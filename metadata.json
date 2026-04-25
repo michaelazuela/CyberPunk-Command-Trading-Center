@@ -1,0 +1,5 @@
+{
+  "name": "Remix: MES/MNQ Complete Trading System",
+  "description": "A production-grade trading analyst tool for MES/MNQ futures, featuring automated chart analysis, risk management, and session monitoring.",
+  "requestFramePermissions": []
+}
