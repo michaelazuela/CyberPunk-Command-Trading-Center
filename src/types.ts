@@ -34,6 +34,7 @@ export interface AISettings {
     high: number;
     low: number;
   };
+  screenshotTimezone?: 'EST' | 'PST' | 'CST' | 'MST';
 }
 
 export interface ProposedRule {
@@ -42,11 +43,13 @@ export interface ProposedRule {
   reasoning: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   timestamp: number;
+  imageUrls?: string[];
 }
 
 export interface AgentReport {
   agentName: string;
   findings: string;
+  ruleCitation?: string;
   status: 'SUCCESS' | 'WARNING' | 'ERROR';
 }
 
@@ -92,6 +95,8 @@ export interface SessionState {
   };
   aiSettings?: AISettings;
   analysisResult?: AnalysisResult;
+  morningScreenshot?: string;
+  lunchScreenshot?: string;
 }
 
 export interface AppState {

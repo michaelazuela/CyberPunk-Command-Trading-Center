@@ -14,6 +14,7 @@ export default function AgentAnimation({ isAnalyzing, reports = [], currentStep 
   const agents = [
     { name: 'Chart Observer', icon: <Eye className="w-5 h-5" />, color: 'bg-blue-500' },
     { name: 'Strategy Specialist', icon: <Brain className="w-5 h-5" />, color: 'bg-purple-500' },
+    { name: "Devil's Advocate", icon: <AlertTriangle className="w-5 h-5" />, color: 'bg-red-500' },
     { name: 'Risk Auditor', icon: <ShieldCheck className="w-5 h-5" />, color: 'bg-green-500' }
   ];
 

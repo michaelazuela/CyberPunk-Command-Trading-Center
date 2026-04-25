@@ -14,7 +14,7 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
   const [logs, setLogs] = useState<MatrixLog[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const agentNames = ['CHART_OBSERVER', 'STRATEGY_SPECIALIST', 'RISK_AUDITOR'];
+  const agentNames = ['CHART_OBSERVER', 'STRATEGY_SPECIALIST', 'DEVILS_ADVOCATE', 'RISK_AUDITOR'];
 
   useEffect(() => {
     if (isAnalyzing) {
@@ -22,8 +22,8 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
         const newLog: MatrixLog = {
           id: Math.random().toString(36).substr(2, 9),
           timestamp: new Date().toLocaleTimeString(),
-          agent: agentNames[currentStep],
-          message: getRandomMessage(currentStep),
+          agent: agentNames[Math.min(currentStep, 3)],
+          message: getRandomMessage(Math.min(currentStep, 3)),
           type: Math.random() > 0.8 ? 'warning' : 'info'
         };
         setLogs(prev => [...prev.slice(-20), newLog]);
@@ -55,6 +55,14 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
         "Filtering market noise (pullback detection)...",
         "Validating momentum vectors...",
         "Cross-referencing system rules v1.1..."
+      ],
+      [
+        "Searching for structural flaws...",
+        "Devil's Advocate analyzing weaknesses...",
+        "Calculating rule violation probability...",
+        "Testing adversarial scenarios...",
+        "Challenging the primary bias...",
+        "Seeking overlapping wicks and friction..."
       ],
       [
         "Calculating risk-to-reward ratio...",

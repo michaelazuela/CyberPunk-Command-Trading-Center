@@ -250,7 +250,7 @@ export default function App() {
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} />}
           {activeTab === 'trade' && <TradeManager session={appState.currentSession} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
           {activeTab === 'history' && <TradeLog trades={appState.history} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} />}
-          {activeTab === 'rules' && <Rules customRules={appState.customRules} onUpdateRule={updateProposedRule} />}
+          {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
           {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} fontSize={fontSize} onFontSizeChange={setFontSize} />}
         </div>
       </main>

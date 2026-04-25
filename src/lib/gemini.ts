@@ -41,7 +41,7 @@ async function chartObserverAgent(imageData: string) {
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: {
       parts: [
         { text: prompt },
@@ -286,7 +286,7 @@ async function strategySpecialistAgent(observation: string, settings?: AISetting
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: `OBSERVATION REPORT:\n${observation}`,
     config: {
       responseMimeType: "application/json",
@@ -340,6 +340,110 @@ async function riskAuditorAgent(strategy: any, accountEquity: number) {
   return reports;
 }
 
+/**
+ * AGENT 4: DEVIL'S ADVOCATE (Multi-Step Validation)
+ * Challenges the strategy to find weaknesses and cites specific rules.
+ */
+async function devilsAdvocateAgent(observation: string, strategy: any) {
+  if (strategy.dayType === "NO TRADE") return null;
+
+  const prompt = `
+    You are the "Devil's Advocate" Agent. Your job is to critically evaluate a proposed trading 
+    strategy based on the observation data and find reasons WHY the trade might FAIL.
+    Look for missing structural elements, overlapping wicks, contradictory signals, or strict rule violations.
+    
+    Observation:
+    ${observation}
+
+    Proposed Strategy:
+    Bias: ${strategy.dayType}
+    Reasoning: ${strategy.reasoning}
+
+    Output valid JSON:
+    {
+      "findings": "Your counter-argument or approval statement.",
+      "ruleCitation": "Specific rule referenced (e.g. '0414_MAX_EXPANSION' or 'ANTI-DRIFT')",
+      "status": "SUCCESS" | "WARNING" | "ERROR",
+      "confidencePenalty": number (e.g., 0.1 for 10% penalty, 0 for no penalty)
+    }
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-pro-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1,
+      }
+    });
+
+    const text = response.text || "{}";
+    const cleanedText = text.replace(/```json\n?|```/g, '').trim();
+    return JSON.parse(cleanedText);
+  } catch (e) {
+    console.error("Devil's Advocate failed:", e);
+    return null;
+  }
+}
+
+export interface OCRResult {
+  ticker?: string;
+  timeframe?: string;
+  currentPrice?: number;
+  lastTimestamp?: string;
+  timezone?: string;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+}
+
+export async function preCheckChartInfo(imageData: string): Promise<OCRResult> {
+  const prompt = `
+    You are an expert financial chart OCR system. 
+    Analyze this chart image and extract the following metadata exactly.
+    Do not hallucinate. If you cannot see a value clearly, return null for it.
+    
+    1. Ticker symbol (e.g. MES, NQ, SPY)
+    2. Timeframe (e.g. 5m, 1m, 1h)
+    3. The absolute last (current) price shown on the Y-axis or price label.
+    4. The most recent time/date on the X-axis.
+    5. Overall confidence in reading these numbers (HIGH, MEDIUM, LOW).
+    
+    Return ONLY valid JSON in this schema:
+    {
+       "ticker": "string or null",
+       "timeframe": "string or null",
+       "currentPrice": number or null,
+       "lastTimestamp": "string or null",
+       "confidence": "HIGH" | "MEDIUM" | "LOW"
+    }
+  `;
+
+  const context = {
+    parts: [
+      { text: prompt },
+      { inlineData: { data: imageData.split(',')[1], mimeType: "image/jpeg" } }
+    ]
+  };
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-pro-preview",
+    contents: [context],
+    config: {
+      temperature: 0.0,
+      responseMimeType: "application/json",
+      systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON."
+    } as any
+  });
+
+  const textVal = response.text || "";
+  try {
+    return JSON.parse(textVal) as OCRResult;
+  } catch (e) {
+    console.error("Failed to parse OCR result", textVal);
+    return { confidence: "LOW" };
+  }
+}
+
 export async function analyzeChart(imageData: string, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any) {
   try {
     // Step 1: Observation
@@ -351,14 +455,32 @@ export async function analyzeChart(imageData: string, settings?: AISettings, acc
     // Step 2: Strategy Classification
     const strategy = await strategySpecialistAgent(observation, settings, previousAnalysis);
     
-    // Step 3: Risk Audit
+    // Step 3: Devil's Advocate
+    const advocateReport = await devilsAdvocateAgent(observation, strategy);
+
+    // Step 4: Risk Audit
     const riskReports = await riskAuditorAgent(strategy, accountEquity);
     
+    let finalConfidence = typeof strategy.confidence === 'number' ? strategy.confidence : 0;
+    const additionalReports: any[] = [];
+    
+    if (advocateReport) {
+      if (advocateReport.confidencePenalty && typeof advocateReport.confidencePenalty === 'number') {
+        finalConfidence = Math.max(0, finalConfidence - advocateReport.confidencePenalty);
+      }
+      additionalReports.push({
+        agentName: "Devil's Advocate",
+        findings: advocateReport.findings || "",
+        ruleCitation: advocateReport.ruleCitation,
+        status: advocateReport.status || 'WARNING'
+      });
+    }
+
     // Combine into final result with robust defaults
     return {
       dayType: strategy.dayType || "NO TRADE",
       reasoning: strategy.reasoning || "No reasoning provided by the AI.",
-      confidence: typeof strategy.confidence === 'number' ? strategy.confidence : 0,
+      confidence: finalConfidence,
       checks: Array.isArray(strategy.checks) ? strategy.checks : [],
       sweepAndReclaim: strategy.sweepAndReclaim || "NO",
       is1055Reversal: !!strategy.is1055Reversal,
@@ -375,6 +497,7 @@ export async function analyzeChart(imageData: string, settings?: AISettings, acc
           findings: observation.substring(0, 4000) + (observation.length > 4000 ? "..." : ""), 
           status: 'SUCCESS' as const 
         },
+        ...additionalReports,
         ...riskReports
       ]
     };
@@ -418,7 +541,7 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
@@ -446,7 +569,7 @@ export async function validateTrade(context: string) {
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: context,
     config: {
       systemInstruction,

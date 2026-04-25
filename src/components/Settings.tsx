@@ -24,9 +24,16 @@ export default function Settings({
   const handleSave = () => {
     onUpdate({ 
       accountEquity: equity, 
-      riskPercent: risk / 100 
+      riskPercent: risk / 100,
+      aiSettings: {
+        ...session.aiSettings,
+        screenshotTimezone: localTimezone,
+        temperature: session.aiSettings?.temperature || 0
+      }
     });
   };
+
+  const [localTimezone, setLocalTimezone] = useState<any>(session.aiSettings?.screenshotTimezone || 'EST');
 
   const handleReset = () => {
     if (confirm('Are you sure you want to reset the current session? This will clear all trades and day classification.')) {
@@ -70,6 +77,19 @@ export default function Settings({
                   onChange={e => setRisk(parseFloat(e.target.value))}
                   className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-sm focus:outline-none focus:border-accent"
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono uppercase opacity-50">Default OCR Timezone</label>
+                <select 
+                  className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-sm focus:outline-none focus:border-accent"
+                  value={localTimezone}
+                  onChange={e => setLocalTimezone(e.target.value)}
+                >
+                  <option value="EST">EST (New York)</option>
+                  <option value="CST">CST (Chicago)</option>
+                  <option value="MST">MST (Denver)</option>
+                  <option value="PST">PST (Los Angeles)</option>
+                </select>
               </div>
             </div>
           </div>

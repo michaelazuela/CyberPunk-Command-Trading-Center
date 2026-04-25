@@ -33,9 +33,12 @@ export default function LunchReversal({ session, onUpdate }: {
       setLastImage(base64String);
       
       // Force strict settings for this module
+      const baseInstructions = "PURE PRICE ACTION MANDATE: Focus EXCLUSIVELY on 5-min candlestick H/L/C. Ignore indicators/volume. Anchor levels are 09:30 IB High/Low. Identify Villain Sweep (wick > IB High, close < IB High) or Liquidity Hunt (wick < IB Low, close > IB Low). Enforce 2-Bar Guard for bias changes.";
+      const tzString = session.aiSettings?.screenshotTimezone ? `\n\nScreenshot Timezone: ${session.aiSettings.screenshotTimezone}` : "";
+      
       const strictSettings = {
         temperature: 0.0,
-        customInstructions: "PURE PRICE ACTION MANDATE: Focus EXCLUSIVELY on 5-min candlestick H/L/C. Ignore indicators/volume. Anchor levels are 09:30 IB High/Low. Identify Villain Sweep (wick > IB High, close < IB High) or Liquidity Hunt (wick < IB Low, close > IB Low). Enforce 2-Bar Guard for bias changes."
+        customInstructions: baseInstructions + tzString
       };
 
       addLog("EXTRACTING OHLC DATA...");
@@ -44,6 +47,7 @@ export default function LunchReversal({ session, onUpdate }: {
       const analysis = await analyzeChart(base64String, strictSettings, session.accountEquity, session.analysisResult);
       
       setResult(analysis);
+      onUpdate({ lunchScreenshot: base64String });
       addLog(`ANALYSIS COMPLETE. BIAS: ${analysis.dayType}`);
       if (analysis.sessionLog) {
         addLog(`R/R POTENTIAL: VERIFIED.`);

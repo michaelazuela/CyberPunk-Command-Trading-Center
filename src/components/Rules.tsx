@@ -3,23 +3,125 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BookOpen, Shield, Clock, AlertTriangle, Sparkles, Check, X, Calculator, Target } from 'lucide-react';
-import { ProposedRule } from '../types';
+import React, { useState } from 'react';
+import { BookOpen, Shield, Clock, AlertTriangle, Sparkles, Check, X, Calculator, Target, Plus, Image as ImageIcon } from 'lucide-react';
+import { ProposedRule, SessionState } from '../types';
 import { cn } from '../lib/utils';
 
-export default function Rules({ customRules = [], onUpdateRule }: { 
+export default function Rules({ customRules = [], currentSession, onUpdateRule, onProposeRule }: { 
   customRules: ProposedRule[],
-  onUpdateRule: (id: string, status: ProposedRule['status']) => void
+  currentSession?: SessionState,
+  onUpdateRule: (id: string, status: ProposedRule['status']) => void,
+  onProposeRule: (rule: ProposedRule) => void
 }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newRule, setNewRule] = useState('');
+  const [newReasoning, setNewReasoning] = useState('');
+  const [attachMorning, setAttachMorning] = useState(false);
+  const [attachLunch, setAttachLunch] = useState(false);
+
   const pendingRules = (customRules || []).filter(r => r.status === 'PENDING');
   const approvedRules = (customRules || []).filter(r => r.status === 'APPROVED');
 
+  const handleAddRule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRule.trim()) return;
+
+    const imageUrls: string[] = [];
+    if (attachMorning && currentSession?.morningScreenshot) imageUrls.push(currentSession.morningScreenshot);
+    if (attachLunch && currentSession?.lunchScreenshot) imageUrls.push(currentSession.lunchScreenshot);
+
+    onProposeRule({
+      id: Math.random().toString(36).substr(2, 9),
+      rule: newRule,
+      reasoning: newReasoning || 'Manually added to playbook.',
+      status: 'APPROVED',
+      timestamp: Date.now(),
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined
+    });
+
+    setIsAdding(false);
+    setNewRule('');
+    setNewReasoning('');
+    setAttachMorning(false);
+    setAttachLunch(false);
+  };
+
   return (
     <div className="space-y-8">
-      <header>
-        <h2 className="text-3xl font-bold tracking-tight">System Rules</h2>
-        <p className="text-sm text-stone-500 font-mono uppercase">The MES/MNQ Complete Trading Framework</p>
+      <header className="flex justify-between items-end">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">System Rules & Playbook</h2>
+          <p className="text-sm text-stone-500 font-mono uppercase">The MES/MNQ Complete Trading Framework</p>
+        </div>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="btn-primary flex items-center gap-2 text-xs"
+        >
+          <Plus className="w-4 h-4" />
+          Add Manual Rule
+        </button>
       </header>
+
+      {isAdding && (
+        <form onSubmit={handleAddRule} className="card p-6 border-accent/20 bg-accent/5 animate-in slide-in-from-top-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+              Add to Permanent Playbook
+            </h3>
+            <button type="button" onClick={() => setIsAdding(false)} className="opacity-50 hover:opacity-100">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-mono uppercase opacity-50 block mb-1">Rule / Observation</label>
+              <input 
+                value={newRule} onChange={e => setNewRule(e.target.value)} required
+                className="w-full bg-bg border border-line p-2 text-sm focus:outline-none focus:border-accent"
+                placeholder="e.g. Reject shorts if 10:45 makes a new high."
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono uppercase opacity-50 block mb-1">Reasoning</label>
+              <textarea 
+                value={newReasoning} onChange={e => setNewReasoning(e.target.value)}
+                className="w-full bg-bg border border-line p-2 text-sm focus:outline-none focus:border-accent min-h-[60px]"
+                placeholder="Context or explanation..."
+              />
+            </div>
+
+            <div className="flex gap-4 p-3 border border-line bg-stone-50 dark:bg-stone-900">
+              <p className="text-[10px] font-mono uppercase opacity-50 flex items-center gap-1 w-full max-w-[120px]">
+                <ImageIcon className="w-3 h-3" /> Attach Media
+              </p>
+              <label className={cn("flex items-center gap-2 text-xs cursor-pointer", !currentSession?.morningScreenshot && "opacity-30 cursor-not-allowed")}>
+                <input 
+                  type="checkbox" 
+                  checked={attachMorning} 
+                  onChange={e => setAttachMorning(e.target.checked)}
+                  disabled={!currentSession?.morningScreenshot}
+                />
+                Morning Screenshot
+              </label>
+              <label className={cn("flex items-center gap-2 text-xs cursor-pointer", !currentSession?.lunchScreenshot && "opacity-30 cursor-not-allowed")}>
+                <input 
+                  type="checkbox" 
+                  checked={attachLunch} 
+                  onChange={e => setAttachLunch(e.target.checked)}
+                  disabled={!currentSession?.lunchScreenshot}
+                />
+                Lunch Screenshot
+              </label>
+            </div>
+
+            <button type="submit" className="btn-primary w-full text-xs py-2 uppercase tracking-widest">
+              Save Rule to Playbook
+            </button>
+          </div>
+        </form>
+      )}
 
       {pendingRules.length > 0 && (
         <section className="space-y-4">
@@ -65,11 +167,23 @@ export default function Rules({ customRules = [], onUpdateRule }: {
             </h3>
             <div className="space-y-4">
               {approvedRules.map(rule => (
-                <div key={rule.id} className="space-y-1">
+                <div key={rule.id} className="space-y-2 border-b border-line pb-4 last:border-0 last:pb-0">
                   <p className="text-xs font-bold flex items-start gap-2">
                     <span className="w-1.5 h-1.5 bg-accent rounded-full mt-1.5 shrink-0" />
                     {rule.rule}
                   </p>
+                  <p className="text-[10px] text-stone-500 italic pl-3 border-lborder-line ml-1">
+                    {rule.reasoning}
+                  </p>
+                  {rule.imageUrls && rule.imageUrls.length > 0 && (
+                    <div className="flex gap-2 pl-4 pt-2 overflow-x-auto">
+                      {rule.imageUrls.map((url, i) => (
+                        <div key={i} className="relative group shrink-0 w-32 h-auto rounded border border-line overflow-hidden cursor-pointer">
+                          <img src={url} alt="Reference" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

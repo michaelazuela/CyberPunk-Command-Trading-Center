@@ -6,11 +6,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, ShieldCheck, Eye, Brain, Sparkles, Target, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { SessionState, AnalysisResult, DayType, AISettings, ProposedRule } from '../types';
-import { analyzeChart } from '../lib/gemini';
+import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn } from '../lib/utils';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
-import MonteCarloSection from './MonteCarloSection';
 import MonteCarloSection from './MonteCarloSection';
 
 export default function Analysis({ session, customRules = [], onUpdate }: { 
@@ -19,6 +18,9 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
   onUpdate: (updates: Partial<SessionState>) => void 
 }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPreChecking, setIsPreChecking] = useState(false);
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lastImage, setLastImage] = useState<string | null>(null);
@@ -43,32 +45,62 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
   }, [isAnalyzing]);
 
   const processImage = useCallback(async (base64String: string) => {
-    setIsAnalyzing(true);
+    setIsPreChecking(true);
     setError(null);
     setResult(null);
+    setOcrResult(null);
+    setPendingImage(base64String);
+
     try {
-      setLastImage(base64String);
+      const ocr = await preCheckChartInfo(base64String);
+      ocr.timezone = session.aiSettings?.screenshotTimezone || 'EST';
+      setOcrResult(ocr);
+    } catch (err) {
+      console.error("OCR Pre-check failed:", err);
+      // Fallback or ignore
+    } finally {
+      setIsPreChecking(false);
+    }
+  }, []);
+
+  const startFullAnalysis = useCallback(async () => {
+    if (!pendingImage) return;
+    setIsAnalyzing(true);
+    setError(null);
+    try {
+      setLastImage(pendingImage);
       
-      // Inject approved custom rules into the analysis
       const approvedRulesText = (customRules || [])
         .filter(r => r.status === 'APPROVED')
         .map(r => `- ${r.rule}`)
         .join('\n');
 
+      const ocrOverrideText = ocrResult ? `
+[OPERATOR OVERRIDE DATA]
+Ticker: ${ocrResult.ticker || 'N/A'}
+Timeframe: ${ocrResult.timeframe || 'N/A'}
+Current Price: ${ocrResult.currentPrice || 'N/A'}
+Timestamp: ${ocrResult.lastTimestamp || 'N/A'}
+Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
+` : '';
+
       const analysisSettings = {
         ...localSettings,
-        customInstructions: `${localSettings.customInstructions}\n\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
+        customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
 
-      const analysis = await analyzeChart(base64String, analysisSettings, session.accountEquity, session.analysisResult);
+      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult);
       setResult(analysis);
+      onUpdate({ morningScreenshot: pendingImage });
+      setPendingImage(null);
+      setOcrResult(null);
     } catch (err) {
       console.error(err);
       setError('Failed to analyze chart. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
-  }, [localSettings, session.accountEquity]);
+  }, [pendingImage, localSettings, session.accountEquity, session.analysisResult, customRules]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,6 +265,21 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
               </div>
             </div>
 
+            <div className="space-y-2 border-t border-line pt-4">
+              <label className="text-[10px] font-mono uppercase opacity-50">Chart Timezone</label>
+              <select 
+                className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                value={localSettings.screenshotTimezone || 'EST'}
+                onChange={e => setLocalSettings(prev => ({ ...prev, screenshotTimezone: e.target.value as any }))}
+              >
+                <option value="EST">EST (New York)</option>
+                <option value="CST">CST (Chicago)</option>
+                <option value="MST">MST (Denver)</option>
+                <option value="PST">PST (Los Angeles)</option>
+              </select>
+              <p className="text-[9px] text-stone-500 font-mono mt-1">This will be passed to the AI so it evaluates key levels based on proper market times.</p>
+            </div>
+
             <div className="flex gap-4">
               <button onClick={saveSettings} className="btn-primary flex-1">Save AI Parameters</button>
               <button onClick={() => setShowSettings(false)} className="btn-outline">Cancel</button>
@@ -263,13 +310,26 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
                   "text-amber-400"
                 )}>{result.dayType}</h3>
               </div>
-              <div className="relative z-10 text-right">
+              <div className="relative z-10 text-right flex flex-col items-end">
                 <p className="text-[10px] font-mono uppercase opacity-50 mb-1 tracking-widest">AI Confidence</p>
-                <p className="text-4xl font-black font-mono">
-                  {typeof result.confidence === 'number' && !isNaN(result.confidence) 
-                    ? (result.confidence * 100).toFixed(0) 
-                    : '0'}%
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-24 bg-stone-900 rounded-full overflow-hidden border border-stone-800">
+                    <div 
+                      className={cn(
+                        "h-full transition-all duration-1000",
+                        (result.confidence * 100) > 80 ? "bg-green-500" :
+                        (result.confidence * 100) > 50 ? "bg-amber-500" :
+                        "bg-red-500"
+                      )}
+                      style={{ width: `${Math.min(100, Math.max(0, result.confidence * 100))}%` }}
+                    />
+                  </div>
+                  <p className="text-4xl font-black font-mono leading-none">
+                    {typeof result.confidence === 'number' && !isNaN(result.confidence) 
+                      ? (result.confidence * 100).toFixed(0) 
+                      : '0'}%
+                  </p>
+                </div>
               </div>
             </div>
             
@@ -314,7 +374,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
               </div>
             )}
 
-            {!result && !isAnalyzing && (
+            {!result && !isAnalyzing && !isPreChecking && !pendingImage && (
               <div className="card p-12 text-center border-dashed border-2 border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/20">
                 <div className="max-w-sm mx-auto space-y-6">
                   <div className="w-20 h-20 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto shadow-inner">
@@ -331,6 +391,99 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
                     </label>
                   </div>
                   <p className="text-[10px] font-mono opacity-40 uppercase tracking-widest">Direct Paste Supported from NinjaTrader / TradingView</p>
+                </div>
+              </div>
+            )}
+
+            {isPreChecking && (
+              <div className="card h-[400px] flex flex-col items-center justify-center p-8 relative overflow-hidden bg-stone-50 dark:bg-stone-900 border-2 border-line">
+                <div className="relative z-10 w-full max-w-lg space-y-6 text-center">
+                  <Loader2 className="w-12 h-12 text-accent animate-spin mx-auto" />
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-bold tracking-[0.2em] uppercase">
+                      Automated OCR Pre-Check
+                    </h2>
+                    <p className="text-xs font-mono uppercase opacity-60">Scanning image for chart metadata...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!isPreChecking && pendingImage && ocrResult && (
+              <div className="card border-2 border-line overflow-hidden">
+                <div className="bg-stone-100 dark:bg-stone-900 border-b border-line p-4">
+                  <h3 className="font-bold tracking-tight uppercase flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-accent" />
+                    OCR Verification
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-1">Please verify the extracted metadata before proceeding with full analysis.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase opacity-50">Ticker</label>
+                      <input 
+                        className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                        value={ocrResult.ticker || ''}
+                        onChange={(e) => setOcrResult({ ...ocrResult, ticker: e.target.value })}
+                        placeholder="N/A"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase opacity-50">Timeframe</label>
+                      <input 
+                        className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                        value={ocrResult.timeframe || ''}
+                        onChange={(e) => setOcrResult({ ...ocrResult, timeframe: e.target.value })}
+                        placeholder="N/A"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase opacity-50">Current Price</label>
+                      <input 
+                        type="number"
+                        step="0.25"
+                        className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                        value={ocrResult.currentPrice || ''}
+                        onChange={(e) => setOcrResult({ ...ocrResult, currentPrice: parseFloat(e.target.value) || undefined })}
+                        placeholder="N/A"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase opacity-50">Timestamp</label>
+                      <input 
+                        className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                        value={ocrResult.lastTimestamp || ''}
+                        onChange={(e) => setOcrResult({ ...ocrResult, lastTimestamp: e.target.value })}
+                        placeholder="N/A"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono uppercase opacity-50">Timezone</label>
+                      <select 
+                        className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-xs focus:outline-none focus:border-accent"
+                        value={ocrResult.timezone || 'EST'}
+                        onChange={(e) => setOcrResult({ ...ocrResult, timezone: e.target.value })}
+                      >
+                        <option value="EST">EST</option>
+                        <option value="CST">CST</option>
+                        <option value="MST">MST</option>
+                        <option value="PST">PST</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 dark:bg-stone-900/50 p-4 border-t border-line flex gap-4">
+                  <button onClick={startFullAnalysis} className="btn-primary flex-1">
+                    Confirm & Analyze
+                  </button>
+                  <button onClick={() => { setPendingImage(null); setOcrResult(null); }} className="btn-outline">
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
@@ -444,6 +597,11 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
                                   )} />
                                 </div>
                                 <p className="opacity-90 whitespace-pre-wrap">{report.findings}</p>
+                                {report.ruleCitation && (
+                                  <p className="mt-2 text-[10px] text-accent/80 flex items-center gap-1 before:content-[''] before:block before:w-3 before:h-px before:bg-accent/30">
+                                    <span className="font-bold uppercase">Citing Rule:</span> {report.ruleCitation}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
