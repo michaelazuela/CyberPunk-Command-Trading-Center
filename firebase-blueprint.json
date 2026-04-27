@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "TradingSetup": {
+      "title": "Trading Setup",
+      "description": "Represents an analyzed trading setup with associated metadata and an optional screenshot.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who owns this setup."
+        },
+        "dayType": {
+          "type": "string",
+          "description": "The classification of the day type/setup."
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "The detailed reasoning for the setup."
+        },
+        "confidence": {
+          "type": "number",
+          "description": "0-1 confidence score."
+        },
+        "imageURL": {
+          "type": "string",
+          "description": "URL to the screenshot stored in Firebase Storage or external."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "AI-generated tags and labels for the screenshot."
+        },
+        "suggestedEntry": {
+          "type": "number",
+          "description": "Suggested entry point"
+        },
+        "suggestedStop": {
+          "type": "number",
+          "description": "Suggested stop loss"
+        },
+        "suggestedTarget": {
+          "type": "number",
+          "description": "Suggested target"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["userId", "dayType", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "setups/{setupId}": {
+      "schema": {
+        "$ref": "#/entities/TradingSetup"
+      },
+      "description": "Stores individual trading setups analyzed by the AI."
+    }
+  }
+}

@@ -4,10 +4,12 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, ShieldCheck, Eye, Brain, Sparkles, Target, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, ShieldCheck, Eye, Brain, Sparkles, Target, ChevronDown, ChevronUp, Zap, CloudUpload } from 'lucide-react';
 import { SessionState, AnalysisResult, DayType, AISettings, ProposedRule } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn } from '../lib/utils';
+import { auth } from '../lib/firebase';
+import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
 import MonteCarloSection from './MonteCarloSection';
@@ -139,12 +141,29 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
     };
   }, [handlePaste]);
 
-  const confirmDayType = () => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const confirmDayType = async () => {
     if (result) {
       onUpdate({ 
         dayType: result.dayType,
         analysisResult: result
       });
+      
+      const user = auth.currentUser;
+      if (session.aiSettings?.ragEnabled && user && lastImage) {
+        setIsUploading(true);
+        try {
+          await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'morning', ocrResult);
+          setUploadSuccess(true);
+          setTimeout(() => setUploadSuccess(false), 3000);
+        } catch (e) {
+          console.error("Failed to upload screenshot to cloud", e);
+        } finally {
+          setIsUploading(false);
+        }
+      }
     }
   };
 
@@ -509,11 +528,11 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
             {result && !isAnalyzing && (
               <>
                 {lastImage && (
-                  <div className="card overflow-hidden border-line relative group shadow-2xl">
+                  <div className="card overflow-hidden border-line relative group shadow-2xl bg-neutral-900 flex justify-center">
                     <img 
                       src={lastImage} 
                       alt="Analyzed Chart" 
-                      className="w-full h-auto object-cover opacity-95 group-hover:opacity-100 transition-opacity duration-500"
+                      className="w-full max-h-[400px] object-contain opacity-95 group-hover:opacity-100 transition-opacity duration-500"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute top-4 left-4 px-4 py-1.5 bg-ink/90 text-bg text-[10px] font-mono uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-xl">
@@ -775,10 +794,43 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
 
                 {/* Actions */}
                 <div className="flex flex-col gap-3">
-                  <button onClick={confirmDayType} className="btn-primary w-full py-4 text-sm shadow-lg shadow-accent/20">
-                    Confirm & Lock Day Type
+                  <div className="space-y-2 border border-line bg-stone-50 dark:bg-stone-900/50 p-4 mb-2 shadow-sm relative overflow-hidden group">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent"></div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={session.aiSettings?.ragEnabled || false}
+                        onChange={e => onUpdate({ aiSettings: { ...(session.aiSettings || {}), temperature: session.aiSettings?.temperature ?? 0.1, ragEnabled: e.target.checked } })}
+                        className="accent-accent w-4 h-4 mt-0.5"
+                      />
+                      <div className="flex-1 space-y-1">
+                        <span className="text-[10px] font-mono uppercase font-bold tracking-widest flex items-center gap-2">
+                          <CloudUpload className="w-4 h-4 text-accent group-hover:animate-bounce" />
+                          Enable RAG Storage (Save Analysis to Cloud)
+                        </span>
+                        <p className="text-[9px] text-stone-500 font-mono italic leading-relaxed pt-1">
+                          Securely upload your screenshot to Firebase and index this setup in your personal vault for continual AI learning.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <button 
+                    onClick={confirmDayType} 
+                    disabled={isUploading}
+                    className="btn-primary w-full py-4 text-sm shadow-lg shadow-accent/20 flex items-center justify-center gap-2"
+                  >
+                    {isUploading ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Uploading to RAG Vault...</>
+                    ) : uploadSuccess ? (
+                      <><CheckCircle2 className="w-5 h-5" /> Saved Successfully!</>
+                    ) : session.aiSettings?.ragEnabled ? (
+                      <><CloudUpload className="w-5 h-5" /> Confirm, Lock & Save to Cloud</>
+                    ) : (
+                      "Confirm & Lock Day Type"
+                    )}
                   </button>
-                  <button onClick={() => { setResult(null); setLastImage(null); }} className="btn-outline w-full py-3 text-xs">
+                  <button onClick={() => { setResult(null); setLastImage(null); }} className="btn-outline w-full py-3 text-xs" disabled={isUploading}>
                     Clear & Restart Analysis
                   </button>
                 </div>

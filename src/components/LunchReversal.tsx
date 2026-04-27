@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Terminal, Crosshair, Activity, ShieldAlert, Zap, Loader2 } from 'lucide-react';
+import { Upload, Terminal, Crosshair, Activity, ShieldAlert, Zap, Loader2, CloudUpload, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { analyzeChart } from '../lib/gemini';
 import { SessionState, AnalysisResult } from '../types';
+import { auth } from '../lib/firebase';
+import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 
 export default function LunchReversal({ session, onUpdate }: { 
   session: SessionState, 
@@ -12,6 +14,9 @@ export default function LunchReversal({ session, onUpdate }: {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lastImage, setLastImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  
   const [logs, setLogs] = useState<string[]>([
     "SYSTEM READY: GROWTH MANDATE ACTIVE.",
     "ANTI-FLIP PROTOCOL: LOCKED.",
@@ -91,6 +96,32 @@ export default function LunchReversal({ session, onUpdate }: {
     }
   }, [processImage]);
 
+  const handleSaveToCloud = async () => {
+    if (!result || !lastImage) return;
+    
+    onUpdate({ 
+      dayType: result.dayType,
+      analysisResult: result
+    });
+
+    const user = auth.currentUser;
+    if (session.aiSettings?.ragEnabled && user) {
+      setIsUploading(true);
+      addLog("INITIATING CLOUD UPLOAD FOR RAG DB...");
+      try {
+        await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'lunch');
+        setUploadSuccess(true);
+        addLog("CLOUD UPLOAD SUCCESSFUL. SETUP INDEXED.");
+        setTimeout(() => setUploadSuccess(false), 3000);
+      } catch (e) {
+        console.error("Failed to upload screenshot to cloud", e);
+        addLog("ERROR: CLOUD UPLOAD FAILED.");
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     window.addEventListener('paste', handlePaste);
     return () => {
@@ -160,8 +191,8 @@ export default function LunchReversal({ session, onUpdate }: {
           )}
 
           {result && lastImage && !isAnalyzing && (
-            <div className={cn("border p-2 relative group", orangeTheme.border, orangeTheme.panel)}>
-              <img src={lastImage} alt="Analyzed Chart" className="w-full h-auto opacity-90" />
+            <div className={cn("border p-2 relative group flex justify-center bg-black/40", orangeTheme.border, orangeTheme.panel)}>
+              <img src={lastImage} alt="Analyzed Chart" className="w-full max-h-[400px] object-contain opacity-90" />
               <div className="absolute top-4 left-4 bg-black/80 border border-orange-600/50 px-3 py-1 text-xs backdrop-blur-sm">
                 TARGET ACQUIRED: {result.dayType}
               </div>
@@ -208,8 +239,54 @@ export default function LunchReversal({ session, onUpdate }: {
               <p className="text-2xl font-black text-green-500">{result.suggestedTarget || 'N/A'}</p>
             </div>
           </div>
-          <div className="mt-6 pt-4 border-t border-orange-600/30 text-xs leading-relaxed opacity-90">
+          <div className="mt-6 pt-4 border-t border-orange-600/30 text-xs leading-relaxed opacity-90 mb-6">
             <span className="font-bold text-orange-400">REASONING:</span> {result.reasoning}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="space-y-2 border border-orange-600/50 bg-orange-950/20 p-4 mb-2 shadow-[0_0_10px_rgba(234,88,12,0.1)] relative overflow-hidden group">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-600"></div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input 
+                  type="checkbox"
+                  checked={session.aiSettings?.ragEnabled || false}
+                  onChange={e => onUpdate({ aiSettings: { ...(session.aiSettings || {}), temperature: session.aiSettings?.temperature ?? 0.1, ragEnabled: e.target.checked } })}
+                  className="w-4 h-4 mt-0.5 accent-orange-600 border-none bg-black"
+                />
+                <div className="flex-1 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 text-orange-500">
+                    <CloudUpload className="w-4 h-4 text-orange-600 group-hover:animate-bounce" />
+                    Enable RAG Storage (Save Analysis to Cloud)
+                  </span>
+                  <p className="text-[9px] text-orange-500/70 italic leading-relaxed pt-1">
+                    Securely upload your screenshot to Firebase and index this setup in your personal vault for continual AI learning.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <button 
+              onClick={handleSaveToCloud} 
+              disabled={isUploading}
+              className="w-full bg-orange-600 hover:bg-orange-500 text-black font-bold py-4 text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              {isUploading ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Uploading to RAG Vault...</>
+              ) : uploadSuccess ? (
+                <><CheckCircle2 className="w-5 h-5" /> Saved Successfully!</>
+              ) : session.aiSettings?.ragEnabled ? (
+                <><CloudUpload className="w-5 h-5" /> Confirm, Lock & Save to Cloud</>
+              ) : (
+                "Confirm & Lock Setup"
+              )}
+            </button>
+            <button 
+              onClick={() => { setResult(null); setLastImage(null); }} 
+              className="w-full border border-orange-600/50 hover:bg-orange-600/10 text-orange-500 py-3 text-xs transition-colors" 
+              disabled={isUploading}
+            >
+              Clear & Restart Scan
+            </button>
           </div>
         </div>
       )}

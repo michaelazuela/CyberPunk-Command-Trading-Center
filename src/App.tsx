@@ -22,8 +22,12 @@ import {
   BookOpen,
   Sun,
   Moon,
-  Zap
+  Zap,
+  LogIn,
+  LogOut
 } from 'lucide-react';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { cn } from './lib/utils';
 import { SessionState, Trade, DayType, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
@@ -37,6 +41,7 @@ import LunchReversal from './components/LunchReversal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
+  const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark' | 'cyberpunk'>(() => {
     const saved = localStorage.getItem('mes_theme');
     return (saved as 'light' | 'dark' | 'cyberpunk') || 'light';
@@ -45,6 +50,26 @@ export default function App() {
     const saved = localStorage.getItem('mes_font_size');
     return saved ? parseInt(saved) : 18;
   });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Error signing in:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
 
   const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem('mes_trading_app_state');
@@ -198,6 +223,26 @@ export default function App() {
             onClick={() => setActiveTab('rules')} 
           />
           <div className="pt-4 mt-4 border-t border-line space-y-2">
+            {user ? (
+              <div className="px-4 py-2">
+                <p className="text-[10px] font-mono opacity-50 uppercase truncate">User: {user.email}</p>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 py-2 text-sm font-mono uppercase transition-colors text-red-500 hover:text-red-400 mt-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-mono uppercase transition-colors text-green-500 hover:text-green-400 hover:bg-stone-200 dark:hover:bg-stone-800"
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </button>
+            )}
             <NavItem 
               icon={<SettingsIcon className="w-4 h-4" />} 
               label="Settings" 

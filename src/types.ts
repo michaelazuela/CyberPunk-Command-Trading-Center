@@ -35,6 +35,7 @@ export interface AISettings {
     low: number;
   };
   screenshotTimezone?: 'EST' | 'PST' | 'CST' | 'MST';
+  ragEnabled?: boolean;
 }
 
 export interface ProposedRule {
@@ -81,6 +82,7 @@ export interface AnalysisResult {
   agentReports?: AgentReport[];
   sessionLog?: SessionLog;
   monteCarloPaths?: number[][];
+  tags?: string[];
 }
 
 export interface SessionState {

@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+    
+    function incoming() { 
+      return request.resource.data; 
+    }
+    
+    function existing() { 
+      return resource.data; 
+    }
+
+    match /setups/{setupId} {
+      function validateOptionalFields(data) {
+        return (!data.keys().hasAny(['reasoning']) || (data.reasoning is string && data.reasoning.size() <= 20000)) &&
+               (!data.keys().hasAny(['confidence']) || (data.confidence is number || data.confidence is int)) &&
+               (!data.keys().hasAny(['imageURL']) || (data.imageURL is string && data.imageURL.size() <= 2000)) &&
+               (!data.keys().hasAny(['ocrText']) || (data.ocrText is string && data.ocrText.size() <= 100000)) &&
+               (!data.keys().hasAny(['tags']) || (data.tags is list && data.tags.size() <= 20 && (data.tags.size() == 0 || data.tags[0] is string))) &&
+               (!data.keys().hasAny(['suggestedEntry']) || (data.suggestedEntry is number || data.suggestedEntry is int)) &&
+               (!data.keys().hasAny(['suggestedStop']) || (data.suggestedStop is number || data.suggestedStop is int)) &&
+               (!data.keys().hasAny(['suggestedTarget']) || (data.suggestedTarget is number || data.suggestedTarget is int));
+      }
+
+      function isValidSetup(data) {
+        return data.keys().hasAll(['userId', 'dayType', 'createdAt', 'updatedAt']) &&
+               data.userId == request.auth.uid &&
+               data.dayType is string && data.dayType.size() <= 100 &&
+               validateOptionalFields(data);
+      }
+
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && 
+                    isValidId(setupId) &&
+                    isValidSetup(incoming()) &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time;
+                    
+      allow update: if isSignedIn() && 
+                    isValidId(setupId) &&
+                    isValidSetup(incoming()) &&
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().updatedAt == request.time &&
+                    (
+                      incoming().diff(existing()).affectedKeys().hasOnly([
+                        'dayType', 'reasoning', 'confidence', 'imageURL', 'ocrText', 'tags', 
+                        'suggestedEntry', 'suggestedStop', 'suggestedTarget', 'updatedAt'
+                      ])
+                    );
+                    
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
