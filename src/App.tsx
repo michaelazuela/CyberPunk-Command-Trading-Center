@@ -55,10 +55,31 @@ export default function App() {
   });
 
   useEffect(() => {
-    testFirestoreConnection();
-    supabase.auth.getSession().then(({ data }) => {
+    const initializeAuth = async () => {
+      testFirestoreConnection();
+
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const oauthError = url.searchParams.get('error_description') || url.hash.match(/error_description=([^&]+)/)?.[1];
+
+      if (oauthError) {
+        console.error('OAuth sign-in failed:', decodeURIComponent(oauthError));
+      }
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.error('OAuth session exchange failed:', error);
+        } else {
+          window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
-    });
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
