@@ -1,67 +1,58 @@
 {
   "entities": {
-    "TradingSetup": {
-      "title": "Trading Setup",
-      "description": "Represents an analyzed trading setup with associated metadata and an optional screenshot.",
+    "Trade": {
+      "title": "Trade",
+      "description": "A recorded trade with outcome and screenshot reference.",
       "type": "object",
       "properties": {
-        "userId": {
-          "type": "string",
-          "description": "The UID of the user who owns this setup."
-        },
-        "dayType": {
-          "type": "string",
-          "description": "The classification of the day type/setup."
-        },
-        "reasoning": {
-          "type": "string",
-          "description": "The detailed reasoning for the setup."
-        },
-        "confidence": {
-          "type": "number",
-          "description": "0-1 confidence score."
-        },
-        "imageURL": {
-          "type": "string",
-          "description": "URL to the screenshot stored in Firebase Storage or external."
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "AI-generated tags and labels for the screenshot."
-        },
-        "suggestedEntry": {
-          "type": "number",
-          "description": "Suggested entry point"
-        },
-        "suggestedStop": {
-          "type": "number",
-          "description": "Suggested stop loss"
-        },
-        "suggestedTarget": {
-          "type": "number",
-          "description": "Suggested target"
-        },
-        "createdAt": {
-          "type": "timestamp",
-          "description": "Creation timestamp"
-        },
-        "updatedAt": {
-          "type": "timestamp",
-          "description": "Last update timestamp"
-        }
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "direction": { "type": "string", "enum": ["LONG", "SHORT"] },
+        "dayType": { "type": "string" },
+        "entryPrice": { "type": "number" },
+        "exitPrice": { "type": "number" },
+        "stopPrice": { "type": "number" },
+        "targetPrice": { "type": "number" },
+        "contracts": { "type": "number" },
+        "pnl": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED", "CANCELLED", "EXECUTED", "MISSED", "SUCCESSFUL", "FAILED"] },
+        "exitReason": { "type": "string" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "screenshotUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "dayType", "createdAt", "updatedAt"]
+      "required": ["userId", "direction", "entryPrice", "status", "timestamp"]
+    },
+    "Setup": {
+      "title": "Setup",
+      "description": "A chart analysis setup with screenshot and AI reasoning.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dayType": { "type": "string" },
+        "reasoning": { "type": "string" },
+        "confidence": { "type": "number" },
+        "imageURL": { "type": "string" },
+        "tags": { "type": "array" },
+        "suggestedEntry": { "type": "number" },
+        "suggestedStop": { "type": "number" },
+        "suggestedTarget": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "dayType", "imageURL"]
     }
   },
   "firestore": {
     "setups/{setupId}": {
-      "schema": {
-        "$ref": "#/entities/TradingSetup"
-      },
-      "description": "Stores individual trading setups analyzed by the AI."
+      "schema": "Setup",
+      "description": "Collection of chart analysis setups."
+    },
+    "trades/{tradeId}": {
+      "schema": "Trade",
+      "description": "Collection of historical trades."
     }
   }
 }

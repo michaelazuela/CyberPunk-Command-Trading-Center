@@ -79,7 +79,7 @@ export async function uploadScreenshotAndSaveSetup(
     
     const docRef = await addDoc(collection(db, 'setups'), setupData);
     console.log("Analysis saved to cloud with ID: ", docRef.id);
-    return docRef.id;
+    return { id: docRef.id, url: downloadURL };
   } catch (error) {
     handleFirestoreError(error, OperationType.UPLOAD, 'setups/storage');
   }

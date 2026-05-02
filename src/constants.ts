@@ -15,6 +15,8 @@ export const SYSTEM_RULES = {
   MAX_STOP_TYPE_2: 8,
   KILL_SWITCH_LOSSES: 2,
   KILL_SWITCH_FILLS: 50,
+  MIDNIGHT_BAND_SIZE: 2, // +/- 2 points
+  MIDNIGHT_VETO_THRESHOLD: 3, // 3 wick interactions
 };
 
 export const DAY_TYPE_DESCRIPTIONS = {

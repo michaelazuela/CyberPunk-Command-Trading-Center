@@ -22,9 +22,10 @@ interface MonteCarloSectionProps {
   startPrice: number;
   stopPrice?: number;
   targetPrice?: number;
+  targetPrice15R?: number;
 }
 
-export default function MonteCarloSection({ startPrice, stopPrice, targetPrice }: MonteCarloSectionProps) {
+export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, targetPrice15R }: MonteCarloSectionProps) {
   const [numPaths, setNumPaths] = useState(30);
   const [volatility, setVolatility] = useState(0.002); // 0.2% per step default
   const [paths, setPaths] = useState<number[][]>([]);
@@ -53,6 +54,7 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice }
     
     // Probability of hitting target before stop (simplified as final price ratio)
     const successCount = targetPrice ? finalPrices.filter(p => p >= targetPrice).length : 0;
+    const successCount15 = targetPrice15R ? finalPrices.filter(p => p >= targetPrice15R).length : 0;
     const failureCount = stopPrice ? finalPrices.filter(p => p <= stopPrice).length : 0;
     
     return {
@@ -60,6 +62,7 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice }
       p10: p10.toFixed(2),
       p90: p90.toFixed(2),
       probSuccess: targetPrice ? ((successCount / paths.length) * 100).toFixed(1) : null,
+      probSuccess15: targetPrice15R ? ((successCount15 / paths.length) * 100).toFixed(1) : null,
       probFailure: stopPrice ? ((failureCount / paths.length) * 100).toFixed(1) : null,
     };
   }, [paths, targetPrice, stopPrice]);
@@ -127,10 +130,16 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice }
                   <span className="opacity-60">P10 - P90</span>
                   <span className="font-bold text-stone-500">{stats.p10} - {stats.p90}</span>
                 </div>
-                {stats.probSuccess !== null && (
+                {stats.probSuccess15 !== null && (
                   <div className="flex justify-between text-[10px] font-mono border-t border-line/20 pt-2">
-                    <span className="text-green-500">Exp. Win Rate</span>
-                    <span className="font-bold text-green-500">{stats.probSuccess}%</span>
+                    <span className="text-green-500">Exp. Win (1.5R)</span>
+                    <span className="font-bold text-green-500">{stats.probSuccess15}%</span>
+                  </div>
+                )}
+                {stats.probSuccess !== null && (
+                  <div className="flex justify-between text-[10px] font-mono">
+                    <span className="text-green-400">Exp. Win (2.0R)</span>
+                    <span className="font-bold text-green-400">{stats.probSuccess}%</span>
                   </div>
                 )}
                 {stats.probFailure !== null && (
@@ -194,15 +203,30 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice }
                   />
                 ))}
 
+                {targetPrice15R && (
+                  <ReferenceLine 
+                    y={targetPrice15R} 
+                    stroke="#10b981" 
+                    strokeDasharray="3 3" 
+                    strokeOpacity={0.6}
+                    label={{ 
+                      value: '1.5R', 
+                      position: 'right', 
+                      fill: '#10b981', 
+                      fontSize: 8,
+                      fontFamily: 'monospace'
+                    }} 
+                  />
+                )}
                 {targetPrice && (
                   <ReferenceLine 
                     y={targetPrice} 
-                    stroke="#10b981" 
+                    stroke="#22c55e" 
                     strokeDasharray="3 3" 
                     label={{ 
-                      value: 'TARGET', 
+                      value: '2.0R', 
                       position: 'right', 
-                      fill: '#10b981', 
+                      fill: '#22c55e', 
                       fontSize: 8,
                       fontFamily: 'monospace'
                     }} 

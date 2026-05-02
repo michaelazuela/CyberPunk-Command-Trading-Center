@@ -7,6 +7,8 @@ import React from 'react';
 import { SessionState, Trade } from '../types';
 import { SYSTEM_RULES, DAY_TYPE_DESCRIPTIONS } from '../constants';
 import { cn } from '../lib/utils';
+import MonteCarloSection from './MonteCarloSection';
+import MidnightAnalysisView from './MidnightAnalysisView';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -18,7 +20,8 @@ import {
   Shield,
   Zap,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Moon
 } from 'lucide-react';
 
 export default function Dashboard({ 
@@ -79,6 +82,33 @@ export default function Dashboard({
               <p className="text-lg font-bold text-green-500">{session.analysisResult.suggestedTarget || 'N/A'}</p>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Intelligence Matrix & Forecasting */}
+
+      {session.analysisResult?.suggestedEntry && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-mono uppercase tracking-widest italic">Live Session Forecast</h3>
+          </div>
+          <MonteCarloSection 
+            startPrice={session.analysisResult.suggestedEntry}
+            stopPrice={session.analysisResult.suggestedStop}
+            targetPrice={session.analysisResult.suggestedTarget20R || session.analysisResult.suggestedTarget}
+            targetPrice15R={session.analysisResult.suggestedTarget15R}
+          />
+        </section>
+      )}
+
+      {session.analysisResult?.midnightAnalysis && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Moon className="w-4 h-4 text-accent" />
+            <h3 className="text-sm font-mono uppercase tracking-widest italic">Midnight Level Strategy Review</h3>
+          </div>
+          <MidnightAnalysisView analysis={session.analysisResult.midnightAnalysis} />
         </section>
       )}
 

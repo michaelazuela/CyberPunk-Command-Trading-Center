@@ -18,6 +18,7 @@ import {
 import { SessionState, Trade, DayType } from '../types';
 import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
+import MonteCarloSection from './MonteCarloSection';
 
 export default function TradeManager({ session, onAddTrade, onUpdateTrade }: { 
   session: SessionState, 
@@ -213,6 +214,17 @@ function TradeSetupForm({ session, onCancel, onConfirm }: {
           )}
         </div>
       </div>
+
+      {entryPrice && stopPrice && stopDistance !== 0 && (
+        <div className="mt-4">
+          <MonteCarloSection 
+            startPrice={entryPrice}
+            stopPrice={stopPrice}
+            targetPrice={targetPrice}
+            targetPrice15R={direction === 'LONG' ? entryPrice + (stopDistance * 1.5) : entryPrice - (stopDistance * 1.5)}
+          />
+        </div>
+      )}
 
       <div className="pt-6 border-t border-line flex gap-4">
         <button 

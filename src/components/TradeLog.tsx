@@ -5,20 +5,31 @@
 
 import React, { useState } from 'react';
 import { Trade, AppState, ProposedRule } from '../types';
-import { TrendingUp, TrendingDown, Clock, Target, ShieldAlert, Sparkles, Loader2, Check, Plus, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Target, ShieldAlert, Sparkles, Loader2, Check, Plus, X, Trash2, ExternalLink, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { generateStrategyInsights } from '../lib/gemini';
 import { SYSTEM_RULES } from '../constants';
+import { updateTradeStatus } from '../lib/firestoreService';
 
-export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }: { 
+export default function TradeLog({ trades, appState, onProposeRule, onAddTrade, onDeleteTrade }: { 
   trades: Trade[], 
   appState: AppState,
   onProposeRule: (rule: ProposedRule) => void,
-  onAddTrade: (trade: Trade) => void
+  onAddTrade: (trade: Trade) => void,
+  onDeleteTrade?: (id: string) => void
 }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [insight, setInsight] = useState<{ rule: string, reasoning: string } | null>(null);
   const [isAddingManual, setIsAddingManual] = useState(false);
+  const [showScreenshots, setShowScreenshots] = useState(true);
+
+  const handleUpdateStatus = async (tradeId: string, status: Trade['status'], pnl?: number) => {
+    try {
+      await updateTradeStatus(tradeId, status, { pnl });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
@@ -49,10 +60,17 @@ export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }
     <div className="space-y-8">
       <header className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Trade Log</h2>
-          <p className="text-sm text-stone-500 font-mono uppercase">Historical Performance & Review</p>
+          <h2 className="text-3xl font-bold tracking-tight text-ink">Trade Log</h2>
+          <p className="text-sm text-stone-500 font-mono uppercase">Historical Performance & Cloud Synchronization</p>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={() => setShowScreenshots(!showScreenshots)}
+            className="btn-outline flex items-center gap-2"
+          >
+            {showScreenshots ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showScreenshots ? 'Hide Visuals' : 'Show Visuals'}
+          </button>
           <button 
             onClick={() => setIsAddingManual(true)}
             className="btn-outline flex items-center gap-2"
@@ -108,13 +126,13 @@ export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }
       )}
 
       <div className="card overflow-hidden">
-        <div className="technical-grid grid-cols-[80px_1fr_100px_100px_100px_120px]">
+        <div className="technical-grid grid-cols-[80px_1fr_100px_100px_100px_220px]">
           <div className="col-header">Type</div>
           <div className="col-header">Details</div>
           <div className="col-header">Entry</div>
           <div className="col-header">Exit</div>
           <div className="col-header">P&L</div>
-          <div className="col-header">Status</div>
+          <div className="col-header">Status & Execution</div>
 
           {(!trades || trades.length === 0) ? (
             <div className="grid-cell col-span-6 py-12 text-center text-stone-400 font-mono text-xs italic">
@@ -122,22 +140,35 @@ export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }
             </div>
           ) : (
             trades.map(trade => (
-              <div key={trade.id} className="data-row grid-cols-[80px_1fr_100px_100px_100px_120px]">
-                <div className="grid-cell flex items-center justify-center">
+              <div key={trade.id} className="data-row grid-cols-[80px_1fr_100px_100px_100px_220px]">
+                <div className="grid-cell flex flex-col items-center justify-center gap-1">
                   {trade.direction === 'LONG' ? (
                     <TrendingUp className="w-4 h-4 text-green-600" />
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-600" />
                   )}
+                  <span className="text-[8px] font-mono opacity-50">{trade.date}</span>
                 </div>
                 <div className="grid-cell">
-                  <p className="text-xs font-bold">{trade.direction} {trade.contracts}x MES</p>
-                  <p className="text-[10px] font-mono opacity-50 uppercase">{trade.dayType}</p>
-                  {trade.notes && (
-                    <p className="text-[9px] text-accent italic mt-1 border-t border-line/50 pt-1">
-                      Note: {trade.notes}
-                    </p>
-                  )}
+                  <div className="flex items-start gap-3">
+                    {showScreenshots && trade.screenshotUrl && (
+                      <div className="w-16 h-10 bg-stone-100 rounded border border-line overflow-hidden flex-shrink-0 cursor-pointer relative group" onClick={() => window.open(trade.screenshotUrl, '_blank')}>
+                        <img src={trade.screenshotUrl} alt="Trade Snapshot" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <ExternalLink className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-bold">{trade.direction} {trade.contracts}x MES</p>
+                      <p className="text-[10px] font-mono opacity-50 uppercase">{trade.dayType}</p>
+                      {trade.notes && (
+                        <p className="text-[9px] text-accent italic mt-1 border-t border-line/50 pt-1">
+                          Note: {trade.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="grid-cell font-mono text-xs">{trade.entryPrice}</div>
                 <div className="grid-cell font-mono text-xs">{trade.exitPrice || '-'}</div>
@@ -147,18 +178,56 @@ export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }
                 )}>
                   {trade.pnl ? `${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}` : '-'}
                 </div>
-                <div className="grid-cell flex items-center gap-2">
+                <div className="grid-cell flex flex-col gap-2">
+                  <div className="flex flex-wrap gap-1">
+                    <StatusBtn 
+                      active={trade.status === 'EXECUTED' || trade.status === 'OPEN'} 
+                      label="Exec" 
+                      color="blue" 
+                      onClick={() => handleUpdateStatus(trade.id!, 'EXECUTED')} 
+                    />
+                    <StatusBtn 
+                      active={trade.status === 'MISSED'} 
+                      label="Missed" 
+                      color="stone" 
+                      onClick={() => handleUpdateStatus(trade.id!, 'MISSED')} 
+                    />
+                    <StatusBtn 
+                      active={trade.status === 'SUCCESSFUL'} 
+                      label="Win" 
+                      color="green" 
+                      onClick={() => {
+                        const winPnl = 2.0 * Math.abs(trade.entryPrice - trade.stopPrice) * 5 * trade.contracts;
+                        handleUpdateStatus(trade.id!, 'SUCCESSFUL', winPnl);
+                      }} 
+                    />
+                    <StatusBtn 
+                      active={trade.status === 'FAILED'} 
+                      label="Loss" 
+                      color="red" 
+                      onClick={() => {
+                        const lossPnl = -1.0 * Math.abs(trade.entryPrice - trade.stopPrice) * 5 * trade.contracts;
+                        handleUpdateStatus(trade.id!, 'FAILED', lossPnl);
+                      }} 
+                    />
+                    {onDeleteTrade && (
+                      <button 
+                        onClick={() => onDeleteTrade(trade.id!)}
+                        className="p-1 hover:bg-red-50 text-stone-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                   <span className={cn(
-                    "status-badge",
-                    trade.status === 'OPEN' ? "text-blue-600 border-blue-600" : 
-                    trade.status === 'CLOSED' ? "text-stone-600 border-stone-600 dark:text-stone-400 dark:border-stone-700" : 
+                    "status-badge text-[8px] py-0.5",
+                    trade.status === 'OPEN' || trade.status === 'EXECUTED' ? "text-blue-600 border-blue-600" : 
+                    trade.status === 'SUCCESSFUL' ? "text-green-600 border-green-600" : 
+                    trade.status === 'FAILED' ? "text-red-600 border-red-600" : 
                     "text-stone-400 border-stone-300 dark:border-stone-800"
                   )}>
                     {trade.status}
                   </span>
-                  {trade.exitReason && (
-                    <span className="text-[8px] font-mono opacity-50 uppercase">{trade.exitReason}</span>
-                  )}
                 </div>
               </div>
             ))
@@ -184,6 +253,27 @@ export default function TradeLog({ trades, appState, onProposeRule, onAddTrade }
         />
       </div>
     </div>
+  );
+}
+
+function StatusBtn({ active, label, color, onClick }: { active: boolean, label: string, color: string, onClick: () => void }) {
+  const colors: Record<string, string> = {
+    blue: active ? "bg-blue-600 text-white" : "border-blue-600/30 text-blue-600 hover:bg-blue-50",
+    green: active ? "bg-green-600 text-white" : "border-green-600/30 text-green-600 hover:bg-green-50",
+    red: active ? "bg-red-600 text-white" : "border-red-600/30 text-red-600 hover:bg-red-50",
+    stone: active ? "bg-stone-600 text-white" : "border-stone-600/30 text-stone-600 hover:bg-stone-50"
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      className={cn(
+        "px-2 py-0.5 text-[8px] font-mono border uppercase transition-colors rounded-sm",
+        colors[color] || colors.stone
+      )}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -9,6 +9,7 @@ export type SessionStatus = 'PRE-MARKET' | 'OBSERVATION' | 'ENTRY' | 'CLOSED';
 
 export interface Trade {
   id: string;
+  userId?: string; // Optional for legacy, required for Firestore
   date: string;
   direction: 'LONG' | 'SHORT';
   dayType: DayType;
@@ -18,11 +19,15 @@ export interface Trade {
   targetPrice: number;
   contracts: number;
   pnl?: number;
-  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED' | 'EXECUTED' | 'MISSED' | 'SUCCESSFUL' | 'FAILED';
   exitReason?: 'TARGET' | 'STOP' | 'HARD EXIT' | 'MANUAL';
   manualOutcome?: 'SUCCESS' | 'FAILED';
   notes?: string;
   timestamp: number;
+  screenshotUrl?: string;
+
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface AISettings {
@@ -35,6 +40,8 @@ export interface AISettings {
     low: number;
   };
   screenshotTimezone?: 'EST' | 'PST' | 'CST' | 'MST';
+  morningTimeZone?: 'EST' | 'PST';
+  lunchTimeZone?: 'EST' | 'PST';
   ragEnabled?: boolean;
 }
 
@@ -58,7 +65,7 @@ export interface SessionLog {
   timestamp: string;
   instrument: string;
   final_bias: string;
-  confidence: string;
+  confidence: number;
   key_structural_level: string;
   recalibration_status: string;
 }
@@ -74,6 +81,8 @@ export interface AnalysisResult {
   suggestedEntry?: number;
   suggestedStop?: number;
   suggestedTarget?: number;
+  suggestedTarget15R?: number;
+  suggestedTarget20R?: number;
   sweepAndReclaim?: string;
   is1055Reversal?: boolean;
   rejectionStrength?: 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
@@ -83,6 +92,36 @@ export interface AnalysisResult {
   sessionLog?: SessionLog;
   monteCarloPaths?: number[][];
   tags?: string[];
+  step4_RiskAudit?: {
+    riskAmount: number;
+    riskPercent: number;
+    status: 'GO' | 'NO-GO' | 'WARNING';
+    auditLog: string;
+    monteCarloForecast: string;
+    probabilitySuccess: number;
+  };
+  midnightAnalysis?: {
+    level: number;
+    band: [number, number];
+    interactions: {
+      timestamp: string;
+      price: number;
+      type: 'WICK_REJECTION' | 'PIERCE' | 'CLOSE_BEYOND';
+      session: 'ETH' | 'RTH_OPEN' | 'RTH_LATER';
+    }[];
+    role: 'SUPPORT' | 'RESISTANCE' | 'NEUTRAL';
+    wickVetoCandidate: boolean;
+    vetoCount: number;
+    justification: string;
+    proposals: {
+      option: 'A' | 'B' | 'C';
+      title: string;
+      description: string;
+      pros: string[];
+      cons: string[];
+      recommendation: string;
+    }[];
+  };
 }
 
 export interface SessionState {

@@ -39,9 +39,12 @@ import Settings from './components/Settings';
 import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
 
+import { subscribeToTrades, deleteTrade, addTrade as addFirestoreTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
+  const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark' | 'cyberpunk'>(() => {
     const saved = localStorage.getItem('mes_theme');
     return (saved as 'light' | 'dark' | 'cyberpunk') || 'light';
@@ -52,11 +55,23 @@ export default function App() {
   });
 
   useEffect(() => {
+    testFirestoreConnection();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      const unsubscribe = subscribeToTrades(user.uid, (trades) => {
+        setCloudTrades(trades);
+      });
+      return () => unsubscribe();
+    } else {
+      setCloudTrades([]);
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
@@ -115,44 +130,58 @@ export default function App() {
     }));
   };
 
-  const addTrade = (trade: Trade) => {
-    setAppState(prev => ({
-      ...prev,
-      currentSession: {
-        ...prev.currentSession,
-        trades: [trade, ...prev.currentSession.trades],
-        killSwitches: {
-          ...prev.currentSession.killSwitches,
-          fills: prev.currentSession.killSwitches.fills + 1,
-          losses: trade.pnl && trade.pnl < 0 ? prev.currentSession.killSwitches.losses + 1 : prev.currentSession.killSwitches.losses
-        }
-      },
-      history: [trade, ...prev.history]
-    }));
-  };
-
-  const updateTrade = (id: string, updates: Partial<Trade>) => {
-    setAppState(prev => {
-      const updateTradeInList = (list: Trade[]) => list.map(t => t.id === id ? { ...t, ...updates } : t);
-      
-      const newSessionTrades = updateTradeInList(prev.currentSession.trades);
-      const newHistory = updateTradeInList(prev.history);
-
-      const losses = newSessionTrades.filter(t => t.status === 'CLOSED' && t.pnl && t.pnl < 0).length;
-      
-      return {
+  const addTrade = async (trade: Trade) => {
+    if (user) {
+      await addFirestoreTrade(trade);
+    } else {
+      setAppState(prev => ({
         ...prev,
         currentSession: {
           ...prev.currentSession,
-          trades: newSessionTrades,
+          trades: [trade, ...prev.currentSession.trades],
           killSwitches: {
             ...prev.currentSession.killSwitches,
-            losses
+            fills: prev.currentSession.killSwitches.fills + 1,
+            losses: trade.pnl && trade.pnl < 0 ? prev.currentSession.killSwitches.losses + 1 : prev.currentSession.killSwitches.losses
           }
         },
-        history: newHistory
-      };
-    });
+        history: [trade, ...prev.history]
+      }));
+    }
+  };
+
+  const removeTrade = async (id: string) => {
+    if (user) {
+      await deleteTrade(id);
+    } else {
+      setAppState(prev => ({
+        ...prev,
+        currentSession: {
+          ...prev.currentSession,
+          trades: prev.currentSession.trades.filter(t => t.id !== id)
+        },
+        history: prev.history.filter(t => t.id !== id)
+      }));
+    }
+  };
+
+  const updateTrade = async (id: string, updates: Partial<Trade>) => {
+    if (user) {
+      const { status, ...rest } = updates;
+      // We use helper if status is modified, but updateTradeStatus also allows extra fields
+      await updateTradeStatus(id, status || 'OPEN', rest);
+    } else {
+      setAppState(prev => {
+        const updateTradeInList = (list: Trade[]) => list.map(t => t.id === id ? { ...t, ...updates } : t);
+        const newSessionTrades = updateTradeInList(prev.currentSession.trades);
+        const newHistory = updateTradeInList(prev.history);
+        return {
+          ...prev,
+          currentSession: { ...prev.currentSession, trades: newSessionTrades },
+          history: newHistory
+        };
+      });
+    }
   };
 
   const addProposedRule = (rule: ProposedRule) => {
@@ -169,8 +198,14 @@ export default function App() {
     }));
   };
 
-  const isKillSwitchTriggered = appState.currentSession.killSwitches.losses >= SYSTEM_RULES.KILL_SWITCH_LOSSES || 
-                                appState.currentSession.killSwitches.fills >= SYSTEM_RULES.KILL_SWITCH_FILLS;
+  const displayTrades = user ? cloudTrades : appState.history;
+  const currentTrades = user ? cloudTrades.filter(t => t.date === new Date().toISOString().split('T')[0]) : appState.currentSession.trades;
+  
+  const currentLosses = currentTrades.filter(t => (t.status === 'CLOSED' || t.status === 'FAILED') && t.pnl && t.pnl < 0).length;
+  const currentFills = currentTrades.length;
+
+  const isKillSwitchTriggered = currentLosses >= SYSTEM_RULES.KILL_SWITCH_LOSSES || 
+                                currentFills >= SYSTEM_RULES.KILL_SWITCH_FILLS;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--ink)]">
@@ -290,11 +325,11 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-8">
         <div className="max-w-5xl mx-auto">
-          {activeTab === 'dashboard' && <Dashboard session={appState.currentSession} onUpdateTrade={updateTrade} />}
+          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateTrade={updateTrade} />}
           {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} />}
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} />}
-          {activeTab === 'trade' && <TradeManager session={appState.currentSession} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
-          {activeTab === 'history' && <TradeLog trades={appState.history} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} />}
+          {activeTab === 'trade' && <TradeManager session={{ ...appState.currentSession, trades: currentTrades }} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
+          {activeTab === 'history' && <TradeLog trades={displayTrades} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} onDeleteTrade={removeTrade} />}
           {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
           {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} fontSize={fontSize} onFontSizeChange={setFontSize} />}
         </div>

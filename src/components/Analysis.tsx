@@ -4,15 +4,17 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, ShieldCheck, Eye, Brain, Sparkles, Target, ChevronDown, ChevronUp, Zap, CloudUpload } from 'lucide-react';
-import { SessionState, AnalysisResult, DayType, AISettings, ProposedRule } from '../types';
+import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, ShieldCheck, Eye, Brain, Sparkles, Target, ChevronDown, ChevronUp, Zap, CloudUpload, PlayCircle, Moon, TrendingUp, TrendingDown } from 'lucide-react';
+import { SessionState, AnalysisResult, DayType, AISettings, ProposedRule, Trade } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn } from '../lib/utils';
 import { auth } from '../lib/firebase';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
+import { addTrade } from '../lib/firestoreService';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
 import MonteCarloSection from './MonteCarloSection';
+import MidnightAnalysisView from './MidnightAnalysisView';
 
 export default function Analysis({ session, customRules = [], onUpdate }: { 
   session: SessionState, 
@@ -55,7 +57,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
 
     try {
       const ocr = await preCheckChartInfo(base64String);
-      ocr.timezone = session.aiSettings?.screenshotTimezone || 'EST';
+      ocr.timezone = session.aiSettings?.morningTimeZone || session.aiSettings?.screenshotTimezone || 'EST';
       setOcrResult(ocr);
     } catch (err) {
       console.error("OCR Pre-check failed:", err);
@@ -128,8 +130,7 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
         reader.onloadend = () => {
           processImage(reader.result as string);
         };
-        reader.readAsDataURL(blob);
-        break;
+        reader.readAsDataURL(blob as Blob);
       }
     }
   }, [processImage]);
@@ -144,6 +145,44 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executedTradeId, setExecutedTradeId] = useState<string | null>(null);
+
+  const handleExecuteTrade = async () => {
+    if (!result || !auth.currentUser) return;
+    
+    setIsExecuting(true);
+    try {
+      const isShort = result.dayType?.includes('SHORT') || result.dayType === 'DISTRIBUTION';
+      
+      let screenshotUrl = '';
+      if (lastImage) {
+        const uploadResult = await uploadScreenshotAndSaveSetup(auth.currentUser.uid, lastImage, result, 'morning', ocrResult);
+        if (uploadResult) screenshotUrl = uploadResult.url;
+      }
+
+      const trade: Omit<Trade, 'id'> = {
+        date: new Date().toISOString().split('T')[0],
+        direction: isShort ? 'SHORT' : 'LONG',
+        dayType: result.dayType,
+        entryPrice: result.suggestedEntry || 0,
+        stopPrice: result.suggestedStop || 0,
+        targetPrice: result.suggestedTarget || 0,
+        contracts: 1, 
+        status: 'EXECUTED',
+        timestamp: Date.now(),
+        screenshotUrl,
+      };
+
+      const tradeId = await addTrade(trade);
+      if (tradeId) setExecutedTradeId(tradeId);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   const confirmDayType = async () => {
     if (result) {
       onUpdate({ 
@@ -155,9 +194,11 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
       if (session.aiSettings?.ragEnabled && user && lastImage) {
         setIsUploading(true);
         try {
-          await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'morning', ocrResult);
-          setUploadSuccess(true);
-          setTimeout(() => setUploadSuccess(false), 3000);
+          const uploadResult = await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'morning', ocrResult);
+          if (uploadResult) {
+            setUploadSuccess(true);
+            setTimeout(() => setUploadSuccess(false), 3000);
+          }
         } catch (e) {
           console.error("Failed to upload screenshot to cloud", e);
         } finally {
@@ -177,7 +218,29 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
       <header className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Morning Analysis</h2>
-          <p className="text-sm text-stone-500 font-mono uppercase">10:10 AM EDT Chart Review</p>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-sm text-stone-500 font-mono uppercase">10:10 AM {session.aiSettings?.morningTimeZone || 'EDT'} Chart Review</p>
+            <div className="flex bg-stone-100 dark:bg-stone-800 p-0.5 rounded border border-line">
+              <button 
+                onClick={() => onUpdate({ aiSettings: { ...(session.aiSettings || {}), morningTimeZone: 'EST', temperature: session.aiSettings?.temperature ?? 0.1 } })}
+                className={cn(
+                  "px-2 py-0.5 text-[9px] font-mono transition-colors",
+                  (session.aiSettings?.morningTimeZone || 'EST') === 'EST' ? "bg-bg shadow-sm text-ink font-bold" : "text-stone-400"
+                )}
+              >
+                EST
+              </button>
+              <button 
+                onClick={() => onUpdate({ aiSettings: { ...(session.aiSettings || {}), morningTimeZone: 'PST', temperature: session.aiSettings?.temperature ?? 0.1 } })}
+                className={cn(
+                  "px-2 py-0.5 text-[9px] font-mono transition-colors",
+                  session.aiSettings?.morningTimeZone === 'PST' ? "bg-bg shadow-sm text-ink font-bold" : "text-stone-400"
+                )}
+              >
+                PST
+              </button>
+            </div>
+          </div>
         </div>
         <button 
           onClick={() => setShowSettings(!showSettings)}
@@ -401,28 +464,13 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold">Initialize Analysis</h3>
-                    <p className="text-sm text-stone-500">Paste (Ctrl+V) or upload a screenshot of your chart (9:30 AM - 10:10 AM EDT).</p>
+                    <p className="text-sm text-stone-500">Paste (Ctrl+V) or upload a screenshot of your chart.</p>
                   </div>
                   <div className="flex justify-center gap-4">
                     <label className="btn-primary px-8 py-3 cursor-pointer shadow-lg shadow-accent/20">
                       Select File
                       <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
                     </label>
-                  </div>
-                  <p className="text-[10px] font-mono opacity-40 uppercase tracking-widest">Direct Paste Supported from NinjaTrader / TradingView</p>
-                </div>
-              </div>
-            )}
-
-            {isPreChecking && (
-              <div className="card h-[400px] flex flex-col items-center justify-center p-8 relative overflow-hidden bg-stone-50 dark:bg-stone-900 border-2 border-line">
-                <div className="relative z-10 w-full max-w-lg space-y-6 text-center">
-                  <Loader2 className="w-12 h-12 text-accent animate-spin mx-auto" />
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-bold tracking-[0.2em] uppercase">
-                      Automated OCR Pre-Check
-                    </h2>
-                    <p className="text-xs font-mono uppercase opacity-60">Scanning image for chart metadata...</p>
                   </div>
                 </div>
               </div>
@@ -528,15 +576,17 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
             {result && !isAnalyzing && (
               <>
                 {lastImage && (
-                  <div className="card overflow-hidden border-line relative group shadow-2xl bg-neutral-900 flex justify-center">
-                    <img 
-                      src={lastImage} 
-                      alt="Analyzed Chart" 
-                      className="w-full max-h-[400px] object-contain opacity-95 group-hover:opacity-100 transition-opacity duration-500"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute top-4 left-4 px-4 py-1.5 bg-ink/90 text-bg text-[10px] font-mono uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-xl">
-                      Reference Chart: 09:30 - 11:00
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="card overflow-hidden border-line relative group shadow-lg bg-neutral-900 flex justify-center aspect-video">
+                      <img 
+                        src={lastImage} 
+                        alt="Analyzed Chart" 
+                        className="w-full h-full object-contain opacity-95 group-hover:opacity-100 transition-opacity duration-500"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute top-2 left-2 px-3 py-1 bg-ink/90 text-bg text-[8px] font-mono uppercase tracking-widest backdrop-blur-md border border-white/10">
+                        Primary Execution (5m)
+                      </div>
                     </div>
                   </div>
                 )}
@@ -634,8 +684,19 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                   <MonteCarloSection 
                     startPrice={result.suggestedEntry}
                     stopPrice={result.suggestedStop}
-                    targetPrice={result.suggestedTarget}
+                    targetPrice={result.suggestedTarget20R || result.suggestedTarget}
+                    targetPrice15R={result.suggestedTarget15R}
                   />
+                )}
+
+                {result.midnightAnalysis && (
+                  <div className="mt-8">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Moon className="w-4 h-4 text-accent" />
+                      <h3 className="text-sm font-mono uppercase tracking-widest italic">Systematic Midnight Review</h3>
+                    </div>
+                    <MidnightAnalysisView analysis={result.midnightAnalysis} />
+                  </div>
                 )}
               </>
             )}
@@ -711,9 +772,19 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                                     <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Stop Loss</p>
                                     <p className="text-xl font-bold text-red-500 font-mono tracking-tighter">{result.suggestedStop}</p>
                                   </div>
-                                  <div className="space-y-1">
-                                    <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Target (2.0R)</p>
-                                    <p className={cn("text-xl font-bold font-mono tracking-tighter", isShort ? "text-red-400" : "text-green-400")}>{result.suggestedTarget}</p>
+                                  <div className="space-y-4">
+                                    <div className="space-y-1">
+                                      <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Target 1.5R</p>
+                                      <p className={cn("text-xl font-bold font-mono tracking-tighter", isShort ? "text-red-400" : "text-green-400")}>
+                                        {result.suggestedTarget15R || (result.suggestedTarget ? (isShort ? result.suggestedEntry! - (Math.abs(result.suggestedEntry! - result.suggestedStop!) * 1.5) : result.suggestedEntry! + (Math.abs(result.suggestedEntry! - result.suggestedStop!) * 1.5)).toFixed(2) : 'N/A')}
+                                      </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Target 2.0R</p>
+                                      <p className={cn("text-xl font-bold font-mono tracking-tighter", isShort ? "text-red-400" : "text-green-400")}>
+                                        {result.suggestedTarget20R || result.suggestedTarget || 'N/A'}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -723,7 +794,9 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                                 <div className="grid grid-cols-3 gap-1.5">
                                   <div className="bg-white/5 p-2 rounded border border-white/10 text-center backdrop-blur-sm flex flex-col justify-center min-h-[50px]">
                                     <p className="text-[6px] opacity-40 uppercase tracking-widest mb-1">Confidence</p>
-                                    <p className="text-xs font-black">{(result.confidence * 100).toFixed(0)}%</p>
+                                    <p className="text-xs font-black">
+                                      {typeof result.confidence === 'number' ? (result.confidence * 100).toFixed(0) : result.confidence}%
+                                    </p>
                                   </div>
                                   <div className="bg-white/5 p-2 rounded border border-white/10 text-center backdrop-blur-sm flex flex-col justify-center min-h-[50px]">
                                     <p className="text-[6px] opacity-40 uppercase tracking-widest mb-1">Rejection</p>
@@ -742,9 +815,21 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                                 const text = `PLAN: ${result.dayType}\nENTRY: ${result.suggestedEntry}\nSTOP: ${result.suggestedStop}\nTARGET: ${result.suggestedTarget}`;
                                 navigator.clipboard.writeText(text);
                               }}
-                              className={cn("w-full py-4 text-black font-black text-xs uppercase tracking-[0.3em] transition-colors", bgClass, isShort ? "hover:bg-red-400" : "hover:bg-green-400")}
+                              className={cn("w-1/2 py-4 text-black font-black text-xs uppercase tracking-[0.3em] transition-colors border-r border-black/20", bgClass, isShort ? "hover:bg-red-400" : "hover:bg-green-400")}
                             >
-                              Copy Trade Plan
+                              Copy Plan
+                            </button>
+                            <button 
+                              onClick={handleExecuteTrade}
+                              disabled={isExecuting || !!executedTradeId}
+                              className={cn(
+                                "w-1/2 py-4 text-white font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2",
+                                isShort ? "bg-red-700 hover:bg-red-800" : "bg-green-700 hover:bg-green-800",
+                                (isExecuting || !!executedTradeId) && "opacity-50 cursor-not-allowed"
+                                )}
+                            >
+                              {isExecuting ? <Loader2 className="w-3 h-3 animate-spin" /> : executedTradeId ? <CheckCircle2 className="w-3 h-3" /> : <PlayCircle className="w-3 h-3" />}
+                              {executedTradeId ? 'Executed' : 'Execute'}
                             </button>
                           </div>
                         </>
@@ -837,26 +922,7 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
               </>
             )}
 
-            {/* Static Reference Cards */}
-            <div className="space-y-4">
-              <div className="card p-6 space-y-4 bg-stone-50 dark:bg-stone-900/30 border-line">
-                <h4 className="text-[10px] font-mono uppercase tracking-widest opacity-50 border-b border-line pb-2">Analysis Tips</h4>
-                <ul className="space-y-3 text-[10px] font-mono uppercase leading-relaxed">
-                  <li className="flex gap-3">
-                    <span className="text-accent font-bold">01.</span>
-                    <span className="opacity-70">Ensure 9:30 AM open is clearly visible.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-accent font-bold">02.</span>
-                    <span className="opacity-70">The AI looks for the "Staircase" pattern (HH/HL).</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-accent font-bold">03.</span>
-                    <span className="opacity-70">Type 2 setups require a small 9:30 bar.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+
           </div>
         </div>
 
