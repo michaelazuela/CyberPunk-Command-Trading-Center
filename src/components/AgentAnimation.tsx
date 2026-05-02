@@ -19,7 +19,7 @@ export default function AgentAnimation({ isAnalyzing, reports = [], currentStep 
   ];
 
   return (
-    <div className="relative h-64 w-full bg-stone-100 dark:bg-stone-900 border-2 border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden font-mono">
+    <div className="relative h-64 w-full bg-stone-100 dark:bg-[var(--s1)] border-2 border-[var(--b1)] rounded-lg overflow-hidden font-mono">
       {/* Retro Background Elements */}
       <div className="absolute bottom-0 w-full h-8 bg-stone-300 dark:bg-stone-800 flex items-center px-2 gap-1">
         {Array.from({ length: 20 }).map((_, i) => (

@@ -1,330 +1,582 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
-  --bg: #E4E3E0;
-  --ink: #141414;
-  --line: #141414;
-  --accent: #F27D26;
-  --card-bg: #FFFFFF;
-  --muted: #8E9299;
-  --base-font-size: 18px;
-}
-
-.dark {
-  --bg: #0A0A0A;
-  --ink: #E4E3E0;
-  --line: #2A2A2A;
-  --card-bg: #141414;
-  --muted: #6B7280;
-}
-
-.cyberpunk {
-  --bg: #020204;
-  --ink: #00ff41; /* Matrix Green */
-  --line: #ff0055; /* Cyber Pink */
-  --accent: #00f3ff; /* Neon Blue */
-  --card-bg: rgba(13, 13, 15, 0.9);
-  --muted: #bc00ff; /* Purple */
-  --glow: 0 0 15px rgba(0, 255, 65, 0.4);
-  --text-glow: 0 0 10px rgba(0, 255, 65, 0.5);
-}
-
-.cyberpunk body {
-  background-image: 
-    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)),
-    radial-gradient(circle at center, #111 0%, #000 100%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23ff0055' fill-opacity='0.05' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.31zM27.98 15L15 7.5V0h2v6.35l10.98 6.34v2.3zm0 18.5L15 41v8h2v-6.85l10.98-6.34v-2.31z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  background-size: 100% 2px, 3px 100%, 100% 100%, 28px 49px;
-  position: relative;
-}
-
-.cyberpunk body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
-    transparent 1px,
-    transparent 2px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-
-.cyberpunk .card {
-  background: var(--card-bg);
-  border: 1px solid var(--line);
-  box-shadow: inset 0 0 10px rgba(255, 0, 85, 0.1), 0 0 15px rgba(0, 0, 0, 0.5);
-  clip-path: polygon(
-    0 0, 
-    calc(100% - 15px) 0, 
-    100% 15px, 
-    100% 100%, 
-    15px 100%, 
-    0 calc(100% - 15px)
-  );
-  position: relative;
-}
-
-.cyberpunk .card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 30px;
-  height: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
-}
-
-.cyberpunk .btn-primary {
-  background: var(--ink);
-  color: #000;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  box-shadow: 0 0 20px var(--ink);
-  border: 1px solid var(--ink);
-  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
-}
-
-.cyberpunk .btn-primary:hover {
-  background: #fff;
-  box-shadow: 0 0 30px #fff;
-}
-
-.cyberpunk .btn-outline {
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  text-shadow: 0 0 5px var(--accent);
-  background: transparent;
-  clip-path: polygon(0 0, 90% 0, 100% 100%, 10% 100%);
-}
-
-.cyberpunk .btn-outline:hover {
-  background: var(--accent);
-  color: #000;
-  box-shadow: 0 0 20px var(--accent);
-}
-
-.cyberpunk h1, .cyberpunk h2, .cyberpunk h3 {
-  color: #fff;
-  text-shadow: 2px 2px var(--line), -2px -2px var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.cyberpunk .text-accent {
-  color: var(--accent) !important;
-  text-shadow: 0 0 8px var(--accent);
-}
-
-.cyberpunk .text-green-400, .cyberpunk .text-green-500, .cyberpunk .text-green-600 {
-  color: var(--ink) !important;
-  text-shadow: 0 0 10px var(--ink);
-}
-
-.cyberpunk .text-red-400, .cyberpunk .text-red-500, .cyberpunk .text-red-600 {
-  color: var(--line) !important;
-  text-shadow: 0 0 10px var(--line);
-}
-
-.cyberpunk input, .cyberpunk select, .cyberpunk textarea {
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid var(--muted);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  box-shadow: inset 0 0 5px var(--muted);
-}
-
-.cyberpunk .sidebar {
-  border-right: 2px solid var(--line);
-  background: #000;
-}
-
-.cyberpunk .nav-item-active {
-  background: var(--line) !important;
-  color: #fff !important;
-  box-shadow: 0 0 15px var(--line);
-}
-
-@keyframes glitch {
-  0% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-  100% { transform: translate(0); }
-}
-
-.glitch-text {
-  position: relative;
-}
-
-.glitch-text::before,
-.glitch-text::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.8;
-}
-
-.glitch-text::before {
-  color: var(--accent);
-  z-index: -1;
-  animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
-}
-
-.glitch-text::after {
-  color: var(--line);
-  z-index: -2;
-  animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse both infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite;
-}
-
-@keyframes grid-scroll {
-  0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
-  100% { transform: perspective(500px) rotateX(60deg) translateY(40px); }
-}
-
-.terminal-log {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 255, 65, 0.2);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  padding: 8px;
-  height: 100px;
-  overflow-y: hidden;
-  position: relative;
-}
-
-.terminal-log::before {
-  content: "SYSTEM_LOG_STREAM";
-  position: absolute;
-  top: -6px;
-  left: 10px;
-  background: #000;
-  padding: 0 4px;
-  color: var(--ink);
-  font-size: 7px;
-  letter-spacing: 1px;
-}
-
-.terminal-line {
-  display: block;
-  white-space: nowrap;
-  animation: typing 0.1s steps(20, end);
-}
-
-@keyframes typing {
-  from { width: 0 }
-  to { width: 100% }
+  --bg:     #080808;
+  --s1:     #0D0D0D;
+  --s2:     #111111;
+  --s3:     #161616;
+  --s4:     #1C1C1C;
+  --b0:     rgba(255,255,255,0.04);
+  --b1:     rgba(255,255,255,0.08);
+  --b2:     rgba(255,255,255,0.13);
+  --orange: #FF6B00;
+  --or-d:   rgba(255,107,0,0.10);
+  --or-g:   rgba(255,107,0,0.04);
+  --or-b:   rgba(255,107,0,0.20);
+  --green:  #22C55E;
+  --gn-d:   rgba(34,197,94,0.10);
+  --gn-b:   rgba(34,197,94,0.20);
+  --red:    #EF4444;
+  --rd-d:   rgba(239,68,68,0.10);
+  --rd-b:   rgba(239,68,68,0.20);
+  --amber:  #FFBA00;
+  --am-d:   rgba(255,186,0,0.10);
+  --am-b:   rgba(255,186,0,0.20);
+  --txt:  #F0F0F0;   /* primary — near white */
+  --txt2: #C0C0C0;   /* secondary — clearly readable */
+  --txt3: #808080;   /* tertiary labels — visible but subordinate */
+  --ease:   cubic-bezier(0.16,1,0.3,1);
+  --t:      160ms;
 }
 
 html {
-  font-size: var(--base-font-size);
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #F0F0F0;
+  font-family: 'JetBrains Mono', monospace;
   background-color: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Remove hardcoded !important overrides to allow scaling */
-.text-xs { font-size: 0.75rem; }
-.text-sm { font-size: 0.875rem; }
-.text-base { font-size: 1rem; }
-.text-lg { font-size: 1.125rem; }
-.text-xl { font-size: 1.25rem; }
-.text-2xl { font-size: 1.5rem; }
-.text-3xl { font-size: 1.875rem; }
+/* ── GLOBAL TYPE SCALE — overrides everything ── */
+/* Navigation */
+.brand                    { font-size: 14px; font-weight: 600; }
+.nav-tab                  { font-size: 12px; letter-spacing: 0.08em; }
+.live-badge               { font-size: 11px; }
+.nav-right                { font-size: 12px; }
 
-/* Custom utility overrides for the specific sizes used in the app */
-.text-\[10px\] { font-size: 0.625rem; }
-.text-\[9px\] { font-size: 0.5625rem; }
-.text-\[8px\] { font-size: 0.5rem; }
+/* Page headers */
+.page-title               { font-size: 20px; font-weight: 600; }
+.page-sub                 { font-size: 12px; letter-spacing: 0.08em; }
 
-.col-header {
-  font-family: 'Georgia', serif;
-  font-style: italic;
-  font-size: 14px; /* Increased */
-  opacity: 0.6;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--line);
-  padding: 0.5rem 0.75rem;
+/* KPI strip */
+.kpi-label                { font-size: 11px; letter-spacing: 0.12em; }
+.kpi-val                  { font-size: 28px; font-weight: 700; }
+.kpi-sub                  { font-size: 12px; }
+
+/* Card headers */
+.card-title               { font-size: 11px; letter-spacing: 0.12em; }
+
+/* ALL body content — this is the primary fix */
+p, li, td, span,
+.empty-sub, .upload-sub   { font-size: 14px; line-height: 1.7; }
+
+/* Rule block titles */
+.rule-block-title         { font-size: 13px; font-weight: 700; }
+
+/* Orange sub-category headers in Rules */
+.rule-cat-header          { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; }
+
+/* Table headers */
+th                        { font-size: 11px; letter-spacing: 0.12em; }
+
+/* Badges */
+.badge, .qd-badge         { font-size: 11px; height: 22px; padding: 0 9px; }
+
+/* Empty states */
+.empty-title              { font-size: 14px; font-weight: 600; }
+.empty-sub                { font-size: 13px; }
+
+/* Execution log */
+.log-prompt               { font-size: 13px; }
+
+/* Confidence table */
+.conf-table td            { font-size: 13px; padding: 8px 10px; }
+
+/* System info cells */
+.sysinfo-label            { font-size: 11px; }
+.sysinfo-val              { font-size: 14px; }
+
+* {
+  border-radius: 2px !important;
 }
 
-.data-value {
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: rgba(255,107,0,0.4) !important;
+  transition: border-color var(--t) var(--ease);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tabSwitchIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tabSwitchOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+.fade-up {
+  animation: fadeUp 400ms var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: .01ms !important;
+    transition: .01ms !important;
+  }
+}
+
+/* Card classes */
+.card-base {
+  background-color: var(--s1);
+  border: 1px solid var(--b1);
+  padding: 16px 18px;
+  transition: background-color var(--t) var(--ease);
+  position: relative;
+}
+
+.card-base:hover {
+  background-color: var(--s2);
+}
+
+.card-base::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid var(--orange);
+  border-right: 2px solid var(--orange);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.card-header {
   font-family: var(--font-mono);
-  letter-spacing: -0.02em;
-  font-size: 16px; /* Increased */
-}
-
-.status-badge {
-  font-family: var(--font-mono);
-  font-size: 13px; /* Increased */
-  padding: 4px 8px;
-  border: 1px solid currentColor;
+  font-weight: 600;
+  font-size: 10px;
   text-transform: uppercase;
+  color: var(--txt2);
+  letter-spacing: 0.12em;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--b0);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.btn-primary {
-  background: var(--ink);
-  color: var(--bg);
-  padding: 0.75rem 1.5rem; /* Larger padding */
+/* Badges */
+.qd-badge {
+  height: 20px;
+  padding: 0 7px;
   font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-transform: uppercase;
-  font-size: 16px; /* Increased */
-  cursor: pointer;
-  border: none;
-  transition: opacity 0.2s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
 }
+.qd-badge-green { background-color: var(--gn-d); color: var(--green); border-color: var(--gn-b); }
+.qd-badge-orange { background-color: var(--or-d); color: var(--orange); border-color: var(--or-b); }
+.qd-badge-red { background-color: var(--rd-d); color: var(--red); border-color: var(--rd-b); }
+.qd-badge-amber { background-color: var(--am-d); color: var(--amber); border-color: var(--am-b); }
+.qd-badge-muted { background-color: var(--b0); color: var(--txt2); border-color: var(--b1); }
 
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-outline {
-  border: 1px solid var(--ink);
-  padding: 0.5rem 1rem;
+/* Buttons */
+.qd-btn-primary {
+  background-color: var(--orange);
+  color: #000;
+  height: 34px;
+  padding: 0 16px;
   font-family: var(--font-mono);
-  text-transform: uppercase;
+  font-weight: 700;
   font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all var(--t) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+}
+.qd-btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: scale(0.97); }
+
+.qd-btn-ghost {
+  background-color: transparent;
+  color: var(--txt2);
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--b2);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all var(--t) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.qd-btn-ghost:hover:not(:disabled) { color: var(--txt); background-color: var(--b0); transform: scale(0.97); }
+
+.qd-btn-ghost-red {
+  background-color: transparent;
+  color: var(--red);
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--rd-b);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all var(--t) var(--ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.qd-btn-ghost-red:hover:not(:disabled) { background-color: var(--rd-d); transform: scale(0.97); }
+
+/* KPI Strip */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background-color: var(--b0);
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .kpi-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.kpi-cell {
+  background-color: var(--s1);
+  padding: 14px 18px;
+  transition: background-color var(--t) var(--ease);
+  display: flex;
+  flex-direction: column;
+}
+.kpi-cell:hover { background-color: var(--s2); }
+
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--txt3);
 }
 
-.btn-outline:hover {
-  background: var(--ink);
-  color: var(--bg);
+.kpi-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
 }
 
-.card {
-  background-color: var(--card-bg);
-  border: 1px solid var(--line);
+.kpi-sub {
+  font-size: 12px;
+  color: var(--txt2);
+  margin-top: 2px;
+}
+
+.kpi-featured {
+  border-top: 2px solid var(--orange);
+}
+
+/* Upload zone */
+.upload-zone {
+  background-color: var(--s1);
+  border: 1px dashed var(--b2);
+  transition: all var(--t) var(--ease);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+.upload-zone:hover {
+  background-color: var(--s2);
+  border-color: rgba(255,107,0,0.35);
+}
+.upload-zone:hover .upload-icon {
+  color: var(--orange);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 0;
+}
+.empty-state svg {
+  opacity: 0.5;
+  color: var(--txt3);
+  margin-bottom: 16px;
+  width: 32px;
+  height: 32px;
+}
+.empty-state h3 {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--txt2);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.empty-state p {
+  font-size: 9px;
+  color: var(--txt3);
+  max-width: 260px;
+  line-height: 1.7;
+}
+
+/* Execution Log */
+.exec-log {
+  background-color: var(--bg);
+  border: 1px solid var(--b1);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--txt2);
+  line-height: 1.8;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--txt3);
+  border-bottom: 1px solid var(--b1);
+  padding: 10px 14px;
+  text-align: left;
+}
+td {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--txt2);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--b0);
+  padding: 10px 14px;
+}
+tr:hover td {
+  background-color: var(--or-g);
+}
+
+/* Rule Block (Highlighted) */
+.rule-block {
+  border-left: 2px solid var(--orange);
+  background-color: var(--or-g);
+  padding: 10px 14px;
+  border-radius: 0 2px 2px 0 !important;
+}
+.rule-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--orange);
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.rule-body {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 9px;
+  color: var(--txt);
+  line-height: 1.7;
+}
+
+/* Page Header Standard */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--b0);
+}
+.page-header h1 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--txt);
+  margin-bottom: 2px;
+}
+.page-header p {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--txt2);
+}
+
+.nav-tab { font-size: 11px; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FIX 3 — SETTINGS TAB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Settings section headers */
+.settings-section-title,
+.ui-preferences-title,
+.system-config-title,
+[class*="settings"] h2,
+[class*="settings"] h3    { font-size: 13px !important; font-weight: 700 !important;
+                             color: var(--txt3) !important; letter-spacing: 0.12em !important;
+                             text-transform: uppercase !important; }
+
+/* Setting row labels */
+.setting-label,
+[class*="setting"] label,
+[class*="setting"] .label { font-size: 14px !important; color: var(--txt) !important; }
+
+/* Setting row sub-labels */
+.setting-sub,
+[class*="setting"] .sub,
+[class*="setting"] small  { font-size: 12px !important; color: var(--txt2) !important; }
+
+/* Input fields */
+input[type="text"],
+input[type="number"],
+select                    { font-size: 14px !important; color: var(--txt) !important;
+                             background: var(--s3) !important;
+                             border: 1px solid var(--b2) !important; }
+
+/* Color theme dropdown */
+select option             { background: var(--s3) !important; color: var(--txt) !important; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FIX 4 — RULES TAB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Card section headers (ORDER BLOCK, CONFIRMATION BAR, etc.) */
+.card-title,
+.card-header,
+[class*="card"] h3,
+[class*="card"] h4,
+[class*="section-title"]  { font-size: 13px !important; font-weight: 700 !important;
+                             color: var(--txt3) !important; letter-spacing: 0.12em !important;
+                             text-transform: uppercase !important; }
+
+/* Orange rule block titles (THE 61.8% GOLDEN RATIO, etc.) */
+.rule-block-title,
+[class*="rule-title"],
+[class*="highlight"] h4,
+[class*="orange-title"]   { font-size: 14px !important; font-weight: 700 !important;
+                             color: var(--orange) !important; letter-spacing: 0.08em !important; }
+
+/* Rule block subtitle/trigger description */
+.rule-block-subtitle,
+[class*="rule-block"] > p { font-size: 13px !important; color: var(--txt2) !important;
+                             line-height: 1.6 !important; }
+
+/* Sub-section labels (Execution Rules:, Sweep & Reclaim Mechanics:) */
+.rule-sub-header,
+[class*="rule"] h5,
+[class*="rule"] strong    { font-size: 14px !important; color: var(--txt) !important;
+                             font-weight: 700 !important; }
+
+/* Bullet / list items */
+.rule-item,
+[class*="rule"] li,
+[class*="rule"] p,
+[class*="execution"] li   { font-size: 14px !important; color: var(--txt2) !important;
+                             line-height: 1.75 !important; }
+
+/* Arrow bullets */
+.rule-arrow,
+[class*="rule"] li::before { color: var(--orange) !important; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FIX 5 — HISTORY TAB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* KPI strip labels (WIN RATE, AVG EXPECTANCY, TOTAL FILLS) */
+.kpi-label,
+[class*="kpi"] .label,
+[class*="stat"] .label    { font-size: 12px !important; color: var(--txt3) !important;
+                             letter-spacing: 0.12em !important;
+                             text-transform: uppercase !important; }
+
+/* KPI values (0.0%, $0.00, 0) */
+.kpi-val,
+.kpi-value,
+[class*="kpi"] .value,
+[class*="stat"] .value    { font-size: 28px !important; color: var(--txt) !important;
+                             font-weight: 700 !important; line-height: 1.1 !important;
+                             font-variant-numeric: tabular-nums !important; }
+
+/* Execution Log header */
+.exec-log-title,
+[class*="execution-log"] h3,
+[class*="log"] .title     { font-size: 13px !important; color: var(--txt3) !important;
+                             letter-spacing: 0.12em !important; text-transform: uppercase !important; }
+
+/* Empty state — No Trades Recorded */
+.empty-title,
+[class*="empty"] h3,
+[class*="no-trades"]      { font-size: 16px !important; color: var(--txt2) !important;
+                             font-weight: 700 !important; letter-spacing: 0.08em !important; }
+
+.empty-sub,
+[class*="empty"] p,
+[class*="no-trades"] + p  { font-size: 13px !important; color: var(--txt3) !important;
+                             line-height: 1.7 !important; }
+
+/* Table headers */
+table th                  { font-size: 11px !important; color: var(--txt3) !important;
+                             letter-spacing: 0.12em !important;
+                             text-transform: uppercase !important;
+                             border-bottom: 1px solid var(--b1) !important; }
+
+/* Table cells */
+table td                  { font-size: 14px !important; color: var(--txt2) !important;
+                             border-bottom: 1px solid var(--b0) !important; }
+
+/* Export Log / Manual Entry buttons top-right */
+.btn-ghost,
+[class*="export-btn"],
+[class*="manual-entry"]   { font-size: 12px !important; color: var(--txt2) !important; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FIX 6 — GLOBAL CATCH-ALL (paste last)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Any text still below 12px gets bumped up */
+*:not(svg):not(path):not(circle):not(line):not(rect) {
+  min-height: 0;
+}
+p, span, div, li, td, th, label, button, input, select, textarea {
+  font-size: max(12px, 14px) !important;
+}
+/* But preserve these intentionally small elements */
+.corner, .dot, [class*="corner-mark"] {
+  font-size: inherit !important;
 }

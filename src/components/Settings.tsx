@@ -1,42 +1,26 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+import React, { useState } from 'react';
 import { SessionState } from '../types';
-import { Settings as SettingsIcon, Save, RefreshCw, Type } from 'lucide-react';
-import { useState } from 'react';
 
 export default function Settings({ 
   session, 
-  onUpdate,
-  fontSize,
-  onFontSizeChange
+  onUpdate
 }: { 
   session: SessionState, 
-  onUpdate: (updates: Partial<SessionState>) => void,
-  fontSize: number,
-  onFontSizeChange: (size: number) => void
+  onUpdate: (updates: Partial<SessionState>) => void
 }) {
-  const [equity, setEquity] = useState(session.accountEquity);
-  const [risk, setRisk] = useState(session.riskPercent * 100);
+  const [equity, setEquity] = useState(session.accountEquity || 100000);
+  const [risk, setRisk] = useState((session.riskPercent || 0.02) * 100);
+  const [theme, setTheme] = useState('DARK'); // Dummy state for visual
 
   const handleSave = () => {
     onUpdate({ 
       accountEquity: equity, 
-      riskPercent: risk / 100,
-      aiSettings: {
-        ...session.aiSettings,
-        screenshotTimezone: localTimezone,
-        temperature: session.aiSettings?.temperature || 0
-      }
+      riskPercent: risk / 100
     });
   };
 
-  const [localTimezone, setLocalTimezone] = useState<any>(session.aiSettings?.screenshotTimezone || 'EST');
-
   const handleReset = () => {
-    if (confirm('Are you sure you want to reset the current session? This will clear all trades and day classification.')) {
+    if (confirm('Are you sure you want to reset the current session?')) {
       onUpdate({
         dayType: undefined,
         trades: [],
@@ -46,135 +30,70 @@ export default function Settings({
   };
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        <p className="text-sm text-stone-500 font-mono uppercase">System Configuration & Account Parameters</p>
+    <div className="space-y-6 fade-up">
+      <header className="page-header">
+        <div>
+          <h1>Settings</h1>
+          <p>PREFERENCES & SYSTEM INTEGRATION</p>
+        </div>
       </header>
 
-      <div className="card p-8 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h3 className="text-sm font-mono uppercase border-b border-line pb-2 flex items-center gap-2">
-              <SettingsIcon className="w-4 h-4" />
-              Account Parameters
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase opacity-50">Account Equity ($)</label>
-                <input 
-                  type="number" 
-                  value={equity} 
-                  onChange={e => setEquity(parseFloat(e.target.value))}
-                  className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-sm focus:outline-none focus:border-accent"
-                />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: UI Preferences */}
+        <div className="card-base flex flex-col">
+           <div className="card-header border-none">
+              <span>UI Preferences</span>
+           </div>
+           
+           <div className="space-y-6 flex-1 px-4 pb-4">
+              <div className="gap-2 flex flex-col">
+                 <label className="text-[10px] font-mono text-[var(--txt2)] uppercase">Color Theme</label>
+                 <select 
+                   value={theme}
+                   onChange={e => setTheme(e.target.value)}
+                   className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[12px] font-mono focus:outline-none"
+                 >
+                    <option value="DARK">Dark Mode (Strict)</option>
+                    <option value="LIGHT" disabled>Light Mode (Unavailable)</option>
+                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase opacity-50">Risk Per Trade (%)</label>
-                <input 
-                  type="number" 
-                  value={risk} 
-                  onChange={e => setRisk(parseFloat(e.target.value))}
-                  className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-sm focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase opacity-50">Default OCR Timezone</label>
-                <select 
-                  className="w-full bg-stone-50 dark:bg-stone-900 border border-line p-2 font-mono text-sm focus:outline-none focus:border-accent"
-                  value={localTimezone}
-                  onChange={e => setLocalTimezone(e.target.value)}
-                >
-                  <option value="EST">EST (New York)</option>
-                  <option value="CST">CST (Chicago)</option>
-                  <option value="MST">MST (Denver)</option>
-                  <option value="PST">PST (Los Angeles)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-mono uppercase border-b border-line pb-2 flex items-center gap-2">
-              <Type className="w-4 h-4" />
-              Accessibility
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-mono uppercase opacity-50">Base Font Size ({fontSize}px)</label>
-                  <span className="text-[10px] font-mono text-accent">Recommended: 18px - 24px</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="14" 
-                  max="32" 
-                  step="1"
-                  value={fontSize} 
-                  onChange={e => onFontSizeChange(parseInt(e.target.value))}
-                  className="w-full h-2 bg-stone-200 dark:bg-stone-800 rounded-lg appearance-none cursor-pointer accent-accent"
-                />
-                <div className="flex justify-between text-[8px] font-mono opacity-30 uppercase">
-                  <span>Small</span>
-                  <span>Normal</span>
-                  <span>Large</span>
-                  <span>Extra Large</span>
-                </div>
-              </div>
-              <p className="text-xs text-stone-500 leading-relaxed italic">
-                Adjust the slider to increase the readability of all system components, logs, and analysis results.
-              </p>
-            </div>
-          </div>
+           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h3 className="text-sm font-mono uppercase border-b border-line pb-2 flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Session Control
-            </h3>
-            <div className="space-y-4">
-              <p className="text-xs text-stone-500 leading-relaxed">
-                Resetting the session will clear the current day's classification and all trade records. 
-                Use this at the start of a new trading day.
-              </p>
-              <button onClick={handleReset} className="btn-outline w-full text-red-600 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/20">
-                Reset Current Session
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Right: System Configuration */}
+        <div className="card-base flex flex-col">
+           <div className="card-header border-none">
+              <span>System Configuration</span>
+           </div>
 
-        <div className="pt-6 border-t border-line">
-          <button onClick={handleSave} className="btn-primary flex items-center gap-2">
-            <Save className="w-4 h-4" />
-            Save Configuration
-          </button>
+           <div className="space-y-6 flex-1 px-4 pb-4">
+              <div className="gap-2 flex flex-col">
+                 <label className="text-[10px] font-mono text-[var(--txt2)] uppercase">Account Equity</label>
+                 <input 
+                   type="number" 
+                   value={equity} 
+                   onChange={e => setEquity(parseFloat(e.target.value))}
+                   className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[12px] font-mono focus:outline-none"
+                 />
+              </div>
+
+              <div className="gap-2 flex flex-col">
+                 <label className="text-[10px] font-mono text-[var(--txt2)] uppercase">Risk Per Trade (%)</label>
+                 <input 
+                   type="number" 
+                   value={risk} 
+                   onChange={e => setRisk(parseFloat(e.target.value))}
+                   className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[12px] font-mono focus:outline-none"
+                 />
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-[var(--b0)]">
+                 <button onClick={handleSave} className="qd-btn-primary flex-1">SAVE CONFIG</button>
+                 <button onClick={handleReset} className="qd-btn-ghost-red flex-1 text-[var(--red)] border-[var(--red)] border">RESET SESSION</button>
+              </div>
+           </div>
         </div>
       </div>
-
-      <section className="bg-stone-100 dark:bg-stone-900 border border-line p-6">
-        <h3 className="text-[10px] font-mono uppercase opacity-50 mb-4">System Information</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[10px] font-mono uppercase">
-          <div>
-            <p className="opacity-50">Version</p>
-            <p className="font-bold">1.0.0-PROD</p>
-          </div>
-          <div>
-            <p className="opacity-50">Engine</p>
-            <p className="font-bold">Gemini 3 Flash</p>
-          </div>
-          <div>
-            <p className="opacity-50">Strategy</p>
-            <p className="font-bold">MES/MNQ Pullback</p>
-          </div>
-          <div>
-            <p className="opacity-50">Last Update</p>
-            <p className="font-bold">Apr 11, 2026</p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

@@ -16,7 +16,7 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Stat */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card-bg/50 border border-line p-4 rounded-lg">
+        <div className="bg-[var(--s1)] border border-[var(--b1)] p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
             <Moon className="w-4 h-4 text-accent" />
             <span className="text-xs font-mono text-gray-500 uppercase">Midnight Level</span>
@@ -27,7 +27,7 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
           </p>
         </div>
 
-        <div className="bg-card-bg/50 border border-line p-4 rounded-lg">
+        <div className="bg-[var(--s1)] border border-[var(--b1)] p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-4 h-4 text-accent" />
             <span className="text-xs font-mono text-gray-500 uppercase">Session Role</span>
@@ -38,9 +38,9 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
           <p className="text-[10px] font-mono text-gray-500 mt-1">Classification based on RTH price action</p>
         </div>
 
-        <div className="bg-card-bg/50 border border-line p-4 rounded-lg">
+        <div className="bg-[var(--s1)] border border-[var(--b1)] p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
-            <ShieldAlert className="w-4 h-4 text-yellow-500" />
+            <ShieldAlert className="w-4 h-4 text-[var(--accent)]" />
             <span className="text-xs font-mono text-gray-500 uppercase">Wick Filter Veto</span>
           </div>
           <div className="flex items-center gap-2">
@@ -56,8 +56,8 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
       </div>
 
       {/* Logic Breakdown */}
-      <div className="bg-card-bg border border-line rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-line bg-card-bg/50 flex items-center justify-between">
+      <div className="bg-black border border-[var(--b1)] rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-[var(--b1)] bg-[var(--s1)] flex items-center justify-between">
           <h3 className="text-sm font-mono uppercase tracking-widest italic flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-accent" />
             Midnight Interaction Log
@@ -71,8 +71,8 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
                 <span className="text-[10px] font-mono text-gray-400 uppercase w-20">{interaction.session}</span>
                 <span className={cn(
                   "text-[10px] font-bold uppercase px-2 py-0.5 rounded",
-                  interaction.type === 'WICK_REJECTION' ? 'bg-yellow-500/10 text-yellow-500' :
-                  interaction.type === 'CLOSE_BEYOND' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+                  interaction.type === 'WICK_REJECTION' ? 'bg-orange-500/10 text-orange-500' :
+                  interaction.type === 'CLOSE_BEYOND' ? 'bg-red-500/10 text-red-500' : 'bg-[var(--accent)]/10 text-[var(--accent)]'
                 )}>
                   {interaction.type.replace('_', ' ')}
                 </span>
@@ -101,7 +101,7 @@ export default function MidnightAnalysisView({ analysis }: { analysis: AnalysisR
               "p-5 rounded-xl border transition-all duration-300",
               proposal.recommendation.includes('RECOMMENDED') 
                 ? 'bg-accent/10 border-accent shadow-[0_0_20px_rgba(var(--accent-rgb),0.1)]' 
-                : 'bg-card-bg border-line opacity-80 hover:opacity-100'
+                : 'bg-[var(--s1)] border-[var(--b1)] opacity-80 hover:opacity-100'
             )}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-2xl font-bold font-mono text-accent">Option {proposal.option}</span>

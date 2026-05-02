@@ -1,35 +1,9 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
-import {
-  LayoutDashboard, 
-  BarChart3, 
-  ShieldAlert, 
-  History, 
-  Settings as SettingsIcon,
-  TrendingUp,
-  AlertTriangle,
-  Clock,
-  DollarSign,
-  BookOpen,
-  Sun,
-  Moon,
-  Zap,
-  LogIn,
-  LogOut
-} from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from './lib/supabase';
+import { AlertTriangle } from 'lucide-react';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { cn } from './lib/utils';
-import { SessionState, Trade, DayType, AppState, ProposedRule } from './types';
+import { SessionState, Trade, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
 import Dashboard from './components/Dashboard';
 import Analysis from './components/Analysis';
@@ -39,58 +13,24 @@ import Settings from './components/Settings';
 import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
 
-import { subscribeToTrades, deleteTrade, addTrade as addSupabaseTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
+import { subscribeToTrades, deleteTrade, addTrade as addFirestoreTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'cyberpunk'>(() => {
-    const saved = localStorage.getItem('mes_theme');
-    return (saved as 'light' | 'dark' | 'cyberpunk') || 'light';
-  });
-  const [fontSize, setFontSize] = useState(() => {
-    const saved = localStorage.getItem('mes_font_size');
-    return saved ? parseInt(saved) : 18;
-  });
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      testFirestoreConnection();
-
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get('code');
-      const oauthError = url.searchParams.get('error_description') || url.hash.match(/error_description=([^&]+)/)?.[1];
-
-      if (oauthError) {
-        console.error('OAuth sign-in failed:', decodeURIComponent(oauthError));
-      }
-
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          console.error('OAuth session exchange failed:', error);
-        } else {
-          window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
-        }
-      }
-
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    testFirestoreConnection();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (user) {
-      const unsubscribe = subscribeToTrades(user.id, (trades) => {
+      const unsubscribe = subscribeToTrades(user.uid, (trades) => {
         setCloudTrades(trades);
       });
       return () => unsubscribe();
@@ -100,20 +40,12 @@ export default function App() {
   }, [user]);
 
   const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
     try {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error('Error signing in:', error);
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
   };
 
   const [appState, setAppState] = useState<AppState>(() => {
@@ -123,8 +55,8 @@ export default function App() {
     const initialSession: SessionState = {
       date: new Date().toISOString().split('T')[0],
       trades: [],
-      accountEquity: 5000,
-      riskPercent: 0.02,
+      accountEquity: 50000,
+      riskPercent: 0.01,
       killSwitches: { losses: 0, fills: 0 },
       aiSettings: { temperature: 0.1, customInstructions: '' }
     };
@@ -140,19 +72,6 @@ export default function App() {
     localStorage.setItem('mes_trading_app_state', JSON.stringify(appState));
   }, [appState]);
 
-  useEffect(() => {
-    localStorage.setItem('mes_theme', theme);
-    document.documentElement.classList.remove('dark', 'cyberpunk');
-    if (theme !== 'light') {
-      document.documentElement.classList.add(theme);
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem('mes_font_size', fontSize.toString());
-    document.documentElement.style.setProperty('--base-font-size', `${fontSize}px`);
-  }, [fontSize]);
-
   const updateSession = (updates: Partial<SessionState>) => {
     setAppState(prev => ({
       ...prev,
@@ -162,7 +81,7 @@ export default function App() {
 
   const addTrade = async (trade: Trade) => {
     if (user) {
-      await addSupabaseTrade(trade);
+      await addFirestoreTrade(trade);
     } else {
       setAppState(prev => ({
         ...prev,
@@ -198,7 +117,6 @@ export default function App() {
   const updateTrade = async (id: string, updates: Partial<Trade>) => {
     if (user) {
       const { status, ...rest } = updates;
-      // We use helper if status is modified, but updateTradeStatus also allows extra fields
       await updateTradeStatus(id, status || 'OPEN', rest);
     } else {
       setAppState(prev => {
@@ -238,138 +156,73 @@ export default function App() {
                                 currentFills >= SYSTEM_RULES.KILL_SWITCH_FILLS;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--ink)]">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-line bg-[var(--card-bg)] flex flex-col">
-        <div className="p-6 border-b border-line">
-          <h1 className="text-xl font-bold tracking-tighter flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-accent" />
-            MES/MNQ
-          </h1>
-          <p className="text-[10px] font-mono opacity-50 uppercase mt-1">Trading System v1.0</p>
+    <div className="flex flex-col h-screen overflow-hidden bg-[var(--bg)] text-[var(--txt)] text-[14px]">
+      {/* Top Navigation Bar */}
+      <header className="flex items-center justify-between bg-[#0D0D0D] border-b border-[var(--b1)] h-[44px] px-6 shrink-0 z-50 relative">
+        <div className="flex items-center gap-8 h-full">
+          {/* Logo */}
+          <div className="font-sans font-semibold text-[13px] text-[var(--txt)] flex items-center">
+            QUANT<span className="text-[var(--orange)] mx-[2px]">•</span>DESK
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex items-center h-full space-x-6 shrink-0">
+            <TopNavItem label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+            <TopNavItem label="Analysis" active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
+            <TopNavItem label="Lunch Reversal" active={activeTab === 'lunch'} onClick={() => setActiveTab('lunch')} />
+            <TopNavItem label="Trade Desk" active={activeTab === 'trade'} disabled={!appState.currentSession.dayType || isKillSwitchTriggered} onClick={() => setActiveTab('trade')} />
+            <TopNavItem label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+            <TopNavItem label="Rules" active={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
+            <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          </nav>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          <NavItem 
-            icon={<LayoutDashboard className="w-4 h-4" />} 
-            label="Dashboard" 
-            active={activeTab === 'dashboard'} 
-            onClick={() => setActiveTab('dashboard')} 
-          />
-          <NavItem 
-            icon={<BarChart3 className="w-4 h-4" />} 
-            label="Morning Analysis" 
-            active={activeTab === 'analysis'} 
-            onClick={() => setActiveTab('analysis')} 
-          />
-          <NavItem 
-            icon={<Zap className="w-4 h-4" />} 
-            label="Lunch Reversal" 
-            active={activeTab === 'lunch'} 
-            onClick={() => setActiveTab('lunch')} 
-          />
-          <NavItem 
-            icon={<ShieldAlert className="w-4 h-4" />} 
-            label="Trade Manager" 
-            active={activeTab === 'trade'} 
-            onClick={() => setActiveTab('trade')} 
-            disabled={!appState.currentSession.dayType || isKillSwitchTriggered}
-          />
-          <NavItem 
-            icon={<History className="w-4 h-4" />} 
-            label="Trade Log" 
-            active={activeTab === 'history'} 
-            onClick={() => setActiveTab('history')} 
-          />
-          <NavItem 
-            icon={<BookOpen className="w-4 h-4" />} 
-            label="System Rules" 
-            active={activeTab === 'rules'} 
-            onClick={() => setActiveTab('rules')} 
-          />
-          <div className="pt-4 mt-4 border-t border-line space-y-2">
-            {user ? (
-              <div className="px-4 py-2">
-                <p className="text-[10px] font-mono opacity-50 uppercase truncate">User: {user.email}</p>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 py-2 text-sm font-mono uppercase transition-colors text-red-500 hover:text-red-400 mt-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-mono uppercase transition-colors text-green-500 hover:text-green-400 hover:bg-stone-200 dark:hover:bg-stone-800"
-              >
-                <LogIn className="w-4 h-4" />
-                Login
-              </button>
-            )}
-            <NavItem 
-              icon={<SettingsIcon className="w-4 h-4" />} 
-              label="Settings" 
-              active={activeTab === 'settings'} 
-              onClick={() => setActiveTab('settings')} 
-            />
-            <button
-              onClick={() => {
-                if (theme === 'light') setTheme('dark');
-                else if (theme === 'dark') setTheme('cyberpunk');
-                else setTheme('light');
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm font-mono uppercase transition-colors text-ink hover:bg-stone-200 dark:hover:bg-stone-800"
-            >
-              {theme === 'light' && <Sun className="w-4 h-4" />}
-              {theme === 'dark' && <Moon className="w-4 h-4" />}
-              {theme === 'cyberpunk' && <Zap className="w-4 h-4 text-accent" />}
-              Theme: {theme}
-            </button>
-          </div>
-        </nav>
+        {/* Right side */}
+        <div className="flex items-center gap-4 shrink-0">
+           {isKillSwitchTriggered && (
+             <span className="qd-badge qd-badge-red flex items-center gap-1">
+               <AlertTriangle className="w-3 h-3" /> KILL SWITCH
+             </span>
+           )}
+           <div className="qd-badge qd-badge-orange flex items-center gap-1.5 px-2">
+             <div className="w-1.5 h-1.5 rounded-full bg-[var(--orange)] animate-pulse"></div>LIVE
+           </div>
+           
+           <div className="text-[10px] font-mono text-[var(--txt)] uppercase">
+             MES/MNQ
+           </div>
+           
+           <div className="text-[10px] font-mono uppercase">
+             <span className="text-[var(--txt2)]">NLV: </span>
+             <span className="text-[var(--txt)] font-bold">${appState.currentSession.accountEquity.toLocaleString()}</span>
+           </div>
 
-        {isKillSwitchTriggered && (
-          <div className="p-4 m-4 bg-red-100 border border-red-500 text-red-700">
-            <div className="flex items-center gap-2 font-bold text-xs uppercase mb-1">
-              <AlertTriangle className="w-4 h-4" />
-              Kill Switch Active
-            </div>
-            <p className="text-[10px]">Session ended. Daily limits reached.</p>
-          </div>
-        )}
-
-        <div className="p-4 border-t border-line bg-stone-50 dark:bg-stone-900/50">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] font-mono opacity-50 uppercase">Account Equity</span>
-            <span className="text-xs font-mono font-bold">${appState.currentSession.accountEquity.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-mono opacity-50 uppercase">Risk (2%)</span>
-            <span className="text-xs font-mono font-bold text-red-600">-${(appState.currentSession.accountEquity * appState.currentSession.riskPercent).toLocaleString()}</span>
-          </div>
+           <div className="text-[10px] font-mono text-[var(--txt2)] truncate max-w-[120px] ml-2 uppercase flex items-center gap-2">
+             {user ? user.email?.split('@')[0] : 'MICHAELAZUE'}
+             <button onClick={user ? () => auth.signOut() : handleLogin} className="hover:text-[var(--txt)] ml-1">
+               {user ? '(LOGOUT)' : '(LOGIN)'}
+             </button>
+           </div>
         </div>
-      </aside>
+      </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
+        <div className="w-full pb-12">
           {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateTrade={updateTrade} />}
           {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} />}
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} />}
           {activeTab === 'trade' && <TradeManager session={{ ...appState.currentSession, trades: currentTrades }} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
           {activeTab === 'history' && <TradeLog trades={displayTrades} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} onDeleteTrade={removeTrade} />}
           {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
-          {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} fontSize={fontSize} onFontSizeChange={setFontSize} />}
+          {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} />}
         </div>
       </main>
     </div>
   );
 }
 
-function NavItem({ icon, label, active, onClick, disabled }: { 
-  icon: React.ReactNode, 
+function TopNavItem({ label, active, onClick, disabled }: { 
   label: string, 
   active: boolean, 
   onClick: () => void,
@@ -380,14 +233,17 @@ function NavItem({ icon, label, active, onClick, disabled }: {
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-2 text-sm font-mono uppercase transition-all duration-200",
-        active ? "nav-item-active text-bg" : "text-ink hover:bg-stone-200 dark:hover:bg-stone-800",
-        disabled && "opacity-30 cursor-not-allowed"
+        "relative h-full flex items-center nav-tab font-mono tracking-[0.1em] transition-colors uppercase",
+        active ? "text-[var(--txt)]" : "text-[var(--txt2)] hover:text-[var(--txt)]",
+        disabled && "opacity-30 cursor-not-allowed hover:text-[var(--txt2)]"
       )}
     >
-      {icon}
       {label}
+      {/* Animated underline */}
+      <div className={cn(
+        "absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--orange)] transition-transform ease-[var(--ease)] duration-[var(--t)] origin-left",
+        active ? "scale-x-100" : "scale-x-0"
+      )}></div>
     </button>
   );
 }
-

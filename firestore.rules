@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Helper functions
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.email_verified == true;
     }
 
     function isOwner(userId) {
@@ -29,7 +29,8 @@ service cloud.firestore {
 
     // SETUPS Rules
     match /setups/{setupId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && isOwner(incoming().userId) && isValidSetup(incoming());
       allow update: if isSignedIn() && isOwner(existing().userId) && isValidSetup(incoming());
       allow delete: if isSignedIn() && isOwner(existing().userId);
@@ -46,15 +47,15 @@ service cloud.firestore {
 
     // TRADES Rules
     match /trades/{tradeId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId); // Enforce ownership on read
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid; // Secure list queries
-      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidTrade(incoming());
-      allow update: if isSignedIn() && isOwner(existing().userId) && (
+      allow get: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow list: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.auth.uid == incoming().userId && isValidTrade(incoming());
+      allow update: if isSignedIn() && request.auth.uid == existing().userId && (
         // Action: Update Status
         (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'exitPrice', 'pnl', 'updatedAt', 'notes', 'exitReason'])) && 
         isValidTrade(incoming())
       );
-      allow delete: if isSignedIn() && isOwner(existing().userId);
+      allow delete: if isSignedIn() && request.auth.uid == existing().userId;
     }
 
     function isValidTrade(data) {

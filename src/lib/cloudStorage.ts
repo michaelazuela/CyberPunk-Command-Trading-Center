@@ -1,4 +1,6 @@
-import { supabase, handleSupabaseError, OperationType } from './supabase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { storage, db, handleFirestoreError, OperationType } from './firebase';
 import { AnalysisResult } from '../types';
 
 export async function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.6): Promise<string> {
@@ -46,60 +48,39 @@ export async function uploadScreenshotAndSaveSetup(
     // 2. Convert timestamp for unique filename
     const timestamp = new Date().getTime();
     // Using .jpg since we compress to JPEG
-    const filename = `${userId}/${timestamp}_${imageType}.jpg`;
+    const filename = `screenshots/${userId}/${timestamp}_${imageType}.jpg`;
+    const storageRef = ref(storage, filename);
     
-    // 3. Upload Compressed Image to Supabase Storage
-    const file = await dataUrlToBlob(compressedImage);
-    const { error: uploadError } = await supabase.storage
-      .from('screenshots')
-      .upload(filename, file, {
-        contentType: 'image/jpeg',
-        upsert: false
-      });
+    // 3. Upload Compressed Image to Firebase Storage
+    await uploadString(storageRef, compressedImage, 'data_url');
     
-    if (uploadError) throw uploadError;
+    // 4. Get Download URL
+    const downloadURL = await getDownloadURL(storageRef);
     
-    // 4. Create a time-limited signed URL
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('screenshots')
-      .createSignedUrl(filename, 60 * 60 * 24 * 7);
-
-    if (signedUrlError) throw signedUrlError;
-    const downloadURL = signedUrlData.signedUrl;
-    
-    // 5. Save metadata to Supabase 'setups' table
+    // 5. Save metadata to Firestore 'setups' collection
     const setupData: Record<string, any> = {
-      user_id: userId,
-      day_type: analysis.dayType,
+      userId,
+      dayType: analysis.dayType,
       reasoning: analysis.reasoning,
       confidence: analysis.confidence,
-      image_url: downloadURL,
+      imageURL: downloadURL,
       tags: analysis.tags || [],
-      suggested_entry: analysis.suggestedEntry || 0,
-      suggested_stop: analysis.suggestedStop || 0,
-      suggested_target: analysis.suggestedTarget || 0
+      suggestedEntry: analysis.suggestedEntry || 0,
+      suggestedStop: analysis.suggestedStop || 0,
+      suggestedTarget: analysis.suggestedTarget || 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     };
     
     if (ocrData) {
-      setupData.ocr_text = ocrData;
+      setupData.ocrText = JSON.stringify(ocrData);
     }
     Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
     
-    const { data, error: insertError } = await supabase
-      .from('setups')
-      .insert(setupData)
-      .select('id')
-      .single();
-
-    if (insertError) throw insertError;
-    console.log("Analysis saved to cloud with ID: ", data.id);
-    return { id: data.id, url: downloadURL };
+    const docRef = await addDoc(collection(db, 'setups'), setupData);
+    console.log("Analysis saved to cloud with ID: ", docRef.id);
+    return { id: docRef.id, url: downloadURL };
   } catch (error) {
-    handleSupabaseError(error, OperationType.UPLOAD, 'setups/storage');
+    handleFirestoreError(error, OperationType.UPLOAD, 'setups/storage');
   }
-}
-
-async function dataUrlToBlob(dataUrl: string) {
-  const response = await fetch(dataUrl);
-  return response.blob();
 }

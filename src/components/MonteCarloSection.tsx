@@ -26,10 +26,14 @@ interface MonteCarloSectionProps {
 }
 
 export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, targetPrice15R }: MonteCarloSectionProps) {
-  const [numPaths, setNumPaths] = useState(30);
-  const [volatility, setVolatility] = useState(0.002); // 0.2% per step default
+  const numPaths = 30;
+  const volatility = 0.002; // 0.2% per step default
   const [paths, setPaths] = useState<number[][]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  React.useEffect(() => {
+    runSimulation();
+  }, [startPrice, stopPrice, targetPrice, targetPrice15R]);
 
   const runSimulation = () => {
     setIsSimulating(true);
@@ -68,8 +72,8 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, 
   }, [paths, targetPrice, stopPrice]);
 
   return (
-    <div className="card p-6 space-y-6 border-line bg-stone-50 dark:bg-stone-900/30 overflow-hidden">
-      <div className="flex justify-between items-center border-b border-line pb-4">
+    <div className="card p-6 space-y-6 border-[var(--b1)] bg-stone-50 dark:bg-stone-900/30 overflow-hidden">
+      <div className="flex justify-between items-center border-b border-[var(--b1)] pb-4">
         <h3 className="text-sm font-mono uppercase tracking-widest flex items-center gap-2">
           <Activity className="w-4 h-4 text-accent" />
           Probabilistic Prediction Engine
@@ -85,41 +89,9 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono uppercase opacity-50 flex justify-between">
-              Paths (N)
-              <span className="text-accent">{numPaths}</span>
-            </label>
-            <input 
-              type="range" 
-              min="10" 
-              max="100" 
-              step="10"
-              value={numPaths}
-              onChange={(e) => setNumPaths(parseInt(e.target.value))}
-              className="w-full accent-accent"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono uppercase opacity-50 flex justify-between">
-              Volatility
-              <span className="text-accent">{(volatility * 100).toFixed(2)}%</span>
-            </label>
-            <input 
-              type="range" 
-              min="0.0005" 
-              max="0.005" 
-              step="0.0005"
-              value={volatility}
-              onChange={(e) => setVolatility(parseFloat(e.target.value))}
-              className="w-full accent-accent"
-            />
-          </div>
-
-          {stats && (
-            <div className="pt-4 space-y-3 border-t border-line">
+        <div className="md:col-span-1 space-y-4 flex flex-col justify-center">
+          {stats ? (
+            <div className="space-y-3">
               <p className="text-[9px] font-mono uppercase opacity-40">Outcomes (distribution)</p>
               <div className="bg-black/5 dark:bg-white/5 p-3 rounded space-y-2">
                 <div className="flex justify-between text-[10px] font-mono">
@@ -131,7 +103,7 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, 
                   <span className="font-bold text-stone-500">{stats.p10} - {stats.p90}</span>
                 </div>
                 {stats.probSuccess15 !== null && (
-                  <div className="flex justify-between text-[10px] font-mono border-t border-line/20 pt-2">
+                  <div className="flex justify-between text-[10px] font-mono border-t border-[var(--b0)] pt-2">
                     <span className="text-green-500">Exp. Win (1.5R)</span>
                     <span className="font-bold text-green-500">{stats.probSuccess15}%</span>
                   </div>
@@ -150,7 +122,7 @@ export default function MonteCarloSection({ startPrice, stopPrice, targetPrice, 
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="md:col-span-3 h-80 bg-black/10 dark:bg-black/40 rounded p-4 relative">

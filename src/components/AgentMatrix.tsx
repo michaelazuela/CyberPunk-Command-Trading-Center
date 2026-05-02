@@ -77,9 +77,9 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
   };
 
   return (
-    <div className="flex flex-col h-full bg-black border-2 border-stone-800 rounded-lg overflow-hidden font-mono shadow-2xl">
+    <div className="flex flex-col h-full bg-black border border-[var(--b1)] rounded-lg overflow-hidden font-mono shadow-2xl">
       {/* Matrix Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-stone-900 border-b border-stone-800">
+      <div className="flex items-center justify-between px-4 py-2 bg-stone-900 border-b border-[var(--b1)]">
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-green-500" />
           <span className="text-xs font-bold text-stone-300 uppercase tracking-widest">Agent Intelligence Matrix</span>
@@ -94,7 +94,7 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
       {/* Matrix Content */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Live Stats Rail */}
-        <div className="grid grid-cols-3 border-b border-stone-800 divide-x divide-stone-800">
+        <div className="grid grid-cols-3 border-b border-[var(--b1)] divide-x divide-stone-800">
           <StatItem icon={<Cpu className="w-3 h-3" />} label="CPU" value={isAnalyzing ? "84%" : "12%"} />
           <StatItem icon={<Binary className="w-3 h-3" />} label="DATA" value="4.2MB/s" />
           <StatItem icon={<Activity className="w-3 h-3" />} label="LATENCY" value="14ms" />
@@ -135,7 +135,7 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
         </div>
 
         {/* Bottom Status Bar */}
-        <div className="px-4 py-2 bg-stone-900 border-t border-stone-800 flex justify-between items-center">
+        <div className="px-4 py-2 bg-stone-900 border-t border-[var(--b1)] flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Database className="w-3 h-3 text-stone-500" />
             <span className="text-[10px] text-stone-500 uppercase">Memory: 1.2GB / 16GB</span>

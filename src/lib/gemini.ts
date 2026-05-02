@@ -3,24 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { AISettings, Trade } from "../types";
 
-async function generateContent(payload: Record<string, unknown>) {
-  const response = await fetch('/api/gemini', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || `Gemini API request failed with ${response.status}`);
-  }
-
-  return response.json() as Promise<{ text?: string }>;
-}
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[]) {
   const prompt = `
@@ -50,6 +36,8 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     MODULE 2: [LOGIC_PROCESSOR] (Strategy)
     - Enforce rules based ONLY on Module 1 data.
     - MOMENTUM(09:30-10:00) ➔ PRIMARY_BIAS. (No single-wick flip).
+    - PRIORITY 1 [VILLAIN SWEEP]: IF (WICK > IB_HIGH AND CLOSE < IB_HIGH) ➔ FLIP BIAS TO SHORT (Buyers Trapped).
+    - PRIORITY 1 [LIQUIDITY HUNT]: IF (WICK < IB_LOW AND CLOSE > IB_LOW) ➔ FLIP BIAS TO LONG (Sellers Trapped).
     - IF (2x CONSECUTIVE_BARS FAIL_EXTREME) AND (CLOSE < PREV_BODY_LOW) ➔ ACTION: FLIP_BIAS.
     - IF (LAST_HL == INTACT) AND (STAIRCASE == HH/HL) ➔ BIAS: LONG (Ignore wicks).
     - IF (PRICE > IB_HIGH) AND (STAIRCASE == HH/HL) ➔ 2-BAR RULE = ONLY BIAS KILLER.
@@ -148,7 +136,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     }
   `;
 
-  const response = await generateContent({
+  const response = await ai.models.generateContent({
     model: "gemini-3.1-pro-preview",
     contents: {
       parts: [
@@ -159,7 +147,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     config: {
       responseMimeType: "application/json",
       temperature: settings?.temperature ?? 0.0,
-      thinkingConfig: { thinkingLevel: "LOW" }
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
     }
   });
 
@@ -239,14 +227,14 @@ export async function preCheckChartInfo(imageData: string): Promise<OCRResult> {
     ]
   };
 
-  const response = await generateContent({
+  const response = await ai.models.generateContent({
     model: "gemini-3.1-pro-preview",
     contents: [context],
     config: {
       temperature: 0.0,
       responseMimeType: "application/json",
       systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON.",
-      thinkingConfig: { thinkingLevel: "LOW" }
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
     } as any
   });
 
@@ -368,13 +356,13 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
     }
   `;
 
-  const response = await generateContent({
+  const response = await ai.models.generateContent({
     model: "gemini-3.1-pro-preview",
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: "LOW" }
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
     }
   });
 
@@ -397,13 +385,13 @@ export async function validateTrade(context: string) {
     Return a JSON response with the verdict and checklist status.
   `;
 
-  const response = await generateContent({
+  const response = await ai.models.generateContent({
     model: "gemini-3.1-pro-preview",
     contents: context,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: "LOW" }
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
     }
   });
 
