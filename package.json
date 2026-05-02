@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "guard:no-firebase": "node scripts/no-firebase-check.js",
+    "lint": "npm run guard:no-firebase && tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

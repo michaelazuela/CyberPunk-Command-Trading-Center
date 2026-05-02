@@ -6,6 +6,9 @@
 import { ThinkingLevel } from "@google/genai";
 import { AISettings, Trade } from "../types";
 
+const GEMINI_PRO_MODEL = "gemini-3-pro-preview";
+const GEMINI_FLASH_MODEL = "gemini-3-flash-preview";
+
 async function generateContent(payload: unknown) {
   const response = await fetch('/api/gemini', {
     method: 'POST',
@@ -16,7 +19,8 @@ async function generateContent(payload: unknown) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error || 'Gemini API request failed.');
+    const details = [data.error, data.status, data.statusText, data.model].filter(Boolean).join(' - ');
+    throw new Error(details || `Gemini API request failed with HTTP ${response.status}.`);
   }
 
   return data as { text?: string };
@@ -151,7 +155,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
   `;
 
   const response = await generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: GEMINI_PRO_MODEL,
     contents: {
       parts: [
         { text: prompt },
@@ -242,7 +246,7 @@ export async function preCheckChartInfo(imageData: string): Promise<OCRResult> {
   };
 
   const response = await generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: GEMINI_FLASH_MODEL,
     contents: [context],
     config: {
       temperature: 0.0,
@@ -371,7 +375,7 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
   `;
 
   const response = await generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: GEMINI_FLASH_MODEL,
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
@@ -400,7 +404,7 @@ export async function validateTrade(context: string) {
   `;
 
   const response = await generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: GEMINI_FLASH_MODEL,
     contents: context,
     config: {
       systemInstruction,
