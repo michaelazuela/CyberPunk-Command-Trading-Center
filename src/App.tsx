@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   LayoutDashboard, 
   BarChart3, 
   ShieldAlert, 
@@ -26,8 +26,8 @@ import {
   LogIn,
   LogOut
 } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from './lib/supabase';
 import { cn } from './lib/utils';
 import { SessionState, Trade, DayType, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
@@ -39,7 +39,7 @@ import Settings from './components/Settings';
 import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
 
-import { subscribeToTrades, deleteTrade, addTrade as addFirestoreTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
+import { subscribeToTrades, deleteTrade, addTrade as addSupabaseTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
@@ -56,15 +56,20 @@ export default function App() {
 
   useEffect(() => {
     testFirestoreConnection();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (user) {
-      const unsubscribe = subscribeToTrades(user.uid, (trades) => {
+      const unsubscribe = subscribeToTrades(user.id, (trades) => {
         setCloudTrades(trades);
       });
       return () => unsubscribe();
@@ -74,16 +79,20 @@ export default function App() {
   }, [user]);
 
   const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
     } catch (error) {
       console.error('Error signing in:', error);
     }
   };
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
   };
 
   const [appState, setAppState] = useState<AppState>(() => {
@@ -132,7 +141,7 @@ export default function App() {
 
   const addTrade = async (trade: Trade) => {
     if (user) {
-      await addFirestoreTrade(trade);
+      await addSupabaseTrade(trade);
     } else {
       setAppState(prev => ({
         ...prev,

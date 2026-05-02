@@ -9,7 +9,7 @@ export type SessionStatus = 'PRE-MARKET' | 'OBSERVATION' | 'ENTRY' | 'CLOSED';
 
 export interface Trade {
   id: string;
-  userId?: string; // Optional for legacy, required for Firestore
+  userId?: string; // Optional for legacy, required for Supabase
   date: string;
   direction: 'LONG' | 'SHORT';
   dayType: DayType;

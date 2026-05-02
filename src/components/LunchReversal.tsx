@@ -3,7 +3,7 @@ import { Upload, Terminal, Crosshair, Activity, ShieldAlert, Zap, Loader2, Cloud
 import { cn } from '../lib/utils';
 import { analyzeChart } from '../lib/gemini';
 import { SessionState, AnalysisResult, Trade } from '../types';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { addTrade } from '../lib/firestoreService';
 import MonteCarloSection from './MonteCarloSection';
@@ -102,7 +102,8 @@ export default function LunchReversal({ session, onUpdate }: {
   }, [processImage]);
 
   const handleExecuteTrade = async () => {
-    if (!result || !auth.currentUser) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!result || !user) return;
     
     setIsExecuting(true);
     addLog("EXECUTING LUNCH REVERSAL TRADE...");
@@ -111,7 +112,7 @@ export default function LunchReversal({ session, onUpdate }: {
       
       let screenshotUrl = '';
       if (lastImage) {
-        const uploadResult = await uploadScreenshotAndSaveSetup(auth.currentUser.uid, lastImage, result, 'lunch');
+        const uploadResult = await uploadScreenshotAndSaveSetup(user.id, lastImage, result, 'lunch');
         if (uploadResult) {
           screenshotUrl = uploadResult.url;
           addLog("LUNCH SCREENSHOT LINKED TO TRADE.");
@@ -152,12 +153,12 @@ export default function LunchReversal({ session, onUpdate }: {
       analysisResult: result
     });
 
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (session.aiSettings?.ragEnabled && user) {
       setIsUploading(true);
       addLog("INITIATING CLOUD UPLOAD FOR RAG DB...");
       try {
-        const uploadResult = await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'lunch');
+        const uploadResult = await uploadScreenshotAndSaveSetup(user.id, lastImage, result, 'lunch');
         if (uploadResult) {
           setUploadSuccess(true);
           addLog("CLOUD UPLOAD SUCCESSFUL. SETUP INDEXED.");
@@ -354,7 +355,7 @@ export default function LunchReversal({ session, onUpdate }: {
                     Enable RAG Storage (Save Analysis to Cloud)
                   </span>
                   <p className="text-[9px] text-orange-500/70 italic leading-relaxed pt-1">
-                    Securely upload your screenshot to Firebase and index this setup in your personal vault for continual AI learning.
+                    Securely upload your screenshot to Supabase and index this setup in your personal vault for continual AI learning.
                   </p>
                 </div>
               </label>

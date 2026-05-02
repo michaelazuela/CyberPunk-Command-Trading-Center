@@ -8,7 +8,7 @@ import { Upload, Loader2, CheckCircle2, XCircle, Clipboard, Settings2, Sliders, 
 import { SessionState, AnalysisResult, DayType, AISettings, ProposedRule, Trade } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn } from '../lib/utils';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { addTrade } from '../lib/firestoreService';
 import AgentAnimation from './AgentAnimation';
@@ -149,7 +149,8 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
   const [executedTradeId, setExecutedTradeId] = useState<string | null>(null);
 
   const handleExecuteTrade = async () => {
-    if (!result || !auth.currentUser) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!result || !user) return;
     
     setIsExecuting(true);
     try {
@@ -157,7 +158,7 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
       
       let screenshotUrl = '';
       if (lastImage) {
-        const uploadResult = await uploadScreenshotAndSaveSetup(auth.currentUser.uid, lastImage, result, 'morning', ocrResult);
+        const uploadResult = await uploadScreenshotAndSaveSetup(user.id, lastImage, result, 'morning', ocrResult);
         if (uploadResult) screenshotUrl = uploadResult.url;
       }
 
@@ -190,11 +191,11 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
         analysisResult: result
       });
       
-      const user = auth.currentUser;
+      const { data: { user } } = await supabase.auth.getUser();
       if (session.aiSettings?.ragEnabled && user && lastImage) {
         setIsUploading(true);
         try {
-          const uploadResult = await uploadScreenshotAndSaveSetup(user.uid, lastImage, result, 'morning', ocrResult);
+          const uploadResult = await uploadScreenshotAndSaveSetup(user.id, lastImage, result, 'morning', ocrResult);
           if (uploadResult) {
             setUploadSuccess(true);
             setTimeout(() => setUploadSuccess(false), 3000);
@@ -894,7 +895,7 @@ Screenshot Timezone: ${ocrResult.timezone || 'EST (Default)'}
                           Enable RAG Storage (Save Analysis to Cloud)
                         </span>
                         <p className="text-[9px] text-stone-500 font-mono italic leading-relaxed pt-1">
-                          Securely upload your screenshot to Firebase and index this setup in your personal vault for continual AI learning.
+                          Securely upload your screenshot to Supabase and index this setup in your personal vault for continual AI learning.
                         </p>
                       </div>
                     </label>

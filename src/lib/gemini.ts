@@ -3,10 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { AISettings, Trade } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+async function generateContent(payload: Record<string, unknown>) {
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Gemini API request failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<{ text?: string }>;
+}
 
 async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[]) {
   const prompt = `
@@ -134,7 +148,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     }
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: "gemini-3.1-pro-preview",
     contents: {
       parts: [
@@ -145,7 +159,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     config: {
       responseMimeType: "application/json",
       temperature: settings?.temperature ?? 0.0,
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      thinkingConfig: { thinkingLevel: "LOW" }
     }
   });
 
@@ -225,14 +239,14 @@ export async function preCheckChartInfo(imageData: string): Promise<OCRResult> {
     ]
   };
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: "gemini-3.1-pro-preview",
     contents: [context],
     config: {
       temperature: 0.0,
       responseMimeType: "application/json",
       systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON.",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      thinkingConfig: { thinkingLevel: "LOW" }
     } as any
   });
 
@@ -354,13 +368,13 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
     }
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: "gemini-3.1-pro-preview",
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      thinkingConfig: { thinkingLevel: "LOW" }
     }
   });
 
@@ -383,13 +397,13 @@ export async function validateTrade(context: string) {
     Return a JSON response with the verdict and checklist status.
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
     model: "gemini-3.1-pro-preview",
     contents: context,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      thinkingConfig: { thinkingLevel: "LOW" }
     }
   });
 
