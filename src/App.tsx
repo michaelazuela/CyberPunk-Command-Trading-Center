@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from './lib/supabase';
 import { cn } from './lib/utils';
 import { SessionState, Trade, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
@@ -22,15 +22,29 @@ export default function App() {
 
   useEffect(() => {
     testFirestoreConnection();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).finally(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+    }
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (user) {
-      const unsubscribe = subscribeToTrades(user.uid, (trades) => {
+      const unsubscribe = subscribeToTrades(user.id, (trades) => {
         setCloudTrades(trades);
       });
       return () => unsubscribe();
@@ -40,12 +54,20 @@ export default function App() {
   }, [user]);
 
   const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
     } catch (error) {
       console.error('Error signing in:', error);
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const [appState, setAppState] = useState<AppState>(() => {
@@ -199,7 +221,7 @@ export default function App() {
 
            <div className="text-[10px] font-mono text-[var(--txt2)] truncate max-w-[120px] ml-2 uppercase flex items-center gap-2">
              {user ? user.email?.split('@')[0] : 'MICHAELAZUE'}
-             <button onClick={user ? () => auth.signOut() : handleLogin} className="hover:text-[var(--txt)] ml-1">
+             <button onClick={user ? handleLogout : handleLogin} className="hover:text-[var(--txt)] ml-1">
                {user ? '(LOGOUT)' : '(LOGIN)'}
              </button>
            </div>

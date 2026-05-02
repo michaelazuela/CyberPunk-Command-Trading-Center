@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Sparkles, Target, Shield, Zap, Moon, CheckCircle2, CloudUpload } from 'lucide-react';
 import { SessionState, AnalysisResult, ProposedRule, Trade, AISettings } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
-import { auth } from '../lib/firebase';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { addTrade } from '../lib/firestoreService';
 import MonteCarloSection from './MonteCarloSection';
