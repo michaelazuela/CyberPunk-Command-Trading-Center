@@ -3,27 +3,63 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ThinkingLevel } from "@google/genai";
 import { AISettings, Trade } from "../types";
 
-const GEMINI_PRO_MODEL = "gemini-3-pro-preview";
-const GEMINI_FLASH_MODEL = "gemini-3-flash-preview";
+async function callGeminiAPI(params: any) {
+  const payload: any = {
+    model: params.model,
+    contents: Array.isArray(params.contents) ? params.contents : [params.contents],
+    generationConfig: {}
+  };
 
-async function generateContent(payload: unknown) {
+  // Convert inlineData camelCase to inline_data snake_case
+  payload.contents.forEach((content: any) => {
+    if (content.parts) {
+      content.parts.forEach((part: any) => {
+        if (part.inlineData) {
+          part.inline_data = {
+            mime_type: part.inlineData.mimeType,
+            data: part.inlineData.data
+          };
+          delete part.inlineData;
+        }
+      });
+    }
+  });
+
+  if (params.config) {
+    if (params.config.temperature !== undefined) payload.generationConfig.temperature = params.config.temperature;
+    if (params.config.responseMimeType !== undefined) payload.generationConfig.responseMimeType = params.config.responseMimeType;
+    if (params.config.systemInstruction) {
+      payload.systemInstruction = { parts: [{ text: params.config.systemInstruction }] };
+    }
+  }
+
   const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    const details = [data.error, data.status, data.statusText, data.model].filter(Boolean).join(' - ');
-    throw new Error(details || `Gemini API request failed with HTTP ${response.status}.`);
+    const errorText = await response.text();
+    let parsedError = errorText;
+    try {
+      const json = JSON.parse(errorText);
+      if (json.error && json.error.message) {
+        parsedError = json.error.message;
+      } else if (json.error) {
+        parsedError = typeof json.error === 'string' ? json.error : JSON.stringify(json.error);
+      }
+    } catch (e) {
+      // ignore
+    }
+    throw new Error(`API error (${response.status} ${response.statusText}): ${parsedError}`);
   }
-
-  return data as { text?: string };
+  const data = await response.json();
+  if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
+    return { text: data.candidates[0].content.parts[0].text };
+  }
+  return { text: "{}" };
 }
 
 async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[]) {
@@ -154,8 +190,8 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     }
   `;
 
-  const response = await generateContent({
-    model: GEMINI_PRO_MODEL,
+  const response = await callGeminiAPI({
+    model: "gemini-3.1-pro-preview",
     contents: {
       parts: [
         { text: prompt },
@@ -165,7 +201,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     config: {
       responseMimeType: "application/json",
       temperature: settings?.temperature ?? 0.0,
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      
     }
   });
 
@@ -245,14 +281,13 @@ export async function preCheckChartInfo(imageData: string): Promise<OCRResult> {
     ]
   };
 
-  const response = await generateContent({
-    model: GEMINI_FLASH_MODEL,
+  const response = await callGeminiAPI({
+    model: "gemini-3.1-pro-preview",
     contents: [context],
     config: {
       temperature: 0.0,
       responseMimeType: "application/json",
-      systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON.",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON."
     } as any
   });
 
@@ -374,13 +409,12 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
     }
   `;
 
-  const response = await generateContent({
-    model: GEMINI_FLASH_MODEL,
+  const response = await callGeminiAPI({
+    model: "gemini-3.1-pro-preview",
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
-      responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      responseMimeType: "application/json"
     }
   });
 
@@ -403,13 +437,12 @@ export async function validateTrade(context: string) {
     Return a JSON response with the verdict and checklist status.
   `;
 
-  const response = await generateContent({
-    model: GEMINI_FLASH_MODEL,
+  const response = await callGeminiAPI({
+    model: "gemini-3.1-pro-preview",
     contents: context,
     config: {
       systemInstruction,
-      responseMimeType: "application/json",
-      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      responseMimeType: "application/json"
     }
   });
 

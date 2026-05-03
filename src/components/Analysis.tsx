@@ -3,12 +3,14 @@ import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Spa
 import { SessionState, AnalysisResult, ProposedRule, Trade, AISettings } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
+import { supabase } from '../lib/supabase';
 import { addTrade } from '../lib/firestoreService';
 import MonteCarloSection from './MonteCarloSection';
 import MidnightAnalysisView from './MidnightAnalysisView';
-import { cn } from '../lib/utils';
+import { cn, getImageFromClipboard } from '../lib/utils';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
+import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
 
 export default function Analysis({ session, customRules = [], onUpdate }: { 
   session: SessionState, 
@@ -19,7 +21,6 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
   const [isPreChecking, setIsPreChecking] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lastImage, setLastImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,40 +29,64 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
   const [showReasoning, setShowReasoning] = useState(false);
   const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0.1, customInstructions: '' });
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isAnalyzing) {
-      setCurrentStep(0);
-      interval = setInterval(() => {
-        setCurrentStep(prev => (prev < 2 ? prev + 1 : prev));
-      }, 2000);
-    } else {
-      setCurrentStep(0);
-    }
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
+  const [progressStart, setProgressStart] = useState<number | null>(null);
+
+  const updateStep = useCallback((id: string, status: StepStatus, errorMessage?: string) => {
+    setProgressSteps(prev => prev.map(s => s.id === id ? { ...s, status, errorMessage } : s));
+  }, []);
+
+  const initProgress = useCallback(() => {
+    setProgressSteps([
+      { id: 'received', label: 'Image received', status: 'complete' },
+      { id: 'prep', label: 'Preparing screenshot', status: 'active' },
+      { id: 'extract', label: 'Extracting chart metadata', status: 'pending' },
+      { id: 'confirm', label: 'Waiting for confirmation', status: 'pending' },
+      { id: 'send', label: 'Sending chart to Gemini', status: 'pending' },
+      { id: 'strategy', label: 'Running strategy analysis', status: 'pending' },
+      { id: 'risk', label: 'Running risk audit', status: 'pending' },
+      { id: 'save', label: 'Saving setup to Supabase', status: 'pending' },
+      { id: 'complete', label: 'Complete', status: 'pending' }
+    ]);
+    setProgressStart(Date.now());
+  }, []);
 
   const processImage = useCallback(async (base64String: string) => {
+    if (isPreChecking || isAnalyzing) return;
     setIsPreChecking(true);
     setError(null);
     setResult(null);
     setOcrResult(null);
     setPendingImage(base64String);
+    initProgress();
+    
     try {
+      updateStep('prep', 'complete');
+      updateStep('extract', 'active');
       const ocr = await preCheckChartInfo(base64String);
       ocr.timezone = session.aiSettings?.morningTimeZone || session.aiSettings?.screenshotTimezone || 'EST';
       setOcrResult(ocr);
-    } catch (err) {
+      updateStep('extract', 'complete');
+      updateStep('confirm', 'active');
+    } catch (err: any) {
       console.error("OCR Pre-check failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('Missing Gemini API key') || msg.includes('API key not valid')) {
+         setError(msg);
+      }
+      updateStep('extract', 'warning', `OCR failed: ${msg}. You can continue analysis if desired.`);
+      updateStep('confirm', 'active');
     } finally {
       setIsPreChecking(false);
     }
-  }, [session.aiSettings]);
+  }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep]);
 
   const startFullAnalysis = useCallback(async () => {
     if (!pendingImage) return;
     setIsAnalyzing(true);
     setError(null);
+    updateStep('confirm', 'complete');
+    updateStep('send', 'active');
     try {
       setLastImage(pendingImage);
       const approvedRulesText = (customRules || []).filter(r => r.status === 'APPROVED').map(r => `- ${r.rule}`).join('\n');
@@ -70,18 +95,63 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         ...localSettings,
         customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
+      
+      const subStepInterval = setInterval(() => {
+        setProgressSteps(prev => {
+          const sendStep = prev.find(s => s.id === 'send');
+          const stratStep = prev.find(s => s.id === 'strategy');
+          const riskStep = prev.find(s => s.id === 'risk');
+          
+          if (sendStep?.status === 'active') {
+             return prev.map(s => s.id === 'send' ? {...s, status:'complete'} : s.id === 'strategy' ? {...s, status:'active'} : s);
+          } else if (stratStep?.status === 'active') {
+             return prev.map(s => s.id === 'strategy' ? {...s, status:'complete'} : s.id === 'risk' ? {...s, status:'active'} : s);
+          }
+          return prev;
+        });
+      }, 5000);
+
       const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult);
+      clearInterval(subStepInterval);
+      
+      updateStep('send', 'complete');
+      updateStep('strategy', 'complete');
+      updateStep('risk', 'complete');
+      updateStep('save', 'active');
       setResult(analysis);
+      
+      try {
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+        if (authSession?.user?.id) {
+           await uploadScreenshotAndSaveSetup(authSession.user.id, pendingImage, analysis, 'morning', ocrResult); 
+           updateStep('save', 'complete');
+        } else {
+           updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
+           setError('Analysis complete, cloud save failed: User not authenticated.');
+        }
+      } catch (saveErr: any) {
+        console.error('Supabase save error:', saveErr);
+        updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
+        setError('Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
+      }
+      
+      updateStep('complete', 'complete');
       onUpdate({ morningScreenshot: pendingImage, analysisResult: analysis, dayType: analysis.dayType });
       setPendingImage(null);
       setOcrResult(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setError('Failed to analyze chart. Please try again.');
+      updateStep('send', 'error', err instanceof Error ? err.message : String(err));
+      // if send failed, make sure risk, save, etc don't hang
+      updateStep('strategy', 'warning', 'Skipped');
+      updateStep('risk', 'warning', 'Skipped');
+      updateStep('save', 'warning', 'Skipped');
+      updateStep('complete', 'warning', 'Halted');
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate]);
+  }, [pendingImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,17 +161,21 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
     reader.readAsDataURL(file);
   };
 
-  const handlePaste = useCallback((e: ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const blob = items[i].getAsFile();
-        if (!blob) continue;
-        const reader = new FileReader();
-        reader.onloadend = () => processImage(reader.result as string);
-        reader.readAsDataURL(blob as Blob);
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    // Ignore paste if user is typing in an input or textarea
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || (activeElement as HTMLElement).isContentEditable)) {
+      return;
+    }
+
+    try {
+      const imageData = await getImageFromClipboard(e);
+      if (imageData) {
+        processImage(imageData);
       }
+    } catch (error) {
+      console.error('Paste screenshot failed:', error);
+      setError(error instanceof Error ? error.message : 'Could not paste screenshot.');
     }
   }, [processImage]);
 
@@ -172,6 +246,10 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)] p-4 text-[10px] font-mono flex items-center gap-2 fade-up">
           <XCircle className="w-4 h-4" /> {error}
         </div>
+      )}
+
+      {(isPreChecking || isAnalyzing || pendingImage) && progressSteps.length > 0 && (
+         <AnalysisProgress steps={progressSteps} startTime={progressStart} className="mb-6 fade-up" />
       )}
 
       {!result && !isAnalyzing && !isPreChecking && !pendingImage && (
@@ -259,7 +337,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
       )}
 
       {/* OCR/Analysis Running/Results UI ... */}
-      {!isPreChecking && pendingImage && ocrResult && (
+      {!isPreChecking && pendingImage && ocrResult && !isAnalyzing && !result && (
         <div className="card-base fade-up">
            {/* OCR Verification UI */}
            <div className="card-header">
@@ -276,13 +354,9 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         </div>
       )}
 
-      {isAnalyzing && (
-        <div className="card-base flex items-center justify-center p-12 fade-up">
-          <div className="text-center">
-            <Settings2 className="w-8 h-8 text-[var(--amber)] animate-spin mx-auto mb-4" />
-            <h3 className="font-mono text-[12px] text-[var(--orange)] mb-2 uppercase">Analysis in Progress</h3>
-            <p className="text-[9px] text-[var(--txt2)] uppercase">Extracting market context...</p>
-          </div>
+      {isAnalyzing && pendingImage && (
+        <div className="card-base flex justify-center p-2 bg-[#000] fade-up mt-4">
+           <img src={pendingImage} alt="Analysis Progress" className="max-h-[400px] object-contain opacity-70" referrerPolicy="no-referrer" />
         </div>
       )}
 

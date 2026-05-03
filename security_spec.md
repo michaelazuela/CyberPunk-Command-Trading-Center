@@ -2,8 +2,8 @@
 ## 1. Data Invariants
 
 - A logged-in user can only create and access their own trading setups.
-- A `TradingSetup` cannot exist without a valid `user_id` matching `auth.uid()`.
-- Timestamps must sync strictly with database defaults/triggers.
+- A `TradingSetup` cannot exist without a valid `userId` matching `request.auth.uid`.
+- Timestamps must sync strictly with `request.time`.
 - `confidence` must be between 0 and 1.
 - `tags` must be a list of strings, with a maximum of 20 elements, and each string no more than 64 characters to prevent "Denial of Wallet" resource exhaustion.
 
@@ -20,7 +20,7 @@
 9. **Deletion Theft**: User A attempts to delete User B's setup.
 10. **State Immutability Break**: Updating `createdAt` or `userId` after creation.
 11. **RAG Injection**: Sending an ID parameter > 128 chars.
-12. **Unauthenticated Access**: Read/Write attempts without `auth.uid()`.
+12. **Unauthenticated Access**: Read/Write attempts without `request.auth.uid`.
 
 ## 3. The Test Runner 
-*(Will be populated with Supabase RLS policy tests)*
+*(Will be populated with supabase.test.ts)*

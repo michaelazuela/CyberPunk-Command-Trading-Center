@@ -1,30 +1,22 @@
-# Project Rules
+# Project Rules: Supabase & Cloudflare ONLY (Firebase Forbidden)
 
-This project has been migrated from Firebase to Supabase.
+This project has been explicitly migrated from Firebase to **Supabase** and **Cloudflare**.
 
-Firebase is forbidden.
+## FIRESTORE / FIREBASE IS FORBIDDEN
 
-Do not:
-- install firebase
-- import firebase/*
-- create or restore src/lib/firebase.ts
-- use Firebase Auth
-- use Firestore
-- use Firebase Storage
-- restore firestore.rules
-- use firebase-applet-config.json
-- expose GEMINI_API_KEY in Vite/browser code
+To prevent accidental rollbacks or re-introductions:
+- **Firebase is strictly forbidden.**
+- **Do not** install `firebase`, `firebase-admin`, or related packages.
+- **Do not** import `firebase/*`.
+- **Do not** create or restore `src/lib/firebase.ts`.
+- **Do not** use Firebase Auth, Firestore, Firebase Storage, `firestore.rules`, or Firebase config JSON files (`firebase-applet-config.json`, `firebase-blueprint.json`).
 
-Use:
-- Supabase Auth
-- Supabase database
-- Supabase Storage
-- Cloudflare Pages
-- Cloudflare Pages Functions
-- /api/gemini for Gemini calls
+## APPROVED ARCHITECTURE
 
-Before completing any code change, verify:
-- package.json does not contain firebase
-- no source file imports firebase/*
-- npm run lint passes
-- npm run build passes
+- **Database/Auth/Storage**: Use **Supabase**.
+  - Supabase client is initialized in `src/lib/supabase.ts`.
+- **Hosting/Functions**: Use **Cloudflare Pages**.
+  - Cloudflare Pages Functions are in the `functions/` directory.
+- **AI / LLM Integration**:
+  - Gemini API calls **must** go through the proxy at `/api/gemini` (`functions/api/gemini.js`).
+  - The `GEMINI_API_KEY` **must never** be exposed in Vite/browser code or `.env` files that get bundled to the client. It must only exist securely in the Cloudflare Page Function environment.

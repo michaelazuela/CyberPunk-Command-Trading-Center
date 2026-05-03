@@ -1,44 +1,56 @@
-import { GoogleGenAI } from "@google/genai";
-
-const jsonHeaders = {
-  "Content-Type": "application/json",
-  "Cache-Control": "no-store"
-};
-
-export async function onRequestOptions() {
-  return new Response(null, {
-    headers: {
-      ...jsonHeaders,
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization"
-    }
-  });
+function getGeminiApiKey(env = {}) {
+  return (
+    env.GEMINI_API_KEY ||
+    env.GOOGLE_API_KEY ||
+    env.API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.API_KEY ||
+    ''
+  );
 }
 
-export async function onRequestPost({ request, env }) {
-  if (!env.GEMINI_API_KEY) {
-    return Response.json({ error: "GEMINI_API_KEY is not configured." }, { status: 500, headers: jsonHeaders });
-  }
-
-  let payload;
+export async function onRequestPost(context) {
   try {
-    payload = await request.json();
-    const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent(payload);
+    const requestData = await context.request.json();
+    let apiKey = getGeminiApiKey(context.env);
 
-    return Response.json({ text: response.text || "" }, { headers: jsonHeaders });
-  } catch (error) {
-    const status = error?.status || error?.code || 500;
-    const errorText = error instanceof Error ? error.message : String(error);
+    if (apiKey === 'MY_GEMINI_API_KEY' || apiKey === 'undefined' || apiKey === 'null') {
+      apiKey = '';
+    }
 
-    return Response.json(
-      {
-        error: errorText || "Gemini API request failed.",
-        status,
-        model: payload?.model
+    if (!apiKey) {
+      return new Response(JSON.stringify({ 
+        error: "Missing Gemini API key. Checked GEMINI_API_KEY, GOOGLE_API_KEY, and API_KEY. Add one in AI Studio Secrets and Cloudflare Environment Variables." 
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
+    // We expect the client to send a payload that matches the REST API structure
+    // e.g. { model: "gemini-3.1-pro-preview", contents: [...], generationConfig: {...}, systemInstruction: {...} }
+    const model = requestData.model || "gemini-3.1-pro-preview";
+    delete requestData.model;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      { status: Number.isInteger(status) && status >= 400 && status <= 599 ? status : 500, headers: jsonHeaders }
-    );
+      body: JSON.stringify(requestData)
+    });
+
+    const data = await response.json();
+    
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }

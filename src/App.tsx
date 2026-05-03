@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { cn } from './lib/utils';
 import { SessionState, Trade, AppState, ProposedRule } from './types';
@@ -17,24 +16,15 @@ import { subscribeToTrades, deleteTrade, addTrade as addFirestoreTrade, updateTr
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
 
   useEffect(() => {
     testFirestoreConnection();
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      supabase.auth.exchangeCodeForSession(code).finally(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      });
-    }
-
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
     });
-
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -54,20 +44,10 @@ export default function App() {
   }, [user]);
 
   const handleLogin = async () => {
-    try {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-    } catch (error) {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) {
       console.error('Error signing in:', error);
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
   };
 
   const [appState, setAppState] = useState<AppState>(() => {
@@ -221,7 +201,7 @@ export default function App() {
 
            <div className="text-[10px] font-mono text-[var(--txt2)] truncate max-w-[120px] ml-2 uppercase flex items-center gap-2">
              {user ? user.email?.split('@')[0] : 'MICHAELAZUE'}
-             <button onClick={user ? handleLogout : handleLogin} className="hover:text-[var(--txt)] ml-1">
+             <button onClick={user ? () => supabase.auth.signOut() : handleLogin} className="hover:text-[var(--txt)] ml-1">
                {user ? '(LOGOUT)' : '(LOGIN)'}
              </button>
            </div>

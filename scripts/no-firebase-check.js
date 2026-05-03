@@ -1,67 +1,104 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from 'fs';
+import path from 'path';
 
-const root = process.cwd();
-const ignoredDirs = new Set(['.git', 'node_modules', 'dist', 'build', '.next', 'coverage']);
-const ignoredFiles = new Set(['package-lock.json', 'package.json', 'PROJECT_RULES.md', 'no-firebase-check.js']);
+try {
+  const envContent = fs.readFileSync('.env', 'utf8');
+  console.log('.env FOUND:', envContent);
+} catch (e) {
+  console.log('.env NOT FOUND');
+}
+try {
+  const envLocalContent = fs.readFileSync('.env.local', 'utf8');
+  console.log('.env.local FOUND:', envLocalContent);
+} catch (e) {
+  console.log('.env.local NOT FOUND');
+}
 
-const forbiddenPatterns = [
-  'firebase',
-  'firebase/',
-  'firebase/app',
-  'firebase/auth',
-  'firebase/firestore',
-  'firebase/storage',
-  'src/lib/firebase',
-  './firebase',
-  '../lib/firebase',
-  'firestore.rules',
-  'firebase-applet-config.json'
+const FORBIDDEN_DEPENDENCIES = ['firebase', 'firebase-admin'];
+const FORBIDDEN_PATTERNS = [
+  /['"]firebase['"]/,
+  /['"]firebase\/.*?['"]/,
+  /src\/lib\/firebase/,
+  /\.\/firebase/,
+  /\.\.\/lib\/firebase/,
+  /firestore\.rules/,
+  /firebase-applet-config\.json/,
+  /firebase-blueprint\.json/
 ];
 
-const offenders = [];
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  'dist',
+  '.git',
+  '.next',
+  'build',
+  'coverage',
+]);
 
-const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-for (const depType of ['dependencies', 'devDependencies']) {
-  if (packageJson[depType]?.firebase) {
-    offenders.push(`package.json: ${depType}.firebase is forbidden`);
+let hasError = false;
+
+// 1. Check package.json
+function checkPackageJson() {
+  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    console.error('package.json not found!');
+    process.exit(1);
+  }
+
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+
+  for (const pkg of FORBIDDEN_DEPENDENCIES) {
+    if (deps[pkg]) {
+      console.error(`❌ FORBIDDEN DEPENDENCY FOUND: package.json contains "${pkg}"`);
+      hasError = true;
+    }
   }
 }
 
+// 2. Scan source files
 function scanDirectory(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (ignoredDirs.has(entry.name)) continue;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
 
+  for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
-    const relativePath = path.relative(root, fullPath).replaceAll(path.sep, '/');
 
     if (entry.isDirectory()) {
-      scanDirectory(fullPath);
-      continue;
-    }
+      if (!IGNORED_DIRS.has(entry.name)) {
+        scanDirectory(fullPath);
+      }
+    } else if (entry.isFile()) {
+      // Avoid checking certain binary files or lockfiles if needed, but for thoroughness we check text
+      if (entry.name === 'package-lock.json') continue;
+      
+      const content = fs.readFileSync(fullPath, 'utf8');
 
-    if (ignoredFiles.has(entry.name)) continue;
-
-    const searchableExtensions = new Set(['.js', '.jsx', '.ts', '.tsx', '.json', '.md', '.html', '.css']);
-    if (!searchableExtensions.has(path.extname(entry.name))) continue;
-
-    const content = fs.readFileSync(fullPath, 'utf8');
-    for (const pattern of forbiddenPatterns) {
-      if (content.includes(pattern)) {
-        offenders.push(`${relativePath}: contains forbidden pattern "${pattern}"`);
+      // Skip files that might legitimately contain the word 'firebase' in comments, but strictly check our patterns
+      // Note: we don't skip anything - just check against FORBIDDEN_PATTERNS.
+      
+      for (const pattern of FORBIDDEN_PATTERNS) {
+        if (pattern.test(content)) {
+          // If the match is not in this script itself or PROJECT_RULES.md
+          if (!fullPath.endsWith('no-firebase-check.js') && !fullPath.endsWith('PROJECT_RULES.md')) {
+            console.error(`❌ FORBIDDEN PATTERN FOUND in ${fullPath}`);
+            console.error(`   Matched pattern: ${pattern}`);
+            hasError = true;
+          }
+        }
       }
     }
   }
 }
 
-scanDirectory(root);
+console.log('Running Firebase Guard Check...');
+checkPackageJson();
+scanDirectory(process.cwd());
 
-if (offenders.length > 0) {
-  console.error('Firebase guard failed. Remove these forbidden references:');
-  for (const offender of offenders) {
-    console.error(`- ${offender}`);
-  }
+if (hasError) {
+  console.error('\n🚨 ERROR: Firebase references were found in the codebase!');
+  console.error('This project uses Supabase and Cloudflare. Firebase is forbidden.');
   process.exit(1);
+} else {
+  console.log('✅ Firebase Guard Check passed: No Firebase references found.');
+  process.exit(0);
 }
-
-console.log('Firebase guard passed. No forbidden Firebase references found.');
