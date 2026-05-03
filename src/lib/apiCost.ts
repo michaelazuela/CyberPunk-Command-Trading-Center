@@ -1,85 +1,64 @@
-export type ApiCostAnalysisType = 'morning' | 'lunch' | 'general';
-
-export interface ApiCostEstimate {
+export interface ApiCostRecord {
+  timestamp: string;
+  route: string;
   model: string;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  inputCostUsd: number;
-  outputCostUsd: number;
-  totalCostUsd: number;
-  pricingNote: string;
+  promptTokens: number;
+  completionTokens: number;
+  cost: number;
 }
 
-export interface ApiCostRecord extends ApiCostEstimate {
-  id: string;
-  date: string;
-  timestamp: number;
-  analysisType: ApiCostAnalysisType;
-  stage: string;
+export function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
+  let promptCost = 0;
+  let compCost = 0;
+  if (model.includes('flash')) {
+    promptCost = promptTokens * (0.075 / 1000000); 
+    compCost = completionTokens * (0.3 / 1000000);   
+  } else {
+    // Pro
+    promptCost = promptTokens * (1.25 / 1000000); 
+    compCost = completionTokens * (5.0 / 1000000);  
+  }
+  return promptCost + compCost;
 }
 
-const STORAGE_KEY = 'gemini_api_cost_records';
-
-export function recordApiCost(
-  analysisType: ApiCostAnalysisType,
-  stage: string,
-  cost?: ApiCostEstimate
-) {
-  if (!cost) return;
-
-  const record: ApiCostRecord = {
-    ...cost,
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    date: getTodayKey(),
-    timestamp: Date.now(),
-    analysisType,
-    stage
-  };
-
-  const records = getApiCostRecords();
-  records.unshift(record);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(0, 500)));
-  window.dispatchEvent(new CustomEvent('api-cost-updated'));
+export function saveApiCost(record: Omit<ApiCostRecord, 'timestamp' | 'cost'>) {
+  const records = getApiCosts();
+  const cost = calculateCost(record.model, record.promptTokens, record.completionTokens);
+  records.push({
+    ...record,
+    timestamp: new Date().toISOString(),
+    cost
+  });
+  localStorage.setItem('mnq_api_costs', JSON.stringify(records));
+  window.dispatchEvent(new Event('mnq_api_cost_update'));
 }
 
-export function getApiCostRecords(): ApiCostRecord[] {
+export function getApiCosts(): ApiCostRecord[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    const data = localStorage.getItem('mnq_api_costs');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
     return [];
   }
 }
 
-export function getTodayApiCostSummary(analysisType?: ApiCostAnalysisType) {
-  const today = getTodayKey();
-  const records = getApiCostRecords().filter(record => {
-    return record.date === today && (!analysisType || record.analysisType === analysisType);
+export function getTotalCostToday(route?: string): number {
+  const records = getApiCosts();
+  const today = new Date().toISOString().split('T')[0];
+  return records
+    .filter(r => r.timestamp.startsWith(today) && (!route || r.route === route))
+    .reduce((acc, current) => acc + current.cost, 0);
+}
+
+export function getLastUsedModel(route?: string): string | null {
+  const records = getApiCosts();
+  const filtered = route ? records.filter(r => r.route === route) : records;
+  if (filtered.length === 0) return null;
+  return filtered[filtered.length - 1].model;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('mnq_gemini_usage', (e: any) => {
+    saveApiCost(e.detail);
   });
-
-  return {
-    records,
-    requestCount: records.length,
-    inputTokens: sum(records, 'inputTokens'),
-    outputTokens: sum(records, 'outputTokens'),
-    totalTokens: sum(records, 'totalTokens'),
-    totalCostUsd: sum(records, 'totalCostUsd')
-  };
-}
-
-export function formatUsd(value: number) {
-  if (value === 0) return '$0.0000';
-  if (value < 0.0001) return '<$0.0001';
-  return `$${value.toFixed(4)}`;
-}
-
-function getTodayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function sum(records: ApiCostRecord[], key: keyof Pick<ApiCostRecord, 'inputTokens' | 'outputTokens' | 'totalTokens' | 'totalCostUsd'>) {
-  return records.reduce((total, record) => total + Number(record[key] || 0), 0);
 }

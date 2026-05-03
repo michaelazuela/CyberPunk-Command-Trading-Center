@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Sparkles, Target, Shield, Zap, Moon, CheckCircle2, CloudUpload } from 'lucide-react';
+import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Sparkles, Target, Shield, Zap, Moon, CheckCircle2, CloudUpload, Cpu } from 'lucide-react';
 import { SessionState, AnalysisResult, ProposedRule, Trade, AISettings } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
@@ -11,7 +11,9 @@ import { cn, getImageFromClipboard } from '../lib/utils';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
+import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
+import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
 
 export default function Analysis({ session, customRules = [], onUpdate }: { 
   session: SessionState, 
@@ -29,6 +31,13 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
   const [showChainOfThought, setShowChainOfThought] = useState(false);
   const [showReasoning, setShowReasoning] = useState(false);
   const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0.1, customInstructions: '' });
+
+  const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
+
+  const handleConfigChange = (newConfig: ModelConfig) => {
+    setModelConfig(newConfig);
+    saveModelConfig(newConfig);
+  };
 
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [progressStart, setProgressStart] = useState<number | null>(null);
@@ -64,7 +73,8 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
     try {
       updateStep('prep', 'complete');
       updateStep('extract', 'active');
-      const ocr = await preCheckChartInfo(base64String);
+      const ocrModel = getModelForRoute("ocr", modelConfig);
+      const ocr = await preCheckChartInfo(base64String, "ocr", ocrModel);
       ocr.timezone = session.aiSettings?.morningTimeZone || session.aiSettings?.screenshotTimezone || 'EST';
       setOcrResult(ocr);
       updateStep('extract', 'complete');
@@ -80,22 +90,35 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
     } finally {
       setIsPreChecking(false);
     }
-  }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep]);
+  }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep, modelConfig]);
 
-  const startFullAnalysis = useCallback(async () => {
-    if (!pendingImage) return;
+  const startFullAnalysis = useCallback(async (isDeepReview = false) => {
+    const imgSource = isDeepReview ? lastImage : pendingImage;
+    if (!imgSource) return;
+    
+    // reset steps if deep review
+    if (isDeepReview) {
+       initProgress();
+    }
+    
     setIsAnalyzing(true);
     setError(null);
-    updateStep('confirm', 'complete');
+    
+    if (!isDeepReview) {
+      updateStep('confirm', 'complete');
+    }
     updateStep('send', 'active');
     try {
-      setLastImage(pendingImage);
+      if (!isDeepReview) {
+         setLastImage(pendingImage);
+      }
       const approvedRulesText = (customRules || []).filter(r => r.status === 'APPROVED').map(r => `- ${r.rule}`).join('\n');
-      const ocrOverrideText = ocrResult ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
+      const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       const analysisSettings = {
         ...localSettings,
         customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
+      
       const subStepInterval = setInterval(() => {
         setProgressSteps(prev => {
           const sendStep = prev.find(s => s.id === 'send');
@@ -111,7 +134,9 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         });
       }, 5000);
 
-      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult, undefined, 'morning');
+      const routeName = isDeepReview ? "deep_review" : "morning";
+      const modelToUse = getModelForRoute(routeName, modelConfig);
+      const analysis = await analyzeChart(imgSource, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
       clearInterval(subStepInterval);
       
       updateStep('send', 'complete');
@@ -123,7 +148,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
       try {
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (authSession?.user?.id) {
-           await uploadScreenshotAndSaveSetup(authSession.user.id, pendingImage, analysis, 'morning', ocrResult); 
+           await uploadScreenshotAndSaveSetup(authSession.user.id, imgSource, analysis, 'morning', ocrResult); 
            updateStep('save', 'complete');
         } else {
            updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
@@ -136,9 +161,12 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
       }
       
       updateStep('complete', 'complete');
-      onUpdate({ morningScreenshot: pendingImage, analysisResult: analysis, dayType: analysis.dayType });
-      setPendingImage(null);
-      setOcrResult(null);
+      onUpdate({ morningScreenshot: imgSource, analysisResult: analysis, dayType: analysis.dayType });
+      
+      if (!isDeepReview) {
+         setPendingImage(null);
+         setOcrResult(null);
+      }
     } catch (err: any) {
       console.error(err);
       setError('Failed to analyze chart. Please try again.');
@@ -151,7 +179,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep]);
+  }, [pendingImage, lastImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -213,7 +241,8 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         </div>
       </header>
 
-      <ApiCostPanel analysisType="morning" title="Morning Gemini Cost Today" />
+      <ApiCostPanel route="morning" />
+      <ModelConfigPanel route="morning" config={modelConfig} onChange={handleConfigChange} />
 
       {showSettings && (
         <div className="card-base fade-up">
@@ -394,6 +423,15 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
               <img src={lastImage} alt="Analysis" className="max-h-[400px] object-contain opacity-90" referrerPolicy="no-referrer" />
             </div>
           )}
+          <div className="flex justify-end gap-4 mt-8">
+            <button
+              onClick={() => startFullAnalysis(true)}
+              className="qd-btn-primary flex items-center gap-2"
+            >
+              <Cpu className="w-4 h-4" />
+              Run Deep Pro Review
+            </button>
+          </div>
         </div>
       )}
     </div>

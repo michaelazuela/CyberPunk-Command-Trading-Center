@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SessionState, Trade, AnalysisResult, AISettings } from '../types';
-import { Clock, Upload, XCircle, Settings2 } from 'lucide-react';
+import { Clock, Upload, XCircle, Settings2, Cpu } from 'lucide-react';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn, getImageFromClipboard } from '../lib/utils';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
+import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
+import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
 
 export default function LunchReversal({ 
   session, 
@@ -22,6 +24,14 @@ export default function LunchReversal({
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lastImage, setLastImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
+
+  const handleConfigChange = (newConfig: ModelConfig) => {
+    setModelConfig(newConfig);
+    saveModelConfig(newConfig);
+  };
+
 
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [progressStart, setProgressStart] = useState<number | null>(null);
@@ -56,17 +66,11 @@ export default function LunchReversal({
     try {
       updateStep('prep', 'complete');
       updateStep('extract', 'active');
-      const ocr = await preCheckChartInfo(base64String);
+      const ocrModel = getModelForRoute("ocr", modelConfig);
+      const ocr = await preCheckChartInfo(base64String, "ocr", ocrModel);
       ocr.timezone = session.aiSettings?.screenshotTimezone || session.aiSettings?.morningTimeZone || 'EST';
       setOcrResult(ocr);
       updateStep('extract', 'complete');
-      // Auto-start for lunch if OCR succeeds without confirmation, or require confirm? The user didn't specify confirmation for lunch, but let's wait for user to hit confirm
-      // actually, morning has "confirm" step, lunch doesn't in user's prompt:
-      // "3. Extracting lunch chart context
-      //  4. Sending chart to Gemini"
-      // it means NO confirm step. So we should startFullAnalysis directly!
-      
-       // However, we wait to render OCR confirm UI. Wait, currently LunchReversal has "Confirm & Analyze" button. Let's start it manually so we match the existing UI.
     } catch (err: any) {
       console.error("OCR Pre-check failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -77,16 +81,24 @@ export default function LunchReversal({
     } finally {
       setIsPreChecking(false);
     }
-  }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep]);
+  }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep, modelConfig]);
 
-  const startFullAnalysis = useCallback(async () => {
-    if (!pendingImage) return;
+  const startFullAnalysis = useCallback(async (isDeepReview = false) => {
+    const imgSource = isDeepReview ? lastImage : pendingImage;
+    if (!imgSource) return;
+
+    if (isDeepReview) {
+       initProgress();
+    }
+    
     setIsAnalyzing(true);
     setError(null);
     updateStep('send', 'active');
     try {
-      setLastImage(pendingImage);
-      const ocrOverrideText = ocrResult ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
+      if (!isDeepReview) {
+        setLastImage(pendingImage);
+      }
+      const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       
       const analysisSettings = {
         ...(session.aiSettings || { temperature: 0.1, customInstructions: '' }),
@@ -106,7 +118,9 @@ export default function LunchReversal({
         });
       }, 5000);
 
-      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult, undefined, 'lunch');
+      const routeName = isDeepReview ? "deep_review" : "lunch";
+      const modelToUse = getModelForRoute(routeName, modelConfig);
+      const analysis = await analyzeChart(imgSource, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
       clearInterval(subStepInterval);
       
       updateStep('send', 'complete');
@@ -118,7 +132,7 @@ export default function LunchReversal({
       try {
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (authSession?.user?.id) {
-           await uploadScreenshotAndSaveSetup(authSession.user.id, pendingImage, analysis, 'lunch', ocrResult); 
+           await uploadScreenshotAndSaveSetup(authSession.user.id, imgSource, analysis, 'lunch', ocrResult); 
            updateStep('save', 'complete');
         } else {
            updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
@@ -132,8 +146,10 @@ export default function LunchReversal({
       
       updateStep('complete', 'complete');
       
-      setPendingImage(null);
-      setOcrResult(null);
+      if (!isDeepReview) {
+        setPendingImage(null);
+        setOcrResult(null);
+      }
     } catch (err: any) {
       console.error(err);
       setError('Failed to analyze chart. Please try again.');
@@ -146,7 +162,7 @@ export default function LunchReversal({
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, updateStep]);
+  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, updateStep, modelConfig, initProgress]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,7 +204,8 @@ export default function LunchReversal({
         </div>
       </header>
 
-      <ApiCostPanel analysisType="lunch" title="Lunch Gemini Cost Today" />
+      <ApiCostPanel route="lunch" />
+      <ModelConfigPanel route="lunch" config={modelConfig} onChange={handleConfigChange} />
 
       {error && (
         <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)] p-4 text-[10px] font-mono flex items-center gap-2 fade-up">
@@ -308,6 +325,15 @@ export default function LunchReversal({
               <img src={lastImage} alt="Analysis" className="max-h-[400px] object-contain opacity-90" referrerPolicy="no-referrer" />
             </div>
           )}
+          <div className="flex justify-end gap-4 mt-8">
+            <button
+              onClick={() => startFullAnalysis(true)}
+              className="qd-btn-primary flex items-center gap-2"
+            >
+              <Cpu className="w-4 h-4" />
+              Run Deep Pro Review
+            </button>
+          </div>
         </div>
       )}
     </div>

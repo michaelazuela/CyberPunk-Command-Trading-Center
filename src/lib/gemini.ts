@@ -4,12 +4,8 @@
  */
 
 import { AISettings, Trade } from "../types";
-import { ApiCostAnalysisType, ApiCostEstimate, recordApiCost } from "./apiCost";
 
-const GEMINI_PRO_MODEL = "gemini-3-pro-preview";
-const GEMINI_FLASH_MODEL = "gemini-3-flash-preview";
-
-async function callGeminiAPI(params: any, analysisType: ApiCostAnalysisType = 'general', stage: string = 'gemini_request') {
+async function callGeminiAPI(params: any) {
   const payload: any = {
     model: params.model,
     contents: Array.isArray(params.contents) ? params.contents : [params.contents],
@@ -60,21 +56,26 @@ async function callGeminiAPI(params: any, analysisType: ApiCostAnalysisType = 'g
     throw new Error(`API error (${response.status} ${response.statusText}): ${parsedError}`);
   }
   const data = await response.json();
-  const result = data as { text?: string; cost?: ApiCostEstimate };
-  recordApiCost(analysisType, stage, result.cost);
-  return {
-    ...result,
-    text: result.text || data.candidates?.[0]?.content?.parts?.[0]?.text || "{}"
-  };
+  
+  if (data.usageMetadata && params.route) {
+    const { promptTokenCount, candidatesTokenCount } = data.usageMetadata;
+    window.dispatchEvent(new CustomEvent('mnq_gemini_usage', {
+      detail: {
+        route: params.route,
+        model: params.model,
+        promptTokens: promptTokenCount || 0,
+        completionTokens: candidatesTokenCount || 0
+      }
+    }));
+  }
+
+  if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
+    return { text: data.candidates[0].content.parts[0].text };
+  }
+  return { text: "{}" };
 }
 
-async function superAgent(
-  imageData: string,
-  settings?: AISettings,
-  previousAnalysis?: any,
-  historicalTrades?: Trade[],
-  analysisType: ApiCostAnalysisType = 'morning'
-) {
+async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string) {
   const prompt = `
     ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
     You are a unified system composing multiple expert sub-agents running in strict sequence to prevent hallucination.
@@ -203,7 +204,8 @@ async function superAgent(
   `;
 
   const response = await callGeminiAPI({
-    model: GEMINI_PRO_MODEL,
+    model: modelOverride || "gemini-3.1-pro-preview",
+    route: routeName,
     contents: {
       parts: [
         { text: prompt },
@@ -215,7 +217,7 @@ async function superAgent(
       temperature: settings?.temperature ?? 0.0,
       
     }
-  }, analysisType, 'full_analysis');
+  });
 
   try {
     const text = response.text || "{}";
@@ -264,7 +266,7 @@ export interface OCRResult {
   confidence: "HIGH" | "MEDIUM" | "LOW";
 }
 
-export async function preCheckChartInfo(imageData: string, analysisType: ApiCostAnalysisType = 'morning'): Promise<OCRResult> {
+export async function preCheckChartInfo(imageData: string, analysisType?: string, modelOverride?: string): Promise<OCRResult> {
   const prompt = `
     You are an expert financial chart OCR system. 
     Analyze this chart image and extract the following metadata exactly.
@@ -294,14 +296,15 @@ export async function preCheckChartInfo(imageData: string, analysisType: ApiCost
   };
 
   const response = await callGeminiAPI({
-    model: GEMINI_FLASH_MODEL,
+    model: modelOverride || "gemini-3.1-flash-preview", 
+    route: analysisType || "ocr",
     contents: [context],
     config: {
       temperature: 0.0,
       responseMimeType: "application/json",
       systemInstruction: "You are an automated OCR pre-check system. Output strictly valid JSON."
     } as any
-  }, analysisType, 'ocr_precheck');
+  });
 
   const textVal = response.text || "";
   try {
@@ -312,17 +315,10 @@ export async function preCheckChartInfo(imageData: string, analysisType: ApiCost
   }
 }
 
-export async function analyzeChart(
-  imageData: string,
-  settings?: AISettings,
-  accountEquity: number = 5000,
-  previousAnalysis?: any,
-  historicalTrades?: Trade[],
-  analysisType: ApiCostAnalysisType = 'morning'
-) {
+export async function analyzeChart(imageData: string, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string) {
   try {
     // Step 1: Execute Unified Super Agent
-    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, analysisType);
+    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType);
     
     if (!superReport) {
       throw new Error("Super Agent returned an empty report.");
@@ -429,13 +425,13 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
   `;
 
   const response = await callGeminiAPI({
-    model: GEMINI_FLASH_MODEL,
+    model: "gemini-3.1-pro-preview",
     contents: `Current Rules: ${currentRules}\n\nTrade History: ${JSON.stringify(trades)}`,
     config: {
       systemInstruction,
       responseMimeType: "application/json"
     }
-  }, 'general', 'strategy_insights');
+  });
 
   try {
     const text = response.text || '{}';
@@ -457,13 +453,13 @@ export async function validateTrade(context: string) {
   `;
 
   const response = await callGeminiAPI({
-    model: GEMINI_FLASH_MODEL,
+    model: "gemini-3.1-pro-preview",
     contents: context,
     config: {
       systemInstruction,
       responseMimeType: "application/json"
     }
-  }, 'general', 'trade_validation');
+  });
 
   try {
     const text = response.text || '{}';

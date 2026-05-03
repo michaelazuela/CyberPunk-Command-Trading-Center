@@ -1,70 +1,48 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, DollarSign } from 'lucide-react';
-import { ApiCostAnalysisType, formatUsd, getTodayApiCostSummary } from '../lib/apiCost';
+import React, { useEffect, useState } from 'react';
+import { getApiCosts, getTotalCostToday, getLastUsedModel } from '../lib/apiCost';
+import { formatModelLabel } from '../lib/modelRouter';
+import { cn } from '../lib/utils';
+import { BadgeDollarSign } from 'lucide-react';
 
-export default function ApiCostPanel({ analysisType, title }: {
-  analysisType?: ApiCostAnalysisType;
-  title?: string;
-}) {
-  const [version, setVersion] = useState(0);
+export default function ApiCostPanel({ route }: { route?: string }) {
+  const [cost, setCost] = useState(0);
+  const [lastModel, setLastModel] = useState<string | null>(null);
 
   useEffect(() => {
-    const onUpdate = () => setVersion(prev => prev + 1);
-    window.addEventListener('api-cost-updated', onUpdate);
-    window.addEventListener('storage', onUpdate);
-    return () => {
-      window.removeEventListener('api-cost-updated', onUpdate);
-      window.removeEventListener('storage', onUpdate);
+    const update = () => {
+      setCost(getTotalCostToday(route));
+      setLastModel(getLastUsedModel(route));
     };
-  }, []);
-
-  const summary = useMemo(() => getTodayApiCostSummary(analysisType), [analysisType, version]);
-  const latest = summary.records[0];
+    update();
+    window.addEventListener('mnq_api_cost_update', update);
+    return () => window.removeEventListener('mnq_api_cost_update', update);
+  }, [route]);
 
   return (
-    <div className="card-base">
-      <div className="card-header">
+    <div className="card-base mb-6 fade-up">
+      <div className="card-header border-b border-[var(--b1)] pb-2 mb-4">
         <span className="flex items-center gap-2">
-          <DollarSign className="w-3 h-3 text-[var(--green)]" />
-          {title || 'API Cost Today'}
+          <BadgeDollarSign className="w-4 h-4 text-[var(--green)]" />
+          API Cost Tracking
         </span>
-        <span className="qd-badge qd-badge-green">{formatUsd(summary.totalCostUsd)}</span>
       </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Metric label="Requests" value={summary.requestCount.toString()} />
-        <Metric label="Input Tokens" value={summary.inputTokens.toLocaleString()} />
-        <Metric label="Output Tokens" value={summary.outputTokens.toLocaleString()} />
-        <Metric label="Total Tokens" value={summary.totalTokens.toLocaleString()} />
+      <div className="flex items-center gap-6">
+        <div>
+           <span className="block text-[10px] text-[var(--txt2)] uppercase font-mono mb-1">Today's Estimated Cost</span>
+           <span className={cn("text-[14px] font-mono font-bold", cost > 0.5 ? "text-[var(--red)]" : "text-[var(--green)]")}>
+             ${cost.toFixed(4)}
+           </span>
+        </div>
+        
+        {lastModel && (
+          <div>
+            <span className="block text-[10px] text-[var(--txt2)] uppercase font-mono mb-1">Last Used Model</span>
+            <span className={cn("text-[12px] font-mono font-bold px-2 py-0.5 rounded border", lastModel.includes('flash') ? "text-[var(--cyan)] border-[var(--cyan)]/30 bg-[var(--cyan)]/10" : "text-[var(--amber)] border-[var(--amber)]/30 bg-[var(--amber)]/10")}>
+              {formatModelLabel(lastModel)}
+            </span>
+          </div>
+        )}
       </div>
-
-      {latest ? (
-        <div className="mt-4 border-t border-[var(--b0)] pt-3 flex flex-wrap items-center gap-2 text-[9px] font-mono uppercase text-[var(--txt2)]">
-          <Activity className="w-3 h-3 text-[var(--orange)]" />
-          <span>Last: {latest.stage}</span>
-          <span className="text-[var(--txt3)]">·</span>
-          <span>{latest.model}</span>
-          <span className="text-[var(--txt3)]">·</span>
-          <span className="text-[var(--green)]">{formatUsd(latest.totalCostUsd)}</span>
-        </div>
-      ) : (
-        <div className="mt-4 border-t border-[var(--b0)] pt-3 text-[9px] font-mono uppercase text-[var(--txt3)]">
-          No Gemini API calls recorded for this section today.
-        </div>
-      )}
-
-      <p className="mt-3 text-[8px] font-mono uppercase text-[var(--txt3)]">
-        Estimate only. Final billing is shown in Google Cloud Billing.
-      </p>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-[var(--s2)] border border-[var(--b1)] p-3">
-      <div className="text-[8px] font-mono uppercase text-[var(--txt3)] mb-1">{label}</div>
-      <div className="text-[12px] font-mono font-bold text-[var(--txt)]">{value}</div>
     </div>
   );
 }

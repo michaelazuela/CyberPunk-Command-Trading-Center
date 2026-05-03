@@ -229,40 +229,6 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="card-base">
-        <div className="card-header">
-          <div className="flex items-center gap-2">
-             <Clock className="w-3 h-3" />
-             <span>System Status — Session Timeline</span>
-          </div>
-        </div>
-        
-        <div className="space-y-[1px] bg-[var(--b0)]">
-           <div className="bg-[var(--s1)] flex justify-between items-center p-4 hover:bg-[var(--s2)] transition-colors">
-              <div className="flex items-center gap-6">
-                <span className="font-mono font-bold text-[10px] w-20">9:30-10:00</span>
-                <span className="text-[10px] text-[var(--txt2)]">Observation Window — Classify day type from 9:30 bar</span>
-              </div>
-              <span className="qd-badge qd-badge-muted">PENDING</span>
-           </div>
-           <div className="bg-[var(--s1)] flex justify-between items-center p-4 hover:bg-[var(--s2)] transition-colors">
-              <div className="flex items-center gap-6">
-                <span className="font-mono font-bold text-[10px] w-20">10:00-10:30</span>
-                <span className="text-[10px] text-[var(--txt2)]">Entry Window — Pullback confirmation bar required</span>
-              </div>
-              <span className="qd-badge qd-badge-muted">PENDING</span>
-           </div>
-           <div className="bg-[var(--s1)] flex justify-between items-center p-4 hover:bg-[var(--s2)] transition-colors">
-              <div className="flex items-center gap-6">
-                <span className="font-mono font-bold text-[10px] w-20">10:30</span>
-                <span className="text-[10px] text-[var(--txt2)]">Hard Exit — All positions closed, no new entries</span>
-              </div>
-              <span className="qd-badge qd-badge-muted">PENDING</span>
-           </div>
-        </div>
-      </div>
-
     </div>
   );
 }
