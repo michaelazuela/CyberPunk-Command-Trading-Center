@@ -6,6 +6,7 @@ import { cn, getImageFromClipboard } from '../lib/utils';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
+import ApiCostPanel from './ApiCostPanel';
 
 export default function LunchReversal({ 
   session, 
@@ -105,7 +106,7 @@ export default function LunchReversal({
         });
       }, 5000);
 
-      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult);
+      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult, undefined, 'lunch');
       clearInterval(subStepInterval);
       
       updateStep('send', 'complete');
@@ -186,6 +187,8 @@ export default function LunchReversal({
           <p>12:00-13:00 EST TRAP CONDITIONS</p>
         </div>
       </header>
+
+      <ApiCostPanel analysisType="lunch" title="Lunch Gemini Cost Today" />
 
       {error && (
         <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)] p-4 text-[10px] font-mono flex items-center gap-2 fade-up">

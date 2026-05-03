@@ -11,6 +11,7 @@ import { cn, getImageFromClipboard } from '../lib/utils';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
+import ApiCostPanel from './ApiCostPanel';
 
 export default function Analysis({ session, customRules = [], onUpdate }: { 
   session: SessionState, 
@@ -95,7 +96,6 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         ...localSettings,
         customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
-      
       const subStepInterval = setInterval(() => {
         setProgressSteps(prev => {
           const sendStep = prev.find(s => s.id === 'send');
@@ -111,7 +111,7 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
         });
       }, 5000);
 
-      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult);
+      const analysis = await analyzeChart(pendingImage, analysisSettings, session.accountEquity, session.analysisResult, undefined, 'morning');
       clearInterval(subStepInterval);
       
       updateStep('send', 'complete');
@@ -212,6 +212,8 @@ export default function Analysis({ session, customRules = [], onUpdate }: {
           </button>
         </div>
       </header>
+
+      <ApiCostPanel analysisType="morning" title="Morning Gemini Cost Today" />
 
       {showSettings && (
         <div className="card-base fade-up">
