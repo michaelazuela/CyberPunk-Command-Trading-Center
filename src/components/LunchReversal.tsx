@@ -212,15 +212,15 @@ export default function LunchReversal({
       
       try {
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
-        const { data: { session: authSession } } = await supabase.auth.getSession();
-        if (authSession?.user?.id) {
-           await uploadScreenshotAndSaveSetup(authSession.user.id, imgSource, analysis, 'lunch', ocrResult); 
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.id) {
+           await uploadScreenshotAndSaveSetup(authUser.id, imgSource, analysis, 'lunch', ocrResult); 
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            updateStep('save', 'complete');
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
-           updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
-           setError('Analysis complete, cloud save failed: User not authenticated.');
+           updateStep('save', 'warning', 'Please log in again to save to cloud history.');
+           setError('Analysis complete, cloud save failed: Please log in again to save to cloud history.');
         }
       } catch (saveErr: any) {
         console.error('[Analysis] Supabase save error:', saveErr);
