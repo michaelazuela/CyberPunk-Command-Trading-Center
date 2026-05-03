@@ -160,27 +160,33 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     if (!isDeepReview) {
       updateStep('confirm', 'complete');
     }
-    updateStep('send', 'active');
     
-    // Add timeout watchdog
-    let timeoutFired = false;
-    let subStepInterval: ReturnType<typeof setInterval> | undefined;
-    
-    const timeoutId = setTimeout(() => {
-      timeoutFired = true;
-      console.error('[Analysis] Timeout waiting for Gemini');
-      updateStep('send', 'error', 'Analysis timed out. Please retry.');
-      if (typeof setError === 'function') {
-        setError('Analysis timed out. Please retry.');
-      }
-      setIsAnalyzing(false);
-    }, 90000);
-
     try {
       if (!isDeepReview) {
          setLastImage(pendingImage);
       }
-      if (import.meta.env.DEV) console.log('[Analysis] Gemini request started');
+      
+      const routeName = isDeepReview ? "deep_review" : "morning";
+      const modelToUse = getModelForRoute(routeName, modelConfig);
+      
+      if (import.meta.env.DEV) {
+        console.log(`[GEMINI DEBUG] Starting API call`);
+        console.log(`[GEMINI DEBUG] Model: ${modelToUse}`);
+      }
+
+      // Compression step
+      updateStep('send', 'active');
+      setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: 'Compressing image' } : s));
+      
+      let imgToSend = imgSource;
+      try {
+        if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size before compression: ${Math.round(imgSource.length / 1024)} KB`);
+        imgToSend = await import('../lib/cloudStorage').then(m => m.compressImage(imgSource, 1280, 0.7));
+        if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size after compression: ${Math.round(imgToSend.length / 1024)} KB`);
+      } catch (err) {
+        console.warn("Failed to compress image, using original", err);
+      }
+
       const approvedRulesText = (customRules || []).filter(r => r.status === 'APPROVED').map(r => `- ${r.rule}`).join('\n');
       const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       const analysisSettings = {
@@ -188,30 +194,65 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
       
-      subStepInterval = setInterval(() => {
-        setProgressSteps(prev => {
-          const sendStep = prev.find(s => s.id === 'send');
-          const stratStep = prev.find(s => s.id === 'strategy');
-          const riskStep = prev.find(s => s.id === 'risk');
-          
-          if (sendStep?.status === 'active') {
-             return prev.map(s => s.id === 'send' ? {...s, status:'complete'} : s.id === 'strategy' ? {...s, status:'active'} : s);
-          } else if (stratStep?.status === 'active') {
-             return prev.map(s => s.id === 'strategy' ? {...s, status:'complete'} : s.id === 'risk' ? {...s, status:'active'} : s);
-          }
-          return prev;
-        });
-      }, 5000);
+      let analysis: any = null;
+      let attempt = 0;
+      const maxAttempts = 3;
+      let lastGeminiError: any = null;
+      const globalStartTime = Date.now();
 
-      const routeName = isDeepReview ? "deep_review" : "morning";
-      const modelToUse = getModelForRoute(routeName, modelConfig);
-      const analysis = await analyzeChart(imgSource, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
-      clearInterval(subStepInterval);
-      
-      if (timeoutFired) return;
-      clearTimeout(timeoutId);
-      
-      if (import.meta.env.DEV) console.log('[Analysis] Gemini response received', analysis);
+      while (attempt < maxAttempts) {
+        attempt++;
+        if (import.meta.env.DEV) {
+          console.log(`[GEMINI DEBUG] Timeout: 120000ms`);
+          console.log(`[GEMINI DEBUG] Attempt: ${attempt}/${maxAttempts}`);
+        }
+        
+        setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: attempt > 1 ? `Sending chart to Gemini (attempt ${attempt}/${maxAttempts})` : 'Sending chart to Gemini' } : s));
+        
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('TIMEOUT')), 120000);
+          });
+          
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
+          
+          analysis = await Promise.race([geminiPromise, timeoutPromise]);
+          const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
+          if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Response received in ${elapsed}s`);
+          
+          lastGeminiError = null;
+          break; // success
+        } catch (err: any) {
+          const errMsg = err.message || String(err);
+          const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
+          if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Attempt ${attempt} failed after ${elapsed}s: ${errMsg}`);
+          
+          lastGeminiError = err;
+          // check for retryable errors
+          if (errMsg.includes('429') || errMsg.includes('503') || errMsg.includes('TIMEOUT') || errMsg.includes('fetch failed')) {
+            if (attempt < maxAttempts) {
+              const delay = attempt === 1 ? 2000 : attempt === 2 ? 5000 : 10000;
+              await new Promise(r => setTimeout(r, delay));
+              continue;
+            }
+          }
+          break; // break immediately on other errors or if out of attempts
+        }
+      }
+
+      if (lastGeminiError) {
+        const errMsg = lastGeminiError.message || String(lastGeminiError);
+        const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
+        
+        let finalErrorText = `Analysis timed out after ${maxAttempts} attempts. Possible causes: large image, slow Gemini response, or rate limiting. Failed after ${elapsed}s.`;
+        if (errMsg.includes('429')) {
+          finalErrorText = 'Rate limited by Gemini API. Please wait before retrying.';
+        } else if (!errMsg.includes('TIMEOUT')) {
+          finalErrorText = `API Error: ${errMsg}`;
+        }
+        
+        throw new Error(finalErrorText);
+      }
 
       updateStep('send', 'complete');
       updateStep('strategy', 'complete');
@@ -223,18 +264,16 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser?.id) {
-           await uploadScreenshotAndSaveSetup(authUser.id, imgSource, analysis, 'morning', ocrResult); 
+           await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'morning', ocrResult)); 
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            updateStep('save', 'complete');
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
-           updateStep('save', 'warning', 'Please log in again to save to cloud history.');
-           setError('Analysis complete, cloud save failed: Please log in again to save to cloud history.');
+           updateStep('save', 'warning', 'Analysis complete. Cloud save skipped: user not authenticated.');
         }
       } catch (saveErr: any) {
         console.error('[Analysis] Supabase save error:', saveErr);
         updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
-        setError('Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
       }
       
       updateStep('complete', 'complete');
@@ -245,19 +284,16 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
          setOcrResult(null);
       }
     } catch (err: any) {
-      clearInterval(subStepInterval);
-      if (timeoutFired) return;
-      clearTimeout(timeoutId);
       console.error('[Analysis] Gemini error:', err);
-      setError('Failed to analyze chart. Please try again.');
-      updateStep('send', 'error', err instanceof Error ? err.message : String(err));
-      // if send failed, make sure risk, save, etc don't hang
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      updateStep('send', 'error', msg);
       updateStep('strategy', 'warning', 'Skipped');
       updateStep('risk', 'warning', 'Skipped');
       updateStep('save', 'warning', 'Skipped');
       updateStep('complete', 'warning', 'Halted');
     } finally {
-      if (!timeoutFired) setIsAnalyzing(false);
+      setIsAnalyzing(false);
     }
   }, [pendingImage, lastImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
