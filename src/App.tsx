@@ -18,6 +18,9 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthAttempting, setIsAuthAttempting] = useState<boolean>(false);
+
+  const AUTH_DEBUG = import.meta.env.DEV;
 
   useEffect(() => {
     testFirestoreConnection();
@@ -41,28 +44,56 @@ export default function App() {
         'Login failed.';
 
       setAuthError(`Auth Error: ${description}`);
-      console.error('Auth Error during startup:', description);
+      if (AUTH_DEBUG) console.error('[AUTH DEBUG] Auth Error during startup:', description);
+      setIsAuthAttempting(false);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     if (code) {
-      supabase.auth.exchangeCodeForSession(code).catch(err => {
-        console.error("Auth Error exchanging code:", err);
+      setIsAuthAttempting(true);
+      if (AUTH_DEBUG) console.log('[AUTH DEBUG] Exchanging code for session');
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+        if (error) {
+          if (AUTH_DEBUG) console.error("[AUTH DEBUG] Auth Error exchanging code:", error);
+          setAuthError(`Auth Error: ${error.message}`);
+        } else {
+          if (AUTH_DEBUG) console.log("[AUTH DEBUG] Code exchanged successfully");
+        }
+      }).catch(err => {
+        if (AUTH_DEBUG) console.error("[AUTH DEBUG] Exception exchanging code:", err);
         setAuthError(`Auth Error: ${err.message}`);
       }).finally(() => {
+        setIsAuthAttempting(false);
         window.history.replaceState({}, document.title, window.location.pathname);
       });
     }
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-         console.error('Error getting session:', error);
-         setAuthError(`Auth Error: ${error.message}`);
+    // Initialize state
+    supabase.auth.getSession().then(async ({ data: { session }, error: sessionError }) => {
+      if (sessionError) {
+         if (AUTH_DEBUG) console.error('[AUTH DEBUG] Error getting session:', sessionError);
+         setAuthError(`Auth Error: ${sessionError.message}`);
       }
-      setUser(session?.user ?? null);
+      
+      if (session) {
+        // Confirm user is actually valid to prevent stale session showing as logged in
+        const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          if (AUTH_DEBUG) console.error('[AUTH DEBUG] Session found but getUser failed:', userError);
+          setAuthError(`Session invalid: ${userError.message}`);
+          setUser(null);
+        } else {
+          setUser(authUser);
+          if (AUTH_DEBUG) console.log('[AUTH DEBUG] User present on mount:', Boolean(authUser));
+        }
+      } else {
+        setUser(null);
+        if (AUTH_DEBUG) console.log('[AUTH DEBUG] No session found on mount');
+      }
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (AUTH_DEBUG) console.log('[AUTH DEBUG] onAuthStateChange event:', _event);
       setUser(session?.user ?? null);
       if (_event === 'SIGNED_IN') {
          setAuthError(null);
@@ -70,7 +101,7 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [AUTH_DEBUG]);
 
   useEffect(() => {
     if (user) {
@@ -89,22 +120,32 @@ export default function App() {
     return window.location.origin;
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.MouseEvent) => {
+    e.preventDefault();
     setAuthError(null);
+    setIsAuthAttempting(true);
+    
+    const redirectUrl = getAuthRedirectUrl();
+    if (AUTH_DEBUG) console.log("[AUTH DEBUG] Login attempted at:", new Date().toISOString());
+    if (AUTH_DEBUG) console.log("[AUTH DEBUG] Redirect URL:", redirectUrl);
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({ 
         provider: 'google',
         options: {
-          redirectTo: getAuthRedirectUrl()
+          redirectTo: redirectUrl
         }
       });
       if (error) {
-        console.error('Error signing in:', error);
+        if (AUTH_DEBUG) console.error('[AUTH DEBUG] Error signing in:', error);
         setAuthError(`Auth Error: ${error.message}`);
+        setIsAuthAttempting(false);
       }
+      // If it succeeds, the page will redirect so we leave isAuthAttempting true
     } catch (err: any) {
-      console.error('Exception during sign in:', err);
+      if (AUTH_DEBUG) console.error('[AUTH DEBUG] Exception during sign in:', err);
       setAuthError(`Auth Error: ${err.message}`);
+      setIsAuthAttempting(false);
     }
   };
 
@@ -224,9 +265,20 @@ export default function App() {
                  LOGOUT
                </button>
              </>
+           ) : isAuthAttempting ? (
+             <>
+               <div className="qd-badge bg-[var(--orange)]/10 border-[var(--orange)]/30 text-[var(--orange)] shrink-0">AUTH: ATTEMPTING</div>
+               <button disabled className="text-[10px] font-mono text-[var(--txt3)] bg-[var(--b0)] px-2 py-1 rounded border border-[var(--b1)] shrink-0 opacity-50 cursor-not-allowed">
+                 WAIT...
+               </button>
+             </>
            ) : (
              <>
-               <div className="qd-badge bg-[var(--b0)] border-[var(--b1)] text-[var(--txt3)] shrink-0">AUTH: OFF</div>
+               {authError ? (
+                 <div className="qd-badge bg-[var(--red)]/10 border-[var(--red)]/30 text-[var(--red)] shrink-0">AUTH: FAILED</div>
+               ) : (
+                 <div className="qd-badge bg-[var(--b0)] border-[var(--b1)] text-[var(--txt3)] shrink-0">AUTH: OFF</div>
+               )}
                <button onClick={handleLogin} className="text-[10px] font-mono text-[var(--txt2)] hover:text-[var(--txt)] bg-[var(--b0)] px-2 py-1 rounded border border-[var(--b1)] shrink-0">
                  LOGIN
                </button>
