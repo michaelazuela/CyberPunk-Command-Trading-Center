@@ -25,6 +25,11 @@ export interface Trade {
   notes?: string;
   timestamp: number;
   screenshotUrl?: string;
+  analysisType?: string;
+  analysisConfidence?: number;
+  analysisReasoning?: string;
+  setupTags?: string[];
+  outcomeLabel?: string;
 
   createdAt?: any;
   updatedAt?: any;

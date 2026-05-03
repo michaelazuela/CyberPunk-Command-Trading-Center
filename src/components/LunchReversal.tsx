@@ -12,10 +12,12 @@ import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from 
 
 export default function LunchReversal({ 
   session, 
-  onUpdate 
+  onUpdate,
+  onAddTrade
 }: { 
   session: SessionState,
-  onUpdate: (updates: Partial<SessionState>) => void
+  onUpdate: (updates: Partial<SessionState>) => void,
+  onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void
 }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPreChecking, setIsPreChecking] = useState(false);
@@ -32,6 +34,54 @@ export default function LunchReversal({
     saveModelConfig(newConfig);
   };
 
+  const [executionQuantity, setExecutionQuantity] = useState(1);
+  const [executionDirection, setExecutionDirection] = useState<'LONG'|'SHORT'>('LONG');
+  const [isSavingTrade, setIsSavingTrade] = useState(false);
+  const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
+
+  useEffect(() => {
+    if (result) {
+       if (result.dayType?.includes('LONG')) setExecutionDirection('LONG');
+       else if (result.dayType?.includes('SHORT')) setExecutionDirection('SHORT');
+    }
+  }, [result]);
+
+  const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED') => {
+    if (!onAddTrade || !result) return;
+    setIsSavingTrade(true);
+    setTradeSavedMessage(null);
+    try {
+      const status = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : manualOutcome === 'FAILED' ? 'FAILED' : 'OPEN';
+      const tradeData: Omit<Trade, 'id' | 'timestamp'> = {
+        date: new Date().toISOString().split('T')[0],
+        direction: executionDirection,
+        dayType: result.dayType,
+        entryPrice: result.suggestedEntry || 0,
+        stopPrice: result.suggestedStop || 0,
+        targetPrice: result.suggestedTarget || 0,
+        contracts: executionQuantity,
+        status,
+        manualOutcome,
+        notes: `From Lunch Reversal analysis.\nReasoning: ${result.reasoning}`,
+        screenshotUrl: lastImage || undefined,
+        analysisType: 'lunch',
+        analysisConfidence: result.confidence,
+        analysisReasoning: result.reasoning,
+        setupTags: result.tags || [],
+        outcomeLabel: manualOutcome
+      };
+      
+      await onAddTrade(tradeData);
+      setTradeSavedMessage("Trade saved to history.");
+      setTimeout(() => setTradeSavedMessage(null), 3000);
+    } catch(err) {
+      console.error(err);
+      setTradeSavedMessage("Error saving trade");
+      setTimeout(() => setTradeSavedMessage(null), 3000);
+    } finally {
+      setIsSavingTrade(false);
+    }
+  };
 
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [progressStart, setProgressStart] = useState<number | null>(null);
@@ -334,6 +384,64 @@ export default function LunchReversal({
               Run Deep Pro Review
             </button>
           </div>
+
+          {/* Trade Execution Panel */}
+          {onAddTrade && (
+             <div className="card-base mt-8">
+               <div className="card-header border-b border-[var(--b1)] pb-2 mb-4">
+                 <span>Trade Execution</span>
+               </div>
+               {tradeSavedMessage && (
+                 <div className="mb-4 text-[12px] font-mono text-[var(--cyan)]">{tradeSavedMessage}</div>
+               )}
+               <div className="flex flex-wrap items-end gap-4">
+                 <div>
+                   <label className="block text-[10px] text-[var(--txt2)] uppercase font-mono mb-1">Contracts</label>
+                   <input 
+                     type="number" 
+                     min="1" 
+                     value={executionQuantity} 
+                     onChange={(e) => setExecutionQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                     className="bg-[var(--b0)] border border-[var(--b1)] p-2 w-20 text-[var(--txt)] text-[14px] font-mono rounded-none focus:border-[var(--orange)] focus:outline-none"
+                   />
+                 </div>
+                 {(!result.dayType?.includes('LONG') && !result.dayType?.includes('SHORT')) && (
+                   <div>
+                     <label className="block text-[10px] text-[var(--txt2)] uppercase font-mono mb-1">Direction</label>
+                     <select 
+                       value={executionDirection} 
+                       onChange={(e) => setExecutionDirection(e.target.value as 'LONG'|'SHORT')}
+                       className="bg-[var(--b0)] border border-[var(--b1)] p-2 w-24 text-[var(--txt)] text-[14px] font-mono rounded-none focus:border-[var(--orange)] focus:outline-none"
+                     >
+                       <option value="LONG">LONG</option>
+                       <option value="SHORT">SHORT</option>
+                     </select>
+                   </div>
+                 )}
+                 <button
+                   onClick={() => handleSaveTrade()}
+                   disabled={isSavingTrade}
+                   className="qd-btn-primary flex items-center gap-2 h-[38px]"
+                 >
+                   {isSavingTrade ? 'Saving...' : 'Execute Trade'}
+                 </button>
+                 <button
+                   onClick={() => handleSaveTrade('SUCCESS')}
+                   disabled={isSavingTrade}
+                   className="qd-btn-ghost hover:bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/30 flex items-center gap-2 h-[38px]"
+                 >
+                   Successful
+                 </button>
+                 <button
+                   onClick={() => handleSaveTrade('FAILED')}
+                   disabled={isSavingTrade}
+                   className="qd-btn-ghost hover:bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 flex items-center gap-2 h-[38px]"
+                 >
+                   Failed
+                 </button>
+               </div>
+             </div>
+          )}
         </div>
       )}
     </div>

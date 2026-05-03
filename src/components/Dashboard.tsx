@@ -1,6 +1,6 @@
 import React from 'react';
 import { SessionState, Trade } from '../types';
-import { SYSTEM_RULES, DAY_TYPE_DESCRIPTIONS } from '../constants';
+import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
 import MonteCarloSection from './MonteCarloSection';
 import MidnightAnalysisView from './MidnightAnalysisView';
@@ -150,80 +150,6 @@ export default function Dashboard({
               <Activity className="w-6 h-6 mb-4 opacity-50" />
               <h3>AWAITING ANALYSIS</h3>
               <p>Prediction engine will activate once entry parameters are defined.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 3 Col Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card-base flex flex-col">
-          <div className="card-header">
-            <span>Day Type</span>
-            {!session.dayType && <span className="qd-badge qd-badge-muted">PENDING</span>}
-          </div>
-          {session.dayType ? (
-            <div className="flex-1 flex flex-col justify-center text-center py-6">
-              <h3 className="font-mono font-bold text-[14px] text-[var(--txt)] uppercase mb-2">{session.dayType}</h3>
-              <p className="text-[9px] text-[var(--txt2)] lowercase first-letter:uppercase">{DAY_TYPE_DESCRIPTIONS[session.dayType]}</p>
-            </div>
-          ) : (
-            <div className="empty-state flex-1 py-6">
-              <h3>NOT CLASSIFIED</h3>
-              <p>Run Morning Analysis to classify today's session type.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="card-base flex flex-col justify-between">
-          <div className="card-header border-none mb-0 pb-0">
-            <span>Kill Switches</span>
-            <button className="qd-badge qd-badge-green hover:opacity-80">CLEAR</button>
-          </div>
-          <div className="mt-4 space-y-[1px] bg-[var(--b0)]">
-             <div className="bg-[var(--s1)] flex justify-between items-center py-2 px-1">
-               <span className="text-[10px] text-[var(--txt)]">Daily Loss Limit</span>
-               <span className={cn("qd-badge", isLossKillSwitch ? "qd-badge-red" : "qd-badge-muted")}>
-                 {isLossKillSwitch ? "TRIGGERED" : "STANDBY"}
-               </span>
-             </div>
-             <div className="bg-[var(--s1)] flex justify-between items-center py-2 px-1">
-               <span className="text-[10px] text-[var(--txt)]">Order Limit (3 max)</span>
-               <span className={cn("qd-badge", isFillKillSwitch ? "qd-badge-red" : "qd-badge-green")}>
-                 {session.killSwitches.fills} / {SYSTEM_RULES.KILL_SWITCH_FILLS}
-               </span>
-             </div>
-             <div className="bg-[var(--s1)] flex justify-between items-center py-2 px-1">
-               <span className="text-[10px] text-[var(--txt)]">Time Limit Reached</span>
-               <span className="qd-badge qd-badge-muted">STANDBY</span>
-             </div>
-          </div>
-        </div>
-
-        <div className="card-base flex flex-col">
-          <div className="card-header">
-            <span>Active Trades</span>
-            <span className="qd-badge qd-badge-muted">{openTrades.length} OPEN</span>
-          </div>
-          {openTrades.length > 0 ? (
-            <div className="flex-1 flex flex-col gap-2 mt-2">
-              {openTrades.map(trade => (
-                <div key={trade.id} className="flex justify-between items-center p-3 border border-[var(--b1)] bg-[var(--s2)]">
-                  <div className="flex items-center gap-2">
-                     <span className={trade.direction === 'LONG' ? "text-[var(--green)]" : "text-[var(--red)]"}>
-                       {trade.direction === 'LONG' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                     </span>
-                     <span className="font-mono text-[10px] font-bold">{trade.direction}</span>
-                  </div>
-                  <span className="font-mono text-[10px]">{trade.entryPrice}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state flex-1 py-6">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-              <h3>NO ACTIVE TRADES</h3>
-              <p>Awaiting valid pullback confirmation bar.</p>
             </div>
           )}
         </div>

@@ -180,31 +180,34 @@ export default function App() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 ml-auto min-w-0 pr-2">
            {isKillSwitchTriggered && (
-             <span className="qd-badge qd-badge-red flex items-center gap-1">
+             <span className="qd-badge qd-badge-red flex items-center gap-1 shrink-0">
                <AlertTriangle className="w-3 h-3" /> KILL SWITCH
              </span>
            )}
-           <div className="qd-badge qd-badge-orange flex items-center gap-1.5 px-2">
+           <div className="qd-badge qd-badge-orange flex items-center gap-1.5 px-2 shrink-0">
              <div className="w-1.5 h-1.5 rounded-full bg-[var(--orange)] animate-pulse"></div>LIVE
            </div>
            
-           <div className="text-[10px] font-mono text-[var(--txt)] uppercase">
-             MES/MNQ
-           </div>
-           
-           <div className="text-[10px] font-mono uppercase">
-             <span className="text-[var(--txt2)]">NLV: </span>
-             <span className="text-[var(--txt)] font-bold">${appState.currentSession.accountEquity.toLocaleString()}</span>
-           </div>
-
-           <div className="text-[10px] font-mono text-[var(--txt2)] truncate max-w-[120px] ml-2 uppercase flex items-center gap-2">
-             {user ? user.email?.split('@')[0] : 'MICHAELAZUE'}
-             <button onClick={user ? () => supabase.auth.signOut() : handleLogin} className="hover:text-[var(--txt)] ml-1">
-               {user ? '(LOGOUT)' : '(LOGIN)'}
-             </button>
-           </div>
+           {user ? (
+             <>
+               <div className="qd-badge bg-[var(--green)]/10 border-[var(--green)]/30 text-[var(--green)] shrink-0">AUTH: ON</div>
+               <div className="text-[10px] font-mono text-[var(--txt2)] uppercase truncate max-w-[120px] md:max-w-[180px]" title={user.email}>
+                 USER: {user.email}
+               </div>
+               <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-mono text-[var(--txt2)] hover:text-[var(--txt)] bg-[var(--b0)] px-2 py-1 rounded border border-[var(--b1)] shrink-0">
+                 LOGOUT
+               </button>
+             </>
+           ) : (
+             <>
+               <div className="qd-badge bg-[var(--b0)] border-[var(--b1)] text-[var(--txt3)] shrink-0">AUTH: OFF</div>
+               <button onClick={handleLogin} className="text-[10px] font-mono text-[var(--txt2)] hover:text-[var(--txt)] bg-[var(--b0)] px-2 py-1 rounded border border-[var(--b1)] shrink-0">
+                 LOGIN
+               </button>
+             </>
+           )}
         </div>
       </header>
 
@@ -212,8 +215,8 @@ export default function App() {
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
           {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateTrade={updateTrade} />}
-          {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} />}
-          {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} />}
+          {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} />}
+          {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} />}
           {activeTab === 'trade' && <TradeManager session={{ ...appState.currentSession, trades: currentTrades }} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
           {activeTab === 'history' && <TradeLog trades={displayTrades} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} onDeleteTrade={removeTrade} />}
           {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
