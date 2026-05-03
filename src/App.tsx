@@ -18,15 +18,56 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     testFirestoreConnection();
-    supabase.auth.getSession().then(({ data: { session } }) => {
+
+    // Check for OAuth errors in query or hash
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const errorFromQuery = url.searchParams.get('error');
+    const errorDescriptionFromQuery = url.searchParams.get('error_description');
+
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const errorFromHash = hashParams.get('error');
+    const errorDescriptionFromHash = hashParams.get('error_description');
+
+    if (errorFromQuery || errorFromHash) {
+      const description =
+        errorDescriptionFromQuery ||
+        errorDescriptionFromHash ||
+        errorFromQuery ||
+        errorFromHash ||
+        'Login failed.';
+
+      setAuthError(`Auth Error: ${description}`);
+      console.error('Auth Error during startup:', description);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).catch(err => {
+        console.error("Auth Error exchanging code:", err);
+        setAuthError(`Auth Error: ${err.message}`);
+      }).finally(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+    }
+
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+         console.error('Error getting session:', error);
+         setAuthError(`Auth Error: ${error.message}`);
+      }
       setUser(session?.user ?? null);
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (_event === 'SIGNED_IN') {
+         setAuthError(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -43,10 +84,28 @@ export default function App() {
     }
   }, [user]);
 
+  const getAuthRedirectUrl = () => {
+    const configured = import.meta.env.VITE_AUTH_REDIRECT_URL;
+    if (configured) return configured;
+    return window.location.origin;
+  };
+
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) {
-      console.error('Error signing in:', error);
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({ 
+        provider: 'google',
+        options: {
+          redirectTo: getAuthRedirectUrl()
+        }
+      });
+      if (error) {
+        console.error('Error signing in:', error);
+        setAuthError(`Auth Error: ${error.message}`);
+      }
+    } catch (err: any) {
+      console.error('Exception during sign in:', err);
+      setAuthError(`Auth Error: ${err.message}`);
     }
   };
 
@@ -210,6 +269,13 @@ export default function App() {
            )}
         </div>
       </header>
+
+      {authError && (
+        <div className="bg-[var(--red)]/10 border-b border-[var(--red)]/30 text-[var(--red)] px-6 py-2 text-[11px] font-mono flex items-center justify-between z-40 relative">
+          <span>{authError}</span>
+          <button onClick={() => setAuthError(null)} className="hover:text-white px-2 py-0.5 rounded border border-[var(--red)]/30">DISMISS</button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
