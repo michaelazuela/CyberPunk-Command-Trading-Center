@@ -6,16 +6,15 @@ import { SessionState, Trade, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
 import Dashboard from './components/Dashboard';
 import Analysis from './components/Analysis';
-import TradeManager from './components/TradeManager';
 import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
 
-import { subscribeToTrades, deleteTrade, addTrade as addFirestoreTrade, updateTradeStatus, testFirestoreConnection } from './lib/firestoreService';
+import { subscribeToTrades, addTrade as addFirestoreTrade, testFirestoreConnection } from './lib/firestoreService';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'trade' | 'history' | 'settings' | 'rules'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -160,39 +159,6 @@ export default function App() {
     }
   };
 
-  const removeTrade = async (id: string) => {
-    if (user) {
-      await deleteTrade(id);
-    } else {
-      setAppState(prev => ({
-        ...prev,
-        currentSession: {
-          ...prev.currentSession,
-          trades: prev.currentSession.trades.filter(t => t.id !== id)
-        },
-        history: prev.history.filter(t => t.id !== id)
-      }));
-    }
-  };
-
-  const updateTrade = async (id: string, updates: Partial<Trade>) => {
-    if (user) {
-      const { status, ...rest } = updates;
-      await updateTradeStatus(id, status || 'OPEN', rest);
-    } else {
-      setAppState(prev => {
-        const updateTradeInList = (list: Trade[]) => list.map(t => t.id === id ? { ...t, ...updates } : t);
-        const newSessionTrades = updateTradeInList(prev.currentSession.trades);
-        const newHistory = updateTradeInList(prev.history);
-        return {
-          ...prev,
-          currentSession: { ...prev.currentSession, trades: newSessionTrades },
-          history: newHistory
-        };
-      });
-    }
-  };
-
   const addProposedRule = (rule: ProposedRule) => {
     setAppState(prev => ({
       ...prev,
@@ -231,7 +197,6 @@ export default function App() {
             <TopNavItem label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
             <TopNavItem label="Analysis" active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
             <TopNavItem label="Lunch Reversal" active={activeTab === 'lunch'} onClick={() => setActiveTab('lunch')} />
-            <TopNavItem label="Trade Desk" active={activeTab === 'trade'} disabled={!appState.currentSession.dayType || isKillSwitchTriggered} onClick={() => setActiveTab('trade')} />
             <TopNavItem label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
             <TopNavItem label="Rules" active={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -280,11 +245,10 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
-          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateTrade={updateTrade} />}
+          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} />}
           {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} />}
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} />}
-          {activeTab === 'trade' && <TradeManager session={{ ...appState.currentSession, trades: currentTrades }} onAddTrade={addTrade} onUpdateTrade={updateTrade} />}
-          {activeTab === 'history' && <TradeLog trades={displayTrades} appState={appState} onProposeRule={addProposedRule} onAddTrade={addTrade} onDeleteTrade={removeTrade} />}
+          {activeTab === 'history' && <TradeLog trades={displayTrades} onAddTrade={addTrade} />}
           {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
           {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} />}
         </div>

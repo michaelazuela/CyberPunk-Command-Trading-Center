@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { Trade, AppState, ProposedRule } from '../types';
-import { Target, TrendingUp, TrendingDown, Clock, ShieldAlert, Sparkles, Loader2, Plus, Download, X } from 'lucide-react';
+import { Target, Clock, ShieldAlert, Plus, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { updateTradeStatus } from '../lib/firestoreService';
 
-export default function TradeLog({ trades, appState, onAddTrade, onDeleteTrade }: { 
+export default function TradeLog({ trades, onAddTrade }: { 
   trades: Trade[], 
-  appState: AppState,
-  onProposeRule: (rule: ProposedRule) => void, // Kept to satisfy interface
   onAddTrade: (trade: Trade) => void,
-  onDeleteTrade?: (id: string) => void
 }) {
   const [isAddingManual, setIsAddingManual] = useState(false);
 

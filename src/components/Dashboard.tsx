@@ -1,30 +1,19 @@
 import React from 'react';
-import { SessionState, Trade } from '../types';
+import { SessionState } from '../types';
 import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
 import MonteCarloSection from './MonteCarloSection';
-import MidnightAnalysisView from './MidnightAnalysisView';
 import { 
   TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
   Target,
   Shield,
-  Zap,
-  CheckCircle2,
-  ThumbsUp,
-  ThumbsDown,
-  Moon,
-  Clock,
   Activity
 } from 'lucide-react';
 
 export default function Dashboard({ 
-  session, 
-  onUpdateTrade 
+  session
 }: { 
-  session: SessionState,
-  onUpdateTrade: (id: string, updates: Partial<Trade>) => void
+  session: SessionState
 }) {
   const openTrades = session.trades.filter(t => t.status === 'OPEN');
   const closedTrades = session.trades.filter(t => t.status === 'CLOSED' || t.status === 'FAILED' || t.status === 'SUCCESSFUL');
