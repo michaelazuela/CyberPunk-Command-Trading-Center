@@ -142,10 +142,13 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     }
   }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep, modelConfig]);
 
-  const startFullAnalysis = useCallback(async (isDeepReview = false) => {
+  const startFullAnalysis = useCallback(async (isDeepReviewParam?: boolean | React.MouseEvent) => {
+    const isDeepReview = isDeepReviewParam === true;
     const imgSource = isDeepReview ? lastImage : pendingImage;
     if (!imgSource) return;
     
+    if (import.meta.env.DEV) console.log('[Analysis] Starting full analysis, isDeepReview:', isDeepReview);
+
     // reset steps if deep review
     if (isDeepReview) {
        initProgress();
@@ -158,10 +161,26 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       updateStep('confirm', 'complete');
     }
     updateStep('send', 'active');
+    
+    // Add timeout watchdog
+    let timeoutFired = false;
+    let subStepInterval: ReturnType<typeof setInterval> | undefined;
+    
+    const timeoutId = setTimeout(() => {
+      timeoutFired = true;
+      console.error('[Analysis] Timeout waiting for Gemini');
+      updateStep('send', 'error', 'Analysis timed out. Please retry.');
+      if (typeof setError === 'function') {
+        setError('Analysis timed out. Please retry.');
+      }
+      setIsAnalyzing(false);
+    }, 90000);
+
     try {
       if (!isDeepReview) {
          setLastImage(pendingImage);
       }
+      if (import.meta.env.DEV) console.log('[Analysis] Gemini request started');
       const approvedRulesText = (customRules || []).filter(r => r.status === 'APPROVED').map(r => `- ${r.rule}`).join('\n');
       const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       const analysisSettings = {
@@ -169,7 +188,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         customInstructions: `${localSettings.customInstructions}\n${ocrOverrideText}\nAPPROVED STRATEGY REFINEMENTS:\n${approvedRulesText}`.trim()
       };
       
-      const subStepInterval = setInterval(() => {
+      subStepInterval = setInterval(() => {
         setProgressSteps(prev => {
           const sendStep = prev.find(s => s.id === 'send');
           const stratStep = prev.find(s => s.id === 'strategy');
@@ -189,6 +208,11 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       const analysis = await analyzeChart(imgSource, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
       clearInterval(subStepInterval);
       
+      if (timeoutFired) return;
+      clearTimeout(timeoutId);
+      
+      if (import.meta.env.DEV) console.log('[Analysis] Gemini response received', analysis);
+
       updateStep('send', 'complete');
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
@@ -196,16 +220,19 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       setResult(analysis);
       
       try {
+        if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (authSession?.user?.id) {
            await uploadScreenshotAndSaveSetup(authSession.user.id, imgSource, analysis, 'morning', ocrResult); 
+           if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            updateStep('save', 'complete');
         } else {
+           if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
            updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
            setError('Analysis complete, cloud save failed: User not authenticated.');
         }
       } catch (saveErr: any) {
-        console.error('Supabase save error:', saveErr);
+        console.error('[Analysis] Supabase save error:', saveErr);
         updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
         setError('Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
       }
@@ -218,7 +245,10 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
          setOcrResult(null);
       }
     } catch (err: any) {
-      console.error(err);
+      clearInterval(subStepInterval);
+      if (timeoutFired) return;
+      clearTimeout(timeoutId);
+      console.error('[Analysis] Gemini error:', err);
       setError('Failed to analyze chart. Please try again.');
       updateStep('send', 'error', err instanceof Error ? err.message : String(err));
       // if send failed, make sure risk, save, etc don't hang
@@ -227,7 +257,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       updateStep('save', 'warning', 'Skipped');
       updateStep('complete', 'warning', 'Halted');
     } finally {
-      setIsAnalyzing(false);
+      if (!timeoutFired) setIsAnalyzing(false);
     }
   }, [pendingImage, lastImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 

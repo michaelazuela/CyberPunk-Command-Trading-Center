@@ -95,6 +95,7 @@ export default function LunchReversal({
       { id: 'received', label: 'Image received', status: 'complete' },
       { id: 'prep', label: 'Preparing screenshot', status: 'active' },
       { id: 'extract', label: 'Extracting lunch chart context', status: 'pending' },
+      { id: 'confirm', label: 'Waiting for confirmation', status: 'pending' },
       { id: 'send', label: 'Sending chart to Gemini', status: 'pending' },
       { id: 'strategy', label: 'Running lunch reversal analysis', status: 'pending' },
       { id: 'risk', label: 'Running risk audit', status: 'pending' },
@@ -121,6 +122,7 @@ export default function LunchReversal({
       ocr.timezone = session.aiSettings?.screenshotTimezone || session.aiSettings?.morningTimeZone || 'EST';
       setOcrResult(ocr);
       updateStep('extract', 'complete');
+      updateStep('confirm', 'active');
     } catch (err: any) {
       console.error("OCR Pre-check failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -128,14 +130,18 @@ export default function LunchReversal({
          setError(msg);
       }
       updateStep('extract', 'warning', `OCR failed: ${msg}. You can continue analysis if desired.`);
+      updateStep('confirm', 'active');
     } finally {
       setIsPreChecking(false);
     }
   }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep, modelConfig]);
 
-  const startFullAnalysis = useCallback(async (isDeepReview = false) => {
+  const startFullAnalysis = useCallback(async (isDeepReviewParam?: boolean | React.MouseEvent) => {
+    const isDeepReview = isDeepReviewParam === true;
     const imgSource = isDeepReview ? lastImage : pendingImage;
     if (!imgSource) return;
+
+    if (import.meta.env.DEV) console.log('[Analysis] Starting full analysis, isDeepReview:', isDeepReview);
 
     if (isDeepReview) {
        initProgress();
@@ -143,11 +149,31 @@ export default function LunchReversal({
     
     setIsAnalyzing(true);
     setError(null);
+    
+    if (!isDeepReview) {
+      updateStep('confirm', 'complete');
+    }
     updateStep('send', 'active');
+    
+    // Add timeout watchdog
+    let timeoutFired = false;
+    let subStepInterval: ReturnType<typeof setInterval> | undefined;
+
+    const timeoutId = setTimeout(() => {
+      timeoutFired = true;
+      console.error('[Analysis] Timeout waiting for Gemini');
+      updateStep('send', 'error', 'Analysis timed out. Please retry.');
+      if (typeof setError === 'function') {
+        setError('Analysis timed out. Please retry.');
+      }
+      setIsAnalyzing(false);
+    }, 90000);
+
     try {
       if (!isDeepReview) {
         setLastImage(pendingImage);
       }
+      if (import.meta.env.DEV) console.log('[Analysis] Gemini request started');
       const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       
       const analysisSettings = {
@@ -155,7 +181,7 @@ export default function LunchReversal({
         customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 12:00-13:00 EST Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
       };
       
-      const subStepInterval = setInterval(() => {
+      subStepInterval = setInterval(() => {
         setProgressSteps(prev => {
           const sendStep = prev.find(s => s.id === 'send');
           const stratStep = prev.find(s => s.id === 'strategy');
@@ -173,6 +199,11 @@ export default function LunchReversal({
       const analysis = await analyzeChart(imgSource, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
       clearInterval(subStepInterval);
       
+      if (timeoutFired) return;
+      clearTimeout(timeoutId);
+      
+      if (import.meta.env.DEV) console.log('[Analysis] Gemini response received', analysis);
+
       updateStep('send', 'complete');
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
@@ -180,16 +211,19 @@ export default function LunchReversal({
       setResult(analysis);
       
       try {
+        if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (authSession?.user?.id) {
            await uploadScreenshotAndSaveSetup(authSession.user.id, imgSource, analysis, 'lunch', ocrResult); 
+           if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            updateStep('save', 'complete');
         } else {
+           if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
            updateStep('save', 'warning', 'User not authenticated. Setup was not saved to cloud.');
            setError('Analysis complete, cloud save failed: User not authenticated.');
         }
       } catch (saveErr: any) {
-        console.error('Supabase save error:', saveErr);
+        console.error('[Analysis] Supabase save error:', saveErr);
         updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
         setError('Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
       }
@@ -201,7 +235,10 @@ export default function LunchReversal({
         setOcrResult(null);
       }
     } catch (err: any) {
-      console.error(err);
+      clearInterval(subStepInterval);
+      if (timeoutFired) return;
+      clearTimeout(timeoutId);
+      console.error('[Analysis] Gemini error:', err);
       setError('Failed to analyze chart. Please try again.');
       updateStep('send', 'error', err instanceof Error ? err.message : String(err));
       // if send failed, make sure risk, save, etc don't hang
@@ -210,7 +247,7 @@ export default function LunchReversal({
       updateStep('save', 'warning', 'Skipped');
       updateStep('complete', 'warning', 'Halted');
     } finally {
-      setIsAnalyzing(false);
+      if (!timeoutFired) setIsAnalyzing(false);
     }
   }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, updateStep, modelConfig, initProgress]);
 
@@ -332,7 +369,14 @@ export default function LunchReversal({
               <input value={ocrResult.currentPrice || ''} onChange={(e) => setOcrResult({ ...ocrResult, currentPrice: parseFloat(e.target.value) || undefined })} type="number" className="bg-[var(--bg)] border border-[var(--b1)] p-2 font-mono text-[10px]" placeholder="Price" />
            </div>
            <div className="flex gap-4">
-              <button onClick={startFullAnalysis} className="qd-btn-primary">Confirm & Analyze</button>
+              <button 
+                type="button"
+                onClick={() => startFullAnalysis(false)} 
+                className="qd-btn-primary"
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? 'Analyzing...' : 'Confirm & Analyze'}
+              </button>
               <button onClick={() => { setPendingImage(null); setOcrResult(null); }} className="qd-btn-ghost">Cancel</button>
            </div>
         </div>
@@ -377,11 +421,13 @@ export default function LunchReversal({
           )}
           <div className="flex justify-end gap-4 mt-8">
             <button
+              type="button"
               onClick={() => startFullAnalysis(true)}
               className="qd-btn-primary flex items-center gap-2"
+              disabled={isAnalyzing}
             >
               <Cpu className="w-4 h-4" />
-              Run Deep Pro Review
+              {isAnalyzing ? 'Running...' : 'Run Deep Pro Review'}
             </button>
           </div>
 
