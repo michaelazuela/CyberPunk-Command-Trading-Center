@@ -59,14 +59,14 @@ export async function uploadScreenshotAndSaveSetup(
 
     // 2. Convert timestamp for unique filename
     const timestamp = new Date().getTime();
-    // Using .jpg since we compress to JPEG
-    const filename = `screenshots/${userId}/${timestamp}_${imageType}.jpg`;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `${userId}/${dateStr}/${timestamp}_${imageType}.jpg`;
     
     const blob = dataURLtoBlob(compressedImage);
 
     // 3. Upload Compressed Image to Supabase Storage
     const { error: uploadError } = await supabase.storage
-      .from('screenshots')
+      .from('analysis-screenshots')
       .upload(filename, blob, {
         contentType: 'image/jpeg'
       });
@@ -76,11 +76,15 @@ export async function uploadScreenshotAndSaveSetup(
       throw uploadError;
     }
     
-    // 4. Get Download URL
-    const { data: publicURLData } = supabase.storage
-      .from('screenshots')
-      .getPublicUrl(filename);
-    const downloadURL = publicURLData.publicUrl;
+    // 4. Get Signed URL for temporary display
+    const { data: signedURLData, error: signError } = await supabase.storage
+      .from('analysis-screenshots')
+      .createSignedUrl(filename, 60 * 60); // 1 hour expiry
+      
+    if (signError || !signedURLData) {
+      console.error("Error creating signed URL for analysis", signError);
+      throw signError;
+    }
     
     // 5. Save metadata to Supabase 'setups' table
     const setupData: Record<string, any> = {
@@ -88,11 +92,25 @@ export async function uploadScreenshotAndSaveSetup(
       dayType: analysis.dayType,
       reasoning: analysis.reasoning,
       confidence: analysis.confidence,
-      imageURL: downloadURL,
+      imageURL: filename, // Store the path, not the expiring signed URL
       tags: analysis.tags || [],
       suggestedEntry: analysis.suggestedEntry || 0,
       suggestedStop: analysis.suggestedStop || 0,
-      suggestedTarget: analysis.suggestedTarget || 0
+      suggestedTarget: analysis.suggestedTarget || 0,
+      
+      // Midnight Open Options
+      midnight_open_source: analysis.midnightOpenSource,
+      midnight_open_override: analysis.midnightOpenOverride,
+      midnight_open_price: analysis.midnightOpenPrice,
+      midnight_open_visible: analysis.midnightOpenVisible,
+      rth_vs_midnight: analysis.rthVsMidnight,
+      retrace_probability: analysis.retraceProbability,
+      midnight_open_note: analysis.midnightOpenNote,
+      is_target_today: analysis.isTargetToday,
+
+      // OCR Timing
+      ocr_timestamp_status: analysis.ocrTimestampStatus,
+      ocr_timestamp_delta: analysis.ocrTimestampDelta,
     };
     
     if (ocrData) {
@@ -112,8 +130,51 @@ export async function uploadScreenshotAndSaveSetup(
     }
     
     console.log("Analysis saved to cloud with ID: ", docData.id);
-    return { id: docData.id, url: downloadURL };
+    return { id: docData.id, url: signedURLData.signedUrl };
   } catch (error) {
     console.error("Supabase Error uploading screenshot", error);
   }
+}
+
+export async function getAnalysisScreenshotSignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from('analysis-screenshots')
+    .createSignedUrl(path, 60 * 60);
+    
+  if (error || !data) {
+    console.error("Error creating signed URL for analysis screenshot", error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+export async function uploadTradeProof(userId: string, dataUrl: string, originalFilename: string): Promise<string> {
+  const timestamp = new Date().getTime();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `${userId}/${dateStr}/${timestamp}_${originalFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+  
+  const blob = dataURLtoBlob(dataUrl);
+
+  const { error: uploadError } = await supabase.storage
+    .from('trade-proofs')
+    .upload(filename, blob);
+    
+  if (uploadError) {
+    console.error("Trade proof upload error", uploadError);
+    throw uploadError;
+  }
+  
+  return filename;
+}
+
+export async function getTradeProofSignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from('trade-proofs')
+    .createSignedUrl(path, 60 * 60);
+    
+  if (error || !data) {
+    console.error("Error creating signed URL", error);
+    return null;
+  }
+  return data.signedUrl;
 }

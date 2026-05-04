@@ -108,6 +108,10 @@ export default function App() {
       const unsubscribe = subscribeToTrades(user.id, (trades) => {
         setCloudTrades(trades);
       });
+
+      // Run RAG pending embeddings in background
+      import('./lib/rag').then(m => m.embedPendingRecords()).catch(e => console.error("RAG background err:", e));
+
       return () => unsubscribe();
     } else {
       setCloudTrades([]);

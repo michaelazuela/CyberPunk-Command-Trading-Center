@@ -30,6 +30,17 @@ export interface Trade {
   analysisReasoning?: string;
   setupTags?: string[];
   outcomeLabel?: string;
+  setupId?: string;
+  pnlTicks?: number;
+  pnlDollars?: number;
+
+  proof_screenshot_url?: string | null;
+  gemini_verdict?: 'CONFIRMED' | 'DISPUTED' | 'UNCLEAR' | null;
+  gemini_confidence?: 'High' | 'Medium' | 'Low' | null;
+  gemini_evidence?: string[] | null;
+  gemini_notes?: string | null;
+  gemini_dispute_reason?: string | null;
+  proof_reviewed_at?: string | null;
 
   createdAt?: any;
   updatedAt?: any;
@@ -97,6 +108,27 @@ export interface AnalysisResult {
   sessionLog?: SessionLog;
   monteCarloPaths?: number[][];
   tags?: string[];
+  
+  // Midnight Open Options
+  midnightOpenSource?: "manual" | "gemini_ocr" | "undetected";
+  midnightOpenOverride?: number | null;
+  midnightOpenPrice?: number | null;
+  midnightOpenVisible?: boolean;
+  rthVsMidnight?: "above" | "below" | "at";
+  retraceProbability?: number | null;
+  midnightOpenNote?: string;
+  isTargetToday?: boolean;
+
+  // OCR Timing
+  ocrTimestampStatus?: "valid" | "too_early" | "too_late" | "unreadable" | "weekend";
+  ocrTimestampDelta?: number;
+
+  // RAG and Priority
+  priorityResult?: PriorityResult;
+  similarSetups?: SimilarSetup[];
+  ragContextUsed?: boolean;
+  historicalContextUsed?: boolean;
+
   step4_RiskAudit?: {
     riskAmount: number;
     riskPercent: number;
@@ -149,4 +181,81 @@ export interface AppState {
   currentSession: SessionState;
   history: Trade[];
   customRules: ProposedRule[];
+}
+
+export interface RAGSaveContext {
+  sessionType: "morning" | "lunch";
+  instrument: "MES" | "MNQ";
+  tradeDate: string;
+  dayOfWeek: string;
+  midnightOpenPrice?: number | null;
+  rthVsMidnight?: "above" | "below" | "at";
+  retraceProbability?: number | null;
+  ibHigh?: number | null;
+  ibLow?: number | null;
+  ibPosition?: string;
+  entryPrice?: number | null;
+  exitPrice?: number | null;
+  pnlTicks?: number | null;
+  pnlDollars?: number | null;
+  contracts?: number;
+  geminiConfidence?: "High" | "Medium" | "Low";
+  geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;
+  geminiAnalysisJson?: Record<string, unknown>;
+  ocrText?: string;
+  screenshotUrl?: string;
+  proofScreenshotUrl?: string;
+  setupId?: string;
+  tradeId?: string;
+  tradeResult?: "win" | "loss" | "scratch" | "pending";
+  midnightOpenSource?: "manual" | "gemini_ocr" | "undetected";
+  notes?: string;
+}
+
+export interface RAGQuery {
+  sessionType: string;
+  instrument: string;
+  dayOfWeek: string;
+  rthVsMidnight?: string;
+  ibPosition?: string;
+  midnightOpenPrice?: number;
+  additionalContext?: string;
+}
+
+export interface SimilarSetup {
+  id: string;
+  tradeDate: string;
+  dayOfWeek: string;
+  similarity: number;
+  sessionType: string;
+  instrument: string;
+  rthVsMidnight?: string;
+  ibPosition?: string;
+  geminiConfidence?: string;
+  setupQualityScore?: number;
+  tradeResult?: string;
+  pnlTicks?: number;
+  embeddingText: string;
+}
+
+export interface PriorityScoreContext {
+  instrument?: string;
+  dayOfWeek: string;
+  rthVsMidnight?: string;
+  retraceProbability?: number;
+  ibPosition?: string;
+  ocrTimestampDelta?: number;
+  sessionType: "morning" | "lunch";
+  geminiConfidence?: string;
+  similarSetups?: SimilarSetup[];
+}
+
+export interface PriorityResult {
+  score: number;
+  label: "HIGH PRIORITY" | "MEDIUM PRIORITY" | "LOW PRIORITY" | "SKIP";
+  color: string;
+  breakdown: Record<string, number>;
+  historicalWinRate?: number;
+  historicalAvgPnl?: number;
+  similarSetupCount: number;
 }

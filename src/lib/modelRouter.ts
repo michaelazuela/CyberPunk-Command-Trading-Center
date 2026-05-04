@@ -1,4 +1,4 @@
-export type AnalysisRoute = "morning" | "lunch" | "ocr" | "deep_review" | "strategy_insights" | "trade_validation";
+export type AnalysisRoute = "morning" | "lunch" | "ocr" | "deep_review" | "strategy_insights" | "trade_validation" | "trade_confirmation" | "proof_review";
 export type ModelMode = "testing" | "live";
 
 export interface ModelConfig {
@@ -60,6 +60,9 @@ export function getModelForRoute(route: AnalysisRoute, config: ModelConfig): str
       return PRO_MODEL;
     case "trade_validation":
       return PRO_MODEL;
+    case "trade_confirmation":
+    case "proof_review":
+      return config.deepReviewModel; // Or fallback to PRO_MODEL
     default:
       return FLASH_MODEL;
   }

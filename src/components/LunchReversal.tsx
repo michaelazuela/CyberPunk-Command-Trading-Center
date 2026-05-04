@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
 import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
+import TradeProofPanel from './TradeProofPanel';
 
 export default function LunchReversal({ 
   session, 
@@ -19,6 +20,7 @@ export default function LunchReversal({
   onUpdate: (updates: Partial<SessionState>) => void,
   onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void
 }) {
+  const [proofFlow, setProofFlow] = useState<{ active: boolean, outcome?: 'SUCCESS' | 'FAILED' }>({ active: false });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPreChecking, setIsPreChecking] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
@@ -38,6 +40,7 @@ export default function LunchReversal({
   const [executionDirection, setExecutionDirection] = useState<'LONG'|'SHORT'>('LONG');
   const [isSavingTrade, setIsSavingTrade] = useState(false);
   const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
+  const [setupId, setSetupId] = useState<string|null>(null);
 
   useEffect(() => {
     if (result) {
@@ -46,7 +49,7 @@ export default function LunchReversal({
     }
   }, [result]);
 
-  const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED') => {
+  const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED', proofData?: Partial<Trade>) => {
     if (!onAddTrade || !result) return;
     setIsSavingTrade(true);
     setTradeSavedMessage(null);
@@ -68,11 +71,33 @@ export default function LunchReversal({
         analysisConfidence: result.confidence,
         analysisReasoning: result.reasoning,
         setupTags: result.tags || [],
-        outcomeLabel: manualOutcome
+        outcomeLabel: manualOutcome,
+        setupId: setupId || undefined,
+        ...proofData // Inject proof data if available
       };
       
       await onAddTrade(tradeData);
-      setTradeSavedMessage("Trade saved to history.");
+
+      if (setupId && manualOutcome) {
+         try {
+           const { updateRAGWithTradeResult } = await import('../lib/rag');
+           await updateRAGWithTradeResult(
+             setupId,
+             manualOutcome === 'SUCCESS' ? 'win' : 'loss',
+             proofData?.pnlTicks || undefined,
+             proofData?.pnlDollars || undefined,
+             result.suggestedEntry,
+             undefined,
+             proofData?.gemini_verdict as any || undefined,
+             proofData?.proof_screenshot_url || undefined
+           );
+         } catch (e) {
+           console.error("[RAG] Error updating trade result", e);
+         }
+      }
+
+      setTradeSavedMessage(proofData ? "Trade and proof saved ✓" : "Trade saved to history.");
+      setProofFlow({ active: false });
       setTimeout(() => setTradeSavedMessage(null), 3000);
     } catch(err) {
       console.error(err);
@@ -184,7 +209,7 @@ export default function LunchReversal({
       
       const analysisSettings = {
         ...(session.aiSettings || { temperature: 0.1, customInstructions: '' }),
-        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 12:00-13:00 EST Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
+        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM-1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
       };
       
       let analysis: any = null;
@@ -251,15 +276,50 @@ export default function LunchReversal({
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
       updateStep('save', 'active');
+      
+      const { computePriorityScore } = await import('../lib/priorityScore');
+      const priorityContext = {
+        instrument: 'MES', // Default
+        dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        rthVsMidnight: analysis.rthVsMidnight,
+        retraceProbability: analysis.retraceProbability || undefined,
+        ibPosition: undefined,
+        ocrTimestampDelta: analysis.ocrTimestampDelta,
+        sessionType: 'lunch' as const,
+        geminiConfidence: analysis.confidence,
+        similarSetups: analysis.similarSetups
+      };
+      analysis.priorityResult = computePriorityScore(priorityContext);
+
       setResult(analysis);
       
       try {
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser?.id) {
-           await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'lunch', ocrResult)); 
+           const setupData = await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'lunch', ocrResult)); 
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
+           if (setupData?.id) setSetupId(setupData.id);
            updateStep('save', 'complete');
+
+           // Call RAG save
+           const { saveToRAG } = await import('../lib/rag');
+           await saveToRAG({
+             sessionType: 'lunch',
+             instrument: 'MES',
+             tradeDate: new Date().toLocaleDateString('en-US'),
+             dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+             midnightOpenPrice: analysis.midnightOpenPrice,
+             rthVsMidnight: analysis.rthVsMidnight,
+             retraceProbability: analysis.retraceProbability,
+             geminiConfidence: analysis.confidence,
+             geminiAnalysisJson: analysis,
+             ocrText: ocrResult?.text,
+             screenshotUrl: setupData?.url,
+             setupId: setupData?.id,
+             tradeResult: 'pending',
+             midnightOpenSource: analysis.midnightOpenSource
+           });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
            updateStep('save', 'warning', 'Analysis complete. Cloud save skipped: user not authenticated.');
@@ -289,12 +349,34 @@ export default function LunchReversal({
     }
   }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, updateStep, modelConfig, initProgress]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageFile = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => processImage(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const type of item.types) {
+          if (type.startsWith("image/")) {
+            const blob = await item.getType(type);
+            const file = new File([blob], "paste.png", { type });
+            handleImageFile(file);
+            return;
+          }
+        }
+      }
+      setError("No image found in clipboard");
+    } catch {
+      setError("Use Ctrl+V / Cmd+V to paste directly");
+    }
   };
 
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
@@ -325,7 +407,7 @@ export default function LunchReversal({
       <header className="page-header">
         <div>
           <h1>Lunch Reversal</h1>
-          <p>12:00-13:00 EST TRAP CONDITIONS</p>
+          <p>11:50 AM-1:00 PM ET TRAP CONDITIONS</p>
         </div>
       </header>
 
@@ -354,7 +436,7 @@ export default function LunchReversal({
                 Select File
                 <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
               </label>
-              <button className="qd-btn-ghost" onClick={() => {}}>Paste (Ctrl+V)</button>
+              <button className="qd-btn-ghost" onClick={handlePasteFromClipboard}>Paste Screenshot</button>
             </div>
           </div>
 
@@ -385,7 +467,7 @@ export default function LunchReversal({
                 </div>
                 <div className="bg-[var(--s1)] p-4 flex flex-col gap-2">
                   <span className="font-mono text-[11px] font-bold text-[var(--txt)]">The Trap</span>
-                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--b2)] pl-2">12:00-13:00 must create a false breakout trap above/below the morning boundary.</p>
+                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--b2)] pl-2">11:50-13:00 must create a false breakout trap above/below the morning boundary.</p>
                 </div>
                 <div className="bg-[var(--s1)] p-4 flex flex-col gap-2">
                   <span className="font-mono text-[11px] font-bold text-[var(--txt)]">Execution Trigger</span>
@@ -452,6 +534,70 @@ export default function LunchReversal({
               </div>
             </div>
           </div>
+          
+          {result.priorityResult && (
+            <div className="card-base flex flex-col p-4 mb-4" style={{ borderColor: result.priorityResult.color }}>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[12px] font-mono font-bold uppercase" style={{ color: result.priorityResult.color }}>
+                  SETUP PRIORITY SCORE
+                </span>
+                <span className="text-[14px] font-mono font-bold" style={{ color: result.priorityResult.color }}>
+                  {result.priorityResult.score.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="qd-badge" style={{ backgroundColor: result.priorityResult.color + '20', color: result.priorityResult.color, border: 'none' }}>
+                  {result.priorityResult.label}
+                </span>
+              </div>
+              <div className="text-[10px] text-[var(--txt2)] mt-2 font-mono flex flex-col gap-1">
+                <div className="flex justify-between"><span>Midnight Open:</span><span>{(result.priorityResult.breakdown.midnight * 4).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Initial Balance:</span><span>{(result.priorityResult.breakdown.initialBalance * 5).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Session Timing:</span><span>{(result.priorityResult.breakdown.timing * 6.66).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Confidence:</span><span>{(result.priorityResult.breakdown.confidence * 4).toFixed(2)} / 1.0</span></div>
+                {result.priorityResult.breakdown.historical !== undefined && (
+                  <div className="flex justify-between text-[var(--blue)]"><span>Historical Perf:</span><span>{(result.priorityResult.breakdown.historical * 6.66).toFixed(2)} / 1.0</span></div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* RAG Context Display */}
+          <div className="card-base flex flex-col p-4 mb-4 border border-[var(--b2)]">
+            <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-3">HISTORICAL RAG CONTEXT</h3>
+            {result.similarSetups && result.similarSetups.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-[10px] text-[var(--txt2)]">Found {result.similarSetups.length} similar past setups:</p>
+                {result.similarSetups.map((setup: any, idx: number) => (
+                  <div key={setup.id} className="bg-[var(--bg)] p-2 rounded border border-[var(--b1)] flex flex-col gap-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-[var(--txt)] font-bold">Setup {idx + 1} ({Math.round(setup.similarity * 100)}% match)</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] ${setup.tradeResult === 'win' ? 'bg-[var(--green)]/10 text-[var(--green)]' : setup.tradeResult === 'loss' ? 'bg-[var(--red)]/10 text-[var(--red)]' : 'bg-[var(--b2)] text-[var(--txt2)]'}`}>
+                        {(setup.tradeResult || 'PENDING').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-[var(--txt2)] flex justify-between">
+                      <span>{setup.tradeDate} - {setup.sessionType}</span>
+                      <span>PnL: {setup.pnlTicks || 0} ticks</span>
+                    </div>
+                    <div className="text-[9px] text-[var(--txt3)] truncate">
+                      Midnight: {setup.rthVsMidnight || 'unknown'} | IB: {setup.ibPosition || 'unknown'}
+                    </div>
+                  </div>
+                ))}
+                {result.priorityResult?.historicalWinRate !== undefined && (
+                  <div className="mt-2 p-2 bg-[var(--blue)]/10 border border-[var(--blue)]/30 text-[var(--blue)] text-[10px] font-mono rounded">
+                    <strong>Pattern Insight:</strong> {Math.round(result.priorityResult.historicalWinRate * 100)}% historical win rate. Avg PnL: {result.priorityResult.historicalAvgPnl?.toFixed(1)} ticks.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
+                No similar past setups found. Your trade history will improve future recommendations.
+              </p>
+            )}
+          </div>
+          
           {lastImage && (
             <div className="card-base flex justify-center p-2 bg-[#000]">
               <img src={lastImage} alt="Analysis" className="max-h-[400px] object-contain opacity-90" referrerPolicy="no-referrer" />
@@ -510,20 +656,36 @@ export default function LunchReversal({
                    {isSavingTrade ? 'Saving...' : 'Execute Trade'}
                  </button>
                  <button
-                   onClick={() => handleSaveTrade('SUCCESS')}
+                   onClick={() => setProofFlow({ active: true, outcome: 'SUCCESS' })}
                    disabled={isSavingTrade}
-                   className="qd-btn-ghost hover:bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/30 flex items-center gap-2 h-[38px]"
+                   className={cn(
+                     "qd-btn-ghost hover:bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/30 flex items-center gap-2 h-[38px]",
+                     proofFlow.active && proofFlow.outcome === 'SUCCESS' ? "bg-[var(--green)]/20 shadow-[0_0_10px_var(--green)]" : ""
+                   )}
                  >
                    Successful
                  </button>
                  <button
-                   onClick={() => handleSaveTrade('FAILED')}
+                   onClick={() => setProofFlow({ active: true, outcome: 'FAILED' })}
                    disabled={isSavingTrade}
-                   className="qd-btn-ghost hover:bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 flex items-center gap-2 h-[38px]"
+                   className={cn(
+                     "qd-btn-ghost hover:bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 flex items-center gap-2 h-[38px]",
+                     proofFlow.active && proofFlow.outcome === 'FAILED' ? "bg-[var(--red)]/20 shadow-[0_0_10px_var(--red)]" : ""
+                   )}
                  >
                    Failed
                  </button>
                </div>
+               
+               {proofFlow.active && proofFlow.outcome && (
+                 <TradeProofPanel 
+                   manualOutcome={proofFlow.outcome} 
+                   executionQuantity={executionQuantity} 
+                   onSaveTrade={handleSaveTrade}
+                   onCancel={() => setProofFlow({ active: false })}
+                   modelConfig={modelConfig}
+                 />
+               )}
              </div>
           )}
         </div>

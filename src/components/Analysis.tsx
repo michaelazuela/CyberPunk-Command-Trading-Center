@@ -14,6 +14,9 @@ import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
 import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
 import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
+import { TIME_WINDOWS, getWindowStatus, formatWindow, minutesUntilOpen, minutesUntilClose, formatNYTimeStr } from '../config/timeWindows';
+
+import TradeProofPanel from './TradeProofPanel';
 
 export default function Analysis({ session, customRules = [], onUpdate, onAddTrade }: { 
   session: SessionState, 
@@ -21,6 +24,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   onUpdate: (updates: Partial<SessionState>) => void,
   onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void 
 }) {
+  const [proofFlow, setProofFlow] = useState<{ active: boolean, outcome?: 'SUCCESS' | 'FAILED' }>({ active: false });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isPreChecking, setIsPreChecking] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
@@ -33,6 +37,22 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [showReasoning, setShowReasoning] = useState(false);
   const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0.1, customInstructions: '' });
 
+  const [midnightOpenOverrideStr, setMidnightOpenOverrideStr] = useState<string>('');
+  const [useManualMidnightOpen, setUseManualMidnightOpen] = useState(false);
+
+  const [windowStatus, setWindowStatus] = useState<"active"|"too_early"|"too_late"|"weekend">("active");
+  const [timeStr, setTimeStr] = useState("");
+  
+  useEffect(() => {
+    const updateTime = () => {
+      setWindowStatus(getWindowStatus('morning'));
+      setTimeStr(formatNYTimeStr());
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
   const handleConfigChange = (newConfig: ModelConfig) => {
@@ -44,6 +64,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [executionDirection, setExecutionDirection] = useState<'LONG'|'SHORT'>('LONG');
   const [isSavingTrade, setIsSavingTrade] = useState(false);
   const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
+  const [setupId, setSetupId] = useState<string|null>(null);
 
   useEffect(() => {
     if (result) {
@@ -52,7 +73,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     }
   }, [result]);
 
-  const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED') => {
+  const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED', proofData?: Partial<Trade>) => {
     if (!onAddTrade || !result) return;
     setIsSavingTrade(true);
     setTradeSavedMessage(null);
@@ -74,11 +95,33 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         analysisConfidence: result.confidence,
         analysisReasoning: result.reasoning,
         setupTags: result.tags || [],
-        outcomeLabel: manualOutcome
+        outcomeLabel: manualOutcome,
+        setupId: setupId || undefined,
+        ...proofData // Inject proof data if available
       };
       
       await onAddTrade(tradeData);
-      setTradeSavedMessage("Trade saved to history.");
+
+      if (setupId && manualOutcome) {
+         try {
+           const { updateRAGWithTradeResult } = await import('../lib/rag');
+           await updateRAGWithTradeResult(
+             setupId,
+             manualOutcome === 'SUCCESS' ? 'win' : 'loss',
+             proofData?.pnlTicks || undefined,
+             proofData?.pnlDollars || undefined,
+             result.suggestedEntry, // or actual entry
+             undefined, // actual exit
+             proofData?.gemini_verdict as any || undefined,
+             proofData?.proof_screenshot_url || undefined
+           );
+         } catch (e) {
+           console.error("[RAG] Error updating trade result", e);
+         }
+      }
+
+      setTradeSavedMessage(proofData ? "Trade and proof saved ✓" : "Trade saved to history.");
+      setProofFlow({ active: false });
       setTimeout(() => setTradeSavedMessage(null), 3000);
     } catch(err) {
       console.error(err);
@@ -214,7 +257,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             setTimeout(() => reject(new Error('TIMEOUT')), 120000);
           });
           
-          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse);
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, useManualMidnightOpen ? midnightOpenOverrideStr : undefined);
           
           analysis = await Promise.race([geminiPromise, timeoutPromise]);
           const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
@@ -258,15 +301,50 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
       updateStep('save', 'active');
+
+      const { computePriorityScore } = await import('../lib/priorityScore');
+      const priorityContext = {
+        instrument: 'MES', // Default
+        dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        rthVsMidnight: analysis.rthVsMidnight,
+        retraceProbability: analysis.retraceProbability || undefined,
+        ibPosition: undefined, // Need more OCR context for exact IB pos
+        ocrTimestampDelta: analysis.ocrTimestampDelta,
+        sessionType: 'morning' as const,
+        geminiConfidence: analysis.confidence,
+        similarSetups: analysis.similarSetups
+      };
+      analysis.priorityResult = computePriorityScore(priorityContext);
+
       setResult(analysis);
       
       try {
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser?.id) {
-           await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'morning', ocrResult)); 
+           const setupData = await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'morning', ocrResult)); 
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
+           if (setupData?.id) setSetupId(setupData.id);
            updateStep('save', 'complete');
+
+           // Call RAG save
+           const { saveToRAG } = await import('../lib/rag');
+           await saveToRAG({
+             sessionType: 'morning',
+             instrument: 'MES',
+             tradeDate: new Date().toLocaleDateString('en-US'),
+             dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+             midnightOpenPrice: analysis.midnightOpenPrice,
+             rthVsMidnight: analysis.rthVsMidnight,
+             retraceProbability: analysis.retraceProbability,
+             geminiConfidence: analysis.confidence,
+             geminiAnalysisJson: analysis,
+             ocrText: ocrResult?.text,
+             screenshotUrl: setupData?.url,
+             setupId: setupData?.id,
+             tradeResult: 'pending',
+             midnightOpenSource: analysis.midnightOpenSource
+           });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
            updateStep('save', 'warning', 'Analysis complete. Cloud save skipped: user not authenticated.');
@@ -297,12 +375,34 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     }
   }, [pendingImage, lastImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageFile = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => processImage(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const type of item.types) {
+          if (type.startsWith("image/")) {
+            const blob = await item.getType(type);
+            const file = new File([blob], "paste.png", { type });
+            handleImageFile(file);
+            return;
+          }
+        }
+      }
+      setError("No image found in clipboard");
+    } catch {
+      setError("Use Ctrl+V / Cmd+V to paste directly");
+    }
   };
 
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
@@ -335,10 +435,37 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
   return (
     <div className="space-y-6 fade-up">
+      {windowStatus === 'active' && (
+        <div className="border border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)] p-3 text-[11px] font-mono flex flex-col gap-1 rounded-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--orange)] inline-block"></span>
+            <strong>MORNING WINDOW ACTIVE • Closes in {minutesUntilClose('morning')} min</strong>
+          </div>
+          <span className="text-[10px] opacity-80">Upload 5-min chart: 9:30 open → 10:10 candle close. Include midnight open level (horizontal line on NinjaTrader chart).</span>
+        </div>
+      )}
+      {windowStatus === 'too_early' && (
+        <div className="border border-[var(--b2)] bg-[var(--b0)] text-[var(--txt2)] p-3 text-[11px] font-mono flex flex-col gap-1 rounded-sm">
+          <strong>⏳ MORNING WINDOW OPENS IN {minutesUntilOpen('morning')} min</strong>
+          <span className="text-[10px]">Upload your 5-min chart after 9:30 AM. Current time: {timeStr}</span>
+        </div>
+      )}
+      {windowStatus === 'too_late' && (
+        <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)]/80 p-3 text-[11px] font-mono flex flex-col gap-1 rounded-sm">
+          <strong>✕ MORNING WINDOW CLOSED</strong>
+          <span className="text-[10px]">Next: Lunch Reversal opens at {TIME_WINDOWS.lunch.openHour > 12 ? TIME_WINDOWS.lunch.openHour - 12 : TIME_WINDOWS.lunch.openHour}:{TIME_WINDOWS.lunch.openMinute} PM ET</span>
+        </div>
+      )}
+      {windowStatus === 'weekend' && (
+        <div className="border border-[var(--b2)] bg-[var(--b0)] text-[var(--txt2)] p-3 text-[11px] font-mono rounded-sm">
+          <strong>○ MARKET CLOSED • Next session: Monday 9:30 AM ET</strong>
+        </div>
+      )}
+
       <header className="page-header">
         <div>
           <h1>Morning Analysis</h1>
-          <p>9:30 CHART REVIEW · STRICT TECHNICAL MODE</p>
+          <p>9:30–10:10 AM CHART REVIEW · STRICT TECHNICAL MODE</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-[var(--s2)] p-0.5 border border-[var(--b1)] rounded-sm">
@@ -406,12 +533,38 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             <Upload className="w-6 h-6 text-[var(--txt3)] mb-4 upload-icon transition-colors" />
             <h3 className="text-[12px] font-mono font-bold text-[var(--orange)] uppercase tracking-widest mb-1">Initialize Analysis</h3>
             <p className="text-[9px] text-[var(--txt2)] mb-6">Select a chart screenshot or paste from clipboard.</p>
-            <div className="flex gap-4">
+            <div className="flex gap-4 mb-6">
               <label className="qd-btn-primary cursor-pointer">
                 Select File
                 <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
               </label>
-              <button className="qd-btn-ghost" onClick={() => {}}>Paste (Ctrl+V)</button>
+              <button className="qd-btn-ghost" onClick={handlePasteFromClipboard}>Paste Screenshot</button>
+            </div>
+            
+            <div className="w-full max-w-sm mt-4 p-4 border border-[var(--b2)] bg-[var(--b0)] rounded text-left">
+              <label className="text-[10px] font-mono text-[var(--txt2)] uppercase block mb-3" title="The 12:00 AM ET candle open price shown as a horizontal line on your NinjaTrader chart">
+                Midnight Open Level (optional)
+              </label>
+              <div className="flex flex-col gap-2 text-[11px] font-mono">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={!useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(false)} className="accent-[var(--orange)]" />
+                  <span className={!useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Auto (let Gemini read from chart)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(true)} className="accent-[var(--orange)]" />
+                  <span className={useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Manual entry:</span>
+                  {useManualMidnightOpen && (
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 5821.25" 
+                      value={midnightOpenOverrideStr} 
+                      onChange={e => setMidnightOpenOverrideStr(e.target.value)}
+                      className="ml-2 w-24 bg-[var(--bg)] border border-[var(--b2)] px-2 py-0.5 rounded text-[10px]"
+                    />
+                  )}
+                </label>
+              </div>
+              <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If Gemini misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
             </div>
           </div>
 
@@ -534,6 +687,73 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
               </div>
             </div>
           </div>
+          
+          {result.priorityResult && (
+            <div className="card-base flex flex-col p-4 mb-4" style={{ borderColor: result.priorityResult.color }}>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[12px] font-mono font-bold uppercase" style={{ color: result.priorityResult.color }}>
+                  SETUP PRIORITY SCORE
+                </span>
+                <span className="text-[14px] font-mono font-bold" style={{ color: result.priorityResult.color }}>
+                  {result.priorityResult.score.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="qd-badge" style={{ backgroundColor: result.priorityResult.color + '20', color: result.priorityResult.color, border: 'none' }}>
+                  {result.priorityResult.label}
+                </span>
+              </div>
+              <div className="text-[10px] text-[var(--txt2)] mt-2 font-mono flex flex-col gap-1">
+                <div className="flex justify-between"><span>Midnight Open:</span><span>{(result.priorityResult.breakdown.midnight * 4).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Initial Balance:</span><span>{(result.priorityResult.breakdown.initialBalance * 5).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Session Timing:</span><span>{(result.priorityResult.breakdown.timing * 6.66).toFixed(2)} / 1.0</span></div>
+                <div className="flex justify-between"><span>Confidence:</span><span>{(result.priorityResult.breakdown.confidence * 4).toFixed(2)} / 1.0</span></div>
+                {result.priorityResult.breakdown.historical !== undefined && (
+                  <div className="flex justify-between text-[var(--blue)]"><span>Historical Perf:</span><span>{(result.priorityResult.breakdown.historical * 6.66).toFixed(2)} / 1.0</span></div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* RAG Context Display */}
+          <div className="card-base flex flex-col p-4 mb-4 border border-[var(--b2)]">
+            <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-3">HISTORICAL RAG CONTEXT</h3>
+            {result.similarSetups && result.similarSetups.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-[10px] text-[var(--txt2)]">Found {result.similarSetups.length} similar past setups:</p>
+                {result.similarSetups.map((setup: any, idx: number) => (
+                  <div key={setup.id} className="bg-[var(--bg)] p-2 rounded border border-[var(--b1)] flex flex-col gap-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-[var(--txt)] font-bold">Setup {idx + 1} ({Math.round(setup.similarity * 100)}% match)</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] ${setup.tradeResult === 'win' ? 'bg-[var(--green)]/10 text-[var(--green)]' : setup.tradeResult === 'loss' ? 'bg-[var(--red)]/10 text-[var(--red)]' : 'bg-[var(--b2)] text-[var(--txt2)]'}`}>
+                        {(setup.tradeResult || 'PENDING').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-[var(--txt2)] flex justify-between">
+                      <span>{setup.tradeDate} - {setup.sessionType}</span>
+                      <span>PnL: {setup.pnlTicks || 0} ticks</span>
+                    </div>
+                    <div className="text-[9px] text-[var(--txt3)] truncate">
+                      Midnight: {setup.rthVsMidnight || 'unknown'} | IB: {setup.ibPosition || 'unknown'}
+                    </div>
+                  </div>
+                ))}
+                {result.priorityResult?.historicalWinRate !== undefined && (
+                  <div className="mt-2 p-2 bg-[var(--blue)]/10 border border-[var(--blue)]/30 text-[var(--blue)] text-[10px] font-mono rounded">
+                    <strong>Pattern Insight:</strong> {Math.round(result.priorityResult.historicalWinRate * 100)}% historical win rate. Avg PnL: {result.priorityResult.historicalAvgPnl?.toFixed(1)} ticks.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
+                No similar past setups found. Your trade history will improve future recommendations.
+              </p>
+            )}
+          </div>
+
+          <MidnightAnalysisView analysis={result.midnightAnalysis} />
+
+
           {lastImage && (
             <div className="card-base flex justify-center p-2 bg-[#000]">
               <img src={lastImage} alt="Analysis" className="max-h-[400px] object-contain opacity-90" referrerPolicy="no-referrer" />
@@ -590,20 +810,36 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                    {isSavingTrade ? 'Saving...' : 'Execute Trade'}
                  </button>
                  <button
-                   onClick={() => handleSaveTrade('SUCCESS')}
+                   onClick={() => setProofFlow({ active: true, outcome: 'SUCCESS' })}
                    disabled={isSavingTrade}
-                   className="qd-btn-ghost hover:bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/30 flex items-center gap-2 h-[38px]"
+                   className={cn(
+                     "qd-btn-ghost hover:bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/30 flex items-center gap-2 h-[38px]",
+                     proofFlow.active && proofFlow.outcome === 'SUCCESS' ? "bg-[var(--green)]/20 shadow-[0_0_10px_var(--green)]" : ""
+                   )}
                  >
                    Successful
                  </button>
                  <button
-                   onClick={() => handleSaveTrade('FAILED')}
+                   onClick={() => setProofFlow({ active: true, outcome: 'FAILED' })}
                    disabled={isSavingTrade}
-                   className="qd-btn-ghost hover:bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 flex items-center gap-2 h-[38px]"
+                   className={cn(
+                     "qd-btn-ghost hover:bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/30 flex items-center gap-2 h-[38px]",
+                     proofFlow.active && proofFlow.outcome === 'FAILED' ? "bg-[var(--red)]/20 shadow-[0_0_10px_var(--red)]" : ""
+                   )}
                  >
                    Failed
                  </button>
                </div>
+
+               {proofFlow.active && proofFlow.outcome && (
+                 <TradeProofPanel 
+                   manualOutcome={proofFlow.outcome} 
+                   executionQuantity={executionQuantity} 
+                   onSaveTrade={handleSaveTrade}
+                   onCancel={() => setProofFlow({ active: false })}
+                   modelConfig={modelConfig}
+                 />
+               )}
              </div>
           )}
         </div>

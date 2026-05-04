@@ -99,7 +99,7 @@ const SYSTEM_RULES: Setup[] = [
     window: 'BOTH',
     timeframe: '5-min primary',
     invalidation: 'A 5-min candle closes convincingly above/below the extreme after the sweep.',
-    confluence: 'Late morning sweeps (10:45-11:00) strongly signal Lunch Reversals.',
+    confluence: 'Late morning sweeps strongly signal Lunch Reversals.',
     rank: 2,
     frequency: 'High',
     clarity: 'High',
@@ -254,7 +254,7 @@ const SYSTEM_RULES: Setup[] = [
     category: 'Time Mechanics',
     headline: 'Algo Kill Zones',
     shortExplanation: 'Specific time windows where algorithmic liquidity sweeps and reversals reliably occur.',
-    conditions: ['Time hits exactly: 9:50-10:10, 10:30-10:45, 11:00-11:15, or 11:50-12:10 ET'],
+    conditions: ['Time hits specific liquidity periods (e.g. 9:50-10:10, 11:50-12:10)'],
     entryRules: ['Wait for a sweep into a liquidity pool exactly during the window, enter the reversal'],
     stop: 'Outside the sweep execution extreme',
     target: 'Session equilibrium (50%) or opposing liquidity',
@@ -301,6 +301,19 @@ export default function Rules({ customRules = [], onUpdateRule, onProposeRule }:
           <p>PURE PRICE ACTION / SMC CORE ARCHITECTURE</p>
         </div>
       </header>
+
+      {/* Midnight Open Reference Notice */}
+      <div className="bg-[var(--cyan)]/10 border border-[var(--cyan)]/30 text-[var(--cyan)] p-4 rounded text-[11px] font-mono flex items-start gap-3 mb-6">
+        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <div>
+          <strong>Midnight Open (12:00 AM ET) — Primary ICT Daily Bias Anchor</strong>
+          <p className="mt-1 opacity-80">
+            ES: 58% retrace prob (above) / 69% (below). Best day: Thursday.<br/>
+            NQ: 57% retrace prob (above) / 63% (below). Tuesday: up to 73% (below).<br/>
+            Draw as a horizontal line on NinjaTrader chart before screenshotting.
+          </p>
+        </div>
+      </div>
 
       {/* SMT Divergence Omission Notice */}
       <div className="bg-[var(--cyan)]/10 border border-[var(--cyan)]/30 text-[var(--cyan)] p-4 rounded text-[11px] font-mono flex items-start gap-3">

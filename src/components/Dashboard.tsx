@@ -3,6 +3,7 @@ import { SessionState } from '../types';
 import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
 import MonteCarloSection from './MonteCarloSection';
+import { TIME_WINDOWS, getWindowStatus, formatWindow } from '../config/timeWindows';
 import { 
   TrendingUp, 
   Target,
@@ -23,11 +24,9 @@ export default function Dashboard({
     return `${val >= 0 ? '+' : ''}$${Math.abs(val).toFixed(2)}`;
   };
 
-  const isTimeForLunch = 
-    new Date().getHours() === 10 && new Date().getMinutes() >= 45 ||
-    new Date().getHours() > 10;
+  const isTimeForLunch = getWindowStatus('lunch') === 'active' || new Date().getHours() >= TIME_WINDOWS.lunch.openHour;
   
-  const currentPhase = isTimeForLunch ? '10:45-11:15' : '9:30-10:00 window';
+  const currentPhase = isTimeForLunch ? formatWindow('lunch') : formatWindow('morning');
 
   const killSwitchCount = `${session.killSwitches.losses}/${SYSTEM_RULES.KILL_SWITCH_LOSSES}`;
   const isLossKillSwitch = session.killSwitches.losses >= SYSTEM_RULES.KILL_SWITCH_LOSSES;
@@ -77,6 +76,11 @@ export default function Dashboard({
           <span className="kpi-label">Session Phase</span>
           <span className="kpi-value uppercase">Observation</span>
           <span className="kpi-sub">{currentPhase}</span>
+          {session.analysisResult?.midnightOpenPrice && (
+            <div className="mt-2 text-[10px] text-[var(--cyan)] border-t border-[var(--b2)] pt-1">
+              NY MIDNIGHT: <span className="font-bold">{session.analysisResult.midnightOpenPrice}</span>
+            </div>
+          )}
         </div>
       </div>
 

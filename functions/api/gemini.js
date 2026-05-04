@@ -31,9 +31,11 @@ export async function onRequestPost(context) {
     // We expect the client to send a payload that matches the REST API structure
     // e.g. { model: "gemini-3.1-pro-preview", contents: [...], generationConfig: {...}, systemInstruction: {...} }
     const model = requestData.model || "gemini-3.1-pro-preview";
+    const action = requestData.action || "generateContent";
     delete requestData.model;
+    delete requestData.action;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

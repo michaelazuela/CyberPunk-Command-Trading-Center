@@ -4,6 +4,7 @@
  */
 
 import { AISettings, Trade } from "../types";
+import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
 
 async function callGeminiAPI(params: any) {
   const payload: any = {
@@ -75,7 +76,8 @@ async function callGeminiAPI(params: any) {
   return { text: "{}" };
 }
 
-async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string) {
+async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string) {
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const prompt = `
     ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
     You are a unified system composing multiple expert sub-agents running in strict sequence to prevent hallucination.
@@ -86,11 +88,15 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
 
     =========================================
     MODULE 0: [HISTORICAL_CONTEXT] (RAG)
-    ${historicalTrades && historicalTrades.length > 0 ? `
-    The following is a summary of recent trade outcomes to help you avoid repeating mistakes and stick to what works.
-    HISTORICAL TRADES:
-    ${historicalTrades.map(t => `- Date: ${t.date}, Type: ${t.dayType}, Direction: ${t.direction}, Outcome: ${t.status}, PnL: ${t.pnl}, Notes: ${t.notes}`).join('\n')}
-    ` : 'No historical trade context available.'}
+    --- RAG CONTEXT INJECTION ---
+    ${ragContextStr || 'No similar past setups found.'}
+    --- END RAG CONTEXT ---
+
+    Use the historical context above to:
+    1. Calibrate confidence based on similar setup outcomes.
+    2. Note patterns, such as similar setups winning or losing.
+    3. Adjust bias if historical win rate contradicts the current chart signal.
+    4. Return historical_context_used as true if similar setups were provided.
 
     =========================================
     MODULE 1: [DATA_EXTRACTOR] (Vision)
@@ -122,7 +128,6 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     SETUP SIGNATURES:
     T1L: 09:30 Green + Staircase | T2L: 09:30 Doji + 09:35 Green
     T1S: 09:30 Red/Close<Open + Staircase | T2S: Overnight Gap + Red Rejection
-    1055R: Wick past IB (10:45-11:00) + Reclaim inside IB on 10:55 close.
     DIST: Upper Wick Rejection + 2-Bar Failure at Highs.
 
     =========================================
@@ -139,14 +144,24 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     - Provide a Final GO / NO-GO validation.
 
     =========================================
-    MODULE 5: [MIDNIGHT_STRATEGIST] (Risk Filter Layer - Option B)
-    - ANALYZE the Midnight Level (00:00 Open) and Midnight Band (±2 points).
-    - MANDATORY RULE (Option B):
-      1. WICK VETO: If 3+ wick-only interactions occur in the Midnight Band (no close beyond), trigger a VETO for any trade fading that level.
-      2. CONFLUENCE: If a trade setup aligns with an RTH level AND the Midnight Band, and NO wick veto is present, increase confidence score by 0.15.
-      3. RISK FILTER: Flag any trade that triggers an entry directly into a strong Midnight rejection as 'ERROR' in the risk audit.
-    - CLASSIFY role: SUPPORT, RESISTANCE, or NEUTRAL.
-    - PROVIDE direct justification based on Option B integration rules.
+    MODULE 5: [MIDNIGHT_STRATEGIST]
+    --- MIDNIGHT OPEN ANALYSIS ---
+    The Midnight Open is the price at the 12:00 AM ET candle open. It is a
+    primary ICT institutional reference level. The trader uses NinjaTrader
+    with a horizontal line drawn at this level.
+
+    ${midnightOpenOverride 
+      ? `The user has confirmed the midnight open price is: ${midnightOpenOverride}. Use this value — do not attempt to read it from the chart visually.` 
+      : `Identify the midnight open horizontal line on the chart and read its price level as accurately as possible.`}
+
+    Statistical edge (use in your bias assessment):
+    - RTH opens ABOVE midnight open: 58% probability of retracing DOWN to it (ES) / 57% (NQ). On Thursdays (ES) and Tuesdays (NQ), probabilities are higher.
+    - RTH opens BELOW midnight open: 69% probability of retracing UP to it (ES) / 63% (NQ). Tuesday NQ: 73% probability.
+
+    Today is: ${currentDay}. Apply day-specific edge adjustments above.
+
+    Return this object inside your JSON response:
+    "midnightAnalysis": { ... }
 
     ${settings?.customInstructions ? `USER INSTRUCTIONS:\n${settings.customInstructions}` : ''}
 
@@ -315,10 +330,32 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
   }
 }
 
-export async function analyzeChart(imageData: string, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string) {
+export async function analyzeChart(imageData: string, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string) {
   try {
+    const isMorning = analysisType !== 'lunch';
+    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    
+    // RAG Retrieval
+    const ragQuery = {
+      sessionType: isMorning ? 'morning' : 'lunch',
+      instrument: 'MES', // Default, we'll refine if OCR tells otherwise
+      dayOfWeek: dayOfWeek,
+      rthVsMidnight: undefined, // Unknown at query time
+      ibPosition: undefined
+    };
+    
+    let similarSetups: any[] = [];
+    try {
+      similarSetups = await retrieveSimilarSetups(ragQuery);
+      console.log(`[RAG] Retrieved ${similarSetups.length} similar setups for ${ragQuery.sessionType} analysis`);
+    } catch (e) {
+      console.error("[RAG] Retrieval failed", e);
+    }
+    
+    const ragContextStr = formatRAGContextForGemini(similarSetups);
+
     // Step 1: Execute Unified Super Agent
-    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType);
+    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr);
     
     if (!superReport) {
       throw new Error("Super Agent returned an empty report.");
@@ -376,6 +413,8 @@ export async function analyzeChart(imageData: string, settings?: AISettings, acc
       sessionLog: strategy.sessionLog,
       step4_RiskAudit: riskAudit,
       midnightAnalysis: superReport.midnightAnalysis,
+      similarSetups,
+      historicalContextUsed: !!similarSetups.length,
       agentReports: [
         { 
           agentName: "Chart Observer", 
@@ -472,4 +511,115 @@ export async function validateTrade(context: string) {
       checklist: []
     };
   }
+}
+
+export async function reviewTradeProof(image: string, claimedResult: string, contracts: number, modelToUse: string = "gemini-3-pro-preview") {
+  const systemInstruction = `
+You are a trade execution auditor reviewing a screenshot provided as proof of a futures trade result on MES or MNQ, Micro E-mini S&P 500 or Nasdaq 100.
+
+The trader has claimed this trade was: ${claimedResult} (${contracts} contract(s)).
+
+Review the screenshot carefully and look for any of the following evidence:
+- A filled order confirmation showing entry price, fill price, or quantity
+- A closed position confirmation showing exit price, PnL, or profit/loss amount
+- A brokerage statement or trade history row showing the completed trade
+- A platform notification showing a trade was executed or closed
+- A PnL summary showing the trade outcome
+
+Return your analysis in this JSON format only. Do not return text outside the JSON:
+
+{
+  "verdict": "CONFIRMED | DISPUTED | UNCLEAR",
+  "confidence": "High | Medium | Low",
+  "evidence_found": [
+    "string describing piece of evidence 1",
+    "string describing piece of evidence 2"
+  ],
+  "claimed_result": "${claimedResult}",
+  "screenshot_shows": "brief description of what is visible in the screenshot",
+  "notes": "any caveats, missing information, or concerns",
+  "dispute_reason": "only populated if verdict is DISPUTED — what contradicts the claim"
+}
+
+Verdict definitions:
+- CONFIRMED: The screenshot clearly shows evidence consistent with the claimed result.
+- DISPUTED: The screenshot shows evidence that contradicts the claimed result.
+- UNCLEAR: The screenshot does not contain enough information to confirm or deny.
+  `.trim();
+
+  let imgToSend = image;
+  try {
+    const cloudStorage = await import('./cloudStorage');
+    if (import.meta.env.DEV) console.log(`[PROOF REVIEW] Image size before compression: ${Math.round(image.length / 1024)} KB`);
+    imgToSend = await cloudStorage.compressImage(image, 1600, 0.6); // Compress aggressively
+    if (import.meta.env.DEV) console.log(`[PROOF REVIEW] Image size after compression: ${Math.round(imgToSend.length / 1024)} KB`);
+  } catch(e) {
+    console.warn("Failed to compress proof image for review, using original");
+  }
+
+  const base64Data = imgToSend.split(',')[1] || imgToSend;
+  
+  if (import.meta.env.DEV) {
+    console.log(`[PROOF REVIEW] Started review`);
+    console.log(`[PROOF REVIEW] Claimed: ${claimedResult}, Contracts: ${contracts}`);
+    console.log(`[PROOF REVIEW] Model: ${modelToUse}`);
+  }
+
+  let attempt = 0;
+  let lastError = null;
+
+  while(attempt < 3) {
+    attempt++;
+    try {
+      const response: any = await Promise.race([
+        callGeminiAPI({
+          model: modelToUse,
+          contents: [
+             { parts: [{ text: "Please review this proof screenshot." }] },
+             { parts: [{ inlineData: { mimeType: "image/jpeg", data: base64Data } }] }
+          ],
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            temperature: 0.1
+          }
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 120000))
+      ]);
+      
+      const text = response.text || "{}";
+      const cleaned = text.replace(/```json\n?|```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      if (import.meta.env.DEV) {
+        console.log(`[PROOF REVIEW] Verdict: ${parsed.verdict}, Confidence: ${parsed.confidence}`);
+      }
+      return parsed;
+
+    } catch (e: any) {
+      lastError = e;
+      const msg = e.message || String(e);
+      if (msg.includes('429') || msg.includes('503') || msg.includes('TIMEOUT') || msg.includes('fetch failed')) {
+         if (attempt < 3) {
+            await new Promise(r => setTimeout(r, 2000 * attempt));
+            continue;
+         }
+      }
+      
+      // If it's a parsing error but we got here, it's not retryable in the same way
+      if (e instanceof SyntaxError) {
+         if (import.meta.env.DEV) console.log(`[PROOF REVIEW] PARSE ERROR`, e);
+         return {
+           verdict: "UNCLEAR",
+           confidence: "Low",
+           evidence_found: [],
+           claimed_result: claimedResult,
+           screenshot_shows: "Unknown due to parsing error",
+           notes: "The AI response could not be parsed as valid JSON.",
+         };
+      }
+      break; // any other non-retryable error
+    }
+  }
+  
+  throw lastError || new Error("Failed to review trade proof");
 }
