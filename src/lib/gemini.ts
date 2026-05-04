@@ -345,15 +345,38 @@ export async function analyzeChart(imageData: string, settings?: AISettings, acc
     };
     
     let similarSetups: any[] = [];
+    let agentLearningSummary: any = null;
+    let ragContextStr = "";
     try {
+      const { retrieveSimilarSetups, buildAgentLearningSummary } = await import('./rag');
       similarSetups = await retrieveSimilarSetups(ragQuery);
       console.log(`[RAG] Retrieved ${similarSetups.length} similar setups for ${ragQuery.sessionType} analysis`);
+      
+      if (similarSetups && similarSetups.length > 0) {
+        agentLearningSummary = buildAgentLearningSummary(similarSetups);
+        ragContextStr = `
+--- AGENT LEARNING FROM TRADE HISTORY ---
+Similar setups retrieved: ${agentLearningSummary.setupCount}
+Completed outcomes: ${agentLearningSummary.completedCount}
+Wins: ${agentLearningSummary.winCount}
+Losses: ${agentLearningSummary.lossCount}
+Scratches: ${agentLearningSummary.scratchCount}
+Pending: ${agentLearningSummary.pendingCount}
+Historical win rate: ${agentLearningSummary.winRate !== null ? Math.round(agentLearningSummary.winRate * 100) + '%' : "not enough data"}
+Average PnL: ${agentLearningSummary.avgPnlTicks || 0} ticks / ${agentLearningSummary.avgPnlDollars || 0} dollars
+Strongest lesson: ${agentLearningSummary.strongestLesson}
+Risk warning: ${agentLearningSummary.riskWarning || "none"}
+Confidence adjustment: ${agentLearningSummary.confidenceAdjustment}
+Reason: ${agentLearningSummary.confidenceAdjustmentReason}
+--- END AGENT LEARNING ---
+
+Use Agent Learning as evidence, not as a replacement for current chart analysis. If the current chart conflicts with historical outcomes, explain the conflict. If similar historical setups performed poorly, reduce confidence unless the current setup has stronger price-action confirmation.
+`;
+      }
     } catch (e) {
       console.error("[RAG] Retrieval failed", e);
     }
     
-    const ragContextStr = formatRAGContextForGemini(similarSetups);
-
     // Step 1: Execute Unified Super Agent
     const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr);
     
@@ -414,6 +437,7 @@ export async function analyzeChart(imageData: string, settings?: AISettings, acc
       step4_RiskAudit: riskAudit,
       midnightAnalysis: superReport.midnightAnalysis,
       similarSetups,
+      agentLearningSummary,
       historicalContextUsed: !!similarSetups.length,
       agentReports: [
         { 

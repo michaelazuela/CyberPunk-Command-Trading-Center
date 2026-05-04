@@ -71,20 +71,21 @@ export function computePriorityScore(context: PriorityScoreContext): PriorityRes
   let applyRagWeight = false;
   let winRate = 0;
   let avgPnl = 0;
-  let similarSetupCount = context.similarSetups?.length || 0;
-
-  if (similarSetupCount >= 3) {
+  
+  if (context.agentLearningSummary && context.agentLearningSummary.completedCount >= 3) {
     applyRagWeight = true;
-    let wins = 0;
-    let totalPnl = 0;
-    context.similarSetups!.forEach(s => {
-      if (s.tradeResult === 'win') wins++;
-      if (s.pnlTicks) totalPnl += s.pnlTicks;
-    });
-    winRate = wins / similarSetupCount;
-    avgPnl = totalPnl / similarSetupCount;
+    winRate = context.agentLearningSummary.winRate !== null ? context.agentLearningSummary.winRate : 0;
+    avgPnl = context.agentLearningSummary.avgPnlTicks !== null ? context.agentLearningSummary.avgPnlTicks : 0;
+    
+    // Normalize avgPnl. E.g. expected max ~20 ticks, minimum 0 (or negative handles gracefully)
     const normalizedAvgPnl = Math.min(Math.max(avgPnl / 20, 0), 1);
     ragScore = winRate * 0.7 + normalizedAvgPnl * 0.3;
+    
+    // If agent recommends decrease, adjust score implicitly via winRate, but we can also manually penalize
+    if (context.agentLearningSummary.confidenceAdjustment === 'decrease') {
+      ragScore *= 0.8;
+    }
+    
     breakdown['historical'] = ragScore * 0.15;
   }
 
@@ -108,7 +109,7 @@ export function computePriorityScore(context: PriorityScoreContext): PriorityRes
     breakdown,
     historicalWinRate: applyRagWeight ? winRate : undefined,
     historicalAvgPnl: applyRagWeight ? avgPnl : undefined,
-    similarSetupCount
+    similarSetupCount: context.similarSetups?.length || 0
   };
 }
 

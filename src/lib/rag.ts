@@ -114,6 +114,13 @@ IB Position: ${queryContext.ibPosition}`;
       setupQualityScore: row.setup_quality_score,
       tradeResult: row.trade_result,
       pnlTicks: row.pnl_ticks,
+      pnlDollars: row.pnl_dollars,
+      contracts: row.contracts,
+      entryPrice: row.entry_price,
+      exitPrice: row.exit_price,
+      screenshotUrl: row.screenshot_url,
+      proofScreenshotUrl: row.proof_screenshot_url,
+      geminiVerdict: row.gemini_verdict,
       embeddingText: row.embedding_text,
       similarity: row.similarity
     }));
@@ -122,6 +129,88 @@ IB Position: ${queryContext.ibPosition}`;
     console.error("[RAG] Retrieval failed:", error);
     return [];
   }
+}
+
+export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
+  const completedOutcomes = similarSetups.filter(s => ['win', 'loss', 'scratch'].includes(s.tradeResult?.toLowerCase() || ''));
+  
+  let winCount = 0;
+  let lossCount = 0;
+  let scratchCount = 0;
+  let totalPnlTicks = 0;
+  let totalPnlDollars = 0;
+  let pnlTicksCount = 0;
+  let pnlDollarsCount = 0;
+
+  completedOutcomes.forEach(setup => {
+    const res = setup.tradeResult?.toLowerCase() || '';
+    if (res === 'win') winCount++;
+    else if (res === 'loss') lossCount++;
+    else if (res === 'scratch') scratchCount++;
+
+    if (setup.pnlTicks !== null && setup.pnlTicks !== undefined) {
+      totalPnlTicks += setup.pnlTicks;
+      pnlTicksCount++;
+    }
+    if (setup.pnlDollars !== null && setup.pnlDollars !== undefined) {
+      totalPnlDollars += setup.pnlDollars;
+      pnlDollarsCount++;
+    }
+  });
+
+  const setupCount = similarSetups.length;
+  const completedCount = completedOutcomes.length;
+  const pendingCount = setupCount - completedCount;
+
+  const winRate = completedCount > 0 ? winCount / completedCount : null;
+  const avgPnlTicks = pnlTicksCount > 0 ? totalPnlTicks / pnlTicksCount : null;
+  const avgPnlDollars = pnlDollarsCount > 0 ? totalPnlDollars / pnlDollarsCount : null;
+
+  let strongestLesson = "Not enough completed similar setups yet. Continue logging outcomes.";
+  let confidenceAdjustment: "increase" | "decrease" | "neutral" = "neutral";
+  let riskWarning: string | undefined;
+
+  let bestMatch = similarSetups.length > 0 ? similarSetups[0] : undefined;
+
+  if (completedCount >= 3) {
+    if (winRate !== null && winRate >= 0.70) {
+      confidenceAdjustment = "increase";
+      strongestLesson = `Historically, similar setups have performed well (${Math.round(winRate * 100)}% win rate). Watch for confirmation.`;
+    } else if (winRate !== null && winRate <= 0.40) {
+      confidenceAdjustment = "decrease";
+      strongestLesson = `Warning: Similar setups have significantly underperformed (${Math.round(winRate * 100)}% win rate). Proceed with caution.`;
+    } else {
+      confidenceAdjustment = "neutral";
+      strongestLesson = "Similar setups have mixed results historically. Follow standard entry rules.";
+    }
+  }
+
+  if (avgPnlTicks !== null && avgPnlTicks < 0) {
+    riskWarning = `Historically negative expectancy observed on similar setups (avg ${avgPnlTicks.toFixed(1)} ticks). Tighten stops if entering.`;
+  }
+
+  if (bestMatch && bestMatch.tradeResult?.toLowerCase() === 'loss') {
+    strongestLesson += " Note: The most similar historical setup resulted in a LOSS.";
+  }
+
+  const confidenceAdjustmentReason = `Win rate is ${winRate !== null ? Math.round(winRate * 100) + '%' : 'unknown'} with ${completedCount} completed setups.`;
+
+  return {
+    setupCount,
+    completedCount,
+    winCount,
+    lossCount,
+    scratchCount,
+    pendingCount,
+    winRate,
+    avgPnlTicks,
+    avgPnlDollars,
+    bestMatch,
+    strongestLesson,
+    riskWarning,
+    confidenceAdjustment,
+    confidenceAdjustmentReason
+  };
 }
 
 export function formatRAGContextForGemini(similarSetups: SimilarSetup[]): string {
@@ -159,9 +248,12 @@ Use this historical context to calibrate confidence and bias.`;
 }
 
 export async function embedPendingRecords(): Promise<void> {
+  // embedPendingRecords only repairs missing vector embeddings. It does not itself display learning insights.
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    if (import.meta.env.DEV) console.log("[AGENT LEARNING] Checking for pending embeddings...");
 
     const { data: pendingRecords, error } = await supabase
       .from('trade_embeddings')
@@ -172,6 +264,7 @@ export async function embedPendingRecords(): Promise<void> {
 
     if (error || !pendingRecords || pendingRecords.length === 0) return;
 
+    let updatedCount = 0;
     for (const record of pendingRecords) {
       try {
         const embedding = await generateEmbedding(record.embedding_text);
@@ -179,10 +272,13 @@ export async function embedPendingRecords(): Promise<void> {
           .from('trade_embeddings')
           .update({ embedding })
           .eq('id', record.id);
+        updatedCount++;
       } catch (err) {
         console.error(`[RAG] Failed to embed record ${record.id}:`, err);
       }
     }
+    
+    if (import.meta.env.DEV) console.log(`[AGENT LEARNING] Pending embedding backfill complete: ${updatedCount} updated`);
   } catch (error) {
     // Quietly fail
   }

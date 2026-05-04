@@ -104,11 +104,27 @@ export default function TradeLog({ trades, onAddTrade }: {
                   <th>P&L</th>
                   <th>Status</th>
                   <th>Proof</th>
+                  <th>Learning</th>
                   <th>Notes</th>
                 </tr>
               </thead>
               <tbody>
-                {trades.map(trade => (
+                {trades.map(trade => {
+                  let learningBadge = { label: 'UNKNOWN', cls: 'bg-[var(--b2)] text-[var(--txt2)]' };
+                  if (!trade.setupId) {
+                    if (!trade.screenshotUrl) learningBadge = { label: 'NO SCREEN', cls: 'bg-[var(--b2)] text-[var(--txt2)] opacity-50' };
+                    else learningBadge = { label: 'PENDING EMBED', cls: 'bg-[var(--blue)]/10 text-[var(--blue)] border border-[var(--blue)]/30' };
+                  } else {
+                    if (!trade.manualOutcome && trade.status === 'OPEN') {
+                      learningBadge = { label: 'NEEDS OUTCOME', cls: 'bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30' };
+                    } else if (!trade.proof_screenshot_url) {
+                      learningBadge = { label: 'NEEDS SCREENSHOT', cls: 'bg-[var(--amber)]/10 text-[var(--amber)] border border-[var(--amber)]/30' };
+                    } else {
+                      learningBadge = { label: 'LEARNING READY', cls: 'bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/50 font-bold' };
+                    }
+                  }
+
+                  return (
                   <tr key={trade.id}>
                     <td>{trade.date}</td>
                     <td className="font-mono">{trade.dayType}</td>
@@ -147,11 +163,17 @@ export default function TradeLog({ trades, onAddTrade }: {
                          <FileQuestion className="w-4 h-4" />}
                       </button>
                     </td>
+                    <td>
+                      <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-mono whitespace-nowrap", learningBadge.cls)}>
+                        {learningBadge.label}
+                      </span>
+                    </td>
                     <td className="w-1/3">
                       {trade.notes ? <span className="text-[9px]">{trade.notes}</span> : <span className="text-[var(--txt3)]">—</span>}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

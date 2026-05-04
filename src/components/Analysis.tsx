@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Sparkles, Target, Shield, Zap, Moon, CheckCircle2, CloudUpload, Cpu } from 'lucide-react';
+import { Upload, XCircle, Settings2, Sliders, ChevronDown, ChevronUp, Brain, Sparkles, Target, Shield, Zap, Moon, CheckCircle2, CloudUpload, Cpu, TrendingUp, TrendingDown, Camera, AlertTriangle } from 'lucide-react';
 import { SessionState, AnalysisResult, ProposedRule, Trade, AISettings } from '../types';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
@@ -312,7 +312,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         ocrTimestampDelta: analysis.ocrTimestampDelta,
         sessionType: 'morning' as const,
         geminiConfidence: analysis.confidence,
-        similarSetups: analysis.similarSetups
+        similarSetups: analysis.similarSetups,
+        agentLearningSummary: analysis.agentLearningSummary
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
 
@@ -715,41 +716,159 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             </div>
           )}
 
-          {/* RAG Context Display */}
-          <div className="card-base flex flex-col p-4 mb-4 border border-[var(--b2)]">
-            <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-3">HISTORICAL RAG CONTEXT</h3>
-            {result.similarSetups && result.similarSetups.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-[10px] text-[var(--txt2)]">Found {result.similarSetups.length} similar past setups:</p>
-                {result.similarSetups.map((setup: any, idx: number) => (
-                  <div key={setup.id} className="bg-[var(--bg)] p-2 rounded border border-[var(--b1)] flex flex-col gap-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="text-[var(--txt)] font-bold">Setup {idx + 1} ({Math.round(setup.similarity * 100)}% match)</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] ${setup.tradeResult === 'win' ? 'bg-[var(--green)]/10 text-[var(--green)]' : setup.tradeResult === 'loss' ? 'bg-[var(--red)]/10 text-[var(--red)]' : 'bg-[var(--b2)] text-[var(--txt2)]'}`}>
-                        {(setup.tradeResult || 'PENDING').toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-[9px] text-[var(--txt2)] flex justify-between">
-                      <span>{setup.tradeDate} - {setup.sessionType}</span>
-                      <span>PnL: {setup.pnlTicks || 0} ticks</span>
-                    </div>
-                    <div className="text-[9px] text-[var(--txt3)] truncate">
-                      Midnight: {setup.rthVsMidnight || 'unknown'} | IB: {setup.ibPosition || 'unknown'}
-                    </div>
-                  </div>
-                ))}
-                {result.priorityResult?.historicalWinRate !== undefined && (
-                  <div className="mt-2 p-2 bg-[var(--blue)]/10 border border-[var(--blue)]/30 text-[var(--blue)] text-[10px] font-mono rounded">
-                    <strong>Pattern Insight:</strong> {Math.round(result.priorityResult.historicalWinRate * 100)}% historical win rate. Avg PnL: {result.priorityResult.historicalAvgPnl?.toFixed(1)} ticks.
+          {/* Agent Learning Summary Component */}
+          {result.agentLearningSummary && (
+            <div className="card-base flex flex-col p-4 mb-4 border border-[var(--b2)]">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2">
+                  <Cpu size={14} className="text-[var(--blue)]" />
+                  AGENT LEARNING SUMMARY
+                </h3>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[9px] font-mono border",
+                  result.agentLearningSummary.completedCount >= 10 ? "bg-[var(--green)]/10 text-[var(--green)] border-[var(--green)]/30" :
+                  result.agentLearningSummary.completedCount >= 5 ? "bg-[var(--blue)]/10 text-[var(--blue)] border-[var(--blue)]/30" :
+                  result.agentLearningSummary.completedCount >= 1 ? "bg-[var(--orange)]/10 text-[var(--orange)] border-[var(--orange)]/30" :
+                  "bg-[var(--b2)] text-[var(--txt2)] border-[var(--b2)]"
+                )}>
+                  CONFIDENCE: {
+                    result.agentLearningSummary.completedCount >= 10 ? "HIGH" :
+                    result.agentLearningSummary.completedCount >= 5 ? "MEDIUM" :
+                    result.agentLearningSummary.completedCount >= 1 ? "LOW" :
+                    "EMPTY"
+                  }
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Completed Outcomes</span>
+                  <span className="text-[14px] font-bold text-[var(--txt)]">{result.agentLearningSummary.completedCount}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Hist. Win Rate</span>
+                  <span className={cn(
+                    "text-[14px] font-bold flex items-center gap-1",
+                    result.agentLearningSummary.winRate !== null && result.agentLearningSummary.winRate >= 0.7 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.winRate !== null && result.agentLearningSummary.winRate <= 0.4 ? "text-[var(--red)]" : "text-[var(--txt)]"
+                  )}>
+                    {result.agentLearningSummary.winRate !== null ? `${Math.round(result.agentLearningSummary.winRate * 100)}%` : "N/A"}
+                    {result.agentLearningSummary.confidenceAdjustment === 'increase' && <TrendingUp size={12} />}
+                    {result.agentLearningSummary.confidenceAdjustment === 'decrease' && <TrendingDown size={12} />}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Average P&L</span>
+                  <span className={cn(
+                    "text-[12px] font-mono",
+                    result.agentLearningSummary.avgPnlTicks && result.agentLearningSummary.avgPnlTicks > 0 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.avgPnlTicks && result.agentLearningSummary.avgPnlTicks < 0 ? "text-[var(--red)]" : "text-[var(--txt2)]"
+                  )}>
+                    {result.agentLearningSummary.avgPnlTicks !== null ? `${result.agentLearningSummary.avgPnlTicks.toFixed(1)} ticks` : "N/A"}
+                    {result.agentLearningSummary.avgPnlDollars !== null ? ` / $${result.agentLearningSummary.avgPnlDollars}` : ""}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Match Distribution</span>
+                  <span className="text-[10px] text-[var(--txt2)] font-mono">
+                    <span className="text-[var(--green)]">{result.agentLearningSummary.winCount}W</span> / <span className="text-[var(--red)]">{result.agentLearningSummary.lossCount}L</span> / <span className="text-[var(--txt)]">{result.agentLearningSummary.scratchCount}S</span>
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-[var(--bg)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2 mb-4">
+                <div className="text-[10px] text-[var(--txt)] font-mono">
+                  <strong className="text-[var(--blue)]">Learned Pattern:</strong> {result.agentLearningSummary.strongestLesson}
+                </div>
+                {result.agentLearningSummary.riskWarning && (
+                  <div className="text-[10px] text-[var(--red)] font-mono flex items-start gap-1.5 mt-1 border border-[var(--red)]/20 bg-[var(--red)]/5 p-2 rounded">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>{result.agentLearningSummary.riskWarning}</span>
                   </div>
                 )}
               </div>
-            ) : (
-              <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
-                No similar past setups found. Your trade history will improve future recommendations.
-              </p>
-            )}
-          </div>
+
+              {result.similarSetups && result.similarSetups.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-[9px] text-[var(--txt3)] font-mono uppercase mb-1">Retrieved History ({result.similarSetups.length})</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[var(--b1)] text-[9px] text-[var(--txt3)] font-mono">
+                          <th className="pb-1 font-normal opacity-70">Date</th>
+                          <th className="pb-1 font-normal opacity-70">Session</th>
+                          <th className="pb-1 font-normal opacity-70">Match</th>
+                          <th className="pb-1 font-normal opacity-70">Result</th>
+                          <th className="pb-1 font-normal opacity-70">P&L</th>
+                          <th className="pb-1 font-normal opacity-70">Verdict</th>
+                          <th className="pb-1 font-normal opacity-70">Link</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.similarSetups.map((setup: any, idx: number) => (
+                          <tr key={setup.id} className="border-b border-[var(--b1)]/50 last:border-0 hover:bg-[var(--b1)]/20 transition-colors">
+                            <td className="py-2 text-[10px] text-[var(--txt2)] whitespace-nowrap">{setup.tradeDate}</td>
+                            <td className="py-2 text-[10px] text-[var(--txt)] capitalize whitespace-nowrap">{setup.sessionType}</td>
+                            <td className="py-2 text-[10px] font-mono text-[var(--blue)] whitespace-nowrap">{Math.round(setup.similarity * 100)}%</td>
+                            <td className="py-2 whitespace-nowrap">
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider",
+                                setup.tradeResult === 'win' ? "bg-[var(--green)]/10 text-[var(--green)]" :
+                                setup.tradeResult === 'loss' ? "bg-[var(--red)]/10 text-[var(--red)]" :
+                                setup.tradeResult === 'scratch' ? "bg-[var(--txt)]/10 text-[var(--txt)]" :
+                                "bg-[var(--orange)]/10 text-[var(--orange)]"
+                              )}>
+                                {(setup.tradeResult || 'PENDING').toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-2 text-[10px] font-mono whitespace-nowrap">
+                              {setup.pnlTicks !== null && setup.pnlTicks !== undefined ? (
+                                <span className={setup.pnlTicks > 0 ? "text-[var(--green)]" : setup.pnlTicks < 0 ? "text-[var(--red)]" : "text-[var(--txt)]"}>
+                                  {setup.pnlTicks > 0 ? '+' : ''}{setup.pnlTicks}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="py-2 whitespace-nowrap">
+                              {setup.geminiVerdict ? (
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[8px] font-mono",
+                                  setup.geminiVerdict === 'CONFIRMED' ? "text-[var(--green)] border border-[var(--green)]/30" :
+                                  setup.geminiVerdict === 'DISPUTED' ? "text-[var(--red)] border border-[var(--red)]/30" :
+                                  "text-[var(--orange)] border border-[var(--orange)]/30"
+                                )}>
+                                  {setup.geminiVerdict}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-[var(--txt3)] border border-[var(--b2)] rounded px-1.5 py-0.5">UNVERIFIED</span>
+                              )}
+                            </td>
+                            <td className="py-2 whitespace-nowrap">
+                              {(setup.screenshotUrl || setup.proofScreenshotUrl) ? (
+                                <a href={setup.screenshotUrl || setup.proofScreenshotUrl} target="_blank" rel="noreferrer" className="text-[var(--blue)] hover:underline flex items-center justify-center opacity-70 hover:opacity-100">
+                                  <Camera size={12} />
+                                </a>
+                              ) : (
+                                <span className="text-[var(--txt3)] opacity-30 flex items-center justify-center"><Camera size={12} /></span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {!result.agentLearningSummary && (
+             <div className="card-base flex flex-col p-4 mb-4 border border-[var(--b2)]">
+               <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-2">AGENT LEARNING SUMMARY</h3>
+               <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
+                 No similar past setups found. Your trade history will form the baseline for future RAG learning.
+               </p>
+             </div>
+          )}
 
           <MidnightAnalysisView analysis={result.midnightAnalysis} />
 

@@ -126,6 +126,7 @@ export interface AnalysisResult {
   // RAG and Priority
   priorityResult?: PriorityResult;
   similarSetups?: SimilarSetup[];
+  agentLearningSummary?: AgentLearningSummary;
   ragContextUsed?: boolean;
   historicalContextUsed?: boolean;
 
@@ -226,16 +227,40 @@ export interface SimilarSetup {
   id: string;
   tradeDate: string;
   dayOfWeek: string;
+  sessionType: "morning" | "lunch" | string;
+  instrument: "MES" | "MNQ" | string;
   similarity: number;
-  sessionType: string;
-  instrument: string;
   rthVsMidnight?: string;
   ibPosition?: string;
   geminiConfidence?: string;
   setupQualityScore?: number;
-  tradeResult?: string;
-  pnlTicks?: number;
+  tradeResult: "win" | "loss" | "scratch" | "pending" | string;
+  pnlTicks?: number | null;
+  pnlDollars?: number | null;
+  contracts?: number | null;
+  entryPrice?: number | null;
+  exitPrice?: number | null;
+  screenshotUrl?: string | null;
+  proofScreenshotUrl?: string | null;
+  geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;
   embeddingText: string;
+}
+
+export interface AgentLearningSummary {
+  setupCount: number;
+  completedCount: number;
+  winCount: number;
+  lossCount: number;
+  scratchCount: number;
+  pendingCount: number;
+  winRate: number | null;
+  avgPnlTicks: number | null;
+  avgPnlDollars: number | null;
+  bestMatch?: SimilarSetup;
+  strongestLesson: string;
+  riskWarning?: string;
+  confidenceAdjustment: "increase" | "decrease" | "neutral";
+  confidenceAdjustmentReason: string;
 }
 
 export interface PriorityScoreContext {
@@ -248,6 +273,7 @@ export interface PriorityScoreContext {
   sessionType: "morning" | "lunch";
   geminiConfidence?: string;
   similarSetups?: SimilarSetup[];
+  agentLearningSummary?: AgentLearningSummary;
 }
 
 export interface PriorityResult {
