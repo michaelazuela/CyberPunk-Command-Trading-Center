@@ -10,7 +10,20 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
   return `Session: ${context.sessionType}
 Instrument: ${context.instrument}
 Date: ${dateStr} (${dayStr})
-Midnight Open: ${context.midnightOpenPrice ?? 'Unknown'} | RTH opened ${context.rthVsMidnight ?? 'unknown'} midnight open
+Midnight Open:
+- Instrument: ${context.midnightOpenInstrument ?? 'unknown'}
+- Date: ${context.midnightOpenDate ?? 'unknown'}
+- Price: ${context.midnightOpenPrice ?? 'unknown'}
+- Status: ${context.midnightOpenStatus ?? 'unknown'}
+- Source: ${context.midnightOpenSource ?? 'unknown'}
+- RTH vs Midnight: ${context.rthVsMidnight ?? 'unknown'}
+- Distance from Midnight: ${context.distanceFromMidnightPoints ?? 'unknown'} points / ${context.distanceFromMidnightTicks ?? 'unknown'} ticks
+- Midnight Role: ${context.midnightRole ?? 'UNCONFIRMED'}
+- Midnight Interaction: ${context.midnightInteraction ?? 'UNCONFIRMED'}
+- Plan Impact: ${context.midnightPlanImpact ?? 'unknown'}
+- Confidence Adjustment: ${context.midnightConfidenceAdjustment ?? 'unknown'}
+- Confidence Reason: ${context.midnightConfidenceReason ?? 'unknown'}
+
 Retrace probability: ${context.retraceProbability ? context.retraceProbability * 100 : 'unknown'}%
 Initial Balance: High ${context.ibHigh ?? 'unknown'} / Low ${context.ibLow ?? 'unknown'}
 IB Position: ${context.ibPosition ?? 'unknown'}

@@ -83,7 +83,9 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
         return;
       }
 
-      const uploadedPath = await uploadTradeProof(authUser.id, proofImage.dataUrl, proofImage.filename);
+      const dateStr = new Date().toISOString().split('T')[0];
+      const tempSetupId = 'pending-' + Date.now();
+      const uploadedPath = await uploadTradeProof(authUser.id, proofImage.dataUrl, tempSetupId, dateStr);
 
       await onSaveTrade(manualOutcome, {
         proof_screenshot_url: uploadedPath,

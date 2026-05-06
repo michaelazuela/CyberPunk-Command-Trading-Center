@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { AnalysisResult } from '../types';
+import { AnalysisResult, ScreenshotRole, AnalysisType } from '../types';
 
 export async function compressImage(dataUrl: string, maxWidth = 1600, quality = 0.6): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -46,25 +46,21 @@ function dataURLtoBlob(dataurl: string): Blob {
     return new Blob([u8arr], { type: mime });
 }
 
-export async function uploadScreenshotAndSaveSetup(
+export async function uploadScreenshot(
   userId: string,
-  base64Image: string,
-  analysis: AnalysisResult,
-  imageType: 'morning' | 'lunch',
-  ocrData?: any
-) {
+  tradeDate: string,
+  analysisType: AnalysisType,
+  screenshotRole: ScreenshotRole,
+  base64Image: string
+): Promise<{ storagePath: string; url: string; screenshotRole: ScreenshotRole; timeframe: "5m" | "15m" }> {
   try {
-    // 1. Compress Image
     const compressedImage = await compressImage(base64Image);
-
-    // 2. Convert timestamp for unique filename
     const timestamp = new Date().getTime();
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `${userId}/${dateStr}/${timestamp}_${imageType}.jpg`;
+    
+    const filename = `${userId}/${tradeDate}/${analysisType}/${screenshotRole}/${timestamp}.jpg`;
     
     const blob = dataURLtoBlob(compressedImage);
 
-    // 3. Upload Compressed Image to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('analysis-screenshots')
       .upload(filename, blob, {
@@ -76,64 +72,63 @@ export async function uploadScreenshotAndSaveSetup(
       throw uploadError;
     }
     
-    // 4. Get Signed URL for temporary display
     const { data: signedURLData, error: signError } = await supabase.storage
       .from('analysis-screenshots')
-      .createSignedUrl(filename, 60 * 60); // 1 hour expiry
+      .createSignedUrl(filename, 60 * 60);
       
     if (signError || !signedURLData) {
       console.error("Error creating signed URL for analysis", signError);
       throw signError;
     }
     
-    // 5. Save metadata to Supabase 'setups' table
-    const setupData: Record<string, any> = {
-      userId,
-      dayType: analysis.dayType,
-      reasoning: analysis.reasoning,
-      confidence: analysis.confidence,
-      imageURL: filename, // Store the path, not the expiring signed URL
-      tags: analysis.tags || [],
-      suggestedEntry: analysis.suggestedEntry || 0,
-      suggestedStop: analysis.suggestedStop || 0,
-      suggestedTarget: analysis.suggestedTarget || 0,
-      
-      // Midnight Open Options
-      midnight_open_source: analysis.midnightOpenSource,
-      midnight_open_override: analysis.midnightOpenOverride,
-      midnight_open_price: analysis.midnightOpenPrice,
-      midnight_open_visible: analysis.midnightOpenVisible,
-      rth_vs_midnight: analysis.rthVsMidnight,
-      retrace_probability: analysis.retraceProbability,
-      midnight_open_note: analysis.midnightOpenNote,
-      is_target_today: analysis.isTargetToday,
+    const timeframe = screenshotRole === '15m_eth_context' ? '15m' : '5m';
 
-      // OCR Timing
-      ocr_timestamp_status: analysis.ocrTimestampStatus,
-      ocr_timestamp_delta: analysis.ocrTimestampDelta,
+    return {
+      storagePath: filename,
+      url: signedURLData.signedUrl,
+      screenshotRole,
+      timeframe
     };
-    
-    if (ocrData) {
-      setupData.ocrText = JSON.stringify(ocrData);
-    }
-    Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
-    
-    const { data: docData, error: dbError } = await supabase
-      .from('setups')
-      .insert([setupData])
-      .select('id')
-      .single();
-      
-    if (dbError) {
-      console.error("Error saving setup to db", dbError);
-      throw dbError;
-    }
-    
-    console.log("Analysis saved to cloud with ID: ", docData.id);
-    return { id: docData.id, url: signedURLData.signedUrl };
   } catch (error) {
     console.error("Supabase Error uploading screenshot", error);
+    throw error;
   }
+}
+
+// Deprecated in favor of the workflow that uses uploadScreenshot first then saves setup later
+export async function uploadScreenshotAndSaveSetup(
+  userId: string,
+  base64Image: string,
+  analysis: AnalysisResult,
+  imageType: 'morning' | 'lunch',
+  ocrData?: any
+) {
+  // Existing logic for backwards compat...
+  // Just return the standard one
+  const dateStr = new Date().toISOString().split('T')[0];
+  const { url, storagePath } = await uploadScreenshot(userId, dateStr, imageType, '5m_execution', base64Image);
+  
+  // Create setup record 
+  const setupData: Record<string, any> = {
+    userId,
+    dayType: analysis.dayType,
+    reasoning: analysis.reasoning,
+    confidence: analysis.confidence,
+    imageURL: storagePath,
+    tags: analysis.tags || [],
+    suggestedEntry: analysis.suggestedEntry || 0,
+    suggestedStop: analysis.suggestedStop || 0,
+    suggestedTarget: analysis.suggestedTarget || 0,
+  };
+  
+  const { data: docData, error: dbError } = await supabase
+    .from('setups')
+    .insert([setupData])
+    .select('id')
+    .single();
+    
+  if (dbError) throw dbError;
+  return { id: docData.id, url };
 }
 
 export async function getAnalysisScreenshotSignedUrl(path: string): Promise<string | null> {
@@ -148,10 +143,9 @@ export async function getAnalysisScreenshotSignedUrl(path: string): Promise<stri
   return data.signedUrl;
 }
 
-export async function uploadTradeProof(userId: string, dataUrl: string, originalFilename: string): Promise<string> {
+export async function uploadTradeProof(userId: string, dataUrl: string, tradeId: string, tradeDate: string): Promise<string> {
   const timestamp = new Date().getTime();
-  const dateStr = new Date().toISOString().split('T')[0];
-  const filename = `${userId}/${dateStr}/${timestamp}_${originalFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+  const filename = `${userId}/${tradeDate}/${tradeId}/${timestamp}.jpg`;
   
   const blob = dataURLtoBlob(dataUrl);
 

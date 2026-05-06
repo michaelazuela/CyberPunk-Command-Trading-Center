@@ -33,6 +33,18 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       day_of_week: context.dayOfWeek,
       instrument: context.instrument || 'MES',
       midnight_open_price: context.midnightOpenPrice || null,
+      midnight_open_instrument: context.midnightOpenInstrument || null,
+      midnight_open_source: context.midnightOpenSource || null,
+      midnight_open_confirmed_at: context.midnightOpenConfirmedAt || null,
+      midnight_open_date: context.midnightOpenDate || null,
+      midnight_open_status: context.midnightOpenStatus || null,
+      distance_from_midnight_points: context.distanceFromMidnightPoints || null,
+      distance_from_midnight_ticks: context.distanceFromMidnightTicks || null,
+      midnight_role: context.midnightRole || null,
+      midnight_interaction: context.midnightInteraction || null,
+      midnight_plan_impact: context.midnightPlanImpact || null,
+      midnight_confidence_adjustment: context.midnightConfidenceAdjustment || null,
+      midnight_confidence_reason: context.midnightConfidenceReason || null,
       rth_vs_midnight: context.rthVsMidnight || null,
       retrace_probability: context.retraceProbability || null,
       initial_balance_high: context.ibHigh || null,
@@ -53,8 +65,32 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       gemini_analysis_json: context.geminiAnalysisJson || null,
       screenshot_url: context.screenshotUrl || null,
       proof_screenshot_url: context.proofScreenshotUrl || null,
-      midnight_open_source: context.midnightOpenSource || null,
       notes: context.notes || null,
+
+      execution_5m_screenshot_url: context.execution_5m_screenshot_url || null,
+      execution_5m_storage_path: context.execution_5m_storage_path || null,
+      execution_timeframe: context.execution_timeframe || null,
+      eth_15m_context_screenshot_url: context.eth_15m_context_screenshot_url || null,
+      eth_15m_context_storage_path: context.eth_15m_context_storage_path || null,
+      context_timeframe: context.context_timeframe || null,
+      context_session: context.context_session || null,
+      eth_context_available: context.eth_context_available || false,
+      eth_context_status: context.eth_context_status || null,
+      eth_high: context.eth_high || null,
+      eth_low: context.eth_low || null,
+      asian_high: context.asian_high || null,
+      asian_low: context.asian_low || null,
+      london_high: context.london_high || null,
+      london_low: context.london_low || null,
+      ny_premarket_high: context.ny_premarket_high || null,
+      ny_premarket_low: context.ny_premarket_low || null,
+      rth_open_relation_to_eth: context.rth_open_relation_to_eth || null,
+      rth_open_relation_to_midnight: context.rth_open_relation_to_midnight || null,
+      trade_plan_json: context.trade_plan_json || null,
+      execution_review_json: context.execution_review_json || null,
+      eth_context_review_json: context.eth_context_review_json || null,
+      afternoon_test_plan_json: context.afternoon_test_plan_json || null,
+      midnight_open_review_json: context.midnight_open_review_json || null,
     };
 
     let result;
@@ -122,7 +158,12 @@ IB Position: ${queryContext.ibPosition}`;
       proofScreenshotUrl: row.proof_screenshot_url,
       geminiVerdict: row.gemini_verdict,
       embeddingText: row.embedding_text,
-      similarity: row.similarity
+      similarity: row.similarity,
+      midnightOpenInstrument: row.midnight_open_instrument,
+      midnightOpenStatus: row.midnight_open_status,
+      midnightRole: row.midnight_role,
+      midnightInteraction: row.midnight_interaction,
+      distanceFromMidnightPoints: row.distance_from_midnight_points
     }));
 
   } catch (error) {
@@ -142,6 +183,16 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
   let pnlTicksCount = 0;
   let pnlDollarsCount = 0;
 
+  // Midnight variables
+  let midnightWinCount = 0;
+  let midnightLossCount = 0;
+  let midnightTotalPnlTicks = 0;
+  let midnightTotalPnlDollars = 0;
+  let midnightPnlTicksCount = 0;
+  let midnightPnlDollarsCount = 0;
+  const midnightSetups = similarSetups.filter(s => !!s.midnightOpenPrice);
+  const completedMidnightSetups = midnightSetups.filter(s => ['win', 'loss', 'scratch'].includes(s.tradeResult?.toLowerCase() || ''));
+
   completedOutcomes.forEach(setup => {
     const res = setup.tradeResult?.toLowerCase() || '';
     if (res === 'win') winCount++;
@@ -158,6 +209,21 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
     }
   });
 
+  completedMidnightSetups.forEach(setup => {
+    const res = setup.tradeResult?.toLowerCase() || '';
+    if (res === 'win') midnightWinCount++;
+    else if (res === 'loss') midnightLossCount++;
+
+    if (setup.pnlTicks !== null && setup.pnlTicks !== undefined) {
+      midnightTotalPnlTicks += setup.pnlTicks;
+      midnightPnlTicksCount++;
+    }
+    if (setup.pnlDollars !== null && setup.pnlDollars !== undefined) {
+      midnightTotalPnlDollars += setup.pnlDollars;
+      midnightPnlDollarsCount++;
+    }
+  });
+
   const setupCount = similarSetups.length;
   const completedCount = completedOutcomes.length;
   const pendingCount = setupCount - completedCount;
@@ -165,6 +231,22 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
   const winRate = completedCount > 0 ? winCount / completedCount : null;
   const avgPnlTicks = pnlTicksCount > 0 ? totalPnlTicks / pnlTicksCount : null;
   const avgPnlDollars = pnlDollarsCount > 0 ? totalPnlDollars / pnlDollarsCount : null;
+
+  const midnightSetupCount = midnightSetups.length;
+  const midnightCompletedCount = completedMidnightSetups.length;
+  const midnightWinRate = midnightCompletedCount > 0 ? midnightWinCount / midnightCompletedCount : null;
+  const midnightAvgPnlTicks = midnightPnlTicksCount > 0 ? midnightTotalPnlTicks / midnightPnlTicksCount : null;
+  const midnightAvgPnlDollars = midnightPnlDollarsCount > 0 ? midnightTotalPnlDollars / midnightPnlDollarsCount : null;
+  const midnightBestMatch = midnightSetups.length > 0 ? midnightSetups[0] : undefined;
+  
+  let midnightPatternLearned = "Not enough Midnight Open history yet.";
+  if (midnightCompletedCount >= 1) {
+    midnightPatternLearned = `When similar Midnight Open setups occurred, they won ${midnightWinCount} out of ${midnightCompletedCount} times.`;
+  }
+  let midnightRiskWarning: string | undefined;
+  if (midnightWinRate !== null && midnightWinRate <= 0.4) {
+    midnightRiskWarning = "Past trades underperformed when similar Midnight Open conditions were present.";
+  }
 
   let strongestLesson = "Not enough completed similar setups yet. Continue logging outcomes.";
   let confidenceAdjustment: "increase" | "decrease" | "neutral" = "neutral";
@@ -209,7 +291,17 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
     strongestLesson,
     riskWarning,
     confidenceAdjustment,
-    confidenceAdjustmentReason
+    confidenceAdjustmentReason,
+    
+    // Midnight
+    midnightSetupCount,
+    midnightCompletedCount,
+    midnightWinRate,
+    midnightAvgPnlTicks,
+    midnightAvgPnlDollars,
+    midnightBestMatch,
+    midnightPatternLearned,
+    midnightRiskWarning
   };
 }
 
@@ -314,6 +406,18 @@ export async function updateRAGWithTradeResult(
       tradeDate: record.trade_date,
       dayOfWeek: record.day_of_week,
       midnightOpenPrice: record.midnight_open_price,
+      midnightOpenInstrument: record.midnight_open_instrument,
+      midnightOpenSource: record.midnight_open_source,
+      midnightOpenConfirmedAt: record.midnight_open_confirmed_at,
+      midnightOpenDate: record.midnight_open_date,
+      midnightOpenStatus: record.midnight_open_status,
+      distanceFromMidnightPoints: record.distance_from_midnight_points,
+      distanceFromMidnightTicks: record.distance_from_midnight_ticks,
+      midnightRole: record.midnight_role,
+      midnightInteraction: record.midnight_interaction,
+      midnightPlanImpact: record.midnight_plan_impact,
+      midnightConfidenceAdjustment: record.midnight_confidence_adjustment,
+      midnightConfidenceReason: record.midnight_confidence_reason,
       rthVsMidnight: record.rth_vs_midnight,
       retraceProbability: record.retrace_probability,
       ibHigh: record.initial_balance_high,
@@ -346,7 +450,7 @@ export async function updateRAGWithTradeResult(
       embedding: newEmbedding
     }).eq('id', record.id);
 
-    console.log(`[RAG] Updated embedding for setup ${setupId} - result: ${tradeResult}`);
+    console.log(`[RAG] Midnight Open learning updated for setup ${setupId}`);
   } catch (error) {
     console.error("[RAG] Failed to update record:", error);
   }

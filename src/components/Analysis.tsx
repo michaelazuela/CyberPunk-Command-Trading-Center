@@ -29,8 +29,10 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [isPreChecking, setIsPreChecking] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingEthImage, setPendingEthImage] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [lastImage, setLastImage] = useState<string | null>(null);
+  const [lastEthImage, setLastEthImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showChainOfThought, setShowChainOfThought] = useState(false);
@@ -154,7 +156,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     setProgressStart(Date.now());
   }, []);
 
-  const processImage = useCallback(async (base64String: string) => {
+  const processExecImage = useCallback(async (base64String: string) => {
     if (isPreChecking || isAnalyzing) return;
     setIsPreChecking(true);
     setError(null);
@@ -185,11 +187,68 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     }
   }, [session.aiSettings, isPreChecking, isAnalyzing, initProgress, updateStep, modelConfig]);
 
+  const processEthImage = useCallback((base64String: string) => {
+    setPendingEthImage(base64String);
+  }, []);
+
+  const handleImageFile = (file: File, type: 'exec' | 'eth') => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+       if (type === 'exec') processExecImage(reader.result as string);
+       else processEthImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'exec' | 'eth') => {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file, type);
+  };
+
+  const handlePasteFromClipboard = async (type: 'exec' | 'eth') => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const clipboardType of item.types) {
+          if (clipboardType.startsWith("image/")) {
+            const blob = await item.getType(clipboardType);
+            const file = new File([blob], "paste.png", { type: clipboardType });
+            handleImageFile(file, type);
+            return;
+          }
+        }
+      }
+      setError("No image found in clipboard");
+    } catch {
+      setError("Use Ctrl+V / Cmd+V to paste directly");
+    }
+  };
+
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    // Ignore paste if user is typing in an input or textarea
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || (activeElement as HTMLElement).isContentEditable)) {
+      return;
+    }
+
+    try {
+      const imageData = await getImageFromClipboard(e);
+      if (imageData) {
+        // Assume default paste is exec
+        processExecImage(imageData);
+      }
+    } catch (error) {
+      console.error('Paste screenshot failed:', error);
+      setError(error instanceof Error ? error.message : 'Could not paste screenshot.');
+    }
+  }, [processExecImage]);
+
   const startFullAnalysis = useCallback(async (isDeepReviewParam?: boolean | React.MouseEvent) => {
     const isDeepReview = isDeepReviewParam === true;
     const imgSource = isDeepReview ? lastImage : pendingImage;
+    const ethSource = isDeepReview ? lastEthImage : pendingEthImage;
     if (!imgSource) return;
-    
+
     if (import.meta.env.DEV) console.log('[Analysis] Starting full analysis, isDeepReview:', isDeepReview);
 
     // reset steps if deep review
@@ -207,6 +266,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     try {
       if (!isDeepReview) {
          setLastImage(pendingImage);
+         setLastEthImage(pendingEthImage);
       }
       
       const routeName = isDeepReview ? "deep_review" : "morning";
@@ -219,15 +279,32 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       // Compression step
       updateStep('send', 'active');
-      setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: 'Compressing image' } : s));
+      setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: 'Compressing image(s)' } : s));
       
-      let imgToSend = imgSource;
+      let imgToSend: any = imgSource;
       try {
         if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size before compression: ${Math.round(imgSource.length / 1024)} KB`);
-        imgToSend = await import('../lib/cloudStorage').then(m => m.compressImage(imgSource, 1280, 0.7));
-        if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size after compression: ${Math.round(imgToSend.length / 1024)} KB`);
+        const compressedExec = await import('../lib/cloudStorage').then(m => m.compressImage(imgSource, 1280, 0.7));
+        if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Exec Image size after compression: ${Math.round(compressedExec.length / 1024)} KB`);
+        
+        let compressedEth;
+        if (ethSource) {
+           compressedEth = await import('../lib/cloudStorage').then(m => m.compressImage(ethSource, 1280, 0.7));
+           if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] ETH Image size after compression: ${Math.round(compressedEth.length / 1024)} KB`);
+        }
+
+        if (compressedEth) {
+           imgToSend = { exec: compressedExec, eth: compressedEth };
+        } else {
+           imgToSend = { exec: compressedExec };
+        }
       } catch (err) {
         console.warn("Failed to compress image, using original", err);
+        if (ethSource) {
+           imgToSend = { exec: imgSource, eth: ethSource };
+        } else {
+           imgToSend = imgSource;
+        }
       }
 
       const approvedRulesText = (customRules || []).filter(r => r.status === 'APPROVED').map(r => `- ${r.rule}`).join('\n');
@@ -313,7 +390,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         sessionType: 'morning' as const,
         geminiConfidence: analysis.confidence,
         similarSetups: analysis.similarSetups,
-        agentLearningSummary: analysis.agentLearningSummary
+        agentLearningSummary: analysis.agentLearningSummary,
+        midnightOpenStatus: analysis.midnightOpenStatus
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
 
@@ -323,9 +401,96 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser?.id) {
-           const setupData = await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'morning', ocrResult)); 
+           const { uploadScreenshot } = await import('../lib/cloudStorage');
+           const todayStr = new Date().toISOString().split('T')[0];
+           
+           let execImgBase64 = imgSource;
+           let ethImgBase64 = ethSource;
+
+           // Upload 5m exec
+           const execUpload = await uploadScreenshot(authUser.id, todayStr, 'morning', '5m_execution', execImgBase64);
+           
+           let ethUpload;
+           if (ethImgBase64) {
+             ethUpload = await uploadScreenshot(authUser.id, todayStr, 'morning', '15m_eth_context', ethImgBase64);
+           }
+
+           // Create setup record 
+           const setupData: Record<string, any> = {
+             userId: authUser.id,
+             dayType: analysis.dayType,
+             reasoning: analysis.reasoning,
+             confidence: analysis.confidence,
+             imageURL: execUpload.storagePath,
+             tags: analysis.tags || [],
+             suggestedEntry: analysis.suggestedEntry || 0,
+             suggestedStop: analysis.suggestedStop || 0,
+             suggestedTarget: analysis.suggestedTarget || 0,
+             
+             // Midnight Open Options
+             midnight_open_source: analysis.midnightOpenSource,
+             midnight_open_override: analysis.midnightOpenOverride,
+             midnight_open_price: analysis.midnightOpenPrice,
+             midnight_open_visible: analysis.midnightOpenVisible,
+             rth_vs_midnight: analysis.rthVsMidnight,
+             retrace_probability: analysis.retraceProbability,
+             midnight_open_note: analysis.midnightOpenNote,
+             is_target_today: analysis.isTargetToday,
+
+             // OCR Timing
+             ocr_timestamp_status: analysis.ocrTimestampStatus,
+             ocr_timestamp_delta: analysis.ocrTimestampDelta,
+
+             // New Context Fields
+             execution_5m_screenshot_url: execUpload.url,
+             execution_5m_storage_path: execUpload.storagePath,
+             execution_timeframe: '5m',
+             
+             ...(ethUpload ? {
+               eth_15m_context_screenshot_url: ethUpload.url,
+               eth_15m_context_storage_path: ethUpload.storagePath,
+               context_timeframe: '15m',
+               context_session: 'ETH',
+               eth_context_available: true,
+             } : {
+                 eth_context_available: false,
+             }),
+             
+             eth_context_status: analysis.ethContextReview?.status || null,
+             eth_high: analysis.ethContextReview?.ethHigh || null,
+             eth_low: analysis.ethContextReview?.ethLow || null,
+             asian_high: analysis.ethContextReview?.asianHigh || null,
+             asian_low: analysis.ethContextReview?.asianLow || null,
+             london_high: analysis.ethContextReview?.londonHigh || null,
+             london_low: analysis.ethContextReview?.londonLow || null,
+             ny_premarket_high: analysis.ethContextReview?.nyPremarketHigh || null,
+             ny_premarket_low: analysis.ethContextReview?.nyPremarketLow || null,
+             rth_open_relation_to_eth: analysis.ethContextReview?.rthOpenRelationToEth || null,
+             rth_open_relation_to_midnight: analysis.ethContextReview?.rthOpenRelationToMidnight || null,
+             
+             trade_plan_json: analysis.tradePlan || null,
+             execution_review_json: analysis.executionReview5m || null,
+             eth_context_review_json: analysis.ethContextReview || null,
+             midnight_open_review_json: analysis.midnightAnalysis || null,
+           };
+
+           if (ocrResult) {
+             setupData.ocrText = JSON.stringify(ocrResult);
+           }
+           Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
+
+           const { data: docData, error: dbError } = await supabase
+              .from('setups')
+              .insert([setupData])
+              .select('id')
+              .single();
+              
+           if (dbError) throw dbError;
+
+           const setupId = docData.id;
+
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
-           if (setupData?.id) setSetupId(setupData.id);
+           if (setupId) setSetupId(setupId);
            updateStep('save', 'complete');
 
            // Call RAG save
@@ -336,15 +501,50 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              tradeDate: new Date().toLocaleDateString('en-US'),
              dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
              midnightOpenPrice: analysis.midnightOpenPrice,
+             midnightOpenInstrument: analysis.midnightOpenInstrument,
+             midnightOpenSource: analysis.midnightOpenSource,
+             midnightOpenConfirmedAt: analysis.midnightOpenConfirmedAt,
+             midnightOpenDate: analysis.midnightOpenDate,
+             midnightOpenStatus: analysis.midnightOpenStatus,
+             distanceFromMidnightPoints: analysis.distanceFromMidnightPoints,
+             distanceFromMidnightTicks: analysis.distanceFromMidnightTicks,
+             midnightRole: analysis.midnightRole,
+             midnightInteraction: analysis.midnightInteraction,
+             midnightPlanImpact: analysis.midnightPlanImpact,
+             midnightConfidenceAdjustment: analysis.midnightConfidenceAdjustment,
+             midnightConfidenceReason: analysis.midnightConfidenceReason,
              rthVsMidnight: analysis.rthVsMidnight,
              retraceProbability: analysis.retraceProbability,
              geminiConfidence: analysis.confidence,
              geminiAnalysisJson: analysis,
              ocrText: ocrResult?.text,
-             screenshotUrl: setupData?.url,
-             setupId: setupData?.id,
+             screenshotUrl: execUpload.url,
+             setupId: setupId,
              tradeResult: 'pending',
-             midnightOpenSource: analysis.midnightOpenSource
+
+             execution_5m_screenshot_url: execUpload.url,
+             execution_5m_storage_path: execUpload.storagePath,
+             execution_timeframe: '5m',
+             eth_15m_context_screenshot_url: ethUpload?.url || null,
+             eth_15m_context_storage_path: ethUpload?.storagePath || null,
+             context_timeframe: ethUpload ? '15m' : null,
+             context_session: ethUpload ? 'ETH' : null,
+             eth_context_available: !!ethUpload,
+             eth_context_status: analysis.ethContextReview?.status || null,
+             eth_high: analysis.ethContextReview?.ethHigh || null,
+             eth_low: analysis.ethContextReview?.ethLow || null,
+             asian_high: analysis.ethContextReview?.asianHigh || null,
+             asian_low: analysis.ethContextReview?.asianLow || null,
+             london_high: analysis.ethContextReview?.londonHigh || null,
+             london_low: analysis.ethContextReview?.londonLow || null,
+             ny_premarket_high: analysis.ethContextReview?.nyPremarketHigh || null,
+             ny_premarket_low: analysis.ethContextReview?.nyPremarketLow || null,
+             rth_open_relation_to_eth: analysis.ethContextReview?.rthOpenRelationToEth || null,
+             rth_open_relation_to_midnight: analysis.ethContextReview?.rthOpenRelationToMidnight || null,
+             trade_plan_json: analysis.tradePlan || null,
+             execution_review_json: analysis.executionReview5m || null,
+             eth_context_review_json: analysis.ethContextReview || null,
+             midnight_open_review_json: analysis.midnightAnalysis || null,
            });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
@@ -360,6 +560,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       
       if (!isDeepReview) {
          setPendingImage(null);
+         setPendingEthImage(null);
          setOcrResult(null);
       }
     } catch (err: any) {
@@ -374,55 +575,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, lastImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
-
-  const handleImageFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => processImage(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleImageFile(file);
-  };
-
-  const handlePasteFromClipboard = async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const item of clipboardItems) {
-        for (const type of item.types) {
-          if (type.startsWith("image/")) {
-            const blob = await item.getType(type);
-            const file = new File([blob], "paste.png", { type });
-            handleImageFile(file);
-            return;
-          }
-        }
-      }
-      setError("No image found in clipboard");
-    } catch {
-      setError("Use Ctrl+V / Cmd+V to paste directly");
-    }
-  };
-
-  const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    // Ignore paste if user is typing in an input or textarea
-    const activeElement = document.activeElement;
-    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || (activeElement as HTMLElement).isContentEditable)) {
-      return;
-    }
-
-    try {
-      const imageData = await getImageFromClipboard(e);
-      if (imageData) {
-        processImage(imageData);
-      }
-    } catch (error) {
-      console.error('Paste screenshot failed:', error);
-      setError(error instanceof Error ? error.message : 'Could not paste screenshot.');
-    }
-  }, [processImage]);
+  }, [pendingImage, pendingEthImage, lastImage, lastEthImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   useEffect(() => {
     window.addEventListener('paste', handlePaste);
@@ -529,44 +682,81 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       {!result && !isAnalyzing && !isPreChecking && !pendingImage && (
         <div className="space-y-6 fade-up">
-          {/* Full-width upload zone */}
-          <div className="upload-zone">
-            <Upload className="w-6 h-6 text-[var(--txt3)] mb-4 upload-icon transition-colors" />
-            <h3 className="text-[12px] font-mono font-bold text-[var(--orange)] uppercase tracking-widest mb-1">Initialize Analysis</h3>
-            <p className="text-[9px] text-[var(--txt2)] mb-6">Select a chart screenshot or paste from clipboard.</p>
-            <div className="flex gap-4 mb-6">
-              <label className="qd-btn-primary cursor-pointer">
-                Select File
-                <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
-              </label>
-              <button className="qd-btn-ghost" onClick={handlePasteFromClipboard}>Paste Screenshot</button>
-            </div>
-            
-            <div className="w-full max-w-sm mt-4 p-4 border border-[var(--b2)] bg-[var(--b0)] rounded text-left">
-              <label className="text-[10px] font-mono text-[var(--txt2)] uppercase block mb-3" title="The 12:00 AM ET candle open price shown as a horizontal line on your NinjaTrader chart">
-                Midnight Open Level (optional)
-              </label>
-              <div className="flex flex-col gap-2 text-[11px] font-mono">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" checked={!useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(false)} className="accent-[var(--orange)]" />
-                  <span className={!useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Auto (let Gemini read from chart)</span>
+          {/* Side-by-side upload zone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="upload-zone flex flex-col items-center justify-center p-6 h-full">
+              <Upload className="w-6 h-6 text-[var(--txt3)] mb-4 upload-icon transition-colors" />
+              <h3 className="text-[12px] font-mono font-bold text-[var(--orange)] uppercase tracking-widest mb-1">
+                Required — 5M Execution
+              </h3>
+              <p className="text-[9px] text-[var(--txt2)] mb-6 text-center max-w-[200px]">
+                Screenshot from 9:30 open to 10:10 close.
+              </p>
+              
+              <div className="flex gap-4 w-full max-w-[240px]">
+                <label className="qd-btn-primary cursor-pointer flex-1 text-center whitespace-nowrap">
+                  Select
+                  <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'exec')} accept="image/*" />
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" checked={useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(true)} className="accent-[var(--orange)]" />
-                  <span className={useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Manual entry:</span>
-                  {useManualMidnightOpen && (
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 5821.25" 
-                      value={midnightOpenOverrideStr} 
-                      onChange={e => setMidnightOpenOverrideStr(e.target.value)}
-                      className="ml-2 w-24 bg-[var(--bg)] border border-[var(--b2)] px-2 py-0.5 rounded text-[10px]"
-                    />
-                  )}
-                </label>
+                <button className="qd-btn-ghost flex-1 whitespace-nowrap" onClick={() => handlePasteFromClipboard('exec')}>Paste</button>
               </div>
-              <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If Gemini misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
             </div>
+
+            <div className="upload-zone flex flex-col items-center justify-center p-6 h-full border-dashed border-[var(--b2)] relative">
+              <h3 className="text-[12px] font-mono font-bold text-[var(--txt)] uppercase tracking-widest mb-1 flex items-center gap-2">
+                <span className="text-[9px] bg-[var(--b2)] text-[var(--txt)] px-1 py-0.5 rounded uppercase">Optional</span>
+                15M ETH Context
+              </h3>
+              <p className="text-[9px] text-[var(--txt2)] mb-6 text-center max-w-[200px]">
+                8:00 PM to 9:45 AM context chart. Recommended.
+              </p>
+              
+              {!pendingEthImage ? (
+                <div className="flex gap-4 w-full max-w-[240px]">
+                  <label className="qd-btn-secondary cursor-pointer flex-1 text-center whitespace-nowrap !bg-[var(--b1)] !text-[var(--txt2)]">
+                    Select
+                    <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'eth')} accept="image/*" />
+                  </label>
+                  <button className="qd-btn-ghost flex-1 whitespace-nowrap opacity-60" onClick={() => handlePasteFromClipboard('eth')}>Paste</button>
+                </div>
+              ) : (
+                <div className="relative group w-full max-w-[240px]">
+                   <img src={pendingEthImage} alt="ETH Context" className="w-full h-24 object-cover rounded border border-[var(--b2)] opacity-80" />
+                   <button onClick={() => setPendingEthImage(null)} className="absolute top-1 right-1 bg-[var(--bg)] text-[var(--txt)] rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow">
+                     <XCircle className="w-4 h-4" />
+                   </button>
+                   <div className="mt-2 text-center text-[10px] text-[var(--green)] flex flex-col gap-1 items-center font-mono">
+                     <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> ETH Context Attached</span>
+                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="w-full max-w-sm mt-0 p-4 border border-[var(--b2)] bg-[var(--b0)] rounded text-left mb-6 mx-auto">
+            <label className="text-[10px] font-mono text-[var(--txt2)] uppercase block mb-3" title="The 12:00 AM ET candle open price shown as a horizontal line on your NinjaTrader chart">
+              Midnight Open Level (optional)
+            </label>
+            <div className="flex flex-col gap-2 text-[11px] font-mono">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={!useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(false)} className="accent-[var(--orange)]" />
+                <span className={!useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Auto (let Gemini read from chart)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" checked={useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(true)} className="accent-[var(--orange)]" />
+                <span className={useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Manual entry:</span>
+                {useManualMidnightOpen && (
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 5821.25" 
+                    value={midnightOpenOverrideStr} 
+                    onChange={e => setMidnightOpenOverrideStr(e.target.value)}
+                    className="ml-2 w-24 bg-[var(--bg)] border border-[var(--b2)] px-2 py-0.5 rounded text-[10px]"
+                  />
+                )}
+              </label>
+            </div>
+            <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If Gemini misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -713,6 +903,12 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                   <div className="flex justify-between text-[var(--blue)]"><span>Historical Perf:</span><span>{(result.priorityResult.breakdown.historical * 6.66).toFixed(2)} / 1.0</span></div>
                 )}
               </div>
+              {result.priorityResult.missingMidnightReason && (
+                <div className="mt-3 p-2 bg-[var(--orange)]/10 border border-[var(--orange)]/30 rounded text-[10px] text-[var(--orange)] font-mono flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>{result.priorityResult.missingMidnightReason}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -866,6 +1062,99 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-2">AGENT LEARNING SUMMARY</h3>
                <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
                  No similar past setups found. Your trade history will form the baseline for future RAG learning.
+               </p>
+             </div>
+          )}
+
+          {/* Midnight Open RAG Learning Component */}
+          {result.agentLearningSummary?.midnightSetupCount ? (
+            <div className="card-base flex flex-col p-4 mb-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-[11px] font-mono font-bold text-[var(--blue)] flex items-center gap-2">
+                  <Moon size={14} className="text-[var(--blue)]" />
+                  MIDNIGHT OPEN RAG LEARNING
+                </h3>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[9px] font-mono border",
+                  result.agentLearningSummary.midnightCompletedCount >= 10 ? "bg-[var(--green)]/10 text-[var(--green)] border-[var(--green)]/30" :
+                  result.agentLearningSummary.midnightCompletedCount >= 5 ? "bg-[var(--blue)]/10 text-[var(--blue)] border-[var(--blue)]/30" :
+                  result.agentLearningSummary.midnightCompletedCount >= 1 ? "bg-[var(--orange)]/10 text-[var(--orange)] border-[var(--orange)]/30" :
+                  "bg-[var(--b2)] text-[var(--txt2)] border-[var(--b2)]"
+                )}>
+                  CONFIDENCE: {
+                    result.agentLearningSummary.midnightCompletedCount >= 10 ? "HIGH" :
+                    result.agentLearningSummary.midnightCompletedCount >= 5 ? "MEDIUM" :
+                    result.agentLearningSummary.midnightCompletedCount >= 1 ? "LOW" :
+                    "EMPTY"
+                  }
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Similar Setups</span>
+                  <span className="text-[14px] font-bold text-[var(--txt)]">{result.agentLearningSummary.midnightSetupCount}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Win Rate</span>
+                  <span className={cn(
+                    "text-[14px] font-bold",
+                    result.agentLearningSummary.midnightWinRate !== null && result.agentLearningSummary.midnightWinRate >= 0.7 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.midnightWinRate !== null && result.agentLearningSummary.midnightWinRate <= 0.4 ? "text-[var(--red)]" : "text-[var(--txt)]"
+                  )}>
+                    {result.agentLearningSummary.midnightWinRate !== null ? `${Math.round(result.agentLearningSummary.midnightWinRate * 100)}%` : "N/A"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Avg P&L</span>
+                  <span className={cn(
+                    "text-[14px] font-mono",
+                    result.agentLearningSummary.midnightAvgPnlTicks && result.agentLearningSummary.midnightAvgPnlTicks > 0 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.midnightAvgPnlTicks && result.agentLearningSummary.midnightAvgPnlTicks < 0 ? "text-[var(--red)]" : "text-[var(--txt2)]"
+                  )}>
+                    {result.agentLearningSummary.midnightAvgPnlTicks !== null ? `${result.agentLearningSummary.midnightAvgPnlTicks.toFixed(1)} ticks` : "N/A"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Best Match</span>
+                  {result.agentLearningSummary.midnightBestMatch ? (
+                    <span className="text-[10px] text-[var(--txt)] font-mono">
+                      {new Date(result.agentLearningSummary.midnightBestMatch.tradeDate || '').toLocaleDateString(undefined, {month: 'numeric', day: 'numeric'})} | <span className={
+                        result.agentLearningSummary.midnightBestMatch.tradeResult === 'win' ? "text-[var(--green)]" :
+                        result.agentLearningSummary.midnightBestMatch.tradeResult === 'loss' ? "text-[var(--red)]" : ""
+                      }>
+                        {result.agentLearningSummary.midnightBestMatch.tradeResult?.toUpperCase()}
+                      </span>
+                    </span>
+                  ) : <span className="text-[10px] text-[var(--txt2)] font-mono">None</span>}
+                </div>
+              </div>
+              
+              <div className="bg-[var(--bg)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2">
+                <div className="text-[10px] text-[var(--txt)] font-mono">
+                  <strong className="text-[var(--blue)]">Pattern Learned:</strong> {result.agentLearningSummary.midnightPatternLearned}
+                </div>
+                {result.agentLearningSummary.midnightRiskWarning && (
+                  <div className="text-[10px] text-[var(--red)] font-mono flex items-start gap-1.5 mt-1 border border-[var(--red)]/20 bg-[var(--red)]/5 p-2 rounded">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>{result.agentLearningSummary.midnightRiskWarning}</span>
+                  </div>
+                )}
+                {result.midnightConfidenceAdjustment && (
+                  <div className="text-[10px] font-mono mt-1">
+                      <strong className="text-[var(--txt)]">Confidence Adj:</strong> <span className={result.midnightConfidenceAdjustment === 'increase' ? "text-[var(--green)]" : result.midnightConfidenceAdjustment === 'decrease' ? "text-[var(--red)]" : "text-[var(--txt2)]"}>{result.midnightConfidenceAdjustment.toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+             <div className="card-base flex flex-col p-4 mb-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5">
+                <h3 className="text-[11px] font-mono font-bold text-[var(--blue)] flex items-center gap-2 mb-2">
+                  <Moon size={14} className="text-[var(--blue)]" />
+                  MIDNIGHT OPEN RAG LEARNING
+                </h3>
+               <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
+                 No Midnight Open history yet. Future saved trades will teach the agent how this level affects your setups.
                </p>
              </div>
           )}

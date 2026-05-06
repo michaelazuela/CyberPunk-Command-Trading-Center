@@ -76,7 +76,7 @@ async function callGeminiAPI(params: any) {
   return { text: "{}" };
 }
 
-async function superAgent(imageData: string, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string) {
+async function superAgent(imageData: string | { exec: string; eth?: string }, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string) {
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const prompt = `
     ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
@@ -92,11 +92,16 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     ${ragContextStr || 'No similar past setups found.'}
     --- END RAG CONTEXT ---
 
-    Use the historical context above to:
+    --- PREVIOUS SESSION ANALYSIS INJECTION ---
+    ${previousAnalysis ? JSON.stringify(previousAnalysis) : 'No previous analysis for this session.'}
+    --- END PREVIOUS SESSION ANALYSIS ---
+
+    Use the historical and previous session context above to:
     1. Calibrate confidence based on similar setup outcomes.
     2. Note patterns, such as similar setups winning or losing.
     3. Adjust bias if historical win rate contradicts the current chart signal.
     4. Return historical_context_used as true if similar setups were provided.
+    5. Carry forward relevant context from the previous session (e.g., morning ETH levels, Midnight Open analysis).
 
     =========================================
     MODULE 1: [DATA_EXTRACTOR] (Vision)
@@ -214,9 +219,67 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
             "recommendation": "string"
           }
         ]
+      },
+      "tradePlan": {
+         "bias": "LONG" | "SHORT" | "NO TRADE",
+         "setupName": "string",
+         "entry": 0, "stop": 0, "target": 0,
+         "invalidation": "string",
+         "confidence": 0,
+         "goNoGo": "GO" | "NO-GO" | "WAIT",
+         "reasoningSummary": "string"
+      },
+      "executionReview5m": {
+         "structure930To1010": "string",
+         "initialBalanceBehavior": "string",
+         "openingCandleRead": "string",
+         "sweepReclaim": "string",
+         "mssChoch": "string",
+         "entryQuality": "string",
+         "stopPlacement": "string",
+         "targetQuality": "string"
+      },
+      "ethContextReview": {
+         "available": boolean,
+         "status": "detected" | "missing" | "unclear",
+         "ethHigh": 0, "ethLow": 0,
+         "asianHigh": 0, "asianLow": 0,
+         "londonHigh": 0, "londonLow": 0,
+         "nyPremarketHigh": 0, "nyPremarketLow": 0,
+         "rthOpenRelationToEth": "above_eth_high" | "below_eth_low" | "inside_eth_range" | "at_eth_high" | "at_eth_low" | "unknown",
+         "rthOpenRelationToMidnight": "above" | "below" | "at" | "unknown",
+         "checklist": {
+            "ethHighVisible": "detected", "ethLowVisible": "detected", "asianHighVisible": "detected", "asianLowVisible": "detected",
+            "londonHighVisible": "detected", "londonLowVisible": "detected", "midnightOpenConfirmed": "detected",
+            "nyPremarketHighVisible": "detected", "nyPremarketLowVisible": "detected", "rthOpenVisible": "detected"
+         },
+         "planImpact": "string",
+         "confidenceAdjustment": "increase" | "decrease" | "neutral",
+         "confidenceAdjustmentReason": "string"
+      },
+      "afternoonTestPlan": {
+         "morningBiasCarryover": "LONG" | "SHORT" | "NEUTRAL",
+         "lunchExpectation": "CONTINUATION" | "REVERSAL" | "NO TRADE" | "WAIT",
+         "keyMorningLevels": ["string"],
+         "ethLevelsStillRelevant": ["string"],
+         "midnightOpenRelevance": "string",
+         "lunchTrapLevel": 0,
+         "afternoonInvalidationLevel": 0,
+         "confidence": 0,
+         "plan": "string"
       }
     }
   `;
+
+  let inlineParts: any[] = [];
+  if (typeof imageData === 'string') {
+    inlineParts.push({ inlineData: { mimeType: "image/png", data: imageData.split(',')[1] || imageData } });
+  } else {
+    inlineParts.push({ inlineData: { mimeType: "image/png", data: imageData.exec.split(',')[1] || imageData.exec } });
+    if (imageData.eth) {
+      inlineParts.push({ inlineData: { mimeType: "image/png", data: imageData.eth.split(',')[1] || imageData.eth } });
+    }
+  }
 
   const response = await callGeminiAPI({
     model: modelOverride || "gemini-3.1-pro-preview",
@@ -224,7 +287,7 @@ async function superAgent(imageData: string, settings?: AISettings, previousAnal
     contents: {
       parts: [
         { text: prompt },
-        { inlineData: { mimeType: "image/png", data: imageData.split(',')[1] } }
+        ...inlineParts
       ]
     },
     config: {
@@ -330,7 +393,7 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
   }
 }
 
-export async function analyzeChart(imageData: string, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string) {
+export async function analyzeChart(imageData: string | { exec: string; eth?: string }, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string) {
   try {
     const isMorning = analysisType !== 'lunch';
     const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -363,14 +426,28 @@ Losses: ${agentLearningSummary.lossCount}
 Scratches: ${agentLearningSummary.scratchCount}
 Pending: ${agentLearningSummary.pendingCount}
 Historical win rate: ${agentLearningSummary.winRate !== null ? Math.round(agentLearningSummary.winRate * 100) + '%' : "not enough data"}
-Average PnL: ${agentLearningSummary.avgPnlTicks || 0} ticks / ${agentLearningSummary.avgPnlDollars || 0} dollars
+Average PnL: ${agentLearningSummary.avgPnlTicks !== null ? agentLearningSummary.avgPnlTicks.toFixed(1) : 0} ticks / ${agentLearningSummary.avgPnlDollars !== null ? '$' + agentLearningSummary.avgPnlDollars : '0 dollars'}
 Strongest lesson: ${agentLearningSummary.strongestLesson}
 Risk warning: ${agentLearningSummary.riskWarning || "none"}
 Confidence adjustment: ${agentLearningSummary.confidenceAdjustment}
 Reason: ${agentLearningSummary.confidenceAdjustmentReason}
 --- END AGENT LEARNING ---
 
+--- MIDNIGHT OPEN RAG LEARNING ---
+Similar Midnight Open setups found: ${agentLearningSummary.midnightSetupCount}
+Completed outcomes: ${agentLearningSummary.midnightCompletedCount}
+Win rate: ${agentLearningSummary.midnightWinRate !== null ? Math.round(agentLearningSummary.midnightWinRate * 100) + '%' : 'no data'}
+Average P&L: ${agentLearningSummary.midnightAvgPnlTicks !== null ? agentLearningSummary.midnightAvgPnlTicks.toFixed(1) : 0} ticks / $${agentLearningSummary.midnightAvgPnlDollars || 0}
+Pattern learned: ${agentLearningSummary.midnightPatternLearned}
+Risk warning: ${agentLearningSummary.midnightRiskWarning || "none"}
+Best historical match: ${agentLearningSummary.midnightBestMatch ? 
+  `${agentLearningSummary.midnightBestMatch.tradeDate} | ${agentLearningSummary.midnightBestMatch.sessionType} | ${agentLearningSummary.midnightBestMatch.instrument} | ${agentLearningSummary.midnightBestMatch.tradeResult} | ${agentLearningSummary.midnightBestMatch.pnlTicks} ticks` : 
+  'None'}
+--- END MIDNIGHT OPEN RAG LEARNING ---
+
 Use Agent Learning as evidence, not as a replacement for current chart analysis. If the current chart conflicts with historical outcomes, explain the conflict. If similar historical setups performed poorly, reduce confidence unless the current setup has stronger price-action confirmation.
+
+Use Midnight Open RAG Learning to study how similar historical Midnight Open conditions performed. Do not treat Midnight Open as a temporary UI value. It is a core historical feature used for future trading plans. If similar Midnight Open setups performed poorly, reduce confidence unless current price action is materially stronger. If similar Midnight Open setups performed well, explain whether the current setup matches those winning conditions.
 `;
       }
     } catch (e) {
@@ -436,6 +513,10 @@ Use Agent Learning as evidence, not as a replacement for current chart analysis.
       sessionLog: strategy.sessionLog,
       step4_RiskAudit: riskAudit,
       midnightAnalysis: superReport.midnightAnalysis,
+      tradePlan: superReport.tradePlan,
+      executionReview5m: superReport.executionReview5m,
+      ethContextReview: superReport.ethContextReview,
+      afternoonTestPlan: superReport.afternoonTestPlan,
       similarSetups,
       agentLearningSummary,
       historicalContextUsed: !!similarSetups.length,

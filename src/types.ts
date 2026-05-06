@@ -86,6 +86,87 @@ export interface SessionLog {
   recalibration_status: string;
 }
 
+export type ScreenshotRole = "5m_execution" | "15m_eth_context" | "trade_proof";
+export type AnalysisType = "morning" | "lunch";
+
+export interface AnalysisScreenshotMeta {
+  url?: string;
+  storagePath?: string;
+  role: ScreenshotRole;
+  timeframe: "5m" | "15m";
+  session?: "RTH" | "ETH";
+  windowStart?: string;
+  windowEnd?: string;
+}
+
+export interface ETHContextReview {
+  available: boolean;
+  status: "detected" | "missing" | "unclear";
+  ethHigh?: number | null;
+  ethLow?: number | null;
+  asianHigh?: number | null;
+  asianLow?: number | null;
+  londonHigh?: number | null;
+  londonLow?: number | null;
+  nyPremarketHigh?: number | null;
+  nyPremarketLow?: number | null;
+  rthOpenRelationToEth?: "above_eth_high" | "below_eth_low" | "inside_eth_range" | "at_eth_high" | "at_eth_low" | "unknown";
+  rthOpenRelationToMidnight?: "above" | "below" | "at" | "unknown";
+  checklist: {
+    ethHighVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    ethLowVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    asianHighVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    asianLowVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    londonHighVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    londonLowVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    midnightOpenConfirmed: "detected" | "missing" | "unclear" | "manually_confirmed";
+    nyPremarketHighVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    nyPremarketLowVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    rthOpenVisible: "detected" | "missing" | "unclear" | "manually_confirmed";
+    executionWindowValid: "detected" | "missing" | "unclear" | "manually_confirmed";
+    ethContextWindowValid: "detected" | "missing" | "unclear" | "manually_confirmed";
+  };
+  planImpact?: string;
+  confidenceAdjustment?: "increase" | "decrease" | "neutral";
+  confidenceAdjustmentReason?: string;
+}
+
+export interface TradePlan {
+  bias: "LONG" | "SHORT" | "NO TRADE";
+  setupName: string;
+  entry?: number | null;
+  stop?: number | null;
+  target?: number | null;
+  invalidation: string;
+  confidence: number;
+  goNoGo: "GO" | "NO-GO" | "WAIT";
+  reasoningSummary: string;
+}
+
+export interface ExecutionReview5m {
+  structure930To1010: string;
+  initialBalanceBehavior: string;
+  openingCandleRead: string;
+  sweepReclaim: string;
+  mssChoch: string;
+  entryQuality: string;
+  stopPlacement: string;
+  targetQuality: string;
+}
+
+export interface AfternoonTestPlan {
+  morningBiasCarryover: "LONG" | "SHORT" | "NEUTRAL";
+  lunchExpectation: "CONTINUATION" | "REVERSAL" | "NO TRADE" | "WAIT";
+  keyMorningLevels: string[];
+  ethLevelsStillRelevant: string[];
+  midnightOpenRelevance: string;
+  lunchTrapLevel?: number | null;
+  afternoonInvalidationLevel?: number | null;
+  confidence: number;
+  priorityScore?: number;
+  plan: string;
+}
+
 export interface AnalysisResult {
   dayType: DayType;
   reasoning: string;
@@ -114,10 +195,21 @@ export interface AnalysisResult {
   midnightOpenOverride?: number | null;
   midnightOpenPrice?: number | null;
   midnightOpenVisible?: boolean;
-  rthVsMidnight?: "above" | "below" | "at";
+  rthVsMidnight?: "above" | "below" | "at" | "unknown";
   retraceProbability?: number | null;
   midnightOpenNote?: string;
   isTargetToday?: boolean;
+  midnightOpenInstrument?: string;
+  midnightOpenConfirmedAt?: string;
+  midnightOpenDate?: string;
+  midnightOpenStatus?: "confirmed" | "stale" | "missing" | "ocr_unconfirmed";
+  distanceFromMidnightPoints?: number;
+  distanceFromMidnightTicks?: number;
+  midnightRole?: "SUPPORT" | "RESISTANCE" | "MAGNET" | "NEUTRAL" | "UNCONFIRMED";
+  midnightInteraction?: "ABOVE_AND_HOLDING" | "BELOW_AND_HOLDING" | "RECLAIMED" | "REJECTED" | "CHOPPING_AROUND" | "UNCONFIRMED";
+  midnightPlanImpact?: string;
+  midnightConfidenceAdjustment?: "increase" | "decrease" | "neutral";
+  midnightConfidenceReason?: string;
 
   // OCR Timing
   ocrTimestampStatus?: "valid" | "too_early" | "too_late" | "unreadable" | "weekend";
@@ -129,6 +221,12 @@ export interface AnalysisResult {
   agentLearningSummary?: AgentLearningSummary;
   ragContextUsed?: boolean;
   historicalContextUsed?: boolean;
+
+  tradePlan?: TradePlan;
+  executionReview5m?: ExecutionReview5m;
+  ethContextReview?: ETHContextReview;
+  afternoonTestPlan?: AfternoonTestPlan;
+  screenshots?: AnalysisScreenshotMeta[];
 
   step4_RiskAudit?: {
     riskAmount: number;
@@ -190,7 +288,20 @@ export interface RAGSaveContext {
   tradeDate: string;
   dayOfWeek: string;
   midnightOpenPrice?: number | null;
-  rthVsMidnight?: "above" | "below" | "at";
+  midnightOpenInstrument?: string | null;
+  midnightOpenSource?: "manual" | "gemini_ocr" | "undetected" | string | null;
+  midnightOpenConfirmedAt?: string | null;
+  midnightOpenDate?: string | null;
+  midnightOpenStatus?: "confirmed" | "stale" | "missing" | "ocr_unconfirmed" | string | null;
+  distanceFromMidnightPoints?: number | null;
+  distanceFromMidnightTicks?: number | null;
+  midnightRole?: "SUPPORT" | "RESISTANCE" | "MAGNET" | "NEUTRAL" | "UNCONFIRMED" | string | null;
+  midnightInteraction?: "ABOVE_AND_HOLDING" | "BELOW_AND_HOLDING" | "RECLAIMED" | "REJECTED" | "CHOPPING_AROUND" | "UNCONFIRMED" | string | null;
+  midnightPlanImpact?: string | null;
+  midnightConfidenceAdjustment?: "increase" | "decrease" | "neutral" | string | null;
+  midnightConfidenceReason?: string | null;
+
+  rthVsMidnight?: "above" | "below" | "at" | "unknown" | string;
   retraceProbability?: number | null;
   ibHigh?: number | null;
   ibLow?: number | null;
@@ -202,15 +313,42 @@ export interface RAGSaveContext {
   contracts?: number;
   geminiConfidence?: "High" | "Medium" | "Low";
   geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;
-  geminiAnalysisJson?: Record<string, unknown>;
+  geminiAnalysisJson?: Record<string, unknown> | any;
   ocrText?: string;
-  screenshotUrl?: string;
+  screenshotUrl?: string; // Legacy, optional
   proofScreenshotUrl?: string;
   setupId?: string;
   tradeId?: string;
   tradeResult?: "win" | "loss" | "scratch" | "pending";
-  midnightOpenSource?: "manual" | "gemini_ocr" | "undetected";
   notes?: string;
+
+  // New Timeframe-Aware and Context Fields
+  execution_5m_screenshot_url?: string | null;
+  execution_5m_storage_path?: string | null;
+  execution_timeframe?: string | null;
+  eth_15m_context_screenshot_url?: string | null;
+  eth_15m_context_storage_path?: string | null;
+  context_timeframe?: string | null;
+  context_session?: string | null;
+  eth_context_available?: boolean;
+  eth_context_status?: string | null;
+  eth_high?: number | null;
+  eth_low?: number | null;
+  asian_high?: number | null;
+  asian_low?: number | null;
+  london_high?: number | null;
+  london_low?: number | null;
+  ny_premarket_high?: number | null;
+  ny_premarket_low?: number | null;
+  rth_open_relation_to_eth?: string | null;
+  rth_open_relation_to_midnight?: string | null;
+  
+  // JSON review blocks
+  trade_plan_json?: Record<string, any> | null;
+  execution_review_json?: Record<string, any> | null;
+  eth_context_review_json?: Record<string, any> | null;
+  afternoon_test_plan_json?: Record<string, any> | null;
+  midnight_open_review_json?: Record<string, any> | null;
 }
 
 export interface RAGQuery {
@@ -244,6 +382,21 @@ export interface SimilarSetup {
   proofScreenshotUrl?: string | null;
   geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;
   embeddingText: string;
+  
+  // Midnight Open attributes
+  midnightOpenPrice?: number;
+  midnightOpenInstrument?: string;
+  midnightOpenSource?: "manual" | "gemini_ocr" | "undetected" | string;
+  midnightOpenConfirmedAt?: string;
+  midnightOpenDate?: string;
+  midnightOpenStatus?: "confirmed" | "stale" | "missing" | "ocr_unconfirmed" | string;
+  distanceFromMidnightPoints?: number;
+  distanceFromMidnightTicks?: number;
+  midnightRole?: "SUPPORT" | "RESISTANCE" | "MAGNET" | "NEUTRAL" | "UNCONFIRMED" | string;
+  midnightInteraction?: "ABOVE_AND_HOLDING" | "BELOW_AND_HOLDING" | "RECLAIMED" | "REJECTED" | "CHOPPING_AROUND" | "UNCONFIRMED" | string;
+  midnightPlanImpact?: string;
+  midnightConfidenceAdjustment?: "increase" | "decrease" | "neutral" | string;
+  midnightConfidenceReason?: string;
 }
 
 export interface AgentLearningSummary {
@@ -261,6 +414,16 @@ export interface AgentLearningSummary {
   riskWarning?: string;
   confidenceAdjustment: "increase" | "decrease" | "neutral";
   confidenceAdjustmentReason: string;
+  
+  // Midnight Open section
+  midnightSetupCount: number;
+  midnightCompletedCount: number;
+  midnightWinRate: number | null;
+  midnightAvgPnlTicks: number | null;
+  midnightAvgPnlDollars: number | null;
+  midnightBestMatch?: SimilarSetup;
+  midnightPatternLearned: string;
+  midnightRiskWarning?: string;
 }
 
 export interface PriorityScoreContext {
@@ -274,6 +437,7 @@ export interface PriorityScoreContext {
   geminiConfidence?: string;
   similarSetups?: SimilarSetup[];
   agentLearningSummary?: AgentLearningSummary;
+  midnightOpenStatus?: string;
 }
 
 export interface PriorityResult {
@@ -284,4 +448,5 @@ export interface PriorityResult {
   historicalWinRate?: number;
   historicalAvgPnl?: number;
   similarSetupCount: number;
+  missingMidnightReason?: string;
 }

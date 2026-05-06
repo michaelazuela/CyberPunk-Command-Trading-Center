@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SessionState, Trade, AnalysisResult, AISettings } from '../types';
-import { Clock, Upload, XCircle, Settings2, Cpu, TrendingUp, TrendingDown, Camera, AlertTriangle } from 'lucide-react';
+import { Clock, Upload, XCircle, Settings2, Cpu, TrendingUp, TrendingDown, Camera, AlertTriangle, Moon } from 'lucide-react';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { cn, getImageFromClipboard } from '../lib/utils';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
@@ -288,7 +288,8 @@ export default function LunchReversal({
         sessionType: 'lunch' as const,
         geminiConfidence: analysis.confidence,
         similarSetups: analysis.similarSetups,
-        agentLearningSummary: analysis.agentLearningSummary
+        agentLearningSummary: analysis.agentLearningSummary,
+        midnightOpenStatus: analysis.midnightOpenStatus
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
 
@@ -298,9 +299,62 @@ export default function LunchReversal({
         if (import.meta.env.DEV) console.log('[Analysis] Supabase save started');
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser?.id) {
-           const setupData = await import('../lib/cloudStorage').then(m => m.uploadScreenshotAndSaveSetup(authUser.id, imgToSend, analysis, 'lunch', ocrResult)); 
+           const { uploadScreenshot } = await import('../lib/cloudStorage');
+           const todayStr = new Date().toISOString().split('T')[0];
+           
+           let execImgBase64 = imgSource;
+           
+           // Upload 5m exec
+           const execUpload = await uploadScreenshot(authUser.id, todayStr, 'lunch', '5m_execution', execImgBase64);
+
+           const setupData: Record<string, any> = {
+             userId: authUser.id,
+             dayType: analysis.dayType,
+             reasoning: analysis.reasoning,
+             confidence: analysis.confidence,
+             imageURL: execUpload.storagePath,
+             tags: analysis.tags || [],
+             suggestedEntry: analysis.suggestedEntry || 0,
+             suggestedStop: analysis.suggestedStop || 0,
+             suggestedTarget: analysis.suggestedTarget || 0,
+
+             midnight_open_source: analysis.midnightOpenSource,
+             midnight_open_price: analysis.midnightOpenPrice,
+             rth_vs_midnight: analysis.rthVsMidnight,
+             retrace_probability: analysis.retraceProbability,
+             
+             ocr_timestamp_status: analysis.ocrTimestampStatus,
+             ocr_timestamp_delta: analysis.ocrTimestampDelta,
+
+             execution_5m_screenshot_url: execUpload.url,
+             execution_5m_storage_path: execUpload.storagePath,
+             execution_timeframe: '5m',
+             
+             eth_context_available: false, // Lunch doesn't upload a new one, relying on morning
+             
+             trade_plan_json: analysis.tradePlan || null,
+             execution_review_json: analysis.executionReview5m || null,
+             afternoon_test_plan_json: analysis.afternoonTestPlan || null,
+             midnight_open_review_json: analysis.midnightAnalysis || null,
+           };
+
+           if (ocrResult) {
+             setupData.ocrText = JSON.stringify(ocrResult);
+           }
+           Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
+
+           const { data: docData, error: dbError } = await supabase
+              .from('setups')
+              .insert([setupData])
+              .select('id')
+              .single();
+              
+           if (dbError) throw dbError;
+           
+           const setupId = docData.id;
+
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
-           if (setupData?.id) setSetupId(setupData.id);
+           if (setupId) setSetupId(setupId);
            updateStep('save', 'complete');
 
            // Call RAG save
@@ -311,15 +365,35 @@ export default function LunchReversal({
              tradeDate: new Date().toLocaleDateString('en-US'),
              dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
              midnightOpenPrice: analysis.midnightOpenPrice,
+             midnightOpenInstrument: analysis.midnightOpenInstrument,
+             midnightOpenSource: "gemini_ocr",
+             midnightOpenConfirmedAt: analysis.midnightOpenConfirmedAt,
+             midnightOpenDate: analysis.midnightOpenDate,
+             midnightOpenStatus: analysis.midnightOpenStatus,
+             distanceFromMidnightPoints: analysis.distanceFromMidnightPoints,
+             distanceFromMidnightTicks: analysis.distanceFromMidnightTicks,
+             midnightRole: analysis.midnightRole,
+             midnightInteraction: analysis.midnightInteraction,
+             midnightPlanImpact: analysis.midnightPlanImpact,
+             midnightConfidenceAdjustment: analysis.midnightConfidenceAdjustment,
+             midnightConfidenceReason: analysis.midnightConfidenceReason,
              rthVsMidnight: analysis.rthVsMidnight,
              retraceProbability: analysis.retraceProbability,
              geminiConfidence: analysis.confidence,
              geminiAnalysisJson: analysis,
              ocrText: ocrResult?.text,
-             screenshotUrl: setupData?.url,
-             setupId: setupData?.id,
+             screenshotUrl: execUpload.url,
+             setupId: setupId,
              tradeResult: 'pending',
-             midnightOpenSource: analysis.midnightOpenSource
+
+             execution_5m_screenshot_url: execUpload.url,
+             execution_5m_storage_path: execUpload.storagePath,
+             execution_timeframe: '5m',
+             eth_context_available: false,
+             trade_plan_json: analysis.tradePlan || null,
+             execution_review_json: analysis.executionReview5m || null,
+             afternoon_test_plan_json: analysis.afternoonTestPlan || null,
+             midnight_open_review_json: analysis.midnightAnalysis || null,
            });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
@@ -536,6 +610,52 @@ export default function LunchReversal({
             </div>
           </div>
           
+          {result.afternoonTestPlan && (
+            <div className="card-base flex flex-col p-6 mb-4 border border-[var(--orange)] bg-[#1a1410]">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[14px] font-mono font-bold text-[var(--orange)] flex items-center gap-2">
+                  <TrendingUp size={16} />
+                  AFTERNOON TEST PLAN
+                </span>
+                <span className="qd-badge !bg-[var(--b2)] !text-[var(--orange)]">
+                  {result.afternoonTestPlan.lunchExpectation}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-[10px] uppercase text-[var(--txt3)] font-mono mb-2">Trap Expectations</h4>
+                  <p className="text-[12px] text-[var(--txt)] text-pretty leading-relaxed">
+                    {result.afternoonTestPlan.plan}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {result.afternoonTestPlan.lunchTrapLevel !== undefined && (
+                    <div className="flex justify-between bg-[#111] p-2 border border-[var(--b2)] rounded">
+                      <span className="text-[11px] text-[var(--txt2)] font-mono">Trap Focus Level</span>
+                      <span className="text-[12px] font-bold text-[var(--red)] font-mono">
+                        {result.afternoonTestPlan.lunchTrapLevel}
+                      </span>
+                    </div>
+                  )}
+                  {result.afternoonTestPlan.afternoonInvalidationLevel !== undefined && (
+                    <div className="flex justify-between bg-[#111] p-2 border border-[var(--b2)] rounded">
+                      <span className="text-[11px] text-[var(--txt2)] font-mono">Invalidation</span>
+                      <span className="text-[12px] font-bold text-[var(--orange)] font-mono">
+                        {result.afternoonTestPlan.afternoonInvalidationLevel}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between bg-[#111] p-2 border border-[var(--b2)] rounded">
+                    <span className="text-[11px] text-[var(--txt2)] font-mono">Morning Carryover</span>
+                    <span className="text-[12px] font-bold text-[var(--txt)] font-mono">
+                      {result.afternoonTestPlan.morningBiasCarryover}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {result.priorityResult && (
             <div className="card-base flex flex-col p-4 mb-4" style={{ borderColor: result.priorityResult.color }}>
               <div className="flex justify-between items-center mb-3">
@@ -560,6 +680,12 @@ export default function LunchReversal({
                   <div className="flex justify-between text-[var(--blue)]"><span>Historical Perf:</span><span>{(result.priorityResult.breakdown.historical * 6.66).toFixed(2)} / 1.0</span></div>
                 )}
               </div>
+              {result.priorityResult.missingMidnightReason && (
+                <div className="mt-3 p-2 bg-[var(--orange)]/10 border border-[var(--orange)]/30 rounded text-[10px] text-[var(--orange)] font-mono flex items-start gap-1.5">
+                  <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>{result.priorityResult.missingMidnightReason}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -713,6 +839,99 @@ export default function LunchReversal({
                <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] mb-2">AGENT LEARNING SUMMARY</h3>
                <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
                  No similar past setups found. Your trade history will form the baseline for future RAG learning.
+               </p>
+             </div>
+          )}
+
+          {/* Midnight Open RAG Learning Component */}
+          {result.agentLearningSummary?.midnightSetupCount ? (
+            <div className="card-base flex flex-col p-4 mb-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-[11px] font-mono font-bold text-[var(--blue)] flex items-center gap-2">
+                  <Moon size={14} className="text-[var(--blue)]" />
+                  MIDNIGHT OPEN RAG LEARNING
+                </h3>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[9px] font-mono border",
+                  result.agentLearningSummary.midnightCompletedCount >= 10 ? "bg-[var(--green)]/10 text-[var(--green)] border-[var(--green)]/30" :
+                  result.agentLearningSummary.midnightCompletedCount >= 5 ? "bg-[var(--blue)]/10 text-[var(--blue)] border-[var(--blue)]/30" :
+                  result.agentLearningSummary.midnightCompletedCount >= 1 ? "bg-[var(--orange)]/10 text-[var(--orange)] border-[var(--orange)]/30" :
+                  "bg-[var(--b2)] text-[var(--txt2)] border-[var(--b2)]"
+                )}>
+                  CONFIDENCE: {
+                    result.agentLearningSummary.midnightCompletedCount >= 10 ? "HIGH" :
+                    result.agentLearningSummary.midnightCompletedCount >= 5 ? "MEDIUM" :
+                    result.agentLearningSummary.midnightCompletedCount >= 1 ? "LOW" :
+                    "EMPTY"
+                  }
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Similar Setups</span>
+                  <span className="text-[14px] font-bold text-[var(--txt)]">{result.agentLearningSummary.midnightSetupCount}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Win Rate</span>
+                  <span className={cn(
+                    "text-[14px] font-bold",
+                    result.agentLearningSummary.midnightWinRate !== null && result.agentLearningSummary.midnightWinRate >= 0.7 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.midnightWinRate !== null && result.agentLearningSummary.midnightWinRate <= 0.4 ? "text-[var(--red)]" : "text-[var(--txt)]"
+                  )}>
+                    {result.agentLearningSummary.midnightWinRate !== null ? `${Math.round(result.agentLearningSummary.midnightWinRate * 100)}%` : "N/A"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Avg P&L</span>
+                  <span className={cn(
+                    "text-[14px] font-mono",
+                    result.agentLearningSummary.midnightAvgPnlTicks && result.agentLearningSummary.midnightAvgPnlTicks > 0 ? "text-[var(--green)]" :
+                    result.agentLearningSummary.midnightAvgPnlTicks && result.agentLearningSummary.midnightAvgPnlTicks < 0 ? "text-[var(--red)]" : "text-[var(--txt2)]"
+                  )}>
+                    {result.agentLearningSummary.midnightAvgPnlTicks !== null ? `${result.agentLearningSummary.midnightAvgPnlTicks.toFixed(1)} ticks` : "N/A"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--blue)] opacity-70 font-mono uppercase">Best Match</span>
+                  {result.agentLearningSummary.midnightBestMatch ? (
+                    <span className="text-[10px] text-[var(--txt)] font-mono">
+                      {new Date(result.agentLearningSummary.midnightBestMatch.tradeDate || '').toLocaleDateString(undefined, {month: 'numeric', day: 'numeric'})} | <span className={
+                        result.agentLearningSummary.midnightBestMatch.tradeResult === 'win' ? "text-[var(--green)]" :
+                        result.agentLearningSummary.midnightBestMatch.tradeResult === 'loss' ? "text-[var(--red)]" : ""
+                      }>
+                        {result.agentLearningSummary.midnightBestMatch.tradeResult?.toUpperCase()}
+                      </span>
+                    </span>
+                  ) : <span className="text-[10px] text-[var(--txt2)] font-mono">None</span>}
+                </div>
+              </div>
+              
+              <div className="bg-[var(--bg)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2">
+                <div className="text-[10px] text-[var(--txt)] font-mono">
+                  <strong className="text-[var(--blue)]">Pattern Learned:</strong> {result.agentLearningSummary.midnightPatternLearned}
+                </div>
+                {result.agentLearningSummary.midnightRiskWarning && (
+                  <div className="text-[10px] text-[var(--red)] font-mono flex items-start gap-1.5 mt-1 border border-[var(--red)]/20 bg-[var(--red)]/5 p-2 rounded">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>{result.agentLearningSummary.midnightRiskWarning}</span>
+                  </div>
+                )}
+                {result.midnightConfidenceAdjustment && (
+                  <div className="text-[10px] font-mono mt-1">
+                      <strong className="text-[var(--txt)]">Confidence Adj:</strong> <span className={result.midnightConfidenceAdjustment === 'increase' ? "text-[var(--green)]" : result.midnightConfidenceAdjustment === 'decrease' ? "text-[var(--red)]" : "text-[var(--txt2)]"}>{result.midnightConfidenceAdjustment.toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+             <div className="card-base flex flex-col p-4 mb-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5">
+                <h3 className="text-[11px] font-mono font-bold text-[var(--blue)] flex items-center gap-2 mb-2">
+                  <Moon size={14} className="text-[var(--blue)]" />
+                  MIDNIGHT OPEN RAG LEARNING
+                </h3>
+               <p className="text-[10px] text-[var(--txt2)] italic leading-relaxed">
+                 No Midnight Open history yet. Future saved trades will teach the agent how this level affects your setups.
                </p>
              </div>
           )}
