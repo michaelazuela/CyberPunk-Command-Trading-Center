@@ -159,6 +159,7 @@ export default function App() {
     
     const initialSession: SessionState = {
       date: new Date().toISOString().split('T')[0],
+      dailyInstrument: "MES" as const,
       trades: [],
       accountEquity: 50000,
       riskPercent: 0.01,
@@ -301,7 +302,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
-          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} />}
+          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} />}
           {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} />}
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} />}
           {activeTab === 'history' && <TradeLog trades={displayTrades} onAddTrade={addTrade} />}

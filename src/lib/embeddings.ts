@@ -1,15 +1,41 @@
 import { RAGSaveContext } from '../types';
 
 export function buildEmbeddingText(context: RAGSaveContext): string {
-  const noteContent = context.notes || "";
-  const notesTruncated = noteContent.substring(0, 200).replace(/\n/g, ' ');
+  const noteContent = (context.notes || "").substring(0, 200).replace(/\n/g, ' ');
 
-  const dateStr = context.tradeDate;
-  const dayStr = context.dayOfWeek;
+  // Attempt to extract OCR ticker if it was present
+  let ocrTicker = "unknown";
+  if (context.ocrText) {
+    try {
+      const parsedOcr = JSON.parse(context.ocrText);
+      if (parsedOcr.ticker) ocrTicker = parsedOcr.ticker;
+    } catch {}
+  }
+  
+  const mismatchWarning = ocrTicker !== "unknown" && ocrTicker !== context.instrument ? "yes" : "no";
 
-  return `Session: ${context.sessionType}
+  const direction = context.geminiAnalysisJson?.tradePlan?.bias || "UNKNOWN";
+  
+  return `DAILY INSTRUMENT:
 Instrument: ${context.instrument}
-Date: ${dateStr} (${dayStr})
+Source: User-selected daily instrument
+OCR ticker observed: ${ocrTicker}
+Ticker mismatch warning: ${mismatchWarning}
+
+FUTURES TRADE OUTCOME:
+Instrument: ${context.instrument}
+Session: ${context.sessionType === 'morning' ? 'Morning' : 'Lunch'}
+Direction: ${direction}
+Contracts: ${context.contracts ?? 'unknown'}
+Entry: ${context.entryPrice ?? 'unknown'}
+Stop: ${context.geminiAnalysisJson?.tradePlan?.stop ?? 'unknown'}
+Target: ${context.geminiAnalysisJson?.tradePlan?.target ?? 'unknown'}
+Exit: ${context.exitPrice ?? 'unknown'}
+Result: ${context.tradeResult?.toUpperCase() ?? 'PENDING'}
+PnL: ${context.pnlTicks ?? 0} ticks ($${context.pnlDollars ?? 0})
+Proof: ${context.geminiVerdict?.toUpperCase() ?? 'NO PROOF'}
+What happened: ${noteContent}
+
 Midnight Open:
 - Instrument: ${context.midnightOpenInstrument ?? 'unknown'}
 - Date: ${context.midnightOpenDate ?? 'unknown'}
@@ -26,13 +52,7 @@ Midnight Open:
 
 Retrace probability: ${context.retraceProbability ? context.retraceProbability * 100 : 'unknown'}%
 Initial Balance: High ${context.ibHigh ?? 'unknown'} / Low ${context.ibLow ?? 'unknown'}
-IB Position: ${context.ibPosition ?? 'unknown'}
-Entry: ${context.entryPrice ?? 'unknown'} | Exit: ${context.exitPrice ?? 'unknown'} | PnL: ${context.pnlTicks ?? 'unknown'} ticks (${context.pnlDollars !== null && context.pnlDollars !== undefined ? '$' + context.pnlDollars : 'unknown'})
-Contracts: ${context.contracts ?? 'unknown'}
-Gemini confidence: ${context.geminiConfidence ?? 'unknown'}
-Gemini verdict: ${context.geminiVerdict ?? 'unknown'}
-Trade result: ${context.tradeResult ?? 'pending'}
-Setup notes: ${notesTruncated}`;
+IB Position: ${context.ibPosition ?? 'unknown'}`;
 }
 
 async function callEmbeddingsProxy(text: string, taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"): Promise<number[]> {

@@ -10,6 +10,7 @@ export type SessionStatus = 'PRE-MARKET' | 'OBSERVATION' | 'ENTRY' | 'CLOSED';
 export interface Trade {
   id: string;
   userId?: string; // Optional for legacy, required for Firestore
+  instrument?: string; // e.g. "MES" | "MNQ"
   date: string;
   direction: 'LONG' | 'SHORT';
   dayType: DayType;
@@ -262,6 +263,7 @@ export interface AnalysisResult {
 
 export interface SessionState {
   date: string;
+  dailyInstrument?: "MES" | "MNQ";
   dayType?: DayType;
   trades: Trade[];
   accountEquity: number;

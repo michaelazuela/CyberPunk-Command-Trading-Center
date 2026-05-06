@@ -76,11 +76,16 @@ async function callGeminiAPI(params: any) {
   return { text: "{}" };
 }
 
-async function superAgent(imageData: string | { exec: string; eth?: string }, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string) {
+async function superAgent(imageData: string | { exec: string; eth?: string }, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string, dailyInstrument?: string) {
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const prompt = `
     ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
     You are a unified system composing multiple expert sub-agents running in strict sequence to prevent hallucination.
+    
+    [USER-SELECTED DAILY INSTRUMENT]
+    Instrument: ${dailyInstrument || "MES"}
+    This is the source of truth. Do not override it based on screenshot OCR.
+    If the screenshot label appears different, mention it as a warning but continue using the selected instrument.
     
     [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | 5M_TIMEFRAME]
 
@@ -393,7 +398,7 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
   }
 }
 
-export async function analyzeChart(imageData: string | { exec: string; eth?: string }, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string) {
+export async function analyzeChart(imageData: string | { exec: string; eth?: string }, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string) {
   try {
     const isMorning = analysisType !== 'lunch';
     const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -401,7 +406,7 @@ export async function analyzeChart(imageData: string | { exec: string; eth?: str
     // RAG Retrieval
     const ragQuery = {
       sessionType: isMorning ? 'morning' : 'lunch',
-      instrument: 'MES', // Default, we'll refine if OCR tells otherwise
+      instrument: dailyInstrument || 'MES', // Use selected instrument
       dayOfWeek: dayOfWeek,
       rthVsMidnight: undefined, // Unknown at query time
       ibPosition: undefined
@@ -455,7 +460,7 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
     }
     
     // Step 1: Execute Unified Super Agent
-    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr);
+    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument);
     
     if (!superReport) {
       throw new Error("Super Agent returned an empty report.");
@@ -618,11 +623,16 @@ export async function validateTrade(context: string) {
   }
 }
 
-export async function reviewTradeProof(image: string, claimedResult: string, contracts: number, modelToUse: string = "gemini-3-pro-preview") {
+export async function reviewTradeProof(image: string, claimedResult: string, contracts: number, modelToUse: string = "gemini-3-pro-preview", dailyInstrument?: string) {
   const systemInstruction = `
 You are a trade execution auditor reviewing a screenshot provided as proof of a futures trade result on MES or MNQ, Micro E-mini S&P 500 or Nasdaq 100.
 
 The trader has claimed this trade was: ${claimedResult} (${contracts} contract(s)).
+
+[USER-SELECTED DAILY INSTRUMENT]
+Instrument: ${dailyInstrument || "MES"}
+This is the source of truth. Do not override it based on screenshot OCR.
+If the screenshot label appears different, return UNCLEAR and mention that the user-selected instrument is ${dailyInstrument || "MES"}.
 
 Review the screenshot carefully and look for any of the following evidence:
 - A filled order confirmation showing entry price, fill price, or quantity

@@ -98,6 +98,7 @@ export default function TradeLog({ trades, onAddTrade }: {
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>Inst</th>
                   <th>Day Type</th>
                   <th>Dir</th>
                   <th>Entry</th>
@@ -127,6 +128,7 @@ export default function TradeLog({ trades, onAddTrade }: {
                   return (
                   <tr key={trade.id}>
                     <td>{trade.date}</td>
+                    <td className="font-mono text-[var(--orange)]">{trade.instrument || '—'}</td>
                     <td className="font-mono">{trade.dayType}</td>
                     <td>
                       <span className={trade.direction === 'LONG' ? "text-[var(--green)]" : "text-[var(--red)]"}>{trade.direction}</span>

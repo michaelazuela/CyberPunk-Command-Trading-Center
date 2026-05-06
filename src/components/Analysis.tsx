@@ -83,6 +83,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       const status = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : manualOutcome === 'FAILED' ? 'FAILED' : 'OPEN';
       const tradeData: Omit<Trade, 'id' | 'timestamp'> = {
         date: new Date().toISOString().split('T')[0],
+        instrument: session.dailyInstrument || 'MES',
         direction: executionDirection,
         dayType: result.dayType,
         entryPrice: result.suggestedEntry || 0,
@@ -225,6 +226,9 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   };
 
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    // If proof flow is active or event default prevented by proof panel, don't hijack it
+    if (proofFlow.active || e.defaultPrevented) return;
+
     // Ignore paste if user is typing in an input or textarea
     const activeElement = document.activeElement;
     if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || (activeElement as HTMLElement).isContentEditable)) {
@@ -241,7 +245,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       console.error('Paste screenshot failed:', error);
       setError(error instanceof Error ? error.message : 'Could not paste screenshot.');
     }
-  }, [processExecImage]);
+  }, [processExecImage, proofFlow.active]);
 
   const startFullAnalysis = useCallback(async (isDeepReviewParam?: boolean | React.MouseEvent) => {
     const isDeepReview = isDeepReviewParam === true;
@@ -334,7 +338,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             setTimeout(() => reject(new Error('TIMEOUT')), 120000);
           });
           
-          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, useManualMidnightOpen ? midnightOpenOverrideStr : undefined);
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, useManualMidnightOpen ? midnightOpenOverrideStr : undefined, session.dailyInstrument);
           
           analysis = await Promise.race([geminiPromise, timeoutPromise]);
           const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
@@ -381,7 +385,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       const { computePriorityScore } = await import('../lib/priorityScore');
       const priorityContext = {
-        instrument: 'MES', // Default
+        instrument: session.dailyInstrument || 'MES', // Default
         dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
         rthVsMidnight: analysis.rthVsMidnight,
         retraceProbability: analysis.retraceProbability || undefined,
@@ -419,6 +423,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
            const setupData: Record<string, any> = {
              userId: authUser.id,
              dayType: analysis.dayType,
+             instrument: session.dailyInstrument || 'MES',
              reasoning: analysis.reasoning,
              confidence: analysis.confidence,
              imageURL: execUpload.storagePath,
@@ -497,7 +502,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
            const { saveToRAG } = await import('../lib/rag');
            await saveToRAG({
              sessionType: 'morning',
-             instrument: 'MES',
+             instrument: session.dailyInstrument || 'MES',
              tradeDate: new Date().toLocaleDateString('en-US'),
              dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
              midnightOpenPrice: analysis.midnightOpenPrice,
@@ -682,6 +687,16 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       {!result && !isAnalyzing && !isPreChecking && !pendingImage && (
         <div className="space-y-6 fade-up">
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="text-[12px] font-mono tracking-widest uppercase">
+               Daily Instrument: <strong className={session.dailyInstrument === 'MNQ' ? "text-[var(--blue)]" : "text-[var(--orange)]"}>{session.dailyInstrument || "MES"}</strong>
+            </div>
+            {ocrResult?.ticker && ocrResult.ticker !== (session.dailyInstrument || "MES") && (
+              <div className="text-[10px] text-[var(--orange)] mt-1 bg-[var(--orange)]/10 border border-[var(--orange)]/20 p-2 rounded">
+                 OCR saw {ocrResult.ticker}, but Daily Instrument is {session.dailyInstrument || "MES"}. Using {session.dailyInstrument || "MES"} as source of truth.
+              </div>
+            )}
+          </div>
           {/* Side-by-side upload zone */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="upload-zone flex flex-col items-center justify-center p-6 h-full">
@@ -1246,6 +1261,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                    onSaveTrade={handleSaveTrade}
                    onCancel={() => setProofFlow({ active: false })}
                    modelConfig={modelConfig}
+                   dailyInstrument={session.dailyInstrument}
                  />
                )}
              </div>

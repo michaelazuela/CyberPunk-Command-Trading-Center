@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn, getImageFromClipboard } from '../lib/utils';
 import { reviewTradeProof } from '../lib/gemini';
 import { uploadTradeProof } from '../lib/cloudStorage';
@@ -11,15 +11,38 @@ interface TradeProofPanelProps {
   onSaveTrade: (manualOutcome: 'SUCCESS' | 'FAILED', proofData?: Partial<Trade>) => Promise<void>;
   onCancel: () => void;
   modelConfig: any;
+  dailyInstrument?: string;
 }
 
-export default function TradeProofPanel({ manualOutcome, executionQuantity, onSaveTrade, onCancel, modelConfig }: TradeProofPanelProps) {
+export default function TradeProofPanel({ manualOutcome, executionQuantity, onSaveTrade, onCancel, modelConfig, dailyInstrument }: TradeProofPanelProps) {
   const [proofImage, setProofImage] = useState<{ filename: string; dataUrl: string } | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewResult, setReviewResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processPastedImage = async (e: Event) => {
+    try {
+      e.preventDefault();
+      const imageData = await getImageFromClipboard(e as any);
+      if (imageData) {
+        setProofImage({ filename: `pasted_proof_${new Date().getTime()}.png`, dataUrl: imageData });
+        setReviewResult(null);
+        setReviewError(null);
+      }
+    } catch (err) {
+      console.error('Failed to paste proof image', err);
+    }
+  };
+
+  useEffect(() => {
+    const handleWindowPaste = (e: ClipboardEvent) => processPastedImage(e);
+    window.addEventListener('paste', handleWindowPaste, { capture: true });
+    return () => {
+      window.removeEventListener('paste', handleWindowPaste, { capture: true });
+    };
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,16 +56,28 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
     reader.readAsDataURL(file);
   };
 
-  const handlePaste = async (e: React.ClipboardEvent) => {
+  const handlePasteButtonClick = async () => {
     try {
-      const imageData = await getImageFromClipboard(e as any);
-      if (imageData) {
-        setProofImage({ filename: `pasted_proof_${new Date().getTime()}.png`, dataUrl: imageData });
-        setReviewResult(null);
-        setReviewError(null);
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        for (const type of item.types) {
+          if (type.startsWith("image/")) {
+            const blob = await item.getType(type);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setProofImage({ filename: `pasted_proof_${Date.now()}.png`, dataUrl: reader.result as string });
+              setReviewResult(null);
+              setReviewError(null);
+            };
+            reader.readAsDataURL(blob);
+            return;
+          }
+        }
       }
+      setReviewError("No image found in clipboard.");
     } catch (err) {
       console.error(err);
+      setReviewError("Clipboard access blocked. Use Ctrl+V / Cmd+V while this proof panel is open.");
     }
   };
 
@@ -63,7 +98,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
       const modelToUse = getModelForRoute('proof_review' as any, modelConfig);
       
       const claimedResultStr = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : 'FAILED';
-      const result = await reviewTradeProof(proofImage.dataUrl, claimedResultStr, executionQuantity, modelToUse);
+      const result = await reviewTradeProof(proofImage.dataUrl, claimedResultStr, executionQuantity, modelToUse, dailyInstrument);
       setReviewResult(result);
     } catch (err: any) {
        console.error("Proof review failed", err);
@@ -106,15 +141,18 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
   };
 
   return (
-    <div className="mt-4 p-4 border-2 border-[var(--b2)] bg-[var(--b0)] fade-up rounded-sm max-w-xl shadow-lg font-mono relative" onPaste={handlePaste} tabIndex={0}>
+    <div className="mt-4 p-4 border-2 border-[var(--b2)] bg-[var(--b0)] fade-up rounded-sm max-w-xl shadow-lg font-mono relative">
        <h4 className="text-[12px] uppercase text-[var(--txt)] font-bold mb-2">Upload trade proof screenshot (optional)</h4>
        
        {!proofImage ? (
          <div className="space-y-4">
-           <p className="text-[10px] text-[var(--txt2)]">Choose a screenshot of your execution or PnL</p>
+           <p className="text-[10px] text-[var(--txt2)]">You can choose a file or paste an execution/PnL screenshot here.</p>
            <div className="flex gap-2">
              <button onClick={() => fileInputRef.current?.click()} className="qd-btn-primary h-[32px] text-[10px]" disabled={isSaving}>
                Choose Screenshot
+             </button>
+             <button onClick={handlePasteButtonClick} className="qd-btn-secondary !bg-[var(--b1)] !text-[var(--txt2)] h-[32px] text-[10px]" disabled={isSaving}>
+               Paste Screenshot
              </button>
              <button onClick={skipProof} className="qd-btn-ghost h-[32px] text-[10px]" disabled={isSaving}>
                Skip — No Proof
@@ -123,6 +161,13 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                Cancel
              </button>
            </div>
+           
+           {reviewError && (
+             <div className="text-[10px] text-[var(--red)] bg-[var(--red)]/10 p-2 border border-[var(--red)]/20 rounded-sm">
+               {reviewError}
+             </div>
+           )}
+
            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
          </div>
        ) : (

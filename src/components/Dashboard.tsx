@@ -12,9 +12,11 @@ import {
 } from 'lucide-react';
 
 export default function Dashboard({ 
-  session
+  session,
+  onUpdateSession
 }: { 
-  session: SessionState
+  session: SessionState;
+  onUpdateSession: (s: SessionState) => void;
 }) {
   const openTrades = session.trades.filter(t => t.status === 'OPEN');
   const closedTrades = session.trades.filter(t => t.status === 'CLOSED' || t.status === 'FAILED' || t.status === 'SUCCESSFUL');
@@ -82,6 +84,34 @@ export default function Dashboard({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Daily Instrument Selector */}
+      <div className="card-base flex flex-col p-4 border border-[var(--b2)] bg-[var(--b0)]">
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+           <div>
+             <h3 className="text-[12px] font-mono font-bold text-[var(--txt)] tracking-widest uppercase mb-1">
+               Daily Instrument
+             </h3>
+             <p className="text-[10px] text-[var(--txt2)]">
+               Select the futures contract for today. OCR may read labels, but this selection is the source of truth.
+             </p>
+           </div>
+           <div className="flex gap-2">
+             <button
+               onClick={() => onUpdateSession({ ...session, dailyInstrument: 'MES' })}
+               className={cn("px-4 py-2 text-[12px] font-mono font-bold border", session.dailyInstrument === 'MES' ? "bg-[var(--orange)] border-[var(--orange)] text-[#111]" : "bg-transparent border-[var(--b2)] text-[var(--txt2)]")}
+             >
+               MES
+             </button>
+             <button
+               onClick={() => onUpdateSession({ ...session, dailyInstrument: 'MNQ' })}
+               className={cn("px-4 py-2 text-[12px] font-mono font-bold border", session.dailyInstrument === 'MNQ' ? "bg-[var(--blue)] border-[var(--blue)] text-[#111]" : "bg-transparent border-[var(--b2)] text-[var(--txt2)]")}
+             >
+               MNQ
+             </button>
+           </div>
+         </div>
       </div>
 
       {/* 2 Col Body */}
