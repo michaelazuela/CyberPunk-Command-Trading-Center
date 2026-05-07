@@ -174,6 +174,12 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
 
     Today is: ${currentDay}. Apply day-specific edge adjustments above.
 
+    =========================================
+    MODULE 6: [FINAL_DECISION] (Final Trade Plan)
+    - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
+    - Consolidate all reasoning across the 5 modules into a final, actionable trade decision.
+    - Provide exact entry price, stop-loss price, and realistic targets.
+
     Return this object inside your JSON response:
     "midnightAnalysis": { ... }
 
@@ -228,15 +234,6 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
             "recommendation": "string"
           }
         ]
-      },
-      "tradePlan": {
-         "bias": "LONG" | "SHORT" | "NO TRADE",
-         "setupName": "string",
-         "entry": 0, "stop": 0, "target": 0,
-         "invalidation": "string",
-         "confidence": 0,
-         "goNoGo": "GO" | "NO-GO" | "WAIT",
-         "reasoningSummary": "string"
       },
       "executionReview5m": {
          "structure930To1010": "string",

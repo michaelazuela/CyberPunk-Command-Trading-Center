@@ -4,7 +4,8 @@ import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
 import MonteCarloSection from './MonteCarloSection';
 import { TIME_WINDOWS, getWindowStatus, formatWindow } from '../config/timeWindows';
-import { 
+import { normalizeTradePlan } from '../lib/tradePlan';
+import {  
   TrendingUp, 
   Target,
   Shield,
@@ -126,30 +127,36 @@ export default function Dashboard({
              )}
           </div>
           
-          {!session.analysisResult ? (
-            <div className="empty-state flex-1">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-              <h3>NO ANALYSIS LOADED</h3>
-              <p>Complete a Morning Analysis to populate entry, stop, and target values here.</p>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-center">
-              <div className="grid grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <p className="kpi-label flex items-center gap-1"><Target className="w-3 h-3" /> Entry</p>
-                  <p className="kpi-value text-[var(--txt)]">{session.analysisResult.suggestedEntry || 'N/A'}</p>
+          {(() => {
+            if (!session.analysisResult) {
+              return (
+                <div className="empty-state flex-1">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  <h3>NO ANALYSIS LOADED</h3>
+                  <p>Complete a Morning Analysis to populate entry, stop, and target values here.</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="kpi-label flex items-center gap-1"><Shield className="w-3 h-3" /> Stop</p>
-                  <p className="kpi-value text-[var(--red)]">{session.analysisResult.suggestedStop || 'N/A'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="kpi-label flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Target</p>
-                  <p className="kpi-value text-[var(--green)]">{session.analysisResult.suggestedTarget || 'N/A'}</p>
+              );
+            }
+            const plan = normalizeTradePlan(session.analysisResult);
+            return (
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <p className="kpi-label flex items-center gap-1"><Target className="w-3 h-3" /> Entry</p>
+                    <p className="kpi-value text-[var(--txt)]">{plan.entry || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="kpi-label flex items-center gap-1"><Shield className="w-3 h-3" /> Stop</p>
+                    <p className="kpi-value text-[var(--red)]">{plan.stop || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="kpi-label flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Target</p>
+                    <p className="kpi-value text-[var(--green)]">{plan.t1 || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Probabilistic Prediction Engine */}
@@ -162,10 +169,11 @@ export default function Dashboard({
           {session.analysisResult ? (
              <div className="flex-1 -mx-[18px] -mb-[16px]">
                <MonteCarloSection 
-                  startPrice={session.analysisResult.suggestedEntry}
-                  stopPrice={session.analysisResult.suggestedStop}
-                  targetPrice={session.analysisResult.suggestedTarget20R || session.analysisResult.suggestedTarget}
-                  targetPrice15R={session.analysisResult.suggestedTarget15R}
+                  startPrice={normalizeTradePlan(session.analysisResult).entry}
+                  stopPrice={normalizeTradePlan(session.analysisResult).stop}
+                  targetPrice={normalizeTradePlan(session.analysisResult).t2 || normalizeTradePlan(session.analysisResult).t1}
+                  targetPrice15R={normalizeTradePlan(session.analysisResult).t1}
+                  bias={session.analysisResult.dayType?.includes('SHORT') ? 'SHORT' : 'LONG'}
                />
              </div>
           ) : (

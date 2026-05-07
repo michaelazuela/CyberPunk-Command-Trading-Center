@@ -7,6 +7,8 @@ import { uploadScreenshot } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import TradeProofPanel from './TradeProofPanel';
 import { TimezoneToggle } from './TimezoneToggle';
+import { normalizeTradePlan } from '../lib/tradePlan';
+import FinalTradePlanCard from './FinalTradePlanCard';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 
@@ -51,6 +53,9 @@ export default function ReplayLab({
   const [lunchReviewTimezone, setLunchReviewTimezone] = useState<'EST' | 'PST'>('EST');
 
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
+
+  const normalizedMorningPlan = morningResult ? normalizeTradePlan(morningResult) : null;
+  const normalizedLunchPlan = lunchResult ? normalizeTradePlan(lunchResult) : null;
 
   const handleGlobalClick = useCallback((e: MouseEvent) => {
     // Determine target based on what user clicked
@@ -274,15 +279,16 @@ export default function ReplayLab({
       const ragStatus = ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(outcome) ? outcome : 'pending';
       const manualOutcome = outcome === 'win' || outcome === 'scratch' ? 'SUCCESS' : 'FAILED';
       const tradeStatus = (outcome === 'no_trade' || outcome === 'missed_trade') ? 'MISSED' : outcome === 'scratch' ? 'CLOSED' : outcome === 'win' ? 'SUCCESSFUL' : 'FAILED';
-      
+      const normalizedPlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+
       const tradeData: Omit<Trade, 'id'> = {
         date: tradeDate,
         instrument: instrument,
-        direction: result.dayType?.includes('SHORT') ? 'SHORT' : 'LONG',
+        direction: normalizedPlan?.decision === 'LONG' || normalizedPlan?.decision === 'SHORT' ? normalizedPlan.decision : result.dayType?.includes('SHORT') ? 'SHORT' : 'LONG',
         dayType: result.dayType || 'NO TRADE',
-        entryPrice: result.suggestedEntry || 0,
-        stopPrice: result.suggestedStop || 0,
-        targetPrice: result.suggestedTarget || 0,
+        entryPrice: normalizedPlan?.entry || 0,
+        stopPrice: normalizedPlan?.stop || 0,
+        targetPrice: normalizedPlan?.t1 || 0,
         contracts: contracts,
         status: tradeStatus,
         manualOutcome: manualOutcome,
@@ -314,8 +320,8 @@ export default function ReplayLab({
          geminiVerdict: null,
          tradeResult: ragStatus,
          contracts,
-         entryPrice: result.suggestedEntry, // Estimate or actual
-         notes: notes || result.reasoning,
+         entryPrice: normalizedPlan?.entry, // Estimate or actual
+         notes: notes ? `${notes} ${normalizedPlan?.t2 ? '[T2: '+normalizedPlan.t2+']' : ''}` : result.reasoning,
          ocrText: JSON.stringify({ ...(sessionType === 'morning' ? morningExecImg?.ocrResult : lunchExecImg?.ocrResult) }),
          window_start: sessionType === 'lunch' ? "11:50" : undefined,
          window_end: sessionType === 'lunch' ? "13:00" : undefined,
@@ -439,11 +445,9 @@ export default function ReplayLab({
                    <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">Morning Bias: <span className={morningResult.dayType?.includes('LONG') ? 'text-[var(--green)]' : 'text-[var(--red)]'}>{morningResult.dayType}</span></h3>
                    <div className="text-[11px] leading-relaxed mb-4">{morningResult.reasoning}</div>
                    
-                   {morningResult.tradePlan && (
-                     <div className="bg-[var(--b1)] p-2">
-                        <div className="text-[10px] text-[var(--txt2)] mb-1">Entry: {morningResult.tradePlan.triggerCondition || "Market"}</div>
-                        <div className="text-[10px] text-[var(--red)] mb-1">Stop: {morningResult.tradePlan.stop || "None"}</div>
-                        <div className="text-[10px] text-[var(--green)]">Target: {morningResult.tradePlan.target || "N/A"}</div>
+                   {normalizedMorningPlan && (
+                     <div className="mt-4">
+                       <FinalTradePlanCard plan={normalizedMorningPlan} agentLearningUsed={morningResult.agent_learning_used} />
                      </div>
                    )}
                  </div>
@@ -523,11 +527,9 @@ export default function ReplayLab({
                    <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">Lunch Bias: <span className={lunchResult.dayType?.includes('LONG') ? 'text-[var(--green)]' : 'text-[var(--red)]'}>{lunchResult.dayType}</span></h3>
                    <div className="text-[11px] leading-relaxed mb-4">{lunchResult.reasoning}</div>
                    
-                   {lunchResult.tradePlan && (
-                     <div className="bg-[var(--b1)] p-2">
-                        <div className="text-[10px] text-[var(--txt2)] mb-1">Entry: {lunchResult.tradePlan.triggerCondition || "Market"}</div>
-                        <div className="text-[10px] text-[var(--red)] mb-1">Stop: {lunchResult.tradePlan.stop || "None"}</div>
-                        <div className="text-[10px] text-[var(--green)]">Target: {lunchResult.tradePlan.target || "N/A"}</div>
+                   {normalizedLunchPlan && (
+                     <div className="mt-4">
+                       <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} />
                      </div>
                    )}
                  </div>

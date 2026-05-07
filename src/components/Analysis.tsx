@@ -16,8 +16,9 @@ import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
 import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
 import { TIME_WINDOWS, getWindowStatus, formatWindow, minutesUntilOpen, minutesUntilClose, formatNYTimeStr } from '../config/timeWindows';
-
 import TradeProofPanel from './TradeProofPanel';
+import { normalizeTradePlan } from '../lib/tradePlan';
+import FinalTradePlanCard from './FinalTradePlanCard';
 
 export default function Analysis({ session, customRules = [], onUpdate, onAddTrade }: { 
   session: SessionState, 
@@ -58,6 +59,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
+  const normalizedPlan = result ? normalizeTradePlan(result) : null;
+
   const handleConfigChange = (newConfig: ModelConfig) => {
     setModelConfig(newConfig);
     saveModelConfig(newConfig);
@@ -70,14 +73,14 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [setupId, setSetupId] = useState<string|null>(null);
 
   useEffect(() => {
-    if (result) {
-       if (result.dayType?.includes('LONG')) setExecutionDirection('LONG');
-       else if (result.dayType?.includes('SHORT')) setExecutionDirection('SHORT');
+    if (normalizedPlan && normalizedPlan.decision !== "NO TRADE") {
+       if (normalizedPlan.decision === 'LONG') setExecutionDirection('LONG');
+       else if (normalizedPlan.decision === 'SHORT') setExecutionDirection('SHORT');
     }
-  }, [result]);
+  }, [normalizedPlan]);
 
   const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED', proofData?: Partial<Trade>) => {
-    if (!onAddTrade || !result) return;
+    if (!onAddTrade || !result || !normalizedPlan) return;
     setIsSavingTrade(true);
     setTradeSavedMessage(null);
     try {
@@ -85,15 +88,15 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       const tradeData: Omit<Trade, 'id' | 'timestamp'> = {
         date: new Date().toISOString().split('T')[0],
         instrument: session.dailyInstrument || 'MES',
-        direction: executionDirection,
+        direction: normalizedPlan.decision === "LONG" || normalizedPlan.decision === "SHORT" ? normalizedPlan.decision as "LONG"|"SHORT" : executionDirection,
         dayType: result.dayType,
-        entryPrice: result.suggestedEntry || 0,
-        stopPrice: result.suggestedStop || 0,
-        targetPrice: result.suggestedTarget || 0,
+        entryPrice: normalizedPlan.entry || 0,
+        stopPrice: normalizedPlan.stop || 0,
+        targetPrice: normalizedPlan.t1 || 0,
         contracts: executionQuantity,
         status,
         manualOutcome,
-        notes: `From Morning analysis.\nReasoning: ${result.reasoning}`,
+        notes: `From Morning analysis.\nTarget 2: ${normalizedPlan.t2 || 'None'}\nReasoning: ${result.reasoning}`,
         screenshotUrl: lastImage || undefined,
         analysisType: 'morning',
         analysisConfidence: result.confidence,
@@ -114,7 +117,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              manualOutcome === 'SUCCESS' ? 'win' : 'loss',
              proofData?.pnlTicks || undefined,
              proofData?.pnlDollars || undefined,
-             result.suggestedEntry, // or actual entry
+             normalizedPlan?.entry || 0, // or actual entry
              undefined, // actual exit
              proofData?.gemini_verdict as any || undefined,
              proofData?.proof_screenshot_url || undefined
@@ -429,9 +432,9 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              confidence: analysis.confidence,
              imageURL: execUpload.storagePath,
              tags: analysis.tags || [],
-             suggestedEntry: analysis.suggestedEntry || 0,
-             suggestedStop: analysis.suggestedStop || 0,
-             suggestedTarget: analysis.suggestedTarget || 0,
+             suggestedEntry: normalizeTradePlan(analysis).entry || 0,
+             suggestedStop: normalizeTradePlan(analysis).stop || 0,
+             suggestedTarget: normalizeTradePlan(analysis).t1 || 0,
              
              // Midnight Open Options
              midnight_open_source: analysis.midnightOpenSource,
@@ -961,53 +964,11 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
           )}
 
           {/* 3. FINAL TRADE PLAN */}
-          {result.final_trade_plan && (
-            <div className="card-base flex flex-col p-4 border border-[var(--green)]/30 bg-[var(--green)]/5 mt-4">
-              <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
-                <CheckCircle2 size={14} className="text-[var(--green)]" />
-                3. FINAL TRADE PLAN
-                <span className="qd-badge ml-auto opacity-70">
-                  {result.agent_learning_used ? 'HISTORY CALIBRATED' : 'SCREENSHOT + RULES ONLY'}
-                </span>
-              </h3>
-              
-              <div className="flex flex-col items-center justify-center py-6 mb-4 border border-[var(--b1)] bg-[var(--bg)]">
-                 <span className={cn("text-3xl font-black italic tracking-tighter uppercase mb-2", result.final_trade_plan.decision === 'LONG' ? "text-[var(--green)]" : result.final_trade_plan.decision === 'SHORT' ? "text-[var(--red)]" : "text-[var(--amber)]")}>
-                   {result.final_trade_plan.decision}
-                 </span>
-                 <span className="qd-badge qd-badge-orange">CONFIDENCE: {result.final_trade_plan.final_confidence.toUpperCase()}</span>
-              </div>
-              
-              {result.final_trade_plan.decision !== 'NO TRADE' && (
-                <div className="grid grid-cols-4 gap-2 mb-4">
-                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
-                    <div className="text-[9px] font-mono text-[var(--txt2)]">ENTRY</div>
-                    <div className="text-[14px] font-mono text-[var(--txt)]">{result.final_trade_plan.entry || '—'}</div>
-                  </div>
-                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
-                    <div className="text-[9px] font-mono text-[var(--txt2)]">STOP</div>
-                    <div className="text-[14px] font-mono text-[var(--red)]">{result.final_trade_plan.stop || '—'}</div>
-                  </div>
-                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
-                    <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 1</div>
-                    <div className="text-[14px] font-mono text-[var(--green)]">{result.final_trade_plan.target_1 || '—'}</div>
-                  </div>
-                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
-                    <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 2</div>
-                    <div className="text-[14px] font-mono text-[var(--green)]">{result.final_trade_plan.target_2 || '—'}</div>
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-[var(--s2)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2 mt-2">
-                <div className="text-[11px] text-[var(--txt)]">
-                  <strong className="text-[var(--green)]">Why this plan:</strong> {result.final_trade_plan.why_this_plan}
-                </div>
-                <div className="text-[11px] text-[var(--red)] border-t border-[var(--b1)] pt-2 mt-2">
-                  <strong className="text-[var(--red)]">Invalidation:</strong> {result.final_trade_plan.what_would_invalidate}
-                </div>
-              </div>
-            </div>
+          {normalizedPlan && (
+            <FinalTradePlanCard
+              plan={normalizedPlan}
+              agentLearningUsed={result.agent_learning_used}
+            />
           )}
 
           {/* Legacy Components Container */}
@@ -1332,7 +1293,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                      className="bg-[var(--b0)] border border-[var(--b1)] p-2 w-20 text-[var(--txt)] text-[14px] font-mono rounded-none focus:border-[var(--orange)] focus:outline-none"
                    />
                  </div>
-                 {(!result.dayType?.includes('LONG') && !result.dayType?.includes('SHORT')) && (
+                 {(!normalizedPlan?.canExecute && normalizedPlan?.decision !== "LONG" && normalizedPlan?.decision !== "SHORT") && (
                    <div>
                      <label className="block text-[10px] text-[var(--txt2)] uppercase font-mono mb-1">Direction</label>
                      <select 
@@ -1345,13 +1306,16 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                      </select>
                    </div>
                  )}
-                 <button
-                   onClick={() => handleSaveTrade()}
-                   disabled={isSavingTrade}
-                   className="qd-btn-primary flex items-center gap-2 h-[38px]"
-                 >
-                   {isSavingTrade ? 'Saving...' : 'Execute Trade'}
-                 </button>
+                 <div className="flex flex-col gap-1">
+                   <button
+                     onClick={() => handleSaveTrade()}
+                     disabled={isSavingTrade || !normalizedPlan?.canExecute}
+                     className="qd-btn-primary flex items-center justify-center gap-2 h-[38px] min-w-[140px]"
+                   >
+                     {isSavingTrade ? 'Saving...' : 'Execute Trade'}
+                   </button>
+                   {!normalizedPlan?.canExecute && <span className="text-[9px] text-[var(--txt3)] w-[140px] leading-tight text-center">Need valid plan</span>}
+                 </div>
                  <button
                    onClick={() => setProofFlow({ active: true, outcome: 'SUCCESS' })}
                    disabled={isSavingTrade}
