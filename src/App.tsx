@@ -10,11 +10,12 @@ import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
+import ReplayLab from './components/ReplayLab';
 
 import { subscribeToTrades, addTrade as addFirestoreTrade, testFirestoreConnection } from './lib/firestoreService';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'history' | 'settings' | 'rules'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'replay' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -243,6 +244,7 @@ export default function App() {
             <TopNavItem label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
             <TopNavItem label="Analysis" active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
             <TopNavItem label="Lunch Reversal" active={activeTab === 'lunch'} onClick={() => setActiveTab('lunch')} />
+            <TopNavItem label="Replay Lab" active={activeTab === 'replay'} onClick={() => setActiveTab('replay')} />
             <TopNavItem label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
             <TopNavItem label="Rules" active={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -305,6 +307,7 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} />}
           {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} />}
           {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} />}
+          {activeTab === 'replay' && <ReplayLab session={appState.currentSession} onAddTrade={addTrade} />}
           {activeTab === 'history' && <TradeLog trades={displayTrades} onAddTrade={addTrade} />}
           {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
           {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} />}

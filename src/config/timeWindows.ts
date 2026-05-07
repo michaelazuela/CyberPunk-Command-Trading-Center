@@ -19,16 +19,14 @@ export const TIME_WINDOWS = {
     openHour: 11, openMinute: 50,
     closeHour: 13, closeMinute: 0,
     timezone: "America/New_York",
-    screenshotEndHour: 13, screenshotEndMinute: 10,
-    bestChart: "5-min MES/MNQ from opening candle through 1:10 PM candle H/L + 11:50–1:00 trap/reclaim",
+    screenshotEndHour: 13, screenshotEndMinute: 0,
+    bestChart: "5-min MES/MNQ from 11:50 AM through 1:00 PM",
     chartMustInclude: [
+      "11:50 AM to 1:00 PM ET required screenshot range",
       "Morning high and low extremes",
-      "11:50 AM trap zone",
-      "12:00 PM noon level",
-      "Reclaim behavior after trap",
-      "1:10 PM candle high/low",
+      "Reclaim behavior after trap"
     ],
-    sessionNote: "Noon lunch trap. Watch for false breakout + reclaim.",
+    sessionNote: "11:50 AM ET → 1:00 PM ET. Noon lunch trap. Watch for false breakout + reclaim.",
   },
   midnightOpen: {
     label: "Midnight Open",
@@ -104,7 +102,7 @@ export function formatWindow(key: WindowKey): string {
     const minStr = m.toString().padStart(2, '0');
     return `${hour12}:${minStr} ${period}`;
   };
-  return `${formatTime(win.openHour, win.openMinute)}–${formatTime(win.closeHour, win.closeMinute)} ET`;
+  return `${formatTime(win.openHour, win.openMinute)} ET → ${formatTime(win.closeHour, win.closeMinute)} ET`;
 }
 
 export function getNextWindowKey(): WindowKey | null {

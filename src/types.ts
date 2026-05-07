@@ -27,6 +27,9 @@ export interface Trade {
   timestamp: number;
   screenshotUrl?: string;
   analysisType?: string;
+  analysisMode?: string;
+  source?: string;
+  sessionType?: string;
   analysisConfidence?: number;
   analysisReasoning?: string;
   setupTags?: string[];
@@ -87,8 +90,8 @@ export interface SessionLog {
   recalibration_status: string;
 }
 
-export type ScreenshotRole = "5m_execution" | "15m_eth_context" | "trade_proof";
-export type AnalysisType = "morning" | "lunch";
+export type ScreenshotRole = "5m_execution" | "15m_eth_context" | "trade_proof" | "lunch_execution";
+export type AnalysisType = "morning" | "lunch" | "replay_lab/morning" | "replay_lab/lunch" | string;
 
 export interface AnalysisScreenshotMeta {
   url?: string;
@@ -212,6 +215,45 @@ export interface AnalysisResult {
   midnightConfidenceAdjustment?: "increase" | "decrease" | "neutral";
   midnightConfidenceReason?: string;
 
+  // New RAG / Pipeline specific fields
+  current_rule_analysis?: {
+    summary: string;
+    setup_detected: string;
+    rule_category: string;
+    entry: number | null;
+    stop: number | null;
+    target_1: number | null;
+    target_2: number | null;
+    no_trade_reason: string | null;
+    base_confidence: "High" | "Medium" | "Low";
+  };
+  rag_learning_context?: {
+    rag_search_attempted: boolean;
+    rag_records_found: number;
+    live_records_found: number;
+    replay_records_found: number;
+    historical_win_count: number;
+    historical_loss_count: number;
+    historical_scratch_count: number;
+    historical_no_trade_count: number;
+    average_pnl_ticks: number;
+    historical_support_rating: "SUPPORTS PLAN" | "CONFLICTS WITH PLAN" | "NEUTRAL" | "INSUFFICIENT DATA";
+    confidence_adjustment: "Increased" | "Reduced" | "Unchanged";
+    explanation: string;
+  };
+  final_trade_plan?: {
+    decision: "LONG" | "SHORT" | "NO TRADE";
+    entry: number | null;
+    stop: number | null;
+    target_1: number | null;
+    target_2: number | null;
+    risk_reward: string | null;
+    final_confidence: "High" | "Medium" | "Low";
+    why_this_plan: string;
+    what_would_invalidate: string;
+  };
+  agent_learning_used?: boolean;
+
   // OCR Timing
   ocrTimestampStatus?: "valid" | "too_early" | "too_late" | "unreadable" | "weekend";
   ocrTimestampDelta?: number;
@@ -285,6 +327,8 @@ export interface AppState {
 }
 
 export interface RAGSaveContext {
+  analysis_mode?: string;
+  source?: string;
   sessionType: "morning" | "lunch";
   instrument: "MES" | "MNQ";
   tradeDate: string;
@@ -321,7 +365,7 @@ export interface RAGSaveContext {
   proofScreenshotUrl?: string;
   setupId?: string;
   tradeId?: string;
-  tradeResult?: "win" | "loss" | "scratch" | "pending";
+  tradeResult?: "win" | "loss" | "scratch" | "pending" | "no_trade" | "missed_trade" | string;
   notes?: string;
 
   // New Timeframe-Aware and Context Fields
@@ -351,6 +395,12 @@ export interface RAGSaveContext {
   eth_context_review_json?: Record<string, any> | null;
   afternoon_test_plan_json?: Record<string, any> | null;
   midnight_open_review_json?: Record<string, any> | null;
+
+  // Generic metadata
+  window_start?: string;
+  window_end?: string;
+  window_timezone?: string;
+  required_screenshot_range?: string;
 }
 
 export interface RAGQuery {
@@ -365,6 +415,8 @@ export interface RAGQuery {
 
 export interface SimilarSetup {
   id: string;
+  source?: string;
+  analysisMode?: string;
   tradeDate: string;
   dayOfWeek: string;
   sessionType: "morning" | "lunch" | string;

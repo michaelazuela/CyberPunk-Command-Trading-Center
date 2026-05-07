@@ -23,6 +23,8 @@ OCR ticker observed: ${ocrTicker}
 Ticker mismatch warning: ${mismatchWarning}
 
 FUTURES TRADE OUTCOME:
+Analysis Mode: ${context.analysis_mode === 'historical_replay' ? 'Historical Replay (Backtest)' : 'Live Trading'}
+Source: ${context.source === 'replay_lab' ? 'Replay Lab' : 'Live UI'}
 Instrument: ${context.instrument}
 Session: ${context.sessionType === 'morning' ? 'Morning' : 'Lunch'}
 Direction: ${direction}

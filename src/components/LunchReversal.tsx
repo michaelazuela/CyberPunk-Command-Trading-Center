@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SessionState, Trade, AnalysisResult, AISettings } from '../types';
-import { Clock, Upload, XCircle, Settings2, Cpu, TrendingUp, TrendingDown, Camera, AlertTriangle, Moon } from 'lucide-react';
+import { Clock, Upload, XCircle, Settings2, Cpu, TrendingUp, TrendingDown, Camera, AlertTriangle, Moon, Target, CheckCircle2 } from 'lucide-react';
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
-import { cn, getImageFromClipboard } from '../lib/utils';
+import { cn, getImageFromClipboard, formatReplayRange } from '../lib/utils';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
+import { TimezoneToggle } from './TimezoneToggle';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import ModelConfigPanel from './ModelConfigPanel';
@@ -41,6 +42,7 @@ export default function LunchReversal({
   const [isSavingTrade, setIsSavingTrade] = useState(false);
   const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
   const [setupId, setSetupId] = useState<string|null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (result) {
@@ -210,7 +212,7 @@ export default function LunchReversal({
       
       const analysisSettings = {
         ...(session.aiSettings || { temperature: 0.1, customInstructions: '' }),
-        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM-1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
+        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM ET → 1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
       };
       
       let analysis: any = null;
@@ -334,6 +336,11 @@ export default function LunchReversal({
              
              eth_context_available: false, // Lunch doesn't upload a new one, relying on morning
              
+             window_start: "11:50",
+             window_end: "13:00",
+             window_timezone: "America/New_York",
+             required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
+             
              trade_plan_json: analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
@@ -392,6 +399,12 @@ export default function LunchReversal({
              execution_5m_storage_path: execUpload.storagePath,
              execution_timeframe: '5m',
              eth_context_available: false,
+             
+             window_start: "11:50",
+             window_end: "13:00",
+             window_timezone: "America/New_York",
+             required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
+
              trade_plan_json: analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
@@ -487,8 +500,15 @@ export default function LunchReversal({
       <header className="page-header">
         <div>
           <h1>Lunch Reversal</h1>
-          <p>11:50 AM-1:00 PM ET TRAP CONDITIONS</p>
+          <p>{formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST')} TRAP CONDITIONS</p>
         </div>
+        <TimezoneToggle 
+          selectedTimezone={session.aiSettings?.lunchTimeZone || 'EST'}
+          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0.1 }), lunchTimeZone: tz } })}
+          showSettings={showSettings}
+          onToggleSettings={() => setShowSettings(!showSettings)}
+          hasSettingsIcon={true}
+        />
       </header>
 
       <ApiCostPanel route="lunch" />
@@ -537,8 +557,8 @@ export default function LunchReversal({
               </div>
               <div className="empty-state flex-1">
                 <Clock className="w-8 h-8 opacity-40 mb-4" />
-                <h3>AWAITING 12:00 BAR</h3>
-                <p>Lunch reversal module activates during the noon chop zone to look for false breakout traps.</p>
+                <h3 className="uppercase">REQUIRED RANGE: {formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST')}</h3>
+                <p>Paste or upload 5M chart: {formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST')}. Lunch reversal module activates during this chop zone to look for false breakout traps.</p>
               </div>
             </div>
 
@@ -557,11 +577,11 @@ export default function LunchReversal({
                 </div>
                 <div className="bg-[var(--s1)] p-4 flex flex-col gap-2">
                   <span className="font-mono text-[11px] font-bold text-[var(--txt)]">The Trap</span>
-                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--b2)] pl-2">11:50-13:00 must create a false breakout trap above/below the morning boundary.</p>
+                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--b2)] pl-2">{formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST')} must create a false breakout trap above/below the morning boundary.</p>
                 </div>
                 <div className="bg-[var(--s1)] p-4 flex flex-col gap-2">
                   <span className="font-mono text-[11px] font-bold text-[var(--txt)]">Execution Trigger</span>
-                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--orange)] pl-2 text-[var(--orange)]">Entry on the reclaim of the 12:00 boundary with 5M close confirmation.</p>
+                  <p className="text-[10px] text-[var(--txt2)] border-l-2 border-[var(--orange)] pl-2 text-[var(--orange)]">Entry on the reclaim of the trap boundary with 5M close confirmation.</p>
                 </div>
               </div>
             </div>
@@ -600,30 +620,158 @@ export default function LunchReversal({
 
       {result && !isAnalyzing && (
         <div className="space-y-6 fade-up">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="card-base flex flex-col items-center justify-center py-12">
-               <span className="text-[10px] font-mono uppercase text-[var(--txt2)] mb-2">LUNCH REVERSAL SETUP</span>
-               <span className={cn("text-3xl font-black italic tracking-tighter uppercase mb-4", result.dayType?.includes('LONG') ? "text-[var(--green)]" : result.dayType?.includes('SHORT') ? "text-[var(--red)]" : "text-[var(--amber)]")}>
-                 {result.dayType || 'TRAP RECOGNIZED'}
-               </span>
-               <span className="qd-badge qd-badge-orange">CONFIDENCE: {(result.confidence * 100).toFixed(0)}%</span>
+          {/* New Rule Pipeline UI */}
+          
+          {/* 1. CURRENT RULE ANALYSIS */}
+          {result.current_rule_analysis && (
+            <div className="card-base flex flex-col p-4 border border-[var(--b2)] bg-[var(--s2)]">
+              <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
+                <Target size={14} className="text-[var(--amber)]" />
+                1. CURRENT RULE ANALYSIS
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Setup Detected</span>
+                  <span className="text-[12px] font-bold text-[var(--txt)]">{result.current_rule_analysis.setup_detected}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Rule Category</span>
+                  <span className="text-[12px] font-mono text-[var(--blue)]">{result.current_rule_analysis.rule_category}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Base Confidence</span>
+                  <span className="text-[12px] font-bold text-[var(--txt)]">{result.current_rule_analysis.base_confidence}</span>
+                </div>
+                {result.current_rule_analysis.no_trade_reason && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">No Trade Reason</span>
+                    <span className="text-[12px] text-[var(--red)]">{result.current_rule_analysis.no_trade_reason}</span>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                  <div className="text-[9px] font-mono text-[var(--txt2)]">ENTRY</div>
+                  <div className="text-[14px] font-mono text-[var(--txt)]">{result.current_rule_analysis.entry || '—'}</div>
+                </div>
+                <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                  <div className="text-[9px] font-mono text-[var(--txt2)]">STOP</div>
+                  <div className="text-[14px] font-mono text-[var(--red)]">{result.current_rule_analysis.stop || '—'}</div>
+                </div>
+                <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                  <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 1</div>
+                  <div className="text-[14px] font-mono text-[var(--green)]">{result.current_rule_analysis.target_1 || '—'}</div>
+                </div>
+              </div>
             </div>
-            
-            <div className="card-base flex flex-col justify-center gap-4">
-              <div className="flex justify-between items-center bg-[var(--s2)] p-4 border border-[var(--b1)]">
-                 <span className="text-[10px] font-mono text-[var(--txt2)] uppercase">TRAP ENTRY</span>
-                 <span className="text-[16px] font-mono font-bold text-[var(--txt)]">{result.suggestedEntry}</span>
+          )}
+
+          {/* 2. AGENT LEARNING CONTEXT */}
+          {result.rag_learning_context && (
+            <div className="card-base flex flex-col p-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5 mt-4">
+              <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
+                <Cpu size={14} className="text-[var(--blue)]" />
+                2. AGENT LEARNING CONTEXT
+              </h3>
+              
+              {!result.rag_learning_context.rag_search_attempted ? (
+                <div className="text-[12px] text-[var(--txt2)] italic">Agent learning unavailable. Plan built from current screenshot and rules only.</div>
+              ) : result.rag_learning_context.rag_records_found === 0 ? (
+                <div className="text-[12px] text-[var(--txt2)] italic">No similar Replay/RAG records found yet. Plan built from current screenshot and rules only.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">RAG Searched</span>
+                      <span className="text-[12px] font-bold text-[var(--green)]">YES</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Records Found</span>
+                      <span className="text-[12px] font-mono text-[var(--txt)] text-left">{result.rag_learning_context.rag_records_found} Total ({result.rag_learning_context.live_records_found} Live, {result.rag_learning_context.replay_records_found} Replay)</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Similar Outcomes</span>
+                      <span className="text-[12px] font-mono text-[var(--txt)]"><span className="text-[var(--green)]">{result.rag_learning_context.historical_win_count}W</span> / <span className="text-[var(--red)]">{result.rag_learning_context.historical_loss_count}L</span> / {result.rag_learning_context.historical_scratch_count}S</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Avg PnL</span>
+                      <span className="text-[12px] font-bold text-[var(--txt)]">{result.rag_learning_context.average_pnl_ticks > 0 ? '+' : ''}{result.rag_learning_context.average_pnl_ticks} ticks</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-[var(--bg)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2">
+                    <div className="text-[10px] font-mono grid grid-cols-2 gap-4 mb-2">
+                      <div>
+                        <span className="text-[var(--txt3)] uppercase">Support Rating:</span>{' '}
+                        <span className={result.rag_learning_context.historical_support_rating === 'SUPPORTS PLAN' ? 'text-[var(--green)] font-bold' : result.rag_learning_context.historical_support_rating === 'CONFLICTS WITH PLAN' ? 'text-[var(--red)] font-bold' : 'text-[var(--amber)]'}>{result.rag_learning_context.historical_support_rating}</span>
+                      </div>
+                      <div>
+                        <span className="text-[var(--txt3)] uppercase">Confidence Adj:</span>{' '}
+                        <span className={result.rag_learning_context.confidence_adjustment === 'Increased' ? 'text-[var(--green)]' : result.rag_learning_context.confidence_adjustment === 'Reduced' ? 'text-[var(--red)]' : 'text-[var(--txt)]'}>{result.rag_learning_context.confidence_adjustment}</span>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-[var(--txt)] border-t border-[var(--b1)] pt-2">
+                      {result.rag_learning_context.explanation}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* 3. FINAL TRADE PLAN */}
+          {result.final_trade_plan && (
+            <div className="card-base flex flex-col p-4 border border-[var(--green)]/30 bg-[var(--green)]/5 mt-4">
+              <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
+                <CheckCircle2 size={14} className="text-[var(--green)]" />
+                3. FINAL TRADE PLAN
+                <span className="qd-badge ml-auto opacity-70">
+                  {result.agent_learning_used ? 'HISTORY CALIBRATED' : 'SCREENSHOT + RULES ONLY'}
+                </span>
+              </h3>
+              
+              <div className="flex flex-col items-center justify-center py-6 mb-4 border border-[var(--b1)] bg-[var(--bg)]">
+                 <span className={cn("text-3xl font-black italic tracking-tighter uppercase mb-2", result.final_trade_plan.decision === 'LONG' ? "text-[var(--green)]" : result.final_trade_plan.decision === 'SHORT' ? "text-[var(--red)]" : "text-[var(--amber)]")}>
+                   {result.final_trade_plan.decision}
+                 </span>
+                 <span className="qd-badge qd-badge-orange">CONFIDENCE: {result.final_trade_plan.final_confidence.toUpperCase()}</span>
               </div>
-              <div className="flex justify-between items-center bg-[var(--s2)] p-4 border border-[var(--b1)]">
-                 <span className="text-[10px] font-mono text-[var(--txt2)] uppercase">STOP LOSS</span>
-                 <span className="text-[16px] font-mono font-bold text-[var(--red)]">{result.suggestedStop}</span>
-              </div>
-              <div className="flex justify-between items-center bg-[var(--s2)] p-4 border border-[var(--b1)]">
-                 <span className="text-[10px] font-mono text-[var(--txt2)] uppercase">TARGET RECLAIM</span>
-                 <span className="text-[16px] font-mono font-bold text-[var(--green)]">{result.suggestedTarget20R || result.suggestedTarget}</span>
+              
+              {result.final_trade_plan.decision !== 'NO TRADE' && (
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                    <div className="text-[9px] font-mono text-[var(--txt2)]">ENTRY</div>
+                    <div className="text-[14px] font-mono text-[var(--txt)]">{result.final_trade_plan.entry || '—'}</div>
+                  </div>
+                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                    <div className="text-[9px] font-mono text-[var(--txt2)]">STOP</div>
+                    <div className="text-[14px] font-mono text-[var(--red)]">{result.final_trade_plan.stop || '—'}</div>
+                  </div>
+                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                    <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 1</div>
+                    <div className="text-[14px] font-mono text-[var(--green)]">{result.final_trade_plan.target_1 || '—'}</div>
+                  </div>
+                  <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
+                    <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 2</div>
+                    <div className="text-[14px] font-mono text-[var(--green)]">{result.final_trade_plan.target_2 || '—'}</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-[var(--s2)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2 mt-2">
+                <div className="text-[11px] text-[var(--txt)]">
+                  <strong className="text-[var(--green)]">Why this plan:</strong> {result.final_trade_plan.why_this_plan}
+                </div>
+                <div className="text-[11px] text-[var(--red)] border-t border-[var(--b1)] pt-2 mt-2">
+                  <strong className="text-[var(--red)]">Invalidation:</strong> {result.final_trade_plan.what_would_invalidate}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Legacy Components Container */}
+          <div className="mt-8 pt-8 border-t border-[var(--b1)] opacity-70">
+            <div className="text-[10px] text-[var(--txt3)] font-mono uppercase mb-4">Internal Diagnositcs & Legacy Data</div>
           
           {result.afternoonTestPlan && (
             <div className="card-base flex flex-col p-6 mb-4 border border-[var(--orange)] bg-[#1a1410]">
@@ -1042,6 +1190,7 @@ export default function LunchReversal({
                )}
              </div>
           )}
+          </div>
         </div>
       )}
     </div>

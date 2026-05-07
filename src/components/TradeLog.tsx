@@ -30,6 +30,29 @@ export default function TradeLog({ trades, onAddTrade }: {
     }
   };
 
+  const [filterSource, setFilterSource] = useState<'ALL' | 'LIVE' | 'REPLAY'>('ALL');
+  const [filterSession, setFilterSession] = useState<'ALL' | 'MORNING' | 'LUNCH'>('ALL');
+  const [filterOutcome, setFilterOutcome] = useState<'ALL' | 'WIN' | 'LOSS' | 'SCRATCH' | 'NO_TRADE' | 'MISSED_TRADE' | 'PENDING'>('ALL');
+
+  const filteredTrades = trades.filter(t => {
+    const isReplay = t.analysisMode === 'historical_replay';
+    if (filterSource === 'LIVE' && isReplay) return false;
+    if (filterSource === 'REPLAY' && !isReplay) return false;
+
+    const sessionType = t.sessionType || (t.dayType === 'LUNCH REVERSAL' ? 'lunch' : 'morning');
+    if (filterSession === 'MORNING' && sessionType !== 'morning') return false;
+    if (filterSession === 'LUNCH' && sessionType !== 'lunch') return false;
+
+    if (filterOutcome === 'WIN' && t.status !== 'SUCCESSFUL' && (!t.pnl || t.pnl <= 0)) return false;
+    if (filterOutcome === 'LOSS' && t.status !== 'FAILED' && (!t.pnl || t.pnl >= 0)) return false;
+    if (filterOutcome === 'SCRATCH' && t.status !== 'CLOSED' && t.pnl !== 0) return false;
+    if (filterOutcome === 'NO_TRADE' && t.status !== 'MISSED') return false;
+    if (filterOutcome === 'MISSED_TRADE' && t.status !== 'MISSED') return false;
+    if (filterOutcome === 'PENDING' && t.status !== 'OPEN') return false;
+
+    return true;
+  });
+
   return (
     <div className="space-y-6 fade-up">
       <header className="page-header">
@@ -40,9 +63,6 @@ export default function TradeLog({ trades, onAddTrade }: {
         <div className="flex gap-2">
           <button onClick={() => setIsAddingManual(true)} className="qd-btn-ghost">
             <Plus className="w-3 h-3 mr-1" /> MANUAL ENTRY
-          </button>
-          <button className="qd-btn-ghost">
-            <Download className="w-3 h-3 mr-1" /> EXPORT LOG
           </button>
         </div>
       </header>
@@ -57,28 +77,37 @@ export default function TradeLog({ trades, onAddTrade }: {
         />
       )}
 
-      {/* Stats row can be optional, keeping it for value */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card-base flex items-center justify-between p-4">
-          <div>
-            <p className="kpi-label">Win Rate</p>
-            <p className="kpi-value text-[var(--txt)]">{(((trades || []).filter(t => t.pnl && t.pnl > 0).length / ((trades || []).filter(t => t.status === 'CLOSED' || t.status === 'SUCCESSFUL' || t.status === 'FAILED').length || 1)) * 100).toFixed(1)}%</p>
-          </div>
-          <Target className="w-4 h-4 text-[var(--txt3)]" />
+      {/* FILTERS */}
+      <div className="flex flex-wrap gap-4 items-center bg-[var(--b0)] p-4 border border-[var(--b2)]">
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] uppercase tracking-widest text-[var(--txt3)] font-bold">Source</span>
+          <select value={filterSource} onChange={e => setFilterSource(e.target.value as any)} className="bg-[var(--b1)] border border-[var(--b2)] text-[var(--txt)] text-[11px] p-1 font-mono">
+             <option value="ALL">All</option>
+             <option value="LIVE">Live</option>
+             <option value="REPLAY">Historical Replay</option>
+          </select>
         </div>
-        <div className="card-base flex items-center justify-between p-4">
-          <div>
-            <p className="kpi-label">Avg Expectancy</p>
-            <p className="kpi-value text-[var(--txt)]">${((trades || []).reduce((acc, t) => acc + (t.pnl || 0), 0) / ((trades || []).filter(t => t.status === 'CLOSED' || t.status === 'SUCCESSFUL' || t.status === 'FAILED').length || 1)).toFixed(2)}</p>
-          </div>
-          <Clock className="w-4 h-4 text-[var(--txt3)]" />
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] uppercase tracking-widest text-[var(--txt3)] font-bold">Session</span>
+          <select value={filterSession} onChange={e => setFilterSession(e.target.value as any)} className="bg-[var(--b1)] border border-[var(--b2)] text-[var(--txt)] text-[11px] p-1 font-mono">
+             <option value="ALL">All</option>
+             <option value="MORNING">Morning</option>
+             <option value="LUNCH">Lunch</option>
+          </select>
         </div>
-        <div className="card-base flex items-center justify-between p-4">
-          <div>
-            <p className="kpi-label">Total Fills</p>
-            <p className="kpi-value text-[var(--txt)]">{(trades || []).length}</p>
-          </div>
-          <ShieldAlert className="w-4 h-4 text-[var(--txt3)]" />
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] uppercase tracking-widest text-[var(--txt3)] font-bold">Outcome</span>
+          <select value={filterOutcome} onChange={e => setFilterOutcome(e.target.value as any)} className="bg-[var(--b1)] border border-[var(--b2)] text-[var(--txt)] text-[11px] p-1 font-mono">
+             <option value="ALL">All</option>
+             <option value="WIN">Win</option>
+             <option value="LOSS">Loss</option>
+             <option value="SCRATCH">Scratch</option>
+             <option value="NO_TRADE">No Trade</option>
+             <option value="MISSED_TRADE">Missed Trade</option>
+             <option value="PENDING">Pending Outcome</option>
+          </select>
         </div>
       </div>
 
@@ -87,10 +116,10 @@ export default function TradeLog({ trades, onAddTrade }: {
            <span>Execution Log</span>
         </div>
         
-        {(!trades || trades.length === 0) ? (
+        {(!filteredTrades || filteredTrades.length === 0) ? (
           <div className="empty-state">
-            <h3>NO TRADES RECORDED</h3>
-            <p>Your history will populate automatically after executing trades.</p>
+            <h3>NO TRADES FOUND</h3>
+            <p>Try adjusting your filters.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -98,6 +127,8 @@ export default function TradeLog({ trades, onAddTrade }: {
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>Uploaded At</th>
+                  <th>Source</th>
                   <th>Inst</th>
                   <th>Day Type</th>
                   <th>Dir</th>
@@ -110,7 +141,7 @@ export default function TradeLog({ trades, onAddTrade }: {
                 </tr>
               </thead>
               <tbody>
-                {trades.map(trade => {
+                {filteredTrades.map(trade => {
                   let learningBadge = { label: 'UNKNOWN', cls: 'bg-[var(--b2)] text-[var(--txt2)]' };
                   if (!trade.setupId) {
                     if (!trade.screenshotUrl) learningBadge = { label: 'NO SCREEN', cls: 'bg-[var(--b2)] text-[var(--txt2)] opacity-50' };
@@ -128,6 +159,8 @@ export default function TradeLog({ trades, onAddTrade }: {
                   return (
                   <tr key={trade.id}>
                     <td>{trade.date}</td>
+                    <td className="font-mono text-[9px] text-[var(--txt3)]">{trade.timestamp ? new Date(trade.timestamp).toLocaleString() : '—'}</td>
+                    <td className="font-mono text-[9px] uppercase">{trade.source === 'replay_lab' ? 'REPLAY' : 'LIVE'}</td>
                     <td className="font-mono text-[var(--orange)]">{trade.instrument || '—'}</td>
                     <td className="font-mono">{trade.dayType}</td>
                     <td>

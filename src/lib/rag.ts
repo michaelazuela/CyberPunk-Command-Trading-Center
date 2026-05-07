@@ -28,6 +28,8 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       user_id: user.id,
       trade_id: context.tradeId || null,
       setup_id: context.setupId || null,
+      analysis_mode: context.analysis_mode || 'live',
+      source: context.source || 'app',
       session_type: context.sessionType,
       trade_date: context.tradeDate,
       day_of_week: context.dayOfWeek,
@@ -91,6 +93,11 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       eth_context_review_json: context.eth_context_review_json || null,
       afternoon_test_plan_json: context.afternoon_test_plan_json || null,
       midnight_open_review_json: context.midnight_open_review_json || null,
+      
+      window_start: context.window_start || null,
+      window_end: context.window_end || null,
+      window_timezone: context.window_timezone || null,
+      required_screenshot_range: context.required_screenshot_range || null,
     };
 
     let result;
@@ -140,6 +147,8 @@ IB Position: ${queryContext.ibPosition}`;
 
     return (data || []).map((row: any) => ({
       id: row.id,
+      source: row.source,
+      analysisMode: row.analysis_mode,
       tradeDate: row.trade_date,
       dayOfWeek: row.day_of_week,
       sessionType: row.session_type,
@@ -308,35 +317,54 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
 export function formatRAGContextForGemini(similarSetups: SimilarSetup[]): string {
   if (!similarSetups || similarSetups.length === 0) {
     return `HISTORICAL CONTEXT:
-No similar past setups found in trade history yet. This analysis is based entirely on the current screenshot. As trade history grows, similar setups will be surfaced here automatically.`;
+No similar past setups found in trade history yet. You MUST analyze this entirely from the current screenshot using existing rules. Return { "agent_learning_used": false }.`;
   }
 
   const n = similarSetups.length;
   let wins = 0;
+  let losses = 0;
+  let scratches = 0;
+  let misses = 0;
   let totalPnl = 0;
   let setupsStr = "";
+  
+  let liveCount = 0;
+  let replayCount = 0;
 
   similarSetups.forEach((setup, i) => {
     if (setup.tradeResult === 'win') wins++;
+    else if (setup.tradeResult === 'loss') losses++;
+    else if (setup.tradeResult === 'scratch') scratches++;
+    else if (setup.tradeResult === 'no_trade' || setup.tradeResult === 'pending') misses++; // treats no_trade/pending as miss
+    
+    if (setup.source === 'replay_lab') replayCount++;
+    else liveCount++;
+
     if (setup.pnlTicks) totalPnl += setup.pnlTicks;
     
     setupsStr += `\nSetup ${i + 1} (${Math.round(setup.similarity * 100)}% match) - ${setup.tradeDate} (${setup.dayOfWeek}):\n`;
+    setupsStr += `Source: ${setup.source === 'replay_lab' ? 'Replay Lab (Historical Backtest)' : 'Live Trading'}\n`;
     setupsStr += `Midnight open: RTH opened ${setup.rthVsMidnight || 'unknown'}\n`;
     setupsStr += `IB position: ${setup.ibPosition || 'unknown'}\n`;
     setupsStr += `Result: ${(setup.tradeResult || 'PENDING').toUpperCase()}\n`;
     setupsStr += `PnL: ${setup.pnlTicks || 0} ticks\n`;
-    setupsStr += `Confidence: ${setup.geminiConfidence || 'unknown'}\n`;
+    setupsStr += `Confidence at the time: ${setup.geminiConfidence || 'unknown'}\n`;
   });
 
   const win_pct = Math.round((wins / n) * 100);
   const avg_pnl = (totalPnl / n).toFixed(1);
 
-  return `HISTORICAL CONTEXT - ${n} similar past setups retrieved from trade history:
+  return `HISTORICAL CONTEXT - ${n} similar past setups retrieved from RAG memory:
+- ${liveCount} Live Records
+- ${replayCount} Replay Lab Records
+
 ${setupsStr}
-Pattern insight:
-Of ${n} similar setups, ${wins} resulted in wins (${win_pct}%).
+
+Historical Support Context:
+Of ${n} similar setups: ${wins} wins (${win_pct}%), ${losses} losses, ${scratches} scratches.
 Average PnL on similar setups: ${avg_pnl} ticks.
-Use this historical context to calibrate confidence and bias.`;
+
+You MUST use this historical data to decide whether it SUPPORTS, CONFLICTS WITH, or is NEUTRAL towards the plan you derived in your current rule analysis step. Return { "agent_learning_used": true }.`;
 }
 
 export async function embedPendingRecords(): Promise<void> {
@@ -378,7 +406,7 @@ export async function embedPendingRecords(): Promise<void> {
 
 export async function updateRAGWithTradeResult(
   setupId: string,
-  tradeResult: "win" | "loss" | "scratch" | "pending",
+  tradeResult: "win" | "loss" | "scratch" | "pending" | "no_trade" | "missed_trade" | string,
   pnlTicks?: number | null,
   pnlDollars?: number | null,
   entryPrice?: number | null,

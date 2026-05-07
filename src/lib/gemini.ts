@@ -87,6 +87,9 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     This is the source of truth. Do not override it based on screenshot OCR.
     If the screenshot label appears different, mention it as a warning but continue using the selected instrument.
     
+    ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
+    ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Reversal window. Use current Lunch Reversal rules only. Do NOT use future data.' : ''}
+
     [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | 5M_TIMEFRAME]
 
     Your task is to process the chart image sequentially in a fully structured JSON response.
@@ -107,6 +110,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     3. Adjust bias if historical win rate contradicts the current chart signal.
     4. Return historical_context_used as true if similar setups were provided.
     5. Carry forward relevant context from the previous session (e.g., morning ETH levels, Midnight Open analysis).
+    6. Do not let historical replay data replace current chart analysis. First perform independent rule-based analysis from the current screenshot. Then use Replay/RAG records only as supporting evidence to adjust confidence and explain whether similar historical setups succeeded or failed.
 
     =========================================
     MODULE 1: [DATA_EXTRACTOR] (Vision)
@@ -272,7 +276,44 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
          "afternoonInvalidationLevel": 0,
          "confidence": 0,
          "plan": "string"
-      }
+      },
+      "current_rule_analysis": {
+        "summary": "string",
+        "setup_detected": "string",
+        "rule_category": "string",
+        "entry": "number or null",
+        "stop": "number or null",
+        "target_1": "number or null",
+        "target_2": "number or null",
+        "no_trade_reason": "string or null",
+        "base_confidence": "High | Medium | Low"
+      },
+      "rag_learning_context": {
+        "rag_search_attempted": true,
+        "rag_records_found": 0,
+        "live_records_found": 0,
+        "replay_records_found": 0,
+        "historical_win_count": 0,
+        "historical_loss_count": 0,
+        "historical_scratch_count": 0,
+        "historical_no_trade_count": 0,
+        "average_pnl_ticks": 0,
+        "historical_support_rating": "SUPPORTS PLAN | CONFLICTS WITH PLAN | NEUTRAL | INSUFFICIENT DATA",
+        "confidence_adjustment": "Increased | Reduced | Unchanged",
+        "explanation": "string"
+      },
+      "final_trade_plan": {
+        "decision": "LONG | SHORT | NO TRADE",
+        "entry": "number or null",
+        "stop": "number or null",
+        "target_1": "number or null",
+        "target_2": "number or null",
+        "risk_reward": "string or null",
+        "final_confidence": "High | Medium | Low",
+        "why_this_plan": "string",
+        "what_would_invalidate": "string"
+      },
+      "agent_learning_used": true
     }
   `;
 
@@ -400,7 +441,7 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
 
 export async function analyzeChart(imageData: string | { exec: string; eth?: string }, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string) {
   try {
-    const isMorning = analysisType !== 'lunch';
+    const isMorning = analysisType !== 'lunch' && analysisType !== 'lunch_replay';
     const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     
     // RAG Retrieval
@@ -522,6 +563,10 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       executionReview5m: superReport.executionReview5m,
       ethContextReview: superReport.ethContextReview,
       afternoonTestPlan: superReport.afternoonTestPlan,
+      current_rule_analysis: superReport.current_rule_analysis,
+      rag_learning_context: superReport.rag_learning_context,
+      final_trade_plan: superReport.final_trade_plan,
+      agent_learning_used: superReport.agent_learning_used,
       similarSetups,
       agentLearningSummary,
       historicalContextUsed: !!similarSetups.length,
