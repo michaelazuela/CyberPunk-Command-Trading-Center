@@ -169,11 +169,10 @@ export default function Dashboard({
           {session.analysisResult ? (
              <div className="flex-1 -mx-[18px] -mb-[16px]">
                <MonteCarloSection 
-                  startPrice={normalizeTradePlan(session.analysisResult).entry}
-                  stopPrice={normalizeTradePlan(session.analysisResult).stop}
-                  targetPrice={normalizeTradePlan(session.analysisResult).t2 || normalizeTradePlan(session.analysisResult).t1}
-                  targetPrice15R={normalizeTradePlan(session.analysisResult).t1}
-                  bias={session.analysisResult.dayType?.includes('SHORT') ? 'SHORT' : 'LONG'}
+                  startPrice={normalizeTradePlan(session.analysisResult).entry || 0}
+                  stopPrice={normalizeTradePlan(session.analysisResult).stop || 0}
+                  targetPrice={normalizeTradePlan(session.analysisResult).t2 || normalizeTradePlan(session.analysisResult).t1 || 0}
+                  targetPrice15R={normalizeTradePlan(session.analysisResult).t1 || 0}
                />
              </div>
           ) : (

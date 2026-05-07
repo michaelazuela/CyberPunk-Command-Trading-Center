@@ -1,6 +1,7 @@
 import { RAGSaveContext, SimilarSetup } from '../types';
 import { supabase } from './supabase';
 import { generateEmbedding, generateQueryEmbedding, buildEmbeddingText } from './embeddings';
+import { mapTradeEmbeddingRow } from './ragMapper';
 
 export async function saveToRAG(context: RAGSaveContext): Promise<void> {
   try {
@@ -54,6 +55,11 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       ib_position: context.ibPosition || null,
       entry_price: context.entryPrice || null,
       exit_price: context.exitPrice || null,
+      stop_price: context.stopPrice || null,
+      target_1_price: context.t1 || null,
+      target_2_price: context.t2 || null,
+      risk_points: context.riskPoints || null,
+      plan_source: context.planSource || null,
       pnl_ticks: context.pnlTicks || null,
       pnl_dollars: context.pnlDollars || null,
       contracts: context.contracts || null,
@@ -100,15 +106,18 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       required_screenshot_range: context.required_screenshot_range || null,
     };
 
-    let result;
+    let existingId = null;
     if (context.tradeId) {
-      result = await supabase.from('trade_embeddings').update(record).eq('trade_id', context.tradeId);
+      const { data } = await supabase.from('trade_embeddings').select('id').eq('trade_id', context.tradeId).maybeSingle();
+      if (data) existingId = data.id;
     } else if (context.setupId) {
-      result = await supabase.from('trade_embeddings').update(record).eq('setup_id', context.setupId);
+      const { data } = await supabase.from('trade_embeddings').select('id').eq('setup_id', context.setupId).maybeSingle();
+      if (data) existingId = data.id;
     } 
     
-    // If update returned nothing or didn't run, insert
-    if (!result || (result.data === null && result.error === null)) {
+    if (existingId) {
+       await supabase.from('trade_embeddings').update(record).eq('id', existingId);
+    } else {
        await supabase.from('trade_embeddings').insert(record);
     }
 
@@ -145,35 +154,7 @@ IB Position: ${queryContext.ibPosition}`;
       return [];
     }
 
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      source: row.source,
-      analysisMode: row.analysis_mode,
-      tradeDate: row.trade_date,
-      dayOfWeek: row.day_of_week,
-      sessionType: row.session_type,
-      instrument: row.instrument,
-      rthVsMidnight: row.rth_vs_midnight,
-      ibPosition: row.ib_position,
-      geminiConfidence: row.gemini_confidence,
-      setupQualityScore: row.setup_quality_score,
-      tradeResult: row.trade_result,
-      pnlTicks: row.pnl_ticks,
-      pnlDollars: row.pnl_dollars,
-      contracts: row.contracts,
-      entryPrice: row.entry_price,
-      exitPrice: row.exit_price,
-      screenshotUrl: row.screenshot_url,
-      proofScreenshotUrl: row.proof_screenshot_url,
-      geminiVerdict: row.gemini_verdict,
-      embeddingText: row.embedding_text,
-      similarity: row.similarity,
-      midnightOpenInstrument: row.midnight_open_instrument,
-      midnightOpenStatus: row.midnight_open_status,
-      midnightRole: row.midnight_role,
-      midnightInteraction: row.midnight_interaction,
-      distanceFromMidnightPoints: row.distance_from_midnight_points
-    }));
+    return (data || []).map((row: any) => mapTradeEmbeddingRow(row));
 
   } catch (error) {
     console.error("[RAG] Retrieval failed:", error);

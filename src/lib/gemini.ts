@@ -179,6 +179,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
     - Consolidate all reasoning across the 5 modules into a final, actionable trade decision.
     - Provide exact entry price, stop-loss price, and realistic targets.
+    - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
+    - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
 
     Return this object inside your JSON response:
     "midnightAnalysis": { ... }

@@ -14,6 +14,34 @@ import ReplayLab from './components/ReplayLab';
 
 import { subscribeToTrades, addTrade as addFirestoreTrade, testFirestoreConnection } from './lib/firestoreService';
 
+function createInitialAppState(): AppState {
+  return {
+    currentSession: {
+      date: new Date().toISOString().split('T')[0],
+      dailyInstrument: "MES" as const,
+      trades: [],
+      accountEquity: 50000,
+      riskPercent: 0.01,
+      killSwitches: { losses: 0, fills: 0 },
+      aiSettings: { temperature: 0.1, customInstructions: '' }
+    },
+    history: [],
+    customRules: []
+  };
+}
+
+function loadSavedAppState(): AppState {
+  try {
+    const saved = localStorage.getItem('mes_trading_app_state');
+    if (!saved) return createInitialAppState();
+    return JSON.parse(saved);
+  } catch (error) {
+    console.error("Invalid saved app state. Resetting local state.", error);
+    localStorage.removeItem('mes_trading_app_state');
+    return createInitialAppState();
+  }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'replay' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<any>(null);
@@ -155,24 +183,7 @@ export default function App() {
   };
 
   const [appState, setAppState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('mes_trading_app_state');
-    if (saved) return JSON.parse(saved);
-    
-    const initialSession: SessionState = {
-      date: new Date().toISOString().split('T')[0],
-      dailyInstrument: "MES" as const,
-      trades: [],
-      accountEquity: 50000,
-      riskPercent: 0.01,
-      killSwitches: { losses: 0, fills: 0 },
-      aiSettings: { temperature: 0.1, customInstructions: '' }
-    };
-
-    return {
-      currentSession: initialSession,
-      history: [],
-      customRules: []
-    };
+    return loadSavedAppState();
   });
 
   useEffect(() => {

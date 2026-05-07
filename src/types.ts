@@ -354,6 +354,15 @@ export interface RAGSaveContext {
   ibPosition?: string;
   entryPrice?: number | null;
   exitPrice?: number | null;
+  stopPrice?: number | null;
+  t1?: number | null;
+  t2?: number | null;
+  riskPoints?: number | null;
+  riskRewardT1?: string | null;
+  riskRewardT2?: string | null;
+  planSource?: string | null;
+  whyThisPlan?: string | null;
+  invalidation?: string | null;
   pnlTicks?: number | null;
   pnlDollars?: number | null;
   contracts?: number;
