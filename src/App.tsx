@@ -315,13 +315,27 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
-          {activeTab === 'dashboard' && <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} />}
-          {activeTab === 'analysis' && <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} />}
-          {activeTab === 'lunch' && <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} />}
-          {activeTab === 'replay' && <ReplayLab session={appState.currentSession} onAddTrade={addTrade} />}
-          {activeTab === 'history' && <TradeLog trades={displayTrades} onAddTrade={addTrade} />}
-          {activeTab === 'rules' && <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />}
-          {activeTab === 'settings' && <Settings session={appState.currentSession} onUpdate={updateSession} />}
+          <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
+            <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} />
+          </div>
+          <div className={activeTab === 'analysis' ? 'block' : 'hidden'}>
+            <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'analysis'} />
+          </div>
+          <div className={activeTab === 'lunch' ? 'block' : 'hidden'}>
+            <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'lunch'} />
+          </div>
+          <div className={activeTab === 'replay' ? 'block' : 'hidden'}>
+            <ReplayLab session={appState.currentSession} onAddTrade={addTrade} isActive={activeTab === 'replay'} />
+          </div>
+          <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+            <TradeLog trades={displayTrades} onAddTrade={addTrade} />
+          </div>
+          <div className={activeTab === 'rules' ? 'block' : 'hidden'}>
+            <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />
+          </div>
+          <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
+            <Settings session={appState.currentSession} onUpdate={updateSession} />
+          </div>
         </div>
       </main>
     </div>

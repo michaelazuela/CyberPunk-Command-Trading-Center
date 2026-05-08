@@ -113,6 +113,16 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
         <div className="text-[11px] text-[var(--red)] border-t border-[var(--red)]/20 pt-2 mt-2 whitespace-pre-wrap">
           <strong className="text-[var(--red)]">Invalidation:</strong> {plan.invalidation}
         </div>
+        {plan.consistencyWarnings && plan.consistencyWarnings.length > 0 && (
+          <div className="text-[10px] text-[var(--amber)] border-t border-[var(--amber)]/20 pt-2 mt-2">
+            <strong>Plan Consistency Checker:</strong>
+            <div className="mt-2 grid gap-1">
+              {plan.consistencyWarnings.map((warning, idx) => (
+                <div key={`${warning}-${idx}`}>- {warning}</div>
+              ))}
+            </div>
+          </div>
+        )}
         {plan.rejectedAlternatives && plan.rejectedAlternatives.length > 0 && (
           <div className="text-[10px] text-[var(--txt2)] border-t border-[var(--b1)] pt-2 mt-2">
             <strong className="text-[var(--amber)]">Rejected alternatives:</strong>

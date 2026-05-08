@@ -32,6 +32,7 @@ export interface NormalizedTradePlan {
   whyItWon?: string;
   ragSupport?: string;
   tradeManagement?: AnalysisResult['trade_management_plan'];
+  consistencyWarnings?: string[];
   rejectedAlternatives?: {
     setupName: string;
     rejectionReason: string;
@@ -171,6 +172,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     decision: TradeDecision;
     entry: number | null;
     stop: number | null;
+    rawT1?: number | null;
+    rawT2?: number | null;
     confidence: "High" | "Medium" | "Low";
     whyThisPlan: string;
     invalidation: string;
@@ -192,6 +195,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         setupName: candidate.setup_name || `Candidate ${index + 1}`,
         entry: parsePrice(candidate.entry),
         stop: parsePrice(candidate.stop),
+        rawT1: parsePrice(candidate.target_1),
+        rawT2: parsePrice(candidate.target_2),
         source: "candidate_trade_plan",
         decision: candidate.direction || "NO TRADE",
         confidence: normalizeConfidence(candidate.confidence),
@@ -214,6 +219,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       setupName: selectedCandidate?.setup_name || "Best Plan Selector",
       entry: parsePrice(result.best_trade_plan.entry),
       stop: parsePrice(result.best_trade_plan.stop),
+      rawT1: parsePrice(result.best_trade_plan.target_1),
+      rawT2: parsePrice(result.best_trade_plan.target_2),
       source: "best_trade_plan",
       decision: result.best_trade_plan.decision || "NO TRADE",
       confidence: normalizeConfidence(result.best_trade_plan.final_confidence),
@@ -231,6 +238,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       setupName: "Final Trade Plan",
       entry: parsePrice(result.final_trade_plan.entry),
       stop: parsePrice(result.final_trade_plan.stop),
+      rawT1: parsePrice(result.final_trade_plan.target_1),
+      rawT2: parsePrice(result.final_trade_plan.target_2),
       source: "final_trade_plan",
       decision: result.final_trade_plan.decision || "NO TRADE",
       confidence: normalizeConfidence(result.final_trade_plan.final_confidence),
@@ -250,6 +259,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       setupName: result.current_rule_analysis.setup_detected || "Current Rule Analysis",
       entry: parsePrice(result.current_rule_analysis.entry),
       stop: parsePrice(result.current_rule_analysis.stop),
+      rawT1: parsePrice(result.current_rule_analysis.target_1),
       source: "current_rule_analysis",
       decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
       confidence: normalizeConfidence(result.current_rule_analysis.base_confidence, confidenceFromNumber(result.confidence)),
@@ -263,6 +273,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       setupName: result.tradePlan.setupName || "Structured Trade Plan",
       entry: parsePrice(result.tradePlan.entry),
       stop: parsePrice(result.tradePlan.stop),
+      rawT1: parsePrice(result.tradePlan.target),
       source: "tradePlan",
       decision: result.tradePlan.bias || "NO TRADE",
       confidence: confidenceFromNumber(result.tradePlan.confidence),
@@ -276,6 +287,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       setupName: "Legacy Suggested Levels",
       entry: parsePrice(result.suggestedEntry),
       stop: parsePrice(result.suggestedStop),
+      rawT1: parsePrice(result.suggestedTarget),
       source: "legacy",
       decision: inferDecision(result),
       confidence: confidenceFromNumber(result.confidence),
@@ -334,6 +346,13 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);
+  const consistencyWarnings: string[] = [];
+  if (isValidPrice(executableCandidate.rawT1) && isValidPrice(targets.t1) && Math.abs(executableCandidate.rawT1 - targets.t1) >= 0.25) {
+    consistencyWarnings.push(`Raw Gemini T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using fixed 1.5R.`);
+  }
+  if (isValidPrice(executableCandidate.rawT2) && isValidPrice(targets.t2) && Math.abs(executableCandidate.rawT2 - targets.t2) >= 0.25) {
+    consistencyWarnings.push(`Raw Gemini T2 ${executableCandidate.rawT2} was replaced with app-computed T2 ${targets.t2} using fixed 2.0R.`);
+  }
 
   return {
     decision: decision === "LONG" || decision === "SHORT" ? decision : "NO TRADE",
@@ -355,6 +374,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     whyItWon: result.best_trade_plan?.why_it_won,
     ragSupport: executableCandidate.ragSupport,
     tradeManagement: result.trade_management_plan,
+    consistencyWarnings,
     rejectedAlternatives: candidates
       .filter((candidate) => {
         if (candidate === executableCandidate) return false;

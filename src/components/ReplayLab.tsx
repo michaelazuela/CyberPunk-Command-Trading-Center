@@ -20,10 +20,12 @@ interface UploadedImage {
 
 export default function ReplayLab({
   session,
-  onAddTrade
+  onAddTrade,
+  isActive
 }: {
   session: SessionState;
   onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void;
+  isActive?: boolean;
 }) {
   const [tradeDate, setTradeDate] = useState<string>('');
   const [instrument, setInstrument] = useState<"MES" | "MNQ">(session.dailyInstrument || "MES");
@@ -95,13 +97,37 @@ export default function ReplayLab({
   }, [activePasteTarget, proofFlow.active, morningExecImg]);
 
   useEffect(() => {
+    if (!isActive) return;
     window.addEventListener('click', handleGlobalClick, { capture: true });
     window.addEventListener('paste', handlePaste);
     return () => {
       window.removeEventListener('click', handleGlobalClick, { capture: true });
       window.removeEventListener('paste', handlePaste);
     };
-  }, [handleGlobalClick, handlePaste]);
+  }, [handleGlobalClick, handlePaste, isActive]);
+
+  const resetReplayLab = () => {
+    setTradeDate('');
+    setInstrument(session.dailyInstrument || "MES");
+    setContracts(1);
+    setMidnightOpen('');
+    setNotes('');
+    setActivePasteTarget(null);
+    setMorningEthImg(null);
+    setMorningExecImg(null);
+    setIsAnalyzingMorning(false);
+    setMorningResult(null);
+    setMorningSetupId(null);
+    setMorningError(null);
+    setMorningOutcome(null);
+    setLunchExecImg(null);
+    setIsAnalyzingLunch(false);
+    setLunchResult(null);
+    setLunchSetupId(null);
+    setLunchError(null);
+    setLunchOutcome(null);
+    setProofFlow({ active: false });
+  };
 
   const processImage = async (dataUrl: string, target: ReplayPasteTarget) => {
     // Auto OCR
@@ -443,6 +469,9 @@ export default function ReplayLab({
       {/* Top Header */}
       <div className="flex items-center gap-4 mb-6 sticky top-0 bg-[var(--bg)]/90 backdrop-blur z-10 py-4 border-b border-[var(--b2)]">
         <h1 className="text-xl font-bold tracking-tight text-[var(--txt)] flex-1">REPLAY LAB</h1>
+        <button onClick={resetReplayLab} className="qd-btn-ghost text-[10px]">
+          Reset Replay
+        </button>
         <div className="flex bg-[var(--b1)] p-1 rounded-sm gap-1 text-[10px]">
           <span className="px-2 py-1 bg-[var(--b2)] text-[var(--txt)]">Historical Training Mode</span>
         </div>

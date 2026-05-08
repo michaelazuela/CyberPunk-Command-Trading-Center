@@ -132,7 +132,10 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - IF (TIME_IN_IB > 45min) ➔ STATUS: NEUTRAL / FRICTION. (Wait: 2-Bar Guard).
     - IF (OVERLAP > 80%) AND (VELOCITY == LOW) ➔ NO_WICK_ENTRY. (Wait: Clearing Bar).
     - IF (WICK > ANCHOR ± 1pt) AND (CLOSE == INSIDE_IB) AND (C2 == DEEP_RECLAIM) ➔ ACTION: FLIP_BIAS. (Stop: Wick_Extreme + 1t).
-    - IF (2-BAR_GUARD == TRUE) AND (PRICE > ANCHOR + 5pts) ➔ WAIT: 1st COUNTER-TREND BREATHER. (Execute: Breather_Break).
+    - IF (2-BAR_GUARD == TRUE) AND (PRICE > ANCHOR + 5pts) ➔ WAIT: 1st COUNTER-TREND BREATHER. Do NOT execute Breather_Break until a completed pullback candle is followed by a later candle that breaks the breather candle high (long) or low (short).
+    - BREATHER BREAK ELIGIBILITY LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT active yet. Output Momentum Continuation with WAIT_FOR_RECLAIM, or NO TRADE if no executable continuation trigger exists. Do not invent a future break price.
+    - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, do not select a setup that requires later confirmation.
+    - PRICE FORMULA LOCK: Gemini identifies setup and trigger candle only. The executable T1/T2 are app-calculated from entry and stop. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
     - CALCULATE TARGETS: Risk = |Entry - Stop|. Target 1.5R = Entry ± (Risk * 1.5). Target 2.0R = Entry ± (Risk * 2.0).
@@ -186,6 +189,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - Consolidate all reasoning across the modules into a final, actionable trade decision.
     - Provide exact entry price, stop-loss price, and realistic targets.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
+    - Formula check: For any LONG plan, target_1 MUST equal entry + abs(entry - stop) * 1.5 and target_2 MUST equal entry + abs(entry - stop) * 2.0. For any SHORT plan, target_1 MUST equal entry - abs(entry - stop) * 1.5 and target_2 MUST equal entry - abs(entry - stop) * 2.0. If you cannot calculate this exactly, set target_1 and target_2 to null and let the app calculate them.
     - CONSISTENCY LOCK: If current_rule_analysis contains an executable setup with entry and stop, best_trade_plan and final_trade_plan MUST repeat the same direction, entry, stop, target_1, and target_2 unless another candidate clearly outranks it. If another candidate wins, current_rule_analysis must explain why the lower-priority setup was rejected.
     - If best_trade_plan/final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.

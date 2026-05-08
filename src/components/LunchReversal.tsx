@@ -17,11 +17,13 @@ import FinalTradePlanCard from './FinalTradePlanCard';
 export default function LunchReversal({ 
   session, 
   onUpdate,
-  onAddTrade
+  onAddTrade,
+  isActive
 }: { 
   session: SessionState,
   onUpdate: (updates: Partial<SessionState>) => void,
-  onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void
+  onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void,
+  isActive?: boolean
 }) {
   const [proofFlow, setProofFlow] = useState<{ active: boolean, outcome?: 'SUCCESS' | 'FAILED' }>({ active: false });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -525,9 +527,29 @@ export default function LunchReversal({
   }, [processImage, proofFlow.active]);
 
   useEffect(() => {
+    if (!isActive) return;
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [handlePaste]);
+  }, [handlePaste, isActive]);
+
+  const resetLunchTab = () => {
+    setProofFlow({ active: false });
+    setIsAnalyzing(false);
+    setIsPreChecking(false);
+    setOcrResult(null);
+    setPendingImage(null);
+    setResult(null);
+    setLastImage(null);
+    setError(null);
+    setExecutionQuantity(1);
+    setExecutionDirection('LONG');
+    setIsSavingTrade(false);
+    setTradeSavedMessage(null);
+    setSetupId(null);
+    setShowSettings(false);
+    setProgressSteps([]);
+    setProgressStart(null);
+  };
 
   return (
     <div className="space-y-6 fade-up">
@@ -536,13 +558,18 @@ export default function LunchReversal({
           <h1>Lunch Reversal</h1>
           <p>{formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST')} TRAP CONDITIONS</p>
         </div>
-        <TimezoneToggle 
-          selectedTimezone={session.aiSettings?.lunchTimeZone || 'EST'}
-          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0 }), lunchTimeZone: tz } })}
-          showSettings={showSettings}
-          onToggleSettings={() => setShowSettings(!showSettings)}
-          hasSettingsIcon={true}
-        />
+        <div className="flex items-center gap-2">
+          <button onClick={resetLunchTab} className="qd-btn-ghost text-[10px]">
+            Reset Lunch
+          </button>
+          <TimezoneToggle 
+            selectedTimezone={session.aiSettings?.lunchTimeZone || 'EST'}
+            onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0 }), lunchTimeZone: tz } })}
+            showSettings={showSettings}
+            onToggleSettings={() => setShowSettings(!showSettings)}
+            hasSettingsIcon={true}
+          />
+        </div>
       </header>
 
       <ApiCostPanel route="lunch" />
@@ -662,6 +689,7 @@ export default function LunchReversal({
               <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
                 <Target size={14} className="text-[var(--amber)]" />
                 1. CURRENT RULE ANALYSIS
+                <span className="qd-badge ml-auto opacity-70">APP-COMPUTED LEVELS</span>
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="flex flex-col gap-1">
@@ -686,17 +714,22 @@ export default function LunchReversal({
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
                   <div className="text-[9px] font-mono text-[var(--txt2)]">ENTRY</div>
-                  <div className="text-[14px] font-mono text-[var(--txt)]">{result.current_rule_analysis.entry || '—'}</div>
+                  <div className="text-[14px] font-mono text-[var(--txt)]">{normalizedPlan?.entry || '—'}</div>
                 </div>
                 <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
                   <div className="text-[9px] font-mono text-[var(--txt2)]">STOP</div>
-                  <div className="text-[14px] font-mono text-[var(--red)]">{result.current_rule_analysis.stop || '—'}</div>
+                  <div className="text-[14px] font-mono text-[var(--red)]">{normalizedPlan?.stop || '—'}</div>
                 </div>
                 <div className="bg-[var(--bg)] p-2 text-center border border-[var(--b1)]">
                   <div className="text-[9px] font-mono text-[var(--txt2)]">TARGET 1</div>
-                  <div className="text-[14px] font-mono text-[var(--green)]">{result.current_rule_analysis.target_1 || '—'}</div>
+                  <div className="text-[14px] font-mono text-[var(--green)]">{normalizedPlan?.t1 || '—'}</div>
                 </div>
               </div>
+              {(result.current_rule_analysis.entry !== normalizedPlan?.entry || result.current_rule_analysis.stop !== normalizedPlan?.stop || result.current_rule_analysis.target_1 !== normalizedPlan?.t1) && (
+                <div className="mt-3 text-[10px] text-[var(--txt3)] font-mono">
+                  Raw Gemini levels were normalized before execution. Final executable levels are shown here and in the Final Trade Plan.
+                </div>
+              )}
             </div>
           )}
 
