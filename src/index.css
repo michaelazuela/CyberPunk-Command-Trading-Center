@@ -161,6 +161,47 @@ input:focus, textarea:focus, select:focus {
   pointer-events: none;
 }
 
+.command-tile {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)),
+    var(--s1);
+  border: 1px solid var(--b1);
+  min-height: 58px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+}
+
+.command-tile::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--orange);
+  opacity: 0.6;
+}
+
+.command-tile span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--txt3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.command-tile strong {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--txt);
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+}
+
 .card-header {
   font-family: var(--font-mono);
   font-weight: 600;

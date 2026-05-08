@@ -505,6 +505,21 @@ export default function ReplayLab({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <div className="command-tile">
+          <span>Morning Review</span>
+          <strong>15M ETH + 5M Execution</strong>
+        </div>
+        <div className="command-tile">
+          <span>Lunch Review</span>
+          <strong>{formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}</strong>
+        </div>
+        <div className="command-tile">
+          <span>Learning Mode</span>
+          <strong>Save Outcomes to RAG</strong>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6">
          {/* MORNING PANEL */}
          <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] morning-panel">

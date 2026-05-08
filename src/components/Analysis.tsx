@@ -705,6 +705,21 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         </div>
       </header>
 
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="command-tile">
+          <span>Instrument</span>
+          <strong className={session.dailyInstrument === 'MNQ' ? "text-[var(--blue)]" : "text-[var(--orange)]"}>{session.dailyInstrument || "MES"}</strong>
+        </div>
+        <div className="command-tile md:col-span-2">
+          <span>Required Screenshot</span>
+          <strong>5M 9:30 AM → 10:10 AM ET</strong>
+        </div>
+        <div className="command-tile">
+          <span>Decision Mode</span>
+          <strong>Rules + RAG</strong>
+        </div>
+      </div>
+
       <ApiCostPanel route="morning" />
       <ModelConfigPanel route="morning" config={modelConfig} onChange={handleConfigChange} />
 
@@ -930,14 +945,21 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       {result && !isAnalyzing && (
         <div className="space-y-6 fade-up">
-          {/* New Rule Pipeline UI */}
+          {/* Command Desk: decision first, evidence underneath */}
+          {normalizedPlan && (
+            <FinalTradePlanCard
+              plan={normalizedPlan}
+              title="1. BEST EXECUTABLE TRADE PLAN"
+              agentLearningUsed={result.agent_learning_used}
+            />
+          )}
           
-          {/* 1. CURRENT RULE ANALYSIS */}
+          {/* 2. CURRENT RULE ANALYSIS */}
           {result.current_rule_analysis && (
             <div className="card-base flex flex-col p-4 border border-[var(--b2)] bg-[var(--s2)]">
               <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
                 <Target size={14} className="text-[var(--amber)]" />
-                1. CURRENT RULE ANALYSIS
+                2. CURRENT RULE ANALYSIS
                 <span className="qd-badge ml-auto opacity-70">APP-COMPUTED LEVELS</span>
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -982,12 +1004,12 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             </div>
           )}
 
-          {/* 2. AGENT LEARNING CONTEXT */}
+          {/* 3. AGENT LEARNING CONTEXT */}
           {result.rag_learning_context && (
             <div className="card-base flex flex-col p-4 border border-[var(--blue)]/30 bg-[var(--blue)]/5">
               <h3 className="text-[11px] font-mono font-bold text-[var(--txt)] flex items-center gap-2 mb-4">
                 <Cpu size={14} className="text-[var(--blue)]" />
-                2. AGENT LEARNING CONTEXT
+                3. AGENT LEARNING CONTEXT
               </h3>
               
               {!result.rag_learning_context.rag_search_attempted ? (
@@ -1033,14 +1055,6 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                 </>
               )}
             </div>
-          )}
-
-          {/* 3. FINAL TRADE PLAN */}
-          {normalizedPlan && (
-            <FinalTradePlanCard
-              plan={normalizedPlan}
-              agentLearningUsed={result.agent_learning_used}
-            />
           )}
 
           {/* Legacy Components Container */}
