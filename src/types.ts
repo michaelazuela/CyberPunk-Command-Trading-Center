@@ -441,6 +441,11 @@ export interface SimilarSetup {
   contracts?: number | null;
   entryPrice?: number | null;
   exitPrice?: number | null;
+  stopPrice?: number | null;
+  target1Price?: number | null;
+  target2Price?: number | null;
+  riskPoints?: number | null;
+  planSource?: string | null;
   screenshotUrl?: string | null;
   proofScreenshotUrl?: string | null;
   geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;

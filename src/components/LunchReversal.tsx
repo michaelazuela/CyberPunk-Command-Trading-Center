@@ -57,6 +57,11 @@ export default function LunchReversal({
 
   const handleSaveTrade = async (manualOutcome?: 'SUCCESS' | 'FAILED', proofData?: Partial<Trade>) => {
     if (!onAddTrade || !result || !normalizedPlan) return;
+    if (!normalizedPlan.canExecute || normalizedPlan.entry === null || normalizedPlan.stop === null || normalizedPlan.t1 === null || normalizedPlan.t2 === null) {
+      setTradeSavedMessage("Trade not saved: ENTRY, STOP, T1, and T2 are required.");
+      setProofFlow({ active: false });
+      return;
+    }
     setIsSavingTrade(true);
     setTradeSavedMessage(null);
     try {
@@ -66,9 +71,9 @@ export default function LunchReversal({
         instrument: session.dailyInstrument || 'MES',
         direction: normalizedPlan.decision === "LONG" || normalizedPlan.decision === "SHORT" ? normalizedPlan.decision as "LONG"|"SHORT" : executionDirection,
         dayType: result.dayType,
-        entryPrice: normalizedPlan.entry || 0,
-        stopPrice: normalizedPlan.stop || 0,
-        targetPrice: normalizedPlan.t1 || 0,
+        entryPrice: normalizedPlan.entry,
+        stopPrice: normalizedPlan.stop,
+        targetPrice: normalizedPlan.t1,
         contracts: executionQuantity,
         status,
         manualOutcome,
@@ -93,7 +98,7 @@ export default function LunchReversal({
              manualOutcome === 'SUCCESS' ? 'win' : 'loss',
              proofData?.pnlTicks || undefined,
              proofData?.pnlDollars || undefined,
-             normalizedPlan?.entry || 0,
+             normalizedPlan.entry,
              undefined,
              proofData?.gemini_verdict as any || undefined,
              proofData?.proof_screenshot_url || undefined

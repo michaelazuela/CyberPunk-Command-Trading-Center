@@ -35,34 +35,34 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       trade_date: context.tradeDate,
       day_of_week: context.dayOfWeek,
       instrument: context.instrument || 'MES',
-      midnight_open_price: context.midnightOpenPrice || null,
-      midnight_open_instrument: context.midnightOpenInstrument || null,
-      midnight_open_source: context.midnightOpenSource || null,
-      midnight_open_confirmed_at: context.midnightOpenConfirmedAt || null,
-      midnight_open_date: context.midnightOpenDate || null,
-      midnight_open_status: context.midnightOpenStatus || null,
-      distance_from_midnight_points: context.distanceFromMidnightPoints || null,
-      distance_from_midnight_ticks: context.distanceFromMidnightTicks || null,
+      midnight_open_price: context.midnightOpenPrice ?? null,
+      midnight_open_instrument: context.midnightOpenInstrument ?? null,
+      midnight_open_source: context.midnightOpenSource ?? null,
+      midnight_open_confirmed_at: context.midnightOpenConfirmedAt ?? null,
+      midnight_open_date: context.midnightOpenDate ?? null,
+      midnight_open_status: context.midnightOpenStatus ?? null,
+      distance_from_midnight_points: context.distanceFromMidnightPoints ?? null,
+      distance_from_midnight_ticks: context.distanceFromMidnightTicks ?? null,
       midnight_role: context.midnightRole || null,
       midnight_interaction: context.midnightInteraction || null,
       midnight_plan_impact: context.midnightPlanImpact || null,
       midnight_confidence_adjustment: context.midnightConfidenceAdjustment || null,
       midnight_confidence_reason: context.midnightConfidenceReason || null,
       rth_vs_midnight: context.rthVsMidnight || null,
-      retrace_probability: context.retraceProbability || null,
-      initial_balance_high: context.ibHigh || null,
-      initial_balance_low: context.ibLow || null,
-      ib_position: context.ibPosition || null,
-      entry_price: context.entryPrice || null,
-      exit_price: context.exitPrice || null,
-      stop_price: context.stopPrice || null,
-      target_1_price: context.t1 || null,
-      target_2_price: context.t2 || null,
-      risk_points: context.riskPoints || null,
+      retrace_probability: context.retraceProbability ?? null,
+      initial_balance_high: context.ibHigh ?? null,
+      initial_balance_low: context.ibLow ?? null,
+      ib_position: context.ibPosition ?? null,
+      entry_price: context.entryPrice ?? null,
+      exit_price: context.exitPrice ?? null,
+      stop_price: context.stopPrice ?? null,
+      target_1_price: context.t1 ?? null,
+      target_2_price: context.t2 ?? null,
+      risk_points: context.riskPoints ?? null,
       plan_source: context.planSource || null,
-      pnl_ticks: context.pnlTicks || null,
-      pnl_dollars: context.pnlDollars || null,
-      contracts: context.contracts || null,
+      pnl_ticks: context.pnlTicks ?? null,
+      pnl_dollars: context.pnlDollars ?? null,
+      contracts: context.contracts ?? null,
       gemini_confidence: context.geminiConfidence || null,
       gemini_verdict: context.geminiVerdict || null,
       setup_quality_score: setupQualityScore,
@@ -118,7 +118,15 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
     if (existingId) {
        await supabase.from('trade_embeddings').update(record).eq('id', existingId);
     } else {
-       await supabase.from('trade_embeddings').insert(record);
+       const { error: insertError } = await supabase.from('trade_embeddings').insert(record);
+       if (insertError) {
+         const conflictTarget = context.tradeId ? ['trade_id', context.tradeId] : context.setupId ? ['setup_id', context.setupId] : null;
+         if (insertError.code === '23505' && conflictTarget) {
+           await supabase.from('trade_embeddings').update(record).eq(conflictTarget[0], conflictTarget[1]);
+         } else {
+           throw insertError;
+         }
+       }
     }
 
     console.log(`[RAG] Saved embedding for ${context.sessionType} setup on ${context.tradeDate} - score: ${setupQualityScore}`);

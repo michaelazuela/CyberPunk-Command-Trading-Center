@@ -280,15 +280,25 @@ export default function ReplayLab({
       const manualOutcome = outcome === 'win' || outcome === 'scratch' ? 'SUCCESS' : 'FAILED';
       const tradeStatus = (outcome === 'no_trade' || outcome === 'missed_trade') ? 'MISSED' : outcome === 'scratch' ? 'CLOSED' : outcome === 'win' ? 'SUCCESSFUL' : 'FAILED';
       const normalizedPlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+      const requiresExecutablePlan = outcome === 'win' || outcome === 'loss' || outcome === 'scratch';
+
+      if (requiresExecutablePlan && (!normalizedPlan?.canExecute || normalizedPlan.entry === null || normalizedPlan.stop === null || normalizedPlan.t1 === null || normalizedPlan.t2 === null)) {
+        console.warn("[Replay Lab] Outcome not saved: executable outcomes require ENTRY, STOP, T1, and T2.");
+        return;
+      }
+
+      const entryPrice = normalizedPlan?.entry ?? null;
+      const stopPrice = normalizedPlan?.stop ?? null;
+      const targetPrice = normalizedPlan?.t1 ?? null;
 
       const tradeData: Omit<Trade, 'id'> = {
         date: tradeDate,
         instrument: instrument,
         direction: normalizedPlan?.decision === 'LONG' || normalizedPlan?.decision === 'SHORT' ? normalizedPlan.decision : result.dayType?.includes('SHORT') ? 'SHORT' : 'LONG',
         dayType: result.dayType || 'NO TRADE',
-        entryPrice: normalizedPlan?.entry || 0,
-        stopPrice: normalizedPlan?.stop || 0,
-        targetPrice: normalizedPlan?.t1 || 0,
+        entryPrice: entryPrice ?? 0,
+        stopPrice: stopPrice ?? 0,
+        targetPrice: targetPrice ?? 0,
         contracts: contracts,
         status: tradeStatus,
         manualOutcome: manualOutcome,
@@ -299,7 +309,7 @@ export default function ReplayLab({
         timestamp: Date.now()
       };
       
-      if (onAddTrade) {
+      if (onAddTrade && requiresExecutablePlan) {
         onAddTrade(tradeData as any);
       }
 

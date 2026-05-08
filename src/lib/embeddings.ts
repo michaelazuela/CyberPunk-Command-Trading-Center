@@ -14,7 +14,7 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
   
   const mismatchWarning = ocrTicker !== "unknown" && ocrTicker !== context.instrument ? "yes" : "no";
 
-  const direction = context.geminiAnalysisJson?.tradePlan?.bias || "UNKNOWN";
+  const direction = context.geminiAnalysisJson?.final_trade_plan?.decision || context.geminiAnalysisJson?.tradePlan?.bias || "UNKNOWN";
   
   return `DAILY INSTRUMENT:
 Instrument: ${context.instrument}
@@ -30,8 +30,11 @@ Session: ${context.sessionType === 'morning' ? 'Morning' : 'Lunch'}
 Direction: ${direction}
 Contracts: ${context.contracts ?? 'unknown'}
 Entry: ${context.entryPrice ?? 'unknown'}
-Stop: ${context.geminiAnalysisJson?.tradePlan?.stop ?? 'unknown'}
-Target: ${context.geminiAnalysisJson?.tradePlan?.target ?? 'unknown'}
+Stop: ${context.stopPrice ?? context.geminiAnalysisJson?.final_trade_plan?.stop ?? context.geminiAnalysisJson?.tradePlan?.stop ?? 'unknown'}
+T1: ${context.t1 ?? context.geminiAnalysisJson?.final_trade_plan?.target_1 ?? 'unknown'}
+T2: ${context.t2 ?? context.geminiAnalysisJson?.final_trade_plan?.target_2 ?? 'unknown'}
+Risk Points: ${context.riskPoints ?? 'unknown'}
+Plan Source: ${context.planSource ?? 'unknown'}
 Exit: ${context.exitPrice ?? 'unknown'}
 Result: ${context.tradeResult?.toUpperCase() ?? 'PENDING'}
 PnL: ${context.pnlTicks ?? 0} ticks ($${context.pnlDollars ?? 0})
