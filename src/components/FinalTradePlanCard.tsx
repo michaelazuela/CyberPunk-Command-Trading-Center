@@ -13,6 +13,7 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
   let sourceBadge = "MISSING";
   switch (plan.source) {
     case "final_trade_plan": sourceBadge = "FINAL PLAN"; break;
+    case "current_rule_analysis": sourceBadge = "RULE ANALYSIS"; break;
     case "tradePlan": sourceBadge = "STRUCTURED TRADE PLAN"; break;
     case "legacy": sourceBadge = "LEGACY FALLBACK"; break;
     case "manual": sourceBadge = "MANUAL"; break;

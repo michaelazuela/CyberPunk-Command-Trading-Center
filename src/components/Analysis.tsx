@@ -39,7 +39,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [showSettings, setShowSettings] = useState(false);
   const [showChainOfThought, setShowChainOfThought] = useState(false);
   const [showReasoning, setShowReasoning] = useState(false);
-  const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0.1, customInstructions: '' });
+  const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0, customInstructions: '' });
 
   const [midnightOpenOverrideStr, setMidnightOpenOverrideStr] = useState<string>('');
   const [useManualMidnightOpen, setUseManualMidnightOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
-  const normalizedPlan = result ? normalizeTradePlan(result) : null;
+  const normalizedPlan = result ? normalizeTradePlan(result, session.dailyInstrument || 'MES') : null;
 
   const handleConfigChange = (newConfig: ModelConfig) => {
     setModelConfig(newConfig);
@@ -407,6 +407,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         midnightOpenStatus: analysis.midnightOpenStatus
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
+      const analysisPlan = normalizeTradePlan(analysis, session.dailyInstrument || 'MES');
 
       setResult(analysis);
       
@@ -430,16 +431,21 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
            // Create setup record 
            const setupData: Record<string, any> = {
-             userId: authUser.id,
-             dayType: analysis.dayType,
+             user_id: authUser.id,
+             day_type: analysis.dayType,
              instrument: session.dailyInstrument || 'MES',
              reasoning: analysis.reasoning,
              confidence: analysis.confidence,
-             imageURL: execUpload.storagePath,
+             image_url: execUpload.storagePath,
              tags: analysis.tags || [],
-             suggestedEntry: normalizeTradePlan(analysis).entry || 0,
-             suggestedStop: normalizeTradePlan(analysis).stop || 0,
-             suggestedTarget: normalizeTradePlan(analysis).t1 || 0,
+             suggested_entry: analysisPlan.entry || 0,
+             suggested_stop: analysisPlan.stop || 0,
+             suggested_target: analysisPlan.t1 || 0,
+             normalized_plan_json: analysisPlan,
+             plan_source: analysisPlan.source,
+             t1_price: analysisPlan.t1,
+             t2_price: analysisPlan.t2,
+             risk_points: analysisPlan.riskPoints,
              
              // Midnight Open Options
              midnight_open_source: analysis.midnightOpenSource,
@@ -482,14 +488,14 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              rth_open_relation_to_eth: analysis.ethContextReview?.rthOpenRelationToEth || null,
              rth_open_relation_to_midnight: analysis.ethContextReview?.rthOpenRelationToMidnight || null,
              
-             trade_plan_json: analysis.tradePlan || null,
+             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              eth_context_review_json: analysis.ethContextReview || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
            };
 
            if (ocrResult) {
-             setupData.ocrText = JSON.stringify(ocrResult);
+             setupData.ocr_text = ocrResult;
            }
            Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
@@ -535,16 +541,16 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              screenshotUrl: execUpload.url,
              setupId: setupId,
              tradeResult: 'pending',
-             entryPrice: normalizedPlan?.entry,
-             stopPrice: normalizedPlan?.stop,
-             t1: normalizedPlan?.t1,
-             t2: normalizedPlan?.t2,
-             riskPoints: normalizedPlan?.riskPoints,
-             riskRewardT1: normalizedPlan?.riskRewardT1,
-             riskRewardT2: normalizedPlan?.riskRewardT2,
-             planSource: normalizedPlan?.source,
-             whyThisPlan: normalizedPlan?.whyThisPlan,
-             invalidation: normalizedPlan?.invalidation,
+             entryPrice: analysisPlan.entry,
+             stopPrice: analysisPlan.stop,
+             t1: analysisPlan.t1,
+             t2: analysisPlan.t2,
+             riskPoints: analysisPlan.riskPoints,
+             riskRewardT1: analysisPlan.riskRewardT1,
+             riskRewardT2: analysisPlan.riskRewardT2,
+             planSource: analysisPlan.source,
+             whyThisPlan: analysisPlan.whyThisPlan,
+             invalidation: analysisPlan.invalidation,
 
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
@@ -565,7 +571,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              ny_premarket_low: analysis.ethContextReview?.nyPremarketLow || null,
              rth_open_relation_to_eth: analysis.ethContextReview?.rthOpenRelationToEth || null,
              rth_open_relation_to_midnight: analysis.ethContextReview?.rthOpenRelationToMidnight || null,
-             trade_plan_json: analysis.tradePlan || null,
+             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              eth_context_review_json: analysis.ethContextReview || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
@@ -647,7 +653,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         </div>
         <TimezoneToggle 
           selectedTimezone={session.aiSettings?.morningTimeZone || 'EST'}
-          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0.1 }), morningTimeZone: tz } })}
+          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0 }), morningTimeZone: tz } })}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(!showSettings)}
           hasSettingsIcon={true}

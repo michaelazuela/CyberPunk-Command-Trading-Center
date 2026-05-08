@@ -181,6 +181,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - Consolidate all reasoning across the 5 modules into a final, actionable trade decision.
     - Provide exact entry price, stop-loss price, and realistic targets.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
+    - CONSISTENCY LOCK: If current_rule_analysis contains an executable setup with entry and stop, final_trade_plan MUST repeat the same direction, entry, stop, target_1, and target_2. Do not return current_rule_analysis with prices and final_trade_plan = NO TRADE.
+    - If final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
 
     Return this object inside your JSON response:
@@ -338,7 +340,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     },
     config: {
       responseMimeType: "application/json",
-      temperature: settings?.temperature ?? 0.0,
+      temperature: ["morning", "lunch", "morning_replay", "lunch_replay"].includes(routeName || "") ? 0.0 : (settings?.temperature ?? 0.0),
       
     }
   });

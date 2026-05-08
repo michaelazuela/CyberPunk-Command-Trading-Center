@@ -34,7 +34,7 @@ export default function LunchReversal({
 
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
-  const normalizedPlan = result ? normalizeTradePlan(result) : null;
+  const normalizedPlan = result ? normalizeTradePlan(result, session.dailyInstrument || 'MES') : null;
 
   const handleConfigChange = (newConfig: ModelConfig) => {
     setModelConfig(newConfig);
@@ -220,7 +220,7 @@ export default function LunchReversal({
       const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       
       const analysisSettings = {
-        ...(session.aiSettings || { temperature: 0.1, customInstructions: '' }),
+        ...(session.aiSettings || { temperature: 0, customInstructions: '' }),
         customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM ET → 1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
       };
       
@@ -304,6 +304,7 @@ export default function LunchReversal({
         midnightOpenStatus: analysis.midnightOpenStatus
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
+      const analysisPlan = normalizeTradePlan(analysis, session.dailyInstrument || 'MES');
 
       setResult(analysis);
       
@@ -320,16 +321,21 @@ export default function LunchReversal({
            const execUpload = await uploadScreenshot(authUser.id, todayStr, 'lunch', '5m_execution', execImgBase64);
 
            const setupData: Record<string, any> = {
-             userId: authUser.id,
-             dayType: analysis.dayType,
+             user_id: authUser.id,
+             day_type: analysis.dayType,
              instrument: session.dailyInstrument || 'MES',
              reasoning: analysis.reasoning,
              confidence: analysis.confidence,
-             imageURL: execUpload.storagePath,
+             image_url: execUpload.storagePath,
              tags: analysis.tags || [],
-             suggestedEntry: normalizeTradePlan(analysis).entry || 0,
-             suggestedStop: normalizeTradePlan(analysis).stop || 0,
-             suggestedTarget: normalizeTradePlan(analysis).t1 || 0,
+             suggested_entry: analysisPlan.entry || 0,
+             suggested_stop: analysisPlan.stop || 0,
+             suggested_target: analysisPlan.t1 || 0,
+             normalized_plan_json: analysisPlan,
+             plan_source: analysisPlan.source,
+             t1_price: analysisPlan.t1,
+             t2_price: analysisPlan.t2,
+             risk_points: analysisPlan.riskPoints,
 
              midnight_open_source: analysis.midnightOpenSource,
              midnight_open_price: analysis.midnightOpenPrice,
@@ -345,19 +351,14 @@ export default function LunchReversal({
              
              eth_context_available: false, // Lunch doesn't upload a new one, relying on morning
              
-             window_start: "11:50",
-             window_end: "13:00",
-             window_timezone: "America/New_York",
-             required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
-             
-             trade_plan_json: analysis.tradePlan || null,
+             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
            };
 
            if (ocrResult) {
-             setupData.ocrText = JSON.stringify(ocrResult);
+             setupData.ocr_text = ocrResult;
            }
            Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
@@ -403,16 +404,16 @@ export default function LunchReversal({
              screenshotUrl: execUpload.url,
              setupId: setupId,
              tradeResult: 'pending',
-             entryPrice: normalizedPlan?.entry,
-             stopPrice: normalizedPlan?.stop,
-             t1: normalizedPlan?.t1,
-             t2: normalizedPlan?.t2,
-             riskPoints: normalizedPlan?.riskPoints,
-             riskRewardT1: normalizedPlan?.riskRewardT1,
-             riskRewardT2: normalizedPlan?.riskRewardT2,
-             planSource: normalizedPlan?.source,
-             whyThisPlan: normalizedPlan?.whyThisPlan,
-             invalidation: normalizedPlan?.invalidation,
+             entryPrice: analysisPlan.entry,
+             stopPrice: analysisPlan.stop,
+             t1: analysisPlan.t1,
+             t2: analysisPlan.t2,
+             riskPoints: analysisPlan.riskPoints,
+             riskRewardT1: analysisPlan.riskRewardT1,
+             riskRewardT2: analysisPlan.riskRewardT2,
+             planSource: analysisPlan.source,
+             whyThisPlan: analysisPlan.whyThisPlan,
+             invalidation: analysisPlan.invalidation,
 
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
@@ -424,7 +425,7 @@ export default function LunchReversal({
              window_timezone: "America/New_York",
              required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
 
-             trade_plan_json: analysis.tradePlan || null,
+             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
@@ -523,7 +524,7 @@ export default function LunchReversal({
         </div>
         <TimezoneToggle 
           selectedTimezone={session.aiSettings?.lunchTimeZone || 'EST'}
-          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0.1 }), lunchTimeZone: tz } })}
+          onChange={(tz) => onUpdate({ aiSettings: { ...(session.aiSettings || { temperature: 0 }), lunchTimeZone: tz } })}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(!showSettings)}
           hasSettingsIcon={true}

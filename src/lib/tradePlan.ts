@@ -4,6 +4,7 @@ export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
 
 export type TradePlanSource =
   | "final_trade_plan"
+  | "current_rule_analysis"
   | "tradePlan"
   | "legacy"
   | "manual"
@@ -29,12 +30,54 @@ export function isValidPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function parsePrice(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function confidenceFromNumber(value?: number): "High" | "Medium" | "Low" {
+  return (value || 0) >= 0.75 ? "High" : ((value || 0) >= 0.45 ? "Medium" : "Low");
+}
+
+function normalizeConfidence(value: unknown, fallback: "High" | "Medium" | "Low" = "Low"): "High" | "Medium" | "Low" {
+  if (value === "High" || value === "Medium" || value === "Low") return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === "high") return "High";
+    if (lower === "medium") return "Medium";
+    if (lower === "low") return "Low";
+  }
+  return fallback;
+}
+
+function inferDecisionFromText(text: string): TradeDecision {
+  const upper = text.toUpperCase();
+  if (upper.includes("NO TRADE")) return "NO TRADE";
+  if (upper.includes("SHORT") || upper.includes("BEARISH") || upper.includes("SELL")) return "SHORT";
+  if (upper.includes("LONG") || upper.includes("BULLISH") || upper.includes("BUY")) return "LONG";
+  return "NO TRADE";
+}
+
 export function inferDecision(result: AnalysisResult): TradeDecision {
-  if (result.final_trade_plan && result.final_trade_plan.decision) return result.final_trade_plan.decision;
+  if (result.final_trade_plan && (result.final_trade_plan.decision === "LONG" || result.final_trade_plan.decision === "SHORT")) {
+    return result.final_trade_plan.decision;
+  }
   if (result.tradePlan && result.tradePlan.bias) {
     if (result.tradePlan.bias === "LONG" || result.tradePlan.bias === "SHORT" || result.tradePlan.bias === "NO TRADE") {
       return result.tradePlan.bias;
     }
+  }
+  if (result.current_rule_analysis) {
+    const textDecision = inferDecisionFromText([
+      result.current_rule_analysis.setup_detected,
+      result.current_rule_analysis.rule_category,
+      result.current_rule_analysis.summary
+    ].filter(Boolean).join(" "));
+    if (textDecision === "LONG" || textDecision === "SHORT") return textDecision;
   }
   if (typeof result.dayType === 'string') {
     if (result.dayType.includes("LONG")) return "LONG";
@@ -90,37 +133,98 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
 
   if (!result) return defaultPlan;
 
-  let entry: number | null = null;
-  let stop: number | null = null;
-  let source: TradePlanSource = "missing";
-  let confidence: "High" | "Medium" | "Low" = "Low";
-  let whyThisPlan = defaultPlan.whyThisPlan;
-  let invalidation = defaultPlan.invalidation;
+  type Candidate = {
+    source: TradePlanSource;
+    decision: TradeDecision;
+    entry: number | null;
+    stop: number | null;
+    confidence: "High" | "Medium" | "Low";
+    whyThisPlan: string;
+    invalidation: string;
+  };
+
+  const candidates: Candidate[] = [];
+  const addCandidate = (candidate: Candidate) => {
+    candidates.push(candidate);
+  };
 
   if (result.final_trade_plan) {
-    entry = result.final_trade_plan.entry ?? null;
-    stop = result.final_trade_plan.stop ?? null;
-    source = "final_trade_plan";
-    confidence = result.final_trade_plan.final_confidence || "Low";
-    whyThisPlan = result.final_trade_plan.why_this_plan || "No reasoning provided.";
-    invalidation = result.final_trade_plan.what_would_invalidate || "No invalidation provided.";
-  } else if (result.tradePlan) {
-    entry = typeof result.tradePlan.entry === 'string' ? parseFloat(result.tradePlan.entry) : result.tradePlan.entry || null;
-    stop = typeof result.tradePlan.stop === 'string' ? parseFloat(result.tradePlan.stop) : result.tradePlan.stop || null;
-    source = "tradePlan";
-    confidence = (result.tradePlan.confidence || 0) >= 0.75 ? "High" : ((result.tradePlan.confidence || 0) >= 0.45 ? "Medium" : "Low");
-    whyThisPlan = result.tradePlan.reasoningSummary || "No reasoning provided.";
-    invalidation = result.tradePlan.invalidation || "No invalidation provided.";
-  } else if (result.suggestedEntry || result.suggestedStop) {
-    entry = result.suggestedEntry || null;
-    stop = result.suggestedStop || null;
-    source = "legacy";
-    confidence = (result.confidence || 0) >= 0.75 ? "High" : ((result.confidence || 0) >= 0.45 ? "Medium" : "Low");
-    whyThisPlan = result.reasoning || "No reasoning provided.";
-    invalidation = result.levelCheck || result.structureStatus || "No invalidation provided.";
+    addCandidate({
+      entry: parsePrice(result.final_trade_plan.entry),
+      stop: parsePrice(result.final_trade_plan.stop),
+      source: "final_trade_plan",
+      decision: result.final_trade_plan.decision || "NO TRADE",
+      confidence: normalizeConfidence(result.final_trade_plan.final_confidence),
+      whyThisPlan: result.final_trade_plan.why_this_plan || "No reasoning provided.",
+      invalidation: result.final_trade_plan.what_would_invalidate || "No invalidation provided."
+    });
   }
 
-  const decision = inferDecision(result);
+  if (result.current_rule_analysis && !result.current_rule_analysis.no_trade_reason) {
+    const currentDecision = inferDecisionFromText([
+      result.current_rule_analysis.setup_detected,
+      result.current_rule_analysis.rule_category,
+      result.current_rule_analysis.summary,
+      result.dayType
+    ].filter(Boolean).join(" "));
+    addCandidate({
+      entry: parsePrice(result.current_rule_analysis.entry),
+      stop: parsePrice(result.current_rule_analysis.stop),
+      source: "current_rule_analysis",
+      decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
+      confidence: normalizeConfidence(result.current_rule_analysis.base_confidence, confidenceFromNumber(result.confidence)),
+      whyThisPlan: result.current_rule_analysis.summary || result.reasoning || "Current rule analysis produced executable levels.",
+      invalidation: result.current_rule_analysis.no_trade_reason || result.levelCheck || result.structureStatus || "Invalid if price violates the defined stop before entry confirmation."
+    });
+  }
+
+  if (result.tradePlan) {
+    addCandidate({
+      entry: parsePrice(result.tradePlan.entry),
+      stop: parsePrice(result.tradePlan.stop),
+      source: "tradePlan",
+      decision: result.tradePlan.bias || "NO TRADE",
+      confidence: confidenceFromNumber(result.tradePlan.confidence),
+      whyThisPlan: result.tradePlan.reasoningSummary || "No reasoning provided.",
+      invalidation: result.tradePlan.invalidation || "No invalidation provided."
+    });
+  }
+
+  if (result.suggestedEntry || result.suggestedStop) {
+    addCandidate({
+      entry: parsePrice(result.suggestedEntry),
+      stop: parsePrice(result.suggestedStop),
+      source: "legacy",
+      decision: inferDecision(result),
+      confidence: confidenceFromNumber(result.confidence),
+      whyThisPlan: result.reasoning || "No reasoning provided.",
+      invalidation: result.levelCheck || result.structureStatus || "No invalidation provided."
+    });
+  }
+
+  const executableCandidate = candidates.find((candidate) => {
+    const targets = calculateTargets(candidate.decision, candidate.entry, candidate.stop, instrument);
+    return (candidate.decision === "LONG" || candidate.decision === "SHORT") &&
+      isValidPrice(candidate.entry) &&
+      isValidPrice(candidate.stop) &&
+      isValidPrice(targets.t1) &&
+      isValidPrice(targets.t2);
+  });
+
+  if (!executableCandidate) {
+    const noTradeReason =
+      result.final_trade_plan?.why_this_plan ||
+      result.current_rule_analysis?.no_trade_reason ||
+      defaultPlan.whyThisPlan;
+    return {
+      ...defaultPlan,
+      decision: "NO TRADE",
+      whyThisPlan: noTradeReason,
+      invalidation: result.final_trade_plan?.what_would_invalidate || defaultPlan.invalidation
+    };
+  }
+
+  const { decision, entry, stop, source, confidence, whyThisPlan, invalidation } = executableCandidate;
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);

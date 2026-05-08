@@ -23,7 +23,7 @@ function createInitialAppState(): AppState {
       accountEquity: 50000,
       riskPercent: 0.01,
       killSwitches: { losses: 0, fills: 0 },
-      aiSettings: { temperature: 0.1, customInstructions: '' }
+      aiSettings: { temperature: 0, customInstructions: '' }
     },
     history: [],
     customRules: []
