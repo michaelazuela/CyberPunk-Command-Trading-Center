@@ -1163,11 +1163,12 @@ export default function LunchReversal({
                    manualOutcome={proofFlow.outcome} 
                    executionQuantity={executionQuantity} 
                    onSaveTrade={handleSaveTrade}
-                   onCancel={() => setProofFlow({ active: false })}
-                   modelConfig={modelConfig}
-                   dailyInstrument={session.dailyInstrument}
-                 />
-               )}
+                  onCancel={() => setProofFlow({ active: false })}
+                  modelConfig={modelConfig}
+                  dailyInstrument={session.dailyInstrument}
+                  tradePlan={normalizedPlan}
+                />
+              )}
              </div>
           )}
           </div>

@@ -5,6 +5,7 @@
 
 import { AISettings, Trade } from "../types";
 import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
+import { NormalizedTradePlan } from "./tradePlan";
 
 async function callGeminiAPI(params: any) {
   const payload: any = {
@@ -667,29 +668,50 @@ export async function validateTrade(context: string) {
   }
 }
 
-export async function reviewTradeProof(image: string, claimedResult: string, contracts: number, modelToUse: string = "gemini-3-pro-preview", dailyInstrument?: string) {
+export async function reviewTradeProof(image: string, claimedResult: string, contracts: number, modelToUse: string = "gemini-3-pro-preview", dailyInstrument?: string, tradePlan?: NormalizedTradePlan) {
+  const planText = tradePlan && tradePlan.canExecute
+    ? `
+[TRADE PLAN TO VERIFY]
+Direction: ${tradePlan.decision}
+Entry: ${tradePlan.entry}
+Stop: ${tradePlan.stop}
+Target 1 (T1): ${tradePlan.t1}
+Target 2 (T2): ${tradePlan.t2}
+Risk points: ${tradePlan.riskPoints}
+`
+    : `
+[TRADE PLAN TO VERIFY]
+No complete normalized trade plan was provided. Return UNCLEAR unless the screenshot itself clearly shows stop/target levels and outcome.
+`;
+
   const systemInstruction = `
-You are a trade execution auditor reviewing a screenshot provided as proof of a futures trade result on MES or MNQ, Micro E-mini S&P 500 or Nasdaq 100.
+You are a futures trade outcome auditor reviewing a chart screenshot provided as proof of whether a MES or MNQ trade plan worked.
 
 The trader has claimed this trade was: ${claimedResult} (${contracts} contract(s)).
+The proof screenshot does NOT need to prove an order was placed. Your job is to determine from visible price action whether the planned stop was avoided and whether T1 and/or T2 were reached.
 
 [USER-SELECTED DAILY INSTRUMENT]
 Instrument: ${dailyInstrument || "MES"}
 This is the source of truth. Do not override it based on screenshot OCR.
-If the screenshot label appears different, return UNCLEAR and mention that the user-selected instrument is ${dailyInstrument || "MES"}.
+If the screenshot label appears different, mention it as a caveat but continue to evaluate the visible price action using the user-selected instrument.
+
+${planText}
 
 Review the screenshot carefully and look for any of the following evidence:
-- A filled order confirmation showing entry price, fill price, or quantity
-- A closed position confirmation showing exit price, PnL, or profit/loss amount
-- A brokerage statement or trade history row showing the completed trade
-- A platform notification showing a trade was executed or closed
-- A PnL summary showing the trade outcome
+- Price reaching or crossing the stop level before any target
+- Price reaching T1 before the stop
+- Price reaching T2 before the stop
+- Candle highs/lows, wick touches, closes, or visible horizontal levels that confirm the sequence
+- Optional: PnL/order evidence if it is visible, but do not require it
 
 Return your analysis in this JSON format only. Do not return text outside the JSON:
 
 {
   "verdict": "CONFIRMED | DISPUTED | UNCLEAR",
   "confidence": "High | Medium | Low",
+  "target_1_hit": true,
+  "target_2_hit": false,
+  "stopped_out": false,
   "evidence_found": [
     "string describing piece of evidence 1",
     "string describing piece of evidence 2"
@@ -701,9 +723,14 @@ Return your analysis in this JSON format only. Do not return text outside the JS
 }
 
 Verdict definitions:
-- CONFIRMED: The screenshot clearly shows evidence consistent with the claimed result.
-- DISPUTED: The screenshot shows evidence that contradicts the claimed result.
-- UNCLEAR: The screenshot does not contain enough information to confirm or deny.
+- CONFIRMED: The screenshot clearly supports the claimed result using the visible stop/T1/T2 outcome.
+- DISPUTED: The screenshot shows price action that contradicts the claimed result.
+- UNCLEAR: The screenshot does not contain enough visible price/level information to confirm or deny.
+
+Target/stop field rules:
+- target_1_hit must be true only if T1 is visibly reached before stop, false if visibly not reached, null if unclear.
+- target_2_hit must be true only if T2 is visibly reached before stop, false if visibly not reached, null if unclear.
+- stopped_out must be true only if stop is visibly reached before targets, false if the screenshot shows stop was not reached, null if unclear.
   `.trim();
 
   let imgToSend = image;

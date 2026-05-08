@@ -4,6 +4,7 @@ import { reviewTradeProof } from '../lib/gemini';
 import { uploadTradeProof } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import { Trade } from '../types';
+import { NormalizedTradePlan } from '../lib/tradePlan';
 
 interface TradeProofPanelProps {
   manualOutcome: 'SUCCESS' | 'FAILED';
@@ -12,17 +13,20 @@ interface TradeProofPanelProps {
   onCancel: () => void;
   modelConfig: any;
   dailyInstrument?: string;
+  tradePlan?: NormalizedTradePlan | null;
 }
 
-export default function TradeProofPanel({ manualOutcome, executionQuantity, onSaveTrade, onCancel, modelConfig, dailyInstrument }: TradeProofPanelProps) {
+export default function TradeProofPanel({ manualOutcome, executionQuantity, onSaveTrade, onCancel, modelConfig, dailyInstrument, tradePlan }: TradeProofPanelProps) {
   const [proofImage, setProofImage] = useState<{ filename: string; dataUrl: string } | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewResult, setReviewResult] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pasteZoneRef = useRef<HTMLDivElement>(null);
 
-  const processPastedImage = async (e: Event) => {
+  const processPastedImage = async (e: Event | React.ClipboardEvent) => {
     try {
       e.preventDefault();
       const imageData = await getImageFromClipboard(e as any);
@@ -37,10 +41,15 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
   };
 
   useEffect(() => {
-    const handleWindowPaste = (e: ClipboardEvent) => processPastedImage(e);
-    window.addEventListener('paste', handleWindowPaste, { capture: true });
+    const handleWindowPaste = (e: ClipboardEvent) => {
+      if (e.defaultPrevented) return;
+      const activeElement = document.activeElement;
+      if (!activeElement || !panelRef.current?.contains(activeElement)) return;
+      processPastedImage(e);
+    };
+    window.addEventListener('paste', handleWindowPaste);
     return () => {
-      window.removeEventListener('paste', handleWindowPaste, { capture: true });
+      window.removeEventListener('paste', handleWindowPaste);
     };
   }, []);
 
@@ -98,7 +107,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
       const modelToUse = getModelForRoute('proof_review' as any, modelConfig);
       
       const claimedResultStr = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : 'FAILED';
-      const result = await reviewTradeProof(proofImage.dataUrl, claimedResultStr, executionQuantity, modelToUse, dailyInstrument);
+      const result = await reviewTradeProof(proofImage.dataUrl, claimedResultStr, executionQuantity, modelToUse, dailyInstrument, tradePlan || undefined);
       setReviewResult(result);
     } catch (err: any) {
        console.error("Proof review failed", err);
@@ -141,12 +150,22 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
   };
 
   return (
-    <div className="mt-4 p-4 border-2 border-[var(--b2)] bg-[var(--b0)] fade-up rounded-sm max-w-xl shadow-lg font-mono relative">
+    <div ref={panelRef} className="mt-4 p-4 border-2 border-[var(--b2)] bg-[var(--b0)] fade-up rounded-sm max-w-xl shadow-lg font-mono relative">
        <h4 className="text-[12px] uppercase text-[var(--txt)] font-bold mb-2">Upload trade proof screenshot (optional)</h4>
        
        {!proofImage ? (
          <div className="space-y-4">
-           <p className="text-[10px] text-[var(--txt2)]">You can choose a file or paste an execution/PnL screenshot here.</p>
+           <p className="text-[10px] text-[var(--txt2)]">Paste a chart screenshot showing whether stop held and T1/T2 were reached.</p>
+           <div
+             ref={pasteZoneRef}
+             tabIndex={0}
+             onPaste={processPastedImage}
+             onClick={() => pasteZoneRef.current?.focus()}
+             className="min-h-[92px] border border-dashed border-[var(--b2)] bg-black/20 flex flex-col items-center justify-center gap-2 text-center outline-none focus:border-[var(--orange)] focus:ring-1 focus:ring-[var(--orange)]/40"
+           >
+             <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--txt)]">Click this proof box, then Ctrl+V</span>
+             <span className="text-[9px] text-[var(--txt3)]">Use a screenshot that shows price action around Entry, Stop, T1, and T2.</span>
+           </div>
            <div className="flex gap-2">
              <button onClick={() => fileInputRef.current?.click()} className="qd-btn-primary h-[32px] text-[10px]" disabled={isSaving}>
                Choose Screenshot
@@ -225,6 +244,15 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                    
                    <span className="text-[var(--txt2)]">Confidence:</span>
                    <span className="text-[var(--txt)]">{reviewResult.confidence}</span>
+
+                   <span className="text-[var(--txt2)]">Stop Held:</span>
+                   <span className="text-[var(--txt)]">{reviewResult.stopped_out === true ? 'NO - stopped out' : reviewResult.stopped_out === false ? 'YES' : 'UNCLEAR'}</span>
+
+                   <span className="text-[var(--txt2)]">T1 Hit:</span>
+                   <span className="text-[var(--txt)]">{reviewResult.target_1_hit === true ? 'YES' : reviewResult.target_1_hit === false ? 'NO' : 'UNCLEAR'}</span>
+
+                   <span className="text-[var(--txt2)]">T2 Hit:</span>
+                   <span className="text-[var(--txt)]">{reviewResult.target_2_hit === true ? 'YES' : reviewResult.target_2_hit === false ? 'NO' : 'UNCLEAR'}</span>
                  </div>
 
                  {reviewResult.dispute_reason && (
