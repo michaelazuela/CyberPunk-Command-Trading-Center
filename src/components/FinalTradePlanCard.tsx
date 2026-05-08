@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Shield, Target, TrendingUp } from 'lucide-react';
+import { CheckCircle2, Route, Shield, Target, TrendingUp } from 'lucide-react';
 import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 
@@ -12,6 +12,8 @@ interface FinalTradePlanCardProps {
 export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN", agentLearningUsed }: FinalTradePlanCardProps) {
   let sourceBadge = "MISSING";
   switch (plan.source) {
+    case "best_trade_plan": sourceBadge = "BEST PLAN"; break;
+    case "candidate_trade_plan": sourceBadge = "RANKED CANDIDATE"; break;
     case "final_trade_plan": sourceBadge = "FINAL PLAN"; break;
     case "current_rule_analysis": sourceBadge = "RULE ANALYSIS"; break;
     case "tradePlan": sourceBadge = "STRUCTURED TRADE PLAN"; break;
@@ -52,13 +54,26 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
       ) : (
         <>
           <div className="flex flex-col items-center justify-center py-6 mb-4 border border-[var(--b1)] bg-[var(--bg)]">
+            {plan.setupName && (
+              <span className="qd-badge qd-badge-orange mb-2">
+                {plan.rank ? `RANK #${plan.rank}` : "SELECTED"} · {plan.setupName}
+              </span>
+            )}
             <span className={cn(
               "text-3xl font-black italic tracking-tighter uppercase mb-2",
               plan.decision === 'LONG' ? "text-[var(--green)]" : "text-[var(--red)]"
             )}>
               {plan.decision}
             </span>
-            <span className="qd-badge qd-badge-orange">CONFIDENCE: {plan.finalConfidence.toUpperCase()}</span>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <span className="qd-badge qd-badge-orange">CONFIDENCE: {plan.finalConfidence.toUpperCase()}</span>
+              {plan.priorityScore !== null && plan.priorityScore !== undefined && (
+                <span className="qd-badge opacity-80">PRIORITY: {plan.priorityScore}</span>
+              )}
+              {plan.ragSupport && (
+                <span className="qd-badge opacity-80">RAG: {plan.ragSupport}</span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-4 gap-2 mb-4">
@@ -93,11 +108,47 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
 
       <div className="bg-[var(--s2)] p-3 rounded border border-[var(--b1)] flex flex-col gap-2 mt-2">
         <div className="text-[11px] text-[var(--txt)] whitespace-pre-wrap">
-          <strong className="text-[var(--green)]">Why this plan:</strong> {plan.whyThisPlan}
+          <strong className="text-[var(--green)]">Why this plan:</strong> {plan.whyItWon || plan.whyThisPlan}
         </div>
         <div className="text-[11px] text-[var(--red)] border-t border-[var(--red)]/20 pt-2 mt-2 whitespace-pre-wrap">
           <strong className="text-[var(--red)]">Invalidation:</strong> {plan.invalidation}
         </div>
+        {plan.rejectedAlternatives && plan.rejectedAlternatives.length > 0 && (
+          <div className="text-[10px] text-[var(--txt2)] border-t border-[var(--b1)] pt-2 mt-2">
+            <strong className="text-[var(--amber)]">Rejected alternatives:</strong>
+            <div className="mt-2 grid gap-1">
+              {plan.rejectedAlternatives.slice(0, 4).map((alt, idx) => (
+                <div key={`${alt.setupName}-${idx}`} className="flex gap-2">
+                  <span className="text-[var(--txt3)]">{idx + 1}.</span>
+                  <span>
+                    <span className="text-[var(--txt)]">{alt.setupName}</span>
+                    {" — "}
+                    {alt.rejectionReason}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {plan.tradeManagement && (
+          <div className="text-[10px] text-[var(--txt2)] border-t border-[var(--b1)] pt-2 mt-2">
+            <strong className="text-[var(--green)] flex items-center gap-1">
+              <Route size={11} /> Trade Management Agent:
+            </strong>
+            <div className="mt-2 grid gap-1">
+              <div><span className="text-[var(--txt)]">Style:</span> {plan.tradeManagement.management_style} · Primary success: {plan.tradeManagement.primary_success_target}</div>
+              {plan.tradeManagement.move_stop_to_breakeven_at !== null && (
+                <div><span className="text-[var(--txt)]">Move stop to B/E at:</span> {plan.tradeManagement.move_stop_to_breakeven_at}</div>
+              )}
+              {plan.tradeManagement.trail_stop_after_t1 !== null && (
+                <div><span className="text-[var(--txt)]">Trail after T1:</span> {plan.tradeManagement.trail_stop_after_t1}</div>
+              )}
+              <div><span className="text-[var(--txt)]">At 1R:</span> {plan.tradeManagement.if_price_reaches_1r}</div>
+              <div><span className="text-[var(--txt)]">At T1:</span> {plan.tradeManagement.if_price_reaches_t1}</div>
+              <div><span className="text-[var(--txt)]">Failure warning:</span> {plan.tradeManagement.failure_warning}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

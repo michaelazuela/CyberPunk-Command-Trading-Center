@@ -351,7 +351,14 @@ export default function LunchReversal({
              
              eth_context_available: false, // Lunch doesn't upload a new one, relying on morning
              
-             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
+             trade_plan_json: {
+               best_trade_plan: analysis.best_trade_plan || null,
+               final_trade_plan: analysis.final_trade_plan || null,
+               candidate_trade_plans: analysis.candidate_trade_plans || [],
+               trade_management_plan: analysis.trade_management_plan || null,
+               normalized_plan: analysisPlan,
+               legacy_trade_plan: analysis.tradePlan || null,
+             },
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
@@ -425,7 +432,14 @@ export default function LunchReversal({
              window_timezone: "America/New_York",
              required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
 
-             trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
+             trade_plan_json: {
+               best_trade_plan: analysis.best_trade_plan || null,
+               final_trade_plan: analysis.final_trade_plan || null,
+               candidate_trade_plans: analysis.candidate_trade_plans || [],
+               trade_management_plan: analysis.trade_management_plan || null,
+               normalized_plan: analysisPlan,
+               legacy_trade_plan: analysis.tradePlan || null,
+             },
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,

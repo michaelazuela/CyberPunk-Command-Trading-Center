@@ -252,6 +252,9 @@ export interface AnalysisResult {
     why_this_plan: string;
     what_would_invalidate: string;
   };
+  candidate_trade_plans?: CandidateTradePlan[];
+  best_trade_plan?: BestTradePlan;
+  trade_management_plan?: TradeManagementPlan;
   agent_learning_used?: boolean;
 
   // OCR Timing
@@ -301,6 +304,65 @@ export interface AnalysisResult {
       recommendation: string;
     }[];
   };
+}
+
+export interface CandidateTradePlan {
+  id?: string;
+  rank?: number;
+  setup_name: string;
+  rule_category?: string;
+  direction: "LONG" | "SHORT" | "NO TRADE";
+  entry: number | null;
+  stop: number | null;
+  target_1: number | null;
+  target_2: number | null;
+  confidence: "High" | "Medium" | "Low";
+  priority_score?: number | null;
+  invalidation: string;
+  why_this_plan: string;
+  rag_support?: "SUPPORTS PLAN" | "CONFLICTS WITH PLAN" | "NEUTRAL" | "INSUFFICIENT DATA";
+  selected?: boolean;
+  rejection_reason?: string | null;
+}
+
+export interface BestTradePlan {
+  selected_candidate_id?: string;
+  decision: "LONG" | "SHORT" | "NO TRADE";
+  entry: number | null;
+  stop: number | null;
+  target_1: number | null;
+  target_2: number | null;
+  final_confidence: "High" | "Medium" | "Low";
+  priority_score?: number | null;
+  why_it_won: string;
+  rejected_alternatives: {
+    setup_name: string;
+    rejection_reason: string;
+  }[];
+  rag_support?: "SUPPORTS PLAN" | "CONFLICTS WITH PLAN" | "NEUTRAL" | "INSUFFICIENT DATA";
+  what_would_invalidate: string;
+}
+
+export interface TradeManagementPlan {
+  management_style: "T1_FIRST" | "RUNNER" | "SCALP_ONLY" | "NO_MANAGEMENT";
+  primary_success_target: "T1" | "T2" | "STRUCTURE_BASED";
+  move_stop_to_breakeven_at: number | null;
+  trail_stop_after_t1: number | null;
+  partial_exit_at_t1: boolean;
+  runner_rules: string;
+  failure_warning: string;
+  if_price_reaches_1r: string;
+  if_price_reaches_t1: string;
+  if_price_reverses_before_t1: string;
+  if_two_bar_failure_appears: string;
+  outcome_labels: {
+    stopped_out: string;
+    t1_hit: string;
+    t2_hit: string;
+    partial_then_stop: string;
+    near_t1_then_reversed: string;
+  };
+  management_reasoning: string;
 }
 
 export interface SessionState {

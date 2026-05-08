@@ -178,12 +178,27 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     =========================================
     MODULE 6: [FINAL_DECISION] (Final Trade Plan)
     - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
-    - Consolidate all reasoning across the 5 modules into a final, actionable trade decision.
+    - Act as a Best Plan Selector, not a single-shot answer.
+    - Evaluate at least 3 competing setup candidates when visible on the chart: Liquidity Sweep, Momentum/Runaway, FVG/Imbalance, Initial Balance Extension, Opening Order Block, EQH/EQL, PDH/PDL Sweep, and No Trade.
+    - Return every reviewed plan in \`candidate_trade_plans\`. Invalid candidates still belong in the array with direction = NO TRADE or null prices and a rejection_reason.
+    - Rank candidates by price-action clarity, risk size, R:R, timing window, RAG support/conflict, and risk-auditor status.
+    - Return exactly one \`best_trade_plan\` that explains why it beat the alternatives.
+    - Consolidate all reasoning across the modules into a final, actionable trade decision.
     - Provide exact entry price, stop-loss price, and realistic targets.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
-    - CONSISTENCY LOCK: If current_rule_analysis contains an executable setup with entry and stop, final_trade_plan MUST repeat the same direction, entry, stop, target_1, and target_2. Do not return current_rule_analysis with prices and final_trade_plan = NO TRADE.
-    - If final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
+    - CONSISTENCY LOCK: If current_rule_analysis contains an executable setup with entry and stop, best_trade_plan and final_trade_plan MUST repeat the same direction, entry, stop, target_1, and target_2 unless another candidate clearly outranks it. If another candidate wins, current_rule_analysis must explain why the lower-priority setup was rejected.
+    - If best_trade_plan/final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
+
+    =========================================
+    MODULE 7: [TRADE_MANAGEMENT_AGENT] (After Entry Management)
+    - This module runs AFTER the Best Plan Selector.
+    - Its job is NOT to choose the entry. Its job is to define how the trade should be managed after entry.
+    - For every executable best_trade_plan, specify what to do if price moves in favor, stalls before T1, hits 1R, hits T1, or shows a two-bar failure.
+    - Prefer T1-first management after vertical morning expansion. T2 should be treated as a runner unless structure stays clean.
+    - Define whether success means T1, T2, or structure-based continuation.
+    - Define the outcome labels the app should use for proof review and RAG learning: STOPPED_OUT, T1_HIT, T2_HIT, PARTIAL_WIN_THEN_STOP, NEAR_T1_THEN_REVERSED.
+    - If no trade is valid, return management_style = NO_MANAGEMENT and explain that there is no active trade to manage.
 
     Return this object inside your JSON response:
     "midnightAnalysis": { ... }
@@ -314,6 +329,63 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
         "final_confidence": "High | Medium | Low",
         "why_this_plan": "string",
         "what_would_invalidate": "string"
+      },
+      "candidate_trade_plans": [
+        {
+          "id": "candidate_1",
+          "rank": 1,
+          "setup_name": "Liquidity Sweep | Momentum Entry | FVG | IB Extension | No Trade",
+          "rule_category": "string",
+          "direction": "LONG | SHORT | NO TRADE",
+          "entry": "number or null",
+          "stop": "number or null",
+          "target_1": "number or null",
+          "target_2": "number or null",
+          "confidence": "High | Medium | Low",
+          "priority_score": 0.0,
+          "invalidation": "string",
+          "why_this_plan": "string",
+          "rag_support": "SUPPORTS PLAN | CONFLICTS WITH PLAN | NEUTRAL | INSUFFICIENT DATA",
+          "selected": true,
+          "rejection_reason": "null for selected candidate; reason rejected for non-selected candidates"
+        }
+      ],
+      "best_trade_plan": {
+        "selected_candidate_id": "candidate_1",
+        "decision": "LONG | SHORT | NO TRADE",
+        "entry": "number or null",
+        "stop": "number or null",
+        "target_1": "number or null",
+        "target_2": "number or null",
+        "final_confidence": "High | Medium | Low",
+        "priority_score": 0.0,
+        "why_it_won": "string explaining why this candidate beat alternatives",
+        "rejected_alternatives": [
+          { "setup_name": "string", "rejection_reason": "string" }
+        ],
+        "rag_support": "SUPPORTS PLAN | CONFLICTS WITH PLAN | NEUTRAL | INSUFFICIENT DATA",
+        "what_would_invalidate": "string"
+      },
+      "trade_management_plan": {
+        "management_style": "T1_FIRST | RUNNER | SCALP_ONLY | NO_MANAGEMENT",
+        "primary_success_target": "T1 | T2 | STRUCTURE_BASED",
+        "move_stop_to_breakeven_at": "number or null",
+        "trail_stop_after_t1": "number or null",
+        "partial_exit_at_t1": true,
+        "runner_rules": "string",
+        "failure_warning": "string",
+        "if_price_reaches_1r": "string",
+        "if_price_reaches_t1": "string",
+        "if_price_reverses_before_t1": "string",
+        "if_two_bar_failure_appears": "string",
+        "outcome_labels": {
+          "stopped_out": "STOPPED_OUT",
+          "t1_hit": "T1_HIT",
+          "t2_hit": "T2_HIT",
+          "partial_then_stop": "PARTIAL_WIN_THEN_STOP",
+          "near_t1_then_reversed": "NEAR_T1_THEN_REVERSED"
+        },
+        "management_reasoning": "string"
       },
       "agent_learning_used": true
     }
@@ -568,6 +640,9 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       current_rule_analysis: superReport.current_rule_analysis,
       rag_learning_context: superReport.rag_learning_context,
       final_trade_plan: superReport.final_trade_plan,
+      candidate_trade_plans: Array.isArray(superReport.candidate_trade_plans) ? superReport.candidate_trade_plans : [],
+      best_trade_plan: superReport.best_trade_plan,
+      trade_management_plan: superReport.trade_management_plan,
       agent_learning_used: superReport.agent_learning_used,
       similarSetups,
       agentLearningSummary,

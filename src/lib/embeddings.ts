@@ -14,7 +14,25 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
   
   const mismatchWarning = ocrTicker !== "unknown" && ocrTicker !== context.instrument ? "yes" : "no";
 
-  const direction = context.geminiAnalysisJson?.final_trade_plan?.decision || context.geminiAnalysisJson?.tradePlan?.bias || "UNKNOWN";
+  const direction =
+    context.geminiAnalysisJson?.best_trade_plan?.decision ||
+    context.geminiAnalysisJson?.final_trade_plan?.decision ||
+    context.geminiAnalysisJson?.tradePlan?.bias ||
+    "UNKNOWN";
+  const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
+  const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
+    ? context.geminiAnalysisJson.candidate_trade_plans
+    : [];
+  const candidateSummary = candidatePlans.length
+    ? candidatePlans.slice(0, 5).map((candidate: any) => {
+        const status = candidate.selected ? "SELECTED" : "REJECTED";
+        const reason = candidate.selected
+          ? candidate.why_this_plan
+          : candidate.rejection_reason || "Lower priority than selected setup.";
+        return `- ${status}: ${candidate.setup_name || "Unnamed setup"} | ${candidate.direction || "NO TRADE"} | confidence ${candidate.confidence || "unknown"} | ${reason}`;
+      }).join('\n')
+    : "- No candidate plan committee data available.";
+  const managementPlan = context.geminiAnalysisJson?.trade_management_plan;
   
   return `DAILY INSTRUMENT:
 Instrument: ${context.instrument}
@@ -35,6 +53,20 @@ T1: ${context.t1 ?? context.geminiAnalysisJson?.final_trade_plan?.target_1 ?? 'u
 T2: ${context.t2 ?? context.geminiAnalysisJson?.final_trade_plan?.target_2 ?? 'unknown'}
 Risk Points: ${context.riskPoints ?? 'unknown'}
 Plan Source: ${context.planSource ?? 'unknown'}
+Best Plan Selector:
+- Winner: ${bestPlan?.decision || direction}
+- Why it won: ${bestPlan?.why_it_won || context.whyThisPlan || 'unknown'}
+- RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
+Candidate plans reviewed:
+${candidateSummary}
+Trade Management Agent:
+- Style: ${managementPlan?.management_style || 'unknown'}
+- Primary success target: ${managementPlan?.primary_success_target || 'unknown'}
+- Move stop to breakeven at: ${managementPlan?.move_stop_to_breakeven_at ?? 'unknown'}
+- Trail stop after T1: ${managementPlan?.trail_stop_after_t1 ?? 'unknown'}
+- 1R rule: ${managementPlan?.if_price_reaches_1r || 'unknown'}
+- T1 rule: ${managementPlan?.if_price_reaches_t1 || 'unknown'}
+- Failure warning: ${managementPlan?.failure_warning || 'unknown'}
 Exit: ${context.exitPrice ?? 'unknown'}
 Result: ${context.tradeResult?.toUpperCase() ?? 'PENDING'}
 PnL: ${context.pnlTicks ?? 0} ticks ($${context.pnlDollars ?? 0})
