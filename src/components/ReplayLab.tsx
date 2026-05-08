@@ -42,6 +42,7 @@ export default function ReplayLab({
   const [morningResult, setMorningResult] = useState<AnalysisResult | null>(null);
   const [morningSetupId, setMorningSetupId] = useState<string | null>(null);
   const [morningError, setMorningError] = useState<string | null>(null);
+  const [morningSaveStatus, setMorningSaveStatus] = useState<string | null>(null);
   const [morningOutcome, setMorningOutcome] = useState<'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade' | null>(null);
   const [morningReviewTimezone, setMorningReviewTimezone] = useState<'EST' | 'PST'>('EST');
 
@@ -51,6 +52,7 @@ export default function ReplayLab({
   const [lunchResult, setLunchResult] = useState<AnalysisResult | null>(null);
   const [lunchSetupId, setLunchSetupId] = useState<string | null>(null);
   const [lunchError, setLunchError] = useState<string | null>(null);
+  const [lunchSaveStatus, setLunchSaveStatus] = useState<string | null>(null);
   const [lunchOutcome, setLunchOutcome] = useState<'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade' | null>(null);
   const [lunchReviewTimezone, setLunchReviewTimezone] = useState<'EST' | 'PST'>('EST');
 
@@ -119,12 +121,14 @@ export default function ReplayLab({
     setMorningResult(null);
     setMorningSetupId(null);
     setMorningError(null);
+    setMorningSaveStatus(null);
     setMorningOutcome(null);
     setLunchExecImg(null);
     setIsAnalyzingLunch(false);
     setLunchResult(null);
     setLunchSetupId(null);
     setLunchError(null);
+    setLunchSaveStatus(null);
     setLunchOutcome(null);
     setProofFlow({ active: false });
   };
@@ -169,6 +173,7 @@ export default function ReplayLab({
       return;
     }
     setMorningError(null);
+    setMorningSaveStatus(null);
     setIsAnalyzingMorning(true);
     setMorningResult(null);
 
@@ -182,7 +187,9 @@ export default function ReplayLab({
       
       // Save Setup to Supabase
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (!user) {
+        setMorningError("Login required: Replay setup was analyzed, but it was not saved to Supabase.");
+      } else {
          let ethStoragePath, execStoragePath;
          if (morningEthImg) {
            const ethUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '15m_eth_context', morningEthImg.dataUrl);
@@ -232,10 +239,12 @@ export default function ReplayLab({
          };
          Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
-         const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
-         if (!dbError && docData) {
-            setMorningSetupId(docData.id);
-         }
+        const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
+        if (dbError || !docData?.id) {
+          throw new Error(`Supabase setup save failed: ${dbError?.message || 'No setup ID returned.'}`);
+        }
+        setMorningSetupId(docData.id);
+        setMorningSaveStatus(`Replay setup saved. Setup ID: ${docData.id}`);
       }
     } catch (err: any) {
       setMorningError(err.message || 'Morning analysis failed');
@@ -250,6 +259,7 @@ export default function ReplayLab({
       return;
     }
     setLunchError(null);
+    setLunchSaveStatus(null);
     setIsAnalyzingLunch(true);
     setLunchResult(null);
 
@@ -270,7 +280,9 @@ export default function ReplayLab({
       
       // Save Setup to Supabase
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (!user) {
+        setLunchError("Login required: Replay setup was analyzed, but it was not saved to Supabase.");
+      } else {
          const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/lunch', '5m_execution', lunchExecImg.dataUrl);
          const execStoragePath = execUpload.storagePath;
          setLunchExecImg({ ...lunchExecImg, storagePath: execStoragePath });
@@ -314,10 +326,12 @@ export default function ReplayLab({
          };
          Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
-         const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
-         if (!dbError && docData) {
-            setLunchSetupId(docData.id);
-         }
+        const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
+        if (dbError || !docData?.id) {
+          throw new Error(`Supabase setup save failed: ${dbError?.message || 'No setup ID returned.'}`);
+        }
+        setLunchSetupId(docData.id);
+        setLunchSaveStatus(`Replay setup saved. Setup ID: ${docData.id}`);
       }
     } catch (err: any) {
       setLunchError(err.message || 'Lunch analysis failed');
@@ -329,18 +343,27 @@ export default function ReplayLab({
   const saveTradeOutcome = async (sessionType: 'morning' | 'lunch', outcome: 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade') => {
     const setupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
     const result = sessionType === 'morning' ? morningResult : lunchResult;
-    if (!result || !setupId) return;
+    const setSessionError = sessionType === 'morning' ? setMorningError : setLunchError;
+    const setSessionStatus = sessionType === 'morning' ? setMorningSaveStatus : setLunchSaveStatus;
+
+    setSessionError(null);
+    setSessionStatus(null);
+
+    if (!result) {
+      setSessionError("No replay analysis result found. Run the replay analysis before marking an outcome.");
+      return;
+    }
+    if (!setupId) {
+      setSessionError("No Supabase setup ID found. The analysis result is visible, but it was not saved to Supabase. Re-run the replay analysis while logged in, then mark the outcome.");
+      return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      // Update Supabase Database
-      await supabase.from('setups').update({ 
-        outcome,
-        replay_status: 'verified',
-        contracts
-      }).eq('id', setupId);
+      if (!user) {
+        setSessionError("Login required: outcome was not saved to Supabase or RAG.");
+        return;
+      }
 
       // Map to RAG Save schema
       const ragStatus = ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(outcome) ? outcome : 'pending';
@@ -351,13 +374,24 @@ export default function ReplayLab({
 
       if (requiresExecutablePlan && (!normalizedPlan?.canExecute || normalizedPlan.entry === null || normalizedPlan.stop === null || normalizedPlan.t1 === null || normalizedPlan.t2 === null)) {
         console.warn("[Replay Lab] Outcome not saved: executable outcomes require ENTRY, STOP, T1, and T2.");
-        if (sessionType === 'morning') setMorningError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
-        else setLunchError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
+        setSessionError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
         return;
       }
 
-      if (sessionType === 'morning') setMorningOutcome(outcome);
-      else setLunchOutcome(outcome);
+      const { data: updatedSetup, error: setupUpdateError } = await supabase
+        .from('setups')
+        .update({
+          outcome,
+          replay_status: 'verified',
+          contracts
+        })
+        .eq('id', setupId)
+        .select('id,outcome,replay_status')
+        .single();
+
+      if (setupUpdateError || !updatedSetup?.id) {
+        throw new Error(`Supabase outcome update failed: ${setupUpdateError?.message || 'No updated setup row returned.'}`);
+      }
 
       const entryPrice = normalizedPlan?.entry ?? null;
       const stopPrice = normalizedPlan?.stop ?? null;
@@ -382,11 +416,12 @@ export default function ReplayLab({
       };
       
       if (onAddTrade && requiresExecutablePlan) {
-        onAddTrade(tradeData as any);
+        await Promise.resolve(onAddTrade(tradeData as any));
       }
 
       const { saveToRAG } = await import('../lib/rag');
       await saveToRAG({
+         setupId,
          analysis_mode: 'historical_replay',
          source: 'replay_lab',
          sessionType,
@@ -414,19 +449,42 @@ export default function ReplayLab({
          invalidation: normalizedPlan?.invalidation,
          notes: `${notes ? notes + '\n' : ''}Replay Plan (${normalizedPlan?.source || 'missing'})\nRisk: ${normalizedPlan?.riskPoints || 'N/A'}\nT1: ${normalizedPlan?.t1 || 'N/A'}\nT2: ${normalizedPlan?.t2 || 'N/A'}\nWhy: ${normalizedPlan?.whyThisPlan || 'N/A'}\nInvalidation: ${normalizedPlan?.invalidation || 'N/A'}`,
          ocrText: JSON.stringify({ ...(sessionType === 'morning' ? morningExecImg?.ocrResult : lunchExecImg?.ocrResult) }),
+         execution_5m_storage_path: sessionType === 'morning' ? morningExecImg?.storagePath : lunchExecImg?.storagePath,
+         eth_15m_context_storage_path: sessionType === 'morning' ? morningEthImg?.storagePath : undefined,
+         execution_timeframe: '5m',
+         context_timeframe: sessionType === 'morning' && morningEthImg ? '15m' : undefined,
+         context_session: sessionType === 'morning' && morningEthImg ? 'ETH' : undefined,
+         eth_context_available: sessionType === 'morning' ? !!morningEthImg : false,
          window_start: sessionType === 'lunch' ? "11:50" : undefined,
          window_end: sessionType === 'lunch' ? "13:00" : undefined,
          window_timezone: sessionType === 'lunch' ? "America/New_York" : undefined,
          required_screenshot_range: sessionType === 'lunch' ? "11:50 AM ET → 1:00 PM ET" : undefined,
       });
 
+      const { data: ragRow, error: ragVerifyError } = await supabase
+        .from('trade_embeddings')
+        .select('id,setup_id,trade_result')
+        .eq('setup_id', setupId)
+        .maybeSingle();
+
+      if (ragVerifyError || !ragRow?.id) {
+        throw new Error(`RAG verification failed: ${ragVerifyError?.message || 'No trade_embeddings row found for setup ID.'}`);
+      }
+
+      if (ragRow.trade_result !== ragStatus) {
+        throw new Error(`RAG verification mismatch: expected ${ragStatus}, received ${ragRow.trade_result || 'empty'}.`);
+      }
+
+      if (sessionType === 'morning') setMorningOutcome(outcome);
+      else setLunchOutcome(outcome);
+      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${setupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}`);
+
       // Show proof panel
       setProofFlow({ active: true, outcome: manualOutcome, sessionType });
       
     } catch (err: any) {
       console.error(err);
-      if (sessionType === 'morning') setMorningError("Outcome save failed.");
-      else setLunchError("Outcome save failed");
+      setSessionError(err.message || "Outcome save failed.");
     }
   };
 
@@ -537,6 +595,7 @@ export default function ReplayLab({
                 <UploadBox target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('morning_5m_execution', morningReviewTimezone)}`} />
                 
                 {morningError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{morningError}</div>}
+                {morningSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{morningSaveStatus}</div>}
                 
                 <button 
                   onClick={runMorningAnalysis} 
@@ -590,7 +649,12 @@ export default function ReplayLab({
                       <CheckCircle2 className="w-4 h-4" /> Outcome logged: {morningOutcome.toUpperCase()}
                     </div>
                  )}
-                 <button onClick={() => {setMorningResult(null); setMorningOutcome(null); setMorningSetupId(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
+                 {morningSaveStatus && (
+                    <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/20">
+                      {morningSaveStatus}
+                    </div>
+                 )}
+                 <button onClick={() => {setMorningResult(null); setMorningOutcome(null); setMorningSetupId(null); setMorningSaveStatus(null); setMorningError(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
                </div>
             )}
          </div>
@@ -620,6 +684,7 @@ export default function ReplayLab({
                 )}
                 
                 {lunchError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{lunchError}</div>}
+                {lunchSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{lunchSaveStatus}</div>}
                 
                 <button 
                   onClick={runLunchAnalysis} 
@@ -673,7 +738,12 @@ export default function ReplayLab({
                       <CheckCircle2 className="w-4 h-4" /> Outcome logged: {lunchOutcome.toUpperCase()}
                     </div>
                  )}
-                 <button onClick={() => {setLunchResult(null); setLunchOutcome(null); setLunchSetupId(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
+                 {lunchSaveStatus && (
+                    <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/20">
+                      {lunchSaveStatus}
+                    </div>
+                 )}
+                 <button onClick={() => {setLunchResult(null); setLunchOutcome(null); setLunchSetupId(null); setLunchSaveStatus(null); setLunchError(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
                </div>
             )}
          </div>
