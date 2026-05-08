@@ -11,6 +11,7 @@ import { normalizeTradePlan } from '../lib/tradePlan';
 import FinalTradePlanCard from './FinalTradePlanCard';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
+type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 
 interface UploadedImage {
   dataUrl: string;
@@ -43,7 +44,7 @@ export default function ReplayLab({
   const [morningSetupId, setMorningSetupId] = useState<string | null>(null);
   const [morningError, setMorningError] = useState<string | null>(null);
   const [morningSaveStatus, setMorningSaveStatus] = useState<string | null>(null);
-  const [morningOutcome, setMorningOutcome] = useState<'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade' | null>(null);
+  const [morningOutcome, setMorningOutcome] = useState<ReplayOutcome | null>(null);
   const [morningReviewTimezone, setMorningReviewTimezone] = useState<'EST' | 'PST'>('EST');
 
   // Lunch State
@@ -53,10 +54,11 @@ export default function ReplayLab({
   const [lunchSetupId, setLunchSetupId] = useState<string | null>(null);
   const [lunchError, setLunchError] = useState<string | null>(null);
   const [lunchSaveStatus, setLunchSaveStatus] = useState<string | null>(null);
-  const [lunchOutcome, setLunchOutcome] = useState<'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade' | null>(null);
+  const [lunchOutcome, setLunchOutcome] = useState<ReplayOutcome | null>(null);
   const [lunchReviewTimezone, setLunchReviewTimezone] = useState<'EST' | 'PST'>('EST');
 
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
+  const [savingOutcome, setSavingOutcome] = useState<{ sessionType: 'morning' | 'lunch'; outcome: ReplayOutcome } | null>(null);
 
   const normalizedMorningPlan = morningResult ? normalizeTradePlan(morningResult, instrument) : null;
   const normalizedLunchPlan = lunchResult ? normalizeTradePlan(lunchResult, instrument) : null;
@@ -131,6 +133,7 @@ export default function ReplayLab({
     setLunchSaveStatus(null);
     setLunchOutcome(null);
     setProofFlow({ active: false });
+    setSavingOutcome(null);
   };
 
   const processImage = async (dataUrl: string, target: ReplayPasteTarget) => {
@@ -340,21 +343,86 @@ export default function ReplayLab({
     }
   };
 
-  const saveTradeOutcome = async (sessionType: 'morning' | 'lunch', outcome: 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade') => {
-    const setupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
+  const ensureReplaySetupId = async (
+    sessionType: 'morning' | 'lunch',
+    userId: string,
+    result: AnalysisResult,
+    normalizedPlan: ReturnType<typeof normalizeTradePlan> | null
+  ) => {
+    const currentSetupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
+    if (currentSetupId) return currentSetupId;
+
+    const setSessionSetupId = sessionType === 'morning' ? setMorningSetupId : setLunchSetupId;
+    const execImg = sessionType === 'morning' ? morningExecImg : lunchExecImg;
+    const setupData: Record<string, any> = {
+      user_id: userId,
+      analysis_mode: 'historical_replay',
+      source: 'replay_lab',
+      session_type: sessionType,
+      instrument,
+      trade_date: tradeDate,
+      day_type: result.dayType,
+      reasoning: result.reasoning,
+      confidence: result.confidence,
+      eth_context_screenshot_url: sessionType === 'morning' ? morningEthImg?.storagePath : undefined,
+      execution_screenshot_url: execImg?.storagePath,
+      trade_plan_json: {
+        best_trade_plan: result.best_trade_plan || null,
+        final_trade_plan: result.final_trade_plan || null,
+        candidate_trade_plans: result.candidate_trade_plans || [],
+        trade_management_plan: result.trade_management_plan || null,
+        normalized_plan: normalizedPlan,
+        legacy_trade_plan: result.tradePlan || null,
+      },
+      normalized_plan_json: normalizedPlan,
+      plan_source: normalizedPlan?.source,
+      suggested_entry: normalizedPlan?.entry ?? 0,
+      suggested_stop: normalizedPlan?.stop ?? 0,
+      suggested_target: normalizedPlan?.t1 ?? 0,
+      t1_price: normalizedPlan?.t1,
+      t2_price: normalizedPlan?.t2,
+      risk_points: normalizedPlan?.riskPoints,
+      midnight_open_price: result.midnightOpenPrice ?? (midnightOpen ? Number(midnightOpen) : null),
+      midnight_open_source: result.midnightOpenSource || (midnightOpen ? 'manual' : undefined),
+      rth_vs_midnight: result.rthVsMidnight,
+      retrace_probability: result.retraceProbability,
+      execution_review_json: result.executionReview5m || null,
+      eth_context_review_json: sessionType === 'morning' ? result.ethContextReview || null : undefined,
+      afternoon_test_plan_json: sessionType === 'lunch' ? result.afternoonTestPlan || null : undefined,
+      midnight_open_review_json: result.midnightAnalysis || null,
+      morning_context_setup_id: sessionType === 'lunch' ? morningSetupId || undefined : undefined,
+      replay_status: 'pending',
+      contracts
+    };
+    Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
+
+    const { data, error } = await supabase
+      .from('setups')
+      .insert([setupData])
+      .select('id')
+      .single();
+
+    if (error || !data?.id) {
+      throw new Error(`Replay setup recovery failed: ${error?.message || 'No setup ID returned.'}`);
+    }
+
+    setSessionSetupId(data.id);
+    return data.id as string;
+  };
+
+  const saveTradeOutcome = async (sessionType: 'morning' | 'lunch', outcome: ReplayOutcome) => {
     const result = sessionType === 'morning' ? morningResult : lunchResult;
     const setSessionError = sessionType === 'morning' ? setMorningError : setLunchError;
     const setSessionStatus = sessionType === 'morning' ? setMorningSaveStatus : setLunchSaveStatus;
 
     setSessionError(null);
-    setSessionStatus(null);
+    setSessionStatus(`Saving ${outcome.replace(/_/g, ' ').toUpperCase()} to Supabase + RAG...`);
+    setSavingOutcome({ sessionType, outcome });
 
     if (!result) {
       setSessionError("No replay analysis result found. Run the replay analysis before marking an outcome.");
-      return;
-    }
-    if (!setupId) {
-      setSessionError("No Supabase setup ID found. The analysis result is visible, but it was not saved to Supabase. Re-run the replay analysis while logged in, then mark the outcome.");
+      setSessionStatus(null);
+      setSavingOutcome(null);
       return;
     }
 
@@ -362,6 +430,7 @@ export default function ReplayLab({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setSessionError("Login required: outcome was not saved to Supabase or RAG.");
+        setSessionStatus(null);
         return;
       }
 
@@ -378,6 +447,8 @@ export default function ReplayLab({
         return;
       }
 
+      const resolvedSetupId = await ensureReplaySetupId(sessionType, user.id, result, normalizedPlan);
+
       const { data: updatedSetup, error: setupUpdateError } = await supabase
         .from('setups')
         .update({
@@ -385,7 +456,7 @@ export default function ReplayLab({
           replay_status: 'verified',
           contracts
         })
-        .eq('id', setupId)
+        .eq('id', resolvedSetupId)
         .select('id,outcome,replay_status')
         .single();
 
@@ -411,17 +482,21 @@ export default function ReplayLab({
         analysisMode: 'historical_replay',
         source: 'replay_lab',
         sessionType: sessionType,
-        setupId: setupId,
+        setupId: resolvedSetupId,
         timestamp: Date.now()
       };
       
       if (onAddTrade && requiresExecutablePlan) {
-        await Promise.resolve(onAddTrade(tradeData as any));
+        try {
+          await Promise.resolve(onAddTrade(tradeData as any));
+        } catch (tradeHistoryError) {
+          console.warn("[Replay Lab] Trade history save failed, continuing with RAG outcome save:", tradeHistoryError);
+        }
       }
 
       const { saveToRAG } = await import('../lib/rag');
       await saveToRAG({
-         setupId,
+         setupId: resolvedSetupId,
          analysis_mode: 'historical_replay',
          source: 'replay_lab',
          sessionType,
@@ -464,7 +539,7 @@ export default function ReplayLab({
       const { data: ragRow, error: ragVerifyError } = await supabase
         .from('trade_embeddings')
         .select('id,setup_id,trade_result')
-        .eq('setup_id', setupId)
+        .eq('setup_id', resolvedSetupId)
         .maybeSingle();
 
       if (ragVerifyError || !ragRow?.id) {
@@ -477,14 +552,20 @@ export default function ReplayLab({
 
       if (sessionType === 'morning') setMorningOutcome(outcome);
       else setLunchOutcome(outcome);
-      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${setupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}`);
+      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${resolvedSetupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}`);
 
-      // Show proof panel
-      setProofFlow({ active: true, outcome: manualOutcome, sessionType });
+      if (requiresExecutablePlan) {
+        setProofFlow({ active: true, outcome: manualOutcome, sessionType });
+      } else {
+        setProofFlow({ active: false });
+      }
       
     } catch (err: any) {
       console.error(err);
       setSessionError(err.message || "Outcome save failed.");
+      setSessionStatus(null);
+    } finally {
+      setSavingOutcome(null);
     }
   };
 
@@ -623,12 +704,17 @@ export default function ReplayLab({
                  {!morningOutcome && !proofFlow.active && (
                    <div className="flex flex-col gap-2 mt-4">
                      <h3 className="text-[10px] text-[var(--txt2)] font-bold">Mark Historical Outcome</h3>
+                     {morningError && (
+                       <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
+                         {morningError}
+                       </div>
+                     )}
                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => saveTradeOutcome('morning', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)]">Win</button>
-                        <button onClick={() => saveTradeOutcome('morning', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)]">Loss</button>
-                        <button onClick={() => saveTradeOutcome('morning', 'scratch')} className="qd-btn-secondary">Scratch</button>
-                        <button onClick={() => saveTradeOutcome('morning', 'no_trade')} className="qd-btn-secondary">No Trade</button>
-                        <button onClick={() => saveTradeOutcome('morning', 'missed_trade')} className="qd-btn-secondary">Missed Trade</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)] disabled:opacity-50">Win</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)] disabled:opacity-50">Loss</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'scratch')} className="qd-btn-secondary disabled:opacity-50">Scratch</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'no_trade')} className="qd-btn-secondary disabled:opacity-50">No Trade</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'missed_trade')} className="qd-btn-secondary disabled:opacity-50">Missed Trade</button>
                      </div>
                    </div>
                  )}
@@ -712,12 +798,17 @@ export default function ReplayLab({
                  {!lunchOutcome && !proofFlow.active && (
                    <div className="flex flex-col gap-2 mt-4">
                      <h3 className="text-[10px] text-[var(--txt2)] font-bold">Mark Historical Outcome</h3>
+                     {lunchError && (
+                       <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
+                         {lunchError}
+                       </div>
+                     )}
                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => saveTradeOutcome('lunch', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)]">Win</button>
-                        <button onClick={() => saveTradeOutcome('lunch', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)]">Loss</button>
-                        <button onClick={() => saveTradeOutcome('lunch', 'scratch')} className="qd-btn-secondary">Scratch</button>
-                        <button onClick={() => saveTradeOutcome('lunch', 'no_trade')} className="qd-btn-secondary">No Trade</button>
-                        <button onClick={() => saveTradeOutcome('lunch', 'missed_trade')} className="qd-btn-secondary">Missed Trade</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)] disabled:opacity-50">Win</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)] disabled:opacity-50">Loss</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'scratch')} className="qd-btn-secondary disabled:opacity-50">Scratch</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'no_trade')} className="qd-btn-secondary disabled:opacity-50">No Trade</button>
+                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'missed_trade')} className="qd-btn-secondary disabled:opacity-50">Missed Trade</button>
                      </div>
                    </div>
                  )}
