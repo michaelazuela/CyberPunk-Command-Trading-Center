@@ -54,8 +54,8 @@ export default function ReplayLab({
 
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
 
-  const normalizedMorningPlan = morningResult ? normalizeTradePlan(morningResult) : null;
-  const normalizedLunchPlan = lunchResult ? normalizeTradePlan(lunchResult) : null;
+  const normalizedMorningPlan = morningResult ? normalizeTradePlan(morningResult, instrument) : null;
+  const normalizedLunchPlan = lunchResult ? normalizeTradePlan(lunchResult, instrument) : null;
 
   const handleGlobalClick = useCallback((e: MouseEvent) => {
     // Determine target based on what user clicked
@@ -150,6 +150,7 @@ export default function ReplayLab({
       const imgPayload = morningEthImg ? { exec: morningExecImg.dataUrl, eth: morningEthImg.dataUrl } : morningExecImg.dataUrl;
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, undefined, [], 'morning_replay', undefined, midnightOpen || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
+      const analysisPlan = normalizeTradePlan(analysis, instrument);
       
       setMorningResult(analysis);
       
@@ -166,23 +167,37 @@ export default function ReplayLab({
          execStoragePath = execUpload.storagePath;
          setMorningExecImg({ ...morningExecImg, storagePath: execStoragePath });
          
-         const setupData = {
-           userId: user.id,
+         const setupData: Record<string, any> = {
+           user_id: user.id,
            analysis_mode: 'historical_replay',
            source: 'replay_lab',
            session_type: 'morning',
            instrument: instrument,
            trade_date: tradeDate,
-           dayType: analysis.dayType,
+           day_type: analysis.dayType,
            reasoning: analysis.reasoning,
            confidence: analysis.confidence,
            eth_context_screenshot_url: ethStoragePath,
            execution_screenshot_url: execStoragePath,
-           agentReports: JSON.stringify(analysis.agentReports),
-           tradePlan: JSON.stringify(analysis.tradePlan),
-           midnightOpenPrice: analysis.midnightOpenPrice,
+           trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
+           normalized_plan_json: analysisPlan,
+           plan_source: analysisPlan.source,
+           suggested_entry: analysisPlan.entry || 0,
+           suggested_stop: analysisPlan.stop || 0,
+           suggested_target: analysisPlan.t1 || 0,
+           t1_price: analysisPlan.t1,
+           t2_price: analysisPlan.t2,
+           risk_points: analysisPlan.riskPoints,
+           midnight_open_price: analysis.midnightOpenPrice,
+           midnight_open_source: analysis.midnightOpenSource || (midnightOpen ? 'manual' : undefined),
+           rth_vs_midnight: analysis.rthVsMidnight,
+           retrace_probability: analysis.retraceProbability,
+           execution_review_json: analysis.executionReview5m || null,
+           eth_context_review_json: analysis.ethContextReview || null,
+           midnight_open_review_json: analysis.midnightAnalysis || null,
            replay_status: 'pending'
          };
+         Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
          const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
          if (!dbError && docData) {
@@ -216,6 +231,7 @@ export default function ReplayLab({
       
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, previousAnalysis, [], 'lunch_replay', undefined, midnightOpen || morningResult?.midnightOpenPrice?.toString() || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
+      const analysisPlan = normalizeTradePlan(analysis, instrument);
       
       setLunchResult(analysis);
       
@@ -226,23 +242,37 @@ export default function ReplayLab({
          const execStoragePath = execUpload.storagePath;
          setLunchExecImg({ ...lunchExecImg, storagePath: execStoragePath });
          
-         const setupData = {
-           userId: user.id,
+         const setupData: Record<string, any> = {
+           user_id: user.id,
            analysis_mode: 'historical_replay',
            source: 'replay_lab',
            session_type: 'lunch',
            instrument: instrument,
            trade_date: tradeDate,
-           dayType: analysis.dayType,
+           day_type: analysis.dayType,
            reasoning: analysis.reasoning,
            confidence: analysis.confidence,
            execution_screenshot_url: execStoragePath,
-           agentReports: JSON.stringify(analysis.agentReports),
-           tradePlan: JSON.stringify(analysis.tradePlan),
-           midnightOpenPrice: analysis.midnightOpenPrice || morningResult?.midnightOpenPrice,
+           trade_plan_json: analysis.final_trade_plan || analysis.tradePlan || null,
+           normalized_plan_json: analysisPlan,
+           plan_source: analysisPlan.source,
+           suggested_entry: analysisPlan.entry || 0,
+           suggested_stop: analysisPlan.stop || 0,
+           suggested_target: analysisPlan.t1 || 0,
+           t1_price: analysisPlan.t1,
+           t2_price: analysisPlan.t2,
+           risk_points: analysisPlan.riskPoints,
+           midnight_open_price: analysis.midnightOpenPrice || morningResult?.midnightOpenPrice,
+           midnight_open_source: analysis.midnightOpenSource || (midnightOpen ? 'manual' : undefined),
+           rth_vs_midnight: analysis.rthVsMidnight,
+           retrace_probability: analysis.retraceProbability,
+           execution_review_json: analysis.executionReview5m || null,
+           afternoon_test_plan_json: analysis.afternoonTestPlan || null,
+           midnight_open_review_json: analysis.midnightAnalysis || null,
            morning_context_setup_id: morningSetupId || undefined,
            replay_status: 'pending'
          };
+         Object.keys(setupData).forEach(key => setupData[key] === undefined && delete setupData[key]);
 
          const { data: docData, error: dbError } = await supabase.from('setups').insert([setupData]).select('id').single();
          if (!dbError && docData) {
@@ -260,9 +290,6 @@ export default function ReplayLab({
     const setupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
     const result = sessionType === 'morning' ? morningResult : lunchResult;
     if (!result || !setupId) return;
-
-    if (sessionType === 'morning') setMorningOutcome(outcome);
-    else setLunchOutcome(outcome);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -284,8 +311,13 @@ export default function ReplayLab({
 
       if (requiresExecutablePlan && (!normalizedPlan?.canExecute || normalizedPlan.entry === null || normalizedPlan.stop === null || normalizedPlan.t1 === null || normalizedPlan.t2 === null)) {
         console.warn("[Replay Lab] Outcome not saved: executable outcomes require ENTRY, STOP, T1, and T2.");
+        if (sessionType === 'morning') setMorningError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
+        else setLunchError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
         return;
       }
+
+      if (sessionType === 'morning') setMorningOutcome(outcome);
+      else setLunchOutcome(outcome);
 
       const entryPrice = normalizedPlan?.entry ?? null;
       const stopPrice = normalizedPlan?.stop ?? null;
@@ -490,6 +522,7 @@ export default function ReplayLab({
                       executionQuantity={contracts} 
                       modelConfig={session.aiSettings} 
                       dailyInstrument={instrument}
+                      tradePlan={normalizedMorningPlan}
                       onSaveTrade={handleProofSave} 
                       onCancel={() => setProofFlow({ active: false })}
                     />
@@ -572,6 +605,7 @@ export default function ReplayLab({
                       executionQuantity={contracts} 
                       modelConfig={session.aiSettings} 
                       dailyInstrument={instrument}
+                      tradePlan={normalizedLunchPlan}
                       onSaveTrade={handleProofSave} 
                       onCancel={() => setProofFlow({ active: false })}
                     />
