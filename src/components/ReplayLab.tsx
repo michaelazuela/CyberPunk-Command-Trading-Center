@@ -213,6 +213,7 @@ export default function ReplayLab({
            day_type: analysis.dayType,
            reasoning: analysis.reasoning,
            confidence: analysis.confidence,
+           image_url: execStoragePath,
            eth_context_screenshot_url: ethStoragePath,
            execution_screenshot_url: execStoragePath,
            trade_plan_json: {
@@ -300,6 +301,7 @@ export default function ReplayLab({
            day_type: analysis.dayType,
            reasoning: analysis.reasoning,
            confidence: analysis.confidence,
+           image_url: execStoragePath,
            execution_screenshot_url: execStoragePath,
            trade_plan_json: {
              best_trade_plan: analysis.best_trade_plan || null,
@@ -364,6 +366,7 @@ export default function ReplayLab({
       day_type: result.dayType,
       reasoning: result.reasoning,
       confidence: result.confidence,
+      image_url: execImg?.storagePath || execImg?.dataUrl,
       eth_context_screenshot_url: sessionType === 'morning' ? morningEthImg?.storagePath : undefined,
       execution_screenshot_url: execImg?.storagePath,
       trade_plan_json: {
