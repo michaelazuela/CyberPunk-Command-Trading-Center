@@ -3,12 +3,24 @@ import { supabase } from './supabase';
 import { generateEmbedding, generateQueryEmbedding, buildEmbeddingText } from './embeddings';
 import { mapTradeEmbeddingRow } from './ragMapper';
 
-export async function saveToRAG(context: RAGSaveContext): Promise<void> {
+type RAGSaveResult = {
+  success: boolean;
+  id?: string;
+  error?: string;
+  code?: string;
+  usedFallback?: boolean;
+};
+
+function formatSupabaseError(error: any): string {
+  return error?.message || error?.details || error?.hint || String(error || 'Unknown Supabase error');
+}
+
+export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.log("[RAG] Skipped: user not authenticated");
-      return;
+      return { success: false, error: 'User not authenticated' };
     }
 
     const embeddingText = buildEmbeddingText(context);
@@ -106,6 +118,39 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       required_screenshot_range: context.required_screenshot_range || null,
     };
 
+    const coreRecord = {
+      user_id: record.user_id,
+      trade_id: record.trade_id,
+      setup_id: record.setup_id,
+      session_type: record.session_type,
+      trade_date: record.trade_date,
+      day_of_week: record.day_of_week,
+      instrument: record.instrument,
+      midnight_open_price: record.midnight_open_price,
+      rth_vs_midnight: record.rth_vs_midnight,
+      retrace_probability: record.retrace_probability,
+      initial_balance_high: record.initial_balance_high,
+      initial_balance_low: record.initial_balance_low,
+      ib_position: record.ib_position,
+      entry_price: record.entry_price,
+      exit_price: record.exit_price,
+      pnl_ticks: record.pnl_ticks,
+      pnl_dollars: record.pnl_dollars,
+      contracts: record.contracts,
+      gemini_confidence: record.gemini_confidence,
+      gemini_verdict: record.gemini_verdict,
+      setup_quality_score: record.setup_quality_score,
+      trade_result: record.trade_result,
+      embedding_text: record.embedding_text,
+      embedding: record.embedding,
+      ocr_text: record.ocr_text,
+      gemini_analysis_json: record.gemini_analysis_json,
+      screenshot_url: record.screenshot_url || record.execution_5m_storage_path,
+      proof_screenshot_url: record.proof_screenshot_url,
+      midnight_open_source: record.midnight_open_source,
+      notes: record.notes,
+    };
+
     let existingId = null;
     if (context.tradeId) {
       const { data } = await supabase.from('trade_embeddings').select('id').eq('trade_id', context.tradeId).maybeSingle();
@@ -115,24 +160,56 @@ export async function saveToRAG(context: RAGSaveContext): Promise<void> {
       if (data) existingId = data.id;
     } 
     
-    if (existingId) {
-       await supabase.from('trade_embeddings').update(record).eq('id', existingId);
-    } else {
-       const { error: insertError } = await supabase.from('trade_embeddings').insert(record);
-       if (insertError) {
-         const conflictTarget = context.tradeId ? ['trade_id', context.tradeId] : context.setupId ? ['setup_id', context.setupId] : null;
-         if (insertError.code === '23505' && conflictTarget) {
-           await supabase.from('trade_embeddings').update(record).eq(conflictTarget[0], conflictTarget[1]);
-         } else {
-           throw insertError;
-         }
-       }
+    const persistRecord = async (payload: Record<string, any>) => {
+      if (existingId) {
+        const { data, error } = await supabase.from('trade_embeddings').update(payload).eq('id', existingId).select('id').single();
+        if (error || !data?.id) throw error || new Error('RAG update returned no row.');
+        return data.id as string;
+      }
+
+      const { data, error: insertError } = await supabase.from('trade_embeddings').insert(payload).select('id').single();
+      if (insertError) {
+        const conflictTarget = context.tradeId ? ['trade_id', context.tradeId] : context.setupId ? ['setup_id', context.setupId] : null;
+        if (insertError.code === '23505' && conflictTarget) {
+          const { data: updateData, error: updateError } = await supabase
+            .from('trade_embeddings')
+            .update(payload)
+            .eq(conflictTarget[0], conflictTarget[1])
+            .select('id')
+            .single();
+          if (updateError || !updateData?.id) throw updateError || new Error('RAG conflict update returned no row.');
+          return updateData.id as string;
+        }
+        throw insertError;
+      }
+      if (!data?.id) throw new Error('RAG insert returned no row.');
+      return data.id as string;
+    };
+
+    let savedId: string;
+    let usedFallback = false;
+    try {
+      savedId = await persistRecord(record);
+    } catch (fullRecordError: any) {
+      console.warn("[RAG] Full record save failed; retrying with core fields:", fullRecordError);
+      usedFallback = true;
+      try {
+        savedId = await persistRecord(coreRecord);
+      } catch (fallbackError: any) {
+        return {
+          success: false,
+          error: `Full save failed: ${formatSupabaseError(fullRecordError)} | Core fallback failed: ${formatSupabaseError(fallbackError)}`,
+          code: fallbackError?.code || fullRecordError?.code,
+        };
+      }
     }
 
     console.log(`[RAG] Saved embedding for ${context.sessionType} setup on ${context.tradeDate} - score: ${setupQualityScore}`);
+    return { success: true, id: savedId, usedFallback };
 
   } catch (error) {
     console.error("[RAG] Failed to save:", error);
+    return { success: false, error: formatSupabaseError(error), code: (error as any)?.code };
   }
 }
 

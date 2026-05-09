@@ -498,7 +498,7 @@ export default function ReplayLab({
       }
 
       const { saveToRAG } = await import('../lib/rag');
-      await saveToRAG({
+      const ragSaveResult = await saveToRAG({
          setupId: resolvedSetupId,
          analysis_mode: 'historical_replay',
          source: 'replay_lab',
@@ -539,6 +539,10 @@ export default function ReplayLab({
          required_screenshot_range: sessionType === 'lunch' ? "11:50 AM ET → 1:00 PM ET" : undefined,
       });
 
+      if (!ragSaveResult.success) {
+        throw new Error(`RAG save failed: ${ragSaveResult.error || 'Unknown Supabase error.'}`);
+      }
+
       const { data: ragRow, error: ragVerifyError } = await supabase
         .from('trade_embeddings')
         .select('id,setup_id,trade_result')
@@ -555,7 +559,7 @@ export default function ReplayLab({
 
       if (sessionType === 'morning') setMorningOutcome(outcome);
       else setLunchOutcome(outcome);
-      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${resolvedSetupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}`);
+      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${resolvedSetupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}${ragSaveResult.usedFallback ? ' · Core RAG fallback used' : ''}`);
 
       if (requiresExecutablePlan) {
         setProofFlow({ active: true, outcome: manualOutcome, sessionType });
