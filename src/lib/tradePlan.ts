@@ -216,7 +216,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         source: "candidate_trade_plan",
         decision: candidate.direction || "NO TRADE",
         confidence: normalizeConfidence(candidate.confidence),
-        whyThisPlan: candidate.why_this_plan || "Candidate plan returned by Best Plan Selector.",
+        whyThisPlan: candidate.why_this_plan || "Candidate plan returned by App Plan Engine.",
         invalidation: candidate.invalidation || "No invalidation provided.",
         priorityScore: candidate.priority_score ?? null,
         rank: candidate.rank ?? index + 1,
@@ -239,7 +239,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       candidate.id === result.best_trade_plan?.selected_candidate_id || candidate.selected
     );
     addCandidate({
-      setupName: selectedCandidate?.setup_name || "Best Plan Selector",
+      setupName: selectedCandidate?.setup_name || "App Plan Engine",
       entry: parsePrice(result.best_trade_plan.entry),
       stop: parsePrice(result.best_trade_plan.stop),
       rawT1: parsePrice(result.best_trade_plan.target_1),
@@ -247,7 +247,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       source: "best_trade_plan",
       decision: result.best_trade_plan.decision || "NO TRADE",
       confidence: normalizeConfidence(result.best_trade_plan.final_confidence),
-      whyThisPlan: result.best_trade_plan.why_it_won || "Best Plan Selector chose this setup.",
+      whyThisPlan: result.best_trade_plan.why_it_won || "App Plan Engine chose this setup.",
       invalidation: result.best_trade_plan.what_would_invalidate || "No invalidation provided.",
       priorityScore: result.best_trade_plan.priority_score ?? null,
       rank: 1,

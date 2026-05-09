@@ -53,7 +53,7 @@ T1: ${context.t1 ?? context.geminiAnalysisJson?.final_trade_plan?.target_1 ?? 'u
 T2: ${context.t2 ?? context.geminiAnalysisJson?.final_trade_plan?.target_2 ?? 'unknown'}
 Risk Points: ${context.riskPoints ?? 'unknown'}
 Plan Source: ${context.planSource ?? 'unknown'}
-Best Plan Selector:
+App Plan Engine:
 - Winner: ${bestPlan?.decision || direction}
 - Why it won: ${bestPlan?.why_it_won || context.whyThisPlan || 'unknown'}
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}

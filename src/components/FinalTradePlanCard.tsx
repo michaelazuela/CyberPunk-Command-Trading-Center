@@ -12,9 +12,9 @@ interface FinalTradePlanCardProps {
 export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN", agentLearningUsed }: FinalTradePlanCardProps) {
   let sourceBadge = "MISSING";
   switch (plan.source) {
-    case "best_trade_plan": sourceBadge = "BEST PLAN"; break;
-    case "candidate_trade_plan": sourceBadge = "RANKED CANDIDATE"; break;
-    case "final_trade_plan": sourceBadge = "FINAL PLAN"; break;
+    case "best_trade_plan": sourceBadge = "APP BEST PLAN"; break;
+    case "candidate_trade_plan": sourceBadge = "APP RANKED"; break;
+    case "final_trade_plan": sourceBadge = "APP NORMALIZED"; break;
     case "current_rule_analysis": sourceBadge = "RULE ANALYSIS"; break;
     case "tradePlan": sourceBadge = "STRUCTURED TRADE PLAN"; break;
     case "legacy": sourceBadge = "LEGACY FALLBACK"; break;

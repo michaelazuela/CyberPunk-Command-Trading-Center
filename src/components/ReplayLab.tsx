@@ -7,7 +7,7 @@ import { uploadScreenshot } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import TradeProofPanel from './TradeProofPanel';
 import { TimezoneToggle } from './TimezoneToggle';
-import { normalizeTradePlan } from '../lib/tradePlan';
+import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
@@ -98,8 +98,8 @@ export default function ReplayLab({
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
   const [savingOutcome, setSavingOutcome] = useState<{ sessionType: 'morning' | 'lunch'; outcome: ReplayOutcome } | null>(null);
 
-  const normalizedMorningPlan = morningResult ? normalizeTradePlan(morningResult, instrument) : null;
-  const normalizedLunchPlan = lunchResult ? normalizeTradePlan(lunchResult, instrument) : null;
+  const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'replay_morning', instrument }) : null;
+  const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'replay_lunch', instrument }) : null;
 
   const handleGlobalClick = useCallback((e: MouseEvent) => {
     // Determine target based on what user clicked
@@ -222,7 +222,7 @@ export default function ReplayLab({
       const imgPayload = morningEthImg ? { exec: morningExecImg.dataUrl, eth: morningEthImg.dataUrl } : morningExecImg.dataUrl;
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, undefined, [], 'morning_replay', undefined, midnightOpen || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
-      const analysisPlan = normalizeTradePlan(analysis, instrument);
+      const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_morning', instrument });
       
       setMorningResult(analysis);
       
@@ -316,7 +316,7 @@ export default function ReplayLab({
       
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, previousAnalysis, [], 'lunch_replay', undefined, midnightOpen || morningResult?.midnightOpenPrice?.toString() || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
-      const analysisPlan = normalizeTradePlan(analysis, instrument);
+      const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_lunch', instrument });
       
       setLunchResult(analysis);
       
@@ -387,7 +387,7 @@ export default function ReplayLab({
     sessionType: 'morning' | 'lunch',
     userId: string,
     result: AnalysisResult,
-    normalizedPlan: ReturnType<typeof normalizeTradePlan> | null
+    normalizedPlan: ReturnType<typeof buildAppTradePlan> | null
   ) => {
     const currentSetupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
     if (currentSetupId) return currentSetupId;

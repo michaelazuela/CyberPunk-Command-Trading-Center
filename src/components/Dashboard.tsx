@@ -4,7 +4,7 @@ import { SYSTEM_RULES } from '../constants';
 import { cn } from '../lib/utils';
 import MonteCarloSection from './MonteCarloSection';
 import { TIME_WINDOWS, getWindowStatus, formatWindow } from '../config/timeWindows';
-import { normalizeTradePlan } from '../lib/tradePlan';
+import { buildAppTradePlan } from '../lib/planEngine';
 import {  
   TrendingUp, 
   Target,
@@ -19,6 +19,9 @@ export default function Dashboard({
   session: SessionState;
   onUpdateSession: (s: SessionState) => void;
 }) {
+  const dashboardPlan = session.analysisResult
+    ? buildAppTradePlan(session.analysisResult, { sessionType: 'morning', instrument: session.dailyInstrument || 'MES' })
+    : null;
   const openTrades = session.trades.filter(t => t.status === 'OPEN');
   const closedTrades = session.trades.filter(t => t.status === 'CLOSED' || t.status === 'FAILED' || t.status === 'SUCCESSFUL');
   const totalPnl = session.trades.filter(t => t.status !== 'OPEN').reduce((acc, t) => acc + (t.pnl || 0), 0);
@@ -137,7 +140,8 @@ export default function Dashboard({
                 </div>
               );
             }
-            const plan = normalizeTradePlan(session.analysisResult);
+            const plan = dashboardPlan;
+            if (!plan) return null;
             return (
               <div className="flex-1 flex flex-col justify-center">
                 <div className="grid grid-cols-3 gap-6">
@@ -169,10 +173,10 @@ export default function Dashboard({
           {session.analysisResult ? (
              <div className="flex-1 -mx-[18px] -mb-[16px]">
                <MonteCarloSection 
-                  startPrice={normalizeTradePlan(session.analysisResult).entry || 0}
-                  stopPrice={normalizeTradePlan(session.analysisResult).stop || 0}
-                  targetPrice={normalizeTradePlan(session.analysisResult).t2 || normalizeTradePlan(session.analysisResult).t1 || 0}
-                  targetPrice15R={normalizeTradePlan(session.analysisResult).t1 || 0}
+                  startPrice={dashboardPlan?.entry || 0}
+                  stopPrice={dashboardPlan?.stop || 0}
+                  targetPrice={dashboardPlan?.t2 || dashboardPlan?.t1 || 0}
+                  targetPrice15R={dashboardPlan?.t1 || 0}
                />
              </div>
           ) : (

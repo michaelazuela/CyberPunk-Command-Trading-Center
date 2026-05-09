@@ -11,7 +11,7 @@ import ModelConfigPanel from './ModelConfigPanel';
 import ApiCostPanel from './ApiCostPanel';
 import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from '../lib/modelRouter';
 import TradeProofPanel from './TradeProofPanel';
-import { normalizeTradePlan } from '../lib/tradePlan';
+import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
 
 export default function LunchReversal({ 
@@ -36,7 +36,7 @@ export default function LunchReversal({
 
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
-  const normalizedPlan = result ? normalizeTradePlan(result, session.dailyInstrument || 'MES') : null;
+  const normalizedPlan = result ? buildAppTradePlan(result, { sessionType: 'lunch', instrument: session.dailyInstrument || 'MES' }) : null;
 
   const handleConfigChange = (newConfig: ModelConfig) => {
     setModelConfig(newConfig);
@@ -306,7 +306,7 @@ export default function LunchReversal({
         midnightOpenStatus: analysis.midnightOpenStatus
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
-      const analysisPlan = normalizeTradePlan(analysis, session.dailyInstrument || 'MES');
+      const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'lunch', instrument: session.dailyInstrument || 'MES' });
 
       setResult(analysis);
       
@@ -749,7 +749,7 @@ export default function LunchReversal({
               </div>
               {(result.current_rule_analysis.entry !== normalizedPlan?.entry || result.current_rule_analysis.stop !== normalizedPlan?.stop || result.current_rule_analysis.target_1 !== normalizedPlan?.t1) && (
                 <div className="mt-3 text-[10px] text-[var(--txt3)] font-mono">
-                  Raw Gemini levels were normalized before execution. Final executable levels are shown here and in the Final Trade Plan.
+                  App Plan Engine computed the final executable levels. Gemini supplies chart facts; the app owns ENTRY, STOP, T1, and T2.
                 </div>
               )}
             </div>

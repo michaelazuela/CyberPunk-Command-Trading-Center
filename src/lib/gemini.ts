@@ -182,15 +182,15 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     Today is: ${currentDay}. Apply day-specific edge adjustments above.
 
     =========================================
-    MODULE 6: [FINAL_DECISION] (Final Trade Plan)
+    MODULE 6: [CANDIDATE_EXTRACTOR] (Facts + Candidate Inputs)
     - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
-    - Act as a Best Plan Selector, not a single-shot answer.
+    - The APP owns final trade-plan authority. Your job is to extract chart facts and propose measurable candidate inputs; the App Plan Engine will select the final plan and compute final T1/T2.
     - Evaluate at least 3 competing setup candidates when visible on the chart: Liquidity Sweep, Momentum/Runaway, FVG/Imbalance, Initial Balance Extension, Opening Order Block, EQH/EQL, PDH/PDL Sweep, and No Trade.
     - Return every reviewed plan in \`candidate_trade_plans\`. Invalid candidates still belong in the array with direction = NO TRADE or null prices and a rejection_reason.
-    - Rank candidates by price-action clarity, risk size, R:R, timing window, RAG support/conflict, and risk-auditor status.
-    - Return exactly one \`best_trade_plan\` that explains why it beat the alternatives.
-    - Consolidate all reasoning across the modules into a final, actionable trade decision.
-    - Provide exact entry price, stop-loss price, and realistic targets.
+    - Give each candidate your observed rank, but understand the app will rerank deterministically by price-action clarity, risk size, R:R, timing window, RAG support/conflict, and risk-auditor status.
+    - Return one \`best_trade_plan\` as your reviewer recommendation only. The App Plan Engine may override it if another candidate is more complete or more valid.
+    - Consolidate all reasoning across the modules into candidate inputs the app can safely evaluate.
+    - Provide exact observed entry trigger price and stop-loss price when visible.
     - A conditional stop-entry plan with visible ENTRY and STOP levels is a valid trade plan. It is not a NO TRADE. Use trigger_state = PENDING_TRIGGER when the entry has not fired yet.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
     - Formula check: For any LONG plan, target_1 MUST equal entry + abs(entry - stop) * 1.5 and target_2 MUST equal entry + abs(entry - stop) * 2.0. For any SHORT plan, target_1 MUST equal entry - abs(entry - stop) * 1.5 and target_2 MUST equal entry - abs(entry - stop) * 2.0. If you cannot calculate this exactly, set target_1 and target_2 to null and let the app calculate them.
@@ -201,8 +201,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
 
     =========================================
     MODULE 7: [TRADE_MANAGEMENT_AGENT] (After Entry Management)
-    - This module runs AFTER the Best Plan Selector.
-    - Its job is NOT to choose the entry. Its job is to define how the trade should be managed after entry.
+    - This module runs AFTER candidate extraction.
+    - Its job is NOT to choose the entry. The app chooses the final plan. Your job is to define how a valid selected trade should be managed after entry.
     - For every executable best_trade_plan, specify what to do if price moves in favor, stalls before T1, hits 1R, hits T1, or shows a two-bar failure.
     - Prefer T1-first management after vertical morning expansion. T2 should be treated as a runner unless structure stays clean.
     - Define whether success means T1, T2, or structure-based continuation.
