@@ -254,7 +254,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                    <span className="text-[9px] uppercase tracking-[0.16em]">Screenshot Loaded</span>
                  </div>
                  <span className="mt-2 block truncate text-[11px] text-[var(--txt)] font-bold">{proofImage.filename}</span>
-               <span className="text-[9px] text-[var(--txt3)]">{proofSizeKb} KB - ready for optional Gemini review</span>
+               <span className="text-[9px] text-[var(--txt3)]">{proofSizeKb} KB - ready for optional proof review</span>
                </div>
                {tradePlan?.entry != null && tradePlan?.stop != null && (
                  <div className="grid grid-cols-2 gap-2 text-[9px] md:grid-cols-4">
@@ -277,7 +277,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
              <div className="flex flex-wrap gap-2">
                  <button onClick={reviewWithGemini} className="qd-btn-primary h-[32px] text-[10px]">
                    <Bot className="h-3.5 w-3.5" />
-                   Review with Gemini
+                   Review Proof
                </button>
                <button onClick={() => setProofImage(null)} className="qd-btn-ghost text-[var(--red)] border-transparent h-[32px] text-[10px]">
                  <X className="mr-2 h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
            {isReviewing && (
              <div className="flex items-center gap-2 text-[10px] text-[var(--cyan)] animate-pulse p-2 border border-[var(--cyan)]/20 bg-[var(--cyan)]/5 rounded-sm">
                <Bot className="h-3.5 w-3.5" />
-               Sending proof to Gemini for review...
+               Sending proof to verification engine...
              </div>
            )}
 
@@ -299,7 +299,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                  <div className="flex flex-col gap-2 border-b border-[var(--b1)] pb-2 mb-2 md:flex-row md:items-center md:justify-between">
                    <h5 className="flex items-center gap-2 text-[10px] uppercase font-bold text-[var(--orange)]">
                      <ShieldCheck className="h-3.5 w-3.5" />
-                     Gemini Trade Review
+                     Trade Proof Review
                    </h5>
                    <span className="text-[9px] text-[var(--txt2)] tracking-widest">VERIFICATION SYSTEM</span>
                  </div>
@@ -308,7 +308,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                    <span className="text-[var(--txt2)]">Result Claimed:</span>
                    <span className="font-bold text-[var(--txt)]">{claimedLabel}</span>
                    
-                   <span className="text-[var(--txt2)]">Gemini Verdict:</span>
+                   <span className="text-[var(--txt2)]">Proof Verdict:</span>
                    <span className={cn("font-bold px-1 rounded-sm text-black inline-block max-w-fit", 
                      reviewResult.verdict === 'CONFIRMED' ? 'bg-[var(--green)]' : 
                      reviewResult.verdict === 'DISPUTED' ? 'bg-[var(--red)] text-white' : 'bg-[var(--amber)]')}>

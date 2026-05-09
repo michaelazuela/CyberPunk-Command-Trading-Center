@@ -158,7 +158,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       { id: 'prep', label: 'Preparing screenshot', status: 'active' },
       { id: 'extract', label: 'Extracting chart metadata', status: 'pending' },
       { id: 'confirm', label: 'Waiting for confirmation', status: 'pending' },
-      { id: 'send', label: 'Sending chart to Gemini', status: 'pending' },
+      { id: 'send', label: 'Sending chart to analysis engine', status: 'pending' },
       { id: 'strategy', label: 'Running strategy analysis', status: 'pending' },
       { id: 'risk', label: 'Running risk audit', status: 'pending' },
       { id: 'save', label: 'Saving setup to Supabase', status: 'pending' },
@@ -188,10 +188,11 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     } catch (err: any) {
       console.error("OCR Pre-check failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
+      const displayMsg = msg.replace(/Gemini API/gi, 'AI API').replace(/Gemini/gi, 'AI service');
       if (msg.includes('Missing Gemini API key') || msg.includes('API key not valid')) {
-         setError(msg);
+         setError(displayMsg);
       }
-      updateStep('extract', 'warning', `OCR failed: ${msg}. You can continue analysis if desired.`);
+      updateStep('extract', 'warning', `OCR failed: ${displayMsg}. You can continue analysis if desired.`);
       updateStep('confirm', 'active');
     } finally {
       setIsPreChecking(false);
@@ -341,7 +342,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
           console.log(`[GEMINI DEBUG] Attempt: ${attempt}/${maxAttempts}`);
         }
         
-        setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: attempt > 1 ? `Sending chart to Gemini (attempt ${attempt}/${maxAttempts})` : 'Sending chart to Gemini' } : s));
+        setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: attempt > 1 ? `Sending chart to analysis engine (attempt ${attempt}/${maxAttempts})` : 'Sending chart to analysis engine' } : s));
         
         try {
           const timeoutPromise = new Promise((_, reject) => {
@@ -378,9 +379,9 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         const errMsg = lastGeminiError.message || String(lastGeminiError);
         const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
         
-        let finalErrorText = `Analysis timed out after ${maxAttempts} attempts. Possible causes: large image, slow Gemini response, or rate limiting. Failed after ${elapsed}s.`;
+        let finalErrorText = `Analysis timed out after ${maxAttempts} attempts. Possible causes: large image, slow analysis response, or rate limiting. Failed after ${elapsed}s.`;
         if (errMsg.includes('429')) {
-          finalErrorText = 'Rate limited by Gemini API. Please wait before retrying.';
+          finalErrorText = 'Rate limited by the AI API. Please wait before retrying.';
         } else if (!errMsg.includes('TIMEOUT')) {
           finalErrorText = `API Error: ${errMsg}`;
         }
@@ -832,7 +833,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             <div className="flex flex-col gap-2 text-[11px] font-mono">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={!useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(false)} className="accent-[var(--orange)]" />
-                <span className={!useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Auto (let Gemini read from chart)</span>
+                <span className={!useManualMidnightOpen ? 'text-[var(--orange)] font-bold' : 'text-[var(--txt2)]'}>Auto (read from chart)</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" checked={useManualMidnightOpen} onChange={() => setUseManualMidnightOpen(true)} className="accent-[var(--orange)]" />
@@ -848,7 +849,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                 )}
               </label>
             </div>
-            <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If Gemini misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
+            <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If the chart reader misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -998,7 +999,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
               </div>
               {(result.current_rule_analysis.entry !== normalizedPlan?.entry || result.current_rule_analysis.stop !== normalizedPlan?.stop || result.current_rule_analysis.target_1 !== normalizedPlan?.t1) && (
                 <div className="mt-3 text-[10px] text-[var(--txt3)] font-mono">
-                  App Plan Engine computed the final executable levels. Gemini supplies chart facts; the app owns ENTRY, STOP, T1, and T2.
+                  App Plan Engine computed the final executable levels. The chart reader supplies facts; the app owns ENTRY, STOP, T1, and T2.
                 </div>
               )}
             </div>

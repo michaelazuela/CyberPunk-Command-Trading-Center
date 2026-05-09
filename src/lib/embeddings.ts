@@ -54,7 +54,7 @@ App Plan Engine:
 - Winner: ${appPlan?.setupName || appPlan?.source || direction}
 - Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || bestPlan?.why_it_won || 'unknown'}
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
-Gemini Advisory Note: candidate/best/final Gemini trade plans are stored as context only; executable levels come from app-normalized fields above.
+Advisory Note: candidate/best/final model trade plans are stored as context only; executable levels come from app-normalized fields above.
 Candidate plans reviewed:
 ${candidateSummary}
 Trade Management Agent:

@@ -386,7 +386,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     const noTradeReason =
       result.current_rule_analysis?.no_trade_reason ||
       (advisoryCandidates.some(isExecutable)
-        ? "Gemini returned advisory trade levels, but the app-owned rule engine did not confirm an executable setup."
+        ? "Advisory trade levels were returned, but the app-owned rule engine did not confirm an executable setup."
         : null) ||
       defaultPlan.whyThisPlan;
     return {
@@ -395,7 +395,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       whyThisPlan: noTradeReason,
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       consistencyWarnings: advisoryCandidates.some(isExecutable)
-        ? ["Gemini trade-plan fields are advisory only. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
+        ? ["Advisory trade-plan fields are not executable. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
         : []
     };
   }
@@ -406,13 +406,13 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
   const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);
   const consistencyWarnings: string[] = [];
   if (advisoryCandidates.length > 0) {
-    consistencyWarnings.push("Gemini best/final/candidate trade-plan fields were treated as advisory. The executable plan was selected by the app-owned rule engine.");
+    consistencyWarnings.push("Advisory candidate fields were ignored for execution. The executable plan was selected by the app-owned rule engine.");
   }
   if (isValidPrice(executableCandidate.rawT1) && isValidPrice(targets.t1) && Math.abs(executableCandidate.rawT1 - targets.t1) >= 0.25) {
-    consistencyWarnings.push(`Raw Gemini T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using fixed 1.5R.`);
+    consistencyWarnings.push(`Raw advisory T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using fixed 1.5R.`);
   }
   if (isValidPrice(executableCandidate.rawT2) && isValidPrice(targets.t2) && Math.abs(executableCandidate.rawT2 - targets.t2) >= 0.25) {
-    consistencyWarnings.push(`Raw Gemini T2 ${executableCandidate.rawT2} was replaced with app-computed T2 ${targets.t2} using fixed 2.0R.`);
+    consistencyWarnings.push(`Raw advisory T2 ${executableCandidate.rawT2} was replaced with app-computed T2 ${targets.t2} using fixed 2.0R.`);
   }
 
   return {
@@ -450,7 +450,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         rejectionReason: candidate.rejectionReason ||
           result.best_trade_plan?.rejected_alternatives?.find((alt) => alt.setup_name === candidate.setupName)?.rejection_reason ||
           (!candidate.appOwned && isExecutable(candidate)
-            ? "Advisory only: Gemini suggested this, but executable plans must be confirmed by the app-owned rule engine."
+            ? "Advisory only: executable plans must be confirmed by the app-owned rule engine."
             : isExecutable(candidate) ? "Lower ranked than selected app-owned plan." : "Rejected because ENTRY, STOP, T1, or T2 was missing or invalid.")
       }))
   };

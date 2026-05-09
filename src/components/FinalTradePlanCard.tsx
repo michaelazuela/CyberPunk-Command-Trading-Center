@@ -13,9 +13,9 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
   let sourceBadge = "MISSING";
   switch (plan.source) {
     case "app_rule_engine": sourceBadge = "APP RULE ENGINE"; break;
-    case "best_trade_plan": sourceBadge = "GEMINI ADVISORY"; break;
-    case "candidate_trade_plan": sourceBadge = "GEMINI ADVISORY"; break;
-    case "final_trade_plan": sourceBadge = "GEMINI ADVISORY"; break;
+    case "best_trade_plan": sourceBadge = "ADVISORY ONLY"; break;
+    case "candidate_trade_plan": sourceBadge = "ADVISORY ONLY"; break;
+    case "final_trade_plan": sourceBadge = "ADVISORY ONLY"; break;
     case "current_rule_analysis": sourceBadge = "RULE ANALYSIS"; break;
     case "tradePlan": sourceBadge = "STRUCTURED TRADE PLAN"; break;
     case "legacy": sourceBadge = "LEGACY FALLBACK"; break;
