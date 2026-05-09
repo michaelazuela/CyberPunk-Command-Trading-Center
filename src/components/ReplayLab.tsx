@@ -13,6 +13,44 @@ import FinalTradePlanCard from './FinalTradePlanCard';
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 
+const REPLAY_OUTCOMES: Array<{
+  value: ReplayOutcome;
+  label: string;
+  hint: string;
+  className: string;
+}> = [
+  {
+    value: 'win',
+    label: 'Win',
+    hint: 'Target reached',
+    className: 'border-[var(--green)]/40 bg-[var(--green)]/10 text-[var(--green)] hover:bg-[var(--green)]/20'
+  },
+  {
+    value: 'loss',
+    label: 'Loss',
+    hint: 'Stop hit',
+    className: 'border-[var(--red)]/40 bg-[var(--red)]/10 text-[var(--red)] hover:bg-[var(--red)]/20'
+  },
+  {
+    value: 'scratch',
+    label: 'Scratch',
+    hint: 'Break even',
+    className: 'border-[var(--txt3)]/40 bg-[var(--b1)] text-[var(--txt)] hover:border-[var(--txt2)]'
+  },
+  {
+    value: 'no_trade',
+    label: 'No Trade',
+    hint: 'No valid entry',
+    className: 'border-[var(--yellow)]/40 bg-[var(--yellow)]/10 text-[var(--yellow)] hover:bg-[var(--yellow)]/20'
+  },
+  {
+    value: 'missed_trade',
+    label: 'Missed',
+    hint: 'Setup skipped',
+    className: 'border-[var(--orange)]/40 bg-[var(--orange)]/10 text-[var(--orange)] hover:bg-[var(--orange)]/20'
+  },
+];
+
 interface UploadedImage {
   dataUrl: string;
   ocrResult?: OCRResult | null;
@@ -543,11 +581,13 @@ export default function ReplayLab({
         throw new Error(`RAG save failed: ${ragSaveResult.error || 'Unknown Supabase error.'}`);
       }
 
-      const { data: ragRow, error: ragVerifyError } = await supabase
+      const ragQuery = supabase
         .from('trade_embeddings')
-        .select('id,setup_id,trade_result')
-        .eq('setup_id', resolvedSetupId)
-        .maybeSingle();
+        .select('id,setup_id,trade_result');
+
+      const { data: ragRow, error: ragVerifyError } = ragSaveResult.id
+        ? await ragQuery.eq('id', ragSaveResult.id).single()
+        : await ragQuery.eq('setup_id', resolvedSetupId).maybeSingle();
 
       if (ragVerifyError || !ragRow?.id) {
         throw new Error(`RAG verification failed: ${ragVerifyError?.message || 'No trade_embeddings row found for setup ID.'}`);
@@ -709,19 +749,37 @@ export default function ReplayLab({
                  </div>
 
                  {!morningOutcome && !proofFlow.active && (
-                   <div className="flex flex-col gap-2 mt-4">
-                     <h3 className="text-[10px] text-[var(--txt2)] font-bold">Mark Historical Outcome</h3>
+                   <div className="flex flex-col gap-3 mt-4 p-3 border border-[var(--b2)] bg-[var(--bg)]">
+                     <div className="flex items-center justify-between gap-3">
+                       <div>
+                         <h3 className="text-[10px] text-[var(--txt)] font-bold uppercase tracking-[0.18em]">Mark Historical Outcome</h3>
+                         <p className="text-[9px] text-[var(--txt3)] mt-1">Saves this replay result into Supabase and RAG learning.</p>
+                       </div>
+                       {savingOutcome?.sessionType === 'morning' && (
+                         <span className="text-[9px] text-[var(--orange)] uppercase tracking-[0.16em]">Saving...</span>
+                       )}
+                     </div>
                      {morningError && (
                        <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
                          {morningError}
                        </div>
                      )}
-                     <div className="flex flex-wrap gap-2">
-                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)] disabled:opacity-50">Win</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)] disabled:opacity-50">Loss</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'scratch')} className="qd-btn-secondary disabled:opacity-50">Scratch</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'no_trade')} className="qd-btn-secondary disabled:opacity-50">No Trade</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'morning'} onClick={() => saveTradeOutcome('morning', 'missed_trade')} className="qd-btn-secondary disabled:opacity-50">Missed Trade</button>
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        {REPLAY_OUTCOMES.map((option) => (
+                          <button
+                            key={`morning-${option.value}`}
+                            type="button"
+                            disabled={savingOutcome?.sessionType === 'morning'}
+                            onClick={() => saveTradeOutcome('morning', option.value)}
+                            className={cn(
+                              'min-h-[54px] border px-3 py-2 text-left font-mono transition-colors disabled:opacity-50 disabled:cursor-wait',
+                              option.className
+                            )}
+                          >
+                            <span className="block text-[11px] font-bold uppercase tracking-[0.16em]">{option.label}</span>
+                            <span className="block text-[9px] opacity-70 mt-1">{option.hint}</span>
+                          </button>
+                        ))}
                      </div>
                    </div>
                  )}
@@ -803,19 +861,37 @@ export default function ReplayLab({
                  </div>
 
                  {!lunchOutcome && !proofFlow.active && (
-                   <div className="flex flex-col gap-2 mt-4">
-                     <h3 className="text-[10px] text-[var(--txt2)] font-bold">Mark Historical Outcome</h3>
+                   <div className="flex flex-col gap-3 mt-4 p-3 border border-[var(--b2)] bg-[var(--bg)]">
+                     <div className="flex items-center justify-between gap-3">
+                       <div>
+                         <h3 className="text-[10px] text-[var(--txt)] font-bold uppercase tracking-[0.18em]">Mark Historical Outcome</h3>
+                         <p className="text-[9px] text-[var(--txt3)] mt-1">Saves this replay result into Supabase and RAG learning.</p>
+                       </div>
+                       {savingOutcome?.sessionType === 'lunch' && (
+                         <span className="text-[9px] text-[var(--orange)] uppercase tracking-[0.16em]">Saving...</span>
+                       )}
+                     </div>
                      {lunchError && (
                        <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
                          {lunchError}
                        </div>
                      )}
-                     <div className="flex flex-wrap gap-2">
-                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'win')} className="qd-btn-secondary bg-[var(--green)]/20 text-[var(--green)] disabled:opacity-50">Win</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'loss')} className="qd-btn-secondary bg-[var(--red)]/20 text-[var(--red)] disabled:opacity-50">Loss</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'scratch')} className="qd-btn-secondary disabled:opacity-50">Scratch</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'no_trade')} className="qd-btn-secondary disabled:opacity-50">No Trade</button>
-                        <button type="button" disabled={savingOutcome?.sessionType === 'lunch'} onClick={() => saveTradeOutcome('lunch', 'missed_trade')} className="qd-btn-secondary disabled:opacity-50">Missed Trade</button>
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        {REPLAY_OUTCOMES.map((option) => (
+                          <button
+                            key={`lunch-${option.value}`}
+                            type="button"
+                            disabled={savingOutcome?.sessionType === 'lunch'}
+                            onClick={() => saveTradeOutcome('lunch', option.value)}
+                            className={cn(
+                              'min-h-[54px] border px-3 py-2 text-left font-mono transition-colors disabled:opacity-50 disabled:cursor-wait',
+                              option.className
+                            )}
+                          >
+                            <span className="block text-[11px] font-bold uppercase tracking-[0.16em]">{option.label}</span>
+                            <span className="block text-[9px] opacity-70 mt-1">{option.hint}</span>
+                          </button>
+                        ))}
                      </div>
                    </div>
                  )}
