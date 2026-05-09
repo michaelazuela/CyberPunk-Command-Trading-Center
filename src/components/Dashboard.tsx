@@ -67,9 +67,9 @@ export default function Dashboard({
         <div className="kpi-cell flex-1">
           <span className="kpi-label">Entry Signal</span>
           <span className="kpi-value text-[var(--orange)]">
-            {session.analysisResult?.suggestedEntry ? 'ACTIVE' : '—'}
+            {dashboardPlan?.canExecute ? 'ACTIVE' : '—'}
           </span>
-          <span className="kpi-sub">{session.analysisResult?.suggestedEntry ? `Entry at ${session.analysisResult.suggestedEntry}` : 'Awaiting analysis'}</span>
+          <span className="kpi-sub">{dashboardPlan?.canExecute ? `Entry at ${dashboardPlan.entry}` : 'Awaiting app rule engine'}</span>
         </div>
         <div className="kpi-cell flex-1">
           <span className="kpi-label">Kill Switches</span>

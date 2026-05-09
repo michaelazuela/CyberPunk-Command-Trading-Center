@@ -14,11 +14,8 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
   
   const mismatchWarning = ocrTicker !== "unknown" && ocrTicker !== context.instrument ? "yes" : "no";
 
-  const direction =
-    context.geminiAnalysisJson?.best_trade_plan?.decision ||
-    context.geminiAnalysisJson?.final_trade_plan?.decision ||
-    context.geminiAnalysisJson?.tradePlan?.bias ||
-    "UNKNOWN";
+  const appPlan = context.trade_plan_json?.normalized_plan || context.geminiAnalysisJson?.normalized_plan;
+  const direction = appPlan?.decision || "UNKNOWN";
   const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
   const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
     ? context.geminiAnalysisJson.candidate_trade_plans
@@ -48,15 +45,16 @@ Session: ${context.sessionType === 'morning' ? 'Morning' : 'Lunch'}
 Direction: ${direction}
 Contracts: ${context.contracts ?? 'unknown'}
 Entry: ${context.entryPrice ?? 'unknown'}
-Stop: ${context.stopPrice ?? context.geminiAnalysisJson?.final_trade_plan?.stop ?? context.geminiAnalysisJson?.tradePlan?.stop ?? 'unknown'}
-T1: ${context.t1 ?? context.geminiAnalysisJson?.final_trade_plan?.target_1 ?? 'unknown'}
-T2: ${context.t2 ?? context.geminiAnalysisJson?.final_trade_plan?.target_2 ?? 'unknown'}
+Stop: ${context.stopPrice ?? 'unknown'}
+T1: ${context.t1 ?? 'unknown'}
+T2: ${context.t2 ?? 'unknown'}
 Risk Points: ${context.riskPoints ?? 'unknown'}
 Plan Source: ${context.planSource ?? 'unknown'}
 App Plan Engine:
-- Winner: ${bestPlan?.decision || direction}
-- Why it won: ${bestPlan?.why_it_won || context.whyThisPlan || 'unknown'}
+- Winner: ${appPlan?.setupName || appPlan?.source || direction}
+- Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || bestPlan?.why_it_won || 'unknown'}
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
+Gemini Advisory Note: candidate/best/final Gemini trade plans are stored as context only; executable levels come from app-normalized fields above.
 Candidate plans reviewed:
 ${candidateSummary}
 Trade Management Agent:

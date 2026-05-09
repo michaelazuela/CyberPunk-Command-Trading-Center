@@ -4,6 +4,7 @@ export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
 export type TriggerState = "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
 
 export type TradePlanSource =
+  | "app_rule_engine"
   | "best_trade_plan"
   | "candidate_trade_plan"
   | "final_trade_plan"
@@ -194,6 +195,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     priorityScore?: number | null;
     rank?: number | null;
     selected?: boolean;
+    appOwned?: boolean;
     ragSupport?: string;
     rejectionReason?: string | null;
     triggerState?: TriggerState;
@@ -221,6 +223,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         priorityScore: candidate.priority_score ?? null,
         rank: candidate.rank ?? index + 1,
         selected: !!candidate.selected,
+        appOwned: false,
         ragSupport: candidate.rag_support,
         rejectionReason: candidate.rejection_reason,
         triggerState: normalizeTriggerState(candidate.trigger_state, {
@@ -252,6 +255,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       priorityScore: result.best_trade_plan.priority_score ?? null,
       rank: 1,
       selected: true,
+      appOwned: false,
       ragSupport: result.best_trade_plan.rag_support,
       triggerState: normalizeTriggerState(result.best_trade_plan.trigger_state, {
         decision: result.best_trade_plan.decision || "NO TRADE",
@@ -275,6 +279,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       confidence: normalizeConfidence(result.final_trade_plan.final_confidence),
       whyThisPlan: result.final_trade_plan.why_this_plan || "No reasoning provided.",
       invalidation: result.final_trade_plan.what_would_invalidate || "No invalidation provided.",
+      appOwned: false,
       triggerState: normalizeTriggerState(result.final_trade_plan.trigger_state, {
         decision: result.final_trade_plan.decision || "NO TRADE",
         entry: parsePrice(result.final_trade_plan.entry),
@@ -297,13 +302,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       entry: parsePrice(result.current_rule_analysis.entry),
       stop: parsePrice(result.current_rule_analysis.stop),
       rawT1: parsePrice(result.current_rule_analysis.target_1),
-      source: "current_rule_analysis",
-      decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
+      source: "app_rule_engine",
+      decision: currentDecision,
       confidence: normalizeConfidence(result.current_rule_analysis.base_confidence, confidenceFromNumber(result.confidence)),
       whyThisPlan: result.current_rule_analysis.summary || result.reasoning || "Current rule analysis produced executable levels.",
       invalidation: result.current_rule_analysis.no_trade_reason || result.levelCheck || result.structureStatus || "Invalid if price violates the defined stop before entry confirmation.",
+      appOwned: true,
       triggerState: normalizeTriggerState(result.current_rule_analysis.trigger_state, {
-        decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
+        decision: currentDecision,
         entry: parsePrice(result.current_rule_analysis.entry),
         stop: parsePrice(result.current_rule_analysis.stop),
         whyThisPlan: result.current_rule_analysis.summary
@@ -322,7 +328,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       decision: result.tradePlan.bias || "NO TRADE",
       confidence: confidenceFromNumber(result.tradePlan.confidence),
       whyThisPlan: result.tradePlan.reasoningSummary || "No reasoning provided.",
-      invalidation: result.tradePlan.invalidation || "No invalidation provided."
+      invalidation: result.tradePlan.invalidation || "No invalidation provided.",
+      appOwned: false
     });
   }
 
@@ -336,7 +343,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       decision: inferDecision(result),
       confidence: confidenceFromNumber(result.confidence),
       whyThisPlan: result.reasoning || "No reasoning provided.",
-      invalidation: result.levelCheck || result.structureStatus || "No invalidation provided."
+      invalidation: result.levelCheck || result.structureStatus || "No invalidation provided.",
+      appOwned: false
     });
   }
 
@@ -353,12 +361,10 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     if (!isExecutable(candidate)) return -100;
     const risk = calculateRisk(candidate.entry as number, candidate.stop as number);
     const sourceScore =
-      candidate.source === "best_trade_plan" ? 35 :
-      candidate.selected ? 32 :
-      candidate.source === "candidate_trade_plan" ? 25 :
-      candidate.source === "final_trade_plan" ? 22 :
-      candidate.source === "current_rule_analysis" ? 18 :
-      candidate.source === "tradePlan" ? 12 : 5;
+      candidate.source === "app_rule_engine" ? 40 :
+      candidate.source === "current_rule_analysis" ? 30 :
+      candidate.source === "manual" ? 25 :
+      0;
     const riskScore = risk <= 8 ? 10 : risk <= 15 ? 2 : -12;
     const rankScore = candidate.rank ? Math.max(0, 8 - candidate.rank) : 0;
     return sourceScore +
@@ -369,20 +375,28 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       rankScore;
   };
 
-  const executableCandidate = [...candidates]
+  const appOwnedCandidates = candidates.filter(candidate => candidate.appOwned || candidate.source === "app_rule_engine" || candidate.source === "manual");
+  const advisoryCandidates = candidates.filter(candidate => !appOwnedCandidates.includes(candidate));
+
+  const executableCandidate = [...appOwnedCandidates]
     .filter(isExecutable)
     .sort((a, b) => scoreCandidate(b) - scoreCandidate(a))[0];
 
   if (!executableCandidate) {
     const noTradeReason =
-      result.final_trade_plan?.why_this_plan ||
       result.current_rule_analysis?.no_trade_reason ||
+      (advisoryCandidates.some(isExecutable)
+        ? "Gemini returned advisory trade levels, but the app-owned rule engine did not confirm an executable setup."
+        : null) ||
       defaultPlan.whyThisPlan;
     return {
       ...defaultPlan,
       decision: "NO TRADE",
       whyThisPlan: noTradeReason,
-      invalidation: result.final_trade_plan?.what_would_invalidate || defaultPlan.invalidation
+      invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
+      consistencyWarnings: advisoryCandidates.some(isExecutable)
+        ? ["Gemini trade-plan fields are advisory only. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
+        : []
     };
   }
 
@@ -391,6 +405,9 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);
   const consistencyWarnings: string[] = [];
+  if (advisoryCandidates.length > 0) {
+    consistencyWarnings.push("Gemini best/final/candidate trade-plan fields were treated as advisory. The executable plan was selected by the app-owned rule engine.");
+  }
   if (isValidPrice(executableCandidate.rawT1) && isValidPrice(targets.t1) && Math.abs(executableCandidate.rawT1 - targets.t1) >= 0.25) {
     consistencyWarnings.push(`Raw Gemini T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using fixed 1.5R.`);
   }
@@ -432,7 +449,9 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         setupName: candidate.setupName,
         rejectionReason: candidate.rejectionReason ||
           result.best_trade_plan?.rejected_alternatives?.find((alt) => alt.setup_name === candidate.setupName)?.rejection_reason ||
-          (isExecutable(candidate) ? "Lower ranked than selected plan." : "Rejected because ENTRY, STOP, T1, or T2 was missing or invalid.")
+          (!candidate.appOwned && isExecutable(candidate)
+            ? "Advisory only: Gemini suggested this, but executable plans must be confirmed by the app-owned rule engine."
+            : isExecutable(candidate) ? "Lower ranked than selected app-owned plan." : "Rejected because ENTRY, STOP, T1, or T2 was missing or invalid.")
       }))
   };
 }
