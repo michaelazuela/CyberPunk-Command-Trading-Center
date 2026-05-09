@@ -60,10 +60,12 @@ interface UploadedImage {
 export default function ReplayLab({
   session,
   onAddTrade,
+  onUpdate,
   isActive
 }: {
   session: SessionState;
   onAddTrade?: (trade: Omit<Trade, 'id' | 'timestamp'>) => void;
+  onUpdate?: (updates: Partial<SessionState>) => void;
   isActive?: boolean;
 }) {
   const [tradeDate, setTradeDate] = useState<string>('');
@@ -225,6 +227,7 @@ export default function ReplayLab({
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_morning', instrument });
       
       setMorningResult(analysis);
+      onUpdate?.({ replayMorningResult: analysis });
       
       // Save Setup to Supabase
       const { data: { user } } = await supabase.auth.getUser();
@@ -319,6 +322,7 @@ export default function ReplayLab({
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_lunch', instrument });
       
       setLunchResult(analysis);
+      onUpdate?.({ replayLunchResult: analysis });
       
       // Save Setup to Supabase
       const { data: { user } } = await supabase.auth.getUser();

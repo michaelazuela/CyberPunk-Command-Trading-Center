@@ -316,7 +316,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
           <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-            <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} />
+            <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} isAuthenticated={!!user} />
           </div>
           <div className={activeTab === 'analysis' ? 'block' : 'hidden'}>
             <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'analysis'} />
@@ -325,7 +325,7 @@ export default function App() {
             <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'lunch'} />
           </div>
           <div className={activeTab === 'replay' ? 'block' : 'hidden'}>
-            <ReplayLab session={appState.currentSession} onAddTrade={addTrade} isActive={activeTab === 'replay'} />
+            <ReplayLab session={appState.currentSession} onAddTrade={addTrade} onUpdate={updateSession} isActive={activeTab === 'replay'} />
           </div>
           <div className={activeTab === 'history' ? 'block' : 'hidden'}>
             <TradeLog trades={displayTrades} onAddTrade={addTrade} />

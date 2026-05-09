@@ -386,6 +386,9 @@ export interface SessionState {
   };
   aiSettings?: AISettings;
   analysisResult?: AnalysisResult;
+  lunchAnalysisResult?: AnalysisResult;
+  replayMorningResult?: AnalysisResult;
+  replayLunchResult?: AnalysisResult;
   morningScreenshot?: string;
   lunchScreenshot?: string;
 }

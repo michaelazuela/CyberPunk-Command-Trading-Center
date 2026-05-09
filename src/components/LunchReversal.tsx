@@ -457,6 +457,7 @@ export default function LunchReversal({
       }
       
       updateStep('complete', 'complete');
+      onUpdate({ lunchScreenshot: imgSource, lunchAnalysisResult: analysis });
       
       if (!isDeepReview) {
         setPendingImage(null);
@@ -474,7 +475,7 @@ export default function LunchReversal({
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, updateStep, modelConfig, initProgress]);
+  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   const handleImageFile = (file: File) => {
     const reader = new FileReader();
