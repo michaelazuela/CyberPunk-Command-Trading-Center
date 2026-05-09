@@ -5,6 +5,7 @@ import { uploadTradeProof } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import { Trade } from '../types';
 import { NormalizedTradePlan } from '../lib/tradePlan';
+import { Bot, CheckCircle2, Clipboard, Image as ImageIcon, RotateCcw, Save, ShieldCheck, Upload, X } from 'lucide-react';
 
 interface TradeProofPanelProps {
   manualOutcome: 'SUCCESS' | 'FAILED';
@@ -25,6 +26,10 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
   const fileInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pasteZoneRef = useRef<HTMLDivElement>(null);
+  const proofSizeKb = proofImage ? Math.round((proofImage.dataUrl.length * 0.75) / 1024) : 0;
+  const claimedLabel = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : 'FAILED';
+  const claimTone = manualOutcome === 'SUCCESS' ? 'qd-badge-green' : 'qd-badge-red';
+  const metric = (value?: number | null) => value == null ? 'N/A' : String(value);
 
   const processPastedImage = async (e: Event | React.ClipboardEvent) => {
     try {
@@ -150,33 +155,80 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
   };
 
   return (
-    <div ref={panelRef} className="mt-4 p-4 border-2 border-[var(--b2)] bg-[var(--b0)] fade-up rounded-sm max-w-xl shadow-lg font-mono relative">
-       <h4 className="text-[12px] uppercase text-[var(--txt)] font-bold mb-2">Upload trade proof screenshot (optional)</h4>
+    <div ref={panelRef} className="mt-4 border border-[var(--b2)] bg-[var(--b0)] fade-up font-mono relative overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+       <div className="flex flex-col gap-3 border-b border-[var(--b1)] bg-[linear-gradient(90deg,var(--s1),transparent)] px-4 py-3 md:flex-row md:items-center md:justify-between">
+         <div>
+           <div className="flex items-center gap-2">
+             <ShieldCheck className="h-4 w-4 text-[var(--orange)]" />
+             <h4 className="text-[11px] uppercase text-[var(--txt)] font-bold tracking-[0.16em]">Trade Proof Review</h4>
+           </div>
+           <p className="mt-1 text-[10px] text-[var(--txt3)]">
+             Optional evidence for Replay Lab. Paste or upload the chart outcome so RAG can learn whether stop held and T1/T2 were reached.
+           </p>
+         </div>
+         <div className="flex items-center gap-2">
+           <span className="qd-badge qd-badge-muted">CLAIM</span>
+           <span className={cn("qd-badge", claimTone)}>{claimedLabel}</span>
+         </div>
+       </div>
        
        {!proofImage ? (
-         <div className="space-y-4">
-           <p className="text-[10px] text-[var(--txt2)]">Paste a chart screenshot showing whether stop held and T1/T2 were reached.</p>
+         <div className="space-y-4 p-4">
+           <div className="grid gap-2 text-[10px] text-[var(--txt2)] md:grid-cols-3">
+             <div className="border border-[var(--b1)] bg-[var(--bg)] p-3">
+               <span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">Required Evidence</span>
+               <strong className="mt-1 block text-[var(--txt)]">Entry / Stop / T1 / T2</strong>
+             </div>
+             <div className="border border-[var(--b1)] bg-[var(--bg)] p-3">
+               <span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">Best Screenshot</span>
+               <strong className="mt-1 block text-[var(--txt)]">After trade outcome</strong>
+             </div>
+             <div className="border border-[var(--b1)] bg-[var(--bg)] p-3">
+               <span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">RAG Use</span>
+               <strong className="mt-1 block text-[var(--txt)]">Proof + learning memory</strong>
+             </div>
+           </div>
+           {tradePlan && (
+             <div className="grid gap-2 border border-[var(--b1)] bg-black/20 p-3 text-[10px] md:grid-cols-5">
+               <div><span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">Instrument</span><strong>{dailyInstrument || 'MES/MNQ'}</strong></div>
+               <div><span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">Entry</span><strong>{metric(tradePlan.entry)}</strong></div>
+               <div><span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">Stop</span><strong className="text-[var(--red)]">{metric(tradePlan.stop)}</strong></div>
+               <div><span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">T1</span><strong className="text-[var(--green)]">{metric(tradePlan.t1)}</strong></div>
+               <div><span className="block text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">T2</span><strong className="text-[var(--green)]">{metric(tradePlan.t2)}</strong></div>
+             </div>
+           )}
            <div
              ref={pasteZoneRef}
              tabIndex={0}
              onPaste={processPastedImage}
              onClick={() => pasteZoneRef.current?.focus()}
-             className="min-h-[92px] border border-dashed border-[var(--b2)] bg-black/20 flex flex-col items-center justify-center gap-2 text-center outline-none focus:border-[var(--orange)] focus:ring-1 focus:ring-[var(--orange)]/40"
+             className="min-h-[156px] cursor-pointer border border-dashed border-[var(--b2)] bg-black/20 flex flex-col items-center justify-center gap-3 text-center outline-none transition-colors hover:border-[var(--orange)]/60 hover:bg-[var(--s1)] focus:border-[var(--orange)] focus:ring-1 focus:ring-[var(--orange)]/40"
            >
-             <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--txt)]">Click this proof box, then Ctrl+V</span>
-             <span className="text-[9px] text-[var(--txt3)]">Use a screenshot that shows price action around Entry, Stop, T1, and T2.</span>
+             <div className="flex h-12 w-12 items-center justify-center border border-[var(--b2)] bg-[var(--bg)] text-[var(--orange)]">
+               <Clipboard className="h-6 w-6" />
+             </div>
+             <div>
+               <span className="block text-[11px] uppercase tracking-[0.2em] text-[var(--txt)]">Click proof box, then Ctrl+V</span>
+               <span className="mt-2 block max-w-[520px] text-[10px] leading-5 text-[var(--txt3)]">
+                 Use the chart after the trade played out. The screenshot should show price near Entry, Stop, T1, and T2 so the saved RAG record can verify the outcome.
+               </span>
+             </div>
            </div>
-           <div className="flex gap-2">
+           <div className="flex flex-wrap gap-2">
              <button onClick={() => fileInputRef.current?.click()} className="qd-btn-primary h-[32px] text-[10px]" disabled={isSaving}>
+               <Upload className="mr-2 h-3.5 w-3.5" />
                Choose Screenshot
              </button>
-             <button onClick={handlePasteButtonClick} className="qd-btn-secondary !bg-[var(--b1)] !text-[var(--txt2)] h-[32px] text-[10px]" disabled={isSaving}>
+             <button onClick={handlePasteButtonClick} className="qd-btn-ghost h-[32px] text-[10px]" disabled={isSaving}>
+               <Clipboard className="mr-2 h-3.5 w-3.5" />
                Paste Screenshot
              </button>
              <button onClick={skipProof} className="qd-btn-ghost h-[32px] text-[10px]" disabled={isSaving}>
-               Skip — No Proof
+               <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+               Skip - No Proof
              </button>
              <button onClick={onCancel} className="qd-btn-ghost text-[var(--red)] border-transparent h-[32px] text-[10px]" disabled={isSaving}>
+               <X className="mr-2 h-3.5 w-3.5" />
                Cancel
              </button>
            </div>
@@ -190,12 +242,28 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
          </div>
        ) : (
-         <div className="space-y-4">
-           <div className="flex gap-4 items-center bg-[var(--bg)] p-2 border border-[var(--b1)] rounded-sm">
-             <img src={proofImage.dataUrl} alt="Proof thumbnail" className="max-h-[120px] rounded-sm border border-[var(--b2)]" />
-             <div className="flex flex-col gap-1 overflow-hidden">
-               <span className="text-[10px] truncate text-[var(--txt)] font-bold">{proofImage.filename}</span>
-               <span className="text-[9px] text-[var(--txt3)]">{Math.round((proofImage.dataUrl.length * 0.75) / 1024)} KB</span>
+         <div className="space-y-4 p-4">
+           <div className="flex flex-col gap-4 bg-[var(--bg)] p-3 border border-[var(--b1)] md:flex-row md:items-center">
+             <div className="relative flex h-[132px] w-full items-center justify-center overflow-hidden border border-[var(--b2)] bg-black/30 md:w-[220px]">
+               <img src={proofImage.dataUrl} alt="Proof thumbnail" className="h-full w-full object-contain" />
+             </div>
+             <div className="flex min-w-0 flex-1 flex-col gap-3">
+               <div>
+                 <div className="flex items-center gap-2 text-[var(--orange)]">
+                   <ImageIcon className="h-4 w-4" />
+                   <span className="text-[9px] uppercase tracking-[0.16em]">Screenshot Loaded</span>
+                 </div>
+                 <span className="mt-2 block truncate text-[11px] text-[var(--txt)] font-bold">{proofImage.filename}</span>
+               <span className="text-[9px] text-[var(--txt3)]">{proofSizeKb} KB - ready for optional Gemini review</span>
+               </div>
+               {tradePlan?.entry != null && tradePlan?.stop != null && (
+                 <div className="grid grid-cols-2 gap-2 text-[9px] md:grid-cols-4">
+                   <div className="border border-[var(--b1)] p-2"><span className="block text-[var(--txt3)]">ENTRY</span><strong>{metric(tradePlan.entry)}</strong></div>
+                   <div className="border border-[var(--b1)] p-2"><span className="block text-[var(--txt3)]">STOP</span><strong className="text-[var(--red)]">{metric(tradePlan.stop)}</strong></div>
+                   <div className="border border-[var(--b1)] p-2"><span className="block text-[var(--txt3)]">T1</span><strong className="text-[var(--green)]">{metric(tradePlan.t1)}</strong></div>
+                   <div className="border border-[var(--b1)] p-2"><span className="block text-[var(--txt3)]">T2</span><strong className="text-[var(--green)]">{metric(tradePlan.t2)}</strong></div>
+                 </div>
+               )}
              </div>
            </div>
 
@@ -206,11 +274,13 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
            )}
 
            {!reviewResult && !isReviewing && (
-             <div className="flex gap-2">
-               <button onClick={reviewWithGemini} className="qd-btn-primary flex items-center gap-2 h-[32px] text-[10px]">
-                 Review with Gemini
+             <div className="flex flex-wrap gap-2">
+                 <button onClick={reviewWithGemini} className="qd-btn-primary h-[32px] text-[10px]">
+                   <Bot className="h-3.5 w-3.5" />
+                   Review with Gemini
                </button>
                <button onClick={() => setProofImage(null)} className="qd-btn-ghost text-[var(--red)] border-transparent h-[32px] text-[10px]">
+                 <X className="mr-2 h-3.5 w-3.5" />
                  Remove
                </button>
              </div>
@@ -218,7 +288,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
 
            {isReviewing && (
              <div className="flex items-center gap-2 text-[10px] text-[var(--cyan)] animate-pulse p-2 border border-[var(--cyan)]/20 bg-[var(--cyan)]/5 rounded-sm">
-               <span className="w-2 h-2 rounded-full bg-[var(--cyan)]"></span>
+               <Bot className="h-3.5 w-3.5" />
                Sending proof to Gemini for review...
              </div>
            )}
@@ -226,14 +296,17 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
            {reviewResult && !isReviewing && (
              <div className="space-y-4">
                <div className="p-3 bg-[var(--b0)] border border-[var(--b2)] rounded-sm space-y-2">
-                 <div className="flex justify-between items-center border-b border-[var(--b1)] pb-2 mb-2">
-                   <h5 className="text-[10px] uppercase font-bold text-[var(--orange)]">Gemini Trade Review</h5>
+                 <div className="flex flex-col gap-2 border-b border-[var(--b1)] pb-2 mb-2 md:flex-row md:items-center md:justify-between">
+                   <h5 className="flex items-center gap-2 text-[10px] uppercase font-bold text-[var(--orange)]">
+                     <ShieldCheck className="h-3.5 w-3.5" />
+                     Gemini Trade Review
+                   </h5>
                    <span className="text-[9px] text-[var(--txt2)] tracking-widest">VERIFICATION SYSTEM</span>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-2 text-[10px]">
                    <span className="text-[var(--txt2)]">Result Claimed:</span>
-                   <span className="font-bold text-[var(--txt)]">{manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : 'FAILED'}</span>
+                   <span className="font-bold text-[var(--txt)]">{claimedLabel}</span>
                    
                    <span className="text-[var(--txt2)]">Gemini Verdict:</span>
                    <span className={cn("font-bold px-1 rounded-sm text-black inline-block max-w-fit", 
@@ -279,11 +352,13 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
                  )}
                </div>
 
-               <div className="flex gap-2">
+               <div className="flex flex-wrap gap-2">
                  <button onClick={saveTradeWithProof} className="qd-btn-primary h-[32px] text-[10px]" disabled={isSaving}>
+                   <Save className="mr-2 h-3.5 w-3.5" />
                    {isSaving ? 'Saving...' : 'Save Trade + Proof'}
                  </button>
                  <button onClick={() => { setProofImage(null); setReviewResult(null); }} className="qd-btn-ghost h-[32px] text-[10px]" disabled={isSaving}>
+                   <RotateCcw className="mr-2 h-3.5 w-3.5" />
                    Upload Different Screenshot
                  </button>
                </div>
