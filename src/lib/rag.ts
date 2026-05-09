@@ -15,6 +15,50 @@ function formatSupabaseError(error: any): string {
   return error?.message || error?.details || error?.hint || String(error || 'Unknown Supabase error');
 }
 
+type GeminiConfidence = 'High' | 'Medium' | 'Low';
+type GeminiVerdict = 'CONFIRMED' | 'DISPUTED' | 'UNCLEAR';
+
+function normalizeGeminiConfidence(value: unknown): GeminiConfidence | null {
+  if (value === 'High' || value === 'Medium' || value === 'Low') return value;
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const score = value > 1 ? value / 100 : value;
+    if (score >= 0.75) return 'High';
+    if (score >= 0.45) return 'Medium';
+    return 'Low';
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'high') return 'High';
+    if (normalized === 'medium' || normalized === 'med') return 'Medium';
+    if (normalized === 'low') return 'Low';
+
+    const numeric = Number(normalized.replace('%', ''));
+    if (Number.isFinite(numeric)) return normalizeGeminiConfidence(numeric);
+  }
+
+  return null;
+}
+
+function normalizeGeminiVerdict(value: unknown): GeminiVerdict | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === 'CONFIRMED' || normalized === 'DISPUTED' || normalized === 'UNCLEAR') {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeTradeResult(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) return 'pending';
+  const normalized = value.trim().toLowerCase();
+  if (['win', 'loss', 'scratch', 'pending', 'no_trade', 'missed_trade'].includes(normalized)) {
+    return normalized;
+  }
+  return 'pending';
+}
+
 export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -28,7 +72,11 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
     let setupQualityScore = 0.5; // Default
 
     // Simple heuristic for initial quality score
-    if (context.geminiConfidence === 'High') setupQualityScore += 0.2;
+    const geminiConfidence = normalizeGeminiConfidence(context.geminiConfidence);
+    const geminiVerdict = normalizeGeminiVerdict(context.geminiVerdict);
+    const tradeResult = normalizeTradeResult(context.tradeResult);
+
+    if (geminiConfidence === 'High') setupQualityScore += 0.2;
     if (context.rthVsMidnight === 'below') setupQualityScore += 0.1;
 
     try {
@@ -75,10 +123,10 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       pnl_ticks: context.pnlTicks ?? null,
       pnl_dollars: context.pnlDollars ?? null,
       contracts: context.contracts ?? null,
-      gemini_confidence: context.geminiConfidence || null,
-      gemini_verdict: context.geminiVerdict || null,
+      gemini_confidence: geminiConfidence,
+      gemini_verdict: geminiVerdict,
       setup_quality_score: setupQualityScore,
-      trade_result: context.tradeResult || 'pending',
+      trade_result: tradeResult,
       embedding_text: embeddingText,
       embedding: embedding,
       ocr_text: context.ocrText || null,
@@ -111,11 +159,10 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       eth_context_review_json: context.eth_context_review_json || null,
       afternoon_test_plan_json: context.afternoon_test_plan_json || null,
       midnight_open_review_json: context.midnight_open_review_json || null,
-      
+
       window_start: context.window_start || null,
       window_end: context.window_end || null,
       window_timezone: context.window_timezone || null,
-      required_screenshot_range: context.required_screenshot_range || null,
     };
 
     const coreRecord = {
@@ -149,6 +196,19 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       proof_screenshot_url: record.proof_screenshot_url,
       midnight_open_source: record.midnight_open_source,
       notes: record.notes,
+    };
+
+    const legacyTradeResult = ['win', 'loss', 'scratch', 'pending'].includes(coreRecord.trade_result)
+      ? coreRecord.trade_result
+      : 'pending';
+
+    const legacyCoreRecord = {
+      ...coreRecord,
+      trade_result: legacyTradeResult,
+      notes: [
+        coreRecord.notes,
+        legacyTradeResult !== tradeResult ? `Original replay outcome: ${tradeResult}` : null,
+      ].filter(Boolean).join('\n') || null,
     };
 
     let existingId = null;
@@ -196,11 +256,15 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       try {
         savedId = await persistRecord(coreRecord);
       } catch (fallbackError: any) {
-        return {
-          success: false,
-          error: `Full save failed: ${formatSupabaseError(fullRecordError)} | Core fallback failed: ${formatSupabaseError(fallbackError)}`,
-          code: fallbackError?.code || fullRecordError?.code,
-        };
+        try {
+          savedId = await persistRecord(legacyCoreRecord);
+        } catch (legacyFallbackError: any) {
+          return {
+            success: false,
+            error: `Full save failed: ${formatSupabaseError(fullRecordError)} | Core fallback failed: ${formatSupabaseError(fallbackError)} | Legacy fallback failed: ${formatSupabaseError(legacyFallbackError)}`,
+            code: legacyFallbackError?.code || fallbackError?.code || fullRecordError?.code,
+          };
+        }
       }
     }
 
