@@ -73,6 +73,9 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
               {plan.ragSupport && (
                 <span className="qd-badge opacity-80">RAG: {plan.ragSupport}</span>
               )}
+              {plan.triggerState === "PENDING_TRIGGER" && (
+                <span className="qd-badge qd-badge-orange">PENDING TRIGGER</span>
+              )}
             </div>
           </div>
 
@@ -110,6 +113,11 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
         <div className="text-[11px] text-[var(--txt)] whitespace-pre-wrap">
           <strong className="text-[var(--green)]">Why this plan:</strong> {plan.whyItWon || plan.whyThisPlan}
         </div>
+        {plan.entryTrigger && (
+          <div className="text-[11px] text-[var(--amber)] border-t border-[var(--amber)]/20 pt-2 mt-2 whitespace-pre-wrap">
+            <strong>Entry trigger:</strong> {plan.entryTrigger}
+          </div>
+        )}
         <div className="text-[11px] text-[var(--red)] border-t border-[var(--red)]/20 pt-2 mt-2 whitespace-pre-wrap">
           <strong className="text-[var(--red)]">Invalidation:</strong> {plan.invalidation}
         </div>

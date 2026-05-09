@@ -132,9 +132,12 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - IF (TIME_IN_IB > 45min) ➔ STATUS: NEUTRAL / FRICTION. (Wait: 2-Bar Guard).
     - IF (OVERLAP > 80%) AND (VELOCITY == LOW) ➔ NO_WICK_ENTRY. (Wait: Clearing Bar).
     - IF (WICK > ANCHOR ± 1pt) AND (CLOSE == INSIDE_IB) AND (C2 == DEEP_RECLAIM) ➔ ACTION: FLIP_BIAS. (Stop: Wick_Extreme + 1t).
-    - IF (2-BAR_GUARD == TRUE) AND (PRICE > ANCHOR + 5pts) ➔ WAIT: 1st COUNTER-TREND BREATHER. Do NOT execute Breather_Break until a completed pullback candle is followed by a later candle that breaks the breather candle high (long) or low (short).
-    - BREATHER BREAK ELIGIBILITY LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT active yet. Output Momentum Continuation with WAIT_FOR_RECLAIM, or NO TRADE if no executable continuation trigger exists. Do not invent a future break price.
-    - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, do not select a setup that requires later confirmation.
+    - IF (2-BAR_GUARD == TRUE) AND (PRICE > ANCHOR + 5pts) ➔ WAIT: 1st COUNTER-TREND BREATHER. Do NOT market-enter on the breather candle itself.
+    - BREATHER BREAK PLAN LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT an already-triggered entry, but it IS a valid CONDITIONAL_STOP_ENTRY plan when the trend structure is intact. Do NOT output NO TRADE solely because the trigger has not fired yet.
+    - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.
+    - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
+    - Only output NO TRADE when there is no measurable trigger candle, no valid stop, invalid structure, oversized risk, or the setup violates a kill switch.
+    - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible 9:30-10:10 levels. Do not require future confirmation before producing ENTRY/STOP/T1/T2.
     - PRICE FORMULA LOCK: Gemini identifies setup and trigger candle only. The executable T1/T2 are app-calculated from entry and stop. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
@@ -188,10 +191,12 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - Return exactly one \`best_trade_plan\` that explains why it beat the alternatives.
     - Consolidate all reasoning across the modules into a final, actionable trade decision.
     - Provide exact entry price, stop-loss price, and realistic targets.
+    - A conditional stop-entry plan with visible ENTRY and STOP levels is a valid trade plan. It is not a NO TRADE. Use trigger_state = PENDING_TRIGGER when the entry has not fired yet.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate. You should still return target_1 and target_2 if possible, but the app may recompute them using Risk = abs(entry - stop).
     - Formula check: For any LONG plan, target_1 MUST equal entry + abs(entry - stop) * 1.5 and target_2 MUST equal entry + abs(entry - stop) * 2.0. For any SHORT plan, target_1 MUST equal entry - abs(entry - stop) * 1.5 and target_2 MUST equal entry - abs(entry - stop) * 2.0. If you cannot calculate this exactly, set target_1 and target_2 to null and let the app calculate them.
     - CONSISTENCY LOCK: If current_rule_analysis contains an executable setup with entry and stop, best_trade_plan and final_trade_plan MUST repeat the same direction, entry, stop, target_1, and target_2 unless another candidate clearly outranks it. If another candidate wins, current_rule_analysis must explain why the lower-priority setup was rejected.
     - If best_trade_plan/final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
+    - If structure is valid but the entry is pending, best_trade_plan/final_trade_plan MUST NOT be NO TRADE. Return decision LONG/SHORT, trigger_state PENDING_TRIGGER, and exact entry/stop derived from the visible trigger candle.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
 
     =========================================
@@ -306,6 +311,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
         "stop": "number or null",
         "target_1": "number or null",
         "target_2": "number or null",
+        "trigger_state": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER",
+        "entry_trigger": "string explaining the candle/level that must break",
         "no_trade_reason": "string or null",
         "base_confidence": "High | Medium | Low"
       },
@@ -330,6 +337,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
         "target_1": "number or null",
         "target_2": "number or null",
         "risk_reward": "string or null",
+        "trigger_state": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER",
+        "entry_trigger": "string explaining the trigger condition or null",
         "final_confidence": "High | Medium | Low",
         "why_this_plan": "string",
         "what_would_invalidate": "string"
@@ -345,6 +354,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
           "stop": "number or null",
           "target_1": "number or null",
           "target_2": "number or null",
+          "trigger_state": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER",
+          "entry_trigger": "string explaining the trigger condition or null",
           "confidence": "High | Medium | Low",
           "priority_score": 0.0,
           "invalidation": "string",
@@ -361,6 +372,8 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
         "stop": "number or null",
         "target_1": "number or null",
         "target_2": "number or null",
+        "trigger_state": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER",
+        "entry_trigger": "string explaining the trigger condition or null",
         "final_confidence": "High | Medium | Low",
         "priority_score": 0.0,
         "why_it_won": "string explaining why this candidate beat alternatives",

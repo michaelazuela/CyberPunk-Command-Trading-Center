@@ -1,6 +1,7 @@
 import { AnalysisResult } from '../types';
 
 export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
+export type TriggerState = "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
 
 export type TradePlanSource =
   | "best_trade_plan"
@@ -32,6 +33,8 @@ export interface NormalizedTradePlan {
   whyItWon?: string;
   ragSupport?: string;
   tradeManagement?: AnalysisResult['trade_management_plan'];
+  triggerState?: TriggerState;
+  entryTrigger?: string | null;
   consistencyWarnings?: string[];
   rejectedAlternatives?: {
     setupName: string;
@@ -84,6 +87,17 @@ function priorityScoreValue(value: unknown): number {
   const parsed = parsePrice(value);
   if (parsed === null) return 0;
   return Math.max(0, Math.min(parsed, 1)) * 35;
+}
+
+function normalizeTriggerState(value: unknown, candidate: { decision: TradeDecision; entry: number | null; stop: number | null; whyThisPlan?: string }): TriggerState {
+  if (value === "TRIGGERED" || value === "PENDING_TRIGGER" || value === "NO_TRIGGER") return value;
+  if (candidate.decision === "NO TRADE") return "NO_TRIGGER";
+  const text = `${candidate.whyThisPlan || ""}`.toUpperCase();
+  if (text.includes("PENDING") || text.includes("WAIT") || text.includes("BREAK") || text.includes("TRIGGER")) {
+    return "PENDING_TRIGGER";
+  }
+  if (isValidPrice(candidate.entry) && isValidPrice(candidate.stop)) return "TRIGGERED";
+  return "NO_TRIGGER";
 }
 
 function inferDecisionFromText(text: string): TradeDecision {
@@ -182,6 +196,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     selected?: boolean;
     ragSupport?: string;
     rejectionReason?: string | null;
+    triggerState?: TriggerState;
+    entryTrigger?: string | null;
   };
 
   const candidates: Candidate[] = [];
@@ -206,7 +222,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
         rank: candidate.rank ?? index + 1,
         selected: !!candidate.selected,
         ragSupport: candidate.rag_support,
-        rejectionReason: candidate.rejection_reason
+        rejectionReason: candidate.rejection_reason,
+        triggerState: normalizeTriggerState(candidate.trigger_state, {
+          decision: candidate.direction || "NO TRADE",
+          entry: parsePrice(candidate.entry),
+          stop: parsePrice(candidate.stop),
+          whyThisPlan: candidate.why_this_plan
+        }),
+        entryTrigger: candidate.entry_trigger || null
       });
     });
   }
@@ -229,7 +252,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       priorityScore: result.best_trade_plan.priority_score ?? null,
       rank: 1,
       selected: true,
-      ragSupport: result.best_trade_plan.rag_support
+      ragSupport: result.best_trade_plan.rag_support,
+      triggerState: normalizeTriggerState(result.best_trade_plan.trigger_state, {
+        decision: result.best_trade_plan.decision || "NO TRADE",
+        entry: parsePrice(result.best_trade_plan.entry),
+        stop: parsePrice(result.best_trade_plan.stop),
+        whyThisPlan: result.best_trade_plan.why_it_won
+      }),
+      entryTrigger: result.best_trade_plan.entry_trigger || selectedCandidate?.entry_trigger || null
     });
   }
 
@@ -244,7 +274,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       decision: result.final_trade_plan.decision || "NO TRADE",
       confidence: normalizeConfidence(result.final_trade_plan.final_confidence),
       whyThisPlan: result.final_trade_plan.why_this_plan || "No reasoning provided.",
-      invalidation: result.final_trade_plan.what_would_invalidate || "No invalidation provided."
+      invalidation: result.final_trade_plan.what_would_invalidate || "No invalidation provided.",
+      triggerState: normalizeTriggerState(result.final_trade_plan.trigger_state, {
+        decision: result.final_trade_plan.decision || "NO TRADE",
+        entry: parsePrice(result.final_trade_plan.entry),
+        stop: parsePrice(result.final_trade_plan.stop),
+        whyThisPlan: result.final_trade_plan.why_this_plan
+      }),
+      entryTrigger: result.final_trade_plan.entry_trigger || null
     });
   }
 
@@ -264,7 +301,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
       confidence: normalizeConfidence(result.current_rule_analysis.base_confidence, confidenceFromNumber(result.confidence)),
       whyThisPlan: result.current_rule_analysis.summary || result.reasoning || "Current rule analysis produced executable levels.",
-      invalidation: result.current_rule_analysis.no_trade_reason || result.levelCheck || result.structureStatus || "Invalid if price violates the defined stop before entry confirmation."
+      invalidation: result.current_rule_analysis.no_trade_reason || result.levelCheck || result.structureStatus || "Invalid if price violates the defined stop before entry confirmation.",
+      triggerState: normalizeTriggerState(result.current_rule_analysis.trigger_state, {
+        decision: currentDecision === "NO TRADE" ? inferDecision(result) : currentDecision,
+        entry: parsePrice(result.current_rule_analysis.entry),
+        stop: parsePrice(result.current_rule_analysis.stop),
+        whyThisPlan: result.current_rule_analysis.summary
+      }),
+      entryTrigger: result.current_rule_analysis.entry_trigger || null
     });
   }
 
@@ -342,7 +386,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     };
   }
 
-  const { decision, entry, stop, source, confidence, whyThisPlan, invalidation } = executableCandidate;
+  const { decision, entry, stop, source, confidence, whyThisPlan, invalidation, entryTrigger } = executableCandidate;
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);
@@ -374,6 +418,8 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     whyItWon: result.best_trade_plan?.why_it_won,
     ragSupport: executableCandidate.ragSupport,
     tradeManagement: result.trade_management_plan,
+    triggerState: executableCandidate.triggerState ?? normalizeTriggerState(undefined, executableCandidate),
+    entryTrigger: entryTrigger ?? null,
     consistencyWarnings,
     rejectedAlternatives: candidates
       .filter((candidate) => {

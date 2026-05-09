@@ -224,6 +224,8 @@ export interface AnalysisResult {
     stop: number | null;
     target_1: number | null;
     target_2: number | null;
+    trigger_state?: "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
+    entry_trigger?: string | null;
     no_trade_reason: string | null;
     base_confidence: "High" | "Medium" | "Low";
   };
@@ -248,6 +250,8 @@ export interface AnalysisResult {
     target_1: number | null;
     target_2: number | null;
     risk_reward: string | null;
+    trigger_state?: "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
+    entry_trigger?: string | null;
     final_confidence: "High" | "Medium" | "Low";
     why_this_plan: string;
     what_would_invalidate: string;
@@ -316,6 +320,8 @@ export interface CandidateTradePlan {
   stop: number | null;
   target_1: number | null;
   target_2: number | null;
+  trigger_state?: "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
+  entry_trigger?: string | null;
   confidence: "High" | "Medium" | "Low";
   priority_score?: number | null;
   invalidation: string;
@@ -332,6 +338,8 @@ export interface BestTradePlan {
   stop: number | null;
   target_1: number | null;
   target_2: number | null;
+  trigger_state?: "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
+  entry_trigger?: string | null;
   final_confidence: "High" | "Medium" | "Low";
   priority_score?: number | null;
   why_it_won: string;
