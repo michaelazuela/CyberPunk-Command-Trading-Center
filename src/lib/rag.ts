@@ -163,6 +163,10 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       window_start: context.window_start || null,
       window_end: context.window_end || null,
       window_timezone: context.window_timezone || null,
+      required_screenshot_range: context.required_screenshot_range || null,
+      plan_version_id: context.planVersionId || null,
+      setup_signature: context.setupSignature || null,
+      save_receipt_json: context.saveReceiptJson || null,
     };
 
     const coreRecord = {
@@ -497,11 +501,11 @@ Average PnL on similar setups: ${avg_pnl} ticks.
 You MUST use this historical data to decide whether it SUPPORTS, CONFLICTS WITH, or is NEUTRAL towards the plan you derived in your current rule analysis step. Return { "agent_learning_used": true }.`;
 }
 
-export async function embedPendingRecords(): Promise<void> {
+export async function embedPendingRecords(): Promise<{ checked: number; updated: number; failed: number }> {
   // embedPendingRecords only repairs missing vector embeddings. It does not itself display learning insights.
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return { checked: 0, updated: 0, failed: 0 };
 
     if (import.meta.env.DEV) console.log("[AGENT LEARNING] Checking for pending embeddings...");
 
@@ -512,9 +516,10 @@ export async function embedPendingRecords(): Promise<void> {
       .eq('user_id', user.id)
       .limit(5);
 
-    if (error || !pendingRecords || pendingRecords.length === 0) return;
+    if (error || !pendingRecords || pendingRecords.length === 0) return { checked: 0, updated: 0, failed: 0 };
 
     let updatedCount = 0;
+    let failedCount = 0;
     for (const record of pendingRecords) {
       try {
         const embedding = await generateEmbedding(record.embedding_text);
@@ -524,13 +529,16 @@ export async function embedPendingRecords(): Promise<void> {
           .eq('id', record.id);
         updatedCount++;
       } catch (err) {
+        failedCount++;
         console.error(`[RAG] Failed to embed record ${record.id}:`, err);
       }
     }
     
     if (import.meta.env.DEV) console.log(`[AGENT LEARNING] Pending embedding backfill complete: ${updatedCount} updated`);
+    return { checked: pendingRecords.length, updated: updatedCount, failed: failedCount };
   } catch (error) {
     // Quietly fail
+    return { checked: 0, updated: 0, failed: 1 };
   }
 }
 

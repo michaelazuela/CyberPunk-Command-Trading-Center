@@ -19,6 +19,7 @@ import { TIME_WINDOWS, getWindowStatus, formatWindow, minutesUntilOpen, minutesU
 import TradeProofPanel from './TradeProofPanel';
 import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
+import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 
 export default function Analysis({ session, customRules = [], onUpdate, onAddTrade, isActive }: { 
   session: SessionState, 
@@ -40,6 +41,9 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [showSettings, setShowSettings] = useState(false);
   const [showChainOfThought, setShowChainOfThought] = useState(false);
   const [showReasoning, setShowReasoning] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [showRuleReference, setShowRuleReference] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [localSettings, setLocalSettings] = useState<AISettings>(session.aiSettings || { temperature: 0, customInstructions: '' });
 
   const [midnightOpenOverrideStr, setMidnightOpenOverrideStr] = useState<string>('');
@@ -72,6 +76,21 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
   const [isSavingTrade, setIsSavingTrade] = useState(false);
   const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
   const [setupId, setSetupId] = useState<string|null>(null);
+  const [saveStatus, setSaveStatus] = useState<{
+    setup: 'idle' | 'skipped' | 'saving' | 'saved' | 'warning';
+    rag: 'idle' | 'skipped' | 'saving' | 'saved' | 'warning';
+    message?: string;
+    setupId?: string | null;
+  }>({ setup: 'idle', rag: 'idle' });
+
+  useEffect(() => {
+    if (!result && session.analysisResult) {
+      setResult(session.analysisResult);
+    }
+    if (!lastImage && session.morningScreenshot) {
+      setLastImage(session.morningScreenshot);
+    }
+  }, [session.analysisResult, session.morningScreenshot, result, lastImage]);
 
   useEffect(() => {
     if (normalizedPlan && normalizedPlan.decision !== "NO TRADE") {
@@ -393,6 +412,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
       updateStep('save', 'active');
+      setSaveStatus({ setup: 'saving', rag: 'idle', message: 'Saving Morning setup to Supabase.' });
 
       const { computePriorityScore } = await import('../lib/priorityScore');
       const priorityContext = {
@@ -410,6 +430,14 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'morning', instrument: session.dailyInstrument || 'MES' });
+      const planVersionId = createPlanVersionId('morning');
+      const setupSignature = createSetupSignature({
+        sessionType: 'morning',
+        instrument: session.dailyInstrument || 'MES',
+        plan: analysisPlan,
+      });
+      analysis.planVersionId = planVersionId;
+      analysis.setupSignature = setupSignature;
 
       setResult(analysis);
       
@@ -496,6 +524,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                candidate_trade_plans: analysis.candidate_trade_plans || [],
                trade_management_plan: analysis.trade_management_plan || null,
                normalized_plan: analysisPlan,
+               plan_version_id: planVersionId,
+               setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
              },
              execution_review_json: analysis.executionReview5m || null,
@@ -520,11 +550,12 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            if (setupId) setSetupId(setupId);
+           setSaveStatus({ setup: 'saved', rag: 'saving', message: 'Setup saved. Writing RAG learning record.', setupId });
            updateStep('save', 'complete');
 
            // Call RAG save
            const { saveToRAG } = await import('../lib/rag');
-           await saveToRAG({
+           const ragSaveResult = await saveToRAG({
              sessionType: 'morning',
              instrument: session.dailyInstrument || 'MES',
              tradeDate: new Date().toLocaleDateString('en-US'),
@@ -560,6 +591,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              planSource: analysisPlan.source,
              whyThisPlan: analysisPlan.whyThisPlan,
              invalidation: analysisPlan.invalidation,
+             planVersionId,
+             setupSignature,
 
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
@@ -586,18 +619,36 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                candidate_trade_plans: analysis.candidate_trade_plans || [],
                trade_management_plan: analysis.trade_management_plan || null,
                normalized_plan: analysisPlan,
+               plan_version_id: planVersionId,
+               setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
              },
              execution_review_json: analysis.executionReview5m || null,
              eth_context_review_json: analysis.ethContextReview || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
            });
+           const receipt = buildSaveReceipt({
+             planVersionId,
+             setupId,
+             ragId: ragSaveResult.id || null,
+             screenshotPath: execUpload.storagePath,
+             embeddingStatus: ragSaveResult.success ? (ragSaveResult.usedFallback ? 'pending' : 'saved') : 'failed',
+             note: ragSaveResult.usedFallback ? 'Core RAG fallback used because the live schema is missing optional columns.' : undefined,
+           });
+           setSaveStatus({
+             setup: 'saved',
+             rag: ragSaveResult.success ? 'saved' : 'warning',
+             message: `Save receipt: Plan ${receipt.planVersionId} · Setup ${setupId?.slice(0, 8)} · RAG ${receipt.ragId?.slice(0, 8) || 'pending'} · Embedding ${receipt.embeddingStatus}${receipt.note ? ` · ${receipt.note}` : ''}`,
+             setupId
+           });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
+           setSaveStatus({ setup: 'skipped', rag: 'skipped', message: 'Cloud save skipped because the user is not authenticated.' });
            updateStep('save', 'warning', 'Analysis complete. Cloud save skipped: user not authenticated.');
         }
       } catch (saveErr: any) {
         console.error('[Analysis] Supabase save error:', saveErr);
+        setSaveStatus({ setup: 'warning', rag: 'warning', message: saveErr.message || String(saveErr) });
         updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
       }
       
@@ -654,9 +705,28 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     setIsSavingTrade(false);
     setTradeSavedMessage(null);
     setSetupId(null);
+    setSaveStatus({ setup: 'idle', rag: 'idle' });
     setProgressSteps([]);
     setProgressStart(null);
   };
+
+  const readinessItems = [
+    { label: 'Window', value: windowStatus === 'active' ? 'ACTIVE' : windowStatus.replace('_', ' ').toUpperCase(), ready: windowStatus === 'active' },
+    { label: 'Instrument', value: session.dailyInstrument || 'MES', ready: Boolean(session.dailyInstrument || 'MES') },
+    { label: '5M chart', value: pendingImage || lastImage || session.morningScreenshot ? 'READY' : 'REQUIRED', ready: Boolean(pendingImage || lastImage || session.morningScreenshot) },
+    { label: 'ETH context', value: pendingEthImage || lastEthImage ? 'ATTACHED' : 'OPTIONAL', ready: Boolean(pendingEthImage || lastEthImage) },
+    { label: 'Midnight', value: useManualMidnightOpen ? 'MANUAL' : result?.midnightOpenPrice ? 'DETECTED' : 'AUTO', ready: useManualMidnightOpen || Boolean(result?.midnightOpenPrice) },
+    { label: 'Plan engine', value: 'APP', ready: true },
+    { label: 'RAG', value: result?.rag_learning_context?.rag_records_found ? `${result.rag_learning_context.rag_records_found} FOUND` : 'CHECKS ON RUN', ready: true },
+  ];
+
+  const saveBadgeClass = (status: typeof saveStatus.setup) => cn(
+    "qd-badge",
+    status === 'saved' ? "qd-badge-green" :
+    status === 'saving' ? "qd-badge-orange" :
+    status === 'warning' ? "qd-badge-red" :
+    "qd-badge-muted"
+  );
 
   return (
     <div className="space-y-6 fade-up">
@@ -721,8 +791,37 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
         </div>
       </div>
 
-      <ApiCostPanel route="morning" />
-      <ModelConfigPanel route="morning" config={modelConfig} onChange={handleConfigChange} />
+      <div className="card-base p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[var(--txt2)]">Morning Readiness</div>
+            <div className="mt-1 text-[11px] text-[var(--txt3)] font-mono">
+              The chart reader describes the image. The app-owned rule engine decides if a trade is executable.
+            </div>
+          </div>
+          <button onClick={() => setShowAdvancedTools(v => !v)} className="qd-btn-ghost text-[10px]">
+            {showAdvancedTools ? 'Hide Advanced' : 'Advanced Tools'}
+          </button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          {readinessItems.map(item => (
+            <div key={item.label} className={cn(
+              "border p-2 font-mono",
+              item.ready ? "border-[var(--green)]/30 bg-[var(--green)]/5" : "border-[var(--orange)]/30 bg-[var(--orange)]/5"
+            )}>
+              <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--txt3)]">{item.label}</div>
+              <div className={cn("mt-1 text-[10px] font-bold", item.ready ? "text-[var(--green)]" : "text-[var(--orange)]")}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showAdvancedTools && (
+        <div className="space-y-4 fade-up">
+          <ApiCostPanel route="morning" />
+          <ModelConfigPanel route="morning" config={modelConfig} onChange={handleConfigChange} />
+        </div>
+      )}
 
       {showSettings && (
         <div className="card-base fade-up">
@@ -852,6 +951,13 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             <p className="text-[9px] text-[var(--txt3)] mt-3 leading-tight">If the chart reader misreads the level, enter the correct price here. The manual value overrides the OCR-detected value.</p>
           </div>
 
+          <div className="flex justify-center">
+            <button onClick={() => setShowRuleReference(v => !v)} className="qd-btn-ghost text-[10px]">
+              {showRuleReference ? 'Hide Rule Reference' : 'Show Rule Reference'}
+            </button>
+          </div>
+
+          {showRuleReference && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card-base flex flex-col">
               <div className="card-header text-[var(--orange)]">
@@ -913,10 +1019,11 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                 </div>
               </div>
               <p className="text-[9px] italic text-[var(--txt2)] mt-6 pt-4 border-t border-[var(--b0)]">
-                AI adjusts targets based on R/R dynamics
+                App computes executable targets from normalized Entry / Stop risk.
               </p>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -946,12 +1053,36 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
 
       {result && !isAnalyzing && (
         <div className="space-y-6 fade-up">
+          <div className="card-base p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-[var(--txt2)]">Run Status</div>
+                <div className="mt-1 text-[11px] text-[var(--txt3)] font-mono">
+                  Morning result restored in this tab. Save/RAG state shows whether learning data reached Supabase.
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={saveBadgeClass(saveStatus.setup)}>SETUP: {saveStatus.setup.toUpperCase()}</span>
+                <span className={saveBadgeClass(saveStatus.rag)}>RAG: {saveStatus.rag.toUpperCase()}</span>
+                {saveStatus.setupId && <span className="qd-badge opacity-70">ID: {saveStatus.setupId.slice(0, 8)}</span>}
+              </div>
+            </div>
+            {saveStatus.message && (
+              <div className="mt-3 border border-[var(--b1)] bg-[var(--bg)] p-2 text-[10px] font-mono text-[var(--txt2)]">
+                {saveStatus.message}
+              </div>
+            )}
+          </div>
+
           {/* Command Desk: decision first, evidence underneath */}
           {normalizedPlan && (
             <FinalTradePlanCard
               plan={normalizedPlan}
               title="1. BEST EXECUTABLE TRADE PLAN"
               agentLearningUsed={result.agent_learning_used}
+              windowValid={windowStatus === 'active'}
+              killSwitchClear={(session.killSwitches?.losses || 0) < 2 && (session.killSwitches?.fills || 0) < 5}
+              planVersionId={result.planVersionId}
             />
           )}
           
@@ -1059,8 +1190,13 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
           )}
 
           {/* Legacy Components Container */}
-          <div className="mt-8 pt-8 border-t border-[var(--b1)] opacity-70">
-            <div className="text-[10px] text-[var(--txt3)] font-mono uppercase mb-4">Internal Diagnositcs & Legacy Data</div>
+          <div className="mt-8 pt-8 border-t border-[var(--b1)]">
+            <button onClick={() => setShowDiagnostics(v => !v)} className="qd-btn-ghost text-[10px] mb-4">
+              {showDiagnostics ? 'Hide Internal Diagnostics' : 'Show Internal Diagnostics'}
+            </button>
+            {showDiagnostics && (
+            <div className="opacity-70">
+            <div className="text-[10px] text-[var(--txt3)] font-mono uppercase mb-4">Internal Diagnostics & Legacy Data</div>
           
           {result.priorityResult && (
             <div className="card-base flex flex-col p-4 mb-4" style={{ borderColor: result.priorityResult.color }}>
@@ -1343,6 +1479,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
           )}
 
           <MidnightAnalysisView analysis={result.midnightAnalysis} />
+            </div>
+            )}
 
 
           {lastImage && (

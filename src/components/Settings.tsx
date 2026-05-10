@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SessionState } from '../types';
+import DataHealthPanel from './DataHealthPanel';
 
 export default function Settings({ 
   session, 
@@ -37,6 +38,8 @@ export default function Settings({
           <p>PREFERENCES & SYSTEM INTEGRATION</p>
         </div>
       </header>
+
+      <DataHealthPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: UI Preferences */}

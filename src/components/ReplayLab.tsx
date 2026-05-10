@@ -9,6 +9,7 @@ import TradeProofPanel from './TradeProofPanel';
 import { TimezoneToggle } from './TimezoneToggle';
 import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
+import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -103,6 +104,26 @@ export default function ReplayLab({
   const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'replay_morning', instrument }) : null;
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'replay_lunch', instrument }) : null;
 
+  useEffect(() => {
+    if (!morningResult && session.replayMorningResult) {
+      setMorningResult(session.replayMorningResult);
+    }
+    if (!lunchResult && session.replayLunchResult) {
+      setLunchResult(session.replayLunchResult);
+    }
+  }, [lunchResult, morningResult, session.replayLunchResult, session.replayMorningResult]);
+
+  const replayReadinessItems = [
+    { label: 'Trading Date', value: tradeDate || 'REQUIRED', ready: Boolean(tradeDate) },
+    { label: 'Instrument', value: instrument, ready: true },
+    { label: 'Midnight Open', value: midnightOpen ? 'SET' : 'OPTIONAL', ready: Boolean(midnightOpen) },
+    { label: 'Morning ETH', value: morningEthImg ? 'ATTACHED' : 'OPTIONAL', ready: Boolean(morningEthImg) },
+    { label: 'Morning 5M', value: morningExecImg ? 'READY' : 'REQUIRED', ready: Boolean(morningExecImg || morningResult) },
+    { label: 'Lunch 5M', value: lunchExecImg ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
+    { label: 'Plan Engine', value: 'APP-OWNED', ready: true },
+    { label: 'RAG Save', value: morningSaveStatus || lunchSaveStatus ? 'ACTIVE' : 'ON OUTCOME', ready: true },
+  ];
+
   const handleGlobalClick = useCallback((e: MouseEvent) => {
     // Determine target based on what user clicked
     const target = e.target as HTMLElement;
@@ -174,6 +195,42 @@ export default function ReplayLab({
     setLunchOutcome(null);
     setProofFlow({ active: false });
     setSavingOutcome(null);
+    onUpdate?.({ replayMorningResult: undefined, replayLunchResult: undefined });
+  };
+
+  const confirmReplayDuplicate = async (userId: string, sessionType: 'morning' | 'lunch', setupSignature?: string | null) => {
+    try {
+      const { data: existingSetups } = await supabase
+        .from('setups')
+        .select('id, created_at, outcome, replay_status')
+        .eq('user_id', userId)
+        .eq('trade_date', tradeDate)
+        .eq('instrument', instrument)
+        .eq('session_type', sessionType)
+        .limit(3);
+
+      let query = supabase
+        .from('trade_embeddings')
+        .select('id, trade_date, session_type, instrument, trade_result, setup_signature')
+        .eq('user_id', userId)
+        .eq('trade_date', tradeDate)
+        .eq('instrument', instrument)
+        .eq('session_type', sessionType)
+        .limit(3);
+
+      if (setupSignature) query = query.eq('setup_signature', setupSignature);
+
+      const { data, error } = await query;
+      const hasRagDuplicate = !error && data && data.length > 0;
+      const hasSetupDuplicate = existingSetups && existingSetups.length > 0;
+      if (!hasRagDuplicate && !hasSetupDuplicate) return true;
+
+      return window.confirm(
+        `This looks like an existing ${sessionType} replay record for ${instrument} on ${tradeDate}. Save duplicate anyway?`
+      );
+    } catch {
+      return true;
+    }
   };
 
   const processImage = async (dataUrl: string, target: ReplayPasteTarget) => {
@@ -225,15 +282,24 @@ export default function ReplayLab({
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, undefined, [], 'morning_replay', undefined, midnightOpen || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_morning', instrument });
+      const planVersionId = createPlanVersionId('replay_morning', tradeDate);
+      const setupSignature = createSetupSignature({ sessionType: 'replay_morning', instrument, tradeDate, plan: analysisPlan });
+      analysis.planVersionId = planVersionId;
+      analysis.setupSignature = setupSignature;
       
       setMorningResult(analysis);
       onUpdate?.({ replayMorningResult: analysis });
       
       // Save Setup to Supabase
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+         if (!user) {
         setMorningError("Login required: Replay setup was analyzed, but it was not saved to Supabase.");
       } else {
+         const duplicateOk = await confirmReplayDuplicate(user.id, 'morning', setupSignature);
+         if (!duplicateOk) {
+           setMorningSaveStatus('Duplicate replay save canceled by user.');
+           return;
+         }
          let ethStoragePath, execStoragePath;
          if (morningEthImg) {
            const ethUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '15m_eth_context', morningEthImg.dataUrl);
@@ -263,6 +329,8 @@ export default function ReplayLab({
              candidate_trade_plans: analysis.candidate_trade_plans || [],
              trade_management_plan: analysis.trade_management_plan || null,
              normalized_plan: analysisPlan,
+             plan_version_id: planVersionId,
+             setup_signature: setupSignature,
              legacy_trade_plan: analysis.tradePlan || null,
            },
            normalized_plan_json: analysisPlan,
@@ -289,7 +357,7 @@ export default function ReplayLab({
           throw new Error(`Supabase setup save failed: ${dbError?.message || 'No setup ID returned.'}`);
         }
         setMorningSetupId(docData.id);
-        setMorningSaveStatus(`Replay setup saved. Setup ID: ${docData.id}`);
+        setMorningSaveStatus(`Replay setup saved. Plan ${planVersionId} · Setup ID: ${docData.id}`);
       }
     } catch (err: any) {
       setMorningError(err.message || 'Morning analysis failed');
@@ -320,6 +388,10 @@ export default function ReplayLab({
       const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, previousAnalysis, [], 'lunch_replay', undefined, midnightOpen || morningResult?.midnightOpenPrice?.toString() || undefined, instrument);
       const analysis = analysisRaw as AnalysisResult;
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_lunch', instrument });
+      const planVersionId = createPlanVersionId('replay_lunch', tradeDate);
+      const setupSignature = createSetupSignature({ sessionType: 'replay_lunch', instrument, tradeDate, plan: analysisPlan });
+      analysis.planVersionId = planVersionId;
+      analysis.setupSignature = setupSignature;
       
       setLunchResult(analysis);
       onUpdate?.({ replayLunchResult: analysis });
@@ -329,6 +401,11 @@ export default function ReplayLab({
       if (!user) {
         setLunchError("Login required: Replay setup was analyzed, but it was not saved to Supabase.");
       } else {
+         const duplicateOk = await confirmReplayDuplicate(user.id, 'lunch', setupSignature);
+         if (!duplicateOk) {
+           setLunchSaveStatus('Duplicate replay save canceled by user.');
+           return;
+         }
          const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/lunch', '5m_execution', lunchExecImg.dataUrl);
          const execStoragePath = execUpload.storagePath;
          setLunchExecImg({ ...lunchExecImg, storagePath: execStoragePath });
@@ -351,6 +428,8 @@ export default function ReplayLab({
              candidate_trade_plans: analysis.candidate_trade_plans || [],
              trade_management_plan: analysis.trade_management_plan || null,
              normalized_plan: analysisPlan,
+             plan_version_id: planVersionId,
+             setup_signature: setupSignature,
              legacy_trade_plan: analysis.tradePlan || null,
            },
            normalized_plan_json: analysisPlan,
@@ -378,7 +457,7 @@ export default function ReplayLab({
           throw new Error(`Supabase setup save failed: ${dbError?.message || 'No setup ID returned.'}`);
         }
         setLunchSetupId(docData.id);
-        setLunchSaveStatus(`Replay setup saved. Setup ID: ${docData.id}`);
+        setLunchSaveStatus(`Replay setup saved. Plan ${planVersionId} · Setup ID: ${docData.id}`);
       }
     } catch (err: any) {
       setLunchError(err.message || 'Lunch analysis failed');
@@ -417,6 +496,8 @@ export default function ReplayLab({
         candidate_trade_plans: result.candidate_trade_plans || [],
         trade_management_plan: result.trade_management_plan || null,
         normalized_plan: normalizedPlan,
+        plan_version_id: result.planVersionId || null,
+        setup_signature: result.setupSignature || null,
         legacy_trade_plan: result.tradePlan || null,
       },
       normalized_plan_json: normalizedPlan,
@@ -579,6 +660,8 @@ export default function ReplayLab({
          window_end: sessionType === 'lunch' ? "13:00" : undefined,
          window_timezone: sessionType === 'lunch' ? "America/New_York" : undefined,
          required_screenshot_range: sessionType === 'lunch' ? "11:50 AM ET → 1:00 PM ET" : undefined,
+         planVersionId: result.planVersionId || null,
+         setupSignature: result.setupSignature || null,
       });
 
       if (!ragSaveResult.success) {
@@ -603,7 +686,16 @@ export default function ReplayLab({
 
       if (sessionType === 'morning') setMorningOutcome(outcome);
       else setLunchOutcome(outcome);
-      setSessionStatus(`Saved to Supabase + RAG ✓ Setup ID: ${resolvedSetupId} · RAG ID: ${ragRow.id} · Result: ${outcome.toUpperCase()}${ragSaveResult.usedFallback ? ' · Core RAG fallback used' : ''}`);
+      const receipt = buildSaveReceipt({
+        planVersionId: result.planVersionId || createPlanVersionId(sessionType === 'morning' ? 'replay_morning' : 'replay_lunch', tradeDate),
+        setupId: resolvedSetupId,
+        ragId: ragRow.id,
+        screenshotPath: sessionType === 'morning' ? morningExecImg?.storagePath : lunchExecImg?.storagePath,
+        outcome,
+        embeddingStatus: ragSaveResult.usedFallback ? 'pending' : 'saved',
+        note: ragSaveResult.usedFallback ? 'Core RAG fallback used because optional schema columns are not live yet.' : undefined,
+      });
+      setSessionStatus(`Saved to Supabase + RAG ✓ Plan ${receipt.planVersionId} · Setup ${resolvedSetupId.slice(0, 8)} · RAG ${ragRow.id.slice(0, 8)} · Result: ${outcome.toUpperCase()} · Embedding ${receipt.embeddingStatus}${receipt.note ? ` · ${receipt.note}` : ''}`);
 
       if (requiresExecutablePlan) {
         setProofFlow({ active: true, outcome: manualOutcome, sessionType });
@@ -710,6 +802,24 @@ export default function ReplayLab({
         </div>
       </div>
 
+      <div className="card-base p-4 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Replay Readiness</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Build historical examples without changing live rules. Outcome buttons write the lesson into Supabase and RAG.</div>
+          </div>
+          <span className="qd-badge">HISTORICAL TRAINING</span>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {replayReadinessItems.map((item) => (
+            <div key={item.label} className={cn('border p-3 font-mono', item.ready ? 'border-[var(--green)]/25 bg-[var(--green)]/5' : 'border-[var(--orange)]/25 bg-[var(--orange)]/5')}>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">{item.label}</div>
+              <div className={cn('text-[11px] mt-1 font-bold', item.ready ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6">
          {/* MORNING PANEL */}
          <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] morning-panel">
@@ -747,7 +857,7 @@ export default function ReplayLab({
                    
                    {normalizedMorningPlan && (
                      <div className="mt-4">
-                       <FinalTradePlanCard plan={normalizedMorningPlan} agentLearningUsed={morningResult.agent_learning_used} />
+                      <FinalTradePlanCard plan={normalizedMorningPlan} agentLearningUsed={morningResult.agent_learning_used} planVersionId={morningResult.planVersionId} />
                      </div>
                    )}
                  </div>
@@ -859,7 +969,7 @@ export default function ReplayLab({
                    
                    {normalizedLunchPlan && (
                      <div className="mt-4">
-                       <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} />
+                      <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} planVersionId={lunchResult.planVersionId} />
                      </div>
                    )}
                  </div>

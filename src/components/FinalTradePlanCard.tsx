@@ -1,15 +1,70 @@
 import React from 'react';
-import { CheckCircle2, Route, Shield, Target, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleX, Route, Shield, Target, TrendingUp } from 'lucide-react';
 import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
+import { buildConfidenceBreakdown } from '../lib/planMetadata';
 
 interface FinalTradePlanCardProps {
   plan: NormalizedTradePlan;
   title?: string;
   agentLearningUsed?: boolean;
+  windowValid?: boolean;
+  killSwitchClear?: boolean;
+  planVersionId?: string;
 }
 
-export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN", agentLearningUsed }: FinalTradePlanCardProps) {
+function inferNoTradeBlockers(plan: NormalizedTradePlan): string[] {
+  const text = `${plan.whyThisPlan || ''} ${plan.invalidation || ''}`.toLowerCase();
+  const blockers: string[] = [];
+
+  if (text.includes('wait') || text.includes('break') || text.includes('trigger') || text.includes('pullback') || text.includes('candle')) {
+    blockers.push('Waiting for candle break or confirmed trigger');
+  }
+  if (text.includes('risk') || text.includes('stop') || text.includes('wide')) {
+    blockers.push('Risk or stop placement is not acceptable yet');
+  }
+  if (text.includes('outside') || text.includes('window') || text.includes('time')) {
+    blockers.push('Outside the preferred trading window');
+  }
+  if (text.includes('midnight')) {
+    blockers.push('Midnight Open context is missing or unresolved');
+  }
+  if (text.includes('conflict') || text.includes('rag') || text.includes('history')) {
+    blockers.push('Historical/RAG context conflicts or is insufficient');
+  }
+  if (text.includes('structure') || text.includes('clean') || text.includes('no valid')) {
+    blockers.push('No clean executable market structure');
+  }
+  if (plan.entry === null || plan.stop === null) {
+    blockers.push('ENTRY and STOP are not both defined by the app-owned rule engine');
+  }
+
+  return Array.from(new Set(blockers.length > 0 ? blockers : ['No executable setup passed the app-owned rule checks']));
+}
+
+function ValidityRow({ label, ready, detail }: { key?: React.Key; label: string; ready: boolean; detail: string }) {
+  return (
+    <div className={cn(
+      'border p-2 font-mono',
+      ready ? 'border-[var(--green)]/25 bg-[var(--green)]/5' : 'border-[var(--orange)]/25 bg-[var(--orange)]/5'
+    )}>
+      <div className="flex items-center gap-2">
+        {ready ? <CheckCircle2 className="w-3 h-3 text-[var(--green)]" /> : <AlertTriangle className="w-3 h-3 text-[var(--orange)]" />}
+        <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt2)]">{label}</span>
+      </div>
+      <div className={cn('mt-1 text-[10px]', ready ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>{detail}</div>
+    </div>
+  );
+}
+
+export default function FinalTradePlanCard({
+  plan,
+  title = "3. FINAL TRADE PLAN",
+  agentLearningUsed,
+  windowValid = true,
+  killSwitchClear = true,
+  planVersionId
+}: FinalTradePlanCardProps) {
   let sourceBadge = "MISSING";
   switch (plan.source) {
     case "app_rule_engine": sourceBadge = "APP RULE ENGINE"; break;
@@ -22,6 +77,26 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
     case "manual": sourceBadge = "MANUAL"; break;
     case "missing": sourceBadge = "MISSING"; break;
   }
+
+  const riskUnderMax = plan.riskPoints !== null && plan.riskPoints <= 15;
+  const validityChecks = [
+    { label: 'Entry', ready: plan.entry !== null, detail: plan.entry !== null ? String(plan.entry) : 'Missing' },
+    { label: 'Stop', ready: plan.stop !== null, detail: plan.stop !== null ? String(plan.stop) : 'Missing' },
+    { label: 'T1/T2', ready: plan.t1 !== null && plan.t2 !== null, detail: plan.t1 !== null && plan.t2 !== null ? 'App computed' : 'Missing' },
+    { label: 'Risk', ready: riskUnderMax, detail: plan.riskPoints !== null ? `${plan.riskPoints} pts` : 'Missing' },
+    { label: 'Window', ready: windowValid, detail: windowValid ? 'Valid' : 'Check time' },
+    { label: 'RAG', ready: agentLearningUsed !== undefined, detail: agentLearningUsed ? 'Used' : agentLearningUsed === false ? 'Checked empty' : 'Unknown' },
+    { label: 'Kill Switch', ready: killSwitchClear, detail: killSwitchClear ? 'Clear' : 'Active' },
+  ];
+  const blockers = inferNoTradeBlockers(plan);
+  const confidenceBreakdown = buildConfidenceBreakdown({ plan, windowValid, agentLearningUsed, killSwitchClear });
+  const confidenceRows = [
+    { label: 'Rule', value: confidenceBreakdown.rule },
+    { label: 'Structure', value: confidenceBreakdown.structure },
+    { label: 'Risk', value: confidenceBreakdown.risk },
+    { label: 'RAG', value: confidenceBreakdown.rag },
+    { label: 'Time', value: confidenceBreakdown.timeWindow },
+  ];
 
   return (
     <div className="card-base flex flex-col p-4 border border-[var(--green)]/30 bg-[var(--green)]/5 mt-4">
@@ -36,24 +111,44 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
             {agentLearningUsed ? "HISTORY CALIBRATED" : "SCREENSHOT + RULES ONLY"}
           </span>
         )}
+        {planVersionId && (
+          <span className="qd-badge opacity-70 ml-2">
+            ID: {planVersionId}
+          </span>
+        )}
       </h3>
 
       {!plan.canExecute ? (
-        <div className="flex flex-col items-center justify-center p-6 mb-4 border border-dashed border-[var(--red)]/40 bg-[var(--red)]/5 text-center">
-          <span className="text-lg font-black tracking-tighter uppercase mb-2 text-[var(--red)]">
-            NO VALID TRADE PLAN GENERATED
-          </span>
-          <span className="text-[11px] text-[var(--txt2)]">
-            Execution disabled until ENTRY, STOP, T1, and T2 are available.
-          </span>
-          {plan.decision === "NO TRADE" && (
-            <span className="mt-4 text-[13px] text-[var(--amber)] italic max-w-[80%]">
-              {plan.whyThisPlan}
-            </span>
-          )}
+        <div className="mb-4 border border-dashed border-[var(--red)]/40 bg-[var(--red)]/5 p-4">
+          <div className="flex items-center gap-2 text-[var(--red)] font-mono uppercase tracking-[0.14em] text-[12px] font-bold">
+            <CircleX className="w-4 h-4" />
+            Why No Trade?
+          </div>
+          <div className="mt-2 text-[11px] text-[var(--txt2)]">
+            Execution is disabled until the app-owned rule engine has ENTRY, STOP, T1, and T2.
+          </div>
+          <div className="mt-4 grid gap-2">
+            {blockers.map((blocker) => (
+              <div key={blocker} className="border border-[var(--red)]/20 bg-[var(--bg)] p-2 text-[10px] font-mono text-[var(--red)]">
+                {blocker}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 text-[11px] text-[var(--amber)] italic">
+            {plan.whyThisPlan}
+          </div>
         </div>
       ) : (
         <>
+          <div className="mb-4 border border-[var(--b1)] bg-[var(--s2)] p-3">
+            <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">Plan Validity Checklist</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              {validityChecks.map((check) => (
+                <ValidityRow key={check.label} label={check.label} ready={check.ready} detail={check.detail} />
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col items-center justify-center py-6 mb-4 border border-[var(--b1)] bg-[var(--bg)]">
             {plan.setupName && (
               <span className="qd-badge qd-badge-orange mb-2">
@@ -105,6 +200,23 @@ export default function FinalTradePlanCard({ plan, title = "3. FINAL TRADE PLAN"
               {plan.riskRewardT2 && (
                 <div className="text-[8px] text-[var(--txt3)] mt-1">{plan.riskRewardT2}</div>
               )}
+            </div>
+          </div>
+
+          <div className="mb-4 border border-[var(--green)]/20 bg-[var(--green)]/5 px-3 py-2 text-[10px] font-mono text-[var(--txt2)]">
+            <span className="text-[var(--green)] font-bold">APP-OWNED LEVELS:</span>{' '}
+            executable ENTRY / STOP come from the rule engine; T1 is 1.5R and T2 is 2.0R from normalized risk.
+          </div>
+
+          <div className="mb-4 border border-[var(--b1)] bg-[var(--s2)] p-3">
+            <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">Confidence Reason Breakdown</div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {confidenceRows.map((row) => (
+                <div key={row.label} className="border border-[var(--b2)] bg-[var(--bg)] p-2 font-mono">
+                  <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">{row.label}</div>
+                  <div className={cn('text-[14px] mt-1 font-bold', row.value >= 75 ? 'text-[var(--green)]' : row.value >= 50 ? 'text-[var(--orange)]' : 'text-[var(--red)]')}>{row.value}%</div>
+                </div>
+              ))}
             </div>
           </div>
         </>

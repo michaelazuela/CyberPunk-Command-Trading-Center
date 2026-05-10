@@ -271,6 +271,8 @@ export interface AnalysisResult {
   agentLearningSummary?: AgentLearningSummary;
   ragContextUsed?: boolean;
   historicalContextUsed?: boolean;
+  planVersionId?: string;
+  setupSignature?: string;
 
   tradePlan?: TradePlan;
   executionReview5m?: ExecutionReview5m;
@@ -483,6 +485,9 @@ export interface RAGSaveContext {
   window_end?: string;
   window_timezone?: string;
   required_screenshot_range?: string;
+  planVersionId?: string | null;
+  setupSignature?: string | null;
+  saveReceiptJson?: Record<string, any> | null;
 }
 
 export interface RAGQuery {

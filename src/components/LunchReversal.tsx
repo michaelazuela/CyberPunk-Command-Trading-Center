@@ -13,6 +13,7 @@ import { loadModelConfig, saveModelConfig, ModelConfig, getModelForRoute } from 
 import TradeProofPanel from './TradeProofPanel';
 import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
+import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 
 export default function LunchReversal({ 
   session, 
@@ -49,6 +50,23 @@ export default function LunchReversal({
   const [tradeSavedMessage, setTradeSavedMessage] = useState<string|null>(null);
   const [setupId, setSetupId] = useState<string|null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{
+    setup: 'idle' | 'saving' | 'saved' | 'skipped' | 'warning';
+    rag: 'idle' | 'saving' | 'saved' | 'skipped' | 'warning';
+    message: string;
+    setupId?: string;
+  }>({ setup: 'idle', rag: 'idle', message: 'No lunch setup saved yet.' });
+
+  useEffect(() => {
+    if (!result && session.lunchAnalysisResult) {
+      setResult(session.lunchAnalysisResult);
+    }
+    if (!lastImage && session.lunchScreenshot) {
+      setLastImage(session.lunchScreenshot);
+    }
+  }, [lastImage, result, session.lunchAnalysisResult, session.lunchScreenshot]);
 
   useEffect(() => {
     if (normalizedPlan && normalizedPlan.decision !== "NO TRADE") {
@@ -291,6 +309,7 @@ export default function LunchReversal({
       updateStep('strategy', 'complete');
       updateStep('risk', 'complete');
       updateStep('save', 'active');
+      setSaveStatus({ setup: 'saving', rag: 'idle', message: 'Saving Lunch setup to Supabase.' });
       
       const { computePriorityScore } = await import('../lib/priorityScore');
       const priorityContext = {
@@ -308,6 +327,14 @@ export default function LunchReversal({
       };
       analysis.priorityResult = computePriorityScore(priorityContext);
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'lunch', instrument: session.dailyInstrument || 'MES' });
+      const planVersionId = createPlanVersionId('lunch');
+      const setupSignature = createSetupSignature({
+        sessionType: 'lunch',
+        instrument: session.dailyInstrument || 'MES',
+        plan: analysisPlan,
+      });
+      analysis.planVersionId = planVersionId;
+      analysis.setupSignature = setupSignature;
 
       setResult(analysis);
       
@@ -360,6 +387,8 @@ export default function LunchReversal({
                candidate_trade_plans: analysis.candidate_trade_plans || [],
                trade_management_plan: analysis.trade_management_plan || null,
                normalized_plan: analysisPlan,
+               plan_version_id: planVersionId,
+               setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
              },
              execution_review_json: analysis.executionReview5m || null,
@@ -385,10 +414,11 @@ export default function LunchReversal({
            if (import.meta.env.DEV) console.log('[Analysis] Supabase save complete');
            if (setupId) setSetupId(setupId);
            updateStep('save', 'complete');
+           setSaveStatus({ setup: 'saved', rag: 'saving', message: 'Setup saved. Writing RAG learning record.', setupId });
 
            // Call RAG save
            const { saveToRAG } = await import('../lib/rag');
-           await saveToRAG({
+           const ragSaveResult = await saveToRAG({
              sessionType: 'lunch',
              instrument: session.dailyInstrument || 'MES',
              tradeDate: new Date().toLocaleDateString('en-US'),
@@ -424,6 +454,8 @@ export default function LunchReversal({
              planSource: analysisPlan.source,
              whyThisPlan: analysisPlan.whyThisPlan,
              invalidation: analysisPlan.invalidation,
+             planVersionId,
+             setupSignature,
 
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
@@ -441,19 +473,37 @@ export default function LunchReversal({
                candidate_trade_plans: analysis.candidate_trade_plans || [],
                trade_management_plan: analysis.trade_management_plan || null,
                normalized_plan: analysisPlan,
+               plan_version_id: planVersionId,
+               setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
              },
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
            });
+           const receipt = buildSaveReceipt({
+             planVersionId,
+             setupId,
+             ragId: ragSaveResult.id || null,
+             screenshotPath: execUpload.storagePath,
+             embeddingStatus: ragSaveResult.success ? (ragSaveResult.usedFallback ? 'pending' : 'saved') : 'failed',
+             note: ragSaveResult.usedFallback ? 'Core RAG fallback used because the live schema is missing optional columns.' : undefined,
+           });
+           setSaveStatus({
+             setup: 'saved',
+             rag: ragSaveResult.success ? 'saved' : 'warning',
+             message: `Save receipt: Plan ${receipt.planVersionId} · Setup ${setupId?.slice(0, 8)} · RAG ${receipt.ragId?.slice(0, 8) || 'pending'} · Embedding ${receipt.embeddingStatus}${receipt.note ? ` · ${receipt.note}` : ''}`,
+             setupId
+           });
         } else {
            if (import.meta.env.DEV) console.log('[Analysis] User not authenticated, skipping save');
            updateStep('save', 'warning', 'Analysis complete. Cloud save skipped: user not authenticated.');
+           setSaveStatus({ setup: 'skipped', rag: 'skipped', message: 'Cloud save skipped because the user is not authenticated.' });
         }
       } catch (saveErr: any) {
         console.error('[Analysis] Supabase save error:', saveErr);
         updateStep('save', 'warning', 'Analysis complete, cloud save failed: ' + (saveErr.message || String(saveErr)));
+        setSaveStatus({ setup: 'warning', rag: 'warning', message: saveErr.message || String(saveErr) });
       }
       
       updateStep('complete', 'complete');
@@ -549,8 +599,26 @@ export default function LunchReversal({
     setTradeSavedMessage(null);
     setSetupId(null);
     setShowSettings(false);
+    setShowAdvancedTools(false);
+    setShowDiagnostics(false);
+    setSaveStatus({ setup: 'idle', rag: 'idle', message: 'No lunch setup saved yet.' });
     setProgressSteps([]);
     setProgressStart(null);
+  };
+
+  const readinessItems = [
+    { label: 'Instrument', value: session.dailyInstrument || 'MES', ready: true },
+    { label: 'Screenshot Range', value: formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST'), ready: true },
+    { label: 'Morning Context', value: session.analysisResult ? 'AVAILABLE' : 'OPTIONAL', ready: Boolean(session.analysisResult) },
+    { label: 'Plan Engine', value: 'APP-OWNED', ready: true },
+    { label: 'RAG Save', value: saveStatus.rag === 'saved' ? 'SAVED' : saveStatus.setup === 'warning' ? 'CHECK' : 'ON ANALYSIS', ready: saveStatus.setup !== 'warning' },
+  ];
+
+  const saveBadgeClass = (status: typeof saveStatus.setup) => {
+    if (status === 'saved') return 'text-[var(--green)] border-[var(--green)]/30 bg-[var(--green)]/10';
+    if (status === 'saving') return 'text-[var(--orange)] border-[var(--orange)]/30 bg-[var(--orange)]/10';
+    if (status === 'warning') return 'text-[var(--red)] border-[var(--red)]/30 bg-[var(--red)]/10';
+    return 'text-[var(--txt3)] border-[var(--b2)] bg-[var(--b0)]';
   };
 
   return (
@@ -589,8 +657,40 @@ export default function LunchReversal({
         </div>
       </div>
 
-      <ApiCostPanel route="lunch" />
-      <ModelConfigPanel route="lunch" config={modelConfig} onChange={handleConfigChange} />
+      <div className="card-base p-4">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Lunch Readiness</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Replay-aware plan review for the 11:50 AM ET to 1:00 PM ET reversal window.</div>
+          </div>
+          <span className="qd-badge">APP PLAN ENGINE</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+          {readinessItems.map((item) => (
+            <div key={item.label} className={cn('border p-3 font-mono', item.ready ? 'border-[var(--green)]/25 bg-[var(--green)]/5' : 'border-[var(--orange)]/25 bg-[var(--orange)]/5')}>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">{item.label}</div>
+              <div className={cn('text-[11px] mt-1 font-bold', item.ready ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card-base p-3">
+        <button
+          type="button"
+          onClick={() => setShowAdvancedTools((value) => !value)}
+          className="w-full flex items-center justify-between text-left font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--txt2)]"
+        >
+          <span>Advanced Tools</span>
+          <span className="text-[var(--orange)]">{showAdvancedTools ? 'Hide' : 'Show'}</span>
+        </button>
+        {showAdvancedTools && (
+          <div className="mt-4 space-y-4">
+            <ApiCostPanel route="lunch" />
+            <ModelConfigPanel route="lunch" config={modelConfig} onChange={handleConfigChange} />
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)] p-4 text-[10px] font-mono flex items-center gap-2 fade-up">
@@ -698,12 +798,36 @@ export default function LunchReversal({
 
       {result && !isAnalyzing && (
         <div className="space-y-6 fade-up">
+          <div className="card-base p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Run Status</div>
+                <div className="text-[12px] text-[var(--txt2)] mt-1">{saveStatus.message}</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={cn('border px-3 py-1 text-[9px] font-mono uppercase tracking-[0.16em]', saveBadgeClass(saveStatus.setup))}>
+                  Setup: {saveStatus.setup}
+                </span>
+                <span className={cn('border px-3 py-1 text-[9px] font-mono uppercase tracking-[0.16em]', saveBadgeClass(saveStatus.rag))}>
+                  RAG: {saveStatus.rag}
+                </span>
+                {saveStatus.setupId && (
+                  <span className="border border-[var(--b2)] px-3 py-1 text-[9px] font-mono text-[var(--txt3)]">
+                    ID: {saveStatus.setupId.slice(0, 8)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Command Desk: decision first, evidence underneath */}
           {normalizedPlan && (
             <FinalTradePlanCard
               plan={normalizedPlan}
               title="1. BEST EXECUTABLE LUNCH PLAN"
               agentLearningUsed={result.agent_learning_used}
+              killSwitchClear={(session.killSwitches?.losses || 0) < 2 && (session.killSwitches?.fills || 0) < 5}
+              planVersionId={result.planVersionId}
             />
           )}
           
@@ -811,8 +935,17 @@ export default function LunchReversal({
           )}
 
           {/* Legacy Components Container */}
-          <div className="mt-8 pt-8 border-t border-[var(--b1)] opacity-70">
-            <div className="text-[10px] text-[var(--txt3)] font-mono uppercase mb-4">Internal Diagnositcs & Legacy Data</div>
+          <div className="mt-8 pt-8 border-t border-[var(--b1)]">
+            <button
+              type="button"
+              onClick={() => setShowDiagnostics((value) => !value)}
+              className="text-[10px] text-[var(--txt3)] hover:text-[var(--txt)] font-mono uppercase tracking-[0.18em]"
+            >
+              {showDiagnostics ? 'Hide Internal Diagnostics' : 'Show Internal Diagnostics'}
+            </button>
+            {showDiagnostics && (
+              <div className="mt-4 opacity-70">
+                <div className="text-[10px] text-[var(--txt3)] font-mono uppercase mb-4">Internal Diagnostics & Legacy Data</div>
           
           {result.afternoonTestPlan && (
             <div className="card-base flex flex-col p-6 mb-4 border border-[var(--orange)] bg-[#1a1410]">
@@ -1139,6 +1272,9 @@ export default function LunchReversal({
                </p>
              </div>
           )}
+              </div>
+            )}
+          </div>
           
           {lastImage && (
             <div className="card-base flex justify-center p-2 bg-[#000]">
@@ -1235,7 +1371,6 @@ export default function LunchReversal({
               )}
              </div>
           )}
-          </div>
         </div>
       )}
     </div>
