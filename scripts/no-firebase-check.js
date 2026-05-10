@@ -1,18 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-try {
-  const envContent = fs.readFileSync('.env', 'utf8');
-  console.log('.env FOUND:', envContent);
-} catch (e) {
-  console.log('.env NOT FOUND');
-}
-try {
-  const envLocalContent = fs.readFileSync('.env.local', 'utf8');
-  console.log('.env.local FOUND:', envLocalContent);
-} catch (e) {
-  console.log('.env.local NOT FOUND');
-}
+console.log('Environment files are not printed by this guard to avoid leaking secrets.');
 
 const FORBIDDEN_DEPENDENCIES = ['firebase', 'firebase-admin'];
 const FORBIDDEN_PATTERNS = [

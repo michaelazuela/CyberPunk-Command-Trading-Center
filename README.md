@@ -1,20 +1,72 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# MES/MNQ Trading Decision-Support App
 
-# Run and deploy your AI Studio app
+This project is a MES/MNQ futures trading decision-support system built with React, Supabase, Cloudflare Pages, and Gemini.
 
-This contains everything you need to run your app locally.
+## Core Architecture
 
-View your app in AI Studio: https://ai.studio/apps/f3d6a42d-9acd-4898-9fe2-6dab6df4e559
+- Frontend: Vite + React
+- Hosting: Cloudflare Pages
+- Server function: Cloudflare Pages Function at `/api/gemini`
+- Database/Auth/Storage/RAG: Supabase
+- AI provider: Gemini, accessed only through the Cloudflare function
 
-## Run Locally
+## Important Rules
 
-**Prerequisites:**  Node.js
+- Firebase is forbidden.
+- Do not install or import `firebase`.
+- Do not expose `GEMINI_API_KEY` in browser code or Vite environment variables.
+- Gemini API calls must go through `/api/gemini`.
+- The app is a decision-support tool, not a prediction tool.
+- Gemini interprets screenshots; the app-owned plan engine validates trades and computes executable Entry, Stop, T1, and T2.
+- No-trade is a valid outcome.
 
+## Local Development
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Prerequisites:
+
+- Node.js
+- Supabase project with URL and publishable/anon key
+
+Install and run:
+
+```bash
+npm install
+npm run dev
+```
+
+Required frontend environment variables:
+
+```bash
+VITE_SUPABASE_URL="https://your-project.supabase.co"
+VITE_SUPABASE_ANON_KEY="your-supabase-anon-or-publishable-key"
+VITE_AUTH_REDIRECT_URL="http://localhost:3000"
+```
+
+Cloudflare-only secret:
+
+```bash
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+Set `GEMINI_API_KEY` in Cloudflare Pages environment variables, not in frontend code.
+
+## Verification
+
+Before deploying:
+
+```bash
+npm run guard:no-firebase
+npm run guard:architecture
+npm run guard:schema
+npm run lint
+npm run build
+```
+
+## Project Guidance
+
+- [Agent operating guide](./AGENTS.md)
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Workflows](./docs/WORKFLOWS.md)
+- [Data guardrails](./docs/DATA_GUARDRAILS.md)
+- [AI Studio maintenance prompt](./prompts/AI_STUDIO_MAINTENANCE_PROMPT.md)
+- [Review-only audit prompt](./prompts/REVIEW_ONLY_AUDIT_PROMPT.md)

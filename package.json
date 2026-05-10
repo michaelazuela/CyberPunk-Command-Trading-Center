@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "guard:no-firebase": "node scripts/no-firebase-check.js",
-    "lint": "npm run guard:no-firebase && tsc --noEmit"
+    "guard:architecture": "node scripts/architecture-guard.js",
+    "guard:schema": "node scripts/schema-guard.js",
+    "guard": "npm run guard:no-firebase && npm run guard:architecture && npm run guard:schema",
+    "lint": "npm run guard && tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

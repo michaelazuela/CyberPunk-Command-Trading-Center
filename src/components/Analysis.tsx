@@ -4,7 +4,7 @@ import { SessionState, AnalysisResult, ProposedRule, Trade, AISettings } from '.
 import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
 import { uploadScreenshotAndSaveSetup } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
-import { addTrade } from '../lib/firestoreService';
+import { addTrade } from '../lib/supabaseTradeService';
 import MonteCarloSection from './MonteCarloSection';
 import MidnightAnalysisView from './MidnightAnalysisView';
 import { cn, getImageFromClipboard } from '../lib/utils';

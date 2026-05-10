@@ -15,8 +15,8 @@ The system uses a multi-agent architectural matrix to validate every potential t
 
 ### Agent 2: The Strategy Specialist (Logic)
 **Role:** Rule enforcement based on the Observer's data.
-**Directive:** Matches the observed price action against the rigid system core recalibration rules (e.g., 2-Bar Failure, 0414_Max_Expansion). It identifies the specific setup (Type 1 Long/Short, Lunch Reversal, Distribution) and calculates stop placements, entry boundaries, and 2.0R targets.
-**Output:** Strategy classification, risk bounds, confidence score, and specific reasons for bias generation.
+**Directive:** Matches the observed price action against the rigid system core recalibration rules (e.g., 2-Bar Failure, 0414_Max_Expansion). It identifies the specific setup (Type 1 Long/Short, Lunch Reversal, Distribution) and proposes stop placements and entry boundaries.
+**Output:** Strategy classification, risk bounds, confidence score, and specific reasons for bias generation. Executable T1 and T2 are calculated by the app, not by the agent.
 
 ### Agent 3: Devil's Advocate (Multi-Step Validation)
 **Role:** Adversarial critique of the Strategy Specialist's setup.
@@ -27,6 +27,11 @@ The system uses a multi-agent architectural matrix to validate every potential t
 **Role:** Safety checks and parameter enforcement.
 **Directive:** Audits the required stop-loss distance of the setup against the trader's total account equity and system caps (e.g., maximum 8-point stop allowance). 
 **Output:** Final GO / NO-GO validation on the technical risk thresholds.
+
+### Agent 5: The Trade Management Agent
+**Role:** Post-entry decision support.
+**Directive:** Explains how to manage an already selected app-owned trade plan if price moves in favor, stalls before T1, reaches 1R, reaches T1, or shows a two-bar failure. This agent does not create executable entry, stop, T1, or T2 levels.
+**Output:** Management notes, stop movement guidance, failure warnings, and partial/runner logic.
 
 ---
 
@@ -70,6 +75,6 @@ The agents enforce the following systemic rules strictly:
 - **TYPE 1 SHORT:** Large red 9:30 bar OR large red 9:35 closing below 9:30 open. LH+LL staircase.
   - *Sweep & Reclaim:* Wick above 9:30 high, immediate recovery.
 - **TYPE 2 SHORT:** Gap up overnight + immediate red rejection at the opening bell.
-- **10:55 LUNCH REVERSAL:** Price wicks past the IB structure late morning (10:45-11:00) and reclaims inside the IB on the 10:55 close. Targets the opposite extreme of the session.
+- **LUNCH REVERSAL:** The canonical review window is 11:50 AM-1:00 PM ET. Price should show a noon trap, false breakout, sweep/reclaim, or failure behavior against morning structure. The app should use `src/config/timeWindows.ts` as the source of truth for this window.
 - **DISTRIBUTION / SUPPLY WALL:** Massive upper wick rejection at session highs, followed by 2 bars failing to break highs with at least one red close.
 - **NO TRADE:** Heavy overlap (>80% over 4 bars), poor R/R, or erratic directional behavior.

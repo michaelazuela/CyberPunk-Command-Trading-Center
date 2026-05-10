@@ -12,7 +12,7 @@ import Rules from './components/Rules';
 import LunchReversal from './components/LunchReversal';
 import ReplayLab from './components/ReplayLab';
 
-import { subscribeToTrades, addTrade as addFirestoreTrade, testFirestoreConnection } from './lib/firestoreService';
+import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
 
 function createInitialAppState(): AppState {
   return {
@@ -52,7 +52,7 @@ export default function App() {
   const AUTH_DEBUG = import.meta.env.DEV;
 
   useEffect(() => {
-    testFirestoreConnection();
+    testSupabaseConnection();
 
     // Check for OAuth errors in query or hash
     const url = new URL(window.location.href);
@@ -199,7 +199,7 @@ export default function App() {
 
   const addTrade = async (trade: Trade) => {
     if (user) {
-      await addFirestoreTrade(trade);
+      await addSupabaseTrade(trade);
     } else {
       setAppState(prev => ({
         ...prev,

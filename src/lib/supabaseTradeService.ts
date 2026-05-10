@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Trade } from '../types';
 
-const TRADES_COLLECTION = 'trades';
+const TRADES_TABLE = 'trades';
 
 type TradeInput = Omit<Trade, 'id'> | Omit<Trade, 'id' | 'timestamp'>;
 
@@ -139,7 +139,7 @@ function toTradeUpdate(extra?: Partial<Trade>) {
   return update;
 }
 
-export async function testFirestoreConnection() {
+export async function testSupabaseConnection() {
   try {
     const { error } = await supabase.from('system').select('id').limit(1);
     if (!error) {
@@ -156,7 +156,7 @@ export async function testFirestoreConnection() {
 export function subscribeToTrades(userId: string, callback: (trades: Trade[]) => void) {
   // First get current trades
   supabase
-    .from(TRADES_COLLECTION)
+    .from(TRADES_TABLE)
     .select('*')
     .eq('user_id', userId)
     .order('timestamp', { ascending: false })
@@ -167,9 +167,9 @@ export function subscribeToTrades(userId: string, callback: (trades: Trade[]) =>
   // Then subscribe for updates
   const subscription = supabase
     .channel('trades_channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: TRADES_COLLECTION, filter: `user_id=eq.${userId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: TRADES_TABLE, filter: `user_id=eq.${userId}` }, async () => {
       const { data } = await supabase
-        .from(TRADES_COLLECTION)
+        .from(TRADES_TABLE)
         .select('*')
         .eq('user_id', userId)
         .order('timestamp', { ascending: false });
@@ -190,7 +190,7 @@ export async function addTrade(trade: TradeInput) {
   const tradeData = toTradeRow(trade, user.id);
 
   const { data, error } = await supabase
-    .from(TRADES_COLLECTION)
+    .from(TRADES_TABLE)
     .insert([tradeData])
     .select('id')
     .single();
@@ -205,7 +205,7 @@ export async function addTrade(trade: TradeInput) {
 
 export async function updateTradeStatus(tradeId: string, status: Trade['status'], extra?: Partial<Trade>) {
   const { error } = await supabase
-    .from(TRADES_COLLECTION)
+    .from(TRADES_TABLE)
     .update({ status, ...toTradeUpdate(extra) })
     .eq('id', tradeId);
   
@@ -217,7 +217,7 @@ export async function updateTradeStatus(tradeId: string, status: Trade['status']
 
 export async function getHistoricalTradesForRAG(userId: string, count: number = 20): Promise<Trade[]> {
   const { data, error } = await supabase
-    .from(TRADES_COLLECTION)
+    .from(TRADES_TABLE)
     .select('*')
     .eq('user_id', userId)
     .order('timestamp', { ascending: false })
@@ -232,7 +232,7 @@ export async function getHistoricalTradesForRAG(userId: string, count: number = 
 
 export async function deleteTrade(tradeId: string) {
   const { error } = await supabase
-    .from(TRADES_COLLECTION)
+    .from(TRADES_TABLE)
     .delete()
     .eq('id', tradeId);
 
