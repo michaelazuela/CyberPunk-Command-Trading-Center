@@ -17,7 +17,7 @@ function toLiveSession(sessionType: AppPlanSessionType): 'morning' | 'lunch' {
 }
 
 export function buildAppTradePlan(result: AnalysisResult | null | undefined, context: AppPlanContext): NormalizedTradePlan {
-  const plan = normalizeTradePlan(result, context.instrument);
+  const plan = normalizeTradePlan(result, context.instrument, context.sessionType);
   const liveSession = toLiveSession(context.sessionType);
   const warnings = [
     ...(plan.consistencyWarnings || []),

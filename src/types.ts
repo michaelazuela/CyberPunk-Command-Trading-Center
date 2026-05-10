@@ -7,6 +7,184 @@ export type DayType = 'TYPE 1 LONG' | 'TYPE 2 LONG' | 'TYPE 1 SHORT' | 'TYPE 2 S
 
 export type SessionStatus = 'PRE-MARKET' | 'OBSERVATION' | 'ENTRY' | 'CLOSED';
 
+export enum TradeDecisionStatus {
+  ApprovedTrade = 'ApprovedTrade',
+  ConditionalTrade = 'ConditionalTrade',
+  NoTrade = 'NoTrade',
+  Wait = 'Wait',
+  InvalidScreenshot = 'InvalidScreenshot',
+  OutsideRules = 'OutsideRules',
+}
+
+export enum BiasDirection {
+  Bullish = 'Bullish',
+  Bearish = 'Bearish',
+  Neutral = 'Neutral',
+  NoBias = 'NoBias',
+}
+
+export enum SetupType {
+  OrderBlock618 = 'OrderBlock618',
+  LiquiditySweep = 'LiquiditySweep',
+  MomentumRunaway = 'MomentumRunaway',
+  FairValueGap = 'FairValueGap',
+  MarketStructureShift = 'MarketStructureShift',
+  OpeningOrderBlock = 'OpeningOrderBlock',
+  EqualHighsLows = 'EqualHighsLows',
+  InitialBalanceExtension = 'InitialBalanceExtension',
+  PreviousDaySweep = 'PreviousDaySweep',
+  CompressionBreakout = 'CompressionBreakout',
+  OpeningGapFill = 'OpeningGapFill',
+  BreakerBlock = 'BreakerBlock',
+  AlgoKillZone = 'AlgoKillZone',
+  MitigationBlock = 'MitigationBlock',
+  NoSetup = 'NoSetup',
+}
+
+export enum NoTradeReason {
+  InvalidScreenshot = 'InvalidScreenshot',
+  OutsideTimeWindow = 'OutsideTimeWindow',
+  MissingInstrument = 'MissingInstrument',
+  MissingRequiredContext = 'MissingRequiredContext',
+  MissingKeyLevels = 'MissingKeyLevels',
+  NoClearBias = 'NoClearBias',
+  NoApprovedSetup = 'NoApprovedSetup',
+  EntryTriggerMissing = 'EntryTriggerMissing',
+  EntryTriggerPending = 'EntryTriggerPending',
+  InvalidStopLocation = 'InvalidStopLocation',
+  RiskTooWide = 'RiskTooWide',
+  TargetsUnavailable = 'TargetsUnavailable',
+  KillSwitchActive = 'KillSwitchActive',
+  ConflictingStructure = 'ConflictingStructure',
+  ConflictingRagHistory = 'ConflictingRagHistory',
+  ChasingExtendedMove = 'ChasingExtendedMove',
+  LowConfidence = 'LowConfidence',
+}
+
+export enum RiskStatus {
+  Approved = 'Approved',
+  Warning = 'Warning',
+  Blocked = 'Blocked',
+  Unknown = 'Unknown',
+}
+
+export enum TradeDecisionStep {
+  ConfirmSessionAndInstrument = 'ConfirmSessionAndInstrument',
+  ConfirmScreenshotUsability = 'ConfirmScreenshotUsability',
+  IdentifyMarketContext = 'IdentifyMarketContext',
+  IdentifyKeyLevels = 'IdentifyKeyLevels',
+  DetermineBias = 'DetermineBias',
+  CheckApprovedTimeWindow = 'CheckApprovedTimeWindow',
+  IdentifySetupType = 'IdentifySetupType',
+  ValidateEntryTrigger = 'ValidateEntryTrigger',
+  ValidateStopLocation = 'ValidateStopLocation',
+  ValidateRiskLimit = 'ValidateRiskLimit',
+  DetermineTargetModel = 'DetermineTargetModel',
+  DefineInvalidation = 'DefineInvalidation',
+  DecideTradeOrNoTrade = 'DecideTradeOrNoTrade',
+  GenerateFinalTradePlan = 'GenerateFinalTradePlan',
+  SaveJournalReadyRecord = 'SaveJournalReadyRecord',
+}
+
+export interface KeyLevels {
+  midnightOpen?: number | null;
+  rthOpen?: number | null;
+  openingRangeHigh?: number | null;
+  openingRangeLow?: number | null;
+  initialBalanceHigh?: number | null;
+  initialBalanceLow?: number | null;
+  ethHigh?: number | null;
+  ethLow?: number | null;
+  asianHigh?: number | null;
+  asianLow?: number | null;
+  londonHigh?: number | null;
+  londonLow?: number | null;
+  nyPremarketHigh?: number | null;
+  nyPremarketLow?: number | null;
+  previousDayHigh?: number | null;
+  previousDayLow?: number | null;
+  triggerCandleHigh?: number | null;
+  triggerCandleLow?: number | null;
+}
+
+export interface ChartContext {
+  sessionType: 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+  instrument: 'MES' | 'MNQ';
+  tradeDate: string;
+  timeframe: '1m' | '5m' | '15m' | '60m' | string;
+  screenshotRole?: ScreenshotRole;
+  screenshotTimestamp?: string | null;
+  screenshotTimezone?: AISettings['screenshotTimezone'];
+  screenshotUsability: 'usable' | 'warning' | 'unusable';
+  screenshotWarning?: string | null;
+  keyLevels: KeyLevels;
+  marketContext: string;
+  ocrText?: string | null;
+}
+
+export interface BiasAssessment {
+  bias: BiasDirection;
+  confidence: 'High' | 'Medium' | 'Low';
+  reasoning: string;
+  evidence: string[];
+}
+
+export interface SetupAssessment {
+  setupType: SetupType;
+  status: TradeDecisionStatus;
+  confidence: 'High' | 'Medium' | 'Low';
+  entryTrigger: string | null;
+  invalidation: string;
+  reasoning: string;
+  noTradeReason?: NoTradeReason | null;
+}
+
+export interface RiskAssessment {
+  status: RiskStatus;
+  entry: number | null;
+  stop: number | null;
+  riskPoints: number | null;
+  maxRiskPoints: number;
+  riskPercent?: number | null;
+  contracts?: number | null;
+  reasoning: string;
+}
+
+export interface FinalTradePlan {
+  status: TradeDecisionStatus;
+  direction: 'LONG' | 'SHORT' | 'NO TRADE';
+  setupType: SetupType;
+  entry: number | null;
+  stop: number | null;
+  target: number | null;
+  target1?: number | null;
+  target2?: number | null;
+  invalidation: string;
+  risk: RiskAssessment;
+  confidence: 'High' | 'Medium' | 'Low';
+  reasoning: string;
+  noTradeReason?: NoTradeReason | null;
+}
+
+export interface MorningPlan extends FinalTradePlan {
+  sessionType: 'morning' | 'replay_morning';
+  requiredScreenshotRange: string;
+  biasAssessment: BiasAssessment;
+  setupAssessment: SetupAssessment;
+}
+
+export interface TradeDecision {
+  status: TradeDecisionStatus;
+  step: TradeDecisionStep;
+  chartContext: ChartContext;
+  biasAssessment: BiasAssessment;
+  setupAssessment: SetupAssessment;
+  riskAssessment: RiskAssessment;
+  finalTradePlan: FinalTradePlan;
+  noTradeReason?: NoTradeReason | null;
+  journalReady: boolean;
+}
+
 export interface Trade {
   id: string;
   userId?: string; // Optional for local legacy records, required for Supabase rows

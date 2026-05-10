@@ -1,0 +1,73 @@
+import { NoTradeReason, SetupType } from '../types';
+import { SYSTEM_RULES } from '../constants';
+
+export const TRADE_RULES = {
+  instruments: ['MES', 'MNQ'] as const,
+  maxRiskPoints: SYSTEM_RULES.MAX_STOP_TYPE_2,
+  preferredRiskPoints: SYSTEM_RULES.MAX_STOP_TYPE_1,
+  targetModel: {
+    t1R: 1.5,
+    t2R: 2.0,
+    tickSize: 0.25,
+  },
+  sessions: {
+    morning: {
+      label: 'Morning Analysis',
+      requiredScreenshotRange: '9:30 AM through the 10:10 AM candle',
+      allowedSetups: [
+        SetupType.OrderBlock618,
+        SetupType.LiquiditySweep,
+        SetupType.MomentumRunaway,
+        SetupType.FairValueGap,
+        SetupType.MarketStructureShift,
+        SetupType.OpeningOrderBlock,
+        SetupType.EqualHighsLows,
+        SetupType.InitialBalanceExtension,
+        SetupType.PreviousDaySweep,
+        SetupType.CompressionBreakout,
+        SetupType.OpeningGapFill,
+        SetupType.BreakerBlock,
+        SetupType.AlgoKillZone,
+        SetupType.MitigationBlock,
+      ],
+    },
+    lunch: {
+      label: 'Lunch Reversal',
+      requiredScreenshotRange: '11:50 AM through 1:00 PM ET',
+      allowedSetups: [
+        SetupType.LiquiditySweep,
+        SetupType.MomentumRunaway,
+        SetupType.FairValueGap,
+        SetupType.MarketStructureShift,
+        SetupType.EqualHighsLows,
+        SetupType.PreviousDaySweep,
+        SetupType.CompressionBreakout,
+        SetupType.BreakerBlock,
+        SetupType.AlgoKillZone,
+        SetupType.MitigationBlock,
+      ],
+    },
+  },
+  noTradeSeverity: {
+    [NoTradeReason.InvalidScreenshot]: 'hard',
+    [NoTradeReason.OutsideTimeWindow]: 'hard',
+    [NoTradeReason.MissingInstrument]: 'hard',
+    [NoTradeReason.MissingRequiredContext]: 'hard',
+    [NoTradeReason.MissingKeyLevels]: 'hard',
+    [NoTradeReason.NoClearBias]: 'hard',
+    [NoTradeReason.NoApprovedSetup]: 'hard',
+    [NoTradeReason.EntryTriggerMissing]: 'hard',
+    [NoTradeReason.EntryTriggerPending]: 'wait',
+    [NoTradeReason.InvalidStopLocation]: 'hard',
+    [NoTradeReason.RiskTooWide]: 'hard',
+    [NoTradeReason.TargetsUnavailable]: 'hard',
+    [NoTradeReason.KillSwitchActive]: 'hard',
+    [NoTradeReason.ConflictingStructure]: 'hard',
+    [NoTradeReason.ConflictingRagHistory]: 'warning',
+    [NoTradeReason.ChasingExtendedMove]: 'hard',
+    [NoTradeReason.LowConfidence]: 'warning',
+  } satisfies Record<NoTradeReason, 'hard' | 'wait' | 'warning'>,
+};
+
+export type SupportedInstrument = typeof TRADE_RULES.instruments[number];
+

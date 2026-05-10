@@ -1,4 +1,6 @@
-import { AnalysisResult } from '../types';
+import { AnalysisResult, NoTradeReason, TradeDecisionStatus } from '../types';
+import { SYSTEM_RULES } from '../constants';
+import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
 export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
 export type TriggerState = "TRIGGERED" | "PENDING_TRIGGER" | "NO_TRIGGER";
@@ -36,6 +38,9 @@ export interface NormalizedTradePlan {
   tradeManagement?: AnalysisResult['trade_management_plan'];
   triggerState?: TriggerState;
   entryTrigger?: string | null;
+  decisionStatus?: TradeDecisionStatus;
+  noTradeReason?: NoTradeReason | null;
+  decisionAuditTrail?: TradeDecisionStepResult[];
   consistencyWarnings?: string[];
   rejectedAlternatives?: {
     setupName: string;
@@ -161,7 +166,12 @@ export function roundToTick(price: number, instrument?: "MES" | "MNQ"): number {
   return Math.round(price / tickSize) * tickSize;
 }
 
-export function normalizeTradePlan(result: AnalysisResult | null | undefined, instrument?: "MES" | "MNQ"): NormalizedTradePlan {
+export function normalizeTradePlan(
+  result: AnalysisResult | null | undefined,
+  instrument?: "MES" | "MNQ",
+  sessionType: PipelineSessionType = 'morning'
+): NormalizedTradePlan {
+  const pipeline = runTradeDecisionPipeline({ result, instrument, sessionType });
   const defaultPlan: NormalizedTradePlan = {
     decision: "NO TRADE",
     entry: null,
@@ -176,6 +186,9 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     invalidation: "Do not execute until entry and stop are defined.",
     source: "missing",
     canExecute: false,
+    decisionStatus: pipeline.status,
+    noTradeReason: pipeline.noTradeReason,
+    decisionAuditTrail: pipeline.auditTrail,
     rejectedAlternatives: []
   };
 
@@ -206,6 +219,25 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
   const addCandidate = (candidate: Candidate) => {
     candidates.push(candidate);
   };
+
+  const appRuleCandidate = pipeline.finalTradePlan;
+  addCandidate({
+    setupName: appRuleCandidate.setupType,
+    entry: appRuleCandidate.entry,
+    stop: appRuleCandidate.stop,
+    source: "app_rule_engine",
+    decision: appRuleCandidate.direction,
+    confidence: appRuleCandidate.confidence,
+    whyThisPlan: appRuleCandidate.reasoning,
+    invalidation: appRuleCandidate.invalidation,
+    priorityScore: null,
+    rank: 1,
+    selected: appRuleCandidate.status === TradeDecisionStatus.ApprovedTrade || appRuleCandidate.status === TradeDecisionStatus.ConditionalTrade,
+    appOwned: true,
+    rejectionReason: appRuleCandidate.noTradeReason || null,
+    triggerState: appRuleCandidate.status === TradeDecisionStatus.ConditionalTrade ? "PENDING_TRIGGER" : appRuleCandidate.status === TradeDecisionStatus.ApprovedTrade ? "TRIGGERED" : "NO_TRIGGER",
+    entryTrigger: pipeline.setupAssessment.entryTrigger
+  });
 
   if (result.candidate_trade_plans && Array.isArray(result.candidate_trade_plans)) {
     result.candidate_trade_plans.forEach((candidate, index) => {
@@ -302,12 +334,12 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
       entry: parsePrice(result.current_rule_analysis.entry),
       stop: parsePrice(result.current_rule_analysis.stop),
       rawT1: parsePrice(result.current_rule_analysis.target_1),
-      source: "app_rule_engine",
+      source: "current_rule_analysis",
       decision: currentDecision,
       confidence: normalizeConfidence(result.current_rule_analysis.base_confidence, confidenceFromNumber(result.confidence)),
       whyThisPlan: result.current_rule_analysis.summary || result.reasoning || "Current rule analysis produced executable levels.",
       invalidation: result.current_rule_analysis.no_trade_reason || result.levelCheck || result.structureStatus || "Invalid if price violates the defined stop before entry confirmation.",
-      appOwned: true,
+      appOwned: false,
       triggerState: normalizeTriggerState(result.current_rule_analysis.trigger_state, {
         decision: currentDecision,
         entry: parsePrice(result.current_rule_analysis.entry),
@@ -350,9 +382,14 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
 
   const isExecutable = (candidate: Candidate) => {
     const targets = calculateTargets(candidate.decision, candidate.entry, candidate.stop, instrument);
+    const risk = (isValidPrice(candidate.entry) && isValidPrice(candidate.stop))
+      ? calculateRisk(candidate.entry, candidate.stop)
+      : null;
     return (candidate.decision === "LONG" || candidate.decision === "SHORT") &&
       isValidPrice(candidate.entry) &&
       isValidPrice(candidate.stop) &&
+      risk !== null &&
+      risk <= SYSTEM_RULES.MAX_STOP_TYPE_2 &&
       isValidPrice(targets.t1) &&
       isValidPrice(targets.t2);
   };
@@ -392,7 +429,7 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     return {
       ...defaultPlan,
       decision: "NO TRADE",
-      whyThisPlan: noTradeReason,
+      whyThisPlan: pipeline.finalTradePlan.reasoning || noTradeReason,
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       consistencyWarnings: advisoryCandidates.some(isExecutable)
         ? ["Advisory trade-plan fields are not executable. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
@@ -403,7 +440,15 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
   const { decision, entry, stop, source, confidence, whyThisPlan, invalidation, entryTrigger } = executableCandidate;
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
-  const canExecute = (decision === "LONG" || decision === "SHORT") && isValidPrice(entry) && isValidPrice(stop) && isValidPrice(targets.t1) && isValidPrice(targets.t2);
+  const pipelineAllowsExecution =
+    pipeline.status === TradeDecisionStatus.ApprovedTrade ||
+    pipeline.status === TradeDecisionStatus.ConditionalTrade;
+  const canExecute = pipelineAllowsExecution &&
+    (decision === "LONG" || decision === "SHORT") &&
+    isValidPrice(entry) &&
+    isValidPrice(stop) &&
+    isValidPrice(targets.t1) &&
+    isValidPrice(targets.t2);
   const consistencyWarnings: string[] = [];
   if (advisoryCandidates.length > 0) {
     consistencyWarnings.push("Advisory candidate fields were ignored for execution. The executable plan was selected by the app-owned rule engine.");
@@ -429,6 +474,9 @@ export function normalizeTradePlan(result: AnalysisResult | null | undefined, in
     invalidation,
     source: canExecute ? source : "missing",
     canExecute,
+    decisionStatus: pipeline.status,
+    noTradeReason: pipeline.noTradeReason,
+    decisionAuditTrail: pipeline.auditTrail,
     setupName: executableCandidate.setupName,
     priorityScore: executableCandidate.priorityScore ?? null,
     rank: executableCandidate.rank ?? null,

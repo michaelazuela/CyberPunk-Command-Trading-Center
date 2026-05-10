@@ -138,7 +138,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
     - Only output NO TRADE when there is no measurable trigger candle, no valid stop, invalid structure, oversized risk, or the setup violates a kill switch.
     - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible 9:30-10:10 levels. Do not require future confirmation before producing ENTRY/STOP/T1/T2.
-    - PRICE FORMULA LOCK: Gemini identifies setup and trigger candle only. The executable T1/T2 are app-calculated from entry and stop. Do not output non-formula targets.
+    - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
     - CALCULATE TARGETS: Risk = |Entry - Stop|. Target 1.5R = Entry ± (Risk * 1.5). Target 2.0R = Entry ± (Risk * 2.0).
@@ -184,7 +184,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     =========================================
     MODULE 6: [CANDIDATE_EXTRACTOR] (Facts + Candidate Inputs)
     - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
-    - The APP owns final trade-plan authority. Your job is to extract chart facts and propose measurable candidate inputs; the App Plan Engine will select the final plan and compute final T1/T2.
+    - The APP owns final trade-plan authority. Your job is to extract chart facts and propose measurable candidate inputs; the shared App Rule Engine will detect the executable setup, apply no-trade gates, hard-block risk, select the final plan, and compute final T1/T2.
     - Evaluate at least 3 competing setup candidates when visible on the chart: Liquidity Sweep, Momentum/Runaway, FVG/Imbalance, Initial Balance Extension, Opening Order Block, EQH/EQL, PDH/PDL Sweep, and No Trade.
     - Return every reviewed plan in \`candidate_trade_plans\`. Invalid candidates still belong in the array with direction = NO TRADE or null prices and a rejection_reason.
     - Give each candidate your observed rank, but understand the app will rerank deterministically by price-action clarity, risk size, R:R, timing window, RAG support/conflict, and risk-auditor status.
@@ -194,7 +194,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - A conditional stop-entry plan with visible ENTRY and STOP levels is a valid trade plan. It is not a NO TRADE. Use trigger_state = PENDING_TRIGGER when the entry has not fired yet.
     - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate as advisory fields only. The app will recompute targets using Risk = abs(entry - stop).
     - Formula check: For any LONG plan, target_1 MUST equal entry + abs(entry - stop) * 1.5 and target_2 MUST equal entry + abs(entry - stop) * 2.0. For any SHORT plan, target_1 MUST equal entry - abs(entry - stop) * 1.5 and target_2 MUST equal entry - abs(entry - stop) * 2.0. If you cannot calculate this exactly, set target_1 and target_2 to null and let the app calculate them.
-    - EXECUTION AUTHORITY LOCK: current_rule_analysis is the only structured section the app can use to confirm executable ENTRY and STOP. best_trade_plan, final_trade_plan, candidate_trade_plans, and legacy suggested fields are advisory context only.
+    - EXECUTION AUTHORITY LOCK: current_rule_analysis, best_trade_plan, final_trade_plan, candidate_trade_plans, and legacy suggested fields are advisory chart-observation context only. The app-owned rule engine is the only executable authority.
     - If best_trade_plan/final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
     - If structure is valid but the entry is pending, best_trade_plan/final_trade_plan MUST NOT be NO TRADE. Return decision LONG/SHORT, trigger_state PENDING_TRIGGER, and exact entry/stop derived from the visible trigger candle.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
