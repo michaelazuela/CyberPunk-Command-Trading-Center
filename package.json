@@ -7,7 +7,7 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "tsx src/lib/tradeDecisionPipeline.test.ts",
+    "test": "tsx src/lib/tradeDecisionPipeline.test.ts && tsx src/lib/setupScanner.test.ts",
     "clean": "rm -rf dist",
     "guard:no-firebase": "node scripts/no-firebase-check.js",
     "guard:architecture": "node scripts/architecture-guard.js",

@@ -3,11 +3,14 @@ import {
   BiasAssessment,
   BiasDirection,
   ChartContext,
+  ExecutionStatus,
+  FinalOpportunitySelection,
   FinalTradePlan,
   KeyLevels,
   NoTradeReason,
   RiskAssessment,
   RiskStatus,
+  SetupCandidate,
   SetupAssessment,
   SetupType,
   TradeDecision,
@@ -17,6 +20,7 @@ import {
 import { DECISION_STEPS, DECISION_STEP_LABELS } from '../config/decisionSteps';
 import { TRADE_RULES } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
+import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -342,6 +346,28 @@ function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
   };
 }
 
+function makeRiskAssessmentFromSetup(candidate: SetupCandidate | null): RiskAssessment {
+  const entry = candidate?.entry ?? null;
+  const stop = candidate?.stop ?? null;
+  const risk = riskPoints(entry, stop);
+  const status =
+    risk === null ? RiskStatus.Unknown :
+    risk > TRADE_RULES.maxRiskPoints ? RiskStatus.Blocked :
+    risk > TRADE_RULES.preferredRiskPoints ? RiskStatus.Warning :
+    RiskStatus.Approved;
+
+  return {
+    status,
+    entry,
+    stop,
+    riskPoints: risk,
+    maxRiskPoints: TRADE_RULES.maxRiskPoints,
+    reasoning: risk === null
+      ? 'Risk unavailable because ENTRY or STOP is missing.'
+      : `Risk is ${risk.toFixed(2)} points against max ${TRADE_RULES.maxRiskPoints}.`,
+  };
+}
+
 function makeStep(step: TradeDecisionStep, status: StepStatus, message: string, required = true, noTradeReason?: NoTradeReason): TradeDecisionStepResult {
   return {
     step,
@@ -357,29 +383,73 @@ function firstFailure(auditTrail: TradeDecisionStepResult[]): TradeDecisionStepR
   return auditTrail.find((step) => step.required && step.status === 'fail');
 }
 
+function hasDetectedOpportunity(candidate: SetupCandidate): boolean {
+  return candidate.detectedStatus !== 'NotDetected' && candidate.detectedStatus !== 'Invalid';
+}
+
+function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | null {
+  return candidates
+    .filter(hasDetectedOpportunity)
+    .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a))[0] || null;
+}
+
+function finalStatusFromSelection(
+  selectedExecutable: SetupCandidate | null,
+  selectedConditional: SetupCandidate | null,
+  preliminaryFailure: TradeDecisionStepResult | undefined
+): TradeDecisionStatus {
+  if (preliminaryFailure?.noTradeReason === NoTradeReason.InvalidScreenshot) return TradeDecisionStatus.InvalidScreenshot;
+  if (preliminaryFailure?.noTradeReason === NoTradeReason.OutsideTimeWindow) return TradeDecisionStatus.OutsideRules;
+  if (preliminaryFailure) return TradeDecisionStatus.NoTrade;
+  if (selectedExecutable) return TradeDecisionStatus.ApprovedTrade;
+  if (selectedConditional?.blockReason === NoTradeReason.RiskTooWide) return TradeDecisionStatus.Wait;
+  if (selectedConditional) return TradeDecisionStatus.ConditionalTrade;
+  return TradeDecisionStatus.NoTrade;
+}
+
+function noTradeReasonFromSelection(
+  status: TradeDecisionStatus,
+  selected: SetupCandidate | null,
+  displayCandidate: SetupCandidate | null
+): NoTradeReason | null {
+  if (status === TradeDecisionStatus.ApprovedTrade || status === TradeDecisionStatus.ConditionalTrade) return null;
+  if (status === TradeDecisionStatus.Wait) return selected?.blockReason || NoTradeReason.EntryTriggerPending;
+  return selected?.blockReason || displayCandidate?.blockReason || NoTradeReason.NoApprovedSetup;
+}
+
 export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): TradeDecisionPipelineResult {
   const chartContext = buildChartContext(input);
-  const candidates = candidatesFromResult(input.result);
-  const selectedCandidate = chooseCandidate(candidates, input.sessionType);
-  const fallbackCandidate = selectedCandidate || candidates[0] || null;
-  const blocker = selectedCandidate ? null : (fallbackCandidate ? candidateBlocker(fallbackCandidate, input.sessionType) : NoTradeReason.NoApprovedSetup);
+  const setupScan = scanSetupCandidates({
+    sessionType: input.sessionType,
+    result: input.result,
+  });
+  const selectedExecutable = setupScan.bestExecutableCandidate;
+  const selectedConditional = setupScan.bestConditionalCandidate;
+  const selectedCandidate = selectedExecutable || selectedConditional;
+  const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupScan.candidates);
+  const blockedCandidates = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);
   const bias = inferBias(input.result);
-  const riskAssessment = makeRiskAssessment(selectedCandidate || fallbackCandidate);
-  const computedTargets = selectedCandidate ? targets(selectedCandidate.direction, selectedCandidate.entry, selectedCandidate.stop) : { target: null, target1: null, target2: null };
+  const riskAssessment = makeRiskAssessmentFromSetup(selectedCandidate || displayCandidate);
+  const computedTargets = selectedCandidate
+    ? { target: selectedCandidate.target1 ?? null, target1: selectedCandidate.target1 ?? null, target2: selectedCandidate.target2 ?? null }
+    : { target: null, target1: null, target2: null };
   const liveWindow = sessionKey(input.sessionType);
   const isReplay = input.sessionType === 'replay_morning' || input.sessionType === 'replay_lunch';
   const windowStatus = isReplay ? 'active' : input.windowStatusOverride || getWindowStatus(liveWindow);
   const isWindowApproved = isReplay || windowStatus === 'active';
   const hasUsableScreenshot = chartContext.screenshotUsability !== 'unusable';
   const hasInstrument = TRADE_RULES.instruments.includes(chartContext.instrument);
+  const detectedCount = setupScan.candidates.filter(hasDetectedOpportunity).length;
+  const executableCount = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Executable).length;
+  const conditionalCount = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Conditional).length;
   const setupAssessment: SetupAssessment = {
-    setupType: selectedCandidate?.setupType || fallbackCandidate?.setupType || SetupType.NoSetup,
+    setupType: selectedCandidate?.setupType || displayCandidate?.setupType || SetupType.NoSetup,
     status: selectedCandidate ? TradeDecisionStatus.ConditionalTrade : TradeDecisionStatus.NoTrade,
-    confidence: selectedCandidate?.confidence || fallbackCandidate?.confidence || 'Low',
-    entryTrigger: selectedCandidate?.entryTrigger || fallbackCandidate?.entryTrigger || null,
-    invalidation: selectedCandidate?.invalidation || fallbackCandidate?.invalidation || 'No valid invalidation defined.',
-    reasoning: selectedCandidate?.reasoning || fallbackCandidate?.reasoning || 'No approved setup survived deterministic gates.',
-    noTradeReason: blocker,
+    confidence: selectedCandidate?.confidence || displayCandidate?.confidence || 'Low',
+    entryTrigger: selectedCandidate?.requiredTrigger || displayCandidate?.requiredTrigger || null,
+    invalidation: selectedCandidate?.invalidation || displayCandidate?.invalidation || 'No valid invalidation defined.',
+    reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || 'No executable or conditional setup survived deterministic scan.',
+    noTradeReason: selectedCandidate?.blockReason || displayCandidate?.blockReason || null,
   };
   const biasAssessment: BiasAssessment = {
     bias,
@@ -399,44 +469,104 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     makeStep(TradeDecisionStep.IdentifyKeyLevels, Object.values(chartContext.keyLevels).some(isValidPrice) ? 'pass' : 'warning', 'Key levels reviewed from extracted chart context.', false, NoTradeReason.MissingKeyLevels),
     makeStep(TradeDecisionStep.DetermineBias, bias === BiasDirection.NoBias ? 'fail' : 'pass', `Bias: ${bias}.`, true, NoTradeReason.NoClearBias),
     makeStep(TradeDecisionStep.CheckApprovedTimeWindow, isWindowApproved ? 'pass' : 'fail', isReplay ? 'Replay mode uses entered trade date/session.' : `Live window status: ${windowStatus}.`, true, NoTradeReason.OutsideTimeWindow),
-    makeStep(TradeDecisionStep.IdentifySetupType, selectedCandidate ? 'pass' : 'fail', selectedCandidate ? `Setup: ${selectedCandidate.setupName}.` : 'No approved setup type survived gates.', true, blocker || NoTradeReason.NoApprovedSetup),
-    makeStep(TradeDecisionStep.ValidateEntryTrigger, isValidPrice(selectedCandidate?.entry) ? (selectedCandidate?.entryTrigger ? 'pass' : 'warning') : 'fail', selectedCandidate?.entryTrigger || 'No measurable entry trigger.', true, NoTradeReason.EntryTriggerMissing),
-    makeStep(TradeDecisionStep.ValidateStopLocation, selectedCandidate && stopTiedToStructure(selectedCandidate) ? 'pass' : 'fail', selectedCandidate?.invalidation || 'Stop is not tied to active swing/structure.', true, NoTradeReason.InvalidStopLocation),
-    makeStep(TradeDecisionStep.ValidateRiskLimit, riskAssessment.status === RiskStatus.Blocked || riskAssessment.status === RiskStatus.Unknown ? 'fail' : riskAssessment.status === RiskStatus.Warning ? 'warning' : 'pass', riskAssessment.reasoning, true, riskAssessment.status === RiskStatus.Blocked ? NoTradeReason.RiskTooWide : undefined),
-    makeStep(TradeDecisionStep.DetermineTargetModel, isValidPrice(computedTargets.target1) && isValidPrice(computedTargets.target2) ? 'pass' : 'fail', 'Targets use app model: T1 = 1.5R, T2 = 2.0R.', true, NoTradeReason.TargetsUnavailable),
-    makeStep(TradeDecisionStep.DefineInvalidation, selectedCandidate?.invalidation ? 'pass' : 'fail', selectedCandidate?.invalidation || 'Invalidation is required.', true, NoTradeReason.InvalidStopLocation),
   ];
 
-  const failure = firstFailure(auditTrail);
-  const finalStatus =
-    failure?.noTradeReason === NoTradeReason.InvalidScreenshot ? TradeDecisionStatus.InvalidScreenshot :
-    failure?.noTradeReason === NoTradeReason.OutsideTimeWindow ? TradeDecisionStatus.OutsideRules :
-    failure?.noTradeReason === NoTradeReason.EntryTriggerPending ? TradeDecisionStatus.Wait :
-    failure ? TradeDecisionStatus.NoTrade :
-    selectedCandidate?.entryTrigger ? TradeDecisionStatus.ConditionalTrade :
-    TradeDecisionStatus.ApprovedTrade;
+  const preliminaryFailure = firstFailure(auditTrail);
+  const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure);
+  const finalNoTradeReason =
+    preliminaryFailure?.noTradeReason ||
+    noTradeReasonFromSelection(finalStatus, selectedCandidate, displayCandidate);
+  const selectedIsExecutable = finalStatus === TradeDecisionStatus.ApprovedTrade;
+  const selectedIsConditional = finalStatus === TradeDecisionStatus.ConditionalTrade || finalStatus === TradeDecisionStatus.Wait;
+
+  auditTrail.push(
+    makeStep(
+      TradeDecisionStep.IdentifySetupType,
+      detectedCount > 0 ? (selectedCandidate ? 'pass' : 'warning') : 'fail',
+      detectedCount > 0
+        ? `Setup scan complete: ${detectedCount} detected/possible, ${executableCount} executable, ${conditionalCount} conditional, ${blockedCandidates.length} blocked.`
+        : 'No approved setup type was detected.',
+      true,
+      detectedCount > 0 ? undefined : NoTradeReason.NoApprovedSetup
+    ),
+    makeStep(
+      TradeDecisionStep.ValidateEntryTrigger,
+      selectedIsExecutable && isValidPrice(selectedCandidate?.entry) ? 'pass' : selectedIsConditional ? 'warning' : 'fail',
+      selectedCandidate?.requiredTrigger || (selectedIsConditional ? 'Conditional setup requires trigger confirmation.' : 'No measurable entry trigger.'),
+      true,
+      selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.EntryTriggerPending : NoTradeReason.EntryTriggerMissing
+    ),
+    makeStep(
+      TradeDecisionStep.ValidateStopLocation,
+      selectedIsExecutable && isValidPrice(selectedCandidate?.stop) && selectedCandidate?.invalidation ? 'pass' : selectedIsConditional ? 'warning' : 'fail',
+      selectedCandidate?.invalidation || (selectedIsConditional ? 'Conditional setup must define stop tied to active swing structure before execution.' : 'Stop is not tied to active swing/structure.'),
+      true,
+      selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.InvalidStopLocation : NoTradeReason.InvalidStopLocation
+    ),
+    makeStep(
+      TradeDecisionStep.ValidateRiskLimit,
+      selectedIsExecutable
+        ? riskAssessment.status === RiskStatus.Warning ? 'warning' : 'pass'
+        : selectedIsConditional ? 'warning' : 'fail',
+      selectedCandidate?.blockReason === NoTradeReason.RiskTooWide
+        ? 'RiskTooWide blocks execution only; setup remains available as a reduced-risk wait/conditional candidate.'
+        : riskAssessment.reasoning,
+      true,
+      selectedCandidate?.blockReason === NoTradeReason.RiskTooWide ? NoTradeReason.RiskTooWide : undefined
+    ),
+    makeStep(
+      TradeDecisionStep.DetermineTargetModel,
+      selectedIsExecutable && isValidPrice(computedTargets.target1) && isValidPrice(computedTargets.target2) ? 'pass' : selectedIsConditional ? 'warning' : 'fail',
+      'Targets use app model: T1 = 1.5R, T2 = 2.0R.',
+      true,
+      selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.TargetsUnavailable : NoTradeReason.TargetsUnavailable
+    ),
+    makeStep(
+      TradeDecisionStep.DefineInvalidation,
+      selectedIsExecutable && selectedCandidate?.invalidation ? 'pass' : selectedIsConditional ? 'warning' : 'fail',
+      selectedCandidate?.invalidation || (selectedIsConditional ? 'Conditional setup requires invalidation before execution.' : 'Invalidation is required.'),
+      true,
+      selectedIsConditional ? selectedCandidate?.blockReason || NoTradeReason.InvalidStopLocation : NoTradeReason.InvalidStopLocation
+    ),
+  );
 
   const finalPlan: FinalTradePlan = {
     status: finalStatus,
     direction: selectedCandidate?.direction || 'NO TRADE',
-    setupType: selectedCandidate?.setupType || SetupType.NoSetup,
-    entry: finalStatus === TradeDecisionStatus.ApprovedTrade || finalStatus === TradeDecisionStatus.ConditionalTrade ? selectedCandidate?.entry ?? null : null,
-    stop: finalStatus === TradeDecisionStatus.ApprovedTrade || finalStatus === TradeDecisionStatus.ConditionalTrade ? selectedCandidate?.stop ?? null : null,
-    target: finalStatus === TradeDecisionStatus.ApprovedTrade || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target : null,
-    target1: finalStatus === TradeDecisionStatus.ApprovedTrade || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target1 : null,
-    target2: finalStatus === TradeDecisionStatus.ApprovedTrade || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target2 : null,
-    invalidation: selectedCandidate?.invalidation || failure?.message || 'No valid invalidation defined.',
+    setupType: selectedCandidate?.setupType || displayCandidate?.setupType || SetupType.NoSetup,
+    entry: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? selectedCandidate?.entry ?? null : null,
+    stop: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? selectedCandidate?.stop ?? null : null,
+    target: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target : null,
+    target1: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target1 : null,
+    target2: selectedIsExecutable || finalStatus === TradeDecisionStatus.ConditionalTrade ? computedTargets.target2 : null,
+    invalidation: selectedCandidate?.invalidation || preliminaryFailure?.message || 'No valid invalidation defined.',
     risk: riskAssessment,
-    confidence: selectedCandidate?.confidence || 'Low',
-    reasoning: selectedCandidate?.reasoning || failure?.message || 'No approved trade.',
-    noTradeReason: failure?.noTradeReason || blocker || null,
+    confidence: selectedCandidate?.confidence || displayCandidate?.confidence || 'Low',
+    reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || preliminaryFailure?.message || 'No executable or conditional opportunity.',
+    noTradeReason: finalNoTradeReason,
   };
 
   auditTrail.push(
-    makeStep(TradeDecisionStep.DecideTradeOrNoTrade, failure ? 'fail' : 'pass', failure ? `Decision blocked: ${failure.message}` : `Decision: ${finalStatus}.`, true, failure?.noTradeReason),
+    makeStep(
+      TradeDecisionStep.DecideTradeOrNoTrade,
+      finalStatus === TradeDecisionStatus.NoTrade || finalStatus === TradeDecisionStatus.InvalidScreenshot || finalStatus === TradeDecisionStatus.OutsideRules ? 'fail' : finalStatus === TradeDecisionStatus.Wait ? 'warning' : 'pass',
+      finalStatus === TradeDecisionStatus.NoTrade
+        ? 'NoTrade returned only after no executable or conditional setup was available.'
+        : `Decision: ${finalStatus}.`,
+      true,
+      finalPlan.noTradeReason || undefined
+    ),
     makeStep(TradeDecisionStep.GenerateFinalTradePlan, finalPlan.status === TradeDecisionStatus.NoTrade || finalPlan.status === TradeDecisionStatus.InvalidScreenshot || finalPlan.status === TradeDecisionStatus.OutsideRules ? 'warning' : 'pass', 'Final plan generated by deterministic app pipeline.', true, finalPlan.noTradeReason || undefined),
     makeStep(TradeDecisionStep.SaveJournalReadyRecord, 'pass', 'Journal-ready payload can be saved after analysis/outcome.', false),
   );
+
+  const opportunitySelection: FinalOpportunitySelection = {
+    bestExecutableCandidate: selectedExecutable,
+    bestConditionalCandidate: selectedConditional,
+    blockedCandidates,
+    finalDecision: finalStatus,
+    noTradeReason: finalPlan.noTradeReason || null,
+  };
 
   return {
     status: finalStatus,
@@ -444,6 +574,8 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext,
     biasAssessment,
     setupAssessment,
+    setupCandidates: setupScan.candidates,
+    opportunitySelection,
     riskAssessment,
     finalTradePlan: finalPlan,
     noTradeReason: finalPlan.noTradeReason,

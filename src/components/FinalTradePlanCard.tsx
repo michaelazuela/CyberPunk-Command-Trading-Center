@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, CircleX, Route, Shield, Target, TrendingUp
 import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 import { buildConfidenceBreakdown } from '../lib/planMetadata';
-import { TradeDecisionStatus } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType, TradeDecisionStatus } from '../types';
 
 interface FinalTradePlanCardProps {
   plan: NormalizedTradePlan;
@@ -70,6 +70,176 @@ function formatDecisionStatus(status?: TradeDecisionStatus): string {
   }
 }
 
+function formatSetupType(setupType?: SetupType | string): string {
+  const labels: Record<string, string> = {
+    [SetupType.OrderBlock618]: 'Order Block / 61.8%',
+    [SetupType.LiquiditySweep]: 'Liquidity Sweep',
+    [SetupType.MomentumRunaway]: 'Momentum / Runaway',
+    [SetupType.FairValueGap]: 'Fair Value Gap',
+    [SetupType.FvgImbalancePullback]: 'FVG / Imbalance Pullback',
+    [SetupType.MarketStructureShift]: 'Market Structure Shift / ChoCH',
+    [SetupType.OpeningOrderBlock]: 'Opening Order Block',
+    [SetupType.EqualHighsLows]: 'Equal Highs / Equal Lows',
+    [SetupType.InitialBalanceExtension]: 'Initial Balance Extension',
+    [SetupType.PreviousDaySweep]: 'Previous Day High/Low Sweep',
+    [SetupType.CompressionBreakout]: 'Compression Breakout',
+    [SetupType.OpeningGapFill]: 'Opening Gap Fill',
+    [SetupType.BreakerBlock]: 'Breaker Block',
+    [SetupType.AlgoKillZone]: 'Algo Kill Zone',
+    [SetupType.MitigationBlock]: 'Mitigation Block',
+    [SetupType.MomentumPullbackBreatherReclaim]: 'Momentum Pullback / Breather Reclaim',
+    [SetupType.NoSetup]: 'No Setup',
+  };
+  const raw = setupType || 'Unknown';
+  return labels[raw] || String(raw).replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function formatDirection(direction: SetupCandidate['direction']): string {
+  if (direction === 'NO TRADE') return 'None';
+  return direction.charAt(0) + direction.slice(1).toLowerCase();
+}
+
+function candidateTone(candidate: SetupCandidate): string {
+  if (candidate.executionStatus === ExecutionStatus.Executable) return 'border-[var(--green)]/35 bg-[var(--green)]/5';
+  if (candidate.executionStatus === ExecutionStatus.Conditional) return 'border-[var(--orange)]/35 bg-[var(--orange)]/5';
+  if (candidate.executionStatus === ExecutionStatus.Blocked || candidate.detectedStatus === SetupCandidateStatus.Blocked) return 'border-[var(--red)]/30 bg-[var(--red)]/5';
+  if (candidate.detectedStatus === SetupCandidateStatus.Possible) return 'border-[var(--amber)]/30 bg-[var(--amber)]/5';
+  return 'border-[var(--b1)] bg-[var(--bg)]';
+}
+
+function statusTone(candidate: SetupCandidate): string {
+  if (candidate.executionStatus === ExecutionStatus.Executable) return 'text-[var(--green)] border-[var(--green)]/30';
+  if (candidate.executionStatus === ExecutionStatus.Conditional) return 'text-[var(--orange)] border-[var(--orange)]/30';
+  if (candidate.executionStatus === ExecutionStatus.Blocked || candidate.detectedStatus === SetupCandidateStatus.Blocked) return 'text-[var(--red)] border-[var(--red)]/30';
+  if (candidate.detectedStatus === SetupCandidateStatus.Possible) return 'text-[var(--amber)] border-[var(--amber)]/30';
+  return 'text-[var(--txt3)] border-[var(--b2)]';
+}
+
+function formatBlockReason(reason: NoTradeReason | null): string {
+  if (!reason) return '';
+  if (reason === NoTradeReason.RiskTooWide) return 'RiskTooWide';
+  return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function candidateReason(candidate: SetupCandidate): string {
+  if (candidate.blockReason === NoTradeReason.RiskTooWide) {
+    return 'RiskTooWide - setup remains detected, but execution is blocked until risk is reduced.';
+  }
+  if (candidate.blockReason) return formatBlockReason(candidate.blockReason);
+  if (candidate.executionStatus === ExecutionStatus.Conditional && candidate.requiredTrigger) return candidate.requiredTrigger;
+  if (candidate.detectedStatus === SetupCandidateStatus.NotDetected) return 'Not detected in current screenshot.';
+  if (candidate.missingEvidence.length > 0) return candidate.missingEvidence[0];
+  return candidate.evidence[0] || 'No additional reason provided.';
+}
+
+function bestOpportunityLabel(plan: NormalizedTradePlan): string {
+  const executable = plan.opportunitySelection?.bestExecutableCandidate;
+  const conditional = plan.opportunitySelection?.bestConditionalCandidate;
+  if (executable) return `Executable ${formatSetupType(executable.setupType)} ${formatDirection(executable.direction)}`;
+  if (conditional) return `Conditional ${formatSetupType(conditional.setupType)} ${formatDirection(conditional.direction)}`;
+  return 'No executable or conditional opportunity';
+}
+
+function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
+  const candidates = plan.setupCandidates || [];
+  if (candidates.length === 0) return null;
+
+  const executableCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Executable).length;
+  const conditionalCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Conditional).length;
+  const blockedCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Blocked).length;
+  const detectedCount = candidates.filter(candidate =>
+    candidate.detectedStatus === SetupCandidateStatus.Detected ||
+    candidate.detectedStatus === SetupCandidateStatus.Possible ||
+    candidate.detectedStatus === SetupCandidateStatus.Conditional ||
+    candidate.detectedStatus === SetupCandidateStatus.Blocked
+  ).length;
+
+  return (
+    <div className="mb-4 border border-[var(--b1)] bg-[var(--s2)] p-3">
+      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">
+            Setup Scan Results
+          </div>
+          <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
+            Setup Detected is separate from Execution Approved. Blocked setups stay visible.
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="qd-badge text-[var(--green)] border-[var(--green)]/30">Executable {executableCount}</span>
+          <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Conditional {conditionalCount}</span>
+          <span className="qd-badge text-[var(--red)] border-[var(--red)]/30">Blocked {blockedCount}</span>
+          <span className="qd-badge opacity-70">Detected {detectedCount}/{candidates.length}</span>
+        </div>
+      </div>
+
+      <div className="mb-3 border border-[var(--orange)]/25 bg-[var(--bg)] px-3 py-2 font-mono">
+        <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Best Trade Opportunity</div>
+        <div className={cn(
+          'mt-1 text-[12px] font-bold uppercase tracking-[0.12em]',
+          plan.opportunitySelection?.bestExecutableCandidate ? 'text-[var(--green)]' :
+            plan.opportunitySelection?.bestConditionalCandidate ? 'text-[var(--orange)]' :
+              'text-[var(--txt3)]'
+        )}>
+          {bestOpportunityLabel(plan)}
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        {candidates.map((candidate, index) => (
+          <div
+            key={`${candidate.setupType}-${candidate.executionStatus}-${candidate.detectedStatus}-${index}`}
+            className={cn('border p-3 font-mono', candidateTone(candidate))}
+          >
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="text-[11px] font-bold text-[var(--txt)]">
+                  {index + 1}. {formatSetupType(candidate.setupType)}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.detectedStatus}</span>
+                  <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
+                  <span className="qd-badge opacity-80">Confidence: {candidate.confidence}</span>
+                  <span className={cn('qd-badge', statusTone(candidate))}>Execution: {candidate.executionStatus}</span>
+                </div>
+              </div>
+              {(candidate.entry || candidate.stop || candidate.riskPoints) && (
+                <div className="grid grid-cols-3 gap-1 text-right text-[10px] lg:min-w-[260px]">
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">ENTRY</div>
+                    <div className="text-[var(--txt)]">{candidate.entry ?? 'N/A'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">STOP</div>
+                    <div className="text-[var(--red)]">{candidate.stop ?? 'N/A'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">RISK</div>
+                    <div className="text-[var(--orange)]">{candidate.riskPoints ?? 'N/A'}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
+              <div><span className="text-[var(--txt)]">Reason:</span> {candidateReason(candidate)}</div>
+              <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || 'No action required.'}</div>
+              {candidate.blockReason === NoTradeReason.RiskTooWide && (
+                <div className="mt-1 text-[var(--orange)]">
+                  RiskTooWide blocks execution only. It does not erase this setup candidate.
+                </div>
+              )}
+              {candidate.requiredTrigger && (
+                <div><span className="text-[var(--txt)]">Required Trigger:</span> {candidate.requiredTrigger}</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DecisionStepAudit({ plan }: { plan: NormalizedTradePlan }) {
   const steps = plan.decisionAuditTrail || [];
   if (steps.length === 0) return null;
@@ -95,6 +265,9 @@ function DecisionStepAudit({ plan }: { plan: NormalizedTradePlan }) {
         {steps.map((step, index) => {
           const isFail = step.status === 'fail';
           const isWarning = step.status === 'warning';
+          const displayMessage = /no (approved )?setup (type )?survived gates/i.test(step.message)
+            ? 'No executable setup passed gates; detected, conditional, and blocked candidates remain listed in Setup Scan Results.'
+            : step.message;
           return (
             <div
               key={`${step.step}-${index}`}
@@ -120,7 +293,7 @@ function DecisionStepAudit({ plan }: { plan: NormalizedTradePlan }) {
               <div>
                 <div className="text-[var(--txt)]">{step.label}</div>
                 <div className={cn('mt-1 leading-relaxed', isFail ? 'text-[var(--red)]' : isWarning ? 'text-[var(--orange)]' : 'text-[var(--txt2)]')}>
-                  {step.message}
+                  {displayMessage}
                 </div>
                 {step.noTradeReason && (
                   <div className="mt-1 text-[var(--txt3)]">Reason: {step.noTradeReason}</div>
@@ -197,6 +370,7 @@ export default function FinalTradePlanCard({
       </h3>
 
       <DecisionStepAudit plan={plan} />
+      <SetupScanResults plan={plan} />
 
       {!plan.canExecute ? (
         <div className="mb-4 border border-dashed border-[var(--orange)]/40 bg-[var(--orange)]/5 p-4">
@@ -205,7 +379,9 @@ export default function FinalTradePlanCard({
             {decisionStatusLabel}
           </div>
           <div className="mt-2 text-[11px] text-[var(--txt2)]">
-            No-trade and wait states are valid completed outcomes. Execution remains disabled unless the deterministic pipeline returns Approved Trade or Conditional Trade.
+            {plan.decisionStatus === TradeDecisionStatus.ConditionalTrade || plan.decisionStatus === TradeDecisionStatus.Wait
+              ? 'This is a valid planning result. Execution stays disabled until the required trigger and risk fields are satisfied.'
+              : 'No-trade and wait states are valid completed outcomes. NoTrade is shown only when no executable or conditional opportunity is available.'}
           </div>
           {plan.noTradeReason && (
             <div className="mt-3 inline-flex border border-[var(--orange)]/30 bg-[var(--bg)] px-2 py-1 text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--orange)]">

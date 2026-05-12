@@ -104,7 +104,9 @@ Replay mode must use the entered trading date and replay session, not the upload
 
 ### 7. Identify Setup Type
 
-The app-owned rule engine must classify the setup type. AI may describe candidates, but final setup selection belongs to the deterministic engine.
+The app-owned rule engine must classify setup opportunities. AI may describe candidates, but final setup selection belongs to the deterministic engine.
+
+The planned all-setup scan workflow requires the app to evaluate every approved setup type for the active session before returning a final decision. A single failed setup gate must not stop the scan.
 
 Examples:
 
@@ -121,6 +123,10 @@ Examples:
 - Breaker Block
 - Mitigation Block
 - No Trade
+
+Setup detection must be separate from execution approval. A detected setup can still be blocked, conditional, or invalid for execution.
+
+For the complete all-setup scan blueprint, see `docs/SETUP_SCAN_WORKFLOW.md`.
 
 ### 8. Validate Entry Trigger
 
@@ -155,7 +161,11 @@ The app must hard-block trades that exceed the configured risk limit. Risk must 
 riskPoints = abs(entry - stop)
 ```
 
-If risk is too large, the app returns no-trade or pending/no-go. AI cannot override this.
+If risk is too large, the app must block execution. AI cannot override this.
+
+`RiskTooWide` blocks execution only. It must not erase the detected setup candidate. A setup with wide risk should remain visible as a blocked opportunity and may produce a conditional reduced-risk plan if the chart provides a valid trigger.
+
+For the detailed handling contract, see `docs/RISK_TOO_WIDE_HANDLING.md`.
 
 ### 11. Determine Target Model
 
@@ -190,6 +200,8 @@ The app must decide:
 - No-trade
 
 The decision must be traceable to the rule engine.
+
+No-trade is returned only when the full setup scan finds no executable or conditional opportunity. Blocked candidates remain visible but cannot be selected as executable trades.
 
 ### 14. Generate Final Trade Plan
 

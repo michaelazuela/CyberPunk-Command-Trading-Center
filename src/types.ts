@@ -28,6 +28,7 @@ export enum SetupType {
   LiquiditySweep = 'LiquiditySweep',
   MomentumRunaway = 'MomentumRunaway',
   FairValueGap = 'FairValueGap',
+  FvgImbalancePullback = 'FvgImbalancePullback',
   MarketStructureShift = 'MarketStructureShift',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
@@ -38,6 +39,7 @@ export enum SetupType {
   BreakerBlock = 'BreakerBlock',
   AlgoKillZone = 'AlgoKillZone',
   MitigationBlock = 'MitigationBlock',
+  MomentumPullbackBreatherReclaim = 'MomentumPullbackBreatherReclaim',
   NoSetup = 'NoSetup',
 }
 
@@ -66,6 +68,23 @@ export enum RiskStatus {
   Warning = 'Warning',
   Blocked = 'Blocked',
   Unknown = 'Unknown',
+}
+
+export enum SetupCandidateStatus {
+  Detected = 'Detected',
+  Possible = 'Possible',
+  NotDetected = 'NotDetected',
+  Blocked = 'Blocked',
+  Conditional = 'Conditional',
+  Invalid = 'Invalid',
+}
+
+export enum ExecutionStatus {
+  Executable = 'Executable',
+  Conditional = 'Conditional',
+  Blocked = 'Blocked',
+  NotDetected = 'NotDetected',
+  Invalid = 'Invalid',
 }
 
 export enum TradeDecisionStep {
@@ -150,6 +169,51 @@ export interface RiskAssessment {
   reasoning: string;
 }
 
+export interface ReducedRiskPlan {
+  direction: 'LONG' | 'SHORT' | 'NO TRADE';
+  entry: number | null;
+  stop: number | null;
+  target1?: number | null;
+  target2?: number | null;
+  requiredTrigger: string | null;
+  invalidation: string | null;
+  reasoning: string;
+}
+
+export interface SetupCandidate {
+  setupType: SetupType;
+  direction: 'LONG' | 'SHORT' | 'NO TRADE';
+  detectedStatus: SetupCandidateStatus;
+  confidence: 'High' | 'Medium' | 'Low';
+  priority: number;
+  entry?: number | null;
+  stop?: number | null;
+  target1?: number | null;
+  target2?: number | null;
+  riskPoints?: number | null;
+  invalidation?: string | null;
+  entryClarity?: number;
+  stopClarity?: number;
+  targetClarity?: number;
+  proximityScore?: number;
+  rankScore?: number;
+  evidence: string[];
+  missingEvidence: string[];
+  executionStatus: ExecutionStatus;
+  blockReason: NoTradeReason | null;
+  requiredTrigger: string | null;
+  nextAction: string;
+  reducedRiskPlan: ReducedRiskPlan | null;
+}
+
+export interface FinalOpportunitySelection {
+  bestExecutableCandidate: SetupCandidate | null;
+  bestConditionalCandidate: SetupCandidate | null;
+  blockedCandidates?: SetupCandidate[];
+  finalDecision: TradeDecisionStatus;
+  noTradeReason: NoTradeReason | null;
+}
+
 export interface FinalTradePlan {
   status: TradeDecisionStatus;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
@@ -179,6 +243,8 @@ export interface TradeDecision {
   chartContext: ChartContext;
   biasAssessment: BiasAssessment;
   setupAssessment: SetupAssessment;
+  setupCandidates?: SetupCandidate[];
+  opportunitySelection?: FinalOpportunitySelection;
   riskAssessment: RiskAssessment;
   finalTradePlan: FinalTradePlan;
   noTradeReason?: NoTradeReason | null;
