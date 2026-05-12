@@ -4,6 +4,7 @@ import { DECISION_STEPS } from '../config/decisionSteps';
 import {
   AnalysisResult,
   BiasDirection,
+  ChartContext,
   DayType,
   ExecutionStatus,
   NoTradeReason,
@@ -46,6 +47,79 @@ function run(input: Partial<TradeDecisionPipelineInput> = {}) {
     instrument: 'MES',
     ...input,
   });
+}
+
+function structuredContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  return {
+    timeframe: '5m',
+    screenshotUsability: 'usable',
+    keyLevels: {
+      currentPrice: 7400,
+      rthOpen: 7398,
+      nearestSupport: 7396,
+      nearestResistance: 7410,
+      activeSwingHigh: 7412,
+      activeSwingLow: 7396,
+    },
+    marketStructure: {
+      trend: 'bullish',
+      higherHigh: true,
+      higherLow: true,
+      lowerHigh: false,
+      lowerLow: false,
+      marketStructureShift: false,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: true,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: 'bullish',
+      expansionCandlePresent: true,
+      rejectionWickPresent: false,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: false,
+      pullbackPresent: false,
+      closeAboveKeyLevel: true,
+      closeBelowKeyLevel: false,
+    },
+    setupEvidence: {
+      liquiditySweep: {
+        detected: true,
+        direction: 'LONG',
+        entry: 7400,
+        stop: 7396,
+        invalidation: 'Break below active swing low.',
+        requiredTrigger: 'Break of reclaim candle high.',
+        triggerState: 'TRIGGERED',
+        confidence: 'High',
+        evidence: ['Structured sweep/reclaim context.'],
+        missingEvidence: [],
+      },
+    },
+    screenshotQuality: 'High',
+    levelReadConfidence: 'High',
+    candleReadConfidence: 'High',
+    structureReadConfidence: 'High',
+    setupReadConfidence: 'High',
+    riskReadConfidence: 'High',
+    entryStopConfidence: 'High',
+    proposedEntry: 7400,
+    proposedStop: 7396,
+    riskPoints: 4,
+    riskStatus: 'WithinLimit',
+    entryConfirmed: true,
+    stopConfirmed: true,
+    requiresManualConfirmation: false,
+    extractionWarnings: {
+      screenshotUnclear: false,
+      priceLabelsUnreadable: false,
+      timeframeUnverified: false,
+      levelsUnclear: false,
+      manualEntryStopRequired: false,
+      messages: [],
+    },
+    ...overrides,
+  };
 }
 
 function assertSameSequence(input: Partial<TradeDecisionPipelineInput> = {}) {
@@ -394,6 +468,183 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.target2, 7408.5);
     assert.equal((result.target1 as number) % 0.25, 0);
     assert.equal((result.target2 as number) % 0.25, 0);
+  }],
+
+  ['22. Low screenshot quality blocks an otherwise executable structured trade from approval', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        reasoning: 'Narrative should not override low screenshot quality.',
+        structuredChartContext: structuredContext({
+          screenshotQuality: 'Low',
+          extractionWarnings: {
+            screenshotUnclear: false,
+            priceLabelsUnreadable: false,
+            timeframeUnverified: false,
+            levelsUnclear: false,
+            manualEntryStopRequired: false,
+            messages: ['Screenshot quality is low.'],
+          },
+        }),
+      }),
+    });
+
+    assert.ok(
+      result.status === TradeDecisionStatus.Wait ||
+      result.status === TradeDecisionStatus.ConditionalTrade
+    );
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(result.finalTradePlan.stop, null);
+    assert.equal(result.target1, null);
+    assert.equal(result.target2, null);
+    assert.equal(stepStatus(result, TradeDecisionStep.ConfirmScreenshotUsability), 'warning');
+  }],
+
+  ['23. Unreadable structured screenshot becomes InvalidScreenshot', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: structuredContext({
+          screenshotQuality: 'Unreadable',
+          extractionWarnings: {
+            screenshotUnclear: true,
+            priceLabelsUnreadable: true,
+            timeframeUnverified: true,
+            levelsUnclear: true,
+            manualEntryStopRequired: true,
+            messages: ['Screenshot is unreadable.'],
+          },
+        }),
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.InvalidScreenshot);
+    assert.equal(result.noTradeReason, NoTradeReason.InvalidScreenshot);
+  }],
+
+  ['24. Structured low level confidence prevents T1/T2 calculation until levels are confirmed', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: structuredContext({
+          levelReadConfidence: 'Low',
+          extractionWarnings: {
+            screenshotUnclear: false,
+            priceLabelsUnreadable: true,
+            timeframeUnverified: false,
+            levelsUnclear: true,
+            manualEntryStopRequired: true,
+            messages: ['Exact entry and stop require manual confirmation.'],
+          },
+        }),
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(result.finalTradePlan.stop, null);
+    assert.equal(result.target1, null);
+    assert.equal(result.target2, null);
+  }],
+
+  ['25. Structured low entry/stop confidence prevents executable prices and T1/T2 calculation', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: structuredContext({
+          entryStopConfidence: 'Low',
+          extractionWarnings: {
+            screenshotUnclear: false,
+            priceLabelsUnreadable: false,
+            timeframeUnverified: false,
+            levelsUnclear: false,
+            manualEntryStopRequired: true,
+            messages: ['Entry/stop confidence is low. Manual confirmation required.'],
+          },
+        }),
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(result.finalTradePlan.stop, null);
+    assert.equal(result.target1, null);
+    assert.equal(result.target2, null);
+  }],
+
+  ['26. Narrative says trade, but structured facts reject it in the trade decision pipeline', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        reasoning: 'Narrative says liquidity sweep long trade is confirmed and should execute.',
+        current_rule_analysis: {
+          ...baseResult().current_rule_analysis!,
+          summary: 'Narrative says liquidity sweep long trade is confirmed and should execute.',
+          entry: 7400,
+          stop: 7396,
+          trigger_state: 'TRIGGERED',
+        },
+        structuredChartContext: structuredContext({
+          setupEvidence: {},
+          fvgZones: [],
+          liquidityEvents: [],
+          candleFacts: {
+            lastClosedCandleDirection: 'unknown',
+            expansionCandlePresent: false,
+            rejectionWickPresent: false,
+            breatherCandlePresent: false,
+            reclaimCandlePresent: false,
+            pullbackPresent: false,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          marketStructure: {
+            trend: 'unknown',
+            higherHigh: false,
+            higherLow: false,
+            lowerHigh: false,
+            lowerLow: false,
+            marketStructureShift: false,
+            chopRangeCondition: false,
+            compressionCondition: false,
+            expansionCondition: false,
+          },
+        }),
+      }),
+    });
+
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.ok(
+      result.status === TradeDecisionStatus.Wait ||
+      result.status === TradeDecisionStatus.ConditionalTrade ||
+      result.status === TradeDecisionStatus.NoTrade
+    );
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
+  }],
+
+  ['27. Structured unconfirmed entry/stop prevents approval and T1/T2 calculation', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        structuredChartContext: structuredContext({
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+          riskReadConfidence: 'Low',
+          extractionWarnings: {
+            screenshotUnclear: false,
+            priceLabelsUnreadable: false,
+            timeframeUnverified: false,
+            levelsUnclear: true,
+            manualEntryStopRequired: true,
+            messages: ['Entry and stop are not confirmed.'],
+          },
+        }),
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(result.finalTradePlan.stop, null);
+    assert.equal(result.target1, null);
+    assert.equal(result.target2, null);
   }],
 ];
 

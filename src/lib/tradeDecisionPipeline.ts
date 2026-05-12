@@ -140,31 +140,75 @@ function setupFromText(...parts: Array<unknown>): SetupType {
 }
 
 function buildKeyLevels(result: AnalysisResult | null | undefined): KeyLevels {
+  const structured = result?.structuredChartContext?.keyLevels || {};
   return {
-    midnightOpen: result?.midnightOpenPrice ?? result?.midnightAnalysis?.level ?? null,
-    initialBalanceHigh: result?.midnightAnalysis?.band?.[1] ?? null,
-    initialBalanceLow: result?.midnightAnalysis?.band?.[0] ?? null,
-    ethHigh: result?.ethContextReview?.ethHigh ?? null,
-    ethLow: result?.ethContextReview?.ethLow ?? null,
-    asianHigh: result?.ethContextReview?.asianHigh ?? null,
-    asianLow: result?.ethContextReview?.asianLow ?? null,
-    londonHigh: result?.ethContextReview?.londonHigh ?? null,
-    londonLow: result?.ethContextReview?.londonLow ?? null,
-    nyPremarketHigh: result?.ethContextReview?.nyPremarketHigh ?? null,
-    nyPremarketLow: result?.ethContextReview?.nyPremarketLow ?? null,
+    ...structured,
+    currentPrice: structured.currentPrice ?? parsePrice(result?.sessionLog?.key_structural_level),
+    midnightOpen: structured.midnightOpen ?? result?.midnightOpenPrice ?? result?.midnightAnalysis?.level ?? null,
+    rthOpen: structured.rthOpen ?? null,
+    initialBalanceHigh: structured.initialBalanceHigh ?? null,
+    initialBalanceLow: structured.initialBalanceLow ?? null,
+    ethHigh: structured.ethHigh ?? result?.ethContextReview?.ethHigh ?? null,
+    ethLow: structured.ethLow ?? result?.ethContextReview?.ethLow ?? null,
+    asianHigh: structured.asianHigh ?? result?.ethContextReview?.asianHigh ?? null,
+    asianLow: structured.asianLow ?? result?.ethContextReview?.asianLow ?? null,
+    londonHigh: structured.londonHigh ?? result?.ethContextReview?.londonHigh ?? null,
+    londonLow: structured.londonLow ?? result?.ethContextReview?.londonLow ?? null,
+    nyPremarketHigh: structured.nyPremarketHigh ?? result?.ethContextReview?.nyPremarketHigh ?? null,
+    nyPremarketLow: structured.nyPremarketLow ?? result?.ethContextReview?.nyPremarketLow ?? null,
+    previousDayHigh: structured.previousDayHigh ?? structured.priorDayHigh ?? null,
+    previousDayLow: structured.previousDayLow ?? structured.priorDayLow ?? null,
+    priorDayHigh: structured.priorDayHigh ?? structured.previousDayHigh ?? null,
+    priorDayLow: structured.priorDayLow ?? structured.previousDayLow ?? null,
   };
 }
 
 function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
+  const structured = input.result?.structuredChartContext || {};
+  const extractedWarnings = structured.extractionWarnings;
+  const warningMessages = extractedWarnings?.messages || [];
+  const structuredUsability =
+    structured.screenshotQuality === 'Unreadable' || extractedWarnings?.screenshotUnclear
+      ? 'unusable'
+      : structured.screenshotQuality === 'Low'
+        ? 'warning'
+        : structured.screenshotUsability;
   return {
     sessionType: input.sessionType,
     instrument: input.instrument || 'MES',
     tradeDate: input.tradeDate || new Date().toISOString().split('T')[0],
-    timeframe: '5m',
-    screenshotTimestamp: input.result?.sessionLog?.timestamp ?? null,
-    screenshotUsability: input.screenshotUsability || (input.result ? 'usable' : 'unusable'),
-    screenshotWarning: input.screenshotWarning || null,
+    timeframe: structured.timeframe || '5m',
+    screenshotRole: structured.screenshotRole,
+    screenshotTimestamp: structured.screenshotTimestamp ?? input.result?.sessionLog?.timestamp ?? null,
+    screenshotTimezone: structured.screenshotTimezone,
+    screenshotUsability: input.screenshotUsability || structuredUsability || (input.result ? 'usable' : 'unusable'),
+    screenshotWarning: input.screenshotWarning || structured.screenshotWarning || warningMessages[0] || null,
     keyLevels: buildKeyLevels(input.result),
+    extractedLevels: structured.extractedLevels,
+    candles: structured.candles,
+    swings: structured.swings,
+    fvgZones: structured.fvgZones,
+    liquidityEvents: structured.liquidityEvents,
+    gapContext: structured.gapContext,
+    compressionRange: structured.compressionRange,
+    marketStructure: structured.marketStructure,
+    candleFacts: structured.candleFacts,
+    setupEvidence: structured.setupEvidence,
+    proposedEntry: structured.proposedEntry,
+    proposedStop: structured.proposedStop,
+    riskPoints: structured.riskPoints,
+    riskStatus: structured.riskStatus,
+    entryConfirmed: structured.entryConfirmed,
+    stopConfirmed: structured.stopConfirmed,
+    requiresManualConfirmation: structured.requiresManualConfirmation,
+    screenshotQuality: structured.screenshotQuality,
+    levelReadConfidence: structured.levelReadConfidence,
+    candleReadConfidence: structured.candleReadConfidence,
+    structureReadConfidence: structured.structureReadConfidence,
+    setupReadConfidence: structured.setupReadConfidence,
+    riskReadConfidence: structured.riskReadConfidence,
+    entryStopConfidence: structured.entryStopConfidence,
+    extractionWarnings: structured.extractionWarnings,
     marketContext: input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
     ocrText: input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
   };
@@ -396,11 +440,13 @@ function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | 
 function finalStatusFromSelection(
   selectedExecutable: SetupCandidate | null,
   selectedConditional: SetupCandidate | null,
-  preliminaryFailure: TradeDecisionStepResult | undefined
+  preliminaryFailure: TradeDecisionStepResult | undefined,
+  hasLowQualityScreenshot = false
 ): TradeDecisionStatus {
   if (preliminaryFailure?.noTradeReason === NoTradeReason.InvalidScreenshot) return TradeDecisionStatus.InvalidScreenshot;
   if (preliminaryFailure?.noTradeReason === NoTradeReason.OutsideTimeWindow) return TradeDecisionStatus.OutsideRules;
   if (preliminaryFailure) return TradeDecisionStatus.NoTrade;
+  if (selectedExecutable && hasLowQualityScreenshot) return TradeDecisionStatus.Wait;
   if (selectedExecutable) return TradeDecisionStatus.ApprovedTrade;
   if (selectedConditional?.blockReason === NoTradeReason.RiskTooWide) return TradeDecisionStatus.Wait;
   if (selectedConditional) return TradeDecisionStatus.ConditionalTrade;
@@ -422,6 +468,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   const setupScan = scanSetupCandidates({
     sessionType: input.sessionType,
     result: input.result,
+    chartContext,
   });
   const selectedExecutable = setupScan.bestExecutableCandidate;
   const selectedConditional = setupScan.bestConditionalCandidate;
@@ -438,6 +485,26 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   const windowStatus = isReplay ? 'active' : input.windowStatusOverride || getWindowStatus(liveWindow);
   const isWindowApproved = isReplay || windowStatus === 'active';
   const hasUsableScreenshot = chartContext.screenshotUsability !== 'unusable';
+  const hasLowQualityScreenshot =
+    chartContext.screenshotUsability === 'warning' ||
+    chartContext.screenshotUsability === 'unusable' ||
+    chartContext.screenshotQuality === 'Low' ||
+    chartContext.screenshotQuality === 'Unreadable' ||
+    chartContext.levelReadConfidence === 'Low' ||
+    chartContext.levelReadConfidence === 'Unreadable' ||
+    chartContext.structureReadConfidence === 'Low' ||
+    chartContext.structureReadConfidence === 'Unreadable' ||
+    chartContext.riskReadConfidence === 'Low' ||
+    chartContext.riskReadConfidence === 'Unreadable' ||
+    chartContext.entryStopConfidence === 'Low' ||
+    chartContext.entryStopConfidence === 'Unreadable' ||
+    chartContext.requiresManualConfirmation === true ||
+    chartContext.entryConfirmed === false ||
+    chartContext.stopConfirmed === false ||
+    chartContext.extractionWarnings?.screenshotUnclear === true ||
+    chartContext.extractionWarnings?.levelsUnclear === true ||
+    chartContext.extractionWarnings?.priceLabelsUnreadable === true ||
+    chartContext.extractionWarnings?.manualEntryStopRequired === true;
   const hasInstrument = TRADE_RULES.instruments.includes(chartContext.instrument);
   const detectedCount = setupScan.candidates.filter(hasDetectedOpportunity).length;
   const executableCount = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Executable).length;
@@ -472,7 +539,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   ];
 
   const preliminaryFailure = firstFailure(auditTrail);
-  const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure);
+  const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure, hasLowQualityScreenshot);
   const finalNoTradeReason =
     preliminaryFailure?.noTradeReason ||
     noTradeReasonFromSelection(finalStatus, selectedCandidate, displayCandidate);

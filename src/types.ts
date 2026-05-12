@@ -70,6 +70,8 @@ export enum RiskStatus {
   Unknown = 'Unknown',
 }
 
+export type ExtractedRiskStatus = 'WithinLimit' | 'Warning' | 'RiskTooWide' | 'Unknown';
+
 export enum SetupCandidateStatus {
   Detected = 'Detected',
   Possible = 'Possible',
@@ -107,6 +109,7 @@ export enum TradeDecisionStep {
 
 export interface KeyLevels {
   midnightOpen?: number | null;
+  currentPrice?: number | null;
   rthOpen?: number | null;
   openingRangeHigh?: number | null;
   openingRangeLow?: number | null;
@@ -122,8 +125,171 @@ export interface KeyLevels {
   nyPremarketLow?: number | null;
   previousDayHigh?: number | null;
   previousDayLow?: number | null;
+  priorDayHigh?: number | null;
+  priorDayLow?: number | null;
+  overnightHigh?: number | null;
+  overnightLow?: number | null;
+  nearestSupport?: number | null;
+  nearestResistance?: number | null;
+  activeSwingHigh?: number | null;
+  activeSwingLow?: number | null;
   triggerCandleHigh?: number | null;
   triggerCandleLow?: number | null;
+}
+
+export type ReadConfidence = 'High' | 'Medium' | 'Low' | 'Unreadable';
+export type TrendState = 'bullish' | 'bearish' | 'neutral' | 'range' | 'chop' | 'unknown';
+export type CandleDirection = 'bullish' | 'bearish' | 'doji' | 'unknown';
+export type PriceDirection = 'LONG' | 'SHORT' | 'NO TRADE';
+export type SwingType = 'high' | 'low';
+export type LevelRole = 'support' | 'resistance' | 'liquidity' | 'magnet' | 'invalidation' | 'unknown';
+
+export interface ExtractedLevelFact {
+  label: string;
+  price: number | null;
+  role: LevelRole;
+  source: 'ocr' | 'manual' | 'inferred' | 'unknown';
+  confidence: ReadConfidence;
+  evidence?: string;
+}
+
+export interface ChartCandleFact {
+  index: number;
+  timestamp?: string | null;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  close?: number | null;
+  direction: CandleDirection;
+  bodyQuality?: 'small' | 'normal' | 'large' | 'unknown';
+  upperWickQuality?: 'none' | 'small' | 'large' | 'unknown';
+  lowerWickQuality?: 'none' | 'small' | 'large' | 'unknown';
+  isExpansion?: boolean;
+  isRejection?: boolean;
+  isBreather?: boolean;
+  isReclaim?: boolean;
+  confidence: ReadConfidence;
+}
+
+export interface SwingPointFact {
+  type: SwingType;
+  price: number | null;
+  timestamp?: string | null;
+  candleIndex?: number | null;
+  label?: string;
+  confidence: ReadConfidence;
+}
+
+export interface FvgZoneFact {
+  direction: Exclude<PriceDirection, 'NO TRADE'>;
+  upper: number | null;
+  lower: number | null;
+  midpoint?: number | null;
+  formedAt?: string | null;
+  filledPercent?: number | null;
+  inverted?: boolean;
+  confidence: ReadConfidence;
+}
+
+export interface LiquidityEventFact {
+  type: 'sweep' | 'reclaim' | 'equal_highs' | 'equal_lows' | 'pdh_sweep' | 'pdl_sweep' | 'unknown';
+  direction: PriceDirection;
+  level: number | null;
+  sweptLevelLabel?: string;
+  reclaimed: boolean;
+  timestamp?: string | null;
+  confidence: ReadConfidence;
+  evidence?: string;
+}
+
+export interface GapContextFact {
+  gapPresent: boolean;
+  direction: 'gap_up' | 'gap_down' | 'none' | 'unknown';
+  priorClose?: number | null;
+  openPrice?: number | null;
+  gapSizePoints?: number | null;
+  fillTarget?: number | null;
+  fillAttempted?: boolean;
+  confidence: ReadConfidence;
+}
+
+export interface CompressionRangeFact {
+  present: boolean;
+  high?: number | null;
+  low?: number | null;
+  barsCount?: number | null;
+  breakoutDirection?: PriceDirection;
+  confidence: ReadConfidence;
+}
+
+export interface MarketStructureFacts {
+  trend: TrendState;
+  higherHigh: boolean;
+  higherLow: boolean;
+  lowerHigh: boolean;
+  lowerLow: boolean;
+  marketStructureShift: boolean;
+  chopRangeCondition: boolean;
+  compressionCondition?: boolean;
+  expansionCondition?: boolean;
+}
+
+export interface CandleFacts {
+  lastClosedCandleDirection: CandleDirection;
+  expansionCandlePresent: boolean;
+  rejectionWickPresent: boolean;
+  breatherCandlePresent: boolean;
+  reclaimCandlePresent: boolean;
+  pullbackPresent: boolean;
+  closeAboveKeyLevel?: boolean;
+  closeBelowKeyLevel?: boolean;
+}
+
+export interface StructuredSetupEvidence {
+  detected: boolean;
+  possible?: boolean;
+  direction?: 'LONG' | 'SHORT' | 'NO TRADE' | null;
+  entry?: number | null;
+  stop?: number | null;
+  invalidation?: string | null;
+  requiredTrigger?: string | null;
+  triggerState?: 'TRIGGERED' | 'PENDING_TRIGGER' | 'NO_TRIGGER' | null;
+  confidence?: 'High' | 'Medium' | 'Low' | null;
+  evidence?: string[];
+  missingEvidence?: string[];
+  sourceFacts?: string[];
+  levelRefs?: string[];
+  candleRefs?: number[];
+  confidenceReason?: string | null;
+}
+
+export interface StructuredSetupEvidenceMap {
+  liquiditySweep?: StructuredSetupEvidence;
+  fairValueGap?: StructuredSetupEvidence;
+  imbalancePullback?: StructuredSetupEvidence;
+  orderBlockRetest?: StructuredSetupEvidence;
+  momentumRunaway?: StructuredSetupEvidence;
+  compressionBreakout?: StructuredSetupEvidence;
+  openingGapFill?: StructuredSetupEvidence;
+  previousDayHighLowSweep?: StructuredSetupEvidence;
+  equalHighsEqualLows?: StructuredSetupEvidence;
+  breakerBlock?: StructuredSetupEvidence;
+  mitigationBlock?: StructuredSetupEvidence;
+  marketStructureShift?: StructuredSetupEvidence;
+  openingOrderBlock?: StructuredSetupEvidence;
+  initialBalanceExtension?: StructuredSetupEvidence;
+  algoKillZone?: StructuredSetupEvidence;
+  momentumPullbackBreatherReclaim?: StructuredSetupEvidence;
+  momentumPullback?: StructuredSetupEvidence;
+}
+
+export interface ChartExtractionWarnings {
+  screenshotUnclear?: boolean;
+  priceLabelsUnreadable?: boolean;
+  timeframeUnverified?: boolean;
+  levelsUnclear?: boolean;
+  manualEntryStopRequired?: boolean;
+  messages?: string[];
 }
 
 export interface ChartContext {
@@ -137,6 +303,31 @@ export interface ChartContext {
   screenshotUsability: 'usable' | 'warning' | 'unusable';
   screenshotWarning?: string | null;
   keyLevels: KeyLevels;
+  extractedLevels?: ExtractedLevelFact[];
+  candles?: ChartCandleFact[];
+  swings?: SwingPointFact[];
+  fvgZones?: FvgZoneFact[];
+  liquidityEvents?: LiquidityEventFact[];
+  gapContext?: GapContextFact;
+  compressionRange?: CompressionRangeFact;
+  marketStructure?: MarketStructureFacts;
+  candleFacts?: CandleFacts;
+  setupEvidence?: StructuredSetupEvidenceMap;
+  proposedEntry?: number | null;
+  proposedStop?: number | null;
+  riskPoints?: number | null;
+  riskStatus?: ExtractedRiskStatus;
+  entryConfirmed?: boolean;
+  stopConfirmed?: boolean;
+  requiresManualConfirmation?: boolean;
+  screenshotQuality?: ReadConfidence;
+  levelReadConfidence?: ReadConfidence;
+  candleReadConfidence?: ReadConfidence;
+  structureReadConfidence?: ReadConfidence;
+  setupReadConfidence?: ReadConfidence;
+  riskReadConfidence?: ReadConfidence;
+  entryStopConfidence?: ReadConfidence;
+  extractionWarnings?: ChartExtractionWarnings;
   marketContext: string;
   ocrText?: string | null;
 }
@@ -518,6 +709,7 @@ export interface AnalysisResult {
   planVersionId?: string;
   setupSignature?: string;
 
+  structuredChartContext?: Partial<ChartContext>;
   tradePlan?: TradePlan;
   executionReview5m?: ExecutionReview5m;
   ethContextReview?: ETHContextReview;

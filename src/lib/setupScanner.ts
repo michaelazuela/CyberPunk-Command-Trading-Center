@@ -1,5 +1,6 @@
 import {
   AnalysisResult,
+  ChartContext,
   ExecutionStatus,
   NoTradeReason,
   SetupCandidate,
@@ -11,6 +12,7 @@ import { SETUP_REGISTRY, SetupRegistryEntry, SetupSession } from '../config/setu
 
 type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
+type ReadConfidence = Exclude<ChartContext['levelReadConfidence'], undefined>;
 
 interface ExtractedPlanFacts {
   text: string;
@@ -26,6 +28,7 @@ interface ExtractedPlanFacts {
 export interface SetupScannerInput {
   sessionType: SetupSession;
   result?: AnalysisResult | null;
+  chartContext?: ChartContext | null;
   contextText?: string;
 }
 
@@ -111,6 +114,31 @@ function confidenceForStatus(status: SetupCandidateStatus): SetupCandidate['conf
   return 'Low';
 }
 
+function isReadableConfidence(confidence: ReadConfidence | null | undefined): boolean {
+  return confidence === 'High' || confidence === 'Medium';
+}
+
+function hasStructuredChartFacts(chartContext?: ChartContext | null): boolean {
+  if (!chartContext) return false;
+  return Boolean(
+    chartContext.setupEvidence ||
+    chartContext.candleFacts ||
+    chartContext.marketStructure ||
+    chartContext.candles?.length ||
+    chartContext.swings?.length ||
+    chartContext.fvgZones?.length ||
+    chartContext.liquidityEvents?.length ||
+    chartContext.extractedLevels?.length ||
+    chartContext.gapContext ||
+    chartContext.compressionRange ||
+    chartContext.levelReadConfidence ||
+    chartContext.candleReadConfidence ||
+    chartContext.structureReadConfidence ||
+    chartContext.setupReadConfidence ||
+    chartContext.entryStopConfidence
+  );
+}
+
 function extractPlanFacts(result: AnalysisResult | null | undefined): ExtractedPlanFacts[] {
   if (!result) return [];
   const facts: ExtractedPlanFacts[] = [];
@@ -155,6 +183,194 @@ function findRelevantFacts(entry: SetupRegistryEntry, facts: ExtractedPlanFacts[
     return facts;
   }
   return [];
+}
+
+function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartContext['setupEvidence']> | null {
+  switch (setupType) {
+    case SetupType.OrderBlock618: return 'orderBlockRetest';
+    case SetupType.LiquiditySweep: return 'liquiditySweep';
+    case SetupType.MomentumRunaway: return 'momentumRunaway';
+    case SetupType.FairValueGap: return 'fairValueGap';
+    case SetupType.FvgImbalancePullback: return 'imbalancePullback';
+    case SetupType.MarketStructureShift: return 'marketStructureShift';
+    case SetupType.OpeningOrderBlock: return 'openingOrderBlock';
+    case SetupType.EqualHighsLows: return 'equalHighsEqualLows';
+    case SetupType.InitialBalanceExtension: return 'initialBalanceExtension';
+    case SetupType.PreviousDaySweep: return 'previousDayHighLowSweep';
+    case SetupType.CompressionBreakout: return 'compressionBreakout';
+    case SetupType.OpeningGapFill: return 'openingGapFill';
+    case SetupType.BreakerBlock: return 'breakerBlock';
+    case SetupType.AlgoKillZone: return 'algoKillZone';
+    case SetupType.MitigationBlock: return 'mitigationBlock';
+    case SetupType.MomentumPullbackBreatherReclaim: return 'momentumPullbackBreatherReclaim';
+    default: return null;
+  }
+}
+
+function setupEvidenceFromContext(entry: SetupRegistryEntry, chartContext?: ChartContext | null) {
+  const key = evidenceKeyForSetup(entry.setupType);
+  if (!key) return null;
+  if (entry.setupType === SetupType.MomentumPullbackBreatherReclaim) {
+    return chartContext?.setupEvidence?.momentumPullbackBreatherReclaim || chartContext?.setupEvidence?.momentumPullback || null;
+  }
+  return chartContext?.setupEvidence?.[key] || null;
+}
+
+function levelsRequireManualConfirmation(chartContext?: ChartContext | null): boolean {
+  if (!chartContext) return false;
+  return (
+    chartContext.screenshotUsability === 'warning' ||
+    chartContext.screenshotUsability === 'unusable' ||
+    chartContext.screenshotQuality === 'Low' ||
+    chartContext.screenshotQuality === 'Unreadable' ||
+    chartContext.levelReadConfidence === 'Low' ||
+    chartContext.levelReadConfidence === 'Unreadable' ||
+    chartContext.riskReadConfidence === 'Low' ||
+    chartContext.riskReadConfidence === 'Unreadable' ||
+    chartContext.entryStopConfidence === 'Low' ||
+    chartContext.entryStopConfidence === 'Unreadable' ||
+    chartContext.requiresManualConfirmation === true ||
+    chartContext.entryConfirmed === false ||
+    chartContext.stopConfirmed === false ||
+    chartContext.extractionWarnings?.levelsUnclear === true ||
+    chartContext.extractionWarnings?.priceLabelsUnreadable === true ||
+    chartContext.extractionWarnings?.manualEntryStopRequired === true
+  );
+}
+
+function candleFactSummary(chartContext: ChartContext) {
+  const candles = chartContext.candles || [];
+  return {
+    expansion: Boolean(chartContext.candleFacts?.expansionCandlePresent || candles.some((candle) => candle.isExpansion && isReadableConfidence(candle.confidence))),
+    rejection: Boolean(chartContext.candleFacts?.rejectionWickPresent || candles.some((candle) => candle.isRejection && isReadableConfidence(candle.confidence))),
+    breather: Boolean(chartContext.candleFacts?.breatherCandlePresent || candles.some((candle) => candle.isBreather && isReadableConfidence(candle.confidence))),
+    reclaim: Boolean(chartContext.candleFacts?.reclaimCandlePresent || candles.some((candle) => candle.isReclaim && isReadableConfidence(candle.confidence))),
+    pullback: Boolean(chartContext.candleFacts?.pullbackPresent || candles.some((candle) => candle.direction !== 'unknown' && candle.bodyQuality === 'small' && isReadableConfidence(candle.confidence))),
+    closeAboveKeyLevel: Boolean(chartContext.candleFacts?.closeAboveKeyLevel),
+    closeBelowKeyLevel: Boolean(chartContext.candleFacts?.closeBelowKeyLevel),
+  };
+}
+
+function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: ChartContext | null): Direction | null {
+  if (!chartContext) return null;
+  const evidence = setupEvidenceFromContext(entry, chartContext);
+  if (evidence?.direction && evidence.direction !== 'NO TRADE') return evidence.direction;
+
+  const readableFvg = chartContext.fvgZones?.find((zone) => isReadableConfidence(zone.confidence));
+  if (
+    (entry.setupType === SetupType.FairValueGap || entry.setupType === SetupType.FvgImbalancePullback) &&
+    readableFvg?.direction
+  ) {
+    return readableFvg.direction;
+  }
+
+  const readableLiquidity = chartContext.liquidityEvents?.find((event) =>
+    isReadableConfidence(event.confidence) &&
+    event.direction !== 'NO TRADE' &&
+    (
+      entry.setupType === SetupType.LiquiditySweep ||
+      entry.setupType === SetupType.EqualHighsLows ||
+      entry.setupType === SetupType.PreviousDaySweep
+    )
+  );
+  if (readableLiquidity?.direction && readableLiquidity.direction !== 'NO TRADE') return readableLiquidity.direction;
+
+  if (entry.setupType === SetupType.MomentumRunaway || entry.setupType === SetupType.MomentumPullbackBreatherReclaim) {
+    if (chartContext.marketStructure?.trend === 'bullish') return 'LONG';
+    if (chartContext.marketStructure?.trend === 'bearish') return 'SHORT';
+  }
+
+  if (entry.setupType === SetupType.OpeningGapFill && chartContext.gapContext?.gapPresent && isReadableConfidence(chartContext.gapContext.confidence)) {
+    if (chartContext.gapContext.direction === 'gap_down') return 'LONG';
+    if (chartContext.gapContext.direction === 'gap_up') return 'SHORT';
+  }
+
+  if (entry.setupType === SetupType.CompressionBreakout && chartContext.compressionRange?.breakoutDirection && chartContext.compressionRange.breakoutDirection !== 'NO TRADE') {
+    return chartContext.compressionRange.breakoutDirection;
+  }
+
+  return null;
+}
+
+function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?: ChartContext | null): boolean {
+  if (!chartContext) return false;
+  const structure = chartContext.marketStructure;
+  const levels = chartContext.keyLevels;
+  const candles = candleFactSummary(chartContext);
+  const swings = chartContext.swings || [];
+  const fvgZones = chartContext.fvgZones || [];
+  const liquidityEvents = chartContext.liquidityEvents || [];
+  const gapContext = chartContext.gapContext;
+  const compressionRange = chartContext.compressionRange;
+  const hasReadableFvg = fvgZones.some((zone) => isReadableConfidence(zone.confidence));
+  const hasReadableSwing = swings.some((swing) => swing.price !== null && isReadableConfidence(swing.confidence));
+  const hasSweep = liquidityEvents.some((event) => event.type === 'sweep' && isReadableConfidence(event.confidence));
+  const hasReclaim = liquidityEvents.some((event) => event.reclaimed && isReadableConfidence(event.confidence));
+  const hasEqualLiquidity = liquidityEvents.some((event) =>
+    (event.type === 'equal_highs' || event.type === 'equal_lows') &&
+    isReadableConfidence(event.confidence)
+  );
+  const hasPreviousDaySweep = liquidityEvents.some((event) =>
+    (event.type === 'pdh_sweep' || event.type === 'pdl_sweep') &&
+    isReadableConfidence(event.confidence)
+  );
+
+  switch (entry.setupType) {
+    case SetupType.MomentumRunaway:
+      return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
+    case SetupType.MomentumPullbackBreatherReclaim:
+      return Boolean(candles.breather || (candles.pullback && candles.reclaim));
+    case SetupType.LiquiditySweep:
+      return Boolean((hasSweep && hasReclaim) || (candles.rejection && (candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel)));
+    case SetupType.MarketStructureShift:
+      return Boolean(structure?.marketStructureShift);
+    case SetupType.EqualHighsLows:
+      return Boolean(hasEqualLiquidity || hasReadableSwing || candles.rejection);
+    case SetupType.InitialBalanceExtension:
+      return Boolean(levels.initialBalanceHigh && levels.initialBalanceLow && levels.currentPrice);
+    case SetupType.PreviousDaySweep:
+      return Boolean(hasPreviousDaySweep || ((levels.priorDayHigh || levels.previousDayHigh || levels.priorDayLow || levels.previousDayLow) && candles.rejection));
+    case SetupType.CompressionBreakout:
+      return Boolean((compressionRange?.present && isReadableConfidence(compressionRange.confidence)) || ((structure?.chopRangeCondition || structure?.compressionCondition) && (candles.expansion || structure?.expansionCondition)));
+    case SetupType.OpeningGapFill:
+      return Boolean((gapContext?.gapPresent && isReadableConfidence(gapContext.confidence)) || (levels.rthOpen && (levels.nearestSupport || levels.nearestResistance)));
+    case SetupType.FvgImbalancePullback:
+      return Boolean(hasReadableFvg && candles.pullback);
+    case SetupType.FairValueGap:
+      return hasReadableFvg;
+    case SetupType.OrderBlock618:
+    case SetupType.OpeningOrderBlock:
+    case SetupType.BreakerBlock:
+    case SetupType.MitigationBlock:
+    case SetupType.AlgoKillZone:
+      return false;
+    default:
+      return false;
+  }
+}
+
+function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?: ChartContext | null): boolean {
+  if (!chartContext) return false;
+  const structure = chartContext.marketStructure;
+  const candles = candleFactSummary(chartContext);
+  const fvgZones = chartContext.fvgZones || [];
+  const liquidityEvents = chartContext.liquidityEvents || [];
+  const hasReadableFvg = fvgZones.some((zone) => isReadableConfidence(zone.confidence));
+  const hasSweep = liquidityEvents.some((event) => event.type === 'sweep' && isReadableConfidence(event.confidence));
+  const hasReclaim = liquidityEvents.some((event) => event.reclaimed && isReadableConfidence(event.confidence));
+
+  switch (entry.setupType) {
+    case SetupType.MomentumRunaway:
+      return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
+    case SetupType.LiquiditySweep:
+      return Boolean(hasSweep && hasReclaim);
+    case SetupType.FairValueGap:
+      return hasReadableFvg;
+    case SetupType.FvgImbalancePullback:
+      return Boolean(hasReadableFvg && candles.pullback);
+    default:
+      return false;
+  }
 }
 
 function riskPoints(entry: number | null, stop: number | null): number | null {
@@ -213,19 +429,34 @@ function executionStatusFor(
 
 function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, text: string): SetupCandidate {
   const allowed = entry.allowedSessions.includes(input.sessionType);
-  const facts = findRelevantFacts(entry, extractPlanFacts(input.result), text);
+  const structuredFactsPresent = hasStructuredChartFacts(input.chartContext);
+  const allowNarrativeFallback = !structuredFactsPresent;
+  const structuredEvidence = setupEvidenceFromContext(entry, input.chartContext);
+  const manualLevelConfirmation = levelsRequireManualConfirmation(input.chartContext);
+  const facts = allowNarrativeFallback ? findRelevantFacts(entry, extractPlanFacts(input.result), text) : [];
   const bestFact = facts.find((fact) => fact.entry !== null && fact.stop !== null) || facts[0] || null;
-  const detected = hasAny(text, [...entry.detectionKeywords, ...entry.aliases]);
-  const possible = !detected && hasAny(text, entry.possibleKeywords);
-  const direction = bestFact?.direction && bestFact.direction !== 'NO TRADE'
+  const structuredDetected = Boolean(structuredEvidence?.detected || structuredContextDetectsSetup(entry, input.chartContext));
+  const structuredPossible = Boolean(structuredEvidence?.possible || (!structuredDetected && structuredContextSupportsSetup(entry, input.chartContext)));
+  const narrativeDetected = allowNarrativeFallback && hasAny(text, [...entry.detectionKeywords, ...entry.aliases]);
+  const narrativePossible = allowNarrativeFallback && hasAny(text, entry.possibleKeywords);
+  const detected = structuredDetected || narrativeDetected;
+  const possible = !detected && (structuredPossible || narrativePossible);
+  const structuredDirection = structuredDirectionForSetup(entry, input.chartContext);
+  const direction = structuredDirection && structuredDirection !== 'NO TRADE'
+    ? structuredDirection
+    : bestFact?.direction && bestFact.direction !== 'NO TRADE'
     ? bestFact.direction
     : detected || possible ? inferDirection(text) : 'NO TRADE';
-  const entryPrice = bestFact?.entry ?? null;
-  const stopPrice = bestFact?.stop ?? null;
-  const risk = riskPoints(entryPrice, stopPrice);
+  const entryPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.entry) ?? parsePrice(input.chartContext?.proposedEntry) ?? bestFact?.entry ?? null;
+  const stopPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.stop) ?? parsePrice(input.chartContext?.proposedStop) ?? bestFact?.stop ?? null;
+  const extractedRisk = parsePrice(input.chartContext?.riskPoints);
+  const risk =
+    riskPoints(entryPrice, stopPrice) ??
+    extractedRisk ??
+    (input.chartContext?.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
   const targets = computedTargets(direction, entryPrice, stopPrice);
-  const invalidation = bestFact?.invalidation ?? null;
-  const confidence = bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
+  const invalidation = structuredEvidence?.invalidation ?? (allowNarrativeFallback ? bestFact?.invalidation : null) ?? null;
+  const confidence = structuredEvidence?.confidence || bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
 
   const detectedStatus =
     !allowed ? SetupCandidateStatus.Invalid :
@@ -241,7 +472,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stopPrice !== null,
     targets.target1 !== null && targets.target2 !== null,
     Boolean(invalidation && invalidation.trim().length >= 3),
-    Boolean(bestFact?.triggerState && bestFact.triggerState.toUpperCase().includes('PENDING')),
+    Boolean((structuredEvidence?.triggerState || bestFact?.triggerState)?.toUpperCase().includes('PENDING')),
     entry.priority,
     confidence
   );
@@ -266,11 +497,13 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stopClarity: stopPrice !== null ? 1 : detected || possible ? 0.35 : 0,
     targetClarity: targets.target1 !== null && targets.target2 !== null ? 1 : 0,
     proximityScore: detected ? 0.75 : possible ? 0.55 : 0,
-    evidence: detected || possible ? entry.requiredEvidence : [],
-    missingEvidence: detected ? [] : entry.requiredEvidence,
+    evidence: structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : [],
+    missingEvidence: manualLevelConfirmation
+      ? Array.from(new Set([...(structuredEvidence?.missingEvidence || []), 'Exact entry/stop levels require manual confirmation.']))
+      : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence,
     executionStatus: execution.executionStatus,
     blockReason: execution.blockReason,
-    requiredTrigger: bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
+    requiredTrigger: structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
     nextAction:
       execution.blockReason === NoTradeReason.RiskTooWide
         ? 'Execution blocked by risk. Preserve setup and wait for a reduced-risk trigger.'

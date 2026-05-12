@@ -141,7 +141,7 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
-    - CALCULATE TARGETS: Risk = |Entry - Stop|. Target 1.5R = Entry ± (Risk * 1.5). Target 2.0R = Entry ± (Risk * 2.0).
+    - DO NOT CALCULATE EXECUTABLE TARGETS: Extract entry/stop facts only when clearly readable. The app calculates T1/T2 later from confirmed entry and stop.
     - IF (RISK > 15pts) ➔ TARGET = 1.5R.
     - IF (TIME == 12:30 EDT - 30min) ➔ TARGET = 1.0R - 1.5R.
     - IF (TIME == 10:30) AND (MOVE > 50%_TARGET) ➔ ACTION: STOP = BE / 10:00 STRUCTURE.
@@ -192,9 +192,14 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     - Consolidate all reasoning across the modules into candidate inputs the app can safely evaluate.
     - Provide exact observed entry trigger price and stop-loss price when visible.
     - A conditional stop-entry plan with visible ENTRY and STOP levels is a valid trade plan. It is not a NO TRADE. Use trigger_state = PENDING_TRIGGER when the entry has not fired yet.
-    - IMPORTANT: The app calculates T1 and T2 deterministically from entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate as advisory fields only. The app will recompute targets using Risk = abs(entry - stop).
-    - Formula check: For any LONG plan, target_1 MUST equal entry + abs(entry - stop) * 1.5 and target_2 MUST equal entry + abs(entry - stop) * 2.0. For any SHORT plan, target_1 MUST equal entry - abs(entry - stop) * 1.5 and target_2 MUST equal entry - abs(entry - stop) * 2.0. If you cannot calculate this exactly, set target_1 and target_2 to null and let the app calculate them.
+    - IMPORTANT: The app calculates T1 and T2 deterministically from confirmed entry and stop (T1 = 1.5R, T2 = 2.0R). You must still return final_trade_plan with decision, entry, stop, confidence, why_this_plan, and what_would_invalidate as advisory fields only. Set target_1 and target_2 to null unless they are already visible chart annotations. The app will recompute executable targets using Risk = abs(entry - stop).
+    - TARGET AUTHORITY LOCK: Do not calculate T1/T2. Do not approve a trade because a target looks reachable. The app-owned rule engine is the only executable target authority.
     - EXECUTION AUTHORITY LOCK: current_rule_analysis, best_trade_plan, final_trade_plan, candidate_trade_plans, and legacy suggested fields are advisory chart-observation context only. The app-owned rule engine is the only executable authority.
+    - STRUCTURED EXTRACTION LOCK: Always populate structuredChartContext with measurable chart facts. The app setup scanner will prefer structuredChartContext over your narrative text. If price labels, timeframe, entry, stop, or setup evidence cannot be confidently read, set the relevant confidence to Low/Unreadable, add extractionWarnings.messages, set requiresManualConfirmation = true, and set extractionWarnings.manualEntryStopRequired = true. Do not invent exact levels.
+    - EXTRACTION AUTHORITY LOCK: Gemini extracts structured candle, swing, FVG, liquidity, gap, level, and confidence facts only. Gemini must not approve trades, must not be the final authority for setup validity, and must not calculate executable T1/T2. Narrative/advisory text is display-only.
+    - RISK FACT LOCK: proposedEntry/proposedStop/riskPoints may only be populated when the exact visible entry and stop levels are readable from the chart or manually confirmed. If either is uncertain, set proposedEntry/proposedStop/riskPoints to null, entryConfirmed = false, stopConfirmed = false, riskReadConfidence = Low/Unreadable, entryStopConfidence = Low/Unreadable, and requiresManualConfirmation = true. The app will calculate T1/T2 only after entry and stop are confirmed.
+    - FACT OBJECT LOCK: Always return candles, swings, fvgZones, liquidityEvents, extractedLevels as arrays (empty arrays if none are visible), and always return gapContext. Populate compressionRange when visible. These are extraction facts only. Do not use them to approve a trade. Do not guess missing OHLC values; use null with Low/Unreadable confidence.
+    - MACHINE EVIDENCE LOCK: Every setupEvidence object must include machine-readable evidence arrays: evidence, missingEvidence, sourceFacts, levelRefs, candleRefs, and confidenceReason. Use sourceFacts such as "liquidityEvents[0]" or "fvgZones[1]", levelRefs such as "activeSwingLow" or "midnightOpen", and candleRefs as candle indexes.
     - If best_trade_plan/final_trade_plan = NO TRADE, then current_rule_analysis.entry, stop, target_1, and target_2 MUST all be null and current_rule_analysis.no_trade_reason MUST be populated.
     - If structure is valid but the entry is pending, best_trade_plan/final_trade_plan MUST NOT be NO TRADE. Return decision LONG/SHORT, trigger_state PENDING_TRIGGER, and exact entry/stop derived from the visible trigger candle.
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
@@ -273,6 +278,128 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
          "entryQuality": "string",
          "stopPlacement": "string",
          "targetQuality": "string"
+      },
+      "structuredChartContext": {
+        "timeframe": "5m",
+        "screenshotUsability": "usable | warning | unusable",
+        "screenshotWarning": "string or null",
+        "schemaContract": "Gemini extracts facts only. The app decides setup validity, execution approval, risk, entry, stop, T1, T2, and final status.",
+        "keyLevels": {
+          "currentPrice": 0,
+          "priorDayHigh": 0,
+          "priorDayLow": 0,
+          "overnightHigh": 0,
+          "overnightLow": 0,
+          "rthOpen": 0,
+          "midnightOpen": 0,
+          "nearestSupport": 0,
+          "nearestResistance": 0,
+          "activeSwingHigh": 0,
+          "activeSwingLow": 0,
+          "initialBalanceHigh": 0,
+          "initialBalanceLow": 0,
+          "openingRangeHigh": 0,
+          "openingRangeLow": 0,
+          "triggerCandleHigh": 0,
+          "triggerCandleLow": 0
+        },
+        "requiredArrays": "candles, swings, fvgZones, liquidityEvents, and extractedLevels must always be arrays. Return [] when no fact is visible. Do not omit these fields.",
+        "extractedLevels": [
+          { "label": "active swing low", "price": 0, "role": "support | resistance | liquidity | magnet | invalidation | unknown", "source": "ocr | manual | inferred | unknown", "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "candles": [
+          { "index": 0, "timestamp": "string or null", "open": 0, "high": 0, "low": 0, "close": 0, "direction": "bullish | bearish | doji | unknown", "bodyQuality": "small | normal | large | unknown", "upperWickQuality": "none | small | large | unknown", "lowerWickQuality": "none | small | large | unknown", "isExpansion": false, "isRejection": false, "isBreather": false, "isReclaim": false, "confidence": "High | Medium | Low | Unreadable" }
+        ],
+        "swings": [
+          { "type": "high | low", "price": 0, "timestamp": "string or null", "candleIndex": 0, "label": "string", "confidence": "High | Medium | Low | Unreadable" }
+        ],
+        "fvgZones": [
+          { "direction": "LONG | SHORT", "upper": 0, "lower": 0, "midpoint": 0, "formedAt": "string or null", "filledPercent": 0, "inverted": false, "confidence": "High | Medium | Low | Unreadable" }
+        ],
+        "liquidityEvents": [
+          { "type": "sweep | reclaim | equal_highs | equal_lows | pdh_sweep | pdl_sweep | unknown", "direction": "LONG | SHORT | NO TRADE", "level": 0, "sweptLevelLabel": "string", "reclaimed": false, "timestamp": "string or null", "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "gapContext": {
+          "gapPresent": false,
+          "direction": "gap_up | gap_down | none | unknown",
+          "priorClose": null,
+          "openPrice": null,
+          "gapSizePoints": null,
+          "fillTarget": null,
+          "fillAttempted": false,
+          "confidence": "High | Medium | Low | Unreadable"
+        },
+        "compressionRange": {
+          "present": false,
+          "high": null,
+          "low": null,
+          "barsCount": null,
+          "breakoutDirection": "LONG | SHORT | NO TRADE",
+          "confidence": "High | Medium | Low | Unreadable"
+        },
+        "marketStructure": {
+          "trend": "bullish | bearish | neutral | range | chop | unknown",
+          "higherHigh": false,
+          "higherLow": false,
+          "lowerHigh": false,
+          "lowerLow": false,
+          "marketStructureShift": false,
+          "chopRangeCondition": false,
+          "compressionCondition": false,
+          "expansionCondition": false
+        },
+        "candleFacts": {
+          "lastClosedCandleDirection": "bullish | bearish | doji | unknown",
+          "expansionCandlePresent": false,
+          "rejectionWickPresent": false,
+          "breatherCandlePresent": false,
+          "reclaimCandlePresent": false,
+          "pullbackPresent": false,
+          "closeAboveKeyLevel": false,
+          "closeBelowKeyLevel": false
+        },
+        "setupEvidence": {
+          "evidenceObjectContract": "Every setup object must include evidence, missingEvidence, sourceFacts, levelRefs, candleRefs, and confidenceReason. These fields are machine-readable facts, not final trade approval.",
+          "liquiditySweep": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "fairValueGap": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "imbalancePullback": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "orderBlockRetest": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "momentumRunaway": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "compressionBreakout": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "openingGapFill": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "previousDayHighLowSweep": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "equalHighsEqualLows": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "breakerBlock": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "mitigationBlock": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "marketStructureShift": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "openingOrderBlock": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "initialBalanceExtension": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "algoKillZone": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "momentumPullback": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "momentumPullbackBreatherReclaim": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" }
+        },
+        "proposedEntry": null,
+        "proposedStop": null,
+        "riskPoints": null,
+        "riskStatus": "WithinLimit | Warning | RiskTooWide | Unknown",
+        "entryConfirmed": false,
+        "stopConfirmed": false,
+        "requiresManualConfirmation": true,
+        "screenshotQuality": "High | Medium | Low | Unreadable",
+        "levelReadConfidence": "High | Medium | Low | Unreadable",
+        "candleReadConfidence": "High | Medium | Low | Unreadable",
+        "structureReadConfidence": "High | Medium | Low | Unreadable",
+        "setupReadConfidence": "High | Medium | Low | Unreadable",
+        "riskReadConfidence": "High | Medium | Low | Unreadable",
+        "entryStopConfidence": "High | Medium | Low | Unreadable",
+        "extractionWarnings": {
+          "screenshotUnclear": false,
+          "priceLabelsUnreadable": false,
+          "timeframeUnverified": false,
+          "levelsUnclear": false,
+          "manualEntryStopRequired": false,
+          "messages": []
+        }
       },
       "ethContextReview": {
          "available": boolean,
@@ -652,6 +779,7 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       midnightAnalysis: superReport.midnightAnalysis,
       tradePlan: superReport.tradePlan,
       executionReview5m: superReport.executionReview5m,
+      structuredChartContext: superReport.structuredChartContext,
       ethContextReview: superReport.ethContextReview,
       afternoonTestPlan: superReport.afternoonTestPlan,
       current_rule_analysis: superReport.current_rule_analysis,
@@ -903,3 +1031,4 @@ Target/stop field rules:
   
   throw lastError || new Error("Failed to review trade proof");
 }
+
