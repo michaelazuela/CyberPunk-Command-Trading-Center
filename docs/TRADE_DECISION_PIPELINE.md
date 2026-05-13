@@ -81,6 +81,10 @@ The app should work from explicit levels, including:
 
 Levels must be visible, manually supplied, or marked unknown.
 
+The 15M ETH Context screenshot is context input only. It may contribute ETH, overnight, Asian, London, NY premarket, broader trend, compression/expansion, and major support/resistance context into the analyzer, but it must not approve a trade, produce executable entry/stop/T1/T2, override the 5M execution chart, override the plan engine, override the trade decision pipeline, override risk rules, or override setup scanner ranking.
+
+The 5M chart remains the execution authority for entry trigger, active swing, stop placement, risk check, and final trade approval.
+
 ### 5. Determine Bias
 
 Bias must come from the approved rule framework, not from free-form AI preference.

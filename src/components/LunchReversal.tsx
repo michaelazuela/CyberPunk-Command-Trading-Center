@@ -604,6 +604,7 @@ export default function LunchReversal({
     setSaveStatus({ setup: 'idle', rag: 'idle', message: 'No lunch setup saved yet.' });
     setProgressSteps([]);
     setProgressStart(null);
+    onUpdate({ lunchAnalysisResult: undefined, lunchScreenshot: undefined });
   };
 
   const readinessItems = [

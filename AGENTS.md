@@ -47,6 +47,16 @@ All trading windows must come from `src/config/timeWindows.ts`.
 
 Do not hardcode competing time strings in prompts, docs, UI text, or logic.
 
+## 15M ETH Context
+
+The 15M ETH Context screenshot is context only.
+
+It may help identify ETH high/low, Asian high/low, London high/low, NY premarket high/low, overnight high/low, prior session high/low interaction, broader trend, compression/expansion, major support/resistance, and early RTH direction into 10:00 AM ET.
+
+It must not approve a trade by itself, generate final entry/stop/T1/T2 by itself, override the 5M execution chart, override the plan engine, override the trade decision pipeline, override risk rules, or override setup scanner ranking.
+
+The 5M chart remains the execution chart for entry trigger, active swing, stop placement, risk check, and final trade approval.
+
 ## RAG And Persistence
 
 Every completed analysis and replay outcome should have a durable Supabase record and a RAG learning record when possible.

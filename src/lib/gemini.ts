@@ -87,6 +87,11 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     Instrument: ${dailyInstrument || "MES"}
     This is the source of truth. Do not override it based on screenshot OCR.
     If the screenshot label appears different, mention it as a warning but continue using the selected instrument.
+
+    [15M ETH CONTEXT IMAGE RULE]
+    If a second image is provided, treat it as a 15M ETH context screenshot only. It may help extract ETH high/low, Asian high/low, London high/low, NY premarket high/low, overnight high/low, broader trend, compression/expansion, major support/resistance, and early RTH direction into 10:00 AM ET.
+    The 15M ETH context image must not approve a trade by itself, generate final entry/stop/T1/T2 by itself, override the 5M execution chart, override the app-owned plan engine, override the deterministic trade decision pipeline, override risk rules, or override setup scanner ranking.
+    The 5M execution image remains the authority for entry trigger, active swing, stop placement, risk check, and final trade approval.
     
     ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
     ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Reversal window. Use current Lunch Reversal rules only. Do NOT use future data.' : ''}

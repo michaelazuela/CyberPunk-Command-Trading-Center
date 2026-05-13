@@ -696,8 +696,12 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     setLastImage(null);
     setLastEthImage(null);
     setError(null);
+    setShowSettings(false);
     setShowChainOfThought(false);
     setShowReasoning(false);
+    setShowAdvancedTools(false);
+    setShowRuleReference(false);
+    setShowDiagnostics(false);
     setMidnightOpenOverrideStr('');
     setUseManualMidnightOpen(false);
     setExecutionQuantity(1);
@@ -708,6 +712,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     setSaveStatus({ setup: 'idle', rag: 'idle' });
     setProgressSteps([]);
     setProgressStart(null);
+    onUpdate({ analysisResult: undefined, morningScreenshot: undefined, dayType: undefined });
   };
 
   const readinessItems = [
@@ -900,7 +905,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                 15M ETH Context
               </h3>
               <p className="text-[9px] text-[var(--txt2)] mb-6 text-center max-w-[200px]">
-                8:00 PM to 9:45 AM context chart. Recommended.
+                Upload 15M chart covering overnight / premarket into 10:00 AM ET. Context only; 5M remains execution.
               </p>
               
               {!pendingEthImage ? (

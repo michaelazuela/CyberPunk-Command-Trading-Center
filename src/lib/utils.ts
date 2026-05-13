@@ -30,14 +30,14 @@ export async function getImageFromClipboard(event: ClipboardEvent | React.Clipbo
 export function formatReplayRange(rangeKey: 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution', timezone: 'EST' | 'PST' = 'EST'): string {
   if (timezone === 'PST') {
     switch (rangeKey) {
-      case 'morning_eth_context': return '9:00 PM PT prior day → 7:10 AM PT';
+      case 'morning_eth_context': return 'Overnight / premarket into 7:00 AM PT';
       case 'morning_5m_execution': return '6:30 AM PT → 7:10 AM PT';
       case 'lunch_5m_execution': return '8:50 AM PT → 10:00 AM PT';
     }
   } else {
     // EST
     switch (rangeKey) {
-      case 'morning_eth_context': return '12:00 AM ET → 10:10 AM ET';
+      case 'morning_eth_context': return 'Overnight / premarket into 10:00 AM ET';
       case 'morning_5m_execution': return '9:30 AM ET → 10:10 AM ET';
       case 'lunch_5m_execution': return '11:50 AM ET → 1:00 PM ET';
     }
