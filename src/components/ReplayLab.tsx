@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, XCircle, Brain, Target, Shield, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { SessionState, Trade, AnalysisResult } from '../types';
 import { cn, getImageFromClipboard, formatReplayRange } from '../lib/utils';
-import { analyzeChart, preCheckChartInfo, type OCRResult } from '../lib/gemini';
+import { analyzeChart, preCheckChartInfo } from '../lib/gemini';
 import { uploadScreenshot } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import TradeProofPanel from './TradeProofPanel';
@@ -10,16 +10,14 @@ import { TimezoneToggle } from './TimezoneToggle';
 import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
+import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
+import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
+import WorkflowResetButton from './workflow/WorkflowResetButton';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 
-const REPLAY_OUTCOMES: Array<{
-  value: ReplayOutcome;
-  label: string;
-  hint: string;
-  className: string;
-}> = [
+const REPLAY_OUTCOMES: Array<WorkflowOutcomeOption<ReplayOutcome>> = [
   {
     value: 'win',
     label: 'Win',
@@ -52,11 +50,7 @@ const REPLAY_OUTCOMES: Array<{
   },
 ];
 
-interface UploadedImage {
-  dataUrl: string;
-  ocrResult?: OCRResult | null;
-  storagePath?: string;
-}
+type UploadedImage = UploadedWorkflowImage;
 
 export default function ReplayLab({
   session,
@@ -625,6 +619,9 @@ export default function ReplayLab({
          setupId: resolvedSetupId,
          analysis_mode: 'historical_replay',
          source: 'replay_lab',
+         workflowMode: 'replay',
+         sessionMode: sessionType,
+         ampm: sessionType === 'morning' ? 'AM' : 'PM',
          sessionType,
          instrument,
          tradeDate,
@@ -637,6 +634,21 @@ export default function ReplayLab({
          geminiAnalysisJson: result,
          geminiVerdict: null,
          tradeResult: ragStatus,
+         outcome: outcome,
+         proofSubmitted: false,
+         tradeConfirmed: true,
+         tradeTaken: requiresExecutablePlan,
+         ruleVersion: result.planVersionId || null,
+         workflowTimestamp: new Date().toISOString(),
+         screenshots: {
+           execution5m: sessionType === 'morning' ? morningExecImg?.storagePath || morningExecImg?.dataUrl : lunchExecImg?.storagePath || lunchExecImg?.dataUrl,
+           eth15mContext: sessionType === 'morning' ? morningEthImg?.storagePath || morningEthImg?.dataUrl : null,
+           proof: null,
+         },
+         chartContext: result.structuredChartContext || null,
+         setupCandidates: (result as any).tradeDecision?.setupCandidates || result.candidate_trade_plans || [],
+         selectedSetup: result.best_trade_plan || null,
+         finalTradePlan: normalizedPlan || null,
          contracts,
          entryPrice: normalizedPlan?.entry, // Estimate or actual
          stopPrice: normalizedPlan?.stop,
@@ -662,6 +674,16 @@ export default function ReplayLab({
          required_screenshot_range: sessionType === 'lunch' ? "11:50 AM ET → 1:00 PM ET" : undefined,
          planVersionId: result.planVersionId || null,
          setupSignature: result.setupSignature || null,
+         trade_plan_json: {
+           best_trade_plan: result.best_trade_plan || null,
+           final_trade_plan: result.final_trade_plan || null,
+           candidate_trade_plans: result.candidate_trade_plans || [],
+           trade_management_plan: result.trade_management_plan || null,
+           normalized_plan: normalizedPlan,
+           plan_version_id: result.planVersionId || null,
+           setup_signature: result.setupSignature || null,
+           legacy_trade_plan: result.tradePlan || null,
+         },
       });
 
       if (!ragSaveResult.success) {
@@ -751,9 +773,9 @@ export default function ReplayLab({
       {/* Top Header */}
       <div className="flex items-center gap-4 mb-6 sticky top-0 bg-[var(--bg)]/90 backdrop-blur z-10 py-4 border-b border-[var(--b2)]">
         <h1 className="text-xl font-bold tracking-tight text-[var(--txt)] flex-1">REPLAY LAB</h1>
-        <button onClick={resetReplayLab} className="qd-btn-ghost text-[10px]">
+        <WorkflowResetButton onClick={resetReplayLab}>
           Reset Replay
-        </button>
+        </WorkflowResetButton>
         <div className="flex bg-[var(--b1)] p-1 rounded-sm gap-1 text-[10px]">
           <span className="px-2 py-1 bg-[var(--b2)] text-[var(--txt)]">Historical Training Mode</span>
         </div>
@@ -833,8 +855,8 @@ export default function ReplayLab({
             
             {!morningResult && (
               <>
-                <UploadBox target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => setMorningEthImg(null)} hintText={`Paste or upload 15M chart: ${formatReplayRange('morning_eth_context', morningReviewTimezone)}`} />
-                <UploadBox target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('morning_5m_execution', morningReviewTimezone)}`} />
+                <ScreenshotUploadPanel target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => setMorningEthImg(null)} hintText={`Paste or upload 15M chart: ${formatReplayRange('morning_eth_context', morningReviewTimezone)}`} />
+                <ScreenshotUploadPanel target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('morning_5m_execution', morningReviewTimezone)}`} />
                 
                 {morningError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{morningError}</div>}
                 {morningSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{morningSaveStatus}</div>}
@@ -863,39 +885,13 @@ export default function ReplayLab({
                  </div>
 
                  {!morningOutcome && !proofFlow.active && (
-                   <div className="flex flex-col gap-3 mt-4 p-3 border border-[var(--b2)] bg-[var(--bg)]">
-                     <div className="flex items-center justify-between gap-3">
-                       <div>
-                         <h3 className="text-[10px] text-[var(--txt)] font-bold uppercase tracking-[0.18em]">Mark Historical Outcome</h3>
-                         <p className="text-[9px] text-[var(--txt3)] mt-1">Saves this replay result into Supabase and RAG learning.</p>
-                       </div>
-                       {savingOutcome?.sessionType === 'morning' && (
-                         <span className="text-[9px] text-[var(--orange)] uppercase tracking-[0.16em]">Saving...</span>
-                       )}
-                     </div>
-                     {morningError && (
-                       <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
-                         {morningError}
-                       </div>
-                     )}
-                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {REPLAY_OUTCOMES.map((option) => (
-                          <button
-                            key={`morning-${option.value}`}
-                            type="button"
-                            disabled={savingOutcome?.sessionType === 'morning'}
-                            onClick={() => saveTradeOutcome('morning', option.value)}
-                            className={cn(
-                              'min-h-[54px] border px-3 py-2 text-left font-mono transition-colors disabled:opacity-50 disabled:cursor-wait',
-                              option.className
-                            )}
-                          >
-                            <span className="block text-[11px] font-bold uppercase tracking-[0.16em]">{option.label}</span>
-                            <span className="block text-[9px] opacity-70 mt-1">{option.hint}</span>
-                          </button>
-                        ))}
-                     </div>
-                   </div>
+                   <TradeConfirmationPanel
+                     options={REPLAY_OUTCOMES}
+                     disabled={savingOutcome?.sessionType === 'morning'}
+                     saving={savingOutcome?.sessionType === 'morning'}
+                     error={morningError}
+                     onSelect={(outcome) => saveTradeOutcome('morning', outcome)}
+                   />
                  )}
 
                  {proofFlow.active && proofFlow.sessionType === 'morning' && (
@@ -936,7 +932,7 @@ export default function ReplayLab({
             
             {!lunchResult && (
               <>
-                <UploadBox target="lunch_5m_execution" label="5m Lunch Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}`} />
+                <ScreenshotUploadPanel target="lunch_5m_execution" label="5m Lunch Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}`} />
                 <div className="text-[9px] text-[var(--txt3)] mt-1 mb-2">Required range: {formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}</div>
                 <div className="text-[10px] text-[var(--txt2)] mt-2 border border-[var(--b2)] p-2">
                    Use the primary 5-minute execution chart for Lunch Reversal Review. This review should use Morning Review, ETH context, Midnight Open, and RAG history when available.
@@ -975,39 +971,13 @@ export default function ReplayLab({
                  </div>
 
                  {!lunchOutcome && !proofFlow.active && (
-                   <div className="flex flex-col gap-3 mt-4 p-3 border border-[var(--b2)] bg-[var(--bg)]">
-                     <div className="flex items-center justify-between gap-3">
-                       <div>
-                         <h3 className="text-[10px] text-[var(--txt)] font-bold uppercase tracking-[0.18em]">Mark Historical Outcome</h3>
-                         <p className="text-[9px] text-[var(--txt3)] mt-1">Saves this replay result into Supabase and RAG learning.</p>
-                       </div>
-                       {savingOutcome?.sessionType === 'lunch' && (
-                         <span className="text-[9px] text-[var(--orange)] uppercase tracking-[0.16em]">Saving...</span>
-                       )}
-                     </div>
-                     {lunchError && (
-                       <div className="text-[10px] p-2 bg-[var(--red)]/10 text-[var(--red)] border border-[var(--red)]/20">
-                         {lunchError}
-                       </div>
-                     )}
-                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                        {REPLAY_OUTCOMES.map((option) => (
-                          <button
-                            key={`lunch-${option.value}`}
-                            type="button"
-                            disabled={savingOutcome?.sessionType === 'lunch'}
-                            onClick={() => saveTradeOutcome('lunch', option.value)}
-                            className={cn(
-                              'min-h-[54px] border px-3 py-2 text-left font-mono transition-colors disabled:opacity-50 disabled:cursor-wait',
-                              option.className
-                            )}
-                          >
-                            <span className="block text-[11px] font-bold uppercase tracking-[0.16em]">{option.label}</span>
-                            <span className="block text-[9px] opacity-70 mt-1">{option.hint}</span>
-                          </button>
-                        ))}
-                     </div>
-                   </div>
+                   <TradeConfirmationPanel
+                     options={REPLAY_OUTCOMES}
+                     disabled={savingOutcome?.sessionType === 'lunch'}
+                     saving={savingOutcome?.sessionType === 'lunch'}
+                     error={lunchError}
+                     onSelect={(outcome) => saveTradeOutcome('lunch', outcome)}
+                   />
                  )}
 
                  {proofFlow.active && proofFlow.sessionType === 'lunch' && (
@@ -1038,38 +1008,4 @@ export default function ReplayLab({
       </div>
     </div>
   );
-}
-
-function UploadBox({ target, label, img, onUpload, onClear, isRequired=false, hintText }: any) {
-   const cls = target.replace(/_/, '-').replace(/_context/, '-slot');
-   return (
-     <div className={cn("p-4 border-2 border-[var(--b2)] relative flex flex-col justify-center items-center bg-[var(--bg)] min-h-[140px] group", cls, !img ? "border-dashed" : "border-solid border-[var(--orange)]")}>
-        <div className="absolute top-2 left-2 text-[9px] font-mono bg-[var(--b2)] px-1 rounded uppercase flex items-center gap-1">
-          {label} {isRequired && <span className="text-[var(--orange)]">*</span>}
-        </div>
-        
-        {!img && (
-          <div className="flex flex-col items-center mt-4 text-[var(--txt3)] gap-2">
-             <Upload className="w-6 h-6" />
-             <p className="text-[10px] text-center max-w-[200px]">
-               {hintText || 'Click here to paste or upload'}
-             </p>
-             <label className="cursor-pointer text-[10px] bg-[var(--b1)] px-3 py-1 mt-2 text-[var(--txt)] border border-[var(--b2)] hover:bg-[var(--b2)]">
-               Select File
-               <input type="file" className="hidden" accept="image/*" onChange={e => onUpload(e, target)} />
-             </label>
-          </div>
-        )}
-
-        {img && (
-          <div className="flex flex-col items-center mt-4">
-             <img src={img.dataUrl} className="max-h-[80px] object-cover border border-[var(--b2)]" alt={label} />
-             <button onClick={onClear} className="absolute top-2 right-2 text-[var(--txt3)] hover:text-[var(--red)]"><XCircle className="w-4 h-4" /></button>
-             {img.ocrResult && (
-                <div className="text-[9px] mt-2 text-[var(--green)] flex items-center gap-1"><Brain className="w-3 h-3"/> OCR complete {img.ocrResult.ticker && `[${img.ocrResult.ticker}]`}</div>
-             )}
-          </div>
-        )}
-     </div>
-   );
 }

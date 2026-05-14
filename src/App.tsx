@@ -5,11 +5,10 @@ import { cn } from './lib/utils';
 import { SessionState, Trade, AppState, ProposedRule } from './types';
 import { SYSTEM_RULES } from './constants';
 import Dashboard from './components/Dashboard';
-import Analysis from './components/Analysis';
+import SessionLab from './components/SessionLab';
 import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import Rules from './components/Rules';
-import LunchReversal from './components/LunchReversal';
 import ReplayLab from './components/ReplayLab';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
@@ -43,7 +42,7 @@ function loadSavedAppState(): AppState {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'analysis' | 'lunch' | 'replay' | 'history' | 'settings' | 'rules'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'session' | 'replay' | 'history' | 'settings' | 'rules'>('dashboard');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -253,8 +252,7 @@ export default function App() {
           {/* Navigation */}
           <nav className="flex items-center h-full space-x-6 shrink-0">
             <TopNavItem label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-            <TopNavItem label="Analysis" active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
-            <TopNavItem label="Lunch Reversal" active={activeTab === 'lunch'} onClick={() => setActiveTab('lunch')} />
+            <TopNavItem label="Session Lab" active={activeTab === 'session'} onClick={() => setActiveTab('session')} />
             <TopNavItem label="Replay Lab" active={activeTab === 'replay'} onClick={() => setActiveTab('replay')} />
             <TopNavItem label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
             <TopNavItem label="Rules" active={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
@@ -318,11 +316,8 @@ export default function App() {
           <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
             <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} isAuthenticated={!!user} />
           </div>
-          <div className={activeTab === 'analysis' ? 'block' : 'hidden'}>
-            <Analysis session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'analysis'} />
-          </div>
-          <div className={activeTab === 'lunch' ? 'block' : 'hidden'}>
-            <LunchReversal session={appState.currentSession} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'lunch'} />
+          <div className={activeTab === 'session' ? 'block' : 'hidden'}>
+            <SessionLab session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'session'} />
           </div>
           <div className={activeTab === 'replay' ? 'block' : 'hidden'}>
             <ReplayLab session={appState.currentSession} onAddTrade={addTrade} onUpdate={updateSession} isActive={activeTab === 'replay'} />

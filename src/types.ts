@@ -841,6 +841,9 @@ export interface RAGSaveContext {
   analysis_mode?: string;
   source?: string;
   sessionType: "morning" | "lunch";
+  workflowMode?: "morning" | "lunch" | "replay" | string;
+  sessionMode?: "morning" | "lunch" | string;
+  ampm?: "AM" | "PM" | string | null;
   instrument: "MES" | "MNQ";
   tradeDate: string;
   dayOfWeek: string;
@@ -883,6 +886,17 @@ export interface RAGSaveContext {
   ocrText?: string;
   screenshotUrl?: string; // Legacy, optional
   proofScreenshotUrl?: string;
+  proofSubmitted?: boolean;
+  tradeConfirmed?: boolean;
+  tradeTaken?: boolean;
+  outcome?: string | null;
+  ruleVersion?: string | null;
+  workflowTimestamp?: string | null;
+  screenshots?: Record<string, any> | null;
+  chartContext?: Record<string, any> | Partial<ChartContext> | null;
+  setupCandidates?: SetupCandidate[] | any[] | null;
+  selectedSetup?: Record<string, any> | null;
+  finalTradePlan?: Record<string, any> | null;
   setupId?: string;
   tradeId?: string;
   tradeResult?: "win" | "loss" | "scratch" | "pending" | "no_trade" | "missed_trade" | string;

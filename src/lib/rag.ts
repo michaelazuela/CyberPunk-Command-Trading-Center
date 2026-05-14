@@ -59,6 +59,51 @@ function normalizeTradeResult(value: unknown): string {
   return 'pending';
 }
 
+function deriveWorkflowMode(context: RAGSaveContext): string {
+  if (context.workflowMode) return context.workflowMode;
+  if (context.analysis_mode === 'historical_replay' || context.source === 'replay_lab') return 'replay';
+  return context.sessionType;
+}
+
+function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: string) {
+  const analysis = context.geminiAnalysisJson || {};
+  const tradePlanJson = context.trade_plan_json || {};
+  const normalizedPlan = context.finalTradePlan || tradePlanJson.normalized_plan || null;
+  const workflowMode = deriveWorkflowMode(context);
+  const proofSubmitted = context.proofSubmitted ?? Boolean(context.proofScreenshotUrl);
+  const isCompletedOutcome = ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(tradeResult);
+  const tradeTaken = context.tradeTaken ?? ['win', 'loss', 'scratch'].includes(tradeResult);
+
+  return {
+    workflowMode,
+    session: context.sessionMode || context.sessionType,
+    mode: context.sessionMode || context.sessionType,
+    ampm: context.ampm ?? (context.sessionType === 'morning' ? 'AM' : 'PM'),
+    screenshots: context.screenshots || {
+      primary: context.screenshotUrl || context.execution_5m_screenshot_url || context.execution_5m_storage_path || null,
+      execution5m: context.execution_5m_screenshot_url || context.execution_5m_storage_path || context.screenshotUrl || null,
+      eth15mContext: context.eth_15m_context_screenshot_url || context.eth_15m_context_storage_path || null,
+      proof: context.proofScreenshotUrl || null,
+    },
+    chartContext: context.chartContext || analysis.structuredChartContext || null,
+    setupCandidates: context.setupCandidates || analysis.structuredChartContext?.setupCandidates || analysis.candidate_trade_plans || [],
+    selectedSetup: context.selectedSetup || analysis.best_trade_plan || normalizedPlan || null,
+    finalTradePlan: normalizedPlan,
+    proofSubmitted,
+    tradeConfirmed: context.tradeConfirmed ?? isCompletedOutcome,
+    tradeTaken,
+    outcome: context.outcome ?? tradeResult,
+    notes: context.notes || null,
+    ruleVersion: context.ruleVersion || context.planVersionId || 'app-owned-plan-engine',
+    timestamp: context.workflowTimestamp || new Date().toISOString(),
+    approvalBoundary: {
+      proofSubmissionApprovesTrade: false,
+      tradeConfirmationOverridesRiskRules: false,
+      ragSaveApprovesTradeRetroactively: false,
+    },
+  };
+}
+
 export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,6 +129,12 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
     } catch (err) {
       console.error("[RAG] Embedding generation failed:", err);
     }
+
+    const workflowPersistence = buildWorkflowPersistenceRecord(context, tradeResult);
+    const enrichedTradePlanJson = {
+      ...(context.trade_plan_json || {}),
+      workflow_persistence: workflowPersistence,
+    };
 
     const record = {
       user_id: user.id,
@@ -154,7 +205,7 @@ export async function saveToRAG(context: RAGSaveContext): Promise<RAGSaveResult>
       ny_premarket_low: context.ny_premarket_low || null,
       rth_open_relation_to_eth: context.rth_open_relation_to_eth || null,
       rth_open_relation_to_midnight: context.rth_open_relation_to_midnight || null,
-      trade_plan_json: context.trade_plan_json || null,
+      trade_plan_json: enrichedTradePlanJson,
       execution_review_json: context.execution_review_json || null,
       eth_context_review_json: context.eth_context_review_json || null,
       afternoon_test_plan_json: context.afternoon_test_plan_json || null,
@@ -602,6 +653,25 @@ export async function updateRAGWithTradeResult(
 
     const newEmbeddingText = buildEmbeddingText(context);
     const newEmbedding = await generateEmbedding(newEmbeddingText);
+    const existingTradePlanJson = record.trade_plan_json && typeof record.trade_plan_json === 'object'
+      ? record.trade_plan_json
+      : {};
+    const existingWorkflow = existingTradePlanJson.workflow_persistence && typeof existingTradePlanJson.workflow_persistence === 'object'
+      ? existingTradePlanJson.workflow_persistence
+      : {};
+    const updatedWorkflowPersistence = {
+      ...existingWorkflow,
+      proofSubmitted: proofScreenshotUrl !== undefined ? Boolean(proofScreenshotUrl) : Boolean(record.proof_screenshot_url),
+      tradeConfirmed: ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(String(tradeResult).toLowerCase()),
+      tradeTaken: ['win', 'loss', 'scratch'].includes(String(tradeResult).toLowerCase()),
+      outcome: tradeResult,
+      timestamp: new Date().toISOString(),
+      approvalBoundary: {
+        proofSubmissionApprovesTrade: false,
+        tradeConfirmationOverridesRiskRules: false,
+        ragSaveApprovesTradeRetroactively: false,
+      },
+    };
 
     await supabase.from('trade_embeddings').update({
       trade_result: tradeResult,
@@ -613,7 +683,11 @@ export async function updateRAGWithTradeResult(
       proof_screenshot_url: proofScreenshotUrl !== undefined ? proofScreenshotUrl : record.proof_screenshot_url,
       setup_quality_score: setupQualityScore,
       embedding_text: newEmbeddingText,
-      embedding: newEmbedding
+      embedding: newEmbedding,
+      trade_plan_json: {
+        ...existingTradePlanJson,
+        workflow_persistence: updatedWorkflowPersistence,
+      },
     }).eq('id', record.id);
 
     console.log(`[RAG] Midnight Open learning updated for setup ${setupId}`);

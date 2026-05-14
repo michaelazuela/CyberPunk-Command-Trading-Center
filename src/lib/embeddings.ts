@@ -30,6 +30,10 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
       }).join('\n')
     : "- No candidate plan committee data available.";
   const managementPlan = context.geminiAnalysisJson?.trade_management_plan;
+  const workflowMode = context.workflowMode || (context.analysis_mode === 'historical_replay' || context.source === 'replay_lab' ? 'replay' : context.sessionType);
+  const proofSubmitted = context.proofSubmitted ?? Boolean(context.proofScreenshotUrl);
+  const tradeConfirmed = context.tradeConfirmed ?? ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(String(context.tradeResult || '').toLowerCase());
+  const tradeTaken = context.tradeTaken ?? ['win', 'loss', 'scratch'].includes(String(context.tradeResult || '').toLowerCase());
   
   return `DAILY INSTRUMENT:
 Instrument: ${context.instrument}
@@ -38,10 +42,14 @@ OCR ticker observed: ${ocrTicker}
 Ticker mismatch warning: ${mismatchWarning}
 
 FUTURES TRADE OUTCOME:
+Workflow Mode: ${workflowMode}
 Analysis Mode: ${context.analysis_mode === 'historical_replay' ? 'Historical Replay (Backtest)' : 'Live Trading'}
 Source: ${context.source === 'replay_lab' ? 'Replay Lab' : 'Live UI'}
 Instrument: ${context.instrument}
 Session: ${context.sessionType === 'morning' ? 'Morning' : 'Lunch'}
+Trade Confirmed: ${tradeConfirmed ? 'yes' : 'no'}
+Trade Taken: ${tradeTaken ? 'yes' : 'no'}
+Proof Submitted: ${proofSubmitted ? 'yes' : 'no'}
 Direction: ${direction}
 Contracts: ${context.contracts ?? 'unknown'}
 Entry: ${context.entryPrice ?? 'unknown'}
