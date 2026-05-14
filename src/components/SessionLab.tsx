@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import type { AnalysisResult, ProposedRule, SessionState, Trade } from '../types';
+import type { AnalysisResult, ProposedRule, SessionState, SetupCandidate, Trade } from '../types';
 import { analyzeChart } from '../lib/gemini';
 import { uploadScreenshot } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
@@ -16,6 +16,7 @@ import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
+type OutcomePlanChoice = 'main' | `candidate:${number}`;
 type UploadedImage = UploadedWorkflowImage;
 
 const SESSION_OUTCOMES: Array<WorkflowOutcomeOption<SessionOutcome>> = [
@@ -65,6 +66,44 @@ function outcomeToRag(outcome: SessionOutcome): string {
   return 'missed_trade';
 }
 
+function isTradeTakenOutcome(outcome: SessionOutcome): boolean {
+  return outcome === 'win' || outcome === 'loss' || outcome === 'scratch';
+}
+
+function formatCandidateName(candidate: SetupCandidate): string {
+  return String(candidate.setupType || 'Setup').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function candidateHasPlanLevels(candidate: SetupCandidate): boolean {
+  return candidate.direction !== 'NO TRADE' &&
+    candidate.entry != null &&
+    candidate.stop != null &&
+    candidate.target1 != null &&
+    candidate.target2 != null;
+}
+
+function buildPlanFromCandidate(basePlan: ReturnType<typeof buildAppTradePlan> | null, candidate: SetupCandidate | null, labelSuffix = '') {
+  if (!basePlan || !candidate || !candidateHasPlanLevels(candidate)) return basePlan;
+  return {
+    ...basePlan,
+    decision: candidate.direction,
+    entry: candidate.entry ?? null,
+    stop: candidate.stop ?? null,
+    t1: candidate.target1 ?? null,
+    t2: candidate.target2 ?? null,
+    riskPoints: candidate.riskPoints ?? (candidate.entry != null && candidate.stop != null ? Math.abs(candidate.entry - candidate.stop) : null),
+    riskRewardT1: '1.5R' as const,
+    riskRewardT2: '2.0R' as const,
+    canExecute: basePlan.canExecute && candidate.executionStatus === 'Executable',
+    setupName: formatCandidateName(candidate),
+    source: 'app_rule_engine' as const,
+    whyThisPlan: `${candidate.nextAction || candidate.evidence?.[0] || basePlan.whyThisPlan}${labelSuffix}`,
+    invalidation: candidate.invalidation || basePlan.invalidation,
+    triggerState: candidate.executionStatus === 'Executable' ? 'TRIGGERED' as const : 'PENDING_TRIGGER' as const,
+    entryTrigger: candidate.requiredTrigger || basePlan.entryTrigger || null,
+  };
+}
+
 function buildRuleRefinementText(customRules: ProposedRule[]): string {
   const approvedRules = customRules
     .filter(rule => rule.status === 'APPROVED')
@@ -79,6 +118,74 @@ function mergeCustomInstructions(base: string | undefined, additions: Array<stri
     .map(value => value?.trim())
     .filter(Boolean)
     .join('\n\n');
+}
+
+function OutcomePlanSelector({
+  plan,
+  value,
+  onChange,
+  getOptions,
+}: {
+  plan: ReturnType<typeof buildAppTradePlan> | null;
+  value: OutcomePlanChoice;
+  onChange: (value: OutcomePlanChoice) => void;
+  getOptions: (plan: ReturnType<typeof buildAppTradePlan> | null) => Array<{
+    key: OutcomePlanChoice;
+    label: string;
+    candidate: SetupCandidate | null;
+    plan: ReturnType<typeof buildAppTradePlan> | null;
+  }>;
+}) {
+  if (!plan) return null;
+  const options = getOptions(plan);
+  const selected = options.find(option => option.key === value) || options[0];
+
+  return (
+    <div className="mt-4 border border-[var(--b2)] bg-[var(--bg)] p-3 font-mono">
+      <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">Trade Taken</h3>
+          <p className="mt-1 text-[9px] text-[var(--txt3)]">
+            Select the exact plan you actually traded before marking Win/Loss/Scratch. RAG will learn from this plan, not just the main card.
+          </p>
+        </div>
+        <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">Outcome Plan</span>
+      </div>
+
+      <div className="grid gap-2">
+        {options.map(option => {
+          const optionPlan = option.plan;
+          const isSelected = option.key === selected.key;
+          return (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onChange(option.key)}
+              className={cn(
+                'border px-3 py-2 text-left transition-colors',
+                isSelected ? 'border-[var(--orange)] bg-[var(--orange)]/10' : 'border-[var(--b2)] bg-[var(--s1)] hover:border-[var(--orange)]/40'
+              )}
+            >
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">{option.label}</div>
+                  <div className="mt-1 text-[9px] text-[var(--txt3)]">
+                    {option.candidate ? 'Setup-scan / conditional candidate selected by user.' : 'Primary normalized app plan.'}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-1 text-right text-[9px] md:min-w-[320px]">
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--txt2)]">E {optionPlan?.entry ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--red)]">S {optionPlan?.stop ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T1 {optionPlan?.t1 ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T2 {optionPlan?.t2 ?? 'N/A'}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function SessionLab({
@@ -121,10 +228,36 @@ export default function SessionLab({
   const [lunchOutcome, setLunchOutcome] = useState<SessionOutcome | null>(null);
   const [savingOutcome, setSavingOutcome] = useState<{ sessionType: 'morning' | 'lunch'; outcome: SessionOutcome } | null>(null);
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
+  const [morningOutcomePlanChoice, setMorningOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
+  const [lunchOutcomePlanChoice, setLunchOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
+  const [morningTradeTaken, setMorningTradeTaken] = useState<boolean | null>(null);
+  const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
 
   const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'morning', instrument }) : null;
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'lunch', instrument }) : null;
   const approvedRuleRefinements = buildRuleRefinementText(customRules);
+
+  const getOutcomePlanOptions = (plan: typeof normalizedMorningPlan) => {
+    const candidates = (plan?.setupCandidates || [])
+      .filter(candidateHasPlanLevels)
+      .slice(0, 8);
+    return [
+      { key: 'main' as OutcomePlanChoice, label: 'Main App Plan', candidate: null, plan },
+      ...candidates.map((candidate, index) => ({
+        key: `candidate:${index}` as OutcomePlanChoice,
+        label: `${formatCandidateName(candidate)} ${candidate.direction}`,
+        candidate,
+        plan: buildPlanFromCandidate(plan, candidate, ' User selected this candidate for outcome/RAG learning.'),
+      })),
+    ];
+  };
+
+  const getSelectedOutcomePlan = (sessionType: 'morning' | 'lunch') => {
+    const basePlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+    const choice = sessionType === 'morning' ? morningOutcomePlanChoice : lunchOutcomePlanChoice;
+    const options = getOutcomePlanOptions(basePlan);
+    return options.find(option => option.key === choice) || options[0];
+  };
 
   useEffect(() => {
     onUpdate({
@@ -198,6 +331,8 @@ export default function SessionLab({
     setMorningError(null);
     setMorningSaveStatus(null);
     setMorningOutcome(null);
+    setMorningOutcomePlanChoice('main');
+    setMorningTradeTaken(null);
     setProofFlow(current => current.sessionType === 'morning' ? { active: false } : current);
     onUpdate({ analysisResult: undefined, morningScreenshot: undefined, morningEthScreenshot: undefined, dayType: undefined });
   };
@@ -210,6 +345,8 @@ export default function SessionLab({
     setLunchError(null);
     setLunchSaveStatus(null);
     setLunchOutcome(null);
+    setLunchOutcomePlanChoice('main');
+    setLunchTradeTaken(null);
     setProofFlow(current => current.sessionType === 'lunch' ? { active: false } : current);
     onUpdate({ lunchAnalysisResult: undefined, lunchScreenshot: undefined });
   };
@@ -465,15 +602,29 @@ export default function SessionLab({
   const saveTradeOutcome = async (sessionType: 'morning' | 'lunch', outcome: SessionOutcome) => {
     const result = sessionType === 'morning' ? morningResult : lunchResult;
     const plan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+    const selectedOutcomePlan = getSelectedOutcomePlan(sessionType);
+    const actualPlan = selectedOutcomePlan.plan || plan;
+    const selectedCandidate = selectedOutcomePlan.candidate;
+    const tradeTaken = sessionType === 'morning' ? morningTradeTaken : lunchTradeTaken;
     const setupId = sessionType === 'morning' ? morningSetupId : lunchSetupId;
     const setError = sessionType === 'morning' ? setMorningError : setLunchError;
     const setStatus = sessionType === 'morning' ? setMorningSaveStatus : setLunchSaveStatus;
     const setOutcome = sessionType === 'morning' ? setMorningOutcome : setLunchOutcome;
     if (!result) return;
 
-    const executableOutcome = outcome === 'win' || outcome === 'loss' || outcome === 'scratch';
-    if (executableOutcome && (!plan?.canExecute || plan.entry === null || plan.stop === null || plan.t1 === null || plan.t2 === null)) {
-      setError('Executable outcomes require ENTRY, STOP, T1, and T2. Use No Trade or Missed if no executable plan was produced.');
+    const executableOutcome = isTradeTakenOutcome(outcome);
+    if (tradeTaken === null) {
+      setError('Select Trade Taken: Yes or No before marking the outcome.');
+      return;
+    }
+    if (tradeTaken !== executableOutcome) {
+      setError(tradeTaken
+        ? 'Trade Taken is Yes, so choose Win, Loss, or Scratch.'
+        : 'Trade Taken is No, so choose No Trade or Missed.');
+      return;
+    }
+    if (executableOutcome && (!actualPlan || actualPlan.entry === null || actualPlan.stop === null || actualPlan.t1 === null || actualPlan.t2 === null)) {
+      setError('Trade-taken outcomes require a selected plan with ENTRY, STOP, T1, and T2. Select a conditional plan or use No Trade / Missed.');
       return;
     }
 
@@ -506,29 +657,37 @@ export default function SessionLab({
           workflowTimestamp: new Date().toISOString(),
           chartContext: result.structuredChartContext || null,
           setupCandidates: (result as any).tradeDecision?.setupCandidates || result.candidate_trade_plans || [],
-          selectedSetup: result.best_trade_plan || null,
-          finalTradePlan: plan || null,
+          selectedSetup: selectedCandidate || result.best_trade_plan || null,
+          finalTradePlan: actualPlan || null,
           contracts,
-          entryPrice: plan?.entry,
-          stopPrice: plan?.stop,
-          t1: plan?.t1,
-          t2: plan?.t2,
-          riskPoints: plan?.riskPoints,
-          planSource: plan?.source,
-          whyThisPlan: plan?.whyThisPlan,
-          invalidation: plan?.invalidation,
+          entryPrice: actualPlan?.entry,
+          stopPrice: actualPlan?.stop,
+          t1: actualPlan?.t1,
+          t2: actualPlan?.t2,
+          riskPoints: actualPlan?.riskPoints,
+          planSource: selectedCandidate ? 'user_selected_setup_candidate' : actualPlan?.source,
+          whyThisPlan: actualPlan?.whyThisPlan,
+          invalidation: actualPlan?.invalidation,
+          notes: `Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\n${selectedCandidate ? 'User selected a conditional/setup-scan candidate instead of the main plan.' : 'User selected the main app plan.'}`,
+          trade_plan_json: {
+            selected_outcome_plan_key: selectedOutcomePlan.key,
+            selected_outcome_plan_label: selectedOutcomePlan.label,
+            selected_outcome_candidate: selectedCandidate,
+            selected_outcome_plan: actualPlan,
+            normalized_plan: plan,
+          },
         });
       }
 
-      if (onAddTrade && executableOutcome && plan) {
+      if (onAddTrade && executableOutcome && actualPlan) {
         await Promise.resolve(onAddTrade({
           date: tradeDate,
           instrument,
-          direction: plan.decision === 'LONG' || plan.decision === 'SHORT' ? plan.decision : 'LONG',
+          direction: actualPlan.decision === 'LONG' || actualPlan.decision === 'SHORT' ? actualPlan.decision : 'LONG',
           dayType: result.dayType,
-          entryPrice: plan.entry || 0,
-          stopPrice: plan.stop || 0,
-          targetPrice: plan.t1 || 0,
+          entryPrice: actualPlan.entry || 0,
+          stopPrice: actualPlan.stop || 0,
+          targetPrice: actualPlan.t1 || 0,
           contracts,
           status: outcome === 'win' ? 'SUCCESSFUL' : outcome === 'loss' ? 'FAILED' : 'CLOSED',
           manualOutcome: outcome === 'loss' ? 'FAILED' : 'SUCCESS',
@@ -540,7 +699,7 @@ export default function SessionLab({
       }
 
       setOutcome(outcome);
-      setStatus(`Saved to Supabase + RAG ✓ Result: ${outcome.toUpperCase()}`);
+      setStatus(`Saved to Supabase + RAG ✓ Result: ${outcome.toUpperCase()} · Plan: ${selectedOutcomePlan.label}`);
       if (executableOutcome) setProofFlow({ active: true, outcome: outcome === 'loss' ? 'FAILED' : 'SUCCESS', sessionType });
     } catch (error: any) {
       setError(error.message || 'Outcome save failed.');
@@ -655,8 +814,27 @@ export default function SessionLab({
                 <div className="text-[11px] leading-relaxed mb-4">{morningResult.reasoning}</div>
                 {normalizedMorningPlan && <FinalTradePlanCard plan={normalizedMorningPlan} agentLearningUsed={morningResult.agent_learning_used} planVersionId={morningResult.planVersionId} />}
               </div>
-              {!morningOutcome && !proofFlow.active && <TradeConfirmationPanel options={SESSION_OUTCOMES} disabled={savingOutcome?.sessionType === 'morning'} saving={savingOutcome?.sessionType === 'morning'} error={morningError} onSelect={(outcome) => saveTradeOutcome('morning', outcome)} />}
-              {proofFlow.active && proofFlow.sessionType === 'morning' && <TradeProofPanel manualOutcome={proofFlow.outcome!} executionQuantity={contracts} modelConfig={session.aiSettings} dailyInstrument={instrument} tradePlan={normalizedMorningPlan} onSaveTrade={handleProofSave} onCancel={() => setProofFlow({ active: false })} />}
+              {!morningOutcome && !proofFlow.active && (
+                <>
+                  <OutcomePlanSelector
+                    plan={normalizedMorningPlan}
+                    value={morningOutcomePlanChoice}
+                    onChange={setMorningOutcomePlanChoice}
+                    getOptions={getOutcomePlanOptions}
+                  />
+                  <TradeConfirmationPanel
+                    options={SESSION_OUTCOMES}
+                    disabled={savingOutcome?.sessionType === 'morning'}
+                    saving={savingOutcome?.sessionType === 'morning'}
+                    error={morningError}
+                    tradeTaken={morningTradeTaken}
+                    onTradeTakenChange={setMorningTradeTaken}
+                    isTradeTakenOutcome={isTradeTakenOutcome}
+                    onSelect={(outcome) => saveTradeOutcome('morning', outcome)}
+                  />
+                </>
+              )}
+              {proofFlow.active && proofFlow.sessionType === 'morning' && <TradeProofPanel manualOutcome={proofFlow.outcome!} executionQuantity={contracts} modelConfig={session.aiSettings} dailyInstrument={instrument} tradePlan={getSelectedOutcomePlan('morning').plan} onSaveTrade={handleProofSave} onCancel={() => setProofFlow({ active: false })} />}
               {morningOutcome && <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)]">Outcome logged: {morningOutcome.toUpperCase()}</div>}
               {morningSaveStatus && <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/20">{morningSaveStatus}</div>}
             </div>
@@ -694,8 +872,27 @@ export default function SessionLab({
                 <div className="text-[11px] leading-relaxed mb-4">{lunchResult.reasoning}</div>
                 {normalizedLunchPlan && <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} planVersionId={lunchResult.planVersionId} />}
               </div>
-              {!lunchOutcome && !proofFlow.active && <TradeConfirmationPanel options={SESSION_OUTCOMES} disabled={savingOutcome?.sessionType === 'lunch'} saving={savingOutcome?.sessionType === 'lunch'} error={lunchError} onSelect={(outcome) => saveTradeOutcome('lunch', outcome)} />}
-              {proofFlow.active && proofFlow.sessionType === 'lunch' && <TradeProofPanel manualOutcome={proofFlow.outcome!} executionQuantity={contracts} modelConfig={session.aiSettings} dailyInstrument={instrument} tradePlan={normalizedLunchPlan} onSaveTrade={handleProofSave} onCancel={() => setProofFlow({ active: false })} />}
+              {!lunchOutcome && !proofFlow.active && (
+                <>
+                  <OutcomePlanSelector
+                    plan={normalizedLunchPlan}
+                    value={lunchOutcomePlanChoice}
+                    onChange={setLunchOutcomePlanChoice}
+                    getOptions={getOutcomePlanOptions}
+                  />
+                  <TradeConfirmationPanel
+                    options={SESSION_OUTCOMES}
+                    disabled={savingOutcome?.sessionType === 'lunch'}
+                    saving={savingOutcome?.sessionType === 'lunch'}
+                    error={lunchError}
+                    tradeTaken={lunchTradeTaken}
+                    onTradeTakenChange={setLunchTradeTaken}
+                    isTradeTakenOutcome={isTradeTakenOutcome}
+                    onSelect={(outcome) => saveTradeOutcome('lunch', outcome)}
+                  />
+                </>
+              )}
+              {proofFlow.active && proofFlow.sessionType === 'lunch' && <TradeProofPanel manualOutcome={proofFlow.outcome!} executionQuantity={contracts} modelConfig={session.aiSettings} dailyInstrument={instrument} tradePlan={getSelectedOutcomePlan('lunch').plan} onSaveTrade={handleProofSave} onCancel={() => setProofFlow({ active: false })} />}
               {lunchOutcome && <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)]">Outcome logged: {lunchOutcome.toUpperCase()}</div>}
               {lunchSaveStatus && <div className="text-[10px] p-2 bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/20">{lunchSaveStatus}</div>}
             </div>

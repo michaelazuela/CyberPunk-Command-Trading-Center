@@ -132,6 +132,18 @@ Setup detection must be separate from execution approval. A detected setup can s
 
 For the complete all-setup scan blueprint, see `docs/SETUP_SCAN_WORKFLOW.md`.
 
+#### Deterministic Conditional Plan Builder
+
+After structured chart extraction and setup scanning, the app may build deterministic conditional planning paths from confirmed levels and facts. This layer exists so a `Wait` or `NoTrade` result does not hide useful if/then paths.
+
+Examples:
+
+- Morning Failed High / Liquidity Rejection: short only after a failed hold above a key high/resistance and a confirmed break below reclaim/support.
+- Morning Reclaim Long: long only after price reclaims a key level and the pullback holds.
+- Lunch reversal subtypes: built only from completed Morning-window context plus Lunch execution evidence.
+
+Conditional plan levels are projections, not approvals. T1/T2 are still app-computed from candidate ENTRY/STOP at 1.5R and 2.0R, and execution remains disabled until the pipeline approves the plan.
+
 ### 8. Validate Entry Trigger
 
 A trade cannot be executable unless the app has a measurable entry trigger.

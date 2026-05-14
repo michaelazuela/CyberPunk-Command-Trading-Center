@@ -40,6 +40,8 @@ export enum SetupType {
   AlgoKillZone = 'AlgoKillZone',
   MitigationBlock = 'MitigationBlock',
   MomentumPullbackBreatherReclaim = 'MomentumPullbackBreatherReclaim',
+  MorningFailedHighLiquidityRejection = 'MorningFailedHighLiquidityRejection',
+  MorningReclaimLong = 'MorningReclaimLong',
   LunchFailedHighReversal = 'LunchFailedHighReversal',
   LunchFailedLowReversal = 'LunchFailedLowReversal',
   LunchCompressionBreakout = 'LunchCompressionBreakout',
@@ -290,6 +292,8 @@ export interface StructuredSetupEvidenceMap {
   algoKillZone?: StructuredSetupEvidence;
   momentumPullbackBreatherReclaim?: StructuredSetupEvidence;
   momentumPullback?: StructuredSetupEvidence;
+  morningFailedHighLiquidityRejection?: StructuredSetupEvidence;
+  morningReclaimLong?: StructuredSetupEvidence;
   lunchFailedHighReversal?: StructuredSetupEvidence;
   lunchFailedLowReversal?: StructuredSetupEvidence;
   lunchCompressionBreakout?: StructuredSetupEvidence;
@@ -405,6 +409,35 @@ export interface ReducedRiskPlan {
   reasoning: string;
 }
 
+export type MissingLevelKey =
+  | 'triggerCandleHigh'
+  | 'triggerCandleLow'
+  | 'activeSwingHigh'
+  | 'activeSwingLow'
+  | 'nearestResistance'
+  | 'nearestSupport'
+  | 'failedHigh'
+  | 'failedLow'
+  | 'reclaimLevel'
+  | 'breakdownLevel'
+  | 'morningHigh'
+  | 'morningLow'
+  | 'sweepHigh'
+  | 'sweepLow'
+  | 'compressionHigh'
+  | 'compressionLow'
+  | 'entry'
+  | 'stop'
+  | 'invalidation';
+
+export interface MissingLevelRequirement {
+  key: MissingLevelKey;
+  label: string;
+  reason: string;
+  source: '5m_execution' | '15m_context' | 'morning_context' | 'manual_or_cleaner_screenshot';
+  requiredFor: 'entry' | 'stop' | 'trigger' | 'target' | 'invalidation' | 'context';
+}
+
 export interface SetupCandidate {
   setupType: SetupType;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
@@ -424,6 +457,7 @@ export interface SetupCandidate {
   rankScore?: number;
   evidence: string[];
   missingEvidence: string[];
+  missingLevels?: MissingLevelRequirement[];
   executionStatus: ExecutionStatus;
   blockReason: NoTradeReason | null;
   requiredTrigger: string | null;

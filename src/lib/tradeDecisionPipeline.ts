@@ -21,6 +21,7 @@ import { DECISION_STEPS, DECISION_STEP_LABELS } from '../config/decisionSteps';
 import { TRADE_RULES } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
+import { buildConditionalPlans } from './conditionalPlanBuilder';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -127,6 +128,8 @@ function setupFromText(...parts: Array<unknown>): SetupType {
   if (text.includes('LUNCH COMPRESSION') || text.includes('MIDDAY COMPRESSION')) return SetupType.LunchCompressionBreakout;
   if (text.includes('LUNCH FAILED CONTINUATION') || text.includes('CONTINUATION FAILURE')) return SetupType.LunchFailedContinuation;
   if (text.includes('LUNCH RANGE RECLAIM') || text.includes('RECLAIM MORNING RANGE')) return SetupType.LunchRangeReclaim;
+  if (text.includes('MORNING FAILED HIGH') || text.includes('LIQUIDITY REJECTION')) return SetupType.MorningFailedHighLiquidityRejection;
+  if (text.includes('MORNING RECLAIM') || text.includes('RECLAIM LONG')) return SetupType.MorningReclaimLong;
   if (text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('HUNT') || text.includes('RECLAIM')) return SetupType.LiquiditySweep;
   if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('STAIRCASE')) return SetupType.MomentumRunaway;
   if (text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE')) return SetupType.FairValueGap;
@@ -328,6 +331,8 @@ function setupScore(setupType: SetupType): number {
     case SetupType.BreakerBlock: return 46;
     case SetupType.MitigationBlock: return 42;
     case SetupType.AlgoKillZone: return 40;
+    case SetupType.MorningFailedHighLiquidityRejection: return 89;
+    case SetupType.MorningReclaimLong: return 88;
     case SetupType.LunchFailedHighReversal: return 96;
     case SetupType.LunchFailedLowReversal: return 96;
     case SetupType.LunchFailedContinuation: return 90;
@@ -452,6 +457,45 @@ function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | 
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a))[0] || null;
 }
 
+function mergeSetupCandidates(scannerCandidates: SetupCandidate[], builderCandidates: SetupCandidate[]): SetupCandidate[] {
+  const merged = [...scannerCandidates];
+  builderCandidates.forEach((candidate) => {
+    const duplicateIndex = merged.findIndex((existing) =>
+      existing.setupType === candidate.setupType &&
+      existing.direction === candidate.direction
+    );
+
+    if (duplicateIndex === -1) {
+      merged.push(candidate);
+      return;
+    }
+
+    const existing = merged[duplicateIndex];
+    const candidateScore = rankSetupCandidate(candidate);
+    const existingScore = rankSetupCandidate(existing);
+    if (
+      candidateScore > existingScore ||
+      ((existing.entry === null || existing.entry === undefined) && candidate.entry) ||
+      ((existing.stop === null || existing.stop === undefined) && candidate.stop)
+    ) {
+      merged[duplicateIndex] = {
+        ...existing,
+        ...candidate,
+        evidence: Array.from(new Set([...(existing.evidence || []), ...(candidate.evidence || [])])),
+        missingEvidence: Array.from(new Set([...(existing.missingEvidence || []), ...(candidate.missingEvidence || [])])),
+        missingLevels: [
+          ...(existing.missingLevels || []),
+          ...(candidate.missingLevels || []).filter((level) =>
+            !(existing.missingLevels || []).some((existingLevel) => existingLevel.key === level.key && existingLevel.requiredFor === level.requiredFor)
+          ),
+        ],
+      };
+    }
+  });
+
+  return merged.sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
+}
+
 function finalStatusFromSelection(
   selectedExecutable: SetupCandidate | null,
   selectedConditional: SetupCandidate | null,
@@ -485,11 +529,12 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     result: input.result,
     chartContext,
   });
-  const selectedExecutable = setupScan.bestExecutableCandidate;
-  const selectedConditional = setupScan.bestConditionalCandidate;
+  const setupCandidates = mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext));
+  const selectedExecutable = setupCandidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || null;
+  const selectedConditional = setupCandidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Conditional) || null;
   const selectedCandidate = selectedExecutable || selectedConditional;
-  const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupScan.candidates);
-  const blockedCandidates = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);
+  const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupCandidates);
+  const blockedCandidates = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);
   const bias = inferBias(input.result);
   const riskAssessment = makeRiskAssessmentFromSetup(selectedCandidate || displayCandidate);
   const computedTargets = selectedCandidate
@@ -521,9 +566,9 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext.extractionWarnings?.priceLabelsUnreadable === true ||
     chartContext.extractionWarnings?.manualEntryStopRequired === true;
   const hasInstrument = TRADE_RULES.instruments.includes(chartContext.instrument);
-  const detectedCount = setupScan.candidates.filter(hasDetectedOpportunity).length;
-  const executableCount = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Executable).length;
-  const conditionalCount = setupScan.candidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Conditional).length;
+  const detectedCount = setupCandidates.filter(hasDetectedOpportunity).length;
+  const executableCount = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Executable).length;
+  const conditionalCount = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Conditional).length;
   const setupAssessment: SetupAssessment = {
     setupType: selectedCandidate?.setupType || displayCandidate?.setupType || SetupType.NoSetup,
     status: selectedCandidate ? TradeDecisionStatus.ConditionalTrade : TradeDecisionStatus.NoTrade,
@@ -656,7 +701,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext,
     biasAssessment,
     setupAssessment,
-    setupCandidates: setupScan.candidates,
+    setupCandidates,
     opportunitySelection,
     riskAssessment,
     finalTradePlan: finalPlan,

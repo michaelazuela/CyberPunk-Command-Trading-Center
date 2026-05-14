@@ -646,6 +646,109 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.target1, null);
     assert.equal(result.target2, null);
   }],
+
+  ['28. Morning failed-high builder creates a visible conditional short with projected targets', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Price rejected a key high and is waiting for a failed-high breakdown trigger.',
+        current_rule_analysis: {
+          summary: 'No executable trade yet.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7494.5,
+            nearestSupport: 7488,
+            nearestResistance: 7497.25,
+            activeSwingHigh: 7497.25,
+            activeSwingLow: 7488,
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bearish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: false,
+            reclaimCandlePresent: false,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.entry, 7487.75);
+    assert.equal(candidate.stop, 7497.5);
+    assert.equal(candidate.target1, 7473.25);
+    assert.equal(candidate.target2, 7468.25);
+    assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleLow' && level.requiredFor === 'trigger'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['29. Morning reclaim builder creates a visible conditional long with projected targets', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7494.5,
+            nearestSupport: 7494.25,
+            nearestResistance: 7500,
+            activeSwingHigh: 7500,
+            activeSwingLow: 7494.25,
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: false,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: true,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.entry, 7500.25);
+    assert.equal(candidate.stop, 7494);
+    assert.equal(candidate.target1, 7509.75);
+    assert.equal(candidate.target2, 7512.75);
+    assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleHigh' && level.requiredFor === 'trigger'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
 ];
 
 for (const [name, test] of tests) {

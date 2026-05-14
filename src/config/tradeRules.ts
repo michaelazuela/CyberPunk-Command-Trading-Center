@@ -31,6 +31,8 @@ export const TRADE_RULES = {
         SetupType.AlgoKillZone,
         SetupType.MitigationBlock,
         SetupType.MomentumPullbackBreatherReclaim,
+        SetupType.MorningFailedHighLiquidityRejection,
+        SetupType.MorningReclaimLong,
       ],
     },
     lunch: {

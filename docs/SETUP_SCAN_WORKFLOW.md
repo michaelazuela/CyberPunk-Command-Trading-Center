@@ -119,6 +119,21 @@ The app should return:
 
 No-trade is valid, but it must be the final result only after the full setup scan is complete.
 
+## Deterministic Conditional Builder
+
+The scanner detects and ranks setup candidates. A separate deterministic builder may add conditional planning paths from structured chart facts so the user can see the next valid trigger without loosening execution rules.
+
+Builder output remains non-executable until the trade decision pipeline confirms:
+
+- trigger present
+- entry confirmed
+- stop confirmed
+- T1/T2 computed from confirmed risk
+- invalidation defined
+- risk inside the hard limit
+
+RiskTooWide candidates remain visible as blocked or conditional opportunities. They must not be converted into approved trades or erased from the scan.
+
 ## Output Expectation
 
 The final output should support a ranked scan view:

@@ -203,6 +203,8 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
     case SetupType.AlgoKillZone: return 'algoKillZone';
     case SetupType.MitigationBlock: return 'mitigationBlock';
     case SetupType.MomentumPullbackBreatherReclaim: return 'momentumPullbackBreatherReclaim';
+    case SetupType.MorningFailedHighLiquidityRejection: return 'morningFailedHighLiquidityRejection';
+    case SetupType.MorningReclaimLong: return 'morningReclaimLong';
     case SetupType.LunchFailedHighReversal: return 'lunchFailedHighReversal';
     case SetupType.LunchFailedLowReversal: return 'lunchFailedLowReversal';
     case SetupType.LunchCompressionBreakout: return 'lunchCompressionBreakout';
@@ -318,6 +320,8 @@ function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: C
 
   if (entry.setupType === SetupType.LunchFailedHighReversal) return 'SHORT';
   if (entry.setupType === SetupType.LunchFailedLowReversal) return 'LONG';
+  if (entry.setupType === SetupType.MorningFailedHighLiquidityRejection) return 'SHORT';
+  if (entry.setupType === SetupType.MorningReclaimLong) return 'LONG';
   if (entry.setupType === SetupType.LunchCompressionBreakout && chartContext.compressionRange?.breakoutDirection && chartContext.compressionRange.breakoutDirection !== 'NO TRADE') {
     return chartContext.compressionRange.breakoutDirection;
   }
@@ -397,6 +401,10 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.MitigationBlock:
     case SetupType.AlgoKillZone:
       return false;
+    case SetupType.MorningFailedHighLiquidityRejection:
+      return Boolean((candles.rejection || hasSweep) && (levels.nearestResistance || levels.activeSwingHigh || levels.openingRangeHigh));
+    case SetupType.MorningReclaimLong:
+      return Boolean((candles.reclaim || candles.closeAboveKeyLevel) && (levels.nearestResistance || levels.activeSwingHigh || levels.triggerCandleHigh));
     case SetupType.LunchFailedHighReversal:
       return Boolean(hasMorningContext && (sweptMorningHigh || morningContext?.failedHoldAboveMorningHigh) && (candles.closeBelowKeyLevel || candles.rejection || candles.reclaim));
     case SetupType.LunchFailedLowReversal:
@@ -443,6 +451,10 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
       return hasReadableFvg;
     case SetupType.FvgImbalancePullback:
       return Boolean(hasReadableFvg && candles.pullback);
+    case SetupType.MorningFailedHighLiquidityRejection:
+      return Boolean(candles.rejection && (chartContext.keyLevels.nearestSupport || chartContext.keyLevels.activeSwingLow));
+    case SetupType.MorningReclaimLong:
+      return Boolean((candles.reclaim || candles.closeAboveKeyLevel) && (chartContext.keyLevels.nearestResistance || chartContext.keyLevels.triggerCandleHigh));
     case SetupType.LunchFailedHighReversal:
       return Boolean(hasMorningContext && sweptMorningHigh && (morningContext?.failedHoldAboveMorningHigh || candles.closeBelowKeyLevel));
     case SetupType.LunchFailedLowReversal:

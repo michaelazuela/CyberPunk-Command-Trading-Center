@@ -88,6 +88,8 @@ function formatSetupType(setupType?: SetupType | string): string {
     [SetupType.AlgoKillZone]: 'Algo Kill Zone',
     [SetupType.MitigationBlock]: 'Mitigation Block',
     [SetupType.MomentumPullbackBreatherReclaim]: 'Momentum Pullback / Breather Reclaim',
+    [SetupType.MorningFailedHighLiquidityRejection]: 'Morning Failed High / Liquidity Rejection',
+    [SetupType.MorningReclaimLong]: 'Morning Reclaim Long',
     [SetupType.LunchFailedHighReversal]: 'Lunch Failed High Reversal',
     [SetupType.LunchFailedLowReversal]: 'Lunch Failed Low Reversal',
     [SetupType.LunchCompressionBreakout]: 'Lunch Compression Breakout',
@@ -163,6 +165,28 @@ function candidateReason(candidate: SetupCandidate): string {
   if (candidate.detectedStatus === SetupCandidateStatus.NotDetected) return 'Not detected in current screenshot.';
   if (candidate.missingEvidence.length > 0) return candidate.missingEvidence[0];
   return candidate.evidence[0] || 'No additional reason provided.';
+}
+
+function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
+  const missingLevels = candidate.missingLevels || [];
+  if (missingLevels.length === 0) return null;
+
+  return (
+    <div className="mt-2 border border-[var(--orange)]/25 bg-[var(--bg)] p-2">
+      <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--orange)]">Needs Before Executable</div>
+      <div className="grid gap-1">
+        {missingLevels.map((level, index) => (
+          <div key={`${level.key}-${level.requiredFor}-${index}`} className="flex flex-col gap-0.5 border border-[var(--b1)] bg-[var(--s1)] px-2 py-1 md:flex-row md:items-center md:justify-between">
+            <div>
+              <span className="text-[var(--txt)]">{level.label}</span>
+              <span className="ml-2 text-[var(--txt3)]">for {level.requiredFor}</span>
+            </div>
+            <div className="text-[var(--txt3)] md:text-right">{level.reason}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function bestOpportunityLabel(plan: NormalizedTradePlan): string {
@@ -278,6 +302,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
               {candidate.requiredTrigger && (
                 <div><span className="text-[var(--txt)]">Required Trigger:</span> {candidate.requiredTrigger}</div>
               )}
+              <MissingLevelsList candidate={candidate} />
             </div>
           </div>
         ))}
@@ -351,6 +376,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
               <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
                 <div><span className="text-[var(--txt)]">Trigger:</span> {candidate.requiredTrigger || 'Manual confirmation required before execution.'}</div>
                 <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || candidateReason(candidate)}</div>
+                <MissingLevelsList candidate={candidate} />
                 <div className="text-[var(--amber)]">
                   T1/T2 above are projected at 1.5R / 2.0R from candidate ENTRY and STOP. They are not executable until the app-owned pipeline approves the plan.
                 </div>
