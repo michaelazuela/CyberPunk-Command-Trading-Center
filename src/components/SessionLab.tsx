@@ -230,7 +230,7 @@ export default function SessionLab({
 
     const setupData: Record<string, any> = {
       user_id: user.id,
-      analysis_mode: 'live_session_lab',
+      analysis_mode: 'live',
       source: 'session_lab',
       session_type: sessionType,
       instrument,
@@ -532,7 +532,7 @@ export default function SessionLab({
           contracts,
           status: outcome === 'win' ? 'SUCCESSFUL' : outcome === 'loss' ? 'FAILED' : 'CLOSED',
           manualOutcome: outcome === 'loss' ? 'FAILED' : 'SUCCESS',
-          analysisMode: 'live_session_lab',
+          analysisMode: 'live',
           source: 'session_lab',
           sessionType,
           setupId: setupId || undefined,
