@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertTriangle, CheckCircle2, CircleX, Route, Shield, Target, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, CircleX, Route, Shield, Target, TrendingUp } from 'lucide-react';
 import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 import { buildConfidenceBreakdown } from '../lib/planMetadata';
@@ -126,6 +126,34 @@ function formatBlockReason(reason: NoTradeReason | null): string {
   return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
+function roundToTick(value: number, tickSize = 0.25): number {
+  return Math.round(value / tickSize) * tickSize;
+}
+
+function projectedTargets(candidate: SetupCandidate): { t1: number | null; t2: number | null; risk: number | null } {
+  if (candidate.target1 && candidate.target2) {
+    return {
+      t1: candidate.target1,
+      t2: candidate.target2,
+      risk: candidate.riskPoints ?? (candidate.entry && candidate.stop ? Math.abs(candidate.entry - candidate.stop) : null),
+    };
+  }
+
+  if (!candidate.entry || !candidate.stop || candidate.direction === 'NO TRADE') {
+    return { t1: null, t2: null, risk: null };
+  }
+
+  const risk = Math.abs(candidate.entry - candidate.stop);
+  if (!Number.isFinite(risk) || risk <= 0) return { t1: null, t2: null, risk: null };
+
+  const directionMultiplier = candidate.direction === 'LONG' ? 1 : -1;
+  return {
+    t1: roundToTick(candidate.entry + directionMultiplier * risk * 1.5),
+    t2: roundToTick(candidate.entry + directionMultiplier * risk * 2),
+    risk: roundToTick(risk),
+  };
+}
+
 function candidateReason(candidate: SetupCandidate): string {
   if (candidate.blockReason === NoTradeReason.RiskTooWide) {
     return 'RiskTooWide - setup remains detected, but execution is blocked until risk is reduced.';
@@ -146,6 +174,7 @@ function bestOpportunityLabel(plan: NormalizedTradePlan): string {
 }
 
 function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
+  const [isOpen, setIsOpen] = useState(false);
   const candidates = plan.setupCandidates || [];
   if (candidates.length === 0) return null;
   const hasLunchSubtype = candidates.some(candidate =>
@@ -168,13 +197,18 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
 
   return (
     <div className="mb-4 border border-[var(--b1)] bg-[var(--s2)] p-3">
-      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex w-full flex-col gap-2 text-left md:flex-row md:items-center md:justify-between"
+      >
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">
+            {isOpen ? <ChevronDown className="h-3 w-3 text-[var(--orange)]" /> : <ChevronRight className="h-3 w-3 text-[var(--orange)]" />}
             {hasLunchSubtype ? 'Lunch Setup Scan Results' : 'Setup Scan Results'}
           </div>
           <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
-            Setup Detected is separate from Execution Approved. Blocked setups stay visible.
+            {isOpen ? 'Setup Detected is separate from Execution Approved. Blocked setups stay visible.' : 'Collapsed audit. Open to review detected, conditional, blocked, and rejected setups.'}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -183,9 +217,9 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
           <span className="qd-badge text-[var(--red)] border-[var(--red)]/30">Blocked {blockedCount}</span>
           <span className="qd-badge opacity-70">Detected {detectedCount}/{candidates.length}</span>
         </div>
-      </div>
+      </button>
 
-      <div className="mb-3 border border-[var(--orange)]/25 bg-[var(--bg)] px-3 py-2 font-mono">
+      <div className="mt-3 border border-[var(--orange)]/25 bg-[var(--bg)] px-3 py-2 font-mono">
         <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Best Trade Opportunity</div>
         <div className={cn(
           'mt-1 text-[12px] font-bold uppercase tracking-[0.12em]',
@@ -197,7 +231,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
         </div>
       </div>
 
-      <div className="grid gap-2">
+      {isOpen && <div className="mt-3 grid gap-2">
         {candidates.map((candidate, index) => (
           <div
             key={`${candidate.setupType}-${candidate.executionStatus}-${candidate.detectedStatus}-${index}`}
@@ -247,6 +281,83 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
             </div>
           </div>
         ))}
+      </div>}
+    </div>
+  );
+}
+
+function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
+  const candidates = (plan.setupCandidates || [])
+    .filter((candidate) =>
+      candidate.executionStatus === ExecutionStatus.Conditional ||
+      candidate.blockReason === NoTradeReason.RiskTooWide
+    )
+    .slice(0, 3);
+
+  if (candidates.length === 0) return null;
+
+  return (
+    <div className="mb-4 border border-[var(--orange)]/25 bg-[var(--orange)]/5 p-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--orange)]">Conditional Plans</div>
+          <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
+            Planning paths only. Execution remains disabled until the trigger, entry, stop, risk, and invalidation all pass.
+          </div>
+        </div>
+        <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">WAIT / CONDITIONAL</span>
+      </div>
+
+      <div className="grid gap-2">
+        {candidates.map((candidate, index) => {
+          const projection = projectedTargets(candidate);
+          return (
+            <div key={`${candidate.setupType}-${candidate.direction}-${index}`} className={cn('border p-3 font-mono', candidateTone(candidate))}>
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="text-[11px] font-bold text-[var(--txt)]">
+                    Plan {String.fromCharCode(65 + index)}: {formatSetupType(candidate.setupType)}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
+                    <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.executionStatus}</span>
+                    {candidate.blockReason && <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Blocker: {formatBlockReason(candidate.blockReason)}</span>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-5 gap-1 text-right text-[10px] lg:min-w-[420px]">
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">ENTRY</div>
+                    <div className="text-[var(--txt)]">{candidate.entry ?? 'TBD'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">STOP</div>
+                    <div className="text-[var(--red)]">{candidate.stop ?? 'TBD'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">RISK</div>
+                    <div className="text-[var(--orange)]">{projection.risk ?? candidate.riskPoints ?? 'TBD'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">T1</div>
+                    <div className="text-[var(--green)]">{projection.t1 ?? 'TBD'}</div>
+                  </div>
+                  <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
+                    <div className="text-[var(--txt3)]">T2</div>
+                    <div className="text-[var(--green)]">{projection.t2 ?? 'TBD'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
+                <div><span className="text-[var(--txt)]">Trigger:</span> {candidate.requiredTrigger || 'Manual confirmation required before execution.'}</div>
+                <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || candidateReason(candidate)}</div>
+                <div className="text-[var(--amber)]">
+                  T1/T2 above are projected at 1.5R / 2.0R from candidate ENTRY and STOP. They are not executable until the app-owned pipeline approves the plan.
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -383,6 +494,7 @@ export default function FinalTradePlanCard({
 
       <DecisionStepAudit plan={plan} />
       <SetupScanResults plan={plan} />
+      {!plan.canExecute && <ConditionalPlansPanel plan={plan} />}
 
       {!plan.canExecute ? (
         <div className="mb-4 border border-dashed border-[var(--orange)]/40 bg-[var(--orange)]/5 p-4">
