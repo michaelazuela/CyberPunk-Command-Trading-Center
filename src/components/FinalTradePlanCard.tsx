@@ -88,6 +88,11 @@ function formatSetupType(setupType?: SetupType | string): string {
     [SetupType.AlgoKillZone]: 'Algo Kill Zone',
     [SetupType.MitigationBlock]: 'Mitigation Block',
     [SetupType.MomentumPullbackBreatherReclaim]: 'Momentum Pullback / Breather Reclaim',
+    [SetupType.LunchFailedHighReversal]: 'Lunch Failed High Reversal',
+    [SetupType.LunchFailedLowReversal]: 'Lunch Failed Low Reversal',
+    [SetupType.LunchCompressionBreakout]: 'Lunch Compression Breakout',
+    [SetupType.LunchFailedContinuation]: 'Lunch Failed Continuation',
+    [SetupType.LunchRangeReclaim]: 'Lunch Range Reclaim',
     [SetupType.NoSetup]: 'No Setup',
   };
   const raw = setupType || 'Unknown';
@@ -143,6 +148,13 @@ function bestOpportunityLabel(plan: NormalizedTradePlan): string {
 function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
   const candidates = plan.setupCandidates || [];
   if (candidates.length === 0) return null;
+  const hasLunchSubtype = candidates.some(candidate =>
+    candidate.setupType === SetupType.LunchFailedHighReversal ||
+    candidate.setupType === SetupType.LunchFailedLowReversal ||
+    candidate.setupType === SetupType.LunchCompressionBreakout ||
+    candidate.setupType === SetupType.LunchFailedContinuation ||
+    candidate.setupType === SetupType.LunchRangeReclaim
+  );
 
   const executableCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Executable).length;
   const conditionalCount = candidates.filter(candidate => candidate.executionStatus === ExecutionStatus.Conditional).length;
@@ -159,7 +171,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">
-            Setup Scan Results
+            {hasLunchSubtype ? 'Lunch Setup Scan Results' : 'Setup Scan Results'}
           </div>
           <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
             Setup Detected is separate from Execution Approved. Blocked setups stay visible.

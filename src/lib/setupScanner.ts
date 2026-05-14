@@ -203,8 +203,35 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
     case SetupType.AlgoKillZone: return 'algoKillZone';
     case SetupType.MitigationBlock: return 'mitigationBlock';
     case SetupType.MomentumPullbackBreatherReclaim: return 'momentumPullbackBreatherReclaim';
+    case SetupType.LunchFailedHighReversal: return 'lunchFailedHighReversal';
+    case SetupType.LunchFailedLowReversal: return 'lunchFailedLowReversal';
+    case SetupType.LunchCompressionBreakout: return 'lunchCompressionBreakout';
+    case SetupType.LunchFailedContinuation: return 'lunchFailedContinuation';
+    case SetupType.LunchRangeReclaim: return 'lunchRangeReclaim';
     default: return null;
   }
+}
+
+function isLunchSubtype(setupType: SetupType): boolean {
+  return setupType === SetupType.LunchFailedHighReversal ||
+    setupType === SetupType.LunchFailedLowReversal ||
+    setupType === SetupType.LunchCompressionBreakout ||
+    setupType === SetupType.LunchFailedContinuation ||
+    setupType === SetupType.LunchRangeReclaim;
+}
+
+function isLunchSession(sessionType: SetupSession): boolean {
+  return sessionType === 'lunch' || sessionType === 'replay_lunch';
+}
+
+function hasCompletedMorningWindowContext(chartContext?: ChartContext | null): boolean {
+  if (!chartContext) return false;
+  const morningContext = chartContext.morningWindowContext;
+  const levels = chartContext.keyLevels;
+  return Boolean(
+    (morningContext?.complete && (morningContext.morningHigh || levels.morningHigh) && (morningContext.morningLow || levels.morningLow)) ||
+    (levels.morningHigh && levels.morningLow && (morningContext?.confidence === 'High' || morningContext?.confidence === 'Medium'))
+  );
 }
 
 function setupEvidenceFromContext(entry: SetupRegistryEntry, chartContext?: ChartContext | null) {
@@ -289,6 +316,20 @@ function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: C
     return chartContext.compressionRange.breakoutDirection;
   }
 
+  if (entry.setupType === SetupType.LunchFailedHighReversal) return 'SHORT';
+  if (entry.setupType === SetupType.LunchFailedLowReversal) return 'LONG';
+  if (entry.setupType === SetupType.LunchCompressionBreakout && chartContext.compressionRange?.breakoutDirection && chartContext.compressionRange.breakoutDirection !== 'NO TRADE') {
+    return chartContext.compressionRange.breakoutDirection;
+  }
+  if (entry.setupType === SetupType.LunchFailedContinuation) {
+    if (chartContext.morningWindowContext?.morningTrend === 'bullish_extension') return 'SHORT';
+    if (chartContext.morningWindowContext?.morningTrend === 'bearish_extension') return 'LONG';
+  }
+  if (entry.setupType === SetupType.LunchRangeReclaim) {
+    if (chartContext.candleFacts?.closeAboveKeyLevel) return 'LONG';
+    if (chartContext.candleFacts?.closeBelowKeyLevel) return 'SHORT';
+  }
+
   return null;
 }
 
@@ -314,6 +355,18 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     (event.type === 'pdh_sweep' || event.type === 'pdl_sweep') &&
     isReadableConfidence(event.confidence)
   );
+  const hasMorningContext = hasCompletedMorningWindowContext(chartContext);
+  const morningContext = chartContext.morningWindowContext;
+  const sweptMorningHigh = Boolean(morningContext?.morningHighSwept || liquidityEvents.some((event) =>
+    event.type === 'sweep' &&
+    isReadableConfidence(event.confidence) &&
+    event.sweptLevelLabel?.toLowerCase().includes('morning high')
+  ));
+  const sweptMorningLow = Boolean(morningContext?.morningLowSwept || liquidityEvents.some((event) =>
+    event.type === 'sweep' &&
+    isReadableConfidence(event.confidence) &&
+    event.sweptLevelLabel?.toLowerCase().includes('morning low')
+  ));
 
   switch (entry.setupType) {
     case SetupType.MomentumRunaway:
@@ -344,6 +397,16 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.MitigationBlock:
     case SetupType.AlgoKillZone:
       return false;
+    case SetupType.LunchFailedHighReversal:
+      return Boolean(hasMorningContext && (sweptMorningHigh || morningContext?.failedHoldAboveMorningHigh) && (candles.closeBelowKeyLevel || candles.rejection || candles.reclaim));
+    case SetupType.LunchFailedLowReversal:
+      return Boolean(hasMorningContext && (sweptMorningLow || morningContext?.failedHoldBelowMorningLow) && (candles.closeAboveKeyLevel || candles.rejection || candles.reclaim));
+    case SetupType.LunchCompressionBreakout:
+      return Boolean(hasMorningContext && ((compressionRange?.present && isReadableConfidence(compressionRange.confidence)) || structure?.compressionCondition || structure?.chopRangeCondition));
+    case SetupType.LunchFailedContinuation:
+      return Boolean(hasMorningContext && (morningContext?.morningTrend === 'bullish_extension' || morningContext?.morningTrend === 'bearish_extension') && (structure?.marketStructureShift || candles.rejection || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
+    case SetupType.LunchRangeReclaim:
+      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim || candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
     default:
       return false;
   }
@@ -358,6 +421,18 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
   const hasReadableFvg = fvgZones.some((zone) => isReadableConfidence(zone.confidence));
   const hasSweep = liquidityEvents.some((event) => event.type === 'sweep' && isReadableConfidence(event.confidence));
   const hasReclaim = liquidityEvents.some((event) => event.reclaimed && isReadableConfidence(event.confidence));
+  const hasMorningContext = hasCompletedMorningWindowContext(chartContext);
+  const morningContext = chartContext.morningWindowContext;
+  const sweptMorningHigh = Boolean(morningContext?.morningHighSwept || liquidityEvents.some((event) =>
+    event.type === 'sweep' &&
+    isReadableConfidence(event.confidence) &&
+    event.sweptLevelLabel?.toLowerCase().includes('morning high')
+  ));
+  const sweptMorningLow = Boolean(morningContext?.morningLowSwept || liquidityEvents.some((event) =>
+    event.type === 'sweep' &&
+    isReadableConfidence(event.confidence) &&
+    event.sweptLevelLabel?.toLowerCase().includes('morning low')
+  ));
 
   switch (entry.setupType) {
     case SetupType.MomentumRunaway:
@@ -368,6 +443,16 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
       return hasReadableFvg;
     case SetupType.FvgImbalancePullback:
       return Boolean(hasReadableFvg && candles.pullback);
+    case SetupType.LunchFailedHighReversal:
+      return Boolean(hasMorningContext && sweptMorningHigh && (morningContext?.failedHoldAboveMorningHigh || candles.closeBelowKeyLevel));
+    case SetupType.LunchFailedLowReversal:
+      return Boolean(hasMorningContext && sweptMorningLow && (morningContext?.failedHoldBelowMorningLow || candles.closeAboveKeyLevel));
+    case SetupType.LunchCompressionBreakout:
+      return Boolean(hasMorningContext && chartContext.compressionRange?.present && isReadableConfidence(chartContext.compressionRange.confidence) && chartContext.compressionRange.breakoutDirection !== 'NO TRADE');
+    case SetupType.LunchFailedContinuation:
+      return Boolean(hasMorningContext && (morningContext?.morningTrend === 'bullish_extension' || morningContext?.morningTrend === 'bearish_extension') && chartContext.marketStructure?.marketStructureShift);
+    case SetupType.LunchRangeReclaim:
+      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim));
     default:
       return false;
   }
@@ -429,16 +514,17 @@ function executionStatusFor(
 
 function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, text: string): SetupCandidate {
   const allowed = entry.allowedSessions.includes(input.sessionType);
+  const missingMorningWindowContext = isLunchSubtype(entry.setupType) && (!isLunchSession(input.sessionType) || !hasCompletedMorningWindowContext(input.chartContext));
   const structuredFactsPresent = hasStructuredChartFacts(input.chartContext);
   const allowNarrativeFallback = !structuredFactsPresent;
   const structuredEvidence = setupEvidenceFromContext(entry, input.chartContext);
   const manualLevelConfirmation = levelsRequireManualConfirmation(input.chartContext);
   const facts = allowNarrativeFallback ? findRelevantFacts(entry, extractPlanFacts(input.result), text) : [];
   const bestFact = facts.find((fact) => fact.entry !== null && fact.stop !== null) || facts[0] || null;
-  const structuredDetected = Boolean(structuredEvidence?.detected || structuredContextDetectsSetup(entry, input.chartContext));
-  const structuredPossible = Boolean(structuredEvidence?.possible || (!structuredDetected && structuredContextSupportsSetup(entry, input.chartContext)));
-  const narrativeDetected = allowNarrativeFallback && hasAny(text, [...entry.detectionKeywords, ...entry.aliases]);
-  const narrativePossible = allowNarrativeFallback && hasAny(text, entry.possibleKeywords);
+  const structuredDetected = !missingMorningWindowContext && Boolean(structuredEvidence?.detected || structuredContextDetectsSetup(entry, input.chartContext));
+  const structuredPossible = !missingMorningWindowContext && Boolean(structuredEvidence?.possible || (!structuredDetected && structuredContextSupportsSetup(entry, input.chartContext)));
+  const narrativeDetected = !isLunchSubtype(entry.setupType) && allowNarrativeFallback && hasAny(text, [...entry.detectionKeywords, ...entry.aliases]);
+  const narrativePossible = !isLunchSubtype(entry.setupType) && allowNarrativeFallback && hasAny(text, entry.possibleKeywords);
   const detected = structuredDetected || narrativeDetected;
   const possible = !detected && (structuredPossible || narrativePossible);
   const structuredDirection = structuredDirectionForSetup(entry, input.chartContext);
@@ -498,14 +584,18 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     targetClarity: targets.target1 !== null && targets.target2 !== null ? 1 : 0,
     proximityScore: detected ? 0.75 : possible ? 0.55 : 0,
     evidence: structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : [],
-    missingEvidence: manualLevelConfirmation
+    missingEvidence: missingMorningWindowContext
+      ? ['Completed Morning window context is required before this Lunch subtype can activate.']
+      : manualLevelConfirmation
       ? Array.from(new Set([...(structuredEvidence?.missingEvidence || []), 'Exact entry/stop levels require manual confirmation.']))
       : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence,
     executionStatus: execution.executionStatus,
     blockReason: execution.blockReason,
     requiredTrigger: structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
     nextAction:
-      execution.blockReason === NoTradeReason.RiskTooWide
+      missingMorningWindowContext
+        ? 'Load or complete Morning 15M/5M context first. Lunch subtypes cannot activate from the Lunch chart alone.'
+        : execution.blockReason === NoTradeReason.RiskTooWide
         ? 'Execution blocked by risk. Preserve setup and wait for a reduced-risk trigger.'
         : entry.defaultNextAction,
     reducedRiskPlan:

@@ -156,3 +156,15 @@ Conditional Momentum Pullback Long
 - `RiskTooWide` must not erase the detected setup candidate.
 - The app ranks executable and conditional opportunities.
 - `NoTrade` is returned only when no executable or conditional setup exists.
+
+## Lunch Reversal Subtypes
+
+The scanner evaluates five Lunch-only subtypes for `lunch` and `replay_lunch`:
+
+- Lunch Failed High Reversal
+- Lunch Failed Low Reversal
+- Lunch Compression Breakout
+- Lunch Failed Continuation
+- Lunch Range Reclaim
+
+These subtypes require completed Morning window context. Missing Morning context prevents the subtype from activating. `RiskTooWide` blocks execution only; it does not erase a detected Lunch subtype.

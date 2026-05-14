@@ -93,3 +93,5 @@ Therefore, `RiskTooWide` alone should not automatically produce `NoTrade` if a c
 - `RiskTooWide` must not erase detected setups.
 - Blocked setups should remain visible and journal-ready.
 - No-trade is valid only after every setup candidate is scanned and ranked.
+
+For Lunch-only subtypes, `RiskTooWide` still blocks execution only. A detected `LunchFailedHighReversal`, `LunchFailedLowReversal`, `LunchCompressionBreakout`, `LunchFailedContinuation`, or `LunchRangeReclaim` must remain visible so the trader and RAG database can learn from the opportunity even when the current entry/stop distance is too wide.

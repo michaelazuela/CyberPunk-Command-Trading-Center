@@ -326,6 +326,14 @@ export default function ReplayLab({
              plan_version_id: planVersionId,
              setup_signature: setupSignature,
              legacy_trade_plan: analysis.tradePlan || null,
+             morning_context: {
+               morning_5m_available: Boolean(morningExecImg),
+               morning_15m_eth_available: Boolean(morningEthImg),
+               morning_analysis_available: Boolean(morningResult),
+               morning_day_type: morningResult?.dayType || null,
+               morning_eth_context_review: morningResult?.ethContextReview || null,
+               morning_structured_chart_context: morningResult?.structuredChartContext || null,
+             },
            },
            normalized_plan_json: analysisPlan,
            plan_source: analysisPlan.source,
@@ -371,11 +379,19 @@ export default function ReplayLab({
     setLunchResult(null);
 
     try {
-      const imgPayload = lunchExecImg.dataUrl;
+      const imgPayload = (morningEthImg || morningExecImg)
+        ? { exec: lunchExecImg.dataUrl, eth: morningEthImg?.dataUrl, morningExec: morningExecImg?.dataUrl }
+        : lunchExecImg.dataUrl;
       const previousAnalysis = morningResult ? {
         tradePlan: morningResult.tradePlan,
+        normalizedPlan: normalizedMorningPlan,
         midnightOpenPrice: morningResult.midnightOpenPrice,
         ethContextReview: morningResult.ethContextReview,
+        structuredChartContext: morningResult.structuredChartContext,
+        morningContextImagesAvailable: {
+          eth15m: Boolean(morningEthImg),
+          execution5m: Boolean(morningExecImg),
+        },
         reasoning: morningResult.reasoning
       } : undefined;
       
@@ -439,6 +455,8 @@ export default function ReplayLab({
            rth_vs_midnight: analysis.rthVsMidnight,
            retrace_probability: analysis.retraceProbability,
            execution_review_json: analysis.executionReview5m || null,
+           eth_context_available: Boolean(morningEthImg || morningResult?.ethContextReview),
+           eth_context_review_json: morningResult?.ethContextReview || null,
            afternoon_test_plan_json: analysis.afternoonTestPlan || null,
            midnight_open_review_json: analysis.midnightAnalysis || null,
            morning_context_setup_id: morningSetupId || undefined,
@@ -471,6 +489,8 @@ export default function ReplayLab({
 
     const setSessionSetupId = sessionType === 'morning' ? setMorningSetupId : setLunchSetupId;
     const execImg = sessionType === 'morning' ? morningExecImg : lunchExecImg;
+    const chartTimezone = sessionType === 'morning' ? morningReviewTimezone : lunchReviewTimezone;
+    const requiredScreenshotRange = formatReplayRange(sessionType === 'morning' ? 'morning_5m_execution' : 'lunch_5m_execution', chartTimezone);
     const setupData: Record<string, any> = {
       user_id: userId,
       analysis_mode: 'historical_replay',
@@ -493,6 +513,8 @@ export default function ReplayLab({
         plan_version_id: result.planVersionId || null,
         setup_signature: result.setupSignature || null,
         legacy_trade_plan: result.tradePlan || null,
+        chart_timezone: chartTimezone,
+        required_screenshot_range: requiredScreenshotRange,
       },
       normalized_plan_json: normalizedPlan,
       plan_source: normalizedPlan?.source,
@@ -615,13 +637,16 @@ export default function ReplayLab({
       }
 
       const { saveToRAG } = await import('../lib/rag');
+      const chartTimezone = sessionType === 'morning' ? morningReviewTimezone : lunchReviewTimezone;
+      const requiredScreenshotRange = formatReplayRange(sessionType === 'morning' ? 'morning_5m_execution' : 'lunch_5m_execution', chartTimezone);
       const ragSaveResult = await saveToRAG({
          setupId: resolvedSetupId,
          analysis_mode: 'historical_replay',
          source: 'replay_lab',
-         workflowMode: 'replay',
+         workflowMode: sessionType === 'morning' ? 'replay_morning' : 'replay_lunch',
          sessionMode: sessionType,
          ampm: sessionType === 'morning' ? 'AM' : 'PM',
+         chartTimezone,
          sessionType,
          instrument,
          tradeDate,
@@ -642,7 +667,8 @@ export default function ReplayLab({
          workflowTimestamp: new Date().toISOString(),
          screenshots: {
            execution5m: sessionType === 'morning' ? morningExecImg?.storagePath || morningExecImg?.dataUrl : lunchExecImg?.storagePath || lunchExecImg?.dataUrl,
-           eth15mContext: sessionType === 'morning' ? morningEthImg?.storagePath || morningEthImg?.dataUrl : null,
+           eth15mContext: morningEthImg?.storagePath || morningEthImg?.dataUrl || null,
+           morning5mContext: sessionType === 'lunch' ? morningExecImg?.storagePath || morningExecImg?.dataUrl || null : null,
            proof: null,
          },
          chartContext: result.structuredChartContext || null,
@@ -663,15 +689,15 @@ export default function ReplayLab({
          notes: `${notes ? notes + '\n' : ''}Replay Plan (${normalizedPlan?.source || 'missing'})\nRisk: ${normalizedPlan?.riskPoints || 'N/A'}\nT1: ${normalizedPlan?.t1 || 'N/A'}\nT2: ${normalizedPlan?.t2 || 'N/A'}\nWhy: ${normalizedPlan?.whyThisPlan || 'N/A'}\nInvalidation: ${normalizedPlan?.invalidation || 'N/A'}`,
          ocrText: JSON.stringify({ ...(sessionType === 'morning' ? morningExecImg?.ocrResult : lunchExecImg?.ocrResult) }),
          execution_5m_storage_path: sessionType === 'morning' ? morningExecImg?.storagePath : lunchExecImg?.storagePath,
-         eth_15m_context_storage_path: sessionType === 'morning' ? morningEthImg?.storagePath : undefined,
+         eth_15m_context_storage_path: morningEthImg?.storagePath,
          execution_timeframe: '5m',
-         context_timeframe: sessionType === 'morning' && morningEthImg ? '15m' : undefined,
-         context_session: sessionType === 'morning' && morningEthImg ? 'ETH' : undefined,
-         eth_context_available: sessionType === 'morning' ? !!morningEthImg : false,
+         context_timeframe: morningEthImg ? '15m' : undefined,
+         context_session: morningEthImg ? 'ETH' : undefined,
+         eth_context_available: Boolean(morningEthImg || result.ethContextReview),
          window_start: sessionType === 'lunch' ? "11:50" : undefined,
          window_end: sessionType === 'lunch' ? "13:00" : undefined,
-         window_timezone: sessionType === 'lunch' ? "America/New_York" : undefined,
-         required_screenshot_range: sessionType === 'lunch' ? "11:50 AM ET → 1:00 PM ET" : undefined,
+         window_timezone: "America/New_York",
+         required_screenshot_range: requiredScreenshotRange,
          planVersionId: result.planVersionId || null,
          setupSignature: result.setupSignature || null,
          trade_plan_json: {
@@ -683,6 +709,16 @@ export default function ReplayLab({
            plan_version_id: result.planVersionId || null,
            setup_signature: result.setupSignature || null,
            legacy_trade_plan: result.tradePlan || null,
+           chart_timezone: chartTimezone,
+           required_screenshot_range: requiredScreenshotRange,
+           morning_context: sessionType === 'lunch' ? {
+             morning_5m_available: Boolean(morningExecImg),
+             morning_15m_eth_available: Boolean(morningEthImg),
+             morning_analysis_available: Boolean(morningResult),
+             morning_day_type: morningResult?.dayType || null,
+             morning_eth_context_review: morningResult?.ethContextReview || null,
+             morning_structured_chart_context: morningResult?.structuredChartContext || null,
+           } : null,
          },
       });
 

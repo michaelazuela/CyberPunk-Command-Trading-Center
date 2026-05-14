@@ -40,6 +40,11 @@ export enum SetupType {
   AlgoKillZone = 'AlgoKillZone',
   MitigationBlock = 'MitigationBlock',
   MomentumPullbackBreatherReclaim = 'MomentumPullbackBreatherReclaim',
+  LunchFailedHighReversal = 'LunchFailedHighReversal',
+  LunchFailedLowReversal = 'LunchFailedLowReversal',
+  LunchCompressionBreakout = 'LunchCompressionBreakout',
+  LunchFailedContinuation = 'LunchFailedContinuation',
+  LunchRangeReclaim = 'LunchRangeReclaim',
   NoSetup = 'NoSetup',
 }
 
@@ -135,6 +140,10 @@ export interface KeyLevels {
   activeSwingLow?: number | null;
   triggerCandleHigh?: number | null;
   triggerCandleLow?: number | null;
+  morningHigh?: number | null;
+  morningLow?: number | null;
+  morningHighSweep?: number | null;
+  morningLowSweep?: number | null;
 }
 
 export type ReadConfidence = 'High' | 'Medium' | 'Low' | 'Unreadable';
@@ -281,6 +290,30 @@ export interface StructuredSetupEvidenceMap {
   algoKillZone?: StructuredSetupEvidence;
   momentumPullbackBreatherReclaim?: StructuredSetupEvidence;
   momentumPullback?: StructuredSetupEvidence;
+  lunchFailedHighReversal?: StructuredSetupEvidence;
+  lunchFailedLowReversal?: StructuredSetupEvidence;
+  lunchCompressionBreakout?: StructuredSetupEvidence;
+  lunchFailedContinuation?: StructuredSetupEvidence;
+  lunchRangeReclaim?: StructuredSetupEvidence;
+}
+
+export interface MorningWindowContext {
+  complete: boolean;
+  source?: 'morning_analysis' | 'morning_5m_context' | 'manual' | 'gemini_ocr' | 'unknown';
+  morningHigh?: number | null;
+  morningLow?: number | null;
+  initialBalanceHigh?: number | null;
+  initialBalanceLow?: number | null;
+  openingDriveDirection?: 'bullish' | 'bearish' | 'range' | 'unknown';
+  morningTrend?: 'bullish_extension' | 'bearish_extension' | 'compression_range' | 'failed_continuation' | 'unknown';
+  morningHighSwept?: boolean;
+  morningLowSwept?: boolean;
+  failedHoldAboveMorningHigh?: boolean;
+  failedHoldBelowMorningLow?: boolean;
+  rangeReclaimed?: boolean;
+  evidence?: string[];
+  missingEvidence?: string[];
+  confidence?: 'High' | 'Medium' | 'Low' | null;
 }
 
 export interface ChartExtractionWarnings {
@@ -313,6 +346,7 @@ export interface ChartContext {
   marketStructure?: MarketStructureFacts;
   candleFacts?: CandleFacts;
   setupEvidence?: StructuredSetupEvidenceMap;
+  morningWindowContext?: MorningWindowContext;
   proposedEntry?: number | null;
   proposedStop?: number | null;
   riskPoints?: number | null;
@@ -828,6 +862,7 @@ export interface SessionState {
   replayMorningResult?: AnalysisResult;
   replayLunchResult?: AnalysisResult;
   morningScreenshot?: string;
+  morningEthScreenshot?: string;
   lunchScreenshot?: string;
 }
 
@@ -844,6 +879,7 @@ export interface RAGSaveContext {
   workflowMode?: "morning" | "lunch" | "replay" | string;
   sessionMode?: "morning" | "lunch" | string;
   ampm?: "AM" | "PM" | string | null;
+  chartTimezone?: "EST" | "PST" | string | null;
   instrument: "MES" | "MNQ";
   tradeDate: string;
   dayOfWeek: string;

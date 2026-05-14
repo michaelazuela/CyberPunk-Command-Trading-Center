@@ -229,20 +229,42 @@ export default function LunchReversal({
       updateStep('send', 'active');
       setProgressSteps(prev => prev.map(s => s.id === 'send' ? { ...s, label: 'Compressing image' } : s));
       
-      let imgToSend = imgSource;
+      let imgToSend: string | { exec: string; eth?: string; morningExec?: string } = imgSource;
       try {
         if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size before compression: ${Math.round(imgSource.length / 1024)} KB`);
-        imgToSend = await import('../lib/cloudStorage').then(m => m.compressImage(imgSource, 1280, 0.7));
-        if (import.meta.env.DEV) console.log(`[GEMINI DEBUG] Image size after compression: ${Math.round(imgToSend.length / 1024)} KB`);
+        const compressedLunchExec = await import('../lib/cloudStorage').then(m => m.compressImage(imgSource, 1280, 0.7));
+        const compressedMorningEth = session.morningEthScreenshot
+          ? await import('../lib/cloudStorage').then(m => m.compressImage(session.morningEthScreenshot!, 1280, 0.7))
+          : undefined;
+        const compressedMorningExec = session.morningScreenshot
+          ? await import('../lib/cloudStorage').then(m => m.compressImage(session.morningScreenshot!, 1280, 0.7))
+          : undefined;
+
+        imgToSend = compressedMorningEth || compressedMorningExec
+          ? { exec: compressedLunchExec, eth: compressedMorningEth, morningExec: compressedMorningExec }
+          : compressedLunchExec;
+
+        if (import.meta.env.DEV) {
+          console.log(`[GEMINI DEBUG] Lunch exec image size after compression: ${Math.round(compressedLunchExec.length / 1024)} KB`);
+          if (compressedMorningEth) console.log(`[GEMINI DEBUG] Morning ETH context attached for lunch analysis`);
+          if (compressedMorningExec) console.log(`[GEMINI DEBUG] Morning 5M context attached for lunch analysis`);
+        }
       } catch (err) {
         console.warn("Failed to compress image, using original", err);
+        if (session.morningEthScreenshot || session.morningScreenshot) {
+          imgToSend = {
+            exec: imgSource,
+            eth: session.morningEthScreenshot,
+            morningExec: session.morningScreenshot,
+          };
+        }
       }
 
       const ocrOverrideText = (!isDeepReview && ocrResult) ? `\n[OPERATOR OVERRIDE DATA]\nTicker: ${ocrResult.ticker || 'N/A'}\nTimeframe: ${ocrResult.timeframe || 'N/A'}\nCurrent Price: ${ocrResult.currentPrice || 'N/A'}\nTimestamp: ${ocrResult.lastTimestamp || 'N/A'}\nScreenshot Timezone: ${ocrResult.timezone || 'EST'}\n` : '';
       
       const analysisSettings = {
         ...(session.aiSettings || { temperature: 0, customInstructions: '' }),
-        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM ET → 1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.`.trim()
+        customInstructions: `${session.aiSettings?.customInstructions || ''}\n${ocrOverrideText}\nTHIS IS THE LUNCH REVERSAL SETUP. Focus on 11:50 AM ET → 1:00 PM ET Trap Conditions. Evaluate false breakouts and morning boundaries.\nIf Morning 15M ETH and Morning 5M context images are available, review them only as context for morning high/low, ETH structure, initial drive, and boundary sweep/failure logic. The current Lunch 5M screenshot remains the only execution chart.`.trim()
       };
       
       let analysis: any = null;
@@ -265,7 +287,20 @@ export default function LunchReversal({
             setTimeout(() => reject(new Error('TIMEOUT')), 120000);
           });
           
-          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, undefined, session.dailyInstrument);
+          const previousAnalysis = session.analysisResult ? {
+            tradePlan: session.analysisResult.tradePlan,
+            appOwnedPlan: buildAppTradePlan(session.analysisResult, { sessionType: 'morning', instrument: session.dailyInstrument || 'MES' }),
+            midnightOpenPrice: session.analysisResult.midnightOpenPrice,
+            ethContextReview: session.analysisResult.ethContextReview,
+            structuredChartContext: session.analysisResult.structuredChartContext,
+            reasoning: session.analysisResult.reasoning,
+            morningContextImagesAvailable: {
+              eth15m: Boolean(session.morningEthScreenshot),
+              execution5m: Boolean(session.morningScreenshot),
+            }
+          } : undefined;
+
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, previousAnalysis, undefined, routeName, modelToUse, undefined, session.dailyInstrument);
           
           analysis = await Promise.race([geminiPromise, timeoutPromise]);
           const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
@@ -379,7 +414,7 @@ export default function LunchReversal({
              execution_5m_storage_path: execUpload.storagePath,
              execution_timeframe: '5m',
              
-             eth_context_available: false, // Lunch doesn't upload a new one, relying on morning
+             eth_context_available: Boolean(session.morningEthScreenshot || session.analysisResult?.ethContextReview),
              
              trade_plan_json: {
                best_trade_plan: analysis.best_trade_plan || null,
@@ -390,10 +425,21 @@ export default function LunchReversal({
                plan_version_id: planVersionId,
                setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
+               chart_timezone: session.aiSettings?.lunchTimeZone || 'EST',
+               required_screenshot_range: formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST'),
+               morning_context: {
+                 morning_5m_available: Boolean(session.morningScreenshot),
+                 morning_15m_eth_available: Boolean(session.morningEthScreenshot),
+                 morning_analysis_available: Boolean(session.analysisResult),
+                 morning_day_type: session.analysisResult?.dayType || null,
+                 morning_eth_context_review: session.analysisResult?.ethContextReview || null,
+                 morning_structured_chart_context: session.analysisResult?.structuredChartContext || null,
+               },
              },
              execution_review_json: analysis.executionReview5m || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
+             eth_context_review_json: session.analysisResult?.ethContextReview || null,
            };
 
            if (ocrResult) {
@@ -423,6 +469,7 @@ export default function LunchReversal({
              workflowMode: 'lunch',
              sessionMode: 'lunch',
              ampm: 'PM',
+             chartTimezone: session.aiSettings?.lunchTimeZone || 'EST',
              instrument: session.dailyInstrument || 'MES',
              tradeDate: new Date().toLocaleDateString('en-US'),
              dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
@@ -455,6 +502,8 @@ export default function LunchReversal({
              workflowTimestamp: new Date().toISOString(),
              screenshots: {
                execution5m: execUpload.url,
+               morning5mContext: session.morningScreenshot || null,
+               eth15mContext: session.morningEthScreenshot || null,
              },
              chartContext: analysis.structuredChartContext || null,
              setupCandidates: (analysis as any).tradeDecision?.setupCandidates || analysis.candidate_trade_plans || [],
@@ -476,12 +525,15 @@ export default function LunchReversal({
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
              execution_timeframe: '5m',
-             eth_context_available: false,
+             eth_15m_context_screenshot_url: session.morningEthScreenshot || null,
+             context_timeframe: session.morningEthScreenshot ? '15m' : null,
+             context_session: session.morningEthScreenshot ? 'ETH' : null,
+             eth_context_available: Boolean(session.morningEthScreenshot || session.analysisResult?.ethContextReview),
              
              window_start: "11:50",
              window_end: "13:00",
              window_timezone: "America/New_York",
-             required_screenshot_range: "11:50 AM ET → 1:00 PM ET",
+             required_screenshot_range: formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST'),
 
              trade_plan_json: {
                best_trade_plan: analysis.best_trade_plan || null,
@@ -492,8 +544,19 @@ export default function LunchReversal({
                plan_version_id: planVersionId,
                setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
+               chart_timezone: session.aiSettings?.lunchTimeZone || 'EST',
+               required_screenshot_range: formatReplayRange('lunch_5m_execution', session.aiSettings?.lunchTimeZone || 'EST'),
+               morning_context: {
+                 morning_5m_available: Boolean(session.morningScreenshot),
+                 morning_15m_eth_available: Boolean(session.morningEthScreenshot),
+                 morning_analysis_available: Boolean(session.analysisResult),
+                 morning_day_type: session.analysisResult?.dayType || null,
+                 morning_eth_context_review: session.analysisResult?.ethContextReview || null,
+                 morning_structured_chart_context: session.analysisResult?.structuredChartContext || null,
+               },
              },
              execution_review_json: analysis.executionReview5m || null,
+             eth_context_review_json: session.analysisResult?.ethContextReview || null,
              afternoon_test_plan_json: analysis.afternoonTestPlan || null,
              midnight_open_review_json: analysis.midnightAnalysis || null,
            });
@@ -541,7 +604,7 @@ export default function LunchReversal({
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
+  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, session.morningEthScreenshot, session.morningScreenshot, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   const handleImageFile = (file: File) => {
     const reader = new FileReader();

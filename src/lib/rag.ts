@@ -61,7 +61,9 @@ function normalizeTradeResult(value: unknown): string {
 
 function deriveWorkflowMode(context: RAGSaveContext): string {
   if (context.workflowMode) return context.workflowMode;
-  if (context.analysis_mode === 'historical_replay' || context.source === 'replay_lab') return 'replay';
+  if (context.analysis_mode === 'historical_replay' || context.source === 'replay_lab') {
+    return context.sessionType === 'lunch' ? 'replay_lunch' : 'replay_morning';
+  }
   return context.sessionType;
 }
 
@@ -69,6 +71,13 @@ function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: st
   const analysis = context.geminiAnalysisJson || {};
   const tradePlanJson = context.trade_plan_json || {};
   const normalizedPlan = context.finalTradePlan || tradePlanJson.normalized_plan || null;
+  const selectedAppCandidate =
+    normalizedPlan?.opportunitySelection?.bestExecutableCandidate ||
+    normalizedPlan?.opportunitySelection?.bestConditionalCandidate ||
+    context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Executable') ||
+    context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Conditional') ||
+    null;
+  const setupSubtype = selectedAppCandidate?.setupType || normalizedPlan?.setupType || normalizedPlan?.setupName || null;
   const workflowMode = deriveWorkflowMode(context);
   const proofSubmitted = context.proofSubmitted ?? Boolean(context.proofScreenshotUrl);
   const isCompletedOutcome = ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(tradeResult);
@@ -79,6 +88,8 @@ function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: st
     session: context.sessionMode || context.sessionType,
     mode: context.sessionMode || context.sessionType,
     ampm: context.ampm ?? (context.sessionType === 'morning' ? 'AM' : 'PM'),
+    chartTimezone: context.chartTimezone || null,
+    requiredScreenshotRange: context.required_screenshot_range || null,
     screenshots: context.screenshots || {
       primary: context.screenshotUrl || context.execution_5m_screenshot_url || context.execution_5m_storage_path || null,
       execution5m: context.execution_5m_screenshot_url || context.execution_5m_storage_path || context.screenshotUrl || null,
@@ -87,7 +98,8 @@ function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: st
     },
     chartContext: context.chartContext || analysis.structuredChartContext || null,
     setupCandidates: context.setupCandidates || analysis.structuredChartContext?.setupCandidates || analysis.candidate_trade_plans || [],
-    selectedSetup: context.selectedSetup || analysis.best_trade_plan || normalizedPlan || null,
+    selectedSetup: context.selectedSetup || selectedAppCandidate || analysis.best_trade_plan || normalizedPlan || null,
+    setupSubtype,
     finalTradePlan: normalizedPlan,
     proofSubmitted,
     tradeConfirmed: context.tradeConfirmed ?? isCompletedOutcome,

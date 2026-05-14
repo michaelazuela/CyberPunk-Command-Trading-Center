@@ -77,7 +77,13 @@ async function callGeminiAPI(params: any) {
   return { text: "{}" };
 }
 
-async function superAgent(imageData: string | { exec: string; eth?: string }, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string, dailyInstrument?: string) {
+type ChartImagePayload = string | {
+  exec: string;
+  eth?: string;
+  morningExec?: string;
+};
+
+async function superAgent(imageData: ChartImagePayload, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string, dailyInstrument?: string) {
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const prompt = `
     ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
@@ -92,6 +98,17 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     If a second image is provided, treat it as a 15M ETH context screenshot only. It may help extract ETH high/low, Asian high/low, London high/low, NY premarket high/low, overnight high/low, broader trend, compression/expansion, major support/resistance, and early RTH direction into 10:00 AM ET.
     The 15M ETH context image must not approve a trade by itself, generate final entry/stop/T1/T2 by itself, override the 5M execution chart, override the app-owned plan engine, override the deterministic trade decision pipeline, override risk rules, or override setup scanner ranking.
     The 5M execution image remains the authority for entry trigger, active swing, stop placement, risk check, and final trade approval.
+
+    [LUNCH MORNING CONTEXT IMAGE RULE]
+    For Lunch Reversal routes, an additional Morning 5M context image may be provided after the 15M ETH context image. Treat that Morning 5M image as context only. Use it to identify morning high, morning low, initial drive, morning extension, failed continuation potential, and whether the lunch chart is sweeping or reclaiming a morning boundary.
+    The Morning 5M context image must not approve a lunch trade by itself, generate lunch entry/stop/T1/T2 by itself, override the current Lunch 5M execution chart, override the app-owned plan engine, override the deterministic trade decision pipeline, override risk rules, or override setup scanner ranking.
+    The current Lunch 5M execution image remains the authority for lunch entry trigger, active swing, stop placement, risk check, and final lunch trade approval.
+
+    [LUNCH SUBTYPE FACT EXTRACTION RULE]
+    For Lunch routes, extract facts for these Lunch-only subtypes: Lunch Failed High Reversal, Lunch Failed Low Reversal, Lunch Compression Breakout, Lunch Failed Continuation, and Lunch Range Reclaim.
+    These subtypes only activate from a completed Morning window. If Morning high/low and Morning window context are missing or unclear, set morningWindowContext.complete=false and keep all lunch subtype evidence as detected=false with missingEvidence explaining the missing Morning context.
+    Lunch Failed High Reversal is a SHORT subtype after bullish morning extension, sweep above morning high, and failure to hold above that high. Lunch Failed Low Reversal is the LONG mirror after bearish extension, sweep below morning low, and failed breakdown.
+    Gemini extracts these facts only. The app-owned setup scanner decides whether a Lunch subtype is detected, conditional, blocked, or executable.
     
     ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
     ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Reversal window. Use current Lunch Reversal rules only. Do NOT use future data.' : ''}
@@ -306,7 +323,11 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
           "openingRangeHigh": 0,
           "openingRangeLow": 0,
           "triggerCandleHigh": 0,
-          "triggerCandleLow": 0
+          "triggerCandleLow": 0,
+          "morningHigh": 0,
+          "morningLow": 0,
+          "morningHighSweep": 0,
+          "morningLowSweep": 0
         },
         "requiredArrays": "candles, swings, fvgZones, liquidityEvents, and extractedLevels must always be arrays. Return [] when no fact is visible. Do not omit these fields.",
         "extractedLevels": [
@@ -381,7 +402,30 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
           "initialBalanceExtension": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
           "algoKillZone": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
           "momentumPullback": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
-          "momentumPullbackBreatherReclaim": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" }
+          "momentumPullbackBreatherReclaim": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": [], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "lunchFailedHighReversal": { "detected": false, "possible": false, "direction": "SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": ["requires completed Morning window context"], "sourceFacts": [], "levelRefs": ["morningHigh"], "candleRefs": [], "confidenceReason": "string or null" },
+          "lunchFailedLowReversal": { "detected": false, "possible": false, "direction": "LONG | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": ["requires completed Morning window context"], "sourceFacts": [], "levelRefs": ["morningLow"], "candleRefs": [], "confidenceReason": "string or null" },
+          "lunchCompressionBreakout": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": ["requires completed Morning window context"], "sourceFacts": [], "levelRefs": [], "candleRefs": [], "confidenceReason": "string or null" },
+          "lunchFailedContinuation": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": ["requires completed Morning window context"], "sourceFacts": [], "levelRefs": ["morningHigh", "morningLow"], "candleRefs": [], "confidenceReason": "string or null" },
+          "lunchRangeReclaim": { "detected": false, "possible": false, "direction": "LONG | SHORT | NO TRADE", "entry": null, "stop": null, "invalidation": null, "requiredTrigger": null, "triggerState": "TRIGGERED | PENDING_TRIGGER | NO_TRIGGER", "confidence": "High | Medium | Low", "evidence": [], "missingEvidence": ["requires completed Morning window context"], "sourceFacts": [], "levelRefs": ["morningHigh", "morningLow"], "candleRefs": [], "confidenceReason": "string or null" }
+        },
+        "morningWindowContext": {
+          "complete": false,
+          "source": "morning_analysis | morning_5m_context | manual | gemini_ocr | unknown",
+          "morningHigh": null,
+          "morningLow": null,
+          "initialBalanceHigh": null,
+          "initialBalanceLow": null,
+          "openingDriveDirection": "bullish | bearish | range | unknown",
+          "morningTrend": "bullish_extension | bearish_extension | compression_range | failed_continuation | unknown",
+          "morningHighSwept": false,
+          "morningLowSwept": false,
+          "failedHoldAboveMorningHigh": false,
+          "failedHoldBelowMorningLow": false,
+          "rangeReclaimed": false,
+          "evidence": [],
+          "missingEvidence": [],
+          "confidence": "High | Medium | Low"
         },
         "proposedEntry": null,
         "proposedStop": null,
@@ -548,6 +592,9 @@ async function superAgent(imageData: string | { exec: string; eth?: string }, se
     if (imageData.eth) {
       inlineParts.push({ inlineData: { mimeType: "image/png", data: imageData.eth.split(',')[1] || imageData.eth } });
     }
+    if (imageData.morningExec) {
+      inlineParts.push({ inlineData: { mimeType: "image/png", data: imageData.morningExec.split(',')[1] || imageData.morningExec } });
+    }
   }
 
   const response = await callGeminiAPI({
@@ -662,7 +709,7 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
   }
 }
 
-export async function analyzeChart(imageData: string | { exec: string; eth?: string }, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string) {
+export async function analyzeChart(imageData: ChartImagePayload, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string) {
   try {
     const isMorning = analysisType !== 'lunch' && analysisType !== 'lunch_replay';
     const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });

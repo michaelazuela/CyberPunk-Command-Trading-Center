@@ -246,3 +246,5 @@ After analysis or replay outcome, the app must save a journal-ready record that 
 AI extracts and explains. The app decides and computes.
 
 Confidence supports the decision. It does not approve the decision.
+
+Lunch-specific subtypes are deterministic inputs to the same pipeline. `LunchFailedHighReversal`, `LunchFailedLowReversal`, `LunchCompressionBreakout`, `LunchFailedContinuation`, and `LunchRangeReclaim` only evaluate after completed Morning window context is available. They do not bypass risk, trigger, invalidation, or target checks.

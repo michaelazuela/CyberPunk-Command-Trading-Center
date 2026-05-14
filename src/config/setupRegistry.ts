@@ -17,6 +17,7 @@ export interface SetupRegistryEntry {
 
 const BOTH_SESSIONS: SetupSession[] = ['morning', 'lunch', 'replay_morning', 'replay_lunch'];
 const MORNING_SESSIONS: SetupSession[] = ['morning', 'replay_morning'];
+const LUNCH_SESSIONS: SetupSession[] = ['lunch', 'replay_lunch'];
 
 export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
@@ -211,6 +212,66 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultRequiredTrigger: 'Break of the completed pullback candle in the original trend direction.',
     defaultNextAction: 'Wait for the pullback candle to complete and break in trend direction.',
   },
+  {
+    setupType: SetupType.LunchFailedHighReversal,
+    label: 'Lunch Failed High Reversal',
+    aliases: ['Failed High Reversal', 'Morning High Failure', 'Lunch High Sweep Failure'],
+    priority: 94,
+    allowedSessions: LUNCH_SESSIONS,
+    detectionKeywords: ['lunch failed high reversal', 'morning high sweep', 'failed hold above morning high', 'failed continuation short'],
+    possibleKeywords: ['morning high', 'failed high', 'sweep above high', 'failed continuation'],
+    requiredEvidence: ['Completed Morning window context', 'Morning high identified', 'Sweep above morning high', 'Failure to hold above morning high', '5M close back below or failed retest from below'],
+    defaultRequiredTrigger: '5M close back below morning high or failed retest from below with stop 1 tick above sweep high.',
+    defaultNextAction: 'Wait for the morning high sweep failure to confirm on the Lunch 5M execution chart.',
+  },
+  {
+    setupType: SetupType.LunchFailedLowReversal,
+    label: 'Lunch Failed Low Reversal',
+    aliases: ['Failed Low Reversal', 'Morning Low Failure', 'Lunch Low Sweep Failure'],
+    priority: 94,
+    allowedSessions: LUNCH_SESSIONS,
+    detectionKeywords: ['lunch failed low reversal', 'morning low sweep', 'failed hold below morning low', 'failed continuation long'],
+    possibleKeywords: ['morning low', 'failed low', 'sweep below low', 'failed breakdown'],
+    requiredEvidence: ['Completed Morning window context', 'Morning low identified', 'Sweep below morning low', 'Failure to hold below morning low', '5M close back above or failed retest from above'],
+    defaultRequiredTrigger: '5M close back above morning low or failed retest from above with stop 1 tick below sweep low.',
+    defaultNextAction: 'Wait for the morning low sweep failure to confirm on the Lunch 5M execution chart.',
+  },
+  {
+    setupType: SetupType.LunchCompressionBreakout,
+    label: 'Lunch Compression Breakout',
+    aliases: ['Lunch Coil Breakout', 'Midday Compression Breakout'],
+    priority: 78,
+    allowedSessions: LUNCH_SESSIONS,
+    detectionKeywords: ['lunch compression breakout', 'midday compression', 'lunch coil', 'compression breakout'],
+    possibleKeywords: ['compression', 'coil', 'tight range', 'midday range'],
+    requiredEvidence: ['Completed Morning window context', 'Defined morning/lunch range', 'Compression before break', '5M breakout trigger', 'Stop outside compression boundary or active swing'],
+    defaultRequiredTrigger: '5M break from compression range with stop beyond the opposite compression boundary or active swing.',
+    defaultNextAction: 'Wait for the lunch compression range to break cleanly and pass risk.',
+  },
+  {
+    setupType: SetupType.LunchFailedContinuation,
+    label: 'Lunch Failed Continuation',
+    aliases: ['Failed Continuation', 'Midday Continuation Failure'],
+    priority: 86,
+    allowedSessions: LUNCH_SESSIONS,
+    detectionKeywords: ['lunch failed continuation', 'failed continuation', 'continuation failure'],
+    possibleKeywords: ['extended morning move', 'continuation failed', 'exhaustion', 'failed push'],
+    requiredEvidence: ['Completed Morning window context', 'Morning directional move', 'Attempted lunch continuation', 'Failure at or near morning extreme/key level', '5M reversal confirmation'],
+    defaultRequiredTrigger: '5M reversal confirmation after the continuation attempt fails at the morning extreme or key level.',
+    defaultNextAction: 'Wait for continuation failure to confirm before planning the reversal.',
+  },
+  {
+    setupType: SetupType.LunchRangeReclaim,
+    label: 'Lunch Range Reclaim',
+    aliases: ['Midday Range Reclaim', 'Lunch Range Re-entry'],
+    priority: 82,
+    allowedSessions: LUNCH_SESSIONS,
+    detectionKeywords: ['lunch range reclaim', 'range reclaim', 'reclaim morning range'],
+    possibleKeywords: ['reclaim', 'back inside range', 'range re-entry', 'failed range break'],
+    requiredEvidence: ['Completed Morning window context', 'Morning range or lunch range defined', 'Price leaves range', '5M reclaim back into range', 'Stop beyond failed break extreme'],
+    defaultRequiredTrigger: '5M reclaim back inside the defined range with stop beyond the failed break extreme.',
+    defaultNextAction: 'Wait for the range reclaim candle to close and confirm risk.',
+  },
 ];
 
 export const APPROVED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);
@@ -218,4 +279,3 @@ export const APPROVED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupTyp
 export function getAllowedSetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
   return SETUP_REGISTRY.filter((entry) => entry.allowedSessions.includes(sessionType));
 }
-

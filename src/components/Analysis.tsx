@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase';
 import { addTrade } from '../lib/supabaseTradeService';
 import MonteCarloSection from './MonteCarloSection';
 import MidnightAnalysisView from './MidnightAnalysisView';
-import { cn, getImageFromClipboard } from '../lib/utils';
+import { cn, getImageFromClipboard, formatReplayRange } from '../lib/utils';
 import AgentAnimation from './AgentAnimation';
 import AgentMatrix from './AgentMatrix';
 import AnalysisProgress, { ProgressStep, StepStatus } from './AnalysisProgress';
@@ -527,6 +527,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                plan_version_id: planVersionId,
                setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
+               chart_timezone: session.aiSettings?.morningTimeZone || 'EST',
+               required_screenshot_range: formatReplayRange('morning_5m_execution', session.aiSettings?.morningTimeZone || 'EST'),
              },
              execution_review_json: analysis.executionReview5m || null,
              eth_context_review_json: analysis.ethContextReview || null,
@@ -560,6 +562,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              workflowMode: 'morning',
              sessionMode: 'morning',
              ampm: 'AM',
+             chartTimezone: session.aiSettings?.morningTimeZone || 'EST',
              instrument: session.dailyInstrument || 'MES',
              tradeDate: new Date().toLocaleDateString('en-US'),
              dayOfWeek: new Date().toLocaleDateString('en-US', { weekday: 'long' }),
@@ -610,6 +613,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
              invalidation: analysisPlan.invalidation,
              planVersionId,
              setupSignature,
+             required_screenshot_range: formatReplayRange('morning_5m_execution', session.aiSettings?.morningTimeZone || 'EST'),
 
              execution_5m_screenshot_url: execUpload.url,
              execution_5m_storage_path: execUpload.storagePath,
@@ -639,6 +643,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                plan_version_id: planVersionId,
                setup_signature: setupSignature,
                legacy_trade_plan: analysis.tradePlan || null,
+               chart_timezone: session.aiSettings?.morningTimeZone || 'EST',
+               required_screenshot_range: formatReplayRange('morning_5m_execution', session.aiSettings?.morningTimeZone || 'EST'),
              },
              execution_review_json: analysis.executionReview5m || null,
              eth_context_review_json: analysis.ethContextReview || null,
@@ -670,7 +676,12 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       }
       
       updateStep('complete', 'complete');
-      onUpdate({ morningScreenshot: imgSource, analysisResult: analysis, dayType: analysis.dayType });
+      onUpdate({
+        morningScreenshot: imgSource,
+        morningEthScreenshot: ethSource || undefined,
+        analysisResult: analysis,
+        dayType: analysis.dayType
+      });
       
       if (!isDeepReview) {
          setPendingImage(null);
@@ -729,7 +740,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     setSaveStatus({ setup: 'idle', rag: 'idle' });
     setProgressSteps([]);
     setProgressStart(null);
-    onUpdate({ analysisResult: undefined, morningScreenshot: undefined, dayType: undefined });
+    onUpdate({ analysisResult: undefined, morningScreenshot: undefined, morningEthScreenshot: undefined, dayType: undefined });
   };
 
   const readinessItems = [

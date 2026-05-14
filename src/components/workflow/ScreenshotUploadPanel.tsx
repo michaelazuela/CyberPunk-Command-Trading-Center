@@ -15,6 +15,7 @@ interface ScreenshotUploadPanelProps<TTarget extends string> {
   img: UploadedWorkflowImage | null;
   onUpload: (event: React.ChangeEvent<HTMLInputElement>, target: TTarget) => void;
   onClear: () => void;
+  onActivate?: (target: TTarget) => void;
   isRequired?: boolean;
   hintText?: string;
 }
@@ -25,13 +26,19 @@ export default function ScreenshotUploadPanel<TTarget extends string>({
   img,
   onUpload,
   onClear,
+  onActivate,
   isRequired = false,
   hintText,
 }: ScreenshotUploadPanelProps<TTarget>) {
-  const slotClassName = target.replace(/_/, '-').replace(/_context/, '-slot');
+  const slotClassName = `${target.replace(/_/g, '-')}-slot ${
+    target === 'morning_eth_context' ? 'morning-eth-slot' :
+    target === 'morning_5m_execution' ? 'morning-exec-slot' :
+    target === 'lunch_5m_execution' ? 'lunch-exec-slot' : ''
+  }`;
 
   return (
     <div
+      onClick={() => onActivate?.(target)}
       className={cn(
         'p-4 border-2 border-[var(--b2)] relative flex flex-col justify-center items-center bg-[var(--bg)] min-h-[140px] group',
         slotClassName,

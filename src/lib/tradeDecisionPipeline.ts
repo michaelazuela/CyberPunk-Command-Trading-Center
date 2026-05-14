@@ -122,6 +122,11 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
+  if (text.includes('LUNCH FAILED HIGH') || text.includes('MORNING HIGH FAILURE')) return SetupType.LunchFailedHighReversal;
+  if (text.includes('LUNCH FAILED LOW') || text.includes('MORNING LOW FAILURE')) return SetupType.LunchFailedLowReversal;
+  if (text.includes('LUNCH COMPRESSION') || text.includes('MIDDAY COMPRESSION')) return SetupType.LunchCompressionBreakout;
+  if (text.includes('LUNCH FAILED CONTINUATION') || text.includes('CONTINUATION FAILURE')) return SetupType.LunchFailedContinuation;
+  if (text.includes('LUNCH RANGE RECLAIM') || text.includes('RECLAIM MORNING RANGE')) return SetupType.LunchRangeReclaim;
   if (text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('HUNT') || text.includes('RECLAIM')) return SetupType.LiquiditySweep;
   if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('STAIRCASE')) return SetupType.MomentumRunaway;
   if (text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE')) return SetupType.FairValueGap;
@@ -160,6 +165,10 @@ function buildKeyLevels(result: AnalysisResult | null | undefined): KeyLevels {
     previousDayLow: structured.previousDayLow ?? structured.priorDayLow ?? null,
     priorDayHigh: structured.priorDayHigh ?? structured.previousDayHigh ?? null,
     priorDayLow: structured.priorDayLow ?? structured.previousDayLow ?? null,
+    morningHigh: structured.morningHigh ?? null,
+    morningLow: structured.morningLow ?? null,
+    morningHighSweep: structured.morningHighSweep ?? null,
+    morningLowSweep: structured.morningLowSweep ?? null,
   };
 }
 
@@ -194,6 +203,7 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     marketStructure: structured.marketStructure,
     candleFacts: structured.candleFacts,
     setupEvidence: structured.setupEvidence,
+    morningWindowContext: structured.morningWindowContext,
     proposedEntry: structured.proposedEntry,
     proposedStop: structured.proposedStop,
     riskPoints: structured.riskPoints,
@@ -318,6 +328,11 @@ function setupScore(setupType: SetupType): number {
     case SetupType.BreakerBlock: return 46;
     case SetupType.MitigationBlock: return 42;
     case SetupType.AlgoKillZone: return 40;
+    case SetupType.LunchFailedHighReversal: return 96;
+    case SetupType.LunchFailedLowReversal: return 96;
+    case SetupType.LunchFailedContinuation: return 90;
+    case SetupType.LunchRangeReclaim: return 86;
+    case SetupType.LunchCompressionBreakout: return 78;
     default: return 0;
   }
 }

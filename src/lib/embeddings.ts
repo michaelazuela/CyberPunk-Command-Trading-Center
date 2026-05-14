@@ -16,6 +16,13 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
 
   const appPlan = context.trade_plan_json?.normalized_plan || context.geminiAnalysisJson?.normalized_plan;
   const direction = appPlan?.decision || "UNKNOWN";
+  const selectedAppCandidate =
+    context.finalTradePlan?.opportunitySelection?.bestExecutableCandidate ||
+    context.finalTradePlan?.opportunitySelection?.bestConditionalCandidate ||
+    context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Executable') ||
+    context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Conditional') ||
+    null;
+  const appSetupSubtype = selectedAppCandidate?.setupType || appPlan?.setupName || appPlan?.source || "unknown";
   const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
   const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
     ? context.geminiAnalysisJson.candidate_trade_plans
@@ -51,6 +58,7 @@ Trade Confirmed: ${tradeConfirmed ? 'yes' : 'no'}
 Trade Taken: ${tradeTaken ? 'yes' : 'no'}
 Proof Submitted: ${proofSubmitted ? 'yes' : 'no'}
 Direction: ${direction}
+App Setup/Subtype: ${appSetupSubtype}
 Contracts: ${context.contracts ?? 'unknown'}
 Entry: ${context.entryPrice ?? 'unknown'}
 Stop: ${context.stopPrice ?? 'unknown'}
@@ -59,7 +67,7 @@ T2: ${context.t2 ?? 'unknown'}
 Risk Points: ${context.riskPoints ?? 'unknown'}
 Plan Source: ${context.planSource ?? 'unknown'}
 App Plan Engine:
-- Winner: ${appPlan?.setupName || appPlan?.source || direction}
+- Winner: ${appSetupSubtype}
 - Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || bestPlan?.why_it_won || 'unknown'}
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
 Advisory Note: candidate/best/final model trade plans are stored as context only; executable levels come from app-normalized fields above.
