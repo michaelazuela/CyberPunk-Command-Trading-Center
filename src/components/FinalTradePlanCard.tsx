@@ -237,6 +237,46 @@ function candidateReason(candidate: SetupCandidate): string {
   return candidate.evidence[0] || 'No additional reason provided.';
 }
 
+function triggerPlainEnglish(candidate: SetupCandidate): string {
+  const trigger = (candidate.requiredTrigger || '').trim();
+  const lowerTrigger = trigger.toLowerCase();
+  const levelMatch = trigger.match(/(?:above|below)\s+(\d+(?:\.\d+)?)/i);
+  const level = levelMatch?.[1];
+
+  if (candidate.direction === 'LONG') {
+    if (lowerTrigger.includes('close above') && lowerTrigger.includes('pullback')) {
+      return level
+        ? `We need a full 5-minute candle to close above ${level}, then a pullback that holds instead of failing back below it.`
+        : 'We need a full 5-minute candle to reclaim resistance, then a pullback that holds before looking for continuation.';
+    }
+    if (lowerTrigger.includes('close above')) {
+      return level
+        ? `We need buyers to prove control with a full 5-minute close above ${level}; a wick above it is not enough.`
+        : 'We need buyers to prove control with a full 5-minute close above the reclaim level.';
+    }
+    if (lowerTrigger.includes('pullback') || lowerTrigger.includes('reclaim')) {
+      return 'We need the pullback/reclaim to hold first; do not chase while price is still unresolved.';
+    }
+  }
+
+  if (candidate.direction === 'SHORT') {
+    if (lowerTrigger.includes('close below')) {
+      return level
+        ? `We need sellers to prove control with a full 5-minute candle close below ${level}; do not short while price is still bouncing above it.`
+        : 'We need sellers to prove control with a full 5-minute close below support before considering the short.';
+    }
+    if (lowerTrigger.includes('failed') || lowerTrigger.includes('rejection') || lowerTrigger.includes('breakdown')) {
+      return 'We need the bounce/reclaim attempt to fail first, then confirm downside continuation before considering the short.';
+    }
+  }
+
+  if (trigger) {
+    return 'This is the confirmation condition. The plan stays conditional until this trigger is visible on the 5-minute execution chart.';
+  }
+
+  return 'Manual confirmation is required before this plan can become executable.';
+}
+
 function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
   const missingLevels = candidate.missingLevels || [];
   if (missingLevels.length === 0) return null;
@@ -446,6 +486,9 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
 
               <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
                 <div><span className="text-[var(--txt)]">Trigger:</span> {candidate.requiredTrigger || 'Manual confirmation required before execution.'}</div>
+                <div className="border border-[var(--orange)]/20 bg-[var(--bg)] px-2 py-1 text-[var(--txt)]">
+                  <span className="text-[var(--orange)]">Plain English:</span> {triggerPlainEnglish(candidate)}
+                </div>
                 <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || candidateReason(candidate)}</div>
                 <MissingLevelsList candidate={candidate} />
                 <div className="text-[var(--amber)]">
