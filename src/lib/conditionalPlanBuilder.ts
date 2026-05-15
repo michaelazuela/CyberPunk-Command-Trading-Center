@@ -49,6 +49,20 @@ function pricesFromExtractedLevels(chartContext: ChartContext, role: 'support' |
     .map((level) => level.price as number);
 }
 
+function pricesFromCandles(chartContext: ChartContext, side: 'high' | 'low'): number[] {
+  return (chartContext.candles || [])
+    .filter((candle) => candle.confidence !== 'Low' && candle.confidence !== 'Unreadable')
+    .map((candle) => side === 'high' ? candle.high : candle.low)
+    .filter(isPrice);
+}
+
+function pricesFromSwings(chartContext: ChartContext, type: 'high' | 'low'): number[] {
+  return (chartContext.swings || [])
+    .filter((swing) => swing.type === type && swing.confidence !== 'Low' && swing.confidence !== 'Unreadable')
+    .map((swing) => swing.price)
+    .filter(isPrice);
+}
+
 function nearestBelow(price: number | null | undefined, levels: number[]): number | null {
   if (!isPrice(price)) return null;
   return levels.filter((level) => level < price).sort((a, b) => b - a)[0] || null;
@@ -173,6 +187,8 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     levels.activeSwingLow,
     levels.triggerCandleLow,
     levels.openingRangeLow,
+    ...pricesFromCandles(chartContext, 'low'),
+    ...pricesFromSwings(chartContext, 'low'),
     ...pricesFromExtractedLevels(chartContext, 'support'),
   ].filter(isPrice);
   const resistanceLevels = [
@@ -180,13 +196,16 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     levels.activeSwingHigh,
     levels.triggerCandleHigh,
     levels.openingRangeHigh,
+    ...pricesFromCandles(chartContext, 'high'),
+    ...pricesFromSwings(chartContext, 'high'),
     ...pricesFromExtractedLevels(chartContext, 'resistance'),
   ].filter(isPrice);
 
-  const resistance = firstPrice(levels.nearestResistance, levels.activeSwingHigh, nearestAbove(current, resistanceLevels), resistanceLevels[0]);
-  const support = firstPrice(levels.nearestSupport, levels.activeSwingLow, nearestBelow(current, supportLevels), supportLevels[0]);
+  const resistance = firstPrice(nearestAbove(current, resistanceLevels), levels.nearestResistance, levels.activeSwingHigh, resistanceLevels[0]);
+  const support = firstPrice(nearestBelow(current, supportLevels), levels.nearestSupport, levels.activeSwingLow, supportLevels[0]);
   const reclaimResistance = firstPrice(nearbyMajorResistance(current, resistance), resistance, levels.triggerCandleHigh);
-  const reclaimStop = firstPrice(levels.triggerCandleLow, projectedPullbackStop(current, support), support);
+  const reclaimStop = firstPrice(projectedPullbackStop(current, support), levels.triggerCandleLow, support);
+  const breakdownSupport = support;
   const rejectionEvidence = Boolean(
     chartContext.candleFacts?.rejectionWickPresent ||
     chartContext.liquidityEvents?.some((event) => event.type === 'sweep' && confidenceIsReadable(event.confidence)) ||
@@ -203,7 +222,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   const plans: SetupCandidate[] = [];
 
   if (rejectionEvidence || resistance || support) {
-    const entry = support ? roundToTick(support - TRADE_RULES.targetModel.tickSize) : null;
+    const entry = breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null;
     const stop = resistance ? roundToTick(resistance + TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
       setupType: SetupType.MorningFailedHighLiquidityRejection,
@@ -215,18 +234,18 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       evidence: [
         'Morning conditional builder reviewed failed-high / liquidity-rejection path.',
         resistance ? `Failed high / resistance reference: ${resistance}.` : 'Failed high / resistance reference not confirmed.',
-        support ? `Breakdown trigger reference: ${support}.` : 'Breakdown trigger reference not confirmed.',
+        breakdownSupport ? `Breakdown trigger reference: ${breakdownSupport}.` : 'Breakdown trigger reference not confirmed.',
       ],
       missingEvidence: [
-        !support ? 'Support/reclaim breakdown level is missing.' : '',
+        !breakdownSupport ? 'Support/reclaim breakdown level is missing.' : '',
         !resistance ? 'Failed high / swing high stop reference is missing.' : '',
       ].filter(Boolean),
       missingLevels: [
-        !support ? missingLevel('breakdownLevel', 'Breakdown / reclaim support level', 'Needed to define the short trigger and ENTRY.', 'entry') : null,
+        !breakdownSupport ? missingLevel('breakdownLevel', 'Breakdown / reclaim support level', 'Needed to define the short trigger and ENTRY.', 'entry') : null,
         !resistance ? missingLevel('failedHigh', 'Failed high / swing high', 'Needed to place the short STOP above the failed high.', 'stop') : null,
         chartContext.candleFacts?.closeBelowKeyLevel !== true ? missingLevel('triggerCandleLow', '5M close below breakdown level', 'Needed before this short can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: support ? `5M close below ${support}.` : '5M close below the active reclaim/support area.',
+      requiredTrigger: breakdownSupport ? `5M close below ${breakdownSupport}.` : '5M close below the active reclaim/support area.',
       nextAction: 'Wait for failed hold above resistance, then confirm breakdown below reclaim/support before shorting.',
       invalidation: resistance ? `Invalid if price reclaims and holds above ${resistance}.` : 'Invalid if price reclaims the failed high.',
       hasTrigger: chartContext.candleFacts?.closeBelowKeyLevel === true,

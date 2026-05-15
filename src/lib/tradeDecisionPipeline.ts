@@ -452,6 +452,10 @@ function hasDetectedOpportunity(candidate: SetupCandidate): boolean {
   return candidate.detectedStatus !== 'NotDetected' && candidate.detectedStatus !== 'Invalid';
 }
 
+function hasActionablePlanLevels(candidate: SetupCandidate): boolean {
+  return candidate.direction !== 'NO TRADE' && (isValidPrice(candidate.entry) || isValidPrice(candidate.stop));
+}
+
 function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | null {
   return candidates
     .filter(hasDetectedOpportunity)
@@ -501,11 +505,13 @@ function finalStatusFromSelection(
   selectedExecutable: SetupCandidate | null,
   selectedConditional: SetupCandidate | null,
   preliminaryFailure: TradeDecisionStepResult | undefined,
-  hasLowQualityScreenshot = false
+  hasLowQualityScreenshot = false,
+  hasNoClearBias = false
 ): TradeDecisionStatus {
   if (preliminaryFailure?.noTradeReason === NoTradeReason.InvalidScreenshot) return TradeDecisionStatus.InvalidScreenshot;
   if (preliminaryFailure?.noTradeReason === NoTradeReason.OutsideTimeWindow) return TradeDecisionStatus.OutsideRules;
   if (preliminaryFailure) return TradeDecisionStatus.NoTrade;
+  if (hasNoClearBias && (selectedExecutable || selectedConditional)) return TradeDecisionStatus.Wait;
   if (selectedExecutable && hasLowQualityScreenshot) return TradeDecisionStatus.Wait;
   if (selectedExecutable) return TradeDecisionStatus.ApprovedTrade;
   if (selectedConditional?.blockReason === NoTradeReason.RiskTooWide) return TradeDecisionStatus.Wait;
@@ -531,8 +537,14 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext,
   });
   const setupCandidates = mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext));
-  const selectedExecutable = setupCandidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || null;
-  const selectedConditional = setupCandidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Conditional) || null;
+  const selectedExecutable = setupCandidates.find((candidate) =>
+    candidate.executionStatus === ExecutionStatus.Executable &&
+    hasActionablePlanLevels(candidate)
+  ) || null;
+  const selectedConditional = setupCandidates.find((candidate) =>
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    hasActionablePlanLevels(candidate)
+  ) || null;
   const selectedCandidate = selectedExecutable || selectedConditional;
   const displayCandidate = selectedCandidate || chooseDisplayCandidate(setupCandidates);
   const blockedCandidates = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Blocked);
@@ -570,6 +582,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
   const detectedCount = setupCandidates.filter(hasDetectedOpportunity).length;
   const executableCount = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Executable).length;
   const conditionalCount = setupCandidates.filter((candidate) => candidate.executionStatus === ExecutionStatus.Conditional).length;
+  const hasNoClearBias = bias === BiasDirection.NoBias;
   const setupAssessment: SetupAssessment = {
     setupType: selectedCandidate?.setupType || displayCandidate?.setupType || SetupType.NoSetup,
     status: selectedCandidate ? TradeDecisionStatus.ConditionalTrade : TradeDecisionStatus.NoTrade,
@@ -595,14 +608,24 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     makeStep(TradeDecisionStep.ConfirmScreenshotUsability, hasUsableScreenshot ? (chartContext.screenshotUsability === 'warning' ? 'warning' : 'pass') : 'fail', chartContext.screenshotWarning || `Screenshot usability: ${chartContext.screenshotUsability}.`, true, NoTradeReason.InvalidScreenshot),
     makeStep(TradeDecisionStep.IdentifyMarketContext, input.result ? 'pass' : 'fail', chartContext.marketContext, true, NoTradeReason.MissingRequiredContext),
     makeStep(TradeDecisionStep.IdentifyKeyLevels, Object.values(chartContext.keyLevels).some(isValidPrice) ? 'pass' : 'warning', 'Key levels reviewed from extracted chart context.', false, NoTradeReason.MissingKeyLevels),
-    makeStep(TradeDecisionStep.DetermineBias, bias === BiasDirection.NoBias ? 'fail' : 'pass', `Bias: ${bias}.`, true, NoTradeReason.NoClearBias),
+    makeStep(
+      TradeDecisionStep.DetermineBias,
+      hasNoClearBias ? (selectedCandidate ? 'warning' : 'fail') : 'pass',
+      hasNoClearBias && selectedCandidate
+        ? 'Bias is unresolved, so execution is blocked, but conditional planning remains visible.'
+        : `Bias: ${bias}.`,
+      true,
+      hasNoClearBias ? NoTradeReason.NoClearBias : undefined
+    ),
     makeStep(TradeDecisionStep.CheckApprovedTimeWindow, isWindowApproved ? 'pass' : 'fail', isReplay ? 'Replay mode uses entered trade date/session.' : `Live window status: ${windowStatus}.`, true, NoTradeReason.OutsideTimeWindow),
   ];
 
   const preliminaryFailure = firstFailure(auditTrail);
-  const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure, hasLowQualityScreenshot);
+  const finalStatus = finalStatusFromSelection(selectedExecutable, selectedConditional, preliminaryFailure, hasLowQualityScreenshot, hasNoClearBias);
   const finalNoTradeReason =
-    preliminaryFailure?.noTradeReason ||
+    (finalStatus === TradeDecisionStatus.NoTrade || finalStatus === TradeDecisionStatus.InvalidScreenshot || finalStatus === TradeDecisionStatus.OutsideRules
+      ? preliminaryFailure?.noTradeReason
+      : undefined) ||
     noTradeReasonFromSelection(finalStatus, selectedCandidate, displayCandidate);
   const selectedIsExecutable = finalStatus === TradeDecisionStatus.ApprovedTrade;
   const selectedIsConditional = finalStatus === TradeDecisionStatus.ConditionalTrade || finalStatus === TradeDecisionStatus.Wait;

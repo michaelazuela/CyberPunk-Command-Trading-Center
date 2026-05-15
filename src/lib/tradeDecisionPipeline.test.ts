@@ -804,6 +804,67 @@ const tests: Array<[string, () => void]> = [
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
+  ['30b. No clear bias keeps two-sided morning conditional paths visible as Wait', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Direction is unresolved between reclaim resistance and breakdown support.',
+        current_rule_analysis: {
+          summary: 'Wait for either reclaim or breakdown trigger.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'No clear bias',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7438,
+            nearestSupport: 7432,
+            nearestResistance: 7442,
+            activeSwingHigh: 7442,
+            activeSwingLow: 7432,
+            triggerCandleHigh: 7442,
+            triggerCandleLow: 7432,
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: false,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
+    const shortCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
+
+    assert.equal(result.status, TradeDecisionStatus.Wait);
+    assert.equal(stepStatus(result, TradeDecisionStep.DetermineBias), 'warning');
+    assert.ok(longCandidate);
+    assert.ok(shortCandidate);
+    assert.equal(longCandidate.direction, 'LONG');
+    assert.equal(shortCandidate.direction, 'SHORT');
+    assert.notEqual(result.status, TradeDecisionStatus.NoTrade);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
   ['31. Level sanity rejects stale execution levels before conditional plan math', () => {
     const result = assertSameSequence({
       sessionType: 'morning',

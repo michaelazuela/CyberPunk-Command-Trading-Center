@@ -23,6 +23,7 @@ function latestReadableCandle(context: ChartContext) {
 
 function inferCurrentPrice(context: ChartContext): number | null {
   const candle = latestReadableCandle(context);
+  if (isExecutionRole(context) && isPrice(candle?.close)) return candle.close as number;
   return context.keyLevels.currentPrice ?? candle?.close ?? null;
 }
 

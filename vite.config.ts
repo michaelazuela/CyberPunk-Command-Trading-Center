@@ -15,6 +15,10 @@ function getGeminiApiKey(env: any = {}) {
   );
 }
 
+function getOpenAIKey(env: any = {}) {
+  return env.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+}
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
@@ -25,6 +29,57 @@ export default defineConfig(({mode}) => {
         name: 'vite-plugin-cloudflare-gemini',
         configureServer(server) {
           server.middlewares.use(async (req, res, next) => {
+            if (req.url === '/api/openai' && req.method === 'POST') {
+              let body = '';
+              req.on('data', chunk => {
+                body += chunk.toString();
+              });
+              req.on('end', async () => {
+                try {
+                  const requestData = JSON.parse(body || '{}');
+                  let apiKey = getOpenAIKey(env);
+
+                  if (apiKey === 'undefined' || apiKey === 'null' || apiKey === 'OPENAI_API_KEY') {
+                    apiKey = '';
+                  }
+
+                  if (!apiKey) {
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Missing OpenAI API key. Add OPENAI_API_KEY in Cloudflare Environment Variables or local env for dev testing.' }));
+                    return;
+                  }
+
+                  const payload = {
+                    model: requestData.model || env.OPENAI_MODEL || 'gpt-4o-mini',
+                    messages: requestData.messages || [],
+                    temperature: requestData.temperature ?? 0,
+                    response_format: requestData.response_format || { type: 'json_object' },
+                    max_tokens: requestData.max_tokens || 2500,
+                  };
+
+                  const fetchRes = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                      Authorization: `Bearer ${apiKey}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                  });
+
+                  const text = await fetchRes.text();
+                  res.statusCode = fetchRes.status;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(text || '{}');
+                } catch (err: any) {
+                  res.statusCode = 500;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ error: err.message }));
+                }
+              });
+              return;
+            }
+
             if (req.url === '/api/gemini' && req.method === 'POST') {
               let body = '';
               req.on('data', chunk => {
