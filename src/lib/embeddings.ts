@@ -122,11 +122,23 @@ async function callEmbeddingsProxy(text: string, taskType: "RETRIEVAL_DOCUMENT" 
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`Embedding API error: ${response.status}`);
+      const responseText = await response.text();
+      let data: any = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        const isTimeout = response.status === 524 || responseText.toLowerCase().includes('error code: 524');
+        throw new Error(isTimeout
+          ? 'Embedding API timed out before Cloudflare received a response.'
+          : `Embedding API returned a non-JSON response: ${responseText.slice(0, 160)}`
+        );
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        const message = data?.error?.message || data?.error || `Embedding API error: ${response.status}`;
+        throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
+      }
+
       if (data.embedding && data.embedding.values) {
         return data.embedding.values;
       } else {

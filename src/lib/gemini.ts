@@ -7,6 +7,20 @@ import { AISettings, Trade } from "../types";
 import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
 import { NormalizedTradePlan } from "./tradePlan";
 
+async function readJsonResponse(response: Response): Promise<any> {
+  const responseText = await response.text();
+  if (!responseText) return {};
+  try {
+    return JSON.parse(responseText);
+  } catch (error) {
+    const isTimeout = response.status === 524 || responseText.toLowerCase().includes('error code: 524');
+    throw new Error(isTimeout
+      ? 'Cloudflare timed out while waiting for the Gemini response. Please retry the analysis.'
+      : `Gemini returned a non-JSON response: ${responseText.slice(0, 240)}`
+    );
+  }
+}
+
 async function callGeminiAPI(params: any) {
   const payload: any = {
     model: params.model,
@@ -42,22 +56,16 @@ async function callGeminiAPI(params: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  const data = await readJsonResponse(response);
   if (!response.ok) {
-    const errorText = await response.text();
-    let parsedError = errorText;
-    try {
-      const json = JSON.parse(errorText);
-      if (json.error && json.error.message) {
-        parsedError = json.error.message;
-      } else if (json.error) {
-        parsedError = typeof json.error === 'string' ? json.error : JSON.stringify(json.error);
-      }
-    } catch (e) {
-      // ignore
+    let parsedError = data;
+    if (data.error && data.error.message) {
+      parsedError = data.error.message;
+    } else if (data.error) {
+      parsedError = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
     }
     throw new Error(`API error (${response.status} ${response.statusText}): ${parsedError}`);
   }
-  const data = await response.json();
   
   if (data.usageMetadata && params.route) {
     const { promptTokenCount, candidatesTokenCount } = data.usageMetadata;

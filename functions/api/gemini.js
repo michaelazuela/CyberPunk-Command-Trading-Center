@@ -43,7 +43,22 @@ export async function onRequestPost(context) {
       body: JSON.stringify(requestData)
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      const isTimeout = response.status === 524 || responseText.toLowerCase().includes('error code: 524');
+      data = {
+        error: {
+          code: response.status,
+          status: isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_NON_JSON_RESPONSE',
+          message: isTimeout
+            ? 'Cloudflare timed out while waiting for the Gemini response. Please retry the analysis.'
+            : `Gemini returned a non-JSON response: ${responseText.slice(0, 240)}`
+        }
+      };
+    }
     
     return new Response(JSON.stringify(data), {
       status: response.status,
