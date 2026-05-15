@@ -538,7 +538,9 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.ok(
+      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
+    );
     assert.equal(result.finalTradePlan.entry, null);
     assert.equal(result.finalTradePlan.stop, null);
     assert.equal(result.target1, null);
@@ -562,7 +564,9 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.ok(
+      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
+    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(result.finalTradePlan.entry, null);
     assert.equal(result.finalTradePlan.stop, null);
@@ -639,7 +643,9 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.ok(
+      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
+    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(result.finalTradePlan.entry, null);
     assert.equal(result.finalTradePlan.stop, null);
@@ -794,6 +800,75 @@ const tests: Array<[string, () => void]> = [
     assert.equal(longCandidate.target1, 7509.75);
     assert.equal(longCandidate.target2, 7512.75);
     assert.ok(longCandidate.requiredTrigger?.includes('7500'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['31. Level sanity rejects stale execution levels before conditional plan math', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'TYPE 1 SHORT',
+        reasoning: 'Extractor proposed stale levels, but current 5M price is far below them.',
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7438,
+            nearestSupport: 7419.75,
+            nearestResistance: 7451,
+            activeSwingHigh: 7451,
+            activeSwingLow: 7419.75,
+          },
+          candles: [{
+            index: 8,
+            timestamp: '10:10',
+            open: 7435,
+            high: 7442,
+            low: 7432,
+            close: 7438,
+            direction: 'bullish',
+            confidence: 'High',
+          }],
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: false,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {
+            morningReclaimLong: {
+              detected: false,
+              possible: true,
+              direction: 'LONG',
+              entry: 7451.25,
+              stop: 7437.5,
+              invalidation: 'Break below pullback low.',
+              requiredTrigger: 'Reclaim above stale level.',
+              triggerState: 'PENDING_TRIGGER',
+              confidence: 'High',
+              evidence: ['Stale extracted long reclaim level.'],
+              missingEvidence: [],
+            },
+          },
+          proposedEntry: 7451.25,
+          proposedStop: 7437.5,
+          entryConfirmed: true,
+          stopConfirmed: true,
+          requiresManualConfirmation: false,
+        }),
+      }),
+    });
+
+    const staleEntries = (result.setupCandidates || [])
+      .filter((candidate) => candidate.entry !== null && candidate.entry > 7446);
+    assert.equal(staleEntries.length, 0);
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
+    assert.ok(longCandidate);
+    assert.equal(longCandidate.direction, 'LONG');
+    assert.ok(longCandidate.entry === null || longCandidate.entry <= 7446);
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 ];

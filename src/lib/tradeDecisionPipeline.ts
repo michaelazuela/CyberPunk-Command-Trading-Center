@@ -22,6 +22,7 @@ import { TRADE_RULES } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
 import { buildConditionalPlans } from './conditionalPlanBuilder';
+import { applyLevelSanity } from './levelSanityEngine';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -523,7 +524,7 @@ function noTradeReasonFromSelection(
 }
 
 export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): TradeDecisionPipelineResult {
-  const chartContext = buildChartContext(input);
+  const chartContext = applyLevelSanity(buildChartContext(input));
   const setupScan = scanSetupCandidates({
     sessionType: input.sessionType,
     result: input.result,
