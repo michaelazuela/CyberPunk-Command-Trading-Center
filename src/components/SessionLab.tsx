@@ -13,7 +13,7 @@ import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/Sc
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
-import { loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
+import { applyWorkflowSpeedMode, loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -245,6 +245,12 @@ export default function SessionLab({
 
   const updateProviderMode = (providerMode: ModelConfig['providerMode']) => {
     const nextConfig = { ...modelConfig, providerMode };
+    setModelConfig(nextConfig);
+    saveModelConfig(nextConfig);
+  };
+
+  const updateSpeedMode = (workflowSpeedMode: ModelConfig['workflowSpeedMode']) => {
+    const nextConfig = applyWorkflowSpeedMode(modelConfig, workflowSpeedMode);
     setModelConfig(nextConfig);
     saveModelConfig(nextConfig);
   };
@@ -505,6 +511,50 @@ export default function SessionLab({
     };
   };
 
+  const persistMorningAnalysis = async (analysis: AnalysisResult, execImage: UploadedImage, ethImage: UploadedImage | null) => {
+    try {
+      setMorningSaveStatus('Analysis ready. Saving Morning setup to Supabase + RAG in the background...');
+      let execUrl = execImage.dataUrl;
+      let ethUrl: string | null = ethImage?.dataUrl || null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const execUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/morning', '5m_execution', execImage.dataUrl);
+        execUrl = execUpload.url;
+        setMorningExecImg(current => current?.dataUrl === execImage.dataUrl ? { ...current, storagePath: execUpload.storagePath } : current);
+        if (ethImage) {
+          const ethUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/morning', '15m_eth_context', ethImage.dataUrl);
+          ethUrl = ethUpload.url;
+          setMorningEthImg(current => current?.dataUrl === ethImage.dataUrl ? { ...current, storagePath: ethUpload.storagePath } : current);
+        }
+      }
+
+      const save = await saveSetupAndRag('morning', analysis, execUrl, ethUrl);
+      setMorningSetupId(save.setupId);
+      setMorningSaveStatus(save.status);
+    } catch (error: any) {
+      setMorningSaveStatus(`Analysis displayed, but background save failed: ${error.message || 'Unknown save error.'}`);
+    }
+  };
+
+  const persistLunchAnalysis = async (analysis: AnalysisResult, execImage: UploadedImage, ethContextUrl: string | null, morning5mContextUrl: string | null) => {
+    try {
+      setLunchSaveStatus('Analysis ready. Saving Lunch setup to Supabase + RAG in the background...');
+      let execUrl = execImage.dataUrl;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const execUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/lunch', '5m_execution', execImage.dataUrl);
+        execUrl = execUpload.url;
+        setLunchExecImg(current => current?.dataUrl === execImage.dataUrl ? { ...current, storagePath: execUpload.storagePath } : current);
+      }
+
+      const save = await saveSetupAndRag('lunch', analysis, execUrl, ethContextUrl, morning5mContextUrl);
+      setLunchSetupId(save.setupId);
+      setLunchSaveStatus(save.status);
+    } catch (error: any) {
+      setLunchSaveStatus(`Analysis displayed, but background save failed: ${error.message || 'Unknown save error.'}`);
+    }
+  };
+
   const runMorningAnalysis = async () => {
     if (!morningExecImg) {
       setMorningError('Required: 5M Morning Execution screenshot.');
@@ -525,25 +575,9 @@ export default function SessionLab({
       };
       const analysis = await analyzeChart(payload, morningSettings, session.accountEquity, undefined, undefined, 'morning', undefined, midnightOpen || undefined, instrument) as AnalysisResult;
 
-      let execUrl = morningExecImg.dataUrl;
-      let ethUrl: string | null = morningEthImg?.dataUrl || null;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const execUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/morning', '5m_execution', morningExecImg.dataUrl);
-        execUrl = execUpload.url;
-        setMorningExecImg({ ...morningExecImg, storagePath: execUpload.storagePath });
-        if (morningEthImg) {
-          const ethUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/morning', '15m_eth_context', morningEthImg.dataUrl);
-          ethUrl = ethUpload.url;
-          setMorningEthImg({ ...morningEthImg, storagePath: ethUpload.storagePath });
-        }
-      }
-
-      const save = await saveSetupAndRag('morning', analysis, execUrl, ethUrl);
-      setMorningSetupId(save.setupId);
-      setMorningSaveStatus(save.status);
       setMorningResult(analysis);
       onUpdate({ analysisResult: analysis, morningScreenshot: morningExecImg.dataUrl, morningEthScreenshot: morningEthImg?.dataUrl, dayType: analysis.dayType });
+      void persistMorningAnalysis(analysis, morningExecImg, morningEthImg);
     } catch (error: any) {
       setMorningError(error.message || 'Morning analysis failed.');
       setMorningSaveStatus(null);
@@ -590,19 +624,14 @@ export default function SessionLab({
       };
       const analysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument) as AnalysisResult;
 
-      let execUrl = lunchExecImg.dataUrl;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const execUpload = await uploadScreenshot(user.id, tradeDate, 'session_lab/lunch', '5m_execution', lunchExecImg.dataUrl);
-        execUrl = execUpload.url;
-        setLunchExecImg({ ...lunchExecImg, storagePath: execUpload.storagePath });
-      }
-
-      const save = await saveSetupAndRag('lunch', analysis, execUrl, morningEthImg?.dataUrl || session.morningEthScreenshot || null, morningExecImg?.dataUrl || session.morningScreenshot || null);
-      setLunchSetupId(save.setupId);
-      setLunchSaveStatus(save.status);
       setLunchResult(analysis);
       onUpdate({ lunchAnalysisResult: analysis, lunchScreenshot: lunchExecImg.dataUrl });
+      void persistLunchAnalysis(
+        analysis,
+        lunchExecImg,
+        morningEthImg?.dataUrl || session.morningEthScreenshot || null,
+        morningExecImg?.dataUrl || session.morningScreenshot || null
+      );
     } catch (error: any) {
       setLunchError(error.message || 'Lunch analysis failed.');
       setLunchSaveStatus(null);
@@ -623,6 +652,10 @@ export default function SessionLab({
     const setStatus = sessionType === 'morning' ? setMorningSaveStatus : setLunchSaveStatus;
     const setOutcome = sessionType === 'morning' ? setMorningOutcome : setLunchOutcome;
     if (!result) return;
+    if (!setupId) {
+      setError('The analysis is still saving in the background. Wait for the Supabase + RAG saved message before marking the outcome.');
+      return;
+    }
 
     const executableOutcome = isTradeTakenOutcome(outcome);
     if (tradeTaken === null) {
@@ -788,10 +821,42 @@ export default function SessionLab({
           <span className="qd-badge">APP-OWNED DECISION</span>
         </div>
         <div className="mb-3 border border-[var(--b1)] bg-[var(--bg)] p-3 font-mono">
+          <div className="mb-3">
+            <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Workflow Speed</div>
+                <div className="text-[10px] text-[var(--txt2)]">Fast for live trading. Audit for slower cross-checks and replay review.</div>
+              </div>
+              <span className="qd-badge">{modelConfig.workflowSpeedMode}</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {[
+                { value: 'fast', label: 'Fast', note: 'Gemini Flash only. Lowest wait.' },
+                { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback.' },
+                { value: 'audit', label: 'Audit', note: 'Gemini Pro + OpenAI validation.' },
+              ].map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateSpeedMode(option.value as ModelConfig['workflowSpeedMode'])}
+                  className={cn(
+                    'border px-3 py-2 text-left transition-colors',
+                    modelConfig.workflowSpeedMode === option.value
+                      ? 'border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)]'
+                      : 'border-[var(--b2)] bg-transparent text-[var(--txt2)] hover:border-[var(--txt2)] hover:text-[var(--txt)]'
+                  )}
+                >
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.12em]">{option.label}</span>
+                  <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Extraction Provider</div>
-              <div className="text-[10px] text-[var(--txt2)]">Gemini remains primary. OpenAI can validate extracted chart facts only.</div>
+              <div className="text-[10px] text-[var(--txt2)]">Advanced override. Speed mode sets this automatically, but you can still choose the provider behavior directly.</div>
             </div>
             <span className="qd-badge">{modelConfig.providerMode.replace(/_/g, ' ')}</span>
           </div>

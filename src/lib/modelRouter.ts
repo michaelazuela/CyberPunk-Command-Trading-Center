@@ -1,12 +1,14 @@
 export type AnalysisRoute = "morning" | "lunch" | "ocr" | "deep_review" | "strategy_insights" | "trade_validation" | "trade_confirmation" | "proof_review";
 export type ModelMode = "testing" | "live";
 export type AIProviderMode = "gemini_only" | "gemini_openai_validation" | "openai_fallback";
+export type WorkflowSpeedMode = "fast" | "balanced" | "audit";
 
 export interface ModelConfig {
   testingMode: boolean;
   flashFirst: boolean;
   proFallback: boolean;
   providerMode: AIProviderMode;
+  workflowSpeedMode: WorkflowSpeedMode;
   morningModel: string;
   lunchModel: string;
   ocrModel: string;
@@ -24,6 +26,7 @@ export function getDefaultModelConfig(): ModelConfig {
     flashFirst: true,
     proFallback: true,
     providerMode: "gemini_only",
+    workflowSpeedMode: "fast",
     morningModel: FLASH_MODEL,
     lunchModel: FLASH_MODEL,
     ocrModel: FLASH_MODEL,
@@ -79,4 +82,43 @@ export function formatModelLabel(model: string): string {
   if (model === PRO_MODEL) return "Pro 3";
   if (model === OPENAI_VALIDATION_MODEL) return "OpenAI Validator";
   return model;
+}
+
+export function applyWorkflowSpeedMode(config: ModelConfig, workflowSpeedMode: WorkflowSpeedMode): ModelConfig {
+  if (workflowSpeedMode === "fast") {
+    return {
+      ...config,
+      workflowSpeedMode,
+      testingMode: true,
+      flashFirst: true,
+      proFallback: false,
+      providerMode: "gemini_only",
+      morningModel: FLASH_MODEL,
+      lunchModel: FLASH_MODEL,
+    };
+  }
+
+  if (workflowSpeedMode === "balanced") {
+    return {
+      ...config,
+      workflowSpeedMode,
+      testingMode: true,
+      flashFirst: true,
+      proFallback: true,
+      providerMode: "openai_fallback",
+      morningModel: FLASH_MODEL,
+      lunchModel: FLASH_MODEL,
+    };
+  }
+
+  return {
+    ...config,
+    workflowSpeedMode,
+    testingMode: false,
+    flashFirst: false,
+    proFallback: true,
+    providerMode: "gemini_openai_validation",
+    morningModel: PRO_MODEL,
+    lunchModel: PRO_MODEL,
+  };
 }

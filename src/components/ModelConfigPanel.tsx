@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModelConfig, formatModelLabel, FLASH_MODEL, PRO_MODEL, OPENAI_VALIDATION_MODEL, AnalysisRoute, getModelForRoute } from '../lib/modelRouter';
+import { ModelConfig, formatModelLabel, FLASH_MODEL, PRO_MODEL, OPENAI_VALIDATION_MODEL, AnalysisRoute, getModelForRoute, applyWorkflowSpeedMode } from '../lib/modelRouter';
 import { cn } from '../lib/utils';
 import { Sliders, Zap, ShieldAlert, Cpu } from 'lucide-react';
 
@@ -38,6 +38,32 @@ export default function ModelConfigPanel({ route, config, onChange }: ModelConfi
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
+          <div className="p-2 border border-[var(--b1)] bg-[var(--bg)]/40 rounded space-y-2">
+            <span className="text-[12px] font-mono font-bold text-[var(--txt1)]">Workflow Speed</span>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { value: 'fast', label: 'Fast', note: 'Gemini Flash only. Best for live decisions.' },
+                { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback on failure.' },
+                { value: 'audit', label: 'Audit', note: 'Gemini Pro plus OpenAI validation. Slower review mode.' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange(applyWorkflowSpeedMode(config, option.value as ModelConfig['workflowSpeedMode']))}
+                  className={cn(
+                    "text-left px-3 py-2 border transition-colors",
+                    config.workflowSpeedMode === option.value
+                      ? "bg-[var(--orange)]/10 border-[var(--orange)]/50 text-[var(--orange)]"
+                      : "bg-transparent border-[var(--b1)] text-[var(--txt3)] hover:text-[var(--txt1)] hover:border-[var(--txt2)]"
+                  )}
+                >
+                  <span className="block text-[11px] font-bold">{option.label}</span>
+                  <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="flex items-center gap-3 cursor-pointer p-2 hover:bg-[var(--rd-b)]/10 rounded transition-colors border border-transparent hover:border-[var(--b1)]">
             <input 
               type="checkbox" 
