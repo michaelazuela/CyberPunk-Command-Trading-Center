@@ -156,6 +156,76 @@ function projectedTargets(candidate: SetupCandidate): { t1: number | null; t2: n
   };
 }
 
+function conditionalPlanScore(candidate: SetupCandidate): number {
+  const projection = projectedTargets(candidate);
+  const confidenceScore =
+    candidate.confidence === 'High' ? 20 :
+    candidate.confidence === 'Medium' ? 10 :
+    0;
+  const executionScore =
+    candidate.executionStatus === ExecutionStatus.Executable ? 40 :
+    candidate.executionStatus === ExecutionStatus.Conditional ? 20 :
+    candidate.blockReason === NoTradeReason.RiskTooWide ? 5 :
+    0;
+  const risk = projection.risk ?? candidate.riskPoints ?? null;
+  const riskQualityScore =
+    risk === null ? 0 :
+    risk <= 6 ? 20 :
+    risk <= 8 ? 10 :
+    -20;
+  const levelClarityScore =
+    candidate.entry != null && candidate.stop != null && projection.t1 != null && projection.t2 != null ? 15 :
+    candidate.entry != null || candidate.stop != null ? 5 :
+    0;
+  const triggerClarityScore =
+    candidate.executionStatus === ExecutionStatus.Executable ? 15 :
+    candidate.requiredTrigger ? 5 :
+    0;
+  const proximityScore = Math.round((candidate.proximityScore || 0) * 10);
+
+  return (
+    (candidate.priority || 0) +
+    confidenceScore +
+    executionScore +
+    riskQualityScore +
+    levelClarityScore +
+    triggerClarityScore +
+    proximityScore
+  );
+}
+
+function sameScenario(a: SetupCandidate, b: SetupCandidate): boolean {
+  if (a.direction !== b.direction) return false;
+  const entryA = a.entry ?? null;
+  const entryB = b.entry ?? null;
+  const stopA = a.stop ?? null;
+  const stopB = b.stop ?? null;
+  const similarEntry = entryA !== null && entryB !== null && Math.abs(entryA - entryB) <= 1;
+  const similarStop = stopA !== null && stopB !== null && Math.abs(stopA - stopB) <= 1;
+  const sameTrigger = Boolean(a.requiredTrigger && b.requiredTrigger && a.requiredTrigger === b.requiredTrigger);
+  return (similarEntry && similarStop) || sameTrigger;
+}
+
+function selectBestConditionalScenarios(candidates: SetupCandidate[]): SetupCandidate[] {
+  const ranked = [...candidates].sort((a, b) => conditionalPlanScore(b) - conditionalPlanScore(a));
+  const unique: SetupCandidate[] = [];
+
+  ranked.forEach((candidate) => {
+    if (candidate.direction === 'NO TRADE') return;
+    if (unique.some((existing) => sameScenario(existing, candidate))) return;
+    unique.push(candidate);
+  });
+
+  const bestLong = unique.find((candidate) => candidate.direction === 'LONG');
+  const bestShort = unique.find((candidate) => candidate.direction === 'SHORT');
+
+  if (bestLong && bestShort) {
+    return [bestLong, bestShort].sort((a, b) => conditionalPlanScore(b) - conditionalPlanScore(a));
+  }
+
+  return unique.slice(0, 2);
+}
+
 function candidateReason(candidate: SetupCandidate): string {
   if (candidate.blockReason === NoTradeReason.RiskTooWide) {
     return 'RiskTooWide - setup remains detected, but execution is blocked until risk is reduced.';
@@ -312,12 +382,12 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
 }
 
 function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
-  const candidates = (plan.setupCandidates || [])
+  const conditionalCandidates = (plan.setupCandidates || [])
     .filter((candidate) =>
       candidate.executionStatus === ExecutionStatus.Conditional ||
       candidate.blockReason === NoTradeReason.RiskTooWide
-    )
-    .slice(0, 3);
+    );
+  const candidates = selectBestConditionalScenarios(conditionalCandidates);
 
   if (candidates.length === 0) return null;
 
@@ -327,7 +397,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--orange)]">Conditional Plans</div>
           <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
-            Planning paths only. Execution remains disabled until the trigger, entry, stop, risk, and invalidation all pass.
+            Best two scenarios by app score after dedupe. Execution remains disabled until the trigger, entry, stop, risk, and invalidation all pass.
           </div>
         </div>
         <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">WAIT / CONDITIONAL</span>
@@ -341,10 +411,11 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="text-[11px] font-bold text-[var(--txt)]">
-                    Plan {String.fromCharCode(65 + index)}: {formatSetupType(candidate.setupType)}
+                    Plan {String.fromCharCode(65 + index)}: {candidate.direction === 'LONG' ? 'Best Long Scenario' : candidate.direction === 'SHORT' ? 'Best Short Scenario' : 'Best Scenario'} - {formatSetupType(candidate.setupType)}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
+                    <span className="qd-badge opacity-80">Score: {conditionalPlanScore(candidate)}</span>
                     <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.executionStatus}</span>
                     {candidate.blockReason && <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Blocker: {formatBlockReason(candidate.blockReason)}</span>}
                   </div>

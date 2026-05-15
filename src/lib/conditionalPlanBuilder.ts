@@ -59,6 +59,28 @@ function nearestAbove(price: number | null | undefined, levels: number[]): numbe
   return levels.filter((level) => level > price).sort((a, b) => a - b)[0] || null;
 }
 
+function roundNumberAbove(price: number | null | undefined, interval = 5): number | null {
+  if (!isPrice(price)) return null;
+  const rounded = Math.ceil(price / interval) * interval;
+  return rounded > price ? rounded : rounded + interval;
+}
+
+function nearbyMajorResistance(current: number | null | undefined, resistance: number | null): number | null {
+  const reference = resistance || current;
+  const roundNumber = roundNumberAbove(reference);
+  if (!isPrice(roundNumber)) return resistance;
+  if (isPrice(current) && roundNumber - current > 8) return resistance;
+  if (isPrice(resistance) && roundNumber - resistance > 4) return resistance;
+  return roundNumber;
+}
+
+function projectedPullbackStop(current: number | null | undefined, support: number | null): number | null {
+  if (!isPrice(current)) return support;
+  const projected = roundToTick(current - TRADE_RULES.targetModel.tickSize * 2);
+  if (isPrice(support) && projected < support && support - projected > 2) return support;
+  return projected;
+}
+
 function confidenceIsReadable(value: unknown): boolean {
   return value === 'High' || value === 'Medium';
 }
@@ -163,6 +185,8 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
 
   const resistance = firstPrice(levels.nearestResistance, levels.activeSwingHigh, nearestAbove(current, resistanceLevels), resistanceLevels[0]);
   const support = firstPrice(levels.nearestSupport, levels.activeSwingLow, nearestBelow(current, supportLevels), supportLevels[0]);
+  const reclaimResistance = firstPrice(nearbyMajorResistance(current, resistance), resistance, levels.triggerCandleHigh);
+  const reclaimStop = firstPrice(levels.triggerCandleLow, projectedPullbackStop(current, support), support);
   const rejectionEvidence = Boolean(
     chartContext.candleFacts?.rejectionWickPresent ||
     chartContext.liquidityEvents?.some((event) => event.type === 'sweep' && confidenceIsReadable(event.confidence)) ||
@@ -210,9 +234,9 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   }
 
   if (reclaimEvidence || resistance || support) {
-    const entryBase = resistance || levels.triggerCandleHigh;
+    const entryBase = reclaimResistance || levels.triggerCandleHigh;
     const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
-    const stop = support ? roundToTick(support - TRADE_RULES.targetModel.tickSize) : null;
+    const stop = reclaimStop ? roundToTick(reclaimStop) : null;
     plans.push(makeCandidate({
       setupType: SetupType.MorningReclaimLong,
       direction: 'LONG',
@@ -222,8 +246,8 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       confidence: reclaimEvidence ? 'Medium' : 'Low',
       evidence: [
         'Morning conditional builder reviewed reclaim-long path.',
-        resistance ? `Reclaim reference: ${resistance}.` : 'Reclaim reference not confirmed.',
-        support ? `Pullback/support stop reference: ${support}.` : 'Pullback/support stop reference not confirmed.',
+        reclaimResistance ? `Reclaim reference: ${reclaimResistance}.` : 'Reclaim reference not confirmed.',
+        reclaimStop ? `Pullback/support stop reference: ${reclaimStop}.` : 'Pullback/support stop reference not confirmed.',
       ],
       missingEvidence: [
         !entry ? 'Reclaim entry level is missing.' : '',
@@ -234,9 +258,9 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
         !stop ? missingLevel('activeSwingLow', 'Pullback low / active swing low', 'Needed to place the long STOP under structure.', 'stop') : null,
         chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above reclaim level', 'Needed before this long can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: resistance ? `5M close above ${resistance}, then pullback holds.` : '5M close above the key reclaim level, then pullback holds.',
+      requiredTrigger: reclaimResistance ? `5M close above ${reclaimResistance}, then pullback holds.` : '5M close above the key reclaim level, then pullback holds.',
       nextAction: 'Wait for reclaim and pullback-hold confirmation; do not chase below resistance.',
-      invalidation: support ? `Invalid if price breaks back below ${support}.` : 'Invalid if reclaim fails and price breaks the pullback low.',
+      invalidation: reclaimStop ? `Invalid if price breaks back below ${reclaimStop}.` : 'Invalid if reclaim fails and price breaks the pullback low.',
       hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true,
     }));
   }

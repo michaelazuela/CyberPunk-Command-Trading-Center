@@ -749,6 +749,53 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleHigh' && level.requiredFor === 'trigger'));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
+
+  ['30. Morning reclaim builder keeps long path visible from short-biased failed-high extraction', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'TYPE 1 SHORT',
+        reasoning: 'Price swept pre-market liquidity and rejected, but remains trapped below the 7500 round-number reclaim zone.',
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7494.5,
+            nearestSupport: 7487,
+            nearestResistance: 7497,
+            activeSwingHigh: 7497,
+            activeSwingLow: 7487,
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bearish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: false,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
+    assert.ok(longCandidate);
+    assert.equal(longCandidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(longCandidate.direction, 'LONG');
+    assert.equal(longCandidate.entry, 7500.25);
+    assert.equal(longCandidate.stop, 7494);
+    assert.equal(longCandidate.target1, 7509.75);
+    assert.equal(longCandidate.target2, 7512.75);
+    assert.ok(longCandidate.requiredTrigger?.includes('7500'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
 ];
 
 for (const [name, test] of tests) {
