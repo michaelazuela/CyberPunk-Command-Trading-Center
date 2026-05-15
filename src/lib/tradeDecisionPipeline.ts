@@ -372,7 +372,7 @@ function candidateBlocker(candidate: CandidateInput, sessionType: PipelineSessio
   if (risk > TRADE_RULES.maxRiskPoints) return NoTradeReason.RiskTooWide;
   const computedTargets = targets(candidate.direction, candidate.entry, candidate.stop);
   if (!isValidPrice(computedTargets.target1) || !isValidPrice(computedTargets.target2)) return NoTradeReason.TargetsUnavailable;
-  if (!candidate.invalidation || candidate.invalidation.trim().length < 3) return NoTradeReason.InvalidStopLocation;
+  if (typeof candidate.invalidation !== 'string' || candidate.invalidation.trim().length < 3) return NoTradeReason.InvalidStopLocation;
   return null;
 }
 

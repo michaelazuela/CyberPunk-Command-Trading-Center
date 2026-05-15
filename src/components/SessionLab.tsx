@@ -113,9 +113,13 @@ function buildRuleRefinementText(customRules: ProposedRule[]): string {
   return `APPROVED STRATEGY REFINEMENTS:\n${approvedRules.join('\n')}`;
 }
 
-function mergeCustomInstructions(base: string | undefined, additions: Array<string | undefined>): string {
+function trimInstruction(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function mergeCustomInstructions(base: unknown, additions: Array<unknown>): string {
   return [base, ...additions]
-    .map(value => value?.trim())
+    .map(trimInstruction)
     .filter(Boolean)
     .join('\n\n');
 }

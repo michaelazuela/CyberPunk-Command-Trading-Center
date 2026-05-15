@@ -569,7 +569,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     entryPrice !== null,
     stopPrice !== null,
     targets.target1 !== null && targets.target2 !== null,
-    Boolean(invalidation && invalidation.trim().length >= 3),
+    Boolean(typeof invalidation === 'string' && invalidation.trim().length >= 3),
     Boolean((structuredEvidence?.triggerState || bestFact?.triggerState)?.toUpperCase().includes('PENDING')),
     entry.priority,
     confidence

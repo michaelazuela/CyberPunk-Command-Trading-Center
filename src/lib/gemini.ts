@@ -7,6 +7,16 @@ import { AISettings, Trade } from "../types";
 import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
 import { NormalizedTradePlan } from "./tradePlan";
 
+function coerceGeminiText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value == null) return '{}';
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '{}';
+  }
+}
+
 async function readJsonResponse(response: Response): Promise<any> {
   const responseText = await response.text();
   if (!responseText) return {};
@@ -630,7 +640,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
   });
 
   try {
-    const text = response.text || "{}";
+    const text = coerceGeminiText(response.text);
     const cleanedText = text.replace(/```json\n?|```/g, '').trim();
     return JSON.parse(cleanedText);
   } catch (e) {
@@ -918,7 +928,7 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
   });
 
   try {
-    const text = response.text || '{}';
+    const text = coerceGeminiText(response.text);
     const cleanedText = text.replace(/```json\n?|```/g, '').trim();
     return JSON.parse(cleanedText);
   } catch (e) {
@@ -946,7 +956,7 @@ export async function validateTrade(context: string) {
   });
 
   try {
-    const text = response.text || '{}';
+    const text = coerceGeminiText(response.text);
     const cleanedText = text.replace(/```json\n?|```/g, '').trim();
     return JSON.parse(cleanedText);
   } catch (e) {
@@ -1063,7 +1073,7 @@ Target/stop field rules:
         new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 120000))
       ]);
       
-      const text = response.text || "{}";
+      const text = coerceGeminiText(response.text);
       const cleaned = text.replace(/```json\n?|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (import.meta.env.DEV) {
