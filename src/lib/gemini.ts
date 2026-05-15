@@ -800,36 +800,49 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
     
     const modelConfig = loadModelConfig();
 
+    async function runOpenAIFallback(reason: string) {
+      const { validateChartExtractionWithOpenAI } = await import("./openai");
+      const fallback = await validateChartExtractionWithOpenAI(imageData, undefined, {
+        model: modelConfig.openaiValidationModel,
+        routeName: analysisType,
+        instrument: dailyInstrument || "MES",
+      });
+      return {
+        dayType: "NO TRADE" as const,
+        reasoning: `Gemini extraction was unavailable (${reason}). OpenAI fallback extracted chart facts only; the app-owned pipeline must still decide the final trade status.`,
+        confidence: 0,
+        checks: [],
+        structuredChartContext: fallback?.structuredChartContext,
+        openaiValidation: fallback,
+        agentReports: [
+          {
+            agentName: "OpenAI Fallback Extractor",
+            findings: "Fallback extraction completed. This does not approve a trade.",
+            status: "WARNING" as const,
+          },
+        ],
+      };
+    }
+
+    function canUseOpenAIFallback() {
+      return modelConfig.providerMode === "openai_fallback" &&
+        ["morning", "lunch", "morning_replay", "lunch_replay"].includes(analysisType || "");
+    }
+
     // Step 1: Execute Unified Super Agent
-    const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument);
+    let superReport: any = null;
+    try {
+      superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument);
+    } catch (error) {
+      if (canUseOpenAIFallback()) {
+        console.warn("[OPENAI FALLBACK] Gemini extraction failed; using OpenAI fallback", error);
+        return await runOpenAIFallback(error instanceof Error ? error.message : String(error));
+      }
+      throw error;
+    }
     
     if (!superReport) {
-      if (
-        modelConfig.providerMode === "openai_fallback" &&
-        ["morning", "lunch", "morning_replay", "lunch_replay"].includes(analysisType || "")
-      ) {
-        const { validateChartExtractionWithOpenAI } = await import("./openai");
-        const fallback = await validateChartExtractionWithOpenAI(imageData, undefined, {
-          model: modelConfig.openaiValidationModel,
-          routeName: analysisType,
-          instrument: dailyInstrument || "MES",
-        });
-        return {
-          dayType: "NO TRADE" as const,
-          reasoning: "Gemini extraction was unavailable. OpenAI fallback extracted chart facts only; the app-owned pipeline must still decide the final trade status.",
-          confidence: 0,
-          checks: [],
-          structuredChartContext: fallback?.structuredChartContext,
-          openaiValidation: fallback,
-          agentReports: [
-            {
-              agentName: "OpenAI Fallback Extractor",
-              findings: "Fallback extraction completed. This does not approve a trade.",
-              status: "WARNING" as const,
-            },
-          ],
-        };
-      }
+      if (canUseOpenAIFallback()) return await runOpenAIFallback("empty Gemini report");
       throw new Error("Super Agent returned an empty report.");
     }
 

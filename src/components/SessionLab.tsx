@@ -13,6 +13,7 @@ import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/Sc
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
+import { loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -236,10 +237,17 @@ export default function SessionLab({
   const [lunchOutcomePlanChoice, setLunchOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
   const [morningTradeTaken, setMorningTradeTaken] = useState<boolean | null>(null);
   const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
+  const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
 
   const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'morning', instrument }) : null;
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'lunch', instrument }) : null;
   const approvedRuleRefinements = buildRuleRefinementText(customRules);
+
+  const updateProviderMode = (providerMode: ModelConfig['providerMode']) => {
+    const nextConfig = { ...modelConfig, providerMode };
+    setModelConfig(nextConfig);
+    saveModelConfig(nextConfig);
+  };
 
   const getOutcomePlanOptions = (plan: typeof normalizedMorningPlan) => {
     const candidates = (plan?.setupCandidates || [])
@@ -778,6 +786,37 @@ export default function SessionLab({
             <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and Lunch share the shell, but use separate screenshots, analysis state, proof flow, and RAG records.</div>
           </div>
           <span className="qd-badge">APP-OWNED DECISION</span>
+        </div>
+        <div className="mb-3 border border-[var(--b1)] bg-[var(--bg)] p-3 font-mono">
+          <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Extraction Provider</div>
+              <div className="text-[10px] text-[var(--txt2)]">Gemini remains primary. OpenAI can validate extracted chart facts only.</div>
+            </div>
+            <span className="qd-badge">{modelConfig.providerMode.replace(/_/g, ' ')}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+            {[
+              { value: 'gemini_only', label: 'Gemini Only', note: 'Primary extractor only.' },
+              { value: 'gemini_openai_validation', label: 'Gemini + OpenAI Validation', note: 'OpenAI cross-checks levels.' },
+              { value: 'openai_fallback', label: 'OpenAI Fallback', note: 'Facts-only fallback if Gemini fails.' },
+            ].map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => updateProviderMode(option.value as ModelConfig['providerMode'])}
+                className={cn(
+                  'border px-3 py-2 text-left transition-colors',
+                  modelConfig.providerMode === option.value
+                    ? 'border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)]'
+                    : 'border-[var(--b2)] bg-transparent text-[var(--txt2)] hover:border-[var(--txt2)] hover:text-[var(--txt)]'
+                )}
+              >
+                <span className="block text-[10px] font-bold uppercase tracking-[0.12em]">{option.label}</span>
+                <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
+              </button>
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {readinessItems.map(item => (
