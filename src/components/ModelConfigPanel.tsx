@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModelConfig, formatModelLabel, FLASH_MODEL, PRO_MODEL, AnalysisRoute, getModelForRoute } from '../lib/modelRouter';
+import { ModelConfig, formatModelLabel, FLASH_MODEL, PRO_MODEL, OPENAI_VALIDATION_MODEL, AnalysisRoute, getModelForRoute } from '../lib/modelRouter';
 import { cn } from '../lib/utils';
 import { Sliders, Zap, ShieldAlert, Cpu } from 'lucide-react';
 
@@ -80,6 +80,31 @@ export default function ModelConfigPanel({ route, config, onChange }: ModelConfi
               <span className="text-[10px] text-[var(--txt2)]">Reserve Pro for deep confirmations.</span>
             </div>
           </label>
+
+          <div className="p-2 border border-[var(--b1)] bg-[var(--bg)]/40 rounded space-y-2">
+            <span className="text-[12px] font-mono font-bold text-[var(--txt1)]">Extraction Provider</span>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { value: 'gemini_only', label: 'Gemini Only', note: 'Primary extractor only.' },
+                { value: 'gemini_openai_validation', label: 'Gemini + OpenAI Validation', note: 'OpenAI cross-checks structured levels.' },
+                { value: 'openai_fallback', label: 'OpenAI Fallback', note: 'Fallback extractor if Gemini fails.' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => onChange({ ...config, providerMode: option.value as ModelConfig['providerMode'] })}
+                  className={cn(
+                    "text-left px-3 py-2 border transition-colors",
+                    config.providerMode === option.value
+                      ? "bg-[var(--orange)]/10 border-[var(--orange)]/50 text-[var(--orange)]"
+                      : "bg-transparent border-[var(--b1)] text-[var(--txt3)] hover:text-[var(--txt1)] hover:border-[var(--txt2)]"
+                  )}
+                >
+                  <span className="block text-[11px] font-bold">{option.label}</span>
+                  <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col justify-center space-y-4 font-mono text-[11px] p-4 bg-[var(--bg)] border border-[var(--b1)] rounded">
@@ -110,6 +135,9 @@ export default function ModelConfigPanel({ route, config, onChange }: ModelConfi
           </div>
           <p className="text-[9px] text-[var(--txt3)] pt-2 border-t border-[var(--b1)] mt-2">
             Flash is used for normal testing. Pro is reserved for deep confirmation.
+          </p>
+          <p className="text-[9px] text-[var(--txt3)]">
+            OpenAI validator: {formatModelLabel(config.openaiValidationModel || OPENAI_VALIDATION_MODEL)}. It validates extraction only; the app still owns final trade decisions.
           </p>
         </div>
       </div>

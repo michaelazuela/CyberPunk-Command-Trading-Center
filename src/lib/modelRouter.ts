@@ -1,28 +1,34 @@
 export type AnalysisRoute = "morning" | "lunch" | "ocr" | "deep_review" | "strategy_insights" | "trade_validation" | "trade_confirmation" | "proof_review";
 export type ModelMode = "testing" | "live";
+export type AIProviderMode = "gemini_only" | "gemini_openai_validation" | "openai_fallback";
 
 export interface ModelConfig {
   testingMode: boolean;
   flashFirst: boolean;
   proFallback: boolean;
+  providerMode: AIProviderMode;
   morningModel: string;
   lunchModel: string;
   ocrModel: string;
   deepReviewModel: string;
+  openaiValidationModel: string;
 }
 
 export const FLASH_MODEL = "gemini-3-flash-preview";
 export const PRO_MODEL = "gemini-3-pro-preview";
+export const OPENAI_VALIDATION_MODEL = "gpt-4o-mini";
 
 export function getDefaultModelConfig(): ModelConfig {
   return {
     testingMode: true,
     flashFirst: true,
     proFallback: true,
+    providerMode: "gemini_only",
     morningModel: FLASH_MODEL,
     lunchModel: FLASH_MODEL,
     ocrModel: FLASH_MODEL,
-    deepReviewModel: PRO_MODEL
+    deepReviewModel: PRO_MODEL,
+    openaiValidationModel: OPENAI_VALIDATION_MODEL
   };
 }
 
@@ -71,5 +77,6 @@ export function getModelForRoute(route: AnalysisRoute, config: ModelConfig): str
 export function formatModelLabel(model: string): string {
   if (model === FLASH_MODEL) return "Flash 3";
   if (model === PRO_MODEL) return "Pro 3";
+  if (model === OPENAI_VALIDATION_MODEL) return "OpenAI Validator";
   return model;
 }

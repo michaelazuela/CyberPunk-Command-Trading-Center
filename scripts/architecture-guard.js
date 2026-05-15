@@ -81,6 +81,28 @@ function checkCloudflareGeminiBoundary() {
   });
 }
 
+function checkCloudflareOpenAIBoundary() {
+  const functionPath = path.join(ROOT, 'functions', 'api', 'openai.js');
+  if (!fs.existsSync(functionPath)) return;
+
+  const functionContent = readFileSafe(functionPath);
+  if (!functionContent.includes('OPENAI_API_KEY')) {
+    fail('Cloudflare OpenAI proxy does not read OPENAI_API_KEY.');
+  }
+
+  walk(path.join(ROOT, 'src'), (filePath, content) => {
+    const relative = path.relative(ROOT, filePath);
+
+    if (content.includes('OPENAI_API_KEY')) {
+      fail(`${relative} references OPENAI_API_KEY. Secrets must stay behind /api/openai.`);
+    }
+
+    if (content.includes('api.openai.com')) {
+      fail(`${relative} calls OpenAI directly. Frontend calls must go through /api/openai.`);
+    }
+  });
+}
+
 function checkGeminiProxyUsage() {
   const expectedClients = [
     path.join(ROOT, 'src', 'lib', 'gemini.ts'),
@@ -125,6 +147,7 @@ function checkCanonicalTimeWindowUsage() {
 
 console.log('Running Architecture Guard Check...');
 checkCloudflareGeminiBoundary();
+checkCloudflareOpenAIBoundary();
 checkGeminiProxyUsage();
 checkTradePlanUiBoundary();
 checkCanonicalTimeWindowUsage();

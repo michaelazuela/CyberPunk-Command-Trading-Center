@@ -14,6 +14,7 @@ import {
   TradeDecisionStep,
 } from '../types';
 import { runTradeDecisionPipeline, TradeDecisionPipelineInput } from './tradeDecisionPipeline';
+import { buildChartContextConsensus } from './chartContextConsensus';
 
 function baseResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
   return {
@@ -870,6 +871,42 @@ const tests: Array<[string, () => void]> = [
     assert.equal(longCandidate.direction, 'LONG');
     assert.ok(longCandidate.entry === null || longCandidate.entry <= 7446);
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['32. OpenAI consensus forces manual confirmation on key level disagreement', () => {
+    const primary = structuredContext({
+      keyLevels: {
+        currentPrice: 7500,
+        nearestSupport: 7494,
+        nearestResistance: 7504,
+        activeSwingHigh: 7504,
+        activeSwingLow: 7494,
+      },
+      entryStopConfidence: 'High',
+      requiresManualConfirmation: false,
+    });
+    const validator = structuredContext({
+      keyLevels: {
+        currentPrice: 7494,
+        nearestSupport: 7488,
+        nearestResistance: 7498,
+        activeSwingHigh: 7498,
+        activeSwingLow: 7488,
+      },
+      entryStopConfidence: 'High',
+      requiresManualConfirmation: false,
+    });
+
+    const consensus = buildChartContextConsensus(primary, validator, {
+      agreement: 'major_disagreement',
+      disagreements: ['OpenAI rejected the primary resistance read.'],
+      warnings: [],
+    });
+
+    assert.equal(consensus.agreement, 'major_disagreement');
+    assert.equal(consensus.context?.requiresManualConfirmation, true);
+    assert.equal(consensus.context?.entryStopConfidence, 'Low');
+    assert.ok(consensus.context?.extractionWarnings?.manualEntryStopRequired);
   }],
 ];
 

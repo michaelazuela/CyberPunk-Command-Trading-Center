@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AISettings, Trade } from "../types";
+import { AISettings, ChartContext, Trade } from "../types";
 import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
 import { NormalizedTradePlan } from "./tradePlan";
+import { loadModelConfig } from "./modelRouter";
+import { buildChartContextConsensus } from "./chartContextConsensus";
 
 function coerceGeminiText(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -796,11 +798,77 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       console.error("[RAG] Retrieval failed", e);
     }
     
+    const modelConfig = loadModelConfig();
+
     // Step 1: Execute Unified Super Agent
     const superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument);
     
     if (!superReport) {
+      if (
+        modelConfig.providerMode === "openai_fallback" &&
+        ["morning", "lunch", "morning_replay", "lunch_replay"].includes(analysisType || "")
+      ) {
+        const { validateChartExtractionWithOpenAI } = await import("./openai");
+        const fallback = await validateChartExtractionWithOpenAI(imageData, undefined, {
+          model: modelConfig.openaiValidationModel,
+          routeName: analysisType,
+          instrument: dailyInstrument || "MES",
+        });
+        return {
+          dayType: "NO TRADE" as const,
+          reasoning: "Gemini extraction was unavailable. OpenAI fallback extracted chart facts only; the app-owned pipeline must still decide the final trade status.",
+          confidence: 0,
+          checks: [],
+          structuredChartContext: fallback?.structuredChartContext,
+          openaiValidation: fallback,
+          agentReports: [
+            {
+              agentName: "OpenAI Fallback Extractor",
+              findings: "Fallback extraction completed. This does not approve a trade.",
+              status: "WARNING" as const,
+            },
+          ],
+        };
+      }
       throw new Error("Super Agent returned an empty report.");
+    }
+
+    let structuredChartContext = superReport.structuredChartContext as Partial<ChartContext> | undefined;
+    let openaiValidation: any = null;
+    const shouldValidateWithOpenAI =
+      modelConfig.providerMode === "gemini_openai_validation" &&
+      ["morning", "lunch", "morning_replay", "lunch_replay"].includes(analysisType || "");
+
+    if (shouldValidateWithOpenAI) {
+      try {
+        const { validateChartExtractionWithOpenAI } = await import("./openai");
+        openaiValidation = await validateChartExtractionWithOpenAI(imageData, structuredChartContext, {
+          model: modelConfig.openaiValidationModel,
+          routeName: analysisType,
+          instrument: dailyInstrument || "MES",
+        });
+        const consensus = buildChartContextConsensus(
+          structuredChartContext,
+          openaiValidation?.structuredChartContext,
+          openaiValidation?.validation
+        );
+        structuredChartContext = consensus.context;
+        openaiValidation = {
+          ...openaiValidation,
+          consensus,
+        };
+      } catch (error) {
+        console.warn("[OPENAI VALIDATION] Chart extraction validation failed", error);
+        openaiValidation = {
+          validation: {
+            provider: "openai",
+            agreement: "error",
+            disagreements: [],
+            warnings: [error instanceof Error ? error.message : String(error)],
+            summary: "OpenAI validation failed. Gemini extraction remains primary.",
+          },
+        };
+      }
     }
     
     // Step 2: Extract steps
@@ -857,7 +925,8 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       midnightAnalysis: superReport.midnightAnalysis,
       tradePlan: superReport.tradePlan,
       executionReview5m: superReport.executionReview5m,
-      structuredChartContext: superReport.structuredChartContext,
+      structuredChartContext,
+      openaiValidation,
       ethContextReview: superReport.ethContextReview,
       afternoonTestPlan: superReport.afternoonTestPlan,
       current_rule_analysis: superReport.current_rule_analysis,
