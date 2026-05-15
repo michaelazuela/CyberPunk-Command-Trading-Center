@@ -4,6 +4,7 @@ export type AIProviderMode = "gemini_only" | "gemini_openai_validation" | "opena
 export type WorkflowSpeedMode = "fast" | "balanced" | "audit";
 
 export interface ModelConfig {
+  configVersion?: number;
   testingMode: boolean;
   flashFirst: boolean;
   proFallback: boolean;
@@ -22,10 +23,11 @@ export const OPENAI_VALIDATION_MODEL = "gpt-4o-mini";
 
 export function getDefaultModelConfig(): ModelConfig {
   return {
+    configVersion: 2,
     testingMode: true,
     flashFirst: true,
     proFallback: true,
-    providerMode: "gemini_only",
+    providerMode: "openai_fallback",
     workflowSpeedMode: "fast",
     morningModel: FLASH_MODEL,
     lunchModel: FLASH_MODEL,
@@ -47,7 +49,21 @@ export function loadModelConfig(): ModelConfig {
   try {
     const data = localStorage.getItem("mnq_model_config");
     if (data) {
-      return { ...getDefaultModelConfig(), ...JSON.parse(data) };
+      const parsed = JSON.parse(data);
+      const merged = { ...getDefaultModelConfig(), ...parsed };
+      const isLegacyFastGeminiOnly = !parsed.configVersion &&
+        merged.workflowSpeedMode === "fast" &&
+        merged.providerMode === "gemini_only";
+
+      if (isLegacyFastGeminiOnly) {
+        return {
+          ...merged,
+          configVersion: 2,
+          providerMode: "openai_fallback",
+        };
+      }
+
+      return merged;
     }
   } catch (e) {
     console.error("Failed to load model config", e);
@@ -92,7 +108,7 @@ export function applyWorkflowSpeedMode(config: ModelConfig, workflowSpeedMode: W
       testingMode: true,
       flashFirst: true,
       proFallback: false,
-      providerMode: "gemini_only",
+      providerMode: "openai_fallback",
       morningModel: FLASH_MODEL,
       lunchModel: FLASH_MODEL,
     };

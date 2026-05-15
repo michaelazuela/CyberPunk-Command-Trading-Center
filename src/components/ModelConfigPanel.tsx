@@ -42,7 +42,7 @@ export default function ModelConfigPanel({ route, config, onChange }: ModelConfi
             <span className="text-[12px] font-mono font-bold text-[var(--txt1)]">Workflow Speed</span>
             <div className="grid grid-cols-1 gap-2">
               {[
-                { value: 'fast', label: 'Fast', note: 'Gemini Flash only. Best for live decisions.' },
+                { value: 'fast', label: 'Fast', note: 'Gemini Flash first, OpenAI fallback on timeout.' },
                 { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback on failure.' },
                 { value: 'audit', label: 'Audit', note: 'Gemini Pro plus OpenAI validation. Slower review mode.' },
               ].map((option) => (

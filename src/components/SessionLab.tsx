@@ -831,7 +831,7 @@ export default function SessionLab({
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               {[
-                { value: 'fast', label: 'Fast', note: 'Gemini Flash only. Lowest wait.' },
+                { value: 'fast', label: 'Fast', note: 'Gemini Flash first. OpenAI fallback if Gemini times out.' },
                 { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback.' },
                 { value: 'audit', label: 'Audit', note: 'Gemini Pro + OpenAI validation.' },
               ].map(option => (
