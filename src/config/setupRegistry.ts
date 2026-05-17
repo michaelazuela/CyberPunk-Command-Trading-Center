@@ -78,7 +78,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     possibleKeywords: ['pullback into imbalance', 'return to fvg', 'return to imbalance'],
     requiredEvidence: ['Visible imbalance', 'Pullback into gap', 'Continuation trigger'],
     defaultRequiredTrigger: 'Pullback into the imbalance followed by a reclaim or candle break in trend direction.',
-    defaultNextAction: 'Mark the imbalance zone and wait for a reduced-risk continuation trigger.',
+    defaultNextAction: 'Mark the imbalance zone and wait for a clean fixed 5-point continuation trigger.',
   },
   {
     setupType: SetupType.MarketStructureShift,

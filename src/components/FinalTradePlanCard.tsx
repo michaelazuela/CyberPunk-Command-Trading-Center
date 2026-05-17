@@ -4,6 +4,7 @@ import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 import { buildConfidenceBreakdown } from '../lib/planMetadata';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType, TradeDecisionStatus } from '../types';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../config/tradeRules';
 
 interface FinalTradePlanCardProps {
   plan: NormalizedTradePlan;
@@ -137,19 +138,21 @@ function roundToTick(value: number, tickSize = 0.25): number {
 }
 
 function projectedTargets(candidate: SetupCandidate): { t1: number | null; t2: number | null; risk: number | null } {
-  if (candidate.target1 && candidate.target2) {
+  const fixedStop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  const fixedTargets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
+  if (fixedStop !== null && fixedTargets.target1 !== null && fixedTargets.target2 !== null) {
     return {
-      t1: candidate.target1,
-      t2: candidate.target2,
-      risk: candidate.riskPoints ?? (candidate.entry && candidate.stop ? Math.abs(candidate.entry - candidate.stop) : null),
+      t1: fixedTargets.target1,
+      t2: fixedTargets.target2,
+      risk: TRADE_RULES.fixedRiskPoints,
     };
   }
 
-  if (!candidate.entry || !candidate.stop || candidate.direction === 'NO TRADE') {
+  if (!candidate.entry || candidate.direction === 'NO TRADE') {
     return { t1: null, t2: null, risk: null };
   }
 
-  const risk = Math.abs(candidate.entry - candidate.stop);
+  const risk = TRADE_RULES.fixedRiskPoints;
   if (!Number.isFinite(risk) || risk <= 0) return { t1: null, t2: null, risk: null };
 
   const directionMultiplier = candidate.direction === 'LONG' ? 1 : -1;
@@ -174,12 +177,11 @@ function conditionalPlanScore(candidate: SetupCandidate): number {
   const risk = projection.risk ?? candidate.riskPoints ?? null;
   const riskQualityScore =
     risk === null ? 0 :
-    risk <= 6 ? 20 :
-    risk <= 8 ? 10 :
+    risk === TRADE_RULES.fixedRiskPoints ? 20 :
     -20;
   const levelClarityScore =
-    candidate.entry != null && candidate.stop != null && projection.t1 != null && projection.t2 != null ? 15 :
-    candidate.entry != null || candidate.stop != null ? 5 :
+    candidate.entry != null && projection.t1 != null && projection.t2 != null ? 15 :
+    candidate.entry != null ? 5 :
     0;
   const triggerClarityScore =
     candidate.executionStatus === ExecutionStatus.Executable ? 15 :
@@ -308,8 +310,9 @@ function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
 function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
   const plan = candidate.targetObjectivePlan;
   if (!plan && !candidate.target1Reason && !candidate.target2Reason) return null;
-  const tacticalT1 = candidate.target1 ?? projectedTargets(candidate).t1;
-  const tacticalT2 = candidate.target2 ?? projectedTargets(candidate).t2;
+  const projection = projectedTargets(candidate);
+  const tacticalT1 = projection.t1 ?? candidate.target1;
+  const tacticalT2 = projection.t2 ?? candidate.target2;
 
   return (
     <div className="mt-2 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2">
@@ -604,11 +607,11 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">STOP</div>
-                    <div className="text-[var(--red)]">{candidate.stop ?? 'N/A'}</div>
+                    <div className="text-[var(--red)]">{fixedRiskStopForDirection(candidate.direction, candidate.entry) ?? 'N/A'}</div>
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">RISK</div>
-                    <div className="text-[var(--orange)]">{candidate.riskPoints ?? 'N/A'}</div>
+                    <div className="text-[var(--orange)]">{candidate.entry ? TRADE_RULES.fixedRiskPoints : 'N/A'}</div>
                   </div>
                 </div>
               )}
@@ -687,7 +690,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">STOP</div>
-                    <div className="text-[var(--red)]">{candidate.stop ?? 'TBD'}</div>
+                    <div className="text-[var(--red)]">{fixedRiskStopForDirection(candidate.direction, candidate.entry) ?? 'TBD'}</div>
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">RISK</div>
@@ -815,7 +818,7 @@ export default function FinalTradePlanCard({
     case "missing": sourceBadge = "MISSING"; break;
   }
 
-  const riskUnderMax = plan.riskPoints !== null && plan.riskPoints <= 15;
+  const riskUnderMax = plan.riskPoints !== null && plan.riskPoints === TRADE_RULES.fixedRiskPoints;
   const validityChecks = [
     { label: 'Entry', ready: plan.entry !== null, detail: plan.entry !== null ? String(plan.entry) : 'Missing' },
     { label: 'Stop', ready: plan.stop !== null, detail: plan.stop !== null ? String(plan.stop) : 'Missing' },

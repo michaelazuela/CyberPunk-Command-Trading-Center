@@ -1039,8 +1039,8 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                   <span className="text-[10px] font-mono text-[var(--txt)]">2.0R FIXED</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-[var(--b0)] pt-3">
-                  <span className="text-[10px] font-mono text-[var(--txt2)]">High Vol. (Stop&gt;15pts)</span>
-                  <span className="text-[10px] font-mono text-[var(--orange)]">1.5R CONSERVATIVE</span>
+                  <span className="text-[10px] font-mono text-[var(--txt2)]">Fixed Risk Model</span>
+                  <span className="text-[10px] font-mono text-[var(--orange)]">5PTS ALWAYS</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-[var(--b0)] pt-3">
                   <span className="text-[10px] font-mono text-[var(--txt2)]">Sweep & Reclaim</span>

@@ -446,7 +446,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchRangeReclaim));
   }],
 
-  ['risk too wide preserves detected setup candidate', () => {
+  ['fixed 5-point risk preserves detected setup candidate', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Momentum runaway long with vertical expansion and staircase continuation.', 7400, 7390),
@@ -455,9 +455,8 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(momentum);
     assert.equal(momentum.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(momentum.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(momentum.blockReason, NoTradeReason.RiskTooWide);
-    assert.ok(momentum.reducedRiskPlan);
+    assert.notEqual(momentum.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(momentum.riskPoints, 5);
   }],
 
   ['one blocked setup does not stop remaining setup evaluation', () => {
@@ -498,7 +497,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
     assert.equal(result.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.equal(result.bestExecutableCandidate?.entry, 7400);
-    assert.equal(result.bestExecutableCandidate?.stop, 7396);
+    assert.equal(result.bestExecutableCandidate?.stop, 7395);
   }],
 
   ['best conditional candidate is shown when no executable candidate exists', () => {
@@ -548,10 +547,10 @@ const tests: Array<[string, () => void]> = [
     assert.equal(typeof best.target2, 'number');
     assert.ok(best.invalidation);
     assert.ok(best.requiredTrigger);
-    assert.ok((best.riskPoints || Infinity) <= 8);
+    assert.equal(best.riskPoints, 5);
   }],
 
-  ['high-priority RiskTooWide setup becomes conditional instead of no setup', () => {
+  ['high-priority wide raw stop is converted to fixed-risk candidate', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed after a stop hunt.', 7400, 7388),
@@ -560,12 +559,12 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.notEqual(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(liquidity.riskPoints, 5);
     assert.notEqual(liquidity.setupType, SetupType.NoSetup);
   }],
 
-  ['weak setup with RiskTooWide does not become approved', () => {
+  ['weak setup with fixed risk still does not become approved without complete gates', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Opening gap fill long toward prior close.', 7400, 7388),
@@ -573,21 +572,20 @@ const tests: Array<[string, () => void]> = [
     const gapFill = result.candidates.find((candidate) => candidate.setupType === SetupType.OpeningGapFill);
 
     assert.ok(gapFill);
-    assert.equal(gapFill.blockReason, NoTradeReason.RiskTooWide);
     assert.notEqual(gapFill.executionStatus, ExecutionStatus.Executable);
   }],
 
   ['T1 and T2 are calculated from R and rounded to MES tick size', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
-      result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400.1, 7395.95, 'TRIGGERED'),
+      result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400.25, 7394, 'TRIGGERED'),
     });
     const best = result.bestExecutableCandidate;
 
     assert.ok(best);
-    assert.ok(Math.abs((best.riskPoints || 0) - 4.15) < 0.001);
-    assert.equal(best.target1, 7406.25);
-    assert.equal(best.target2, 7408.5);
+    assert.equal(best.riskPoints, 5);
+    assert.equal(best.target1, 7407.75);
+    assert.equal(best.target2, 7410.25);
     assert.equal((best.target1 as number) % 0.25, 0);
     assert.equal((best.target2 as number) % 0.25, 0);
   }],
@@ -622,7 +620,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Executable);
     assert.equal(liquidity.entry, 7400);
-    assert.equal(liquidity.stop, 7396);
+    assert.equal(liquidity.stop, 7395);
     assert.equal(liquidity.evidence[0], 'Structured sweep and reclaim facts detected.');
     assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
   }],
@@ -995,7 +993,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(failedHigh.direction, 'SHORT');
     assert.equal(failedHigh.executionStatus, ExecutionStatus.Executable);
     assert.equal(failedHigh.entry, 7417.75);
-    assert.equal(failedHigh.stop, 7419);
+    assert.equal(failedHigh.stop, 7422.75);
     assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
   }],
 

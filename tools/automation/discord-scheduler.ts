@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
-import { TRADE_RULES } from '../../src/config/tradeRules';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../../src/config/tradeRules';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 
@@ -417,7 +417,7 @@ async function upsertDiscordAlertRagRecord(args: {
     day_of_week: getDayOfWeek(args.tradeDate),
     instrument: args.instrument,
     trade_result: 'pending',
-    outcome: 'pending',
+    outcome: null,
     source: 'discord_alert',
     analysis_mode: 'live',
     setup_quality_score: 0.5,
@@ -569,12 +569,60 @@ function compactSentence(value?: string | null, maxLength = 150): string | null 
 function simpleScenarioLine(candidate: SetupCandidate): string {
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
   const trigger = candidate.requiredTrigger || 'Wait for confirmation';
-  const plan = `E ${moneyLine(candidate.entry)} | S ${moneyLine(candidate.stop)} | T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`;
+  const stop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  const targets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
+  const plan = `E ${moneyLine(candidate.entry)} | S ${moneyLine(stop)} | T1 ${moneyLine(targets.target1)} | T2 ${moneyLine(targets.target2)}`;
   return [
     `**${direction} - ${compactSetupName(candidate)}**`,
     `Trigger: ${trigger}`,
     `Plan: ${plan}`,
   ].join('\n');
+}
+
+function cleanScenarioLine(candidate: SetupCandidate, objectives: TargetObjective[] = []): string {
+  const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
+  const stop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  const targets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
+  const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
+    ? candidate.targetObjectivePlan.objectives
+    : objectives;
+  const nearestLiquidity =
+    candidate.targetObjectivePlan?.liquidityTarget1 ||
+    candidate.targetObjectivePlan?.nearestLiquidityTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry);
+  const runner =
+    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
+    candidate.targetObjectivePlan?.runnerTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
+  const trigger = compactSentence(candidate.requiredTrigger, 120) || 'Wait for confirmation';
+
+  return [
+    `**${direction} - ${compactSetupName(candidate)}**`,
+    `Trigger: ${trigger}`,
+    `Entry \`${moneyLine(candidate.entry)}\` | Stop \`${moneyLine(stop)}\` | T1 \`${moneyLine(targets.target1)}\` | T2 \`${moneyLine(targets.target2)}\``,
+    `15M liquidity: \`${compactObjective(nearestLiquidity)}\`${runner && !sameObjective(runner, nearestLiquidity) ? ` | Runner: \`${compactObjective(runner)}\`` : ''}`,
+  ].join('\n');
+}
+
+function formatCleanScenarios(candidates: SetupCandidate[], targetObjectives: TargetObjective[]): string {
+  if (!candidates.length) return 'No active long/short scenario. Wait for a clean 5M trigger.';
+  return candidates
+    .slice(0, 2)
+    .map((candidate, index) => `${index + 1}. ${cleanScenarioLine(candidate, targetObjectives)}`)
+    .join('\n\n');
+}
+
+function formatCleanInvalidations(candidates: SetupCandidate[]): string {
+  if (!candidates.length) return 'No scenario invalidation yet. Do not execute without a 5M trigger and fixed 5-point stop.';
+  return candidates
+    .slice(0, 2)
+    .map((candidate, index) => {
+      const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
+      const stop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+      const invalidation = compactSentence(candidate.invalidation, 130) || `Invalid if price breaks the fixed stop at ${moneyLine(stop)}.`;
+      return `${index + 1}. **${direction}:** ${invalidation} Stop: \`${moneyLine(stop)}\``;
+    })
+    .join('\n');
 }
 
 function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
@@ -627,10 +675,11 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
   const objectives = [...selected, ...additional].slice(0, 4);
 
   if (!objectives.length) {
+    const fixedTargets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
     return [
       'App Targets:',
-      `T1: ${moneyLine(candidate.target1)}`,
-      `T2: ${moneyLine(candidate.target2)}`,
+      `T1: ${moneyLine(fixedTargets.target1)}`,
+      `T2: ${moneyLine(fixedTargets.target2)}`,
       '',
       'Liquidity Map:',
       `Nearest ${directionLabels.primary} liquidity: N/A`,
@@ -644,10 +693,11 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
     ].filter(Boolean).join('\n');
   }
 
+  const fixedTargets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
   return [
     'App Targets:',
-    `T1: ${moneyLine(candidate.target1)}`,
-    `T2: ${moneyLine(candidate.target2)}`,
+    `T1: ${moneyLine(fixedTargets.target1)}`,
+    `T2: ${moneyLine(fixedTargets.target2)}`,
     '',
     'Liquidity Map:',
     formatLiquidityObjective('LQ1 15M/session liquidity', nearestDirectionalTarget),
@@ -732,6 +782,8 @@ function formatSessionLevelContext(analysis: AnalysisResult): string {
 
 function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
   const minimumPracticalRisk = TRADE_RULES.stopQuality.minimumPracticalRiskPoints.MES;
+  const stop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  const targets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
   const riskTooTight =
     typeof candidate.riskPoints === 'number' &&
     Number.isFinite(candidate.riskPoints) &&
@@ -740,7 +792,7 @@ function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: Tar
   return [
     `Status: ${candidate.executionStatus}${candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : ''}`,
     `Trigger: ${candidate.requiredTrigger || 'Needs confirmation'}`,
-    `Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(candidate.stop)} | Risk ${moneyLine(candidate.riskPoints)} | T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`,
+    `Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(stop)} | Risk ${moneyLine(stop ? TRADE_RULES.fixedRiskPoints : null)} | T1 ${moneyLine(targets.target1)} | T2 ${moneyLine(targets.target2)}`,
     riskTooTight
       ? `Stop Quality: TOO TIGHT for MES. Minimum practical stop is ${minimumPracticalRisk} points. Wait for cleaner structure or a wider pullback/retest stop.`
       : `Stop Quality: ${typeof candidate.riskPoints === 'number' ? 'Acceptable practical range' : 'Unknown until entry/stop confirm'}`,
@@ -752,6 +804,8 @@ function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: Tar
 
 function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjective[] = []): string {
   const direction = candidate.direction === 'LONG' ? 'LONG' : 'SHORT';
+  const stop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  const targets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
   const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
     ? candidate.targetObjectivePlan.objectives
     : objectives;
@@ -777,8 +831,8 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
     `**Best ${direction === 'LONG' ? 'Long' : 'Short'} Scenario - ${compactSetupName(candidate)}**`,
     `Status: ${candidate.executionStatus}${blocker}`,
     `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
-    `Plan: Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(candidate.stop)} | Risk ${moneyLine(candidate.riskPoints)}`,
-    `Targets: T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`,
+    `Plan: Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(stop)} | Risk ${moneyLine(stop ? TRADE_RULES.fixedRiskPoints : null)}`,
+    `Targets: T1 ${moneyLine(targets.target1)} | T2 ${moneyLine(targets.target2)}`,
     `Liquidity: ${compactObjective(nearestLiquidity)}`,
     uniqueLq2 ? `Next: ${compactObjective(uniqueLq2)}` : null,
     uniqueRunner ? `Runner: ${compactObjective(uniqueRunner)}` : null,
@@ -849,8 +903,11 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
   const candidates = topConditionalCandidates(normalized.setupCandidates);
   const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
   const finalStatus = normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
-  const deskDecision = normalized.decisionLabel || normalized.decision;
-  const finalStatusLabel = `${statusEmoji(finalStatus)} ${finalStatus}`;
+  const hasPlanningPaths = candidates.length > 0;
+  const deskDecision = hasPlanningPaths && !normalized.canExecute
+    ? 'WAIT / CONDITIONAL'
+    : normalized.decisionLabel || normalized.decision;
+  const finalStatusLabel = `${statusEmoji(finalStatus)} ${deskDecision}`;
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
   const components = buildOutcomeComponents({
     planVersionId,
@@ -862,15 +919,15 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
     {
       name: '1️⃣ What',
       value: discordValue(
-        `**${finalStatusLabel} - ${deskDecision}**\n` +
-        `${normalized.hasConditionalPlans ? 'Conditional plan available. No execution until trigger/risk/invalidation pass.' : normalized.planningDecision}\n` +
+        `**${finalStatusLabel}**\n` +
+        `${hasPlanningPaths && !normalized.canExecute ? 'Two planning paths. No execution until a trigger confirms and the fixed 5-point stop is valid.' : normalized.planningDecision}\n` +
         `${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
       ),
       inline: false,
     },
     {
       name: '2️⃣ Where',
-      value: discordValue(formatBestScenarios(candidates)),
+      value: discordValue(formatCleanScenarios(candidates, targetObjectives)),
       inline: false,
     },
     {
@@ -879,18 +936,14 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       inline: false,
     },
     {
-      name: '4️⃣ Why',
-      value: discordValue([
-        compactSentence(normalized.whyThisPlan, 220) || 'Wait for the highest-quality app-owned setup trigger.',
-        compactSentence(formatSessionStoryLine(analysis), 220),
-        formatTargetFocus(candidates, targetObjectives),
-      ].join('\n')),
+      name: '4️⃣ Invalidation',
+      value: discordValue(formatCleanInvalidations(candidates)),
       inline: false,
     },
     {
       name: '5️⃣ Watch-Out',
       value: discordValue(
-        `${normalized.invalidation || 'Do not execute until entry, stop, trigger, risk, and invalidation pass.'}\n` +
+        `${compactSentence(normalized.whyThisPlan, 160) || 'Do not chase. Let the 5M trigger prove the path.'}\n` +
         `${components ? 'Button guide: 🟢 LONG T1 | 🏆 T2 | 🎯 liquidity target | 🛑 stopped | 🔴 SHORT T1 | ⚪ scratch | 🚫 not taken | ⏭ missed.' : 'RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
         `${components ? 'Use the buttons only after you know what happened. They update RAG/journal learning only.' : ''}\n` +
         'Decision support only. No automated orders were placed.'

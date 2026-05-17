@@ -1,5 +1,6 @@
 import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SessionStory, SetupCandidate, TradeDecisionStatus } from '../types';
 import { SYSTEM_RULES } from '../constants';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
@@ -155,18 +156,10 @@ export function calculateTargets(decision: TradeDecision, entry: number | null, 
   if (decision === "NO TRADE" || !isValidPrice(entry) || !isValidPrice(stop)) {
     return { t1: null, t2: null };
   }
-  const risk = calculateRisk(entry, stop);
-  let t1: number, t2: number;
-  if (decision === "LONG") {
-    t1 = entry + risk * 1.5;
-    t2 = entry + risk * 2.0;
-  } else {
-    t1 = entry - risk * 1.5;
-    t2 = entry - risk * 2.0;
-  }
+  const fixedTargets = fixedRiskTargetsForDirection(decision, entry);
   return {
-    t1: roundToTick(t1, instrument),
-    t2: roundToTick(t2, instrument)
+    t1: fixedTargets.target1,
+    t2: fixedTargets.target2
   };
 }
 
@@ -451,28 +444,30 @@ export function normalizeTradePlan(
   }
 
   const isExecutable = (candidate: Candidate) => {
-    const targets = calculateTargets(candidate.decision, candidate.entry, candidate.stop, instrument);
-    const risk = (isValidPrice(candidate.entry) && isValidPrice(candidate.stop))
-      ? calculateRisk(candidate.entry, candidate.stop)
+    const fixedStop = fixedRiskStopForDirection(candidate.decision, candidate.entry);
+    const targets = calculateTargets(candidate.decision, candidate.entry, fixedStop, instrument);
+    const risk = (isValidPrice(candidate.entry) && isValidPrice(fixedStop))
+      ? calculateRisk(candidate.entry, fixedStop)
       : null;
     return (candidate.decision === "LONG" || candidate.decision === "SHORT") &&
       isValidPrice(candidate.entry) &&
-      isValidPrice(candidate.stop) &&
+      isValidPrice(fixedStop) &&
       risk !== null &&
-      risk <= SYSTEM_RULES.MAX_STOP_TYPE_2 &&
+      risk === SYSTEM_RULES.FIXED_STOP_RISK_POINTS &&
       isValidPrice(targets.t1) &&
       isValidPrice(targets.t2);
   };
 
   const scoreCandidate = (candidate: Candidate) => {
     if (!isExecutable(candidate)) return -100;
-    const risk = calculateRisk(candidate.entry as number, candidate.stop as number);
+    const fixedStop = fixedRiskStopForDirection(candidate.decision, candidate.entry);
+    const risk = calculateRisk(candidate.entry as number, fixedStop as number);
     const sourceScore =
       candidate.source === "app_rule_engine" ? 40 :
       candidate.source === "current_rule_analysis" ? 30 :
       candidate.source === "manual" ? 25 :
       0;
-    const riskScore = risk <= 8 ? 10 : risk <= 15 ? 2 : -12;
+    const riskScore = risk === SYSTEM_RULES.FIXED_STOP_RISK_POINTS ? 10 : -12;
     const rankScore = candidate.rank ? Math.max(0, 8 - candidate.rank) : 0;
     return sourceScore +
       confidenceScore(candidate.confidence) +
@@ -512,7 +507,8 @@ export function normalizeTradePlan(
     };
   }
 
-  const { decision, entry, stop, source, confidence, whyThisPlan, invalidation, entryTrigger } = executableCandidate;
+  const { decision, entry, source, confidence, whyThisPlan, invalidation, entryTrigger } = executableCandidate;
+  const stop = fixedRiskStopForDirection(decision, entry);
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const pipelineAllowsExecution =

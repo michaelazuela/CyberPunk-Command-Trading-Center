@@ -35,7 +35,14 @@ Entry must come from a measurable trigger:
 - Reclaim of a defined level
 - Retest of a defined zone
 
-Stop must come from invalidating structure:
+The app uses a fixed stop-risk model:
+
+- LONG stop = `entry - 5 points`
+- SHORT stop = `entry + 5 points`
+
+Structural invalidation is still required, but it is a separate decision note. It tells the trader when the setup thesis is broken; it does not change the fixed 5-point risk model.
+
+Stop context should come from invalidating structure:
 
 - Trigger candle low/high
 - Protected swing low/high
@@ -50,26 +57,27 @@ The app must reject arbitrary entry or stop values.
 Risk is calculated by the app:
 
 ```text
-riskPoints = abs(entry - stop)
+riskPoints = 5
 ```
 
-Risk must be positive and finite.
+Risk must always equal 5 points for app-owned plans.
 
 If `entry`, `stop`, or `riskPoints` is missing, the trade is not executable.
 
 ## Risk Limit
 
-The app must hard-block trades above the configured maximum stop distance.
+The app must hard-block any executable plan that drifts away from the fixed 5-point stop model.
 
 Current constants define:
 
 ```ts
-MAX_STOP_TYPE_1 = 6
-MAX_STOP_TYPE_2 = 8
+FIXED_STOP_RISK_POINTS = 5
+MAX_STOP_TYPE_1 = 5
+MAX_STOP_TYPE_2 = 5
 MAX_RISK_PER_TRADE = 0.02
 ```
 
-The app-owned rule engine must enforce the active stop-distance maximum before execution.
+The app-owned rule engine must enforce the fixed stop distance before execution.
 
 Example:
 
@@ -83,12 +91,12 @@ Targets are app-computed only:
 
 ```text
 LONG:
-T1 = entry + riskPoints * 1.5
-T2 = entry + riskPoints * 2.0
+T1 = entry + 5 * 1.5
+T2 = entry + 5 * 2.0
 
 SHORT:
-T1 = entry - riskPoints * 1.5
-T2 = entry - riskPoints * 2.0
+T1 = entry - 5 * 1.5
+T2 = entry - 5 * 2.0
 ```
 
 Targets must be rounded to the valid tick size.

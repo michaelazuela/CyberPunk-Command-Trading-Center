@@ -7,7 +7,7 @@ import {
   SetupCandidateStatus,
   SetupType,
 } from '../types';
-import { TRADE_RULES } from '../config/tradeRules';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../config/tradeRules';
 
 type Direction = SetupCandidate['direction'];
 
@@ -25,15 +25,11 @@ function riskPoints(entry: number | null, stop: number | null): number | null {
 }
 
 function targets(direction: Direction, entry: number | null, stop: number | null) {
-  const risk = riskPoints(entry, stop);
-  if ((direction !== 'LONG' && direction !== 'SHORT') || risk === null || !isPrice(entry)) {
+  const fixedTargets = fixedRiskTargetsForDirection(direction, entry);
+  if ((direction !== 'LONG' && direction !== 'SHORT') || !isPrice(entry) || fixedTargets.target1 === null || fixedTargets.target2 === null) {
     return { target1: null, target2: null };
   }
-  const sign = direction === 'LONG' ? 1 : -1;
-  return {
-    target1: roundToTick(entry + sign * risk * TRADE_RULES.targetModel.t1R),
-    target2: roundToTick(entry + sign * risk * TRADE_RULES.targetModel.t2R),
-  };
+  return fixedTargets;
 }
 
 function firstPrice(...values: Array<unknown>): number | null {
@@ -186,9 +182,10 @@ function makeCandidate(input: {
   invalidation: string | null;
   hasTrigger?: boolean;
 }): SetupCandidate {
-  const risk = riskPoints(input.entry, input.stop);
-  const computedTargets = targets(input.direction, input.entry, input.stop);
-  const execution = executionFor(input.entry, input.stop, Boolean(input.hasTrigger), Boolean(input.invalidation));
+  const fixedStop = fixedRiskStopForDirection(input.direction, input.entry);
+  const risk = riskPoints(input.entry, fixedStop);
+  const computedTargets = targets(input.direction, input.entry, fixedStop);
+  const execution = executionFor(input.entry, fixedStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
   const levelContext = levelContextForDirection(input.chartContext, input.direction);
 
   return {
@@ -199,7 +196,7 @@ function makeCandidate(input: {
     confidence: input.confidence || 'Medium',
     priority: input.priority,
     entry: input.entry,
-    stop: input.stop,
+    stop: fixedStop,
     target1: computedTargets.target1,
     target2: computedTargets.target2,
     riskPoints: risk,

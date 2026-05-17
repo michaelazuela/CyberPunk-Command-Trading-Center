@@ -76,7 +76,7 @@ Each candidate should receive one execution status:
 
 ## RiskTooWide Rule
 
-`RiskTooWide` blocks execution only. It must not erase the detected setup candidate.
+`RiskTooWide` blocks execution only. In the fixed-risk model, it means the current structure cannot be expressed through the required 5-point stop. It must not erase the detected setup candidate.
 
 Correct handling:
 
@@ -85,7 +85,7 @@ Momentum / Runaway
 Status: Detected
 Execution: Blocked
 Reason: RiskTooWide
-Next Action: Wait for pullback/reclaim or reduced-risk trigger.
+Next Action: Wait for pullback/reclaim or cleaner 5-point trigger.
 ```
 
 Incorrect handling:

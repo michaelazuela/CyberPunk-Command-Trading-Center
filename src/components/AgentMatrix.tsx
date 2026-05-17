@@ -66,7 +66,7 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
       ],
       [
         "Calculating risk-to-reward ratio...",
-        "Verifying stop distance < 8 pts...",
+        "Verifying fixed 5-point stop...",
         "Auditing contract sizing vs equity...",
         "Simulating 2.0R target reachability...",
         "Finalizing safety parameters...",

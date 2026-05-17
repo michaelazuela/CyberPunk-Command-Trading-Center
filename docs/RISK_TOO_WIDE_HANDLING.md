@@ -1,6 +1,6 @@
 # RiskTooWide Handling
 
-This document defines how the app should treat setups whose entry-to-stop distance exceeds the configured risk limit.
+This document defines how the app should treat setups whose visible structure cannot currently be expressed through the fixed 5-point risk model.
 
 This is a blueprint only. It does not change runtime behavior by itself.
 
@@ -8,7 +8,7 @@ This is a blueprint only. It does not change runtime behavior by itself.
 
 `RiskTooWide` is an execution blocker, not a setup detector.
 
-When a valid setup is visible but the stop distance is too wide, the setup remains detected. Only execution is blocked.
+When a valid setup is visible but it cannot use the fixed 5-point stop model cleanly, the setup remains detected. Only execution is blocked.
 
 ## Required Behavior
 
@@ -18,12 +18,12 @@ The app must preserve the candidate and show:
 - direction
 - confidence
 - detected evidence
-- risk distance
-- configured max risk limit
+- fixed 5-point risk distance
+- whether the current trigger can be expressed through that fixed risk model
 - execution status
 - block reason
 - next action
-- reduced-risk plan, if available
+- cleaner fixed-risk trigger plan, if available
 
 ## Example
 
@@ -38,7 +38,7 @@ Evidence:
 - Higher-high / higher-low structure
 - Continuation pressure visible
 Missing Evidence:
-- Reduced-risk pullback trigger
+- Cleaner 5-point pullback trigger
 Next Action:
 - Wait for breather reclaim or pullback entry with stop under active swing.
 ```
@@ -55,17 +55,17 @@ That message hides useful information from the trader and weakens RAG learning. 
 
 ## Reduced-Risk Planning
 
-When `RiskTooWide` occurs, the scanner may create or recommend a conditional reduced-risk plan if the chart provides enough structure.
+When `RiskTooWide` occurs, the scanner may create or recommend a conditional fixed-risk plan if the chart provides enough structure.
 
 Examples:
 
 - Momentum setup is detected but current entry is extended.
-- App blocks immediate execution because risk exceeds max.
-- App marks a reduced-risk pullback plan as conditional.
+- App blocks immediate execution because the current structure does not fit the fixed 5-point model.
+- App marks a cleaner fixed-risk pullback plan as conditional.
 - Required trigger might be a completed pullback candle break.
 - Stop must be tied to the pullback low/high or visible swing structure.
 
-The reduced-risk plan must still obey all hard gates before it can become executable.
+The fixed-risk plan must still obey all hard gates before it can become executable.
 
 ## Ranking Impact
 
@@ -75,7 +75,7 @@ A `RiskTooWide` candidate can be:
 - high setup priority
 - blocked for execution
 
-Blocked candidates remain visible but cannot be the final executable plan. If the blocked setup has a clean reduced-risk trigger, that reduced-risk plan may become the best conditional opportunity.
+Blocked candidates remain visible but cannot be the final executable plan. If the blocked setup has a clean 5-point trigger, that fixed-risk plan may become the best conditional opportunity.
 
 ## Final Decision Impact
 
@@ -85,7 +85,7 @@ The final decision should follow this order:
 2. If none exists, select the best conditional candidate.
 3. Return `NoTrade` only when no executable or conditional candidate exists.
 
-Therefore, `RiskTooWide` alone should not automatically produce `NoTrade` if a conditional reduced-risk opportunity exists.
+Therefore, `RiskTooWide` alone should not automatically produce `NoTrade` if a conditional fixed-risk opportunity exists.
 
 ## Non-Negotiables
 
@@ -94,4 +94,4 @@ Therefore, `RiskTooWide` alone should not automatically produce `NoTrade` if a c
 - Blocked setups should remain visible and journal-ready.
 - No-trade is valid only after every setup candidate is scanned and ranked.
 
-For Lunch-only subtypes, `RiskTooWide` still blocks execution only. A detected `LunchFailedHighReversal`, `LunchFailedLowReversal`, `LunchCompressionBreakout`, `LunchFailedContinuation`, or `LunchRangeReclaim` must remain visible so the trader and RAG database can learn from the opportunity even when the current entry/stop distance is too wide.
+For Lunch-only subtypes, `RiskTooWide` still blocks execution only. A detected `LunchFailedHighReversal`, `LunchFailedLowReversal`, `LunchCompressionBreakout`, `LunchFailedContinuation`, or `LunchRangeReclaim` must remain visible so the trader and RAG database can learn from the opportunity even when the current structure does not fit the fixed 5-point model.

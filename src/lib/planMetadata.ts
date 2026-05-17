@@ -74,7 +74,7 @@ export function buildConfidenceBreakdown(args: {
   const confidence = args.plan.finalConfidence.toLowerCase();
   const rule = confidence === 'high' ? 100 : confidence === 'medium' ? 65 : 30;
   const structure = args.plan.triggerState === 'TRIGGERED' ? 100 : args.plan.triggerState === 'PENDING_TRIGGER' ? 55 : args.plan.canExecute ? 75 : 25;
-  const risk = args.plan.riskPoints === null ? 25 : args.plan.riskPoints <= 8 ? 100 : args.plan.riskPoints <= 15 ? 65 : 20;
+  const risk = args.plan.riskPoints === null ? 25 : args.plan.riskPoints === 5 ? 100 : 20;
   const rag = args.agentLearningUsed === true ? 85 : args.agentLearningUsed === false ? 45 : 35;
   const timeWindow = args.windowValid === false ? 25 : 100;
   const killSwitchPenalty = args.killSwitchClear === false ? 25 : 0;

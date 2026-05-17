@@ -191,13 +191,13 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - BREATHER BREAK PLAN LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT an already-triggered entry, but it IS a valid CONDITIONAL_STOP_ENTRY plan when the trend structure is intact. Do NOT output NO TRADE solely because the trigger has not fired yet.
     - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.
     - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
-    - Only output NO TRADE when there is no measurable trigger candle, no valid stop, invalid structure, oversized risk, or the setup violates a kill switch.
+    - Only output NO TRADE when there is no measurable trigger candle, no valid fixed-risk stop context, invalid structure, or the setup violates a kill switch.
     - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible 9:30-10:10 levels. Do not require future confirmation before producing ENTRY/STOP/T1/T2.
     - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
     - DO NOT CALCULATE EXECUTABLE TARGETS: Extract entry/stop facts only when clearly readable. The app calculates T1/T2 later from confirmed entry and stop.
-    - IF (RISK > 15pts) ➔ TARGET = 1.5R.
+    - APP RISK LOCK: final app plans use a fixed 5-point stop. Do not invent wider or tighter executable risk.
     - IF (TIME == 12:30 EDT - 30min) ➔ TARGET = 1.0R - 1.5R.
     - IF (TIME == 10:30) AND (MOVE > 50%_TARGET) ➔ ACTION: STOP = BE / 10:00 STRUCTURE.
 
@@ -214,7 +214,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     =========================================
     MODULE 4: [RISK_AUDITOR] (Safety Gate)
     - AUDIT the required stop-loss distance against system caps.
-    - MAXIMUM STOP: 8 points. IF RISK > 8 points ➔ WARNING: OVERSIZED RISK.
+    - FIXED STOP: 5 points. IF visual structure suggests wider risk, mark the setup conditional and wait for a cleaner 5-point trigger.
     - ACCOUNT EQUITY: Use configured account equity $${accountEquity}. IF estimated risk exceeds configured Risk Per Trade ${(riskPercent * 100).toFixed(2)}% ($${(accountEquity * riskPercent).toFixed(2)}) ➔ WARNING: OVERLEVERAGED.
     - MONTE CARLO PROBABILITY: Based on the 5-minute wicks and HH/HL structure, what is the probability of hitting 2.0R vs 1.0R STOP?
     - Provide a Final GO / NO-GO validation.
@@ -688,10 +688,10 @@ async function riskAuditorAgent(strategy: any, accountEquity: number, riskPercen
   
   const reports = [];
   
-  if (stopDistance > 8) {
+  if (stopDistance !== 5) {
     reports.push({
       agentName: "Risk Auditor",
-      findings: `Stop distance (${stopDistance.toFixed(2)} pts) is aggressive. System max is 8 pts. Dollar risk is approximately $${riskPerContract.toFixed(2)} per MES contract against configured budget $${maxRisk.toFixed(2)} (${(riskPercent * 100).toFixed(2)}% of $${accountEquity.toFixed(2)}).`,
+      findings: `Stop distance (${stopDistance.toFixed(2)} pts) does not match the system fixed stop of 5 pts. Dollar risk is approximately $${riskPerContract.toFixed(2)} per MES contract against configured budget $${maxRisk.toFixed(2)} (${(riskPercent * 100).toFixed(2)}% of $${accountEquity.toFixed(2)}).`,
       status: 'WARNING'
     });
   } else {

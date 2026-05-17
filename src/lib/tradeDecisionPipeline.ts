@@ -18,7 +18,7 @@ import {
   TradeDecisionStep,
 } from '../types';
 import { DECISION_STEPS, DECISION_STEP_LABELS } from '../config/decisionSteps';
-import { TRADE_RULES } from '../config/tradeRules';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
 import { buildConditionalPlans } from './conditionalPlanBuilder';
@@ -311,13 +311,12 @@ function riskPoints(entry: number | null, stop: number | null): number | null {
 }
 
 function targets(direction: Direction, entry: number | null, stop: number | null): { target1: number | null; target2: number | null; target: number | null } {
-  const risk = riskPoints(entry, stop);
-  if ((direction !== 'LONG' && direction !== 'SHORT') || risk === null) {
+  const fixedTargets = fixedRiskTargetsForDirection(direction, entry);
+  if ((direction !== 'LONG' && direction !== 'SHORT') || fixedTargets.target1 === null || fixedTargets.target2 === null) {
     return { target1: null, target2: null, target: null };
   }
-  const sign = direction === 'LONG' ? 1 : -1;
-  const target1 = roundToTick((entry as number) + sign * risk * TRADE_RULES.targetModel.t1R);
-  const target2 = roundToTick((entry as number) + sign * risk * TRADE_RULES.targetModel.t2R);
+  const target1 = fixedTargets.target1;
+  const target2 = fixedTargets.target2;
   return { target1, target2, target: target1 };
 }
 
@@ -377,9 +376,10 @@ function candidateBlocker(candidate: CandidateInput, sessionType: PipelineSessio
   if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return NoTradeReason.NoApprovedSetup;
   if (candidate.setupType === SetupType.NoSetup || !setupAllowed(sessionType, candidate.setupType)) return NoTradeReason.NoApprovedSetup;
   if (!isValidPrice(candidate.entry)) return NoTradeReason.EntryTriggerMissing;
-  if (!isValidPrice(candidate.stop)) return NoTradeReason.InvalidStopLocation;
+  const fixedStop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
+  if (!isValidPrice(fixedStop)) return NoTradeReason.InvalidStopLocation;
   if (!stopTiedToStructure(candidate)) return NoTradeReason.InvalidStopLocation;
-  const risk = riskPoints(candidate.entry, candidate.stop);
+  const risk = riskPoints(candidate.entry, fixedStop);
   if (risk === null || risk <= 0) return NoTradeReason.InvalidStopLocation;
   if (risk > TRADE_RULES.maxRiskPoints) return NoTradeReason.RiskTooWide;
   const computedTargets = targets(candidate.direction, candidate.entry, candidate.stop);
@@ -392,8 +392,8 @@ function chooseCandidate(candidates: CandidateInput[], sessionType: PipelineSess
   return candidates
     .filter((candidate) => candidateBlocker(candidate, sessionType) === null)
     .sort((a, b) => {
-      const riskA = riskPoints(a.entry, a.stop) || TRADE_RULES.maxRiskPoints;
-      const riskB = riskPoints(b.entry, b.stop) || TRADE_RULES.maxRiskPoints;
+      const riskA = riskPoints(a.entry, fixedRiskStopForDirection(a.direction, a.entry)) || TRADE_RULES.maxRiskPoints;
+      const riskB = riskPoints(b.entry, fixedRiskStopForDirection(b.direction, b.entry)) || TRADE_RULES.maxRiskPoints;
       const scoreA = setupScore(a.setupType) + confidenceScore(a.confidence) + (a.priorityScore || 0) * 10 - riskA;
       const scoreB = setupScore(b.setupType) + confidenceScore(b.confidence) + (b.priorityScore || 0) * 10 - riskB;
       return scoreB - scoreA;
@@ -402,7 +402,7 @@ function chooseCandidate(candidates: CandidateInput[], sessionType: PipelineSess
 
 function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
   const entry = candidate?.entry ?? null;
-  const stop = candidate?.stop ?? null;
+  const stop = fixedRiskStopForDirection(candidate?.direction, entry) ?? candidate?.stop ?? null;
   const risk = riskPoints(entry, stop);
   const status =
     risk === null ? RiskStatus.Unknown :
@@ -424,7 +424,7 @@ function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
 
 function makeRiskAssessmentFromSetup(candidate: SetupCandidate | null): RiskAssessment {
   const entry = candidate?.entry ?? null;
-  const stop = candidate?.stop ?? null;
+  const stop = fixedRiskStopForDirection(candidate?.direction, entry) ?? candidate?.stop ?? null;
   const risk = riskPoints(entry, stop);
   const status =
     risk === null ? RiskStatus.Unknown :
@@ -674,7 +674,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
         ? riskAssessment.status === RiskStatus.Warning ? 'warning' : 'pass'
         : selectedIsConditional ? 'warning' : 'fail',
       selectedCandidate?.blockReason === NoTradeReason.RiskTooWide
-        ? 'RiskTooWide blocks execution only; setup remains available as a reduced-risk wait/conditional candidate.'
+        ? 'RiskTooWide blocks execution only; setup remains available as a fixed-risk wait/conditional candidate.'
         : riskAssessment.reasoning,
       true,
       selectedCandidate?.blockReason === NoTradeReason.RiskTooWide ? NoTradeReason.RiskTooWide : undefined

@@ -7,7 +7,7 @@ import {
   SetupCandidateStatus,
   SetupType,
 } from '../types';
-import { TRADE_RULES } from '../config/tradeRules';
+import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../config/tradeRules';
 import { SETUP_REGISTRY, SetupRegistryEntry, SetupSession } from '../config/setupRegistry';
 
 type Direction = SetupCandidate['direction'];
@@ -517,13 +517,9 @@ function riskPoints(entry: number | null, stop: number | null): number | null {
 }
 
 function computedTargets(direction: Direction, entry: number | null, stop: number | null): { target1: number | null; target2: number | null } {
-  const risk = riskPoints(entry, stop);
-  if ((direction !== 'LONG' && direction !== 'SHORT') || risk === null) return { target1: null, target2: null };
-  const sign = direction === 'LONG' ? 1 : -1;
-  return {
-    target1: roundToTick(entry + sign * risk * TRADE_RULES.targetModel.t1R),
-    target2: roundToTick(entry + sign * risk * TRADE_RULES.targetModel.t2R),
-  };
+  const fixedTargets = fixedRiskTargetsForDirection(direction, entry);
+  if (fixedTargets.target1 === null || fixedTargets.target2 === null) return { target1: null, target2: null };
+  return fixedTargets;
 }
 
 function executionStatusFor(
@@ -587,7 +583,8 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     ? bestFact.direction
     : detected || possible ? inferDirection(text) : 'NO TRADE';
   const entryPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.entry) ?? parsePrice(input.chartContext?.proposedEntry) ?? bestFact?.entry ?? null;
-  const stopPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.stop) ?? parsePrice(input.chartContext?.proposedStop) ?? bestFact?.stop ?? null;
+  const extractedStopPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.stop) ?? parsePrice(input.chartContext?.proposedStop) ?? bestFact?.stop ?? null;
+  const stopPrice = manualLevelConfirmation ? null : fixedRiskStopForDirection(direction, entryPrice) ?? extractedStopPrice;
   const extractedRisk = parsePrice(input.chartContext?.riskPoints);
   const risk =
     riskPoints(entryPrice, stopPrice) ??
@@ -652,7 +649,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
       missingMorningWindowContext
         ? 'Load or complete Morning 15M/5M context first. Lunch subtypes cannot activate from the Lunch chart alone.'
         : execution.blockReason === NoTradeReason.RiskTooWide
-        ? 'Execution blocked by risk. Preserve setup and wait for a reduced-risk trigger.'
+        ? 'Execution blocked by risk. Preserve setup and wait for a clean fixed 5-point trigger.'
         : entry.defaultNextAction,
     reducedRiskPlan:
       execution.blockReason === NoTradeReason.RiskTooWide

@@ -164,9 +164,8 @@ function riskGate(candidate: Pick<AppRuleCandidate, 'decision' | 'entry' | 'stop
   if (candidate.decision !== 'LONG' && candidate.decision !== 'SHORT') return 'No directional trade decision.';
   if (!isValidPrice(candidate.entry) || !isValidPrice(candidate.stop)) return 'Missing measurable ENTRY or STOP.';
   const risk = calculateRisk(candidate.entry, candidate.stop);
-  if (risk <= 0) return 'Invalid zero-distance stop.';
-  if (risk > SYSTEM_RULES.MAX_STOP_TYPE_2) {
-    return `Risk ${risk.toFixed(2)} points exceeds app hard max ${SYSTEM_RULES.MAX_STOP_TYPE_2} points.`;
+  if (risk !== SYSTEM_RULES.FIXED_STOP_RISK_POINTS) {
+    return `Risk must be exactly ${SYSTEM_RULES.FIXED_STOP_RISK_POINTS} points. Current app risk is ${risk.toFixed(2)} points.`;
   }
   return null;
 }
@@ -174,10 +173,9 @@ function riskGate(candidate: Pick<AppRuleCandidate, 'decision' | 'entry' | 'stop
 function scoreCandidate(candidate: AppRuleCandidate, context: RuleEngineContext): number {
   const riskIssue = riskGate(candidate);
   if (riskIssue) return -500;
-  const risk = calculateRisk(candidate.entry as number, candidate.stop as number);
   const confidence = candidate.confidence === 'High' ? 25 : candidate.confidence === 'Medium' ? 14 : 5;
   const setup = SETUP_PRIORITY[candidate.canonicalSetup] || 0;
-  const riskScore = risk <= SYSTEM_RULES.MAX_STOP_TYPE_1 ? 18 : 10;
+  const riskScore = 18;
   const triggerScore = candidate.triggerState === 'TRIGGERED' ? 10 : candidate.triggerState === 'PENDING_TRIGGER' ? 6 : -20;
   const priority = typeof candidate.priorityScore === 'number' ? Math.max(0, Math.min(candidate.priorityScore, 1)) * 12 : 0;
   const rank = candidate.rank ? Math.max(0, 7 - candidate.rank) : 0;

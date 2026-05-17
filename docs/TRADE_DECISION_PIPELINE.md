@@ -225,15 +225,15 @@ Arbitrary stops are not allowed.
 
 ### 10. Validate Risk Limit
 
-The app must hard-block trades that exceed the configured risk limit. Risk must be calculated from:
+The app must hard-block trades that drift from the fixed 5-point risk model. Risk is app-owned and must be:
 
 ```text
-riskPoints = abs(entry - stop)
+riskPoints = 5
 ```
 
-If risk is too large, the app must block execution. AI cannot override this.
+If risk is missing or not exactly 5 points, the app must block execution. AI cannot override this.
 
-`RiskTooWide` blocks execution only. It must not erase the detected setup candidate. A setup with wide risk should remain visible as a blocked opportunity and may produce a conditional reduced-risk plan if the chart provides a valid trigger.
+`RiskTooWide` means the visible structure cannot currently be expressed through the fixed 5-point model. It blocks execution only. It must not erase the detected setup candidate. The setup should remain visible as a conditional opportunity if the chart provides a valid trigger.
 
 For the detailed handling contract, see `docs/RISK_TOO_WIDE_HANDLING.md`.
 

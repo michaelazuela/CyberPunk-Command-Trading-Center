@@ -3,8 +3,9 @@ import { SYSTEM_RULES } from '../constants';
 
 export const TRADE_RULES = {
   instruments: ['MES', 'MNQ'] as const,
-  maxRiskPoints: SYSTEM_RULES.MAX_STOP_TYPE_2,
-  preferredRiskPoints: SYSTEM_RULES.MAX_STOP_TYPE_1,
+  fixedRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
+  maxRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
+  preferredRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
   targetModel: {
     t1R: 1.5,
     t2R: 2.0,
@@ -12,7 +13,7 @@ export const TRADE_RULES = {
   },
   stopQuality: {
     minimumPracticalRiskPoints: {
-      MES: 4,
+      MES: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
       MNQ: 12,
     },
   },
@@ -87,4 +88,30 @@ export const TRADE_RULES = {
 };
 
 export type SupportedInstrument = typeof TRADE_RULES.instruments[number];
+
+function isValidPrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+export function roundToTradeTick(price: number): number {
+  return Math.round(price / TRADE_RULES.targetModel.tickSize) * TRADE_RULES.targetModel.tickSize;
+}
+
+export function fixedRiskStopForDirection(direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined, entry: number | null | undefined): number | null {
+  if (!isValidPrice(entry)) return null;
+  if (direction === 'LONG') return roundToTradeTick(entry - TRADE_RULES.fixedRiskPoints);
+  if (direction === 'SHORT') return roundToTradeTick(entry + TRADE_RULES.fixedRiskPoints);
+  return null;
+}
+
+export function fixedRiskTargetsForDirection(direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined, entry: number | null | undefined): { target1: number | null; target2: number | null } {
+  if (!isValidPrice(entry) || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { target1: null, target2: null };
+  }
+  const sign = direction === 'LONG' ? 1 : -1;
+  return {
+    target1: roundToTradeTick(entry + sign * TRADE_RULES.fixedRiskPoints * TRADE_RULES.targetModel.t1R),
+    target2: roundToTradeTick(entry + sign * TRADE_RULES.fixedRiskPoints * TRADE_RULES.targetModel.t2R),
+  };
+}
 
