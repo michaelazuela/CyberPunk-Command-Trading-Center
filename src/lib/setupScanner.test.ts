@@ -125,6 +125,8 @@ function structuredContext(): ChartContext {
         formedAt: '09:55',
         filledPercent: 50,
         inverted: false,
+        reclaimed: true,
+        reclaimTimestamp: '10:00',
         confidence: 'High',
       },
     ],
@@ -140,6 +142,63 @@ function structuredContext(): ChartContext {
         evidence: 'Wick swept opening low and reclaimed.',
       },
     ],
+    liquiditySweeps: [
+      {
+        type: 'sweep',
+        direction: 'LONG',
+        level: 7396,
+        sweptLevelLabel: 'opening low',
+        reclaimed: true,
+        timestamp: '09:45',
+        confidence: 'High',
+        evidence: 'Wick swept opening low and reclaimed.',
+      },
+    ],
+    reclaimEvents: [
+      {
+        direction: 'LONG',
+        reclaimedLevel: 7396,
+        levelLabel: 'opening low',
+        timestamp: '09:45',
+        candleIndex: 0,
+        confidence: 'High',
+        evidence: 'Close reclaimed the swept low.',
+      },
+    ],
+    failedBreakEvents: [
+      {
+        direction: 'LONG',
+        failedLevel: 7396,
+        levelLabel: 'opening low',
+        sweptExtreme: 7394,
+        timestamp: '09:45',
+        candleIndex: 0,
+        confidence: 'High',
+        evidence: 'Failed breakdown below opening low.',
+      },
+    ],
+    displacementCandles: [
+      {
+        direction: 'LONG',
+        candleIndex: 0,
+        timestamp: '10:00',
+        open: 7398,
+        high: 7402,
+        low: 7396,
+        close: 7401,
+        bodyPoints: 3,
+        rangePoints: 6,
+        confidence: 'High',
+        evidence: 'Large reclaim candle.',
+      },
+    ],
+    setupReadyFacts: {
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+      breakOfStructure: true,
+      sweepThenReclaim: true,
+      notes: ['Fixture includes setup-ready facts.'],
+    },
     gapContext: {
       gapPresent: false,
       direction: 'none',
@@ -352,7 +411,16 @@ const tests: Array<[string, () => void]> = [
     assert.equal(context.candles?.[0].direction, 'bullish');
     assert.equal(context.swings?.[0].type, 'low');
     assert.equal(context.fvgZones?.[0].direction, 'LONG');
+    assert.equal(context.fvgZones?.[0].reclaimed, true);
     assert.equal(context.liquidityEvents?.[0].type, 'sweep');
+    assert.equal(context.liquiditySweeps?.[0].type, 'sweep');
+    assert.equal(context.reclaimEvents?.[0].direction, 'LONG');
+    assert.equal(context.failedBreakEvents?.[0].direction, 'LONG');
+    assert.equal(context.displacementCandles?.[0].direction, 'LONG');
+    assert.equal(context.setupReadyFacts?.pullbackIntoFvg, true);
+    assert.equal(context.setupReadyFacts?.fvgReclaimed, true);
+    assert.equal(context.setupReadyFacts?.breakOfStructure, true);
+    assert.equal(context.setupReadyFacts?.sweepThenReclaim, true);
     assert.equal(context.gapContext?.gapPresent, false);
     assert.equal(context.compressionRange?.present, false);
     assert.equal(context.extractedLevels?.[0].role, 'support');
@@ -608,6 +676,13 @@ const tests: Array<[string, () => void]> = [
     context.entryConfirmed = false;
     context.stopConfirmed = false;
     context.requiresManualConfirmation = true;
+    context.liquiditySweeps = [];
+    context.reclaimEvents = [];
+    context.failedBreakEvents = [];
+    context.setupReadyFacts = {
+      ...context.setupReadyFacts,
+      sweepThenReclaim: false,
+    };
 
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',

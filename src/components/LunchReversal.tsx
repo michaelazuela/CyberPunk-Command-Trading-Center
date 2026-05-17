@@ -300,7 +300,7 @@ export default function LunchReversal({
             }
           } : undefined;
 
-          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, previousAnalysis, undefined, routeName, modelToUse, undefined, session.dailyInstrument);
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, previousAnalysis, undefined, routeName, modelToUse, undefined, session.dailyInstrument, session.riskPercent);
           
           analysis = await Promise.race([geminiPromise, timeoutPromise]);
           const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
@@ -604,7 +604,7 @@ export default function LunchReversal({
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.analysisResult, session.morningEthScreenshot, session.morningScreenshot, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
+  }, [pendingImage, lastImage, session.aiSettings, session.accountEquity, session.riskPercent, session.analysisResult, session.morningEthScreenshot, session.morningScreenshot, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   const handleImageFile = (file: File) => {
     const reader = new FileReader();

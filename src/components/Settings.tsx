@@ -9,14 +9,18 @@ export default function Settings({
   session: SessionState, 
   onUpdate: (updates: Partial<SessionState>) => void
 }) {
-  const [equity, setEquity] = useState(session.accountEquity || 100000);
-  const [risk, setRisk] = useState((session.riskPercent || 0.02) * 100);
+  const [equity, setEquity] = useState(session.accountEquity ?? 100000);
+  const [risk, setRisk] = useState((session.riskPercent ?? 0.02) * 100);
   const [theme, setTheme] = useState('DARK'); // Dummy state for visual
 
   const handleSave = () => {
+    const safeEquity = Number.isFinite(equity) && equity > 0 ? equity : (session.accountEquity ?? 100000);
+    const safeRisk = Number.isFinite(risk) && risk > 0 ? risk : ((session.riskPercent ?? 0.02) * 100);
+    setEquity(safeEquity);
+    setRisk(safeRisk);
     onUpdate({ 
-      accountEquity: equity, 
-      riskPercent: risk / 100
+      accountEquity: safeEquity,
+      riskPercent: safeRisk / 100
     });
   };
 

@@ -31,6 +31,58 @@ Gemini should extract structured facts from screenshots: candles, swings, levels
 
 The app should use those facts to build conditional paths such as Morning Failed High / Liquidity Rejection, Morning Reclaim Long, and Lunch reversal subtypes. Conditional plans may show projected ENTRY/STOP/T1/T2 only as planning paths. They are not executable until the app-owned pipeline confirms trigger, stop, risk, invalidation, and time-window gates.
 
+The intended decision architecture is layered:
+
+1. OHLC layer extracts facts only: bullish/bearish candles, swing highs/lows, possible gaps, `fvgZones[]`, `liquiditySweeps[]`, `reclaimEvents[]`, `failedBreakEvents[]`, `displacementCandles[]`, and booleans such as `pullbackIntoFvg`, `fvgReclaimed`, `breakOfStructure`, and `sweepThenReclaim`.
+2. Setup scanner applies setup definitions: Liquidity Sweep, FVG Pullback, Lunch Failed Low Reversal, and the other approved setup types.
+3. Ranking engine scores candidates by setup priority, confidence, risk quality, level proximity, trigger clarity, stop clarity, and target clarity.
+4. Trade decision pipeline approves, rejects, waits, or marks conditional based on the required gates.
+
+Do not move setup approval, ranking, risk acceptance, or executable trade decisions into the OHLC extraction layer.
+
+## Market Map And Target Context
+
+Asian, London, NY premarket, full ETH, RTH highs/lows, Midnight Open, and nearby round numbers are session-level context. They are a market map: reaction zones, target references, obstacles, and runner objectives. They are not standalone trade approval.
+
+The key-level context engine may identify relationships such as:
+
+- Asian low below London low
+- London swept Asian low/high
+- NY premarket swept London low/high
+- RTH tested full ETH high/low
+- RTH opened above/below Midnight Open
+- RTH returned into the ETH range
+- RTH expanded away from the ETH range
+- price rejecting or reclaiming a high-strength session level
+
+Those facts can improve candidate scoring and target context. Internal scores may consider source, touches, sweep/reclaim behavior, round-number overlap, FVG overlap, and proximity. User-facing notes should not expose raw score labels as instructions. They should explain what the trader can do with the level: watch for reaction, reclaim, rejection, obstacle before T1, or runner target after T2. These facts must not replace the 5M execution chart, the setup scanner, or the trade decision pipeline. A level can make a plan more interesting, but execution still requires trigger, stop, risk, invalidation, and time-window gates.
+
+## Notes And User-Facing Language
+
+All engines, cards, Discord alerts, RAG text, and agent docs must use the same authority language:
+
+- AI/OHLC extracts facts.
+- The setup scanner applies setup definitions.
+- The ranking layer scores opportunities.
+- The trade decision pipeline approves, waits, rejects, or marks conditional.
+- The trader confirms whether a trade was taken and what happened.
+
+Use plain trading instructions in notes. Prefer `What / Where / When / Why / Invalidation` over raw engine jargon. Do not present internal scores, raw confidence labels, or AI advisory fields as execution instructions.
+
+## Product Voice: Master Trading Desk
+
+The app should not sound like a casual trade assistant. It should sound like a disciplined futures trading desk lead: decisive, risk-first, structurally aware, and trained by a 20+ year professional standard.
+
+Use this tone in prompts, cards, Discord alerts, RAG summaries, and documentation:
+
+- Direct, calm, and specific.
+- No hype, no prediction theater, no emotional encouragement.
+- State the best read, the opposing scenario, the trigger, the invalidation, and the reason.
+- Treat `Wait` and `NoTrade` as professional decisions, not failures.
+- Explain what the trader should watch next.
+
+Do not claim a real certification, personal wealth, guaranteed expertise, or guaranteed trading results. The product voice may be `Master Trading Desk`, but execution authority remains the app-owned deterministic pipeline.
+
 ## Session Types
 
 Use the app-owned session types consistently:
@@ -70,6 +122,7 @@ Every completed analysis and replay outcome should have a durable Supabase recor
 
 - Store image URLs, not base64 images.
 - Save setup/trade metadata, normalized plan data, proof metadata, and save receipts.
+- Discord alert outcome buttons may record trader-confirmed outcomes, but they must only update learning/journal fields. They do not approve trades, place trades, or override risk rules.
 - If embedding fails, preserve the base record and allow retry.
 - RLS must keep user data scoped to `auth.uid()`.
 

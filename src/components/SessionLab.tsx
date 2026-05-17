@@ -14,11 +14,38 @@ import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/T
 import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 import { applyWorkflowSpeedMode, loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
+import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
+import {
+  buildNinjaChartContext,
+  describeNinjaBridgeError,
+  getNinjaBridgeAccounts,
+  getNinjaBridgeBars,
+  getNinjaBridgeHealth,
+  getNinjaBridgePositions,
+  getNinjaBridgeSnapshot,
+  type NinjaBridgeBar,
+  type NinjaBridgeHealth,
+  type NinjaBridgePosition,
+  type NinjaBridgeSnapshot,
+} from '../lib/ninjaTraderBridge';
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 type OutcomePlanChoice = 'main' | `candidate:${number}`;
 type UploadedImage = UploadedWorkflowImage;
+
+interface NinjaBridgeState {
+  connected: boolean;
+  loading: boolean;
+  health: NinjaBridgeHealth | null;
+  accounts: string[];
+  snapshot: NinjaBridgeSnapshot | null;
+  bars5m: NinjaBridgeBar[];
+  bars15m: NinjaBridgeBar[];
+  positions: NinjaBridgePosition[];
+  updatedAt: string | null;
+  error: string | null;
+}
 
 const SESSION_OUTCOMES: Array<WorkflowOutcomeOption<SessionOutcome>> = [
   {
@@ -125,15 +152,67 @@ function mergeCustomInstructions(base: unknown, additions: Array<unknown>): stri
     .join('\n\n');
 }
 
+function formatBridgePrice(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+function summarizeBridgeBar(bar: NinjaBridgeBar | null | undefined): string {
+  if (!bar) return 'No bar';
+  return `${new Date(bar.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} O ${formatBridgePrice(bar.open)} H ${formatBridgePrice(bar.high)} L ${formatBridgePrice(bar.low)} C ${formatBridgePrice(bar.close)}`;
+}
+
+function mergeBridgeContextIntoAnalysis(
+  analysis: AnalysisResult,
+  bridgeContext: Partial<AnalysisResult['structuredChartContext']> | null,
+  bridgeSummary: string
+): AnalysisResult {
+  if (!bridgeContext) return analysis;
+  const existing = analysis.structuredChartContext || {};
+  return {
+    ...analysis,
+    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER BRIDGE] ${bridgeSummary}`.trim(),
+    structuredChartContext: {
+      ...existing,
+      ...bridgeContext,
+      keyLevels: {
+        ...(existing.keyLevels || {}),
+        ...(bridgeContext.keyLevels || {}),
+      },
+      candles: bridgeContext.candles || existing.candles,
+      structuralLevels: bridgeContext.structuralLevels || existing.structuralLevels,
+      targetObjectives: bridgeContext.targetObjectives || existing.targetObjectives,
+      marketStructure: bridgeContext.marketStructure || existing.marketStructure,
+      candleFacts: bridgeContext.candleFacts || existing.candleFacts,
+      extractionWarnings: existing.extractionWarnings,
+    },
+    agentReports: [
+      ...(analysis.agentReports || []),
+      {
+        agentName: 'NinjaTrader Bridge',
+        findings: bridgeSummary,
+        status: 'SUCCESS' as const,
+      },
+    ],
+  };
+}
+
 function OutcomePlanSelector({
   plan,
   value,
   onChange,
   getOptions,
+  accountEquity,
+  riskPercent,
+  contracts,
+  instrument,
 }: {
   plan: ReturnType<typeof buildAppTradePlan> | null;
   value: OutcomePlanChoice;
   onChange: (value: OutcomePlanChoice) => void;
+  accountEquity: number;
+  riskPercent: number;
+  contracts: number;
+  instrument: 'MES' | 'MNQ';
   getOptions: (plan: ReturnType<typeof buildAppTradePlan> | null) => Array<{
     key: OutcomePlanChoice;
     label: string;
@@ -161,6 +240,13 @@ function OutcomePlanSelector({
         {options.map(option => {
           const optionPlan = option.plan;
           const isSelected = option.key === selected.key;
+          const sizing = computeRiskSizing({
+            accountEquity,
+            riskPercent,
+            contracts,
+            instrument,
+            riskPoints: optionPlan?.riskPoints,
+          });
           return (
             <button
               key={option.key}
@@ -184,6 +270,14 @@ function OutcomePlanSelector({
                   <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T1 {optionPlan?.t1 ?? 'N/A'}</span>
                   <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T2 {optionPlan?.t2 ?? 'N/A'}</span>
                 </div>
+              </div>
+              <div className="mt-2 grid gap-1 text-[9px] text-[var(--txt3)] md:grid-cols-4">
+                <span>Budget {formatDollars(sizing.riskBudgetDollars)}</span>
+                <span>Plan risk {formatDollars(sizing.riskPerContractDollars)}</span>
+                <span>{contracts} contract(s) {formatDollars(sizing.totalRiskDollars)}</span>
+                <span className={sizing.withinBudget === false ? 'text-[var(--red)]' : 'text-[var(--green)]'}>
+                  {sizing.withinBudget === null ? 'Risk TBD' : sizing.withinBudget ? `Within budget · Max ${sizing.maxContractsByBudget}` : `Over budget · Max ${sizing.maxContractsByBudget}`}
+                </span>
               </div>
             </button>
           );
@@ -238,6 +332,20 @@ export default function SessionLab({
   const [morningTradeTaken, setMorningTradeTaken] = useState<boolean | null>(null);
   const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
+  const [bridgeInstrument, setBridgeInstrument] = useState('MES 06-26');
+  const [bridgeAccount, setBridgeAccount] = useState('Sim101');
+  const [bridge, setBridge] = useState<NinjaBridgeState>({
+    connected: false,
+    loading: false,
+    health: null,
+    accounts: [],
+    snapshot: null,
+    bars5m: [],
+    bars15m: [],
+    positions: [],
+    updatedAt: null,
+    error: null,
+  });
 
   const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'morning', instrument }) : null;
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'lunch', instrument }) : null;
@@ -277,6 +385,28 @@ export default function SessionLab({
     return options.find(option => option.key === choice) || options[0];
   };
 
+  const buildBridgeAnalysisContext = (sessionType: 'morning' | 'lunch') => {
+    if (!bridge.connected || !bridge.bars5m.length) return { structuredContext: null, summary: 'NinjaTrader bridge not connected.' };
+    const structuredContext = buildNinjaChartContext({
+      bars5m: bridge.bars5m,
+      bars15m: bridge.bars15m,
+      sessionType,
+      instrument,
+      tradeDate,
+      midnightOpen: midnightOpen ? Number(midnightOpen) : null,
+    });
+    const latest5m = bridge.bars5m[bridge.bars5m.length - 1];
+    const latest15m = bridge.bars15m[bridge.bars15m.length - 1];
+    const summary = [
+      `Live ${bridgeInstrument} ${sessionType} OHLC available from NinjaTrader.`,
+      `Latest 5M: ${summarizeBridgeBar(latest5m)}.`,
+      `Latest 15M: ${summarizeBridgeBar(latest15m)}.`,
+      `Snapshot: price ${formatBridgePrice(bridge.snapshot?.currentPrice)}, session H/L ${formatBridgePrice(bridge.snapshot?.sessionHigh)} / ${formatBridgePrice(bridge.snapshot?.sessionLow)}.`,
+      `Selected account ${bridgeAccount}; positions ${bridge.positions.length}.`,
+    ].join(' ');
+    return { structuredContext, summary };
+  };
+
   useEffect(() => {
     onUpdate({
       dailyInstrument: instrument,
@@ -288,6 +418,52 @@ export default function SessionLab({
     });
   }, [instrument, morningTimezone, lunchTimezone]);
 
+  const refreshNinjaBridge = useCallback(async () => {
+    setBridge(current => ({ ...current, loading: true }));
+    try {
+      const health = await getNinjaBridgeHealth();
+      const nextInstrument = bridgeInstrument || health.defaultInstrument || (instrument === 'MNQ' ? 'MNQ 06-26' : 'MES 06-26');
+      if (!bridgeInstrument && health.defaultInstrument) setBridgeInstrument(health.defaultInstrument);
+      const [accounts, snapshot, bars5m, bars15m, positions] = await Promise.all([
+        getNinjaBridgeAccounts(),
+        getNinjaBridgeSnapshot(nextInstrument),
+        getNinjaBridgeBars(nextInstrument, '5m', 120),
+        getNinjaBridgeBars(nextInstrument, '15m', 120),
+        getNinjaBridgePositions(bridgeAccount),
+      ]);
+      if (accounts.accounts?.length && !accounts.accounts.includes(bridgeAccount)) {
+        setBridgeAccount(accounts.preferred?.find(account => accounts.accounts.includes(account)) || accounts.accounts[0]);
+      }
+      setBridge({
+        connected: true,
+        loading: false,
+        health,
+        accounts: accounts.accounts || [],
+        snapshot,
+        bars5m: bars5m.bars || [],
+        bars15m: bars15m.bars || [],
+        positions: positions.positions || [],
+        updatedAt: new Date().toISOString(),
+        error: null,
+      });
+    } catch (error) {
+      setBridge(current => ({
+        ...current,
+        connected: false,
+        loading: false,
+        error: describeNinjaBridgeError(error),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+  }, [bridgeAccount, bridgeInstrument, instrument]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    void refreshNinjaBridge();
+    const timer = window.setInterval(() => void refreshNinjaBridge(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [isActive, refreshNinjaBridge]);
+
   const readinessItems = [
     { label: 'Trading Date', value: tradeDate, ready: Boolean(tradeDate) },
     { label: 'Instrument', value: instrument, ready: true },
@@ -296,6 +472,7 @@ export default function SessionLab({
     { label: 'Morning 15M', value: morningEthImg ? 'ATTACHED' : 'OPTIONAL', ready: Boolean(morningEthImg) },
     { label: 'Morning 5M', value: morningExecImg || morningResult ? 'READY' : 'REQUIRED', ready: Boolean(morningExecImg || morningResult) },
     { label: 'Lunch 5M', value: lunchExecImg || lunchResult ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
+    { label: 'NinjaTrader', value: bridge.connected ? 'CONNECTED' : 'OPTIONAL', ready: bridge.connected },
     { label: 'RAG Save', value: morningSaveStatus || lunchSaveStatus ? 'ACTIVE' : 'ON ANALYSIS', ready: true },
   ];
 
@@ -380,6 +557,13 @@ export default function SessionLab({
     const requiredScreenshotRange = sessionType === 'morning'
       ? formatReplayRange('morning_5m_execution', morningTimezone)
       : formatReplayRange('lunch_5m_execution', lunchTimezone);
+    const planRiskSizing = computeRiskSizing({
+      accountEquity: session.accountEquity,
+      riskPercent: session.riskPercent,
+      riskPoints: plan.riskPoints,
+      contracts,
+      instrument,
+    });
     analysis.planVersionId = planVersionId;
     analysis.setupSignature = setupSignature;
 
@@ -422,6 +606,7 @@ export default function SessionLab({
         setup_signature: setupSignature,
         chart_timezone: chartTimezone,
         required_screenshot_range: requiredScreenshotRange,
+        risk_sizing: planRiskSizing,
         morning_context: sessionType === 'lunch' ? {
           morning_5m_available: Boolean(morning5mContext || session.morningScreenshot),
           morning_15m_eth_available: Boolean(ethImageUrl || session.morningEthScreenshot),
@@ -477,6 +662,9 @@ export default function SessionLab({
       t1: plan.t1,
       t2: plan.t2,
       riskPoints: plan.riskPoints,
+      accountEquity: session.accountEquity,
+      riskPercent: session.riskPercent,
+      riskBudgetDollars: planRiskSizing.riskBudgetDollars,
       riskRewardT1: plan.riskRewardT1,
       riskRewardT2: plan.riskRewardT2,
       planSource: plan.source,
@@ -565,15 +753,18 @@ export default function SessionLab({
     setMorningSaveStatus('Running Morning analysis...');
 
     try {
+      const bridgeContext = buildBridgeAnalysisContext('morning');
       const payload = morningEthImg ? { exec: morningExecImg.dataUrl, eth: morningEthImg.dataUrl } : morningExecImg.dataUrl;
       const morningSettings = {
         ...(session.aiSettings || { temperature: 0 }),
         customInstructions: mergeCustomInstructions(session.aiSettings?.customInstructions, [
           approvedRuleRefinements,
           'THIS IS THE MORNING ANALYSIS SETUP. The 15M ETH image is context only. The 5M image is the execution chart. Final trade approval belongs to the app-owned plan engine and trade decision pipeline.',
+          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Screenshots remain visual context; final approval still belongs to the app-owned pipeline.` : '',
         ]),
       };
-      const analysis = await analyzeChart(payload, morningSettings, session.accountEquity, undefined, undefined, 'morning', undefined, midnightOpen || undefined, instrument) as AnalysisResult;
+      const rawAnalysis = await analyzeChart(payload, morningSettings, session.accountEquity, undefined, undefined, 'morning', undefined, midnightOpen || undefined, instrument, session.riskPercent) as AnalysisResult;
+      const analysis = mergeBridgeContextIntoAnalysis(rawAnalysis, bridgeContext.structuredContext, bridgeContext.summary);
 
       setMorningResult(analysis);
       onUpdate({ analysisResult: analysis, morningScreenshot: morningExecImg.dataUrl, morningEthScreenshot: morningEthImg?.dataUrl, dayType: analysis.dayType });
@@ -596,6 +787,7 @@ export default function SessionLab({
     setLunchSaveStatus('Running Lunch analysis...');
 
     try {
+      const bridgeContext = buildBridgeAnalysisContext('lunch');
       const payload = (morningEthImg || morningExecImg || session.morningEthScreenshot || session.morningScreenshot)
         ? {
           exec: lunchExecImg.dataUrl,
@@ -620,9 +812,11 @@ export default function SessionLab({
         customInstructions: mergeCustomInstructions(session.aiSettings?.customInstructions, [
           approvedRuleRefinements,
           'THIS IS THE LUNCH REVERSAL SETUP. Only treat Morning 15M ETH and Morning 5M images as context. The Lunch 5M image is the execution chart. Prefer Lunch Failed High/Low Reversal, Compression Breakout, Failed Continuation, and Range Reclaim mechanics.',
+          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help plan Lunch, but Lunch 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
         ]),
       };
-      const analysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument) as AnalysisResult;
+      const rawAnalysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument, session.riskPercent) as AnalysisResult;
+      const analysis = mergeBridgeContextIntoAnalysis(rawAnalysis, bridgeContext.structuredContext, bridgeContext.summary);
 
       setLunchResult(analysis);
       onUpdate({ lunchAnalysisResult: analysis, lunchScreenshot: lunchExecImg.dataUrl });
@@ -679,6 +873,13 @@ export default function SessionLab({
 
     try {
       if (setupId) {
+        const selectedRiskSizing = computeRiskSizing({
+          accountEquity: session.accountEquity,
+          riskPercent: session.riskPercent,
+          riskPoints: actualPlan?.riskPoints,
+          contracts,
+          instrument,
+        });
         await supabase.from('setups').update({ outcome, replay_status: 'verified', contracts }).eq('id', setupId);
         const { saveToRAG } = await import('../lib/rag');
         await saveToRAG({
@@ -710,15 +911,21 @@ export default function SessionLab({
           t1: actualPlan?.t1,
           t2: actualPlan?.t2,
           riskPoints: actualPlan?.riskPoints,
+          accountEquity: session.accountEquity,
+          riskPercent: session.riskPercent,
+          riskBudgetDollars: selectedRiskSizing.riskBudgetDollars,
           planSource: selectedCandidate ? 'user_selected_setup_candidate' : actualPlan?.source,
           whyThisPlan: actualPlan?.whyThisPlan,
           invalidation: actualPlan?.invalidation,
-          notes: `Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\n${selectedCandidate ? 'User selected a conditional/setup-scan candidate instead of the main plan.' : 'User selected the main app plan.'}`,
+          notes: `Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\nRisk sizing: ${selectedRiskSizing.summary}\n${selectedCandidate ? 'User selected a conditional/setup-scan candidate instead of the main plan.' : 'User selected the main app plan.'}`,
           trade_plan_json: {
             selected_outcome_plan_key: selectedOutcomePlan.key,
             selected_outcome_plan_label: selectedOutcomePlan.label,
             selected_outcome_candidate: selectedCandidate,
             selected_outcome_plan: actualPlan,
+            selected_outcome_risk_sizing: selectedRiskSizing,
+            account_equity: session.accountEquity,
+            risk_percent: session.riskPercent,
             normalized_plan: plan,
           },
         });
@@ -810,6 +1017,79 @@ export default function SessionLab({
             Session Lab defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the Morning or Lunch analysis button.
           </p>
         </div>
+      </div>
+
+      <div className="card-base p-4 mb-6 font-mono">
+        <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">NinjaTrader Bridge</div>
+            <div className="mt-1 text-[10px] text-[var(--txt3)]">
+              Read-only live OHLC and account snapshot from NinjaTrader Desktop. Screenshots still work if the bridge is disconnected.
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn('qd-badge', bridge.connected ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
+              {bridge.connected ? 'Connected' : 'Disconnected'}
+            </span>
+            <button type="button" onClick={() => void refreshNinjaBridge()} className="qd-btn-ghost px-3 py-1 text-[10px]" disabled={bridge.loading}>
+              {bridge.loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+            <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Bridge Instrument</label>
+            <input
+              value={bridgeInstrument}
+              onChange={event => setBridgeInstrument(event.target.value)}
+              onBlur={() => void refreshNinjaBridge()}
+              className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
+              placeholder="MES 06-26"
+            />
+          </div>
+          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+            <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Account</label>
+            <select
+              value={bridgeAccount}
+              onChange={event => setBridgeAccount(event.target.value)}
+              className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
+            >
+              {(bridge.accounts.length ? bridge.accounts : ['Sim101', '206257']).map(account => <option key={account} value={account}>{account}</option>)}
+            </select>
+          </div>
+          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+            <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 5M Candle</div>
+            <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars5m[bridge.bars5m.length - 1])}</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars5m.length} cached bars</div>
+          </div>
+          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+            <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 15M Candle</div>
+            <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars15m[bridge.bars15m.length - 1])}</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars15m.length} cached bars</div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] md:grid-cols-3">
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">NinjaTrader: </span>
+            <span className="text-[var(--txt)]">{bridge.health?.ninjaTraderVersion || 'N/A'}</span>
+          </div>
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">Current / H / L: </span>
+            <span className="text-[var(--txt)]">{formatBridgePrice(bridge.snapshot?.currentPrice)} / {formatBridgePrice(bridge.snapshot?.sessionHigh)} / {formatBridgePrice(bridge.snapshot?.sessionLow)}</span>
+          </div>
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">Positions: </span>
+            <span className="text-[var(--txt)]">{bridge.positions.length ? bridge.positions.map(position => `${position.instrument} ${position.marketPosition} ${position.quantity}`).join(', ') : 'Flat / none returned'}</span>
+          </div>
+        </div>
+
+        {bridge.error && (
+          <div className="mt-3 border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-2 text-[10px] text-[var(--orange)]">
+            Bridge unavailable: {bridge.error}. Open NinjaTrader and keep the AddOn compiled/running, or continue with screenshot-only analysis.
+          </div>
+        )}
       </div>
 
       <div className="card-base p-4 mb-6">
@@ -929,6 +1209,10 @@ export default function SessionLab({
                     value={morningOutcomePlanChoice}
                     onChange={setMorningOutcomePlanChoice}
                     getOptions={getOutcomePlanOptions}
+                    accountEquity={session.accountEquity}
+                    riskPercent={session.riskPercent}
+                    contracts={contracts}
+                    instrument={instrument}
                   />
                   <TradeConfirmationPanel
                     options={SESSION_OUTCOMES}
@@ -987,6 +1271,10 @@ export default function SessionLab({
                     value={lunchOutcomePlanChoice}
                     onChange={setLunchOutcomePlanChoice}
                     getOptions={getOutcomePlanOptions}
+                    accountEquity={session.accountEquity}
+                    riskPercent={session.riskPercent}
+                    contracts={contracts}
+                    instrument={instrument}
                   />
                   <TradeConfirmationPanel
                     options={SESSION_OUTCOMES}

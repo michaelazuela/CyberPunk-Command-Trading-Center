@@ -1,5 +1,6 @@
-import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SetupCandidate, TradeDecisionStatus } from '../types';
+import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SetupCandidate, TradeDecisionStatus } from '../types';
 import { SYSTEM_RULES } from '../constants';
+import { getWindowStatus } from '../config/timeWindows';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
 export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
@@ -43,6 +44,7 @@ export interface NormalizedTradePlan {
   decisionAuditTrail?: TradeDecisionStepResult[];
   setupCandidates?: SetupCandidate[];
   opportunitySelection?: FinalOpportunitySelection;
+  sessionLevelContext?: SessionLevelContext;
   consistencyWarnings?: string[];
   rejectedAlternatives?: {
     setupName: string;
@@ -171,9 +173,10 @@ export function roundToTick(price: number, instrument?: "MES" | "MNQ"): number {
 export function normalizeTradePlan(
   result: AnalysisResult | null | undefined,
   instrument?: "MES" | "MNQ",
-  sessionType: PipelineSessionType = 'morning'
+  sessionType: PipelineSessionType = 'morning',
+  windowStatusOverride?: ReturnType<typeof getWindowStatus>
 ): NormalizedTradePlan {
-  const pipeline = runTradeDecisionPipeline({ result, instrument, sessionType });
+  const pipeline = runTradeDecisionPipeline({ result, instrument, sessionType, windowStatusOverride });
   const defaultPlan: NormalizedTradePlan = {
     decision: "NO TRADE",
     entry: null,
@@ -193,6 +196,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     rejectedAlternatives: []
   };
 
@@ -437,6 +441,7 @@ export function normalizeTradePlan(
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       setupCandidates: pipeline.setupCandidates || [],
       opportunitySelection: pipeline.opportunitySelection,
+      sessionLevelContext: pipeline.chartContext.sessionLevelContext,
       consistencyWarnings: advisoryCandidates.some(isExecutable)
         ? ["Advisory trade-plan fields are not executable. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
         : []
@@ -485,6 +490,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     setupName: executableCandidate.setupName,
     priorityScore: executableCandidate.priorityScore ?? null,
     rank: executableCandidate.rank ?? null,

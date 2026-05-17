@@ -148,6 +148,87 @@ export interface KeyLevels {
   morningLowSweep?: number | null;
 }
 
+export type SessionSegmentName =
+  | 'prior_eth'
+  | 'asian'
+  | 'london'
+  | 'ny_premarket'
+  | 'rth_morning'
+  | 'lunch'
+  | 'full_context'
+  | 'current_window';
+
+export type StructuralLevelType =
+  | 'high'
+  | 'low'
+  | 'support'
+  | 'resistance'
+  | 'midnight_open'
+  | 'rth_open'
+  | 'round_number'
+  | 'swing'
+  | 'liquidity_pool'
+  | 'gap'
+  | 'unknown';
+
+export interface StructuralLevel {
+  label: string;
+  price: number;
+  type: StructuralLevelType;
+  source: SessionSegmentName | 'manual' | 'screenshot' | 'ninjatrader' | 'app';
+  directionRelevance: 'LONG' | 'SHORT' | 'BOTH';
+  confidence: ReadConfidence;
+  touches?: number;
+  timestamp?: string | null;
+  evidence?: string;
+  strengthScore?: number;
+  strengthLabel?: 'High' | 'Medium' | 'Low';
+  contextRuleTags?: string[];
+  contextNote?: string;
+}
+
+export interface SessionLevelRelationship {
+  id: string;
+  label: string;
+  bias: 'LONG' | 'SHORT' | 'BOTH' | 'NEUTRAL';
+  scoreImpact: number;
+  evidence: string;
+}
+
+export interface SessionLevelContext {
+  levels: StructuralLevel[];
+  relationships: SessionLevelRelationship[];
+  strongestLongLevels: StructuralLevel[];
+  strongestShortLevels: StructuralLevel[];
+  levelsToWatch: StructuralLevel[];
+  notes: string[];
+}
+
+export interface TargetObjective {
+  label: string;
+  price: number;
+  direction: 'LONG' | 'SHORT';
+  source: StructuralLevel['source'];
+  type: StructuralLevelType;
+  confidence: ReadConfidence;
+  score: number;
+  distancePoints?: number | null;
+  rMultiple?: number | null;
+  reason: string;
+}
+
+export interface TargetObjectivePlan {
+  selectedT1?: TargetObjective | null;
+  selectedT2?: TargetObjective | null;
+  nearestLiquidityTarget?: TargetObjective | null;
+  runnerTarget?: TargetObjective | null;
+  targetPathWarning?: string | null;
+  targetQuality: 'clear_path' | 'target_blocked' | 'no_liquidity_map';
+  objectives: TargetObjective[];
+  notes: string[];
+  targetModel: 'fixed_r_with_structural_context';
+}
+
 export type ReadConfidence = 'High' | 'Medium' | 'Low' | 'Unreadable';
 export type TrendState = 'bullish' | 'bearish' | 'neutral' | 'range' | 'chop' | 'unknown';
 export type CandleDirection = 'bullish' | 'bearish' | 'doji' | 'unknown';
@@ -199,6 +280,8 @@ export interface FvgZoneFact {
   formedAt?: string | null;
   filledPercent?: number | null;
   inverted?: boolean;
+  reclaimed?: boolean;
+  reclaimTimestamp?: string | null;
   confidence: ReadConfidence;
 }
 
@@ -211,6 +294,49 @@ export interface LiquidityEventFact {
   timestamp?: string | null;
   confidence: ReadConfidence;
   evidence?: string;
+}
+
+export interface ReclaimEventFact {
+  direction: Exclude<PriceDirection, 'NO TRADE'>;
+  reclaimedLevel: number | null;
+  levelLabel?: string;
+  timestamp?: string | null;
+  candleIndex?: number | null;
+  confidence: ReadConfidence;
+  evidence?: string;
+}
+
+export interface FailedBreakEventFact {
+  direction: Exclude<PriceDirection, 'NO TRADE'>;
+  failedLevel: number | null;
+  levelLabel?: string;
+  sweptExtreme?: number | null;
+  timestamp?: string | null;
+  candleIndex?: number | null;
+  confidence: ReadConfidence;
+  evidence?: string;
+}
+
+export interface DisplacementCandleFact {
+  direction: Exclude<PriceDirection, 'NO TRADE'>;
+  candleIndex: number;
+  timestamp?: string | null;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  close?: number | null;
+  bodyPoints?: number | null;
+  rangePoints?: number | null;
+  confidence: ReadConfidence;
+  evidence?: string;
+}
+
+export interface SetupReadyFacts {
+  pullbackIntoFvg?: boolean;
+  fvgReclaimed?: boolean;
+  breakOfStructure?: boolean;
+  sweepThenReclaim?: boolean;
+  notes?: string[];
 }
 
 export interface GapContextFact {
@@ -340,11 +466,19 @@ export interface ChartContext {
   screenshotUsability: 'usable' | 'warning' | 'unusable';
   screenshotWarning?: string | null;
   keyLevels: KeyLevels;
+  structuralLevels?: StructuralLevel[];
+  targetObjectives?: TargetObjective[];
   extractedLevels?: ExtractedLevelFact[];
   candles?: ChartCandleFact[];
   swings?: SwingPointFact[];
   fvgZones?: FvgZoneFact[];
   liquidityEvents?: LiquidityEventFact[];
+  liquiditySweeps?: LiquidityEventFact[];
+  reclaimEvents?: ReclaimEventFact[];
+  failedBreakEvents?: FailedBreakEventFact[];
+  displacementCandles?: DisplacementCandleFact[];
+  setupReadyFacts?: SetupReadyFacts;
+  sessionLevelContext?: SessionLevelContext;
   gapContext?: GapContextFact;
   compressionRange?: CompressionRangeFact;
   marketStructure?: MarketStructureFacts;
@@ -448,12 +582,17 @@ export interface SetupCandidate {
   stop?: number | null;
   target1?: number | null;
   target2?: number | null;
+  target1Reason?: string | null;
+  target2Reason?: string | null;
+  targetObjectivePlan?: TargetObjectivePlan | null;
   riskPoints?: number | null;
   invalidation?: string | null;
   entryClarity?: number;
   stopClarity?: number;
   targetClarity?: number;
   proximityScore?: number;
+  levelContextScore?: number;
+  levelContextSummary?: string;
   rankScore?: number;
   evidence: string[];
   missingEvidence: string[];
@@ -950,6 +1089,9 @@ export interface RAGSaveContext {
   pnlTicks?: number | null;
   pnlDollars?: number | null;
   contracts?: number;
+  accountEquity?: number | null;
+  riskPercent?: number | null;
+  riskBudgetDollars?: number | null;
   geminiConfidence?: "High" | "Medium" | "Low";
   geminiVerdict?: "CONFIRMED" | "DISPUTED" | "UNCLEAR" | null;
   geminiAnalysisJson?: Record<string, unknown> | any;

@@ -128,6 +128,11 @@ function hasStructuredChartFacts(chartContext?: ChartContext | null): boolean {
     chartContext.swings?.length ||
     chartContext.fvgZones?.length ||
     chartContext.liquidityEvents?.length ||
+    chartContext.liquiditySweeps?.length ||
+    chartContext.reclaimEvents?.length ||
+    chartContext.failedBreakEvents?.length ||
+    chartContext.displacementCandles?.length ||
+    chartContext.setupReadyFacts ||
     chartContext.extractedLevels?.length ||
     chartContext.gapContext ||
     chartContext.compressionRange ||
@@ -280,6 +285,21 @@ function candleFactSummary(chartContext: ChartContext) {
   };
 }
 
+function levelContextScoreForDirection(chartContext: ChartContext | null | undefined, direction: Direction): { score: number; summary: string } {
+  if (!chartContext?.sessionLevelContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { score: 0, summary: 'No session level context score available.' };
+  }
+  const levels = direction === 'LONG'
+    ? chartContext.sessionLevelContext.strongestLongLevels
+    : chartContext.sessionLevelContext.strongestShortLevels;
+  const best = levels[0];
+  if (!best) return { score: 0, summary: 'No directional session level context found.' };
+  return {
+    score: Math.min(Math.round((best.strengthScore || 0) / 5), 20),
+    summary: `${best.label} ${best.price} is a ${direction === 'LONG' ? 'long-side' : 'short-side'} reaction zone to watch for reclaim, rejection, or target management.`,
+  };
+}
+
 function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: ChartContext | null): Direction | null {
   if (!chartContext) return null;
   const evidence = setupEvidenceFromContext(entry, chartContext);
@@ -344,7 +364,7 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
   const candles = candleFactSummary(chartContext);
   const swings = chartContext.swings || [];
   const fvgZones = chartContext.fvgZones || [];
-  const liquidityEvents = chartContext.liquidityEvents || [];
+  const liquidityEvents = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])];
   const gapContext = chartContext.gapContext;
   const compressionRange = chartContext.compressionRange;
   const hasReadableFvg = fvgZones.some((zone) => isReadableConfidence(zone.confidence));
@@ -392,7 +412,7 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.OpeningGapFill:
       return Boolean((gapContext?.gapPresent && isReadableConfidence(gapContext.confidence)) || (levels.rthOpen && (levels.nearestSupport || levels.nearestResistance)));
     case SetupType.FvgImbalancePullback:
-      return Boolean(hasReadableFvg && candles.pullback);
+      return Boolean(hasReadableFvg && (candles.pullback || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed));
     case SetupType.FairValueGap:
       return hasReadableFvg;
     case SetupType.OrderBlock618:
@@ -414,7 +434,7 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.LunchFailedContinuation:
       return Boolean(hasMorningContext && (morningContext?.morningTrend === 'bullish_extension' || morningContext?.morningTrend === 'bearish_extension') && (structure?.marketStructureShift || candles.rejection || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
     case SetupType.LunchRangeReclaim:
-      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim || candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
+      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim || chartContext.setupReadyFacts?.fvgReclaimed || chartContext.setupReadyFacts?.sweepThenReclaim || candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
     default:
       return false;
   }
@@ -425,7 +445,7 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
   const structure = chartContext.marketStructure;
   const candles = candleFactSummary(chartContext);
   const fvgZones = chartContext.fvgZones || [];
-  const liquidityEvents = chartContext.liquidityEvents || [];
+  const liquidityEvents = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])];
   const hasReadableFvg = fvgZones.some((zone) => isReadableConfidence(zone.confidence));
   const hasSweep = liquidityEvents.some((event) => event.type === 'sweep' && isReadableConfidence(event.confidence));
   const hasReclaim = liquidityEvents.some((event) => event.reclaimed && isReadableConfidence(event.confidence));
@@ -450,7 +470,7 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
     case SetupType.FairValueGap:
       return hasReadableFvg;
     case SetupType.FvgImbalancePullback:
-      return Boolean(hasReadableFvg && candles.pullback);
+      return Boolean(hasReadableFvg && (candles.pullback || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed));
     case SetupType.MorningFailedHighLiquidityRejection:
       return Boolean(candles.rejection && (chartContext.keyLevels.nearestSupport || chartContext.keyLevels.activeSwingLow));
     case SetupType.MorningReclaimLong:
@@ -464,7 +484,7 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
     case SetupType.LunchFailedContinuation:
       return Boolean(hasMorningContext && (morningContext?.morningTrend === 'bullish_extension' || morningContext?.morningTrend === 'bearish_extension') && chartContext.marketStructure?.marketStructureShift);
     case SetupType.LunchRangeReclaim:
-      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim));
+      return Boolean(hasMorningContext && (morningContext?.rangeReclaimed || hasReclaim || chartContext.setupReadyFacts?.fvgReclaimed || chartContext.setupReadyFacts?.sweepThenReclaim));
     default:
       return false;
   }
@@ -555,6 +575,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const targets = computedTargets(direction, entryPrice, stopPrice);
   const invalidation = structuredEvidence?.invalidation ?? (allowNarrativeFallback ? bestFact?.invalidation : null) ?? null;
   const confidence = structuredEvidence?.confidence || bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
+  const levelContext = levelContextScoreForDirection(input.chartContext, direction);
 
   const detectedStatus =
     !allowed ? SetupCandidateStatus.Invalid :
@@ -595,6 +616,8 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stopClarity: stopPrice !== null ? 1 : detected || possible ? 0.35 : 0,
     targetClarity: targets.target1 !== null && targets.target2 !== null ? 1 : 0,
     proximityScore: detected ? 0.75 : possible ? 0.55 : 0,
+    levelContextScore: levelContext.score,
+    levelContextSummary: levelContext.summary,
     evidence: structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : [],
     missingEvidence: missingMorningWindowContext
       ? ['Completed Morning window context is required before this Lunch subtype can activate.']
@@ -647,6 +670,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.priority +
     riskQuality +
     clarityScore +
+    (candidate.levelContextScore || 0) +
     (candidate.proximityScore || 0) * 10;
   candidate.rankScore = score;
   return score;

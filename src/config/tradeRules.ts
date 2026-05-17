@@ -10,6 +10,12 @@ export const TRADE_RULES = {
     t2R: 2.0,
     tickSize: 0.25,
   },
+  stopQuality: {
+    minimumPracticalRiskPoints: {
+      MES: 4,
+      MNQ: 12,
+    },
+  },
   sessions: {
     morning: {
       label: 'Morning Analysis',

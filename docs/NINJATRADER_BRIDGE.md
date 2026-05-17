@@ -1,0 +1,236 @@
+# NinjaTrader Bridge
+
+This document defines the first read-only bridge between NinjaTrader Desktop and the Quant Desk app.
+
+## Goal
+
+Pull live data from the NinjaTrader 8 desktop app into the decision-support app without giving the app trade execution authority.
+
+Confirmed environment:
+
+- NinjaTrader: 8.1.6.3 64-bit
+- Initial instrument: MES
+- Initial accounts: Sim101 and 206257
+- Bridge mode: local read-only HTTP bridge
+- Initial port: `127.0.0.1:8765`
+
+Chosen v1 recommendations:
+
+- Start read-only. Pull bars, snapshots, accounts, and positions first.
+- Do not place trades from the web app in v1.
+- Use the NinjaTrader user Custom folder, not the Program Files install folder.
+- Keep MES as the default instrument, then make the exact contract selectable once the connection panel is added.
+- Treat live bars as structured chart facts for the app-owned setup scanner and trade decision pipeline.
+
+## Architecture
+
+```text
+NinjaTrader 8 Desktop
+  -> QuantDeskBridge NinjaScript AddOn
+  -> local read-only HTTP endpoints on 127.0.0.1:8765
+  -> Session Lab / Replay Lab reads structured bars and account snapshots
+  -> app-owned setup scanner, plan engine, and trade decision pipeline decide
+```
+
+The bridge is read-only in v1. It must not place, change, cancel, reverse, flatten, or otherwise submit orders.
+
+Official NinjaTrader references used for this scaffold:
+
+- AddOn lifecycle uses `OnStateChange()` and the `State.Active` / `State.Terminated` lifecycle.
+- Market data access uses `BarsRequest`, its `Update` event, and `Request()` callback pattern.
+- Account and position data are read from the NinjaTrader account objects.
+
+## Install Location
+
+Use the user NinjaScript folder, not Program Files:
+
+```text
+C:\Users\Mike\Documents\NinjaTrader 8\bin\Custom\AddOns\QuantDeskBridge.cs
+```
+
+Do not manually edit:
+
+```text
+C:\Program Files\NinjaTrader 8
+```
+
+That is the application install path.
+
+## Compile
+
+1. Copy `tools/ninjatrader-bridge/QuantDeskBridge.cs` into:
+
+   ```text
+   C:\Users\Mike\Documents\NinjaTrader 8\bin\Custom\AddOns\QuantDeskBridge.cs
+   ```
+
+2. Open NinjaTrader.
+3. Open `New > NinjaScript Editor`.
+4. Right-click and choose `Compile`.
+5. Open the NinjaScript Output window and confirm the bridge started.
+
+Expected output:
+
+```text
+QuantDeskBridge started at http://127.0.0.1:8765/
+```
+
+## Endpoints
+
+Health:
+
+```text
+GET http://127.0.0.1:8765/health
+```
+
+Accounts:
+
+```text
+GET http://127.0.0.1:8765/accounts
+```
+
+Snapshot:
+
+```text
+GET http://127.0.0.1:8765/snapshot?instrument=MES%2006-26
+```
+
+Bars:
+
+```text
+GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=5m&limit=100
+GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=15m&limit=100
+GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=1m&limit=100
+```
+
+Historical bars for Replay Lab:
+
+```text
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T09:30:00-04:00&to=2026-05-15T10:10:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=15m&from=2026-05-15T00:00:00-04:00&to=2026-05-15T10:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T11:50:00-04:00&to=2026-05-15T13:00:00-04:00
+```
+
+Positions:
+
+```text
+GET http://127.0.0.1:8765/positions?account=Sim101
+GET http://127.0.0.1:8765/positions?account=206257
+```
+
+## Current Limitations
+
+- The initial AddOn is configured for `MES 06-26`.
+- Futures contract rollover must be updated or made configurable before production use.
+- The bridge returns cached bars from NinjaTrader `BarsRequest`.
+- Cloudflare-hosted pages use Chrome Private Network Access rules when calling a local `127.0.0.1` endpoint from HTTPS. The bridge includes `Access-Control-Allow-Private-Network: true`, but some browser builds can still deny public-site access to loopback services. In that case, use local dev or the local companion server below.
+
+## First Test Checklist
+
+After compiling the AddOn in NinjaTrader, open these URLs in your browser while NinjaTrader is running:
+
+```text
+http://127.0.0.1:8765/health
+http://127.0.0.1:8765/accounts
+http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=5m&limit=20
+http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=15m&limit=20
+http://127.0.0.1:8765/positions?account=Sim101
+```
+
+Expected behavior:
+
+- `/health` returns `readOnly: true`.
+- `/accounts` includes `Sim101` and, if available in your install, `206257`.
+- `/bars` returns real OHLC candles.
+- `/historical-bars` returns real OHLC candles for the requested Replay Lab date/window when NinjaTrader and the connected data provider can load that history.
+- `/positions` returns current positions without submitting or modifying any orders.
+
+If NinjaTrader uses a different MES contract name than `MES 06-26`, update `DefaultInstrument` inside `QuantDeskBridge.cs` and use that exact name in the URL.
+
+## Cloudflare Production E2E Check
+
+The deployed Cloudflare Pages app must be able to call:
+
+```text
+http://127.0.0.1:8765/health
+```
+
+from the browser. If Chrome reports:
+
+```text
+Permission was denied for this request to access the loopback address space
+```
+
+then NinjaTrader is running an older copy of the bridge. Copy the latest `QuantDeskBridge.cs` into the NinjaTrader AddOns folder, recompile, and restart/reload the bridge.
+
+The important response header is:
+
+```text
+Access-Control-Allow-Private-Network: true
+```
+
+If that header is present and Chrome still blocks the request, the app is hitting browser local-network permission enforcement rather than a bridge code failure. The local app path still works because both the page and the bridge run from localhost.
+
+## Local Companion Server
+
+Use the companion when the Cloudflare-hosted HTTPS site cannot reach `127.0.0.1` directly.
+
+```bash
+npm run build
+npm run nt:companion
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8787
+```
+
+What it does:
+
+- serves the production build locally from `dist`
+- keeps the browser origin on `127.0.0.1`, so NinjaTrader bridge access is allowed
+- exposes `/companion/health` for a quick status check
+- exposes `/bridge/*` as a local proxy to `http://127.0.0.1:8765/*` for future bridge wiring
+
+This does not place trades. It only gives the live decision-support app a reliable local path to read NinjaTrader data.
+
+## Next Phases
+
+Phase 1: compile and test the read-only bridge.
+
+Phase 2: add a Session Lab connection panel:
+
+- Bridge connected yes/no
+- NinjaTrader version
+- selected account
+- selected instrument contract
+- latest 5m bar timestamp
+- latest 15m bar timestamp
+
+Phase 3: use bridge candles as structured input:
+
+- 15m ETH context from real bars
+- 5m execution chart from real bars
+- level sanity from real OHLC
+- screenshot becomes optional proof/context, not primary extraction
+- Replay Lab can import historical NinjaTrader bars by trading date/window so RAG learns from factual OHLC, not only screenshots.
+- Morning Replay imports broader 15m ETH context from prior day 6:00 PM ET through 10:00 AM ET, while keeping the 5m execution window at 9:30-10:10.
+- Lunch Replay imports broader 15m ETH context through 1:00 PM ET plus the 5m lunch execution window at 11:50-1:00.
+- The app segments imported bars into ETH, Asian, London, NY premarket, RTH morning, lunch, and current-window structure.
+- The Target Objective Engine annotates conditional/executable plans with structural target context from those segments. Executable T1/T2 remain the app-owned fixed 1.5R / 2.0R levels.
+
+Phase 4: staged order ticket only:
+
+- app creates a ticket
+- user reviews
+- NinjaTrader receives only after explicit approval
+
+Phase 5: limited automation only after replay/live validation:
+
+- kill switches
+- max risk
+- max contracts
+- manual enable switch
+- emergency flatten
+- full audit trail

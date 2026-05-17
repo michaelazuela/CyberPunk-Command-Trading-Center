@@ -368,7 +368,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
             setTimeout(() => reject(new Error('TIMEOUT')), 120000);
           });
           
-          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, useManualMidnightOpen ? midnightOpenOverrideStr : undefined, session.dailyInstrument);
+          const geminiPromise = analyzeChart(imgToSend, analysisSettings, session.accountEquity, session.analysisResult, undefined, routeName, modelToUse, useManualMidnightOpen ? midnightOpenOverrideStr : undefined, session.dailyInstrument, session.riskPercent);
           
           analysis = await Promise.race([geminiPromise, timeoutPromise]);
           const elapsed = ((Date.now() - globalStartTime) / 1000).toFixed(1);
@@ -700,7 +700,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
     } finally {
       setIsAnalyzing(false);
     }
-  }, [pendingImage, pendingEthImage, lastImage, lastEthImage, localSettings, session.accountEquity, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
+  }, [pendingImage, pendingEthImage, lastImage, lastEthImage, localSettings, session.accountEquity, session.riskPercent, session.analysisResult, customRules, ocrResult, onUpdate, updateStep, modelConfig, initProgress]);
 
   useEffect(() => {
     if (!isActive) return;

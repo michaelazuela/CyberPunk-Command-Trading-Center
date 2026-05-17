@@ -101,6 +101,13 @@ function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: st
     selectedSetup: context.selectedSetup || selectedAppCandidate || analysis.best_trade_plan || normalizedPlan || null,
     setupSubtype,
     finalTradePlan: normalizedPlan,
+    riskProfile: {
+      accountEquity: context.accountEquity ?? null,
+      riskPercent: context.riskPercent ?? null,
+      riskBudgetDollars: context.riskBudgetDollars ?? null,
+      selectedPlanRiskPoints: context.riskPoints ?? normalizedPlan?.riskPoints ?? null,
+      contracts: context.contracts ?? null,
+    },
     proofSubmitted,
     tradeConfirmed: context.tradeConfirmed ?? isCompletedOutcome,
     tradeTaken,

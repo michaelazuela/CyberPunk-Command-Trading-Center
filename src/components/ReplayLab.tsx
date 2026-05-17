@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { SessionState, Trade, AnalysisResult } from '../types';
+import { SessionState, Trade, AnalysisResult, SetupCandidate } from '../types';
 import { cn, getImageFromClipboard, formatReplayRange } from '../lib/utils';
 import { analyzeChart, preCheckChartInfo } from '../lib/gemini';
 import { uploadScreenshot } from '../lib/cloudStorage';
@@ -13,9 +13,16 @@ import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../
 import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
+import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
+import {
+  buildNinjaChartContext,
+  getNinjaHistoricalBars,
+  type NinjaBridgeBar,
+} from '../lib/ninjaTraderBridge';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
+type OutcomePlanChoice = 'main' | `candidate:${number}`;
 
 const REPLAY_OUTCOMES: Array<WorkflowOutcomeOption<ReplayOutcome>> = [
   {
@@ -51,6 +58,190 @@ const REPLAY_OUTCOMES: Array<WorkflowOutcomeOption<ReplayOutcome>> = [
 ];
 
 type UploadedImage = UploadedWorkflowImage;
+
+const HISTORICAL_DATA_IMAGE =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+
+function toBridgeInstrument(instrument: 'MES' | 'MNQ'): string {
+  return instrument === 'MNQ' ? 'MNQ 06-26' : 'MES 06-26';
+}
+
+function replayOffset(timezone: 'EST' | 'PST'): string {
+  return timezone === 'PST' ? '-07:00' : '-04:00';
+}
+
+function replayDateTime(tradeDate: string, time: string, timezone: 'EST' | 'PST'): string {
+  return `${tradeDate}T${time}:00${replayOffset(timezone)}`;
+}
+
+function previousCalendarDate(tradeDate: string): string {
+  const date = new Date(`${tradeDate}T12:00:00`);
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function mergeHistoricalContextIntoAnalysis(
+  analysis: AnalysisResult,
+  historicalContext: Partial<AnalysisResult['structuredChartContext']> | null,
+  summary: string
+): AnalysisResult {
+  if (!historicalContext) return analysis;
+  const existing = analysis.structuredChartContext || {};
+  return {
+    ...analysis,
+    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER HISTORICAL OHLC] ${summary}`.trim(),
+    structuredChartContext: {
+      ...existing,
+      ...historicalContext,
+      keyLevels: {
+        ...(existing.keyLevels || {}),
+        ...(historicalContext.keyLevels || {}),
+      },
+      candles: historicalContext.candles || existing.candles,
+      structuralLevels: historicalContext.structuralLevels || existing.structuralLevels,
+      targetObjectives: historicalContext.targetObjectives || existing.targetObjectives,
+      marketStructure: historicalContext.marketStructure || existing.marketStructure,
+      candleFacts: historicalContext.candleFacts || existing.candleFacts,
+    },
+  };
+}
+
+function outcomeToRag(outcome: ReplayOutcome): string {
+  if (outcome === 'win') return 'win';
+  if (outcome === 'loss') return 'loss';
+  if (outcome === 'scratch') return 'scratch';
+  if (outcome === 'no_trade') return 'no_trade';
+  return 'missed_trade';
+}
+
+function isTradeTakenOutcome(outcome: ReplayOutcome): boolean {
+  return outcome === 'win' || outcome === 'loss' || outcome === 'scratch';
+}
+
+function formatCandidateName(candidate: SetupCandidate): string {
+  return String(candidate.setupType || 'Setup').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function candidateHasPlanLevels(candidate: SetupCandidate): boolean {
+  return candidate.direction !== 'NO TRADE' &&
+    candidate.entry != null &&
+    candidate.stop != null &&
+    candidate.target1 != null &&
+    candidate.target2 != null;
+}
+
+function buildPlanFromCandidate(basePlan: ReturnType<typeof buildAppTradePlan> | null, candidate: SetupCandidate | null, labelSuffix = '') {
+  if (!basePlan || !candidate || !candidateHasPlanLevels(candidate)) return basePlan;
+  return {
+    ...basePlan,
+    decision: candidate.direction,
+    entry: candidate.entry ?? null,
+    stop: candidate.stop ?? null,
+    t1: candidate.target1 ?? null,
+    t2: candidate.target2 ?? null,
+    riskPoints: candidate.riskPoints ?? (candidate.entry != null && candidate.stop != null ? Math.abs(candidate.entry - candidate.stop) : null),
+    riskRewardT1: '1.5R' as const,
+    riskRewardT2: '2.0R' as const,
+    canExecute: basePlan.canExecute && candidate.executionStatus === 'Executable',
+    setupName: formatCandidateName(candidate),
+    source: 'app_rule_engine' as const,
+    whyThisPlan: `${candidate.nextAction || candidate.evidence?.[0] || basePlan.whyThisPlan}${labelSuffix}`,
+    invalidation: candidate.invalidation || basePlan.invalidation,
+    triggerState: candidate.executionStatus === 'Executable' ? 'TRIGGERED' as const : 'PENDING_TRIGGER' as const,
+    entryTrigger: candidate.requiredTrigger || basePlan.entryTrigger || null,
+  };
+}
+
+function OutcomePlanSelector({
+  plan,
+  value,
+  onChange,
+  getOptions,
+  accountEquity,
+  riskPercent,
+  contracts,
+  instrument,
+}: {
+  plan: ReturnType<typeof buildAppTradePlan> | null;
+  value: OutcomePlanChoice;
+  onChange: (value: OutcomePlanChoice) => void;
+  accountEquity: number;
+  riskPercent: number;
+  contracts: number;
+  instrument: 'MES' | 'MNQ';
+  getOptions: (plan: ReturnType<typeof buildAppTradePlan> | null) => Array<{
+    key: OutcomePlanChoice;
+    label: string;
+    candidate: SetupCandidate | null;
+    plan: ReturnType<typeof buildAppTradePlan> | null;
+  }>;
+}) {
+  if (!plan) return null;
+  const options = getOptions(plan);
+  const selected = options.find(option => option.key === value) || options[0];
+
+  return (
+    <div className="mt-4 border border-[var(--b2)] bg-[var(--bg)] p-3 font-mono">
+      <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">Trade Taken</h3>
+          <p className="mt-1 text-[9px] text-[var(--txt3)]">
+            Select the exact replay plan you actually traded before marking Win/Loss/Scratch. RAG will learn from this plan, not just the main card.
+          </p>
+        </div>
+        <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">Outcome Plan</span>
+      </div>
+
+      <div className="grid gap-2">
+        {options.map(option => {
+          const optionPlan = option.plan;
+          const isSelected = option.key === selected.key;
+          const sizing = computeRiskSizing({
+            accountEquity,
+            riskPercent,
+            contracts,
+            instrument,
+            riskPoints: optionPlan?.riskPoints,
+          });
+          return (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onChange(option.key)}
+              className={cn(
+                'border px-3 py-2 text-left transition-colors',
+                isSelected ? 'border-[var(--orange)] bg-[var(--orange)]/10' : 'border-[var(--b2)] bg-[var(--s1)] hover:border-[var(--orange)]/40'
+              )}
+            >
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">{option.label}</div>
+                  <div className="mt-1 text-[9px] text-[var(--txt3)]">
+                    {option.candidate ? 'Setup-scan / conditional replay candidate selected by user.' : 'Primary normalized app plan.'}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-1 text-right text-[9px] md:min-w-[320px]">
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--txt2)]">E {optionPlan?.entry ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--red)]">S {optionPlan?.stop ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T1 {optionPlan?.t1 ?? 'N/A'}</span>
+                  <span className="border border-[var(--b1)] px-2 py-1 text-[var(--green)]">T2 {optionPlan?.t2 ?? 'N/A'}</span>
+                </div>
+              </div>
+              <div className="mt-2 grid gap-1 text-[9px] text-[var(--txt3)] md:grid-cols-4">
+                <span>Budget {formatDollars(sizing.riskBudgetDollars)}</span>
+                <span>Plan risk {formatDollars(sizing.riskPerContractDollars)}</span>
+                <span>{contracts} contract(s) {formatDollars(sizing.totalRiskDollars)}</span>
+                <span className={sizing.withinBudget === false ? 'text-[var(--red)]' : 'text-[var(--green)]'}>
+                  {sizing.withinBudget === null ? 'Risk TBD' : sizing.withinBudget ? `Within budget · Max ${sizing.maxContractsByBudget}` : `Over budget · Max ${sizing.maxContractsByBudget}`}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function ReplayLab({
   session,
@@ -94,9 +285,41 @@ export default function ReplayLab({
 
   const [proofFlow, setProofFlow] = useState<{ active: boolean; outcome?: 'SUCCESS' | 'FAILED'; sessionType?: 'morning' | 'lunch' }>({ active: false });
   const [savingOutcome, setSavingOutcome] = useState<{ sessionType: 'morning' | 'lunch'; outcome: ReplayOutcome } | null>(null);
+  const [morningOutcomePlanChoice, setMorningOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
+  const [lunchOutcomePlanChoice, setLunchOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
+  const [morningTradeTaken, setMorningTradeTaken] = useState<boolean | null>(null);
+  const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
+  const [historicalMorning5mBars, setHistoricalMorning5mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalMorning15mBars, setHistoricalMorning15mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalLunch5mBars, setHistoricalLunch5mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalFetchStatus, setHistoricalFetchStatus] = useState<string | null>(null);
+  const [historicalFetchError, setHistoricalFetchError] = useState<string | null>(null);
+  const [isFetchingHistorical, setIsFetchingHistorical] = useState(false);
 
   const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'replay_morning', instrument }) : null;
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'replay_lunch', instrument }) : null;
+
+  const getOutcomePlanOptions = (plan: typeof normalizedMorningPlan) => {
+    const candidates = (plan?.setupCandidates || [])
+      .filter(candidateHasPlanLevels)
+      .slice(0, 8);
+    return [
+      { key: 'main' as OutcomePlanChoice, label: 'Main App Plan', candidate: null, plan },
+      ...candidates.map((candidate, index) => ({
+        key: `candidate:${index}` as OutcomePlanChoice,
+        label: `${formatCandidateName(candidate)} ${candidate.direction}`,
+        candidate,
+        plan: buildPlanFromCandidate(plan, candidate, ' User selected this replay candidate for outcome/RAG learning.'),
+      })),
+    ];
+  };
+
+  const getSelectedOutcomePlan = (sessionType: 'morning' | 'lunch') => {
+    const basePlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+    const choice = sessionType === 'morning' ? morningOutcomePlanChoice : lunchOutcomePlanChoice;
+    const options = getOutcomePlanOptions(basePlan);
+    return options.find(option => option.key === choice) || options[0];
+  };
 
   useEffect(() => {
     if (!morningResult && session.replayMorningResult) {
@@ -180,6 +403,10 @@ export default function ReplayLab({
     setMorningError(null);
     setMorningSaveStatus(null);
     setMorningOutcome(null);
+    setMorningOutcomePlanChoice('main');
+    setMorningTradeTaken(null);
+    setHistoricalMorning5mBars([]);
+    setHistoricalMorning15mBars([]);
     setLunchExecImg(null);
     setIsAnalyzingLunch(false);
     setLunchResult(null);
@@ -187,6 +414,12 @@ export default function ReplayLab({
     setLunchError(null);
     setLunchSaveStatus(null);
     setLunchOutcome(null);
+    setLunchOutcomePlanChoice('main');
+    setLunchTradeTaken(null);
+    setHistoricalLunch5mBars([]);
+    setHistoricalFetchStatus(null);
+    setHistoricalFetchError(null);
+    setIsFetchingHistorical(false);
     setProofFlow({ active: false });
     setSavingOutcome(null);
     onUpdate?.({ replayMorningResult: undefined, replayLunchResult: undefined });
@@ -262,8 +495,9 @@ export default function ReplayLab({
   };
 
   const runMorningAnalysis = async () => {
-    if (!tradeDate || !instrument || !morningExecImg) {
-      setMorningError("Required: Trade Date, Instrument, and 5m Morning Execution");
+    const hasHistoricalMorning = historicalMorning5mBars.length > 0;
+    if (!tradeDate || !instrument || (!morningExecImg && !hasHistoricalMorning)) {
+      setMorningError("Required: Trade Date, Instrument, and either 5m Morning Execution screenshot or NinjaTrader historical 5M bars.");
       return;
     }
     setMorningError(null);
@@ -272,12 +506,41 @@ export default function ReplayLab({
     setMorningResult(null);
 
     try {
-      const imgPayload = morningEthImg ? { exec: morningExecImg.dataUrl, eth: morningEthImg.dataUrl } : morningExecImg.dataUrl;
-      const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, undefined, [], 'morning_replay', undefined, midnightOpen || undefined, instrument);
-      const analysis = analysisRaw as AnalysisResult;
+      const execImage = morningExecImg?.dataUrl || HISTORICAL_DATA_IMAGE;
+      const ethImage = morningEthImg?.dataUrl || (historicalMorning15mBars.length ? HISTORICAL_DATA_IMAGE : undefined);
+      const imgPayload = ethImage ? { exec: execImage, eth: ethImage } : execImage;
+      const historicalSummary = hasHistoricalMorning
+        ? `Replay imported from NinjaTrader: ${historicalMorning5mBars.length} x 5M bars and ${historicalMorning15mBars.length} x 15M bars for ${tradeDate}.`
+        : '';
+      const historicalContextInput = hasHistoricalMorning ? {
+        ninjaTraderHistoricalReplay: true,
+        source: 'ninjatrader_historical_request',
+        tradeDate,
+        instrument,
+        bars5m: historicalMorning5mBars,
+        bars15m: historicalMorning15mBars,
+        instruction: 'Use these OHLC bars as factual replay context. Do not use future bars beyond the requested replay window.'
+      } : undefined;
+      const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, historicalContextInput, [], 'morning_replay', undefined, midnightOpen || undefined, instrument, session.riskPercent);
+      const historicalContext = hasHistoricalMorning ? buildNinjaChartContext({
+        bars5m: historicalMorning5mBars,
+        bars15m: historicalMorning15mBars,
+        sessionType: 'replay_morning',
+        instrument,
+        tradeDate,
+        midnightOpen: midnightOpen ? Number(midnightOpen) : null,
+      }) : null;
+      const analysis = mergeHistoricalContextIntoAnalysis(analysisRaw as AnalysisResult, historicalContext, historicalSummary);
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_morning', instrument });
       const planVersionId = createPlanVersionId('replay_morning', tradeDate);
       const setupSignature = createSetupSignature({ sessionType: 'replay_morning', instrument, tradeDate, plan: analysisPlan });
+      const analysisRiskSizing = computeRiskSizing({
+        accountEquity: session.accountEquity,
+        riskPercent: session.riskPercent,
+        riskPoints: analysisPlan.riskPoints,
+        contracts,
+        instrument,
+      });
       analysis.planVersionId = planVersionId;
       analysis.setupSignature = setupSignature;
       
@@ -295,14 +558,14 @@ export default function ReplayLab({
            return;
          }
          let ethStoragePath, execStoragePath;
-         if (morningEthImg) {
-           const ethUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '15m_eth_context', morningEthImg.dataUrl);
+         if (morningEthImg || historicalMorning15mBars.length) {
+           const ethUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '15m_eth_context', morningEthImg?.dataUrl || HISTORICAL_DATA_IMAGE);
            ethStoragePath = ethUpload.storagePath;
-           setMorningEthImg({ ...morningEthImg, storagePath: ethStoragePath });
+           if (morningEthImg) setMorningEthImg({ ...morningEthImg, storagePath: ethStoragePath });
          }
-         const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '5m_execution', morningExecImg.dataUrl);
+         const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/morning', '5m_execution', execImage);
          execStoragePath = execUpload.storagePath;
-         setMorningExecImg({ ...morningExecImg, storagePath: execStoragePath });
+         if (morningExecImg) setMorningExecImg({ ...morningExecImg, storagePath: execStoragePath });
          
          const setupData: Record<string, any> = {
            user_id: user.id,
@@ -325,10 +588,17 @@ export default function ReplayLab({
              normalized_plan: analysisPlan,
              plan_version_id: planVersionId,
              setup_signature: setupSignature,
+             risk_sizing: analysisRiskSizing,
              legacy_trade_plan: analysis.tradePlan || null,
+             ninja_historical_context: {
+               morning_5m_bars: historicalMorning5mBars.length,
+               morning_15m_bars: historicalMorning15mBars.length,
+             },
              morning_context: {
-               morning_5m_available: Boolean(morningExecImg),
-               morning_15m_eth_available: Boolean(morningEthImg),
+               morning_5m_available: Boolean(morningExecImg || historicalMorning5mBars.length),
+               morning_15m_eth_available: Boolean(morningEthImg || historicalMorning15mBars.length),
+               ninja_historical_5m_bars: historicalMorning5mBars.length,
+               ninja_historical_15m_bars: historicalMorning15mBars.length,
                morning_analysis_available: Boolean(morningResult),
                morning_day_type: morningResult?.dayType || null,
                morning_eth_context_review: morningResult?.ethContextReview || null,
@@ -369,8 +639,9 @@ export default function ReplayLab({
   };
 
   const runLunchAnalysis = async () => {
-    if (!tradeDate || !instrument || !lunchExecImg) {
-      setLunchError("Required: Trade Date, Instrument, and 5m Lunch Execution");
+    const hasHistoricalLunch = historicalLunch5mBars.length > 0;
+    if (!tradeDate || !instrument || (!lunchExecImg && !hasHistoricalLunch)) {
+      setLunchError("Required: Trade Date, Instrument, and either 5m Lunch Execution screenshot or NinjaTrader historical 5M bars.");
       return;
     }
     setLunchError(null);
@@ -379,9 +650,12 @@ export default function ReplayLab({
     setLunchResult(null);
 
     try {
-      const imgPayload = (morningEthImg || morningExecImg)
-        ? { exec: lunchExecImg.dataUrl, eth: morningEthImg?.dataUrl, morningExec: morningExecImg?.dataUrl }
-        : lunchExecImg.dataUrl;
+      const execImage = lunchExecImg?.dataUrl || HISTORICAL_DATA_IMAGE;
+      const morningEthImage = morningEthImg?.dataUrl || (historicalMorning15mBars.length ? HISTORICAL_DATA_IMAGE : undefined);
+      const morningExecImage = morningExecImg?.dataUrl || (historicalMorning5mBars.length ? HISTORICAL_DATA_IMAGE : undefined);
+      const imgPayload = (morningEthImage || morningExecImage)
+        ? { exec: execImage, eth: morningEthImage, morningExec: morningExecImage }
+        : execImage;
       const previousAnalysis = morningResult ? {
         tradePlan: morningResult.tradePlan,
         normalizedPlan: normalizedMorningPlan,
@@ -393,13 +667,40 @@ export default function ReplayLab({
           execution5m: Boolean(morningExecImg),
         },
         reasoning: morningResult.reasoning
+      } : hasHistoricalLunch ? {
+        ninjaTraderHistoricalReplay: true,
+        source: 'ninjatrader_historical_request',
+        tradeDate,
+        instrument,
+        bars5m: historicalLunch5mBars,
+        morningBars5m: historicalMorning5mBars,
+        morningBars15m: historicalMorning15mBars,
+        instruction: 'Use these OHLC bars as factual lunch replay context. Do not use future bars beyond the requested replay window.'
       } : undefined;
       
-      const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, previousAnalysis, [], 'lunch_replay', undefined, midnightOpen || morningResult?.midnightOpenPrice?.toString() || undefined, instrument);
-      const analysis = analysisRaw as AnalysisResult;
+      const analysisRaw = await analyzeChart(imgPayload, session.aiSettings, session.accountEquity, previousAnalysis, [], 'lunch_replay', undefined, midnightOpen || morningResult?.midnightOpenPrice?.toString() || undefined, instrument, session.riskPercent);
+      const historicalSummary = hasHistoricalLunch
+        ? `Replay imported from NinjaTrader: ${historicalLunch5mBars.length} x Lunch 5M bars for ${tradeDate}. Morning historical context bars: ${historicalMorning5mBars.length} x 5M, ${historicalMorning15mBars.length} x 15M.`
+        : '';
+      const historicalContext = hasHistoricalLunch ? buildNinjaChartContext({
+        bars5m: historicalLunch5mBars,
+        bars15m: historicalMorning15mBars,
+        sessionType: 'replay_lunch',
+        instrument,
+        tradeDate,
+        midnightOpen: midnightOpen ? Number(midnightOpen) : morningResult?.midnightOpenPrice ?? null,
+      }) : null;
+      const analysis = mergeHistoricalContextIntoAnalysis(analysisRaw as AnalysisResult, historicalContext, historicalSummary);
       const analysisPlan = buildAppTradePlan(analysis, { sessionType: 'replay_lunch', instrument });
       const planVersionId = createPlanVersionId('replay_lunch', tradeDate);
       const setupSignature = createSetupSignature({ sessionType: 'replay_lunch', instrument, tradeDate, plan: analysisPlan });
+      const analysisRiskSizing = computeRiskSizing({
+        accountEquity: session.accountEquity,
+        riskPercent: session.riskPercent,
+        riskPoints: analysisPlan.riskPoints,
+        contracts,
+        instrument,
+      });
       analysis.planVersionId = planVersionId;
       analysis.setupSignature = setupSignature;
       
@@ -416,9 +717,9 @@ export default function ReplayLab({
            setLunchSaveStatus('Duplicate replay save canceled by user.');
            return;
          }
-         const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/lunch', '5m_execution', lunchExecImg.dataUrl);
+         const execUpload = await uploadScreenshot(user.id, tradeDate, 'replay_lab/lunch', '5m_execution', execImage);
          const execStoragePath = execUpload.storagePath;
-         setLunchExecImg({ ...lunchExecImg, storagePath: execStoragePath });
+         if (lunchExecImg) setLunchExecImg({ ...lunchExecImg, storagePath: execStoragePath });
          
          const setupData: Record<string, any> = {
            user_id: user.id,
@@ -440,7 +741,13 @@ export default function ReplayLab({
              normalized_plan: analysisPlan,
              plan_version_id: planVersionId,
              setup_signature: setupSignature,
+             risk_sizing: analysisRiskSizing,
              legacy_trade_plan: analysis.tradePlan || null,
+             ninja_historical_context: {
+               lunch_5m_bars: historicalLunch5mBars.length,
+               morning_5m_bars: historicalMorning5mBars.length,
+               morning_15m_bars: historicalMorning15mBars.length,
+             },
            },
            normalized_plan_json: analysisPlan,
            plan_source: analysisPlan.source,
@@ -491,6 +798,13 @@ export default function ReplayLab({
     const execImg = sessionType === 'morning' ? morningExecImg : lunchExecImg;
     const chartTimezone = sessionType === 'morning' ? morningReviewTimezone : lunchReviewTimezone;
     const requiredScreenshotRange = formatReplayRange(sessionType === 'morning' ? 'morning_5m_execution' : 'lunch_5m_execution', chartTimezone);
+    const setupRiskSizing = computeRiskSizing({
+      accountEquity: session.accountEquity,
+      riskPercent: session.riskPercent,
+      riskPoints: normalizedPlan?.riskPoints,
+      contracts,
+      instrument,
+    });
     const setupData: Record<string, any> = {
       user_id: userId,
       analysis_mode: 'historical_replay',
@@ -515,6 +829,7 @@ export default function ReplayLab({
         legacy_trade_plan: result.tradePlan || null,
         chart_timezone: chartTimezone,
         required_screenshot_range: requiredScreenshotRange,
+        risk_sizing: setupRiskSizing,
       },
       normalized_plan_json: normalizedPlan,
       plan_source: normalizedPlan?.source,
@@ -552,21 +867,116 @@ export default function ReplayLab({
     return data.id as string;
   };
 
+  const fetchHistoricalReplayData = async (sessionType: 'morning' | 'lunch') => {
+    if (!tradeDate) {
+      setHistoricalFetchError('Enter a Trading Date before fetching NinjaTrader historical data.');
+      return;
+    }
+
+    setHistoricalFetchError(null);
+    setHistoricalFetchStatus(null);
+    setIsFetchingHistorical(true);
+
+    try {
+      const bridgeInstrument = toBridgeInstrument(instrument);
+      if (sessionType === 'morning') {
+        const priorDate = previousCalendarDate(tradeDate);
+        const [bars15m, bars5m] = await Promise.all([
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '15m',
+            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
+            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+          }),
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '5m',
+            from: replayDateTime(tradeDate, '09:30', morningReviewTimezone),
+            to: replayDateTime(tradeDate, '10:10', morningReviewTimezone),
+          }),
+        ]);
+
+        if (!bars5m.ok || !bars5m.bars?.length) {
+          throw new Error(bars5m.error || 'No Morning 5M historical bars returned from NinjaTrader.');
+        }
+
+        setHistoricalMorning15mBars(bars15m.bars || []);
+        setHistoricalMorning5mBars(bars5m.bars || []);
+        if (!morningExecImg) setMorningExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
+        if (!morningEthImg && bars15m.bars?.length) setMorningEthImg({ dataUrl: HISTORICAL_DATA_IMAGE });
+        setHistoricalFetchStatus(`Imported Morning historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M execution bars, ${(bars15m.bars || []).length} x 15M ETH bars from prior 6:00 PM through 10:00 AM.`);
+      } else {
+        const priorDate = previousCalendarDate(tradeDate);
+        const [bars15m, bars5m] = await Promise.all([
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '15m',
+            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
+            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+          }),
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '5m',
+            from: replayDateTime(tradeDate, '11:50', lunchReviewTimezone),
+            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+          }),
+        ]);
+
+        if (!bars5m.ok || !bars5m.bars?.length) {
+          throw new Error(bars5m.error || 'No Lunch 5M historical bars returned from NinjaTrader.');
+        }
+
+        setHistoricalLunch5mBars(bars5m.bars || []);
+        if (!historicalMorning15mBars.length && bars15m.bars?.length) setHistoricalMorning15mBars(bars15m.bars || []);
+        if (!lunchExecImg) setLunchExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
+        setHistoricalFetchStatus(`Imported Lunch historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M lunch bars and ${(bars15m.bars || []).length} x 15M ETH context bars through 1:00 PM.`);
+      }
+    } catch (error) {
+      setHistoricalFetchError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsFetchingHistorical(false);
+    }
+  };
+
   const saveTradeOutcome = async (sessionType: 'morning' | 'lunch', outcome: ReplayOutcome) => {
     const result = sessionType === 'morning' ? morningResult : lunchResult;
     const setSessionError = sessionType === 'morning' ? setMorningError : setLunchError;
     const setSessionStatus = sessionType === 'morning' ? setMorningSaveStatus : setLunchSaveStatus;
+    const normalizedPlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
+    const selectedOutcomePlan = getSelectedOutcomePlan(sessionType);
+    const actualPlan = selectedOutcomePlan.plan || normalizedPlan;
+    const selectedCandidate = selectedOutcomePlan.candidate;
+    const tradeTaken = sessionType === 'morning' ? morningTradeTaken : lunchTradeTaken;
+    const requiresExecutablePlan = isTradeTakenOutcome(outcome);
 
     setSessionError(null);
-    setSessionStatus(`Saving ${outcome.replace(/_/g, ' ').toUpperCase()} to Supabase + RAG...`);
-    setSavingOutcome({ sessionType, outcome });
+    setSessionStatus(null);
 
     if (!result) {
       setSessionError("No replay analysis result found. Run the replay analysis before marking an outcome.");
-      setSessionStatus(null);
-      setSavingOutcome(null);
       return;
     }
+
+    if (tradeTaken === null) {
+      setSessionError('Select Trade Taken: Yes or No before marking the outcome.');
+      return;
+    }
+
+    if (tradeTaken !== requiresExecutablePlan) {
+      setSessionError(tradeTaken
+        ? 'Trade Taken is Yes, so choose Win, Loss, or Scratch.'
+        : 'Trade Taken is No, so choose No Trade or Missed.');
+      return;
+    }
+
+    if (requiresExecutablePlan && (!actualPlan || actualPlan.entry === null || actualPlan.stop === null || actualPlan.t1 === null || actualPlan.t2 === null)) {
+      console.warn("[Replay Lab] Outcome not saved: trade-taken outcomes require a selected replay plan with ENTRY, STOP, T1, and T2.");
+      setSessionError("Trade-taken outcomes require a selected plan with ENTRY, STOP, T1, and T2. Select a conditional plan or use No Trade / Missed.");
+      return;
+    }
+
+    setSessionStatus(`Saving ${outcome.replace(/_/g, ' ').toUpperCase()} to Supabase + RAG...`);
+    setSavingOutcome({ sessionType, outcome });
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -577,19 +987,18 @@ export default function ReplayLab({
       }
 
       // Map to RAG Save schema
-      const ragStatus = ['win', 'loss', 'scratch', 'no_trade', 'missed_trade'].includes(outcome) ? outcome : 'pending';
+      const ragStatus = outcomeToRag(outcome);
       const manualOutcome = outcome === 'win' || outcome === 'scratch' ? 'SUCCESS' : 'FAILED';
       const tradeStatus = (outcome === 'no_trade' || outcome === 'missed_trade') ? 'MISSED' : outcome === 'scratch' ? 'CLOSED' : outcome === 'win' ? 'SUCCESSFUL' : 'FAILED';
-      const normalizedPlan = sessionType === 'morning' ? normalizedMorningPlan : normalizedLunchPlan;
-      const requiresExecutablePlan = outcome === 'win' || outcome === 'loss' || outcome === 'scratch';
-
-      if (requiresExecutablePlan && (!normalizedPlan?.canExecute || normalizedPlan.entry === null || normalizedPlan.stop === null || normalizedPlan.t1 === null || normalizedPlan.t2 === null)) {
-        console.warn("[Replay Lab] Outcome not saved: executable outcomes require ENTRY, STOP, T1, and T2.");
-        setSessionError("Executable outcomes require ENTRY, STOP, T1, and T2. Mark No Trade or Missed Trade if no executable plan was produced.");
-        return;
-      }
 
       const resolvedSetupId = await ensureReplaySetupId(sessionType, user.id, result, normalizedPlan);
+      const selectedRiskSizing = computeRiskSizing({
+        accountEquity: session.accountEquity,
+        riskPercent: session.riskPercent,
+        riskPoints: actualPlan?.riskPoints,
+        contracts,
+        instrument,
+      });
 
       const { data: updatedSetup, error: setupUpdateError } = await supabase
         .from('setups')
@@ -606,14 +1015,14 @@ export default function ReplayLab({
         throw new Error(`Supabase outcome update failed: ${setupUpdateError?.message || 'No updated setup row returned.'}`);
       }
 
-      const entryPrice = normalizedPlan?.entry ?? null;
-      const stopPrice = normalizedPlan?.stop ?? null;
-      const targetPrice = normalizedPlan?.t1 ?? null;
+      const entryPrice = actualPlan?.entry ?? null;
+      const stopPrice = actualPlan?.stop ?? null;
+      const targetPrice = actualPlan?.t1 ?? null;
 
       const tradeData: Omit<Trade, 'id'> = {
         date: tradeDate,
         instrument: instrument,
-        direction: normalizedPlan?.decision === 'LONG' || normalizedPlan?.decision === 'SHORT' ? normalizedPlan.decision : result.dayType?.includes('SHORT') ? 'SHORT' : 'LONG',
+        direction: actualPlan?.decision === 'LONG' || actualPlan?.decision === 'SHORT' ? actualPlan.decision : result.dayType?.includes('SHORT') ? 'SHORT' : 'LONG',
         dayType: result.dayType || 'NO TRADE',
         entryPrice: entryPrice ?? 0,
         stopPrice: stopPrice ?? 0,
@@ -662,7 +1071,7 @@ export default function ReplayLab({
          outcome: outcome,
          proofSubmitted: false,
          tradeConfirmed: true,
-         tradeTaken: requiresExecutablePlan,
+         tradeTaken,
          ruleVersion: result.planVersionId || null,
          workflowTimestamp: new Date().toISOString(),
          screenshots: {
@@ -673,20 +1082,23 @@ export default function ReplayLab({
          },
          chartContext: result.structuredChartContext || null,
          setupCandidates: (result as any).tradeDecision?.setupCandidates || result.candidate_trade_plans || [],
-         selectedSetup: result.best_trade_plan || null,
-         finalTradePlan: normalizedPlan || null,
+         selectedSetup: selectedCandidate || result.best_trade_plan || null,
+         finalTradePlan: actualPlan || null,
          contracts,
-         entryPrice: normalizedPlan?.entry, // Estimate or actual
-         stopPrice: normalizedPlan?.stop,
-         t1: normalizedPlan?.t1,
-         t2: normalizedPlan?.t2,
-         riskPoints: normalizedPlan?.riskPoints,
-         riskRewardT1: normalizedPlan?.riskRewardT1,
-         riskRewardT2: normalizedPlan?.riskRewardT2,
-         planSource: normalizedPlan?.source,
-         whyThisPlan: normalizedPlan?.whyThisPlan,
-         invalidation: normalizedPlan?.invalidation,
-         notes: `${notes ? notes + '\n' : ''}Replay Plan (${normalizedPlan?.source || 'missing'})\nRisk: ${normalizedPlan?.riskPoints || 'N/A'}\nT1: ${normalizedPlan?.t1 || 'N/A'}\nT2: ${normalizedPlan?.t2 || 'N/A'}\nWhy: ${normalizedPlan?.whyThisPlan || 'N/A'}\nInvalidation: ${normalizedPlan?.invalidation || 'N/A'}`,
+         entryPrice: actualPlan?.entry,
+         stopPrice: actualPlan?.stop,
+         t1: actualPlan?.t1,
+         t2: actualPlan?.t2,
+         riskPoints: actualPlan?.riskPoints,
+         accountEquity: session.accountEquity,
+         riskPercent: session.riskPercent,
+         riskBudgetDollars: selectedRiskSizing.riskBudgetDollars,
+         riskRewardT1: actualPlan?.riskRewardT1,
+         riskRewardT2: actualPlan?.riskRewardT2,
+         planSource: selectedCandidate ? 'user_selected_replay_candidate' : actualPlan?.source,
+         whyThisPlan: actualPlan?.whyThisPlan,
+         invalidation: actualPlan?.invalidation,
+         notes: `${notes ? notes + '\n' : ''}Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\nRisk sizing: ${selectedRiskSizing.summary}\n${selectedCandidate ? 'User selected a conditional/setup-scan replay candidate instead of the main plan.' : 'User selected the main replay app plan.'}\nReplay Plan (${actualPlan?.source || 'missing'})\nRisk: ${actualPlan?.riskPoints || 'N/A'}\nT1: ${actualPlan?.t1 || 'N/A'}\nT2: ${actualPlan?.t2 || 'N/A'}\nWhy: ${actualPlan?.whyThisPlan || 'N/A'}\nInvalidation: ${actualPlan?.invalidation || 'N/A'}`,
          ocrText: JSON.stringify({ ...(sessionType === 'morning' ? morningExecImg?.ocrResult : lunchExecImg?.ocrResult) }),
          execution_5m_storage_path: sessionType === 'morning' ? morningExecImg?.storagePath : lunchExecImg?.storagePath,
          eth_15m_context_storage_path: morningEthImg?.storagePath,
@@ -705,6 +1117,13 @@ export default function ReplayLab({
            final_trade_plan: result.final_trade_plan || null,
            candidate_trade_plans: result.candidate_trade_plans || [],
            trade_management_plan: result.trade_management_plan || null,
+           selected_outcome_plan_key: selectedOutcomePlan.key,
+           selected_outcome_plan_label: selectedOutcomePlan.label,
+           selected_outcome_candidate: selectedCandidate,
+           selected_outcome_plan: actualPlan,
+           selected_outcome_risk_sizing: selectedRiskSizing,
+           account_equity: session.accountEquity,
+           risk_percent: session.riskPercent,
            normalized_plan: normalizedPlan,
            plan_version_id: result.planVersionId || null,
            setup_signature: result.setupSignature || null,
@@ -753,7 +1172,7 @@ export default function ReplayLab({
         embeddingStatus: ragSaveResult.usedFallback ? 'pending' : 'saved',
         note: ragSaveResult.usedFallback ? 'Core RAG fallback used because optional schema columns are not live yet.' : undefined,
       });
-      setSessionStatus(`Saved to Supabase + RAG ✓ Plan ${receipt.planVersionId} · Setup ${resolvedSetupId.slice(0, 8)} · RAG ${ragRow.id.slice(0, 8)} · Result: ${outcome.toUpperCase()} · Embedding ${receipt.embeddingStatus}${receipt.note ? ` · ${receipt.note}` : ''}`);
+      setSessionStatus(`Saved to Supabase + RAG ✓ Plan ${receipt.planVersionId} · Setup ${resolvedSetupId.slice(0, 8)} · RAG ${ragRow.id.slice(0, 8)} · Result: ${outcome.toUpperCase()} · Outcome Plan: ${selectedOutcomePlan.label} · Embedding ${receipt.embeddingStatus}${receipt.note ? ` · ${receipt.note}` : ''}`);
 
       if (requiresExecutablePlan) {
         setProofFlow({ active: true, outcome: manualOutcome, sessionType });
@@ -878,6 +1297,50 @@ export default function ReplayLab({
         </div>
       </div>
 
+      <div className="card-base p-4 mb-6 font-mono">
+        <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">NinjaTrader Historical Import</div>
+            <div className="mt-1 text-[10px] text-[var(--txt3)]">
+              Pulls read-only OHLC bars for the entered Trading Date. Screenshots become optional backup; Replay Lab saves the imported bar context into the setup/RAG lesson.
+            </div>
+          </div>
+          <span className="qd-badge border-[var(--green)]/30 text-[var(--green)]">READ ONLY</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => void fetchHistoricalReplayData('morning')}
+            disabled={isFetchingHistorical || !tradeDate}
+            className="border border-[var(--b2)] bg-[var(--s1)] p-3 text-left transition-colors hover:border-[var(--orange)]/50 disabled:opacity-50"
+          >
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Morning Historical Data</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">15M: midnight to 10:00 · 5M: 9:30 to 10:10</div>
+            <div className="mt-2 text-[10px] text-[var(--green)]">
+              {historicalMorning5mBars.length ? `${historicalMorning5mBars.length} 5M bars · ${historicalMorning15mBars.length} 15M bars imported` : 'Not imported yet'}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => void fetchHistoricalReplayData('lunch')}
+            disabled={isFetchingHistorical || !tradeDate}
+            className="border border-[var(--b2)] bg-[var(--s1)] p-3 text-left transition-colors hover:border-[var(--orange)]/50 disabled:opacity-50"
+          >
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Lunch Historical Data</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">5M: 11:50 to 1:00 · morning context used when imported</div>
+            <div className="mt-2 text-[10px] text-[var(--green)]">
+              {historicalLunch5mBars.length ? `${historicalLunch5mBars.length} lunch 5M bars imported` : 'Not imported yet'}
+            </div>
+          </button>
+        </div>
+        {historicalFetchStatus && (
+          <div className="mt-3 border border-[var(--green)]/25 bg-[var(--green)]/10 p-2 text-[10px] text-[var(--green)]">{historicalFetchStatus}</div>
+        )}
+        {historicalFetchError && (
+          <div className="mt-3 border border-[var(--red)]/25 bg-[var(--red)]/10 p-2 text-[10px] text-[var(--red)]">{historicalFetchError}</div>
+        )}
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6">
          {/* MORNING PANEL */}
          <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] morning-panel">
@@ -921,13 +1384,28 @@ export default function ReplayLab({
                  </div>
 
                  {!morningOutcome && !proofFlow.active && (
-                   <TradeConfirmationPanel
-                     options={REPLAY_OUTCOMES}
-                     disabled={savingOutcome?.sessionType === 'morning'}
-                     saving={savingOutcome?.sessionType === 'morning'}
-                     error={morningError}
-                     onSelect={(outcome) => saveTradeOutcome('morning', outcome)}
+                   <>
+                     <OutcomePlanSelector
+                       plan={normalizedMorningPlan}
+                     value={morningOutcomePlanChoice}
+                     onChange={setMorningOutcomePlanChoice}
+                     getOptions={getOutcomePlanOptions}
+                     accountEquity={session.accountEquity}
+                     riskPercent={session.riskPercent}
+                     contracts={contracts}
+                     instrument={instrument}
                    />
+                     <TradeConfirmationPanel
+                       options={REPLAY_OUTCOMES}
+                       disabled={savingOutcome?.sessionType === 'morning'}
+                       saving={savingOutcome?.sessionType === 'morning'}
+                       error={morningError}
+                       tradeTaken={morningTradeTaken}
+                       onTradeTakenChange={setMorningTradeTaken}
+                       isTradeTakenOutcome={isTradeTakenOutcome}
+                       onSelect={(outcome) => saveTradeOutcome('morning', outcome)}
+                     />
+                   </>
                  )}
 
                  {proofFlow.active && proofFlow.sessionType === 'morning' && (
@@ -936,7 +1414,7 @@ export default function ReplayLab({
                       executionQuantity={contracts} 
                       modelConfig={session.aiSettings} 
                       dailyInstrument={instrument}
-                      tradePlan={normalizedMorningPlan}
+                      tradePlan={getSelectedOutcomePlan('morning').plan}
                       onSaveTrade={handleProofSave} 
                       onCancel={() => setProofFlow({ active: false })}
                     />
@@ -951,7 +1429,7 @@ export default function ReplayLab({
                       {morningSaveStatus}
                     </div>
                  )}
-                 <button onClick={() => {setMorningResult(null); setMorningOutcome(null); setMorningSetupId(null); setMorningSaveStatus(null); setMorningError(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
+                 <button onClick={() => {setMorningResult(null); setMorningOutcome(null); setMorningSetupId(null); setMorningSaveStatus(null); setMorningError(null); setMorningOutcomePlanChoice('main'); setMorningTradeTaken(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
                </div>
             )}
          </div>
@@ -1007,13 +1485,28 @@ export default function ReplayLab({
                  </div>
 
                  {!lunchOutcome && !proofFlow.active && (
-                   <TradeConfirmationPanel
-                     options={REPLAY_OUTCOMES}
-                     disabled={savingOutcome?.sessionType === 'lunch'}
-                     saving={savingOutcome?.sessionType === 'lunch'}
-                     error={lunchError}
-                     onSelect={(outcome) => saveTradeOutcome('lunch', outcome)}
+                   <>
+                     <OutcomePlanSelector
+                       plan={normalizedLunchPlan}
+                     value={lunchOutcomePlanChoice}
+                     onChange={setLunchOutcomePlanChoice}
+                     getOptions={getOutcomePlanOptions}
+                     accountEquity={session.accountEquity}
+                     riskPercent={session.riskPercent}
+                     contracts={contracts}
+                     instrument={instrument}
                    />
+                     <TradeConfirmationPanel
+                       options={REPLAY_OUTCOMES}
+                       disabled={savingOutcome?.sessionType === 'lunch'}
+                       saving={savingOutcome?.sessionType === 'lunch'}
+                       error={lunchError}
+                       tradeTaken={lunchTradeTaken}
+                       onTradeTakenChange={setLunchTradeTaken}
+                       isTradeTakenOutcome={isTradeTakenOutcome}
+                       onSelect={(outcome) => saveTradeOutcome('lunch', outcome)}
+                     />
+                   </>
                  )}
 
                  {proofFlow.active && proofFlow.sessionType === 'lunch' && (
@@ -1022,7 +1515,7 @@ export default function ReplayLab({
                       executionQuantity={contracts} 
                       modelConfig={session.aiSettings} 
                       dailyInstrument={instrument}
-                      tradePlan={normalizedLunchPlan}
+                      tradePlan={getSelectedOutcomePlan('lunch').plan}
                       onSaveTrade={handleProofSave} 
                       onCancel={() => setProofFlow({ active: false })}
                     />
@@ -1037,7 +1530,7 @@ export default function ReplayLab({
                       {lunchSaveStatus}
                     </div>
                  )}
-                 <button onClick={() => {setLunchResult(null); setLunchOutcome(null); setLunchSetupId(null); setLunchSaveStatus(null); setLunchError(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
+                 <button onClick={() => {setLunchResult(null); setLunchOutcome(null); setLunchSetupId(null); setLunchSaveStatus(null); setLunchError(null); setLunchOutcomePlanChoice('main'); setLunchTradeTaken(null);}} className="text-[10px] self-start text-[var(--txt3)] mt-2">← Start Over</button>
                </div>
             )}
          </div>

@@ -99,6 +99,21 @@ function confidenceIsReadable(value: unknown): boolean {
   return value === 'High' || value === 'Medium';
 }
 
+function levelContextForDirection(chartContext: ChartContext, direction: Direction): { score: number; summary: string } {
+  if (!chartContext.sessionLevelContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { score: 0, summary: 'No session level context score available.' };
+  }
+  const levels = direction === 'LONG'
+    ? chartContext.sessionLevelContext.strongestLongLevels
+    : chartContext.sessionLevelContext.strongestShortLevels;
+  const best = levels[0];
+  if (!best) return { score: 0, summary: 'No directional session level context found.' };
+  return {
+    score: Math.min(Math.round((best.strengthScore || 0) / 5), 20),
+    summary: `${best.label} ${best.price} is a ${direction === 'LONG' ? 'long-side' : 'short-side'} reaction zone to watch for reclaim, rejection, or target management.`,
+  };
+}
+
 function missingLevel(
   key: MissingLevelRequirement['key'],
   label: string,
@@ -123,6 +138,7 @@ function executionFor(entry: number | null, stop: number | null, hasTrigger: boo
 }
 
 function makeCandidate(input: {
+  chartContext: ChartContext;
   setupType: SetupType;
   direction: Direction;
   entry: number | null;
@@ -140,6 +156,7 @@ function makeCandidate(input: {
   const risk = riskPoints(input.entry, input.stop);
   const computedTargets = targets(input.direction, input.entry, input.stop);
   const execution = executionFor(input.entry, input.stop, Boolean(input.hasTrigger), Boolean(input.invalidation));
+  const levelContext = levelContextForDirection(input.chartContext, input.direction);
 
   return {
     setupType: input.setupType,
@@ -157,6 +174,8 @@ function makeCandidate(input: {
     stopClarity: isPrice(input.stop) ? 0.8 : 0.35,
     targetClarity: computedTargets.target1 !== null && computedTargets.target2 !== null ? 0.8 : 0,
     proximityScore: 0.7,
+    levelContextScore: levelContext.score,
+    levelContextSummary: levelContext.summary,
     evidence: input.evidence,
     missingEvidence: input.missingEvidence || [],
     missingLevels: input.missingLevels || [],
@@ -225,6 +244,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     const entry = breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null;
     const stop = resistance ? roundToTick(resistance + TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
+      chartContext,
       setupType: SetupType.MorningFailedHighLiquidityRejection,
       direction: 'SHORT',
       entry,
@@ -257,6 +277,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
     const stop = reclaimStop ? roundToTick(reclaimStop) : null;
     plans.push(makeCandidate({
+      chartContext,
       setupType: SetupType.MorningReclaimLong,
       direction: 'LONG',
       entry,
@@ -290,18 +311,55 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
 function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   const levels = chartContext.keyLevels;
   const morning = chartContext.morningWindowContext;
+  const current = levels.currentPrice;
   const sweepHigh = firstPrice(levels.morningHighSweep, levels.activeSwingHigh, levels.nearestResistance);
   const sweepLow = firstPrice(levels.morningLowSweep, levels.activeSwingLow, levels.nearestSupport);
   const morningHigh = firstPrice(levels.morningHigh, morning?.morningHigh);
   const morningLow = firstPrice(levels.morningLow, morning?.morningLow);
   const compressionHigh = firstPrice(chartContext.compressionRange?.high, levels.nearestResistance, levels.activeSwingHigh);
   const compressionLow = firstPrice(chartContext.compressionRange?.low, levels.nearestSupport, levels.activeSwingLow);
+  const supportLevels = [
+    levels.nearestSupport,
+    levels.activeSwingLow,
+    levels.triggerCandleLow,
+    levels.morningLow,
+    morning?.morningLow,
+    compressionLow,
+    ...pricesFromCandles(chartContext, 'low'),
+    ...pricesFromSwings(chartContext, 'low'),
+    ...pricesFromExtractedLevels(chartContext, 'support'),
+  ].filter(isPrice);
+  const resistanceLevels = [
+    levels.nearestResistance,
+    levels.activeSwingHigh,
+    levels.triggerCandleHigh,
+    levels.morningHigh,
+    morning?.morningHigh,
+    compressionHigh,
+    ...pricesFromCandles(chartContext, 'high'),
+    ...pricesFromSwings(chartContext, 'high'),
+    ...pricesFromExtractedLevels(chartContext, 'resistance'),
+  ].filter(isPrice);
+  const support = firstPrice(nearestBelow(current, supportLevels), levels.nearestSupport, levels.activeSwingLow, compressionLow, supportLevels[0]);
+  const resistance = firstPrice(nearestAbove(current, resistanceLevels), levels.nearestResistance, levels.activeSwingHigh, compressionHigh, resistanceLevels[0]);
+  const reclaimEvidence = Boolean(
+    chartContext.candleFacts?.reclaimCandlePresent ||
+    chartContext.candleFacts?.closeAboveKeyLevel ||
+    morning?.rangeReclaimed ||
+    morning?.failedHoldBelowMorningLow
+  );
+  const rejectionEvidence = Boolean(
+    chartContext.candleFacts?.rejectionWickPresent ||
+    chartContext.candleFacts?.closeBelowKeyLevel ||
+    morning?.failedHoldAboveMorningHigh
+  );
   const plans: SetupCandidate[] = [];
 
   if (morningHigh || morning?.failedHoldAboveMorningHigh || morning?.morningHighSwept) {
     const entry = morningHigh ? roundToTick(morningHigh - TRADE_RULES.targetModel.tickSize) : null;
     const stop = sweepHigh ? roundToTick(sweepHigh + TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
+      chartContext,
       setupType: SetupType.LunchFailedHighReversal,
       direction: 'SHORT',
       entry,
@@ -326,6 +384,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     const entry = morningLow ? roundToTick(morningLow + TRADE_RULES.targetModel.tickSize) : null;
     const stop = sweepLow ? roundToTick(sweepLow - TRADE_RULES.targetModel.tickSize) : null;
     plans.push(makeCandidate({
+      chartContext,
       setupType: SetupType.LunchFailedLowReversal,
       direction: 'LONG',
       entry,
@@ -361,6 +420,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
         ? roundToTick(compressionHigh + TRADE_RULES.targetModel.tickSize)
         : null;
     plans.push(makeCandidate({
+      chartContext,
       setupType: SetupType.LunchCompressionBreakout,
       direction,
       entry,
@@ -378,6 +438,74 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       nextAction: 'Wait for clean compression break and risk check.',
       invalidation: stop ? `Invalid beyond opposite compression boundary near ${stop}.` : 'Invalid beyond the opposite compression boundary.',
       hasTrigger: direction !== 'NO TRADE',
+    }));
+  }
+
+  if (!plans.some((plan) => plan.direction === 'LONG') && (reclaimEvidence || support || resistance)) {
+    const entryBase = firstPrice(resistance, compressionHigh, levels.triggerCandleHigh);
+    const stopBase = firstPrice(support, compressionLow, levels.triggerCandleLow);
+    const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
+    const stop = stopBase ? roundToTick(stopBase - TRADE_RULES.targetModel.tickSize) : null;
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.LunchRangeReclaim,
+      direction: 'LONG',
+      entry,
+      stop,
+      priority: 86,
+      confidence: reclaimEvidence ? 'Medium' : 'Low',
+      evidence: [
+        'Lunch conditional builder reviewed range-reclaim long path from structured support/resistance.',
+        entryBase ? `Reclaim trigger reference: ${entryBase}.` : 'Reclaim trigger reference not confirmed.',
+        stopBase ? `Support / failed-low stop reference: ${stopBase}.` : 'Support / failed-low stop reference not confirmed.',
+      ],
+      missingEvidence: [
+        !entryBase ? 'Reclaim or resistance level is missing.' : '',
+        !stopBase ? 'Support / failed-low stop reference is missing.' : '',
+      ].filter(Boolean),
+      missingLevels: [
+        !entryBase ? missingLevel('reclaimLevel', 'Lunch reclaim / range high level', 'Needed to define the long trigger and ENTRY.', 'entry') : null,
+        !stopBase ? missingLevel('activeSwingLow', 'Lunch support / failed-low structure', 'Needed to place the long STOP under structure.', 'stop') : null,
+        chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above lunch reclaim level', 'Needed before this Lunch long can become executable.', 'trigger') : null,
+      ].filter(Boolean) as MissingLevelRequirement[],
+      requiredTrigger: entryBase ? `5M close above ${entryBase}, then pullback holds.` : '5M close above the lunch reclaim / range high level, then pullback holds.',
+      nextAction: 'Wait for failed-low or range reclaim confirmation before going long; do not chase inside the range.',
+      invalidation: stopBase ? `Invalid if price breaks back below ${stopBase}.` : 'Invalid if reclaim fails and price breaks the pullback low.',
+      hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true || morning?.rangeReclaimed === true,
+    }));
+  }
+
+  if (!plans.some((plan) => plan.direction === 'SHORT') && (rejectionEvidence || support || resistance)) {
+    const entryBase = firstPrice(support, compressionLow, levels.triggerCandleLow);
+    const stopBase = firstPrice(resistance, compressionHigh, levels.triggerCandleHigh);
+    const entry = entryBase ? roundToTick(entryBase - TRADE_RULES.targetModel.tickSize) : null;
+    const stop = stopBase ? roundToTick(stopBase + TRADE_RULES.targetModel.tickSize) : null;
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.LunchFailedContinuation,
+      direction: 'SHORT',
+      entry,
+      stop,
+      priority: 84,
+      confidence: rejectionEvidence ? 'Medium' : 'Low',
+      evidence: [
+        'Lunch conditional builder reviewed failed-continuation short path from structured support/resistance.',
+        entryBase ? `Breakdown trigger reference: ${entryBase}.` : 'Breakdown trigger reference not confirmed.',
+        stopBase ? `Resistance / failed-high stop reference: ${stopBase}.` : 'Resistance / failed-high stop reference not confirmed.',
+      ],
+      missingEvidence: [
+        !entryBase ? 'Breakdown or support level is missing.' : '',
+        !stopBase ? 'Resistance / failed-high stop reference is missing.' : '',
+      ].filter(Boolean),
+      missingLevels: [
+        !entryBase ? missingLevel('breakdownLevel', 'Lunch breakdown / range low level', 'Needed to define the short trigger and ENTRY.', 'entry') : null,
+        !stopBase ? missingLevel('activeSwingHigh', 'Lunch resistance / failed-high structure', 'Needed to place the short STOP above structure.', 'stop') : null,
+        chartContext.candleFacts?.closeBelowKeyLevel !== true ? missingLevel('triggerCandleLow', '5M close below lunch breakdown level', 'Needed before this Lunch short can become executable.', 'trigger') : null,
+      ].filter(Boolean) as MissingLevelRequirement[],
+      requiredTrigger: entryBase ? `5M close below ${entryBase}.` : '5M close below the lunch breakdown / range low level.',
+      nextAction: 'Wait for failed hold above resistance, then confirm breakdown before shorting.',
+      invalidation: stopBase ? `Invalid if price reclaims and holds above ${stopBase}.` : 'Invalid if price reclaims the failed high.',
+      hasTrigger: chartContext.candleFacts?.closeBelowKeyLevel === true || morning?.failedHoldAboveMorningHigh === true,
     }));
   }
 

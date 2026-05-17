@@ -1,11 +1,13 @@
 import { AnalysisResult } from '../types';
 import { normalizeTradePlan, NormalizedTradePlan } from './tradePlan';
+import { getWindowStatus } from '../config/timeWindows';
 
 export type AppPlanSessionType = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
 
 export interface AppPlanContext {
   sessionType: AppPlanSessionType;
   instrument?: 'MES' | 'MNQ';
+  windowStatusOverride?: ReturnType<typeof getWindowStatus>;
 }
 
 function isReplaySession(sessionType: AppPlanSessionType): boolean {
@@ -17,7 +19,7 @@ function toLiveSession(sessionType: AppPlanSessionType): 'morning' | 'lunch' {
 }
 
 export function buildAppTradePlan(result: AnalysisResult | null | undefined, context: AppPlanContext): NormalizedTradePlan {
-  const plan = normalizeTradePlan(result, context.instrument, context.sessionType);
+  const plan = normalizeTradePlan(result, context.instrument, context.sessionType, context.windowStatusOverride);
   const liveSession = toLiveSession(context.sessionType);
   const warnings = [
     ...(plan.consistencyWarnings || []),

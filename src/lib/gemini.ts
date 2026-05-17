@@ -103,11 +103,12 @@ type ChartImagePayload = string | {
   morningExec?: string;
 };
 
-async function superAgent(imageData: ChartImagePayload, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string, dailyInstrument?: string) {
+async function superAgent(imageData: ChartImagePayload, settings?: AISettings, previousAnalysis?: any, historicalTrades?: Trade[], modelOverride?: string, routeName?: string, midnightOpenOverride?: string, ragContextStr?: string, dailyInstrument?: string, accountEquity: number = 5000, riskPercent: number = 0.02) {
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const prompt = `
-    ACT AS THE [MNQ/MES_SUPER_AGENT_V3.0]
-    You are a unified system composing multiple expert sub-agents running in strict sequence to prevent hallucination.
+    ACT AS THE [MNQ/MES_MASTER_TRADING_DESK_V4.0]
+    You are a unified institutional futures review desk operating at a 20+ year master-trader standard. You compose multiple expert sub-agents running in strict sequence to prevent hallucination.
+    Your voice is decisive, risk-first, structurally aware, and professional. Do not sound like a casual trade assistant. Do not hype trades. Do not claim real-world certification, personal wealth, or guaranteed results.
     
     [USER-SELECTED DAILY INSTRUMENT]
     Instrument: ${dailyInstrument || "MES"}
@@ -139,7 +140,13 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
     ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Reversal window. Use current Lunch Reversal rules only. Do NOT use future data.' : ''}
 
-    [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | 5M_TIMEFRAME]
+    [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | MASTER_TRADING_DESK | 5M_TIMEFRAME]
+
+    [MASTER TRADING DESK VOICE LOCK]
+    - Write like a senior futures desk lead reviewing MES/MNQ execution risk.
+    - Every note should answer: What is happening, where it matters, when it becomes valid, why it matters, and what invalidates it.
+    - Treat WAIT and NO TRADE as professional outcomes.
+    - Never approve trades from authority, confidence, or narrative. The app-owned pipeline decides.
 
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
@@ -208,7 +215,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     MODULE 4: [RISK_AUDITOR] (Safety Gate)
     - AUDIT the required stop-loss distance against system caps.
     - MAXIMUM STOP: 8 points. IF RISK > 8 points ➔ WARNING: OVERSIZED RISK.
-    - ACCOUNT EQUITY: Assume $5000. IF RISK > 2% ($100 per contract) ➔ WARNING: OVERLEVERAGED.
+    - ACCOUNT EQUITY: Use configured account equity $${accountEquity}. IF estimated risk exceeds configured Risk Per Trade ${(riskPercent * 100).toFixed(2)}% ($${(accountEquity * riskPercent).toFixed(2)}) ➔ WARNING: OVERLEVERAGED.
     - MONTE CARLO PROBABILITY: Based on the 5-minute wicks and HH/HL structure, what is the probability of hitting 2.0R vs 1.0R STOP?
     - Provide a Final GO / NO-GO validation.
 
@@ -230,7 +237,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     Today is: ${currentDay}. Apply day-specific edge adjustments above.
 
     =========================================
-    MODULE 6: [CANDIDATE_EXTRACTOR] (Facts + Candidate Inputs)
+    MODULE 6: [MASTER_PLAN_EXTRACTOR] (Facts + Candidate Inputs)
     - THIS IS CRITICAL: You MUST ALWAYS output the \`final_trade_plan\` object in your JSON response.
     - The APP owns final trade-plan authority. Your job is to extract chart facts and propose measurable candidate inputs; the shared App Rule Engine will detect the executable setup, apply no-trade gates, hard-block risk, select the final plan, and compute final T1/T2.
     - Evaluate at least 3 competing setup candidates when visible on the chart: Liquidity Sweep, Momentum/Runaway, FVG/Imbalance, Initial Balance Extension, Opening Order Block, EQH/EQL, PDH/PDL Sweep, and No Trade.
@@ -253,7 +260,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - If no trade is valid, return decision = NO TRADE and explain why. Do not omit final_trade_plan.
 
     =========================================
-    MODULE 7: [TRADE_MANAGEMENT_AGENT] (After Entry Management)
+    MODULE 7: [MASTER_TRADE_MANAGEMENT] (After Entry Management)
     - This module runs AFTER candidate extraction.
     - Its job is NOT to choose the entry. The app chooses the final plan. Your job is to define how a valid selected trade should be managed after entry.
     - For every executable best_trade_plan, specify what to do if price moves in favor, stalls before T1, hits 1R, hits T1, or shows a two-bar failure.
@@ -355,7 +362,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
           "morningHighSweep": 0,
           "morningLowSweep": 0
         },
-        "requiredArrays": "candles, swings, fvgZones, liquidityEvents, and extractedLevels must always be arrays. Return [] when no fact is visible. Do not omit these fields.",
+        "requiredArrays": "candles, swings, fvgZones, liquidityEvents, liquiditySweeps, reclaimEvents, failedBreakEvents, displacementCandles, and extractedLevels must always be arrays. Return [] when no fact is visible. Do not omit these fields.",
         "extractedLevels": [
           { "label": "active swing low", "price": 0, "role": "support | resistance | liquidity | magnet | invalidation | unknown", "source": "ocr | manual | inferred | unknown", "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
         ],
@@ -366,11 +373,30 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
           { "type": "high | low", "price": 0, "timestamp": "string or null", "candleIndex": 0, "label": "string", "confidence": "High | Medium | Low | Unreadable" }
         ],
         "fvgZones": [
-          { "direction": "LONG | SHORT", "upper": 0, "lower": 0, "midpoint": 0, "formedAt": "string or null", "filledPercent": 0, "inverted": false, "confidence": "High | Medium | Low | Unreadable" }
+          { "direction": "LONG | SHORT", "upper": 0, "lower": 0, "midpoint": 0, "formedAt": "string or null", "filledPercent": 0, "inverted": false, "reclaimed": false, "reclaimTimestamp": "string or null", "confidence": "High | Medium | Low | Unreadable" }
         ],
         "liquidityEvents": [
           { "type": "sweep | reclaim | equal_highs | equal_lows | pdh_sweep | pdl_sweep | unknown", "direction": "LONG | SHORT | NO TRADE", "level": 0, "sweptLevelLabel": "string", "reclaimed": false, "timestamp": "string or null", "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
         ],
+        "liquiditySweeps": [
+          { "type": "sweep", "direction": "LONG | SHORT | NO TRADE", "level": 0, "sweptLevelLabel": "string", "reclaimed": false, "timestamp": "string or null", "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "reclaimEvents": [
+          { "direction": "LONG | SHORT", "reclaimedLevel": 0, "levelLabel": "string", "timestamp": "string or null", "candleIndex": 0, "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "failedBreakEvents": [
+          { "direction": "LONG | SHORT", "failedLevel": 0, "levelLabel": "string", "sweptExtreme": 0, "timestamp": "string or null", "candleIndex": 0, "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "displacementCandles": [
+          { "direction": "LONG | SHORT", "candleIndex": 0, "timestamp": "string or null", "open": 0, "high": 0, "low": 0, "close": 0, "bodyPoints": 0, "rangePoints": 0, "confidence": "High | Medium | Low | Unreadable", "evidence": "string" }
+        ],
+        "setupReadyFacts": {
+          "pullbackIntoFvg": false,
+          "fvgReclaimed": false,
+          "breakOfStructure": false,
+          "sweepThenReclaim": false,
+          "notes": []
+        },
         "gapContext": {
           "gapPresent": false,
           "direction": "gap_up | gap_down | none | unknown",
@@ -655,8 +681,8 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
  * AGENT 3: THE RISK AUDITOR (Validation)
  * Safety checks and parameter validation.
  */
-async function riskAuditorAgent(strategy: any, accountEquity: number) {
-  const maxRisk = accountEquity * 0.02;
+async function riskAuditorAgent(strategy: any, accountEquity: number, riskPercent: number = 0.02) {
+  const maxRisk = accountEquity * riskPercent;
   const stopDistance = Math.abs(strategy.suggestedEntry - strategy.suggestedStop);
   const riskPerContract = stopDistance * 5;
   
@@ -665,13 +691,13 @@ async function riskAuditorAgent(strategy: any, accountEquity: number) {
   if (stopDistance > 8) {
     reports.push({
       agentName: "Risk Auditor",
-      findings: `Stop distance (${stopDistance.toFixed(2)} pts) is aggressive. System max is 8 pts.`,
+      findings: `Stop distance (${stopDistance.toFixed(2)} pts) is aggressive. System max is 8 pts. Dollar risk is approximately $${riskPerContract.toFixed(2)} per MES contract against configured budget $${maxRisk.toFixed(2)} (${(riskPercent * 100).toFixed(2)}% of $${accountEquity.toFixed(2)}).`,
       status: 'WARNING'
     });
   } else {
     reports.push({
       agentName: "Risk Auditor",
-      findings: `Risk parameters are within system limits (${stopDistance.toFixed(2)} pts).`,
+      findings: `Risk parameters are within system point limits (${stopDistance.toFixed(2)} pts). Dollar risk is approximately $${riskPerContract.toFixed(2)} per MES contract against configured budget $${maxRisk.toFixed(2)} (${(riskPercent * 100).toFixed(2)}% of $${accountEquity.toFixed(2)}).`,
       status: 'SUCCESS'
     });
   }
@@ -737,7 +763,7 @@ export async function preCheckChartInfo(imageData: string, analysisType?: string
   }
 }
 
-export async function analyzeChart(imageData: ChartImagePayload, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string) {
+export async function analyzeChart(imageData: ChartImagePayload, settings?: AISettings, accountEquity: number = 5000, previousAnalysis?: any, historicalTrades?: Trade[], analysisType?: string, modelOverride?: string, midnightOpenOverride?: string, dailyInstrument?: string, riskPercent: number = 0.02) {
   try {
     const isMorning = analysisType !== 'lunch' && analysisType !== 'lunch_replay';
     const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -832,7 +858,7 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
     // Step 1: Execute Unified Super Agent
     let superReport: any = null;
     try {
-      superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument);
+      superReport = await superAgent(imageData, settings, previousAnalysis, historicalTrades, modelOverride, analysisType, midnightOpenOverride, ragContextStr, dailyInstrument, accountEquity, riskPercent);
     } catch (error) {
       if (canUseOpenAIFallback()) {
         console.warn("[OPENAI FALLBACK] Gemini extraction failed; using OpenAI fallback", error);
@@ -913,7 +939,7 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
       });
     } else {
       // Step 3: Manual Risk Audit Fallback
-      const manualRiskReports = await riskAuditorAgent(strategy, accountEquity);
+      const manualRiskReports = await riskAuditorAgent(strategy, accountEquity, riskPercent);
       additionalReports.push(...manualRiskReports);
     }
 
@@ -981,7 +1007,7 @@ Use Midnight Open RAG Learning to study how similar historical Midnight Open con
 
 export async function generateStrategyInsights(trades: any[], currentRules: string) {
   const systemInstruction = `
-    You are a Senior Trading Quantitative Analyst. Your task is to review a trader's history and current rules to propose refinements.
+    You are the Master Trading Desk Quant Reviewer. Your task is to review a trader's history and current rules with institutional discipline and propose refinements.
     
     TRADING SYSTEM: MES/MNQ Futures (2.0R Scalping)
     
@@ -1024,7 +1050,7 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
 
 export async function validateTrade(context: string) {
   const systemInstruction = `
-    You are the AI Trading Analyst. Validate the current trade setup against the checklist.
+    You are the Master Trading Desk Risk Reviewer. Validate the current trade setup against the checklist.
     Return a JSON response with the verdict and checklist status.
   `;
 
@@ -1067,7 +1093,7 @@ No complete normalized trade plan was provided. Return UNCLEAR unless the screen
 `;
 
   const systemInstruction = `
-You are a futures trade outcome auditor reviewing a chart screenshot provided as proof of whether a MES or MNQ trade plan worked.
+You are the Master Trading Desk Outcome Auditor reviewing a chart screenshot provided as proof of whether a MES or MNQ trade plan worked.
 
 The trader has claimed this trade was: ${claimedResult} (${contracts} contract(s)).
 The proof screenshot does NOT need to prove an order was placed. Your job is to determine from visible price action whether the planned stop was avoided and whether T1 and/or T2 were reached.

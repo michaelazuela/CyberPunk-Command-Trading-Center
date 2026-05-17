@@ -23,6 +23,16 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
     context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Conditional') ||
     null;
   const appSetupSubtype = selectedAppCandidate?.setupType || appPlan?.setupName || appPlan?.source || "unknown";
+  const targetContext = selectedAppCandidate?.targetObjectivePlan;
+  const targetContextSummary = targetContext
+    ? [
+        `Target model: ${targetContext.targetModel || 'fixed_r_with_structural_context'}`,
+        `Target quality: ${targetContext.targetQuality || 'unknown'}`,
+        `Nearest liquidity target: ${targetContext.nearestLiquidityTarget?.label || 'none'} ${targetContext.nearestLiquidityTarget?.price ?? ''}`.trim(),
+        `Runner objective: ${targetContext.runnerTarget?.label || 'none'} ${targetContext.runnerTarget?.price ?? ''}`.trim(),
+        `Target path warning: ${targetContext.targetPathWarning || 'none'}`,
+      ].join('\n')
+    : 'No liquidity-aware target context was attached to the selected plan.';
   const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
   const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
     ? context.geminiAnalysisJson.candidate_trade_plans
@@ -70,7 +80,9 @@ App Plan Engine:
 - Winner: ${appSetupSubtype}
 - Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || bestPlan?.why_it_won || 'unknown'}
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
-Advisory Note: candidate/best/final model trade plans are stored as context only; executable levels come from app-normalized fields above.
+Target Context:
+${targetContextSummary}
+Authority Note: AI advisory plans are stored as context only. Executable levels, target math, and trade status come from app-normalized fields above.
 Candidate plans reviewed:
 ${candidateSummary}
 Trade Management Agent:

@@ -22,6 +22,7 @@ import { TRADE_RULES } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
 import { buildConditionalPlans } from './conditionalPlanBuilder';
+import { applyTargetObjectivesToCandidates } from './targetObjectiveEngine';
 import { applyLevelSanity } from './levelSanityEngine';
 
 export type PipelineSessionType = ChartContext['sessionType'];
@@ -202,6 +203,11 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     swings: structured.swings,
     fvgZones: structured.fvgZones,
     liquidityEvents: structured.liquidityEvents,
+    liquiditySweeps: structured.liquiditySweeps,
+    reclaimEvents: structured.reclaimEvents,
+    failedBreakEvents: structured.failedBreakEvents,
+    displacementCandles: structured.displacementCandles,
+    setupReadyFacts: structured.setupReadyFacts,
     gapContext: structured.gapContext,
     compressionRange: structured.compressionRange,
     marketStructure: structured.marketStructure,
@@ -536,7 +542,10 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     result: input.result,
     chartContext,
   });
-  const setupCandidates = mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext));
+  const setupCandidates = applyTargetObjectivesToCandidates(
+    mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)),
+    chartContext.structuralLevels || []
+  );
   const selectedExecutable = setupCandidates.find((candidate) =>
     candidate.executionStatus === ExecutionStatus.Executable &&
     hasActionablePlanLevels(candidate)

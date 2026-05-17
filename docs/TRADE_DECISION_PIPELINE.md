@@ -6,6 +6,45 @@ AI may extract chart context, summarize visible structure, and propose advisory 
 
 Confidence is a supporting field only. It may help rank otherwise valid candidates, but it must never override a failed gate. Example: `High` confidence plus a failed risk check still returns `NoTrade`.
 
+## Layered Decision Architecture
+
+The intended architecture must stay separated:
+
+1. **OHLC layer**
+   Extract facts only:
+   "There is a bullish candle, swing low, possible gap, reclaim, sweep, etc."
+
+   Required setup-ready facts include `fvgZones[]`, `liquiditySweeps[]`, `reclaimEvents[]`, `failedBreakEvents[]`, `displacementCandles[]`, `pullbackIntoFvg`, `fvgReclaimed`, `breakOfStructure`, and `sweepThenReclaim` when they can be derived from screenshot or OHLC data.
+
+2. **Setup scanner**
+   Applies setup definitions:
+   "Does this meet Liquidity Sweep? FVG Pullback? Lunch Failed Low Reversal?"
+
+3. **Ranking engine**
+   Scores candidates:
+   "Which setup is better based on priority, confidence, risk, clarity, trigger, structure?"
+
+   Session-level context is part of candidate scoring and target mapping. Asian, London, NY premarket, ETH, and RTH highs/lows should be scored internally for source quality and relationship context. Examples include London sweeping Asian low, NY premarket sweeping London high, or RTH testing the full ETH high/low. User-facing notes should explain the practical use of the level: reaction zone, reclaim/rejection area, obstacle before T1, or runner objective after T2. These facts can strengthen a long or short candidate, but they cannot approve execution by themselves.
+
+4. **Trade decision pipeline**
+   Approves, rejects, waits, or marks conditional:
+   "Can this actually be traded now?"
+
+The OHLC layer must not approve setups, rank trades, accept risk, or produce executable decisions. It should provide structured evidence that the scanner, ranking engine, and trade decision pipeline can evaluate consistently.
+
+## Market Map / Target Context Rule
+
+The app should evaluate session levels before final candidate ranking:
+
+1. Extract or import Asian high/low, London high/low, NY premarket high/low, full ETH high/low, RTH high/low, and nearby round numbers when available.
+2. Score each level for source quality, confidence, proximity, touches, sweep/reclaim context, round-number overlap, FVG overlap, and session relationships.
+3. Evaluate context rules: Asian low below London low, London sweeps Asian high/low, NY premarket sweeps London high/low, RTH open relative to Midnight Open, RTH returning into ETH range, and RTH expanding away from ETH range.
+4. Attach the most useful long-side and short-side levels to candidate scoring and target context.
+5. Display the market map in the workflow with long-side reaction zones, short-side reaction zones, levels to watch, nearby target obstacles, and runner objectives.
+6. Use the level context in Discord alerts so the card separates long-side objectives from short-side objectives and explains how to use them.
+
+Session level context is not execution authority. A strong Asian/London/ETH level can support a candidate, but the 5M trigger, stop, risk, invalidation, and final pipeline gates still decide whether a plan is executable.
+
 ## Fixed Sequence
 
 Every analysis must follow this order:

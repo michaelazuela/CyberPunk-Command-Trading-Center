@@ -19,4 +19,11 @@ To prevent accidental rollbacks or re-introductions:
   - Cloudflare Pages Functions are in the `functions/` directory.
 - **AI / LLM Integration**:
   - Gemini API calls **must** go through the proxy at `/api/gemini` (`functions/api/gemini.js`).
+  - Optional OpenAI validation, if enabled, must also go through a Cloudflare Function boundary. OpenAI may validate chart facts, but it must not approve trades or expose `OPENAI_API_KEY` to browser code.
   - The `GEMINI_API_KEY` **must never** be exposed in Vite/browser code or `.env` files that get bundled to the client. It must only exist securely in the Cloudflare Page Function environment.
+
+## TRADE DECISION AUTHORITY
+
+AI/OHLC extraction may describe what is visible on the chart. The app-owned setup scanner, candidate scoring layer, plan engine, and trade decision pipeline decide whether a trade is executable, conditional, wait, no-trade, outside-rules, or invalid screenshot.
+
+User-facing notes must be plain trading instructions. Do not present raw model confidence, internal score labels, or advisory AI fields as executable instructions.

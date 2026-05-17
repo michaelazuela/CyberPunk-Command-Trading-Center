@@ -182,6 +182,7 @@ function conditionalPlanScore(candidate: SetupCandidate): number {
     candidate.requiredTrigger ? 5 :
     0;
   const proximityScore = Math.round((candidate.proximityScore || 0) * 10);
+  const levelContextScore = candidate.levelContextScore || 0;
 
   return (
     (candidate.priority || 0) +
@@ -190,7 +191,8 @@ function conditionalPlanScore(candidate: SetupCandidate): number {
     riskQualityScore +
     levelClarityScore +
     triggerClarityScore +
-    proximityScore
+    proximityScore +
+    levelContextScore
   );
 }
 
@@ -299,12 +301,172 @@ function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
   );
 }
 
+function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
+  const plan = candidate.targetObjectivePlan;
+  if (!plan && !candidate.target1Reason && !candidate.target2Reason) return null;
+  const tacticalT1 = candidate.target1 ?? projectedTargets(candidate).t1;
+  const tacticalT2 = candidate.target2 ?? projectedTargets(candidate).t2;
+
+  return (
+    <div className="mt-2 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--green)]">
+          Liquidity-Aware Target Map
+        </div>
+        {plan?.targetQuality && (
+          <span className={cn(
+            'qd-badge',
+            plan.targetQuality === 'target_blocked'
+              ? 'border-[var(--orange)]/30 text-[var(--orange)]'
+              : plan.targetQuality === 'clear_path'
+                ? 'border-[var(--green)]/30 text-[var(--green)]'
+                : 'border-[var(--b2)] text-[var(--txt3)]'
+          )}>
+            {plan.targetQuality.replace(/_/g, ' ')}
+          </span>
+        )}
+      </div>
+      <div className="grid gap-1 text-[10px] text-[var(--txt2)]">
+        <div className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
+          <span className="text-[var(--txt)]">Fixed-R scale targets:</span>{' '}
+          T1 {tacticalT1 ?? 'TBD'} · T2 {tacticalT2 ?? 'TBD'}.
+          <span className="ml-1 text-[var(--txt3)]">These stay deterministic for discipline.</span>
+        </div>
+        {plan?.nearestLiquidityTarget && (
+          <div className="border border-[var(--green)]/20 bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">Nearest liquidity target:</span>{' '}
+            <span className="text-[var(--green)]">{plan.nearestLiquidityTarget.label} {plan.nearestLiquidityTarget.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{plan.nearestLiquidityTarget.rMultiple ?? 'N/A'}R · use as first reaction zone.</span>
+          </div>
+        )}
+        {plan?.runnerTarget && (
+          <div className="border border-[var(--amber)]/20 bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">Runner / stretch objective:</span>{' '}
+            <span className="text-[var(--amber)]">{plan.runnerTarget.label} {plan.runnerTarget.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{plan.runnerTarget.rMultiple ?? 'N/A'}R · only after T1/T2 path stays clean.</span>
+          </div>
+        )}
+        {plan?.targetPathWarning && (
+          <div className="border border-[var(--orange)]/30 bg-[var(--orange)]/5 px-2 py-1 text-[var(--orange)]">
+            Target path warning: {plan.targetPathWarning}
+          </div>
+        )}
+        {candidate.target1Reason && (
+          <div><span className="text-[var(--txt)]">T1 context:</span> {candidate.target1Reason}</div>
+        )}
+        {candidate.target2Reason && (
+          <div><span className="text-[var(--txt)]">T2 context:</span> {candidate.target2Reason}</div>
+        )}
+        {plan?.objectives?.slice(0, 3).map((objective, index) => (
+          <div key={`${objective.label}-${objective.price}-${index}`} className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">{objective.label}</span>
+            <span className="ml-2 text-[var(--green)]">{objective.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{objective.rMultiple ?? 'N/A'}R · {objective.distancePoints ?? 'N/A'} pts away</span>
+          </div>
+        ))}
+        <div className="text-[var(--txt3)]">
+          App executable targets still use fixed 1.5R / 2.0R. Liquidity targets guide scale-outs, runners, and whether the path is blocked.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SessionLevelContextPanel({ plan }: { plan: NormalizedTradePlan }) {
+  const context = plan.sessionLevelContext;
+  if (!context) return null;
+
+  const longLevels = context.strongestLongLevels.slice(0, 3);
+  const shortLevels = context.strongestShortLevels.slice(0, 3);
+  const relationships = context.relationships.slice(0, 4);
+  const levelsToWatch = context.levelsToWatch.slice(0, 5);
+
+  if (!longLevels.length && !shortLevels.length && !relationships.length) return null;
+
+  const renderLevel = (level: typeof context.levels[number]) => (
+    <div key={`${level.label}-${level.price}-${level.directionRelevance}`} className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[var(--txt)]">{level.label}</span>
+        <span className="text-[var(--green)]">{level.price}</span>
+      </div>
+      <div className="mt-1 text-[var(--txt3)]">
+        Use: {level.contextNote || level.evidence || 'Watch this level for reaction, reclaim, rejection, or target management.'}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="mb-4 border border-[var(--amber)]/25 bg-[var(--amber)]/5 p-3 font-mono">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--amber)]">Market Map / Targets</div>
+          <div className="mt-1 text-[10px] text-[var(--txt3)]">
+            Asian, London, NY premarket, ETH, and RTH levels are reaction zones, obstacles, and runner targets. They do not approve trades by themselves.
+          </div>
+        </div>
+        <span className="qd-badge text-[var(--amber)] border-[var(--amber)]/30">Context Only</span>
+      </div>
+
+      {relationships.length > 0 && (
+        <div className="mb-3 grid gap-1">
+          <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Context Rules Triggered</div>
+          {relationships.map((relationship) => (
+            <div key={relationship.id} className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1 text-[10px] text-[var(--txt2)]">
+              <span className={relationship.bias === 'LONG' ? 'text-[var(--green)]' : relationship.bias === 'SHORT' ? 'text-[var(--red)]' : 'text-[var(--amber)]'}>
+                {relationship.bias}
+              </span>
+              {' · '}
+              <span className="text-[var(--txt)]">{relationship.label}</span>
+              {' · '}
+              {relationship.evidence}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div>
+          <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--green)]">Long-Side Reaction Zones</div>
+          <div className="grid gap-1">
+            {longLevels.length ? longLevels.map(renderLevel) : <div className="text-[10px] text-[var(--txt3)]">No strong long-side context levels found.</div>}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--red)]">Short-Side Reaction Zones</div>
+          <div className="grid gap-1">
+            {shortLevels.length ? shortLevels.map(renderLevel) : <div className="text-[10px] text-[var(--txt3)]">No strong short-side context levels found.</div>}
+          </div>
+        </div>
+      </div>
+
+      {levelsToWatch.length > 0 && (
+        <div className="mt-3">
+          <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--amber)]">Levels To Watch</div>
+          <div className="grid gap-1 md:grid-cols-2">
+            {levelsToWatch.map(renderLevel)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function bestOpportunityLabel(plan: NormalizedTradePlan): string {
   const executable = plan.opportunitySelection?.bestExecutableCandidate;
   const conditional = plan.opportunitySelection?.bestConditionalCandidate;
   if (executable) return `Executable ${formatSetupType(executable.setupType)} ${formatDirection(executable.direction)}`;
   if (conditional) return `Conditional ${formatSetupType(conditional.setupType)} ${formatDirection(conditional.direction)}`;
   return 'No executable or conditional opportunity';
+}
+
+function selectedPlanCandidate(plan: NormalizedTradePlan): SetupCandidate | null {
+  const selected = plan.opportunitySelection?.bestExecutableCandidate || plan.opportunitySelection?.bestConditionalCandidate || null;
+  if (selected) return selected;
+  return (plan.setupCandidates || []).find(candidate =>
+    candidate.direction === plan.decision &&
+    candidate.entry === plan.entry &&
+    candidate.stop === plan.stop
+  ) || null;
 }
 
 function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
@@ -403,6 +565,9 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
 
             <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
               <div><span className="text-[var(--txt)]">Reason:</span> {candidateReason(candidate)}</div>
+              {candidate.levelContextSummary && (
+                <div><span className="text-[var(--amber)]">Market Map:</span> {candidate.levelContextSummary}</div>
+              )}
               <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || 'No action required.'}</div>
               {candidate.blockReason === NoTradeReason.RiskTooWide && (
                 <div className="mt-1 text-[var(--orange)]">
@@ -413,6 +578,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                 <div><span className="text-[var(--txt)]">Required Trigger:</span> {candidate.requiredTrigger}</div>
               )}
               <MissingLevelsList candidate={candidate} />
+              <TargetObjectiveNotes candidate={candidate} />
             </div>
           </div>
         ))}
@@ -456,6 +622,9 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
                     <span className="qd-badge opacity-80">Score: {conditionalPlanScore(candidate)}</span>
+                    {candidate.levelContextScore !== undefined && candidate.levelContextScore > 0 && (
+                      <span className="qd-badge text-[var(--amber)] border-[var(--amber)]/30">Market Map Supports Plan</span>
+                    )}
                     <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.executionStatus}</span>
                     {candidate.blockReason && <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Blocker: {formatBlockReason(candidate.blockReason)}</span>}
                   </div>
@@ -486,13 +655,17 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
 
               <div className="mt-3 grid gap-1 text-[10px] text-[var(--txt2)]">
                 <div><span className="text-[var(--txt)]">Trigger:</span> {candidate.requiredTrigger || 'Manual confirmation required before execution.'}</div>
+                {candidate.levelContextSummary && (
+                  <div><span className="text-[var(--amber)]">Market Map:</span> {candidate.levelContextSummary}</div>
+                )}
                 <div className="border border-[var(--orange)]/20 bg-[var(--bg)] px-2 py-1 text-[var(--txt)]">
                   <span className="text-[var(--orange)]">Plain English:</span> {triggerPlainEnglish(candidate)}
                 </div>
                 <div><span className="text-[var(--txt)]">Next Action:</span> {candidate.nextAction || candidate.reducedRiskPlan?.reasoning || candidateReason(candidate)}</div>
                 <MissingLevelsList candidate={candidate} />
+                <TargetObjectiveNotes candidate={candidate} />
                 <div className="text-[var(--amber)]">
-                  T1/T2 above are projected at 1.5R / 2.0R from candidate ENTRY and STOP. They are not executable until the app-owned pipeline approves the plan.
+                  T1/T2 above are fixed app projections at 1.5R / 2.0R from candidate ENTRY and STOP. They are not executable until the app-owned pipeline approves the plan.
                 </div>
               </div>
             </div>
@@ -611,6 +784,7 @@ export default function FinalTradePlanCard({
     { label: 'Time', value: confidenceBreakdown.timeWindow },
   ];
   const decisionStatusLabel = formatDecisionStatus(plan.decisionStatus);
+  const activePlanCandidate = selectedPlanCandidate(plan);
 
   return (
     <div className="card-base flex flex-col p-4 border border-[var(--green)]/30 bg-[var(--green)]/5 mt-4">
@@ -633,6 +807,7 @@ export default function FinalTradePlanCard({
       </h3>
 
       <DecisionStepAudit plan={plan} />
+      <SessionLevelContextPanel plan={plan} />
       <SetupScanResults plan={plan} />
       {!plan.canExecute && <ConditionalPlansPanel plan={plan} />}
 
@@ -732,6 +907,8 @@ export default function FinalTradePlanCard({
             <span className="text-[var(--green)] font-bold">APP-OWNED LEVELS:</span>{' '}
             executable ENTRY / STOP come from the rule engine; T1 is 1.5R and T2 is 2.0R from normalized risk.
           </div>
+
+          {activePlanCandidate && <TargetObjectiveNotes candidate={activePlanCandidate} />}
 
           <div className="mb-4 border border-[var(--b1)] bg-[var(--s2)] p-3">
             <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt2)]">Confidence Reason Breakdown</div>
