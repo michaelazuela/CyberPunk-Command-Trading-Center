@@ -1,4 +1,4 @@
-import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SetupCandidate, TradeDecisionStatus } from '../types';
+import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SessionStory, SetupCandidate, TradeDecisionStatus } from '../types';
 import { SYSTEM_RULES } from '../constants';
 import { getWindowStatus } from '../config/timeWindows';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
@@ -45,6 +45,7 @@ export interface NormalizedTradePlan {
   setupCandidates?: SetupCandidate[];
   opportunitySelection?: FinalOpportunitySelection;
   sessionLevelContext?: SessionLevelContext;
+  sessionStory?: SessionStory;
   consistencyWarnings?: string[];
   rejectedAlternatives?: {
     setupName: string;
@@ -197,6 +198,7 @@ export function normalizeTradePlan(
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
+    sessionStory: pipeline.chartContext.sessionStory,
     rejectedAlternatives: []
   };
 
@@ -442,6 +444,7 @@ export function normalizeTradePlan(
       setupCandidates: pipeline.setupCandidates || [],
       opportunitySelection: pipeline.opportunitySelection,
       sessionLevelContext: pipeline.chartContext.sessionLevelContext,
+      sessionStory: pipeline.chartContext.sessionStory,
       consistencyWarnings: advisoryCandidates.some(isExecutable)
         ? ["Advisory trade-plan fields are not executable. Execution stays disabled until the app-owned rule engine confirms ENTRY and STOP."]
         : []
@@ -491,6 +494,7 @@ export function normalizeTradePlan(
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
+    sessionStory: pipeline.chartContext.sessionStory,
     setupName: executableCandidate.setupName,
     priorityScore: executableCandidate.priorityScore ?? null,
     rank: executableCandidate.rank ?? null,

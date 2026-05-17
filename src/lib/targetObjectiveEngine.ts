@@ -23,6 +23,11 @@ function typeScore(type: StructuralLevel['type']): number {
       return 24;
     case 'liquidity_pool':
       return 22;
+    case 'imbalance_zone':
+      return 24;
+    case 'imbalance_midpoint':
+    case 'displacement_origin':
+      return 20;
     case 'round_number':
       return 18;
     case 'midnight_open':

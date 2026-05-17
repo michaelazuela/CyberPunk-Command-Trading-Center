@@ -451,6 +451,41 @@ function SessionLevelContextPanel({ plan }: { plan: NormalizedTradePlan }) {
   );
 }
 
+function SessionStoryPanel({ plan }: { plan: NormalizedTradePlan }) {
+  const story = plan.sessionStory;
+  if (!story) return null;
+  const zones = story.displacementZones.slice(0, 2);
+  return (
+    <div className="mb-4 border border-[var(--green)]/25 bg-[var(--green)]/5 p-3 font-mono">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--green)]">Session Story</div>
+          <div className="mt-1 text-[10px] text-[var(--txt2)]">{story.summary}</div>
+        </div>
+        <span className="qd-badge border-[var(--green)]/30 text-[var(--green)]">Bias: {story.bias}</span>
+      </div>
+      {zones.length > 0 && (
+        <div className="grid gap-2 md:grid-cols-2">
+          {zones.map((zone) => (
+            <div key={zone.id} className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={zone.direction === 'LONG' ? 'text-[var(--green)]' : 'text-[var(--red)]'}>{zone.label}</span>
+                <span className="text-[var(--amber)]">{zone.lower}-{zone.upper}</span>
+              </div>
+              <div className="mt-1 text-[var(--txt3)]">
+                Mid {zone.midpoint} · confidence {zone.confidence} · score {zone.displacementScore}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="mt-2 text-[10px] text-[var(--txt3)]">
+        Session story improves context, ranking, and target quality. The 5M trigger, stop, risk, and invalidation still decide execution.
+      </div>
+    </div>
+  );
+}
+
 function bestOpportunityLabel(plan: NormalizedTradePlan): string {
   const executable = plan.opportunitySelection?.bestExecutableCandidate;
   const conditional = plan.opportunitySelection?.bestConditionalCandidate;
@@ -807,6 +842,7 @@ export default function FinalTradePlanCard({
       </h3>
 
       <DecisionStepAudit plan={plan} />
+      <SessionStoryPanel plan={plan} />
       <SessionLevelContextPanel plan={plan} />
       <SetupScanResults plan={plan} />
       {!plan.canExecute && <ConditionalPlansPanel plan={plan} />}

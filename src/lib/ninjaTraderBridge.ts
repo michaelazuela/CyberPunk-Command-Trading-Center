@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { buildStructuralLevels } from './sessionStructure';
 import { buildSessionLevelContext } from './sessionLevelContextEngine';
+import { buildSessionStory } from './sessionStoryEngine';
 
 export type NinjaBridgeTimeframe = '1m' | '5m' | '15m';
 
@@ -178,8 +179,34 @@ function candleDirection(bar: NinjaBridgeBar): ChartCandleFact['direction'] {
   return 'doji';
 }
 
-function toCandleFacts(bars: NinjaBridgeBar[]): ChartCandleFact[] {
-  const recent = bars.slice(-40);
+function minutesFromIso(value?: string | null): number | null {
+  if (!value) return null;
+  const match = value.match(/T(\d{2}):(\d{2})/);
+  if (match) return Number(match[1]) * 60 + Number(match[2]);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function inMinuteRange(minutes: number | null, start: number, end: number): boolean {
+  if (minutes === null) return false;
+  if (start <= end) return minutes >= start && minutes <= end;
+  return minutes >= start || minutes <= end;
+}
+
+function sessionForTimestamp(value?: string | null): DisplacementCandleFact['session'] {
+  const minutes = minutesFromIso(value);
+  if (inMinuteRange(minutes, 20 * 60, 2 * 60)) return 'asian';
+  if (inMinuteRange(minutes, 3 * 60, 8 * 60 + 29)) return 'london';
+  if (inMinuteRange(minutes, 8 * 60 + 30, 9 * 60 + 29)) return 'ny_premarket';
+  if (inMinuteRange(minutes, 9 * 60 + 30, 10 * 60 + 10)) return 'rth_morning';
+  if (inMinuteRange(minutes, 11 * 60 + 50, 13 * 60)) return 'lunch';
+  if (inMinuteRange(minutes, 18 * 60, 23 * 60 + 59)) return 'prior_eth';
+  return 'current_window';
+}
+
+function toCandleFacts(bars: NinjaBridgeBar[], limit = 40): ChartCandleFact[] {
+  const recent = bars.slice(-limit);
   const ranges = recent.map(bar => Math.abs(bar.close - bar.open));
   const avgBody = ranges.length ? ranges.reduce((sum, value) => sum + value, 0) / ranges.length : 0;
   return recent.map((bar, index) => {
@@ -206,7 +233,7 @@ function toCandleFacts(bars: NinjaBridgeBar[]): ChartCandleFact[] {
   });
 }
 
-function detectDisplacementCandles(candles: ChartCandleFact[]): DisplacementCandleFact[] {
+function detectDisplacementCandles(candles: ChartCandleFact[], fvgZones: FvgZoneFact[] = []): DisplacementCandleFact[] {
   const readable = candles.filter(candle =>
     typeof candle.open === 'number' &&
     typeof candle.high === 'number' &&
@@ -214,25 +241,82 @@ function detectDisplacementCandles(candles: ChartCandleFact[]): DisplacementCand
     typeof candle.close === 'number'
   );
   const bodies = readable.map(candle => Math.abs((candle.close || 0) - (candle.open || 0)));
+  const ranges = readable.map(candle => Math.max((candle.high || 0) - (candle.low || 0), 0));
   const avgBody = bodies.length ? bodies.reduce((sum, body) => sum + body, 0) / bodies.length : 0;
+  const avgRange = ranges.length ? ranges.reduce((sum, range) => sum + range, 0) / ranges.length : 0;
   if (!avgBody) return [];
 
   return readable
     .filter(candle => candle.direction === 'bullish' || candle.direction === 'bearish')
-    .filter(candle => Math.abs((candle.close || 0) - (candle.open || 0)) >= avgBody * 1.5 || candle.isExpansion)
-    .map(candle => ({
-      direction: candle.direction === 'bullish' ? 'LONG' : 'SHORT',
-      candleIndex: candle.index,
-      timestamp: candle.timestamp,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-      bodyPoints: Math.abs((candle.close || 0) - (candle.open || 0)),
-      rangePoints: typeof candle.high === 'number' && typeof candle.low === 'number' ? candle.high - candle.low : null,
-      confidence: 'High',
-      evidence: 'Body is materially larger than recent average body.',
-    }));
+    .map(candle => {
+      const body = Math.abs((candle.close || 0) - (candle.open || 0));
+      const range = typeof candle.high === 'number' && typeof candle.low === 'number' ? candle.high - candle.low : 0;
+      const bodyToRange = range > 0 ? body / range : 0;
+      const closeLocation =
+        candle.direction === 'bullish' && range > 0 && ((candle.high || 0) - (candle.close || 0)) <= range * 0.25
+          ? 'top_quarter'
+          : candle.direction === 'bearish' && range > 0 && ((candle.close || 0) - (candle.low || 0)) <= range * 0.25
+            ? 'bottom_quarter'
+            : range > 0
+              ? 'middle'
+              : 'unknown';
+      const session = sessionForTimestamp(candle.timestamp);
+      const prior = readable.slice(0, Math.max(0, candle.index));
+      const priorHigh = prior.length ? Math.max(...prior.map(item => item.high || 0)) : null;
+      const priorLow = prior.length ? Math.min(...prior.map(item => item.low || Number.POSITIVE_INFINITY)) : null;
+      const breaksStructure =
+        candle.direction === 'bullish'
+          ? typeof priorHigh === 'number' && (candle.high || 0) > priorHigh
+          : typeof priorLow === 'number' && (candle.low || 0) < priorLow;
+      const leavesImbalance = fvgZones.some(zone => {
+        if (typeof zone.upper !== 'number' || typeof zone.lower !== 'number') return false;
+        const upper = Math.max(zone.upper, zone.lower);
+        const lower = Math.min(zone.upper, zone.lower);
+        return lower <= (candle.high || 0) && upper >= (candle.low || 0);
+      });
+      const nearSessionOpen =
+        inMinuteRange(minutesFromIso(candle.timestamp), 20 * 60, 20 * 60 + 30) ||
+        inMinuteRange(minutesFromIso(candle.timestamp), 3 * 60, 3 * 60 + 30) ||
+        inMinuteRange(minutesFromIso(candle.timestamp), 8 * 60 + 30, 9 * 60) ||
+        inMinuteRange(minutesFromIso(candle.timestamp), 9 * 60 + 30, 10 * 60) ||
+        inMinuteRange(minutesFromIso(candle.timestamp), 11 * 60 + 50, 12 * 60 + 20);
+      const score =
+        (body >= avgBody * 1.5 || candle.isExpansion ? 1 : 0) +
+        (avgRange > 0 && range >= avgRange * 1.25 ? 1 : 0) +
+        (bodyToRange >= 0.6 ? 1 : 0) +
+        (closeLocation === 'top_quarter' || closeLocation === 'bottom_quarter' ? 1 : 0) +
+        (breaksStructure ? 1 : 0) +
+        (leavesImbalance ? 2 : 0) +
+        (nearSessionOpen ? 1 : 0);
+
+      return {
+        direction: candle.direction === 'bullish' ? 'LONG' : 'SHORT',
+        candleIndex: candle.index,
+        timestamp: candle.timestamp,
+        session,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+        bodyPoints: body,
+        rangePoints: range,
+        bodyToRange: Math.round(bodyToRange * 100) / 100,
+        closeLocation,
+        displacementScore: score,
+        quality: score >= 7 ? 'high_quality' : score >= 5 ? 'confirmed' : 'possible',
+        leavesImbalance,
+        breaksStructure,
+        confidence: score >= 7 ? 'High' : score >= 5 ? 'Medium' : 'Low',
+        evidence: [
+          `Body ${body.toFixed(2)} vs avg ${avgBody.toFixed(2)}; range ${range.toFixed(2)} vs avg ${avgRange.toFixed(2)}.`,
+          `Body/range ${Math.round(bodyToRange * 100)}%; close location ${closeLocation}.`,
+          leavesImbalance ? 'Leaves/overlaps FVG imbalance.' : 'No FVG overlap.',
+          breaksStructure ? 'Breaks prior structure.' : 'No structure break detected.',
+          nearSessionOpen ? `Occurs near ${sessionForTimestamp(candle.timestamp)} timing.` : 'Not near major session open.',
+        ].join(' '),
+      } as DisplacementCandleFact;
+    })
+    .filter(candle => (candle.displacementScore || 0) >= 3);
 }
 
 function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
@@ -415,9 +499,12 @@ export function buildNinjaChartContext({
   const contextLow = allContextBars.length ? Math.min(...allContextBars.map(bar => bar.low)) : activeSwingLow;
   const trend = last.close > first.close ? 'bullish' : last.close < first.close ? 'bearish' : 'neutral';
   const candles = toCandleFacts(executionBars);
+  const contextCandles = toCandleFacts(allContextBars, 240);
   const lastCandle = candles[candles.length - 1];
   const fvgZones = detectFvgZones(candles);
-  const displacementCandles = detectDisplacementCandles(candles);
+  const contextFvgZones = detectFvgZones(contextCandles);
+  const displacementCandles = detectDisplacementCandles(candles, fvgZones);
+  const contextDisplacementCandles = detectDisplacementCandles(contextCandles, contextFvgZones);
   const liquidityFacts = detectLiquidityAndReclaims(candles);
   const confidence = confidenceForBars(executionBars);
   const expansionPresent = candles.some(candle => candle.isExpansion);
@@ -425,12 +512,22 @@ export function buildNinjaChartContext({
   const pullbackPresent = candles.slice(-4).some((candle, index, arr) =>
     index > 0 && candle.direction !== arr[index - 1].direction && candle.direction !== 'doji'
   );
-  const structuralLevels = buildStructuralLevels({
+  const baseStructuralLevels = buildStructuralLevels({
     bars5m: executionBars,
     bars15m,
     midnightOpen,
     rthOpen: first.open,
   });
+  const sessionStory = buildSessionStory({
+    bars: allContextBars,
+    currentPrice: last.close,
+    fvgZones: contextFvgZones,
+    displacementCandles: contextDisplacementCandles,
+  });
+  const structuralLevels = [
+    ...baseStructuralLevels,
+    ...sessionStory.targetLevels,
+  ];
   const sessionLevelContext = buildSessionLevelContext(structuralLevels, last.close, { fvgZones });
   const enrichedStructuralLevels = sessionLevelContext.levels;
 
@@ -506,6 +603,7 @@ export function buildNinjaChartContext({
     entryStopConfidence: 'Medium',
     requiresManualConfirmation: false,
     sessionLevelContext,
+    sessionStory,
     targetObjectives: enrichedStructuralLevels.map(level => ({
       label: level.label,
       price: level.price,

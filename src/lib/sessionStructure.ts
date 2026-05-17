@@ -10,6 +10,8 @@ export interface SessionSegment {
   low: number | null;
   open: number | null;
   close: number | null;
+  midpoint: number | null;
+  rangePoints: number | null;
 }
 
 function isPrice(value: unknown): value is number {
@@ -36,14 +38,18 @@ function inMinuteRange(minutes: number | null, start: number, end: number): bool
 
 function buildSegment(name: SessionSegmentName, label: string, bars: NinjaBridgeBar[]): SessionSegment {
   const valid = bars.filter(bar => isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.open) && isPrice(bar.close));
+  const high = valid.length ? Math.max(...valid.map(bar => bar.high)) : null;
+  const low = valid.length ? Math.min(...valid.map(bar => bar.low)) : null;
   return {
     name,
     label,
     bars: valid,
-    high: valid.length ? Math.max(...valid.map(bar => bar.high)) : null,
-    low: valid.length ? Math.min(...valid.map(bar => bar.low)) : null,
+    high,
+    low,
     open: valid[0]?.open ?? null,
     close: valid[valid.length - 1]?.close ?? null,
+    midpoint: high !== null && low !== null ? roundToTick((high + low) / 2) : null,
+    rangePoints: high !== null && low !== null ? roundToTick(high - low) : null,
   };
 }
 
@@ -53,9 +59,10 @@ export function segmentTradingSession(bars: NinjaBridgeBar[]): SessionSegment[] 
 
   return [
     buildSegment('full_context', 'Full ETH Context', valid),
+    buildSegment('previous_rth', 'Previous RTH', byRange(9 * 60 + 30, 16 * 60)),
     buildSegment('prior_eth', 'Prior ETH / Globex Context', byRange(18 * 60, 23 * 60 + 59)),
     buildSegment('asian', 'Asian Session', byRange(20 * 60, 2 * 60)),
-    buildSegment('london', 'London / Early Europe', byRange(2 * 60, 8 * 60 + 29)),
+    buildSegment('london', 'London Session', byRange(3 * 60, 8 * 60 + 29)),
     buildSegment('ny_premarket', 'New York Premarket', byRange(8 * 60 + 30, 9 * 60 + 29)),
     buildSegment('rth_morning', 'RTH Morning Window', byRange(9 * 60 + 30, 10 * 60 + 10)),
     buildSegment('lunch', 'Lunch Review Window', byRange(11 * 60 + 50, 13 * 60)),

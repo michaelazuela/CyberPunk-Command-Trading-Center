@@ -33,6 +33,20 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
         `Target path warning: ${targetContext.targetPathWarning || 'none'}`,
       ].join('\n')
     : 'No liquidity-aware target context was attached to the selected plan.';
+  const chartContext = context.chartContext || context.geminiAnalysisJson?.structuredChartContext || {};
+  const sessionStory = chartContext?.sessionStory;
+  const sessionStorySummary = sessionStory
+    ? [
+        `Session story bias: ${sessionStory.bias || 'unknown'}`,
+        `Session story summary: ${sessionStory.summary || 'none'}`,
+        `Session relationships: ${Array.isArray(sessionStory.relationships) && sessionStory.relationships.length
+          ? sessionStory.relationships.slice(0, 4).map((item: any) => `${item.label}: ${item.bias} (${item.scoreImpact})`).join('; ')
+          : 'none'}`,
+        `Displacement zones: ${Array.isArray(sessionStory.displacementZones) && sessionStory.displacementZones.length
+          ? sessionStory.displacementZones.slice(0, 4).map((zone: any) => `${zone.label} ${zone.lower}-${zone.upper} ${zone.direction} confidence ${zone.confidence}`).join('; ')
+          : 'none'}`,
+      ].join('\n')
+    : 'No session story context was attached.';
   const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
   const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
     ? context.geminiAnalysisJson.candidate_trade_plans
@@ -82,6 +96,8 @@ App Plan Engine:
 - RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
 Target Context:
 ${targetContextSummary}
+Session Story:
+${sessionStorySummary}
 Authority Note: AI advisory plans are stored as context only. Executable levels, target math, and trade status come from app-normalized fields above.
 Candidate plans reviewed:
 ${candidateSummary}

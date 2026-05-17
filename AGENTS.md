@@ -126,6 +126,20 @@ Every completed analysis and replay outcome should have a durable Supabase recor
 - If embedding fails, preserve the base record and allow retry.
 - RLS must keep user data scoped to `auth.uid()`.
 
+## Session Story And Displacement
+
+When OHLC data is available from NinjaTrader, build the overnight session story before ranking trade plans.
+
+- Segment OHLC into Asian, London, NY premarket, RTH Morning, Lunch, previous RTH, and full context.
+- Compute each segment's high, low, open, close, midpoint, range, and trend.
+- Displacement requires more than a large candle body:
+  - body-to-range quality
+  - close-location quality
+  - structure break or session timing context
+  - FVG/imbalance overlap for high confidence
+- Save displacement imbalance zones as structural target/context levels.
+- The session story may improve target selection and setup ranking, but the 5M trigger, stop, risk, invalidation, and deterministic pipeline still decide execution.
+
 ## Verification Before Finishing
 
 Run these before reporting success:

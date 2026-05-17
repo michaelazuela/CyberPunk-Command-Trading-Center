@@ -738,6 +738,16 @@ function formatFiveWsWhere(candidates: SetupCandidate[], targetObjectives: Targe
     .join('\n\n');
 }
 
+function formatSessionStoryLine(analysis: AnalysisResult): string {
+  const story = analysis.structuredChartContext?.sessionStory;
+  if (!story) return 'Session story: no dominant overnight/Asian/London/RTH relationship detected.';
+  const zone = story.displacementZones?.[0];
+  return [
+    `Session story: ${story.summary}`,
+    zone ? `Key zone: ${zone.label} ${zone.lower}-${zone.upper}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 function formatFiveWsWhen(candidates: SetupCandidate[]): string {
   if (!candidates.length) return 'When a clean 5M trigger forms.';
   return candidates
@@ -765,7 +775,10 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
     },
     {
       name: '2️⃣ Why',
-      value: discordValue(normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.'),
+      value: discordValue([
+        normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.',
+        formatSessionStoryLine(analysis),
+      ].join('\n')),
       inline: false,
     },
     {

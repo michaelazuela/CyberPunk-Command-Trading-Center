@@ -149,6 +149,7 @@ export interface KeyLevels {
 }
 
 export type SessionSegmentName =
+  | 'previous_rth'
   | 'prior_eth'
   | 'asian'
   | 'london'
@@ -163,6 +164,9 @@ export type StructuralLevelType =
   | 'low'
   | 'support'
   | 'resistance'
+  | 'imbalance_zone'
+  | 'imbalance_midpoint'
+  | 'displacement_origin'
   | 'midnight_open'
   | 'rth_open'
   | 'round_number'
@@ -201,6 +205,43 @@ export interface SessionLevelContext {
   strongestLongLevels: StructuralLevel[];
   strongestShortLevels: StructuralLevel[];
   levelsToWatch: StructuralLevel[];
+  notes: string[];
+}
+
+export interface SessionStats {
+  name: SessionSegmentName;
+  label: string;
+  barCount: number;
+  high: number | null;
+  low: number | null;
+  open: number | null;
+  close: number | null;
+  midpoint: number | null;
+  rangePoints: number | null;
+  trend: 'bullish' | 'bearish' | 'balanced' | 'unknown';
+}
+
+export interface SessionImbalanceZone {
+  id: string;
+  session: SessionSegmentName;
+  label: string;
+  direction: 'LONG' | 'SHORT';
+  upper: number;
+  lower: number;
+  midpoint: number;
+  originPrice?: number | null;
+  confidence: ReadConfidence;
+  displacementScore: number;
+  evidence: string;
+}
+
+export interface SessionStory {
+  segments: SessionStats[];
+  displacementZones: SessionImbalanceZone[];
+  relationships: SessionLevelRelationship[];
+  bias: 'LONG' | 'SHORT' | 'BALANCED' | 'WAIT';
+  summary: string;
+  targetLevels: StructuralLevel[];
   notes: string[];
 }
 
@@ -321,12 +362,19 @@ export interface DisplacementCandleFact {
   direction: Exclude<PriceDirection, 'NO TRADE'>;
   candleIndex: number;
   timestamp?: string | null;
+  session?: SessionSegmentName | null;
   open?: number | null;
   high?: number | null;
   low?: number | null;
   close?: number | null;
   bodyPoints?: number | null;
   rangePoints?: number | null;
+  bodyToRange?: number | null;
+  closeLocation?: 'top_quarter' | 'bottom_quarter' | 'middle' | 'unknown';
+  displacementScore?: number;
+  quality?: 'possible' | 'confirmed' | 'high_quality';
+  leavesImbalance?: boolean;
+  breaksStructure?: boolean;
   confidence: ReadConfidence;
   evidence?: string;
 }
@@ -479,6 +527,7 @@ export interface ChartContext {
   displacementCandles?: DisplacementCandleFact[];
   setupReadyFacts?: SetupReadyFacts;
   sessionLevelContext?: SessionLevelContext;
+  sessionStory?: SessionStory;
   gapContext?: GapContextFact;
   compressionRange?: CompressionRangeFact;
   marketStructure?: MarketStructureFacts;

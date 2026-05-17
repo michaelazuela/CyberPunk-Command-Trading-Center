@@ -18,6 +18,7 @@ function confidenceScore(confidence: StructuralLevel['confidence']): number {
 
 function sourceScore(source: StructuralLevel['source']): number {
   switch (source) {
+    case 'previous_rth': return 24;
     case 'full_context': return 24;
     case 'rth_morning': return 24;
     case 'ny_premarket': return 22;
@@ -33,6 +34,8 @@ function sourceScore(source: StructuralLevel['source']): number {
 
 function typeScore(type: StructuralLevel['type']): number {
   if (type === 'high' || type === 'low') return 12;
+  if (type === 'imbalance_zone') return 14;
+  if (type === 'imbalance_midpoint' || type === 'displacement_origin') return 12;
   if (type === 'liquidity_pool') return 10;
   if (type === 'round_number') return 6;
   if (type === 'midnight_open' || type === 'rth_open') return 8;
