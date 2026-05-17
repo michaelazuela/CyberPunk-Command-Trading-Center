@@ -706,6 +706,46 @@ function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: Tar
   ].join('\n');
 }
 
+function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjective[] = []): string {
+  const direction = candidate.direction === 'LONG' ? 'LONG' : 'SHORT';
+  const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
+    ? candidate.targetObjectivePlan.objectives
+    : objectives;
+  const nearestLiquidity =
+    candidate.targetObjectivePlan?.nearestLiquidityTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry);
+  const runner =
+    candidate.targetObjectivePlan?.runnerTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
+  const blocker = candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : '';
+  return [
+    `**${compactSetupName(candidate)} ${direction}**`,
+    `Status: ${candidate.executionStatus}${blocker}`,
+    `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
+    `Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(candidate.stop)} | T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`,
+    nearestLiquidity ? `Next liquidity: ${nearestLiquidity.price} ${nearestLiquidity.label}` : 'Next liquidity: N/A',
+    runner ? `Runner only after hold: ${runner.price} ${runner.label}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+function formatFiveWsWhere(candidates: SetupCandidate[], targetObjectives: TargetObjective[]): string {
+  if (!candidates.length) {
+    return 'No active scenario levels. Wait for a clean 5M trigger.';
+  }
+  return candidates
+    .slice(0, 2)
+    .map((candidate, index) => `${index + 1}. ${formatFiveWsScenario(candidate, targetObjectives)}`)
+    .join('\n\n');
+}
+
+function formatFiveWsWhen(candidates: SetupCandidate[]): string {
+  if (!candidates.length) return 'When a clean 5M trigger forms.';
+  return candidates
+    .slice(0, 2)
+    .map((candidate, index) => `${index + 1}. ${candidate.requiredTrigger || 'Wait for confirmation'}`)
+    .join('\n');
+}
+
 function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): DiscordWebhookPayload {
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates);
@@ -715,83 +755,38 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
   const fields: DiscordEmbedField[] = [
     {
-      name: '🕒 Session',
-      value: discordValue(`**${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'}**\n**Date:** ${tradeDate}\n**Source:** NinjaTrader OHLC`),
-      inline: false,
-    },
-    {
-      name: '📈 Instrument',
-      value: discordValue(`**${instrument}**\n**Authority:** app-owned pipeline\n**Rule:** AI/OHLC extracts facts only`),
-      inline: false,
-    },
-    {
-      name: '🎯 Final Status',
-      value: discordValue(`**${finalStatusLabel}**\n${normalized.decision}${normalized.setupName ? ` - ${normalized.setupName}` : ''}`),
-      inline: false,
-    },
-    {
-      name: '📍 App-Computed Levels',
+      name: '1️⃣ What',
       value: discordValue(
-        '```text\n' +
-        `ENTRY  ${moneyLine(normalized.entry)}\n` +
-        `STOP   ${moneyLine(normalized.stop)}\n` +
-        `RISK   ${moneyLine(normalized.riskPoints)}\n` +
-        `T1     ${moneyLine(normalized.t1)}\n` +
-        `T2     ${moneyLine(normalized.t2)}\n` +
-        '```\n' +
-        'T1 = 1.5R, T2 = 2.0R from confirmed ENTRY / STOP.'
+        `**${finalStatusLabel}**\n` +
+        `${normalized.decision}${normalized.setupName ? ` - ${normalized.setupName}` : ''}\n` +
+        `Session: ${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
       ),
       inline: false,
     },
     {
-      name: '🌙 ETH / Asian / London High-Low Targets',
-      value: discordValue(formatContextHighLowTargets(targetObjectives)),
+      name: '2️⃣ Why',
+      value: discordValue(normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.'),
       inline: false,
     },
     {
-      name: '🧭 Targets To Watch',
-      value: discordValue(formatSessionLevelContext(analysis)),
+      name: '3️⃣ When',
+      value: discordValue(formatFiveWsWhen(candidates)),
       inline: false,
     },
     {
-      name: '🧠 Why This Plan',
-      value: discordValue(normalized.whyThisPlan),
+      name: '4️⃣ Where',
+      value: discordValue(formatFiveWsWhere(candidates, targetObjectives)),
       inline: false,
     },
     {
-      name: '🚫 Invalidation',
-      value: discordValue(normalized.invalidation),
+      name: '5️⃣ Watch-Out',
+      value: discordValue(
+        `${normalized.invalidation || 'Do not execute until entry, stop, trigger, risk, and invalidation pass.'}\n` +
+        'Decision support only. No automated orders were placed.'
+      ),
       inline: false,
     },
   ];
-
-  if (candidates.length) {
-    candidates.slice(0, 2).forEach((candidate, index) => {
-      fields.push({
-        name: `${index === 0 ? '🟢' : '🔴'} Best ${candidate.direction === 'LONG' ? 'Long' : 'Short'} Scenario`,
-        value: discordValue(`**${compactSetupName(candidate)} ${candidate.direction}**\n${formatCandidateValue(candidate, targetObjectives)}`),
-        inline: false,
-      });
-    });
-  } else {
-    fields.push({
-      name: '🟡 Conditional Paths',
-      value: 'No conditional candidates found by the app-owned scan.',
-      inline: false,
-    });
-  }
-
-  fields.push({
-    name: '📥 Outcome Buttons',
-    value: 'After the setup plays out, tap the matching button below. The selection writes trade taken, direction, and target result back to Supabase/RAG for learning.',
-    inline: false,
-  });
-
-  fields.push({
-    name: '⚠️ Decision Support Only',
-    value: 'No automated orders were placed. Confirm the trigger, risk, and execution in your trading platform before taking action.',
-    inline: false,
-  });
 
   const components = buildOutcomeComponents({
     planVersionId,
@@ -802,14 +797,14 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
 
   return {
     username: 'Quant Desk',
-    content: `# 📊 Quant Desk Master Trading Desk ${header}\n## ${statusEmoji(finalStatus)} ${finalStatus} • ${tradeDate}\n**Decision support only. No automated orders placed.**\nPlan ID: \`${planVersionId}\``,
+    content: `# 📊 Quant Desk ${header}\n## ${statusEmoji(finalStatus)} ${finalStatus} • ${tradeDate}\nPlan ID: \`${planVersionId}\``,
     embeds: [
       {
-        title: `📊 Quant Desk Master Trading Desk ${header} — ${tradeDate}`,
-        description: 'Decision support only. No automated orders placed.',
+        title: `📊 Quant Desk ${header} — ${tradeDate}`,
+        description: '5 W trading card. App-owned decision support only.',
         color: statusColor(finalStatus),
         fields,
-        footer: { text: 'Quant Desk • Master Trading Desk • App-Owned Trade Pipeline' },
+        footer: { text: 'Quant Desk • App-Owned Trade Pipeline • No automated orders' },
         timestamp: new Date().toISOString(),
       },
     ],
