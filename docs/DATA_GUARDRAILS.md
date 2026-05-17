@@ -10,6 +10,15 @@ Canonical values should live in one place:
 - Supabase schema: `supabase/migrations`.
 - Security rules: `security_spec.md`.
 
+## OHLC Fact Authority
+
+NinjaTrader real-time and historical OHLC is the highest-authority market data path.
+
+- Treat imported OHLC bars and OHLC-derived facts as factual: candles, swings, FVG/imbalance zones, liquidity sweeps, reclaims, failed breaks, displacement candles, session highs/lows, structural levels, target context, and session story.
+- AI screenshot extraction may fill a missing field, but it must not overwrite an existing OHLC-derived field.
+- If AI visual extraction conflicts with OHLC, trust OHLC and downgrade or ignore the visual extraction for that field.
+- OHLC facts are still inputs only. They do not approve a setup or trade by themselves; the setup scanner, ranking engine, and trade decision pipeline remain required.
+
 ## Persistence Rules
 
 - Do not store base64 screenshots in database rows.

@@ -168,9 +168,10 @@ function mergeBridgeContextIntoAnalysis(
 ): AnalysisResult {
   if (!bridgeContext) return analysis;
   const existing = analysis.structuredChartContext || {};
+  const ohlcAuthoritySummary = `${bridgeSummary} OHLC fields from NinjaTrader are factual and take precedence over AI visual extraction.`;
   return {
     ...analysis,
-    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER BRIDGE] ${bridgeSummary}`.trim(),
+    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER BRIDGE] ${ohlcAuthoritySummary}`.trim(),
     structuredChartContext: {
       ...existing,
       ...bridgeContext,
@@ -178,12 +179,25 @@ function mergeBridgeContextIntoAnalysis(
         ...(existing.keyLevels || {}),
         ...(bridgeContext.keyLevels || {}),
       },
+      extractedLevels: bridgeContext.extractedLevels || existing.extractedLevels,
       candles: bridgeContext.candles || existing.candles,
+      swings: bridgeContext.swings || existing.swings,
+      fvgZones: bridgeContext.fvgZones || existing.fvgZones,
+      liquidityEvents: bridgeContext.liquidityEvents || existing.liquidityEvents,
+      liquiditySweeps: bridgeContext.liquiditySweeps || existing.liquiditySweeps,
+      reclaimEvents: bridgeContext.reclaimEvents || existing.reclaimEvents,
+      failedBreakEvents: bridgeContext.failedBreakEvents || existing.failedBreakEvents,
+      displacementCandles: bridgeContext.displacementCandles || existing.displacementCandles,
+      setupReadyFacts: bridgeContext.setupReadyFacts || existing.setupReadyFacts,
       structuralLevels: bridgeContext.structuralLevels || existing.structuralLevels,
+      sessionLevelContext: bridgeContext.sessionLevelContext || existing.sessionLevelContext,
+      sessionStory: bridgeContext.sessionStory || existing.sessionStory,
       targetObjectives: bridgeContext.targetObjectives || existing.targetObjectives,
       marketStructure: bridgeContext.marketStructure || existing.marketStructure,
       candleFacts: bridgeContext.candleFacts || existing.candleFacts,
-      extractionWarnings: existing.extractionWarnings,
+      marketContext: bridgeContext.marketContext || existing.marketContext,
+      ocrText: bridgeContext.ocrText || existing.ocrText,
+      extractionWarnings: bridgeContext.extractionWarnings || existing.extractionWarnings,
     },
     agentReports: [
       ...(analysis.agentReports || []),

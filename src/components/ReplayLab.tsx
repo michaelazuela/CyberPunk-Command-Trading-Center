@@ -87,9 +87,10 @@ function mergeHistoricalContextIntoAnalysis(
 ): AnalysisResult {
   if (!historicalContext) return analysis;
   const existing = analysis.structuredChartContext || {};
+  const ohlcAuthoritySummary = `${summary} Historical OHLC fields from NinjaTrader are factual and take precedence over AI visual extraction.`;
   return {
     ...analysis,
-    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER HISTORICAL OHLC] ${summary}`.trim(),
+    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER HISTORICAL OHLC] ${ohlcAuthoritySummary}`.trim(),
     structuredChartContext: {
       ...existing,
       ...historicalContext,
@@ -97,11 +98,25 @@ function mergeHistoricalContextIntoAnalysis(
         ...(existing.keyLevels || {}),
         ...(historicalContext.keyLevels || {}),
       },
+      extractedLevels: historicalContext.extractedLevels || existing.extractedLevels,
       candles: historicalContext.candles || existing.candles,
+      swings: historicalContext.swings || existing.swings,
+      fvgZones: historicalContext.fvgZones || existing.fvgZones,
+      liquidityEvents: historicalContext.liquidityEvents || existing.liquidityEvents,
+      liquiditySweeps: historicalContext.liquiditySweeps || existing.liquiditySweeps,
+      reclaimEvents: historicalContext.reclaimEvents || existing.reclaimEvents,
+      failedBreakEvents: historicalContext.failedBreakEvents || existing.failedBreakEvents,
+      displacementCandles: historicalContext.displacementCandles || existing.displacementCandles,
+      setupReadyFacts: historicalContext.setupReadyFacts || existing.setupReadyFacts,
       structuralLevels: historicalContext.structuralLevels || existing.structuralLevels,
+      sessionLevelContext: historicalContext.sessionLevelContext || existing.sessionLevelContext,
+      sessionStory: historicalContext.sessionStory || existing.sessionStory,
       targetObjectives: historicalContext.targetObjectives || existing.targetObjectives,
       marketStructure: historicalContext.marketStructure || existing.marketStructure,
       candleFacts: historicalContext.candleFacts || existing.candleFacts,
+      marketContext: historicalContext.marketContext || existing.marketContext,
+      ocrText: historicalContext.ocrText || existing.ocrText,
+      extractionWarnings: historicalContext.extractionWarnings || existing.extractionWarnings,
     },
   };
 }

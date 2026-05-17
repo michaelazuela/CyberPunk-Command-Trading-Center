@@ -16,6 +16,8 @@ The intended architecture must stay separated:
 
    Required setup-ready facts include `fvgZones[]`, `liquiditySweeps[]`, `reclaimEvents[]`, `failedBreakEvents[]`, `displacementCandles[]`, `pullbackIntoFvg`, `fvgReclaimed`, `breakOfStructure`, and `sweepThenReclaim` when they can be derived from screenshot or OHLC data.
 
+   When NinjaTrader OHLC is available, those imported OHLC fields are the fact authority. AI visual extraction may fill missing facts, but it must not overwrite OHLC-derived candles, levels, session story, or structural context.
+
 2. **Setup scanner**
    Applies setup definitions:
    "Does this meet Liquidity Sweep? FVG Pullback? Lunch Failed Low Reversal?"

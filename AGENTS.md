@@ -31,6 +31,16 @@ Gemini should extract structured facts from screenshots: candles, swings, levels
 
 The app should use those facts to build conditional paths such as Morning Failed High / Liquidity Rejection, Morning Reclaim Long, and Lunch reversal subtypes. Conditional plans may show projected ENTRY/STOP/T1/T2 only as planning paths. They are not executable until the app-owned pipeline confirms trigger, stop, risk, invalidation, and time-window gates.
 
+## OHLC Fact Authority
+
+Real-time or historical OHLC imported from the NinjaTrader bridge is the highest-authority chart data path.
+
+- Treat NinjaTrader OHLC open, high, low, close, volume, timestamp, session highs/lows, candles, swings, FVG/imbalance facts, liquidity events, displacement candles, session story, and structural levels as factual.
+- AI screenshot extraction may fill gaps only when the OHLC field is missing.
+- AI must not overwrite, contradict, or replace an existing OHLC-derived field.
+- If AI visual extraction conflicts with OHLC, trust OHLC, downgrade the AI/visual confidence, and require manual confirmation where needed.
+- OHLC still does not approve trades by itself. The setup scanner, ranking engine, and trade decision pipeline remain the execution authority.
+
 The intended decision architecture is layered:
 
 1. OHLC layer extracts facts only: bullish/bearish candles, swing highs/lows, possible gaps, `fvgZones[]`, `liquiditySweeps[]`, `reclaimEvents[]`, `failedBreakEvents[]`, `displacementCandles[]`, and booleans such as `pullbackIntoFvg`, `fvgReclaimed`, `breakOfStructure`, and `sweepThenReclaim`.
