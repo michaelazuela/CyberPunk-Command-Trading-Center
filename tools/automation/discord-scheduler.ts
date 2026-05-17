@@ -361,27 +361,27 @@ function buildOutcomeComponents(args: {
     {
       type: 1,
       components: [
-        outcomeButton('Long T1', '🟢', longT1),
-        outcomeButton('Long T2', '🏆', longT2),
-        outcomeButton('Long Liquidity', '🎯', longLiquidity),
-        outcomeButton('Long Stopped', '🛑', longStopped),
+        outcomeButton('LONG T1 Hit', '🟢', longT1),
+        outcomeButton('LONG T2 Hit', '🏆', longT2),
+        outcomeButton('LONG Liquidity', '🎯', longLiquidity),
+        outcomeButton('LONG Stopped', '🛑', longStopped),
       ],
     },
     {
       type: 1,
       components: [
-        outcomeButton('Short T1', '🔴', shortT1),
-        outcomeButton('Short T2', '🏆', shortT2),
-        outcomeButton('Short Liquidity', '🎯', shortLiquidity),
-        outcomeButton('Short Stopped', '🛑', shortStopped),
+        outcomeButton('SHORT T1 Hit', '🔴', shortT1),
+        outcomeButton('SHORT T2 Hit', '🏆', shortT2),
+        outcomeButton('SHORT Liquidity', '🎯', shortLiquidity),
+        outcomeButton('SHORT Stopped', '🛑', shortStopped),
       ],
     },
     {
       type: 1,
       components: [
-        outcomeButton('Scratch', '⚪', scratch),
+        outcomeButton('Scratch / BE', '⚪', scratch),
         outcomeButton('Not Taken', '🚫', notTaken),
-        outcomeButton('Missed', '⏭️', missed),
+        outcomeButton('Missed Trade', '⏭️', missed),
       ],
     },
   ];
@@ -891,7 +891,8 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       name: '5️⃣ Watch-Out',
       value: discordValue(
         `${normalized.invalidation || 'Do not execute until entry, stop, trigger, risk, and invalidation pass.'}\n` +
-        `${components ? 'Use the buttons below only after you know what happened. They update RAG/journal learning only.' : 'RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
+        `${components ? 'Button guide: 🟢 LONG T1 | 🏆 T2 | 🎯 liquidity target | 🛑 stopped | 🔴 SHORT T1 | ⚪ scratch | 🚫 not taken | ⏭ missed.' : 'RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
+        `${components ? 'Use the buttons only after you know what happened. They update RAG/journal learning only.' : ''}\n` +
         'Decision support only. No automated orders were placed.'
       ),
       inline: false,
