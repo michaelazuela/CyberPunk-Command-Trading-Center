@@ -42,6 +42,8 @@ interface NinjaBridgeState {
   snapshot: NinjaBridgeSnapshot | null;
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
+  bars60m: NinjaBridgeBar[];
+  bars240m: NinjaBridgeBar[];
   positions: NinjaBridgePosition[];
   updatedAt: string | null;
   error: string | null;
@@ -99,6 +101,7 @@ function isTradeTakenOutcome(outcome: SessionOutcome): boolean {
 }
 
 function formatCandidateName(candidate: SetupCandidate): string {
+  if (candidate.scenarioLabel) return candidate.scenarioLabel;
   return String(candidate.setupType || 'Setup').replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
@@ -356,6 +359,8 @@ export default function SessionLab({
     snapshot: null,
     bars5m: [],
     bars15m: [],
+    bars60m: [],
+    bars240m: [],
     positions: [],
     updatedAt: null,
     error: null,
@@ -404,6 +409,8 @@ export default function SessionLab({
     const structuredContext = buildNinjaChartContext({
       bars5m: bridge.bars5m,
       bars15m: bridge.bars15m,
+      bars60m: bridge.bars60m,
+      bars240m: bridge.bars240m,
       sessionType,
       instrument,
       tradeDate,
@@ -411,8 +418,13 @@ export default function SessionLab({
     });
     const latest5m = bridge.bars5m[bridge.bars5m.length - 1];
     const latest15m = bridge.bars15m[bridge.bars15m.length - 1];
+    const latest60m = bridge.bars60m[bridge.bars60m.length - 1];
+    const latest240m = bridge.bars240m[bridge.bars240m.length - 1];
     const summary = [
       `Live ${bridgeInstrument} ${sessionType} OHLC available from NinjaTrader.`,
+      `4H/1H/15M define context and liquidity targets; 5M remains execution authority.`,
+      `Latest 4H: ${summarizeBridgeBar(latest240m)}.`,
+      `Latest 1H: ${summarizeBridgeBar(latest60m)}.`,
       `Latest 5M: ${summarizeBridgeBar(latest5m)}.`,
       `Latest 15M: ${summarizeBridgeBar(latest15m)}.`,
       `Snapshot: price ${formatBridgePrice(bridge.snapshot?.currentPrice)}, session H/L ${formatBridgePrice(bridge.snapshot?.sessionHigh)} / ${formatBridgePrice(bridge.snapshot?.sessionLow)}.`,
@@ -438,11 +450,13 @@ export default function SessionLab({
       const health = await getNinjaBridgeHealth();
       const nextInstrument = bridgeInstrument || health.defaultInstrument || (instrument === 'MNQ' ? 'MNQ 06-26' : 'MES 06-26');
       if (!bridgeInstrument && health.defaultInstrument) setBridgeInstrument(health.defaultInstrument);
-      const [accounts, snapshot, bars5m, bars15m, positions] = await Promise.all([
+      const [accounts, snapshot, bars5m, bars15m, bars60m, bars240m, positions] = await Promise.all([
         getNinjaBridgeAccounts(),
         getNinjaBridgeSnapshot(nextInstrument),
         getNinjaBridgeBars(nextInstrument, '5m', 120),
         getNinjaBridgeBars(nextInstrument, '15m', 120),
+        getNinjaBridgeBars(nextInstrument, '60m', 120),
+        getNinjaBridgeBars(nextInstrument, '240m', 120),
         getNinjaBridgePositions(bridgeAccount),
       ]);
       if (accounts.accounts?.length && !accounts.accounts.includes(bridgeAccount)) {
@@ -456,6 +470,8 @@ export default function SessionLab({
         snapshot,
         bars5m: bars5m.bars || [],
         bars15m: bars15m.bars || [],
+        bars60m: bars60m.bars || [],
+        bars240m: bars240m.bars || [],
         positions: positions.positions || [],
         updatedAt: new Date().toISOString(),
         error: null,
@@ -1084,7 +1100,15 @@ export default function SessionLab({
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] md:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] md:grid-cols-5">
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">4H Macro: </span>
+            <span className="text-[var(--txt)]">{bridge.bars240m.length ? `${bridge.bars240m.length} bars` : 'N/A'}</span>
+          </div>
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">1H Session: </span>
+            <span className="text-[var(--txt)]">{bridge.bars60m.length ? `${bridge.bars60m.length} bars` : 'N/A'}</span>
+          </div>
           <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
             <span className="text-[var(--txt3)]">NinjaTrader: </span>
             <span className="text-[var(--txt)]">{bridge.health?.ninjaTraderVersion || 'N/A'}</span>

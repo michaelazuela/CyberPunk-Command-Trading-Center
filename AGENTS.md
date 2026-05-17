@@ -50,6 +50,19 @@ The intended decision architecture is layered:
 
 Do not move setup approval, ranking, risk acceptance, or executable trade decisions into the OHLC extraction layer.
 
+## Multi-Timeframe Authority
+
+Use higher timeframe OHLC as a map, not as an execution trigger:
+
+- 4H defines macro context: multi-day swing highs/lows, large displacement legs, broad liquidity pools, and major range boundaries.
+- 1H defines session structure: overnight trend, prior-day interaction, larger FVG/imbalance zones, and whether RTH is returning into or expanding away from ETH structure.
+- 15M defines the primary session liquidity map: Asian/London/NY premarket highs/lows, ETH high/low, displacement/FVG zones, LQ1/LQ2/Runner objectives, and obstacles before fixed-R targets.
+- 5M remains the only execution authority for entry trigger, active swing, stop placement, risk, invalidation, and final trade approval.
+
+NinjaTrader bridge fetches should prefer 4H + 1H + 15M + 5M OHLC when available. The app may use higher timeframe levels to improve setup ranking and target management, but the deterministic pipeline must still require a valid 5M trigger, stop, risk, invalidation, and time-window gate.
+
+All bridge timeframes must be made machine-readable before app-owned engines consume them. Do not use Gemini narrative text, Discord text, or human-readable summaries as the glue between timeframes. The bridge should produce structured OHLC-derived facts for 4H, 1H, 15M, and 5M first; then the setup scanner, ranking engine, target engine, and trade decision pipeline may consume those facts according to their authority boundaries.
+
 ## Market Map And Target Context
 
 Asian, London, NY premarket, full ETH, RTH highs/lows, Midnight Open, and nearby round numbers are session-level context. They are a market map: reaction zones, target references, obstacles, and runner objectives. They are not standalone trade approval.
@@ -66,6 +79,13 @@ The key-level context engine may identify relationships such as:
 - price rejecting or reclaiming a high-strength session level
 
 Those facts can improve candidate scoring and target context. Internal scores may consider source, touches, sweep/reclaim behavior, round-number overlap, FVG overlap, and proximity. User-facing notes should not expose raw score labels as instructions. They should explain what the trader can do with the level: watch for reaction, reclaim, rejection, obstacle before T1, or runner target after T2. These facts must not replace the 5M execution chart, the setup scanner, or the trade decision pipeline. A level can make a plan more interesting, but execution still requires trigger, stop, risk, invalidation, and time-window gates.
+
+15M/session liquidity may be promoted into target-management objectives:
+
+- Fixed app targets remain T1 = 1.5R and T2 = 2.0R from confirmed 5M ENTRY/STOP.
+- LQ1, LQ2, and Runner may come from 15M/session liquidity such as Asian, London, NY premarket, ETH, RTH, displacement, FVG, and major round-number levels.
+- LQ1/LQ2/Runner are management targets, reaction zones, and runner objectives. They do not approve trades or replace fixed-R targets.
+- Discord and UI cards should show this plainly as: App Targets first, then 15M Liquidity Targets, then target-management instruction.
 
 ## Notes And User-Facing Language
 

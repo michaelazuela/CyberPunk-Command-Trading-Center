@@ -19,6 +19,31 @@ NinjaTrader real-time and historical OHLC is the highest-authority market data p
 - If AI visual extraction conflicts with OHLC, trust OHLC and downgrade or ignore the visual extraction for that field.
 - OHLC facts are still inputs only. They do not approve a setup or trade by themselves; the setup scanner, ranking engine, and trade decision pipeline remain required.
 
+## Multi-Timeframe OHLC Rule
+
+When the NinjaTrader bridge is available, fetch and evaluate the market in layers:
+
+- `4H`: macro context, broad liquidity, large displacement, and major range boundaries.
+- `1H`: session structure, overnight trend, larger imbalance zones, and ETH return/expansion behavior.
+- `15M`: primary session liquidity map, Asian/London/NY premarket highs/lows, LQ1/LQ2/Runner objectives, and target obstacles.
+- `5M`: execution authority for trigger, entry, stop, risk, invalidation, and final approval.
+
+Higher timeframe levels may improve target management and setup ranking, but they must not approve trades or replace the 5M execution chart.
+
+Bridge timeframes must be machine-readable before they influence the app-owned engines. The correct flow is:
+
+```text
+4H / 1H / 15M / 5M OHLC
+↓
+structured multi-timeframe facts
+↓
+setup scanner + ranking engine + target engine
+↓
+strict trade decision pipeline
+```
+
+Do not use Gemini narrative, Discord copy, or plain-English notes as the linking layer between timeframes. The linking layer must be structured OHLC-derived facts.
+
 ## Persistence Rules
 
 - Do not store base64 screenshots in database rows.

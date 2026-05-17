@@ -101,6 +101,10 @@ function formatSetupType(setupType?: SetupType | string): string {
   return labels[raw] || String(raw).replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
+function formatCandidateLabel(candidate: SetupCandidate): string {
+  return candidate.scenarioLabel || formatSetupType(candidate.setupType);
+}
+
 function formatDirection(direction: SetupCandidate['direction']): string {
   if (direction === 'NO TRADE') return 'None';
   return direction.charAt(0) + direction.slice(1).toLowerCase();
@@ -332,18 +336,30 @@ function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
           T1 {tacticalT1 ?? 'TBD'} · T2 {tacticalT2 ?? 'TBD'}.
           <span className="ml-1 text-[var(--txt3)]">These stay deterministic for discipline.</span>
         </div>
-        {plan?.nearestLiquidityTarget && (
+        {plan?.liquidityTarget1 && (
           <div className="border border-[var(--green)]/20 bg-[var(--bg)] px-2 py-1">
-            <span className="text-[var(--txt)]">Nearest liquidity target:</span>{' '}
-            <span className="text-[var(--green)]">{plan.nearestLiquidityTarget.label} {plan.nearestLiquidityTarget.price}</span>
-            <span className="ml-2 text-[var(--txt3)]">{plan.nearestLiquidityTarget.rMultiple ?? 'N/A'}R · use as first reaction zone.</span>
+            <span className="text-[var(--txt)]">15M liquidity target LQ1:</span>{' '}
+            <span className="text-[var(--green)]">{plan.liquidityTarget1.label} {plan.liquidityTarget1.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{plan.liquidityTarget1.rMultiple ?? 'N/A'}R · first reaction/management zone.</span>
           </div>
         )}
-        {plan?.runnerTarget && (
+        {plan?.liquidityTarget2 && (
+          <div className="border border-[var(--green)]/20 bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">15M liquidity target LQ2:</span>{' '}
+            <span className="text-[var(--green)]">{plan.liquidityTarget2.label} {plan.liquidityTarget2.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{plan.liquidityTarget2.rMultiple ?? 'N/A'}R · second objective if LQ1 accepts.</span>
+          </div>
+        )}
+        {(plan?.liquidityRunnerTarget || plan?.runnerTarget) && (
           <div className="border border-[var(--amber)]/20 bg-[var(--bg)] px-2 py-1">
             <span className="text-[var(--txt)]">Runner / stretch objective:</span>{' '}
-            <span className="text-[var(--amber)]">{plan.runnerTarget.label} {plan.runnerTarget.price}</span>
-            <span className="ml-2 text-[var(--txt3)]">{plan.runnerTarget.rMultiple ?? 'N/A'}R · only after T1/T2 path stays clean.</span>
+            <span className="text-[var(--amber)]">{(plan.liquidityRunnerTarget || plan.runnerTarget)?.label} {(plan.liquidityRunnerTarget || plan.runnerTarget)?.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{(plan.liquidityRunnerTarget || plan.runnerTarget)?.rMultiple ?? 'N/A'}R · only after T1/T2 path stays clean.</span>
+          </div>
+        )}
+        {plan?.targetManagementInstruction && (
+          <div className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">Target management:</span> {plan.targetManagementInstruction}
           </div>
         )}
         {plan?.targetPathWarning && (
@@ -571,7 +587,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
             <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="text-[11px] font-bold text-[var(--txt)]">
-                  {index + 1}. {formatSetupType(candidate.setupType)}
+                  {index + 1}. {formatCandidateLabel(candidate)}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.detectedStatus}</span>
@@ -652,7 +668,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="text-[11px] font-bold text-[var(--txt)]">
-                    Plan {String.fromCharCode(65 + index)}: {candidate.direction === 'LONG' ? 'Best Long Scenario' : candidate.direction === 'SHORT' ? 'Best Short Scenario' : 'Best Scenario'} - {formatSetupType(candidate.setupType)}
+                    Plan {String.fromCharCode(65 + index)}: {candidate.direction === 'LONG' ? 'Best Long Scenario' : candidate.direction === 'SHORT' ? 'Best Short Scenario' : 'Best Scenario'} - {formatCandidateLabel(candidate)}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
@@ -851,10 +867,15 @@ export default function FinalTradePlanCard({
         <div className="mb-4 border border-dashed border-[var(--orange)]/40 bg-[var(--orange)]/5 p-4">
           <div className="flex items-center gap-2 text-[var(--orange)] font-mono uppercase tracking-[0.14em] text-[12px] font-bold">
             <AlertTriangle className="w-4 h-4" />
-            {decisionStatusLabel}
+            {plan.decisionLabel || decisionStatusLabel}
           </div>
           <div className="mt-2 text-[11px] text-[var(--txt2)]">
-            {plan.decisionStatus === TradeDecisionStatus.ConditionalTrade || plan.decisionStatus === TradeDecisionStatus.Wait
+            {plan.executionDecision && plan.planningDecision && (
+              <div className="mb-2 font-mono uppercase tracking-[0.12em] text-[var(--txt3)]">
+                {plan.executionDecision} · {plan.planningDecision}
+              </div>
+            )}
+            {plan.hasConditionalPlans || plan.decisionStatus === TradeDecisionStatus.ConditionalTrade || plan.decisionStatus === TradeDecisionStatus.Wait
               ? 'This is a valid planning result. Execution stays disabled until the required trigger and risk fields are satisfied.'
               : 'No-trade and wait states are valid completed outcomes. NoTrade is shown only when no executable or conditional opportunity is available.'}
           </div>

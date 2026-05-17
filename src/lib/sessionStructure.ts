@@ -88,15 +88,19 @@ function pushLevel(levels: StructuralLevel[], level: StructuralLevel) {
 export function buildStructuralLevels({
   bars5m,
   bars15m = [],
+  bars60m = [],
+  bars240m = [],
   midnightOpen,
   rthOpen,
 }: {
   bars5m: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
+  bars60m?: NinjaBridgeBar[];
+  bars240m?: NinjaBridgeBar[];
   midnightOpen?: number | null;
   rthOpen?: number | null;
 }): StructuralLevel[] {
-  const contextBars = [...bars15m, ...bars5m].filter(bar => isPrice(bar.high) && isPrice(bar.low));
+  const contextBars = [...bars240m, ...bars60m, ...bars15m, ...bars5m].filter(bar => isPrice(bar.high) && isPrice(bar.low));
   const segments = segmentTradingSession(contextBars);
   const levels: StructuralLevel[] = [];
 
@@ -126,6 +130,40 @@ export function buildStructuralLevels({
       });
     }
   });
+
+  const pushHigherTimeframeContext = (bars: NinjaBridgeBar[], label: string) => {
+    const valid = bars.filter(bar => isPrice(bar.high) && isPrice(bar.low));
+    if (!valid.length) return;
+    const high = Math.max(...valid.map(bar => bar.high));
+    const low = Math.min(...valid.map(bar => bar.low));
+    pushLevel(levels, {
+      label: `${label} High`,
+      price: high,
+      type: 'high',
+      source: 'full_context',
+      directionRelevance: 'LONG',
+      confidence: valid.length >= 3 ? 'High' : 'Medium',
+      touches: 1,
+      evidence: `${valid.length} ${label} bars reviewed as macro liquidity context. Context only; 5M remains execution.`,
+      contextRuleTags: ['higher_timeframe_context', label.toLowerCase().replace(/\s+/g, '_')],
+      contextNote: `${label} high is a macro liquidity/target reference, not an execution trigger.`,
+    });
+    pushLevel(levels, {
+      label: `${label} Low`,
+      price: low,
+      type: 'low',
+      source: 'full_context',
+      directionRelevance: 'SHORT',
+      confidence: valid.length >= 3 ? 'High' : 'Medium',
+      touches: 1,
+      evidence: `${valid.length} ${label} bars reviewed as macro liquidity context. Context only; 5M remains execution.`,
+      contextRuleTags: ['higher_timeframe_context', label.toLowerCase().replace(/\s+/g, '_')],
+      contextNote: `${label} low is a macro liquidity/target reference, not an execution trigger.`,
+    });
+  };
+
+  pushHigherTimeframeContext(bars240m, '4H Macro Context');
+  pushHigherTimeframeContext(bars60m, '1H Session Context');
 
   if (isPrice(midnightOpen)) {
     pushLevel(levels, {

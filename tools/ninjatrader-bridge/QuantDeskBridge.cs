@@ -509,11 +509,19 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private static int ParseTimeframe(string value)
         {
-            string clean = (value ?? "5m").Trim().ToLowerInvariant().Replace("min", "").Replace("m", "");
+            string raw = (value ?? "5m").Trim().ToLowerInvariant();
+            if (raw.EndsWith("h"))
+            {
+                int hours;
+                if (int.TryParse(raw.Replace("h", ""), out hours) && (hours == 1 || hours == 4))
+                    return hours * 60;
+            }
+
+            string clean = raw.Replace("min", "").Replace("m", "");
             int minutes;
             if (!int.TryParse(clean, out minutes))
                 minutes = 5;
-            if (minutes != 1 && minutes != 5 && minutes != 15)
+            if (minutes != 1 && minutes != 5 && minutes != 15 && minutes != 60 && minutes != 240)
                 minutes = 5;
             return minutes;
         }

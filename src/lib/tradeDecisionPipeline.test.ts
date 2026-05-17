@@ -724,6 +724,7 @@ const tests: Array<[string, () => void]> = [
             nearestResistance: 7500,
             activeSwingHigh: 7500,
             activeSwingLow: 7494.25,
+            nyPremarketHigh: 7512,
           },
           candleFacts: {
             lastClosedCandleDirection: 'bullish',
@@ -749,10 +750,13 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.scenarioLabel, 'Reclaim continuation toward NY Premarket High');
     assert.equal(candidate.entry, 7500.25);
     assert.equal(candidate.stop, 7494);
     assert.equal(candidate.target1, 7509.75);
     assert.equal(candidate.target2, 7512.75);
+    assert.ok(candidate.requiredTrigger?.includes('5M close above reclaim level'));
+    assert.ok(candidate.invalidation?.includes('reclaim level fails'));
     assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleHigh' && level.requiredFor === 'trigger'));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -862,6 +866,147 @@ const tests: Array<[string, () => void]> = [
     assert.equal(longCandidate.direction, 'LONG');
     assert.equal(shortCandidate.direction, 'SHORT');
     assert.notEqual(result.status, TradeDecisionStatus.NoTrade);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['30c. Lunch failed-low builder labels reclaim continuation toward NY Premarket High', () => {
+    const result = assertSameSequence({
+      sessionType: 'lunch',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Lunch is reviewing completed Morning range for failed-low reclaim.',
+        current_rule_analysis: {
+          summary: 'Wait for failed-low reclaim confirmation.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7440,
+            morningLow: 7432,
+            morningLowSweep: 7428,
+            nearestSupport: 7432,
+            nearestResistance: 7446,
+            activeSwingHigh: 7446,
+            activeSwingLow: 7428,
+            nyPremarketHigh: 7460,
+          },
+          morningWindowContext: {
+            complete: true,
+            morningHigh: 7468,
+            morningLow: 7432,
+            morningLowSwept: true,
+            failedHoldBelowMorningLow: false,
+            openingDriveDirection: 'bearish',
+            morningTrend: 'failed_continuation',
+            confidence: 'High',
+            evidence: ['Completed Morning low was swept during Lunch review.'],
+            missingEvidence: [],
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: true,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedLowReversal);
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.scenarioLabel, 'Failed low reclaim toward NY Premarket High');
+    assert.ok(candidate.requiredTrigger?.includes('5M close back above reclaim level'));
+    assert.ok(candidate.invalidation?.includes('reclaim level fails'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['30d. Lunch failed-high builder labels reversal toward NY Premarket Low', () => {
+    const result = assertSameSequence({
+      sessionType: 'lunch',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Lunch is reviewing completed Morning high for failed-high reversal.',
+        current_rule_analysis: {
+          summary: 'Wait for failed-high reversal confirmation.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7460,
+            morningHigh: 7468,
+            morningHighSweep: 7472,
+            nearestSupport: 7454,
+            nearestResistance: 7468,
+            activeSwingHigh: 7472,
+            activeSwingLow: 7454,
+            nyPremarketLow: 7440,
+          },
+          morningWindowContext: {
+            complete: true,
+            morningHigh: 7468,
+            morningLow: 7432,
+            morningHighSwept: true,
+            failedHoldAboveMorningHigh: false,
+            openingDriveDirection: 'bullish',
+            morningTrend: 'bullish_extension',
+            confidence: 'High',
+            evidence: ['Completed Morning high was swept during Lunch review.'],
+            missingEvidence: [],
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bearish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: true,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: false,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedHighReversal);
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.scenarioLabel, 'Failed high reversal toward NY Premarket Low');
+    assert.ok(candidate.requiredTrigger?.includes('5M close back below morning high'));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 

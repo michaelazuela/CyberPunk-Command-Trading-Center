@@ -100,6 +100,8 @@ Bars:
 ```text
 GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=5m&limit=100
 GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=15m&limit=100
+GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=60m&limit=100
+GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=240m&limit=100
 GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=1m&limit=100
 ```
 
@@ -108,6 +110,8 @@ Historical bars for Replay Lab:
 ```text
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T09:30:00-04:00&to=2026-05-15T10:10:00-04:00
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=15m&from=2026-05-15T00:00:00-04:00&to=2026-05-15T10:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=60m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T10:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=240m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T10:00:00-04:00
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T11:50:00-04:00&to=2026-05-15T13:00:00-04:00
 ```
 
@@ -143,6 +147,8 @@ Expected behavior:
 - `/accounts` includes `Sim101` and, if available in your install, `206257`.
 - `/bars` returns real OHLC candles.
 - `/historical-bars` returns real OHLC candles for the requested Replay Lab date/window when NinjaTrader and the connected data provider can load that history.
+- Supported minute timeframes are `1m`, `5m`, `15m`, `60m`, and `240m`. `1h` and `4h` are accepted aliases and are returned as `60m` and `240m`.
+- 4H and 1H are macro/session context only. 15M is the primary liquidity target map. 5M remains execution authority.
 - `/positions` returns current positions without submitting or modifying any orders.
 
 If NinjaTrader uses a different MES contract name than `MES 06-26`, update `DefaultInstrument` inside `QuantDeskBridge.cs` and use that exact name in the URL.
@@ -207,16 +213,20 @@ Phase 2: add a Session Lab connection panel:
 - selected instrument contract
 - latest 5m bar timestamp
 - latest 15m bar timestamp
+- latest 1h bar timestamp
+- latest 4h bar timestamp
 
 Phase 3: use bridge candles as structured input:
 
-- 15m ETH context from real bars
+- 4h macro context from real bars
+- 1h session context from real bars
+- 15m ETH/session liquidity context from real bars
 - 5m execution chart from real bars
 - level sanity from real OHLC
 - screenshot becomes optional proof/context, not primary extraction
 - Replay Lab can import historical NinjaTrader bars by trading date/window so RAG learns from factual OHLC, not only screenshots.
-- Morning Replay imports broader 15m ETH context from prior day 6:00 PM ET through 10:00 AM ET, while keeping the 5m execution window at 9:30-10:10.
-- Lunch Replay imports broader 15m ETH context through 1:00 PM ET plus the 5m lunch execution window at 11:50-1:00.
+- Morning Replay imports broader 4h/1h/15m context from prior day 6:00 PM ET through 10:00 AM ET, while keeping the 5m execution window at 9:30-10:10.
+- Lunch Replay imports broader 4h/1h/15m context through 1:00 PM ET plus the 5m lunch execution window at 11:50-1:00.
 - The app segments imported bars into ETH, Asian, London, NY premarket, RTH morning, lunch, and current-window structure.
 - The Target Objective Engine annotates conditional/executable plans with structural target context from those segments. Executable T1/T2 remain the app-owned fixed 1.5R / 2.0R levels.
 

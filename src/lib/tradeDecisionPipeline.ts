@@ -198,6 +198,11 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     screenshotUsability: input.screenshotUsability || structuredUsability || (input.result ? 'usable' : 'unusable'),
     screenshotWarning: input.screenshotWarning || structured.screenshotWarning || warningMessages[0] || null,
     keyLevels: buildKeyLevels(input.result),
+    structuralLevels: structured.structuralLevels,
+    sessionLevelContext: structured.sessionLevelContext,
+    sessionStory: structured.sessionStory,
+    multiTimeframeContext: structured.multiTimeframeContext,
+    targetObjectives: structured.targetObjectives,
     extractedLevels: structured.extractedLevels,
     candles: structured.candles,
     swings: structured.swings,
@@ -229,8 +234,8 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     riskReadConfidence: structured.riskReadConfidence,
     entryStopConfidence: structured.entryStopConfidence,
     extractionWarnings: structured.extractionWarnings,
-    marketContext: input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
-    ocrText: input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
+    marketContext: structured.marketContext || input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
+    ocrText: structured.ocrText || input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
   };
 }
 

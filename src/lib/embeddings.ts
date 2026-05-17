@@ -22,14 +22,18 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
     context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Executable') ||
     context.setupCandidates?.find((candidate: any) => candidate.executionStatus === 'Conditional') ||
     null;
-  const appSetupSubtype = selectedAppCandidate?.setupType || appPlan?.setupName || appPlan?.source || "unknown";
+  const appSetupSubtype = selectedAppCandidate?.scenarioLabel || selectedAppCandidate?.setupType || appPlan?.setupName || appPlan?.source || "unknown";
   const targetContext = selectedAppCandidate?.targetObjectivePlan;
   const targetContextSummary = targetContext
     ? [
         `Target model: ${targetContext.targetModel || 'fixed_r_with_structural_context'}`,
         `Target quality: ${targetContext.targetQuality || 'unknown'}`,
+        `15M/session LQ1: ${targetContext.liquidityTarget1?.label || 'none'} ${targetContext.liquidityTarget1?.price ?? ''}`.trim(),
+        `15M/session LQ2: ${targetContext.liquidityTarget2?.label || 'none'} ${targetContext.liquidityTarget2?.price ?? ''}`.trim(),
+        `15M/session runner: ${targetContext.liquidityRunnerTarget?.label || 'none'} ${targetContext.liquidityRunnerTarget?.price ?? ''}`.trim(),
         `Nearest liquidity target: ${targetContext.nearestLiquidityTarget?.label || 'none'} ${targetContext.nearestLiquidityTarget?.price ?? ''}`.trim(),
         `Runner objective: ${targetContext.runnerTarget?.label || 'none'} ${targetContext.runnerTarget?.price ?? ''}`.trim(),
+        `Target management instruction: ${targetContext.targetManagementInstruction || 'none'}`,
         `Target path warning: ${targetContext.targetPathWarning || 'none'}`,
       ].join('\n')
     : 'No liquidity-aware target context was attached to the selected plan.';

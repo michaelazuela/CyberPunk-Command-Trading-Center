@@ -114,6 +114,38 @@ function levelContextForDirection(chartContext: ChartContext, direction: Directi
   };
 }
 
+function findStructuralLevelPrice(
+  chartContext: ChartContext,
+  matcher: (label: string, source: string, type: string) => boolean
+): number | null {
+  const level = (chartContext.structuralLevels || []).find((item) =>
+    isPrice(item.price) && matcher(item.label.toLowerCase(), String(item.source).toLowerCase(), String(item.type).toLowerCase())
+  );
+  return level?.price ?? null;
+}
+
+function nyPremarketHigh(chartContext: ChartContext): number | null {
+  return firstPrice(
+    chartContext.keyLevels.nyPremarketHigh,
+    findStructuralLevelPrice(chartContext, (label, source, type) =>
+      (source === 'ny_premarket' && type === 'high') ||
+      label.includes('ny premarket high') ||
+      label.includes('new york premarket high')
+    )
+  );
+}
+
+function nyPremarketLow(chartContext: ChartContext): number | null {
+  return firstPrice(
+    chartContext.keyLevels.nyPremarketLow,
+    findStructuralLevelPrice(chartContext, (label, source, type) =>
+      (source === 'ny_premarket' && type === 'low') ||
+      label.includes('ny premarket low') ||
+      label.includes('new york premarket low')
+    )
+  );
+}
+
 function missingLevel(
   key: MissingLevelRequirement['key'],
   label: string,
@@ -140,6 +172,7 @@ function executionFor(entry: number | null, stop: number | null, hasTrigger: boo
 function makeCandidate(input: {
   chartContext: ChartContext;
   setupType: SetupType;
+  scenarioLabel?: string | null;
   direction: Direction;
   entry: number | null;
   stop: number | null;
@@ -160,6 +193,7 @@ function makeCandidate(input: {
 
   return {
     setupType: input.setupType,
+    scenarioLabel: input.scenarioLabel ?? null,
     direction: input.direction,
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: input.confidence || 'Medium',
@@ -224,6 +258,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   const support = firstPrice(nearestBelow(current, supportLevels), levels.nearestSupport, levels.activeSwingLow, supportLevels[0]);
   const reclaimResistance = firstPrice(nearbyMajorResistance(current, resistance), resistance, levels.triggerCandleHigh);
   const reclaimStop = firstPrice(projectedPullbackStop(current, support), levels.triggerCandleLow, support);
+  const nyPremarketHighTarget = nyPremarketHigh(chartContext);
   const breakdownSupport = support;
   const rejectionEvidence = Boolean(
     chartContext.candleFacts?.rejectionWickPresent ||
@@ -276,9 +311,13 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     const entryBase = reclaimResistance || levels.triggerCandleHigh;
     const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
     const stop = reclaimStop ? roundToTick(reclaimStop) : null;
+    const reclaimTargetPhrase = nyPremarketHighTarget ? ` toward NY Premarket High ${nyPremarketHighTarget}` : '';
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.MorningReclaimLong,
+      scenarioLabel: nyPremarketHighTarget
+        ? 'Reclaim continuation toward NY Premarket High'
+        : 'Reclaim continuation',
       direction: 'LONG',
       entry,
       stop,
@@ -287,6 +326,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       evidence: [
         'Morning conditional builder reviewed reclaim-long path.',
         reclaimResistance ? `Reclaim reference: ${reclaimResistance}.` : 'Reclaim reference not confirmed.',
+        nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
         reclaimStop ? `Pullback/support stop reference: ${reclaimStop}.` : 'Pullback/support stop reference not confirmed.',
       ],
       missingEvidence: [
@@ -298,9 +338,9 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
         !stop ? missingLevel('activeSwingLow', 'Pullback low / active swing low', 'Needed to place the long STOP under structure.', 'stop') : null,
         chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above reclaim level', 'Needed before this long can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: reclaimResistance ? `5M close above ${reclaimResistance}, then pullback holds.` : '5M close above the key reclaim level, then pullback holds.',
-      nextAction: 'Wait for reclaim and pullback-hold confirmation; do not chase below resistance.',
-      invalidation: reclaimStop ? `Invalid if price breaks back below ${reclaimStop}.` : 'Invalid if reclaim fails and price breaks the pullback low.',
+      requiredTrigger: reclaimResistance ? `5M close above reclaim level (${reclaimResistance}), then pullback holds.` : '5M close above reclaim level, then pullback holds.',
+      nextAction: `Wait for a reclaim close, then a pullback that holds before considering continuation${reclaimTargetPhrase}.`,
+      invalidation: reclaimStop ? `Invalid if reclaim level fails and price breaks back below ${reclaimStop}.` : 'Invalid if reclaim level fails.',
       hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true,
     }));
   }
@@ -342,6 +382,8 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   ].filter(isPrice);
   const support = firstPrice(nearestBelow(current, supportLevels), levels.nearestSupport, levels.activeSwingLow, compressionLow, supportLevels[0]);
   const resistance = firstPrice(nearestAbove(current, resistanceLevels), levels.nearestResistance, levels.activeSwingHigh, compressionHigh, resistanceLevels[0]);
+  const nyPremarketHighTarget = nyPremarketHigh(chartContext);
+  const nyPremarketLowTarget = nyPremarketLow(chartContext);
   const reclaimEvidence = Boolean(
     chartContext.candleFacts?.reclaimCandlePresent ||
     chartContext.candleFacts?.closeAboveKeyLevel ||
@@ -361,12 +403,19 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.LunchFailedHighReversal,
+      scenarioLabel: nyPremarketLowTarget
+        ? 'Failed high reversal toward NY Premarket Low'
+        : 'Failed high reversal',
       direction: 'SHORT',
       entry,
       stop,
       priority: 94,
       confidence: morning?.failedHoldAboveMorningHigh ? 'High' : 'Medium',
-      evidence: ['Lunch builder used completed Morning high context.', morningHigh ? `Morning high: ${morningHigh}.` : 'Morning high not confirmed.'],
+      evidence: [
+        'Lunch builder used completed Morning high context.',
+        morningHigh ? `Morning high: ${morningHigh}.` : 'Morning high not confirmed.',
+        nyPremarketLowTarget ? `NY Premarket Low target reference: ${nyPremarketLowTarget}.` : 'NY Premarket Low target reference not confirmed.',
+      ],
       missingEvidence: [!morningHigh ? 'Morning high is missing.' : '', !stop ? 'Sweep high stop reference is missing.' : ''].filter(Boolean),
       missingLevels: [
         !morningHigh ? missingLevel('morningHigh', 'Completed Morning high', 'Needed to define the failed-high reversal trigger.', 'context', 'morning_context') : null,
@@ -386,21 +435,28 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.LunchFailedLowReversal,
+      scenarioLabel: nyPremarketHighTarget
+        ? 'Failed low reclaim toward NY Premarket High'
+        : 'Failed low reclaim',
       direction: 'LONG',
       entry,
       stop,
       priority: 94,
       confidence: morning?.failedHoldBelowMorningLow ? 'High' : 'Medium',
-      evidence: ['Lunch builder used completed Morning low context.', morningLow ? `Morning low: ${morningLow}.` : 'Morning low not confirmed.'],
+      evidence: [
+        'Lunch builder used completed Morning low context.',
+        morningLow ? `Morning low: ${morningLow}.` : 'Morning low not confirmed.',
+        nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
+      ],
       missingEvidence: [!morningLow ? 'Morning low is missing.' : '', !stop ? 'Sweep low stop reference is missing.' : ''].filter(Boolean),
       missingLevels: [
         !morningLow ? missingLevel('morningLow', 'Completed Morning low', 'Needed to define the failed-low reversal trigger.', 'context', 'morning_context') : null,
         !stop ? missingLevel('sweepLow', 'Lunch sweep low', 'Needed to place STOP one tick below the sweep low.', 'stop') : null,
         !(chartContext.candleFacts?.closeAboveKeyLevel === true || morning?.failedHoldBelowMorningLow === true) ? missingLevel('triggerCandleHigh', '5M close back above Morning low', 'Needed before this Lunch long can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: morningLow ? `5M close back above morning low ${morningLow}.` : '5M close back above the Morning low.',
-      nextAction: 'Wait for failed hold below Morning low and close back above before going long.',
-      invalidation: stop ? `Invalid if price holds below sweep low ${stop}.` : 'Invalid if price holds below the sweep low.',
+      requiredTrigger: morningLow ? `5M close back above reclaim level (${morningLow}), then pullback holds.` : '5M close back above reclaim level, then pullback holds.',
+      nextAction: `Wait for failed hold below Morning low, reclaim close, and pullback-hold confirmation${nyPremarketHighTarget ? ` before considering continuation toward NY Premarket High ${nyPremarketHighTarget}` : ''}.`,
+      invalidation: stop ? `Invalid if reclaim level fails and price holds below sweep low ${stop}.` : 'Invalid if reclaim level fails.',
       hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true || morning?.failedHoldBelowMorningLow === true,
     }));
   }
@@ -422,6 +478,11 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.LunchCompressionBreakout,
+      scenarioLabel: direction === 'LONG'
+        ? (nyPremarketHighTarget ? 'Compression breakout toward NY Premarket High' : 'Compression breakout long')
+        : direction === 'SHORT'
+          ? (nyPremarketLowTarget ? 'Compression breakdown toward NY Premarket Low' : 'Compression breakout short')
+          : 'Compression breakout',
       direction,
       entry,
       stop,
@@ -449,6 +510,9 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.LunchRangeReclaim,
+      scenarioLabel: nyPremarketHighTarget
+        ? 'Range reclaim continuation toward NY Premarket High'
+        : 'Range reclaim continuation',
       direction: 'LONG',
       entry,
       stop,
@@ -457,6 +521,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       evidence: [
         'Lunch conditional builder reviewed range-reclaim long path from structured support/resistance.',
         entryBase ? `Reclaim trigger reference: ${entryBase}.` : 'Reclaim trigger reference not confirmed.',
+        nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
         stopBase ? `Support / failed-low stop reference: ${stopBase}.` : 'Support / failed-low stop reference not confirmed.',
       ],
       missingEvidence: [
@@ -468,9 +533,9 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
         !stopBase ? missingLevel('activeSwingLow', 'Lunch support / failed-low structure', 'Needed to place the long STOP under structure.', 'stop') : null,
         chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above lunch reclaim level', 'Needed before this Lunch long can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: entryBase ? `5M close above ${entryBase}, then pullback holds.` : '5M close above the lunch reclaim / range high level, then pullback holds.',
-      nextAction: 'Wait for failed-low or range reclaim confirmation before going long; do not chase inside the range.',
-      invalidation: stopBase ? `Invalid if price breaks back below ${stopBase}.` : 'Invalid if reclaim fails and price breaks the pullback low.',
+      requiredTrigger: entryBase ? `5M close above reclaim level (${entryBase}), then pullback holds.` : '5M close above reclaim level, then pullback holds.',
+      nextAction: `Wait for failed-low or range reclaim confirmation before going long${nyPremarketHighTarget ? ` toward NY Premarket High ${nyPremarketHighTarget}` : ''}; do not chase inside the range.`,
+      invalidation: stopBase ? `Invalid if reclaim level fails and price breaks back below ${stopBase}.` : 'Invalid if reclaim level fails.',
       hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true || morning?.rangeReclaimed === true,
     }));
   }
@@ -483,6 +548,9 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.LunchFailedContinuation,
+      scenarioLabel: nyPremarketLowTarget
+        ? 'Failed continuation toward NY Premarket Low'
+        : 'Failed continuation',
       direction: 'SHORT',
       entry,
       stop,
@@ -491,6 +559,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       evidence: [
         'Lunch conditional builder reviewed failed-continuation short path from structured support/resistance.',
         entryBase ? `Breakdown trigger reference: ${entryBase}.` : 'Breakdown trigger reference not confirmed.',
+        nyPremarketLowTarget ? `NY Premarket Low target reference: ${nyPremarketLowTarget}.` : 'NY Premarket Low target reference not confirmed.',
         stopBase ? `Resistance / failed-high stop reference: ${stopBase}.` : 'Resistance / failed-high stop reference not confirmed.',
       ],
       missingEvidence: [

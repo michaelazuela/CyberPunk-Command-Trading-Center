@@ -133,6 +133,7 @@ function hasStructuredChartFacts(chartContext?: ChartContext | null): boolean {
     chartContext.failedBreakEvents?.length ||
     chartContext.displacementCandles?.length ||
     chartContext.setupReadyFacts ||
+    chartContext.multiTimeframeContext ||
     chartContext.extractedLevels?.length ||
     chartContext.gapContext ||
     chartContext.compressionRange ||
@@ -287,13 +288,33 @@ function candleFactSummary(chartContext: ChartContext) {
 
 function levelContextScoreForDirection(chartContext: ChartContext | null | undefined, direction: Direction): { score: number; summary: string } {
   if (!chartContext?.sessionLevelContext || (direction !== 'LONG' && direction !== 'SHORT')) {
-    return { score: 0, summary: 'No session level context score available.' };
+    const mtf = chartContext?.multiTimeframeContext;
+    if (!mtf || (direction !== 'LONG' && direction !== 'SHORT')) {
+      return { score: 0, summary: 'No session level context score available.' };
+    }
+    const aligned = mtf.alignment.alignedDirection === direction;
+    const conflicted = mtf.alignment.conflicts.length > 0;
+    return {
+      score: aligned ? 14 : conflicted ? -6 : 4,
+      summary: `Multi-timeframe OHLC context: 4H=${mtf.alignment.macroBias}, 1H=${mtf.alignment.sessionBias}, 15M=${mtf.alignment.liquidityBias}, 5M=${mtf.alignment.executionBias}.`,
+    };
   }
   const levels = direction === 'LONG'
     ? chartContext.sessionLevelContext.strongestLongLevels
     : chartContext.sessionLevelContext.strongestShortLevels;
   const best = levels[0];
-  if (!best) return { score: 0, summary: 'No directional session level context found.' };
+  if (!best) {
+    const mtf = chartContext.multiTimeframeContext;
+    if (mtf) {
+      const aligned = mtf.alignment.alignedDirection === direction;
+      const conflicted = mtf.alignment.conflicts.length > 0;
+      return {
+        score: aligned ? 14 : conflicted ? -6 : 4,
+        summary: `Multi-timeframe OHLC context: 4H=${mtf.alignment.macroBias}, 1H=${mtf.alignment.sessionBias}, 15M=${mtf.alignment.liquidityBias}, 5M=${mtf.alignment.executionBias}.`,
+      };
+    }
+    return { score: 0, summary: 'No directional session level context found.' };
+  }
   return {
     score: Math.min(Math.round((best.strengthScore || 0) / 5), 20),
     summary: `${best.label} ${best.price} is a ${direction === 'LONG' ? 'long-side' : 'short-side'} reaction zone to watch for reclaim, rejection, or target management.`,

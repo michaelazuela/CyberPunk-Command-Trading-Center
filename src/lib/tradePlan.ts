@@ -19,6 +19,10 @@ export type TradePlanSource =
 
 export interface NormalizedTradePlan {
   decision: TradeDecision;
+  decisionLabel: string;
+  executionDecision: string;
+  planningDecision: string;
+  hasConditionalPlans: boolean;
   entry: number | null;
   stop: number | null;
   t1: number | null;
@@ -171,6 +175,61 @@ export function roundToTick(price: number, instrument?: "MES" | "MNQ"): number {
   return Math.round(price / tickSize) * tickSize;
 }
 
+function hasConditionalPlanningPath(pipeline: ReturnType<typeof runTradeDecisionPipeline>): boolean {
+  if (pipeline.opportunitySelection?.bestConditionalCandidate) return true;
+  return (pipeline.setupCandidates || []).some((candidate) =>
+    candidate.direction !== "NO TRADE" &&
+    (candidate.executionStatus === "Conditional" || candidate.executionStatus === "Blocked") &&
+    (candidate.detectedStatus === "Detected" || candidate.detectedStatus === "Possible" || candidate.detectedStatus === "Conditional" || candidate.detectedStatus === "Blocked")
+  );
+}
+
+function decisionPresentation(args: {
+  decision: TradeDecision;
+  canExecute: boolean;
+  pipeline: ReturnType<typeof runTradeDecisionPipeline>;
+}): Pick<NormalizedTradePlan, "decisionLabel" | "executionDecision" | "planningDecision" | "hasConditionalPlans"> {
+  const hasConditionalPlans = !args.canExecute && hasConditionalPlanningPath(args.pipeline);
+  if (args.canExecute && (args.decision === "LONG" || args.decision === "SHORT")) {
+    return {
+      decisionLabel: args.decision,
+      executionDecision: "EXECUTABLE TRADE",
+      planningDecision: "APPROVED TRADE",
+      hasConditionalPlans: false,
+    };
+  }
+  if (hasConditionalPlans) {
+    return {
+      decisionLabel: "WAIT / CONDITIONAL",
+      executionDecision: "NO EXECUTABLE TRADE",
+      planningDecision: "CONDITIONAL PLANS AVAILABLE",
+      hasConditionalPlans: true,
+    };
+  }
+  if (args.pipeline.status === TradeDecisionStatus.InvalidScreenshot) {
+    return {
+      decisionLabel: "INVALID SCREENSHOT",
+      executionDecision: "NO EXECUTABLE TRADE",
+      planningDecision: "SCREENSHOT NEEDS REVIEW",
+      hasConditionalPlans: false,
+    };
+  }
+  if (args.pipeline.status === TradeDecisionStatus.OutsideRules || args.pipeline.noTradeReason === NoTradeReason.OutsideTimeWindow) {
+    return {
+      decisionLabel: "OUTSIDE RULES",
+      executionDecision: "NO EXECUTABLE TRADE",
+      planningDecision: "OUTSIDE APPROVED WINDOW",
+      hasConditionalPlans: false,
+    };
+  }
+  return {
+    decisionLabel: args.pipeline.status === TradeDecisionStatus.Wait ? "WAIT" : "NO TRADE",
+    executionDecision: "NO EXECUTABLE TRADE",
+    planningDecision: "NO VALID CONDITIONAL PLAN",
+    hasConditionalPlans: false,
+  };
+}
+
 export function normalizeTradePlan(
   result: AnalysisResult | null | undefined,
   instrument?: "MES" | "MNQ",
@@ -180,6 +239,7 @@ export function normalizeTradePlan(
   const pipeline = runTradeDecisionPipeline({ result, instrument, sessionType, windowStatusOverride });
   const defaultPlan: NormalizedTradePlan = {
     decision: "NO TRADE",
+    ...decisionPresentation({ decision: "NO TRADE", canExecute: false, pipeline }),
     entry: null,
     stop: null,
     t1: null,
@@ -439,6 +499,7 @@ export function normalizeTradePlan(
     return {
       ...defaultPlan,
       decision: "NO TRADE",
+      ...decisionPresentation({ decision: "NO TRADE", canExecute: false, pipeline }),
       whyThisPlan: pipeline.finalTradePlan.reasoning || noTradeReason,
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       setupCandidates: pipeline.setupCandidates || [],
@@ -476,6 +537,7 @@ export function normalizeTradePlan(
 
   return {
     decision: decision === "LONG" || decision === "SHORT" ? decision : "NO TRADE",
+    ...decisionPresentation({ decision: decision === "LONG" || decision === "SHORT" ? decision : "NO TRADE", canExecute, pipeline }),
     entry,
     stop,
     t1: targets.t1,

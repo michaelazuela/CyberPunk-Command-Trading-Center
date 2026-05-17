@@ -172,7 +172,7 @@ async function writeState(state: AlertState): Promise<void> {
   await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
-async function fetchBars(config: SchedulerConfig, timeframe: '5m' | '15m', from: string, to: string): Promise<NinjaBridgeBar[]> {
+async function fetchBars(config: SchedulerConfig, timeframe: '5m' | '15m' | '60m' | '240m', from: string, to: string): Promise<NinjaBridgeBar[]> {
   const response = await getNinjaHistoricalBars({
     instrument: config.bridgeInstrument,
     timeframe,
@@ -189,10 +189,16 @@ async function fetchBars(config: SchedulerConfig, timeframe: '5m' | '15m', from:
 
 async function buildPremarketContext(config: SchedulerConfig, tradeDate: string) {
   const priorDate = previousCalendarDate(tradeDate);
-  const bars15m = await fetchBars(config, '15m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15'));
+  const [bars240m, bars60m, bars15m] = await Promise.all([
+    fetchBars(config, '240m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '60m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '15m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
+  ]);
   return buildNinjaChartContext({
     bars5m: bars15m.map((bar) => ({ ...bar })),
     bars15m,
+    bars60m,
+    bars240m,
     sessionType: 'morning',
     instrument: config.instrument,
     tradeDate,
@@ -201,21 +207,23 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
 
 async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJob, 'premarket'>, tradeDate: string): Promise<AnalysisResult> {
   const priorDate = previousCalendarDate(tradeDate);
-  const bars15m = await fetchBars(
-    config,
-    '15m',
-    etDateTime(priorDate, '18:00'),
-    etDateTime(tradeDate, job === 'morning' ? '10:00' : '13:00')
-  );
-  const bars5m = await fetchBars(
-    config,
-    '5m',
-    etDateTime(tradeDate, job === 'morning' ? '09:30' : '11:50'),
-    etDateTime(tradeDate, job === 'morning' ? '10:10' : '13:00')
-  );
+  const contextTo = etDateTime(tradeDate, job === 'morning' ? '10:00' : '13:00');
+  const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
+    fetchBars(config, '240m', etDateTime(priorDate, '18:00'), contextTo),
+    fetchBars(config, '60m', etDateTime(priorDate, '18:00'), contextTo),
+    fetchBars(config, '15m', etDateTime(priorDate, '18:00'), contextTo),
+    fetchBars(
+      config,
+      '5m',
+      etDateTime(tradeDate, job === 'morning' ? '09:30' : '11:50'),
+      etDateTime(tradeDate, job === 'morning' ? '10:10' : '13:00')
+    ),
+  ]);
   const chartContext = buildNinjaChartContext({
     bars5m,
     bars15m,
+    bars60m,
+    bars240m,
     sessionType: job,
     instrument: config.instrument,
     tradeDate,
@@ -421,7 +429,7 @@ async function upsertDiscordAlertRagRecord(args: {
     risk_points: args.normalized.riskPoints ?? selectedCandidate?.riskPoints ?? null,
     embedding_text: [
       `Discord alert pending outcome for ${args.job} ${args.instrument} on ${args.tradeDate}.`,
-      `Plan: ${args.normalized.decision} ${args.normalized.setupName || ''}.`,
+      `Plan: ${args.normalized.decisionLabel || args.normalized.decision} ${args.normalized.setupName || ''}.`,
       `Outcome buttons will record whether trade was taken, direction, and target result.`,
     ].join(' '),
     trade_plan_json: {
@@ -485,6 +493,7 @@ function statusColor(status: string | undefined): number {
 }
 
 function compactSetupName(candidate: SetupCandidate): string {
+  if (candidate.scenarioLabel) return candidate.scenarioLabel;
   return candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
@@ -541,6 +550,22 @@ function formatLiquidityObjective(label: string, objective?: TargetObjective | n
   return `${label}: ${objective.price} ${objective.label}`;
 }
 
+function sameObjective(a?: TargetObjective | null, b?: TargetObjective | null): boolean {
+  if (!a || !b) return false;
+  return a.label === b.label && a.price === b.price;
+}
+
+function compactObjective(objective?: TargetObjective | null): string {
+  if (!objective) return 'N/A';
+  return `${objective.price} ${objective.label}`;
+}
+
+function compactSentence(value?: string | null, maxLength = 150): string | null {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  return text.length <= maxLength ? text : `${text.slice(0, maxLength - 3)}...`;
+}
+
 function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
   const isValidObjectiveForCandidate = (objective: TargetObjective): boolean => {
     if (objective.direction !== candidate.direction) return false;
@@ -553,9 +578,15 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
     candidate.targetObjectivePlan?.selectedT1,
     candidate.targetObjectivePlan?.selectedT2,
   ].filter(Boolean).filter(isValidObjectiveForCandidate) as TargetObjective[];
-  const nearestLiquidityTarget = candidate.targetObjectivePlan?.nearestLiquidityTarget;
-  const runnerTarget = candidate.targetObjectivePlan?.runnerTarget;
+  const nearestLiquidityTarget =
+    candidate.targetObjectivePlan?.liquidityTarget1 ||
+    candidate.targetObjectivePlan?.nearestLiquidityTarget;
+  const secondLiquidityTarget = candidate.targetObjectivePlan?.liquidityTarget2;
+  const runnerTarget =
+    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
+    candidate.targetObjectivePlan?.runnerTarget;
   const targetPathWarning = candidate.targetObjectivePlan?.targetPathWarning;
+  const targetInstruction = candidate.targetObjectivePlan?.targetManagementInstruction;
   const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
     ? candidate.targetObjectivePlan.objectives
     : fallbackObjectives;
@@ -598,7 +629,8 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
       'Target Quality:',
       'T1/T2 are fixed-R tactical targets.',
       'No liquidity map levels found for this direction.',
-    ].join('\n');
+      targetInstruction ? `Target Plan: ${targetInstruction}` : null,
+    ].filter(Boolean).join('\n');
   }
 
   return [
@@ -607,15 +639,16 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
     `T2: ${moneyLine(candidate.target2)}`,
     '',
     'Liquidity Map:',
-    formatLiquidityObjective(`Nearest ${directionLabels.primary} liquidity`, nearestDirectionalTarget),
-    formatLiquidityObjective(directionLabels.runner, runnerDirectionalTarget),
+    formatLiquidityObjective('LQ1 15M/session liquidity', nearestDirectionalTarget),
+    formatLiquidityObjective('LQ2 15M/session liquidity', secondLiquidityTarget || runnerDirectionalTarget),
     formatLiquidityObjective(`Nearest ${directionLabels.opposing} liquidity`, opposingTarget),
     '',
     'Target Quality:',
     'T1/T2 are close-range tactical targets.',
-    nearestDirectionalTarget
-      ? `Runner target only valid if price clears ${nearestDirectionalTarget.price} and holds.`
-      : 'Runner target requires a confirmed break and hold beyond the tactical target zone.',
+    targetInstruction ||
+      (nearestDirectionalTarget
+        ? `Runner target only valid if price clears ${nearestDirectionalTarget.price} and holds.`
+        : 'Runner target requires a confirmed break and hold beyond the tactical target zone.'),
     targetPathWarning ? `Target path warning: ${targetPathWarning}` : null,
     '',
     'Additional levels:',
@@ -712,19 +745,33 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
     ? candidate.targetObjectivePlan.objectives
     : objectives;
   const nearestLiquidity =
+    candidate.targetObjectivePlan?.liquidityTarget1 ||
     candidate.targetObjectivePlan?.nearestLiquidityTarget ||
     nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry);
-  const runner =
-    candidate.targetObjectivePlan?.runnerTarget ||
+  const secondLiquidity =
+    candidate.targetObjectivePlan?.liquidityTarget2 ||
     nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
+  const runner =
+    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
+    candidate.targetObjectivePlan?.runnerTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, secondLiquidity || nearestLiquidity);
+  const rawTargetInstruction = candidate.targetObjectivePlan?.targetManagementInstruction || '';
+  const targetInstruction = rawTargetInstruction.startsWith('No 15M/session')
+    ? null
+    : compactSentence(rawTargetInstruction);
+  const uniqueLq2 = sameObjective(secondLiquidity, nearestLiquidity) ? null : secondLiquidity;
+  const uniqueRunner = sameObjective(runner, nearestLiquidity) || sameObjective(runner, uniqueLq2) ? null : runner;
   const blocker = candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : '';
   return [
-    `**${compactSetupName(candidate)} ${direction}**`,
+    `**Best ${direction === 'LONG' ? 'Long' : 'Short'} Scenario - ${compactSetupName(candidate)}**`,
     `Status: ${candidate.executionStatus}${blocker}`,
     `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
-    `Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(candidate.stop)} | T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`,
-    nearestLiquidity ? `Next liquidity: ${nearestLiquidity.price} ${nearestLiquidity.label}` : 'Next liquidity: N/A',
-    runner ? `Runner only after hold: ${runner.price} ${runner.label}` : null,
+    `Plan: Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(candidate.stop)} | Risk ${moneyLine(candidate.riskPoints)}`,
+    `Targets: T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`,
+    `Liquidity: ${compactObjective(nearestLiquidity)}`,
+    uniqueLq2 ? `Next: ${compactObjective(uniqueLq2)}` : null,
+    uniqueRunner ? `Runner: ${compactObjective(uniqueRunner)}` : null,
+    targetInstruction ? `Note: ${targetInstruction}` : null,
   ].filter(Boolean).join('\n');
 }
 
@@ -761,6 +808,7 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
   const candidates = topConditionalCandidates(normalized.setupCandidates);
   const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
   const finalStatus = normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
+  const deskDecision = normalized.decisionLabel || normalized.decision;
   const finalStatusLabel = `${statusEmoji(finalStatus)} ${finalStatus}`;
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
   const fields: DiscordEmbedField[] = [
@@ -768,17 +816,15 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       name: '1️⃣ What',
       value: discordValue(
         `**${finalStatusLabel}**\n` +
-        `${normalized.decision}${normalized.setupName ? ` - ${normalized.setupName}` : ''}\n` +
-        `Session: ${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
+        `${deskDecision}${!normalized.hasConditionalPlans && normalized.setupName ? ` - ${normalized.setupName}` : ''}\n` +
+        `${normalized.executionDecision} | ${normalized.planningDecision}\n` +
+        `${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
       ),
       inline: false,
     },
     {
-      name: '2️⃣ Why',
-      value: discordValue([
-        normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.',
-        formatSessionStoryLine(analysis),
-      ].join('\n')),
+      name: '2️⃣ Where',
+      value: discordValue(formatFiveWsWhere(candidates, targetObjectives)),
       inline: false,
     },
     {
@@ -787,8 +833,11 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       inline: false,
     },
     {
-      name: '4️⃣ Where',
-      value: discordValue(formatFiveWsWhere(candidates, targetObjectives)),
+      name: '4️⃣ Why',
+      value: discordValue([
+        normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.',
+        formatSessionStoryLine(analysis),
+      ].join('\n')),
       inline: false,
     },
     {
@@ -810,11 +859,11 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
 
   return {
     username: 'Quant Desk',
-    content: `# 📊 Quant Desk ${header}\n## ${statusEmoji(finalStatus)} ${finalStatus} • ${tradeDate}\nPlan ID: \`${planVersionId}\``,
+    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\nPlan ID: \`${planVersionId}\``,
     embeds: [
       {
-        title: `📊 Quant Desk ${header} — ${tradeDate}`,
-        description: '5 W trading card. App-owned decision support only.',
+        title: `📊 5 W Trading Card — ${tradeDate}`,
+        description: 'Decision support only. No automated orders were placed.',
         color: statusColor(finalStatus),
         fields,
         footer: { text: 'Quant Desk • App-Owned Trade Pipeline • No automated orders' },

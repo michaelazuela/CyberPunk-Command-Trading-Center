@@ -262,7 +262,12 @@ export interface TargetObjectivePlan {
   selectedT1?: TargetObjective | null;
   selectedT2?: TargetObjective | null;
   nearestLiquidityTarget?: TargetObjective | null;
+  liquidityTarget1?: TargetObjective | null;
+  liquidityTarget2?: TargetObjective | null;
+  liquidityRunnerTarget?: TargetObjective | null;
   runnerTarget?: TargetObjective | null;
+  targetManagementInstruction?: string | null;
+  liquidityMapSummary?: string | null;
   targetPathWarning?: string | null;
   targetQuality: 'clear_path' | 'target_blocked' | 'no_liquidity_map';
   objectives: TargetObjective[];
@@ -385,6 +390,61 @@ export interface SetupReadyFacts {
   breakOfStructure?: boolean;
   sweepThenReclaim?: boolean;
   notes?: string[];
+}
+
+export interface TimeframeFactSet {
+  timeframe: '4h' | '1h' | '15m' | '5m';
+  role: 'macro_context' | 'session_structure' | 'liquidity_map' | 'execution';
+  barCount: number;
+  high: number | null;
+  low: number | null;
+  open: number | null;
+  close: number | null;
+  midpoint: number | null;
+  rangePoints: number | null;
+  trend: 'bullish' | 'bearish' | 'balanced' | 'unknown';
+  candles: ChartCandleFact[];
+  fvgZones: FvgZoneFact[];
+  liquiditySweeps: LiquidityEventFact[];
+  reclaimEvents: ReclaimEventFact[];
+  failedBreakEvents: FailedBreakEventFact[];
+  displacementCandles: DisplacementCandleFact[];
+  structuralLevels: StructuralLevel[];
+  confidence: ReadConfidence;
+  notes: string[];
+}
+
+export interface MultiTimeframeAlignment {
+  macroBias: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
+  sessionBias: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
+  liquidityBias: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
+  executionBias: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
+  alignedDirection: 'LONG' | 'SHORT' | 'NEUTRAL' | 'CONFLICTED' | 'UNKNOWN';
+  conflicts: string[];
+  notes: string[];
+}
+
+export interface MultiTimeframeContext {
+  source: 'ninjatrader_bridge';
+  authority: 'ohlc_facts_only';
+  fourHour: TimeframeFactSet;
+  oneHour: TimeframeFactSet;
+  fifteenMinute: TimeframeFactSet;
+  fiveMinute: TimeframeFactSet;
+  alignment: MultiTimeframeAlignment;
+  targetMap: {
+    nearestUpsideLiquidity?: StructuralLevel | null;
+    majorUpsideLiquidity?: StructuralLevel | null;
+    nearestDownsideLiquidity?: StructuralLevel | null;
+    majorDownsideLiquidity?: StructuralLevel | null;
+    levelsToWatch: StructuralLevel[];
+  };
+  rules: {
+    higherTimeframesApproveTrades: false;
+    fiveMinuteExecutionRequired: true;
+    aiMayOverwriteOhlcFacts: false;
+  };
+  notes: string[];
 }
 
 export interface GapContextFact {
@@ -528,6 +588,7 @@ export interface ChartContext {
   setupReadyFacts?: SetupReadyFacts;
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
+  multiTimeframeContext?: MultiTimeframeContext;
   gapContext?: GapContextFact;
   compressionRange?: CompressionRangeFact;
   marketStructure?: MarketStructureFacts;
@@ -623,6 +684,7 @@ export interface MissingLevelRequirement {
 
 export interface SetupCandidate {
   setupType: SetupType;
+  scenarioLabel?: string | null;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;
   confidence: 'High' | 'Medium' | 'Low';

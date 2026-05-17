@@ -134,6 +134,7 @@ function isTradeTakenOutcome(outcome: ReplayOutcome): boolean {
 }
 
 function formatCandidateName(candidate: SetupCandidate): string {
+  if (candidate.scenarioLabel) return candidate.scenarioLabel;
   return String(candidate.setupType || 'Setup').replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
@@ -306,7 +307,11 @@ export default function ReplayLab({
   const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
   const [historicalMorning5mBars, setHistoricalMorning5mBars] = useState<NinjaBridgeBar[]>([]);
   const [historicalMorning15mBars, setHistoricalMorning15mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalMorning60mBars, setHistoricalMorning60mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalMorning240mBars, setHistoricalMorning240mBars] = useState<NinjaBridgeBar[]>([]);
   const [historicalLunch5mBars, setHistoricalLunch5mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalLunch60mBars, setHistoricalLunch60mBars] = useState<NinjaBridgeBar[]>([]);
+  const [historicalLunch240mBars, setHistoricalLunch240mBars] = useState<NinjaBridgeBar[]>([]);
   const [historicalFetchStatus, setHistoricalFetchStatus] = useState<string | null>(null);
   const [historicalFetchError, setHistoricalFetchError] = useState<string | null>(null);
   const [isFetchingHistorical, setIsFetchingHistorical] = useState(false);
@@ -540,6 +545,8 @@ export default function ReplayLab({
       const historicalContext = hasHistoricalMorning ? buildNinjaChartContext({
         bars5m: historicalMorning5mBars,
         bars15m: historicalMorning15mBars,
+        bars60m: historicalMorning60mBars,
+        bars240m: historicalMorning240mBars,
         sessionType: 'replay_morning',
         instrument,
         tradeDate,
@@ -700,6 +707,8 @@ export default function ReplayLab({
       const historicalContext = hasHistoricalLunch ? buildNinjaChartContext({
         bars5m: historicalLunch5mBars,
         bars15m: historicalMorning15mBars,
+        bars60m: historicalLunch60mBars.length ? historicalLunch60mBars : historicalMorning60mBars,
+        bars240m: historicalLunch240mBars.length ? historicalLunch240mBars : historicalMorning240mBars,
         sessionType: 'replay_lunch',
         instrument,
         tradeDate,
@@ -896,7 +905,19 @@ export default function ReplayLab({
       const bridgeInstrument = toBridgeInstrument(instrument);
       if (sessionType === 'morning') {
         const priorDate = previousCalendarDate(tradeDate);
-        const [bars15m, bars5m] = await Promise.all([
+        const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '240m',
+            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
+            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+          }),
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '60m',
+            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
+            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+          }),
           getNinjaHistoricalBars({
             instrument: bridgeInstrument,
             timeframe: '15m',
@@ -915,14 +936,28 @@ export default function ReplayLab({
           throw new Error(bars5m.error || 'No Morning 5M historical bars returned from NinjaTrader.');
         }
 
+        setHistoricalMorning240mBars(bars240m.bars || []);
+        setHistoricalMorning60mBars(bars60m.bars || []);
         setHistoricalMorning15mBars(bars15m.bars || []);
         setHistoricalMorning5mBars(bars5m.bars || []);
         if (!morningExecImg) setMorningExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
         if (!morningEthImg && bars15m.bars?.length) setMorningEthImg({ dataUrl: HISTORICAL_DATA_IMAGE });
-        setHistoricalFetchStatus(`Imported Morning historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M execution bars, ${(bars15m.bars || []).length} x 15M ETH bars from prior 6:00 PM through 10:00 AM.`);
+        setHistoricalFetchStatus(`Imported Morning historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M execution bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars.`);
       } else {
         const priorDate = previousCalendarDate(tradeDate);
-        const [bars15m, bars5m] = await Promise.all([
+        const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '240m',
+            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
+            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+          }),
+          getNinjaHistoricalBars({
+            instrument: bridgeInstrument,
+            timeframe: '60m',
+            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
+            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+          }),
           getNinjaHistoricalBars({
             instrument: bridgeInstrument,
             timeframe: '15m',
@@ -942,9 +977,13 @@ export default function ReplayLab({
         }
 
         setHistoricalLunch5mBars(bars5m.bars || []);
+        setHistoricalLunch240mBars(bars240m.bars || []);
+        setHistoricalLunch60mBars(bars60m.bars || []);
+        if (!historicalMorning240mBars.length && bars240m.bars?.length) setHistoricalMorning240mBars(bars240m.bars || []);
+        if (!historicalMorning60mBars.length && bars60m.bars?.length) setHistoricalMorning60mBars(bars60m.bars || []);
         if (!historicalMorning15mBars.length && bars15m.bars?.length) setHistoricalMorning15mBars(bars15m.bars || []);
         if (!lunchExecImg) setLunchExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
-        setHistoricalFetchStatus(`Imported Lunch historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M lunch bars and ${(bars15m.bars || []).length} x 15M ETH context bars through 1:00 PM.`);
+        setHistoricalFetchStatus(`Imported Lunch historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M lunch bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars through 1:00 PM.`);
       }
     } catch (error) {
       setHistoricalFetchError(error instanceof Error ? error.message : String(error));
@@ -1332,7 +1371,7 @@ export default function ReplayLab({
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Morning Historical Data</div>
             <div className="mt-1 text-[9px] text-[var(--txt3)]">15M: midnight to 10:00 · 5M: 9:30 to 10:10</div>
             <div className="mt-2 text-[10px] text-[var(--green)]">
-              {historicalMorning5mBars.length ? `${historicalMorning5mBars.length} 5M bars · ${historicalMorning15mBars.length} 15M bars imported` : 'Not imported yet'}
+              {historicalMorning5mBars.length ? `${historicalMorning5mBars.length} 5M · ${historicalMorning15mBars.length} 15M · ${historicalMorning60mBars.length} 1H · ${historicalMorning240mBars.length} 4H bars imported` : 'Not imported yet'}
             </div>
           </button>
           <button
@@ -1344,7 +1383,7 @@ export default function ReplayLab({
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Lunch Historical Data</div>
             <div className="mt-1 text-[9px] text-[var(--txt3)]">5M: 11:50 to 1:00 · morning context used when imported</div>
             <div className="mt-2 text-[10px] text-[var(--green)]">
-              {historicalLunch5mBars.length ? `${historicalLunch5mBars.length} lunch 5M bars imported` : 'Not imported yet'}
+              {historicalLunch5mBars.length ? `${historicalLunch5mBars.length} lunch 5M · ${historicalLunch60mBars.length} 1H · ${historicalLunch240mBars.length} 4H bars imported` : 'Not imported yet'}
             </div>
           </button>
         </div>

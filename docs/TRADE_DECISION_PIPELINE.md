@@ -47,6 +47,19 @@ The app should evaluate session levels before final candidate ranking:
 
 Session level context is not execution authority. A strong Asian/London/ETH level can support a candidate, but the 5M trigger, stop, risk, invalidation, and final pipeline gates still decide whether a plan is executable.
 
+## Multi-Timeframe Context Rule
+
+When OHLC is available, the app should prefer a clean 4H / 1H / 15M / 5M stack:
+
+- 4H gives macro liquidity and broad swing context.
+- 1H gives session structure and larger imbalance/displacement context.
+- 15M gives the active session liquidity map and target-management objectives.
+- 5M remains the execution chart.
+
+The higher timeframes can explain where the market is likely to react and where a runner might aim, but they cannot create an executable trade without a 5M trigger, protected stop, valid risk, and clear invalidation.
+
+The bridge must convert every available timeframe into machine-readable facts before the setup scanner or pipeline uses it. The app-owned engines should consume fields such as candles, FVG zones, liquidity sweeps, reclaims, failed breaks, displacement candles, structural levels, alignment, and target maps. Gemini narrative and human-readable notes may explain the read, but they must not be the glue that connects timeframes or approves setups.
+
 ## Fixed Sequence
 
 Every analysis must follow this order:

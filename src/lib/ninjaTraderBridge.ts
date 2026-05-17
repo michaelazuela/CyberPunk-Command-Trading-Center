@@ -5,14 +5,18 @@ import type {
   FailedBreakEventFact,
   FvgZoneFact,
   LiquidityEventFact,
+  MultiTimeframeAlignment,
+  MultiTimeframeContext,
   ReadConfidence,
   ReclaimEventFact,
+  StructuralLevel,
+  TimeframeFactSet,
 } from '../types';
 import { buildStructuralLevels } from './sessionStructure';
 import { buildSessionLevelContext } from './sessionLevelContextEngine';
 import { buildSessionStory } from './sessionStoryEngine';
 
-export type NinjaBridgeTimeframe = '1m' | '5m' | '15m';
+export type NinjaBridgeTimeframe = '1m' | '5m' | '15m' | '60m' | '240m' | '1h' | '4h';
 
 export interface NinjaBridgeBar {
   time: string;
@@ -74,6 +78,8 @@ export interface NinjaBridgeLiveContext {
   snapshot: NinjaBridgeSnapshot | null;
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
+  bars60m: NinjaBridgeBar[];
+  bars240m: NinjaBridgeBar[];
   positions: NinjaBridgePosition[];
   selectedAccount: string;
   selectedInstrument: string;
@@ -469,9 +475,210 @@ function detectLiquidityAndReclaims(candles: ChartCandleFact[]): {
   };
 }
 
+function isPrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function timeframeTrend(open: number | null, close: number | null): TimeframeFactSet['trend'] {
+  if (!isPrice(open) || !isPrice(close)) return 'unknown';
+  const delta = close - open;
+  if (Math.abs(delta) < 1) return 'balanced';
+  return delta > 0 ? 'bullish' : 'bearish';
+}
+
+function trendToBias(trend: TimeframeFactSet['trend']): MultiTimeframeAlignment['macroBias'] {
+  if (trend === 'bullish') return 'LONG';
+  if (trend === 'bearish') return 'SHORT';
+  if (trend === 'balanced') return 'NEUTRAL';
+  return 'UNKNOWN';
+}
+
+function summarizeBars(bars: NinjaBridgeBar[]): Pick<TimeframeFactSet, 'high' | 'low' | 'open' | 'close' | 'midpoint' | 'rangePoints' | 'barCount' | 'trend'> {
+  const valid = bars.filter(bar => isPrice(bar.open) && isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.close));
+  const high = valid.length ? Math.max(...valid.map(bar => bar.high)) : null;
+  const low = valid.length ? Math.min(...valid.map(bar => bar.low)) : null;
+  const open = valid[0]?.open ?? null;
+  const close = valid[valid.length - 1]?.close ?? null;
+  return {
+    barCount: valid.length,
+    high,
+    low,
+    open,
+    close,
+    midpoint: high !== null && low !== null ? Math.round(((high + low) / 2) * 4) / 4 : null,
+    rangePoints: high !== null && low !== null ? Math.round((high - low) * 4) / 4 : null,
+    trend: timeframeTrend(open, close),
+  };
+}
+
+function levelsForTimeframe(levels: StructuralLevel[], timeframe: TimeframeFactSet['timeframe']): StructuralLevel[] {
+  const tag = timeframe === '4h'
+    ? '4h_macro_context'
+    : timeframe === '1h'
+      ? '1h_session_context'
+      : timeframe === '15m'
+        ? '15m_liquidity_map'
+        : '5m_execution';
+  return levels.filter(level =>
+    level.contextRuleTags?.includes(tag) ||
+    (timeframe === '15m' && !level.contextRuleTags?.some(item => item.includes('4h') || item.includes('1h'))) ||
+    (timeframe === '5m' && ['rth_morning', 'lunch', 'current_window'].includes(level.source))
+  ).slice(0, 30);
+}
+
+function buildTimeframeFactSet({
+  timeframe,
+  role,
+  bars,
+  structuralLevels,
+}: {
+  timeframe: TimeframeFactSet['timeframe'];
+  role: TimeframeFactSet['role'];
+  bars: NinjaBridgeBar[];
+  structuralLevels: StructuralLevel[];
+}): TimeframeFactSet {
+  const valid = bars.filter(bar => isPrice(bar.open) && isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.close));
+  const candles = toCandleFacts(valid, timeframe === '5m' ? 60 : 80);
+  const fvgZones = detectFvgZones(candles);
+  const liquidityFacts = detectLiquidityAndReclaims(candles);
+  const displacementCandles = detectDisplacementCandles(candles, fvgZones);
+  const summary = summarizeBars(valid);
+  return {
+    timeframe,
+    role,
+    ...summary,
+    candles,
+    fvgZones,
+    liquiditySweeps: liquidityFacts.liquiditySweeps,
+    reclaimEvents: liquidityFacts.reclaimEvents,
+    failedBreakEvents: liquidityFacts.failedBreakEvents,
+    displacementCandles,
+    structuralLevels: levelsForTimeframe(structuralLevels, timeframe),
+    confidence: confidenceForBars(valid),
+    notes: [
+      `${timeframe.toUpperCase()} ${role.replace(/_/g, ' ')} imported from NinjaTrader OHLC.`,
+      `${valid.length} bars; trend ${summary.trend}; range ${summary.rangePoints ?? 'N/A'} points.`,
+      'Facts only. Setup approval, ranking, and execution remain app-owned.',
+    ],
+  };
+}
+
+function buildMultiTimeframeAlignment({
+  fourHour,
+  oneHour,
+  fifteenMinute,
+  fiveMinute,
+}: {
+  fourHour: TimeframeFactSet;
+  oneHour: TimeframeFactSet;
+  fifteenMinute: TimeframeFactSet;
+  fiveMinute: TimeframeFactSet;
+}): MultiTimeframeAlignment {
+  const macroBias = trendToBias(fourHour.trend);
+  const sessionBias = trendToBias(oneHour.trend);
+  const liquidityBias = trendToBias(fifteenMinute.trend);
+  const executionBias = trendToBias(fiveMinute.trend);
+  const directional = [macroBias, sessionBias, liquidityBias, executionBias].filter((bias): bias is 'LONG' | 'SHORT' => bias === 'LONG' || bias === 'SHORT');
+  const longCount = directional.filter(bias => bias === 'LONG').length;
+  const shortCount = directional.filter(bias => bias === 'SHORT').length;
+  const conflicts: string[] = [];
+  if (macroBias !== 'UNKNOWN' && executionBias !== 'UNKNOWN' && macroBias !== 'NEUTRAL' && executionBias !== 'NEUTRAL' && macroBias !== executionBias) {
+    conflicts.push(`4H macro bias ${macroBias} conflicts with 5M execution bias ${executionBias}.`);
+  }
+  if (sessionBias !== 'UNKNOWN' && liquidityBias !== 'UNKNOWN' && sessionBias !== 'NEUTRAL' && liquidityBias !== 'NEUTRAL' && sessionBias !== liquidityBias) {
+    conflicts.push(`1H session bias ${sessionBias} conflicts with 15M liquidity-map bias ${liquidityBias}.`);
+  }
+  const alignedDirection = longCount >= 3
+    ? 'LONG'
+    : shortCount >= 3
+      ? 'SHORT'
+      : conflicts.length
+        ? 'CONFLICTED'
+        : directional.length
+          ? longCount > shortCount ? 'LONG' : shortCount > longCount ? 'SHORT' : 'NEUTRAL'
+          : 'UNKNOWN';
+
+  return {
+    macroBias,
+    sessionBias,
+    liquidityBias,
+    executionBias,
+    alignedDirection,
+    conflicts,
+    notes: [
+      `4H=${macroBias}, 1H=${sessionBias}, 15M=${liquidityBias}, 5M=${executionBias}.`,
+      alignedDirection === 'CONFLICTED'
+        ? 'Timeframes conflict; reduce certainty and require cleaner 5M confirmation.'
+        : `Timeframe stack alignment: ${alignedDirection}.`,
+    ],
+  };
+}
+
+function buildTargetMap(levels: StructuralLevel[], currentPrice: number | null): MultiTimeframeContext['targetMap'] {
+  if (!isPrice(currentPrice)) return { levelsToWatch: levels.slice(0, 8) };
+  const upside = levels
+    .filter(level => level.price > currentPrice)
+    .sort((a, b) => a.price - b.price);
+  const downside = levels
+    .filter(level => level.price < currentPrice)
+    .sort((a, b) => b.price - a.price);
+  const strength = (level: StructuralLevel) => level.strengthScore || (level.confidence === 'High' ? 80 : level.confidence === 'Medium' ? 55 : 25);
+  return {
+    nearestUpsideLiquidity: upside[0] || null,
+    majorUpsideLiquidity: [...upside].sort((a, b) => strength(b) - strength(a))[0] || null,
+    nearestDownsideLiquidity: downside[0] || null,
+    majorDownsideLiquidity: [...downside].sort((a, b) => strength(b) - strength(a))[0] || null,
+    levelsToWatch: [...upside.slice(0, 3), ...downside.slice(0, 3)].slice(0, 6),
+  };
+}
+
+function buildMultiTimeframeContext({
+  bars5m,
+  bars15m,
+  bars60m,
+  bars240m,
+  structuralLevels,
+  currentPrice,
+}: {
+  bars5m: NinjaBridgeBar[];
+  bars15m: NinjaBridgeBar[];
+  bars60m: NinjaBridgeBar[];
+  bars240m: NinjaBridgeBar[];
+  structuralLevels: StructuralLevel[];
+  currentPrice: number | null;
+}): MultiTimeframeContext {
+  const fourHour = buildTimeframeFactSet({ timeframe: '4h', role: 'macro_context', bars: bars240m, structuralLevels });
+  const oneHour = buildTimeframeFactSet({ timeframe: '1h', role: 'session_structure', bars: bars60m, structuralLevels });
+  const fifteenMinute = buildTimeframeFactSet({ timeframe: '15m', role: 'liquidity_map', bars: bars15m, structuralLevels });
+  const fiveMinute = buildTimeframeFactSet({ timeframe: '5m', role: 'execution', bars: bars5m, structuralLevels });
+  const alignment = buildMultiTimeframeAlignment({ fourHour, oneHour, fifteenMinute, fiveMinute });
+  return {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fourHour,
+    oneHour,
+    fifteenMinute,
+    fiveMinute,
+    alignment,
+    targetMap: buildTargetMap(structuralLevels, currentPrice),
+    rules: {
+      higherTimeframesApproveTrades: false,
+      fiveMinuteExecutionRequired: true,
+      aiMayOverwriteOhlcFacts: false,
+    },
+    notes: [
+      'Machine-compatible bridge facts are built from 4H, 1H, 15M, and 5M NinjaTrader OHLC.',
+      'Higher timeframes improve context, targets, and ranking; 5M remains execution authority.',
+      'Gemini narrative is not the glue. Structured OHLC facts feed the app-owned engines.',
+    ],
+  };
+}
+
 export function buildNinjaChartContext({
   bars5m,
   bars15m = [],
+  bars60m = [],
+  bars240m = [],
   sessionType,
   instrument,
   tradeDate,
@@ -479,6 +686,8 @@ export function buildNinjaChartContext({
 }: {
   bars5m: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
+  bars60m?: NinjaBridgeBar[];
+  bars240m?: NinjaBridgeBar[];
   sessionType: ChartContext['sessionType'];
   instrument: ChartContext['instrument'];
   tradeDate: string;
@@ -492,7 +701,8 @@ export function buildNinjaChartContext({
   const last = executionBars[executionBars.length - 1];
   const first = executionBars[0];
   const recent = executionBars.slice(-8);
-  const allContextBars = [...bars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
+  const macroContextBars = [...bars240m, ...bars60m].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
+  const allContextBars = [...macroContextBars, ...bars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
   const activeSwingHigh = recent.length ? Math.max(...recent.map(bar => bar.high)) : null;
   const activeSwingLow = recent.length ? Math.min(...recent.map(bar => bar.low)) : null;
   const contextHigh = allContextBars.length ? Math.max(...allContextBars.map(bar => bar.high)) : activeSwingHigh;
@@ -515,6 +725,8 @@ export function buildNinjaChartContext({
   const baseStructuralLevels = buildStructuralLevels({
     bars5m: executionBars,
     bars15m,
+    bars60m,
+    bars240m,
     midnightOpen,
     rthOpen: first.open,
   });
@@ -530,6 +742,14 @@ export function buildNinjaChartContext({
   ];
   const sessionLevelContext = buildSessionLevelContext(structuralLevels, last.close, { fvgZones });
   const enrichedStructuralLevels = sessionLevelContext.levels;
+  const multiTimeframeContext = buildMultiTimeframeContext({
+    bars5m: executionBars,
+    bars15m,
+    bars60m,
+    bars240m,
+    structuralLevels: enrichedStructuralLevels,
+    currentPrice: last.close,
+  });
 
   return {
     sessionType,
@@ -604,6 +824,7 @@ export function buildNinjaChartContext({
     requiresManualConfirmation: false,
     sessionLevelContext,
     sessionStory,
+    multiTimeframeContext,
     targetObjectives: enrichedStructuralLevels.map(level => ({
       label: level.label,
       price: level.price,
@@ -616,7 +837,7 @@ export function buildNinjaChartContext({
       rMultiple: null,
       reason: `${level.label} from ${level.source} is available as target context. Strength=${level.strengthLabel || 'Low'} (${level.strengthScore || 0}).`,
     })),
-    marketContext: `NinjaTrader live ${sessionType} ${instrument} 5M OHLC context. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
-    ocrText: `NinjaTrader Bridge OHLC bars: 5m=${executionBars.length}, 15m=${bars15m.length}. Structural levels=${enrichedStructuralLevels.length}.`,
+    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
+    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. Structural levels=${enrichedStructuralLevels.length}.`,
   };
 }
