@@ -566,6 +566,17 @@ function compactSentence(value?: string | null, maxLength = 150): string | null 
   return text.length <= maxLength ? text : `${text.slice(0, maxLength - 3)}...`;
 }
 
+function simpleScenarioLine(candidate: SetupCandidate): string {
+  const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
+  const trigger = candidate.requiredTrigger || 'Wait for confirmation';
+  const plan = `E ${moneyLine(candidate.entry)} | S ${moneyLine(candidate.stop)} | T1 ${moneyLine(candidate.target1)} | T2 ${moneyLine(candidate.target2)}`;
+  return [
+    `**${direction} - ${compactSetupName(candidate)}**`,
+    `Trigger: ${trigger}`,
+    `Plan: ${plan}`,
+  ].join('\n');
+}
+
 function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
   const isValidObjectiveForCandidate = (objective: TargetObjective): boolean => {
     if (objective.direction !== candidate.direction) return false;
@@ -803,6 +814,36 @@ function formatFiveWsWhen(candidates: SetupCandidate[]): string {
     .join('\n');
 }
 
+function formatBestScenarios(candidates: SetupCandidate[]): string {
+  if (!candidates.length) return 'No active long/short scenario. Wait for a clean 5M trigger.';
+  return candidates
+    .slice(0, 2)
+    .map((candidate, index) => `${index + 1}. ${simpleScenarioLine(candidate)}`)
+    .join('\n\n');
+}
+
+function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjective[]): string {
+  const first = candidates[0];
+  if (!first) return 'Tactical T1/T2 only after ENTRY and STOP are confirmed.';
+  const direction = first.direction === 'SHORT' ? 'SHORT' : 'LONG';
+  const sourceObjectives = first.targetObjectivePlan?.objectives?.length
+    ? first.targetObjectivePlan.objectives
+    : objectives;
+  const nearest =
+    first.targetObjectivePlan?.liquidityTarget1 ||
+    first.targetObjectivePlan?.nearestLiquidityTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, first.entry);
+  const runner =
+    first.targetObjectivePlan?.liquidityRunnerTarget ||
+    first.targetObjectivePlan?.runnerTarget ||
+    nearestObjectiveByDirection(sourceObjectives, direction, first.entry, nearest);
+  return [
+    `T1/T2: app-computed from confirmed ENTRY/STOP.`,
+    `Nearest liquidity: ${compactObjective(nearest)}`,
+    runner && !sameObjective(runner, nearest) ? `Runner: ${compactObjective(runner)}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): DiscordWebhookPayload {
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates);
@@ -811,20 +852,25 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
   const deskDecision = normalized.decisionLabel || normalized.decision;
   const finalStatusLabel = `${statusEmoji(finalStatus)} ${finalStatus}`;
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
+  const components = buildOutcomeComponents({
+    planVersionId,
+    sessionType: job,
+    tradeDate,
+    instrument,
+  });
   const fields: DiscordEmbedField[] = [
     {
       name: '1️⃣ What',
       value: discordValue(
-        `**${finalStatusLabel}**\n` +
-        `${deskDecision}${!normalized.hasConditionalPlans && normalized.setupName ? ` - ${normalized.setupName}` : ''}\n` +
-        `${normalized.executionDecision} | ${normalized.planningDecision}\n` +
+        `**${finalStatusLabel} - ${deskDecision}**\n` +
+        `${normalized.hasConditionalPlans ? 'Conditional plan available. No execution until trigger/risk/invalidation pass.' : normalized.planningDecision}\n` +
         `${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
       ),
       inline: false,
     },
     {
       name: '2️⃣ Where',
-      value: discordValue(formatFiveWsWhere(candidates, targetObjectives)),
+      value: discordValue(formatBestScenarios(candidates)),
       inline: false,
     },
     {
@@ -835,8 +881,9 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
     {
       name: '4️⃣ Why',
       value: discordValue([
-        normalized.whyThisPlan || 'Wait for the highest-quality app-owned setup trigger.',
-        formatSessionStoryLine(analysis),
+        compactSentence(normalized.whyThisPlan, 220) || 'Wait for the highest-quality app-owned setup trigger.',
+        compactSentence(formatSessionStoryLine(analysis), 220),
+        formatTargetFocus(candidates, targetObjectives),
       ].join('\n')),
       inline: false,
     },
@@ -844,22 +891,16 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       name: '5️⃣ Watch-Out',
       value: discordValue(
         `${normalized.invalidation || 'Do not execute until entry, stop, trigger, risk, and invalidation pass.'}\n` +
+        `${components ? 'Use the buttons below only after you know what happened. They update RAG/journal learning only.' : 'RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
         'Decision support only. No automated orders were placed.'
       ),
       inline: false,
     },
   ];
 
-  const components = buildOutcomeComponents({
-    planVersionId,
-    sessionType: job,
-    tradeDate,
-    instrument,
-  });
-
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\nPlan ID: \`${planVersionId}\``,
+    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\nPlan ID: \`${planVersionId}\`${components ? '\nUse outcome buttons below to feed RAG.' : ''}`,
     embeds: [
       {
         title: `📊 5 W Trading Card — ${tradeDate}`,
