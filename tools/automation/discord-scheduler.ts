@@ -508,6 +508,39 @@ function formatObjectiveLine(objective: TargetObjective): string {
   return `- ${objective.label}: ${objective.price}${distance}${multiple}`;
 }
 
+function objectiveDirectionLabel(direction: 'LONG' | 'SHORT'): { primary: string; opposing: string; runner: string } {
+  return direction === 'LONG'
+    ? { primary: 'upside', opposing: 'downside', runner: 'Major upside liquidity' }
+    : { primary: 'downside', opposing: 'upside', runner: 'Major downside liquidity' };
+}
+
+function nearestObjectiveByDirection(
+  objectives: TargetObjective[],
+  direction: 'LONG' | 'SHORT',
+  entry?: number,
+  exclude?: TargetObjective | null
+): TargetObjective | null {
+  const validEntry = typeof entry === 'number' && Number.isFinite(entry);
+  const filtered = objectives
+    .filter((objective) => objective.direction === direction)
+    .filter((objective) => !exclude || objective.label !== exclude.label || objective.price !== exclude.price)
+    .filter((objective) => {
+      if (!validEntry) return true;
+      return direction === 'LONG' ? objective.price > entry : objective.price < entry;
+    })
+    .sort((a, b) => {
+      if (!validEntry) return b.score - a.score;
+      return Math.abs(a.price - entry) - Math.abs(b.price - entry);
+    });
+
+  return filtered[0] || null;
+}
+
+function formatLiquidityObjective(label: string, objective?: TargetObjective | null): string {
+  if (!objective) return `${label}: N/A`;
+  return `${label}: ${objective.price} ${objective.label}`;
+}
+
 function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
   const isValidObjectiveForCandidate = (objective: TargetObjective): boolean => {
     if (objective.direction !== candidate.direction) return false;
@@ -526,6 +559,25 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
   const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
     ? candidate.targetObjectivePlan.objectives
     : fallbackObjectives;
+  const directionLabels = objectiveDirectionLabel(candidate.direction === 'SHORT' ? 'SHORT' : 'LONG');
+  const nearestDirectionalTarget =
+    nearestLiquidityTarget && isValidObjectiveForCandidate(nearestLiquidityTarget)
+      ? nearestLiquidityTarget
+      : nearestObjectiveByDirection(sourceObjectives, candidate.direction === 'SHORT' ? 'SHORT' : 'LONG', candidate.entry);
+  const runnerDirectionalTarget =
+    runnerTarget && isValidObjectiveForCandidate(runnerTarget)
+      ? runnerTarget
+      : nearestObjectiveByDirection(
+          sourceObjectives,
+          candidate.direction === 'SHORT' ? 'SHORT' : 'LONG',
+          candidate.entry,
+          nearestDirectionalTarget
+        );
+  const opposingTarget = nearestObjectiveByDirection(
+    sourceObjectives,
+    candidate.direction === 'SHORT' ? 'LONG' : 'SHORT',
+    candidate.entry
+  );
   const additional = sourceObjectives
     .filter(isValidObjectiveForCandidate)
     .filter((objective) => !selected.some((picked) => picked.label === objective.label && picked.price === objective.price))
@@ -534,22 +586,39 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
 
   if (!objectives.length) {
     return [
-      'Targets to watch:',
-      `- Fixed-R T1/T2: ${moneyLine(candidate.target1)} / ${moneyLine(candidate.target2)}`,
-      '- No liquidity map levels found for this direction.',
+      'App Targets:',
+      `T1: ${moneyLine(candidate.target1)}`,
+      `T2: ${moneyLine(candidate.target2)}`,
+      '',
+      'Liquidity Map:',
+      `Nearest ${directionLabels.primary} liquidity: N/A`,
+      `${directionLabels.runner}: N/A`,
+      `Nearest ${directionLabels.opposing} liquidity: ${opposingTarget ? `${opposingTarget.price} ${opposingTarget.label}` : 'N/A'}`,
+      '',
+      'Target Quality:',
+      'T1/T2 are fixed-R tactical targets.',
+      'No liquidity map levels found for this direction.',
     ].join('\n');
   }
 
   return [
-    'Targets to watch:',
-    `- Fixed-R scale targets: T1 ${moneyLine(candidate.target1)} / T2 ${moneyLine(candidate.target2)}`,
-    nearestLiquidityTarget && isValidObjectiveForCandidate(nearestLiquidityTarget)
-      ? `- Nearest liquidity target: ${nearestLiquidityTarget.label} ${nearestLiquidityTarget.price} (${nearestLiquidityTarget.rMultiple ?? 'N/A'}R)`
-      : null,
-    runnerTarget && isValidObjectiveForCandidate(runnerTarget)
-      ? `- Runner / stretch objective: ${runnerTarget.label} ${runnerTarget.price} (${runnerTarget.rMultiple ?? 'N/A'}R)`
-      : null,
-    targetPathWarning ? `- Target path warning: ${targetPathWarning}` : null,
+    'App Targets:',
+    `T1: ${moneyLine(candidate.target1)}`,
+    `T2: ${moneyLine(candidate.target2)}`,
+    '',
+    'Liquidity Map:',
+    formatLiquidityObjective(`Nearest ${directionLabels.primary} liquidity`, nearestDirectionalTarget),
+    formatLiquidityObjective(directionLabels.runner, runnerDirectionalTarget),
+    formatLiquidityObjective(`Nearest ${directionLabels.opposing} liquidity`, opposingTarget),
+    '',
+    'Target Quality:',
+    'T1/T2 are close-range tactical targets.',
+    nearestDirectionalTarget
+      ? `Runner target only valid if price clears ${nearestDirectionalTarget.price} and holds.`
+      : 'Runner target requires a confirmed break and hold beyond the tactical target zone.',
+    targetPathWarning ? `Target path warning: ${targetPathWarning}` : null,
+    '',
+    'Additional levels:',
     ...objectives.map(formatObjectiveLine),
   ].filter(Boolean).join('\n');
 }
