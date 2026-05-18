@@ -57,7 +57,19 @@ function countBy<T extends Record<string, any>>(rows: T[], key: keyof T) {
 }
 
 function formatError(label: string, error: any) {
-  return `${label}: ${error?.message || error?.details || String(error)}`;
+  const message =
+    error?.message ||
+    error?.details ||
+    error?.hint ||
+    error?.code ||
+    (() => {
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return String(error);
+      }
+    })();
+  return `${label}: ${message}`;
 }
 
 export default function DataHealthPanel() {
@@ -108,8 +120,8 @@ export default function DataHealthPanel() {
         supabase.from('setups').select('id, normalized_plan_json, trade_plan_json, image_url, execution_5m_screenshot_url, plan_version_id, setup_signature').limit(1),
         supabase.from('trade_embeddings').select('id, trade_result, embedding, required_screenshot_range, plan_version_id, setup_signature, save_receipt_json').limit(1),
         supabase.from('trades').select('id, setup_id, proof_screenshot_url, plan_version_id, setup_signature').limit(1),
-        supabase.from('market_bars').select('id', { count: 'exact', head: true }),
-        supabase.from('market_bars').select('bridge_instrument, timeframe, candle_time_et').order('candle_time_et', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('market_bars').select('id', { count: 'planned', head: true }).eq('user_id', user.id),
+        supabase.from('market_bars').select('bridge_instrument, timeframe, candle_time_et').eq('user_id', user.id).order('candle_time_et', { ascending: false }).limit(1).maybeSingle(),
       ]);
 
       if (setupCountResult.error) errors.push(formatError('Setup count failed', setupCountResult.error));
