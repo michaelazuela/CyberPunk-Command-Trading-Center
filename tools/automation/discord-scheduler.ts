@@ -8,6 +8,7 @@ import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../../src/config/tradeRules';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -105,6 +106,8 @@ function printHelp() {
     '',
     'Options:',
     '  --once premarket|morning|lunch   Run one alert immediately.',
+    '  --session premarket|morning|lunch Alias for --once, for replay/manual tests.',
+    '  --date YYYY-MM-DD                 Trade date for --once/--session.',
     '  --dry-run                       Build the message without posting to Discord.',
     '  --instrument MES|MNQ             Defaults to MES.',
     '  --bridge-instrument "MES 06-26" Defaults to MES 06-26.',
@@ -172,7 +175,23 @@ async function writeState(state: AlertState): Promise<void> {
   await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
-async function fetchBars(config: SchedulerConfig, timeframe: '5m' | '15m' | '60m' | '240m', from: string, to: string): Promise<NinjaBridgeBar[]> {
+async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe, from: string, to: string): Promise<NinjaBridgeBar[]> {
+  const marketCache = loadMarketDataConfig();
+  if (marketCache) {
+    const cached = await fetchCachedMarketBars({
+      instrument: config.bridgeInstrument,
+      timeframe,
+      from,
+      to,
+      config: marketCache,
+      limit: 5000,
+    });
+    if (cached.length) {
+      console.log(`[market-cache] ${timeframe}: loaded ${cached.length} stored bars for ${from} -> ${to}.`);
+      return cached;
+    }
+  }
+
   const response = await getNinjaHistoricalBars({
     instrument: config.bridgeInstrument,
     timeframe,
@@ -183,6 +202,20 @@ async function fetchBars(config: SchedulerConfig, timeframe: '5m' | '15m' | '60m
   });
   if (!response.ok || !response.bars?.length) {
     throw new Error(response.error || `No ${timeframe} bars returned from NinjaTrader for ${from} -> ${to}.`);
+  }
+  if (marketCache) {
+    try {
+      await upsertMarketBars({
+        bars: response.bars,
+        instrument: config.instrument,
+        bridgeInstrument: config.bridgeInstrument,
+        timeframe,
+        config: marketCache,
+      });
+      console.log(`[market-cache] ${timeframe}: repaired cache with ${response.bars.length} bridge bars.`);
+    } catch (error) {
+      console.warn(`[market-cache] ${timeframe}: cache repair skipped:`, error instanceof Error ? error.message : String(error));
+    }
   }
   return response.bars;
 }
@@ -1091,7 +1124,7 @@ async function main() {
     bridgeUrl: argValue('bridge-url') || DEFAULT_CONFIG.bridgeUrl,
   };
   const dryRun = hasArg('dry-run');
-  const once = argValue('once') as AlertJob | null;
+  const once = (argValue('once') || argValue('session')) as AlertJob | null;
   const tradeDate = argValue('date') || getEtTradeDate();
 
   if (once) {

@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "nt:companion": "node tools/ninjatrader-bridge/companion-proxy.mjs",
+    "nt:candle-recorder": "tsx tools/automation/candle-recorder.ts",
+    "nt:backfill": "tsx tools/automation/backfill-market-bars.ts",
     "nt:discord-alerts": "tsx tools/automation/discord-scheduler.ts",
     "test": "tsx src/lib/tradeDecisionPipeline.test.ts && tsx src/lib/setupScanner.test.ts",
     "clean": "rm -rf dist",

@@ -129,6 +129,53 @@ GET http://127.0.0.1:8765/positions?account=206257
 - The bridge returns cached bars from NinjaTrader `BarsRequest`.
 - Cloudflare-hosted pages use Chrome Private Network Access rules when calling a local `127.0.0.1` endpoint from HTTPS. The bridge includes `Access-Control-Allow-Private-Network: true`, but some browser builds can still deny public-site access to loopback services. In that case, use local dev or the local companion server below.
 
+## Durable Candle Cache
+
+NinjaTrader remains the data authority, but Quant Desk also keeps a compact Supabase candle cache for replay, Discord alerts, RAG, and gap repair.
+
+Stored timeframes:
+
+- `5m` execution authority
+- `15m` liquidity/session map
+- `60m` intraday structure
+- `240m` macro context
+
+The cache stores OHLCV candles only. It does not store tick data.
+
+Required local secrets in `.env.local`:
+
+```bash
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="server-only-secret-key"
+DISCORD_RAG_USER_ID="your-supabase-auth-user-id"
+```
+
+Continuous recorder:
+
+```bash
+npm run nt:candle-recorder
+```
+
+Backfill / gap repair:
+
+```bash
+npm run nt:backfill -- --days 1000
+npm run nt:backfill -- --from 2026-05-10 --to 2026-05-15
+```
+
+Backfill uses prior-day 6:00 PM ET through trade-date 5:00 PM ET to cover ETH, premarket, RTH, morning, and lunch context.
+
+The Discord scheduler reads Supabase `market_bars` first. If the requested window is missing, it falls back to NinjaTrader `/historical-bars` and repairs the cache with any returned bars.
+
+The PowerShell launcher starts the candle recorder automatically unless `-NoRecorder` is supplied:
+
+```powershell
+.\tools\automation\start-discord-alerts.ps1
+.\tools\automation\start-discord-alerts.ps1 -NoRecorder
+```
+
+Keep NinjaTrader open while recording or backfilling. If NinjaTrader is closed, the cache cannot receive new market data.
+
 ## First Test Checklist
 
 After compiling the AddOn in NinjaTrader, open these URLs in your browser while NinjaTrader is running:

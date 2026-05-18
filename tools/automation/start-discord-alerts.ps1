@@ -4,7 +4,8 @@ param(
   [string]$Once,
   [string]$BridgeUrl = "http://127.0.0.1:8765",
   [string]$Instrument = "MES",
-  [string]$BridgeInstrument = "MES 06-26"
+  [string]$BridgeInstrument = "MES 06-26",
+  [switch]$NoRecorder
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,6 +33,35 @@ if (-not $DryRun -and [string]::IsNullOrWhiteSpace($env:DISCORD_WEBHOOK_URL)) {
 }
 
 $env:NINJATRADER_BRIDGE_URL = $BridgeUrl
+
+if (-not $NoRecorder) {
+  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if ($null -eq $npmCommand) {
+    $npmCommand = Get-Command npm
+  }
+  $npmCmd = $npmCommand.Source
+  $recorderArgs = @(
+    "run",
+    "nt:candle-recorder",
+    "--",
+    "--instrument",
+    $Instrument,
+    "--bridge-instrument",
+    $BridgeInstrument,
+    "--bridge-url",
+    $BridgeUrl,
+    "--poll-seconds",
+    "30"
+  )
+
+  try {
+    Start-Process -FilePath $npmCmd -ArgumentList $recorderArgs -WorkingDirectory $projectRoot -WindowStyle Hidden
+    Write-Host "Started hidden NinjaTrader candle recorder. Use -NoRecorder to skip it." -ForegroundColor Green
+  } catch {
+    Write-Host "Could not auto-start candle recorder. Alerts will still run." -ForegroundColor Yellow
+    Write-Host $_.Exception.Message -ForegroundColor Yellow
+  }
+}
 
 $argsList = @(
   "run",

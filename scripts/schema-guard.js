@@ -97,6 +97,13 @@ function main() {
     'midnight_open_source',
   ]);
 
+  requireTerms(sql, 'NinjaTrader market candle cache schema', [
+    'market_bars',
+    'candle_time_et',
+    'market_bars_unique_candle',
+    'alter table market_bars enable row level security',
+  ]);
+
   if (hasError) {
     console.error('\n🚨 ERROR: Supabase schema guard failed.');
     process.exit(1);

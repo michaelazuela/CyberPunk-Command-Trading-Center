@@ -40,6 +40,8 @@ The app should use those facts to build conditional paths such as Morning Failed
 Real-time or historical OHLC imported from the NinjaTrader bridge is the highest-authority chart data path.
 
 - Treat NinjaTrader OHLC open, high, low, close, volume, timestamp, session highs/lows, candles, swings, FVG/imbalance facts, liquidity events, displacement candles, session story, and structural levels as factual.
+- Store NinjaTrader OHLC into the durable `market_bars` candle cache when the local recorder/backfill tools are running. The cache is compact OHLCV only for `5m`, `15m`, `60m`, and `240m`; do not store tick data unless explicitly approved.
+- Discord/session automation should read `market_bars` first, then repair gaps from the NinjaTrader bridge when possible.
 - AI screenshot extraction may fill gaps only when the OHLC field is missing.
 - AI must not overwrite, contradict, or replace an existing OHLC-derived field.
 - If AI visual extraction conflicts with OHLC, trust OHLC, downgrade the AI/visual confidence, and require manual confirmation where needed.

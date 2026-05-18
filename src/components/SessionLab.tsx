@@ -28,6 +28,11 @@ import {
   type NinjaBridgePosition,
   type NinjaBridgeSnapshot,
 } from '../lib/ninjaTraderBridge';
+import {
+  fetchMarketBarsFromCache,
+  upsertMarketBarsToCache,
+  type MarketBarTimeframe,
+} from '../lib/marketDataStore';
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -45,6 +50,8 @@ interface NinjaBridgeState {
   bars60m: NinjaBridgeBar[];
   bars240m: NinjaBridgeBar[];
   positions: NinjaBridgePosition[];
+  marketDataSource: 'market_bars' | 'bridge_fallback' | 'mixed' | 'none';
+  marketDataMessage: string | null;
   updatedAt: string | null;
   error: string | null;
 }
@@ -86,6 +93,32 @@ function todayLocalDate(): string {
   const now = new Date();
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function previousCalendarDate(tradeDate: string): string {
+  const date = new Date(`${tradeDate}T12:00:00`);
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function etDateTime(tradeDate: string, time: string): string {
+  return `${tradeDate}T${time}:00`;
+}
+
+function barTimeKey(value: string): string {
+  return value
+    .replace(/Z$/, '')
+    .replace(/[+-]\d{2}:\d{2}$/, '')
+    .slice(0, 19);
+}
+
+function filterBarsByEtWindow(bars: NinjaBridgeBar[], from: string, to: string): NinjaBridgeBar[] {
+  const start = barTimeKey(from);
+  const end = barTimeKey(to);
+  return bars.filter(bar => {
+    const key = barTimeKey(bar.time);
+    return key >= start && key <= end;
+  });
 }
 
 function outcomeToRag(outcome: SessionOutcome): string {
@@ -362,6 +395,8 @@ export default function SessionLab({
     bars60m: [],
     bars240m: [],
     positions: [],
+    marketDataSource: 'none',
+    marketDataMessage: null,
     updatedAt: null,
     error: null,
   });
@@ -406,8 +441,12 @@ export default function SessionLab({
 
   const buildBridgeAnalysisContext = (sessionType: 'morning' | 'lunch') => {
     if (!bridge.connected || !bridge.bars5m.length) return { structuredContext: null, summary: 'NinjaTrader bridge not connected.' };
+    const executionWindow = sessionType === 'morning'
+      ? { from: etDateTime(tradeDate, '09:30'), to: etDateTime(tradeDate, '10:10') }
+      : { from: etDateTime(tradeDate, '11:50'), to: etDateTime(tradeDate, '13:00') };
+    const executionBars5m = filterBarsByEtWindow(bridge.bars5m, executionWindow.from, executionWindow.to);
     const structuredContext = buildNinjaChartContext({
-      bars5m: bridge.bars5m,
+      bars5m: executionBars5m.length ? executionBars5m : bridge.bars5m,
       bars15m: bridge.bars15m,
       bars60m: bridge.bars60m,
       bars240m: bridge.bars240m,
@@ -421,8 +460,9 @@ export default function SessionLab({
     const latest60m = bridge.bars60m[bridge.bars60m.length - 1];
     const latest240m = bridge.bars240m[bridge.bars240m.length - 1];
     const summary = [
-      `Live ${bridgeInstrument} ${sessionType} OHLC available from NinjaTrader.`,
+      `${bridgeInstrument} ${sessionType} OHLC loaded through ${bridge.marketDataSource === 'market_bars' ? 'Supabase market_bars cache' : bridge.marketDataSource === 'mixed' ? 'Supabase market_bars cache with bridge fallback' : 'NinjaTrader bridge fallback'}.`,
       `4H/1H/15M define context and liquidity targets; 5M remains execution authority.`,
+      `${sessionType === 'morning' ? 'Morning' : 'Lunch'} 5M execution window bars: ${(executionBars5m.length ? executionBars5m : bridge.bars5m).length}.`,
       `Latest 4H: ${summarizeBridgeBar(latest240m)}.`,
       `Latest 1H: ${summarizeBridgeBar(latest60m)}.`,
       `Latest 5M: ${summarizeBridgeBar(latest5m)}.`,
@@ -450,29 +490,59 @@ export default function SessionLab({
       const health = await getNinjaBridgeHealth();
       const nextInstrument = bridgeInstrument || health.defaultInstrument || (instrument === 'MNQ' ? 'MNQ 06-26' : 'MES 06-26');
       if (!bridgeInstrument && health.defaultInstrument) setBridgeInstrument(health.defaultInstrument);
+      const priorDate = previousCalendarDate(tradeDate);
+      const contextFrom = etDateTime(priorDate, '18:00');
+      const contextTo = etDateTime(tradeDate, '13:00');
+      const executionFrom = etDateTime(tradeDate, '09:30');
+      const executionTo = etDateTime(tradeDate, '13:00');
+      const fetchBars = async (timeframe: MarketBarTimeframe, from: string, to: string, liveLimit: number) => {
+        const cached = await fetchMarketBarsFromCache({ bridgeInstrument: nextInstrument, timeframe, from, to });
+        if (cached.bars.length) return { bars: cached.bars, source: 'market_bars' as const, error: cached.error };
+        const live = await getNinjaBridgeBars(nextInstrument, timeframe, liveLimit);
+        const liveBars = live.bars || [];
+        if (liveBars.length) {
+          void upsertMarketBarsToCache({
+            instrument,
+            bridgeInstrument: nextInstrument,
+            timeframe,
+            bars: liveBars,
+            metadata: { workflow: 'session_lab_live_fallback' },
+          });
+        }
+        return { bars: liveBars, source: 'bridge_fallback' as const, error: cached.error || live.error };
+      };
+
       const [accounts, snapshot, bars5m, bars15m, bars60m, bars240m, positions] = await Promise.all([
         getNinjaBridgeAccounts(),
         getNinjaBridgeSnapshot(nextInstrument),
-        getNinjaBridgeBars(nextInstrument, '5m', 120),
-        getNinjaBridgeBars(nextInstrument, '15m', 120),
-        getNinjaBridgeBars(nextInstrument, '60m', 120),
-        getNinjaBridgeBars(nextInstrument, '240m', 120),
+        fetchBars('5m', executionFrom, executionTo, 120),
+        fetchBars('15m', contextFrom, contextTo, 120),
+        fetchBars('60m', contextFrom, contextTo, 120),
+        fetchBars('240m', contextFrom, contextTo, 120),
         getNinjaBridgePositions(bridgeAccount),
       ]);
       if (accounts.accounts?.length && !accounts.accounts.includes(bridgeAccount)) {
         setBridgeAccount(accounts.preferred?.find(account => accounts.accounts.includes(account)) || accounts.accounts[0]);
       }
+      const barSources = [bars5m.source, bars15m.source, bars60m.source, bars240m.source];
+      const marketDataSource = barSources.every(source => source === 'market_bars')
+        ? 'market_bars'
+        : barSources.some(source => source === 'market_bars')
+          ? 'mixed'
+          : 'bridge_fallback';
       setBridge({
         connected: true,
         loading: false,
         health,
         accounts: accounts.accounts || [],
         snapshot,
-        bars5m: bars5m.bars || [],
-        bars15m: bars15m.bars || [],
-        bars60m: bars60m.bars || [],
-        bars240m: bars240m.bars || [],
+        bars5m: bars5m.bars,
+        bars15m: bars15m.bars,
+        bars60m: bars60m.bars,
+        bars240m: bars240m.bars,
         positions: positions.positions || [],
+        marketDataSource,
+        marketDataMessage: `market_bars ${bars5m.bars.length}/${bars15m.bars.length}/${bars60m.bars.length}/${bars240m.bars.length} bars for 5M/15M/1H/4H. ${marketDataSource === 'bridge_fallback' ? 'Cache empty; using bridge fallback and repairing cache.' : 'Cache is feeding the analysis workflow.'}`,
         updatedAt: new Date().toISOString(),
         error: null,
       });
@@ -481,11 +551,12 @@ export default function SessionLab({
         ...current,
         connected: false,
         loading: false,
+        marketDataSource: 'none',
         error: describeNinjaBridgeError(error),
         updatedAt: new Date().toISOString(),
       }));
     }
-  }, [bridgeAccount, bridgeInstrument, instrument]);
+  }, [bridgeAccount, bridgeInstrument, instrument, tradeDate]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -1114,6 +1185,12 @@ export default function SessionLab({
             <span className="text-[var(--txt)]">{bridge.health?.ninjaTraderVersion || 'N/A'}</span>
           </div>
           <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+            <span className="text-[var(--txt3)]">Market Store: </span>
+            <span className="text-[var(--txt)]">
+              {bridge.marketDataSource === 'market_bars' ? 'market_bars cache' : bridge.marketDataSource === 'mixed' ? 'cache + bridge' : bridge.marketDataSource === 'bridge_fallback' ? 'bridge fallback' : 'N/A'}
+            </span>
+          </div>
+          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
             <span className="text-[var(--txt3)]">Current / H / L: </span>
             <span className="text-[var(--txt)]">{formatBridgePrice(bridge.snapshot?.currentPrice)} / {formatBridgePrice(bridge.snapshot?.sessionHigh)} / {formatBridgePrice(bridge.snapshot?.sessionLow)}</span>
           </div>
@@ -1122,6 +1199,12 @@ export default function SessionLab({
             <span className="text-[var(--txt)]">{bridge.positions.length ? bridge.positions.map(position => `${position.instrument} ${position.marketPosition} ${position.quantity}`).join(', ') : 'Flat / none returned'}</span>
           </div>
         </div>
+
+        {bridge.marketDataMessage && (
+          <div className="mt-3 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2 text-[10px] text-[var(--txt2)]">
+            Data path: NinjaTrader Bridge to market_bars Supabase cache to session structure / targets to setup scanner to ranking to trade decision pipeline to UI / Discord / RAG. {bridge.marketDataMessage}
+          </div>
+        )}
 
         {bridge.error && (
           <div className="mt-3 border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-2 text-[10px] text-[var(--orange)]">

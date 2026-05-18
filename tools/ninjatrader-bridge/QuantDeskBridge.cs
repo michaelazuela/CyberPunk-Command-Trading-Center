@@ -285,7 +285,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.0-readonly" },
+                { "version", "0.1.1-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
                 { "defaultInstrument", DefaultInstrument },
@@ -535,7 +535,10 @@ namespace NinjaTrader.NinjaScript.AddOns
             DateTimeOffset dto;
             if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dto))
             {
-                localTime = dto.LocalDateTime;
+                // NinjaTrader bar timestamps are compared as chart/session wall-clock times.
+                // Preserve the supplied ET wall-clock value instead of converting it to the
+                // Windows local timezone, otherwise RTH windows shift by three hours on Mike's PC.
+                localTime = dto.DateTime;
                 return true;
             }
 

@@ -19,6 +19,11 @@ import {
   getNinjaHistoricalBars,
   type NinjaBridgeBar,
 } from '../lib/ninjaTraderBridge';
+import {
+  fetchMarketBarsFromCache,
+  upsertMarketBarsToCache,
+  type MarketBarTimeframe,
+} from '../lib/marketDataStore';
 
 type ReplayPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type ReplayOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -72,6 +77,10 @@ function replayOffset(timezone: 'EST' | 'PST'): string {
 
 function replayDateTime(tradeDate: string, time: string, timezone: 'EST' | 'PST'): string {
   return `${tradeDate}T${time}:00${replayOffset(timezone)}`;
+}
+
+function cacheDateTime(tradeDate: string, time: string): string {
+  return `${tradeDate}T${time}:00`;
 }
 
 function previousCalendarDate(tradeDate: string): string {
@@ -903,32 +912,87 @@ export default function ReplayLab({
 
     try {
       const bridgeInstrument = toBridgeInstrument(instrument);
+      const fetchReplayBars = async ({
+        timeframe,
+        fromDate,
+        fromTime,
+        toDate,
+        toTime,
+        timezone,
+      }: {
+        timeframe: MarketBarTimeframe;
+        fromDate: string;
+        fromTime: string;
+        toDate: string;
+        toTime: string;
+        timezone: 'EST' | 'PST';
+      }) => {
+        const cacheFrom = cacheDateTime(fromDate, fromTime);
+        const cacheTo = cacheDateTime(toDate, toTime);
+        const cached = await fetchMarketBarsFromCache({
+          bridgeInstrument,
+          timeframe,
+          from: cacheFrom,
+          to: cacheTo,
+        });
+        if (cached.bars.length) {
+          return { ok: true, bars: cached.bars, source: 'market_bars' as const, error: cached.error };
+        }
+
+        const bridgeBars = await getNinjaHistoricalBars({
+          instrument: bridgeInstrument,
+          timeframe,
+          from: replayDateTime(fromDate, fromTime, timezone),
+          to: replayDateTime(toDate, toTime, timezone),
+        });
+
+        if (bridgeBars.bars?.length) {
+          void upsertMarketBarsToCache({
+            instrument,
+            bridgeInstrument,
+            timeframe,
+            bars: bridgeBars.bars,
+            metadata: { workflow: 'replay_lab_historical_repair' },
+          });
+        }
+
+        return { ...bridgeBars, source: bridgeBars.bars?.length ? 'bridge_fallback' as const : bridgeBars.source };
+      };
+
       if (sessionType === 'morning') {
         const priorDate = previousCalendarDate(tradeDate);
         const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '240m',
-            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
-            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '10:00',
+            timezone: morningReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '60m',
-            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
-            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '10:00',
+            timezone: morningReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '15m',
-            from: replayDateTime(priorDate, '18:00', morningReviewTimezone),
-            to: replayDateTime(tradeDate, '10:00', morningReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '10:00',
+            timezone: morningReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '5m',
-            from: replayDateTime(tradeDate, '09:30', morningReviewTimezone),
-            to: replayDateTime(tradeDate, '10:10', morningReviewTimezone),
+            fromDate: tradeDate,
+            fromTime: '09:30',
+            toDate: tradeDate,
+            toTime: '10:10',
+            timezone: morningReviewTimezone,
           }),
         ]);
 
@@ -942,33 +1006,41 @@ export default function ReplayLab({
         setHistoricalMorning5mBars(bars5m.bars || []);
         if (!morningExecImg) setMorningExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
         if (!morningEthImg && bars15m.bars?.length) setMorningEthImg({ dataUrl: HISTORICAL_DATA_IMAGE });
-        setHistoricalFetchStatus(`Imported Morning historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M execution bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars.`);
+        setHistoricalFetchStatus(`Imported Morning OHLC through market_bars first (${bars5m.source || 'unknown'} 5M): ${bars5m.bars.length} x 5M execution bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars. Bridge fallback repairs cache when needed.`);
       } else {
         const priorDate = previousCalendarDate(tradeDate);
         const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '240m',
-            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
-            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '13:00',
+            timezone: lunchReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '60m',
-            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
-            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '13:00',
+            timezone: lunchReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '15m',
-            from: replayDateTime(priorDate, '18:00', lunchReviewTimezone),
-            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+            fromDate: priorDate,
+            fromTime: '18:00',
+            toDate: tradeDate,
+            toTime: '13:00',
+            timezone: lunchReviewTimezone,
           }),
-          getNinjaHistoricalBars({
-            instrument: bridgeInstrument,
+          fetchReplayBars({
             timeframe: '5m',
-            from: replayDateTime(tradeDate, '11:50', lunchReviewTimezone),
-            to: replayDateTime(tradeDate, '13:00', lunchReviewTimezone),
+            fromDate: tradeDate,
+            fromTime: '11:50',
+            toDate: tradeDate,
+            toTime: '13:00',
+            timezone: lunchReviewTimezone,
           }),
         ]);
 
@@ -983,7 +1055,7 @@ export default function ReplayLab({
         if (!historicalMorning60mBars.length && bars60m.bars?.length) setHistoricalMorning60mBars(bars60m.bars || []);
         if (!historicalMorning15mBars.length && bars15m.bars?.length) setHistoricalMorning15mBars(bars15m.bars || []);
         if (!lunchExecImg) setLunchExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
-        setHistoricalFetchStatus(`Imported Lunch historical OHLC from NinjaTrader: ${bars5m.bars.length} x 5M lunch bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars through 1:00 PM.`);
+        setHistoricalFetchStatus(`Imported Lunch OHLC through market_bars first (${bars5m.source || 'unknown'} 5M): ${bars5m.bars.length} x 5M lunch bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars through 1:00 PM. Bridge fallback repairs cache when needed.`);
       }
     } catch (error) {
       setHistoricalFetchError(error instanceof Error ? error.message : String(error));
@@ -1313,7 +1385,7 @@ export default function ReplayLab({
         <div className="col-span-1 lg:col-span-2">
            <p className="text-[10px] text-[var(--txt3)] flex items-start gap-2 bg-[var(--orange)]/10 border border-[var(--orange)]/20 p-2 text-[var(--orange)]">
              <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
-             Historical replay uses the Trading Date you enter here, not today's upload timestamp. Modifying rules/plans here updates RAG learning for future live analysis.
+             Historical replay uses the Trading Date you enter here, not today's upload timestamp. Replay reads Supabase market_bars first, repairs from NinjaTrader when missing, then sends OHLC facts through the same session structure, target, setup scanner, ranking, and trade decision pipeline used by live Session Lab.
            </p>
         </div>
       </div>

@@ -13,6 +13,7 @@ interface HealthSnapshot {
   pendingEmbeddings: number;
   proofCount: number;
   midnightCount: number;
+  marketBarCount: number;
   latestSetup: any | null;
   latestRag: any | null;
   outcomes: Record<string, number>;
@@ -33,6 +34,7 @@ const emptySnapshot: HealthSnapshot = {
   pendingEmbeddings: 0,
   proofCount: 0,
   midnightCount: 0,
+  marketBarCount: 0,
   latestSetup: null,
   latestRag: null,
   outcomes: {},
@@ -93,6 +95,8 @@ export default function DataHealthPanel() {
         setupSchemaResult,
         ragSchemaResult,
         tradesSchemaResult,
+        marketBarCountResult,
+        latestMarketBarResult,
       ] = await Promise.all([
         supabase.from('setups').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('setups').select('id, created_at, day_type, instrument, image_url, execution_5m_screenshot_url, normalized_plan_json').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
@@ -104,6 +108,8 @@ export default function DataHealthPanel() {
         supabase.from('setups').select('id, normalized_plan_json, trade_plan_json, image_url, execution_5m_screenshot_url, plan_version_id, setup_signature').limit(1),
         supabase.from('trade_embeddings').select('id, trade_result, embedding, required_screenshot_range, plan_version_id, setup_signature, save_receipt_json').limit(1),
         supabase.from('trades').select('id, setup_id, proof_screenshot_url, plan_version_id, setup_signature').limit(1),
+        supabase.from('market_bars').select('id', { count: 'exact', head: true }),
+        supabase.from('market_bars').select('bridge_instrument, timeframe, candle_time_et').order('candle_time_et', { ascending: false }).limit(1).maybeSingle(),
       ]);
 
       if (setupCountResult.error) errors.push(formatError('Setup count failed', setupCountResult.error));
@@ -113,11 +119,13 @@ export default function DataHealthPanel() {
       if (pendingResult.error) errors.push(formatError('Pending embeddings failed', pendingResult.error));
       if (auditRowsResult.error) errors.push(formatError('RAG audit rows failed', auditRowsResult.error));
       if (pendingRowsResult.error) errors.push(formatError('Pending queue rows failed', pendingRowsResult.error));
+      if (marketBarCountResult.error) errors.push(formatError('Market bars count failed', marketBarCountResult.error));
 
       const schemaWarnings = [
         setupSchemaResult.error ? formatError('Schema guard setups', setupSchemaResult.error) : null,
         ragSchemaResult.error ? formatError('Schema guard RAG', ragSchemaResult.error) : null,
         tradesSchemaResult.error ? formatError('Schema guard trades', tradesSchemaResult.error) : null,
+        latestMarketBarResult.error ? formatError('Schema guard market bars', latestMarketBarResult.error) : null,
       ].filter(Boolean) as string[];
 
       const auditRows = auditRowsResult.data || [];
@@ -137,6 +145,7 @@ export default function DataHealthPanel() {
         setupCount: setupCountResult.count || 0,
         ragCount: ragCountResult.count || 0,
         pendingEmbeddings: pendingResult.count || 0,
+        marketBarCount: marketBarCountResult.count || 0,
         proofCount,
         midnightCount,
         latestSetup: latestSetupResult.data || null,
@@ -188,6 +197,7 @@ export default function DataHealthPanel() {
     { label: 'Pending Embeds', value: snapshot.pendingEmbeddings, tone: snapshot.pendingEmbeddings > 0 ? 'orange' : 'green' },
     { label: 'Proof Screens', value: snapshot.proofCount, tone: snapshot.proofCount > 0 ? 'green' : 'muted' },
     { label: 'Midnight Rows', value: snapshot.midnightCount, tone: snapshot.midnightCount > 0 ? 'green' : 'muted' },
+    { label: 'Market Bars', value: snapshot.marketBarCount, tone: snapshot.marketBarCount > 0 ? 'green' : 'muted' },
   ];
 
   const toneClass = (tone: string) => {
