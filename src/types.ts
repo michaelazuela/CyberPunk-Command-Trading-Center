@@ -261,6 +261,8 @@ export interface TargetObjective {
 export interface TargetObjectivePlan {
   selectedT1?: TargetObjective | null;
   selectedT2?: TargetObjective | null;
+  nearestObstacleTarget?: TargetObjective | null;
+  obstacleTarget1?: TargetObjective | null;
   nearestLiquidityTarget?: TargetObjective | null;
   liquidityTarget1?: TargetObjective | null;
   liquidityTarget2?: TargetObjective | null;

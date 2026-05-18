@@ -62,7 +62,7 @@ Use higher timeframe OHLC as a map, not as an execution trigger:
 
 - 4H defines macro context: multi-day swing highs/lows, large displacement legs, broad liquidity pools, and major range boundaries.
 - 1H defines session structure: overnight trend, prior-day interaction, larger FVG/imbalance zones, and whether RTH is returning into or expanding away from ETH structure.
-- 15M defines the primary session liquidity map: Asian/London/NY premarket highs/lows, ETH high/low, displacement/FVG zones, LQ1/LQ2/Runner objectives, and obstacles before fixed-R targets.
+- 15M defines the primary session map: Asian/London/NY premarket highs/lows, ETH high/low, swing/equal-high/equal-low liquidity, displacement/FVG reaction zones, LQ1/LQ2/Runner objectives, and obstacles before fixed-R targets.
 - 5M remains the only execution authority for entry trigger, active swing, stop placement, risk, invalidation, and final trade approval.
 
 NinjaTrader bridge fetches should prefer 4H + 1H + 15M + 5M OHLC when available. The app may use higher timeframe levels to improve setup ranking and target management, but the deterministic pipeline must still require a valid 5M trigger, stop, risk, invalidation, and time-window gate.
@@ -89,9 +89,10 @@ Those facts can improve candidate scoring and target context. Internal scores ma
 15M/session liquidity may be promoted into target-management objectives:
 
 - Fixed app targets remain T1 = 1.5R and T2 = 2.0R from confirmed 5M ENTRY/STOP.
-- LQ1, LQ2, and Runner may come from 15M/session liquidity such as Asian, London, NY premarket, ETH, RTH, displacement, FVG, and major round-number levels.
-- LQ1/LQ2/Runner are management targets, reaction zones, and runner objectives. They do not approve trades or replace fixed-R targets.
-- Discord and UI cards should show this plainly as: App Targets first, then 15M Liquidity Targets, then target-management instruction.
+- LQ1, LQ2, and Runner must prefer real liquidity first: session highs/lows, swing highs/lows, and explicit equal-high/equal-low liquidity pools.
+- Imbalance zones, displacement zones, FVGs, gaps, opens, and round numbers are obstacles or reaction zones. They must not be labeled as liquidity targets.
+- LQ1/LQ2/Runner are management targets and runner objectives. Obstacles/reaction zones are decision areas before or around those targets. None of them approve trades or replace fixed-R targets.
+- Discord and UI cards should show this plainly as: App Targets first, then Obstacle/Reaction Zone if present, then Real 15M/session Liquidity Targets, then target-management instruction.
 
 ## Notes And User-Facing Language
 

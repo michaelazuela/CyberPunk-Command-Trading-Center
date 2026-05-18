@@ -318,7 +318,7 @@ function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
     <div className="mt-2 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--green)]">
-          Liquidity-Aware Target Map
+          Liquidity + Obstacle Target Map
         </div>
         {plan?.targetQuality && (
           <span className={cn(
@@ -341,16 +341,23 @@ function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
         </div>
         {plan?.liquidityTarget1 && (
           <div className="border border-[var(--green)]/20 bg-[var(--bg)] px-2 py-1">
-            <span className="text-[var(--txt)]">15M liquidity target LQ1:</span>{' '}
+            <span className="text-[var(--txt)]">Real 15M liquidity target LQ1:</span>{' '}
             <span className="text-[var(--green)]">{plan.liquidityTarget1.label} {plan.liquidityTarget1.price}</span>
             <span className="ml-2 text-[var(--txt3)]">{plan.liquidityTarget1.rMultiple ?? 'N/A'}R · first reaction/management zone.</span>
           </div>
         )}
         {plan?.liquidityTarget2 && (
           <div className="border border-[var(--green)]/20 bg-[var(--bg)] px-2 py-1">
-            <span className="text-[var(--txt)]">15M liquidity target LQ2:</span>{' '}
+            <span className="text-[var(--txt)]">Real 15M liquidity target LQ2:</span>{' '}
             <span className="text-[var(--green)]">{plan.liquidityTarget2.label} {plan.liquidityTarget2.price}</span>
             <span className="ml-2 text-[var(--txt3)]">{plan.liquidityTarget2.rMultiple ?? 'N/A'}R · second objective if LQ1 accepts.</span>
+          </div>
+        )}
+        {plan?.obstacleTarget1 && (
+          <div className="border border-[var(--orange)]/20 bg-[var(--bg)] px-2 py-1">
+            <span className="text-[var(--txt)]">Obstacle / reaction zone:</span>{' '}
+            <span className="text-[var(--orange)]">{plan.obstacleTarget1.label} {plan.obstacleTarget1.price}</span>
+            <span className="ml-2 text-[var(--txt3)]">{plan.obstacleTarget1.rMultiple ?? 'N/A'}R · imbalance, gap, open, or round-number area. Not liquidity.</span>
           </div>
         )}
         {(plan?.liquidityRunnerTarget || plan?.runnerTarget) && (

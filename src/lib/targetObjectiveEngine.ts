@@ -122,7 +122,7 @@ function strongestRunnerObjective(objectives: TargetObjective[]): TargetObjectiv
     })[0] || null;
 }
 
-function isSessionLiquidityObjective(objective: TargetObjective): boolean {
+function isSessionSource(source: TargetObjective['source']): boolean {
   const sessionSources: TargetObjective['source'][] = [
     'asian',
     'london',
@@ -133,18 +133,29 @@ function isSessionLiquidityObjective(objective: TargetObjective): boolean {
     'rth_morning',
     'lunch',
   ];
-  const liquidityTypes: TargetObjective['type'][] = [
-    'high',
-    'low',
-    'liquidity_pool',
+
+  return sessionSources.includes(source);
+}
+
+function isRealLiquidityObjective(objective: TargetObjective): boolean {
+  if (objective.type === 'liquidity_pool') return true;
+  if (objective.type === 'swing') return true;
+  if ((objective.type === 'high' || objective.type === 'low') && isSessionSource(objective.source)) return true;
+  return false;
+}
+
+function isReactionOrObstacleObjective(objective: TargetObjective): boolean {
+  return [
     'imbalance_zone',
     'imbalance_midpoint',
     'displacement_origin',
     'gap',
     'round_number',
-  ];
-
-  return sessionSources.includes(objective.source) || liquidityTypes.includes(objective.type);
+    'midnight_open',
+    'rth_open',
+    'support',
+    'resistance',
+  ].includes(objective.type);
 }
 
 function uniqueObjectives(objectives: TargetObjective[]): TargetObjective[] {
@@ -163,7 +174,7 @@ function selectLiquidityTargets(objectives: TargetObjective[]): {
   liquidityRunnerTarget: TargetObjective | null;
 } {
   const liquidityObjectives = uniqueObjectives(objectives)
-    .filter(isSessionLiquidityObjective)
+    .filter(isRealLiquidityObjective)
     .sort((a, b) => {
       const distanceA = a.distancePoints ?? Number.POSITIVE_INFINITY;
       const distanceB = b.distancePoints ?? Number.POSITIVE_INFINITY;
@@ -196,6 +207,25 @@ function selectLiquidityTargets(objectives: TargetObjective[]): {
   return { liquidityTarget1, liquidityTarget2, liquidityRunnerTarget };
 }
 
+function selectObstacleTargets(objectives: TargetObjective[]): {
+  obstacleTarget1: TargetObjective | null;
+  nearestObstacleTarget: TargetObjective | null;
+} {
+  const obstacleObjectives = uniqueObjectives(objectives)
+    .filter(isReactionOrObstacleObjective)
+    .sort((a, b) => {
+      const distanceA = a.distancePoints ?? Number.POSITIVE_INFINITY;
+      const distanceB = b.distancePoints ?? Number.POSITIVE_INFINITY;
+      if (distanceA !== distanceB) return distanceA - distanceB;
+      return b.score - a.score;
+    });
+
+  return {
+    obstacleTarget1: obstacleObjectives[0] || null,
+    nearestObstacleTarget: obstacleObjectives[0] || null,
+  };
+}
+
 function targetPathWarning(objectives: TargetObjective[]): string | null {
   const blocker = objectives
     .filter(objective => (objective.rMultiple || 0) > 0 && (objective.rMultiple || 0) < TRADE_RULES.targetModel.t1R)
@@ -207,18 +237,30 @@ function targetPathWarning(objectives: TargetObjective[]): string | null {
 
 function targetManagementInstruction(
   candidate: SetupCandidate,
+  obstacleTarget1: TargetObjective | null,
   liquidityTarget1: TargetObjective | null,
   liquidityTarget2: TargetObjective | null,
   liquidityRunnerTarget: TargetObjective | null,
   warning: string | null
 ): string {
-  if (!liquidityTarget1) {
-    return 'No 15M/session liquidity target is mapped in this direction. Manage from fixed-R levels only until a new structural level forms.';
-  }
-
   const t1 = candidate.target1;
   const t2 = candidate.target2;
   const directionWord = candidate.direction === 'SHORT' ? 'below' : 'above';
+  const obstacleBeforeT1 =
+    obstacleTarget1 &&
+    isPrice(t1) &&
+    (candidate.direction === 'LONG' ? obstacleTarget1.price < t1 : obstacleTarget1.price > t1);
+
+  if (obstacleBeforeT1) {
+    return `An imbalance/reaction zone sits before fixed-R T1. Treat ${obstacleTarget1.price} as the first decision zone; do not call it liquidity.`;
+  }
+
+  if (!liquidityTarget1) {
+    return obstacleTarget1
+      ? `No real session high/low or swing liquidity target is mapped in this direction. Nearest reaction zone is ${obstacleTarget1.price} ${obstacleTarget1.label}; manage from fixed-R levels until real liquidity appears.`
+      : 'No real session high/low or swing liquidity target is mapped in this direction. Manage from fixed-R levels only until a new structural level forms.';
+  }
+
   const lq1BeforeT1 =
     isPrice(t1) &&
     (candidate.direction === 'LONG' ? liquidityTarget1.price < t1 : liquidityTarget1.price > t1);
@@ -235,14 +277,14 @@ function targetManagementInstruction(
   }
 
   if (isPrice(t2) && liquidityTarget1 && (candidate.direction === 'LONG' ? liquidityTarget1.price > t2 : liquidityTarget1.price < t2)) {
-    return `T1/T2 are tactical. Use ${liquidityTarget1.label} as the next 15M liquidity objective only after price clears and holds beyond T2.`;
+    return `T1/T2 are tactical. Use ${liquidityTarget1.label} as the next real 15M/session liquidity objective only after price clears and holds beyond T2.`;
   }
 
   if (liquidityTarget2 || liquidityRunnerTarget) {
     return `Manage in layers: fixed-R T1/T2 first, then LQ1 ${liquidityTarget1.price}${liquidityTarget2 ? ` and LQ2 ${liquidityTarget2.price}` : ''}${liquidityRunnerTarget ? ` as runner toward ${liquidityRunnerTarget.price}` : ''}.`;
   }
 
-  return `Use ${liquidityTarget1.label} at ${liquidityTarget1.price} as the next 15M liquidity reaction zone after fixed-R management.`;
+  return `Use ${liquidityTarget1.label} at ${liquidityTarget1.price} as the next real 15M/session liquidity target after fixed-R management.`;
 }
 
 export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLevels: StructuralLevel[] = []): TargetObjectivePlan | null {
@@ -259,27 +301,33 @@ export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLe
     objectives.filter(objective => objective.price !== selectedT1?.price),
     TRADE_RULES.targetModel.t2R
   );
-  const nearestLiquidityTarget = nearestObjective(objectives);
-  const runnerTarget = strongestRunnerObjective(
-    objectives.filter(objective => objective.price !== selectedT1?.price && objective.price !== selectedT2?.price)
-  );
+  const { obstacleTarget1, nearestObstacleTarget } = selectObstacleTargets(objectives);
   const warning = targetPathWarning(objectives);
   const { liquidityTarget1, liquidityTarget2, liquidityRunnerTarget } = selectLiquidityTargets(objectives);
+  const nearestLiquidityTarget = liquidityTarget1;
+  const runnerTarget = strongestRunnerObjective(
+    [liquidityTarget1, liquidityTarget2, liquidityRunnerTarget]
+      .filter((objective): objective is TargetObjective => Boolean(objective))
+      .filter(objective => objective.price !== selectedT1?.price && objective.price !== selectedT2?.price)
+  );
   const targetInstruction = targetManagementInstruction(
     candidate,
+    obstacleTarget1,
     liquidityTarget1,
     liquidityTarget2,
     liquidityRunnerTarget,
     warning
   );
   const liquidityMapSummary = liquidityTarget1
-    ? `LQ1 ${liquidityTarget1.price} ${liquidityTarget1.label}${liquidityTarget2 ? ` | LQ2 ${liquidityTarget2.price} ${liquidityTarget2.label}` : ''}${liquidityRunnerTarget ? ` | Runner ${liquidityRunnerTarget.price} ${liquidityRunnerTarget.label}` : ''}`
-    : 'No directional 15M/session liquidity targets mapped.';
+    ? `${obstacleTarget1 ? `Obstacle ${obstacleTarget1.price} ${obstacleTarget1.label} | ` : ''}LQ1 ${liquidityTarget1.price} ${liquidityTarget1.label}${liquidityTarget2 ? ` | LQ2 ${liquidityTarget2.price} ${liquidityTarget2.label}` : ''}${liquidityRunnerTarget ? ` | Runner ${liquidityRunnerTarget.price} ${liquidityRunnerTarget.label}` : ''}`
+    : obstacleTarget1
+      ? `Obstacle ${obstacleTarget1.price} ${obstacleTarget1.label} | No directional 15M/session high/low or swing liquidity targets mapped.`
+      : 'No directional 15M/session high/low or swing liquidity targets mapped.';
 
   const notes = [
     'Executable T1/T2 remain fixed 1.5R / 2.0R by app rule.',
     objectives.length
-      ? '15M/session liquidity levels mark reaction zones, nearby obstacles, and runner objectives. They guide target management but do not replace fixed-R execution targets.'
+      ? 'Targets prefer real liquidity first: session highs/lows, swing highs/lows, and explicit equal-high/equal-low pools. Imbalance zones are obstacles or reaction zones, not liquidity.'
       : 'No structural objectives were available from imported ETH/RTH data.',
     targetInstruction,
   ];
@@ -287,6 +335,8 @@ export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLe
   return {
     selectedT1,
     selectedT2,
+    nearestObstacleTarget,
+    obstacleTarget1,
     nearestLiquidityTarget,
     liquidityTarget1,
     liquidityTarget2,
@@ -315,7 +365,9 @@ export function applyTargetObjectivesToCandidates<T extends SetupCandidate>(
       target1Reason: plan.selectedT1
         ? `Nearest reaction/target zone near or beyond 1.5R: ${plan.selectedT1.label} at ${plan.selectedT1.price} (${plan.selectedT1.rMultiple}R).`
         : plan.liquidityTarget1
-          ? `Fixed-R T1 remains tactical; first 15M/session liquidity objective is ${plan.liquidityTarget1.label} at ${plan.liquidityTarget1.price}.`
+          ? `Fixed-R T1 remains tactical; first real 15M/session liquidity objective is ${plan.liquidityTarget1.label} at ${plan.liquidityTarget1.price}.`
+          : plan.obstacleTarget1
+            ? `Fixed-R T1 remains tactical; nearest imbalance/reaction obstacle is ${plan.obstacleTarget1.label} at ${plan.obstacleTarget1.price}.`
           : 'No clear reaction/target zone near or beyond 1.5R; fixed-R T1 remains the execution target.',
       target2Reason: plan.selectedT2
         ? `Nearest reaction/target zone near or beyond 2.0R: ${plan.selectedT2.label} at ${plan.selectedT2.price} (${plan.selectedT2.rMultiple}R).`

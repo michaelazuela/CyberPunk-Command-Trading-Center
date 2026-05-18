@@ -578,6 +578,58 @@ function nearestObjectiveByDirection(
   return filtered[0] || null;
 }
 
+function isSessionSource(source: TargetObjective['source']): boolean {
+  return [
+    'asian',
+    'london',
+    'ny_premarket',
+    'full_context',
+    'prior_eth',
+    'previous_rth',
+    'rth_morning',
+    'lunch',
+  ].includes(source);
+}
+
+function isRealLiquidityObjective(objective?: TargetObjective | null): objective is TargetObjective {
+  if (!objective) return false;
+  if (objective.type === 'liquidity_pool' || objective.type === 'swing') return true;
+  return (objective.type === 'high' || objective.type === 'low') && isSessionSource(objective.source);
+}
+
+function isObstacleObjective(objective?: TargetObjective | null): objective is TargetObjective {
+  if (!objective) return false;
+  return [
+    'imbalance_zone',
+    'imbalance_midpoint',
+    'displacement_origin',
+    'gap',
+    'round_number',
+    'midnight_open',
+    'rth_open',
+    'support',
+    'resistance',
+  ].includes(objective.type);
+}
+
+function nearestLiquidityByDirection(
+  objectives: TargetObjective[],
+  direction: 'LONG' | 'SHORT',
+  entry?: number,
+  exclude?: TargetObjective | null
+): TargetObjective | null {
+  return nearestObjectiveByDirection(objectives.filter(isRealLiquidityObjective), direction, entry, exclude);
+}
+
+function nearestObstacleByDirection(
+  objectives: TargetObjective[],
+  direction: 'LONG' | 'SHORT',
+  entry?: number,
+  exclude?: TargetObjective | null
+): TargetObjective | null {
+  return nearestObjectiveByDirection(objectives.filter(isObstacleObjective), direction, entry, exclude);
+}
+
 function formatLiquidityObjective(label: string, objective?: TargetObjective | null): string {
   if (!objective) return `${label}: N/A`;
   return `${label}: ${objective.price} ${objective.label}`;
@@ -622,17 +674,22 @@ function cleanScenarioLine(candidate: SetupCandidate, objectives: TargetObjectiv
   const nearestLiquidity =
     candidate.targetObjectivePlan?.liquidityTarget1 ||
     candidate.targetObjectivePlan?.nearestLiquidityTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry);
+    nearestLiquidityByDirection(sourceObjectives, direction, candidate.entry);
+  const obstacle =
+    candidate.targetObjectivePlan?.obstacleTarget1 ||
+    candidate.targetObjectivePlan?.nearestObstacleTarget ||
+    nearestObstacleByDirection(sourceObjectives, direction, candidate.entry);
   const runner =
     candidate.targetObjectivePlan?.liquidityRunnerTarget ||
     candidate.targetObjectivePlan?.runnerTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
+    nearestLiquidityByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
   const trigger = compactSentence(candidate.requiredTrigger, 120) || 'Wait for confirmation';
 
   return [
     `**${direction} - ${compactSetupName(candidate)}**`,
     `Trigger: ${trigger}`,
     `Entry \`${moneyLine(candidate.entry)}\` | Stop \`${moneyLine(stop)}\` | T1 \`${moneyLine(targets.target1)}\` | T2 \`${moneyLine(targets.target2)}\``,
+    `Obstacle/reaction: \`${compactObjective(obstacle)}\``,
     `15M liquidity: \`${compactObjective(nearestLiquidity)}\`${runner && !sameObjective(runner, nearestLiquidity) ? ` | Runner: \`${compactObjective(runner)}\`` : ''}`,
   ].join('\n');
 }
@@ -673,6 +730,9 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
   const nearestLiquidityTarget =
     candidate.targetObjectivePlan?.liquidityTarget1 ||
     candidate.targetObjectivePlan?.nearestLiquidityTarget;
+  const nearestObstacleTarget =
+    candidate.targetObjectivePlan?.obstacleTarget1 ||
+    candidate.targetObjectivePlan?.nearestObstacleTarget;
   const secondLiquidityTarget = candidate.targetObjectivePlan?.liquidityTarget2;
   const runnerTarget =
     candidate.targetObjectivePlan?.liquidityRunnerTarget ||
@@ -686,17 +746,21 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
   const nearestDirectionalTarget =
     nearestLiquidityTarget && isValidObjectiveForCandidate(nearestLiquidityTarget)
       ? nearestLiquidityTarget
-      : nearestObjectiveByDirection(sourceObjectives, candidate.direction === 'SHORT' ? 'SHORT' : 'LONG', candidate.entry);
+      : nearestLiquidityByDirection(sourceObjectives, candidate.direction === 'SHORT' ? 'SHORT' : 'LONG', candidate.entry);
+  const nearestDirectionalObstacle =
+    nearestObstacleTarget && isValidObjectiveForCandidate(nearestObstacleTarget)
+      ? nearestObstacleTarget
+      : nearestObstacleByDirection(sourceObjectives, candidate.direction === 'SHORT' ? 'SHORT' : 'LONG', candidate.entry);
   const runnerDirectionalTarget =
     runnerTarget && isValidObjectiveForCandidate(runnerTarget)
       ? runnerTarget
-      : nearestObjectiveByDirection(
+      : nearestLiquidityByDirection(
           sourceObjectives,
           candidate.direction === 'SHORT' ? 'SHORT' : 'LONG',
           candidate.entry,
           nearestDirectionalTarget
         );
-  const opposingTarget = nearestObjectiveByDirection(
+  const opposingTarget = nearestLiquidityByDirection(
     sourceObjectives,
     candidate.direction === 'SHORT' ? 'LONG' : 'SHORT',
     candidate.entry
@@ -715,6 +779,7 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
       `T2: ${moneyLine(fixedTargets.target2)}`,
       '',
       'Liquidity Map:',
+      formatLiquidityObjective('Nearest obstacle / reaction zone', nearestDirectionalObstacle),
       `Nearest ${directionLabels.primary} liquidity: N/A`,
       `${directionLabels.runner}: N/A`,
       `Nearest ${directionLabels.opposing} liquidity: ${opposingTarget ? `${opposingTarget.price} ${opposingTarget.label}` : 'N/A'}`,
@@ -733,8 +798,9 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
     `T2: ${moneyLine(fixedTargets.target2)}`,
     '',
     'Liquidity Map:',
-    formatLiquidityObjective('LQ1 15M/session liquidity', nearestDirectionalTarget),
-    formatLiquidityObjective('LQ2 15M/session liquidity', secondLiquidityTarget || runnerDirectionalTarget),
+    formatLiquidityObjective('Nearest obstacle / reaction zone', nearestDirectionalObstacle),
+    formatLiquidityObjective('LQ1 real 15M/session liquidity', nearestDirectionalTarget),
+    formatLiquidityObjective('LQ2 real 15M/session liquidity', secondLiquidityTarget || runnerDirectionalTarget),
     formatLiquidityObjective(`Nearest ${directionLabels.opposing} liquidity`, opposingTarget),
     '',
     'Target Quality:',
@@ -845,14 +911,18 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
   const nearestLiquidity =
     candidate.targetObjectivePlan?.liquidityTarget1 ||
     candidate.targetObjectivePlan?.nearestLiquidityTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry);
+    nearestLiquidityByDirection(sourceObjectives, direction, candidate.entry);
+  const obstacle =
+    candidate.targetObjectivePlan?.obstacleTarget1 ||
+    candidate.targetObjectivePlan?.nearestObstacleTarget ||
+    nearestObstacleByDirection(sourceObjectives, direction, candidate.entry);
   const secondLiquidity =
     candidate.targetObjectivePlan?.liquidityTarget2 ||
-    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
+    nearestLiquidityByDirection(sourceObjectives, direction, candidate.entry, nearestLiquidity);
   const runner =
     candidate.targetObjectivePlan?.liquidityRunnerTarget ||
     candidate.targetObjectivePlan?.runnerTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, candidate.entry, secondLiquidity || nearestLiquidity);
+    nearestLiquidityByDirection(sourceObjectives, direction, candidate.entry, secondLiquidity || nearestLiquidity);
   const rawTargetInstruction = candidate.targetObjectivePlan?.targetManagementInstruction || '';
   const targetInstruction = rawTargetInstruction.startsWith('No 15M/session')
     ? null
@@ -866,9 +936,10 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
     `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
     `Plan: Entry ${moneyLine(candidate.entry)} | Stop ${moneyLine(stop)} | Risk ${moneyLine(stop ? TRADE_RULES.fixedRiskPoints : null)}`,
     `Targets: T1 ${moneyLine(targets.target1)} | T2 ${moneyLine(targets.target2)}`,
-    `Liquidity: ${compactObjective(nearestLiquidity)}`,
-    uniqueLq2 ? `Next: ${compactObjective(uniqueLq2)}` : null,
-    uniqueRunner ? `Runner: ${compactObjective(uniqueRunner)}` : null,
+    `Obstacle: ${compactObjective(obstacle)}`,
+    `Real liquidity: ${compactObjective(nearestLiquidity)}`,
+    uniqueLq2 ? `Next liquidity: ${compactObjective(uniqueLq2)}` : null,
+    uniqueRunner ? `Runner liquidity: ${compactObjective(uniqueRunner)}` : null,
     targetInstruction ? `Note: ${targetInstruction}` : null,
   ].filter(Boolean).join('\n');
 }
@@ -919,15 +990,20 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
   const nearest =
     first.targetObjectivePlan?.liquidityTarget1 ||
     first.targetObjectivePlan?.nearestLiquidityTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, first.entry);
+    nearestLiquidityByDirection(sourceObjectives, direction, first.entry);
+  const obstacle =
+    first.targetObjectivePlan?.obstacleTarget1 ||
+    first.targetObjectivePlan?.nearestObstacleTarget ||
+    nearestObstacleByDirection(sourceObjectives, direction, first.entry);
   const runner =
     first.targetObjectivePlan?.liquidityRunnerTarget ||
     first.targetObjectivePlan?.runnerTarget ||
-    nearestObjectiveByDirection(sourceObjectives, direction, first.entry, nearest);
+    nearestLiquidityByDirection(sourceObjectives, direction, first.entry, nearest);
   return [
     `T1/T2: app-computed from confirmed ENTRY/STOP.`,
-    `Nearest liquidity: ${compactObjective(nearest)}`,
-    runner && !sameObjective(runner, nearest) ? `Runner: ${compactObjective(runner)}` : null,
+    `Nearest obstacle/reaction: ${compactObjective(obstacle)}`,
+    `Nearest real liquidity: ${compactObjective(nearest)}`,
+    runner && !sameObjective(runner, nearest) ? `Runner liquidity: ${compactObjective(runner)}` : null,
   ].filter(Boolean).join('\n');
 }
 

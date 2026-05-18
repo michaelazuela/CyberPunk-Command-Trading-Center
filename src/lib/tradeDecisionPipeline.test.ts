@@ -9,12 +9,15 @@ import {
   ExecutionStatus,
   NoTradeReason,
   RiskStatus,
+  SetupCandidateStatus,
   SetupType,
+  StructuralLevel,
   TradeDecisionStatus,
   TradeDecisionStep,
 } from '../types';
 import { runTradeDecisionPipeline, TradeDecisionPipelineInput } from './tradeDecisionPipeline';
 import { buildChartContextConsensus } from './chartContextConsensus';
+import { buildTargetObjectivePlan } from './targetObjectiveEngine';
 
 function baseResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
   return {
@@ -1113,6 +1116,65 @@ const tests: Array<[string, () => void]> = [
     assert.equal(consensus.context?.requiresManualConfirmation, true);
     assert.equal(consensus.context?.entryStopConfidence, 'Low');
     assert.ok(consensus.context?.extractionWarnings?.manualEntryStopRequired);
+  }],
+
+  ['33. Target engine treats imbalances as obstacles, not liquidity', () => {
+    const levels: StructuralLevel[] = [
+      {
+        label: 'London Bearish Displacement Imbalance Top',
+        price: 7446.5,
+        type: 'imbalance_zone',
+        source: 'london',
+        directionRelevance: 'LONG',
+        confidence: 'High',
+        strengthScore: 95,
+      },
+      {
+        label: 'London Session High',
+        price: 7459,
+        type: 'high',
+        source: 'london',
+        directionRelevance: 'LONG',
+        confidence: 'High',
+        strengthScore: 80,
+      },
+      {
+        label: 'Equal High Liquidity Pool',
+        price: 7462,
+        type: 'liquidity_pool',
+        source: 'ninjatrader',
+        directionRelevance: 'LONG',
+        confidence: 'Medium',
+        strengthScore: 70,
+      },
+    ];
+
+    const plan = buildTargetObjectivePlan({
+      setupType: SetupType.MorningReclaimLong,
+      direction: 'LONG',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      confidence: 'High',
+      priority: 90,
+      evidence: [],
+      missingEvidence: [],
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: null,
+      requiredTrigger: '5M reclaim holds.',
+      nextAction: 'Wait for reclaim.',
+      reducedRiskPlan: null,
+      entry: 7445.25,
+      stop: 7440.25,
+      target1: 7452.75,
+      target2: 7455.25,
+      invalidation: 'Reclaim fails.',
+      riskPoints: 5,
+    }, levels);
+
+    assert.ok(plan);
+    assert.equal(plan.obstacleTarget1?.label, 'London Bearish Displacement Imbalance Top');
+    assert.equal(plan.liquidityTarget1?.label, 'London Session High');
+    assert.notEqual(plan.nearestLiquidityTarget?.label, 'London Bearish Displacement Imbalance Top');
+    assert.ok(plan.targetManagementInstruction?.includes('imbalance') || plan.notes.join(' ').includes('Imbalance'));
   }],
 ];
 
