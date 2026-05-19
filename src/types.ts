@@ -274,7 +274,7 @@ export interface TargetObjectivePlan {
   targetQuality: 'clear_path' | 'target_blocked' | 'no_liquidity_map';
   objectives: TargetObjective[];
   notes: string[];
-  targetModel: 'fixed_r_with_structural_context';
+  targetModel: 'actual_r_with_structural_context' | 'fixed_r_with_structural_context';
 }
 
 export type ReadConfidence = 'High' | 'Medium' | 'Low' | 'Unreadable';

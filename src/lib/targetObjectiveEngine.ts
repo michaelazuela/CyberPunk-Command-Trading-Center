@@ -232,7 +232,7 @@ function targetPathWarning(objectives: TargetObjective[]): string | null {
     .sort((a, b) => b.score - a.score)[0];
 
   if (!blocker || blocker.score < 70) return null;
-  return `${blocker.label} at ${blocker.price} sits before 1.5R. Expect a possible pause/reaction before fixed-R T1.`;
+  return `${blocker.label} at ${blocker.price} sits before 1.5R. Expect a possible pause/reaction before tactical T1.`;
 }
 
 function targetManagementInstruction(
@@ -252,13 +252,13 @@ function targetManagementInstruction(
     (candidate.direction === 'LONG' ? obstacleTarget1.price < t1 : obstacleTarget1.price > t1);
 
   if (obstacleBeforeT1) {
-    return `An imbalance/reaction zone sits before fixed-R T1. Treat ${obstacleTarget1.price} as the first decision zone; do not call it liquidity.`;
+    return `An imbalance/reaction zone sits before tactical T1. Treat ${obstacleTarget1.price} as the first decision zone; do not call it liquidity.`;
   }
 
   if (!liquidityTarget1) {
     return obstacleTarget1
-      ? `No real session high/low or swing liquidity target is mapped in this direction. Nearest reaction zone is ${obstacleTarget1.price} ${obstacleTarget1.label}; manage from fixed-R levels until real liquidity appears.`
-      : 'No real session high/low or swing liquidity target is mapped in this direction. Manage from fixed-R levels only until a new structural level forms.';
+      ? `No real session high/low or swing liquidity target is mapped in this direction. Nearest reaction zone is ${obstacleTarget1.price} ${obstacleTarget1.label}; manage from actual-risk tactical levels until real liquidity appears.`
+      : 'No real session high/low or swing liquidity target is mapped in this direction. Manage from actual-risk tactical levels only until a new structural level forms.';
   }
 
   const lq1BeforeT1 =
@@ -269,11 +269,11 @@ function targetManagementInstruction(
     Math.abs(liquidityTarget1.price - t1) <= TRADE_RULES.targetModel.tickSize * 4;
 
   if (warning || lq1BeforeT1) {
-    return `Liquidity sits before fixed-R T1. Treat ${liquidityTarget1.price} as the first decision zone; scale, tighten, or wait for a clean hold before expecting T1/T2.`;
+    return `Liquidity sits before tactical T1. Treat ${liquidityTarget1.price} as the first decision zone; scale, tighten, or wait for a clean hold before expecting T1/T2.`;
   }
 
   if (lq1NearT1) {
-    return `Fixed-R T1 aligns with ${liquidityTarget1.label}. Take T1 seriously there; hold runners only if price accepts ${directionWord} that level.`;
+    return `Tactical T1 aligns with ${liquidityTarget1.label}. Take T1 seriously there; hold runners only if price accepts ${directionWord} that level.`;
   }
 
   if (isPrice(t2) && liquidityTarget1 && (candidate.direction === 'LONG' ? liquidityTarget1.price > t2 : liquidityTarget1.price < t2)) {
@@ -281,10 +281,10 @@ function targetManagementInstruction(
   }
 
   if (liquidityTarget2 || liquidityRunnerTarget) {
-    return `Manage in layers: fixed-R T1/T2 first, then LQ1 ${liquidityTarget1.price}${liquidityTarget2 ? ` and LQ2 ${liquidityTarget2.price}` : ''}${liquidityRunnerTarget ? ` as runner toward ${liquidityRunnerTarget.price}` : ''}.`;
+    return `Manage in layers: tactical T1/T2 first, then LQ1 ${liquidityTarget1.price}${liquidityTarget2 ? ` and LQ2 ${liquidityTarget2.price}` : ''}${liquidityRunnerTarget ? ` as runner toward ${liquidityRunnerTarget.price}` : ''}.`;
   }
 
-  return `Use ${liquidityTarget1.label} at ${liquidityTarget1.price} as the next real 15M/session liquidity target after fixed-R management.`;
+  return `Use ${liquidityTarget1.label} at ${liquidityTarget1.price} as the next real 15M/session liquidity target after tactical risk management.`;
 }
 
 export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLevels: StructuralLevel[] = []): TargetObjectivePlan | null {
@@ -325,7 +325,7 @@ export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLe
       : 'No directional 15M/session high/low or swing liquidity targets mapped.';
 
   const notes = [
-    'Executable T1/T2 remain fixed 1.5R / 2.0R by app rule.',
+    'Executable T1/T2 remain 1.5R / 2.0R from actual entry-to-structure-stop risk by app rule.',
     objectives.length
       ? 'Targets prefer real liquidity first: session highs/lows, swing highs/lows, and explicit equal-high/equal-low pools. Imbalance zones are obstacles or reaction zones, not liquidity.'
       : 'No structural objectives were available from imported ETH/RTH data.',
@@ -348,7 +348,7 @@ export function buildTargetObjectivePlan(candidate: SetupCandidate, structuralLe
     targetQuality: !objectives.length ? 'no_liquidity_map' : warning ? 'target_blocked' : 'clear_path',
     objectives: objectives.slice(0, 8),
     notes,
-    targetModel: 'fixed_r_with_structural_context',
+    targetModel: 'actual_r_with_structural_context',
   };
 }
 
@@ -365,15 +365,15 @@ export function applyTargetObjectivesToCandidates<T extends SetupCandidate>(
       target1Reason: plan.selectedT1
         ? `Nearest reaction/target zone near or beyond 1.5R: ${plan.selectedT1.label} at ${plan.selectedT1.price} (${plan.selectedT1.rMultiple}R).`
         : plan.liquidityTarget1
-          ? `Fixed-R T1 remains tactical; first real 15M/session liquidity objective is ${plan.liquidityTarget1.label} at ${plan.liquidityTarget1.price}.`
+          ? `Tactical T1 remains risk-based; first real 15M/session liquidity objective is ${plan.liquidityTarget1.label} at ${plan.liquidityTarget1.price}.`
           : plan.obstacleTarget1
-            ? `Fixed-R T1 remains tactical; nearest imbalance/reaction obstacle is ${plan.obstacleTarget1.label} at ${plan.obstacleTarget1.price}.`
-          : 'No clear reaction/target zone near or beyond 1.5R; fixed-R T1 remains the execution target.',
+            ? `Tactical T1 remains risk-based; nearest imbalance/reaction obstacle is ${plan.obstacleTarget1.label} at ${plan.obstacleTarget1.price}.`
+          : 'No clear reaction/target zone near or beyond 1.5R; tactical T1 remains the execution target.',
       target2Reason: plan.selectedT2
         ? `Nearest reaction/target zone near or beyond 2.0R: ${plan.selectedT2.label} at ${plan.selectedT2.price} (${plan.selectedT2.rMultiple}R).`
         : plan.liquidityRunnerTarget || plan.runnerTarget
           ? `No clean 2R alignment; runner objective to watch is ${(plan.liquidityRunnerTarget || plan.runnerTarget)?.label} at ${(plan.liquidityRunnerTarget || plan.runnerTarget)?.price} (${(plan.liquidityRunnerTarget || plan.runnerTarget)?.rMultiple}R).`
-          : 'No clear reaction/target zone near or beyond 2.0R; fixed-R T2 remains the execution target.',
+          : 'No clear reaction/target zone near or beyond 2.0R; tactical T2 remains the execution target.',
     };
   });
 }

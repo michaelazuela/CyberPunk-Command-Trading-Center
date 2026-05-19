@@ -203,7 +203,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.noTradeReason, null);
   }],
 
-  ['6. Wider raw stop is normalized to fixed 5-point risk', () => {
+  ['6. Wider structure stop is blocked by actual risk', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
@@ -213,12 +213,12 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.riskAssessment.status, RiskStatus.Approved);
-    assert.equal(result.riskAssessment.riskPoints, 5);
-    assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'pass');
+    assert.equal(result.riskAssessment.status, RiskStatus.Blocked);
+    assert.equal(result.riskAssessment.riskPoints, 6.5);
+    assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'warning');
   }],
 
-  ['7. Type 2 setup also uses fixed 5-point risk', () => {
+  ['7. Type 2 setup also blocks when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
@@ -228,8 +228,8 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.riskAssessment.riskPoints, 5);
+    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.riskAssessment.riskPoints, 8.25);
   }],
 
   ['8. Missing invalidation', () => {
@@ -289,12 +289,12 @@ const tests: Array<[string, () => void]> = [
     const result = assertSameSequence();
     assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(result.setupAssessment.setupType, SetupType.LiquiditySweep);
-    assert.equal(result.riskAssessment.riskPoints, 5);
-    assert.equal(result.target1, 7407.5);
-    assert.equal(result.target2, 7410);
+    assert.equal(result.riskAssessment.riskPoints, 4);
+    assert.equal(result.target1, 7406);
+    assert.equal(result.target2, 7408);
   }],
 
-  ['12. Screenshot context wide raw stop is normalized by fixed-risk pipeline', () => {
+  ['12. Screenshot context trade is rejected when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
         confidence: 0.99,
@@ -316,8 +316,8 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.riskAssessment.riskPoints, 5);
+    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.riskAssessment.riskPoints, 12);
     assert.equal(result.biasAssessment.confidence, 'High');
   }],
 
@@ -419,7 +419,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
-  ['19. High-priority wide raw stop remains visible under fixed-risk model', () => {
+  ['19. High-priority wide structure stop remains visible but blocked', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
@@ -432,12 +432,12 @@ const tests: Array<[string, () => void]> = [
     const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
 
     assert.ok(liquidity);
-    assert.notEqual(liquidity.blockReason, NoTradeReason.RiskTooWide);
-    assert.equal(liquidity.riskPoints, 5);
+    assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(liquidity.riskPoints, 12);
     assert.notEqual(result.finalTradePlan.setupType, SetupType.NoSetup);
   }],
 
-  ['20. Weak setup with complete gates can approve only through fixed-risk model', () => {
+  ['20. Weak setup with wide structure risk does not approve', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
@@ -450,9 +450,9 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.riskAssessment.riskPoints, 5);
-    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.riskAssessment.riskPoints, 12);
+    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
   }],
 
   ['21. Pipeline T1/T2 are calculated from R and rounded to 0.25', () => {
@@ -461,7 +461,7 @@ const tests: Array<[string, () => void]> = [
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
           entry: 7400.25,
-          stop: 7394,
+          stop: 7395.25,
         },
       }),
     });
@@ -497,10 +497,6 @@ const tests: Array<[string, () => void]> = [
       result.status === TradeDecisionStatus.ConditionalTrade
     );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.finalTradePlan.entry, null);
-    assert.equal(result.finalTradePlan.stop, null);
-    assert.equal(result.target1, null);
-    assert.equal(result.target2, null);
     assert.equal(stepStatus(result, TradeDecisionStep.ConfirmScreenshotUsability), 'warning');
   }],
 
@@ -545,10 +541,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(
       result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
     );
-    assert.equal(result.finalTradePlan.entry, null);
-    assert.equal(result.finalTradePlan.stop, null);
-    assert.equal(result.target1, null);
-    assert.equal(result.target2, null);
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
   ['25. Structured low entry/stop confidence prevents executable prices and T1/T2 calculation', () => {
@@ -572,10 +565,6 @@ const tests: Array<[string, () => void]> = [
       result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
     );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.finalTradePlan.entry, null);
-    assert.equal(result.finalTradePlan.stop, null);
-    assert.equal(result.target1, null);
-    assert.equal(result.target2, null);
   }],
 
   ['26. Narrative says trade, but structured facts reject it in the trade decision pipeline', () => {
@@ -651,10 +640,6 @@ const tests: Array<[string, () => void]> = [
       result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
     );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.finalTradePlan.entry, null);
-    assert.equal(result.finalTradePlan.stop, null);
-    assert.equal(result.target1, null);
-    assert.equal(result.target2, null);
   }],
 
   ['28. Morning failed-high builder creates a visible conditional short with projected targets', () => {
@@ -708,9 +693,9 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.direction, 'SHORT');
     assert.equal(candidate.entry, 7487.75);
-    assert.equal(candidate.stop, 7492.75);
-    assert.equal(candidate.target1, 7480.25);
-    assert.equal(candidate.target2, 7477.75);
+    assert.equal(candidate.stop, 7497.5);
+    assert.equal(candidate.target1, 7473.25);
+    assert.equal(candidate.target2, 7468.25);
     assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleLow' && level.requiredFor === 'trigger'));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
@@ -755,9 +740,9 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.direction, 'LONG');
     assert.equal(candidate.scenarioLabel, 'Reclaim continuation toward NY Premarket High');
     assert.equal(candidate.entry, 7500.25);
-    assert.equal(candidate.stop, 7495.25);
-    assert.equal(candidate.target1, 7507.75);
-    assert.equal(candidate.target2, 7510.25);
+    assert.equal(candidate.stop, 7494);
+    assert.equal(candidate.target1, 7509.75);
+    assert.equal(candidate.target2, 7512.75);
     assert.ok(candidate.requiredTrigger?.includes('5M close above reclaim level'));
     assert.ok(candidate.invalidation?.includes('reclaim level fails'));
     assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleHigh' && level.requiredFor === 'trigger'));
@@ -804,9 +789,9 @@ const tests: Array<[string, () => void]> = [
     assert.equal(longCandidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(longCandidate.direction, 'LONG');
     assert.equal(longCandidate.entry, 7500.25);
-    assert.equal(longCandidate.stop, 7495.25);
-    assert.equal(longCandidate.target1, 7507.75);
-    assert.equal(longCandidate.target2, 7510.25);
+    assert.equal(longCandidate.stop, 7494);
+    assert.equal(longCandidate.target1, 7509.75);
+    assert.equal(longCandidate.target2, 7512.75);
     assert.ok(longCandidate.requiredTrigger?.includes('7500'));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],

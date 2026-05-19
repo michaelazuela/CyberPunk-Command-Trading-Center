@@ -164,8 +164,8 @@ function riskGate(candidate: Pick<AppRuleCandidate, 'decision' | 'entry' | 'stop
   if (candidate.decision !== 'LONG' && candidate.decision !== 'SHORT') return 'No directional trade decision.';
   if (!isValidPrice(candidate.entry) || !isValidPrice(candidate.stop)) return 'Missing measurable ENTRY or STOP.';
   const risk = calculateRisk(candidate.entry, candidate.stop);
-  if (risk !== SYSTEM_RULES.FIXED_STOP_RISK_POINTS) {
-    return `Risk must be exactly ${SYSTEM_RULES.FIXED_STOP_RISK_POINTS} points. Current app risk is ${risk.toFixed(2)} points.`;
+  if (risk > SYSTEM_RULES.FIXED_STOP_RISK_POINTS) {
+    return `Actual structure risk must be ${SYSTEM_RULES.FIXED_STOP_RISK_POINTS} points or less. Current app risk is ${risk.toFixed(2)} points.`;
   }
   return null;
 }

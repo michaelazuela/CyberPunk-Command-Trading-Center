@@ -335,7 +335,7 @@ function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
       </div>
       <div className="grid gap-1 text-[10px] text-[var(--txt2)]">
         <div className="border border-[var(--b1)] bg-[var(--bg)] px-2 py-1">
-          <span className="text-[var(--txt)]">Fixed-R scale targets:</span>{' '}
+          <span className="text-[var(--txt)]">Actual-risk scale targets:</span>{' '}
           T1 {tacticalT1 ?? 'TBD'} · T2 {tacticalT2 ?? 'TBD'}.
           <span className="ml-1 text-[var(--txt3)]">These stay deterministic for discipline.</span>
         </div>

@@ -1,6 +1,6 @@
 import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SessionStory, SetupCandidate, TradeDecisionStatus } from '../types';
 import { SYSTEM_RULES } from '../constants';
-import { fixedRiskStopForDirection, fixedRiskTargetsForDirection } from '../config/tradeRules';
+import { targetsFromEntryStop } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
@@ -156,10 +156,10 @@ export function calculateTargets(decision: TradeDecision, entry: number | null, 
   if (decision === "NO TRADE" || !isValidPrice(entry) || !isValidPrice(stop)) {
     return { t1: null, t2: null };
   }
-  const fixedTargets = fixedRiskTargetsForDirection(decision, entry);
+  const actualTargets = targetsFromEntryStop(decision, entry, stop);
   return {
-    t1: fixedTargets.target1,
-    t2: fixedTargets.target2
+    t1: actualTargets.target1,
+    t2: actualTargets.target2
   };
 }
 
@@ -444,30 +444,29 @@ export function normalizeTradePlan(
   }
 
   const isExecutable = (candidate: Candidate) => {
-    const fixedStop = fixedRiskStopForDirection(candidate.decision, candidate.entry);
-    const targets = calculateTargets(candidate.decision, candidate.entry, fixedStop, instrument);
-    const risk = (isValidPrice(candidate.entry) && isValidPrice(fixedStop))
-      ? calculateRisk(candidate.entry, fixedStop)
+    const structureStop = candidate.stop;
+    const targets = calculateTargets(candidate.decision, candidate.entry, structureStop, instrument);
+    const risk = (isValidPrice(candidate.entry) && isValidPrice(structureStop))
+      ? calculateRisk(candidate.entry, structureStop)
       : null;
     return (candidate.decision === "LONG" || candidate.decision === "SHORT") &&
       isValidPrice(candidate.entry) &&
-      isValidPrice(fixedStop) &&
+      isValidPrice(structureStop) &&
       risk !== null &&
-      risk === SYSTEM_RULES.FIXED_STOP_RISK_POINTS &&
+      risk <= SYSTEM_RULES.FIXED_STOP_RISK_POINTS &&
       isValidPrice(targets.t1) &&
       isValidPrice(targets.t2);
   };
 
   const scoreCandidate = (candidate: Candidate) => {
     if (!isExecutable(candidate)) return -100;
-    const fixedStop = fixedRiskStopForDirection(candidate.decision, candidate.entry);
-    const risk = calculateRisk(candidate.entry as number, fixedStop as number);
+    const risk = calculateRisk(candidate.entry as number, candidate.stop as number);
     const sourceScore =
       candidate.source === "app_rule_engine" ? 40 :
       candidate.source === "current_rule_analysis" ? 30 :
       candidate.source === "manual" ? 25 :
       0;
-    const riskScore = risk === SYSTEM_RULES.FIXED_STOP_RISK_POINTS ? 10 : -12;
+    const riskScore = risk <= SYSTEM_RULES.FIXED_STOP_RISK_POINTS ? 10 : -12;
     const rankScore = candidate.rank ? Math.max(0, 8 - candidate.rank) : 0;
     return sourceScore +
       confidenceScore(candidate.confidence) +
@@ -508,7 +507,7 @@ export function normalizeTradePlan(
   }
 
   const { decision, entry, source, confidence, whyThisPlan, invalidation, entryTrigger } = executableCandidate;
-  const stop = fixedRiskStopForDirection(decision, entry);
+  const stop = executableCandidate.stop;
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
   const pipelineAllowsExecution =
@@ -525,10 +524,10 @@ export function normalizeTradePlan(
     consistencyWarnings.push("Advisory candidate fields were ignored for execution. The executable plan was selected by the app-owned rule engine.");
   }
   if (isValidPrice(executableCandidate.rawT1) && isValidPrice(targets.t1) && Math.abs(executableCandidate.rawT1 - targets.t1) >= 0.25) {
-    consistencyWarnings.push(`Raw advisory T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using fixed 1.5R.`);
+    consistencyWarnings.push(`Raw advisory T1 ${executableCandidate.rawT1} was replaced with app-computed T1 ${targets.t1} using 1.5R from actual structure risk.`);
   }
   if (isValidPrice(executableCandidate.rawT2) && isValidPrice(targets.t2) && Math.abs(executableCandidate.rawT2 - targets.t2) >= 0.25) {
-    consistencyWarnings.push(`Raw advisory T2 ${executableCandidate.rawT2} was replaced with app-computed T2 ${targets.t2} using fixed 2.0R.`);
+    consistencyWarnings.push(`Raw advisory T2 ${executableCandidate.rawT2} was replaced with app-computed T2 ${targets.t2} using 2.0R from actual structure risk.`);
   }
 
   return {

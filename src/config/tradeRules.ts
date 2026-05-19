@@ -3,9 +3,53 @@ import { SYSTEM_RULES } from '../constants';
 
 export const TRADE_RULES = {
   instruments: ['MES', 'MNQ'] as const,
+  // Compatibility cap only. New execution logic must use structure stops first,
+  // then validate actual entry-to-stop risk against this max.
   fixedRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
   maxRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
   preferredRiskPoints: SYSTEM_RULES.FIXED_STOP_RISK_POINTS,
+  executionParameters: {
+    minimumSweepTicks: 2,
+    defaultSweepDistancePoints: 0.5,
+    stopOffsetTicks: 1,
+    confirmationTimeframe: '5m',
+    displacementScoreThreshold: 70,
+  },
+  discordAlertThresholds: {
+    conditional: 75,
+    executable: 85,
+    educationalBlocked: 70,
+  },
+  executionWindows: {
+    openingObservation: {
+      label: 'Opening Observation Window',
+      startET: '09:30',
+      endET: '10:00',
+      quality: 'observe_only',
+      enabled: true,
+    },
+    morningExecution: {
+      label: 'Morning Execution Window',
+      startET: '10:00',
+      endET: '11:15',
+      quality: 'approved',
+      enabled: true,
+    },
+    middayTrapReversal: {
+      label: 'Midday Trap / Reversal Window',
+      startET: '11:50',
+      endET: '13:00',
+      quality: 'strict',
+      enabled: true,
+    },
+    afternoonExecution: {
+      label: 'Afternoon Execution Window',
+      startET: '13:30',
+      endET: '15:00',
+      quality: 'disabled',
+      enabled: false,
+    },
+  },
   targetModel: {
     t1R: 1.5,
     t2R: 2.0,
@@ -95,6 +139,34 @@ function isValidPrice(value: unknown): value is number {
 
 export function roundToTradeTick(price: number): number {
   return Math.round(price / TRADE_RULES.targetModel.tickSize) * TRADE_RULES.targetModel.tickSize;
+}
+
+export function stopOffsetPoints(ticks = TRADE_RULES.executionParameters.stopOffsetTicks): number {
+  return ticks * TRADE_RULES.targetModel.tickSize;
+}
+
+export function minimumSweepDistancePoints(ticks = TRADE_RULES.executionParameters.minimumSweepTicks): number {
+  return ticks * TRADE_RULES.targetModel.tickSize;
+}
+
+export function targetsFromEntryStop(
+  direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined,
+  entry: number | null | undefined,
+  stop: number | null | undefined
+): { target1: number | null; target2: number | null; riskPoints: number | null } {
+  if (!isValidPrice(entry) || !isValidPrice(stop) || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { target1: null, target2: null, riskPoints: null };
+  }
+  const riskPoints = Math.abs(entry - stop);
+  if (!Number.isFinite(riskPoints) || riskPoints <= 0) {
+    return { target1: null, target2: null, riskPoints: null };
+  }
+  const sign = direction === 'LONG' ? 1 : -1;
+  return {
+    target1: roundToTradeTick(entry + sign * riskPoints * TRADE_RULES.targetModel.t1R),
+    target2: roundToTradeTick(entry + sign * riskPoints * TRADE_RULES.targetModel.t2R),
+    riskPoints: roundToTradeTick(riskPoints),
+  };
 }
 
 export function fixedRiskStopForDirection(direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined, entry: number | null | undefined): number | null {
