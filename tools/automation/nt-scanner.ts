@@ -20,8 +20,11 @@ import {
   DEFAULT_SCANNER_RISK_GUARDS,
   getScannerTradeDate,
   latestCompletedBar,
+  MARKET_MAPPING_COVERAGE,
   resolveScannerWindow,
   scannerAlertKey,
+  scannerContextLogLabel,
+  scannerContextState,
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
@@ -58,6 +61,7 @@ interface ScannerConfig {
   targetAlreadySweptLookbackCandles: number;
   allowRetestOnlyEntries: boolean;
   maxStaleBarMinutes: number;
+  marketMapRefreshSeconds: number;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
 }
@@ -65,6 +69,7 @@ interface ScannerConfig {
 interface ScannerStateFile {
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
   lastCompleted5mBySession: Record<string, string>;
+  lastMarketMapRefreshBySession: Record<string, string>;
 }
 
 interface DiscordWebhookPayload {
@@ -133,6 +138,7 @@ function printHelp() {
     '  --scan-windows false           Disable trade-plan scans; context/health only.',
     '  --afternoon true               Enable optional afternoon window.',
     '  --max-stale-bar-minutes 10     Refuse live scans when latest completed 5M bar is older than this.',
+    '  --market-map-refresh-seconds 300 Refresh durable look-left map while outside trade windows.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
     '  --bar-time-zone central        Timezone for NinjaTrader bar timestamps without offsets: central, eastern, pacific, or local.',
   ].join('\n'));
@@ -169,6 +175,7 @@ function loadConfig(): ScannerConfig {
     targetAlreadySweptLookbackCandles: numberArg('target-swept-lookback', DEFAULT_SCANNER_RISK_GUARDS.targetAlreadySweptLookbackCandles),
     allowRetestOnlyEntries: boolArg('allow-retest-only', DEFAULT_SCANNER_RISK_GUARDS.allowRetestOnlyEntries),
     maxStaleBarMinutes: numberArg('max-stale-bar-minutes', 10),
+    marketMapRefreshSeconds: Math.max(60, numberArg('market-map-refresh-seconds', 300)),
     barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
     barTimeZone,
   };
@@ -180,9 +187,14 @@ function sleep(ms: number): Promise<void> {
 
 async function readState(): Promise<ScannerStateFile> {
   try {
-    return JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as ScannerStateFile;
+    const parsed = JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Partial<ScannerStateFile>;
+    return {
+      sent: parsed.sent || {},
+      lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
+      lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
+    };
   } catch {
-    return { sent: {}, lastCompleted5mBySession: {} };
+    return { sent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
   }
 }
 
@@ -259,6 +271,12 @@ function planName(candidate: SetupCandidate | null): string {
 function objectiveLine(label: string, objective: TargetObjective | null | undefined): string {
   if (!objective) return `${label}: N/A`;
   return `${label}: ${objective.price} ${objective.label}`;
+}
+
+function mappingSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession {
+  if (window.session === 'lunch') return 'lunch';
+  if (window.nextWindowLabel?.toLowerCase().includes('midday')) return 'lunch';
+  return 'morning';
 }
 
 async function fetchFreshBridgeBars(config: ScannerConfig, timeframe: MarketBarTimeframe, limit = 220): Promise<NinjaBridgeBar[]> {
@@ -402,6 +420,39 @@ function chooseBestCandidate(candidates: SetupCandidate[] | undefined): SetupCan
     .sort((a, b) => (b.rankScore || b.priority || 0) - (a.rankScore || a.priority || 0))[0] || null;
 }
 
+async function refreshMarketMapContext(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  tradeDate: string;
+  window: ReturnType<typeof resolveScannerWindow>;
+  liveBars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+}): Promise<string> {
+  const session = mappingSessionForWindow(args.window);
+  const key = `${args.tradeDate}:${session}`;
+  const lastRefresh = args.state.lastMarketMapRefreshBySession[key];
+  const lastRefreshMs = lastRefresh ? new Date(lastRefresh).getTime() : 0;
+  const elapsedSeconds = lastRefreshMs ? (Date.now() - lastRefreshMs) / 1000 : Number.POSITIVE_INFINITY;
+  if (elapsedSeconds < args.config.marketMapRefreshSeconds) {
+    return `market map fresh (${session}; next durable refresh in ${Math.ceil(args.config.marketMapRefreshSeconds - elapsedSeconds)}s).`;
+  }
+
+  try {
+    const cachedBars = await fetchLookLeftBars(args.config, args.tradeDate, session);
+    const bars = {
+      '5m': mergeBars(args.liveBars['5m'], cachedBars['5m']),
+      '15m': mergeBars(args.liveBars['15m'], cachedBars['15m']),
+      '60m': mergeBars(args.liveBars['60m'], cachedBars['60m']),
+      '240m': mergeBars(args.liveBars['240m'], cachedBars['240m']),
+    };
+    const analysis = analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
+    const objectives = analysis.structuredChartContext?.targetObjectives?.length || 0;
+    args.state.lastMarketMapRefreshBySession[key] = new Date().toISOString();
+    return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives).`;
+  } catch (error) {
+    return `market map refresh skipped: ${formatError(error)}`;
+  }
+}
+
 function buildDiscordPayload(args: {
   session: LiveSession;
   tradeDate: string;
@@ -536,7 +587,11 @@ async function runCycle(config: ScannerConfig): Promise<void> {
   }
 
   if (!window.allowsTradePlan || !config.scanWindows) {
-    console.log(`[scanner] ${window.label}: context updated only | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}.`);
+    const mappingState = scannerContextState(window);
+    const mappingLabel = config.scanWindows ? scannerContextLogLabel(window) : 'Market Mapping Mode';
+    const mapStatus = await refreshMarketMapContext({ config, state, tradeDate, window, liveBars });
+    console.log(`[scanner] ${mappingLabel}: ${mappingState}, context updated only | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText} | ${mapStatus}`);
+    await writeState(state);
     return;
   }
 

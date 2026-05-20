@@ -4,8 +4,11 @@ import {
   applyStaleChaseGuard,
   buildTargetCascade,
   latestCompletedBar,
+  MARKET_MAPPING_COVERAGE,
   resolveScannerWindow,
   scannerAlertKey,
+  scannerContextLogLabel,
+  scannerContextState,
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
@@ -66,11 +69,17 @@ const outsideWindow = resolveScannerWindow(new Date('2026-05-19T08:00:00-04:00')
 assert.equal(openingWindow.session, 'premarket');
 assert.equal(openingWindow.allowsTradePlan, false);
 assert.equal(openingWindow.allowsDiscordAlert, false);
+assert.equal(scannerContextLogLabel(openingWindow), 'Opening Observation Window');
+assert.equal(scannerContextState(openingWindow), 'MarketMapping');
 assert.equal(morningWindow.session, 'morning');
 assert.equal(morningWindow.allowsTradePlan, true);
+assert.equal(scannerContextState(morningWindow), 'MapReady');
 assert.equal(lateMorningWindow.session, 'morning');
 assert.equal(lateMorningWindow.allowsTradePlan, true);
 assert.equal(outsideWindow.allowsDiscordAlert, false);
+assert.equal(scannerContextLogLabel(outsideWindow), 'Market Mapping Mode');
+assert.equal(scannerContextState(outsideWindow), 'MarketMapping');
+assert.ok(MARKET_MAPPING_COVERAGE.includes('prior day/week/month levels'));
 
 const completed = latestCompletedBar(
   [
@@ -161,6 +170,10 @@ assert.equal(
   false
 );
 assert.equal(
+  shouldSendScannerAlert({ state: 'MarketMapping', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
+  false
+);
+assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
   false
 );
@@ -208,6 +221,7 @@ assert.equal(noRoom.targetRoomPoor, true);
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.ApprovedTrade, candidate: strongCandidate }), 'Approved');
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.Wait, candidate: strongCandidate }), 'Conditional');
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.NoTrade, candidate: null }), 'NoTrade');
+assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.OutsideRules, candidate: null }), 'MarketMapping');
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.Wait, candidate: strongCandidate, stale }), 'Missed');
 
 const keyA = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Conditional' });

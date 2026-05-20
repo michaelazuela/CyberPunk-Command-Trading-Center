@@ -4,6 +4,7 @@ import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 export type ScannerState =
   | 'NoData'
+  | 'MarketMapping'
   | 'MapReady'
   | 'Watching'
   | 'TriggerPending'
@@ -28,6 +29,18 @@ export interface ScannerWindowState {
   allowsDiscordAlert: boolean;
   nextWindowLabel: string | null;
 }
+
+export const MARKET_MAPPING_LABEL = 'Market Mapping Mode';
+
+export const MARKET_MAPPING_COVERAGE = [
+  'ETH high/low',
+  'Asian high/low',
+  'London high/low',
+  'NY premarket high/low',
+  'prior day/week/month levels',
+  '15M / 60M / 240M liquidity',
+  'target cascade',
+] as const;
 
 export interface ScannerThresholds {
   conditional: number;
@@ -196,6 +209,14 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
             ? windows.middayTrapReversal.label
             : null,
   };
+}
+
+export function scannerContextLogLabel(window: ScannerWindowState): string {
+  return window.quality === 'observe_only' ? window.label : MARKET_MAPPING_LABEL;
+}
+
+export function scannerContextState(window: ScannerWindowState): ScannerState {
+  return window.allowsTradePlan ? 'MapReady' : 'MarketMapping';
 }
 
 const BRIDGE_TIME_ZONES: Record<Exclude<BridgeTimeZoneMode, 'local'>, string> = {
@@ -537,7 +558,7 @@ export function scannerStateFromDecision(args: {
   if (args.decisionStatus === TradeDecisionStatus.ConditionalTrade) return 'Conditional';
   if (args.decisionStatus === TradeDecisionStatus.Wait) return args.candidate ? 'Conditional' : 'Watching';
   if (args.decisionStatus === TradeDecisionStatus.NoTrade) return args.candidate ? 'Blocked' : 'NoTrade';
-  if (args.decisionStatus === TradeDecisionStatus.OutsideRules) return 'MapReady';
+  if (args.decisionStatus === TradeDecisionStatus.OutsideRules) return 'MarketMapping';
   return args.candidate ? 'Watching' : 'MapReady';
 }
 
@@ -558,7 +579,7 @@ export function shouldSendScannerAlert(args: {
   if (args.duplicate && !args.stateImproved) {
     return { shouldSend: false, reason: 'Duplicate alert suppressed for same setup/reference/direction/state.' };
   }
-  if (args.state === 'Watching' || args.state === 'MapReady' || args.state === 'NoData') {
+  if (args.state === 'Watching' || args.state === 'MapReady' || args.state === 'MarketMapping' || args.state === 'NoData') {
     return { shouldSend: false, reason: `${args.state} is logged locally but not sent to Discord by default.` };
   }
   if (args.state === 'Missed') {

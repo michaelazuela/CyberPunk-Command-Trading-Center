@@ -8,3 +8,4 @@ coverage/
 !.env.example
 supabase/.temp/
 tools/automation/.discord-alert-state.json
+tools/automation/.nt-scanner-state.json

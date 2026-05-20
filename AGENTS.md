@@ -176,6 +176,15 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 - Save displacement imbalance zones as structural target/context levels.
 - The session story may improve target selection and setup ranking, but the 5M trigger, stop, risk, invalidation, and deterministic pipeline still decide execution.
 
+## Scanner Market Mapping Mode
+
+The local scanner runs all day and overnight. Outside Morning/Lunch execution windows, it is in `MarketMapping` state, not trade-planning mode.
+
+- Market Mapping Mode may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/240M liquidity, and target cascade context.
+- Market Mapping Mode must not produce actionable trade plans, Discord trade alerts, entries, stops, or approvals.
+- Keep `Opening Observation Window` as the specific 9:30-10:00 AM ET RTH phase. Do not use that label for overnight or all-day context building.
+- Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.
+
 ## Verification Before Finishing
 
 Run these before reporting success:
