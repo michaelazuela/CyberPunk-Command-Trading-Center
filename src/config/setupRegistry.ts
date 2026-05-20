@@ -237,6 +237,18 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultNextAction: 'Wait for reclaim and pullback-hold confirmation before planning the long.',
   },
   {
+    setupType: SetupType.MorningOpeningRangeContinuation,
+    label: 'Opening Range Continuation',
+    aliases: ['Opening Range Continuation', 'Opening Range Retest', 'Opening Range Reclaim'],
+    priority: 87,
+    allowedSessions: MORNING_SESSIONS,
+    detectionKeywords: ['opening range continuation', 'opening range break', 'opening range retest', 'opening range reclaim'],
+    possibleKeywords: ['opening range', 'range break', 'retest holds', 'continuation trigger'],
+    requiredEvidence: ['Opening range high/low', 'Expansion break from the opening range', 'Retest or reclaim of broken boundary', 'Structure stop beyond retest failure'],
+    defaultRequiredTrigger: '5M close beyond the opening range, then retest/reclaim holds before continuation.',
+    defaultNextAction: 'Preferred plan: trade the opening range retest/reclaim, not the breakout chase.',
+  },
+  {
     setupType: SetupType.LunchFailedHighReversal,
     label: 'Lunch Failed High Reversal',
     aliases: ['Failed High Reversal', 'Morning High Failure', 'Lunch High Sweep Failure'],

@@ -15,6 +15,7 @@ import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 import { applyWorkflowSpeedMode, loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
 import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
+import { candidateHasConcretePlan, selectBestTwoScenarios } from '../lib/scenarioSelection';
 import {
   buildNinjaChartContext,
   describeNinjaBridgeError,
@@ -139,11 +140,7 @@ function formatCandidateName(candidate: SetupCandidate): string {
 }
 
 function candidateHasPlanLevels(candidate: SetupCandidate): boolean {
-  return candidate.direction !== 'NO TRADE' &&
-    candidate.entry != null &&
-    candidate.stop != null &&
-    candidate.target1 != null &&
-    candidate.target2 != null;
+  return candidateHasConcretePlan(candidate);
 }
 
 function buildPlanFromCandidate(basePlan: ReturnType<typeof buildAppTradePlan> | null, candidate: SetupCandidate | null, labelSuffix = '') {
@@ -418,9 +415,8 @@ export default function SessionLab({
   };
 
   const getOutcomePlanOptions = (plan: typeof normalizedMorningPlan) => {
-    const candidates = (plan?.setupCandidates || [])
-      .filter(candidateHasPlanLevels)
-      .slice(0, 8);
+    const candidates = selectBestTwoScenarios(plan?.setupCandidates || [])
+      .filter(candidateHasPlanLevels);
     return [
       { key: 'main' as OutcomePlanChoice, label: 'Main App Plan', candidate: null, plan },
       ...candidates.map((candidate, index) => ({
@@ -442,7 +438,7 @@ export default function SessionLab({
   const buildBridgeAnalysisContext = (sessionType: 'morning' | 'lunch') => {
     if (!bridge.connected || !bridge.bars5m.length) return { structuredContext: null, summary: 'NinjaTrader bridge not connected.' };
     const executionWindow = sessionType === 'morning'
-      ? { from: etDateTime(tradeDate, '09:30'), to: etDateTime(tradeDate, '10:10') }
+      ? { from: etDateTime(tradeDate, '09:30'), to: etDateTime(tradeDate, '11:15') }
       : { from: etDateTime(tradeDate, '11:50'), to: etDateTime(tradeDate, '13:00') };
     const executionBars5m = filterBarsByEtWindow(bridge.bars5m, executionWindow.from, executionWindow.to);
     const structuredContext = buildNinjaChartContext({

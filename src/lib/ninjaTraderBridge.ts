@@ -205,7 +205,7 @@ function sessionForTimestamp(value?: string | null): DisplacementCandleFact['ses
   if (inMinuteRange(minutes, 20 * 60, 2 * 60)) return 'asian';
   if (inMinuteRange(minutes, 3 * 60, 8 * 60 + 29)) return 'london';
   if (inMinuteRange(minutes, 8 * 60 + 30, 9 * 60 + 29)) return 'ny_premarket';
-  if (inMinuteRange(minutes, 9 * 60 + 30, 10 * 60 + 10)) return 'rth_morning';
+  if (inMinuteRange(minutes, 9 * 60 + 30, 11 * 60 + 15)) return 'rth_morning';
   if (inMinuteRange(minutes, 11 * 60 + 50, 13 * 60)) return 'lunch';
   if (inMinuteRange(minutes, 18 * 60, 23 * 60 + 59)) return 'prior_eth';
   return 'current_window';

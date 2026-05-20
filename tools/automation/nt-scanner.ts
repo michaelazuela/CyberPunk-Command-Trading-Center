@@ -8,11 +8,13 @@ import {
   buildNinjaChartContext,
   getNinjaBridgeBars,
   getNinjaBridgeHealth,
+  getNinjaHistoricalBars,
   getNinjaBridgePositions,
   getNinjaBridgeSnapshot,
   type NinjaBridgeBar,
 } from '../../src/lib/ninjaTraderBridge';
 import {
+  assessBridgeBarStaleness,
   applyStaleChaseGuard,
   buildTargetCascade,
   DEFAULT_SCANNER_RISK_GUARDS,
@@ -23,6 +25,8 @@ import {
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
+  type BridgeTimeZoneMode,
+  type BridgeTimestampMode,
   type ScannerState,
   type ScannerThresholds,
 } from '../../src/lib/localScannerEngine';
@@ -53,6 +57,9 @@ interface ScannerConfig {
   staleSetupMaxCandles: number;
   targetAlreadySweptLookbackCandles: number;
   allowRetestOnlyEntries: boolean;
+  maxStaleBarMinutes: number;
+  barTimestampMode: BridgeTimestampMode;
+  barTimeZone: BridgeTimeZoneMode;
 }
 
 interface ScannerStateFile {
@@ -99,7 +106,9 @@ function boolArg(name: string, fallback: boolean): boolean {
 }
 
 function numberArg(name: string, fallback: number): number {
-  const value = Number(argValue(name));
+  const raw = argValue(name);
+  if (raw === null) return fallback;
+  const value = Number(raw);
   return Number.isFinite(value) ? value : fallback;
 }
 
@@ -119,22 +128,30 @@ function printHelp() {
     '  --instrument MES|MNQ           Logical app instrument, defaults to MES.',
     '  --bridge-instrument "MES 06-26" NinjaTrader bridge instrument.',
     '  --bridge-url URL               Defaults to http://127.0.0.1:8765.',
-    '  --poll-seconds 30              Poll cadence, minimum 15 seconds for continuous mode.',
+    '  --poll-seconds 60              Poll cadence, minimum 15 seconds for continuous mode.',
     '  --discord false                Disable Discord sends but keep scanner logs.',
     '  --scan-windows false           Disable trade-plan scans; context/health only.',
     '  --afternoon true               Enable optional afternoon window.',
+    '  --max-stale-bar-minutes 10     Refuse live scans when latest completed 5M bar is older than this.',
+    '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
+    '  --bar-time-zone central        Timezone for NinjaTrader bar timestamps without offsets: central, eastern, pacific, or local.',
   ].join('\n'));
 }
 
 function loadConfig(): ScannerConfig {
   const dryRun = hasArg('dry-run');
   const once = hasArg('once');
+  const timestampMode = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'close';
+  const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'central';
+  const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
+    ? (timeZoneArg as BridgeTimeZoneMode)
+    : 'central';
   return {
     instrument: ((argValue('instrument') || 'MES') as Instrument),
     bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES 06-26',
     bridgeUrl: argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765',
     account: argValue('account') || process.env.NINJATRADER_ACCOUNT || 'Sim101',
-    pollSeconds: Math.max(once ? 1 : 15, numberArg('poll-seconds', 30)),
+    pollSeconds: Math.max(once ? 1 : 15, numberArg('poll-seconds', 60)),
     dryRun,
     once,
     continuousMode: boolArg('continuous', true),
@@ -151,6 +168,9 @@ function loadConfig(): ScannerConfig {
     staleSetupMaxCandles: numberArg('stale-candles', DEFAULT_SCANNER_RISK_GUARDS.staleSetupMaxCandles),
     targetAlreadySweptLookbackCandles: numberArg('target-swept-lookback', DEFAULT_SCANNER_RISK_GUARDS.targetAlreadySweptLookbackCandles),
     allowRetestOnlyEntries: boolArg('allow-retest-only', DEFAULT_SCANNER_RISK_GUARDS.allowRetestOnlyEntries),
+    maxStaleBarMinutes: numberArg('max-stale-bar-minutes', 10),
+    barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
+    barTimeZone,
   };
 }
 
@@ -194,6 +214,23 @@ function money(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? String(value) : 'N/A';
 }
 
+function timeframeMinutes(timeframe: MarketBarTimeframe): number {
+  if (timeframe === '60m') return 60;
+  if (timeframe === '240m') return 240;
+  return Number(timeframe.replace('m', '')) || 5;
+}
+
+function recentHistoricalWindow(timeframe: MarketBarTimeframe, limit: number): { from: string; to: string } {
+  const minutes = timeframeMinutes(timeframe);
+  const to = new Date();
+  const lookbackMinutes =
+    timeframe === '5m'
+      ? 120
+      : Math.max(90, minutes * Math.max(limit, 40) * 1.25);
+  const from = new Date(to.getTime() - lookbackMinutes * 60_000);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
 function clip(value: string, max = 1024): string {
   const text = value.trim() || 'N/A';
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
@@ -224,15 +261,59 @@ function objectiveLine(label: string, objective: TargetObjective | null | undefi
   return `${label}: ${objective.price} ${objective.label}`;
 }
 
+async function fetchFreshBridgeBars(config: ScannerConfig, timeframe: MarketBarTimeframe, limit = 220): Promise<NinjaBridgeBar[]> {
+  const response = await getNinjaBridgeBars(config.bridgeInstrument, timeframe, limit, config.bridgeUrl);
+  const cachedBars = response.ok ? response.bars || [] : [];
+  if (timeframe !== '5m') return cachedBars;
+
+  const freshness = assessBridgeBarStaleness({
+    latestBar: latestCompletedBar(cachedBars, 5, new Date(), config.barTimestampMode, config.barTimeZone),
+    timeframeMinutes: 5,
+    maxStaleBarMinutes: config.maxStaleBarMinutes,
+    timestampMode: config.barTimestampMode,
+    timeZoneMode: config.barTimeZone,
+  });
+  if (!freshness.stale) return cachedBars;
+
+  const window = recentHistoricalWindow(timeframe, limit);
+  const historical = await getNinjaHistoricalBars({
+    instrument: config.bridgeInstrument,
+    timeframe,
+    from: window.from,
+    to: window.to,
+    limit,
+    baseUrl: config.bridgeUrl,
+  });
+  if (!historical.ok || !historical.bars?.length) {
+    console.warn(`[scanner-bridge] ${timeframe}: live cache stale and historical repair returned no bars: ${historical.error || 'unknown error'}`);
+    return cachedBars;
+  }
+
+  const repairedFreshness = assessBridgeBarStaleness({
+    latestBar: latestCompletedBar(historical.bars, 5, new Date(), config.barTimestampMode, config.barTimeZone),
+    timeframeMinutes: 5,
+      maxStaleBarMinutes: config.maxStaleBarMinutes,
+      timestampMode: config.barTimestampMode,
+      timeZoneMode: config.barTimeZone,
+    });
+  if (repairedFreshness.stale) {
+    console.warn(`[scanner-bridge] ${timeframe}: historical repair still stale: ${repairedFreshness.reason}`);
+    return cachedBars;
+  }
+
+  console.log(`[scanner-bridge] ${timeframe}: repaired stale live cache with ${historical.bars.length} recent historical bars.`);
+  return historical.bars;
+}
+
 async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
-    const response = await getNinjaBridgeBars(config.bridgeInstrument, timeframe, 220, config.bridgeUrl);
-    if (!response.ok || !response.bars?.length) return [timeframe, []] as const;
+    const bars = await fetchFreshBridgeBars(config, timeframe, 220);
+    if (!bars.length) return [timeframe, []] as const;
     const marketConfig = loadMarketDataConfig();
     if (marketConfig) {
       try {
         await upsertMarketBars({
-          bars: response.bars,
+          bars,
           instrument: config.instrument,
           bridgeInstrument: config.bridgeInstrument,
           timeframe,
@@ -242,7 +323,7 @@ async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTim
         console.warn(`[scanner-cache] ${timeframe}: cache upsert skipped: ${formatError(error)}`);
       }
     }
-    return [timeframe, response.bars] as const;
+    return [timeframe, bars] as const;
   }));
   return Object.fromEntries(entries) as Record<MarketBarTimeframe, NinjaBridgeBar[]>;
 }
@@ -426,9 +507,33 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     fetchLiveBars(config),
   ]);
 
-  const completed5m = latestCompletedBar(liveBars['5m'], 5, now);
-  const currentPrice = snapshot?.currentPrice ?? snapshot?.last?.close ?? completed5m?.close ?? null;
+  const completed5m = latestCompletedBar(liveBars['5m'], 5, now, config.barTimestampMode, config.barTimeZone);
+  let currentPrice = snapshot?.currentPrice ?? snapshot?.last?.close ?? completed5m?.close ?? null;
+  const snapshotFreshness = assessBridgeBarStaleness({
+    latestBar: snapshot?.last || null,
+    timeframeMinutes: 1,
+    now,
+    maxStaleBarMinutes: config.maxStaleBarMinutes,
+    timestampMode: config.barTimestampMode,
+    timeZoneMode: config.barTimeZone,
+  });
+  if (snapshotFreshness.stale && completed5m) {
+    currentPrice = completed5m.close;
+  }
   const positionText = positions?.positions?.length ? positions.positions.map((item) => `${item.marketPosition} ${item.quantity}`).join(', ') : 'flat / none returned';
+  const bridgeFreshness = assessBridgeBarStaleness({
+    latestBar: completed5m,
+    timeframeMinutes: 5,
+    now,
+    maxStaleBarMinutes: config.maxStaleBarMinutes,
+    timestampMode: config.barTimestampMode,
+    timeZoneMode: config.barTimeZone,
+  });
+
+  if (bridgeFreshness.stale) {
+    console.log(`[scanner] NoData: ${bridgeFreshness.reason}`);
+    return;
+  }
 
   if (!window.allowsTradePlan || !config.scanWindows) {
     console.log(`[scanner] ${window.label}: context updated only | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}.`);
@@ -441,10 +546,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     console.log(`[scanner] ${window.label}: NoData, no completed 5M candle available.`);
     return;
   }
-  if (state.lastCompleted5mBySession[sessionKey] === completed5m.time && !config.once) {
-    console.log(`[scanner] ${window.label}: waiting for new completed 5M candle after ${completed5m.time}.`);
-    return;
-  }
+  const sameCompletedCandle = state.lastCompleted5mBySession[sessionKey] === completed5m.time;
 
   const cachedBars = await fetchLookLeftBars(config, tradeDate, session).catch((error) => {
     console.warn(`[scanner] Supabase look-left cache unavailable: ${formatError(error)}`);
@@ -508,7 +610,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     stateImproved: false,
   });
 
-  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${alertDecision.reason}`);
+  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
 
   if (alertDecision.shouldSend) {
@@ -544,7 +646,7 @@ async function main() {
 
   const config = loadConfig();
   console.log('Quant Desk local deterministic scanner started.');
-  console.log(`Bridge: ${config.bridgeUrl} | Instrument: ${config.bridgeInstrument} | Poll: ${config.pollSeconds}s | Discord: ${config.discordEnabled && !config.dryRun ? 'enabled' : 'dry-run/log only'}`);
+  console.log(`Bridge: ${config.bridgeUrl} | Instrument: ${config.bridgeInstrument} | Poll: ${config.pollSeconds}s | Bar time: ${config.barTimeZone}/${config.barTimestampMode} | Discord: ${config.discordEnabled && !config.dryRun ? 'enabled' : 'dry-run/log only'}`);
 
   do {
     try {

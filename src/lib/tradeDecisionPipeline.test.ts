@@ -18,6 +18,7 @@ import {
 import { runTradeDecisionPipeline, TradeDecisionPipelineInput } from './tradeDecisionPipeline';
 import { buildChartContextConsensus } from './chartContextConsensus';
 import { buildTargetObjectivePlan } from './targetObjectiveEngine';
+import { selectBestTwoScenarios } from './scenarioSelection';
 
 function baseResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
   return {
@@ -1160,6 +1161,214 @@ const tests: Array<[string, () => void]> = [
     assert.equal(plan.liquidityTarget1?.label, 'London Session High');
     assert.notEqual(plan.nearestLiquidityTarget?.label, 'London Bearish Displacement Imbalance Top');
     assert.ok(plan.targetManagementInstruction?.includes('imbalance') || plan.notes.join(' ').includes('Imbalance'));
+  }],
+
+  ['34. Morning reclaim long uses completed 5M reclaim candle and protected swing low', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Morning reclaim long path should be built from completed 5M facts.',
+        current_rule_analysis: {
+          summary: 'Wait for reclaim retest.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7398,
+            nearestSupport: 7388,
+            nearestResistance: 7400,
+            activeSwingHigh: 7400,
+            activeSwingLow: 7388,
+          },
+          candles: [
+            { index: 1, open: 7396, high: 7397, low: 7388, close: 7390, direction: 'bearish', confidence: 'High' },
+            { index: 2, open: 7390, high: 7399, low: 7389, close: 7398, direction: 'bullish', isReclaim: true, confidence: 'High' },
+          ],
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: false,
+            rejectionWickPresent: false,
+            breatherCandlePresent: true,
+            reclaimCandlePresent: true,
+            pullbackPresent: true,
+            closeAboveKeyLevel: false,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.entry, 7399.25);
+    assert.equal(candidate.stop, 7387.75);
+    assert.ok(candidate.requiredTrigger?.includes('reclaim candle high'));
+    assert.ok(candidate.nextAction.includes('successful reclaim retest'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['35. Opening range continuation builder creates retest-based morning plan', () => {
+    const result = assertSameSequence({
+      sessionType: 'morning',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Opening range broke and retested.',
+        current_rule_analysis: {
+          summary: 'Wait for OR retest continuation.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7410,
+            openingRangeHigh: 7405,
+            openingRangeLow: 7392,
+            nearestSupport: 7405,
+            nearestResistance: 7412,
+            activeSwingHigh: 7412,
+            activeSwingLow: 7404,
+          },
+          candles: [
+            { index: 1, open: 7402, high: 7410, low: 7401, close: 7408, direction: 'bullish', confidence: 'High' },
+            { index: 2, open: 7408, high: 7411, low: 7405, close: 7407, direction: 'bullish', confidence: 'High' },
+          ],
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: true,
+            rejectionWickPresent: false,
+            breatherCandlePresent: false,
+            reclaimCandlePresent: true,
+            pullbackPresent: true,
+            closeAboveKeyLevel: true,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningOpeningRangeContinuation && item.direction === 'LONG');
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.entry, 7411.25);
+    assert.equal(candidate.stop, 7400.75);
+    assert.ok(candidate.requiredTrigger?.includes('opening range high'));
+    assert.ok(candidate.nextAction.includes('opening range retest'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+  }],
+
+  ['36. Imbalance pullback builder works without narrative and shared best-two prefers concrete plans', () => {
+    const result = assertSameSequence({
+      sessionType: 'lunch',
+      windowStatusOverride: 'active',
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: '',
+        current_rule_analysis: {
+          summary: 'Structured imbalance facts only.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Waiting for trigger',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: structuredContext({
+          keyLevels: {
+            currentPrice: 7448,
+            morningHigh: 7460,
+            morningLow: 7430,
+            nearestSupport: 7444,
+            nearestResistance: 7455,
+            activeSwingHigh: 7455,
+            activeSwingLow: 7440,
+          },
+          morningWindowContext: {
+            complete: true,
+            morningHigh: 7460,
+            morningLow: 7430,
+            confidence: 'High',
+            evidence: ['Completed morning range available.'],
+            missingEvidence: [],
+          },
+          fvgZones: [{
+            direction: 'LONG',
+            lower: 7444,
+            upper: 7449,
+            midpoint: 7446.5,
+            filledPercent: 50,
+            reclaimed: true,
+            confidence: 'High',
+          }],
+          candles: [
+            { index: 1, open: 7447, high: 7450, low: 7444, close: 7448, direction: 'bullish', isReclaim: true, confidence: 'High' },
+          ],
+          setupReadyFacts: {
+            pullbackIntoFvg: true,
+            fvgReclaimed: true,
+            breakOfStructure: false,
+            sweepThenReclaim: false,
+            notes: [],
+          },
+          candleFacts: {
+            lastClosedCandleDirection: 'bullish',
+            expansionCandlePresent: true,
+            rejectionWickPresent: false,
+            breatherCandlePresent: false,
+            reclaimCandlePresent: true,
+            pullbackPresent: true,
+            closeAboveKeyLevel: true,
+            closeBelowKeyLevel: false,
+          },
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        }),
+      }),
+    });
+
+    const imbalance = result.setupCandidates?.find((item) => item.setupType === SetupType.FvgImbalancePullback && item.direction === 'LONG');
+    assert.ok(imbalance);
+    assert.equal(imbalance.entry, 7450.25);
+    assert.equal(imbalance.stop, 7443.75);
+    assert.ok(imbalance.requiredTrigger?.includes('imbalance zone'));
+    const selected = selectBestTwoScenarios(result.setupCandidates || []);
+    assert.ok(selected.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
+    assert.ok(selected.every((candidate) => candidate.entry !== null && candidate.stop !== null));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 ];
 

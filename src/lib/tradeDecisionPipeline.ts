@@ -344,6 +344,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.AlgoKillZone: return 40;
     case SetupType.MorningFailedHighLiquidityRejection: return 89;
     case SetupType.MorningReclaimLong: return 88;
+    case SetupType.MorningOpeningRangeContinuation: return 87;
     case SetupType.LunchFailedHighReversal: return 96;
     case SetupType.LunchFailedLowReversal: return 96;
     case SetupType.LunchFailedContinuation: return 90;

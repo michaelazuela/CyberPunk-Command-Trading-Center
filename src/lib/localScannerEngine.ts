@@ -16,6 +16,8 @@ export type ScannerState =
 
 export type ScannerWindowQuality = 'observe_only' | 'approved' | 'strict' | 'disabled' | 'outside';
 export type ScannerSession = 'premarket' | 'morning' | 'lunch' | 'afternoon' | 'outside';
+export type BridgeTimestampMode = 'open' | 'close';
+export type BridgeTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
 
 export interface ScannerWindowState {
   session: ScannerSession;
@@ -50,6 +52,14 @@ export interface ScannerConfidenceBreakdown {
 export interface StaleChaseResult {
   state: ScannerState;
   stale: boolean;
+  reason: string | null;
+}
+
+export interface BridgeBarStalenessResult {
+  stale: boolean;
+  latestTime: string | null;
+  ageMinutes: number | null;
+  maxAllowedMinutes: number;
   reason: string | null;
 }
 
@@ -188,23 +198,135 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
   };
 }
 
-function parseBridgeTime(value: string): Date | null {
+const BRIDGE_TIME_ZONES: Record<Exclude<BridgeTimeZoneMode, 'local'>, string> = {
+  eastern: 'America/New_York',
+  central: 'America/Chicago',
+  pacific: 'America/Los_Angeles',
+};
+
+function timeZoneOffsetMinutes(timeZone: string, date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const zonedAsUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+  return (zonedAsUtc - date.getTime()) / 60_000;
+}
+
+function parseWallClockInTimeZone(value: string, timeZone: string): Date | null {
+  const cleaned = value.replace(/\.\d+/, '');
+  const match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second = '0'] = match;
+  const wallAsUtc = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)));
+  const offset = timeZoneOffsetMinutes(timeZone, wallAsUtc);
+  const date = new Date(wallAsUtc.getTime() - offset * 60_000);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function parseBridgeTime(value: string, timeZoneMode: BridgeTimeZoneMode = 'eastern'): Date | null {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
-  const normalized = trimmed.includes('Z') || /[+-]\d\d:\d\d$/.test(trimmed)
-    ? trimmed
-    : `${trimmed.replace(/\.\d+/, '')}-04:00`;
+  if (!trimmed.includes('Z') && !/[+-]\d\d:\d\d$/.test(trimmed)) {
+    if (timeZoneMode === 'local') {
+      const localDate = new Date(trimmed.replace(/\.\d+/, ''));
+      return Number.isNaN(localDate.getTime()) ? null : localDate;
+    }
+    return parseWallClockInTimeZone(trimmed, BRIDGE_TIME_ZONES[timeZoneMode]);
+  }
+  const normalized = trimmed;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function latestCompletedBar(bars: NinjaBridgeBar[], timeframeMinutes: number, now = new Date()): NinjaBridgeBar | null {
+function completedAtMs(bar: NinjaBridgeBar, timeframeMinutes: number, timestampMode: BridgeTimestampMode, timeZoneMode: BridgeTimeZoneMode): number | null {
+  const parsed = parseBridgeTime(bar.time, timeZoneMode);
+  if (!parsed) return null;
+  return timestampMode === 'close'
+    ? parsed.getTime()
+    : parsed.getTime() + timeframeMinutes * 60_000;
+}
+
+export function latestCompletedBar(
+  bars: NinjaBridgeBar[],
+  timeframeMinutes: number,
+  now = new Date(),
+  timestampMode: BridgeTimestampMode = 'close',
+  timeZoneMode: BridgeTimeZoneMode = 'eastern'
+): NinjaBridgeBar | null {
   const completed = bars.filter((bar) => {
-    const start = parseBridgeTime(bar.time);
-    if (!start) return true;
-    return start.getTime() + timeframeMinutes * 60_000 <= now.getTime();
+    const completedAt = completedAtMs(bar, timeframeMinutes, timestampMode, timeZoneMode);
+    if (completedAt === null) return true;
+    return completedAt <= now.getTime();
   });
   return completed[completed.length - 1] || null;
+}
+
+export function assessBridgeBarStaleness(args: {
+  latestBar: NinjaBridgeBar | null;
+  timeframeMinutes: number;
+  now?: Date;
+  maxStaleBarMinutes?: number;
+  timestampMode?: BridgeTimestampMode;
+  timeZoneMode?: BridgeTimeZoneMode;
+}): BridgeBarStalenessResult {
+  const now = args.now || new Date();
+  const maxAllowedMinutes = args.maxStaleBarMinutes ?? 10;
+  const timestampMode = args.timestampMode || 'close';
+  const timeZoneMode = args.timeZoneMode || 'eastern';
+  if (!args.latestBar) {
+    return {
+      stale: true,
+      latestTime: null,
+      ageMinutes: null,
+      maxAllowedMinutes,
+      reason: 'No completed 5M candle returned from NinjaTrader. Confirm NinjaTrader is open, connected, and the MES chart is receiving current data.',
+    };
+  }
+
+  const completedAt = completedAtMs(args.latestBar, args.timeframeMinutes, timestampMode, timeZoneMode);
+  if (completedAt === null) {
+    return {
+      stale: true,
+      latestTime: args.latestBar.time,
+      ageMinutes: null,
+      maxAllowedMinutes,
+      reason: `Latest NinjaTrader candle time could not be parsed (${args.latestBar.time}). Restart Quant Desk Live after NinjaTrader is current.`,
+    };
+  }
+
+  const ageMinutes = Math.max(0, (now.getTime() - completedAt) / 60_000);
+  if (ageMinutes > maxAllowedMinutes) {
+    return {
+      stale: true,
+      latestTime: args.latestBar.time,
+      ageMinutes,
+      maxAllowedMinutes,
+      reason: `NinjaTrader bridge is reachable, but latest completed ${args.timeframeMinutes}M candle is stale (${args.latestBar.time}, ${ageMinutes.toFixed(1)} minutes old, timezone=${timeZoneMode}). Start/refresh NinjaTrader first, confirm live data, then restart Quant Desk Live.`,
+    };
+  }
+
+  return {
+    stale: false,
+    latestTime: args.latestBar.time,
+    ageMinutes,
+    maxAllowedMinutes,
+    reason: null,
+  };
 }
 
 function isValidPrice(value: unknown): value is number {
@@ -257,6 +379,12 @@ export function scoreScannerCandidate(args: {
     'no expansion or local structure break evidence'
   );
   add(Boolean(candidate?.requiredTrigger), 10, 'preferred retest/trigger zone defined', 'preferred retest/trigger zone missing');
+  add(
+    Boolean(candidate && candidate.blockReason !== NoTradeReason.EntryTriggerPending && candidate.blockReason !== NoTradeReason.EntryTriggerMissing),
+    5,
+    'completed 5M trigger is no longer pending',
+    'completed 5M trigger still pending'
+  );
   add(isValidPrice(candidate?.stop), 10, 'structure stop defined', 'structure stop missing');
   add(
     isValidPrice(candidate?.riskPoints) && (candidate?.riskPoints || 0) <= TRADE_RULES.maxRiskPoints,

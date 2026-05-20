@@ -42,6 +42,7 @@ export enum SetupType {
   MomentumPullbackBreatherReclaim = 'MomentumPullbackBreatherReclaim',
   MorningFailedHighLiquidityRejection = 'MorningFailedHighLiquidityRejection',
   MorningReclaimLong = 'MorningReclaimLong',
+  MorningOpeningRangeContinuation = 'MorningOpeningRangeContinuation',
   LunchFailedHighReversal = 'LunchFailedHighReversal',
   LunchFailedLowReversal = 'LunchFailedLowReversal',
   LunchCompressionBreakout = 'LunchCompressionBreakout',
@@ -530,6 +531,7 @@ export interface StructuredSetupEvidenceMap {
   momentumPullback?: StructuredSetupEvidence;
   morningFailedHighLiquidityRejection?: StructuredSetupEvidence;
   morningReclaimLong?: StructuredSetupEvidence;
+  openingRangeContinuation?: StructuredSetupEvidence;
   lunchFailedHighReversal?: StructuredSetupEvidence;
   lunchFailedLowReversal?: StructuredSetupEvidence;
   lunchCompressionBreakout?: StructuredSetupEvidence;
@@ -672,6 +674,10 @@ export type MissingLevelKey =
   | 'sweepLow'
   | 'compressionHigh'
   | 'compressionLow'
+  | 'openingRangeHigh'
+  | 'openingRangeLow'
+  | 'imbalanceZone'
+  | 'displacementOrigin'
   | 'entry'
   | 'stop'
   | 'invalidation';

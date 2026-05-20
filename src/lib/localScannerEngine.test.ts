@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  assessBridgeBarStaleness,
   applyStaleChaseGuard,
   buildTargetCascade,
   latestCompletedBar,
@@ -58,6 +59,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
 }
 
 const morningWindow = resolveScannerWindow(new Date('2026-05-19T10:05:00-04:00'));
+const lateMorningWindow = resolveScannerWindow(new Date('2026-05-19T11:10:00-04:00'));
 const openingWindow = resolveScannerWindow(new Date('2026-05-19T09:45:00-04:00'));
 const outsideWindow = resolveScannerWindow(new Date('2026-05-19T08:00:00-04:00'));
 
@@ -66,6 +68,8 @@ assert.equal(openingWindow.allowsTradePlan, false);
 assert.equal(openingWindow.allowsDiscordAlert, false);
 assert.equal(morningWindow.session, 'morning');
 assert.equal(morningWindow.allowsTradePlan, true);
+assert.equal(lateMorningWindow.session, 'morning');
+assert.equal(lateMorningWindow.allowsTradePlan, true);
 assert.equal(outsideWindow.allowsDiscordAlert, false);
 
 const completed = latestCompletedBar(
@@ -74,9 +78,66 @@ const completed = latestCompletedBar(
     bar('2026-05-19T10:05:00', 1, 2, 0, 1),
   ],
   5,
-  new Date('2026-05-19T10:07:00-04:00')
+  new Date('2026-05-19T10:07:00-04:00'),
+  'open'
 );
 assert.equal(completed?.time, '2026-05-19T09:55:00');
+
+const closeTimestampCompleted = latestCompletedBar(
+  [
+    bar('2026-05-19T09:55:00', 1, 2, 0, 1),
+    bar('2026-05-19T10:05:00', 1, 2, 0, 1),
+  ],
+  5,
+  new Date('2026-05-19T10:07:00-04:00')
+);
+assert.equal(closeTimestampCompleted?.time, '2026-05-19T10:05:00');
+
+const freshBridge = assessBridgeBarStaleness({
+  latestBar: bar('2026-05-19T10:00:00', 1, 2, 0, 1),
+  timeframeMinutes: 5,
+  now: new Date('2026-05-19T10:12:00-04:00'),
+  maxStaleBarMinutes: 10,
+  timestampMode: 'open',
+});
+assert.equal(freshBridge.stale, false);
+
+const freshCloseTimestampBridge = assessBridgeBarStaleness({
+  latestBar: bar('2026-05-19T10:05:00', 1, 2, 0, 1),
+  timeframeMinutes: 5,
+  now: new Date('2026-05-19T10:12:00-04:00'),
+  maxStaleBarMinutes: 10,
+});
+assert.equal(freshCloseTimestampBridge.stale, false);
+
+const centralBridgeTime = assessBridgeBarStaleness({
+  latestBar: bar('2026-05-19T21:35:00', 1, 2, 0, 1),
+  timeframeMinutes: 5,
+  now: new Date('2026-05-19T19:47:00-07:00'),
+  maxStaleBarMinutes: 15,
+  timestampMode: 'close',
+  timeZoneMode: 'central',
+});
+assert.equal(centralBridgeTime.stale, false);
+
+const easternBridgeTime = assessBridgeBarStaleness({
+  latestBar: bar('2026-05-19T21:35:00', 1, 2, 0, 1),
+  timeframeMinutes: 5,
+  now: new Date('2026-05-19T19:47:00-07:00'),
+  maxStaleBarMinutes: 15,
+  timestampMode: 'close',
+  timeZoneMode: 'eastern',
+});
+assert.equal(easternBridgeTime.stale, true);
+
+const staleBridge = assessBridgeBarStaleness({
+  latestBar: bar('2026-05-17T19:00:00', 1, 2, 0, 1),
+  timeframeMinutes: 5,
+  now: new Date('2026-05-19T18:05:00-04:00'),
+  maxStaleBarMinutes: 10,
+});
+assert.equal(staleBridge.stale, true);
+assert.ok(staleBridge.reason?.includes('latest completed 5M candle is stale'));
 
 const strongCandidate = candidate();
 const strongScore = scoreScannerCandidate({ candidate: strongCandidate, window: morningWindow, currentPrice: 101, higherTimeframeAligned: true });

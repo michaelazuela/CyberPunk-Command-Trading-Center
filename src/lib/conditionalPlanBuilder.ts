@@ -11,6 +11,54 @@ import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 
 type Direction = SetupCandidate['direction'];
 
+interface FailedReclaimShortReference {
+  reference: number;
+  entry: number;
+  stop: number;
+  triggerCandleClose: number;
+  triggerCandleHigh: number;
+  protectedHigh: number;
+  timestamp?: string | null;
+}
+
+interface ReclaimLongReference {
+  reference: number;
+  entry: number;
+  stop: number;
+  triggerCandleClose: number;
+  triggerCandleLow: number;
+  triggerCandleHigh: number;
+  protectedLow: number;
+  timestamp?: string | null;
+}
+
+interface OpeningRangeContinuationReference {
+  direction: Exclude<Direction, 'NO TRADE'>;
+  reference: number;
+  entry: number;
+  stop: number;
+  trigger: string;
+  invalidation: string;
+  protectedLevel: number;
+}
+
+interface ImbalancePullbackReference {
+  direction: Exclude<Direction, 'NO TRADE'>;
+  zoneLabel: string;
+  entry: number;
+  stop: number;
+  reference: number;
+  trigger: string;
+  invalidation: string;
+}
+
+interface CompressionRangeReference {
+  high: number;
+  low: number;
+  breakoutDirection: Direction;
+  confidence: SetupCandidate['confidence'];
+}
+
 function isPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
@@ -57,6 +105,241 @@ function pricesFromSwings(chartContext: ChartContext, type: 'high' | 'low'): num
     .filter((swing) => swing.type === type && swing.confidence !== 'Low' && swing.confidence !== 'Unreadable')
     .map((swing) => swing.price)
     .filter(isPrice);
+}
+
+function readableCandles(chartContext: ChartContext) {
+  return (chartContext.candles || [])
+    .filter((candle) =>
+      candle.confidence !== 'Low' &&
+      candle.confidence !== 'Unreadable' &&
+      isPrice(candle.open) &&
+      isPrice(candle.high) &&
+      isPrice(candle.low) &&
+      isPrice(candle.close)
+    )
+    .sort((a, b) => a.index - b.index);
+}
+
+function detectFailedReclaimShort(chartContext: ChartContext): FailedReclaimShortReference | null {
+  const candles = readableCandles(chartContext);
+  const tick = TRADE_RULES.targetModel.tickSize;
+  if (candles.length < 2) return null;
+
+  const recent = candles.slice(-8);
+  const matches: FailedReclaimShortReference[] = [];
+  for (let index = recent.length - 1; index >= 1; index -= 1) {
+    const trigger = recent[index];
+    const prior = recent[index - 1];
+    const priorClose = prior.close as number;
+    const triggerClose = trigger.close as number;
+    const triggerHigh = trigger.high as number;
+    const priorHigh = prior.high as number;
+    const priorOpen = prior.open as number;
+    const triggerOpen = trigger.open as number;
+    const bearishCloseThroughPriorClose = triggerClose <= priorClose - tick;
+    const priorReclaimedHigher = priorClose >= priorOpen || priorHigh > priorClose + tick;
+    const triggerRejected = trigger.direction === 'bearish' || triggerClose < triggerOpen;
+
+    if (!bearishCloseThroughPriorClose || !priorReclaimedHigher || !triggerRejected) continue;
+
+    const localProtectedHigh = Math.max(
+      priorHigh,
+      triggerHigh,
+      ...recent.slice(Math.max(0, index - 3), index + 1).map((candle) => candle.high as number)
+    );
+
+    matches.push({
+      reference: roundToTick(priorClose),
+      entry: roundToTick(priorClose - tick),
+      stop: roundToTick(localProtectedHigh + tick),
+      triggerCandleClose: roundToTick(triggerClose),
+      triggerCandleHigh: roundToTick(triggerHigh),
+      protectedHigh: roundToTick(localProtectedHigh),
+      timestamp: trigger.timestamp,
+    });
+  }
+
+  return matches.sort((a, b) => b.reference - a.reference)[0] || null;
+}
+
+function detectMorningReclaimLong(chartContext: ChartContext): ReclaimLongReference | null {
+  const candles = readableCandles(chartContext);
+  const tick = TRADE_RULES.targetModel.tickSize;
+  if (candles.length < 2) return null;
+
+  const recent = candles.slice(-8);
+  const matches: ReclaimLongReference[] = [];
+  for (let index = recent.length - 1; index >= 1; index -= 1) {
+    const trigger = recent[index];
+    const prior = recent[index - 1];
+    const priorClose = prior.close as number;
+    const triggerClose = trigger.close as number;
+    const triggerLow = trigger.low as number;
+    const triggerHigh = trigger.high as number;
+    const priorLow = prior.low as number;
+    const priorOpen = prior.open as number;
+    const triggerOpen = trigger.open as number;
+    const bullishCloseThroughPriorClose = triggerClose >= priorClose + tick;
+    const priorFailedLower = priorClose <= priorOpen || priorLow < priorClose - tick;
+    const triggerReclaimed = trigger.direction === 'bullish' || triggerClose > triggerOpen;
+
+    if (!bullishCloseThroughPriorClose || !priorFailedLower || !triggerReclaimed) continue;
+
+    const localProtectedLow = Math.min(
+      priorLow,
+      triggerLow,
+      ...recent.slice(Math.max(0, index - 3), index + 1).map((candle) => candle.low as number)
+    );
+
+    matches.push({
+      reference: roundToTick(priorClose),
+      entry: roundToTick(triggerHigh + tick),
+      stop: roundToTick(localProtectedLow - tick),
+      triggerCandleClose: roundToTick(triggerClose),
+      triggerCandleLow: roundToTick(triggerLow),
+      triggerCandleHigh: roundToTick(triggerHigh),
+      protectedLow: roundToTick(localProtectedLow),
+      timestamp: trigger.timestamp,
+    });
+  }
+
+  return matches.sort((a, b) => b.reference - a.reference)[0] || null;
+}
+
+function detectMorningOpeningRangeContinuation(chartContext: ChartContext): OpeningRangeContinuationReference | null {
+  const candles = readableCandles(chartContext);
+  const { openingRangeHigh, openingRangeLow } = chartContext.keyLevels;
+  const tick = TRADE_RULES.targetModel.tickSize;
+  if (!isPrice(openingRangeHigh) || !isPrice(openingRangeLow) || candles.length < 2) return null;
+
+  const recent = candles.slice(-8);
+  const longRetest = recent
+    .filter((candle) =>
+      (candle.low as number) <= openingRangeHigh + tick &&
+      (candle.close as number) >= openingRangeHigh &&
+      (candle.high as number) > openingRangeHigh
+    )
+    .sort((a, b) => b.index - a.index)[0];
+  if (longRetest) {
+    const protectedLow = Math.min(longRetest.low as number, ...recent.slice(-4).map((candle) => candle.low as number));
+    return {
+      direction: 'LONG',
+      reference: roundToTick(openingRangeHigh),
+      entry: roundToTick((longRetest.high as number) + tick),
+      stop: roundToTick(protectedLow - tick),
+      trigger: `5M close above opening range high ${roundToTick(openingRangeHigh)}, then retest holds.`,
+      invalidation: `Invalid if price fails back below the opening range retest structure near ${roundToTick(protectedLow - tick)}.`,
+      protectedLevel: roundToTick(protectedLow),
+    };
+  }
+
+  const shortRetest = recent
+    .filter((candle) =>
+      (candle.high as number) >= openingRangeLow - tick &&
+      (candle.close as number) <= openingRangeLow &&
+      (candle.low as number) < openingRangeLow
+    )
+    .sort((a, b) => b.index - a.index)[0];
+  if (shortRetest) {
+    const protectedHigh = Math.max(shortRetest.high as number, ...recent.slice(-4).map((candle) => candle.high as number));
+    return {
+      direction: 'SHORT',
+      reference: roundToTick(openingRangeLow),
+      entry: roundToTick((shortRetest.low as number) - tick),
+      stop: roundToTick(protectedHigh + tick),
+      trigger: `5M close below opening range low ${roundToTick(openingRangeLow)}, then retest fails.`,
+      invalidation: `Invalid if price reclaims the opening range retest structure near ${roundToTick(protectedHigh + tick)}.`,
+      protectedLevel: roundToTick(protectedHigh),
+    };
+  }
+
+  return null;
+}
+
+function detectImbalancePullback(chartContext: ChartContext): ImbalancePullbackReference | null {
+  const candles = readableCandles(chartContext);
+  const zones = (chartContext.fvgZones || [])
+    .filter((zone) => confidenceIsReadable(zone.confidence) && isPrice(zone.upper) && isPrice(zone.lower))
+    .sort((a, b) => {
+      const aScore = (a.reclaimed ? 2 : 0) + (a.filledPercent !== null && a.filledPercent !== undefined && a.filledPercent > 0 ? 1 : 0);
+      const bScore = (b.reclaimed ? 2 : 0) + (b.filledPercent !== null && b.filledPercent !== undefined && b.filledPercent > 0 ? 1 : 0);
+      return bScore - aScore;
+    });
+  const zone = zones[0];
+  if (!zone || candles.length < 1) return null;
+
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const lower = roundToTick(zone.lower as number);
+  const upper = roundToTick(zone.upper as number);
+  const midpoint = roundToTick(zone.midpoint ?? (upper + lower) / 2);
+  const recent = candles.slice(-6);
+
+  if (zone.direction === 'LONG') {
+    const reclaim = recent.find((candle) =>
+      (candle.low as number) <= upper &&
+      (candle.close as number) >= midpoint &&
+      (candle.direction === 'bullish' || candle.isReclaim)
+    );
+    const protectedLow = Math.min(lower, ...recent.map((candle) => candle.low as number));
+    const entryReference = reclaim ? (reclaim.high as number) : midpoint;
+    return {
+      direction: 'LONG',
+      zoneLabel: `${lower}-${upper} Imbalance Zone`,
+      reference: midpoint,
+      entry: roundToTick(entryReference + tick),
+      stop: roundToTick(protectedLow - tick),
+      trigger: `5M reclaim out of ${lower}-${upper} imbalance zone, then break the pullback candle high.`,
+      invalidation: `Invalid if the imbalance hold fails below protected structure near ${roundToTick(protectedLow - tick)}.`,
+    };
+  }
+
+  const rejection = recent.find((candle) =>
+    (candle.high as number) >= lower &&
+    (candle.close as number) <= midpoint &&
+    (candle.direction === 'bearish' || candle.isRejection)
+  );
+  const protectedHigh = Math.max(upper, ...recent.map((candle) => candle.high as number));
+  const entryReference = rejection ? (rejection.low as number) : midpoint;
+  return {
+    direction: 'SHORT',
+    zoneLabel: `${lower}-${upper} Imbalance Zone`,
+    reference: midpoint,
+    entry: roundToTick(entryReference - tick),
+    stop: roundToTick(protectedHigh + tick),
+    trigger: `5M rejection from ${lower}-${upper} imbalance zone, then break the pullback candle low.`,
+    invalidation: `Invalid if price reclaims above protected imbalance structure near ${roundToTick(protectedHigh + tick)}.`,
+  };
+}
+
+function deriveCompressionRangeFromRecentBars(chartContext: ChartContext): CompressionRangeReference | null {
+  const candles = readableCandles(chartContext);
+  if (chartContext.compressionRange?.present && isPrice(chartContext.compressionRange.high) && isPrice(chartContext.compressionRange.low)) {
+    return {
+      high: chartContext.compressionRange.high as number,
+      low: chartContext.compressionRange.low as number,
+      breakoutDirection: chartContext.compressionRange.breakoutDirection || 'NO TRADE',
+      confidence: confidenceIsReadable(chartContext.compressionRange.confidence) ? 'Medium' : 'Low',
+    };
+  }
+  if (candles.length < 8) return null;
+  const compression = candles.slice(-8, -1);
+  const trigger = candles[candles.length - 1];
+  const high = Math.max(...compression.map((candle) => candle.high as number));
+  const low = Math.min(...compression.map((candle) => candle.low as number));
+  const range = high - low;
+  const averageRange = compression.reduce((sum, candle) => sum + ((candle.high as number) - (candle.low as number)), 0) / compression.length;
+  const isTight = range <= averageRange * 2.4;
+  const breakoutDirection =
+    (trigger.close as number) > high ? 'LONG' :
+    (trigger.close as number) < low ? 'SHORT' :
+    'NO TRADE';
+  if (!isTight && breakoutDirection === 'NO TRADE') return null;
+  return {
+    high: roundToTick(high),
+    low: roundToTick(low),
+    breakoutDirection,
+    confidence: isTight ? 'Medium' : 'Low',
+  };
 }
 
 function nearestBelow(price: number | null | undefined, levels: number[]): number | null {
@@ -256,8 +539,10 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   const reclaimResistance = firstPrice(nearbyMajorResistance(current, resistance), resistance, levels.triggerCandleHigh);
   const reclaimStop = firstPrice(projectedPullbackStop(current, support), levels.triggerCandleLow, support);
   const nyPremarketHighTarget = nyPremarketHigh(chartContext);
-  const breakdownSupport = support;
+  const failedReclaimShort = detectFailedReclaimShort(chartContext);
+  const breakdownSupport = firstPrice(failedReclaimShort?.reference, support);
   const rejectionEvidence = Boolean(
+    failedReclaimShort ||
     chartContext.candleFacts?.rejectionWickPresent ||
     chartContext.liquidityEvents?.some((event) => event.type === 'sweep' && confidenceIsReadable(event.confidence)) ||
     chartContext.setupEvidence?.liquiditySweep?.possible ||
@@ -269,12 +554,15 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
     chartContext.setupEvidence?.momentumPullbackBreatherReclaim?.possible ||
     chartContext.setupEvidence?.momentumPullback?.possible
   );
+  const reclaimLong = detectMorningReclaimLong(chartContext);
+  const openingRangeContinuation = detectMorningOpeningRangeContinuation(chartContext);
+  const imbalancePullback = detectImbalancePullback(chartContext);
 
   const plans: SetupCandidate[] = [];
 
   if (rejectionEvidence || resistance || support) {
-    const entry = breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null;
-    const stop = resistance ? roundToTick(resistance + TRADE_RULES.targetModel.tickSize) : null;
+    const entry = firstPrice(failedReclaimShort?.entry, breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null);
+    const stop = firstPrice(failedReclaimShort?.stop, resistance ? roundToTick(resistance + TRADE_RULES.targetModel.tickSize) : null);
     plans.push(makeCandidate({
       chartContext,
       setupType: SetupType.MorningFailedHighLiquidityRejection,
@@ -285,29 +573,38 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       confidence: rejectionEvidence ? 'Medium' : 'Low',
       evidence: [
         'Morning conditional builder reviewed failed-high / liquidity-rejection path.',
-        resistance ? `Failed high / resistance reference: ${resistance}.` : 'Failed high / resistance reference not confirmed.',
+        failedReclaimShort
+          ? `Failed reclaim reference: ${failedReclaimShort.reference}; completed 5M candle closed at ${failedReclaimShort.triggerCandleClose}.`
+          : 'Failed reclaim reference not confirmed from completed candles.',
+        failedReclaimShort
+          ? `Protected failed-structure high: ${failedReclaimShort.protectedHigh}.`
+          : resistance ? `Failed high / resistance reference: ${resistance}.` : 'Failed high / resistance reference not confirmed.',
         breakdownSupport ? `Breakdown trigger reference: ${breakdownSupport}.` : 'Breakdown trigger reference not confirmed.',
       ],
       missingEvidence: [
         !breakdownSupport ? 'Support/reclaim breakdown level is missing.' : '',
-        !resistance ? 'Failed high / swing high stop reference is missing.' : '',
+        !stop ? 'Failed high / swing high stop reference is missing.' : '',
       ].filter(Boolean),
       missingLevels: [
         !breakdownSupport ? missingLevel('breakdownLevel', 'Breakdown / reclaim support level', 'Needed to define the short trigger and ENTRY.', 'entry') : null,
-        !resistance ? missingLevel('failedHigh', 'Failed high / swing high', 'Needed to place the short STOP above the failed high.', 'stop') : null,
-        chartContext.candleFacts?.closeBelowKeyLevel !== true ? missingLevel('triggerCandleLow', '5M close below breakdown level', 'Needed before this short can become executable.', 'trigger') : null,
+        !stop ? missingLevel('failedHigh', 'Failed high / swing high', 'Needed to place the short STOP above the failed high.', 'stop') : null,
+        !(failedReclaimShort || chartContext.candleFacts?.closeBelowKeyLevel === true) ? missingLevel('triggerCandleLow', '5M close below failed reclaim level', 'Needed before this short can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: breakdownSupport ? `5M close below ${breakdownSupport}.` : '5M close below the active reclaim/support area.',
-      nextAction: 'Wait for failed hold above resistance, then confirm breakdown below reclaim/support before shorting.',
-      invalidation: resistance ? `Invalid if price reclaims and holds above ${resistance}.` : 'Invalid if price reclaims the failed high.',
-      hasTrigger: chartContext.candleFacts?.closeBelowKeyLevel === true,
+      requiredTrigger: failedReclaimShort
+        ? `5M close below failed reclaim level (${failedReclaimShort.reference}).`
+        : breakdownSupport ? `5M close below ${breakdownSupport}.` : '5M close below the active reclaim/support area.',
+      nextAction: failedReclaimShort
+        ? `Preferred plan: short the failed retest of ${failedReclaimShort.reference}; do not chase if price is already extended toward the target.`
+        : 'Wait for failed hold above resistance, then confirm breakdown below reclaim/support before shorting.',
+      invalidation: stop ? `Invalid if price reclaims and holds above protected structure near ${stop}.` : 'Invalid if price reclaims the failed high.',
+      hasTrigger: Boolean(failedReclaimShort || chartContext.candleFacts?.closeBelowKeyLevel === true),
     }));
   }
 
-  if (reclaimEvidence || resistance || support) {
-    const entryBase = reclaimResistance || levels.triggerCandleHigh;
-    const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
-    const stop = reclaimStop ? roundToTick(reclaimStop) : null;
+  if (reclaimEvidence || reclaimLong || resistance || support) {
+    const entryBase = firstPrice(reclaimLong?.entry, reclaimResistance ? roundToTick(reclaimResistance + TRADE_RULES.targetModel.tickSize) : null, levels.triggerCandleHigh);
+    const entry = entryBase ? roundToTick(entryBase) : null;
+    const stop = firstPrice(reclaimLong?.stop, reclaimStop ? roundToTick(reclaimStop) : null);
     const reclaimTargetPhrase = nyPremarketHighTarget ? ` toward NY Premarket High ${nyPremarketHighTarget}` : '';
     plans.push(makeCandidate({
       chartContext,
@@ -322,9 +619,13 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       confidence: reclaimEvidence ? 'Medium' : 'Low',
       evidence: [
         'Morning conditional builder reviewed reclaim-long path.',
-        reclaimResistance ? `Reclaim reference: ${reclaimResistance}.` : 'Reclaim reference not confirmed.',
+        reclaimLong
+          ? `Completed 5M reclaim reference: ${reclaimLong.reference}; reclaim candle high: ${reclaimLong.triggerCandleHigh}.`
+          : reclaimResistance ? `Reclaim reference: ${reclaimResistance}.` : 'Reclaim reference not confirmed.',
+        reclaimLong
+          ? `Protected reclaim swing low: ${reclaimLong.protectedLow}.`
+          : reclaimStop ? `Pullback/support stop reference: ${reclaimStop}.` : 'Pullback/support stop reference not confirmed.',
         nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
-        reclaimStop ? `Pullback/support stop reference: ${reclaimStop}.` : 'Pullback/support stop reference not confirmed.',
       ],
       missingEvidence: [
         !entry ? 'Reclaim entry level is missing.' : '',
@@ -335,10 +636,58 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
         !stop ? missingLevel('activeSwingLow', 'Pullback low / active swing low', 'Needed to place the long STOP under structure.', 'stop') : null,
         chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above reclaim level', 'Needed before this long can become executable.', 'trigger') : null,
       ].filter(Boolean) as MissingLevelRequirement[],
-      requiredTrigger: reclaimResistance ? `5M close above reclaim level (${reclaimResistance}), then pullback holds.` : '5M close above reclaim level, then pullback holds.',
-      nextAction: `Wait for a reclaim close, then a pullback that holds before considering continuation${reclaimTargetPhrase}.`,
-      invalidation: reclaimStop ? `Invalid if reclaim level fails and price breaks back below ${reclaimStop}.` : 'Invalid if reclaim level fails.',
-      hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true,
+      requiredTrigger: reclaimLong
+        ? `Break back above reclaim candle high (${reclaimLong.triggerCandleHigh}) after the pullback holds.`
+        : reclaimResistance ? `5M close above reclaim level (${reclaimResistance}), then pullback holds.` : '5M close above reclaim level, then pullback holds.',
+      nextAction: `Preferred plan: long the successful reclaim retest, not the breakout chase${reclaimTargetPhrase}.`,
+      invalidation: stop ? `Invalid if reclaim level fails and price breaks back below protected structure near ${stop}.` : 'Invalid if reclaim level fails.',
+      hasTrigger: Boolean(reclaimLong || chartContext.candleFacts?.closeAboveKeyLevel === true),
+    }));
+  }
+
+  if (openingRangeContinuation) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.MorningOpeningRangeContinuation,
+      scenarioLabel: openingRangeContinuation.direction === 'LONG'
+        ? 'Opening Range Retest Continuation Long'
+        : 'Opening Range Retest Continuation Short',
+      direction: openingRangeContinuation.direction,
+      entry: openingRangeContinuation.entry,
+      stop: openingRangeContinuation.stop,
+      priority: 87,
+      confidence: 'Medium',
+      evidence: [
+        'Morning builder detected an opening range continuation path.',
+        `Opening range reference: ${openingRangeContinuation.reference}.`,
+        `Protected retest structure: ${openingRangeContinuation.protectedLevel}.`,
+      ],
+      missingLevels: [],
+      requiredTrigger: openingRangeContinuation.trigger,
+      nextAction: 'Preferred plan: trade the opening range retest/reclaim, not the breakout chase.',
+      invalidation: openingRangeContinuation.invalidation,
+      hasTrigger: true,
+    }));
+  }
+
+  if (imbalancePullback) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.FvgImbalancePullback,
+      scenarioLabel: `${imbalancePullback.direction === 'LONG' ? 'Long' : 'Short'} Imbalance Pullback`,
+      direction: imbalancePullback.direction,
+      entry: imbalancePullback.entry,
+      stop: imbalancePullback.stop,
+      priority: 86,
+      confidence: 'Medium',
+      evidence: [
+        'Morning builder detected an imbalance pullback planning path.',
+        `Imbalance reference: ${imbalancePullback.zoneLabel}.`,
+      ],
+      requiredTrigger: imbalancePullback.trigger,
+      nextAction: 'Wait for continuation away from the imbalance retest; do not enter on a blind touch.',
+      invalidation: imbalancePullback.invalidation,
+      hasTrigger: Boolean(chartContext.setupReadyFacts?.fvgReclaimed || chartContext.candleFacts?.closeAboveKeyLevel || chartContext.candleFacts?.closeBelowKeyLevel),
     }));
   }
 
@@ -353,8 +702,9 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   const sweepLow = firstPrice(levels.morningLowSweep, levels.activeSwingLow, levels.nearestSupport);
   const morningHigh = firstPrice(levels.morningHigh, morning?.morningHigh);
   const morningLow = firstPrice(levels.morningLow, morning?.morningLow);
-  const compressionHigh = firstPrice(chartContext.compressionRange?.high, levels.nearestResistance, levels.activeSwingHigh);
-  const compressionLow = firstPrice(chartContext.compressionRange?.low, levels.nearestSupport, levels.activeSwingLow);
+  const compressionRange = deriveCompressionRangeFromRecentBars(chartContext);
+  const compressionHigh = firstPrice(compressionRange?.high, levels.nearestResistance, levels.activeSwingHigh);
+  const compressionLow = firstPrice(compressionRange?.low, levels.nearestSupport, levels.activeSwingLow);
   const supportLevels = [
     levels.nearestSupport,
     levels.activeSwingLow,
@@ -392,6 +742,8 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     chartContext.candleFacts?.closeBelowKeyLevel ||
     morning?.failedHoldAboveMorningHigh
   );
+  const hasCompletedMorningContext = Boolean(morning?.complete && morningHigh && morningLow);
+  const imbalancePullback = detectImbalancePullback(chartContext);
   const plans: SetupCandidate[] = [];
 
   if (morningHigh || morning?.failedHoldAboveMorningHigh || morning?.morningHighSwept) {
@@ -458,9 +810,9 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     }));
   }
 
-  if (chartContext.compressionRange?.present || chartContext.marketStructure?.compressionCondition) {
-    const direction = chartContext.compressionRange?.breakoutDirection && chartContext.compressionRange.breakoutDirection !== 'NO TRADE'
-      ? chartContext.compressionRange.breakoutDirection
+  if (compressionRange || chartContext.marketStructure?.compressionCondition) {
+    const direction = compressionRange?.breakoutDirection && compressionRange.breakoutDirection !== 'NO TRADE'
+      ? compressionRange.breakoutDirection
       : 'NO TRADE';
     const entry = direction === 'LONG' && compressionHigh
       ? roundToTick(compressionHigh + TRADE_RULES.targetModel.tickSize)
@@ -484,8 +836,12 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       entry,
       stop,
       priority: 78,
-      confidence: confidenceIsReadable(chartContext.compressionRange?.confidence) ? 'Medium' : 'Low',
-      evidence: ['Lunch builder reviewed compression breakout from completed Morning context.'],
+      confidence: compressionRange?.confidence || 'Low',
+      evidence: [
+        hasCompletedMorningContext
+          ? 'Lunch builder reviewed compression breakout from completed Morning context.'
+          : 'Lunch builder derived compression from recent completed 5M bars, but completed Morning context is still required for high quality.',
+      ],
       missingEvidence: [direction === 'NO TRADE' ? 'Compression breakout direction is not confirmed.' : ''].filter(Boolean),
       missingLevels: [
         !compressionHigh ? missingLevel('compressionHigh', 'Compression range high', 'Needed to define breakout/rejection levels.', 'context') : null,
@@ -499,7 +855,33 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     }));
   }
 
-  if (!plans.some((plan) => plan.direction === 'LONG') && (reclaimEvidence || support || resistance)) {
+  if (imbalancePullback) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.FvgImbalancePullback,
+      scenarioLabel: `${imbalancePullback.direction === 'LONG' ? 'Long' : 'Short'} Imbalance Pullback`,
+      direction: imbalancePullback.direction,
+      entry: imbalancePullback.entry,
+      stop: imbalancePullback.stop,
+      priority: 86,
+      confidence: 'Medium',
+      evidence: [
+        'Lunch builder detected an imbalance pullback planning path.',
+        `Imbalance reference: ${imbalancePullback.zoneLabel}.`,
+        hasCompletedMorningContext ? 'Completed Morning range context is available.' : 'Completed Morning range context is not complete.',
+      ],
+      missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning range context is missing.'],
+      missingLevels: hasCompletedMorningContext ? [] : [
+        missingLevel('morningHigh', 'Completed Morning high/low', 'Needed to validate Lunch imbalance pullback context.', 'context', 'morning_context'),
+      ],
+      requiredTrigger: imbalancePullback.trigger,
+      nextAction: 'Wait for continuation away from the imbalance retest; do not enter on a blind touch.',
+      invalidation: imbalancePullback.invalidation,
+      hasTrigger: Boolean(hasCompletedMorningContext && (chartContext.setupReadyFacts?.fvgReclaimed || chartContext.candleFacts?.closeAboveKeyLevel || chartContext.candleFacts?.closeBelowKeyLevel)),
+    }));
+  }
+
+  if (hasCompletedMorningContext && (reclaimEvidence || support || resistance)) {
     const entryBase = firstPrice(resistance, compressionHigh, levels.triggerCandleHigh);
     const stopBase = firstPrice(support, compressionLow, levels.triggerCandleLow);
     const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
@@ -516,7 +898,8 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       priority: 86,
       confidence: reclaimEvidence ? 'Medium' : 'Low',
       evidence: [
-        'Lunch conditional builder reviewed range-reclaim long path from structured support/resistance.',
+        'Lunch conditional builder reviewed range-reclaim long path from completed Morning range context.',
+        `Completed Morning range: ${morningLow}-${morningHigh}.`,
         entryBase ? `Reclaim trigger reference: ${entryBase}.` : 'Reclaim trigger reference not confirmed.',
         nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
         stopBase ? `Support / failed-low stop reference: ${stopBase}.` : 'Support / failed-low stop reference not confirmed.',
@@ -537,7 +920,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
     }));
   }
 
-  if (!plans.some((plan) => plan.direction === 'SHORT') && (rejectionEvidence || support || resistance)) {
+  if (hasCompletedMorningContext && (rejectionEvidence || support || resistance)) {
     const entryBase = firstPrice(support, compressionLow, levels.triggerCandleLow);
     const stopBase = firstPrice(resistance, compressionHigh, levels.triggerCandleHigh);
     const entry = entryBase ? roundToTick(entryBase - TRADE_RULES.targetModel.tickSize) : null;
@@ -546,15 +929,16 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       chartContext,
       setupType: SetupType.LunchFailedContinuation,
       scenarioLabel: nyPremarketLowTarget
-        ? 'Failed continuation toward NY Premarket Low'
-        : 'Failed continuation',
+        ? 'Failed bullish continuation toward NY Premarket Low'
+        : 'Failed bullish continuation',
       direction: 'SHORT',
       entry,
       stop,
       priority: 84,
       confidence: rejectionEvidence ? 'Medium' : 'Low',
       evidence: [
-        'Lunch conditional builder reviewed failed-continuation short path from structured support/resistance.',
+        'Lunch conditional builder reviewed failed bullish continuation short path from completed Morning context.',
+        `Completed Morning range: ${morningLow}-${morningHigh}.`,
         entryBase ? `Breakdown trigger reference: ${entryBase}.` : 'Breakdown trigger reference not confirmed.',
         nyPremarketLowTarget ? `NY Premarket Low target reference: ${nyPremarketLowTarget}.` : 'NY Premarket Low target reference not confirmed.',
         stopBase ? `Resistance / failed-high stop reference: ${stopBase}.` : 'Resistance / failed-high stop reference not confirmed.',
@@ -572,6 +956,45 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       nextAction: 'Wait for failed hold above resistance, then confirm breakdown before shorting.',
       invalidation: stopBase ? `Invalid if price reclaims and holds above ${stopBase}.` : 'Invalid if price reclaims the failed high.',
       hasTrigger: chartContext.candleFacts?.closeBelowKeyLevel === true || morning?.failedHoldAboveMorningHigh === true,
+    }));
+  }
+
+  if (hasCompletedMorningContext && (reclaimEvidence || support || resistance)) {
+    const entryBase = firstPrice(resistance, compressionHigh, morningLow, levels.triggerCandleHigh);
+    const stopBase = firstPrice(support, compressionLow, levels.triggerCandleLow);
+    const entry = entryBase ? roundToTick(entryBase + TRADE_RULES.targetModel.tickSize) : null;
+    const stop = stopBase ? roundToTick(stopBase - TRADE_RULES.targetModel.tickSize) : null;
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.LunchFailedContinuation,
+      scenarioLabel: nyPremarketHighTarget
+        ? 'Failed bearish continuation toward NY Premarket High'
+        : 'Failed bearish continuation',
+      direction: 'LONG',
+      entry,
+      stop,
+      priority: 84,
+      confidence: reclaimEvidence ? 'Medium' : 'Low',
+      evidence: [
+        'Lunch conditional builder reviewed failed bearish continuation long path from completed Morning context.',
+        `Completed Morning range: ${morningLow}-${morningHigh}.`,
+        entryBase ? `Reclaim trigger reference: ${entryBase}.` : 'Reclaim trigger reference not confirmed.',
+        nyPremarketHighTarget ? `NY Premarket High target reference: ${nyPremarketHighTarget}.` : 'NY Premarket High target reference not confirmed.',
+        stopBase ? `Support / failed-low stop reference: ${stopBase}.` : 'Support / failed-low stop reference not confirmed.',
+      ],
+      missingEvidence: [
+        !entryBase ? 'Reclaim or upper trigger level is missing.' : '',
+        !stopBase ? 'Support / failed-low stop reference is missing.' : '',
+      ].filter(Boolean),
+      missingLevels: [
+        !entryBase ? missingLevel('reclaimLevel', 'Lunch reclaim level after failed bearish continuation', 'Needed to define the long trigger and ENTRY.', 'entry') : null,
+        !stopBase ? missingLevel('activeSwingLow', 'Lunch failed-continuation protected low', 'Needed to place the long STOP below structure.', 'stop') : null,
+        chartContext.candleFacts?.closeAboveKeyLevel !== true ? missingLevel('triggerCandleHigh', '5M close above lunch reclaim level', 'Needed before this Lunch long can become executable.', 'trigger') : null,
+      ].filter(Boolean) as MissingLevelRequirement[],
+      requiredTrigger: entryBase ? `5M close above reclaim level (${entryBase}), then pullback holds.` : '5M close above the lunch reclaim level, then pullback holds.',
+      nextAction: 'Wait for the failed bearish continuation to reclaim and retest; do not chase the first bounce.',
+      invalidation: stopBase ? `Invalid if price loses the failed-continuation reclaim structure near ${stop}.` : 'Invalid if reclaim level fails.',
+      hasTrigger: chartContext.candleFacts?.closeAboveKeyLevel === true || morning?.failedHoldBelowMorningLow === true,
     }));
   }
 

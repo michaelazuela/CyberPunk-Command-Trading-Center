@@ -14,7 +14,7 @@ $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $projectRoot
 
 Write-Host ""
-Write-Host "Quant Desk Discord Alerts" -ForegroundColor Cyan
+Write-Host "Quant Desk Live Scanner" -ForegroundColor Cyan
 Write-Host "Project: $projectRoot"
 Write-Host "Bridge:  $BridgeUrl"
 Write-Host "Symbol:  $BridgeInstrument"
@@ -51,7 +51,7 @@ if (-not $NoRecorder) {
     "--bridge-url",
     $BridgeUrl,
     "--poll-seconds",
-    "30"
+    "60"
   )
 
   try {
@@ -65,14 +65,16 @@ if (-not $NoRecorder) {
 
 $argsList = @(
   "run",
-  "nt:discord-alerts",
+  "nt:scanner",
   "--",
   "--instrument",
   $Instrument,
   "--bridge-instrument",
   $BridgeInstrument,
   "--bridge-url",
-  $BridgeUrl
+  $BridgeUrl,
+  "--poll-seconds",
+  "60"
 )
 
 if ($DryRun) {
@@ -80,7 +82,7 @@ if ($DryRun) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($Once)) {
-  $argsList += @("--once", $Once)
+  $argsList += "--once"
 }
 
 try {

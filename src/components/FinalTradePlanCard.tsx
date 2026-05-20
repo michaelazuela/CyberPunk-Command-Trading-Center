@@ -4,7 +4,8 @@ import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 import { buildConfidenceBreakdown } from '../lib/planMetadata';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType, TradeDecisionStatus } from '../types';
-import { fixedRiskStopForDirection, fixedRiskTargetsForDirection, TRADE_RULES } from '../config/tradeRules';
+import { candidateComputedLevels, scenarioScore, selectBestTwoScenarios } from '../lib/scenarioSelection';
+import { TRADE_RULES } from '../config/tradeRules';
 
 interface FinalTradePlanCardProps {
   plan: NormalizedTradePlan;
@@ -91,6 +92,7 @@ function formatSetupType(setupType?: SetupType | string): string {
     [SetupType.MomentumPullbackBreatherReclaim]: 'Momentum Pullback / Breather Reclaim',
     [SetupType.MorningFailedHighLiquidityRejection]: 'Morning Failed High / Liquidity Rejection',
     [SetupType.MorningReclaimLong]: 'Morning Reclaim Long',
+    [SetupType.MorningOpeningRangeContinuation]: 'Opening Range Continuation',
     [SetupType.LunchFailedHighReversal]: 'Lunch Failed High Reversal',
     [SetupType.LunchFailedLowReversal]: 'Lunch Failed Low Reversal',
     [SetupType.LunchCompressionBreakout]: 'Lunch Compression Breakout',
@@ -131,107 +133,6 @@ function formatBlockReason(reason: NoTradeReason | null): string {
   if (!reason) return '';
   if (reason === NoTradeReason.RiskTooWide) return 'RiskTooWide';
   return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
-}
-
-function roundToTick(value: number, tickSize = 0.25): number {
-  return Math.round(value / tickSize) * tickSize;
-}
-
-function projectedTargets(candidate: SetupCandidate): { t1: number | null; t2: number | null; risk: number | null } {
-  const fixedStop = fixedRiskStopForDirection(candidate.direction, candidate.entry);
-  const fixedTargets = fixedRiskTargetsForDirection(candidate.direction, candidate.entry);
-  if (fixedStop !== null && fixedTargets.target1 !== null && fixedTargets.target2 !== null) {
-    return {
-      t1: fixedTargets.target1,
-      t2: fixedTargets.target2,
-      risk: TRADE_RULES.fixedRiskPoints,
-    };
-  }
-
-  if (!candidate.entry || candidate.direction === 'NO TRADE') {
-    return { t1: null, t2: null, risk: null };
-  }
-
-  const risk = TRADE_RULES.fixedRiskPoints;
-  if (!Number.isFinite(risk) || risk <= 0) return { t1: null, t2: null, risk: null };
-
-  const directionMultiplier = candidate.direction === 'LONG' ? 1 : -1;
-  return {
-    t1: roundToTick(candidate.entry + directionMultiplier * risk * 1.5),
-    t2: roundToTick(candidate.entry + directionMultiplier * risk * 2),
-    risk: roundToTick(risk),
-  };
-}
-
-function conditionalPlanScore(candidate: SetupCandidate): number {
-  const projection = projectedTargets(candidate);
-  const confidenceScore =
-    candidate.confidence === 'High' ? 20 :
-    candidate.confidence === 'Medium' ? 10 :
-    0;
-  const executionScore =
-    candidate.executionStatus === ExecutionStatus.Executable ? 40 :
-    candidate.executionStatus === ExecutionStatus.Conditional ? 20 :
-    candidate.blockReason === NoTradeReason.RiskTooWide ? 5 :
-    0;
-  const risk = projection.risk ?? candidate.riskPoints ?? null;
-  const riskQualityScore =
-    risk === null ? 0 :
-    risk === TRADE_RULES.fixedRiskPoints ? 20 :
-    -20;
-  const levelClarityScore =
-    candidate.entry != null && projection.t1 != null && projection.t2 != null ? 15 :
-    candidate.entry != null ? 5 :
-    0;
-  const triggerClarityScore =
-    candidate.executionStatus === ExecutionStatus.Executable ? 15 :
-    candidate.requiredTrigger ? 5 :
-    0;
-  const proximityScore = Math.round((candidate.proximityScore || 0) * 10);
-  const levelContextScore = candidate.levelContextScore || 0;
-
-  return (
-    (candidate.priority || 0) +
-    confidenceScore +
-    executionScore +
-    riskQualityScore +
-    levelClarityScore +
-    triggerClarityScore +
-    proximityScore +
-    levelContextScore
-  );
-}
-
-function sameScenario(a: SetupCandidate, b: SetupCandidate): boolean {
-  if (a.direction !== b.direction) return false;
-  const entryA = a.entry ?? null;
-  const entryB = b.entry ?? null;
-  const stopA = a.stop ?? null;
-  const stopB = b.stop ?? null;
-  const similarEntry = entryA !== null && entryB !== null && Math.abs(entryA - entryB) <= 1;
-  const similarStop = stopA !== null && stopB !== null && Math.abs(stopA - stopB) <= 1;
-  const sameTrigger = Boolean(a.requiredTrigger && b.requiredTrigger && a.requiredTrigger === b.requiredTrigger);
-  return (similarEntry && similarStop) || sameTrigger;
-}
-
-function selectBestConditionalScenarios(candidates: SetupCandidate[]): SetupCandidate[] {
-  const ranked = [...candidates].sort((a, b) => conditionalPlanScore(b) - conditionalPlanScore(a));
-  const unique: SetupCandidate[] = [];
-
-  ranked.forEach((candidate) => {
-    if (candidate.direction === 'NO TRADE') return;
-    if (unique.some((existing) => sameScenario(existing, candidate))) return;
-    unique.push(candidate);
-  });
-
-  const bestLong = unique.find((candidate) => candidate.direction === 'LONG');
-  const bestShort = unique.find((candidate) => candidate.direction === 'SHORT');
-
-  if (bestLong && bestShort) {
-    return [bestLong, bestShort].sort((a, b) => conditionalPlanScore(b) - conditionalPlanScore(a));
-  }
-
-  return unique.slice(0, 2);
 }
 
 function candidateReason(candidate: SetupCandidate): string {
@@ -310,9 +211,9 @@ function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
 function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
   const plan = candidate.targetObjectivePlan;
   if (!plan && !candidate.target1Reason && !candidate.target2Reason) return null;
-  const projection = projectedTargets(candidate);
-  const tacticalT1 = projection.t1 ?? candidate.target1;
-  const tacticalT2 = projection.t2 ?? candidate.target2;
+  const projection = candidateComputedLevels(candidate);
+  const tacticalT1 = projection.target1 ?? candidate.target1;
+  const tacticalT2 = projection.target2 ?? candidate.target2;
 
   return (
     <div className="mt-2 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2">
@@ -391,7 +292,7 @@ function TargetObjectiveNotes({ candidate }: { candidate: SetupCandidate }) {
           </div>
         ))}
         <div className="text-[var(--txt3)]">
-          App executable targets still use fixed 1.5R / 2.0R. Liquidity targets guide scale-outs, runners, and whether the path is blocked.
+          App executable targets use deterministic 1.5R / 2.0R from ENTRY to structure STOP. Liquidity targets guide scale-outs, runners, and whether the path is blocked.
         </div>
       </div>
     </div>
@@ -614,11 +515,11 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">STOP</div>
-                    <div className="text-[var(--red)]">{fixedRiskStopForDirection(candidate.direction, candidate.entry) ?? 'N/A'}</div>
+                    <div className="text-[var(--red)]">{candidate.stop ?? 'N/A'}</div>
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">RISK</div>
-                    <div className="text-[var(--orange)]">{candidate.entry ? TRADE_RULES.fixedRiskPoints : 'N/A'}</div>
+                    <div className="text-[var(--orange)]">{candidate.riskPoints ?? 'N/A'}</div>
                   </div>
                 </div>
               )}
@@ -654,7 +555,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
       candidate.executionStatus === ExecutionStatus.Conditional ||
       candidate.blockReason === NoTradeReason.RiskTooWide
     );
-  const candidates = selectBestConditionalScenarios(conditionalCandidates);
+  const candidates = selectBestTwoScenarios(conditionalCandidates);
 
   if (candidates.length === 0) return null;
 
@@ -672,7 +573,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
 
       <div className="grid gap-2">
         {candidates.map((candidate, index) => {
-          const projection = projectedTargets(candidate);
+          const projection = candidateComputedLevels(candidate);
           return (
             <div key={`${candidate.setupType}-${candidate.direction}-${index}`} className={cn('border p-3 font-mono', candidateTone(candidate))}>
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
@@ -682,7 +583,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
-                    <span className="qd-badge opacity-80">Score: {conditionalPlanScore(candidate)}</span>
+                    <span className="qd-badge opacity-80">Score: {scenarioScore(candidate)}</span>
                     {candidate.levelContextScore !== undefined && candidate.levelContextScore > 0 && (
                       <span className="qd-badge text-[var(--amber)] border-[var(--amber)]/30">Market Map Supports Plan</span>
                     )}
@@ -697,7 +598,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">STOP</div>
-                    <div className="text-[var(--red)]">{fixedRiskStopForDirection(candidate.direction, candidate.entry) ?? 'TBD'}</div>
+                    <div className="text-[var(--red)]">{projection.stop ?? 'TBD'}</div>
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">RISK</div>
@@ -705,11 +606,11 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">T1</div>
-                    <div className="text-[var(--green)]">{projection.t1 ?? 'TBD'}</div>
+                    <div className="text-[var(--green)]">{projection.target1 ?? 'TBD'}</div>
                   </div>
                   <div className="border border-[var(--b2)] bg-[var(--bg)] p-2">
                     <div className="text-[var(--txt3)]">T2</div>
-                    <div className="text-[var(--green)]">{projection.t2 ?? 'TBD'}</div>
+                    <div className="text-[var(--green)]">{projection.target2 ?? 'TBD'}</div>
                   </div>
                 </div>
               </div>
@@ -726,7 +627,7 @@ function ConditionalPlansPanel({ plan }: { plan: NormalizedTradePlan }) {
                 <MissingLevelsList candidate={candidate} />
                 <TargetObjectiveNotes candidate={candidate} />
                 <div className="text-[var(--amber)]">
-                  T1/T2 above are fixed app projections at 1.5R / 2.0R from candidate ENTRY and STOP. They are not executable until the app-owned pipeline approves the plan.
+                  T1/T2 above are app projections at 1.5R / 2.0R from candidate ENTRY and structure STOP. They are not executable until the app-owned pipeline approves the plan.
                 </div>
               </div>
             </div>
@@ -825,7 +726,7 @@ export default function FinalTradePlanCard({
     case "missing": sourceBadge = "MISSING"; break;
   }
 
-  const riskUnderMax = plan.riskPoints !== null && plan.riskPoints === TRADE_RULES.fixedRiskPoints;
+  const riskUnderMax = plan.riskPoints !== null && plan.riskPoints <= TRADE_RULES.maxRiskPoints;
   const validityChecks = [
     { label: 'Entry', ready: plan.entry !== null, detail: plan.entry !== null ? String(plan.entry) : 'Missing' },
     { label: 'Stop', ready: plan.stop !== null, detail: plan.stop !== null ? String(plan.stop) : 'Missing' },

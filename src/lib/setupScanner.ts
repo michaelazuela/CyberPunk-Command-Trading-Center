@@ -211,6 +211,7 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
     case SetupType.MomentumPullbackBreatherReclaim: return 'momentumPullbackBreatherReclaim';
     case SetupType.MorningFailedHighLiquidityRejection: return 'morningFailedHighLiquidityRejection';
     case SetupType.MorningReclaimLong: return 'morningReclaimLong';
+    case SetupType.MorningOpeningRangeContinuation: return 'openingRangeContinuation';
     case SetupType.LunchFailedHighReversal: return 'lunchFailedHighReversal';
     case SetupType.LunchFailedLowReversal: return 'lunchFailedLowReversal';
     case SetupType.LunchCompressionBreakout: return 'lunchCompressionBreakout';
@@ -446,6 +447,8 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
       return Boolean((candles.rejection || hasSweep) && (levels.nearestResistance || levels.activeSwingHigh || levels.openingRangeHigh));
     case SetupType.MorningReclaimLong:
       return Boolean((candles.reclaim || candles.closeAboveKeyLevel) && (levels.nearestResistance || levels.activeSwingHigh || levels.triggerCandleHigh));
+    case SetupType.MorningOpeningRangeContinuation:
+      return Boolean(levels.openingRangeHigh && levels.openingRangeLow && (candles.expansion || structure?.expansionCondition || candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel));
     case SetupType.LunchFailedHighReversal:
       return Boolean(hasMorningContext && (sweptMorningHigh || morningContext?.failedHoldAboveMorningHigh) && (candles.closeBelowKeyLevel || candles.rejection || candles.reclaim));
     case SetupType.LunchFailedLowReversal:
@@ -496,6 +499,8 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
       return Boolean(candles.rejection && (chartContext.keyLevels.nearestSupport || chartContext.keyLevels.activeSwingLow));
     case SetupType.MorningReclaimLong:
       return Boolean((candles.reclaim || candles.closeAboveKeyLevel) && (chartContext.keyLevels.nearestResistance || chartContext.keyLevels.triggerCandleHigh));
+    case SetupType.MorningOpeningRangeContinuation:
+      return Boolean(chartContext.keyLevels.openingRangeHigh && chartContext.keyLevels.openingRangeLow && (candles.expansion || chartContext.marketStructure?.expansionCondition));
     case SetupType.LunchFailedHighReversal:
       return Boolean(hasMorningContext && sweptMorningHigh && (morningContext?.failedHoldAboveMorningHigh || candles.closeBelowKeyLevel));
     case SetupType.LunchFailedLowReversal:

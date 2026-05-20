@@ -32,6 +32,7 @@ namespace NinjaTrader.NinjaScript.AddOns
         private const string DefaultInstrument = "MES 06-26";
         private const string TradingHoursTemplate = "CME US Index Futures ETH";
         private const int DefaultBarsBack = 450;
+        private const int RecentBarsRequestTimeoutMs = 5000;
         private const string Prefix = "http://127.0.0.1:8765/";
 
         private readonly object sync = new object();
@@ -285,7 +286,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.1-readonly" },
+                { "version", "0.1.3-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
                 { "defaultInstrument", DefaultInstrument },
@@ -441,7 +442,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 
             bars = bars
                 .OrderBy(x => x.Time)
-                .Take(limit)
+                .Skip(Math.Max(0, bars.Count - limit))
                 .ToList();
 
             return new Dictionary<string, object>
@@ -496,6 +497,23 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (!requestsByKey.ContainsKey(key))
                 StartBars(instrumentName, minutes);
 
+            string refreshError;
+            List<BridgeBar> refreshedBars = RequestRecentBars(instrumentName, minutes, limit, out refreshError);
+            if (refreshedBars.Count > 0)
+            {
+                lock (sync)
+                {
+                    barsByKey[key] = TrimBars(refreshedBars);
+                    return barsByKey[key]
+                        .OrderBy(x => x.Time)
+                        .Skip(Math.Max(0, barsByKey[key].Count - limit))
+                        .ToList();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(refreshError))
+                Print(BridgeName + " recent bars refresh failed for " + key + ": " + refreshError);
+
             lock (sync)
             {
                 if (!barsByKey.ContainsKey(key))
@@ -505,6 +523,67 @@ namespace NinjaTrader.NinjaScript.AddOns
                     .Skip(Math.Max(0, barsByKey[key].Count - limit))
                     .ToList();
             }
+        }
+
+        private List<BridgeBar> RequestRecentBars(string instrumentName, int minutes, int limit, out string error)
+        {
+            error = null;
+            Instrument instrument = Instrument.GetInstrument(instrumentName);
+            if (instrument == null)
+            {
+                error = "Instrument not found: " + instrumentName;
+                return new List<BridgeBar>();
+            }
+
+            List<BridgeBar> bars = new List<BridgeBar>();
+            ManualResetEvent done = new ManualResetEvent(false);
+            BarsRequest request = null;
+            string callbackError = null;
+
+            try
+            {
+                request = new BarsRequest(instrument, Math.Max(DefaultBarsBack, limit));
+                request.BarsPeriod = new BarsPeriod { BarsPeriodType = BarsPeriodType.Minute, Value = minutes };
+                request.TradingHours = TradingHours.Get(TradingHoursTemplate) ?? TradingHours.Get("Default 24 x 7");
+
+                request.Request((barsRequest, errorCode, errorMessage) =>
+                {
+                    try
+                    {
+                        if (errorCode != ErrorCode.NoError)
+                        {
+                            callbackError = errorCode + " " + errorMessage;
+                            return;
+                        }
+
+                        for (int i = 0; i < barsRequest.Bars.Count; i++)
+                            bars.Add(ReadBar(barsRequest.Bars, i));
+                    }
+                    finally
+                    {
+                        done.Set();
+                    }
+                });
+
+                if (!done.WaitOne(RecentBarsRequestTimeoutMs))
+                    error = "Recent bars request timed out after " + RecentBarsRequestTimeoutMs.ToString(CultureInfo.InvariantCulture) + "ms.";
+                else
+                    error = callbackError;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+            finally
+            {
+                try { request?.Dispose(); } catch { }
+                try { done.Dispose(); } catch { }
+            }
+
+            return bars
+                .OrderBy(x => x.Time)
+                .Skip(Math.Max(0, bars.Count - limit))
+                .ToList();
         }
 
         private static int ParseTimeframe(string value)

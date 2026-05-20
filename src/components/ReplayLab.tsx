@@ -14,6 +14,7 @@ import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/Sc
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
+import { candidateHasConcretePlan, selectBestTwoScenarios } from '../lib/scenarioSelection';
 import {
   buildNinjaChartContext,
   getNinjaHistoricalBars,
@@ -148,11 +149,7 @@ function formatCandidateName(candidate: SetupCandidate): string {
 }
 
 function candidateHasPlanLevels(candidate: SetupCandidate): boolean {
-  return candidate.direction !== 'NO TRADE' &&
-    candidate.entry != null &&
-    candidate.stop != null &&
-    candidate.target1 != null &&
-    candidate.target2 != null;
+  return candidateHasConcretePlan(candidate);
 }
 
 function buildPlanFromCandidate(basePlan: ReturnType<typeof buildAppTradePlan> | null, candidate: SetupCandidate | null, labelSuffix = '') {
@@ -329,9 +326,8 @@ export default function ReplayLab({
   const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'replay_lunch', instrument }) : null;
 
   const getOutcomePlanOptions = (plan: typeof normalizedMorningPlan) => {
-    const candidates = (plan?.setupCandidates || [])
-      .filter(candidateHasPlanLevels)
-      .slice(0, 8);
+    const candidates = selectBestTwoScenarios(plan?.setupCandidates || [])
+      .filter(candidateHasPlanLevels);
     return [
       { key: 'main' as OutcomePlanChoice, label: 'Main App Plan', candidate: null, plan },
       ...candidates.map((candidate, index) => ({

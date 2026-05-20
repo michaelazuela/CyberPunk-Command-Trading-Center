@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
+import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
@@ -79,6 +80,11 @@ const DEFAULT_CONFIG: SchedulerConfig = {
   },
 };
 
+const MORNING_EXECUTION_START_ET = '09:30';
+const MORNING_EXECUTION_END_ET = TRADE_RULES.executionWindows.morningExecution.endET;
+const LUNCH_EXECUTION_START_ET = TRADE_RULES.executionWindows.middayTrapReversal.startET;
+const LUNCH_EXECUTION_END_ET = TRADE_RULES.executionWindows.middayTrapReversal.endET;
+
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
   const directIndex = process.argv.indexOf(`--${name}`);
@@ -108,6 +114,7 @@ function printHelp() {
     '  --once premarket|morning|lunch   Run one alert immediately.',
     '  --session premarket|morning|lunch Alias for --once, for replay/manual tests.',
     '  --date YYYY-MM-DD                 Trade date for --once/--session.',
+    '  --as-of HH:MM                    End the replay/manual analysis at this ET time.',
     '  --dry-run                       Build the message without posting to Discord.',
     '  --instrument MES|MNQ             Defaults to MES.',
     '  --bridge-instrument "MES 06-26" Defaults to MES 06-26.',
@@ -155,6 +162,16 @@ function getDayOfWeek(tradeDate: string): string {
     timeZone: 'America/New_York',
     weekday: 'long',
   });
+}
+
+function normalizeEtClock(value: string): string {
+  const [hourRaw, minuteRaw = '00'] = value.split(':');
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    throw new Error(`Invalid ET clock value: ${value}. Use HH:MM.`);
+  }
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
 function etDateTime(tradeDate: string, time: string): string {
@@ -238,9 +255,11 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
   });
 }
 
-async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJob, 'premarket'>, tradeDate: string): Promise<AnalysisResult> {
+async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJob, 'premarket'>, tradeDate: string, asOfEt?: string): Promise<AnalysisResult> {
   const priorDate = previousCalendarDate(tradeDate);
-  const contextTo = etDateTime(tradeDate, job === 'morning' ? '10:00' : '13:00');
+  const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
+  const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
+  const contextTo = etDateTime(tradeDate, executionEnd);
   const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(priorDate, '18:00'), contextTo),
     fetchBars(config, '60m', etDateTime(priorDate, '18:00'), contextTo),
@@ -248,8 +267,8 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJ
     fetchBars(
       config,
       '5m',
-      etDateTime(tradeDate, job === 'morning' ? '09:30' : '11:50'),
-      etDateTime(tradeDate, job === 'morning' ? '10:10' : '13:00')
+      etDateTime(tradeDate, executionStart),
+      etDateTime(tradeDate, executionEnd)
     ),
   ]);
   const chartContext = buildNinjaChartContext({
@@ -531,17 +550,7 @@ function compactSetupName(candidate: SetupCandidate): string {
 }
 
 function topConditionalCandidates(candidates: SetupCandidate[] | undefined): SetupCandidate[] {
-  const eligible = (candidates || [])
-    .filter((candidate) => candidate.executionStatus === 'Conditional' || candidate.executionStatus === 'Blocked')
-    .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT');
-  const bestLong = eligible.find((candidate) => candidate.direction === 'LONG');
-  const bestShort = eligible.find((candidate) => candidate.direction === 'SHORT');
-
-  if (bestLong && bestShort) {
-    return [bestLong, bestShort].sort((a, b) => eligible.indexOf(a) - eligible.indexOf(b));
-  }
-
-  return eligible.slice(0, 2);
+  return selectBestTwoScenarios(candidates || []);
 }
 
 function formatObjectiveLine(objective: TargetObjective): string {
@@ -1173,13 +1182,13 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean): Pro
   }
 }
 
-async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate()): Promise<void> {
+async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string): Promise<void> {
   if (job === 'premarket') {
     const context = await buildPremarketContext(config, tradeDate);
     await postDiscord(formatPremarketPayload(tradeDate, context), dryRun);
     return;
   }
-  const analysis = await buildSessionAnalysis(config, job, tradeDate);
+  const analysis = await buildSessionAnalysis(config, job, tradeDate, asOfEt);
   const planVersionId = createPlanVersionId(job, tradeDate);
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument: config.instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates);
@@ -1202,7 +1211,7 @@ async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<
       const key = `${tradeDate}:${jobName}`;
       if (jobConfig.enabled && clock >= jobConfig.timeEt && !state.sent[key]) {
         try {
-          await runJob(jobName, config, dryRun, tradeDate);
+          await runJob(jobName, config, dryRun, tradeDate, clock);
           state.sent[key] = new Date().toISOString();
           await writeState(state);
           console.log(`Sent ${jobName} alert for ${tradeDate}.`);
@@ -1230,12 +1239,13 @@ async function main() {
   const dryRun = hasArg('dry-run');
   const once = (argValue('once') || argValue('session')) as AlertJob | null;
   const tradeDate = argValue('date') || getEtTradeDate();
+  const asOfEt = argValue('as-of') ? normalizeEtClock(argValue('as-of') as string) : undefined;
 
   if (once) {
     if (!['premarket', 'morning', 'lunch'].includes(once)) {
       throw new Error('--once must be premarket, morning, or lunch.');
     }
-    await runJob(once, config, dryRun, tradeDate);
+    await runJob(once, config, dryRun, tradeDate, asOfEt);
     return;
   }
 

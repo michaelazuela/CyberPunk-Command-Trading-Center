@@ -64,7 +64,7 @@ export function segmentTradingSession(bars: NinjaBridgeBar[]): SessionSegment[] 
     buildSegment('asian', 'Asian Session', byRange(20 * 60, 2 * 60)),
     buildSegment('london', 'London Session', byRange(3 * 60, 8 * 60 + 29)),
     buildSegment('ny_premarket', 'New York Premarket', byRange(8 * 60 + 30, 9 * 60 + 29)),
-    buildSegment('rth_morning', 'RTH Morning Window', byRange(9 * 60 + 30, 10 * 60 + 10)),
+    buildSegment('rth_morning', 'RTH Morning Window', byRange(9 * 60 + 30, 11 * 60 + 15)),
     buildSegment('lunch', 'Lunch Review Window', byRange(11 * 60 + 50, 13 * 60)),
     buildSegment('current_window', 'Current Imported Window', valid.slice(-16)),
   ];

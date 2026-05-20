@@ -84,6 +84,7 @@ export const TRADE_RULES = {
         SetupType.MomentumPullbackBreatherReclaim,
         SetupType.MorningFailedHighLiquidityRejection,
         SetupType.MorningReclaimLong,
+        SetupType.MorningOpeningRangeContinuation,
       ],
     },
     lunch: {
