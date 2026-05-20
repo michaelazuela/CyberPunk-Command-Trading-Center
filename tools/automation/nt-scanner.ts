@@ -1,0 +1,562 @@
+import dotenv from 'dotenv';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildAppTradePlan } from '../../src/lib/planEngine';
+import { createPlanVersionId } from '../../src/lib/planMetadata';
+import {
+  buildNinjaChartContext,
+  getNinjaBridgeBars,
+  getNinjaBridgeHealth,
+  getNinjaBridgePositions,
+  getNinjaBridgeSnapshot,
+  type NinjaBridgeBar,
+} from '../../src/lib/ninjaTraderBridge';
+import {
+  applyStaleChaseGuard,
+  buildTargetCascade,
+  DEFAULT_SCANNER_RISK_GUARDS,
+  getScannerTradeDate,
+  latestCompletedBar,
+  resolveScannerWindow,
+  scannerAlertKey,
+  scannerStateFromDecision,
+  scoreScannerCandidate,
+  shouldSendScannerAlert,
+  type ScannerState,
+  type ScannerThresholds,
+} from '../../src/lib/localScannerEngine';
+import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+
+dotenv.config({ quiet: true });
+dotenv.config({ path: '.env.local', override: false, quiet: true });
+
+type Instrument = 'MES' | 'MNQ';
+type LiveSession = 'morning' | 'lunch';
+
+interface ScannerConfig {
+  instrument: Instrument;
+  bridgeInstrument: string;
+  bridgeUrl: string;
+  account: string;
+  pollSeconds: number;
+  dryRun: boolean;
+  once: boolean;
+  continuousMode: boolean;
+  scanWindows: boolean;
+  discordEnabled: boolean;
+  afternoonEnabled: boolean;
+  thresholds: ScannerThresholds;
+  maxChaseDistancePoints: number;
+  maxChaseDistanceR: number;
+  staleSetupMaxCandles: number;
+  targetAlreadySweptLookbackCandles: number;
+  allowRetestOnlyEntries: boolean;
+}
+
+interface ScannerStateFile {
+  sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
+  lastCompleted5mBySession: Record<string, string>;
+}
+
+interface DiscordWebhookPayload {
+  username: string;
+  content?: string;
+  embeds: Array<{
+    title: string;
+    description?: string;
+    color: number;
+    fields: Array<{ name: string; value: string; inline?: boolean }>;
+    footer: { text: string };
+    timestamp: string;
+  }>;
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
+const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
+
+function argValue(name: string): string | null {
+  const prefix = `--${name}=`;
+  const directIndex = process.argv.indexOf(`--${name}`);
+  if (directIndex >= 0 && process.argv[directIndex + 1]) return process.argv[directIndex + 1];
+  const matched = process.argv.find((arg) => arg.startsWith(prefix));
+  return matched ? matched.slice(prefix.length) : null;
+}
+
+function hasArg(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
+function boolArg(name: string, fallback: boolean): boolean {
+  const value = argValue(name);
+  if (value === null) return hasArg(name) ? true : fallback;
+  if (['false', '0', 'no', 'off'].includes(value.toLowerCase())) return false;
+  if (['true', '1', 'yes', 'on'].includes(value.toLowerCase())) return true;
+  return fallback;
+}
+
+function numberArg(name: string, fallback: number): number {
+  const value = Number(argValue(name));
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function printHelp() {
+  console.log([
+    'Quant Desk local deterministic NinjaTrader scanner',
+    '',
+    'Usage:',
+    '  npm run nt:scanner',
+    '  npm run nt:scanner -- --once --dry-run',
+    '  npm run nt:scanner -- --instrument MES --bridge-instrument "MES 06-26"',
+    '  npm run nt:scanner -- --dry-run',
+    '',
+    'Options:',
+    '  --once                         Run one poll cycle and exit.',
+    '  --dry-run                      Print/log alert payloads instead of posting to Discord.',
+    '  --instrument MES|MNQ           Logical app instrument, defaults to MES.',
+    '  --bridge-instrument "MES 06-26" NinjaTrader bridge instrument.',
+    '  --bridge-url URL               Defaults to http://127.0.0.1:8765.',
+    '  --poll-seconds 30              Poll cadence, minimum 15 seconds for continuous mode.',
+    '  --discord false                Disable Discord sends but keep scanner logs.',
+    '  --scan-windows false           Disable trade-plan scans; context/health only.',
+    '  --afternoon true               Enable optional afternoon window.',
+  ].join('\n'));
+}
+
+function loadConfig(): ScannerConfig {
+  const dryRun = hasArg('dry-run');
+  const once = hasArg('once');
+  return {
+    instrument: ((argValue('instrument') || 'MES') as Instrument),
+    bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES 06-26',
+    bridgeUrl: argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765',
+    account: argValue('account') || process.env.NINJATRADER_ACCOUNT || 'Sim101',
+    pollSeconds: Math.max(once ? 1 : 15, numberArg('poll-seconds', 30)),
+    dryRun,
+    once,
+    continuousMode: boolArg('continuous', true),
+    scanWindows: boolArg('scan-windows', true),
+    discordEnabled: boolArg('discord', true),
+    afternoonEnabled: boolArg('afternoon', false),
+    thresholds: {
+      conditional: numberArg('conditional-threshold', 75),
+      executable: numberArg('executable-threshold', 85),
+      educationalBlocked: numberArg('blocked-threshold', 70),
+    },
+    maxChaseDistancePoints: numberArg('max-chase-points', DEFAULT_SCANNER_RISK_GUARDS.maxChaseDistancePoints),
+    maxChaseDistanceR: numberArg('max-chase-r', DEFAULT_SCANNER_RISK_GUARDS.maxChaseDistanceR),
+    staleSetupMaxCandles: numberArg('stale-candles', DEFAULT_SCANNER_RISK_GUARDS.staleSetupMaxCandles),
+    targetAlreadySweptLookbackCandles: numberArg('target-swept-lookback', DEFAULT_SCANNER_RISK_GUARDS.targetAlreadySweptLookbackCandles),
+    allowRetestOnlyEntries: boolArg('allow-retest-only', DEFAULT_SCANNER_RISK_GUARDS.allowRetestOnlyEntries),
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function readState(): Promise<ScannerStateFile> {
+  try {
+    return JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as ScannerStateFile;
+  } catch {
+    return { sent: {}, lastCompleted5mBySession: {} };
+  }
+}
+
+async function writeState(state: ScannerStateFile): Promise<void> {
+  await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+}
+
+function previousCalendarDate(tradeDate: string): string {
+  const date = new Date(`${tradeDate}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function etDateTime(tradeDate: string, time: string): string {
+  return `${tradeDate}T${time}:00-04:00`;
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function money(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : 'N/A';
+}
+
+function clip(value: string, max = 1024): string {
+  const text = value.trim() || 'N/A';
+  return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
+}
+
+function statusColor(state: ScannerState): number {
+  if (state === 'Approved' || state === 'Executable') return 0x00c853;
+  if (state === 'Conditional' || state === 'TriggerPending' || state === 'Missed') return 0xffd600;
+  if (state === 'Blocked' || state === 'NoTrade') return 0xff6d00;
+  return 0x78909c;
+}
+
+function statusEmoji(state: ScannerState): string {
+  if (state === 'Approved' || state === 'Executable') return '🟢';
+  if (state === 'Conditional' || state === 'TriggerPending') return '🟡';
+  if (state === 'Missed') return '⏭️';
+  if (state === 'Blocked') return '🟠';
+  return '⚪';
+}
+
+function planName(candidate: SetupCandidate | null): string {
+  if (!candidate) return 'No active plan';
+  return candidate.scenarioLabel || candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function objectiveLine(label: string, objective: TargetObjective | null | undefined): string {
+  if (!objective) return `${label}: N/A`;
+  return `${label}: ${objective.price} ${objective.label}`;
+}
+
+async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
+  const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
+    const response = await getNinjaBridgeBars(config.bridgeInstrument, timeframe, 220, config.bridgeUrl);
+    if (!response.ok || !response.bars?.length) return [timeframe, []] as const;
+    const marketConfig = loadMarketDataConfig();
+    if (marketConfig) {
+      try {
+        await upsertMarketBars({
+          bars: response.bars,
+          instrument: config.instrument,
+          bridgeInstrument: config.bridgeInstrument,
+          timeframe,
+          config: marketConfig,
+        });
+      } catch (error) {
+        console.warn(`[scanner-cache] ${timeframe}: cache upsert skipped: ${formatError(error)}`);
+      }
+    }
+    return [timeframe, response.bars] as const;
+  }));
+  return Object.fromEntries(entries) as Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+}
+
+async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
+  const marketConfig = loadMarketDataConfig();
+  const priorDate = previousCalendarDate(tradeDate);
+  const contextTo = etDateTime(tradeDate, session === 'morning' ? '11:15' : '13:00');
+  const from = etDateTime(priorDate, '18:00');
+  const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
+    if (marketConfig) {
+      const cached = await fetchCachedMarketBars({
+        instrument: config.bridgeInstrument,
+        timeframe,
+        from,
+        to: contextTo,
+        config: marketConfig,
+        limit: 6000,
+      });
+      if (cached.length) return [timeframe, cached] as const;
+    }
+    return [timeframe, []] as const;
+  }));
+  return Object.fromEntries(entries) as Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+}
+
+function mergeBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): NinjaBridgeBar[] {
+  const byTime = new Map<string, NinjaBridgeBar>();
+  fallback.forEach((bar) => byTime.set(bar.time, bar));
+  primary.forEach((bar) => byTime.set(bar.time, bar));
+  return [...byTime.values()].sort((a, b) => String(a.time).localeCompare(String(b.time)));
+}
+
+function analysisFromBars(args: {
+  config: ScannerConfig;
+  session: LiveSession;
+  tradeDate: string;
+  bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+}): AnalysisResult {
+  const chartContext = buildNinjaChartContext({
+    bars5m: args.bars['5m'],
+    bars15m: args.bars['15m'],
+    bars60m: args.bars['60m'],
+    bars240m: args.bars['240m'],
+    sessionType: args.session,
+    instrument: args.config.instrument,
+    tradeDate: args.tradeDate,
+  });
+
+  return {
+    dayType: 'NO TRADE',
+    reasoning: `NinjaTrader local scanner imported ${args.session} OHLC context. The app-owned deterministic pipeline controls the decision.`,
+    confidence: 0.5,
+    checks: [{ label: 'NinjaTrader OHLC imported', passed: Boolean(chartContext) }],
+    structuredChartContext: chartContext || undefined,
+    current_rule_analysis: {
+      summary: `Local scanner context from NinjaTrader bridge for ${args.session}.`,
+      setup_detected: 'Pending deterministic setup scan',
+      rule_category: 'APP_OWNED_PIPELINE',
+      entry: null,
+      stop: null,
+      target_1: null,
+      target_2: null,
+      trigger_state: 'NO_TRIGGER',
+      entry_trigger: null,
+      no_trade_reason: null,
+      base_confidence: 'Medium',
+    },
+  };
+}
+
+function chooseBestCandidate(candidates: SetupCandidate[] | undefined): SetupCandidate | null {
+  return (candidates || [])
+    .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT')
+    .filter((candidate) => candidate.executionStatus === 'Executable' || candidate.executionStatus === 'Conditional' || candidate.executionStatus === 'Blocked')
+    .sort((a, b) => (b.rankScore || b.priority || 0) - (a.rankScore || a.priority || 0))[0] || null;
+}
+
+function buildDiscordPayload(args: {
+  session: LiveSession;
+  tradeDate: string;
+  config: ScannerConfig;
+  state: ScannerState;
+  confidence: ReturnType<typeof scoreScannerCandidate>;
+  candidate: SetupCandidate | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  windowLabel: string;
+  staleReason: string | null;
+  targetCascade: ReturnType<typeof buildTargetCascade>;
+  alertReason: string;
+}): DiscordWebhookPayload {
+  const candidate = args.candidate;
+  const targetPlan = candidate?.targetObjectivePlan;
+  const trigger = candidate?.requiredTrigger || 'Wait for completed 5M trigger.';
+  const invalidation = candidate?.invalidation || args.normalized.invalidation || 'Do not execute without structure invalidation.';
+  const planLine = [
+    `Plan: ${planName(candidate)}`,
+    `State: ${args.state} | Confidence: ${args.confidence.score}/100`,
+    `Window: ${args.windowLabel}`,
+    `Current: ${money(args.currentPrice)} | Completed 5M: ${args.completed5m?.time || 'N/A'}`,
+  ].join('\n');
+  const executionLine = [
+    `Trigger: ${trigger}`,
+    `Entry Zone: ${money(candidate?.entry)} area`,
+    `Entry: ${money(candidate?.entry)} | Structure Stop: ${money(candidate?.stop)} | Actual Risk: ${money(candidate?.riskPoints)}`,
+    `T1: ${money(candidate?.target1)} | T2: ${money(candidate?.target2)}`,
+  ].join('\n');
+  const targetLine = [
+    objectiveLine('Obstacle / Reaction Zone', targetPlan?.obstacleTarget1 || targetPlan?.nearestObstacleTarget),
+    objectiveLine('Primary Liquidity Target', targetPlan?.liquidityTarget1 || targetPlan?.nearestLiquidityTarget || args.targetCascade.activeTarget),
+    objectiveLine('Runner Liquidity', targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget),
+    `Target Cascade: ${args.targetCascade.path.join(' ')}`,
+  ].join('\n');
+  const reasonLine = [
+    `Qualified: ${args.alertReason}`,
+    args.confidence.qualifiedReasons.slice(0, 5).join(', '),
+    args.confidence.missingReasons.length ? `Missing: ${args.confidence.missingReasons.slice(0, 4).join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+
+  return {
+    username: 'Quant Desk',
+    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${args.state}\nDecision support only. No automated orders were placed.`,
+    embeds: [
+      {
+        title: `📊 Local Scanner Trading Card — ${args.tradeDate}`,
+        description: 'Do not execute from the card alone. Wait for the 5M trigger, structure stop, risk check, and target room confirmation.',
+        color: statusColor(args.state),
+        fields: [
+          { name: '1️⃣ What', value: clip(planLine), inline: false },
+          { name: '2️⃣ Execution Plan', value: clip(executionLine), inline: false },
+          { name: '3️⃣ Targets', value: clip(targetLine), inline: false },
+          { name: '4️⃣ Invalidation / No Chase', value: clip(`${invalidation}\n${args.staleReason || 'Preferred retest entry required. No chase entry.'}`), inline: false },
+          { name: '5️⃣ Alert Quality', value: clip(reasonLine), inline: false },
+        ],
+        footer: { text: 'Quant Desk • Local Scanner • Read-only bridge • No automated orders' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig): Promise<void> {
+  if (config.dryRun || !config.discordEnabled) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
+}
+
+async function runCycle(config: ScannerConfig): Promise<void> {
+  const now = new Date();
+  const window = resolveScannerWindow(now, config.afternoonEnabled);
+  const tradeDate = getScannerTradeDate(now);
+  const state = await readState();
+
+  let healthOk = false;
+  try {
+    const health = await getNinjaBridgeHealth(config.bridgeUrl);
+    healthOk = Boolean(health.ok);
+  } catch (error) {
+    console.error(`[scanner] bridge health failed: ${formatError(error)}`);
+  }
+
+  if (!healthOk) {
+    console.log(`[scanner] ${new Date().toISOString()} NoData: bridge unavailable.`);
+    return;
+  }
+
+  const [snapshot, positions, liveBars] = await Promise.all([
+    getNinjaBridgeSnapshot(config.bridgeInstrument, config.bridgeUrl).catch(() => null),
+    getNinjaBridgePositions(config.account, config.bridgeUrl).catch(() => null),
+    fetchLiveBars(config),
+  ]);
+
+  const completed5m = latestCompletedBar(liveBars['5m'], 5, now);
+  const currentPrice = snapshot?.currentPrice ?? snapshot?.last?.close ?? completed5m?.close ?? null;
+  const positionText = positions?.positions?.length ? positions.positions.map((item) => `${item.marketPosition} ${item.quantity}`).join(', ') : 'flat / none returned';
+
+  if (!window.allowsTradePlan || !config.scanWindows) {
+    console.log(`[scanner] ${window.label}: context updated only | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}.`);
+    return;
+  }
+
+  const session = window.session === 'lunch' ? 'lunch' : 'morning';
+  const sessionKey = `${tradeDate}:${session}`;
+  if (!completed5m) {
+    console.log(`[scanner] ${window.label}: NoData, no completed 5M candle available.`);
+    return;
+  }
+  if (state.lastCompleted5mBySession[sessionKey] === completed5m.time && !config.once) {
+    console.log(`[scanner] ${window.label}: waiting for new completed 5M candle after ${completed5m.time}.`);
+    return;
+  }
+
+  const cachedBars = await fetchLookLeftBars(config, tradeDate, session).catch((error) => {
+    console.warn(`[scanner] Supabase look-left cache unavailable: ${formatError(error)}`);
+    return null;
+  });
+  const bars = cachedBars
+    ? {
+        '5m': mergeBars(liveBars['5m'], cachedBars['5m']),
+        '15m': mergeBars(liveBars['15m'], cachedBars['15m']),
+        '60m': mergeBars(liveBars['60m'], cachedBars['60m']),
+        '240m': mergeBars(liveBars['240m'], cachedBars['240m']),
+      }
+    : liveBars;
+  const analysis = analysisFromBars({ config, session, tradeDate, bars });
+  const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
+  const candidate = chooseBestCandidate(normalized.setupCandidates);
+  const confidence = scoreScannerCandidate({
+    candidate,
+    window,
+    currentPrice,
+    higherTimeframeAligned: analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === candidate?.direction,
+  });
+  const stale = applyStaleChaseGuard({
+    candidate,
+    currentPrice,
+    guards: {
+      maxChaseDistancePoints: config.maxChaseDistancePoints,
+      maxChaseDistanceR: config.maxChaseDistanceR,
+      staleSetupMaxCandles: config.staleSetupMaxCandles,
+      targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
+      allowRetestOnlyEntries: config.allowRetestOnlyEntries,
+    },
+  });
+  const objectives = (analysis.structuredChartContext?.targetObjectives || candidate?.targetObjectivePlan?.objectives || []) as TargetObjective[];
+  const targetCascade = buildTargetCascade({
+    candidate,
+    objectives,
+    recentBars: bars['5m'],
+    lookbackCandles: config.targetAlreadySweptLookbackCandles,
+  });
+  const decisionState = scannerStateFromDecision({
+    decisionStatus: normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
+    candidate,
+    stale,
+    targetCascade,
+  });
+  const stateForAlert =
+    candidate?.executionStatus === 'Executable' && decisionState === 'Conditional'
+      ? 'Executable'
+      : decisionState;
+  const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
+  const existing = state.sent[alertKey];
+  const alertDecision = shouldSendScannerAlert({
+    state: stateForAlert,
+    confidence: confidence.score,
+    window,
+    candidate,
+    thresholds: config.thresholds,
+    stale: stale.stale,
+    duplicate: Boolean(existing),
+    stateImproved: false,
+  });
+
+  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${alertDecision.reason}`);
+  state.lastCompleted5mBySession[sessionKey] = completed5m.time;
+
+  if (alertDecision.shouldSend) {
+    const planVersionId = createPlanVersionId(session, tradeDate);
+    const payload = buildDiscordPayload({
+      session,
+      tradeDate,
+      config,
+      state: stateForAlert,
+      confidence,
+      candidate,
+      normalized,
+      currentPrice,
+      completed5m,
+      windowLabel: window.label,
+      staleReason: stale.reason,
+      targetCascade,
+      alertReason: alertDecision.reason,
+    });
+    payload.content = `${payload.content}\nPlan ID: \`${planVersionId}\``;
+    await postDiscord(payload, config);
+    state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt: new Date().toISOString() };
+  }
+
+  await writeState(state);
+}
+
+async function main() {
+  if (hasArg('help')) {
+    printHelp();
+    return;
+  }
+
+  const config = loadConfig();
+  console.log('Quant Desk local deterministic scanner started.');
+  console.log(`Bridge: ${config.bridgeUrl} | Instrument: ${config.bridgeInstrument} | Poll: ${config.pollSeconds}s | Discord: ${config.discordEnabled && !config.dryRun ? 'enabled' : 'dry-run/log only'}`);
+
+  do {
+    try {
+      await runCycle(config);
+    } catch (error) {
+      console.error(`[scanner] cycle failed: ${formatError(error)}`);
+    }
+    if (!config.once && config.continuousMode) await sleep(config.pollSeconds * 1000);
+  } while (!config.once && config.continuousMode);
+}
+
+main().catch((error) => {
+  console.error(formatError(error));
+  process.exitCode = 1;
+});
