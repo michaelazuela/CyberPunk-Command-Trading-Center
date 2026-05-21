@@ -1,6 +1,6 @@
 # Trade Decision Pipeline
 
-This app is a trading decision-support system. It must use the same trade-decision sequence every time for Morning Analysis, Lunch Reversal, Replay Morning, and Replay Lunch.
+This app is a trading decision-support system. It must use the same trade-decision sequence every time for Morning Analysis, Lunch Review, Replay Morning, and Replay Lunch.
 
 AI may extract chart context, summarize visible structure, and propose advisory observations. The final trade decision must be produced by a deterministic, rule-based app pipeline.
 
@@ -156,7 +156,7 @@ The app must evaluate whether the analysis is within the approved session contex
 
 - Morning Analysis: 9:30 AM to 11:15 AM ET
 - Required Morning screenshot focus: 9:30 AM through the 10:10 AM candle
-- Lunch Reversal: 11:50 AM to 1:00 PM ET
+- Lunch Review: 11:50 AM to 1:00 PM ET
 
 Replay mode must use the entered trading date and replay session, not the upload timestamp.
 
@@ -194,7 +194,7 @@ Examples:
 
 - Morning Failed High / Liquidity Rejection: short only after a failed hold above a key high/resistance and a confirmed break below reclaim/support.
 - Morning Reclaim Long: long only after price reclaims a key level and the pullback holds.
-- Lunch reversal subtypes: built only from completed Morning-window context plus Lunch execution evidence.
+- Lunch Review subtypes: built only from completed Morning-window context plus Lunch execution evidence.
 
 Conditional plan levels are projections, not approvals. T1/T2 are still app-computed from candidate ENTRY/STOP at 1.5R and 2.0R, and execution remains disabled until the pipeline approves the plan.
 

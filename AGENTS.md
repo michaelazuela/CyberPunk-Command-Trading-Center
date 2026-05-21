@@ -32,7 +32,7 @@ Gemini may describe the chart and provide advisory context, but the app owns exe
 
 Gemini should extract structured facts from screenshots: candles, swings, levels, FVG zones, liquidity events, gap context, setup evidence, and confidence fields.
 
-The app should use those facts to build conditional paths such as Morning Failed High / Liquidity Rejection, Morning Reclaim Long, and Lunch reversal subtypes. Conditional plans may show projected ENTRY/STOP/T1/T2 only as planning paths. They are not executable until the app-owned pipeline confirms trigger, stop, risk, invalidation, and time-window gates.
+The app should use those facts to build conditional paths such as Morning Failed High / Liquidity Rejection, Morning Reclaim Long, and midday review subtypes. Conditional plans may show projected ENTRY/STOP/T1/T2 only as planning paths. They are not executable until the app-owned pipeline confirms trigger, stop, risk, invalidation, and time-window gates.
 
 ## OHLC Fact Authority
 
@@ -136,7 +136,7 @@ All trading windows must come from `src/config/timeWindows.ts`.
 
 - Morning Analysis: 9:30 AM-11:15 AM ET.
 - Required Morning screenshot range: 9:30 AM through the 10:10 AM candle.
-- Lunch Reversal: 11:50 AM-1:00 PM ET.
+- Lunch Review: 11:50 AM-1:00 PM ET.
 - Required Lunch screenshot range: 11:50 AM-1:00 PM ET.
 - Midnight Open is a core RAG feature, not temporary UI state.
 

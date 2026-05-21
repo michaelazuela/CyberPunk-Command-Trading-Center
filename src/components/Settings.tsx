@@ -9,44 +9,20 @@ export default function Settings({
   session: SessionState, 
   onUpdate: (updates: Partial<SessionState>) => void
 }) {
-  const [equity, setEquity] = useState(session.accountEquity ?? 100000);
-  const [risk, setRisk] = useState((session.riskPercent ?? 0.02) * 100);
   const [theme, setTheme] = useState('DARK'); // Dummy state for visual
-
-  const handleSave = () => {
-    const safeEquity = Number.isFinite(equity) && equity > 0 ? equity : (session.accountEquity ?? 100000);
-    const safeRisk = Number.isFinite(risk) && risk > 0 ? risk : ((session.riskPercent ?? 0.02) * 100);
-    setEquity(safeEquity);
-    setRisk(safeRisk);
-    onUpdate({ 
-      accountEquity: safeEquity,
-      riskPercent: safeRisk / 100
-    });
-  };
-
-  const handleReset = () => {
-    if (confirm('Are you sure you want to reset the current session?')) {
-      onUpdate({
-        dayType: undefined,
-        trades: [],
-        killSwitches: { losses: 0, fills: 0 }
-      });
-    }
-  };
 
   return (
     <div className="space-y-6 fade-up">
       <header className="page-header">
         <div>
-          <h1>Settings</h1>
-          <p>PREFERENCES & SYSTEM INTEGRATION</p>
+          <h1>Admin Settings</h1>
+          <p>DISCORD · SCANNER · SUPABASE · UI PREFERENCES</p>
         </div>
       </header>
 
       <DataHealthPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: UI Preferences */}
         <div className="card-base flex flex-col">
            <div className="card-header border-none">
               <span>UI Preferences</span>
@@ -67,40 +43,32 @@ export default function Settings({
            </div>
         </div>
 
-        {/* Right: System Configuration */}
         <div className="card-base flex flex-col">
            <div className="card-header border-none">
-              <span>System Configuration</span>
+              <span>Discord + Scanner Configuration</span>
            </div>
 
            <div className="space-y-6 flex-1 px-4 pb-4">
-              <div className="gap-2 flex flex-col">
-                 <label className="text-[10px] font-mono text-[var(--txt2)] uppercase">Account Equity</label>
-                 <input 
-                   type="number" 
-                   value={equity} 
-                   onChange={e => setEquity(parseFloat(e.target.value))}
-                   className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[12px] font-mono focus:outline-none"
-                 />
-              </div>
-
-              <div className="gap-2 flex flex-col">
-                 <label className="text-[10px] font-mono text-[var(--txt2)] uppercase">Risk Per Trade (%)</label>
-                 <input 
-                   type="number" 
-                   value={risk} 
-                   onChange={e => setRisk(parseFloat(e.target.value))}
-                   className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[12px] font-mono focus:outline-none"
-                 />
-              </div>
-
-              <div className="flex gap-4 pt-4 border-t border-[var(--b0)]">
-                 <button onClick={handleSave} className="qd-btn-primary flex-1">SAVE CONFIG</button>
-                 <button onClick={handleReset} className="qd-btn-ghost-red flex-1 text-[var(--red)] border-[var(--red)] border">RESET SESSION</button>
+              <SettingLine label="Discord webhook" value="Configured in local .env / Cloudflare variables" />
+              <SettingLine label="Discord outcome endpoint" value="Configured by DISCORD_OUTCOME_BASE_URL" />
+              <SettingLine label="Scanner command" value="npm run nt:scanner" />
+              <SettingLine label="Market cache recorder" value="npm run nt:candle-recorder" />
+              <SettingLine label="Bridge authority" value="Read-only NinjaTrader OHLC facts" />
+              <div className="border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-3 text-[10px] font-mono text-[var(--orange)]">
+                Trading controls were removed from the UI direction. Risk parameters and execution gates are controlled by the deterministic scanner and configuration files, then published through Discord.
               </div>
            </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SettingLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-[var(--b1)] bg-[var(--bg)] p-3 font-mono">
+      <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">{label}</div>
+      <div className="text-[11px] text-[var(--txt)] mt-1">{value}</div>
     </div>
   );
 }

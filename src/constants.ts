@@ -21,9 +21,8 @@ export const SYSTEM_RULES = {
 };
 
 export const DAY_TYPE_DESCRIPTIONS = {
-  'TYPE 1 LONG': 'Large green 9:30 bar. Clean HH+HL staircase. 3–8 pt pullback.',
-  'TYPE 2 LONG': 'Tiny doji 9:30 + large green 9:35. Choppier continuation.',
-  'TYPE 1 SHORT': 'Large red 9:30 bar OR large red 9:35 closing below 9:30 open. Clean LH+LL staircase.',
-  'TYPE 2 SHORT': 'Gap up overnight + immediate red rejection at open. Expect fast trend day.',
-  'NO TRADE': 'Heavy bar overlap, mixed signals, no clear staircase by 10:00 EDT.',
+  'LONG': 'Bullish execution scenario with a completed trigger, protected structure stop, and acceptable risk.',
+  'SHORT': 'Bearish execution scenario with a completed trigger, protected structure stop, and acceptable risk.',
+  'WAIT': 'Conditional planning state. Wait for completed 5M confirmation before execution.',
+  'NO TRADE': 'Chop, unclear structure, poor target room, or no completed 5M trigger.',
 };

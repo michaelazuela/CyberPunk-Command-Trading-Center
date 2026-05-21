@@ -126,9 +126,25 @@ function minutesFromClock(clock: string): number {
   return hour * 60 + minute;
 }
 
+export function toEtMinutes(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  let hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
+
+  // Defensive guard: some environments can format midnight as 24:00.
+  if (hour === 24) hour = 0;
+
+  return hour * 60 + minute;
+}
+
 function etClockMinutes(date: Date): number {
-  const parts = etParts(date);
-  return parts.hour * 60 + parts.minute;
+  return toEtMinutes(date);
 }
 
 function isBetween(value: number, start: string, end: string): boolean {
@@ -358,22 +374,171 @@ function directionSign(direction: SetupCandidate['direction']): number {
   return direction === 'LONG' ? 1 : direction === 'SHORT' ? -1 : 0;
 }
 
-function confidencePoints(candidate: SetupCandidate): number {
-  if (candidate.confidence === 'High') return 12;
-  if (candidate.confidence === 'Medium') return 7;
-  return 0;
+const ICT_RULE_WEIGHTS = {
+  LIQUIDITY_SWEEP: 25,
+  RECLAIM_AFTER_SWEEP: 15,
+  WICK_REJECTION_SUPPORT: 10,
+  TURTLE_SOUP_REVERSAL: 20,
+  DISPLACEMENT_CONFIRMED: 20,
+  MARKET_STRUCTURE_SHIFT: 20,
+  FVG_OR_IMBALANCE_ENTRY: 15,
+  PREMIUM_DISCOUNT_ALIGNMENT: 15,
+  HTF_BIAS_ALIGNED: 10,
+  EXECUTION_READY: 10,
+} as const;
+
+const SESSION_TIME_WEIGHTS = {
+  morning: 1.0,
+  afternoon: 0.85,
+  lunch: 0.85,
+  outside: 0.0,
+} as const;
+
+const ICT_SCORE_THRESHOLDS = {
+  NO_TRADE: 0,
+  WATCHLIST: 45,
+  CONDITIONAL: 65,
+  QUALIFIED: 80,
+} as const;
+
+function isIctHardDisqualified(candidate: SetupCandidate): boolean {
+  return Boolean(ictHardDisqualifierReason(candidate));
 }
 
-export function scoreScannerCandidate(args: {
-  candidate: SetupCandidate | null;
-  window: ScannerWindowState;
-  currentPrice?: number | null;
-  higherTimeframeAligned?: boolean;
-}): ScannerConfidenceBreakdown {
+function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
+  const blockReason = (candidate.blockReason ?? '').toLowerCase();
+
+  if (blockReason.includes('chop')) return 'Chop/consolidation no-trade';
+  if (blockReason.includes('consolidation')) return 'Chop/consolidation no-trade';
+  if (blockReason.includes('overlap')) return 'Chop/consolidation no-trade';
+  if (blockReason.includes('no displacement')) return 'No confirmed displacement';
+  if (blockReason.includes('expired')) return 'ICT setup expired: stale/chase guard active';
+  if (blockReason.includes('chase')) return 'ICT setup expired: stale/chase guard active';
+  if (blockReason.includes('stale')) return 'ICT setup expired: stale/chase guard active';
+  if (blockReason.includes('outside session')) return 'Outside approved session';
+
+  const risk = candidate.riskPoints;
+
+  const reward =
+    typeof candidate.target1 === 'number' && typeof candidate.entry === 'number'
+      ? Math.abs(candidate.target1 - candidate.entry)
+      : null;
+
+  if (
+    typeof risk === 'number' &&
+    risk > 0 &&
+    typeof reward === 'number' &&
+    reward / risk < 2.0
+  ) {
+    return 'Minimum 2.0R unavailable';
+  }
+
+  return null;
+}
+
+function extractIctSignals(candidate: SetupCandidate) {
+  const setupType = (candidate.setupType ?? '').toLowerCase();
+  const scenario = [
+    candidate.scenarioLabel,
+    ...(candidate.evidence ?? []),
+    ...(candidate.missingEvidence ?? []),
+    candidate.nextAction,
+    candidate.reducedRiskPlan,
+  ].filter(Boolean).join(' ').toLowerCase();
+  const trigger = (candidate.requiredTrigger ?? '').toLowerCase();
+  const blockReason = (candidate.blockReason ?? '').toLowerCase();
+
+  return {
+    hasLiquiditySweep:
+      setupType.includes('sweep') ||
+      scenario.includes('liquidity sweep') ||
+      scenario.includes('buy-side sweep') ||
+      scenario.includes('sell-side sweep') ||
+      scenario.includes('buyside sweep') ||
+      scenario.includes('sellside sweep') ||
+      scenario.includes('raid'),
+
+    hasReclaimAfterSweep:
+      scenario.includes('reclaim') ||
+      trigger.includes('reclaim') ||
+      scenario.includes('sweep and reclaim') ||
+      scenario.includes('sweep-reclaim'),
+
+    hasWickRejectionSupport:
+      scenario.includes('wick rejection') ||
+      scenario.includes('rejection wick') ||
+      scenario.includes('long lower wick') ||
+      scenario.includes('long upper wick') ||
+      scenario.includes('closed back above swept low') ||
+      scenario.includes('closed back below swept high'),
+
+    hasTurtleSoupReversal:
+      scenario.includes('turtle soup') ||
+      setupType.includes('turtle soup') ||
+      scenario.includes('failed breakout') ||
+      scenario.includes('failed breakdown') ||
+      scenario.includes('liquidity raid reversal'),
+
+    hasDisplacement:
+      scenario.includes('displacement') ||
+      scenario.includes('impulse') ||
+      scenario.includes('strong move') ||
+      trigger.includes('displacement'),
+
+    hasMarketStructureShift:
+      scenario.includes('mss') ||
+      scenario.includes('market structure shift') ||
+      scenario.includes('shift in structure') ||
+      trigger.includes('mss'),
+
+    hasFvgOrImbalanceEntry:
+      setupType.includes('fvg') ||
+      setupType.includes('fair value gap') ||
+      setupType.includes('imbalance') ||
+      scenario.includes('fvg') ||
+      scenario.includes('fair value gap') ||
+      scenario.includes('imbalance') ||
+      scenario.includes('breaker/fvg confluence') ||
+      scenario.includes('overlap zone'),
+
+    hasPremiumDiscountAlignment:
+      scenario.includes('discount') ||
+      scenario.includes('premium') ||
+      scenario.includes('equilibrium') ||
+      scenario.includes('pd array') ||
+      scenario.includes('dealing range'),
+
+    isStaleOrChasing:
+      blockReason.includes('chase') ||
+      blockReason.includes('stale') ||
+      blockReason.includes('expired'),
+  };
+}
+
+export function scoreScannerCandidate(
+  candidate: SetupCandidate | null,
+  window: ReturnType<typeof resolveScannerWindow>,
+  currentPrice: number | null,
+  higherTimeframeAligned: boolean,
+  currentEtMinutes: number = toEtMinutes(new Date()),
+): ScannerConfidenceBreakdown {
   const qualifiedReasons: string[] = [];
   const missingReasons: string[] = [];
   let score = 0;
-  const candidate = args.candidate;
+  const windows = TRADE_RULES.executionWindows;
+  const isInsideWindowByEtMinutes =
+    (window.session === 'morning' && isBetween(currentEtMinutes, windows.morningExecution.startET, windows.morningExecution.endET)) ||
+    (window.session === 'lunch' && isBetween(currentEtMinutes, windows.middayTrapReversal.startET, windows.middayTrapReversal.endET)) ||
+    (window.session === 'premarket' && isBetween(currentEtMinutes, windows.openingObservation.startET, windows.openingObservation.endET)) ||
+    (window.session === 'afternoon' && isBetween(currentEtMinutes, windows.afternoonExecution.startET, windows.afternoonExecution.endET));
+  const currentPriceAvailable = isValidPrice(currentPrice);
+  const sessionWeight = window.session === 'morning'
+    ? SESSION_TIME_WEIGHTS.morning
+    : window.session === 'lunch'
+      ? SESSION_TIME_WEIGHTS.lunch
+      : window.session === 'afternoon'
+        ? SESSION_TIME_WEIGHTS.afternoon
+        : SESSION_TIME_WEIGHTS.outside;
 
   const add = (condition: boolean, points: number, good: string, missing: string) => {
     if (condition) {
@@ -384,40 +549,70 @@ export function scoreScannerCandidate(args: {
     }
   };
 
-  add(args.window.allowsTradePlan, 10, `valid ${args.window.label}`, 'not inside an approved execution window');
-  add(Boolean(candidate), 15, 'major reference level identified', 'no candidate/reference level');
-  add(Boolean(candidate?.evidence?.length), 10, 'price interaction evidence present', 'no price interaction evidence');
-  add(
-    candidate?.executionStatus === ExecutionStatus.Executable || candidate?.executionStatus === ExecutionStatus.Conditional,
-    15,
-    'sweep/failure/reclaim condition is active',
-    'sweep/failure/reclaim condition not confirmed'
-  );
-  add(
-    Boolean(candidate?.evidence?.some((item) => /expansion|impulse|structure|break/i.test(item))),
-    15,
-    'expansion or local structure evidence present',
-    'no expansion or local structure break evidence'
-  );
-  add(Boolean(candidate?.requiredTrigger), 10, 'preferred retest/trigger zone defined', 'preferred retest/trigger zone missing');
-  add(
-    Boolean(candidate && candidate.blockReason !== NoTradeReason.EntryTriggerPending && candidate.blockReason !== NoTradeReason.EntryTriggerMissing),
-    5,
-    'completed 5M trigger is no longer pending',
-    'completed 5M trigger still pending'
-  );
-  add(isValidPrice(candidate?.stop), 10, 'structure stop defined', 'structure stop missing');
-  add(
-    isValidPrice(candidate?.riskPoints) && (candidate?.riskPoints || 0) <= TRADE_RULES.maxRiskPoints,
-    10,
-    'actual risk within limit',
-    'actual risk missing or outside limit'
-  );
-  add(Boolean(candidate?.target1 && candidate?.target2), 10, 'target room mapped', 'target room not mapped');
-  add(Boolean(args.higherTimeframeAligned || candidate?.levelContextScore), 5, 'higher-timeframe/session context supports plan', 'higher-timeframe support not confirmed');
+  if (!candidate) {
+    return {
+      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      qualifiedReasons,
+      missingReasons: ['no ICT candidate/reference level'],
+    };
+  }
 
-  if (candidate) score += confidencePoints(candidate);
-  return { score: Math.max(0, Math.min(100, Math.round(score))), qualifiedReasons, missingReasons };
+  if (!window.allowsTradePlan || !isInsideWindowByEtMinutes || sessionWeight === 0) {
+    return {
+      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      qualifiedReasons,
+      missingReasons: ['outside approved ICT execution session'],
+    };
+  }
+
+  const hardDisqualifierReason = ictHardDisqualifierReason(candidate);
+  if (hardDisqualifierReason) {
+    return {
+      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      qualifiedReasons,
+      missingReasons: [hardDisqualifierReason],
+    };
+  }
+
+  const signals = extractIctSignals(candidate);
+  const wickOnly =
+    signals.hasWickRejectionSupport &&
+    !signals.hasReclaimAfterSweep &&
+    !signals.hasDisplacement &&
+    !signals.hasMarketStructureShift &&
+    !signals.hasFvgOrImbalanceEntry &&
+    !signals.hasTurtleSoupReversal &&
+    !higherTimeframeAligned;
+
+  if (wickOnly) {
+    return {
+      score: ICT_SCORE_THRESHOLDS.NO_TRADE,
+      qualifiedReasons: [],
+      missingReasons: ['Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Turtle Soup, or higher-timeframe alignment'],
+    };
+  }
+
+  if (!currentPriceAvailable) missingReasons.push('current price unavailable for proximity check');
+  add(signals.hasLiquiditySweep, ICT_RULE_WEIGHTS.LIQUIDITY_SWEEP, 'Liquidity sweep confirmed', 'No confirmed liquidity sweep');
+  add(signals.hasReclaimAfterSweep, ICT_RULE_WEIGHTS.RECLAIM_AFTER_SWEEP, 'Reclaim after sweep confirmed', 'No confirmed liquidity sweep');
+  add(signals.hasWickRejectionSupport, ICT_RULE_WEIGHTS.WICK_REJECTION_SUPPORT, 'Wick rejection support', 'Wick rejection support missing');
+  add(signals.hasTurtleSoupReversal, ICT_RULE_WEIGHTS.TURTLE_SOUP_REVERSAL, 'Turtle Soup reversal', 'No confirmed liquidity sweep');
+  add(signals.hasDisplacement, ICT_RULE_WEIGHTS.DISPLACEMENT_CONFIRMED, 'Displacement confirmed', 'No confirmed displacement');
+  add(signals.hasMarketStructureShift, ICT_RULE_WEIGHTS.MARKET_STRUCTURE_SHIFT, 'Market structure shift confirmed', 'No confirmed market structure shift');
+  add(signals.hasFvgOrImbalanceEntry, ICT_RULE_WEIGHTS.FVG_OR_IMBALANCE_ENTRY, 'Fair value gap / imbalance entry model', 'No fair value gap / imbalance entry model');
+  add(signals.hasPremiumDiscountAlignment, ICT_RULE_WEIGHTS.PREMIUM_DISCOUNT_ALIGNMENT, 'Premium/discount alignment', 'Premium/discount alignment missing');
+  add(higherTimeframeAligned, ICT_RULE_WEIGHTS.HTF_BIAS_ALIGNED, 'Higher-timeframe bias aligned', 'Higher-timeframe bias not aligned');
+  add(
+    candidate.executionStatus === ExecutionStatus.Executable || candidate.executionStatus === ExecutionStatus.Conditional,
+    ICT_RULE_WEIGHTS.EXECUTION_READY,
+    'Entry, stop, and target available',
+    'Entry, stop, and target unavailable'
+  );
+
+  if (signals.isStaleOrChasing) missingReasons.push('ICT setup expired: stale/chase guard active');
+
+  const weightedScore = score * sessionWeight;
+  return { score: Math.max(0, Math.min(100, Math.round(weightedScore))), qualifiedReasons, missingReasons };
 }
 
 export function applyStaleChaseGuard(args: {

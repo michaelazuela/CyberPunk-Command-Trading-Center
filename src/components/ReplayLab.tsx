@@ -1559,7 +1559,7 @@ export default function ReplayLab({
          {/* LUNCH PANEL */}
          <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] lunch-panel">
             <div className="flex justify-between items-center border-b border-[var(--b2)] pb-2 mb-2">
-               <h2 className="text-[14px] font-mono font-bold text-[var(--txt)] text-right">LUNCH REVERSAL REVIEW</h2>
+               <h2 className="text-[14px] font-mono font-bold text-[var(--txt)] text-right">LUNCH REVIEW</h2>
                <TimezoneToggle 
                  selectedTimezone={lunchReviewTimezone} 
                  onChange={setLunchReviewTimezone} 
@@ -1571,7 +1571,7 @@ export default function ReplayLab({
                 <ScreenshotUploadPanel target="lunch_5m_execution" label="5m Lunch Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} isRequired hintText={`Paste or upload 5M chart: ${formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}`} />
                 <div className="text-[9px] text-[var(--txt3)] mt-1 mb-2">Required range: {formatReplayRange('lunch_5m_execution', lunchReviewTimezone)}</div>
                 <div className="text-[10px] text-[var(--txt2)] mt-2 border border-[var(--b2)] p-2">
-                   Use the primary 5-minute execution chart for Lunch Reversal Review. This review should use Morning Review, ETH context, Midnight Open, and RAG history when available.
+                   Use the primary 5-minute execution chart for Lunch Review. This review should use Morning Review, ETH context, Midnight Open, and RAG history when available.
                 </div>
                 
                 {morningResult && (

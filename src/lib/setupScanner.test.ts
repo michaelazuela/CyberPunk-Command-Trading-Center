@@ -18,7 +18,7 @@ function resultWithText(
   triggerState: 'TRIGGERED' | 'PENDING_TRIGGER' | 'NO_TRIGGER' = 'PENDING_TRIGGER'
 ): AnalysisResult {
   return {
-    dayType: 'TYPE 1 LONG' as DayType,
+    dayType: 'LONG' as DayType,
     reasoning: text,
     confidence: 0.8,
     checks: [],
@@ -449,7 +449,7 @@ const tests: Array<[string, () => void]> = [
   ['wide structure risk preserves detected setup candidate but blocks execution', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
-      result: resultWithText('Momentum runaway long with vertical expansion and staircase continuation.', 7400, 7390),
+      result: resultWithText('Momentum runaway long with vertical expansion and impulse continuation.', 7400, 7390),
     });
     const momentum = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumRunaway);
 

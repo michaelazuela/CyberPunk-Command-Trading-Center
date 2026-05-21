@@ -195,6 +195,7 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
   switch (setupType) {
     case SetupType.OrderBlock618: return 'orderBlockRetest';
     case SetupType.LiquiditySweep: return 'liquiditySweep';
+    case SetupType.TurtleSoup: return 'liquiditySweep';
     case SetupType.MomentumRunaway: return 'momentumRunaway';
     case SetupType.FairValueGap: return 'fairValueGap';
     case SetupType.FvgImbalancePullback: return 'imbalancePullback';
@@ -420,7 +421,9 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.MomentumPullbackBreatherReclaim:
       return Boolean(candles.breather || (candles.pullback && candles.reclaim));
     case SetupType.LiquiditySweep:
-      return Boolean((hasSweep && hasReclaim) || (candles.rejection && (candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel)));
+      return Boolean(hasSweep && (hasReclaim || (candles.rejection && (candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel))));
+    case SetupType.TurtleSoup:
+      return Boolean(hasSweep && hasReclaim && (candles.rejection || candles.expansion || structure?.marketStructureShift || chartContext.setupReadyFacts?.sweepThenReclaim));
     case SetupType.MarketStructureShift:
       return Boolean(structure?.marketStructureShift);
     case SetupType.EqualHighsLows:
@@ -491,6 +494,8 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
       return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
     case SetupType.LiquiditySweep:
       return Boolean(hasSweep && hasReclaim);
+    case SetupType.TurtleSoup:
+      return Boolean(hasSweep && hasReclaim && (candles.rejection || candles.expansion || structure?.marketStructureShift || chartContext.setupReadyFacts?.sweepThenReclaim));
     case SetupType.FairValueGap:
       return hasReadableFvg;
     case SetupType.FvgImbalancePullback:

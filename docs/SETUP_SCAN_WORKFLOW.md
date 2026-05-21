@@ -172,7 +172,7 @@ Conditional Momentum Pullback Long
 - The app ranks executable and conditional opportunities.
 - `NoTrade` is returned only when no executable or conditional setup exists.
 
-## Lunch Reversal Subtypes
+## Lunch Review Subtypes
 
 The scanner evaluates five Lunch-only subtypes for `lunch` and `replay_lunch`:
 

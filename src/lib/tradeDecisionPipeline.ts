@@ -132,8 +132,9 @@ function setupFromText(...parts: Array<unknown>): SetupType {
   if (text.includes('LUNCH RANGE RECLAIM') || text.includes('RECLAIM MORNING RANGE')) return SetupType.LunchRangeReclaim;
   if (text.includes('MORNING FAILED HIGH') || text.includes('LIQUIDITY REJECTION')) return SetupType.MorningFailedHighLiquidityRejection;
   if (text.includes('MORNING RECLAIM') || text.includes('RECLAIM LONG')) return SetupType.MorningReclaimLong;
+  if (text.includes('TURTLE SOUP') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.TurtleSoup;
   if (text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('HUNT') || text.includes('RECLAIM')) return SetupType.LiquiditySweep;
-  if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('STAIRCASE')) return SetupType.MomentumRunaway;
+  if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('IMPULSE CONTINUATION')) return SetupType.MomentumRunaway;
   if (text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE')) return SetupType.FairValueGap;
   if (text.includes('MSS') || text.includes('CHOCH') || text.includes('STRUCTURE SHIFT')) return SetupType.MarketStructureShift;
   if (text.includes('INITIAL BALANCE') || text.includes('IB EXTENSION') || text.includes('IB HIGH') || text.includes('IB LOW')) return SetupType.InitialBalanceExtension;
@@ -329,6 +330,7 @@ function confidenceScore(confidence: Confidence): number {
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
     case SetupType.LiquiditySweep: return 100;
+    case SetupType.TurtleSoup: return 98;
     case SetupType.MomentumRunaway: return 88;
     case SetupType.FairValueGap: return 82;
     case SetupType.InitialBalanceExtension: return 78;

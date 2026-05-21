@@ -105,6 +105,17 @@ function outcomeSummary(payload) {
   return payload.tr === 'missed_trade' ? 'Trade marked MISSED.' : 'Trade marked NOT TAKEN.';
 }
 
+function journalResultR(existingJournalRecord, payload, tradeResult) {
+  if (!payload.tt || tradeResult === 'no_trade' || tradeResult === 'missed_trade') return null;
+  if (tradeResult === 'scratch') return 0;
+  if (tradeResult === 'loss' || payload.hit === 'STOP') return -1;
+  if (payload.hit === 'T1') {
+    return typeof existingJournalRecord?.plannedR === 'number' ? existingJournalRecord.plannedR : 1.5;
+  }
+  if (payload.hit === 'T2') return 2;
+  return null;
+}
+
 async function selectExistingRecord(context, payload, headers) {
   const supabaseUrl = normalizeSupabaseUrl(context);
   const response = await fetch(
@@ -151,9 +162,22 @@ async function persistOutcome(context, payload) {
   const existingPlanJson = existing?.trade_plan_json && typeof existing.trade_plan_json === 'object'
     ? existing.trade_plan_json
     : {};
+  const existingJournalRecord = existingPlanJson.journalRecord && typeof existingPlanJson.journalRecord === 'object'
+    ? existingPlanJson.journalRecord
+    : null;
+  const journalRecord = existingJournalRecord
+    ? {
+        ...existingJournalRecord,
+        outcome: tradeResult === 'scratch' ? 'breakeven' : tradeResult,
+        actualResultR: journalResultR(existingJournalRecord, payload, tradeResult),
+        discordAlertId: payload.pid,
+        notes: `Discord outcome button: ${outcomeSummary(payload)}`,
+      }
+    : null;
   const tradePlanJson = {
     ...existingPlanJson,
     discordOutcome: outcomePatch,
+    ...(journalRecord ? { journalRecord } : {}),
   };
   const patchPayload = {
     user_id: userId,

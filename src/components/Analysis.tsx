@@ -781,7 +781,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
       {windowStatus === 'too_late' && (
         <div className="border border-[var(--rd-b)] bg-[var(--rd-d)] text-[var(--red)]/80 p-3 text-[11px] font-mono flex flex-col gap-1 rounded-sm">
           <strong>✕ MORNING WINDOW CLOSED</strong>
-          <span className="text-[10px]">Next: Lunch Reversal opens at {TIME_WINDOWS.lunch.openHour >= 12 ? (TIME_WINDOWS.lunch.openHour > 12 ? TIME_WINDOWS.lunch.openHour - 12 : 12) : TIME_WINDOWS.lunch.openHour}:{TIME_WINDOWS.lunch.openMinute.toString().padStart(2, '0')} {TIME_WINDOWS.lunch.openHour >= 12 ? 'PM' : 'AM'} ET</span>
+          <span className="text-[10px]">Next: Lunch Review opens at {TIME_WINDOWS.lunch.openHour >= 12 ? (TIME_WINDOWS.lunch.openHour > 12 ? TIME_WINDOWS.lunch.openHour - 12 : 12) : TIME_WINDOWS.lunch.openHour}:{TIME_WINDOWS.lunch.openMinute.toString().padStart(2, '0')} {TIME_WINDOWS.lunch.openHour >= 12 ? 'PM' : 'AM'} ET</span>
         </div>
       )}
       {windowStatus === 'weekend' && (
@@ -994,35 +994,35 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="card-base flex flex-col">
               <div className="card-header text-[var(--orange)]">
-                <span>Classification Rules</span>
+                <span>Execution Scenarios</span>
               </div>
               <div className="space-y-[1px] bg-[var(--b0)]">
                 <div className="bg-[var(--s1)] p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="qd-badge qd-badge-green">TYPE 1</span>
-                    <span className="font-mono text-[10px] text-[var(--txt)]">Large Green 9:30 + HH/HL</span>
+                    <span className="qd-badge qd-badge-green">LONG</span>
+                    <span className="font-mono text-[10px] text-[var(--txt)]">Opening range reclaim + protected higher structure</span>
                   </div>
                   <p className="text-[9px] text-[var(--orange)] mb-1 pl-1 border-l-2 border-[var(--orange)] ml-1">› Sweep & Reclaim: wick below 9:30 low + reclaim</p>
                   <p className="text-[9px] text-[var(--txt2)] pl-1 border-l-2 border-transparent ml-1">› High confidence: 5M close above 9:30 high</p>
                 </div>
                 <div className="bg-[var(--s1)] p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="qd-badge qd-badge-orange">TYPE 2</span>
-                    <span className="font-mono text-[10px] text-[var(--txt)]">Doji 9:30 + Large Green 9:35</span>
+                    <span className="qd-badge qd-badge-orange">PULLBACK</span>
+                    <span className="font-mono text-[10px] text-[var(--txt)]">Impulse candle + controlled retest into support</span>
                   </div>
                 </div>
                 <div className="bg-[var(--s1)] p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="qd-badge qd-badge-red">TYPE 3</span>
-                    <span className="font-mono text-[10px] text-[var(--txt)]">Large Red 9:30 + LH/LL</span>
+                    <span className="qd-badge qd-badge-red">SHORT</span>
+                    <span className="font-mono text-[10px] text-[var(--txt)]">Opening range failure + protected lower structure</span>
                   </div>
                   <p className="text-[9px] text-[var(--red)] mb-1 pl-1 border-l-2 border-[var(--red)] ml-1">› Sweep & Reclaim: wick above 9:30 high + reclaim</p>
                   <p className="text-[9px] text-[var(--txt2)] pl-1 border-l-2 border-transparent ml-1">› High confidence: 5M close below 9:30 low</p>
                 </div>
                 <div className="bg-[var(--s1)] p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="qd-badge qd-badge-amber">TYPE 4</span>
-                    <span className="font-mono text-[10px] text-[var(--txt)]">Gap up + Immediate rejection</span>
+                    <span className="qd-badge qd-badge-amber">FAILED BREAK</span>
+                    <span className="font-mono text-[10px] text-[var(--txt)]">Gap or range expansion that fails back through structure</span>
                   </div>
                 </div>
               </div>
@@ -1317,7 +1317,7 @@ export default function Analysis({ session, customRules = [], onUpdate, onAddTra
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Match Distribution</span>
+                  <span className="text-[9px] text-[var(--txt3)] font-mono uppercase">Outcome Mix</span>
                   <span className="text-[10px] text-[var(--txt2)] font-mono">
                     <span className="text-[var(--green)]">{result.agentLearningSummary.winCount}W</span> / <span className="text-[var(--red)]">{result.agentLearningSummary.lossCount}L</span> / <span className="text-[var(--txt)]">{result.agentLearningSummary.scratchCount}S</span>
                   </span>

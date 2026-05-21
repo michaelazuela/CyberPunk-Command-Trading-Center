@@ -7,6 +7,7 @@ import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
+import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
@@ -462,6 +463,19 @@ async function upsertDiscordAlertRagRecord(args: {
   }
 
   const selectedCandidate = args.candidates[0] || null;
+  const journalRecord = buildTradeJournalRecord({
+    dateTime: new Date().toISOString(),
+    instrument: args.instrument,
+    session: args.job,
+    candidate: selectedCandidate,
+    scannerScore: selectedCandidate ? candidateConfidenceScore(selectedCandidate) : null,
+    entry: args.normalized.entry ?? selectedCandidate?.entry ?? null,
+    stop: args.normalized.stop ?? selectedCandidate?.stop ?? null,
+    target: args.normalized.t1 ?? selectedCandidate?.target1 ?? null,
+    outcome: 'pending',
+    discordAlertId: args.planVersionId,
+    notes: 'Discord alert created. Awaiting trader outcome button.',
+  });
   const payload = {
     user_id: userId,
     session_type: args.job,
@@ -482,11 +496,13 @@ async function upsertDiscordAlertRagRecord(args: {
     embedding_text: [
       `Discord alert pending outcome for ${args.job} ${args.instrument} on ${args.tradeDate}.`,
       `Plan: ${args.normalized.decisionLabel || args.normalized.decision} ${args.normalized.setupName || ''}.`,
+      `Journal model: ${journalRecord.modelType}. Tags: ${journalRecord.setupTags.join(', ') || 'none'}. Planned R: ${journalRecord.plannedR ?? 'pending'}.`,
       `Outcome buttons will record whether trade was taken, direction, and target result.`,
     ].join(' '),
     trade_plan_json: {
       planVersionId: args.planVersionId,
       discordOutcomeButtons: true,
+      journalRecord,
       normalizedPlan: args.normalized,
       setupCandidates: args.candidates,
       targetObjectives: args.analysis.structuredChartContext?.targetObjectives || [],
@@ -545,8 +561,31 @@ function statusColor(status: string | undefined): number {
 }
 
 function compactSetupName(candidate: SetupCandidate): string {
+  const model = candidateModelType(candidate);
+  if (model !== 'ICT setup') return model;
   if (candidate.scenarioLabel) return candidate.scenarioLabel;
   return candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function candidateModelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
+  const text = [
+    candidate?.setupType,
+    candidate?.scenarioLabel,
+    candidate?.requiredTrigger,
+    ...(candidate?.evidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('turtle soup')) return 'Turtle Soup Reversal';
+  if (text.includes('imbalance') || text.includes('fvg') || text.includes('fair value gap') || text.includes('sweep reclaim')) {
+    return 'Sweep -> MSS -> FVG Retrace';
+  }
+  return 'ICT setup';
+}
+
+function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
+  if (score >= 80) return 'Qualified';
+  if (score >= 65) return 'Conditional';
+  if (score >= 45) return 'Watchlist';
+  return 'No Trade';
 }
 
 function topConditionalCandidates(candidates: SetupCandidate[] | undefined): SetupCandidate[] {
@@ -942,6 +981,7 @@ function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: Tar
 function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjective[] = []): string {
   const direction = candidate.direction === 'LONG' ? 'LONG' : 'SHORT';
   const levels = candidateLevels(candidate);
+  const score = candidateConfidenceScore(candidate);
   const sourceObjectives = candidate.targetObjectivePlan?.objectives?.length
     ? candidate.targetObjectivePlan.objectives
     : objectives;
@@ -968,8 +1008,9 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
   const uniqueRunner = sameObjective(runner, nearestLiquidity) || sameObjective(runner, uniqueLq2) ? null : runner;
   const blocker = candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : '';
   return [
-    `**Best ${direction === 'LONG' ? 'Long' : 'Short'} Scenario - ${compactSetupName(candidate)}**`,
-    `Status: ${candidate.executionStatus}${blocker} | Confidence: ${candidateConfidenceScore(candidate)} / 100`,
+    `**${direction} - ${compactSetupName(candidate)}**`,
+    `Model: ${candidateModelType(candidate)} | Score: ${score}/100 | Decision: ${tradeDecisionFromScore(score)}`,
+    `Status: ${candidate.executionStatus}${blocker}`,
     `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
     `Plan: Entry ${moneyLine(candidate.entry)} | Structure Stop ${moneyLine(levels.stop)} | Actual Risk ${moneyLine(levels.risk)}`,
     `Targets: T1 ${moneyLine(levels.target1)} | T2 ${moneyLine(levels.target2)}`,
@@ -1055,6 +1096,16 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
     : normalized.decisionLabel || normalized.decision;
   const finalStatusLabel = `${statusEmoji(finalStatus)} ${deskDecision}`;
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
+  const scoringTimestamp =
+    analysis.structuredChartContext?.chartTimestamp ||
+    analysis.structuredChartContext?.screenshotTimestamp ||
+    analysis.sessionLog?.timestamp ||
+    new Date().toISOString();
+  const scoringTimestampSource =
+    analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
+    analysis.structuredChartContext?.screenshotTimestamp ? 'screenshotTimestamp' :
+    analysis.sessionLog?.timestamp ? 'analysis session timestamp' :
+    'system time fallback';
   const components = buildOutcomeComponents({
     planVersionId,
     sessionType: job,
@@ -1067,7 +1118,8 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
       value: discordValue(
         `**${finalStatusLabel}**\n` +
         `${hasPlanningPaths && !normalized.canExecute ? 'Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.' : normalized.planningDecision}\n` +
-        `${job === 'morning' ? 'Morning Analysis' : 'Lunch Reversal'} | ${instrument} | ${tradeDate}`
+        `${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}\n` +
+        `Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`
       ),
       inline: false,
     },

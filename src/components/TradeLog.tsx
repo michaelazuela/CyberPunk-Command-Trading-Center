@@ -39,7 +39,7 @@ export default function TradeLog({ trades, onAddTrade }: {
     if (filterSource === 'LIVE' && isReplay) return false;
     if (filterSource === 'REPLAY' && !isReplay) return false;
 
-    const sessionType = t.sessionType || (t.dayType === 'LUNCH REVERSAL' ? 'lunch' : 'morning');
+    const sessionType = t.sessionType || 'morning';
     if (filterSession === 'MORNING' && sessionType !== 'morning') return false;
     if (filterSession === 'LUNCH' && sessionType !== 'lunch') return false;
 
@@ -57,12 +57,12 @@ export default function TradeLog({ trades, onAddTrade }: {
     <div className="space-y-6 fade-up">
       <header className="page-header">
         <div>
-          <h1>History</h1>
-          <p>EXECUTION LOG & PERFORMANCE</p>
+          <h1>Trade Example Archive</h1>
+          <p>RAG OUTCOMES · PROOF RECORDS · LEARNING EXAMPLES</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setIsAddingManual(true)} className="qd-btn-ghost">
-            <Plus className="w-3 h-3 mr-1" /> MANUAL ENTRY
+            <Plus className="w-3 h-3 mr-1" /> ADD EXAMPLE
           </button>
         </div>
       </header>
@@ -113,12 +113,12 @@ export default function TradeLog({ trades, onAddTrade }: {
 
       <div className="card-base flex flex-col">
         <div className="card-header">
-           <span>Execution Log</span>
+           <span>Learning Archive</span>
         </div>
         
         {(!filteredTrades || filteredTrades.length === 0) ? (
           <div className="empty-state">
-            <h3>NO TRADES FOUND</h3>
+            <h3>NO EXAMPLES FOUND</h3>
             <p>Try adjusting your filters.</p>
           </div>
         ) : (
@@ -291,7 +291,7 @@ export default function TradeLog({ trades, onAddTrade }: {
 function ManualTradeForm({ onCancel, onConfirm }: { onCancel: () => void, onConfirm: (trade: Trade) => void }) {
   const [direction, setDirection] = useState<'LONG' | 'SHORT'>('LONG');
   const [contracts, setContracts] = useState(1);
-  const [dayType, setDayType] = useState('TYPE 1 LONG');
+  const [dayType, setDayType] = useState('LONG');
   const [entryPrice, setEntryPrice] = useState('');
   const [exitPrice, setExitPrice] = useState('');
   const [pnl, setPnl] = useState('');
@@ -321,7 +321,7 @@ function ManualTradeForm({ onCancel, onConfirm }: { onCancel: () => void, onConf
   return (
     <div className="card-base fade-up">
        <div className="card-header border-b border-[var(--b0)] pb-2 mb-4">
-         <span className="flex items-center gap-2"><Plus className="w-3 h-3 text-[var(--orange)]" /> Manual Trade Entry</span>
+         <span className="flex items-center gap-2"><Plus className="w-3 h-3 text-[var(--orange)]" /> Manual Learning Example</span>
        </div>
        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-4">
@@ -337,12 +337,12 @@ function ManualTradeForm({ onCancel, onConfirm }: { onCancel: () => void, onConf
                <input type="number" value={contracts} onChange={e => setContracts(parseInt(e.target.value))} className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[10px] h-[30px] font-mono focus:outline-none" required />
             </div>
             <div className="space-y-1">
-               <label className="text-[9px] font-mono uppercase text-[var(--txt2)]">Day Type</label>
+               <label className="text-[9px] font-mono uppercase text-[var(--txt2)]">Plan Bias</label>
                <select value={dayType} onChange={e => setDayType(e.target.value)} className="w-full bg-[var(--bg)] border border-[var(--b1)] p-2 text-[10px] h-[30px] font-mono focus:outline-none">
-                 <option>TYPE 1 LONG</option>
-                 <option>TYPE 2 LONG</option>
-                 <option>TYPE 1 SHORT</option>
-                 <option>TYPE 2 SHORT</option>
+                 <option>LONG</option>
+                 <option>SHORT</option>
+                 <option>WAIT</option>
+                 <option>NO TRADE</option>
                </select>
             </div>
           </div>

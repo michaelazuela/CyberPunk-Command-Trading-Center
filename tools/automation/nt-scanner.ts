@@ -21,6 +21,7 @@ import {
   getScannerTradeDate,
   latestCompletedBar,
   MARKET_MAPPING_COVERAGE,
+  parseBridgeTime,
   resolveScannerWindow,
   scannerAlertKey,
   scannerContextLogLabel,
@@ -28,6 +29,7 @@ import {
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
+  toEtMinutes,
   type BridgeTimeZoneMode,
   type BridgeTimestampMode,
   type ScannerState,
@@ -265,7 +267,80 @@ function statusEmoji(state: ScannerState): string {
 
 function planName(candidate: SetupCandidate | null): string {
   if (!candidate) return 'No active plan';
+  const model = modelType(candidate);
+  if (model !== 'ICT setup') return model;
   return candidate.scenarioLabel || candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function modelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
+  const text = [
+    candidate?.setupType,
+    candidate?.scenarioLabel,
+    candidate?.requiredTrigger,
+    ...(candidate?.evidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('turtle soup')) return 'Turtle Soup Reversal';
+  if (text.includes('imbalance') || text.includes('fvg') || text.includes('fair value gap') || text.includes('sweep reclaim')) {
+    return 'Sweep -> MSS -> FVG Retrace';
+  }
+  return 'ICT setup';
+}
+
+function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
+  if (score >= 80) return 'Qualified';
+  if (score >= 65) return 'Conditional';
+  if (score >= 45) return 'Watchlist';
+  return 'No Trade';
+}
+
+function riskReward(candidate: SetupCandidate | null): string {
+  if (
+    typeof candidate?.entry !== 'number' ||
+    typeof candidate?.target1 !== 'number' ||
+    typeof candidate?.riskPoints !== 'number' ||
+    candidate.riskPoints <= 0
+  ) {
+    return 'N/A';
+  }
+  return `${(Math.abs(candidate.target1 - candidate.entry) / candidate.riskPoints).toFixed(2)}R`;
+}
+
+function sanitizeIctReason(reason: string): string {
+  const text = reason.toLowerCase();
+  if (text.includes('liquidity sweep') || text.includes('sweep identified')) return 'Liquidity sweep confirmed';
+  if (text.includes('reclaim after sweep')) return 'Reclaim after sweep confirmed';
+  if (text.includes('wick rejection')) return 'Wick rejection support';
+  if (text.includes('turtle soup')) return 'Turtle Soup reversal';
+  if (text.includes('displacement') || text.includes('expansion') || text.includes('impulse')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed displacement' : 'Displacement confirmed';
+  if (text.includes('market structure shift')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed market structure shift' : 'Market structure shift confirmed';
+  if (text.includes('fair value gap') || text.includes('fvg') || text.includes('imbalance')) return text.includes('no ') || text.includes('missing') ? 'No fair value gap / imbalance entry model' : 'Fair value gap / imbalance entry model';
+  if (text.includes('premium') || text.includes('discount') || text.includes('range location')) return 'Premium/discount alignment';
+  if (text.includes('higher-timeframe')) return 'Higher-timeframe bias aligned';
+  if (text.includes('entry') || text.includes('stop') || text.includes('target')) return 'Entry, stop, and target available';
+  if (text.includes('minimum 2.0r') || text.includes('low ev')) return text.includes('unavailable') ? 'Minimum 2.0R unavailable' : 'Minimum 2.0R available';
+  if (text.includes('stale') || text.includes('chase') || text.includes('expired')) return 'ICT setup expired: stale/chase guard active';
+  if (text.includes('chop') || text.includes('consolidation') || text.includes('overlap')) return 'Chop/consolidation no-trade';
+  if (text.includes('outside')) return 'Outside approved session';
+  if (text.includes('no confirmed liquidity') || text.includes('liquidity sweep missing')) return 'No confirmed liquidity sweep';
+  return reason;
+}
+
+function uniqueReasons(reasons: string[]): string {
+  const selected = [...new Set(reasons.map(sanitizeIctReason))].slice(0, 6);
+  return selected.length ? selected.join('\n') : 'N/A';
+}
+
+function hardDisqualifierReason(reasons: string[]): string {
+  const hard = reasons
+    .map(sanitizeIctReason)
+    .find((reason) =>
+      reason === 'ICT setup expired: stale/chase guard active' ||
+      reason === 'Chop/consolidation no-trade' ||
+      reason === 'Outside approved session' ||
+      reason === 'No confirmed displacement' ||
+      reason === 'Minimum 2.0R unavailable'
+    );
+  return hard || 'N/A';
 }
 
 function objectiveLine(label: string, objective: TargetObjective | null | undefined): string {
@@ -420,6 +495,28 @@ function chooseBestCandidate(candidates: SetupCandidate[] | undefined): SetupCan
     .sort((a, b) => (b.rankScore || b.priority || 0) - (a.rankScore || a.priority || 0))[0] || null;
 }
 
+function analysisTimestampDate(analysis: AnalysisResult, completed5m: NinjaBridgeBar | null, config: ScannerConfig): Date {
+  const structured = analysis.structuredChartContext;
+  const timestamp =
+    structured?.chartTimestamp ||
+    structured?.screenshotTimestamp ||
+    analysis.sessionLog?.timestamp ||
+    completed5m?.time ||
+    null;
+
+  if (timestamp === completed5m?.time) {
+    const parsedBridgeTime = parseBridgeTime(completed5m.time, config.barTimeZone);
+    if (parsedBridgeTime) return parsedBridgeTime;
+  }
+
+  if (timestamp) {
+    const parsed = new Date(timestamp);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  return new Date();
+}
+
 async function refreshMarketMapContext(args: {
   config: ScannerConfig;
   state: ScannerStateFile;
@@ -463,6 +560,8 @@ function buildDiscordPayload(args: {
   normalized: ReturnType<typeof buildAppTradePlan>;
   currentPrice: number | null;
   completed5m: NinjaBridgeBar | null;
+  scoringTimestamp: string;
+  scoringTimestampSource: string;
   windowLabel: string;
   staleReason: string | null;
   targetCascade: ReturnType<typeof buildTargetCascade>;
@@ -472,17 +571,24 @@ function buildDiscordPayload(args: {
   const targetPlan = candidate?.targetObjectivePlan;
   const trigger = candidate?.requiredTrigger || 'Wait for completed 5M trigger.';
   const invalidation = candidate?.invalidation || args.normalized.invalidation || 'Do not execute without structure invalidation.';
+  const model = modelType(candidate);
+  const decision = tradeDecisionFromScore(args.confidence.score);
   const planLine = [
-    `Plan: ${planName(candidate)}`,
-    `State: ${args.state} | Confidence: ${args.confidence.score}/100`,
-    `Window: ${args.windowLabel}`,
+    `Instrument: ${args.config.instrument}`,
+    `Session: ${args.session}`,
+    `Timestamp used for scoring: ${args.scoringTimestamp} (${args.scoringTimestampSource})`,
+    `Direction: ${candidate?.direction || 'N/A'}`,
+    `Model type: ${model}`,
+    `Score: ${args.confidence.score}/100`,
+    `Trade decision: ${decision}`,
     `Current: ${money(args.currentPrice)} | Completed 5M: ${args.completed5m?.time || 'N/A'}`,
   ].join('\n');
   const executionLine = [
     `Trigger: ${trigger}`,
-    `Entry Zone: ${money(candidate?.entry)} area`,
-    `Entry: ${money(candidate?.entry)} | Structure Stop: ${money(candidate?.stop)} | Actual Risk: ${money(candidate?.riskPoints)}`,
-    `T1: ${money(candidate?.target1)} | T2: ${money(candidate?.target2)}`,
+    `Entry area: ${money(candidate?.entry)}`,
+    `Stop: ${money(candidate?.stop)}`,
+    `Target: ${money(candidate?.target1)}${candidate?.target2 ? ` | Runner: ${money(candidate.target2)}` : ''}`,
+    `Risk/reward: ${riskReward(candidate)}`,
   ].join('\n');
   const targetLine = [
     objectiveLine('Obstacle / Reaction Zone', targetPlan?.obstacleTarget1 || targetPlan?.nearestObstacleTarget),
@@ -491,22 +597,23 @@ function buildDiscordPayload(args: {
     `Target Cascade: ${args.targetCascade.path.join(' ')}`,
   ].join('\n');
   const reasonLine = [
-    `Qualified: ${args.alertReason}`,
-    args.confidence.qualifiedReasons.slice(0, 5).join(', '),
-    args.confidence.missingReasons.length ? `Missing: ${args.confidence.missingReasons.slice(0, 4).join(', ')}` : '',
+    `Alert qualification: ${args.alertReason}`,
+    `Qualified reasons:\n${uniqueReasons(args.confidence.qualifiedReasons)}`,
+    `Missing reasons:\n${uniqueReasons(args.confidence.missingReasons)}`,
+    `Hard disqualifier: ${hardDisqualifierReason(args.confidence.missingReasons)}`,
   ].filter(Boolean).join('\n');
 
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${args.state}\nDecision support only. No automated orders were placed.`,
+    content: `# ${statusEmoji(args.state)} Quant Desk ICT Scanner Alert — ${decision}\nDecision support only. No automated orders were placed.`,
     embeds: [
       {
         title: `📊 Local Scanner Trading Card — ${args.tradeDate}`,
         description: 'Do not execute from the card alone. Wait for the 5M trigger, structure stop, risk check, and target room confirmation.',
         color: statusColor(args.state),
         fields: [
-          { name: '1️⃣ What', value: clip(planLine), inline: false },
-          { name: '2️⃣ Execution Plan', value: clip(executionLine), inline: false },
+          { name: '1️⃣ Trade State', value: clip(planLine), inline: false },
+          { name: '2️⃣ ICT Plan', value: clip(executionLine), inline: false },
           { name: '3️⃣ Targets', value: clip(targetLine), inline: false },
           { name: '4️⃣ Invalidation / No Chase', value: clip(`${invalidation}\n${args.staleReason || 'Preferred retest entry required. No chase entry.'}`), inline: false },
           { name: '5️⃣ Alert Quality', value: clip(reasonLine), inline: false },
@@ -618,12 +725,21 @@ async function runCycle(config: ScannerConfig): Promise<void> {
   const analysis = analysisFromBars({ config, session, tradeDate, bars });
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
   const candidate = chooseBestCandidate(normalized.setupCandidates);
-  const confidence = scoreScannerCandidate({
+  const scoringDate = analysisTimestampDate(analysis, completed5m, config);
+  const scoringTimestampSource =
+    analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
+    analysis.structuredChartContext?.screenshotTimestamp ? 'screenshotTimestamp' :
+    analysis.sessionLog?.timestamp ? 'analysis session timestamp' :
+    completed5m?.time ? 'latest completed 5M candle' :
+    'system time fallback';
+  const currentEtMinutes = toEtMinutes(scoringDate);
+  const confidence = scoreScannerCandidate(
     candidate,
     window,
     currentPrice,
-    higherTimeframeAligned: analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === candidate?.direction,
-  });
+    analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === candidate?.direction,
+    currentEtMinutes,
+  );
   const stale = applyStaleChaseGuard({
     candidate,
     currentPrice,
@@ -680,6 +796,8 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       normalized,
       currentPrice,
       completed5m,
+      scoringTimestamp: scoringDate.toISOString(),
+      scoringTimestampSource,
       windowLabel: window.label,
       staleReason: stale.reason,
       targetCascade,

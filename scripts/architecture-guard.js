@@ -141,7 +141,7 @@ function checkCanonicalTimeWindowUsage() {
 
   const content = readFileSafe(timeWindowsPath);
   if (!content.includes('11:50 AM ET → 1:00 PM ET') && !content.includes('11:50 AM-1:00 PM ET')) {
-    fail('timeWindows.ts must document the canonical Lunch Reversal window as 11:50 AM-1:00 PM ET.');
+    fail('timeWindows.ts must document the canonical Lunch Review window as 11:50 AM-1:00 PM ET.');
   }
 }
 

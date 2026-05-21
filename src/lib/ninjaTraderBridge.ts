@@ -325,8 +325,22 @@ function detectDisplacementCandles(candles: ChartCandleFact[], fvgZones: FvgZone
     .filter(candle => (candle.displacementScore || 0) >= 3);
 }
 
+const FVG_IMPULSE_BODY_MULTIPLE = 1.25;
+const FVG_IMPULSE_RANGE_MULTIPLE = 1.25;
+
 function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
   const zones: FvgZoneFact[] = [];
+  const readable = candles.filter((candle) =>
+    typeof candle.open === 'number' &&
+    typeof candle.high === 'number' &&
+    typeof candle.low === 'number' &&
+    typeof candle.close === 'number'
+  );
+  const bodies = readable.map((candle) => Math.abs((candle.close as number) - (candle.open as number)));
+  const ranges = readable.map((candle) => Math.max((candle.high as number) - (candle.low as number), 0));
+  const avgBody = bodies.length ? bodies.reduce((sum, body) => sum + body, 0) / bodies.length : 0;
+  const avgRange = ranges.length ? ranges.reduce((sum, range) => sum + range, 0) / ranges.length : 0;
+
   for (let index = 2; index < candles.length; index += 1) {
     const left = candles[index - 2];
     const middle = candles[index - 1];
@@ -340,6 +354,20 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
       continue;
     }
 
+    const rightBody =
+      typeof right.open === 'number' && typeof right.close === 'number'
+        ? Math.abs(right.close - right.open)
+        : 0;
+    const rightRange = Math.max(right.high - right.low, 0);
+    const bodyRatio = avgBody > 0 ? rightBody / avgBody : 0;
+    const rangeRatio = avgRange > 0 ? rightRange / avgRange : 0;
+    const impulseQualified =
+      bodyRatio >= FVG_IMPULSE_BODY_MULTIPLE ||
+      rangeRatio >= FVG_IMPULSE_RANGE_MULTIPLE ||
+      right.isExpansion === true;
+
+    if (!impulseQualified) continue;
+
     if (left.high < right.low) {
       const lower = left.high;
       const upper = right.low;
@@ -349,12 +377,16 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
         upper,
         lower,
         midpoint,
-        formedAt: middle.timestamp || right.timestamp || null,
+        formedAt: right.timestamp || middle.timestamp || null,
+        formedCandleIndex: right.index,
         filledPercent: null,
         inverted: false,
         reclaimed: candles.slice(index + 1).some(candle => typeof candle.close === 'number' && candle.close > midpoint),
         reclaimTimestamp: candles.slice(index + 1).find(candle => typeof candle.close === 'number' && candle.close > midpoint)?.timestamp || null,
-        confidence: middle.isExpansion || right.isExpansion ? 'High' : 'Medium',
+        impulseQualified,
+        impulseBodyRatio: Math.round(bodyRatio * 100) / 100,
+        impulseRangeRatio: Math.round(rangeRatio * 100) / 100,
+        confidence: bodyRatio >= FVG_IMPULSE_BODY_MULTIPLE && rangeRatio >= FVG_IMPULSE_RANGE_MULTIPLE ? 'High' : 'Medium',
       });
     }
 
@@ -367,12 +399,16 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
         upper,
         lower,
         midpoint,
-        formedAt: middle.timestamp || right.timestamp || null,
+        formedAt: right.timestamp || middle.timestamp || null,
+        formedCandleIndex: right.index,
         filledPercent: null,
         inverted: false,
         reclaimed: candles.slice(index + 1).some(candle => typeof candle.close === 'number' && candle.close < midpoint),
         reclaimTimestamp: candles.slice(index + 1).find(candle => typeof candle.close === 'number' && candle.close < midpoint)?.timestamp || null,
-        confidence: middle.isExpansion || right.isExpansion ? 'High' : 'Medium',
+        impulseQualified,
+        impulseBodyRatio: Math.round(bodyRatio * 100) / 100,
+        impulseRangeRatio: Math.round(rangeRatio * 100) / 100,
+        confidence: bodyRatio >= FVG_IMPULSE_BODY_MULTIPLE && rangeRatio >= FVG_IMPULSE_RANGE_MULTIPLE ? 'High' : 'Medium',
       });
     }
   }
@@ -757,6 +793,7 @@ export function buildNinjaChartContext({
     tradeDate,
     timeframe: '5m',
     screenshotRole: '5m_execution',
+    chartTimestamp: last.time,
     screenshotUsability: 'usable',
     keyLevels: {
       midnightOpen,

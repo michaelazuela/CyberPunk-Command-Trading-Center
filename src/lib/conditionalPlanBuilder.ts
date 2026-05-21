@@ -52,6 +52,35 @@ interface ImbalancePullbackReference {
   invalidation: string;
 }
 
+interface IctModelOneReference {
+  direction: Exclude<Direction, 'NO TRADE'>;
+  zoneLabel: string;
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  risk: number;
+  trigger: string;
+  invalidation: string;
+  evidence: string[];
+}
+
+interface TurtleSoupReference {
+  direction: Exclude<Direction, 'NO TRADE'>;
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  risk: number;
+  referenceLevel: number;
+  sweepExtreme: number;
+  trigger: string;
+  invalidation: string;
+  evidence: string[];
+  confidence: SetupCandidate['confidence'];
+  hasConfirmation: boolean;
+}
+
 interface CompressionRangeReference {
   high: number;
   low: number;
@@ -78,6 +107,10 @@ function targets(direction: Direction, entry: number | null, stop: number | null
     return { target1: null, target2: null };
   }
   return computedTargets;
+}
+
+function rTarget(direction: Exclude<Direction, 'NO TRADE'>, entry: number, risk: number, multiple: number): number {
+  return roundToTick(direction === 'LONG' ? entry + risk * multiple : entry - risk * multiple);
 }
 
 function firstPrice(...values: Array<unknown>): number | null {
@@ -311,6 +344,310 @@ function detectImbalancePullback(chartContext: ChartContext): ImbalancePullbackR
   };
 }
 
+function priceInZone(price: number, lower: number, upper: number): boolean {
+  return price >= Math.min(lower, upper) && price <= Math.max(lower, upper);
+}
+
+function candleTouchesZone(candle: ReturnType<typeof readableCandles>[number], lower: number, upper: number): boolean {
+  return (
+    isPrice(candle.high) &&
+    isPrice(candle.low) &&
+    (candle.low as number) <= Math.max(lower, upper) &&
+    (candle.high as number) >= Math.min(lower, upper)
+  );
+}
+
+function intervalOverlap(
+  breakerLow: number,
+  breakerHigh: number,
+  fvgLow: number,
+  fvgHigh: number
+): { valid: boolean; low: number; high: number } {
+  const overlapLow = Math.max(Math.min(breakerLow, breakerHigh), Math.min(fvgLow, fvgHigh));
+  const overlapHigh = Math.min(Math.max(breakerLow, breakerHigh), Math.max(fvgLow, fvgHigh));
+  return { valid: overlapLow < overlapHigh, low: roundToTick(overlapLow), high: roundToTick(overlapHigh) };
+}
+
+function breakerFvgConfluence(
+  chartContext: ChartContext,
+  direction: Exclude<Direction, 'NO TRADE'>,
+  entry: number | null,
+  zone?: { lower?: number | null; upper?: number | null } | null
+): string | null {
+  if (!isPrice(entry)) return null;
+  const fvgZones = zone
+    ? [zone]
+    : (chartContext.fvgZones || []).filter((item) => item.direction === direction && item.impulseQualified !== false);
+  const breakerZones = chartContext.breakerZones || [];
+  for (const breaker of breakerZones) {
+    if (breaker.direction !== direction || !confidenceIsReadable(breaker.confidence) || !isPrice(breaker.lower) || !isPrice(breaker.upper)) continue;
+    for (const fvg of fvgZones) {
+      if (!isPrice(fvg.lower) || !isPrice(fvg.upper)) continue;
+      const overlap = intervalOverlap(breaker.lower, breaker.upper, fvg.lower, fvg.upper);
+      if (overlap.valid && priceInZone(entry, overlap.low, overlap.high)) {
+        return `Breaker/FVG confluence: price retraced into ${overlap.low}-${overlap.high} overlap zone.`;
+      }
+    }
+  }
+  return null;
+}
+
+function improveConfidence(confidence: SetupCandidate['confidence'], confluence: string | null): SetupCandidate['confidence'] {
+  if (!confluence) return confidence;
+  if (confidence === 'Low') return 'Medium';
+  if (confidence === 'Medium') return 'High';
+  return confidence;
+}
+
+function targetBeyondEntry(chartContext: ChartContext, direction: Exclude<Direction, 'NO TRADE'>, entry: number, minimumTarget: number): number {
+  const candidates = [
+    ...(chartContext.targetObjectives || [])
+      .filter((target) => target.direction === direction)
+      .map((target) => target.price),
+    ...(chartContext.structuralLevels || [])
+      .filter((level) =>
+        (level.directionRelevance === direction || level.directionRelevance === 'BOTH') &&
+        (level.type === 'liquidity_pool' || level.type === 'swing' || level.type === 'high' || level.type === 'low')
+      )
+      .map((level) => level.price),
+    direction === 'LONG' ? chartContext.keyLevels.activeSwingHigh : chartContext.keyLevels.activeSwingLow,
+    direction === 'LONG' ? chartContext.keyLevels.overnightHigh : chartContext.keyLevels.overnightLow,
+  ].filter(isPrice);
+
+  const directional = direction === 'LONG'
+    ? candidates.filter((price) => price >= minimumTarget && price > entry).sort((a, b) => a - b)
+    : candidates.filter((price) => price <= minimumTarget && price < entry).sort((a, b) => b - a);
+
+  return roundToTick(directional[0] || minimumTarget);
+}
+
+function candleAfterTimestamp(candles: ReturnType<typeof readableCandles>, timestamp?: string | null) {
+  const index = candles.findIndex((candle) => candle.timestamp === timestamp);
+  return index >= 0 ? candles[index + 1] || null : null;
+}
+
+function reclaimConfirmationCandle(
+  candles: ReturnType<typeof readableCandles>,
+  direction: Exclude<Direction, 'NO TRADE'>,
+  level: number,
+  timestamp?: string | null
+) {
+  const startIndex = candles.findIndex((candle) => candle.timestamp === timestamp);
+  const search = candles.slice(Math.max(0, startIndex));
+  return search.find((candle) =>
+    direction === 'LONG'
+      ? (candle.close as number) > level
+      : (candle.close as number) < level
+  ) || null;
+}
+
+function wickRejectionSupport(
+  candle: ReturnType<typeof readableCandles>[number] | null | undefined,
+  direction: Exclude<Direction, 'NO TRADE'>,
+  sweptLevel: number
+): { present: boolean; label: string | null } {
+  if (!candle || !isPrice(candle.open) || !isPrice(candle.high) || !isPrice(candle.low) || !isPrice(candle.close)) {
+    return { present: false, label: null };
+  }
+  const body = Math.max(Math.abs(candle.close - candle.open), TRADE_RULES.targetModel.tickSize);
+  const range = candle.high - candle.low;
+  if (range <= 0) return { present: false, label: null };
+
+  const upperWick = candle.high - Math.max(candle.open, candle.close);
+  const lowerWick = Math.min(candle.open, candle.close) - candle.low;
+  const closeLocation = (candle.close - candle.low) / range;
+  const bullish =
+    direction === 'LONG' &&
+    candle.low < sweptLevel &&
+    candle.close > sweptLevel &&
+    lowerWick >= body * 1.5 &&
+    closeLocation >= 0.5;
+  const bearish =
+    direction === 'SHORT' &&
+    candle.high > sweptLevel &&
+    candle.close < sweptLevel &&
+    upperWick >= body * 1.5 &&
+    closeLocation <= 0.5;
+
+  if (!bullish && !bearish) return { present: false, label: null };
+  const wickSize = direction === 'LONG' ? lowerWick : upperWick;
+  return {
+    present: true,
+    label: direction === 'LONG'
+      ? `Wick rejection support: lower wick ${roundToTick(wickSize)} is at least 1.5x body, swept sell-side liquidity, and closed back above ${roundToTick(sweptLevel)}.`
+      : `Wick rejection support: upper wick ${roundToTick(wickSize)} is at least 1.5x body, swept buy-side liquidity, and closed back below ${roundToTick(sweptLevel)}.`,
+  };
+}
+
+function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
+  const candles = readableCandles(chartContext);
+  const tick = TRADE_RULES.targetModel.tickSize;
+  if (candles.length < 3) return [];
+
+  const displacements = chartContext.displacementCandles || [];
+  const structureShift = Boolean(chartContext.marketStructure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure);
+  const sweeps = (chartContext.liquiditySweeps || chartContext.liquidityEvents || [])
+    .filter((event) => event.type === 'sweep' && event.reclaimed && confidenceIsReadable(event.confidence) && isPrice(event.level));
+
+  return sweeps.flatMap((sweep): TurtleSoupReference[] => {
+    const direction = sweep.direction === 'LONG' ? 'LONG' : sweep.direction === 'SHORT' ? 'SHORT' : null;
+    if (!direction || !isPrice(sweep.level)) return [];
+
+    const sweepCandle = candles.find((candle) => candle.timestamp === sweep.timestamp);
+    const wickSupport = wickRejectionSupport(sweepCandle, direction, sweep.level);
+    const confirmation = reclaimConfirmationCandle(candles, direction, sweep.level, sweep.timestamp);
+    const next = candleAfterTimestamp(candles, sweep.timestamp);
+    const matchingDisplacement = displacements.find((item) =>
+      item.direction === direction &&
+      (item.quality === 'confirmed' || item.quality === 'high_quality')
+    );
+    const confirmsReversal = Boolean(
+      confirmation ||
+      (next && (direction === 'LONG' ? next.direction === 'bullish' : next.direction === 'bearish')) ||
+      matchingDisplacement ||
+      structureShift
+    );
+    if (!confirmsReversal) return [];
+
+    const sweepExtreme = direction === 'LONG'
+      ? firstPrice(sweepCandle?.low, sweep.level, chartContext.keyLevels.activeSwingLow)
+      : firstPrice(sweepCandle?.high, sweep.level, chartContext.keyLevels.activeSwingHigh);
+    if (!isPrice(sweepExtreme)) return [];
+
+    const entry = direction === 'LONG'
+      ? firstPrice(confirmation?.close, roundToTick(sweep.level + tick))
+      : firstPrice(confirmation?.close, roundToTick(sweep.level - tick));
+    if (!isPrice(entry)) return [];
+
+    const stop = direction === 'LONG'
+      ? roundToTick(sweepExtreme - tick)
+      : roundToTick(sweepExtreme + tick);
+    const risk = riskPoints(entry, stop);
+    if (!isPrice(risk)) return [];
+
+    const minimumTarget = rTarget(direction, entry, risk, 2);
+    const target1 = targetBeyondEntry(chartContext, direction, entry, minimumTarget);
+    const reward = Math.abs(target1 - entry);
+    if (reward / risk < 2) return [];
+    const target2 = targetBeyondEntry(chartContext, direction, entry, rTarget(direction, entry, risk, 2.5));
+    const confluence = breakerFvgConfluence(chartContext, direction, entry);
+    const baseConfidence: SetupCandidate['confidence'] = matchingDisplacement && structureShift ? 'High' : matchingDisplacement || structureShift ? 'Medium' : 'Low';
+    const confidence = improveConfidence(baseConfidence, confluence);
+    const breakoutText = direction === 'LONG' ? 'failed breakdown reversal' : 'failed breakout reversal';
+
+    return [{
+      direction,
+      entry: roundToTick(entry),
+      stop,
+      target1,
+      target2,
+      risk,
+      referenceLevel: roundToTick(sweep.level),
+      sweepExtreme: roundToTick(sweepExtreme),
+      trigger: direction === 'LONG'
+        ? `Bullish Turtle Soup: sell-side sweep below ${roundToTick(sweep.level)}, reclaim back above the swept low, then confirm upward rejection or expansion.`
+        : `Bearish Turtle Soup: buy-side sweep above ${roundToTick(sweep.level)}, reclaim back below the swept high, then confirm downward rejection or expansion.`,
+      invalidation: direction === 'LONG'
+        ? `Invalid if price trades below the sweep wick structure stop near ${stop}.`
+        : `Invalid if price trades above the sweep wick structure stop near ${stop}.`,
+      evidence: [
+        `${direction === 'LONG' ? 'Sell-side' : 'Buy-side'} liquidity was swept and reclaimed.`,
+        wickSupport.label || 'No qualifying wick rejection support; wick evidence is optional and cannot trigger by itself.',
+        confluence || 'No breaker/FVG overlap confluence; breaker context is optional and cannot trigger by itself.',
+        `Turtle Soup ${breakoutText} target room passes the minimum 2.0R expected-value filter.`,
+        matchingDisplacement
+          ? `${direction === 'LONG' ? 'Bullish' : 'Bearish'} expansion confirms the reversal attempt.`
+          : 'Expansion is not fully confirmed; keep as conditional until price confirms.',
+        structureShift
+          ? 'Market structure shift supports the reversal.'
+          : 'Market structure shift is not fully confirmed; this remains a watchlist/conditional reversal.',
+        `Stop ${stop} is beyond the sweep wick; target ${target1} is opposing liquidity or a valid 2.0R objective.`,
+      ],
+      confidence,
+      hasConfirmation: Boolean(confirmation || matchingDisplacement),
+    }];
+  }).sort((a, b) => b.risk - a.risk).slice(0, 2);
+}
+
+function detectIctModelOne(chartContext: ChartContext): IctModelOneReference | null {
+  const candles = readableCandles(chartContext);
+  const tick = TRADE_RULES.targetModel.tickSize;
+  if (candles.length < 4) return null;
+
+  const sweeps = (chartContext.liquiditySweeps || chartContext.liquidityEvents || [])
+    .filter((event) => event.type === 'sweep' && event.reclaimed && confidenceIsReadable(event.confidence) && isPrice(event.level));
+  const displacements = (chartContext.displacementCandles || [])
+    .filter((candle) =>
+      (candle.quality === 'confirmed' || candle.quality === 'high_quality') &&
+      candle.breaksStructure &&
+      candle.leavesImbalance
+    );
+  const fvgZones = (chartContext.fvgZones || [])
+    .filter((zone) => zone.impulseQualified !== false && confidenceIsReadable(zone.confidence) && isPrice(zone.upper) && isPrice(zone.lower));
+
+  const candidates: IctModelOneReference[] = [];
+
+  for (const sweep of sweeps) {
+    const direction = sweep.direction === 'LONG' ? 'LONG' : sweep.direction === 'SHORT' ? 'SHORT' : null;
+    if (!direction) continue;
+    const matchingDisplacement = displacements.find((item) => item.direction === direction);
+    const zone = fvgZones.find((item) => item.direction === direction);
+    if (!matchingDisplacement || !zone) continue;
+
+    const lower = roundToTick(Math.min(zone.lower as number, zone.upper as number));
+    const upper = roundToTick(Math.max(zone.lower as number, zone.upper as number));
+    const midpoint = roundToTick(zone.midpoint ?? (lower + upper) / 2);
+    const formedIndex = typeof zone.formedCandleIndex === 'number' ? zone.formedCandleIndex : -1;
+    const retraceCandle = candles.find((candle) => candle.index > formedIndex && candleTouchesZone(candle, lower, upper));
+    if (!retraceCandle) continue;
+
+    const entry = priceInZone(midpoint, lower, upper) ? midpoint : direction === 'LONG' ? lower : upper;
+    const sweepCandle = candles.find((candle) => candle.timestamp === sweep.timestamp);
+    const sweepExtreme = direction === 'LONG'
+      ? firstPrice(sweepCandle?.low, chartContext.keyLevels.activeSwingLow, sweep.level)
+      : firstPrice(sweepCandle?.high, chartContext.keyLevels.activeSwingHigh, sweep.level);
+    if (!isPrice(sweepExtreme)) continue;
+    const stop = direction === 'LONG'
+      ? roundToTick(sweepExtreme - tick)
+      : roundToTick(sweepExtreme + tick);
+    const risk = riskPoints(entry, stop);
+    if (!isPrice(risk)) continue;
+    const minimumTarget = rTarget(direction, entry, risk, 2);
+    const target1 = targetBeyondEntry(chartContext, direction, entry, minimumTarget);
+    const reward = Math.abs(target1 - entry);
+    if (reward / risk < 2) continue;
+    const target2 = targetBeyondEntry(chartContext, direction, entry, rTarget(direction, entry, risk, 2.5));
+    const confluence = breakerFvgConfluence(chartContext, direction, entry, zone);
+
+    candidates.push({
+      direction,
+      zoneLabel: `${lower}-${upper} Imbalance Zone`,
+      entry: roundToTick(entry),
+      stop,
+      target1,
+      target2,
+      risk,
+      trigger: direction === 'LONG'
+        ? `Entry only on retrace into bullish imbalance ${lower}-${upper} after sweep, reclaim, displacement, and bullish structure shift.`
+        : `Entry only on retrace into bearish imbalance ${lower}-${upper} after sweep, reclaim, displacement, and bearish structure shift.`,
+      invalidation: direction === 'LONG'
+        ? `Invalid if price trades below the sweep low structure stop near ${stop}.`
+        : `Invalid if price trades above the sweep high structure stop near ${stop}.`,
+      evidence: [
+        direction === 'LONG' ? 'Sell-side liquidity swept and reclaimed.' : 'Buy-side liquidity swept and reclaimed.',
+        wickRejectionSupport(sweepCandle, direction, sweep.level).label || 'Wick support was not required; the model still requires displacement, structure shift, and imbalance retrace.',
+        confluence || 'No breaker/FVG overlap confluence; Model 1 qualification still comes from sweep, reclaim, displacement, structure shift, and imbalance retrace.',
+        `${direction === 'LONG' ? 'Bullish' : 'Bearish'} displacement confirmed with market structure shift.`,
+        `${direction === 'LONG' ? 'Bullish' : 'Bearish'} impulse-qualified imbalance created and retraced.`,
+        `Entry ${roundToTick(entry)} sits inside ${lower}-${upper}; stop ${stop} is beyond the sweep wick.`,
+        `Minimum 2.0R target requirement passed; target ${target1}.`,
+      ],
+    });
+  }
+
+  return candidates.sort((a, b) => b.risk - a.risk)[0] || null;
+}
+
 function deriveCompressionRangeFromRecentBars(chartContext: ChartContext): CompressionRangeReference | null {
   const candles = readableCandles(chartContext);
   if (chartContext.compressionRange?.present && isPrice(chartContext.compressionRange.high) && isPrice(chartContext.compressionRange.low)) {
@@ -464,10 +801,14 @@ function makeCandidate(input: {
   nextAction: string;
   invalidation: string | null;
   hasTrigger?: boolean;
+  target1Override?: number | null;
+  target2Override?: number | null;
 }): SetupCandidate {
   const structureStop = isPrice(input.stop) ? roundToTick(input.stop) : null;
   const risk = riskPoints(input.entry, structureStop);
   const computedTargets = targets(input.direction, input.entry, structureStop);
+  const target1 = input.target1Override ?? computedTargets.target1;
+  const target2 = input.target2Override ?? computedTargets.target2;
   const execution = executionFor(input.entry, structureStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
   const levelContext = levelContextForDirection(input.chartContext, input.direction);
 
@@ -480,13 +821,13 @@ function makeCandidate(input: {
     priority: input.priority,
     entry: input.entry,
     stop: structureStop,
-    target1: computedTargets.target1,
-    target2: computedTargets.target2,
+    target1,
+    target2,
     riskPoints: risk,
     invalidation: input.invalidation,
     entryClarity: isPrice(input.entry) ? 0.8 : 0.35,
     stopClarity: isPrice(input.stop) ? 0.8 : 0.35,
-    targetClarity: computedTargets.target1 !== null && computedTargets.target2 !== null ? 0.8 : 0,
+    targetClarity: target1 !== null && target2 !== null ? 0.8 : 0,
     proximityScore: 0.7,
     levelContextScore: levelContext.score,
     levelContextSummary: levelContext.summary,
@@ -557,8 +898,50 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   const reclaimLong = detectMorningReclaimLong(chartContext);
   const openingRangeContinuation = detectMorningOpeningRangeContinuation(chartContext);
   const imbalancePullback = detectImbalancePullback(chartContext);
+  const ictModelOne = detectIctModelOne(chartContext);
+  const turtleSoupPlans = detectTurtleSoup(chartContext);
 
   const plans: SetupCandidate[] = [];
+
+  for (const turtleSoup of turtleSoupPlans) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.TurtleSoup,
+      scenarioLabel: `${turtleSoup.direction === 'LONG' ? 'Bullish' : 'Bearish'} Turtle Soup Reversal`,
+      direction: turtleSoup.direction,
+      entry: turtleSoup.entry,
+      stop: turtleSoup.stop,
+      priority: 96,
+      confidence: turtleSoup.confidence,
+      evidence: turtleSoup.evidence,
+      requiredTrigger: turtleSoup.trigger,
+      nextAction: 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.',
+      invalidation: turtleSoup.invalidation,
+      hasTrigger: turtleSoup.hasConfirmation,
+      target1Override: turtleSoup.target1,
+      target2Override: turtleSoup.target2,
+    }));
+  }
+
+  if (ictModelOne) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.FvgImbalancePullback,
+      scenarioLabel: `ICT Model 1 ${ictModelOne.direction === 'LONG' ? 'Long' : 'Short'}: Sweep Reclaim Imbalance Retrace`,
+      direction: ictModelOne.direction,
+      entry: ictModelOne.entry,
+      stop: ictModelOne.stop,
+      priority: 98,
+      confidence: 'High',
+      evidence: ictModelOne.evidence,
+      requiredTrigger: ictModelOne.trigger,
+      nextAction: 'Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed.',
+      invalidation: ictModelOne.invalidation,
+      hasTrigger: true,
+      target1Override: ictModelOne.target1,
+      target2Override: ictModelOne.target2,
+    }));
+  }
 
   if (rejectionEvidence || resistance || support) {
     const entry = firstPrice(failedReclaimShort?.entry, breakdownSupport ? roundToTick(breakdownSupport - TRADE_RULES.targetModel.tickSize) : null);
@@ -744,7 +1127,51 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   );
   const hasCompletedMorningContext = Boolean(morning?.complete && morningHigh && morningLow);
   const imbalancePullback = detectImbalancePullback(chartContext);
+  const ictModelOne = detectIctModelOne(chartContext);
+  const turtleSoupPlans = detectTurtleSoup(chartContext);
   const plans: SetupCandidate[] = [];
+
+  for (const turtleSoup of turtleSoupPlans) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.TurtleSoup,
+      scenarioLabel: `${turtleSoup.direction === 'LONG' ? 'Bullish' : 'Bearish'} Turtle Soup Reversal`,
+      direction: turtleSoup.direction,
+      entry: turtleSoup.entry,
+      stop: turtleSoup.stop,
+      priority: 96,
+      confidence: turtleSoup.confidence,
+      evidence: turtleSoup.evidence,
+      missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning context is incomplete; keep this as conditional only.'],
+      requiredTrigger: turtleSoup.trigger,
+      nextAction: 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.',
+      invalidation: turtleSoup.invalidation,
+      hasTrigger: hasCompletedMorningContext && turtleSoup.hasConfirmation,
+      target1Override: turtleSoup.target1,
+      target2Override: turtleSoup.target2,
+    }));
+  }
+
+  if (ictModelOne) {
+    plans.push(makeCandidate({
+      chartContext,
+      setupType: SetupType.FvgImbalancePullback,
+      scenarioLabel: `ICT Model 1 ${ictModelOne.direction === 'LONG' ? 'Long' : 'Short'}: Sweep Reclaim Imbalance Retrace`,
+      direction: ictModelOne.direction,
+      entry: ictModelOne.entry,
+      stop: ictModelOne.stop,
+      priority: 98,
+      confidence: 'High',
+      evidence: ictModelOne.evidence,
+      missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning context is incomplete; keep this as conditional only.'],
+      requiredTrigger: ictModelOne.trigger,
+      nextAction: 'Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed.',
+      invalidation: ictModelOne.invalidation,
+      hasTrigger: hasCompletedMorningContext,
+      target1Override: ictModelOne.target1,
+      target2Override: ictModelOne.target2,
+    }));
+  }
 
   if (morningHigh || morning?.failedHoldAboveMorningHigh || morning?.morningHighSwept) {
     const entry = morningHigh ? roundToTick(morningHigh - TRADE_RULES.targetModel.tickSize) : null;

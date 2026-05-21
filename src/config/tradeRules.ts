@@ -68,6 +68,7 @@ export const TRADE_RULES = {
       allowedSetups: [
         SetupType.OrderBlock618,
         SetupType.LiquiditySweep,
+        SetupType.TurtleSoup,
         SetupType.MomentumRunaway,
         SetupType.FairValueGap,
         SetupType.FvgImbalancePullback,
@@ -88,10 +89,11 @@ export const TRADE_RULES = {
       ],
     },
     lunch: {
-      label: 'Lunch Reversal',
+      label: 'Lunch Review',
       requiredScreenshotRange: '11:50 AM through 1:00 PM ET',
       allowedSetups: [
         SetupType.LiquiditySweep,
+        SetupType.TurtleSoup,
         SetupType.MomentumRunaway,
         SetupType.FairValueGap,
         SetupType.FvgImbalancePullback,

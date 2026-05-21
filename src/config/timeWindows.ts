@@ -15,7 +15,7 @@ export const TIME_WINDOWS = {
     sessionNote: "Initial Balance 9:30–10:00. Valid entries through 11:15.",
   },
   lunch: {
-    label: "Lunch Reversal",
+    label: "Lunch Review",
     openHour: 11, openMinute: 50,
     closeHour: 13, closeMinute: 0,
     timezone: "America/New_York",

@@ -121,7 +121,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     The 5M execution image remains the authority for entry trigger, active swing, stop placement, risk check, and final trade approval.
 
     [LUNCH MORNING CONTEXT IMAGE RULE]
-    For Lunch Reversal routes, an additional Morning 5M context image may be provided after the 15M ETH context image. Treat that Morning 5M image as context only. Use it to identify morning high, morning low, initial drive, morning extension, failed continuation potential, and whether the lunch chart is sweeping or reclaiming a morning boundary.
+    For Lunch Review routes, an additional Morning 5M context image may be provided after the 15M ETH context image. Treat that Morning 5M image as context only. Use it to identify morning high, morning low, initial drive, morning extension, failed continuation potential, and whether the lunch chart is sweeping or reclaiming a morning boundary.
     The Morning 5M context image must not approve a lunch trade by itself, generate lunch entry/stop/T1/T2 by itself, override the current Lunch 5M execution chart, override the app-owned plan engine, override the deterministic trade decision pipeline, override risk rules, or override setup scanner ranking.
     The current Lunch 5M execution image remains the authority for lunch entry trigger, active swing, stop placement, risk check, and final lunch trade approval.
 
@@ -138,7 +138,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     Gemini extracts the key levels and evidence only. The app-owned conditional plan builder creates the if/then plans, computes risk, and computes T1/T2.
     
     ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
-    ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Reversal window. Use current Lunch Reversal rules only. Do NOT use future data.' : ''}
+    ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Review window. Use current Lunch Review rules only. Do NOT use future data.' : ''}
 
     [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | MASTER_TRADING_DESK | 5M_TIMEFRAME]
 
@@ -176,39 +176,40 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - Identify Overlap: Body Overlap > 80%, Overlapping Wicks, Low Velocity.
 
     =========================================
-    MODULE 2: [LOGIC_PROCESSOR] (Strategy)
-    - Enforce rules based ONLY on Module 1 data.
-    - MOMENTUM(09:30-10:00) ➔ PRIMARY_BIAS. (No single-wick flip).
-    - PRIORITY 1 [VILLAIN SWEEP]: IF (WICK > IB_HIGH AND CLOSE < IB_HIGH) ➔ FLIP BIAS TO SHORT (Buyers Trapped).
-    - PRIORITY 1 [LIQUIDITY HUNT]: IF (WICK < IB_LOW AND CLOSE > IB_LOW) ➔ FLIP BIAS TO LONG (Sellers Trapped).
-    - IF (2x CONSECUTIVE_BARS FAIL_EXTREME) AND (CLOSE < PREV_BODY_LOW) ➔ ACTION: FLIP_BIAS.
-    - IF (LAST_HL == INTACT) AND (STAIRCASE == HH/HL) ➔ BIAS: LONG (Ignore wicks).
-    - IF (PRICE > IB_HIGH) AND (STAIRCASE == HH/HL) ➔ 2-BAR RULE = ONLY BIAS KILLER.
-    - IF (TIME_IN_IB > 45min) ➔ STATUS: NEUTRAL / FRICTION. (Wait: 2-Bar Guard).
-    - IF (OVERLAP > 80%) AND (VELOCITY == LOW) ➔ NO_WICK_ENTRY. (Wait: Clearing Bar).
-    - IF (WICK > ANCHOR ± 1pt) AND (CLOSE == INSIDE_IB) AND (C2 == DEEP_RECLAIM) ➔ ACTION: FLIP_BIAS. (Stop: Wick_Extreme + 1t).
-    - IF (2-BAR_GUARD == TRUE) AND (PRICE > ANCHOR + 5pts) ➔ WAIT: 1st COUNTER-TREND BREATHER. Do NOT market-enter on the breather candle itself.
+    MODULE 2: [LOGIC_PROCESSOR] (Professional Price-Action Context)
+    - Extract professional price-action context based ONLY on Module 1 data.
+    - 09:30-10:00 opening range defines initial context; it does not approve a trade.
+    - If price trades beyond opening range high and closes back below it, mark a bearish liquidity sweep / failed breakout fact.
+    - If price trades beyond opening range low and closes back above it, mark a bullish liquidity sweep / failed breakdown fact.
+    - If consecutive completed candles fail continuation and close through local structure, mark market structure shift / failed continuation.
+    - If price holds a protected swing sequence, mark impulse-continuation context; do not treat the label as execution approval.
+    - If price remains inside the opening range with heavy overlap, mark chop/consolidation no-trade context.
+    - If overlap > 80% and velocity is low, mark no clean trigger yet and wait for a completed clearing candle.
+    - If price fails beyond a mapped reference and reclaims it with a completed candle, extract the sweep/reclaim fact and the protected swing.
+    - If price is extended away from the preferred retest zone, mark stale/chase risk. Do not market-enter on the pullback candle itself.
     - BREATHER BREAK PLAN LOCK: If the last visible candle is the breather/pullback candle itself, Breather_Break is NOT an already-triggered entry, but it IS a valid CONDITIONAL_STOP_ENTRY plan when the trend structure is intact. Do NOT output NO TRADE solely because the trigger has not fired yet.
     - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.
     - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
     - Only output NO TRADE when there is no measurable trigger candle, no valid structure-stop context, invalid structure, or the setup violates a kill switch.
     - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible 9:30-10:10 levels. Do not require future confirmation before producing ENTRY/STOP/T1/T2.
     - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
-    - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: EXPIRED. (No chase).
-    - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ STAIRCASE = 100% PRIORITY.
+    - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: STALE_CHASE_RISK. (No chase).
+    - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ mark impulse-continuation context only.
     - DO NOT CALCULATE EXECUTABLE TARGETS: Extract entry/stop facts only when clearly readable. The app calculates T1/T2 later from confirmed entry and stop.
     - APP RISK LOCK: final app plans use structure-based stops. Extract visible structure levels only; the app validates actual entry-to-stop risk.
     - IF (TIME == 12:30 EDT - 30min) ➔ TARGET = 1.0R - 1.5R.
-    - IF (TIME == 10:30) AND (MOVE > 50%_TARGET) ➔ ACTION: STOP = BE / 10:00 STRUCTURE.
+    - If an active trade reaches management criteria, describe only structure-based management context. The app/trader manages execution.
 
-    SETUP SIGNATURES:
-    T1L: 09:30 Green + Staircase | T2L: 09:30 Doji + 09:35 Green
-    T1S: 09:30 Red/Close<Open + Staircase | T2S: Overnight Gap + Red Rejection
-    DIST: Upper Wick Rejection + 2-Bar Failure at Highs.
+    SETUP CONTEXTS:
+    - Bullish reclaim after lower liquidity sweep
+    - Bearish rejection after upper liquidity sweep
+    - Opening range continuation after retest
+    - Imbalance pullback after impulse candle
+    - Failed continuation through local structure
 
     =========================================
-    MODULE 3: [FRICTION_SCANNER] (Devil's Advocate)
-    - Challenge Module 2 Processor. SCAN: Overlap > 80%, Overlapping Wicks, Low Velocity, Villain Traps.
+    MODULE 3: [CHOP_SCANNER] (Devil's Advocate)
+    - Challenge Module 2 Processor. SCAN: Overlap > 80%, overlapping wicks, low velocity, failed breakout traps.
     - State if 'SUCCESS', 'WARNING', or 'ERROR' and assess a confidence penalty.
 
     =========================================
@@ -263,7 +264,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     MODULE 7: [MASTER_TRADE_MANAGEMENT] (After Entry Management)
     - This module runs AFTER candidate extraction.
     - Its job is NOT to choose the entry. The app chooses the final plan. Your job is to define how a valid selected trade should be managed after entry.
-    - For every executable best_trade_plan, specify what to do if price moves in favor, stalls before T1, hits 1R, hits T1, or shows a two-bar failure.
+    - For every executable best_trade_plan, specify what to do if price moves in favor, stalls before T1, hits 1R, hits T1, or shows failed continuation through local structure.
     - Prefer T1-first management after vertical morning expansion. T2 should be treated as a runner unless structure stays clean.
     - Define whether success means T1, T2, or structure-based continuation.
     - Define the outcome labels the app should use for proof review and RAG learning: STOPPED_OUT, T1_HIT, T2_HIT, PARTIAL_WIN_THEN_STOP, NEAR_T1_THEN_REVERSED.
@@ -278,7 +279,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     {
       "step1_DataExtraction": "Factual extraction of OHLC, wicks, structures.",
       "step2_Strategy": {
-        "dayType": "TYPE 1 LONG" | "TYPE 2 LONG" | "TYPE 1 SHORT" | "TYPE 2 SHORT" | "LUNCH REVERSAL" | "DISTRIBUTION" | "NO TRADE",
+        "dayType": "LONG" | "SHORT" | "WAIT" | "NO TRADE",
         "reasoning": "[SYSTEM_PULSE]: [DATA_EXTRACTOR] SYNC | [LOGIC_PROCESSOR] ACTIVE\\n\\nMarkdown table with ENTRY/STOP/TARGET...",
         "confidence": 0-1,
         "sweepAndReclaim": "YES" | "NO",

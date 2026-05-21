@@ -1,6 +1,6 @@
-# Lunch Reversal Subtype Workflow
+# Lunch Review Subtype Workflow
 
-Lunch Reversal uses five deterministic Lunch-only subtypes:
+Lunch Review uses five deterministic Lunch-only subtypes:
 
 - `LunchFailedHighReversal`
 - `LunchFailedLowReversal`

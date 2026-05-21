@@ -99,7 +99,7 @@ const SYSTEM_RULES: Setup[] = [
     window: 'BOTH',
     timeframe: '5-min primary',
     invalidation: 'A 5-min candle closes convincingly above/below the extreme after the sweep.',
-    confluence: 'Late morning sweeps strongly signal Lunch Reversals.',
+    confluence: 'Late morning sweeps strongly inform the Lunch Review map.',
     rank: 2,
     frequency: 'High',
     clarity: 'High',

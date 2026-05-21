@@ -1,5 +1,5 @@
 -- Keep the live trades table aligned with the normalized trade plan fields
--- the app saves from Morning Analysis, Lunch Reversal, and Replay Lab.
+-- the app saves from Morning Analysis, Lunch Review, and Replay Lab.
 
 ALTER TABLE trades
   ADD COLUMN IF NOT EXISTS instrument TEXT,

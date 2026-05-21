@@ -25,7 +25,7 @@
 
 - `src/App.tsx`: top-level app state, auth/session bootstrapping, tab routing.
 - `src/components/Analysis.tsx`: Morning Analysis workflow.
-- `src/components/LunchReversal.tsx`: Lunch Reversal workflow.
+- `src/components/LunchReversal.tsx`: Lunch Review workflow.
 - `src/components/ReplayLab.tsx`: historical replay workflow.
 - `src/lib/gemini.ts`: screenshot analysis client and prompt construction.
 - `src/lib/openai.ts`: optional OpenAI chart-fact validation client.

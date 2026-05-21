@@ -908,7 +908,7 @@ export default function SessionLab({
         ...(session.aiSettings || { temperature: 0 }),
         customInstructions: mergeCustomInstructions(session.aiSettings?.customInstructions, [
           approvedRuleRefinements,
-          'THIS IS THE LUNCH REVERSAL SETUP. Only treat Morning 15M ETH and Morning 5M images as context. The Lunch 5M image is the execution chart. Prefer Lunch Failed High/Low Reversal, Compression Breakout, Failed Continuation, and Range Reclaim mechanics.',
+          'THIS IS THE LUNCH REVIEW SETUP. Only treat Morning 15M ETH and Morning 5M images as context. The Lunch 5M image is the execution chart. Prefer failed high/low review, compression breakout, failed continuation, and range reclaim mechanics.',
           bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help plan Lunch, but Lunch 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
         ]),
       };

@@ -29,7 +29,7 @@ export default function ModelConfigPanel({ route, config, onChange }: ModelConfi
       <div className="card-header border-b border-[var(--b1)] pb-2 mb-4">
         <span className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-[var(--orange)]" />
-          Model Routing ({route === 'lunch' ? 'Lunch Reversal' : 'Morning Analysis'})
+          Model Routing ({route === 'lunch' ? 'Lunch Review' : 'Morning Analysis'})
         </span>
         <span className={cn("qd-badge", activeModel === FLASH_MODEL ? "bg-[var(--cyan)]/20 text-[var(--cyan)] border-[var(--cyan)]/30" : "bg-[var(--amber)]/20 text-[var(--amber)] border-[var(--amber)]/30")}>
           Active: {formatModelLabel(activeModel)}

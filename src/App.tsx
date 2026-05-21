@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { cn } from './lib/utils';
-import { SessionState, Trade, AppState, ProposedRule } from './types';
+import { SessionState, Trade, AppState } from './types';
 import { SYSTEM_RULES } from './constants';
-import Dashboard from './components/Dashboard';
-import SessionLab from './components/SessionLab';
 import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
-import Rules from './components/Rules';
-import ReplayLab from './components/ReplayLab';
+import AdminDashboard from './components/AdminDashboard';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
 
@@ -42,7 +39,7 @@ function loadSavedAppState(): AppState {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'session' | 'replay' | 'history' | 'settings' | 'rules'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'admin' | 'archive' | 'settings'>('admin');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -216,20 +213,6 @@ export default function App() {
     }
   };
 
-  const addProposedRule = (rule: ProposedRule) => {
-    setAppState(prev => ({
-      ...prev,
-      customRules: [rule, ...prev.customRules]
-    }));
-  };
-
-  const updateProposedRule = (id: string, status: ProposedRule['status']) => {
-    setAppState(prev => ({
-      ...prev,
-      customRules: prev.customRules.map(r => r.id === id ? { ...r, status } : r)
-    }));
-  };
-
   const displayTrades = user ? cloudTrades : appState.history;
   const currentTrades = user ? cloudTrades.filter(t => t.date === new Date().toISOString().split('T')[0]) : appState.currentSession.trades;
   
@@ -251,11 +234,8 @@ export default function App() {
 
           {/* Navigation */}
           <nav className="flex items-center h-full space-x-6 shrink-0">
-            <TopNavItem label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-            <TopNavItem label="Session Lab" active={activeTab === 'session'} onClick={() => setActiveTab('session')} />
-            <TopNavItem label="Replay Lab" active={activeTab === 'replay'} onClick={() => setActiveTab('replay')} />
-            <TopNavItem label="History" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
-            <TopNavItem label="Rules" active={activeTab === 'rules'} onClick={() => setActiveTab('rules')} />
+            <TopNavItem label="RAG Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
+            <TopNavItem label="Trade Archive" active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} />
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           </nav>
         </div>
@@ -313,20 +293,11 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6">
         <div className="w-full pb-12">
-          <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-            <Dashboard session={{ ...appState.currentSession, trades: currentTrades }} onUpdateSession={updateSession} isAuthenticated={!!user} />
+          <div className={activeTab === 'admin' ? 'block' : 'hidden'}>
+            <AdminDashboard isAuthenticated={!!user} />
           </div>
-          <div className={activeTab === 'session' ? 'block' : 'hidden'}>
-            <SessionLab session={appState.currentSession} customRules={appState.customRules} onUpdate={updateSession} onAddTrade={addTrade} isActive={activeTab === 'session'} />
-          </div>
-          <div className={activeTab === 'replay' ? 'block' : 'hidden'}>
-            <ReplayLab session={appState.currentSession} onAddTrade={addTrade} onUpdate={updateSession} isActive={activeTab === 'replay'} />
-          </div>
-          <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+          <div className={activeTab === 'archive' ? 'block' : 'hidden'}>
             <TradeLog trades={displayTrades} onAddTrade={addTrade} />
-          </div>
-          <div className={activeTab === 'rules' ? 'block' : 'hidden'}>
-            <Rules customRules={appState.customRules} currentSession={appState.currentSession} onUpdateRule={updateProposedRule} onProposeRule={addProposedRule} />
           </div>
           <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
             <Settings session={appState.currentSession} onUpdate={updateSession} />

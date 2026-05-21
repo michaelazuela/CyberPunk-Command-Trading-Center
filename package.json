@@ -15,9 +15,10 @@
     "test": "tsx src/lib/tradeDecisionPipeline.test.ts && tsx src/lib/setupScanner.test.ts && tsx src/lib/localScannerEngine.test.ts",
     "clean": "rm -rf dist",
     "guard:no-firebase": "node scripts/no-firebase-check.js",
+    "guard:legacy-rules": "node scripts/no-legacy-rules-check.js",
     "guard:architecture": "node scripts/architecture-guard.js",
     "guard:schema": "node scripts/schema-guard.js",
-    "guard": "npm run guard:no-firebase && npm run guard:architecture && npm run guard:schema",
+    "guard": "npm run guard:no-firebase && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema",
     "lint": "npm run guard && tsc --noEmit"
   },
   "dependencies": {

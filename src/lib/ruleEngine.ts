@@ -125,7 +125,7 @@ function canonicalizeSetup(...parts: Array<unknown>): AppRuleSetup {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return 'NO_TRADE';
   if (text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('HUNT') || text.includes('RECLAIM')) return 'LIQUIDITY_SWEEP';
-  if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('STAIRCASE')) return 'MOMENTUM_RUNAWAY';
+  if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('IMPULSE CONTINUATION')) return 'MOMENTUM_RUNAWAY';
   if (text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE')) return 'FVG_IMBALANCE';
   if (text.includes('INITIAL BALANCE') || text.includes('IB EXTENSION') || text.includes('IB HIGH') || text.includes('IB LOW')) return 'INITIAL_BALANCE_EXTENSION';
   if (text.includes('OPENING ORDER BLOCK') || text.includes('CONFIRMATION BAR')) return 'OPENING_ORDER_BLOCK';

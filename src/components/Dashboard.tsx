@@ -193,7 +193,7 @@ export default function Dashboard({
           checklist={TIME_WINDOWS.morning.chartMustInclude}
         />
         <WindowCard
-          title="Lunch Reversal Window"
+          title="Lunch Review Window"
           status={lunchStatus}
           range={formatWindow('lunch')}
           required={TIME_WINDOWS.lunch.bestChart}

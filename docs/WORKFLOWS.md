@@ -20,7 +20,7 @@ Expected flow:
 7. Save setup and RAG learning.
 8. If a trade is taken, save proof/outcome later.
 
-## Lunch Reversal
+## Lunch Review
 
 Required context:
 

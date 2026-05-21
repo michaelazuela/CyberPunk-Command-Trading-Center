@@ -49,9 +49,9 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
         "Mapping price action coordinates..."
       ],
       [
-        "Applying TYPE 1 SHORT logic...",
+        "Applying bearish execution-window logic...",
         "Evaluating 9:30 High breach status...",
-        "Checking staircase consistency...",
+        "Checking impulse-continuation structure...",
         "Filtering market noise (pullback detection)...",
         "Validating momentum vectors...",
         "Cross-referencing system rules v1.1..."
@@ -62,7 +62,7 @@ export default function AgentMatrix({ isAnalyzing, currentStep }: { isAnalyzing:
         "Calculating rule violation probability...",
         "Testing adversarial scenarios...",
         "Challenging the primary bias...",
-        "Seeking overlapping wicks and friction..."
+        "Seeking overlapping wicks and consolidation risk..."
       ],
       [
         "Calculating risk-to-reward ratio...",

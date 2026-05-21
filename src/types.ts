@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type DayType = 'TYPE 1 LONG' | 'TYPE 2 LONG' | 'TYPE 1 SHORT' | 'TYPE 2 SHORT' | 'LUNCH REVERSAL' | 'DISTRIBUTION' | 'NO TRADE';
+export type DayType = 'LONG' | 'SHORT' | 'WAIT' | 'NO TRADE';
 
 export type SessionStatus = 'PRE-MARKET' | 'OBSERVATION' | 'ENTRY' | 'CLOSED';
 
@@ -26,6 +26,7 @@ export enum BiasDirection {
 export enum SetupType {
   OrderBlock618 = 'OrderBlock618',
   LiquiditySweep = 'LiquiditySweep',
+  TurtleSoup = 'TurtleSoup',
   MomentumRunaway = 'MomentumRunaway',
   FairValueGap = 'FairValueGap',
   FvgImbalancePullback = 'FvgImbalancePullback',
@@ -327,11 +328,26 @@ export interface FvgZoneFact {
   lower: number | null;
   midpoint?: number | null;
   formedAt?: string | null;
+  formedCandleIndex?: number | null;
   filledPercent?: number | null;
   inverted?: boolean;
   reclaimed?: boolean;
   reclaimTimestamp?: string | null;
+  impulseQualified?: boolean;
+  impulseBodyRatio?: number | null;
+  impulseRangeRatio?: number | null;
   confidence: ReadConfidence;
+}
+
+export interface BreakerZoneFact {
+  direction: Exclude<PriceDirection, 'NO TRADE'>;
+  upper: number | null;
+  lower: number | null;
+  midpoint?: number | null;
+  formedAt?: string | null;
+  source?: 'ohlc' | 'ninjatrader' | 'screenshot' | 'manual' | 'app';
+  confidence: ReadConfidence;
+  evidence?: string;
 }
 
 export interface LiquidityEventFact {
@@ -573,6 +589,7 @@ export interface ChartContext {
   tradeDate: string;
   timeframe: '1m' | '5m' | '15m' | '60m' | string;
   screenshotRole?: ScreenshotRole;
+  chartTimestamp?: string | null;
   screenshotTimestamp?: string | null;
   screenshotTimezone?: AISettings['screenshotTimezone'];
   screenshotUsability: 'usable' | 'warning' | 'unusable';
@@ -584,6 +601,7 @@ export interface ChartContext {
   candles?: ChartCandleFact[];
   swings?: SwingPointFact[];
   fvgZones?: FvgZoneFact[];
+  breakerZones?: BreakerZoneFact[];
   liquidityEvents?: LiquidityEventFact[];
   liquiditySweeps?: LiquidityEventFact[];
   reclaimEvents?: ReclaimEventFact[];
@@ -816,7 +834,7 @@ export interface AISettings {
   temperature: number;
   tickIndex?: number;
   vixLevel?: number;
-  villainLevels?: {
+  liquidityReferenceLevels?: {
     high: number;
     low: number;
   };
