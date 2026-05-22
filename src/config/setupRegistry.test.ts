@@ -22,6 +22,11 @@ function assertContainsAll(actual: Set<SetupType>, expected: SetupType[], label:
   }
 }
 
+function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: string) {
+  assert(actual.size === expected.length, `${label} expected ${expected.length} entries but found ${actual.size}`);
+  assertContainsAll(actual, expected, label);
+}
+
 const primaryExpected = [SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup];
 const supportingExpected = [
   SetupType.LiquiditySweep,
@@ -52,6 +57,8 @@ const deprecatedExpected = [
   SetupType.LunchRangeReclaim,
 ];
 
+const noisyCatalog = [...supportingExpected, ...deprecatedExpected];
+
 for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch'] as const) {
   const primary = getPrimarySetupRegistry(sessionType);
   const supporting = getSupportingEvidenceRegistry(sessionType);
@@ -70,12 +77,16 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   const deprecatedTypes = setupTypes(deprecated);
   const allowedTypes = setupTypes(allowed);
 
-  assertContainsAll(primaryTypes, primaryExpected, `${sessionType} primary registry`);
-  assertContainsAll(supportingTypes, supportingExpected, `${sessionType} supporting registry`);
+  assertExactSet(primaryTypes, primaryExpected, `${sessionType} primary registry`);
+  assertExactSet(supportingTypes, supportingExpected, `${sessionType} supporting registry`);
 
   for (const setupType of deprecatedExpected) {
     assert(!primaryTypes.has(setupType), `${sessionType} primary registry includes deprecated ${setupType}`);
     assert(!supportingTypes.has(setupType), `${sessionType} supporting registry includes deprecated ${setupType}`);
+  }
+
+  for (const setupType of noisyCatalog) {
+    assert(!primaryTypes.has(setupType), `${sessionType} noisy catalog entry ${setupType} leaked into primary registry`);
   }
 
   for (const setupType of deprecatedTypes) {
@@ -83,7 +94,9 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
     assert(!supportingTypes.has(setupType), `${sessionType} deprecated ${setupType} leaked into supporting registry`);
   }
 
-  assertContainsAll(deprecatedTypes, deprecatedExpected.filter((setupType) => allowedTypes.has(setupType)), `${sessionType} deprecated registry`);
+  assertExactSet(deprecatedTypes, deprecatedExpected.filter((setupType) => allowedTypes.has(setupType)), `${sessionType} deprecated registry`);
+  assertContainsAll(allowedTypes, primaryExpected, `${sessionType} compatibility registry`);
+  assertContainsAll(allowedTypes, supportingExpected, `${sessionType} compatibility registry`);
   assert(
     allowed.length === primary.length + supporting.length + deprecated.length,
     `${sessionType} compatibility accessor should still return every role`,

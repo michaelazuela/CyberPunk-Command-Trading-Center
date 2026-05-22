@@ -1,4 +1,5 @@
 import { SetupType, type SetupCandidate } from '../types';
+import { normalizeCandidateIctModelLabel } from './ictModelLabels';
 
 export type TradeJournalSession =
   | 'morning'
@@ -23,7 +24,8 @@ export type TradeJournalSetupTag =
   | 'Turtle Soup'
   | 'wick rejection'
   | 'premium/discount'
-  | 'HTF aligned';
+  | 'HTF aligned'
+  | 'breaker/FVG confluence';
 
 export type TradeJournalOutcome =
   | 'pending'
@@ -102,26 +104,7 @@ function uniqueTags(tags: TradeJournalSetupTag[]): TradeJournalSetupTag[] {
 }
 
 export function classifyJournalModel(candidate?: SetupCandidate | null): TradeJournalModelType {
-  const text = candidateText(candidate);
-  if (candidate?.setupType === SetupType.TurtleSoup || text.includes('turtle soup')) {
-    return 'Turtle Soup Reversal';
-  }
-  if (
-    text.includes('sweep') &&
-    (text.includes('market structure shift') || text.includes('mss')) &&
-    (text.includes('fvg') || text.includes('fair value gap') || text.includes('imbalance'))
-  ) {
-    return 'Sweep -> MSS -> FVG Retrace';
-  }
-  if (
-    candidate?.setupType === SetupType.FvgImbalancePullback ||
-    text.includes('fvg') ||
-    text.includes('fair value gap') ||
-    text.includes('imbalance')
-  ) {
-    return 'Sweep -> MSS -> FVG Retrace';
-  }
-  return 'ICT setup';
+  return normalizeCandidateIctModelLabel(candidate);
 }
 
 export function extractJournalSetupTags(
@@ -139,6 +122,7 @@ export function extractJournalSetupTags(
   if (text.includes('wick rejection') || text.includes('rejection wick')) tags.push('wick rejection');
   if (text.includes('premium') || text.includes('discount') || text.includes('equilibrium')) tags.push('premium/discount');
   if (higherTimeframeAligned || text.includes('higher-timeframe bias aligned') || text.includes('htf aligned')) tags.push('HTF aligned');
+  if (text.includes('breaker/fvg') || text.includes('breaker + fvg')) tags.push('breaker/FVG confluence');
   return uniqueTags(tags);
 }
 

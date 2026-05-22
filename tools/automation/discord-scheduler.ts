@@ -10,6 +10,7 @@ import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
+import { normalizeCandidateIctModelLabel } from '../../src/lib/ictModelLabels';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 
@@ -562,24 +563,11 @@ function statusColor(status: string | undefined): number {
 }
 
 function compactSetupName(candidate: SetupCandidate): string {
-  const model = candidateModelType(candidate);
-  if (model !== 'ICT setup') return model;
-  if (candidate.scenarioLabel) return candidate.scenarioLabel;
-  return candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return candidateModelType(candidate);
 }
 
 function candidateModelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
-  const text = [
-    candidate?.setupType,
-    candidate?.scenarioLabel,
-    candidate?.requiredTrigger,
-    ...(candidate?.evidence || []),
-  ].filter(Boolean).join(' ').toLowerCase();
-  if (text.includes('turtle soup')) return 'Turtle Soup Reversal';
-  if (text.includes('imbalance') || text.includes('fvg') || text.includes('fair value gap') || text.includes('sweep reclaim')) {
-    return 'Sweep -> MSS -> FVG Retrace';
-  }
-  return 'ICT setup';
+  return normalizeCandidateIctModelLabel(candidate);
 }
 
 function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {

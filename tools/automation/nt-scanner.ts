@@ -13,6 +13,7 @@ import {
   getNinjaBridgeSnapshot,
   type NinjaBridgeBar,
 } from '../../src/lib/ninjaTraderBridge';
+import { normalizeCandidateIctModelLabel } from '../../src/lib/ictModelLabels';
 import {
   assessBridgeBarStaleness,
   applyStaleChaseGuard,
@@ -267,23 +268,11 @@ function statusEmoji(state: ScannerState): string {
 
 function planName(candidate: SetupCandidate | null): string {
   if (!candidate) return 'No active plan';
-  const model = modelType(candidate);
-  if (model !== 'ICT setup') return model;
-  return candidate.scenarioLabel || candidate.setupType.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return modelType(candidate);
 }
 
 function modelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
-  const text = [
-    candidate?.setupType,
-    candidate?.scenarioLabel,
-    candidate?.requiredTrigger,
-    ...(candidate?.evidence || []),
-  ].filter(Boolean).join(' ').toLowerCase();
-  if (text.includes('turtle soup')) return 'Turtle Soup Reversal';
-  if (text.includes('imbalance') || text.includes('fvg') || text.includes('fair value gap') || text.includes('sweep reclaim')) {
-    return 'Sweep -> MSS -> FVG Retrace';
-  }
-  return 'ICT setup';
+  return normalizeCandidateIctModelLabel(candidate);
 }
 
 function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
@@ -311,6 +300,7 @@ function sanitizeIctReason(reason: string): string {
   if (text.includes('reclaim after sweep')) return 'Reclaim after sweep confirmed';
   if (text.includes('wick rejection')) return 'Wick rejection support';
   if (text.includes('turtle soup')) return 'Turtle Soup reversal';
+  if (text.includes('breaker + fvg') || text.includes('breaker/fvg')) return 'Breaker + FVG overlap confluence';
   if (text.includes('displacement') || text.includes('expansion') || text.includes('impulse')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed displacement' : 'Displacement confirmed';
   if (text.includes('market structure shift')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed market structure shift' : 'Market structure shift confirmed';
   if (text.includes('fair value gap') || text.includes('fvg') || text.includes('imbalance')) return text.includes('no ') || text.includes('missing') ? 'No fair value gap / imbalance entry model' : 'Fair value gap / imbalance entry model';

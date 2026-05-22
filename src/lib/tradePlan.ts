@@ -2,6 +2,7 @@ import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelC
 import { SYSTEM_RULES } from '../constants';
 import { targetsFromEntryStop } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
+import { normalizeIctModelLabel } from './ictModelLabels';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
 export type TradeDecision = "LONG" | "SHORT" | "NO TRADE";
@@ -285,7 +286,7 @@ export function normalizeTradePlan(
 
   const appRuleCandidate = pipeline.finalTradePlan;
   addCandidate({
-    setupName: appRuleCandidate.setupType,
+    setupName: normalizeIctModelLabel(appRuleCandidate.setupType),
     entry: appRuleCandidate.entry,
     stop: appRuleCandidate.stop,
     source: "app_rule_engine",

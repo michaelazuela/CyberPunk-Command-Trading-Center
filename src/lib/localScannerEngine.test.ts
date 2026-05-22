@@ -14,6 +14,7 @@ import {
   shouldSendScannerAlert,
 } from './localScannerEngine';
 import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
+import { normalizeIctModelLabel, normalizeCandidateIctModelLabel } from './ictModelLabels';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate, type TargetObjective } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
@@ -303,6 +304,116 @@ assert.equal(journalRecord.discordAlertId, 'MORNING-20260519-100500');
 assert.ok(journalRecord.setupTags.includes('Turtle Soup'));
 assert.ok(journalRecord.setupTags.includes('sweep'));
 assert.ok(journalRecord.setupTags.includes('HTF aligned'));
+
+const modelOneJournal = buildTradeJournalRecord({
+  dateTime: '2026-05-19T10:10:00-04:00',
+  instrument: 'MES',
+  session: 'morning',
+  candidate: candidate({
+    setupType: SetupType.SweepMssFvgRetrace,
+    scenarioLabel: 'Liquidity sweep reclaim displacement MSS FVG retrace',
+    evidence: ['Liquidity sweep confirmed', 'Reclaim after sweep confirmed', 'Breaker + FVG overlap confluence'],
+  }),
+});
+assert.equal(modelOneJournal.modelType, 'Sweep -> MSS -> FVG Retrace');
+assert.ok(modelOneJournal.setupTags.includes('sweep'));
+assert.ok(modelOneJournal.setupTags.includes('breaker/FVG confluence'));
+
+const turtleJournal = buildTradeJournalRecord({
+  dateTime: '2026-05-19T10:15:00-04:00',
+  instrument: 'MES',
+  session: 'morning',
+  candidate: candidate({
+    setupType: SetupType.TurtleSoup,
+    scenarioLabel: 'Bullish Turtle Soup Reversal',
+    evidence: ['Turtle Soup reversal', 'Breaker + FVG overlap confluence'],
+  }),
+});
+assert.equal(turtleJournal.modelType, 'Turtle Soup Reversal');
+assert.ok(turtleJournal.setupTags.includes('Turtle Soup'));
+assert.ok(turtleJournal.setupTags.includes('breaker/FVG confluence'));
+
+for (const setupType of [
+  SetupType.LiquiditySweep,
+  SetupType.FairValueGap,
+  SetupType.FvgImbalancePullback,
+  SetupType.MarketStructureShift,
+  SetupType.PreviousDaySweep,
+  SetupType.EqualHighsLows,
+  SetupType.BreakerBlock,
+]) {
+  assert.equal(normalizeIctModelLabel(setupType), 'ICT setup');
+  assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType })), 'ICT setup');
+}
+
+for (const setupType of [
+  SetupType.OrderBlock618,
+  SetupType.MomentumRunaway,
+  SetupType.OpeningOrderBlock,
+  SetupType.InitialBalanceExtension,
+  SetupType.OpeningGapFill,
+  SetupType.CompressionBreakout,
+  SetupType.AlgoKillZone,
+  SetupType.MitigationBlock,
+  SetupType.MomentumPullbackBreatherReclaim,
+  SetupType.MorningFailedHighLiquidityRejection,
+  SetupType.MorningReclaimLong,
+  SetupType.MorningOpeningRangeContinuation,
+  SetupType.LunchFailedHighReversal,
+  SetupType.LunchFailedLowReversal,
+  SetupType.LunchCompressionBreakout,
+  SetupType.LunchFailedContinuation,
+  SetupType.LunchRangeReclaim,
+]) {
+  assert.equal(normalizeIctModelLabel(setupType), 'ICT setup');
+  assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType })), 'ICT setup');
+}
+
+for (const setupType of [
+  SetupType.LiquiditySweep,
+  SetupType.FairValueGap,
+  SetupType.FvgImbalancePullback,
+  SetupType.MarketStructureShift,
+  SetupType.PreviousDaySweep,
+  SetupType.EqualHighsLows,
+  SetupType.BreakerBlock,
+  SetupType.OrderBlock618,
+  SetupType.MomentumRunaway,
+  SetupType.OpeningOrderBlock,
+  SetupType.InitialBalanceExtension,
+  SetupType.OpeningGapFill,
+  SetupType.CompressionBreakout,
+  SetupType.AlgoKillZone,
+  SetupType.MitigationBlock,
+  SetupType.MomentumPullbackBreatherReclaim,
+  SetupType.MorningFailedHighLiquidityRejection,
+  SetupType.MorningReclaimLong,
+  SetupType.MorningOpeningRangeContinuation,
+  SetupType.LunchFailedHighReversal,
+  SetupType.LunchFailedLowReversal,
+  SetupType.LunchCompressionBreakout,
+  SetupType.LunchFailedContinuation,
+  SetupType.LunchRangeReclaim,
+]) {
+  const record = buildTradeJournalRecord({
+    dateTime: '2026-05-19T10:20:00-04:00',
+    instrument: 'MES',
+    session: 'morning',
+    candidate: candidate({
+      setupType,
+      scenarioLabel: `${setupType} supporting evidence`,
+      evidence: ['Liquidity sweep confirmed', 'Fair value gap / imbalance entry model', 'Breaker + FVG overlap confluence'],
+    }),
+  });
+  assert.equal(record.modelType, 'ICT setup');
+  assert.ok(record.setupTags.includes('sweep'));
+  assert.ok(record.setupTags.includes('FVG'));
+}
+
+assert.equal(normalizeIctModelLabel(SetupType.SweepMssFvgRetrace), 'Sweep -> MSS -> FVG Retrace');
+assert.equal(normalizeIctModelLabel(SetupType.TurtleSoup), 'Turtle Soup Reversal');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.SweepMssFvgRetrace })), 'Sweep -> MSS -> FVG Retrace');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.TurtleSoup })), 'Turtle Soup Reversal');
 
 assert.equal(
   actualResultRFromExit({ direction: 'LONG', entry: 100, stop: 96, exit: 108 }),
