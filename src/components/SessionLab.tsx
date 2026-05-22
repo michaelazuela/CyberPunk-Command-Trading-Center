@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { AnalysisResult, ProposedRule, SessionState, SetupCandidate, Trade } from '../types';
-import { analyzeChart } from '../lib/gemini';
+import { analyzeChart, preCheckChartInfo } from '../lib/gemini';
 import { uploadScreenshot } from '../lib/cloudStorage';
 import { supabase } from '../lib/supabase';
 import { cn, formatReplayRange, getImageFromClipboard } from '../lib/utils';
@@ -458,7 +458,7 @@ export default function SessionLab({
     const summary = [
       `${bridgeInstrument} ${sessionType} OHLC loaded through ${bridge.marketDataSource === 'market_bars' ? 'Supabase market_bars cache' : bridge.marketDataSource === 'mixed' ? 'Supabase market_bars cache with bridge fallback' : 'NinjaTrader bridge fallback'}.`,
       `4H/1H/15M define context and liquidity targets; 5M remains execution authority.`,
-      `${sessionType === 'morning' ? 'Morning' : 'Lunch'} 5M execution window bars: ${(executionBars5m.length ? executionBars5m : bridge.bars5m).length}.`,
+      `${sessionType === 'morning' ? 'Morning' : 'PM'} 5M execution window bars: ${(executionBars5m.length ? executionBars5m : bridge.bars5m).length}.`,
       `Latest 4H: ${summarizeBridgeBar(latest240m)}.`,
       `Latest 1H: ${summarizeBridgeBar(latest60m)}.`,
       `Latest 5M: ${summarizeBridgeBar(latest5m)}.`,
@@ -568,15 +568,39 @@ export default function SessionLab({
     { label: 'Midnight Open', value: midnightOpen ? 'SET' : 'OPTIONAL', ready: Boolean(midnightOpen) },
     { label: 'Morning 15M', value: morningEthImg ? 'ATTACHED' : 'OPTIONAL', ready: Boolean(morningEthImg) },
     { label: 'Morning 5M', value: morningExecImg || morningResult ? 'READY' : 'REQUIRED', ready: Boolean(morningExecImg || morningResult) },
-    { label: 'Lunch 5M', value: lunchExecImg || lunchResult ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
+    { label: 'PM 5M', value: lunchExecImg || lunchResult ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
     { label: 'NinjaTrader', value: bridge.connected ? 'CONNECTED' : 'OPTIONAL', ready: bridge.connected },
     { label: 'RAG Save', value: morningSaveStatus || lunchSaveStatus ? 'ACTIVE' : 'ON ANALYSIS', ready: true },
   ];
 
-  const processImage = (dataUrl: string, target: SessionPasteTarget) => {
-    if (target === 'morning_eth_context') setMorningEthImg({ dataUrl });
-    if (target === 'morning_5m_execution') setMorningExecImg({ dataUrl });
-    if (target === 'lunch_5m_execution') setLunchExecImg({ dataUrl });
+  const setStagedImage = (target: SessionPasteTarget, image: UploadedImage) => {
+    if (target === 'morning_eth_context') setMorningEthImg(image);
+    if (target === 'morning_5m_execution') setMorningExecImg(image);
+    if (target === 'lunch_5m_execution') setLunchExecImg(image);
+  };
+
+  const handleGlobalClick = useCallback((event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('.morning-eth-slot')) setActivePasteTarget('morning_eth_context');
+    else if (target.closest('.morning-exec-slot')) setActivePasteTarget('morning_5m_execution');
+    else if (target.closest('.lunch-exec-slot')) setActivePasteTarget('lunch_5m_execution');
+    else if (target.closest('.morning-panel')) setActivePasteTarget('morning_5m_execution');
+    else if (target.closest('.lunch-panel')) setActivePasteTarget('lunch_5m_execution');
+    else setActivePasteTarget(null);
+  }, []);
+
+  const processImage = async (dataUrl: string, target: SessionPasteTarget) => {
+    if (!target) return;
+    setStagedImage(target, { dataUrl });
+
+    try {
+      const ocr = await preCheckChartInfo(dataUrl);
+      if (ocr) {
+        setStagedImage(target, { dataUrl, ocrResult: ocr });
+      }
+    } catch (error) {
+      console.warn('[SessionLab] OCR precheck failed; screenshot remains staged for manual analysis.', error);
+    }
   };
 
   const handlePaste = useCallback(async (event: ClipboardEvent) => {
@@ -593,22 +617,26 @@ export default function SessionLab({
     const imageData = await getImageFromClipboard(event);
     if (imageData) {
       event.preventDefault();
-      processImage(imageData, target);
+      void processImage(imageData, target);
     }
   }, [activePasteTarget, morningExecImg, proofFlow.active]);
 
   useEffect(() => {
     if (!isActive) return;
+    window.addEventListener('click', handleGlobalClick, { capture: true });
     window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [handlePaste, isActive]);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick, { capture: true });
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [handleGlobalClick, handlePaste, isActive]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, target: SessionPasteTarget) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
-      if (evt.target?.result) processImage(evt.target.result as string, target);
+      if (evt.target?.result) void processImage(evt.target.result as string, target);
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -823,7 +851,7 @@ export default function SessionLab({
 
   const persistLunchAnalysis = async (analysis: AnalysisResult, execImage: UploadedImage, ethContextUrl: string | null, morning5mContextUrl: string | null) => {
     try {
-      setLunchSaveStatus('Analysis ready. Saving Lunch setup to Supabase + RAG in the background...');
+      setLunchSaveStatus('Analysis ready. Saving PM setup to Supabase + RAG in the background...');
       let execUrl = execImage.dataUrl;
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -876,12 +904,12 @@ export default function SessionLab({
 
   const runLunchAnalysis = async () => {
     if (!lunchExecImg) {
-      setLunchError('Required: 5M Lunch Execution screenshot.');
+      setLunchError('Required: 5M PM Execution screenshot.');
       return;
     }
     setIsAnalyzingLunch(true);
     setLunchError(null);
-    setLunchSaveStatus('Running Lunch analysis...');
+    setLunchSaveStatus('Running PM analysis...');
 
     try {
       const bridgeContext = buildBridgeAnalysisContext('lunch');
@@ -908,8 +936,8 @@ export default function SessionLab({
         ...(session.aiSettings || { temperature: 0 }),
         customInstructions: mergeCustomInstructions(session.aiSettings?.customInstructions, [
           approvedRuleRefinements,
-          'THIS IS THE LUNCH REVIEW SETUP. Only treat Morning 15M ETH and Morning 5M images as context. The Lunch 5M image is the execution chart. Prefer failed high/low review, compression breakout, failed continuation, and range reclaim mechanics.',
-          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help plan Lunch, but Lunch 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
+          'THIS IS THE PM REVIEW WORKFLOW. Treat Morning 15M ETH and Morning 5M images as context only. The PM 5M image is the execution chart. Extract structured facts only; final trade approval belongs to the app-owned plan engine and trade decision pipeline.',
+          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help frame PM review, but PM 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
         ]),
       };
       const rawAnalysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument, session.riskPercent) as AnalysisResult;
@@ -924,7 +952,7 @@ export default function SessionLab({
         morningExecImg?.dataUrl || session.morningScreenshot || null
       );
     } catch (error: any) {
-      setLunchError(error.message || 'Lunch analysis failed.');
+      setLunchError(error.message || 'PM analysis failed.');
       setLunchSaveStatus(null);
     } finally {
       setIsAnalyzingLunch(false);
@@ -1084,7 +1112,7 @@ export default function SessionLab({
   return (
     <div className="flex flex-col h-full fade-in">
       <div className="flex items-center gap-4 mb-6 sticky top-0 bg-[var(--bg)]/90 backdrop-blur z-10 py-4 border-b border-[var(--b2)]">
-        <h1 className="text-xl font-bold tracking-tight text-[var(--txt)] flex-1">SESSION LAB</h1>
+        <h1 className="text-xl font-bold tracking-tight text-[var(--txt)] flex-1">TRADING WORKFLOW</h1>
         <span className="qd-badge">LIVE DECISION SUPPORT</span>
       </div>
 
@@ -1111,7 +1139,7 @@ export default function SessionLab({
         <div className="col-span-1 lg:col-span-2">
           <p className="text-[10px] flex items-start gap-2 bg-[var(--green)]/10 border border-[var(--green)]/20 p-2 text-[var(--green)]">
             <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
-            Session Lab defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the Morning or Lunch analysis button.
+            Trading Workflow defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the explicit Morning or PM analysis button.
           </p>
         </div>
       </div>
@@ -1213,7 +1241,7 @@ export default function SessionLab({
         <div className="flex items-center justify-between gap-4 mb-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Session Readiness</div>
-            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and Lunch share the shell, but use separate screenshots, analysis state, proof flow, and RAG records.</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and PM share the shell, but use separate screenshots, analysis state, proof flow, and RAG records.</div>
           </div>
           <span className="qd-badge">APP-OWNED DECISION</span>
         </div>
@@ -1352,24 +1380,24 @@ export default function SessionLab({
 
         <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] lunch-panel">
           <div className="flex justify-between items-center border-b border-[var(--b2)] pb-2">
-            <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">LUNCH REVIEW</h2>
+            <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">PM REVIEW</h2>
             <div className="flex items-center gap-2">
               <TimezoneToggle selectedTimezone={lunchTimezone} onChange={setLunchTimezone} />
-              <WorkflowResetButton onClick={resetLunch}>Reset Lunch</WorkflowResetButton>
+              <WorkflowResetButton onClick={resetLunch}>Reset PM</WorkflowResetButton>
             </div>
           </div>
 
           {!lunchResult && (
             <>
-              <ScreenshotUploadPanel target="lunch_5m_execution" label="5m Lunch Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Execution chart: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
+              <ScreenshotUploadPanel target="lunch_5m_execution" label="5m PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Execution chart: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
               <div className="text-[10px] text-[var(--txt2)] border border-[var(--b2)] p-2">
-                Lunch uses Morning 15M ETH and Morning 5M context when available, but the Lunch 5M chart remains the execution chart.
+                PM uses Morning 15M ETH and Morning 5M context when available, but the PM 5M chart remains the execution chart.
               </div>
-              {morningResult || session.analysisResult ? <div className="text-[10px] text-[var(--green)] bg-[var(--green)]/10 p-2">+ Morning context available for Lunch plan</div> : <div className="text-[10px] text-[var(--orange)] bg-[var(--orange)]/10 p-2">Morning context not available yet. Lunch can still run from its own 5M chart.</div>}
+              {morningResult || session.analysisResult ? <div className="text-[10px] text-[var(--green)] bg-[var(--green)]/10 p-2">+ Morning context available for PM review</div> : <div className="text-[10px] text-[var(--orange)] bg-[var(--orange)]/10 p-2">Morning context not available yet. PM can still run from its own 5M chart.</div>}
               {lunchError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{lunchError}</div>}
               {lunchSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{lunchSaveStatus}</div>}
               <button onClick={runLunchAnalysis} disabled={isAnalyzingLunch} className="qd-btn-primary mt-2 flex justify-center py-3">
-                {isAnalyzingLunch ? 'Running Lunch Analysis...' : 'Run Lunch Review Analysis'}
+                {isAnalyzingLunch ? 'Running PM Analysis...' : 'Run PM Review Analysis'}
               </button>
             </>
           )}
@@ -1377,7 +1405,7 @@ export default function SessionLab({
           {lunchResult && (
             <div className="flex flex-col gap-4 font-mono">
               <div className="bg-[var(--bg)] p-4 border border-[var(--b2)] text-[12px]">
-                <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">Lunch Bias: <span className="text-[var(--orange)]">{lunchResult.dayType}</span></h3>
+                <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">PM Bias: <span className="text-[var(--orange)]">{lunchResult.dayType}</span></h3>
                 <div className="text-[11px] leading-relaxed mb-4">{lunchResult.reasoning}</div>
                 {normalizedLunchPlan && <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} planVersionId={lunchResult.planVersionId} />}
               </div>

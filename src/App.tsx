@@ -7,6 +7,7 @@ import { SYSTEM_RULES } from './constants';
 import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
+import SessionLab from './components/SessionLab';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
 
@@ -39,7 +40,7 @@ function loadSavedAppState(): AppState {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'admin' | 'archive' | 'settings'>('admin');
+  const [activeTab, setActiveTab] = useState<'admin' | 'workflow' | 'archive' | 'settings'>('admin');
   const [user, setUser] = useState<any>(null);
   const [cloudTrades, setCloudTrades] = useState<Trade[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -235,6 +236,7 @@ export default function App() {
           {/* Navigation */}
           <nav className="flex items-center h-full space-x-6 shrink-0">
             <TopNavItem label="RAG Admin" active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} />
+            <TopNavItem label="Trading Workflow" active={activeTab === 'workflow'} onClick={() => setActiveTab('workflow')} />
             <TopNavItem label="Trade Archive" active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} />
             <TopNavItem label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
           </nav>
@@ -295,6 +297,15 @@ export default function App() {
         <div className="w-full pb-12">
           <div className={activeTab === 'admin' ? 'block' : 'hidden'}>
             <AdminDashboard isAuthenticated={!!user} />
+          </div>
+          <div className={activeTab === 'workflow' ? 'block' : 'hidden'}>
+            <SessionLab
+              session={appState.currentSession}
+              customRules={appState.customRules}
+              onUpdate={updateSession}
+              onAddTrade={addTrade as any}
+              isActive={activeTab === 'workflow'}
+            />
           </div>
           <div className={activeTab === 'archive' ? 'block' : 'hidden'}>
             <TradeLog trades={displayTrades} onAddTrade={addTrade} />
