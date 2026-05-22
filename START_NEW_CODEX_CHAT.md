@@ -9,9 +9,12 @@ Use this file when the current Codex chat is almost out of context. It is the sh
 - Repo: `michaelazuela/CyberPunk-Command-Trading-Center`
 - Local path: `C:\Users\Mike\Documents\New project`
 - Branch: `main`
-- Latest pushed code checkpoint at time of this file:
+- Latest local commit at time of this update:
+  - `d845f1c Add new chat bootstrap handoff`
+- Latest pushed code checkpoint known before this update:
   - `b633f86 Restrict active scanner candidates to primary models`
 - Important prior commits:
+  - `b633f86 Restrict active scanner candidates to primary models`
   - `6e2da00 Add phase 1 UX clarity handoff`
   - `644fac3 Add trading workflow tab and align AM PM screenshot flow with replay`
   - `4ef84d1 Add project handoff and trading rules baseline`
@@ -30,15 +33,26 @@ Tell the next Codex chat to read these before changing anything:
 
 ## Current Loose Local Files
 
-At the time this file was created, the only uncommitted items were untracked local artifacts:
+At the time this file was updated, the current uncommitted items were:
 
 ```text
+ M START_NEW_CODEX_CHAT.md
+ M src/components/SessionLab.tsx
+ M src/config/tradeRules.ts
+ M src/lib/setupScanner.test.ts
+ M src/lib/setupScanner.ts
+ M src/lib/tradeDecisionPipeline.test.ts
 ?? test-screenshots/
 ?? tools/automation/Session
 ?? tools/automation/Supabase
 ```
 
-Do not stage these unless the user explicitly says they are needed.
+Notes:
+
+- `src/components/SessionLab.tsx` is from the completed Phase 1 UX clarity pass in this chat.
+- `src/config/tradeRules.ts`, `src/lib/setupScanner.ts`, `src/lib/setupScanner.test.ts`, and `src/lib/tradeDecisionPipeline.test.ts` are from the completed Phase E Model 1 pass in this chat.
+- `START_NEW_CODEX_CHAT.md` is modified only to update this handoff.
+- Do not stage `test-screenshots/`, `tools/automation/Session`, or `tools/automation/Supabase` unless the user explicitly says they are needed.
 
 ## Current Architecture To Preserve
 
@@ -75,33 +89,116 @@ Supporting evidence may enrich a plan but must not independently create active c
 
 Deprecated setup families must not become active candidates.
 
-## Next Approved Phase
+## Completed Since Previous Bootstrap
 
-Continue with **Phase 1 UX Clarity**.
+### Phase 1 UX Clarity
 
-Goal:
+Completed a UI-only clarity pass in `src/components/SessionLab.tsx`.
 
-Make the `Trading Workflow` tab clear, Replay-like, and safe to use without changing trading logic.
+What changed:
 
-Approved focus:
+- Added clear AM/PM readiness/status cards.
+- Clarified upload/paste is staging only and preview must appear before analysis.
+- Renamed buttons to explicit `Analyze Morning 5M` / `Analyze PM 5M`.
+- Added compact result summaries for Bias/Read, Setup/Model, and Decision above the existing plan card.
+- Kept AM and PM workflow state separate.
 
-- `src/components/SessionLab.tsx`
-- `src/components/ReplayLab.tsx` as a reference only
-- very small label/readability changes in related UI files only if necessary
+Validation after Phase 1:
 
-Do not touch:
+```bash
+npm run lint
+npm test
+npm run build
+```
 
-- setup scanner
-- trade decision pipeline
-- conditional plan builder
-- setup registry
-- trade rules
-- time windows
-- target/session engines
-- local scanner engine
-- automation scripts
-- Cloudflare functions
-- Supabase migrations
+Status: passed. Build had existing Vite chunk/dynamic import warnings only.
+
+### Phase E Model 1 Validation
+
+Completed Phase E objective: make `SetupType.SweepMssFvgRetrace` an explicit, measurable primary ICT model.
+
+Files changed for Phase E:
+
+- `src/config/tradeRules.ts`
+- `src/lib/setupScanner.ts`
+- `src/lib/setupScanner.test.ts`
+- `src/lib/tradeDecisionPipeline.test.ts`
+
+Where Model 1 validation now lives:
+
+- `validateModelOne()` in `src/lib/setupScanner.ts`.
+- It is used only for `SetupType.SweepMssFvgRetrace`.
+
+Model 1 now requires:
+
+- liquidity sweep
+- reclaim after sweep
+- displacement
+- market structure shift
+- impulse-qualified FVG / imbalance
+- retrace into FVG
+- entry inside FVG or valid confluence zone
+- stop beyond sweep extreme
+- target using opposing liquidity or a valid R objective
+- minimum 2.0R
+
+FVG definitions implemented for derived candle facts:
+
+- Bullish FVG: `Low[currentBar] > High[currentBar - 2]`
+- Bearish FVG: `High[currentBar] < Low[currentBar - 2]`
+
+Impulse filter:
+
+- Added `TRADE_RULES.executionParameters.fvgImpulseBodyRatio = 1.25`
+- Added `TRADE_RULES.executionParameters.fvgImpulseRangeRatio = 1.25`
+- Explicit `fvgZones` must be impulse-qualified or pass the ratio filter.
+- Weak gaps are not valid Model 1 FVGs.
+
+Incomplete Model 1 handling:
+
+- Full sequence qualifies as executable only when all required facts and 2.0R are present.
+- Partial sequence remains conditional/watchlist if enough evidence exists.
+- FVG-only, sweep-only, missing retrace, weak FVG, entry outside FVG, and missing 2R do not fully qualify.
+- Supporting evidence remains available as notes/evidence, not active standalone candidates.
+
+Tests added/updated:
+
+- Full Model 1 sequence qualifies.
+- FVG-only does not qualify.
+- Sweep + reclaim without displacement/MSS/FVG does not fully qualify.
+- Sweep + displacement + MSS without FVG retrace remains conditional.
+- Weak FVG without impulse does not qualify.
+- Entry outside FVG does not qualify.
+- Missing 2R target room blocks full qualification.
+- LONG stop is below sweep low.
+- SHORT stop is above sweep high.
+- Supporting evidence remains non-standalone.
+
+Validation after Phase E:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Status: passed. `npm run lint` included `guard:no-firebase`, `guard:legacy-rules`, `guard:architecture`, and `guard:schema`. Build had existing Vite chunk/dynamic import warnings only.
+
+## Next Recommended Phase
+
+No next phase has been explicitly approved after Phase E.
+
+Recommended next step:
+
+- Review the Phase 1 + Phase E diffs.
+- Optionally commit a clean checkpoint, excluding untracked local artifacts unless explicitly approved.
+- If continuing code work, ask the user for the next phase/scope before touching additional files.
+
+Important:
+
+- Do not expand active candidates beyond `SetupType.SweepMssFvgRetrace` and `SetupType.TurtleSoup`.
+- Do not reintroduce deprecated setup families.
+- Do not stage `test-screenshots/`, `tools/automation/Session`, or `tools/automation/Supabase` unless explicitly approved.
 
 ## Exact Prompt For New Chat
 
@@ -130,48 +227,35 @@ git status --short
 git log --oneline -5
 
 Task:
-Continue Phase 1 UX Clarity only.
-
-Goal:
-Make the Trading Workflow tab clear, Replay-like, and safe to use without changing trading logic.
+Continue from completed Phase 1 UX Clarity and completed Phase E Model 1 validation.
 
 Rules:
-- Do not alter trading rules.
-- Do not alter setupScanner, tradeDecisionPipeline, conditionalPlanBuilder, setupRegistry, tradeRules, timeWindows, localScannerEngine, target/session engines, automation scripts, Cloudflare functions, or Supabase migrations.
+- First inspect `git status --short` and current diffs.
 - Do not stage untracked test-screenshots or tools/automation/Session or tools/automation/Supabase unless I explicitly approve it.
-- Preserve dark mode.
-- Preserve screenshot paste/upload behavior.
-- Screenshot preview must display before analysis.
-- Analysis must not auto-run when an image is pasted/uploaded.
-- User must click Analyze/Process intentionally.
-- AM and PM must be separate workflows.
-- AM must not trigger PM logic.
-- PM must not trigger AM logic.
-- Neither AM nor PM should use old Lunch Reversal workflow language.
+- Do not reintroduce deprecated setup families.
+- Do not broaden active candidate generation beyond:
+  - SetupType.SweepMssFvgRetrace
+  - SetupType.TurtleSoup
+- Preserve Supabase/Cloudflare-only architecture.
+- Preserve Gemini through `/api/gemini`.
+- Preserve decision-support-only behavior; no automated orders.
 
-Approved files:
+Current local changes to review:
 - src/components/SessionLab.tsx
-- src/components/ReplayLab.tsx only as workflow reference
-- src/components/FinalTradePlanCard.tsx only for label/readability changes
-- src/components/TradeProofPanel.tsx only for label/readability changes
-- src/App.tsx only for small navigation label/wording changes
-- src/lib/utils.ts only for display-only helper text
-- CSS/global style files only for layout/readability
+- src/config/tradeRules.ts
+- src/lib/setupScanner.ts
+- src/lib/setupScanner.test.ts
+- src/lib/tradeDecisionPipeline.test.ts
+- START_NEW_CODEX_CHAT.md
 
 Validation:
-Run:
+Previous chat already ran:
 npm run lint
 npm test
 npm run build
 
-Return:
-1. Files changed
-2. UX clarity changes made
-3. Confirmation no trading rules changed
-4. Confirmation screenshot paste/upload behavior is preserved
-5. Confirmation Analyze/Process remains explicit
-6. Validation results
-7. Remaining risks
+Task:
+Ask me what next phase or action I want. If I ask to commit, make a clean checkpoint with only the intentional modified tracked files and do not stage the untracked artifact folders unless explicitly approved.
 ```
 
 ## Quick Recovery Checklist
@@ -180,9 +264,9 @@ In a new chat:
 
 1. Start from the exact prompt above.
 2. Confirm current branch is `main`.
-3. Confirm latest commit includes `b633f86` or newer.
-4. Ignore untracked screenshots/artifacts unless needed.
-5. Continue Phase 1 UX Clarity only.
+3. Confirm latest local commit includes `d845f1c` or newer.
+4. Review the current tracked diffs before changing anything.
+5. Ignore untracked screenshots/artifacts unless explicitly approved.
 6. Validate before commit/push.
 
 End of bootstrap.

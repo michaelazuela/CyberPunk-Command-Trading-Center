@@ -1109,11 +1109,31 @@ export default function SessionLab({
     setProofFlow({ active: false });
   };
 
+  const morningReadyToAnalyze = Boolean(morningExecImg) && !morningResult;
+  const lunchReadyToAnalyze = Boolean(lunchExecImg) && !lunchResult;
+  const morningStatus = morningResult ? 'Result ready' : morningReadyToAnalyze ? 'Ready to analyze' : 'Waiting for 5M screenshot';
+  const lunchStatus = lunchResult ? 'Result ready' : lunchReadyToAnalyze ? 'Ready to analyze' : 'Waiting for PM 5M screenshot';
+  const morningRequirements = [
+    { label: '15M ETH context', value: morningEthImg ? 'Attached' : 'Optional context only', ready: Boolean(morningEthImg) },
+    { label: '5M execution chart', value: morningExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(morningExecImg) },
+    { label: 'Analyze click', value: morningResult ? 'Complete' : 'Manual button required', ready: Boolean(morningResult) },
+  ];
+  const lunchRequirements = [
+    { label: 'Morning context', value: morningResult || session.analysisResult ? 'Available' : 'Optional; PM can run without it', ready: Boolean(morningResult || session.analysisResult) },
+    { label: 'PM 5M execution chart', value: lunchExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(lunchExecImg) },
+    { label: 'Analyze click', value: lunchResult ? 'Complete' : 'Manual button required', ready: Boolean(lunchResult) },
+  ];
+
   return (
     <div className="flex flex-col h-full fade-in">
       <div className="flex items-center gap-4 mb-6 sticky top-0 bg-[var(--bg)]/90 backdrop-blur z-10 py-4 border-b border-[var(--b2)]">
-        <h1 className="text-xl font-bold tracking-tight text-[var(--txt)] flex-1">TRADING WORKFLOW</h1>
-        <span className="qd-badge">LIVE DECISION SUPPORT</span>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold tracking-tight text-[var(--txt)]">TRADING WORKFLOW</h1>
+          <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--txt3)]">
+            Screenshot-driven review. Nothing runs until an explicit Analyze button is clicked.
+          </div>
+        </div>
+        <span className="qd-badge">DECISION SUPPORT ONLY</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-[var(--b0)] border border-[var(--b2)] p-4 rounded-sm mb-6 shadow-sm font-mono text-[11px]">
@@ -1241,7 +1261,7 @@ export default function SessionLab({
         <div className="flex items-center justify-between gap-4 mb-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Session Readiness</div>
-            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and PM share the shell, but use separate screenshots, analysis state, proof flow, and RAG records.</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and PM are separate workflows with separate screenshots, analysis state, proof flow, and RAG records.</div>
           </div>
           <span className="qd-badge">APP-OWNED DECISION</span>
         </div>
@@ -1320,22 +1340,43 @@ export default function SessionLab({
 
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] morning-panel">
-          <div className="flex justify-between items-center border-b border-[var(--b2)] pb-2">
-            <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">MORNING REVIEW</h2>
+          <div className="flex flex-col gap-3 border-b border-[var(--b2)] pb-3">
+            <div className="flex justify-between items-start gap-3">
+              <div>
+                <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">MORNING REVIEW</h2>
+                <div className="mt-1 text-[10px] text-[var(--txt3)]">
+                  AM workflow only. 15M ETH is context; 5M is the execution chart.
+                </div>
+              </div>
+              <span className={cn('qd-badge', morningReadyToAnalyze || morningResult ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
+                {morningStatus}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <TimezoneToggle selectedTimezone={morningTimezone} onChange={setMorningTimezone} />
               <WorkflowResetButton onClick={resetMorning}>Reset Morning</WorkflowResetButton>
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+              {morningRequirements.map(item => (
+                <div key={item.label} className={cn('border p-2 font-mono', item.ready ? 'border-[var(--green)]/25 bg-[var(--green)]/5' : 'border-[var(--orange)]/25 bg-[var(--orange)]/5')}>
+                  <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">{item.label}</div>
+                  <div className={cn('mt-1 text-[10px] font-bold', item.ready ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>{item.value}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           {!morningResult && (
             <>
-              <ScreenshotUploadPanel target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => setMorningEthImg(null)} onActivate={setActivePasteTarget} hintText={`Context only: ${formatReplayRange('morning_eth_context', morningTimezone)}`} />
-              <ScreenshotUploadPanel target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Execution chart: ${formatReplayRange('morning_5m_execution', morningTimezone)}`} />
+              <ScreenshotUploadPanel target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => setMorningEthImg(null)} onActivate={setActivePasteTarget} hintText={`Context only. Paste/upload range: ${formatReplayRange('morning_eth_context', morningTimezone)}`} />
+              <ScreenshotUploadPanel target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('morning_5m_execution', morningTimezone)}`} />
+              <div className="border border-[var(--b2)] bg-[var(--bg)] p-2 text-[10px] text-[var(--txt2)]">
+                Preview must be visible above before analysis. Pasting or uploading only stages the screenshot; it does not start the analyzer.
+              </div>
               {morningError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{morningError}</div>}
               {morningSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{morningSaveStatus}</div>}
               <button onClick={runMorningAnalysis} disabled={isAnalyzingMorning} className="qd-btn-primary mt-2 flex justify-center py-3">
-                {isAnalyzingMorning ? 'Running Morning Analysis...' : 'Run Morning Analysis'}
+                {isAnalyzingMorning ? 'Analyzing Morning 5M...' : 'Analyze Morning 5M'}
               </button>
             </>
           )}
@@ -1343,7 +1384,26 @@ export default function SessionLab({
           {morningResult && (
             <div className="flex flex-col gap-4 font-mono">
               <div className="bg-[var(--bg)] p-4 border border-[var(--b2)] text-[12px]">
-                <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">Morning Bias: <span className="text-[var(--green)]">{morningResult.dayType}</span></h3>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-[10px] text-[var(--txt2)] font-bold">Morning Result</h3>
+                  <span className="qd-badge border-[var(--green)]/30 text-[var(--green)]">AM only</span>
+                </div>
+                <div className="mb-3 grid gap-2 md:grid-cols-3">
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Bias / Read</div>
+                    <div className="mt-1 text-[11px] font-bold text-[var(--green)]">{morningResult.dayType || 'Pending'}</div>
+                  </div>
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Setup / Model</div>
+                    <div className="mt-1 text-[11px] font-bold text-[var(--txt)]">{normalizedMorningPlan?.setupName || 'No executable setup'}</div>
+                  </div>
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Decision</div>
+                    <div className={cn('mt-1 text-[11px] font-bold', normalizedMorningPlan?.canExecute ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>
+                      {normalizedMorningPlan?.decisionLabel || normalizedMorningPlan?.decision || 'Wait / No Trade'}
+                    </div>
+                  </div>
+                </div>
                 <div className="text-[11px] leading-relaxed mb-4">{morningResult.reasoning}</div>
                 {normalizedMorningPlan && <FinalTradePlanCard plan={normalizedMorningPlan} agentLearningUsed={morningResult.agent_learning_used} planVersionId={morningResult.planVersionId} />}
               </div>
@@ -1379,25 +1439,46 @@ export default function SessionLab({
         </div>
 
         <div className="flex-1 flex flex-col gap-4 p-4 bg-[var(--b0)] border border-[var(--b2)] lunch-panel">
-          <div className="flex justify-between items-center border-b border-[var(--b2)] pb-2">
-            <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">PM REVIEW</h2>
+          <div className="flex flex-col gap-3 border-b border-[var(--b2)] pb-3">
+            <div className="flex justify-between items-start gap-3">
+              <div>
+                <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">PM REVIEW</h2>
+                <div className="mt-1 text-[10px] text-[var(--txt3)]">
+                  PM workflow only. Morning context can frame the read; PM 5M remains execution authority.
+                </div>
+              </div>
+              <span className={cn('qd-badge', lunchReadyToAnalyze || lunchResult ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
+                {lunchStatus}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <TimezoneToggle selectedTimezone={lunchTimezone} onChange={setLunchTimezone} />
               <WorkflowResetButton onClick={resetLunch}>Reset PM</WorkflowResetButton>
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+              {lunchRequirements.map(item => (
+                <div key={item.label} className={cn('border p-2 font-mono', item.ready ? 'border-[var(--green)]/25 bg-[var(--green)]/5' : 'border-[var(--orange)]/25 bg-[var(--orange)]/5')}>
+                  <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">{item.label}</div>
+                  <div className={cn('mt-1 text-[10px] font-bold', item.ready ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>{item.value}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           {!lunchResult && (
             <>
-              <ScreenshotUploadPanel target="lunch_5m_execution" label="5m PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Execution chart: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
+              <ScreenshotUploadPanel target="lunch_5m_execution" label="5m PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
               <div className="text-[10px] text-[var(--txt2)] border border-[var(--b2)] p-2">
                 PM uses Morning 15M ETH and Morning 5M context when available, but the PM 5M chart remains the execution chart.
+              </div>
+              <div className="border border-[var(--b2)] bg-[var(--bg)] p-2 text-[10px] text-[var(--txt2)]">
+                Preview must be visible above before analysis. Upload/paste is staging only; PM analysis starts only from this button.
               </div>
               {morningResult || session.analysisResult ? <div className="text-[10px] text-[var(--green)] bg-[var(--green)]/10 p-2">+ Morning context available for PM review</div> : <div className="text-[10px] text-[var(--orange)] bg-[var(--orange)]/10 p-2">Morning context not available yet. PM can still run from its own 5M chart.</div>}
               {lunchError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{lunchError}</div>}
               {lunchSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{lunchSaveStatus}</div>}
               <button onClick={runLunchAnalysis} disabled={isAnalyzingLunch} className="qd-btn-primary mt-2 flex justify-center py-3">
-                {isAnalyzingLunch ? 'Running PM Analysis...' : 'Run PM Review Analysis'}
+                {isAnalyzingLunch ? 'Analyzing PM 5M...' : 'Analyze PM 5M'}
               </button>
             </>
           )}
@@ -1405,7 +1486,26 @@ export default function SessionLab({
           {lunchResult && (
             <div className="flex flex-col gap-4 font-mono">
               <div className="bg-[var(--bg)] p-4 border border-[var(--b2)] text-[12px]">
-                <h3 className="text-[10px] text-[var(--txt2)] font-bold mb-2">PM Bias: <span className="text-[var(--orange)]">{lunchResult.dayType}</span></h3>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-[10px] text-[var(--txt2)] font-bold">PM Result</h3>
+                  <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">PM only</span>
+                </div>
+                <div className="mb-3 grid gap-2 md:grid-cols-3">
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Bias / Read</div>
+                    <div className="mt-1 text-[11px] font-bold text-[var(--orange)]">{lunchResult.dayType || 'Pending'}</div>
+                  </div>
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Setup / Model</div>
+                    <div className="mt-1 text-[11px] font-bold text-[var(--txt)]">{normalizedLunchPlan?.setupName || 'No executable setup'}</div>
+                  </div>
+                  <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--txt3)]">Decision</div>
+                    <div className={cn('mt-1 text-[11px] font-bold', normalizedLunchPlan?.canExecute ? 'text-[var(--green)]' : 'text-[var(--orange)]')}>
+                      {normalizedLunchPlan?.decisionLabel || normalizedLunchPlan?.decision || 'Wait / No Trade'}
+                    </div>
+                  </div>
+                </div>
                 <div className="text-[11px] leading-relaxed mb-4">{lunchResult.reasoning}</div>
                 {normalizedLunchPlan && <FinalTradePlanCard plan={normalizedLunchPlan} agentLearningUsed={lunchResult.agent_learning_used} planVersionId={lunchResult.planVersionId} />}
               </div>
