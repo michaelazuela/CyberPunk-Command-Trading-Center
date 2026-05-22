@@ -14,6 +14,8 @@ export const TRADE_RULES = {
     stopOffsetTicks: 1,
     confirmationTimeframe: '5m',
     displacementScoreThreshold: 70,
+    fvgImpulseBodyRatio: 1.25,
+    fvgImpulseRangeRatio: 1.25,
   },
   discordAlertThresholds: {
     conditional: 75,

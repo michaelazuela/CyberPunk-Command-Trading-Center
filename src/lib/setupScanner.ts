@@ -29,6 +29,25 @@ interface ExtractedPlanFacts {
   confidence: Confidence | null;
 }
 
+interface ModelOneValidation {
+  detected: boolean;
+  possible: boolean;
+  direction: Direction;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  risk: number | null;
+  invalidation: string | null;
+  requiredTrigger: string | null;
+  confidence: Confidence;
+  evidence: string[];
+  missingEvidence: string[];
+  hasPendingTrigger: boolean;
+}
+
+type TurtleSoupValidation = ModelOneValidation;
+
 export interface SetupScannerInput {
   sessionType: SetupSession;
   result?: AnalysisResult | null;
@@ -317,6 +336,486 @@ function candleFactSummary(chartContext: ChartContext) {
   };
 }
 
+function candleBody(candle: NonNullable<ChartContext['candles']>[number]): number | null {
+  const enriched = candle as typeof candle & { bodyPoints?: number | null };
+  if (typeof enriched.bodyPoints === 'number' && Number.isFinite(enriched.bodyPoints)) return Math.abs(enriched.bodyPoints);
+  if (typeof candle.open === 'number' && typeof candle.close === 'number') return Math.abs(candle.close - candle.open);
+  return null;
+}
+
+function candleRange(candle: NonNullable<ChartContext['candles']>[number]): number | null {
+  const enriched = candle as typeof candle & { rangePoints?: number | null };
+  if (typeof enriched.rangePoints === 'number' && Number.isFinite(enriched.rangePoints)) return Math.abs(enriched.rangePoints);
+  if (typeof candle.high === 'number' && typeof candle.low === 'number') return Math.abs(candle.high - candle.low);
+  return null;
+}
+
+function impulseQualifiedFromRatios(bodyRatio?: number | null, rangeRatio?: number | null): boolean {
+  const minBody = TRADE_RULES.executionParameters.fvgImpulseBodyRatio;
+  const minRange = TRADE_RULES.executionParameters.fvgImpulseRangeRatio;
+  return (
+    (typeof bodyRatio === 'number' && Number.isFinite(bodyRatio) && bodyRatio >= minBody) ||
+    (typeof rangeRatio === 'number' && Number.isFinite(rangeRatio) && rangeRatio >= minRange)
+  );
+}
+
+function deriveImpulseQualifiedFvgs(chartContext: ChartContext): NonNullable<ChartContext['fvgZones']> {
+  const candles = (chartContext.candles || [])
+    .filter((candle) =>
+      typeof candle.index === 'number' &&
+      typeof candle.high === 'number' &&
+      typeof candle.low === 'number' &&
+      typeof candle.open === 'number' &&
+      typeof candle.close === 'number'
+    )
+    .sort((a, b) => a.index - b.index);
+  if (candles.length < 3) return [];
+
+  const derived: NonNullable<ChartContext['fvgZones']> = [];
+  for (let index = 2; index < candles.length; index += 1) {
+    const current = candles[index];
+    const twoBack = candles[index - 2];
+    const recent = candles.slice(Math.max(0, index - 6), index);
+    const bodies = recent.map(candleBody).filter((value): value is number => value !== null && value > 0);
+    const ranges = recent.map(candleRange).filter((value): value is number => value !== null && value > 0);
+    const currentBody = candleBody(current);
+    const currentRange = candleRange(current);
+    const averageBody = bodies.length ? bodies.reduce((sum, value) => sum + value, 0) / bodies.length : null;
+    const averageRange = ranges.length ? ranges.reduce((sum, value) => sum + value, 0) / ranges.length : null;
+    const bodyRatio = currentBody && averageBody ? currentBody / averageBody : null;
+    const rangeRatio = currentRange && averageRange ? currentRange / averageRange : null;
+    if (!impulseQualifiedFromRatios(bodyRatio, rangeRatio)) continue;
+
+    if ((current.low as number) > (twoBack.high as number)) {
+      const lower = twoBack.high as number;
+      const upper = current.low as number;
+      derived.push({
+        direction: 'LONG',
+        lower,
+        upper,
+        midpoint: roundToTick((lower + upper) / 2),
+        formedAt: current.timestamp,
+        formedCandleIndex: current.index,
+        impulseQualified: true,
+        impulseBodyRatio: bodyRatio,
+        impulseRangeRatio: rangeRatio,
+        confidence: isReadableConfidence(current.confidence) ? current.confidence : 'Medium',
+      });
+    }
+
+    if ((current.high as number) < (twoBack.low as number)) {
+      const lower = current.high as number;
+      const upper = twoBack.low as number;
+      derived.push({
+        direction: 'SHORT',
+        lower,
+        upper,
+        midpoint: roundToTick((lower + upper) / 2),
+        formedAt: current.timestamp,
+        formedCandleIndex: current.index,
+        impulseQualified: true,
+        impulseBodyRatio: bodyRatio,
+        impulseRangeRatio: rangeRatio,
+        confidence: isReadableConfidence(current.confidence) ? current.confidence : 'Medium',
+      });
+    }
+  }
+  return derived;
+}
+
+function modelOneFvgZones(chartContext: ChartContext): NonNullable<ChartContext['fvgZones']> {
+  const explicit = (chartContext.fvgZones || []).filter((zone) => {
+    if (!isReadableConfidence(zone.confidence) || zone.impulseQualified === false) return false;
+    if (!Number.isFinite(zone.lower) || !Number.isFinite(zone.upper)) return false;
+    if (zone.impulseQualified === true) return true;
+    if (impulseQualifiedFromRatios(zone.impulseBodyRatio, zone.impulseRangeRatio)) return true;
+    return false;
+  });
+  return [...explicit, ...deriveImpulseQualifiedFvgs(chartContext)];
+}
+
+function priceInsideZone(price: number | null, zone: NonNullable<ChartContext['fvgZones']>[number] | null | undefined): boolean {
+  if (price === null || !zone || !Number.isFinite(zone.lower) || !Number.isFinite(zone.upper)) return false;
+  const lower = Math.min(zone.lower as number, zone.upper as number);
+  const upper = Math.max(zone.lower as number, zone.upper as number);
+  return price >= lower && price <= upper;
+}
+
+function candleTouchesFvg(candle: NonNullable<ChartContext['candles']>[number], zone: NonNullable<ChartContext['fvgZones']>[number]): boolean {
+  if (!Number.isFinite(candle.high) || !Number.isFinite(candle.low) || !Number.isFinite(zone.lower) || !Number.isFinite(zone.upper)) return false;
+  const lower = Math.min(zone.lower as number, zone.upper as number);
+  const upper = Math.max(zone.lower as number, zone.upper as number);
+  return (candle.low as number) <= upper && (candle.high as number) >= lower;
+}
+
+function opposingLiquidityTarget(chartContext: ChartContext, direction: Direction, entry: number, minimumTarget: number): number | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const objectives = (chartContext.targetObjectives || [])
+    .filter((target) =>
+      target.direction === direction &&
+      target.type !== 'imbalance_zone' &&
+      target.type !== 'gap' &&
+      Number.isFinite(target.price)
+    )
+    .map((target) => target.price);
+  const structural = (chartContext.structuralLevels || [])
+    .filter((level) =>
+      Number.isFinite(level.price) &&
+      (level.type === 'high' || level.type === 'low' || level.type === 'swing' || level.type === 'liquidity_pool')
+    )
+    .map((level) => level.price);
+  const candidates = [...objectives, ...structural]
+    .filter((price): price is number => typeof price === 'number' && Number.isFinite(price))
+    .filter((price) => direction === 'LONG' ? price >= minimumTarget && price > entry : price <= minimumTarget && price < entry)
+    .sort((a, b) => direction === 'LONG' ? a - b : b - a);
+  return candidates[0] ?? null;
+}
+
+function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirmation = false): ModelOneValidation | null {
+  if (!chartContext) return null;
+  const candles = chartContext.candles || [];
+  const liquidityEvents = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])];
+  const sweeps = liquidityEvents.filter((event) =>
+    event.type === 'sweep' &&
+    event.reclaimed &&
+    isReadableConfidence(event.confidence) &&
+    event.direction !== 'NO TRADE' &&
+    Number.isFinite(event.level)
+  );
+  const reclaimEvents = chartContext.reclaimEvents || [];
+  const displacementCandles = (chartContext.displacementCandles || []).filter((candle) =>
+    isReadableConfidence(candle.confidence) &&
+    (candle.quality === 'confirmed' || candle.quality === 'high_quality' || (candle.leavesImbalance && candle.breaksStructure)) &&
+    candle.leavesImbalance !== false &&
+    candle.breaksStructure !== false &&
+    (
+      typeof candle.displacementScore !== 'number' ||
+      candle.displacementScore >= TRADE_RULES.executionParameters.displacementScoreThreshold ||
+      candle.quality === 'confirmed' ||
+      candle.quality === 'high_quality'
+    )
+  );
+  const fvgZones = modelOneFvgZones(chartContext);
+  const setupEvidence = chartContext.setupEvidence?.liquiditySweep;
+  const evidence: string[] = [];
+  const missingEvidence: string[] = [];
+
+  if (!sweeps.length) missingEvidence.push('Liquidity sweep');
+  const fallbackDirection = chartContext.candleFacts?.lastClosedCandleDirection === 'bearish' ? 'SHORT' : chartContext.candleFacts?.lastClosedCandleDirection === 'bullish' ? 'LONG' : 'NO TRADE';
+
+  const sweep = sweeps[0];
+  const direction = sweep?.direction || setupEvidence?.direction || fallbackDirection;
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return {
+      detected: false,
+      possible: false,
+      direction: 'NO TRADE',
+      entry: null,
+      stop: null,
+      target1: null,
+      target2: null,
+      risk: null,
+      invalidation: null,
+      requiredTrigger: 'Wait for sweep, reclaim, displacement, market structure shift, and FVG retrace.',
+      confidence: 'Low',
+      evidence,
+      missingEvidence: missingEvidence.length ? missingEvidence : ['Directional sweep'],
+      hasPendingTrigger: true,
+    };
+  }
+
+  const hasSweep = Boolean(sweep);
+  const hasReclaim = Boolean(
+    sweep?.reclaimed ||
+    chartContext.setupReadyFacts?.sweepThenReclaim ||
+    reclaimEvents.some((event) => event.direction === direction && isReadableConfidence(event.confidence))
+  );
+  const displacement = displacementCandles.find((candle) => candle.direction === direction);
+  const hasDisplacement = Boolean(displacement || chartContext.candleFacts?.expansionCandlePresent && chartContext.marketStructure?.expansionCondition);
+  const hasMss = Boolean(
+    chartContext.marketStructure?.marketStructureShift ||
+    chartContext.setupReadyFacts?.breakOfStructure ||
+    displacement?.breaksStructure
+  );
+  const fvg = fvgZones.find((zone) => zone.direction === direction);
+  const hasFvg = Boolean(fvg);
+  const formedIndex = typeof fvg?.formedCandleIndex === 'number' ? fvg.formedCandleIndex : -1;
+  const retraceIntoFvg = Boolean(
+    fvg &&
+    (
+      chartContext.setupReadyFacts?.pullbackIntoFvg ||
+      chartContext.setupReadyFacts?.fvgReclaimed ||
+      candles.some((candle) => candle.index > formedIndex && candleTouchesFvg(candle, fvg))
+    )
+  );
+
+  if (hasSweep) evidence.push('Liquidity sweep confirmed');
+  else missingEvidence.push('Liquidity sweep');
+  if (hasReclaim) evidence.push('Reclaim after sweep confirmed');
+  else missingEvidence.push('Reclaim after sweep');
+  if (hasDisplacement) evidence.push('Displacement confirmed');
+  else missingEvidence.push('Displacement');
+  if (hasMss) evidence.push('Market structure shift confirmed');
+  else missingEvidence.push('Market structure shift');
+  if (hasFvg) evidence.push('Fair value gap / imbalance entry model');
+  else missingEvidence.push('Fair value gap / imbalance');
+  if (retraceIntoFvg) evidence.push('Retrace into FVG confirmed');
+  else missingEvidence.push('Retrace into FVG');
+
+  const zoneEntry = fvg && Number.isFinite(fvg.midpoint)
+    ? roundToTick(fvg.midpoint as number)
+    : fvg && Number.isFinite(fvg.lower) && Number.isFinite(fvg.upper)
+      ? roundToTick(((fvg.lower as number) + (fvg.upper as number)) / 2)
+      : null;
+  const extractedEntry = parsePrice(setupEvidence?.entry) ?? parsePrice(chartContext.proposedEntry);
+  const entry = manualLevelConfirmation
+    ? null
+    : extractedEntry !== null
+      ? priceInsideZone(extractedEntry, fvg) ? extractedEntry : null
+      : zoneEntry;
+  if (!manualLevelConfirmation && entry !== null && fvg && priceInsideZone(entry, fvg)) {
+    evidence.push('Entry inside FVG or valid confluence zone');
+  } else {
+    missingEvidence.push('Entry inside FVG or valid confluence zone');
+  }
+
+  const failedBreak = (chartContext.failedBreakEvents || []).find((event) => event.direction === direction && Number.isFinite(event.sweptExtreme));
+  const sweepCandle = sweep?.timestamp ? candles.find((candle) => candle.timestamp === sweep.timestamp) : null;
+  const sweepExtreme = direction === 'LONG'
+    ? parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.low) ?? parsePrice(chartContext.keyLevels.activeSwingLow) ?? parsePrice(sweep?.level)
+    : parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.high) ?? parsePrice(chartContext.keyLevels.activeSwingHigh) ?? parsePrice(sweep?.level);
+  const stop = manualLevelConfirmation || sweepExtreme === null
+    ? null
+    : direction === 'LONG'
+      ? roundToTick(sweepExtreme - TRADE_RULES.targetModel.tickSize)
+      : roundToTick(sweepExtreme + TRADE_RULES.targetModel.tickSize);
+  if (stop !== null && sweepExtreme !== null && (direction === 'LONG' ? stop < sweepExtreme : stop > sweepExtreme)) {
+    evidence.push('Stop beyond sweep extreme');
+  } else {
+    missingEvidence.push('Stop beyond sweep extreme');
+  }
+
+  const actualRisk = riskPoints(entry, stop);
+  const rTargets = targetsFromEntryStop(direction, entry, stop);
+  const minimumTarget = entry !== null && actualRisk !== null
+    ? direction === 'LONG'
+      ? entry + actualRisk * 2
+      : entry - actualRisk * 2
+    : null;
+  const hasExplicitTargetMap = Boolean((chartContext.targetObjectives || []).length || (chartContext.structuralLevels || []).length);
+  const liquidityTarget = entry !== null && minimumTarget !== null
+    ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
+    : null;
+  const target2 = liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2);
+  const target1 = rTargets.target1;
+  const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
+  const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
+  if (hasTwoR) evidence.push('Minimum 2.0R available');
+  else missingEvidence.push('Minimum 2.0R available');
+  if (target2 !== null) evidence.push(liquidityTarget !== null ? 'Targeting opposing liquidity' : 'Targeting valid R-based objective');
+  else missingEvidence.push('Targeting opposing liquidity');
+
+  const fullSequence = hasSweep && hasReclaim && hasDisplacement && hasMss && hasFvg && retraceIntoFvg && entry !== null && stop !== null && target2 !== null && hasTwoR;
+  const partialCount = [hasSweep, hasReclaim, hasDisplacement, hasMss, hasFvg, retraceIntoFvg].filter(Boolean).length;
+  const possible = !fullSequence && partialCount >= 2;
+
+  return {
+    detected: fullSequence,
+    possible,
+    direction,
+    entry,
+    stop,
+    target1,
+    target2,
+    risk: actualRisk,
+    invalidation: stop !== null
+      ? direction === 'LONG'
+        ? `Invalid if price trades below the sweep low structure stop near ${stop}.`
+        : `Invalid if price trades above the sweep high structure stop near ${stop}.`
+      : null,
+    requiredTrigger: direction === 'LONG'
+      ? 'Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift.'
+      : 'Retrace into the bearish FVG after buy-side sweep, reclaim, displacement, and market structure shift.',
+    confidence: fullSequence ? 'High' : possible ? 'Medium' : 'Low',
+    evidence,
+    missingEvidence: Array.from(new Set(missingEvidence)),
+    hasPendingTrigger: !fullSequence,
+  };
+}
+
+function sweepExtremeForDirection(
+  chartContext: ChartContext,
+  direction: Direction,
+  sweep: NonNullable<ChartContext['liquidityEvents']>[number],
+): number | null {
+  const candles = chartContext.candles || [];
+  const failedBreak = (chartContext.failedBreakEvents || []).find((event) =>
+    event.direction === direction &&
+    isReadableConfidence(event.confidence) &&
+    Number.isFinite(event.sweptExtreme)
+  );
+  const sweepCandle = sweep.timestamp ? candles.find((candle) => candle.timestamp === sweep.timestamp) : null;
+  return direction === 'LONG'
+    ? parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.low) ?? parsePrice(chartContext.keyLevels.activeSwingLow) ?? parsePrice(sweep.level)
+    : parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.high) ?? parsePrice(chartContext.keyLevels.activeSwingHigh) ?? parsePrice(sweep.level);
+}
+
+function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfirmation = false): TurtleSoupValidation | null {
+  if (!chartContext) return null;
+  const liquidityEvents = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])];
+  const sweeps = liquidityEvents.filter((event) =>
+    event.type === 'sweep' &&
+    isReadableConfidence(event.confidence) &&
+    event.direction !== 'NO TRADE' &&
+    Number.isFinite(event.level)
+  );
+  const evidence: string[] = ['Turtle Soup reversal'];
+  const missingEvidence: string[] = [];
+
+  const sweep = sweeps[0];
+  const direction = sweep?.direction || chartContext.setupEvidence?.liquiditySweep?.direction || 'NO TRADE';
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return {
+      detected: false,
+      possible: false,
+      direction: 'NO TRADE',
+      entry: null,
+      stop: null,
+      target1: null,
+      target2: null,
+      risk: null,
+      invalidation: null,
+      requiredTrigger: 'Wait for a liquidity raid, reclaim after sweep, valid entry, structure stop, and 2.0R target room.',
+      confidence: 'Low',
+      evidence: [],
+      missingEvidence: ['Wick-only rejection is not enough without a meaningful liquidity raid'],
+      hasPendingTrigger: true,
+    };
+  }
+
+  const hasSweep = Boolean(sweep);
+  if (hasSweep) {
+    evidence.push('Liquidity raid confirmed');
+    evidence.push(direction === 'LONG'
+      ? 'Sweep below sell-side liquidity confirmed'
+      : 'Sweep above buy-side liquidity confirmed');
+  } else {
+    missingEvidence.push('Wick-only rejection is not enough without a meaningful liquidity raid');
+  }
+
+  const reclaimEvents = chartContext.reclaimEvents || [];
+  const level = parsePrice(sweep?.level);
+  const hasReclaim = Boolean(
+    sweep?.reclaimed ||
+    chartContext.setupReadyFacts?.sweepThenReclaim ||
+    reclaimEvents.some((event) => event.direction === direction && isReadableConfidence(event.confidence)) ||
+    (direction === 'LONG' ? chartContext.candleFacts?.closeAboveKeyLevel : chartContext.candleFacts?.closeBelowKeyLevel)
+  );
+  if (hasReclaim) evidence.push('Reclaim after sweep confirmed');
+  else missingEvidence.push('Reclaim confirmation missing');
+
+  const failedBreak = (chartContext.failedBreakEvents || []).find((event) =>
+    event.direction === direction &&
+    isReadableConfidence(event.confidence) &&
+    Number.isFinite(event.failedLevel)
+  );
+  const hasFailedContinuation = Boolean(
+    failedBreak ||
+    hasReclaim ||
+    chartContext.candleFacts?.rejectionWickPresent
+  );
+  if (hasFailedContinuation) evidence.push('Failed continuation confirmed');
+  else missingEvidence.push('Failed continuation confirmed');
+
+  const optionalDisplacement = (chartContext.displacementCandles || []).find((candle) =>
+    candle.direction === direction && isReadableConfidence(candle.confidence)
+  );
+  if (optionalDisplacement || chartContext.candleFacts?.expansionCandlePresent) evidence.push('Displacement confirmed');
+  if (chartContext.marketStructure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) evidence.push('Market structure shift confirmed');
+  if ((chartContext.fvgZones || []).some((zone) => zone.direction === direction && isReadableConfidence(zone.confidence))) {
+    evidence.push('Fair value gap / imbalance entry model');
+  }
+
+  const extractedEntry = parsePrice(chartContext.setupEvidence?.liquiditySweep?.entry) ?? parsePrice(chartContext.proposedEntry);
+  const entryIsAfterReclaim = extractedEntry !== null && level !== null
+    ? direction === 'LONG'
+      ? extractedEntry > level
+      : extractedEntry < level
+    : false;
+  const entry = manualLevelConfirmation ? null : entryIsAfterReclaim ? extractedEntry : null;
+  if (entry !== null) evidence.push('Reclaim after sweep confirmed');
+  else missingEvidence.push('Valid entry after reclaim or retrace');
+
+  const sweepExtreme = sweep ? sweepExtremeForDirection(chartContext, direction, sweep) : null;
+  const explicitStop = parsePrice(chartContext.setupEvidence?.liquiditySweep?.stop) ?? parsePrice(chartContext.proposedStop);
+  const explicitStopIsValid = explicitStop !== null && sweepExtreme !== null
+    ? direction === 'LONG'
+      ? explicitStop < sweepExtreme
+      : explicitStop > sweepExtreme
+    : false;
+  const computedStop = sweepExtreme === null
+    ? null
+    : direction === 'LONG'
+      ? roundToTick(sweepExtreme - TRADE_RULES.targetModel.tickSize)
+      : roundToTick(sweepExtreme + TRADE_RULES.targetModel.tickSize);
+  const stop = manualLevelConfirmation || sweepExtreme === null
+    ? null
+    : explicitStop !== null
+      ? explicitStopIsValid ? explicitStop : null
+      : computedStop;
+  if (stop !== null && sweepExtreme !== null && (direction === 'LONG' ? stop < sweepExtreme : stop > sweepExtreme)) {
+    evidence.push('Stop beyond sweep wick');
+  } else {
+    missingEvidence.push('Stop beyond sweep wick');
+  }
+
+  const actualRisk = riskPoints(entry, stop);
+  const rTargets = targetsFromEntryStop(direction, entry, stop);
+  const minimumTarget = entry !== null && actualRisk !== null
+    ? direction === 'LONG'
+      ? entry + actualRisk * 2
+      : entry - actualRisk * 2
+    : null;
+  const hasExplicitTargetMap = Boolean((chartContext.targetObjectives || []).length || (chartContext.structuralLevels || []).length);
+  const liquidityTarget = entry !== null && minimumTarget !== null
+    ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
+    : null;
+  const target2 = liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2);
+  const target1 = rTargets.target1;
+  const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
+  const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
+  if (target2 !== null) evidence.push(liquidityTarget !== null ? 'Targeting opposing liquidity' : 'Targeting valid R-based objective');
+  else missingEvidence.push('Targeting opposing liquidity');
+  if (hasTwoR) evidence.push('Minimum 2.0R available');
+  else missingEvidence.push('Minimum 2.0R unavailable');
+
+  const fullSequence = hasSweep && hasReclaim && hasFailedContinuation && entry !== null && stop !== null && target2 !== null && hasTwoR;
+  const possible = !fullSequence && hasSweep;
+
+  return {
+    detected: fullSequence,
+    possible,
+    direction,
+    entry,
+    stop,
+    target1,
+    target2,
+    risk: actualRisk,
+    invalidation: stop !== null
+      ? direction === 'LONG'
+        ? `Invalid if price trades below the sweep wick structure stop near ${stop}.`
+        : `Invalid if price trades above the sweep wick structure stop near ${stop}.`
+      : null,
+    requiredTrigger: direction === 'LONG'
+      ? 'Bullish Turtle Soup requires a sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
+      : 'Bearish Turtle Soup requires a buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
+    confidence: fullSequence ? 'High' : possible ? 'Medium' : 'Low',
+    evidence: Array.from(new Set(evidence)),
+    missingEvidence: Array.from(new Set(missingEvidence)),
+    hasPendingTrigger: !fullSequence,
+  };
+}
+
 function levelContextScoreForDirection(chartContext: ChartContext | null | undefined, direction: Direction): { score: number; summary: string } {
   if (!chartContext?.sessionLevelContext || (direction !== 'LONG' && direction !== 'SHORT')) {
     const mtf = chartContext?.multiTimeframeContext;
@@ -363,6 +862,11 @@ function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: C
     const fvgDirection = chartContext.fvgZones?.find((zone) => isReadableConfidence(zone.confidence))?.direction;
     if (sweepDirection && sweepDirection !== 'NO TRADE') return sweepDirection;
     if (fvgDirection) return fvgDirection;
+  }
+
+  if (entry.setupType === SetupType.TurtleSoup) {
+    const turtleSoupDirection = validateTurtleSoup(chartContext)?.direction;
+    if (turtleSoupDirection && turtleSoupDirection !== 'NO TRADE') return turtleSoupDirection;
   }
 
   const readableFvg = chartContext.fvgZones?.find((zone) => isReadableConfidence(zone.confidence));
@@ -454,13 +958,7 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
 
   switch (entry.setupType) {
     case SetupType.SweepMssFvgRetrace:
-      return Boolean(
-        hasSweep &&
-        (hasReclaim || chartContext.setupReadyFacts?.sweepThenReclaim) &&
-        (candles.expansion || structure?.expansionCondition || chartContext.displacementCandles?.some((candle) => isReadableConfidence(candle.confidence))) &&
-        (structure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) &&
-        (hasReadableFvg || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed)
-      );
+      return Boolean(validateModelOne(chartContext)?.possible || validateModelOne(chartContext)?.detected);
     case SetupType.MomentumRunaway:
       return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
     case SetupType.MomentumPullbackBreatherReclaim:
@@ -468,7 +966,7 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
     case SetupType.LiquiditySweep:
       return Boolean(hasSweep && (hasReclaim || (candles.rejection && (candles.reclaim || candles.closeAboveKeyLevel || candles.closeBelowKeyLevel))));
     case SetupType.TurtleSoup:
-      return Boolean(hasSweep && hasReclaim && (candles.rejection || candles.expansion || structure?.marketStructureShift || chartContext.setupReadyFacts?.sweepThenReclaim));
+      return Boolean(validateTurtleSoup(chartContext)?.possible || validateTurtleSoup(chartContext)?.detected);
     case SetupType.MarketStructureShift:
       return Boolean(structure?.marketStructureShift);
     case SetupType.EqualHighsLows:
@@ -536,20 +1034,13 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
 
   switch (entry.setupType) {
     case SetupType.SweepMssFvgRetrace:
-      return Boolean(
-        hasSweep &&
-        (hasReclaim || chartContext.setupReadyFacts?.sweepThenReclaim) &&
-        (candles.expansion || structure?.expansionCondition || chartContext.displacementCandles?.some((candle) => isReadableConfidence(candle.confidence))) &&
-        (structure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) &&
-        hasReadableFvg &&
-        (chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed)
-      );
+      return Boolean(validateModelOne(chartContext)?.detected);
     case SetupType.MomentumRunaway:
       return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
     case SetupType.LiquiditySweep:
       return Boolean(hasSweep && hasReclaim);
     case SetupType.TurtleSoup:
-      return Boolean(hasSweep && hasReclaim && (candles.rejection || candles.expansion || structure?.marketStructureShift || chartContext.setupReadyFacts?.sweepThenReclaim));
+      return Boolean(validateTurtleSoup(chartContext)?.detected);
     case SetupType.FairValueGap:
       return hasReadableFvg;
     case SetupType.FvgImbalancePullback:
@@ -632,10 +1123,23 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const allowNarrativeFallback = !structuredFactsPresent;
   const structuredEvidence = setupEvidenceFromContext(entry, input.chartContext);
   const manualLevelConfirmation = levelsRequireManualConfirmation(input.chartContext);
+  const modelOneValidation = entry.setupType === SetupType.SweepMssFvgRetrace
+    ? validateModelOne(input.chartContext, manualLevelConfirmation)
+    : null;
+  const turtleSoupValidation = entry.setupType === SetupType.TurtleSoup
+    ? validateTurtleSoup(input.chartContext, manualLevelConfirmation)
+    : null;
+  const primaryValidation = modelOneValidation || turtleSoupValidation;
   const facts = allowNarrativeFallback ? findRelevantFacts(entry, extractPlanFacts(input.result), text) : [];
   const bestFact = facts.find((fact) => fact.entry !== null && fact.stop !== null) || facts[0] || null;
-  const structuredDetected = !missingMorningWindowContext && Boolean(structuredEvidence?.detected || structuredContextDetectsSetup(entry, input.chartContext));
-  const structuredPossible = !missingMorningWindowContext && Boolean(structuredEvidence?.possible || (!structuredDetected && structuredContextSupportsSetup(entry, input.chartContext)));
+  const structuredDetected = !missingMorningWindowContext && Boolean(
+    primaryValidation ? primaryValidation.detected : structuredEvidence?.detected || structuredContextDetectsSetup(entry, input.chartContext)
+  );
+  const structuredPossible = !missingMorningWindowContext && Boolean(
+    primaryValidation
+      ? primaryValidation.possible
+      : structuredEvidence?.possible || (!structuredDetected && structuredContextSupportsSetup(entry, input.chartContext))
+  );
   const narrativeDetected = !isLunchSubtype(entry.setupType) && allowNarrativeFallback && hasAny(text, [...entry.detectionKeywords, ...entry.aliases]);
   const narrativePossible = !isLunchSubtype(entry.setupType) && allowNarrativeFallback && hasAny(text, entry.possibleKeywords);
   const detected = structuredDetected || narrativeDetected;
@@ -646,17 +1150,20 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     : bestFact?.direction && bestFact.direction !== 'NO TRADE'
     ? bestFact.direction
     : detected || possible ? inferDirection(text) : 'NO TRADE';
-  const entryPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.entry) ?? parsePrice(input.chartContext?.proposedEntry) ?? bestFact?.entry ?? null;
-  const extractedStopPrice = manualLevelConfirmation ? null : parsePrice(structuredEvidence?.stop) ?? parsePrice(input.chartContext?.proposedStop) ?? bestFact?.stop ?? null;
+  const entryPrice = manualLevelConfirmation ? null : primaryValidation ? primaryValidation.entry : parsePrice(structuredEvidence?.entry) ?? parsePrice(input.chartContext?.proposedEntry) ?? bestFact?.entry ?? null;
+  const extractedStopPrice = manualLevelConfirmation ? null : primaryValidation ? primaryValidation.stop : parsePrice(structuredEvidence?.stop) ?? parsePrice(input.chartContext?.proposedStop) ?? bestFact?.stop ?? null;
   const stopPrice = manualLevelConfirmation ? null : extractedStopPrice;
   const extractedRisk = parsePrice(input.chartContext?.riskPoints);
   const risk =
+    primaryValidation?.risk ??
     riskPoints(entryPrice, stopPrice) ??
     extractedRisk ??
     (input.chartContext?.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
-  const targets = computedTargets(direction, entryPrice, stopPrice);
-  const invalidation = structuredEvidence?.invalidation ?? (allowNarrativeFallback ? bestFact?.invalidation : null) ?? null;
-  const confidence = structuredEvidence?.confidence || bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
+  const targets = primaryValidation
+    ? { target1: primaryValidation.target1, target2: primaryValidation.target2 }
+    : computedTargets(direction, entryPrice, stopPrice);
+  const invalidation = primaryValidation?.invalidation ?? structuredEvidence?.invalidation ?? (allowNarrativeFallback ? bestFact?.invalidation : null) ?? null;
+  const confidence = primaryValidation?.confidence || structuredEvidence?.confidence || bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
   const levelContext = levelContextScoreForDirection(input.chartContext, direction);
 
   const detectedStatus =
@@ -673,7 +1180,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stopPrice !== null,
     targets.target1 !== null && targets.target2 !== null,
     Boolean(typeof invalidation === 'string' && invalidation.trim().length >= 3),
-    Boolean((structuredEvidence?.triggerState || bestFact?.triggerState)?.toUpperCase().includes('PENDING')),
+    Boolean(primaryValidation?.hasPendingTrigger || (structuredEvidence?.triggerState || bestFact?.triggerState)?.toUpperCase().includes('PENDING')),
     entry.priority,
     confidence
   );
@@ -701,17 +1208,17 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     levelContextScore: levelContext.score,
     levelContextSummary: levelContext.summary,
     evidence: Array.from(new Set([
-      ...(structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
+      ...(primaryValidation?.evidence?.length ? primaryValidation.evidence : structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
       ...(detected || possible ? supportingEvidenceNotes(input.chartContext) : []),
     ])),
     missingEvidence: missingMorningWindowContext
       ? ['Completed Morning window context is required before this Lunch subtype can activate.']
       : manualLevelConfirmation
-      ? Array.from(new Set([...(structuredEvidence?.missingEvidence || []), 'Exact entry/stop levels require manual confirmation.']))
-      : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence,
+      ? Array.from(new Set([...(primaryValidation?.missingEvidence || structuredEvidence?.missingEvidence || []), 'Exact entry/stop levels require manual confirmation.']))
+      : primaryValidation?.missingEvidence?.length ? primaryValidation.missingEvidence : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence,
     executionStatus: execution.executionStatus,
     blockReason: execution.blockReason,
-    requiredTrigger: structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
+    requiredTrigger: primaryValidation?.requiredTrigger || structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
     nextAction:
       missingMorningWindowContext
         ? 'Load or complete Morning 15M/5M context first. Lunch subtypes cannot activate from the Lunch chart alone.'

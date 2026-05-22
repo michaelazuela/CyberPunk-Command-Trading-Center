@@ -65,7 +65,7 @@ function structuredContext(): ChartContext {
       higherLow: true,
       lowerHigh: false,
       lowerLow: false,
-      marketStructureShift: false,
+      marketStructureShift: true,
       chopRangeCondition: false,
       compressionCondition: false,
       expansionCondition: true,
@@ -126,6 +126,9 @@ function structuredContext(): ChartContext {
         filledPercent: 50,
         inverted: false,
         reclaimed: true,
+        impulseQualified: true,
+        impulseBodyRatio: 1.5,
+        impulseRangeRatio: 1.5,
         reclaimTimestamp: '10:00',
         confidence: 'High',
       },
@@ -170,7 +173,7 @@ function structuredContext(): ChartContext {
         direction: 'LONG',
         failedLevel: 7396,
         levelLabel: 'opening low',
-        sweptExtreme: 7394,
+        sweptExtreme: 7396,
         timestamp: '09:45',
         candleIndex: 0,
         confidence: 'High',
@@ -188,6 +191,10 @@ function structuredContext(): ChartContext {
         close: 7401,
         bodyPoints: 3,
         rangePoints: 6,
+        quality: 'confirmed',
+        leavesImbalance: true,
+        breaksStructure: true,
+        displacementScore: 80,
         confidence: 'High',
         evidence: 'Large reclaim candle.',
       },
@@ -339,6 +346,355 @@ function lunchContext(): ChartContext {
     stopConfirmed: true,
     requiresManualConfirmation: false,
     marketContext: 'Completed Morning context supports a Lunch failed high reversal check.',
+  };
+}
+
+function shortModelOneContext(): ChartContext {
+  const context = structuredContext();
+  return {
+    ...context,
+    keyLevels: {
+      ...context.keyLevels,
+      currentPrice: 7400,
+      activeSwingHigh: 7404,
+      activeSwingLow: 7388,
+    },
+    marketStructure: {
+      ...context.marketStructure!,
+      trend: 'bearish',
+      higherHigh: false,
+      higherLow: false,
+      lowerHigh: true,
+      lowerLow: true,
+      marketStructureShift: true,
+      expansionCondition: true,
+    },
+    candleFacts: {
+      ...context.candleFacts!,
+      lastClosedCandleDirection: 'bearish',
+      closeAboveKeyLevel: false,
+      closeBelowKeyLevel: true,
+    },
+    fvgZones: [{
+      direction: 'SHORT',
+      lower: 7398,
+      upper: 7401,
+      midpoint: 7399.5,
+      formedAt: '10:00',
+      formedCandleIndex: 1,
+      impulseQualified: true,
+      impulseBodyRatio: 1.5,
+      impulseRangeRatio: 1.5,
+      confidence: 'High',
+    }],
+    liquidityEvents: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7404,
+      sweptLevelLabel: 'opening high',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Wick swept opening high and reclaimed lower.',
+    }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7404,
+      sweptLevelLabel: 'opening high',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Wick swept opening high and reclaimed lower.',
+    }],
+    reclaimEvents: [{
+      direction: 'SHORT',
+      reclaimedLevel: 7404,
+      levelLabel: 'opening high',
+      timestamp: '09:45',
+      candleIndex: 0,
+      confidence: 'High',
+      evidence: 'Close reclaimed back below the swept high.',
+    }],
+    failedBreakEvents: [{
+      direction: 'SHORT',
+      failedLevel: 7404,
+      levelLabel: 'opening high',
+      sweptExtreme: 7404,
+      timestamp: '09:45',
+      candleIndex: 0,
+      confidence: 'High',
+      evidence: 'Failed breakout above opening high.',
+    }],
+    displacementCandles: [{
+      direction: 'SHORT',
+      candleIndex: 1,
+      timestamp: '10:00',
+      open: 7403,
+      high: 7404,
+      low: 7396,
+      close: 7397,
+      bodyPoints: 6,
+      rangePoints: 8,
+      quality: 'confirmed',
+      leavesImbalance: true,
+      breaksStructure: true,
+      displacementScore: 85,
+      confidence: 'High',
+      evidence: 'Bearish expansion candle created imbalance and broke structure.',
+    }],
+    candles: [
+      {
+        index: 0,
+        timestamp: '09:45',
+        open: 7401,
+        high: 7404,
+        low: 7400,
+        close: 7401,
+        direction: 'doji',
+        confidence: 'High',
+      },
+      {
+        index: 1,
+        timestamp: '10:00',
+        open: 7403,
+        high: 7404,
+        low: 7396,
+        close: 7397,
+        direction: 'bearish',
+        bodyQuality: 'large',
+        isExpansion: true,
+        confidence: 'High',
+      },
+      {
+        index: 2,
+        timestamp: '10:05',
+        open: 7397,
+        high: 7400,
+        low: 7395,
+        close: 7396,
+        direction: 'bearish',
+        confidence: 'High',
+      },
+    ],
+    setupReadyFacts: {
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+      breakOfStructure: true,
+      sweepThenReclaim: true,
+    },
+    setupEvidence: {},
+    proposedEntry: 7400,
+    proposedStop: 7404.25,
+    riskPoints: 4.25,
+  };
+}
+
+function bullishTurtleSoupContext(): ChartContext {
+  const context = structuredContext();
+  return {
+    ...context,
+    keyLevels: {
+      ...context.keyLevels,
+      currentPrice: 7397,
+      activeSwingLow: 7394,
+      activeSwingHigh: 7402,
+    },
+    marketStructure: {
+      ...context.marketStructure!,
+      trend: 'unknown',
+      marketStructureShift: false,
+      expansionCondition: false,
+    },
+    candleFacts: {
+      ...context.candleFacts!,
+      lastClosedCandleDirection: 'bullish',
+      expansionCandlePresent: false,
+      rejectionWickPresent: true,
+      reclaimCandlePresent: true,
+      closeAboveKeyLevel: true,
+      closeBelowKeyLevel: false,
+    },
+    candles: [
+      {
+        index: 0,
+        timestamp: '09:45',
+        open: 7396.5,
+        high: 7397,
+        low: 7394,
+        close: 7396.25,
+        direction: 'bullish',
+        isRejection: true,
+        confidence: 'High',
+      },
+      {
+        index: 1,
+        timestamp: '09:50',
+        open: 7396.25,
+        high: 7398,
+        low: 7396,
+        close: 7397,
+        direction: 'bullish',
+        isReclaim: true,
+        confidence: 'High',
+      },
+    ],
+    fvgZones: [],
+    displacementCandles: [],
+    liquidityEvents: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'prior swing low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Prior swing low was raided and reclaimed.',
+    }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'prior swing low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Prior swing low was raided and reclaimed.',
+    }],
+    reclaimEvents: [{
+      direction: 'LONG',
+      reclaimedLevel: 7396,
+      levelLabel: 'prior swing low',
+      timestamp: '09:50',
+      candleIndex: 1,
+      confidence: 'High',
+      evidence: 'Close reclaimed back above the swept low.',
+    }],
+    failedBreakEvents: [{
+      direction: 'LONG',
+      failedLevel: 7396,
+      levelLabel: 'prior swing low',
+      sweptExtreme: 7394,
+      timestamp: '09:45',
+      candleIndex: 0,
+      confidence: 'High',
+      evidence: 'Failed to continue below the raided low.',
+    }],
+    targetObjectives: [{
+      label: 'Opposing buy-side liquidity',
+      price: 7404,
+      direction: 'LONG',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 90,
+      reason: 'Next buy-side liquidity above reclaim.',
+    }],
+    setupReadyFacts: {
+      sweepThenReclaim: true,
+      breakOfStructure: false,
+      pullbackIntoFvg: false,
+      fvgReclaimed: false,
+    },
+    setupEvidence: {},
+    proposedEntry: 7397,
+    proposedStop: 7393.75,
+    riskPoints: 3.25,
+  };
+}
+
+function bearishTurtleSoupContext(): ChartContext {
+  const context = bullishTurtleSoupContext();
+  return {
+    ...context,
+    keyLevels: {
+      ...context.keyLevels,
+      currentPrice: 7403,
+      activeSwingHigh: 7406,
+      activeSwingLow: 7398,
+    },
+    candleFacts: {
+      ...context.candleFacts!,
+      lastClosedCandleDirection: 'bearish',
+      closeAboveKeyLevel: false,
+      closeBelowKeyLevel: true,
+    },
+    candles: [
+      {
+        index: 0,
+        timestamp: '09:45',
+        open: 7403.5,
+        high: 7406,
+        low: 7403,
+        close: 7403.75,
+        direction: 'bearish',
+        isRejection: true,
+        confidence: 'High',
+      },
+      {
+        index: 1,
+        timestamp: '09:50',
+        open: 7403.75,
+        high: 7404,
+        low: 7402,
+        close: 7403,
+        direction: 'bearish',
+        isReclaim: true,
+        confidence: 'High',
+      },
+    ],
+    liquidityEvents: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7404,
+      sweptLevelLabel: 'prior swing high',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Prior swing high was raided and reclaimed.',
+    }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7404,
+      sweptLevelLabel: 'prior swing high',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+      evidence: 'Prior swing high was raided and reclaimed.',
+    }],
+    reclaimEvents: [{
+      direction: 'SHORT',
+      reclaimedLevel: 7404,
+      levelLabel: 'prior swing high',
+      timestamp: '09:50',
+      candleIndex: 1,
+      confidence: 'High',
+      evidence: 'Close reclaimed back below the swept high.',
+    }],
+    failedBreakEvents: [{
+      direction: 'SHORT',
+      failedLevel: 7404,
+      levelLabel: 'prior swing high',
+      sweptExtreme: 7406,
+      timestamp: '09:45',
+      candleIndex: 0,
+      confidence: 'High',
+      evidence: 'Failed to continue above the raided high.',
+    }],
+    targetObjectives: [{
+      label: 'Opposing sell-side liquidity',
+      price: 7396,
+      direction: 'SHORT',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 90,
+      reason: 'Next sell-side liquidity below reclaim.',
+    }],
+    proposedEntry: 7403,
+    proposedStop: 7406.25,
+    riskPoints: 3.25,
   };
 }
 
@@ -610,7 +966,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Executable);
     assert.equal(liquidity.entry, 7400);
-    assert.equal(liquidity.stop, 7396);
+    assert.equal(liquidity.stop, 7395.75);
     assert.ok(liquidity.evidence.some((item) => item.includes('Liquidity sweep') || item.includes('liquidity sweep')));
     assert.equal(result.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
   }],
@@ -705,7 +1061,319 @@ const tests: Array<[string, () => void]> = [
     assert.equal(fvg, undefined);
     assert.equal(fvgPullback, undefined);
     assert.equal(primary?.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(primary?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(primary?.executionStatus, ExecutionStatus.Executable);
+  }],
+
+  ['Phase E Model 1 qualifies only with full sweep reclaim displacement MSS FVG retrace sequence', () => {
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: structuredContext(),
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.ok(modelOne.evidence.includes('Liquidity sweep confirmed'));
+    assert.ok(modelOne.evidence.includes('Reclaim after sweep confirmed'));
+    assert.ok(modelOne.evidence.includes('Displacement confirmed'));
+    assert.ok(modelOne.evidence.includes('Market structure shift confirmed'));
+    assert.ok(modelOne.evidence.includes('Fair value gap / imbalance entry model'));
+    assert.ok(modelOne.evidence.includes('Retrace into FVG confirmed'));
+    assert.ok(modelOne.evidence.includes('Minimum 2.0R available'));
+  }],
+
+  ['Phase E FVG-only continuation does not qualify as Model 1', () => {
+    const context = structuredContext();
+    context.liquidityEvents = [];
+    context.liquiditySweeps = [];
+    context.reclaimEvents = [];
+    context.failedBreakEvents = [];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.notEqual(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.ok(modelOne.missingEvidence.includes('Liquidity sweep'));
+  }],
+
+  ['Phase E sweep and reclaim without displacement MSS FVG does not fully qualify', () => {
+    const context = structuredContext();
+    context.displacementCandles = [];
+    context.fvgZones = [];
+    context.marketStructure = { ...context.marketStructure!, marketStructureShift: false, expansionCondition: false };
+    context.setupReadyFacts = { sweepThenReclaim: true };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Displacement'));
+    assert.ok(modelOne.missingEvidence.includes('Market structure shift'));
+    assert.ok(modelOne.missingEvidence.includes('Fair value gap / imbalance'));
+  }],
+
+  ['Phase E sweep displacement MSS without FVG retrace remains conditional', () => {
+    const context = structuredContext();
+    context.setupReadyFacts = { ...context.setupReadyFacts!, pullbackIntoFvg: false, fvgReclaimed: false };
+    context.fvgZones = (context.fvgZones || []).map((zone) => ({ ...zone, formedCandleIndex: 1 }));
+    context.candles = (context.candles || []).filter((candle) => candle.index <= 0);
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Retrace into FVG'));
+  }],
+
+  ['Phase E weak FVG without impulse filter does not qualify', () => {
+    const context = structuredContext();
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7398,
+      upper: 7401,
+      midpoint: 7399.5,
+      formedCandleIndex: 0,
+      impulseQualified: false,
+      impulseBodyRatio: 0.8,
+      impulseRangeRatio: 0.9,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Fair value gap / imbalance'));
+  }],
+
+  ['Phase E entry outside FVG does not qualify', () => {
+    const context = structuredContext();
+    context.proposedEntry = 7405;
+    context.setupEvidence = {};
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.entry, null);
+    assert.ok(modelOne.missingEvidence.includes('Entry inside FVG or valid confluence zone'));
+  }],
+
+  ['Phase E missing 2R target room blocks full qualification', () => {
+    const context = structuredContext();
+    context.targetObjectives = [{
+      label: 'Near obstacle',
+      price: 7402,
+      direction: 'LONG',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 80,
+      reason: 'Nearest liquidity is inside 2R.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.target2, null);
+    assert.ok(modelOne.missingEvidence.includes('Minimum 2.0R available'));
+  }],
+
+  ['Phase E long stop is below sweep low', () => {
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: structuredContext(), result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.stop, 7395.75);
+    assert.ok(modelOne.stop! < 7396);
+  }],
+
+  ['Phase E short stop is above sweep high', () => {
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: shortModelOneContext(), result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.equal(modelOne.stop, 7404.25);
+    assert.ok(modelOne.stop! > 7404);
+  }],
+
+  ['Phase F bullish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: bullishTurtleSoupContext(), result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.equal(turtle.direction, 'LONG');
+    assert.equal(turtle.entry, 7397);
+    assert.equal(turtle.stop, 7393.75);
+    assert.ok(turtle.stop! < 7394);
+    assert.equal(turtle.target2, 7404);
+    assert.ok(turtle.evidence.includes('Liquidity raid confirmed'));
+    assert.ok(turtle.evidence.includes('Sweep below sell-side liquidity confirmed'));
+    assert.ok(turtle.evidence.includes('Reclaim after sweep confirmed'));
+    assert.ok(turtle.evidence.includes('Failed continuation confirmed'));
+    assert.ok(turtle.evidence.includes('Stop beyond sweep wick'));
+    assert.ok(turtle.evidence.includes('Targeting opposing liquidity'));
+    assert.ok(turtle.evidence.includes('Minimum 2.0R available'));
+  }],
+
+  ['Phase F bearish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: bearishTurtleSoupContext(), result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.equal(turtle.direction, 'SHORT');
+    assert.equal(turtle.entry, 7403);
+    assert.equal(turtle.stop, 7406.25);
+    assert.ok(turtle.stop! > 7406);
+    assert.equal(turtle.target2, 7396);
+    assert.ok(turtle.evidence.includes('Sweep above buy-side liquidity confirmed'));
+  }],
+
+  ['Phase F Turtle Soup does not require FVG to qualify', () => {
+    const context = bullishTurtleSoupContext();
+    context.fvgZones = [];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(!turtle.evidence.includes('Fair value gap / imbalance entry model'));
+  }],
+
+  ['Phase F Turtle Soup does not require full MSS or displacement to remain conditional', () => {
+    const context = bullishTurtleSoupContext();
+    context.proposedEntry = null;
+    context.displacementCandles = [];
+    context.marketStructure = { ...context.marketStructure!, marketStructureShift: false, expansionCondition: false };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.missingEvidence.includes('Valid entry after reclaim or retrace'));
+    assert.ok(!turtle.missingEvidence.includes('Displacement'));
+    assert.ok(!turtle.missingEvidence.includes('Market structure shift'));
+  }],
+
+  ['Phase F Turtle Soup sweep without reclaim does not qualify', () => {
+    const context = bullishTurtleSoupContext();
+    context.liquidityEvents = (context.liquidityEvents || []).map((event) => ({ ...event, reclaimed: false }));
+    context.liquiditySweeps = (context.liquiditySweeps || []).map((event) => ({ ...event, reclaimed: false }));
+    context.reclaimEvents = [];
+    context.setupReadyFacts = { ...context.setupReadyFacts!, sweepThenReclaim: false };
+    context.candleFacts = { ...context.candleFacts!, closeAboveKeyLevel: false, reclaimCandlePresent: false };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.notEqual(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Possible);
+    assert.ok(turtle.missingEvidence.includes('Reclaim confirmation missing'));
+  }],
+
+  ['Phase F Turtle Soup sweep and reclaim without valid entry stays conditional', () => {
+    const context = bullishTurtleSoupContext();
+    context.proposedEntry = null;
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.entry, null);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.missingEvidence.includes('Valid entry after reclaim or retrace'));
+  }],
+
+  ['Phase F Turtle Soup stop on wrong side of sweep blocks qualification', () => {
+    const context = bullishTurtleSoupContext();
+    context.proposedStop = 7394.5;
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.stop, null);
+    assert.notEqual(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.missingEvidence.includes('Stop beyond sweep wick'));
+  }],
+
+  ['Phase F Turtle Soup target room below 2R blocks qualification', () => {
+    const context = bullishTurtleSoupContext();
+    context.targetObjectives = [{
+      label: 'Near obstacle',
+      price: 7401,
+      direction: 'LONG',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 80,
+      reason: 'Nearest opposing liquidity is below 2R.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.target2, null);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
+  }],
+
+  ['Phase F Turtle Soup rejects wick-only reversal without liquidity raid', () => {
+    const context = bullishTurtleSoupContext();
+    context.liquidityEvents = [];
+    context.liquiditySweeps = [];
+    context.reclaimEvents = [];
+    context.failedBreakEvents = [];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.NotDetected);
+    assert.notEqual(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.missingEvidence.includes('Wick-only rejection is not enough without a meaningful liquidity raid'));
+  }],
+
+  ['Phase F supporting evidence remains tags and not standalone Turtle Soup candidates', () => {
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: bullishTurtleSoupContext(), result: null });
+
+    assert.equal(result.candidates.length, getPrimarySetupRegistry('replay_morning').length);
+    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.TurtleSoup));
+    assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep), undefined);
+    assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.FairValueGap), undefined);
+    assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.MarketStructureShift), undefined);
+  }],
+
+  ['Phase F deprecated setup types still cannot create active candidates', () => {
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: bullishTurtleSoupContext(),
+      result: resultWithText('Neutral structured context should preserve the primary-model-only candidate set.', 7397, 7393.75, 'TRIGGERED'),
+    });
+
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
+      assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
+    }
   }],
 
   ['narrative momentum long is not approved when structured candles show no expansion or continuation', () => {
@@ -894,7 +1562,7 @@ const tests: Array<[string, () => void]> = [
     const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
-    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Possible);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
     assert.equal(liquidity.entry, null);
     assert.equal(liquidity.stop, null);

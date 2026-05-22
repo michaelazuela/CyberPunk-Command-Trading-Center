@@ -129,6 +129,182 @@ function structuredContext(overrides: Partial<ChartContext> = {}): Partial<Chart
   };
 }
 
+function fullModelOneContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  return structuredContext({
+    marketStructure: {
+      trend: 'bullish',
+      higherHigh: true,
+      higherLow: true,
+      lowerHigh: false,
+      lowerLow: false,
+      marketStructureShift: true,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: true,
+    },
+    fvgZones: [{
+      direction: 'LONG',
+      lower: 7398,
+      upper: 7401,
+      midpoint: 7399.5,
+      formedCandleIndex: 0,
+      impulseQualified: true,
+      impulseBodyRatio: 1.5,
+      impulseRangeRatio: 1.5,
+      confidence: 'High',
+    }],
+    liquidityEvents: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'opening low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'opening low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'LONG',
+      reclaimedLevel: 7396,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    failedBreakEvents: [{
+      direction: 'LONG',
+      failedLevel: 7396,
+      sweptExtreme: 7396,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    displacementCandles: [{
+      direction: 'LONG',
+      candleIndex: 0,
+      timestamp: '10:00',
+      open: 7398,
+      high: 7402,
+      low: 7396,
+      close: 7401,
+      bodyPoints: 3,
+      rangePoints: 6,
+      quality: 'confirmed',
+      leavesImbalance: true,
+      breaksStructure: true,
+      displacementScore: 80,
+      confidence: 'High',
+    }],
+    candles: [{
+      index: 0,
+      timestamp: '10:00',
+      open: 7398,
+      high: 7402,
+      low: 7396,
+      close: 7401,
+      direction: 'bullish',
+      bodyQuality: 'large',
+      isExpansion: true,
+      confidence: 'High',
+    }],
+    setupReadyFacts: {
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+      breakOfStructure: true,
+      sweepThenReclaim: true,
+    },
+    proposedEntry: 7400,
+    proposedStop: 7396,
+    riskPoints: 4,
+    ...overrides,
+  });
+}
+
+function turtleSoupContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  return structuredContext({
+    marketStructure: {
+      trend: 'unknown',
+      higherHigh: false,
+      higherLow: false,
+      lowerHigh: false,
+      lowerLow: false,
+      marketStructureShift: false,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: false,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: 'bullish',
+      expansionCandlePresent: false,
+      rejectionWickPresent: true,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: true,
+      pullbackPresent: false,
+      closeAboveKeyLevel: true,
+      closeBelowKeyLevel: false,
+    },
+    fvgZones: [],
+    liquidityEvents: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'prior swing low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7396,
+      sweptLevelLabel: 'prior swing low',
+      reclaimed: true,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'LONG',
+      reclaimedLevel: 7396,
+      timestamp: '09:50',
+      confidence: 'High',
+    }],
+    failedBreakEvents: [{
+      direction: 'LONG',
+      failedLevel: 7396,
+      sweptExtreme: 7394,
+      timestamp: '09:45',
+      confidence: 'High',
+    }],
+    candles: [{
+      index: 0,
+      timestamp: '09:45',
+      open: 7396.5,
+      high: 7397,
+      low: 7394,
+      close: 7396.25,
+      direction: 'bullish',
+      isRejection: true,
+      confidence: 'High',
+    }],
+    setupReadyFacts: {
+      sweepThenReclaim: true,
+      breakOfStructure: false,
+      pullbackIntoFvg: false,
+      fvgReclaimed: false,
+    },
+    setupEvidence: {},
+    proposedEntry: 7400,
+    proposedStop: 7393.5,
+    riskPoints: 6.5,
+    ...overrides,
+  });
+}
+
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -206,15 +382,19 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
-    assert.equal(result.noTradeReason, null);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
+    assert.equal(result.noTradeReason, NoTradeReason.EntryTriggerMissing);
   }],
 
   ['6. Wider structure stop is blocked by actual risk', () => {
     const result = assertSameSequence({
       result: baseResult({
+        structuredChartContext: turtleSoupContext(),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry: 7400,
           stop: 7393.5,
         },
@@ -228,8 +408,12 @@ const tests: Array<[string, () => void]> = [
   ['7. Alternate setup also blocks when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
+        structuredChartContext: turtleSoupContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry: 7400,
           stop: 7391.75,
         },
@@ -250,8 +434,8 @@ const tests: Array<[string, () => void]> = [
         structureStatus: '',
       }),
     });
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
-    assert.equal(result.noTradeReason, null);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
+    assert.equal(result.noTradeReason, NoTradeReason.EntryTriggerMissing);
   }],
 
   ['9. Valid no-trade decision', () => {
@@ -278,33 +462,38 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.journalReady, true);
   }],
 
-  ['10. Valid conditional trade', () => {
+  ['10. Narrative Turtle Soup remains no-trade until liquidity raid facts are structured', () => {
     const result = assertSameSequence({
       result: baseResult({
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry_trigger: 'Break above the trigger candle high.',
           trigger_state: 'PENDING_TRIGGER',
         },
       }),
     });
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
-    assert.equal(result.finalTradePlan.entry, 7400);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
+    assert.equal(result.noTradeReason, NoTradeReason.EntryTriggerMissing);
+    assert.equal(result.finalTradePlan.entry, null);
   }],
 
   ['11. Narrative-only primary setup remains conditional until ICT gates are complete', () => {
     const result = assertSameSequence();
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
     assert.equal(result.setupAssessment.setupType, SetupType.SweepMssFvgRetrace);
-    assert.equal(result.riskAssessment.riskPoints, 4);
-    assert.equal(result.target1, 7406);
-    assert.equal(result.target2, 7408);
+    assert.equal(result.riskAssessment.riskPoints, null);
+    assert.equal(result.target1, null);
+    assert.equal(result.target2, null);
   }],
 
   ['12. Screenshot context trade is rejected when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
         confidence: 0.99,
+        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
         final_trade_plan: {
           decision: 'LONG',
           entry: 7400,
@@ -318,13 +507,16 @@ const tests: Array<[string, () => void]> = [
         },
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry: 7400,
           stop: 7388,
         },
       }),
     });
     assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.riskAssessment.riskPoints, 12);
+    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup)?.riskPoints, 12);
     assert.equal(result.biasAssessment.confidence, 'High');
   }],
 
@@ -354,17 +546,39 @@ const tests: Array<[string, () => void]> = [
   }],
 
   ['15. Pipeline selects the primary model candidate when one is available', () => {
-    const result = assertSameSequence();
+    const result = assertSameSequence({
+      result: baseResult({ structuredChartContext: fullModelOneContext() as ChartContext }),
+    });
 
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
-    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.SweepMssFvgRetrace);
-    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.equal(result.finalTradePlan.setupType, SetupType.SweepMssFvgRetrace);
   }],
 
   ['16. Pipeline shows best conditional candidate when no executable candidate exists', () => {
+    const partialModelOne = fullModelOneContext({
+      setupReadyFacts: {
+        sweepThenReclaim: true,
+        breakOfStructure: true,
+        pullbackIntoFvg: false,
+        fvgReclaimed: false,
+      },
+      fvgZones: [{
+        direction: 'LONG',
+        lower: 7398,
+        upper: 7401,
+        midpoint: 7399.5,
+        formedCandleIndex: 1,
+        impulseQualified: true,
+        impulseBodyRatio: 1.5,
+        impulseRangeRatio: 1.5,
+        confidence: 'High',
+      }],
+    });
     const result = assertSameSequence({
       result: baseResult({
+        structuredChartContext: partialModelOne as ChartContext,
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
           summary: 'FVG pullback into imbalance is possible but needs reclaim confirmation.',
@@ -379,7 +593,6 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
     assert.ok(result.opportunitySelection?.bestConditionalCandidate);
     assert.notEqual(result.finalTradePlan.status, TradeDecisionStatus.NoTrade);
   }],
@@ -426,21 +639,25 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
   ['19. High-priority wide structure stop remains visible but blocked', () => {
     const result = assertSameSequence({
       result: baseResult({
+        structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry: 7400,
           stop: 7388,
         },
       }),
     });
-    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
 
     assert.ok(liquidity);
     assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
@@ -462,22 +679,48 @@ const tests: Array<[string, () => void]> = [
       }),
     });
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.riskAssessment.riskPoints, 12);
-    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.riskAssessment.riskPoints, null);
+    assert.equal(result.noTradeReason, NoTradeReason.EntryTriggerMissing);
   }],
 
   ['21. Pipeline T1/T2 are calculated from R and rounded to 0.25', () => {
     const result = assertSameSequence({
       result: baseResult({
+        structuredChartContext: turtleSoupContext({
+          proposedEntry: 7400.25,
+          proposedStop: 7395.25,
+          riskPoints: 5,
+          failedBreakEvents: [{
+            direction: 'LONG',
+            failedLevel: 7396,
+            sweptExtreme: 7395.5,
+            timestamp: '09:45',
+            confidence: 'High',
+          }],
+          candles: [{
+            index: 0,
+            timestamp: '09:45',
+            open: 7396.5,
+            high: 7397,
+            low: 7395.5,
+            close: 7396.25,
+            direction: 'bullish',
+            isRejection: true,
+            confidence: 'High',
+          }],
+        }),
         current_rule_analysis: {
           ...baseResult().current_rule_analysis!,
+          summary: 'Turtle Soup Reversal long after sell-side sweep and reclaim.',
+          setup_detected: 'Turtle Soup Reversal Long',
+          rule_category: 'Turtle Soup Reversal',
           entry: 7400.25,
           stop: 7395.25,
         },
       }),
     });
 
-    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(result.riskAssessment.riskPoints, 5);
     assert.equal(result.target1, 7407.75);
     assert.equal(result.target2, 7410.25);
