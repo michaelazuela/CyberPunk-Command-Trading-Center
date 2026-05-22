@@ -9,7 +9,7 @@ import {
   SetupCandidateStatus,
   SetupType,
 } from '../types';
-import { getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
+import { computeZoneOverlap, getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
 
 function resultWithText(
   text: string,
@@ -699,6 +699,30 @@ function bearishTurtleSoupContext(): ChartContext {
 }
 
 const tests: Array<[string, () => void]> = [
+  ['Phase G computeZoneOverlap returns valid overlap for intersecting zones', () => {
+    assert.deepEqual(computeZoneOverlap(7398, 7401, 7400, 7402), {
+      valid: true,
+      low: 7400,
+      high: 7401,
+    });
+  }],
+
+  ['Phase G computeZoneOverlap rejects non-overlapping zones', () => {
+    assert.deepEqual(computeZoneOverlap(7398, 7399, 7400, 7401), {
+      valid: false,
+      low: null,
+      high: null,
+    });
+  }],
+
+  ['Phase G computeZoneOverlap normalizes reversed bounds', () => {
+    assert.deepEqual(computeZoneOverlap(7401, 7398, 7400.5, 7399), {
+      valid: true,
+      low: 7399,
+      high: 7400.5,
+    });
+  }],
+
   ['structured ChartContext includes required level fields', () => {
     const context = structuredContext();
     assert.equal(typeof context.keyLevels.currentPrice, 'number');
@@ -1374,6 +1398,258 @@ const tests: Array<[string, () => void]> = [
     for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
       assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
     }
+  }],
+
+  ['Phase G Breaker plus FVG overlap adds confluence to a valid Model 1 setup', () => {
+    const context = structuredContext();
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7399,
+      upper: 7400.5,
+      midpoint: 7399.75,
+      confidence: 'High',
+      evidence: 'Breaker overlaps the bullish FVG retrace.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.ok(modelOne.evidence.includes('Breaker + FVG overlap confluence'));
+    assert.ok(modelOne.evidence.includes('Entry inside breaker/FVG overlap'));
+    assert.ok(modelOne.evidence.includes('FVG retrace supported by breaker overlap'));
+  }],
+
+  ['Phase G Breaker plus FVG overlap can support Turtle Soup', () => {
+    const context = bullishTurtleSoupContext();
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7396.5,
+      upper: 7398,
+      midpoint: 7397.25,
+      impulseQualified: true,
+      confidence: 'High',
+    }];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7396.75,
+      upper: 7397.25,
+      midpoint: 7397,
+      confidence: 'High',
+      evidence: 'Breaker overlaps the FVG entry area.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.evidence.includes('Breaker + FVG overlap confluence'));
+    assert.ok(turtle.evidence.includes('Entry inside breaker/FVG overlap'));
+  }],
+
+  ['Phase G Breaker plus FVG overlap cannot create a candidate by itself', () => {
+    const context = structuredContext();
+    context.liquidityEvents = [];
+    context.liquiditySweeps = [];
+    context.reclaimEvents = [];
+    context.failedBreakEvents = [];
+    context.displacementCandles = [];
+    context.marketStructure = { ...context.marketStructure!, marketStructureShift: false, expansionCondition: false };
+    context.setupReadyFacts = { pullbackIntoFvg: true, fvgReclaimed: true, breakOfStructure: false, sweepThenReclaim: false };
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7399,
+      upper: 7400.5,
+      midpoint: 7399.75,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+
+    assert.equal(result.candidates.length, getPrimarySetupRegistry('replay_morning').length);
+    assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.BreakerBlock), undefined);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase G BreakerBlock supporting evidence cannot become a primary candidate', () => {
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: bullishTurtleSoupContext(),
+      result: resultWithText('Breaker block overlap with imbalance is visible.', 7397, 7393.75, 'TRIGGERED'),
+    });
+
+    assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.BreakerBlock), undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+  }],
+
+  ['Phase G Breaker plus FVG overlap cannot override missing Model 1 sweep', () => {
+    const context = structuredContext();
+    context.liquidityEvents = [];
+    context.liquiditySweeps = [];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7399,
+      upper: 7400.5,
+      midpoint: 7399.75,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.notEqual(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.ok(modelOne.missingEvidence.includes('Liquidity sweep'));
+  }],
+
+  ['Phase G Breaker plus FVG overlap cannot override missing Model 1 displacement or MSS', () => {
+    const context = structuredContext();
+    context.displacementCandles = [];
+    context.marketStructure = { ...context.marketStructure!, marketStructureShift: false, expansionCondition: false };
+    context.setupReadyFacts = { ...context.setupReadyFacts!, breakOfStructure: false };
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7399,
+      upper: 7400.5,
+      midpoint: 7399.75,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Displacement'));
+    assert.ok(modelOne.missingEvidence.includes('Market structure shift'));
+  }],
+
+  ['Phase G Breaker plus FVG overlap cannot override missing Turtle Soup reclaim', () => {
+    const context = bullishTurtleSoupContext();
+    context.liquidityEvents = (context.liquidityEvents || []).map((event) => ({ ...event, reclaimed: false }));
+    context.liquiditySweeps = (context.liquiditySweeps || []).map((event) => ({ ...event, reclaimed: false }));
+    context.reclaimEvents = [];
+    context.setupReadyFacts = { ...context.setupReadyFacts!, sweepThenReclaim: false };
+    context.candleFacts = { ...context.candleFacts!, closeAboveKeyLevel: false, reclaimCandlePresent: false };
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7396.5,
+      upper: 7398,
+      midpoint: 7397.25,
+      impulseQualified: true,
+      confidence: 'High',
+    }];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7396.75,
+      upper: 7397.25,
+      midpoint: 7397,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.notEqual(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.missingEvidence.includes('Reclaim confirmation missing'));
+    assert.ok(turtle.evidence.includes('Breaker + FVG overlap confluence'));
+  }],
+
+  ['Phase G Breaker plus FVG overlap cannot bypass minimum 2R', () => {
+    const context = bullishTurtleSoupContext();
+    context.targetObjectives = [{
+      label: 'Near opposing liquidity',
+      price: 7401,
+      direction: 'LONG',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 80,
+      reason: 'Nearest opposing liquidity is below 2R.',
+    }];
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7396.5,
+      upper: 7398,
+      midpoint: 7397.25,
+      impulseQualified: true,
+      confidence: 'High',
+    }];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7396.75,
+      upper: 7397.25,
+      midpoint: 7397,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(turtle.target2, null);
+    assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
+  }],
+
+  ['Phase G deprecated setup types still cannot create candidates with breaker confluence present', () => {
+    const context = bullishTurtleSoupContext();
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7396.5,
+      upper: 7398,
+      midpoint: 7397.25,
+      impulseQualified: true,
+      confidence: 'High',
+    }];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7396.75,
+      upper: 7397.25,
+      midpoint: 7397,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: resultWithText('Neutral structured context should preserve the primary-model-only candidate set.', 7397, 7393.75, 'TRIGGERED'),
+    });
+
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
+      assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
+    }
+  }],
+
+  ['Phase G journal-facing candidate labels do not show BreakerBlock as a primary model', () => {
+    const context = bullishTurtleSoupContext();
+    context.fvgZones = [{
+      direction: 'LONG',
+      lower: 7396.5,
+      upper: 7398,
+      midpoint: 7397.25,
+      impulseQualified: true,
+      confidence: 'High',
+    }];
+    context.breakerZones = [{
+      direction: 'LONG',
+      lower: 7396.75,
+      upper: 7397.25,
+      midpoint: 7397,
+      confidence: 'High',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+
+    assert.deepEqual(
+      new Set(result.candidates.map((candidate) => candidate.setupType)),
+      new Set([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup])
+    );
+    assert.ok(result.candidates.every((candidate) => candidate.scenarioLabel !== 'BreakerBlock'));
   }],
 
   ['narrative momentum long is not approved when structured candles show no expansion or continuation', () => {

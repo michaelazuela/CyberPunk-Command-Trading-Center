@@ -18,6 +18,19 @@ type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
 type ReadConfidence = Exclude<ChartContext['levelReadConfidence'], undefined>;
 
+interface ZoneOverlap {
+  valid: boolean;
+  low: number | null;
+  high: number | null;
+}
+
+interface BreakerFvgOverlapConfluence {
+  breakerFvgOverlap: boolean;
+  overlapZone: ZoneOverlap;
+  entryInside: boolean;
+  reason: string;
+}
+
 interface ExtractedPlanFacts {
   text: string;
   direction: Direction;
@@ -441,6 +454,48 @@ function priceInsideZone(price: number | null, zone: NonNullable<ChartContext['f
   return price >= lower && price <= upper;
 }
 
+function priceInsideBounds(price: number | null, low: number | null, high: number | null): boolean {
+  if (price === null || low === null || high === null) return false;
+  return price >= Math.min(low, high) && price <= Math.max(low, high);
+}
+
+export function computeZoneOverlap(aLow: unknown, aHigh: unknown, bLow: unknown, bHigh: unknown): ZoneOverlap {
+  const bounds = [aLow, aHigh, bLow, bHigh].map((value) => typeof value === 'number' ? value : Number.NaN);
+  if (!bounds.every(Number.isFinite)) return { valid: false, low: null, high: null };
+  const [firstLow, firstHigh, secondLow, secondHigh] = bounds;
+  const overlapLow = Math.max(Math.min(firstLow, firstHigh), Math.min(secondLow, secondHigh));
+  const overlapHigh = Math.min(Math.max(firstLow, firstHigh), Math.max(secondLow, secondHigh));
+  const validOverlap = Number.isFinite(overlapLow) && Number.isFinite(overlapHigh) && overlapLow < overlapHigh;
+  return validOverlap
+    ? { valid: true, low: roundToTick(overlapLow), high: roundToTick(overlapHigh) }
+    : { valid: false, low: null, high: null };
+}
+
+function breakerFvgOverlapConfluence(
+  chartContext: ChartContext,
+  direction: Direction,
+  entry: number | null,
+  fvgZones: NonNullable<ChartContext['fvgZones']> = (chartContext.fvgZones || []).filter((zone) => isReadableConfidence(zone.confidence) && zone.impulseQualified !== false)
+): BreakerFvgOverlapConfluence | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const breakerZones = chartContext.breakerZones || [];
+  for (const breaker of breakerZones) {
+    if (breaker.direction !== direction || !isReadableConfidence(breaker.confidence)) continue;
+    for (const fvg of fvgZones) {
+      if (fvg.direction !== direction || !isReadableConfidence(fvg.confidence)) continue;
+      const overlap = computeZoneOverlap(breaker.lower, breaker.upper, fvg.lower, fvg.upper);
+      if (!overlap.valid) continue;
+      return {
+        breakerFvgOverlap: true,
+        overlapZone: overlap,
+        entryInside: priceInsideBounds(entry, overlap.low, overlap.high),
+        reason: 'Breaker + FVG overlap confluence',
+      };
+    }
+  }
+  return null;
+}
+
 function candleTouchesFvg(candle: NonNullable<ChartContext['candles']>[number], zone: NonNullable<ChartContext['fvgZones']>[number]): boolean {
   if (!Number.isFinite(candle.high) || !Number.isFinite(candle.low) || !Number.isFinite(zone.lower) || !Number.isFinite(zone.upper)) return false;
   const lower = Math.min(zone.lower as number, zone.upper as number);
@@ -539,6 +594,7 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   );
   const fvg = fvgZones.find((zone) => zone.direction === direction);
   const hasFvg = Boolean(fvg);
+  const breakerFvgConfluence = breakerFvgOverlapConfluence(chartContext, direction, parsePrice(setupEvidence?.entry) ?? parsePrice(chartContext.proposedEntry), fvgZones);
   const formedIndex = typeof fvg?.formedCandleIndex === 'number' ? fvg.formedCandleIndex : -1;
   const retraceIntoFvg = Boolean(
     fvg &&
@@ -571,10 +627,15 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   const entry = manualLevelConfirmation
     ? null
     : extractedEntry !== null
-      ? priceInsideZone(extractedEntry, fvg) ? extractedEntry : null
+      ? priceInsideZone(extractedEntry, fvg) || breakerFvgConfluence?.entryInside ? extractedEntry : null
       : zoneEntry;
-  if (!manualLevelConfirmation && entry !== null && fvg && priceInsideZone(entry, fvg)) {
+  if (!manualLevelConfirmation && entry !== null && fvg && (priceInsideZone(entry, fvg) || breakerFvgConfluence?.entryInside)) {
     evidence.push('Entry inside FVG or valid confluence zone');
+    if (breakerFvgConfluence?.entryInside) {
+      evidence.push('Breaker + FVG overlap confluence');
+      evidence.push('Entry inside breaker/FVG overlap');
+      evidence.push('FVG retrace supported by breaker overlap');
+    }
   } else {
     missingEvidence.push('Entry inside FVG or valid confluence zone');
   }
@@ -737,6 +798,11 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   }
 
   const extractedEntry = parsePrice(chartContext.setupEvidence?.liquiditySweep?.entry) ?? parsePrice(chartContext.proposedEntry);
+  const breakerFvgConfluence = breakerFvgOverlapConfluence(chartContext, direction, extractedEntry);
+  if (breakerFvgConfluence?.breakerFvgOverlap) {
+    evidence.push('Breaker + FVG overlap confluence');
+    if (breakerFvgConfluence.entryInside) evidence.push('Entry inside breaker/FVG overlap');
+  }
   const entryIsAfterReclaim = extractedEntry !== null && level !== null
     ? direction === 'LONG'
       ? extractedEntry > level
@@ -809,7 +875,9 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     requiredTrigger: direction === 'LONG'
       ? 'Bullish Turtle Soup requires a sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
       : 'Bearish Turtle Soup requires a buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
-    confidence: fullSequence ? 'High' : possible ? 'Medium' : 'Low',
+    confidence: breakerFvgConfluence?.entryInside && (fullSequence || possible)
+      ? fullSequence ? 'High' : 'Medium'
+      : fullSequence ? 'High' : possible ? 'Medium' : 'Low',
     evidence: Array.from(new Set(evidence)),
     missingEvidence: Array.from(new Set(missingEvidence)),
     hasPendingTrigger: !fullSequence,
@@ -1256,6 +1324,11 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     -20;
   const clarityScore =
     ((candidate.entryClarity || 0) + (candidate.stopClarity || 0) + (candidate.targetClarity || 0)) * 10;
+  const confluenceBonus =
+    (candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup) &&
+    candidate.evidence.includes('Breaker + FVG overlap confluence')
+      ? 3
+      : 0;
   const score =
     executionScore +
     confidenceScore +
@@ -1263,7 +1336,8 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     riskQuality +
     clarityScore +
     (candidate.levelContextScore || 0) +
-    (candidate.proximityScore || 0) * 10;
+    (candidate.proximityScore || 0) * 10 +
+    confluenceBonus;
   candidate.rankScore = score;
   return score;
 }
