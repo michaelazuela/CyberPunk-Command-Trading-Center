@@ -680,6 +680,7 @@ export function applyStaleChaseGuard(args: {
 function timeframeRank(source: TargetObjective['source']): number {
   if (source === 'ninjatrader' || source === 'app') return 4;
   if (source === 'full_context' || source === 'prior_eth' || source === 'previous_rth') return 4;
+  if (source === 'three_day_rth' || source === 'three_day_eth' || source === 'weekly_rth' || source === 'weekly_eth' || source === 'monthly_rth' || source === 'monthly_eth') return 4;
   if (source === 'asian' || source === 'london' || source === 'ny_premarket') return 3;
   if (source === 'rth_morning' || source === 'lunch') return 2;
   return 1;

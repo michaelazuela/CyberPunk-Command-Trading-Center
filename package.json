@@ -12,7 +12,7 @@
     "nt:backfill": "tsx tools/automation/backfill-market-bars.ts",
     "nt:discord-alerts": "tsx tools/automation/discord-scheduler.ts",
     "nt:scanner": "tsx tools/automation/nt-scanner.ts",
-    "test": "tsx src/config/setupRegistry.test.ts && tsx src/lib/tradeDecisionPipeline.test.ts && tsx src/lib/setupScanner.test.ts && tsx src/lib/localScannerEngine.test.ts",
+    "test": "tsx src/config/setupRegistry.test.ts && tsx src/lib/sessionStructure.test.ts && tsx src/lib/tradeDecisionPipeline.test.ts && tsx src/lib/setupScanner.test.ts && tsx src/lib/localScannerEngine.test.ts",
     "clean": "rm -rf dist",
     "guard:no-firebase": "node scripts/no-firebase-check.js",
     "guard:legacy-rules": "node scripts/no-legacy-rules-check.js",

@@ -20,6 +20,12 @@ function sourceScore(source: StructuralLevel['source']): number {
   switch (source) {
     case 'previous_rth': return 24;
     case 'full_context': return 24;
+    case 'monthly_rth': return 24;
+    case 'monthly_eth': return 24;
+    case 'weekly_rth': return 23;
+    case 'weekly_eth': return 23;
+    case 'three_day_rth': return 22;
+    case 'three_day_eth': return 22;
     case 'rth_morning': return 24;
     case 'ny_premarket': return 22;
     case 'london': return 20;

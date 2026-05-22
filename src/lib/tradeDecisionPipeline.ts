@@ -110,6 +110,15 @@ function inferDirection(text: string): Direction {
 }
 
 function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
+  const structured = result?.structuredChartContext;
+  const alignedDirection = structured?.multiTimeframeContext?.alignment?.alignedDirection;
+  if (alignedDirection === 'LONG') return BiasDirection.Bullish;
+  if (alignedDirection === 'SHORT') return BiasDirection.Bearish;
+
+  const sessionStoryBias = structured?.sessionStory?.bias;
+  if (sessionStoryBias === 'LONG') return BiasDirection.Bullish;
+  if (sessionStoryBias === 'SHORT') return BiasDirection.Bearish;
+
   const text = [
     result?.dayType,
     result?.reasoning,

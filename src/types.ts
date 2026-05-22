@@ -154,6 +154,12 @@ export interface KeyLevels {
 export type SessionSegmentName =
   | 'previous_rth'
   | 'prior_eth'
+  | 'three_day_rth'
+  | 'three_day_eth'
+  | 'weekly_rth'
+  | 'weekly_eth'
+  | 'monthly_rth'
+  | 'monthly_eth'
   | 'asian'
   | 'london'
   | 'ny_premarket'

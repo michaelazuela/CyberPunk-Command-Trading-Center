@@ -778,6 +778,8 @@ export function buildNinjaChartContext({
   ];
   const sessionLevelContext = buildSessionLevelContext(structuralLevels, last.close, { fvgZones });
   const enrichedStructuralLevels = sessionLevelContext.levels;
+  const structuralPrice = (source: string, type: 'high' | 'low') =>
+    enrichedStructuralLevels.find(level => level.source === source && level.type === type)?.price ?? null;
   const multiTimeframeContext = buildMultiTimeframeContext({
     bars5m: executionBars,
     bars15m,
@@ -801,6 +803,10 @@ export function buildNinjaChartContext({
       rthOpen: first.open,
       overnightHigh: contextHigh,
       overnightLow: contextLow,
+      previousDayHigh: structuralPrice('previous_rth', 'high'),
+      previousDayLow: structuralPrice('previous_rth', 'low'),
+      priorDayHigh: structuralPrice('previous_rth', 'high'),
+      priorDayLow: structuralPrice('previous_rth', 'low'),
       nearestSupport: activeSwingLow,
       nearestResistance: activeSwingHigh,
       activeSwingHigh,
@@ -874,7 +880,7 @@ export function buildNinjaChartContext({
       rMultiple: null,
       reason: `${level.label} from ${level.source} is available as target context. Strength=${level.strengthLabel || 'Low'} (${level.strengthScore || 0}).`,
     })),
-    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
-    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. Structural levels=${enrichedStructuralLevels.length}.`,
+    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. RTH/ETH hierarchy includes prior day, prior 3 sessions, prior week, and prior month when cached bars are available. ETH spans the full futures session, including RTH; RTH is also tracked separately for precision. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
+    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. RTH/ETH hierarchy=prior day/3-day/week/month. Structural levels=${enrichedStructuralLevels.length}.`,
   };
 }

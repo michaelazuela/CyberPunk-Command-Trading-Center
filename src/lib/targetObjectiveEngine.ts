@@ -130,6 +130,12 @@ function isSessionSource(source: TargetObjective['source']): boolean {
     'full_context',
     'prior_eth',
     'previous_rth',
+    'three_day_rth',
+    'three_day_eth',
+    'weekly_rth',
+    'weekly_eth',
+    'monthly_rth',
+    'monthly_eth',
     'rth_morning',
     'lunch',
   ];

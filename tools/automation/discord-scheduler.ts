@@ -87,6 +87,7 @@ const MORNING_EXECUTION_START_ET = '09:30';
 const MORNING_EXECUTION_END_ET = TRADE_RULES.executionWindows.morningExecution.endET;
 const LUNCH_EXECUTION_START_ET = TRADE_RULES.executionWindows.middayTrapReversal.startET;
 const LUNCH_EXECUTION_END_ET = TRADE_RULES.executionWindows.middayTrapReversal.endET;
+const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -154,9 +155,9 @@ function getEtClock(date = new Date()): string {
   return `${parts.hour}:${parts.minute}`;
 }
 
-function previousCalendarDate(tradeDate: string): string {
-  const date = new Date(`${tradeDate}T12:00:00`);
-  date.setDate(date.getDate() - 1);
+function previousMonthStartDate(tradeDate: string): string {
+  const [year, month] = tradeDate.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 2, 1));
   return date.toISOString().slice(0, 10);
 }
 
@@ -204,7 +205,7 @@ async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe,
       from,
       to,
       config: marketCache,
-      limit: 5000,
+      limit: MARKET_STRUCTURE_CACHE_LIMIT,
     });
     if (cached.length) {
       console.log(`[market-cache] ${timeframe}: loaded ${cached.length} stored bars for ${from} -> ${to}.`);
@@ -217,7 +218,7 @@ async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe,
     timeframe,
     from,
     to,
-    limit: 3000,
+    limit: timeframe === '5m' ? 6000 : MARKET_STRUCTURE_CACHE_LIMIT,
     baseUrl: config.bridgeUrl,
   });
   if (!response.ok || !response.bars?.length) {
@@ -241,11 +242,11 @@ async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe,
 }
 
 async function buildPremarketContext(config: SchedulerConfig, tradeDate: string) {
-  const priorDate = previousCalendarDate(tradeDate);
+  const contextStartDate = previousMonthStartDate(tradeDate);
   const [bars240m, bars60m, bars15m] = await Promise.all([
-    fetchBars(config, '240m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
-    fetchBars(config, '60m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
-    fetchBars(config, '15m', etDateTime(priorDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
   ]);
   return buildNinjaChartContext({
     bars5m: bars15m.map((bar) => ({ ...bar })),
@@ -259,14 +260,14 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
 }
 
 async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJob, 'premarket'>, tradeDate: string, asOfEt?: string): Promise<AnalysisResult> {
-  const priorDate = previousCalendarDate(tradeDate);
+  const contextStartDate = previousMonthStartDate(tradeDate);
   const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
   const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
   const contextTo = etDateTime(tradeDate, executionEnd);
   const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
-    fetchBars(config, '240m', etDateTime(priorDate, '18:00'), contextTo),
-    fetchBars(config, '60m', etDateTime(priorDate, '18:00'), contextTo),
-    fetchBars(config, '15m', etDateTime(priorDate, '18:00'), contextTo),
+    fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextTo),
+    fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), contextTo),
+    fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(
       config,
       '5m',
@@ -636,6 +637,12 @@ function isSessionSource(source: TargetObjective['source']): boolean {
     'full_context',
     'prior_eth',
     'previous_rth',
+    'three_day_rth',
+    'three_day_eth',
+    'weekly_rth',
+    'weekly_eth',
+    'monthly_rth',
+    'monthly_eth',
     'rth_morning',
     'lunch',
   ].includes(source);
@@ -901,6 +908,13 @@ function formatContextHighLowTargets(objectives: TargetObjective[] = []): string
     .filter((objective) =>
       objective.source === 'full_context' ||
       objective.source === 'prior_eth' ||
+      objective.source === 'previous_rth' ||
+      objective.source === 'three_day_rth' ||
+      objective.source === 'three_day_eth' ||
+      objective.source === 'weekly_rth' ||
+      objective.source === 'weekly_eth' ||
+      objective.source === 'monthly_rth' ||
+      objective.source === 'monthly_eth' ||
       objective.source === 'asian' ||
       objective.source === 'london' ||
       objective.label.toLowerCase().includes('eth') ||
@@ -910,7 +924,7 @@ function formatContextHighLowTargets(objectives: TargetObjective[] = []): string
     )
     .sort((a, b) => a.price - b.price);
 
-  const priorityOrder = ['full_context', 'prior_eth', 'asian', 'london'];
+  const priorityOrder = ['previous_rth', 'prior_eth', 'three_day_rth', 'three_day_eth', 'weekly_rth', 'weekly_eth', 'monthly_rth', 'monthly_eth', 'asian', 'london', 'full_context'];
   const selected = priorityOrder.flatMap((source) => {
     const sourceTargets = contextTargets.filter((objective) => objective.source === source);
     const low = sourceTargets.find((objective) => objective.type === 'low');

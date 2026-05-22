@@ -30,10 +30,73 @@ function minutesFromIso(value: string): number | null {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function dateKeyFromIso(value: string): string | null {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})T/);
+  if (match) return match[1];
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function dateKeyToTime(value: string): number {
+  const [year, month, day] = value.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function addDays(value: string, days: number): string {
+  const next = new Date(dateKeyToTime(value));
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function monthKeyFromDateKey(value: string): string {
+  return value.slice(0, 7);
+}
+
+function previousMonthKey(value: string | null): string | null {
+  if (!value) return null;
+  const [year, month] = value.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  const previous = new Date(Date.UTC(year, month - 2, 1));
+  return previous.toISOString().slice(0, 7);
+}
+
+function uniqueSortedDateKeys(values: Array<string | null>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))]
+    .sort((a, b) => dateKeyToTime(a) - dateKeyToTime(b));
+}
+
 function inMinuteRange(minutes: number | null, start: number, end: number): boolean {
   if (minutes === null) return false;
   if (start <= end) return minutes >= start && minutes <= end;
   return minutes >= start || minutes <= end;
+}
+
+function rthDateKey(bar: NinjaBridgeBar): string | null {
+  const minutes = minutesFromIso(bar.time);
+  if (!inMinuteRange(minutes, 9 * 60 + 30, 16 * 60)) return null;
+  return dateKeyFromIso(bar.time);
+}
+
+function ethSessionDateKey(bar: NinjaBridgeBar): string | null {
+  const dateKey = dateKeyFromIso(bar.time);
+  const minutes = minutesFromIso(bar.time);
+  if (!dateKey || minutes === null) return null;
+  if (minutes >= 18 * 60) return addDays(dateKey, 1);
+  if (minutes <= 17 * 60) return dateKey;
+  return null;
+}
+
+function latestSessionDate(valid: NinjaBridgeBar[]): string | null {
+  const allDates = uniqueSortedDateKeys(valid.map(bar => dateKeyFromIso(bar.time)));
+  return allDates[allDates.length - 1] || null;
+}
+
+function lastCompletedDates(dates: string[], currentDate: string | null, count: number): string[] {
+  const completed = currentDate
+    ? dates.filter(date => dateKeyToTime(date) < dateKeyToTime(currentDate))
+    : dates;
+  return completed.slice(Math.max(0, completed.length - count));
 }
 
 function buildSegment(name: SessionSegmentName, label: string, bars: NinjaBridgeBar[]): SessionSegment {
@@ -55,14 +118,50 @@ function buildSegment(name: SessionSegmentName, label: string, bars: NinjaBridge
 
 export function segmentTradingSession(bars: NinjaBridgeBar[]): SessionSegment[] {
   const valid = bars.filter(bar => isPrice(bar.high) && isPrice(bar.low));
-  const byRange = (start: number, end: number) => valid.filter(bar => inMinuteRange(minutesFromIso(bar.time), start, end));
+  const currentDate = latestSessionDate(valid);
+  const rthDates = uniqueSortedDateKeys(valid.map(rthDateKey));
+  const ethDates = uniqueSortedDateKeys(valid.map(ethSessionDateKey));
+  const priorRthDate = lastCompletedDates(rthDates, currentDate, 1);
+  const priorEthDate = lastCompletedDates(ethDates, currentDate, 1);
+  const threeRthDates = lastCompletedDates(rthDates, currentDate, 3);
+  const threeEthDates = lastCompletedDates(ethDates, currentDate, 3);
+  const weeklyRthDates = lastCompletedDates(rthDates, currentDate, 5);
+  const weeklyEthDates = lastCompletedDates(ethDates, currentDate, 5);
+  const completedPreviousMonth = previousMonthKey(currentDate);
+  const monthlyRthDates = completedPreviousMonth
+    ? rthDates.filter(date => monthKeyFromDateKey(date) === completedPreviousMonth)
+    : [];
+  const monthlyEthDates = completedPreviousMonth
+    ? ethDates.filter(date => monthKeyFromDateKey(date) === completedPreviousMonth)
+    : [];
+
+  const byRange = (start: number, end: number) => valid.filter(bar =>
+    dateKeyFromIso(bar.time) === currentDate && inMinuteRange(minutesFromIso(bar.time), start, end)
+  );
+  const byEthRange = (start: number, end: number) => valid.filter(bar =>
+    ethSessionDateKey(bar) === currentDate && inMinuteRange(minutesFromIso(bar.time), start, end)
+  );
+  const byRthDates = (dates: string[]) => valid.filter(bar => {
+    const dateKey = rthDateKey(bar);
+    return Boolean(dateKey && dates.includes(dateKey));
+  });
+  const byEthDates = (dates: string[]) => valid.filter(bar => {
+    const dateKey = ethSessionDateKey(bar);
+    return Boolean(dateKey && dates.includes(dateKey));
+  });
 
   return [
     buildSegment('full_context', 'Full ETH Context', valid),
-    buildSegment('previous_rth', 'Previous RTH', byRange(9 * 60 + 30, 16 * 60)),
-    buildSegment('prior_eth', 'Prior ETH / Globex Context', byRange(18 * 60, 23 * 60 + 59)),
-    buildSegment('asian', 'Asian Session', byRange(20 * 60, 2 * 60)),
-    buildSegment('london', 'London Session', byRange(3 * 60, 8 * 60 + 29)),
+    buildSegment('previous_rth', 'Prior RTH Day', byRthDates(priorRthDate)),
+    buildSegment('prior_eth', 'Prior ETH Session', byEthDates(priorEthDate)),
+    buildSegment('three_day_rth', 'Prior 3 RTH Days', byRthDates(threeRthDates)),
+    buildSegment('three_day_eth', 'Prior 3 ETH Sessions', byEthDates(threeEthDates)),
+    buildSegment('weekly_rth', 'Prior Week RTH', byRthDates(weeklyRthDates)),
+    buildSegment('weekly_eth', 'Prior Week ETH', byEthDates(weeklyEthDates)),
+    buildSegment('monthly_rth', 'Previous Month RTH', byRthDates(monthlyRthDates)),
+    buildSegment('monthly_eth', 'Previous Month ETH', byEthDates(monthlyEthDates)),
+    buildSegment('asian', 'Asian Session', byEthRange(20 * 60, 2 * 60)),
+    buildSegment('london', 'London Session', byEthRange(3 * 60, 8 * 60 + 29)),
     buildSegment('ny_premarket', 'New York Premarket', byRange(8 * 60 + 30, 9 * 60 + 29)),
     buildSegment('rth_morning', 'RTH Morning Window', byRange(9 * 60 + 30, 11 * 60 + 15)),
     buildSegment('lunch', 'Lunch Review Window', byRange(11 * 60 + 50, 13 * 60)),

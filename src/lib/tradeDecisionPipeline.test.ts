@@ -305,6 +305,29 @@ function turtleSoupContext(overrides: Partial<ChartContext> = {}): Partial<Chart
   });
 }
 
+function withStructuredBias(context: Partial<ChartContext>, alignedDirection: 'LONG' | 'SHORT'): Partial<ChartContext> {
+  return {
+    ...context,
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      fourHour: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      oneHour: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      fifteenMinute: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      fiveMinute: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      alignment: {
+        macroBias: alignedDirection,
+        sessionBias: alignedDirection,
+        liquidityBias: alignedDirection,
+        executionBias: alignedDirection,
+        alignedDirection,
+        conflict: false,
+        conflicts: [],
+        notes: [`Big-picture structure aligned ${alignedDirection}.`],
+      },
+    } as unknown as ChartContext['multiTimeframeContext'],
+  };
+}
+
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -364,6 +387,30 @@ const tests: Array<[string, () => void]> = [
     });
     assert.equal(result.status, TradeDecisionStatus.NoTrade);
     assert.equal(result.biasAssessment.bias, BiasDirection.NoBias);
+  }],
+
+  ['4b. Structured OHLC big-picture bias overrides neutral/no-trade text for final bias gate', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Historical replay shell did not provide narrative bias.',
+        current_rule_analysis: {
+          summary: 'Historical replay shell.',
+          setup_detected: 'Pending deterministic setup scan',
+          rule_category: 'APP_OWNED_PIPELINE',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: null,
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: withStructuredBias(fullModelOneContext(), 'LONG'),
+      }),
+    });
+    assert.equal(result.biasAssessment.bias, BiasDirection.Bullish);
+    assert.notEqual(stepStatus(result, TradeDecisionStep.DetermineBias), 'fail');
+    assert.notEqual(result.noTradeReason, NoTradeReason.NoClearBias);
   }],
 
   ['5. Setup present but no entry trigger', () => {

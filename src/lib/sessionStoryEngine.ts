@@ -109,8 +109,14 @@ function sessionLabel(name: SessionSegmentName): string {
     case 'ny_premarket': return 'NY Premarket';
     case 'rth_morning': return 'RTH Morning';
     case 'lunch': return 'Lunch';
-    case 'previous_rth': return 'Previous RTH';
+    case 'previous_rth': return 'Prior RTH Day';
     case 'prior_eth': return 'Prior ETH';
+    case 'three_day_rth': return 'Prior 3 RTH Days';
+    case 'three_day_eth': return 'Prior 3 ETH Sessions';
+    case 'weekly_rth': return 'Prior Week RTH';
+    case 'weekly_eth': return 'Prior Week ETH';
+    case 'monthly_rth': return 'Previous Month RTH';
+    case 'monthly_eth': return 'Previous Month ETH';
     case 'full_context': return 'Full ETH';
     default: return 'Session';
   }

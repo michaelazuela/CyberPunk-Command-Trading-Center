@@ -94,6 +94,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
+const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -209,8 +210,18 @@ async function writeState(state: ScannerStateFile): Promise<void> {
 }
 
 function previousCalendarDate(tradeDate: string): string {
+  return calendarDateBefore(tradeDate, 1);
+}
+
+function calendarDateBefore(tradeDate: string, days: number): string {
   const date = new Date(`${tradeDate}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function previousMonthStartDate(tradeDate: string): string {
+  const [year, month] = tradeDate.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 2, 1));
   return date.toISOString().slice(0, 10);
 }
 
@@ -417,9 +428,12 @@ async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTim
 async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const marketConfig = loadMarketDataConfig();
   const priorDate = previousCalendarDate(tradeDate);
+  const marketStructureStartDate = previousMonthStartDate(tradeDate);
   const contextTo = etDateTime(tradeDate, session === 'morning' ? '11:15' : '13:00');
-  const from = etDateTime(priorDate, '18:00');
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
+    const from = timeframe === '5m'
+      ? etDateTime(priorDate, '18:00')
+      : etDateTime(marketStructureStartDate, '18:00');
     if (marketConfig) {
       const cached = await fetchCachedMarketBars({
         instrument: config.bridgeInstrument,
@@ -427,7 +441,7 @@ async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, sessi
         from,
         to: contextTo,
         config: marketConfig,
-        limit: 6000,
+        limit: timeframe === '5m' ? 6000 : MARKET_STRUCTURE_CACHE_LIMIT,
       });
       if (cached.length) return [timeframe, cached] as const;
     }
