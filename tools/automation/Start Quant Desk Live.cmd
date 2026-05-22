@@ -19,10 +19,13 @@ if "%BRIDGE_INSTRUMENT%"=="" set "BRIDGE_INSTRUMENT=MES 06-26"
 
 echo.
 echo Using NinjaTrader instrument: %BRIDGE_INSTRUMENT%
+set "APP_INSTRUMENT=MES"
+if /I "%BRIDGE_INSTRUMENT:~0,3%"=="MNQ" set "APP_INSTRUMENT=MNQ"
+echo App instrument: %APP_INSTRUMENT%
 echo.
 
-start "Quant Desk Market Cache" /D "%PROJECT_ROOT%" cmd /k "npm run nt:candle-recorder -- --instrument MES --bridge-instrument ^"%BRIDGE_INSTRUMENT%^" --bridge-url http://127.0.0.1:8765 --poll-seconds 60 --bar-time-zone central"
+start "Quant Desk Market Cache" /D "%PROJECT_ROOT%" cmd /k "npm run nt:candle-recorder -- --instrument %APP_INSTRUMENT% --bridge-instrument ^"%BRIDGE_INSTRUMENT%^" --bridge-url http://127.0.0.1:8765 --poll-seconds 60 --bar-time-zone central"
 
-start "Quant Desk Live Scanner" /D "%PROJECT_ROOT%" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%start-discord-alerts.ps1" -NoRecorder -BridgeInstrument "%BRIDGE_INSTRUMENT%"
+start "Quant Desk Live Scanner" /D "%PROJECT_ROOT%" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%start-discord-alerts.ps1" -NoRecorder -Instrument "%APP_INSTRUMENT%" -BridgeInstrument "%BRIDGE_INSTRUMENT%"
 
 endlocal

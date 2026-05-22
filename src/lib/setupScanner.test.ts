@@ -698,6 +698,36 @@ function bearishTurtleSoupContext(): ChartContext {
   };
 }
 
+function withBigPictureStructure(context: ChartContext, alignedDirection: 'LONG' | 'SHORT'): ChartContext {
+  return {
+    ...context,
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      authority: 'ohlc_facts_only',
+      fourHour: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      oneHour: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      fifteenMinute: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      fiveMinute: { trend: alignedDirection === 'LONG' ? 'bullish' : 'bearish' },
+      alignment: {
+        macroBias: alignedDirection,
+        sessionBias: alignedDirection,
+        liquidityBias: alignedDirection,
+        executionBias: alignedDirection,
+        alignedDirection,
+        conflicts: [],
+        notes: [`Big-picture structure aligned ${alignedDirection}.`],
+      },
+      targetMap: { levelsToWatch: [] },
+      rules: {
+        higherTimeframesApproveTrades: false,
+        fiveMinuteExecutionRequired: true,
+        aiMayOverwriteOhlcFacts: false,
+      },
+      notes: [],
+    } as ChartContext['multiTimeframeContext'],
+  };
+}
+
 const tests: Array<[string, () => void]> = [
   ['Phase G computeZoneOverlap returns valid overlap for intersecting zones', () => {
     assert.deepEqual(computeZoneOverlap(7398, 7401, 7400, 7402), {
@@ -1231,6 +1261,39 @@ const tests: Array<[string, () => void]> = [
     assert.ok(modelOne.stop! > 7404);
   }],
 
+  ['big-picture bullish structure keeps countertrend bearish Model 1 conditional in morning', () => {
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: withBigPictureStructure(shortModelOneContext(), 'LONG'),
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.direction, 'SHORT');
+    assert.equal(modelOne.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(modelOne.evidence.includes('Big-picture structure is bullish'));
+    assert.ok(modelOne.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['big-picture bearish structure keeps countertrend bullish Model 1 conditional in lunch', () => {
+    const context = withBigPictureStructure(structuredContext(), 'SHORT');
+    context.sessionType = 'replay_lunch';
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.direction, 'LONG');
+    assert.equal(modelOne.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.evidence.includes('Big-picture structure is bearish'));
+    assert.ok(modelOne.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
   ['Phase F bullish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
     const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: bullishTurtleSoupContext(), result: null });
     const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
@@ -1265,6 +1328,56 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.stop! > 7406);
     assert.equal(turtle.target2, 7396);
     assert.ok(turtle.evidence.includes('Sweep above buy-side liquidity confirmed'));
+  }],
+
+  ['big-picture bullish structure keeps countertrend bearish Turtle Soup conditional in morning', () => {
+    const context = withBigPictureStructure(bearishTurtleSoupContext(), 'LONG');
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.direction, 'SHORT');
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.evidence.includes('Big-picture structure is bullish'));
+    assert.ok(turtle.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+    assert.ok(turtle.requiredTrigger?.includes('Countertrend bearish Turtle Soup'));
+    assert.ok(turtle.nextAction.includes('Countertrend conditional only'));
+  }],
+
+  ['big-picture bearish structure keeps countertrend bullish Turtle Soup conditional in lunch', () => {
+    const context = withBigPictureStructure(bullishTurtleSoupContext(), 'SHORT');
+    context.sessionType = 'replay_lunch';
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.direction, 'LONG');
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.evidence.includes('Big-picture structure is bearish'));
+    assert.ok(turtle.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+    assert.ok(turtle.requiredTrigger?.includes('Countertrend bullish Turtle Soup'));
+  }],
+
+  ['big-picture aligned Turtle Soup can still qualify in morning or lunch', () => {
+    const morning = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: withBigPictureStructure(bullishTurtleSoupContext(), 'LONG'),
+      result: null,
+    }).candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+    const lunchContext = withBigPictureStructure(bearishTurtleSoupContext(), 'SHORT');
+    lunchContext.sessionType = 'replay_lunch';
+    const lunch = scanSetupCandidates({
+      sessionType: 'replay_lunch',
+      chartContext: lunchContext,
+      result: null,
+    }).candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.equal(morning?.executionStatus, ExecutionStatus.Executable);
+    assert.equal(lunch?.executionStatus, ExecutionStatus.Executable);
+    assert.ok(!morning?.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+    assert.ok(!lunch?.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
   }],
 
   ['Phase F Turtle Soup does not require FVG to qualify', () => {

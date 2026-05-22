@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
+import { TRADE_RULES } from '../../src/config/tradeRules';
 import {
   buildNinjaChartContext,
   getNinjaBridgeBars,
@@ -71,6 +72,7 @@ interface ScannerConfig {
 
 interface ScannerStateFile {
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
+  windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
 }
@@ -193,11 +195,12 @@ async function readState(): Promise<ScannerStateFile> {
     const parsed = JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Partial<ScannerStateFile>;
     return {
       sent: parsed.sent || {},
+      windowStartSent: parsed.windowStartSent || {},
       lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
       lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
     };
   } catch {
-    return { sent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
+    return { sent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
   }
 }
 
@@ -654,6 +657,99 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
   if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
 }
 
+function buildWindowStartPayload(args: {
+  session: LiveSession;
+  tradeDate: string;
+  config: ScannerConfig;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  windowLabel: string;
+}): DiscordWebhookPayload {
+  const sessionLabel = args.session === 'morning' ? 'Morning' : 'Lunch';
+  const windowRange = args.session === 'morning'
+    ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
+    : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
+  const fullSchedule = [
+    `Before ${TRADE_RULES.executionWindows.openingObservation.startET} ET: Market Mapping only`,
+    `${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
+    `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
+    `${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Market Mapping only`,
+    `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
+    `After ${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Market Mapping only`,
+  ].join('\n');
+  return {
+    username: 'Quant Desk',
+    content: `# Quant Desk Scanner Window Active — ${sessionLabel}\nDecision support only. No automated orders were placed.`,
+    embeds: [
+      {
+        title: `${sessionLabel} Setup Scanner Online — ${args.tradeDate}`,
+        description: 'The live scanner is connected and actively checking the two approved ICT models. Keep an eye out for a confirmed setup during this window. This notice is not a trade alert, and no-trade remains a valid professional decision.',
+        color: 0x00bcd4,
+        fields: [
+          {
+            name: 'Scanner Window',
+            value: clip([
+              `Window: ${args.windowLabel}`,
+              `Time: ${windowRange}`,
+              `Instrument: ${args.config.instrument}`,
+              `Bridge instrument: ${args.config.bridgeInstrument}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: 'Full Scanner Schedule',
+            value: clip(fullSchedule),
+            inline: false,
+          },
+          {
+            name: 'Live Data',
+            value: clip([
+              `Bridge: ${args.config.bridgeUrl}`,
+              `Poll cadence: ${args.config.pollSeconds}s`,
+              `Current price: ${money(args.currentPrice)}`,
+              `Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: 'Approved Models',
+            value: 'Sweep -> MSS -> FVG Retrace\nTurtle Soup Reversal',
+            inline: false,
+          },
+        ],
+        footer: { text: 'Quant Desk • Scanner heartbeat • Trade approval still requires full 5M confirmation' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+async function sendWindowStartAlert(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  tradeDate: string;
+  session: LiveSession;
+  windowLabel: string;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+}): Promise<void> {
+  const key = `${args.tradeDate}:${args.session}:scanner-window-start`;
+  if (args.state.windowStartSent[key]) return;
+
+  const payload = buildWindowStartPayload({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    config: args.config,
+    currentPrice: args.currentPrice,
+    completed5m: args.completed5m,
+    windowLabel: args.windowLabel,
+  });
+
+  await postDiscord(payload, args.config);
+  args.state.windowStartSent[key] = new Date().toISOString();
+  console.log(`[scanner] Sent ${args.session} scanner window start heartbeat.`);
+}
+
 async function runCycle(config: ScannerConfig): Promise<void> {
   const now = new Date();
   const window = resolveScannerWindow(now, config.afternoonEnabled);
@@ -723,6 +819,21 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     return;
   }
   const sameCompletedCandle = state.lastCompleted5mBySession[sessionKey] === completed5m.time;
+
+  try {
+    await sendWindowStartAlert({
+      config,
+      state,
+      tradeDate,
+      session,
+      windowLabel: window.label,
+      currentPrice,
+      completed5m,
+    });
+    await writeState(state);
+  } catch (error) {
+    console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
+  }
 
   const cachedBars = await fetchLookLeftBars(config, tradeDate, session).catch((error) => {
     console.warn(`[scanner] Supabase look-left cache unavailable: ${formatError(error)}`);

@@ -512,6 +512,12 @@ function extractIctSignals(candidate: SetupCandidate) {
       blockReason.includes('chase') ||
       blockReason.includes('stale') ||
       blockReason.includes('expired'),
+
+    isCountertrendAgainstBigPicture:
+      scenario.includes('countertrend') ||
+      scenario.includes('do not fight big-picture structure') ||
+      scenario.includes('big-picture structure is bullish') ||
+      scenario.includes('big-picture structure is bearish'),
   };
 }
 
@@ -610,8 +616,12 @@ export function scoreScannerCandidate(
   );
 
   if (signals.isStaleOrChasing) missingReasons.push('ICT setup expired: stale/chase guard active');
+  if (signals.isCountertrendAgainstBigPicture) {
+    missingReasons.push('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure');
+  }
 
-  const weightedScore = score * sessionWeight;
+  const structureWeight = signals.isCountertrendAgainstBigPicture ? 0.6 : 1;
+  const weightedScore = score * sessionWeight * structureWeight;
   return { score: Math.max(0, Math.min(100, Math.round(weightedScore))), qualifiedReasons, missingReasons };
 }
 

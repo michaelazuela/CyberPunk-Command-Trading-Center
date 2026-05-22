@@ -200,6 +200,24 @@ const turtleSoupWickScore = scoreScannerCandidate(candidate({
 assert.ok(turtleSoupWickScore.score >= 75);
 assert.ok(turtleSoupWickScore.qualifiedReasons.some((reason) => reason.includes('Wick rejection support')));
 
+const countertrendScore = scoreScannerCandidate(candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'Sweep -> MSS -> FVG Retrace',
+  evidence: [
+    'Liquidity sweep confirmed',
+    'Reclaim after sweep confirmed',
+    'Displacement confirmed',
+    'Market structure shift confirmed',
+    'Fair value gap / imbalance entry model',
+    'Big-picture structure is bullish',
+  ],
+  missingEvidence: ['Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'],
+  requiredTrigger: 'Countertrend bearish setup requires fresh 5M confirmation.',
+  nextAction: 'Countertrend conditional only. Requires immediate reclaim failure and fresh 5M confirmation. Do not fight big-picture structure.',
+}), morningWindow, 101, false, 10 * 60 + 5);
+assert.ok(countertrendScore.score < strongScore.score);
+assert.ok(countertrendScore.missingReasons.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'));
+
 assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 76, window: morningWindow, candidate: strongCandidate }).shouldSend,
   true

@@ -295,6 +295,40 @@ function isLunchSession(sessionType: SetupSession): boolean {
   return sessionType === 'lunch' || sessionType === 'replay_lunch';
 }
 
+function isMorningOrLunchSession(sessionType?: ChartContext['sessionType'] | SetupSession | null): boolean {
+  return sessionType === 'morning' ||
+    sessionType === 'replay_morning' ||
+    sessionType === 'lunch' ||
+    sessionType === 'replay_lunch';
+}
+
+function bigPictureStructureForDirection(chartContext: ChartContext | null | undefined, direction: Direction): {
+  bias: 'LONG' | 'SHORT' | null;
+  countertrend: boolean;
+  evidence: string | null;
+  missingEvidence: string | null;
+} {
+  const alignedDirection = chartContext?.multiTimeframeContext?.alignment?.alignedDirection;
+  if (
+    !isMorningOrLunchSession(chartContext?.sessionType) ||
+    (direction !== 'LONG' && direction !== 'SHORT') ||
+    (alignedDirection !== 'LONG' && alignedDirection !== 'SHORT')
+  ) {
+    return { bias: null, countertrend: false, evidence: null, missingEvidence: null };
+  }
+
+  const structure = alignedDirection === 'LONG' ? 'bullish' : 'bearish';
+  const evidence = `Big-picture structure is ${structure}`;
+  return {
+    bias: alignedDirection,
+    countertrend: alignedDirection !== direction,
+    evidence,
+    missingEvidence: alignedDirection !== direction
+      ? 'Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'
+      : null,
+  };
+}
+
 function hasCompletedMorningWindowContext(chartContext?: ChartContext | null): boolean {
   if (!chartContext) return false;
   const morningContext = chartContext.morningWindowContext;
@@ -855,7 +889,19 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   if (hasTwoR) evidence.push('Minimum 2.0R available');
   else missingEvidence.push('Minimum 2.0R unavailable');
 
-  const fullSequence = hasSweep && hasReclaim && hasFailedContinuation && entry !== null && stop !== null && target2 !== null && hasTwoR;
+  const bigPicture = bigPictureStructureForDirection(chartContext, direction);
+  if (bigPicture.evidence) evidence.push(bigPicture.evidence);
+  if (bigPicture.missingEvidence) missingEvidence.push(bigPicture.missingEvidence);
+
+  const fullSequence =
+    hasSweep &&
+    hasReclaim &&
+    hasFailedContinuation &&
+    entry !== null &&
+    stop !== null &&
+    target2 !== null &&
+    hasTwoR &&
+    !bigPicture.countertrend;
   const possible = !fullSequence && hasSweep;
 
   return {
@@ -873,8 +919,12 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
         : `Invalid if price trades above the sweep wick structure stop near ${stop}.`
       : null,
     requiredTrigger: direction === 'LONG'
-      ? 'Bullish Turtle Soup requires a sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
-      : 'Bearish Turtle Soup requires a buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
+      ? bigPicture.countertrend
+        ? 'Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure.'
+        : 'Bullish Turtle Soup requires a sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
+      : bigPicture.countertrend
+        ? 'Countertrend bearish Turtle Soup requires immediate reclaim failure against the bullish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure.'
+        : 'Bearish Turtle Soup requires a buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
     confidence: breakerFvgConfluence?.entryInside && (fullSequence || possible)
       ? fullSequence ? 'High' : 'Medium'
       : fullSequence ? 'High' : possible ? 'Medium' : 'Low',
@@ -1198,6 +1248,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     ? validateTurtleSoup(input.chartContext, manualLevelConfirmation)
     : null;
   const primaryValidation = modelOneValidation || turtleSoupValidation;
+  const bigPicture = bigPictureStructureForDirection(input.chartContext, primaryValidation?.direction || 'NO TRADE');
   const facts = allowNarrativeFallback ? findRelevantFacts(entry, extractPlanFacts(input.result), text) : [];
   const bestFact = facts.find((fact) => fact.entry !== null && fact.stop !== null) || facts[0] || null;
   const structuredDetected = !missingMorningWindowContext && Boolean(
@@ -1252,8 +1303,13 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     entry.priority,
     confidence
   );
+  const executionAfterBigPicture = bigPicture.countertrend && execution.executionStatus === ExecutionStatus.Executable
+    ? { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending }
+    : execution;
   const visibleStatus =
-    execution.blockReason === NoTradeReason.RiskTooWide && detectedStatus === SetupCandidateStatus.Detected
+    bigPicture.countertrend && detectedStatus === SetupCandidateStatus.Detected
+      ? SetupCandidateStatus.Possible
+      : executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide && detectedStatus === SetupCandidateStatus.Detected
       ? SetupCandidateStatus.Detected
       : detectedStatus;
 
@@ -1277,24 +1333,34 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     levelContextSummary: levelContext.summary,
     evidence: Array.from(new Set([
       ...(primaryValidation?.evidence?.length ? primaryValidation.evidence : structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
+      ...(bigPicture.evidence ? [bigPicture.evidence] : []),
       ...(detected || possible ? supportingEvidenceNotes(input.chartContext) : []),
     ])),
     missingEvidence: missingMorningWindowContext
       ? ['Completed Morning window context is required before this Lunch subtype can activate.']
       : manualLevelConfirmation
-      ? Array.from(new Set([...(primaryValidation?.missingEvidence || structuredEvidence?.missingEvidence || []), 'Exact entry/stop levels require manual confirmation.']))
-      : primaryValidation?.missingEvidence?.length ? primaryValidation.missingEvidence : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence,
-    executionStatus: execution.executionStatus,
-    blockReason: execution.blockReason,
+      ? Array.from(new Set([
+          ...(primaryValidation?.missingEvidence || structuredEvidence?.missingEvidence || []),
+          ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+          'Exact entry/stop levels require manual confirmation.',
+        ]))
+      : Array.from(new Set([
+          ...(primaryValidation?.missingEvidence?.length ? primaryValidation.missingEvidence : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence),
+          ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+        ])),
+    executionStatus: executionAfterBigPicture.executionStatus,
+    blockReason: executionAfterBigPicture.blockReason,
     requiredTrigger: primaryValidation?.requiredTrigger || structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
     nextAction:
       missingMorningWindowContext
         ? 'Load or complete Morning 15M/5M context first. Lunch subtypes cannot activate from the Lunch chart alone.'
-        : execution.blockReason === NoTradeReason.RiskTooWide
+        : bigPicture.countertrend
+        ? 'Countertrend conditional only. Requires immediate reclaim failure and fresh 5M confirmation. Do not fight big-picture structure.'
+        : executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide
         ? 'Execution blocked by actual risk. Preserve the setup and wait for a cleaner retest with a structure stop inside the allowed risk limit.'
         : entry.defaultNextAction,
     reducedRiskPlan:
-      execution.blockReason === NoTradeReason.RiskTooWide
+      executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide
         ? {
             direction,
             entry: null,
@@ -1329,6 +1395,9 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.evidence.includes('Breaker + FVG overlap confluence')
       ? 3
       : 0;
+  const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
+    ? -60
+    : 0;
   const score =
     executionScore +
     confidenceScore +
@@ -1337,7 +1406,8 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     clarityScore +
     (candidate.levelContextScore || 0) +
     (candidate.proximityScore || 0) * 10 +
-    confluenceBonus;
+    confluenceBonus +
+    countertrendPenalty;
   candidate.rankScore = score;
   return score;
 }
