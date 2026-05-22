@@ -1,9 +1,11 @@
 import { SetupType } from '../types';
 
 export type SetupSession = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+export type SetupRole = 'primary_model' | 'supporting_evidence' | 'deprecated';
 
 export interface SetupRegistryEntry {
   setupType: SetupType;
+  role: SetupRole;
   label: string;
   aliases: string[];
   priority: number;
@@ -19,9 +21,14 @@ const BOTH_SESSIONS: SetupSession[] = ['morning', 'lunch', 'replay_morning', 're
 const MORNING_SESSIONS: SetupSession[] = ['morning', 'replay_morning'];
 const LUNCH_SESSIONS: SetupSession[] = ['lunch', 'replay_lunch'];
 
+// Registry roles are metadata only in this phase. Later phases should let
+// primary_model entries create active trade candidates, supporting_evidence
+// entries contribute facts/reasons/scoring only, and deprecated entries stay
+// out of active scanner, Discord alert, and trade-decision logic.
 export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.OrderBlock618,
+    role: 'deprecated',
     label: 'Prior Impulse Reaction Zone / 61.8%',
     aliases: ['61.8 Golden Ratio', 'Risk Mitigation Order Block'],
     priority: 82,
@@ -33,7 +40,21 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     defaultNextAction: 'Confirm the retracement level and stop distance before execution.',
   },
   {
+    setupType: SetupType.SweepMssFvgRetrace,
+    role: 'primary_model',
+    label: 'Sweep -> MSS -> FVG Retrace',
+    aliases: ['Sweep Reclaim Imbalance Retrace', 'Sweep MSS FVG', 'Model 1'],
+    priority: 98,
+    allowedSessions: BOTH_SESSIONS,
+    detectionKeywords: ['sweep mss fvg', 'sweep reclaim displacement structure shift fvg retrace', 'sweep reclaim imbalance retrace'],
+    possibleKeywords: ['liquidity sweep', 'reclaim', 'market structure shift', 'fvg retrace', 'imbalance retrace'],
+    requiredEvidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Minimum 2.0R'],
+    defaultRequiredTrigger: 'Retrace into the FVG after sweep, reclaim, displacement, and market structure shift are confirmed.',
+    defaultNextAction: 'Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.',
+  },
+  {
     setupType: SetupType.LiquiditySweep,
+    role: 'supporting_evidence',
     label: 'Liquidity Sweep',
     aliases: ['Sweep and Reclaim', 'Stop Hunt'],
     priority: 96,
@@ -46,6 +67,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.TurtleSoup,
+    role: 'primary_model',
     label: 'Turtle Soup Reversal',
     aliases: ['Turtle Soup', 'Failed Breakout Reversal', 'Failed Breakdown Reversal'],
     priority: 95,
@@ -58,6 +80,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MomentumRunaway,
+    role: 'deprecated',
     label: 'Momentum / Runaway',
     aliases: ['Runaway', 'Momentum Entry'],
     priority: 88,
@@ -70,6 +93,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.FairValueGap,
+    role: 'supporting_evidence',
     label: 'Imbalance Zone',
     aliases: ['FVG', 'Imbalance'],
     priority: 86,
@@ -82,6 +106,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.FvgImbalancePullback,
+    role: 'supporting_evidence',
     label: 'Imbalance Pullback',
     aliases: ['FVG Pullback', 'Imbalance Rebalance'],
     priority: 84,
@@ -94,6 +119,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MarketStructureShift,
+    role: 'supporting_evidence',
     label: 'Market Structure Reversal',
     aliases: ['MSS', 'ChoCH', 'Change of Character'],
     priority: 80,
@@ -106,6 +132,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.OpeningOrderBlock,
+    role: 'deprecated',
     label: 'Opening Reaction Zone',
     aliases: ['Confirmation Bar', 'Opening Confirmation Bar'],
     priority: 78,
@@ -118,6 +145,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.EqualHighsLows,
+    role: 'supporting_evidence',
     label: 'Resting Liquidity Pool',
     aliases: ['EQH', 'EQL', 'Liquidity Pool'],
     priority: 76,
@@ -130,6 +158,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.InitialBalanceExtension,
+    role: 'deprecated',
     label: 'Opening Range Extension',
     aliases: ['IB Extension'],
     priority: 74,
@@ -142,6 +171,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.PreviousDaySweep,
+    role: 'supporting_evidence',
     label: 'Previous Day High/Low Sweep',
     aliases: ['PDH Sweep', 'PDL Sweep'],
     priority: 72,
@@ -154,6 +184,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.CompressionBreakout,
+    role: 'deprecated',
     label: 'Compression Breakout',
     aliases: ['Coil', 'Spring'],
     priority: 68,
@@ -166,6 +197,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.OpeningGapFill,
+    role: 'deprecated',
     label: 'Opening Gap Fill',
     aliases: ['Gap Fill'],
     priority: 66,
@@ -178,6 +210,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.BreakerBlock,
+    role: 'supporting_evidence',
     label: 'Failed Structure Retest Zone',
     aliases: ['Breaker'],
     priority: 62,
@@ -190,6 +223,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.AlgoKillZone,
+    role: 'deprecated',
     label: 'Execution Window Setup',
     aliases: ['Kill Zone', 'Time Mechanics'],
     priority: 90,
@@ -202,6 +236,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MitigationBlock,
+    role: 'deprecated',
     label: 'Initiating Move Retest Zone',
     aliases: ['Mitigation'],
     priority: 60,
@@ -214,6 +249,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MomentumPullbackBreatherReclaim,
+    role: 'deprecated',
     label: 'Momentum Pullback / Breather Reclaim',
     aliases: ['Breather Reclaim', 'Momentum Pullback'],
     priority: 87,
@@ -226,6 +262,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MorningFailedHighLiquidityRejection,
+    role: 'deprecated',
     label: 'Morning Failed High / Liquidity Rejection',
     aliases: ['Morning Failed High', 'Failed High Liquidity Rejection', 'Morning Liquidity Rejection'],
     priority: 89,
@@ -238,6 +275,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MorningReclaimLong,
+    role: 'deprecated',
     label: 'Morning Reclaim Long',
     aliases: ['Morning Reclaim', 'Key Level Reclaim Long', 'Resistance Reclaim Long'],
     priority: 88,
@@ -250,6 +288,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.MorningOpeningRangeContinuation,
+    role: 'deprecated',
     label: 'Opening Range Continuation',
     aliases: ['Opening Range Continuation', 'Opening Range Retest', 'Opening Range Reclaim'],
     priority: 87,
@@ -262,6 +301,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.LunchFailedHighReversal,
+    role: 'deprecated',
     label: 'Lunch Failed High Reversal',
     aliases: ['Failed High Reversal', 'Morning High Failure', 'Lunch High Sweep Failure'],
     priority: 94,
@@ -274,6 +314,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.LunchFailedLowReversal,
+    role: 'deprecated',
     label: 'Lunch Failed Low Reversal',
     aliases: ['Failed Low Reversal', 'Morning Low Failure', 'Lunch Low Sweep Failure'],
     priority: 94,
@@ -286,6 +327,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.LunchCompressionBreakout,
+    role: 'deprecated',
     label: 'Lunch Compression Breakout',
     aliases: ['Lunch Coil Breakout', 'Midday Compression Breakout'],
     priority: 78,
@@ -298,6 +340,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.LunchFailedContinuation,
+    role: 'deprecated',
     label: 'Lunch Failed Continuation',
     aliases: ['Failed Continuation', 'Midday Continuation Failure'],
     priority: 86,
@@ -310,6 +353,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
   {
     setupType: SetupType.LunchRangeReclaim,
+    role: 'deprecated',
     label: 'Lunch Range Reclaim',
     aliases: ['Midday Range Reclaim', 'Lunch Range Re-entry'],
     priority: 82,
@@ -324,6 +368,22 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
 
 export const APPROVED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);
 
+export function getPrimarySetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
+  return SETUP_REGISTRY.filter((entry) => entry.role === 'primary_model' && entry.allowedSessions.includes(sessionType));
+}
+
+export function getSupportingEvidenceRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
+  return SETUP_REGISTRY.filter((entry) => entry.role === 'supporting_evidence' && entry.allowedSessions.includes(sessionType));
+}
+
+export function getDeprecatedSetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
+  return SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated' && entry.allowedSessions.includes(sessionType));
+}
+
+/**
+ * @deprecated Use getPrimarySetupRegistry or getSupportingEvidenceRegistry.
+ * This currently returns all allowed registry entries for backward compatibility.
+ */
 export function getAllowedSetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
   return SETUP_REGISTRY.filter((entry) => entry.allowedSessions.includes(sessionType));
 }

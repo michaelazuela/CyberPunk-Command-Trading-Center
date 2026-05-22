@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SETUP_REGISTRY } from '../config/setupRegistry';
+import { getPrimarySetupRegistry, SETUP_REGISTRY } from '../config/setupRegistry';
 import { DECISION_STEPS } from '../config/decisionSteps';
 import {
   AnalysisResult,
@@ -292,10 +292,10 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.entry, 7400);
   }],
 
-  ['11. Valid approved trade', () => {
+  ['11. Narrative-only primary setup remains conditional until ICT gates are complete', () => {
     const result = assertSameSequence();
-    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.setupAssessment.setupType, SetupType.LiquiditySweep);
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.setupAssessment.setupType, SetupType.SweepMssFvgRetrace);
     assert.equal(result.riskAssessment.riskPoints, 4);
     assert.equal(result.target1, 7406);
     assert.equal(result.target2, 7408);
@@ -339,23 +339,27 @@ const tests: Array<[string, () => void]> = [
     );
   }],
 
-  ['14. Pipeline carries every setup candidate into the final decision result', () => {
+  ['14. Pipeline carries only primary setup candidates into the final decision result', () => {
     const result = assertSameSequence();
+    const primary = getPrimarySetupRegistry('morning');
 
-    assert.equal(result.setupCandidates?.length, SETUP_REGISTRY.length);
+    assert.equal(result.setupCandidates?.length, primary.length);
     assert.deepEqual(
       new Set(result.setupCandidates?.map((candidate) => candidate.setupType)),
-      new Set(SETUP_REGISTRY.map((entry) => entry.setupType))
+      new Set(primary.map((entry) => entry.setupType))
     );
+    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role !== 'primary_model')) {
+      assert.ok(!result.setupCandidates?.some((candidate) => candidate.setupType === entry.setupType));
+    }
   }],
 
-  ['15. Pipeline selects best executable candidate when one is available', () => {
+  ['15. Pipeline selects the primary model candidate when one is available', () => {
     const result = assertSameSequence();
 
-    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
-    assert.equal(result.finalTradePlan.setupType, SetupType.LiquiditySweep);
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.SweepMssFvgRetrace);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(result.finalTradePlan.setupType, SetupType.SweepMssFvgRetrace);
   }],
 
   ['16. Pipeline shows best conditional candidate when no executable candidate exists', () => {
@@ -436,7 +440,7 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
@@ -473,7 +477,7 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.status, TradeDecisionStatus.ConditionalTrade);
     assert.equal(result.riskAssessment.riskPoints, 5);
     assert.equal(result.target1, 7407.75);
     assert.equal(result.target2, 7410.25);
@@ -499,10 +503,6 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.ok(
-      result.status === TradeDecisionStatus.Wait ||
-      result.status === TradeDecisionStatus.ConditionalTrade
-    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
     assert.equal(stepStatus(result, TradeDecisionStep.ConfirmScreenshotUsability), 'warning');
   }],
@@ -545,9 +545,6 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.ok(
-      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
-    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -568,9 +565,6 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.ok(
-      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
-    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -643,13 +637,10 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.ok(
-      result.status === TradeDecisionStatus.ConditionalTrade || result.status === TradeDecisionStatus.Wait
-    );
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['28. Morning failed-high builder creates a visible conditional short with projected targets', () => {
+  ['28. Deprecated morning failed-high builder does not create an active candidate', () => {
     const result = assertSameSequence({
       sessionType: 'morning',
       windowStatusOverride: 'active',
@@ -696,18 +687,12 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
-    assert.ok(candidate);
-    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(candidate.direction, 'SHORT');
-    assert.equal(candidate.entry, 7487.75);
-    assert.equal(candidate.stop, 7497.5);
-    assert.equal(candidate.target1, 7473.25);
-    assert.equal(candidate.target2, 7468.25);
-    assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleLow' && level.requiredFor === 'trigger'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['29. Morning reclaim builder creates a visible conditional long with projected targets', () => {
+  ['29. Deprecated morning reclaim builder does not create an active candidate', () => {
     const result = assertSameSequence({
       sessionType: 'morning',
       windowStatusOverride: 'active',
@@ -742,21 +727,12 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.ok(candidate);
-    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(candidate.direction, 'LONG');
-    assert.equal(candidate.scenarioLabel, 'Reclaim continuation toward NY Premarket High');
-    assert.equal(candidate.entry, 7500.25);
-    assert.equal(candidate.stop, 7494);
-    assert.equal(candidate.target1, 7509.75);
-    assert.equal(candidate.target2, 7512.75);
-    assert.ok(candidate.requiredTrigger?.includes('5M close above reclaim level'));
-    assert.ok(candidate.invalidation?.includes('reclaim level fails'));
-    assert.ok(candidate.missingLevels?.some((level) => level.key === 'triggerCandleHigh' && level.requiredFor === 'trigger'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['30. Morning reclaim builder keeps long path visible from short-biased failed-high extraction', () => {
+  ['30. Deprecated morning reclaim does not appear from short-biased extraction', () => {
     const result = assertSameSequence({
       sessionType: 'morning',
       windowStatusOverride: 'active',
@@ -792,14 +768,8 @@ const tests: Array<[string, () => void]> = [
     });
 
     const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.ok(longCandidate);
-    assert.equal(longCandidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(longCandidate.direction, 'LONG');
-    assert.equal(longCandidate.entry, 7500.25);
-    assert.equal(longCandidate.stop, 7494);
-    assert.equal(longCandidate.target1, 7509.75);
-    assert.equal(longCandidate.target2, 7512.75);
-    assert.ok(longCandidate.requiredTrigger?.includes('7500'));
+    assert.equal(longCandidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -854,17 +824,15 @@ const tests: Array<[string, () => void]> = [
     const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
     const shortCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
 
-    assert.equal(result.status, TradeDecisionStatus.Wait);
-    assert.equal(stepStatus(result, TradeDecisionStep.DetermineBias), 'warning');
-    assert.ok(longCandidate);
-    assert.ok(shortCandidate);
-    assert.equal(longCandidate.direction, 'LONG');
-    assert.equal(shortCandidate.direction, 'SHORT');
-    assert.notEqual(result.status, TradeDecisionStatus.NoTrade);
+    assert.equal(result.status, TradeDecisionStatus.NoTrade);
+    assert.equal(stepStatus(result, TradeDecisionStep.DetermineBias), 'fail');
+    assert.equal(longCandidate, undefined);
+    assert.equal(shortCandidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['30c. Lunch failed-low builder labels reclaim continuation toward NY Premarket High', () => {
+  ['30c. Deprecated lunch failed-low builder does not create an active candidate', () => {
     const result = assertSameSequence({
       sessionType: 'lunch',
       windowStatusOverride: 'active',
@@ -926,16 +894,12 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedLowReversal);
-    assert.ok(candidate);
-    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(candidate.direction, 'LONG');
-    assert.equal(candidate.scenarioLabel, 'Failed low reclaim toward NY Premarket High');
-    assert.ok(candidate.requiredTrigger?.includes('5M close back above reclaim level'));
-    assert.ok(candidate.invalidation?.includes('reclaim level fails'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['30d. Lunch failed-high builder labels reversal toward NY Premarket Low', () => {
+  ['30d. Deprecated lunch failed-high builder does not create an active candidate', () => {
     const result = assertSameSequence({
       sessionType: 'lunch',
       windowStatusOverride: 'active',
@@ -997,11 +961,8 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedHighReversal);
-    assert.ok(candidate);
-    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(candidate.direction, 'SHORT');
-    assert.equal(candidate.scenarioLabel, 'Failed high reversal toward NY Premarket Low');
-    assert.ok(candidate.requiredTrigger?.includes('5M close back below morning high'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1068,9 +1029,8 @@ const tests: Array<[string, () => void]> = [
       .filter((candidate) => candidate.entry !== null && candidate.entry > 7446);
     assert.equal(staleEntries.length, 0);
     const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.ok(longCandidate);
-    assert.equal(longCandidate.direction, 'LONG');
-    assert.ok(longCandidate.entry === null || longCandidate.entry <= 7446);
+    assert.equal(longCandidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1169,7 +1129,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(plan.targetManagementInstruction?.includes('imbalance') || plan.notes.join(' ').includes('Imbalance'));
   }],
 
-  ['34. Morning reclaim long uses completed 5M reclaim candle and protected swing low', () => {
+  ['34. Deprecated morning reclaim long does not create an active candidate from structured facts', () => {
     const result = assertSameSequence({
       sessionType: 'morning',
       windowStatusOverride: 'active',
@@ -1220,16 +1180,12 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
-    assert.ok(candidate);
-    assert.equal(candidate.direction, 'LONG');
-    assert.equal(candidate.entry, 7399.25);
-    assert.equal(candidate.stop, 7387.75);
-    assert.ok(candidate.requiredTrigger?.includes('reclaim candle high'));
-    assert.ok(candidate.nextAction.includes('successful reclaim retest'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['35. Opening range continuation builder creates retest-based morning plan', () => {
+  ['35. Deprecated opening range continuation does not create an active candidate', () => {
     const result = assertSameSequence({
       sessionType: 'morning',
       windowStatusOverride: 'active',
@@ -1282,16 +1238,12 @@ const tests: Array<[string, () => void]> = [
     });
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningOpeningRangeContinuation && item.direction === 'LONG');
-    assert.ok(candidate);
-    assert.equal(candidate.direction, 'LONG');
-    assert.equal(candidate.entry, 7411.25);
-    assert.equal(candidate.stop, 7400.75);
-    assert.ok(candidate.requiredTrigger?.includes('opening range high'));
-    assert.ok(candidate.nextAction.includes('opening range retest'));
+    assert.equal(candidate, undefined);
+    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
-  ['36. Imbalance pullback builder works without narrative and shared best-two prefers concrete plans', () => {
+  ['36. Supporting imbalance facts do not create an active support candidate', () => {
     const result = assertSameSequence({
       sessionType: 'lunch',
       windowStatusOverride: 'active',
@@ -1367,13 +1319,10 @@ const tests: Array<[string, () => void]> = [
     });
 
     const imbalance = result.setupCandidates?.find((item) => item.setupType === SetupType.FvgImbalancePullback && item.direction === 'LONG');
-    assert.ok(imbalance);
-    assert.equal(imbalance.entry, 7450.25);
-    assert.equal(imbalance.stop, 7443.75);
-    assert.ok(imbalance.requiredTrigger?.includes('imbalance zone'));
+    assert.equal(imbalance, undefined);
     const selected = selectBestTwoScenarios(result.setupCandidates || []);
-    assert.ok(selected.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
-    assert.ok(selected.every((candidate) => candidate.entry !== null && candidate.stop !== null));
+    assert.ok(!selected.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
+    assert.ok(selected.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 

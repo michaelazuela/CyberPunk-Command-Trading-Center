@@ -125,28 +125,10 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
-  if (text.includes('LUNCH FAILED HIGH') || text.includes('MORNING HIGH FAILURE')) return SetupType.LunchFailedHighReversal;
-  if (text.includes('LUNCH FAILED LOW') || text.includes('MORNING LOW FAILURE')) return SetupType.LunchFailedLowReversal;
-  if (text.includes('LUNCH COMPRESSION') || text.includes('MIDDAY COMPRESSION')) return SetupType.LunchCompressionBreakout;
-  if (text.includes('LUNCH FAILED CONTINUATION') || text.includes('CONTINUATION FAILURE')) return SetupType.LunchFailedContinuation;
-  if (text.includes('LUNCH RANGE RECLAIM') || text.includes('RECLAIM MORNING RANGE')) return SetupType.LunchRangeReclaim;
-  if (text.includes('MORNING FAILED HIGH') || text.includes('LIQUIDITY REJECTION')) return SetupType.MorningFailedHighLiquidityRejection;
-  if (text.includes('MORNING RECLAIM') || text.includes('RECLAIM LONG')) return SetupType.MorningReclaimLong;
   if (text.includes('TURTLE SOUP') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.TurtleSoup;
-  if (text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('HUNT') || text.includes('RECLAIM')) return SetupType.LiquiditySweep;
-  if (text.includes('MOMENTUM') || text.includes('RUNAWAY') || text.includes('BREATHER') || text.includes('IMPULSE CONTINUATION')) return SetupType.MomentumRunaway;
-  if (text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE')) return SetupType.FairValueGap;
-  if (text.includes('MSS') || text.includes('CHOCH') || text.includes('STRUCTURE SHIFT')) return SetupType.MarketStructureShift;
-  if (text.includes('INITIAL BALANCE') || text.includes('IB EXTENSION') || text.includes('IB HIGH') || text.includes('IB LOW')) return SetupType.InitialBalanceExtension;
-  if (text.includes('OPENING ORDER BLOCK') || text.includes('CONFIRMATION BAR')) return SetupType.OpeningOrderBlock;
-  if (text.includes('61.8') || text.includes('GOLDEN') || text.includes('ORDER BLOCK')) return SetupType.OrderBlock618;
-  if (text.includes('EQUAL HIGH') || text.includes('EQUAL LOW') || text.includes('EQH') || text.includes('EQL')) return SetupType.EqualHighsLows;
-  if (text.includes('PDH') || text.includes('PDL') || text.includes('PREVIOUS DAY')) return SetupType.PreviousDaySweep;
-  if (text.includes('COMPRESSION') || text.includes('COIL') || text.includes('SPRING')) return SetupType.CompressionBreakout;
-  if (text.includes('GAP FILL') || text.includes('OPENING GAP')) return SetupType.OpeningGapFill;
-  if (text.includes('BREAKER')) return SetupType.BreakerBlock;
-  if (text.includes('MITIGATION')) return SetupType.MitigationBlock;
-  if (text.includes('KILL ZONE') || text.includes('ALGO')) return SetupType.AlgoKillZone;
+  const hasSweepOrReclaim = text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('RECLAIM') || text.includes('FAILED BREAKOUT') || text.includes('FAILED BREAKDOWN');
+  const hasStructureOrImbalance = text.includes('MSS') || text.includes('STRUCTURE SHIFT') || text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE') || text.includes('DISPLACEMENT');
+  if (hasSweepOrReclaim || hasStructureOrImbalance) return SetupType.SweepMssFvgRetrace;
   return SetupType.NoSetup;
 }
 
@@ -329,29 +311,8 @@ function confidenceScore(confidence: Confidence): number {
 
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
-    case SetupType.LiquiditySweep: return 100;
+    case SetupType.SweepMssFvgRetrace: return 100;
     case SetupType.TurtleSoup: return 98;
-    case SetupType.MomentumRunaway: return 88;
-    case SetupType.FairValueGap: return 82;
-    case SetupType.InitialBalanceExtension: return 78;
-    case SetupType.MarketStructureShift: return 74;
-    case SetupType.OpeningOrderBlock: return 72;
-    case SetupType.OrderBlock618: return 70;
-    case SetupType.EqualHighsLows: return 68;
-    case SetupType.PreviousDaySweep: return 66;
-    case SetupType.CompressionBreakout: return 58;
-    case SetupType.OpeningGapFill: return 52;
-    case SetupType.BreakerBlock: return 46;
-    case SetupType.MitigationBlock: return 42;
-    case SetupType.AlgoKillZone: return 40;
-    case SetupType.MorningFailedHighLiquidityRejection: return 89;
-    case SetupType.MorningReclaimLong: return 88;
-    case SetupType.MorningOpeningRangeContinuation: return 87;
-    case SetupType.LunchFailedHighReversal: return 96;
-    case SetupType.LunchFailedLowReversal: return 96;
-    case SetupType.LunchFailedContinuation: return 90;
-    case SetupType.LunchRangeReclaim: return 86;
-    case SetupType.LunchCompressionBreakout: return 78;
     default: return 0;
   }
 }

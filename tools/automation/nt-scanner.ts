@@ -488,10 +488,25 @@ function analysisFromBars(args: {
   };
 }
 
-function chooseBestCandidate(candidates: SetupCandidate[] | undefined): SetupCandidate | null {
+function chooseBestCandidate(
+  candidates: SetupCandidate[] | undefined,
+  currentPrice: number | null,
+  config: ScannerConfig
+): SetupCandidate | null {
   return (candidates || [])
     .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT')
     .filter((candidate) => candidate.executionStatus === 'Executable' || candidate.executionStatus === 'Conditional' || candidate.executionStatus === 'Blocked')
+    .filter((candidate) => !applyStaleChaseGuard({
+      candidate,
+      currentPrice,
+      guards: {
+        maxChaseDistancePoints: config.maxChaseDistancePoints,
+        maxChaseDistanceR: config.maxChaseDistanceR,
+        staleSetupMaxCandles: config.staleSetupMaxCandles,
+        targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
+        allowRetestOnlyEntries: config.allowRetestOnlyEntries,
+      },
+    }).stale)
     .sort((a, b) => (b.rankScore || b.priority || 0) - (a.rankScore || a.priority || 0))[0] || null;
 }
 
@@ -504,8 +519,17 @@ function analysisTimestampDate(analysis: AnalysisResult, completed5m: NinjaBridg
     completed5m?.time ||
     null;
 
+  if (timestamp) {
+    const timestampText = String(timestamp);
+    const hasExplicitZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(timestampText);
+    if (!hasExplicitZone) {
+      const parsedBridgeTime = parseBridgeTime(timestampText, config.barTimeZone);
+      if (parsedBridgeTime) return parsedBridgeTime;
+    }
+  }
+
   if (timestamp === completed5m?.time) {
-    const parsedBridgeTime = parseBridgeTime(completed5m.time, config.barTimeZone);
+    const parsedBridgeTime = parseBridgeTime(String(completed5m.time), config.barTimeZone);
     if (parsedBridgeTime) return parsedBridgeTime;
   }
 
@@ -724,7 +748,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     : liveBars;
   const analysis = analysisFromBars({ config, session, tradeDate, bars });
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
-  const candidate = chooseBestCandidate(normalized.setupCandidates);
+  const candidate = chooseBestCandidate(normalized.setupCandidates, currentPrice, config);
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
   const scoringTimestampSource =
     analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :

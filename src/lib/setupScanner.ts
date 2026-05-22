@@ -8,7 +8,11 @@ import {
   SetupType,
 } from '../types';
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
-import { SETUP_REGISTRY, SetupRegistryEntry, SetupSession } from '../config/setupRegistry';
+import {
+  getPrimarySetupRegistry,
+  SetupRegistryEntry,
+  SetupSession,
+} from '../config/setupRegistry';
 
 type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
@@ -193,6 +197,7 @@ function findRelevantFacts(entry: SetupRegistryEntry, facts: ExtractedPlanFacts[
 
 function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartContext['setupEvidence']> | null {
   switch (setupType) {
+    case SetupType.SweepMssFvgRetrace: return 'liquiditySweep';
     case SetupType.OrderBlock618: return 'orderBlockRetest';
     case SetupType.LiquiditySweep: return 'liquiditySweep';
     case SetupType.TurtleSoup: return 'liquiditySweep';
@@ -220,6 +225,30 @@ function evidenceKeyForSetup(setupType: SetupType): keyof NonNullable<ChartConte
     case SetupType.LunchRangeReclaim: return 'lunchRangeReclaim';
     default: return null;
   }
+}
+
+function supportingEvidenceNotes(chartContext?: ChartContext | null): string[] {
+  if (!chartContext) return [];
+  const notes: string[] = [];
+  if ([...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])].some((event) => event.type === 'sweep' && isReadableConfidence(event.confidence))) {
+    notes.push('Supporting evidence: liquidity sweep fact present.');
+  }
+  if ([...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])].some((event) => event.reclaimed && isReadableConfidence(event.confidence))) {
+    notes.push('Supporting evidence: reclaim after sweep fact present.');
+  }
+  if (chartContext.fvgZones?.some((zone) => isReadableConfidence(zone.confidence))) {
+    notes.push('Supporting evidence: imbalance zone fact present.');
+  }
+  if (chartContext.marketStructure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) {
+    notes.push('Supporting evidence: market structure shift fact present.');
+  }
+  if (chartContext.liquidityEvents?.some((event) => (event.type === 'equal_highs' || event.type === 'equal_lows') && isReadableConfidence(event.confidence))) {
+    notes.push('Supporting evidence: resting liquidity pool fact present.');
+  }
+  if (chartContext.liquidityEvents?.some((event) => (event.type === 'pdh_sweep' || event.type === 'pdl_sweep') && isReadableConfidence(event.confidence))) {
+    notes.push('Supporting evidence: previous day sweep fact present.');
+  }
+  return notes;
 }
 
 function isLunchSubtype(setupType: SetupType): boolean {
@@ -328,6 +357,14 @@ function structuredDirectionForSetup(entry: SetupRegistryEntry, chartContext?: C
   const evidence = setupEvidenceFromContext(entry, chartContext);
   if (evidence?.direction && evidence.direction !== 'NO TRADE') return evidence.direction;
 
+  if (entry.setupType === SetupType.SweepMssFvgRetrace) {
+    const sweepDirection = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])]
+      .find((event) => event.type === 'sweep' && event.reclaimed && isReadableConfidence(event.confidence))?.direction;
+    const fvgDirection = chartContext.fvgZones?.find((zone) => isReadableConfidence(zone.confidence))?.direction;
+    if (sweepDirection && sweepDirection !== 'NO TRADE') return sweepDirection;
+    if (fvgDirection) return fvgDirection;
+  }
+
   const readableFvg = chartContext.fvgZones?.find((zone) => isReadableConfidence(zone.confidence));
   if (
     (entry.setupType === SetupType.FairValueGap || entry.setupType === SetupType.FvgImbalancePullback) &&
@@ -416,6 +453,14 @@ function structuredContextSupportsSetup(entry: SetupRegistryEntry, chartContext?
   ));
 
   switch (entry.setupType) {
+    case SetupType.SweepMssFvgRetrace:
+      return Boolean(
+        hasSweep &&
+        (hasReclaim || chartContext.setupReadyFacts?.sweepThenReclaim) &&
+        (candles.expansion || structure?.expansionCondition || chartContext.displacementCandles?.some((candle) => isReadableConfidence(candle.confidence))) &&
+        (structure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) &&
+        (hasReadableFvg || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed)
+      );
     case SetupType.MomentumRunaway:
       return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
     case SetupType.MomentumPullbackBreatherReclaim:
@@ -490,6 +535,15 @@ function structuredContextDetectsSetup(entry: SetupRegistryEntry, chartContext?:
   ));
 
   switch (entry.setupType) {
+    case SetupType.SweepMssFvgRetrace:
+      return Boolean(
+        hasSweep &&
+        (hasReclaim || chartContext.setupReadyFacts?.sweepThenReclaim) &&
+        (candles.expansion || structure?.expansionCondition || chartContext.displacementCandles?.some((candle) => isReadableConfidence(candle.confidence))) &&
+        (structure?.marketStructureShift || chartContext.setupReadyFacts?.breakOfStructure) &&
+        hasReadableFvg &&
+        (chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed)
+      );
     case SetupType.MomentumRunaway:
       return Boolean((candles.expansion || structure?.expansionCondition) && (structure?.trend === 'bullish' || structure?.trend === 'bearish'));
     case SetupType.LiquiditySweep:
@@ -646,7 +700,10 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     proximityScore: detected ? 0.75 : possible ? 0.55 : 0,
     levelContextScore: levelContext.score,
     levelContextSummary: levelContext.summary,
-    evidence: structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : [],
+    evidence: Array.from(new Set([
+      ...(structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
+      ...(detected || possible ? supportingEvidenceNotes(input.chartContext) : []),
+    ])),
     missingEvidence: missingMorningWindowContext
       ? ['Completed Morning window context is required before this Lunch subtype can activate.']
       : manualLevelConfirmation
@@ -706,7 +763,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
 
 export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const text = buildSearchText(input);
-  const candidates = SETUP_REGISTRY
+  const candidates = getPrimarySetupRegistry(input.sessionType)
     .map((entry) => candidateForEntry(entry, input, text))
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 
@@ -721,5 +778,5 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
 }
 
 export function getScannedSetupTypes(): SetupType[] {
-  return SETUP_REGISTRY.map((entry) => entry.setupType);
+  return getPrimarySetupRegistry('morning').map((entry) => entry.setupType);
 }

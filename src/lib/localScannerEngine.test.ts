@@ -245,6 +245,11 @@ const stale = applyStaleChaseGuard({ candidate: strongCandidate, currentPrice: 1
 assert.equal(stale.state, 'Missed');
 assert.equal(stale.stale, true);
 
+const targetAlreadyReached = applyStaleChaseGuard({ candidate: strongCandidate, currentPrice: 108 });
+assert.equal(targetAlreadyReached.state, 'Missed');
+assert.equal(targetAlreadyReached.stale, true);
+assert.ok(targetAlreadyReached.reason?.includes('T1 was already reached'));
+
 const notStale = applyStaleChaseGuard({ candidate: strongCandidate, currentPrice: 101 });
 assert.equal(notStale.stale, false);
 

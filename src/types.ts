@@ -25,6 +25,7 @@ export enum BiasDirection {
 
 export enum SetupType {
   OrderBlock618 = 'OrderBlock618',
+  SweepMssFvgRetrace = 'SweepMssFvgRetrace',
   LiquiditySweep = 'LiquiditySweep',
   TurtleSoup = 'TurtleSoup',
   MomentumRunaway = 'MomentumRunaway',

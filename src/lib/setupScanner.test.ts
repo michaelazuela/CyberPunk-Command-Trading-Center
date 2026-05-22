@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SETUP_REGISTRY } from '../config/setupRegistry';
+import { getPrimarySetupRegistry, getSupportingEvidenceRegistry, SETUP_REGISTRY } from '../config/setupRegistry';
 import {
   AnalysisResult,
   ChartContext,
@@ -426,53 +426,54 @@ const tests: Array<[string, () => void]> = [
     assert.equal(context.extractedLevels?.[0].role, 'support');
   }],
 
-  ['scanner represents every approved setup registry entry', () => {
+  ['scanner creates active candidates only from primary model registry entries', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Neutral baseline with no obvious setup.'),
     });
+    const primary = getPrimarySetupRegistry('replay_morning');
+    const supporting = getSupportingEvidenceRegistry('replay_morning');
 
-    assert.equal(result.candidates.length, SETUP_REGISTRY.length);
+    assert.equal(result.candidates.length, primary.length);
     assert.deepEqual(
       new Set(getScannedSetupTypes()),
-      new Set(SETUP_REGISTRY.map((entry) => entry.setupType))
+      new Set(primary.map((entry) => entry.setupType))
     );
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.MomentumPullbackBreatherReclaim));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchFailedHighReversal));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchFailedLowReversal));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchCompressionBreakout));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchFailedContinuation));
-    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.LunchRangeReclaim));
+    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace));
+    assert.ok(result.candidates.some((candidate) => candidate.setupType === SetupType.TurtleSoup));
+    for (const entry of supporting) {
+      assert.ok(!result.candidates.some((candidate) => candidate.setupType === entry.setupType));
+    }
+    for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
+      assert.ok(!result.candidates.some((candidate) => candidate.setupType === entry.setupType));
+    }
   }],
 
-  ['wide structure risk preserves detected setup candidate but blocks execution', () => {
+  ['deprecated setup text does not create an active candidate', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Momentum runaway long with vertical expansion and impulse continuation.', 7400, 7390),
     });
     const momentum = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumRunaway);
 
-    assert.ok(momentum);
-    assert.equal(momentum.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(momentum.blockReason, NoTradeReason.RiskTooWide);
-    assert.equal(momentum.riskPoints, 10);
+    assert.equal(momentum, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 
-  ['one blocked setup does not stop remaining setup evaluation', () => {
+  ['supporting evidence text contributes to the primary model without creating support candidates', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long plus FVG pullback into imbalance after a breather reclaim.', 7400, 7390),
     });
 
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const primary = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
     const fvgPullback = result.candidates.find((candidate) => candidate.setupType === SetupType.FvgImbalancePullback);
     const breather = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumPullbackBreatherReclaim);
 
-    assert.equal(result.candidates.length, SETUP_REGISTRY.length);
-    assert.equal(liquidity?.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(fvgPullback?.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(breather?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(result.candidates.length, getPrimarySetupRegistry('replay_morning').length);
+    assert.equal(primary?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(fvgPullback, undefined);
+    assert.equal(breather, undefined);
   }],
 
   ['setup detection alone does not approve a trade', () => {
@@ -480,24 +481,25 @@ const tests: Array<[string, () => void]> = [
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed the opening low with a pending trigger.', 7400, 7396),
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
-    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Possible);
     assert.notEqual(liquidity.executionStatus, ExecutionStatus.Executable);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
   }],
 
-  ['best executable candidate is selected when available', () => {
+  ['primary model remains conditional from narrative-only supporting evidence', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400, 7396, 'TRIGGERED'),
     });
 
-    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
-    assert.equal(result.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
-    assert.equal(result.bestExecutableCandidate?.entry, 7400);
-    assert.equal(result.bestExecutableCandidate?.stop, 7396);
+    assert.equal(result.bestExecutableCandidate, null);
+    assert.equal(result.bestConditionalCandidate?.setupType, SetupType.SweepMssFvgRetrace);
+    assert.equal(result.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(result.bestConditionalCandidate?.entry, 7400);
+    assert.equal(result.bestConditionalCandidate?.stop, 7396);
   }],
 
   ['best conditional candidate is shown when no executable candidate exists', () => {
@@ -509,12 +511,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate, null);
     assert.ok(result.bestConditionalCandidate);
     assert.equal(result.bestConditionalCandidate?.executionStatus, ExecutionStatus.Conditional);
-    assert.ok(
-      result.candidates.some((candidate) =>
-        candidate.setupType === SetupType.FvgImbalancePullback &&
-        candidate.executionStatus === ExecutionStatus.Conditional
-      )
-    );
+    assert.equal(result.bestConditionalCandidate?.setupType, SetupType.SweepMssFvgRetrace);
   }],
 
   ['no executable or conditional setup exists only when nothing is detected', () => {
@@ -532,15 +529,15 @@ const tests: Array<[string, () => void]> = [
     assert.ok(result.candidates.every((candidate) => candidate.detectedStatus !== SetupCandidateStatus.Detected));
   }],
 
-  ['approved execution requires entry stop targets invalidation trigger and risk inside limit', () => {
+  ['narrative-only primary model does not become executable without full structured Model 1 evidence', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400, 7396, 'TRIGGERED'),
     });
-    const best = result.bestExecutableCandidate;
+    const best = result.bestConditionalCandidate;
 
     assert.ok(best);
-    assert.equal(best.executionStatus, ExecutionStatus.Executable);
+    assert.equal(best.executionStatus, ExecutionStatus.Conditional);
     assert.equal(typeof best.entry, 'number');
     assert.equal(typeof best.stop, 'number');
     assert.equal(typeof best.target1, 'number');
@@ -555,10 +552,10 @@ const tests: Array<[string, () => void]> = [
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed after a stop hunt.', 7400, 7388),
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
-    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Possible);
     assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
     assert.equal(liquidity.riskPoints, 12);
     assert.notEqual(liquidity.setupType, SetupType.NoSetup);
@@ -571,8 +568,8 @@ const tests: Array<[string, () => void]> = [
     });
     const gapFill = result.candidates.find((candidate) => candidate.setupType === SetupType.OpeningGapFill);
 
-    assert.ok(gapFill);
-    assert.notEqual(gapFill.executionStatus, ExecutionStatus.Executable);
+    assert.equal(gapFill, undefined);
+    assert.equal(result.bestExecutableCandidate, null);
   }],
 
   ['T1 and T2 are calculated from R and rounded to MES tick size', () => {
@@ -580,7 +577,7 @@ const tests: Array<[string, () => void]> = [
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400.25, 7395.25, 'TRIGGERED'),
     });
-    const best = result.bestExecutableCandidate;
+    const best = result.bestConditionalCandidate;
 
     assert.ok(best);
     assert.equal(best.riskPoints, 5);
@@ -590,22 +587,15 @@ const tests: Array<[string, () => void]> = [
     assert.equal((best.target2 as number) % 0.25, 0);
   }],
 
-  ['uncertain entry or stop levels require manual confirmation', () => {
+  ['deprecated manual-confirmation text does not create an active candidate', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Momentum pullback breather reclaim is possible but exact entry and stop are unclear.', NaN, NaN),
     });
     const breather = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumPullbackBreatherReclaim);
 
-    assert.ok(breather);
-    assert.equal(breather.executionStatus, ExecutionStatus.Conditional);
-    assert.ok(
-      breather.blockReason === NoTradeReason.EntryTriggerMissing ||
-      breather.blockReason === NoTradeReason.InvalidStopLocation
-    );
-    assert.ok(breather.requiredTrigger);
-    assert.equal(breather.entry, null);
-    assert.equal(breather.stop, null);
+    assert.equal(breather, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 
   ['structured chart context is preferred over narrative text matching', () => {
@@ -614,15 +604,15 @@ const tests: Array<[string, () => void]> = [
       chartContext: structuredContext(),
       result: resultWithText('Neutral baseline with no obvious setup.', NaN, NaN),
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Executable);
     assert.equal(liquidity.entry, 7400);
     assert.equal(liquidity.stop, 7396);
-    assert.equal(liquidity.evidence[0], 'Structured sweep and reclaim facts detected.');
-    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
+    assert.ok(liquidity.evidence.some((item) => item.includes('Liquidity sweep') || item.includes('liquidity sweep')));
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
   }],
 
   ['narrative cannot override structured setup direction or evidence', () => {
@@ -632,13 +622,13 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: resultWithText('Bearish momentum runaway short rejects resistance and should sell.', 7400, 7396, 'TRIGGERED'),
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(liquidity.direction, 'LONG');
-    assert.equal(liquidity.evidence[0], 'Structured sweep and reclaim facts detected.');
-    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
+    assert.ok(liquidity.evidence.some((item) => item.includes('Liquidity sweep') || item.includes('liquidity sweep')));
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
     assert.equal(result.bestExecutableCandidate?.direction, 'LONG');
   }],
 
@@ -687,7 +677,7 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: resultWithText('Liquidity sweep long reclaimed the opening low with a confirmed trigger.', 7400, 7396, 'TRIGGERED'),
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.NotDetected);
@@ -708,13 +698,14 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: resultWithText('Neutral baseline with no named setup.', NaN, NaN),
     });
+    const primary = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
     const fvg = result.candidates.find((candidate) => candidate.setupType === SetupType.FairValueGap);
     const fvgPullback = result.candidates.find((candidate) => candidate.setupType === SetupType.FvgImbalancePullback);
 
-    assert.equal(fvg?.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(fvgPullback?.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(fvg?.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(fvgPullback?.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(fvg, undefined);
+    assert.equal(fvgPullback, undefined);
+    assert.equal(primary?.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(primary?.executionStatus, ExecutionStatus.Conditional);
   }],
 
   ['narrative momentum long is not approved when structured candles show no expansion or continuation', () => {
@@ -752,9 +743,7 @@ const tests: Array<[string, () => void]> = [
     });
     const momentum = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumRunaway);
 
-    assert.ok(momentum);
-    assert.equal(momentum.detectedStatus, SetupCandidateStatus.NotDetected);
-    assert.notEqual(momentum.executionStatus, ExecutionStatus.Executable);
+    assert.equal(momentum, undefined);
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.MomentumRunaway);
   }],
 
@@ -780,11 +769,11 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
-    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
-    assert.notEqual(liquidity.executionStatus, ExecutionStatus.NotDetected);
+    assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
   }],
 
   ['scanner does not require narrative text when structured evidence is present', () => {
@@ -793,12 +782,12 @@ const tests: Array<[string, () => void]> = [
       chartContext: structuredContext(),
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Executable);
-    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LiquiditySweep);
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
   }],
 
   ['structured context requires manual confirmation when levels are unclear', () => {
@@ -829,13 +818,14 @@ const tests: Array<[string, () => void]> = [
       result: resultWithText('Neutral baseline.', NaN, NaN),
     });
     const breather = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumPullbackBreatherReclaim);
+    const primary = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
-    assert.ok(breather);
-    assert.equal(breather.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(breather.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(breather.entry, null);
-    assert.equal(breather.stop, null);
-    assert.ok(breather.missingEvidence.includes('Exact entry and stop labels are unclear.'));
+    assert.equal(breather, undefined);
+    assert.ok(primary);
+    assert.equal(primary.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(primary.entry, null);
+    assert.equal(primary.stop, null);
+    assert.ok(primary.missingEvidence.some((item) => item.toLowerCase().includes('manual') || item.toLowerCase().includes('unclear')));
   }],
 
   ['low level confidence forces manual confirmation even when structured entry and stop exist', () => {
@@ -852,7 +842,7 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
@@ -876,7 +866,7 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
@@ -901,7 +891,7 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Detected);
@@ -924,7 +914,7 @@ const tests: Array<[string, () => void]> = [
       chartContext: context,
       result: null,
     });
-    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.LiquiditySweep);
+    const liquidity = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(liquidity);
     assert.equal(liquidity.executionStatus, ExecutionStatus.Conditional);
@@ -973,14 +963,12 @@ const tests: Array<[string, () => void]> = [
     });
     const failedHigh = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedHighReversal);
 
-    assert.ok(failedHigh);
-    assert.equal(failedHigh.detectedStatus, SetupCandidateStatus.NotDetected);
-    assert.equal(failedHigh.executionStatus, ExecutionStatus.NotDetected);
-    assert.ok(failedHigh.missingEvidence.includes('Completed Morning window context is required before this Lunch subtype can activate.'));
+    assert.equal(failedHigh, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
   }],
 
-  ['Lunch Failed High Reversal detects only after completed Morning high context is available', () => {
+  ['deprecated lunch high-reversal evidence does not create an active candidate', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_lunch',
       chartContext: lunchContext(),
@@ -988,16 +976,12 @@ const tests: Array<[string, () => void]> = [
     });
     const failedHigh = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedHighReversal);
 
-    assert.ok(failedHigh);
-    assert.equal(failedHigh.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(failedHigh.direction, 'SHORT');
-    assert.equal(failedHigh.executionStatus, ExecutionStatus.Executable);
-    assert.equal(failedHigh.entry, 7417.75);
-    assert.equal(failedHigh.stop, 7419);
-    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
+    assert.equal(failedHigh, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
   }],
 
-  ['Lunch Failed Low Reversal detects from completed Morning low sweep context', () => {
+  ['deprecated lunch low-reversal evidence does not create an active candidate', () => {
     const context = lunchContext();
     context.keyLevels = {
       ...context.keyLevels,
@@ -1058,13 +1042,11 @@ const tests: Array<[string, () => void]> = [
     });
     const failedLow = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedLowReversal);
 
-    assert.ok(failedLow);
-    assert.equal(failedLow.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(failedLow.direction, 'LONG');
-    assert.equal(failedLow.executionStatus, ExecutionStatus.Executable);
+    assert.equal(failedLow, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 
-  ['Lunch Compression Breakout detects from completed Morning context plus compression facts', () => {
+  ['deprecated lunch compression evidence does not create an active candidate', () => {
     const context = lunchContext();
     context.setupEvidence = {
       lunchCompressionBreakout: {
@@ -1097,12 +1079,11 @@ const tests: Array<[string, () => void]> = [
     });
     const compression = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchCompressionBreakout);
 
-    assert.ok(compression);
-    assert.equal(compression.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(compression.executionStatus, ExecutionStatus.Executable);
+    assert.equal(compression, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 
-  ['Lunch Failed Continuation detects from completed Morning extension and structure shift', () => {
+  ['deprecated lunch failed-continuation evidence does not create an active candidate', () => {
     const context = lunchContext();
     context.setupEvidence = {
       lunchFailedContinuation: {
@@ -1128,12 +1109,11 @@ const tests: Array<[string, () => void]> = [
     });
     const failedContinuation = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedContinuation);
 
-    assert.ok(failedContinuation);
-    assert.equal(failedContinuation.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(failedContinuation.executionStatus, ExecutionStatus.Executable);
+    assert.equal(failedContinuation, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 
-  ['Lunch Range Reclaim detects from completed Morning range reclaim facts', () => {
+  ['deprecated lunch range-reclaim evidence does not create an active candidate', () => {
     const context = lunchContext();
     context.morningWindowContext = {
       ...context.morningWindowContext!,
@@ -1163,9 +1143,8 @@ const tests: Array<[string, () => void]> = [
     });
     const rangeReclaim = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchRangeReclaim);
 
-    assert.ok(rangeReclaim);
-    assert.equal(rangeReclaim.detectedStatus, SetupCandidateStatus.Detected);
-    assert.equal(rangeReclaim.executionStatus, ExecutionStatus.Executable);
+    assert.equal(rangeReclaim, undefined);
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
   }],
 ];
 

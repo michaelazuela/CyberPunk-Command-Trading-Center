@@ -632,15 +632,19 @@ export function applyStaleChaseGuard(args: {
   const maxRDistance = risk ? risk * guards.maxChaseDistanceR : Number.POSITIVE_INFINITY;
   const chaseDistance = Math.min(guards.maxChaseDistancePoints, maxRDistance);
 
-  if (guards.allowRetestOnlyEntries && movedPastEntry > chaseDistance) {
-    return {
-      state: 'Missed',
-      stale: true,
-      reason: 'Preferred entry was missed. Do not chase. Waiting for new retest or next setup.',
-    };
-  }
-
   if (isValidPrice(candidate.target1)) {
+    const reachedT1 =
+      candidate.direction === 'LONG'
+        ? currentPrice >= candidate.target1
+        : currentPrice <= candidate.target1;
+    if (reachedT1) {
+      return {
+        state: 'Missed',
+        stale: true,
+        reason: 'T1 was already reached before alert generation. Move occurred without preferred retest. No chase entry.',
+      };
+    }
+
     const distanceToEntry = Math.abs(currentPrice - candidate.entry);
     const distanceToT1 = Math.abs(candidate.target1 - currentPrice);
     if (distanceToT1 < distanceToEntry) {
@@ -650,6 +654,14 @@ export function applyStaleChaseGuard(args: {
         reason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
       };
     }
+  }
+
+  if (guards.allowRetestOnlyEntries && movedPastEntry > chaseDistance) {
+    return {
+      state: 'Missed',
+      stale: true,
+      reason: 'Preferred entry was missed. Do not chase. Waiting for new retest or next setup.',
+    };
   }
 
   return { state: 'Conditional', stale: false, reason: null };

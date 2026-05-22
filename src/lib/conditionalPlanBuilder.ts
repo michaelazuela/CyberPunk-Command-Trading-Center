@@ -10,6 +10,7 @@ import {
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 
 type Direction = SetupCandidate['direction'];
+const PRIMARY_MODEL_SETUP_TYPES = new Set<SetupType>([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup]);
 
 interface FailedReclaimShortReference {
   reference: number;
@@ -926,7 +927,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
   if (ictModelOne) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.FvgImbalancePullback,
+      setupType: SetupType.SweepMssFvgRetrace,
       scenarioLabel: `ICT Model 1 ${ictModelOne.direction === 'LONG' ? 'Long' : 'Short'}: Sweep Reclaim Imbalance Retrace`,
       direction: ictModelOne.direction,
       entry: ictModelOne.entry,
@@ -1155,7 +1156,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
   if (ictModelOne) {
     plans.push(makeCandidate({
       chartContext,
-      setupType: SetupType.FvgImbalancePullback,
+      setupType: SetupType.SweepMssFvgRetrace,
       scenarioLabel: `ICT Model 1 ${ictModelOne.direction === 'LONG' ? 'Long' : 'Short'}: Sweep Reclaim Imbalance Retrace`,
       direction: ictModelOne.direction,
       entry: ictModelOne.entry,
@@ -1431,7 +1432,11 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
 export function buildConditionalPlans(chartContext: ChartContext): SetupCandidate[] {
   if (chartContext.screenshotUsability === 'unusable') return [];
   const sessionType = chartContext.sessionType;
-  if (sessionType === 'morning' || sessionType === 'replay_morning') return buildMorningPlans(chartContext);
-  if (sessionType === 'lunch' || sessionType === 'replay_lunch') return buildLunchPlans(chartContext);
+  if (sessionType === 'morning' || sessionType === 'replay_morning') {
+    return buildMorningPlans(chartContext).filter((candidate) => PRIMARY_MODEL_SETUP_TYPES.has(candidate.setupType));
+  }
+  if (sessionType === 'lunch' || sessionType === 'replay_lunch') {
+    return buildLunchPlans(chartContext).filter((candidate) => PRIMARY_MODEL_SETUP_TYPES.has(candidate.setupType));
+  }
   return [];
 }

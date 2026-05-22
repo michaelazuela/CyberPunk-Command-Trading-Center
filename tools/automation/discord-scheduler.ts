@@ -9,6 +9,7 @@ import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
+import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 
@@ -588,8 +589,21 @@ function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Cond
   return 'No Trade';
 }
 
-function topConditionalCandidates(candidates: SetupCandidate[] | undefined): SetupCandidate[] {
-  return selectBestTwoScenarios(candidates || []);
+function currentPriceFromAnalysis(analysis: AnalysisResult): number | null {
+  const currentPrice = analysis.structuredChartContext?.keyLevels?.currentPrice;
+  if (typeof currentPrice === 'number' && Number.isFinite(currentPrice)) return currentPrice;
+  const candles = analysis.structuredChartContext?.candles || [];
+  const lastCandle = candles[candles.length - 1];
+  return typeof lastCandle?.close === 'number' && Number.isFinite(lastCandle.close) ? lastCandle.close : null;
+}
+
+function topConditionalCandidates(candidates: SetupCandidate[] | undefined, currentPrice: number | null): SetupCandidate[] {
+  const freshCandidates = (candidates || []).filter((candidate) => !applyStaleChaseGuard({
+    candidate,
+    currentPrice,
+    guards: DEFAULT_SCANNER_RISK_GUARDS,
+  }).stale);
+  return selectBestTwoScenarios(freshCandidates);
 }
 
 function formatObjectiveLine(objective: TargetObjective): string {
@@ -1087,7 +1101,7 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
 
 function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): DiscordWebhookPayload {
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
-  const candidates = topConditionalCandidates(normalized.setupCandidates);
+  const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
   const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
   const finalStatus = normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
   const hasPlanningPaths = candidates.length > 0;
@@ -1243,7 +1257,7 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   const analysis = await buildSessionAnalysis(config, job, tradeDate, asOfEt);
   const planVersionId = createPlanVersionId(job, tradeDate);
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument: config.instrument, windowStatusOverride: 'active' });
-  const candidates = topConditionalCandidates(normalized.setupCandidates);
+  const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
   try {
     await upsertDiscordAlertRagRecord({ planVersionId, job, tradeDate, instrument: config.instrument, analysis, normalized, candidates });
   } catch (error) {
