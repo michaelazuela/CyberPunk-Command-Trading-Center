@@ -9,7 +9,7 @@ import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
-import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
+import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS, scannerAlertQualityFromScore } from '../../src/lib/localScannerEngine';
 import { TradeDecisionStatus, type AnalysisResult, type ChartContext, type SetupCandidate, type StructuralLevel, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import {
@@ -810,6 +810,7 @@ function scoreStatusEmoji(score: number, max: number): string {
 function recommendationForCandidateScore(candidate: SetupCandidate, score: number): string {
   if (candidate.decisionQualityRecommendation) return candidate.decisionQualityRecommendation;
   if (candidate.blockReason) return `No execution until blocker clears: ${candidate.blockReason}.`;
+  if (score >= 89) return 'High-quality trade plan: publish, but only act after the completed 5M trigger, structure stop, actual risk, and target room remain confirmed.';
   if (candidate.executionStatus === 'Executable' && score >= 80) return 'Qualified only if the 5M trigger, structure stop, actual risk, and target room remain confirmed.';
   if (score >= 65) return 'Conditional: good map, but wait for missing confirmation before execution.';
   if (score >= 45) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
@@ -874,8 +875,10 @@ function candidateScoreBreakdown(candidate: SetupCandidate): Array<{ label: stri
 function formatTradeQualityScore(candidate: SetupCandidate): string {
   const score = candidateConfidenceScore(candidate);
   const breakdown = candidateScoreBreakdown(candidate);
+  const alertQuality = scannerAlertQualityFromScore(score);
   return [
     `📊 Overall Score: **${score}/100**`,
+    `🏷️ Alert Tier: **${alertQuality.label}**`,
     `🧭 Recommendation: ${recommendationForCandidateScore(candidate, score)}`,
     '',
     ...breakdown.map((item) => `${scoreStatusEmoji(item.score, item.max)} ${item.label}: ${item.score}/${item.max} — ${item.note}`),
@@ -1546,9 +1549,10 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
   const uniqueLq2 = sameObjective(secondLiquidity, nearestLiquidity) ? null : secondLiquidity;
   const uniqueRunner = sameObjective(runner, nearestLiquidity) || sameObjective(runner, uniqueLq2) ? null : runner;
   const blocker = candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : '';
+  const alertQuality = scannerAlertQualityFromScore(score);
   return [
     `**${direction} - ${compactSetupName(candidate)}**`,
-    `🎯 Model: ${candidateModelType(candidate)} | 📊 Score: ${score}/100 | ⚖️ Decision: ${tradeDecisionFromScore(score)}`,
+    `🎯 Model: ${candidateModelType(candidate)} | 📊 Score: ${score}/100 | 🏷️ ${alertQuality.label} | ⚖️ Decision: ${tradeDecisionFromScore(score)}`,
     `📊 Status: ${candidate.executionStatus}${blocker}`,
     `✅ Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
     `📝 Plan: 🎯 Entry ${moneyLine(candidate.entry)} | 🛡️ Structure Stop ${moneyLine(levels.stop)} | ⚖️ Actual Risk ${moneyLine(levels.risk)}`,

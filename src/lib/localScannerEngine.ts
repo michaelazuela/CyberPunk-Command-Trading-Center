@@ -102,6 +102,52 @@ export interface ScannerAlertDecision {
 
 const DEFAULT_THRESHOLDS: ScannerThresholds = TRADE_RULES.discordAlertThresholds;
 
+export type ScannerAlertQualityTier =
+  | 'high_quality'
+  | 'qualified_strong_conditional'
+  | 'watchlist_conditional'
+  | 'do_not_publish';
+
+export interface ScannerAlertQuality {
+  tier: ScannerAlertQualityTier;
+  label: string;
+  minScore: number;
+  publishTradePlan: boolean;
+}
+
+export function scannerAlertQualityFromScore(score: number): ScannerAlertQuality {
+  if (score >= 89) {
+    return {
+      tier: 'high_quality',
+      label: 'High-Quality Trade Plan',
+      minScore: 89,
+      publishTradePlan: true,
+    };
+  }
+  if (score >= 80) {
+    return {
+      tier: 'qualified_strong_conditional',
+      label: 'Qualified / Strong Conditional Plan',
+      minScore: 80,
+      publishTradePlan: true,
+    };
+  }
+  if (score >= 65) {
+    return {
+      tier: 'watchlist_conditional',
+      label: 'Watchlist / Conditional Plan',
+      minScore: 65,
+      publishTradePlan: true,
+    };
+  }
+  return {
+    tier: 'do_not_publish',
+    label: 'Do Not Publish Trade Plan',
+    minScore: 0,
+    publishTradePlan: false,
+  };
+}
+
 export const DEFAULT_SCANNER_RISK_GUARDS: ScannerRiskGuards = {
   maxChaseDistancePoints: 3,
   maxChaseDistanceR: 0.5,
@@ -973,13 +1019,13 @@ export function shouldSendScannerAlert(args: {
   }
   if (args.state === 'Conditional') {
     return args.confidence >= thresholds.conditional
-      ? { shouldSend: true, reason: 'High-confidence conditional plan qualified for Discord.' }
-      : { shouldSend: false, reason: 'Conditional plan below Discord threshold.' };
+      ? { shouldSend: true, reason: `${scannerAlertQualityFromScore(args.confidence).label} qualified for Discord.` }
+      : { shouldSend: false, reason: 'Conditional plan below 65 score threshold; trade plan not published.' };
   }
   if (args.state === 'Executable' || args.state === 'Approved') {
     return args.confidence >= thresholds.executable
-      ? { shouldSend: true, reason: 'Executable/approved plan qualified for Discord.' }
-      : { shouldSend: false, reason: 'Executable/approved plan below Discord threshold.' };
+      ? { shouldSend: true, reason: `${scannerAlertQualityFromScore(args.confidence).label} qualified for Discord.` }
+      : { shouldSend: false, reason: 'Executable/approved plan below 80 score threshold.' };
   }
   return { shouldSend: false, reason: 'No actionable scanner alert.' };
 }

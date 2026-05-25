@@ -18,8 +18,8 @@ export const TRADE_RULES = {
     fvgImpulseRangeRatio: 1.25,
   },
   discordAlertThresholds: {
-    conditional: 75,
-    executable: 85,
+    conditional: 65,
+    executable: 80,
     educationalBlocked: 70,
   },
   executionWindows: {

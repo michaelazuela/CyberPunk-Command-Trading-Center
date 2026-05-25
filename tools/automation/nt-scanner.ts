@@ -27,6 +27,7 @@ import {
   scannerAlertKey,
   scannerContextLogLabel,
   scannerContextState,
+  scannerAlertQualityFromScore,
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
@@ -182,8 +183,8 @@ function loadConfig(): ScannerConfig {
     discordEnabled: boolArg('discord', true),
     afternoonEnabled: boolArg('afternoon', false),
     thresholds: {
-      conditional: numberArg('conditional-threshold', 75),
-      executable: numberArg('executable-threshold', 85),
+      conditional: numberArg('conditional-threshold', 65),
+      executable: numberArg('executable-threshold', 80),
       educationalBlocked: numberArg('blocked-threshold', 70),
     },
     maxChaseDistancePoints: numberArg('max-chase-points', DEFAULT_SCANNER_RISK_GUARDS.maxChaseDistancePoints),
@@ -620,13 +621,16 @@ function buildDiscordPayload(args: {
   const invalidation = candidate?.invalidation || args.normalized.invalidation || 'Do not execute without structure invalidation.';
   const model = modelType(candidate);
   const decision = tradeDecisionFromScore(args.confidence.score);
+  const alertQuality = scannerAlertQualityFromScore(args.confidence.score);
   const planLine = [
     `📈 Instrument: ${args.config.instrument}`,
     `🕒 Session: ${args.session}`,
+    `🪟 Window: ${args.windowLabel}`,
     `⏱️ Timestamp used for scoring: ${args.scoringTimestamp} (${args.scoringTimestampSource})`,
     `🧭 Direction: ${candidate?.direction || 'N/A'}`,
     `🎯 Model type: ${model}`,
     `📊 Score: ${args.confidence.score}/100`,
+    `🏷️ Alert tier: ${alertQuality.label}`,
     `⚖️ Trade decision: ${decision}`,
     `💵 Current: ${money(args.currentPrice)} | 🕯️ Completed 5M: ${args.completed5m?.time || 'N/A'}`,
   ].join('\n');
@@ -657,7 +661,7 @@ function buildDiscordPayload(args: {
 
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${decision}\n⚠️ Decision support only. No automated orders were placed.`,
+    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${alertQuality.label}\n⚠️ Decision support only. No automated orders were placed.`,
     embeds: [
       {
         title: `📊 Local Scanner Trading Card — ${args.tradeDate}`,

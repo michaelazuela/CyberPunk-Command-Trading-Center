@@ -224,11 +224,19 @@ assert.equal(
 );
 assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 74, window: morningWindow, candidate: strongCandidate }).shouldSend,
+  true
+);
+assert.equal(
+  shouldSendScannerAlert({ state: 'Conditional', confidence: 64, window: morningWindow, candidate: strongCandidate }).shouldSend,
   false
 );
 assert.equal(
-  shouldSendScannerAlert({ state: 'Executable', confidence: 85, window: morningWindow, candidate: strongCandidate }).shouldSend,
+  shouldSendScannerAlert({ state: 'Executable', confidence: 80, window: morningWindow, candidate: strongCandidate }).shouldSend,
   true
+);
+assert.equal(
+  shouldSendScannerAlert({ state: 'Executable', confidence: 79, window: morningWindow, candidate: strongCandidate }).shouldSend,
+  false
 );
 assert.equal(
   shouldSendScannerAlert({ state: 'Watching', confidence: 100, window: morningWindow, candidate: strongCandidate }).shouldSend,

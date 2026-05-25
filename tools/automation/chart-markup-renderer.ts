@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import type { ChartCandleFact, ChartContext, FvgZoneFact, LiquidityEventFact, SetupCandidate } from '../../src/types';
+import type { ChartCandleFact, ChartContext, DecisionQualityScoreItem, FvgZoneFact, LiquidityEventFact, SetupCandidate } from '../../src/types';
 import { professionalCandidateModelLabel } from './professional-report-language';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +97,79 @@ function renderCandle(candle: Required<Pick<ChartCandleFact, 'open' | 'high' | '
   `;
 }
 
+function qualityColor(score: number, max: number): string {
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return '#3cff73';
+  if (ratio >= 0.6) return '#facc15';
+  if (ratio > 0) return '#ff8a1c';
+  return '#ef4444';
+}
+
+function scorecardItem(scorecard: DecisionQualityScoreItem[], pattern: RegExp): DecisionQualityScoreItem | null {
+  return scorecard.find((item) => pattern.test(item.label)) || null;
+}
+
+function normalizedScoreItem(label: string, score: number, max: number): DecisionQualityScoreItem {
+  return {
+    label,
+    score: Math.max(0, Math.min(max, Math.round(score))),
+    max,
+    status: score >= max * 0.8 ? 'strong' : score > 0 ? 'partial' : 'blocked',
+    note: '',
+  };
+}
+
+function alertQualityBreakdown(candidate: SetupCandidate): DecisionQualityScoreItem[] {
+  const scorecard = candidate.decisionQualityScorecard || [];
+  const model = scorecardItem(scorecard, /approved model|model/i);
+  const execution = scorecardItem(scorecard, /5M execution|execution|trigger/i);
+  const liquidity = scorecardItem(scorecard, /liquidity/i);
+  const structure = scorecardItem(scorecard, /structure/i);
+  const risk = scorecardItem(scorecard, /risk|target/i);
+  const session = scorecardItem(scorecard, /time window|session/i);
+
+  return [
+    normalizedScoreItem(
+      'Structure',
+      ((structure?.score || 0) + (liquidity?.score || 0)) * 20 / Math.max(1, (structure?.max || 0) + (liquidity?.max || 0)),
+      20,
+    ),
+    normalizedScoreItem('Model', (model?.score || (candidate.setupType ? 16 : 0)) * 20 / Math.max(1, model?.max || 20), 20),
+    normalizedScoreItem('Trigger', (execution?.score || (candidate.requiredTrigger ? 12 : 0)) * 15 / Math.max(1, execution?.max || 20), 15),
+    normalizedScoreItem('Risk', (risk?.score || 0) * 20 / Math.max(1, risk?.max || 20), 20),
+    normalizedScoreItem('Targets', (risk?.score || 0) * 15 / Math.max(1, risk?.max || 20), 15),
+    normalizedScoreItem('Conditions', (session?.score || 0) * 10 / Math.max(1, session?.max || 5), 10),
+  ];
+}
+
+function renderAlertQuality(candidate: SetupCandidate): string {
+  const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
+  const items = alertQualityBreakdown(candidate);
+  const row = (item: DecisionQualityScoreItem, x: number, y: number) => {
+    const color = qualityColor(item.score, item.max);
+    const width = Math.round(58 * Math.max(0, Math.min(1, item.max > 0 ? item.score / item.max : 0)));
+    return `
+      <text x="${x}" y="${y}" class="alert-row">${escapeHtml(item.label)}</text>
+      <rect x="${x + 64}" y="${y - 6}" width="58" height="6" rx="3" fill="#33413b" />
+      <rect x="${x + 64}" y="${y - 6}" width="${width}" height="6" rx="3" fill="${color}" />
+      <text x="${x + 154}" y="${y}" text-anchor="end" class="alert-points" fill="${color}">${Math.round(item.score)}/${item.max}</text>
+    `;
+  };
+  return `
+    <rect x="24" y="356" width="378" height="126" rx="4" fill="#020807" stroke="#d5c018" stroke-width="1.5" opacity=".96" />
+    <text x="36" y="383" class="alert-title">ALERT QUALITY</text>
+    <text x="390" y="383" text-anchor="end" class="alert-total">${score == null ? 'N/A' : `${Math.round(score)}/100`}</text>
+    <line x1="36" y1="395" x2="390" y2="395" stroke="#d5c018" stroke-opacity=".28" />
+    <text x="36" y="410" class="alert-sub">Simple breakdown. 5M trigger still required.</text>
+    ${row(items[0], 36, 432)}
+    ${row(items[1], 36, 452)}
+    ${row(items[2], 36, 472)}
+    ${row(items[3], 222, 432)}
+    ${row(items[4], 222, 452)}
+    ${row(items[5], 222, 472)}
+  `;
+}
+
 function buildChartHtml(input: ChartMarkupRenderInput): string {
   const candidate = input.candidate;
   const candles = validCandles(input.chartContext);
@@ -154,6 +227,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       : '';
   const sweepLabel = isLong ? 'Sell-side sweep' : 'Buy-side sweep';
   const contextBias = input.chartContext?.multiTimeframeContext?.alignment?.alignedDirection || input.chartContext?.marketStructure?.trend || 'unknown';
+  const trendBias = input.chartContext?.multiTimeframeContext?.alignment?.executionBias || input.chartContext?.marketStructure?.trend || 'unknown';
+  const narrative = compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 44);
 
   return `<!doctype html>
 <html>
@@ -167,8 +242,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     svg { width: ${width}px; height: ${height}px; display: block; }
     .title { font-size: 42px; font-weight: 900; letter-spacing: 1px; }
     .subtitle { font-size: 28px; font-weight: 800; fill: #4ade80; }
-    .panel-title { font-size: 27px; font-weight: 900; }
-    .panel-text { font-size: 23px; font-weight: 700; }
+    .panel-title { font-size: 27px; font-weight: 900; fill: #f8fafc; }
+    .panel-text { font-size: 23px; font-weight: 700; fill: #f8fafc; }
     .small { font-size: 19px; fill: #cbd5e1; }
     .line-label { font-size: 23px; font-weight: 850; }
     .price-pill { font-size: 22px; font-weight: 900; fill: white; }
@@ -177,6 +252,14 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .axis { fill: #e5e7eb; font-size: 20px; font-weight: 700; }
     .step { font-size: 21px; fill: #f8fafc; font-weight: 760; }
     .step-num { font-size: 22px; fill: #4ade80; font-weight: 900; }
+    .context-title { font-size: 21px; fill: #f8fafc; letter-spacing: 1.5px; }
+    .context-mini { font-size: 15px; fill: #f8fafc; font-weight: 850; }
+    .context-value { font-size: 15px; fill: #4ade80; font-weight: 850; }
+    .alert-title { font-size: 18px; font-weight: 950; fill: #27ff69; letter-spacing: .6px; }
+    .alert-total { font-size: 19px; font-weight: 950; fill: #facc15; }
+    .alert-sub { font-size: 10px; fill: #cbd5e1; }
+    .alert-row { font-size: 11px; fill: #f8fafc; font-weight: 900; }
+    .alert-points { font-size: 11px; font-weight: 950; }
   </style>
 </head>
 <body>
@@ -202,10 +285,14 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="36" y="62" class="panel-title">${escapeHtml(input.instrument)} • 5M CHART</text>
   <line x1="16" y1="82" x2="466" y2="82" stroke="#334155" />
   <text x="42" y="122" class="panel-text">◎ Decision: <tspan fill="#4ade80">${escapeHtml(candidate.executionStatus)}</tspan></text>
-  <text x="42" y="170" class="panel-text">↗ Model: <tspan fill="#4ade80">${escapeHtml(model)}</tspan></text>
+  <text x="42" y="170" class="panel-text">↗ Model: <tspan fill="#4ade80">${escapeHtml(compact(model, 36))}</tspan></text>
   <text x="42" y="218" class="panel-text">★ Score: <tspan fill="#facc15">${score == null ? 'N/A' : `${Math.round(score)}/100`}</tspan></text>
-  <text x="42" y="266" class="panel-text">◷ 5M execution chart</text>
-  <text x="42" y="314" class="small">Decision support only. No automated orders.</text>
+  <line x1="42" y1="238" x2="442" y2="238" stroke="#334155" />
+  <text x="42" y="270" class="context-title">CONTEXT</text>
+  <text x="42" y="304" class="context-mini">Higher: <tspan class="context-value">${escapeHtml(String(contextBias))}</tspan></text>
+  <text x="235" y="304" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
+  <text x="42" y="332" class="context-mini">Narrative: <tspan class="context-value">${escapeHtml(narrative)}</tspan></text>
+  ${renderAlertQuality(candidate)}
   <text x="585" y="62" class="title" fill="${isLong ? '#f8fafc' : '#f8fafc'}">${direction} PLAN</text>
   <text x="585" y="104" class="subtitle">${escapeHtml(model)}</text>
   <line x1="500" y1="128" x2="980" y2="128" stroke="#166534" stroke-width="2" />
@@ -213,11 +300,6 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="650" y="178" class="step-num">②</text><text x="683" y="178" class="step">Reclaim</text>
   <text x="800" y="178" class="step-num">③</text><text x="833" y="178" class="step">Structure shift</text>
   <text x="990" y="178" class="step-num">④</text><text x="1023" y="178" class="step">Entry zone</text>
-  <rect x="26" y="640" width="260" height="178" rx="10" fill="#070b0f" stroke="#64748b" opacity=".92" />
-  <text x="156" y="672" text-anchor="middle" class="panel-text">CONTEXT</text>
-  <text x="46" y="715" class="small">• Higher structure: <tspan fill="#4ade80">${escapeHtml(String(contextBias))}</tspan></text>
-  <text x="46" y="750" class="small">• Model: <tspan fill="#4ade80">${escapeHtml(model)}</tspan></text>
-  <text x="46" y="785" class="small">• Session: <tspan fill="#4ade80">${escapeHtml(input.sessionLabel)}</tspan></text>
   <rect x="1138" y="718" width="330" height="214" rx="10" fill="#070b0f" stroke="#64748b" opacity=".94" />
   <text x="1303" y="750" text-anchor="middle" class="panel-text">RISK SUMMARY</text>
   <text x="1160" y="792" class="small">Entry: <tspan fill="#4ade80">${money(entryLow)} - ${money(entryHigh)}</tspan></text>
@@ -225,7 +307,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="1160" y="862" class="small">Risk: <tspan fill="#f8fafc">${risk ? `~${risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
   <text x="1160" y="897" class="small">T2: <tspan fill="#facc15">${money(t2)}</tspan></text>
   <rect x="18" y="954" width="1584" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
-  <text x="44" y="990" class="small">⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders.</text>
+  <text x="44" y="990" class="small">⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.</text>
 </svg>
 </div>
 </body>
