@@ -505,6 +505,66 @@ export interface MarketStructureFacts {
   expansionCondition?: boolean;
 }
 
+export interface HigherTimeframeThesis {
+  direction: PriceDirection;
+  confidence: 'High' | 'Medium' | 'Low';
+  sourceTimeframes: string[];
+  reason: string;
+  invalidationLevel?: number | null;
+  drawOnLiquidity?: number | null;
+  drawOnLiquidityLabel?: string | null;
+}
+
+export interface StructureQualityContext {
+  direction: PriceDirection;
+  structureEvent: 'major_bos' | 'minor_bos' | 'choch' | 'none';
+  structureTimeframe?: '240m' | '60m' | '15m' | '5m' | 'mixed';
+  executionTimeframeConfirmed?: boolean;
+  inducementSwept: boolean;
+  validPullbackConfirmed: boolean;
+  structureBreakConfirmedByClose?: boolean;
+  wickOnlyBreak?: boolean;
+  oldInducementStale: boolean;
+  newInducementRequired: boolean;
+  noChaseRequired: boolean;
+  inducementFresh?: boolean;
+  inducementAgeBars?: number | null;
+  chochAtMeaningfulLocation?: boolean;
+  chochLocationType?:
+    | 'prior_rth'
+    | 'prior_eth'
+    | 'weekly_monthly'
+    | 'session_extreme'
+    | 'fvg'
+    | 'breaker'
+    | 'liquidity_pool'
+    | 'midrange'
+    | 'unknown';
+  conflictsWithHigherTimeframeThesis?: boolean;
+  reasons: string[];
+  missingReasons: string[];
+}
+
+export interface DealingRangeQuality {
+  rangeHigh: number | null;
+  rangeLow: number | null;
+  midpoint: number | null;
+  currentPrice: number | null;
+  location: 'premium' | 'discount' | 'equilibrium' | 'unknown';
+  rangeSource?: '240m' | '60m' | '15m' | '5m' | 'session' | 'manual' | 'unknown';
+  confidence: 'High' | 'Medium' | 'Low';
+  reason?: string;
+}
+
+export interface NewsMacroCaution {
+  active: boolean;
+  eventLabel?: string | null;
+  minutesUntil?: number | null;
+  minutesAfter?: number | null;
+  confirmedAfterRelease?: boolean;
+  reason?: string | null;
+}
+
 export interface CandleFacts {
   lastClosedCandleDirection: CandleDirection;
   expansionCandlePresent: boolean;
@@ -618,6 +678,10 @@ export interface ChartContext {
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
   multiTimeframeContext?: MultiTimeframeContext;
+  higherTimeframeThesis?: HigherTimeframeThesis;
+  structureQualityContext?: StructureQualityContext;
+  dealingRangeQuality?: DealingRangeQuality;
+  newsMacroCaution?: NewsMacroCaution;
   gapContext?: GapContextFact;
   compressionRange?: CompressionRangeFact;
   marketStructure?: MarketStructureFacts;
@@ -658,6 +722,17 @@ export interface SetupAssessment {
   invalidation: string;
   reasoning: string;
   noTradeReason?: NoTradeReason | null;
+  decisionQualityScore?: number | null;
+  decisionQualityRecommendation?: string | null;
+  decisionQualityScorecard?: DecisionQualityScoreItem[];
+}
+
+export interface DecisionQualityScoreItem {
+  label: string;
+  score: number;
+  max: number;
+  status: 'strong' | 'partial' | 'weak' | 'blocked';
+  note: string;
 }
 
 export interface RiskAssessment {
@@ -737,6 +812,10 @@ export interface SetupCandidate {
   proximityScore?: number;
   levelContextScore?: number;
   levelContextSummary?: string;
+  decisionQualityScore?: number;
+  decisionQualityRecommendation?: string;
+  decisionQualityScorecard?: DecisionQualityScoreItem[];
+  decisionQualityHardBlocker?: string | null;
   rankScore?: number;
   evidence: string[];
   missingEvidence: string[];

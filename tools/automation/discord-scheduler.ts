@@ -10,14 +10,29 @@ import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
-import { normalizeCandidateIctModelLabel } from '../../src/lib/ictModelLabels';
-import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { TradeDecisionStatus, type AnalysisResult, type ChartContext, type SetupCandidate, type StructuralLevel, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import {
+  applyNewsMacroCaution,
+  fetchMacroCalendarEvents,
+  loadMacroCalendarConfig,
+  loadWeeklyVisualMacroCalendarConfig,
+  type MacroCalendarEvent,
+} from './macro-calendar';
+import { renderChartMarkup } from './chart-markup-renderer';
+import {
+  PROFESSIONAL_MODEL_ONE_LABEL,
+  PROFESSIONAL_MODEL_TWO_LABEL,
+  professionalCandidateModelLabel,
+  professionalizeReportText,
+  type ProfessionalModelLabel,
+} from './professional-report-language';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
 
-type AlertJob = 'premarket' | 'morning' | 'lunch';
+type AlertJob = 'weekly' | 'premarket' | 'morning' | 'lunch';
+type SessionAlertJob = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
 
 interface SchedulerConfig {
@@ -80,6 +95,7 @@ const DEFAULT_CONFIG: SchedulerConfig = {
     premarket: { enabled: true, timeEt: '09:15' },
     morning: { enabled: true, timeEt: '10:10' },
     lunch: { enabled: true, timeEt: '13:00' },
+    weekly: { enabled: true, timeEt: '08:00' },
   },
 };
 
@@ -107,6 +123,7 @@ function printHelp() {
     '',
     'Usage:',
     '  npm run nt:discord-alerts',
+    '  npm run nt:discord-alerts -- --once weekly --dry-run',
     '  npm run nt:discord-alerts -- --once morning --dry-run',
     '  npm run nt:discord-alerts -- --once lunch',
     '',
@@ -115,8 +132,8 @@ function printHelp() {
     '  NINJATRADER_BRIDGE_URL    Optional, defaults to http://127.0.0.1:8765.',
     '',
     'Options:',
-    '  --once premarket|morning|lunch   Run one alert immediately.',
-    '  --session premarket|morning|lunch Alias for --once, for replay/manual tests.',
+    '  --once weekly|premarket|morning|lunch   Run one alert immediately.',
+    '  --session weekly|premarket|morning|lunch Alias for --once, for replay/manual tests.',
     '  --date YYYY-MM-DD                 Trade date for --once/--session.',
     '  --as-of HH:MM                    End the replay/manual analysis at this ET time.',
     '  --dry-run                       Build the message without posting to Discord.',
@@ -166,6 +183,23 @@ function getDayOfWeek(tradeDate: string): string {
     timeZone: 'America/New_York',
     weekday: 'long',
   });
+}
+
+function addDaysToTradeDate(tradeDate: string, days: number): string {
+  const [year, month, day] = tradeDate.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days, 12));
+  return date.toISOString().slice(0, 10);
+}
+
+function weeklyPlanRange(tradeDate: string): { start: string; end: string; label: string } {
+  const [year, month, day] = tradeDate.split('-').map(Number);
+  const base = new Date(Date.UTC(year, month - 1, day, 12));
+  const dayOfWeek = base.getUTCDay();
+  const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
+  const start = addDaysToTradeDate(tradeDate, daysUntilMonday);
+  const end = addDaysToTradeDate(start, 4);
+  const label = `${new Date(`${start}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })}-${new Date(`${end}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' })}`;
+  return { start, end, label };
 }
 
 function normalizeEtClock(value: string): string {
@@ -248,7 +282,7 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
     fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
     fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
   ]);
-  return buildNinjaChartContext({
+  const context = buildNinjaChartContext({
     bars5m: bars15m.map((bar) => ({ ...bar })),
     bars15m,
     bars60m,
@@ -257,9 +291,30 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
     instrument: config.instrument,
     tradeDate,
   });
+  return applyNewsMacroCaution(context, new Date(etDateTime(tradeDate, '09:15')), loadMacroCalendarConfig());
 }
 
-async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJob, 'premarket'>, tradeDate: string, asOfEt?: string): Promise<AnalysisResult> {
+async function buildWeeklyContext(config: SchedulerConfig, tradeDate: string) {
+  const contextStartDate = previousMonthStartDate(tradeDate);
+  const contextEnd = etDateTime(tradeDate, '08:00');
+  const [bars240m, bars60m, bars15m] = await Promise.all([
+    fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextEnd),
+    fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), contextEnd),
+    fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), contextEnd),
+  ]);
+  const context = buildNinjaChartContext({
+    bars5m: bars15m.map((bar) => ({ ...bar })),
+    bars15m,
+    bars60m,
+    bars240m,
+    sessionType: 'morning',
+    instrument: config.instrument,
+    tradeDate,
+  });
+  return applyNewsMacroCaution(context, new Date(contextEnd), loadMacroCalendarConfig());
+}
+
+async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJob, tradeDate: string, asOfEt?: string): Promise<AnalysisResult> {
   const contextStartDate = previousMonthStartDate(tradeDate);
   const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
   const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
@@ -275,7 +330,7 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJ
       etDateTime(tradeDate, executionEnd)
     ),
   ]);
-  const chartContext = buildNinjaChartContext({
+  const baseChartContext = buildNinjaChartContext({
     bars5m,
     bars15m,
     bars60m,
@@ -284,6 +339,11 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: Exclude<AlertJ
     instrument: config.instrument,
     tradeDate,
   });
+  const chartContext = await applyNewsMacroCaution(
+    baseChartContext,
+    new Date(etDateTime(tradeDate, executionEnd)),
+    loadMacroCalendarConfig(),
+  );
 
   return {
     dayType: 'NO TRADE',
@@ -317,7 +377,7 @@ function truncateDiscord(value: string, maxLength: number): string {
 }
 
 function discordValue(value: string, maxLength = 1024): string {
-  const cleaned = value.trim() || 'N/A';
+  const cleaned = professionalizeReportText(value).trim() || 'N/A';
   return truncateDiscord(cleaned, maxLength);
 }
 
@@ -342,7 +402,7 @@ function signOutcomePayload(encodedPayload: string): string | null {
 
 function buildOutcomeUrl(args: {
   planVersionId: string;
-  sessionType: Exclude<AlertJob, 'premarket'>;
+  sessionType: SessionAlertJob;
   tradeDate: string;
   instrument: Instrument;
   outcome: string;
@@ -385,7 +445,7 @@ function outcomeButton(label: string, emoji: string, url: string): DiscordLinkBu
 
 function buildOutcomeComponents(args: {
   planVersionId: string;
-  sessionType: Exclude<AlertJob, 'premarket'>;
+  sessionType: SessionAlertJob;
   tradeDate: string;
   instrument: Instrument;
 }): DiscordActionRow[] | undefined {
@@ -450,7 +510,7 @@ function supabaseRestUrl(): string | null {
 
 async function upsertDiscordAlertRagRecord(args: {
   planVersionId: string;
-  job: Exclude<AlertJob, 'premarket'>;
+  job: SessionAlertJob;
   tradeDate: string;
   instrument: Instrument;
   analysis: AnalysisResult;
@@ -567,8 +627,8 @@ function compactSetupName(candidate: SetupCandidate): string {
   return candidateModelType(candidate);
 }
 
-function candidateModelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
-  return normalizeCandidateIctModelLabel(candidate);
+function candidateModelType(candidate: SetupCandidate | null): ProfessionalModelLabel {
+  return professionalCandidateModelLabel(candidate);
 }
 
 function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
@@ -722,6 +782,7 @@ function candidateLevels(candidate: SetupCandidate): { stop: number | null; risk
 }
 
 function candidateConfidenceScore(candidate: SetupCandidate): number {
+  if (typeof candidate.decisionQualityScore === 'number') return candidate.decisionQualityScore;
   const base =
     candidate.executionStatus === 'Executable' ? 55 :
     candidate.executionStatus === 'Conditional' ? 42 :
@@ -736,6 +797,91 @@ function candidateConfidenceScore(candidate: SetupCandidate): number {
   const target = candidate.target1 && candidate.target2 ? 8 : 0;
   const context = candidate.levelContextScore ? Math.min(6, Math.round(candidate.levelContextScore / 4)) : 0;
   return Math.max(0, Math.min(100, Math.round(base + confidence + trigger + stop + target + context)));
+}
+
+function scoreStatusEmoji(score: number, max: number): string {
+  if (score <= 0) return '🛑';
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return '✅';
+  if (ratio >= 0.45) return '🟡';
+  return '⚠️';
+}
+
+function recommendationForCandidateScore(candidate: SetupCandidate, score: number): string {
+  if (candidate.decisionQualityRecommendation) return candidate.decisionQualityRecommendation;
+  if (candidate.blockReason) return `No execution until blocker clears: ${candidate.blockReason}.`;
+  if (candidate.executionStatus === 'Executable' && score >= 80) return 'Qualified only if the 5M trigger, structure stop, actual risk, and target room remain confirmed.';
+  if (score >= 65) return 'Conditional: good map, but wait for missing confirmation before execution.';
+  if (score >= 45) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
+  return 'No trade: score is below the desk threshold or required evidence is missing.';
+}
+
+function candidateScoreBreakdown(candidate: SetupCandidate): Array<{ label: string; score: number; max: number; note: string }> {
+  if (candidate.decisionQualityScorecard?.length) {
+    return candidate.decisionQualityScorecard.map((item) => ({
+      label: item.label,
+      score: item.score,
+      max: item.max,
+      note: item.note,
+    }));
+  }
+  const levels = candidateLevels(candidate);
+  const evidenceText = [...candidate.evidence, candidate.levelContextSummary || ''].join(' ').toLowerCase();
+  const missingText = candidate.missingEvidence.join(' ').toLowerCase();
+  const hasSweep = evidenceText.includes('sweep') || evidenceText.includes('raid');
+  const hasReclaim = evidenceText.includes('reclaim');
+  const hasDisplacement = evidenceText.includes('displacement');
+  const hasMss = evidenceText.includes('market structure shift') || evidenceText.includes('mss');
+  const hasFvg = evidenceText.includes('fair value gap') || evidenceText.includes('fvg') || evidenceText.includes('imbalance');
+  const hasTurtle = candidateModelType(candidate) === PROFESSIONAL_MODEL_TWO_LABEL || evidenceText.includes('turtle soup');
+  const htfAligned = evidenceText.includes('higher-timeframe') || evidenceText.includes('big-picture') || evidenceText.includes('structure supports') || !missingText.includes('higher-timeframe bias not aligned');
+  const modelScore = Math.max(0, Math.min(25,
+    (hasSweep ? 6 : 0) +
+    (hasReclaim ? 6 : 0) +
+    (hasTurtle || hasFvg ? 7 : 0) +
+    (hasDisplacement || hasMss ? 6 : 0)
+  ));
+  const executionScore = Math.max(0, Math.min(20,
+    (candidate.requiredTrigger ? 6 : 0) +
+    (typeof candidate.entry === 'number' ? 5 : 0) +
+    (typeof levels.stop === 'number' ? 5 : 0) +
+    (candidate.executionStatus === 'Executable' || candidate.executionStatus === 'Conditional' ? 4 : 0)
+  ));
+  const liquidityScore = Math.max(0, Math.min(15,
+    (candidate.targetObjectivePlan?.nearestLiquidityTarget || candidate.targetObjectivePlan?.liquidityTarget1 ? 6 : 0) +
+    (candidate.levelContextScore ? Math.min(7, Math.round(candidate.levelContextScore / 2)) : 0) +
+    (candidate.targetObjectivePlan?.nearestObstacleTarget || candidate.targetObjectivePlan?.obstacleTarget1 ? 2 : 0)
+  ));
+  const htfScore = Math.max(0, Math.min(15, htfAligned ? 12 : 5));
+  const riskScore = Math.max(0, Math.min(20,
+    (typeof levels.stop === 'number' ? 5 : 0) +
+    (typeof levels.target1 === 'number' ? 5 : 0) +
+    (typeof levels.target2 === 'number' ? 5 : 0) +
+    (!candidate.blockReason ? 5 : 0)
+  ));
+  const sessionScore = 5;
+
+  return [
+    { label: 'Approved model completion', score: modelScore, max: 25, note: candidateModelType(candidate) },
+    { label: '5M execution quality', score: executionScore, max: 20, note: 'Trigger, entry, structure stop, and execution readiness.' },
+    { label: '15M/session liquidity map', score: liquidityScore, max: 15, note: candidate.levelContextSummary || 'Liquidity map context is limited.' },
+    { label: '60M/240M structure alignment', score: htfScore, max: 15, note: htfAligned ? 'Higher-timeframe/big-picture context supports the idea.' : 'Higher-timeframe alignment is not confirmed.' },
+    { label: 'Risk and target room', score: riskScore, max: 20, note: 'Structure stop, T1/T2, and blocker status.' },
+    { label: 'Time window / session quality', score: sessionScore, max: 5, note: 'Generated inside the scheduled morning/lunch report workflow.' },
+  ];
+}
+
+function formatTradeQualityScore(candidate: SetupCandidate): string {
+  const score = candidateConfidenceScore(candidate);
+  const breakdown = candidateScoreBreakdown(candidate);
+  return [
+    `📊 Overall Score: **${score}/100**`,
+    `🧭 Recommendation: ${recommendationForCandidateScore(candidate, score)}`,
+    '',
+    ...breakdown.map((item) => `${scoreStatusEmoji(item.score, item.max)} ${item.label}: ${item.score}/${item.max} — ${item.note}`),
+    '',
+    '🛡️ Hard rule: score never overrides missing 5M trigger, protected stop, actual risk, target room, or approved time-window gates.',
+  ].join('\n');
 }
 
 function simpleScenarioLine(candidate: SetupCandidate): string {
@@ -772,17 +918,18 @@ function cleanScenarioLine(candidate: SetupCandidate, objectives: TargetObjectiv
 
   return [
     `**${direction} - ${compactSetupName(candidate)}**`,
-    `State: ${candidate.executionStatus} | Confidence: ${candidateConfidenceScore(candidate)} / 100`,
-    `Trigger: ${trigger}`,
-    `Entry \`${moneyLine(candidate.entry)}\` | Structure Stop \`${moneyLine(levels.stop)}\` | Actual Risk \`${moneyLine(levels.risk)}\``,
-    `T1 \`${moneyLine(levels.target1)}\` | T2 \`${moneyLine(levels.target2)}\``,
-    `Obstacle / Reaction Zone: \`${compactObjective(obstacle)}\``,
-    `Primary Liquidity: \`${compactObjective(nearestLiquidity)}\`${runner && !sameObjective(runner, nearestLiquidity) ? ` | Runner Liquidity: \`${compactObjective(runner)}\`` : ''}`,
+    `📊 State: ${candidate.executionStatus} | Overall Score: ${candidateConfidenceScore(candidate)} / 100`,
+    `🧭 Recommendation: ${recommendationForCandidateScore(candidate, candidateConfidenceScore(candidate))}`,
+    `✅ Trigger: ${trigger}`,
+    `🎯 Entry \`${moneyLine(candidate.entry)}\` | 🛡️ Structure Stop \`${moneyLine(levels.stop)}\` | ⚖️ Actual Risk \`${moneyLine(levels.risk)}\``,
+    `🏁 T1 \`${moneyLine(levels.target1)}\` | 🏆 T2 \`${moneyLine(levels.target2)}\``,
+    `🧱 Obstacle / Reaction Zone: \`${compactObjective(obstacle)}\``,
+    `💧 Primary Liquidity: \`${compactObjective(nearestLiquidity)}\`${runner && !sameObjective(runner, nearestLiquidity) ? ` | 🏃 Runner Liquidity: \`${compactObjective(runner)}\`` : ''}`,
   ].join('\n');
 }
 
 function formatCleanScenarios(candidates: SetupCandidate[], targetObjectives: TargetObjective[]): string {
-  if (!candidates.length) return 'No active long/short scenario. Wait for a clean 5M trigger.';
+  if (!candidates.length) return '⚪ No active long/short scenario. Wait for a clean 5M trigger.';
   return candidates
     .slice(0, 2)
     .map((candidate, index) => `${index + 1}. ${cleanScenarioLine(candidate, targetObjectives)}`)
@@ -790,14 +937,14 @@ function formatCleanScenarios(candidates: SetupCandidate[], targetObjectives: Ta
 }
 
 function formatCleanInvalidations(candidates: SetupCandidate[]): string {
-  if (!candidates.length) return 'No scenario invalidation yet. Do not execute without a 5M trigger, structure-based stop, actual risk check, and clear target room.';
+  if (!candidates.length) return '🛡️ No scenario invalidation yet. Do not execute without a 5M trigger, structure-based stop, actual risk check, and clear target room.';
   return candidates
     .slice(0, 2)
     .map((candidate, index) => {
       const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
       const levels = candidateLevels(candidate);
       const invalidation = compactSentence(candidate.invalidation, 130) || `Invalid if price violates the protected structure level near ${moneyLine(levels.stop)}.`;
-      return `${index + 1}. **${direction}:** ${invalidation} Structure Stop: \`${moneyLine(levels.stop)}\``;
+      return `${index + 1}. **${direction}:** 🧱 ${invalidation} 🛡️ Structure Stop: \`${moneyLine(levels.stop)}\``;
     })
     .join('\n');
 }
@@ -861,44 +1008,44 @@ function formatCandidateObjectives(candidate: SetupCandidate, fallbackObjectives
   if (!objectives.length) {
     const levels = candidateLevels(candidate);
     return [
-      'App Targets:',
+      '🏁 App Targets:',
       `T1: ${moneyLine(levels.target1)}`,
       `T2: ${moneyLine(levels.target2)}`,
       '',
-      'Liquidity Map:',
-      formatLiquidityObjective('Nearest obstacle / reaction zone', nearestDirectionalObstacle),
-      `Nearest ${directionLabels.primary} liquidity: N/A`,
-      `${directionLabels.runner}: N/A`,
-      `Nearest ${directionLabels.opposing} liquidity: ${opposingTarget ? `${opposingTarget.price} ${opposingTarget.label}` : 'N/A'}`,
+      '💧 Liquidity Map:',
+      formatLiquidityObjective('🧱 Nearest obstacle / reaction zone', nearestDirectionalObstacle),
+      `💧 Nearest ${directionLabels.primary} liquidity: N/A`,
+      `🏃 ${directionLabels.runner}: N/A`,
+      `↔️ Nearest ${directionLabels.opposing} liquidity: ${opposingTarget ? `${opposingTarget.price} ${opposingTarget.label}` : 'N/A'}`,
       '',
-      'Target Quality:',
+      '✅ Target Quality:',
       'T1/T2 are tactical targets calculated from actual entry-to-structure-stop risk.',
       'No liquidity map levels found for this direction.',
-      targetInstruction ? `Target Plan: ${targetInstruction}` : null,
+      targetInstruction ? `🎯 Target Plan: ${targetInstruction}` : null,
     ].filter(Boolean).join('\n');
   }
 
   const levels = candidateLevels(candidate);
   return [
-    'App Targets:',
+    '🏁 App Targets:',
     `T1: ${moneyLine(levels.target1)}`,
     `T2: ${moneyLine(levels.target2)}`,
     '',
-    'Liquidity Map:',
-    formatLiquidityObjective('Nearest obstacle / reaction zone', nearestDirectionalObstacle),
-    formatLiquidityObjective('LQ1 real 15M/session liquidity', nearestDirectionalTarget),
-    formatLiquidityObjective('LQ2 real 15M/session liquidity', secondLiquidityTarget || runnerDirectionalTarget),
-    formatLiquidityObjective(`Nearest ${directionLabels.opposing} liquidity`, opposingTarget),
+    '💧 Liquidity Map:',
+    formatLiquidityObjective('🧱 Nearest obstacle / reaction zone', nearestDirectionalObstacle),
+    formatLiquidityObjective('💧 LQ1 real 15M/session liquidity', nearestDirectionalTarget),
+    formatLiquidityObjective('💧 LQ2 real 15M/session liquidity', secondLiquidityTarget || runnerDirectionalTarget),
+    formatLiquidityObjective(`↔️ Nearest ${directionLabels.opposing} liquidity`, opposingTarget),
     '',
-    'Target Quality:',
+    '✅ Target Quality:',
     'T1/T2 are close-range tactical targets.',
     targetInstruction ||
       (nearestDirectionalTarget
         ? `Runner target only valid if price clears ${nearestDirectionalTarget.price} and holds.`
         : 'Runner target requires a confirmed break and hold beyond the tactical target zone.'),
-    targetPathWarning ? `Target path warning: ${targetPathWarning}` : null,
+    targetPathWarning ? `⚠️ Target path warning: ${targetPathWarning}` : null,
     '',
-    'Additional levels:',
+    '🧱 Additional levels:',
     ...objectives.map(formatObjectiveLine),
   ].filter(Boolean).join('\n');
 }
@@ -937,7 +1084,7 @@ function formatContextHighLowTargets(objectives: TargetObjective[] = []): string
   }
 
   return selected
-    .map((objective) => `• **${objective.label}:** \`${objective.price}\``)
+    .map((objective) => `• 🧱 **${objective.label}:** \`${objective.price}\``)
     .join('\n');
 }
 
@@ -953,24 +1100,400 @@ function formatSessionLevelContext(analysis: AnalysisResult): string {
     return [
       `**${prefix}:**`,
       ...selected.map((level) =>
-        `• **${level.label}:** \`${level.price}\`${level.contextNote ? ` — ${level.contextNote}` : ''}`
+        `• 🧱 **${level.label}:** \`${level.price}\`${level.contextNote ? ` — ${level.contextNote}` : ''}`
       ),
     ];
   };
 
   const relationshipLines = context.relationships.slice(0, 3).map((relationship) =>
-    `• **${relationship.bias}:** ${relationship.evidence}`
+    `• 🧭 **${relationship.bias}:** ${relationship.evidence}`
   );
 
   return [
-    ...formatLevel('Upside Levels To Watch', context.strongestLongLevels),
+    ...formatLevel('📈 Upside Levels To Watch', context.strongestLongLevels),
     '',
-    ...formatLevel('Downside Levels To Watch', context.strongestShortLevels),
-    relationshipLines.length ? '\n**Session Context Rules:**' : '',
+    ...formatLevel('📉 Downside Levels To Watch', context.strongestShortLevels),
+    relationshipLines.length ? '\n**🧭 Session Context Rules:**' : '',
     ...relationshipLines,
     '',
-    '_Use these as reaction zones and runner targets. The 5M trigger, risk, stop, and invalidation still decide execution._',
+    '_🎯 Use these as reaction zones and runner targets. The 5M trigger, risk, stop, and invalidation still decide execution._',
   ].filter(Boolean).join('\n');
+}
+
+function formatEventTimeEt(event: MacroCalendarEvent): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(event.date));
+}
+
+function formatEventCautionWindow(event: MacroCalendarEvent): string {
+  const config = loadMacroCalendarConfig();
+  const eventMs = new Date(event.date).getTime();
+  const before = new Date(eventMs - config.cautionBeforeMinutes * 60_000);
+  const after = new Date(eventMs + config.cautionAfterMinutes * 60_000);
+  return `${formatEventTimeEt({ ...event, date: before.toISOString() })}-${formatEventTimeEt({ ...event, date: after.toISOString() })} ET`;
+}
+
+function eventInsideMorningWindow(event: MacroCalendarEvent, tradeDate: string): boolean {
+  const eventMs = new Date(event.date).getTime();
+  const start = new Date(etDateTime(tradeDate, MORNING_EXECUTION_START_ET)).getTime();
+  const end = new Date(etDateTime(tradeDate, MORNING_EXECUTION_END_ET)).getTime();
+  return Number.isFinite(eventMs) && eventMs >= start && eventMs <= end;
+}
+
+async function formatMorningNewsBrief(tradeDate: string, context: Partial<ChartContext> | null): Promise<string> {
+  const config = loadMacroCalendarConfig();
+  const events = (await fetchMacroCalendarEvents(config, new Date(etDateTime(tradeDate, '09:15'))))
+    .filter((event) => getEtTradeDate(new Date(event.date)) === tradeDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const active = context?.newsMacroCaution;
+  const lines = events.slice(0, 6).map((event) => {
+    const overlap = eventInsideMorningWindow(event, tradeDate) ? 'overlaps morning scan' : 'outside morning scan';
+    return `• 🗞️ **${formatEventTimeEt(event)} ET:** ${event.country} ${event.impact} Impact - ${event.title} (${overlap}; caution ${formatEventCautionWindow(event)})`;
+  });
+
+  return [
+    lines.length ? lines.join('\n') : '✅ No configured USA medium/high-impact events found for this trade date.',
+    active?.active
+      ? `\n⚠️ Active caution: ${active.eventLabel || 'USA macro event'}${active.minutesUntil ? ` in ${active.minutesUntil} min` : active.minutesAfter != null ? ` released ${active.minutesAfter} min ago` : ''}. Wait for post-release structure confirmation.`
+      : '\n✅ Active caution: none at the report timestamp.',
+    '🚫 Desk rule: do not chase pre-news movement. Wait for sweep/reclaim and confirmed 5M structure.',
+  ].join('\n');
+}
+
+async function formatDailyPlanNewsBrief(tradeDate: string, context: Partial<ChartContext> | null): Promise<string> {
+  const config = loadMacroCalendarConfig();
+  const events = (await fetchMacroCalendarEvents(config, new Date(etDateTime(tradeDate, '09:15'))))
+    .filter((event) => getEtTradeDate(new Date(event.date)) === tradeDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const active = context?.newsMacroCaution;
+  const lines = events.slice(0, 8).map((event) => {
+    const icon = event.impact.toLowerCase() === 'high' ? '🗞️' : '⚠️';
+    return `• ${icon} **${formatEventTimeEt(event)} ET:** ${event.country} ${event.impact} Impact - ${event.title} (caution ${formatEventCautionWindow(event)})`;
+  });
+
+  return [
+    lines.length ? lines.join('\n') : '✅ No configured USA medium/high-impact events found for this trade date.',
+    active?.active
+      ? `\n⚠️ Active caution: ${active.eventLabel || 'USA macro event'}${active.minutesUntil ? ` in ${active.minutesUntil} min` : active.minutesAfter != null ? ` released ${active.minutesAfter} min ago` : ''}. Wait for post-release 5M structure confirmation.`
+      : '\n✅ Active caution: none at the scoring timestamp.',
+    '🚫 Desk rule: news does not create a trade. It only raises the confirmation standard.',
+  ].join('\n');
+}
+
+function formatEventWeekday(event: MacroCalendarEvent): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+  }).format(new Date(event.date));
+}
+
+async function formatWeeklyNewsBrief(tradeDate: string): Promise<string> {
+  const config = loadWeeklyVisualMacroCalendarConfig();
+  const range = weeklyPlanRange(tradeDate);
+  const events = (await fetchMacroCalendarEvents(config, new Date(etDateTime(tradeDate, '08:00'))))
+    .filter((event) => {
+      const eventDate = getEtTradeDate(new Date(event.date));
+      return eventDate >= range.start && eventDate <= range.end;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!events.length) {
+    return '✅ No configured USA high/medium-impact events found for the week. Keep normal macro caution rules active.';
+  }
+
+  return [
+    ...events.slice(0, 10).map((event) =>
+      event.impact.toLowerCase() === 'high'
+        ? `• 🗞️ **${formatEventWeekday(event)} ${formatEventTimeEt(event)} ET:** ${event.country} ${event.impact} Impact - ${event.title} (hard caution ${formatEventCautionWindow(event)})`
+        : `• ⚠️ **${formatEventWeekday(event)} ${formatEventTimeEt(event)} ET:** ${event.country} ${event.impact} Impact - ${event.title} (caution ${formatEventCautionWindow(event)})`
+    ),
+    events.length > 10 ? `• +${events.length - 10} more configured event(s) in the weekly calendar.` : null,
+    '🚫 Desk rule: high- and medium-impact USA events trigger caution. Do not force fresh entries inside the caution window unless post-release 5M structure is already clean.',
+  ].filter(Boolean).join('\n');
+}
+
+function isLiquidityLevel(level: StructuralLevel): boolean {
+  return ['high', 'low', 'swing', 'liquidity_pool'].includes(level.type);
+}
+
+function sourceRank(source: StructuralLevel['source']): number {
+  const order: StructuralLevel['source'][] = [
+    'monthly_rth',
+    'monthly_eth',
+    'weekly_rth',
+    'weekly_eth',
+    'full_context',
+    'three_day_rth',
+    'three_day_eth',
+    'previous_rth',
+    'prior_eth',
+    'asian',
+    'london',
+    'ny_premarket',
+    'rth_morning',
+    'current_window',
+  ];
+  const index = order.indexOf(source);
+  return index >= 0 ? index : order.length;
+}
+
+function rankLiquidityLevels(levels: StructuralLevel[], currentPrice: number | null, side: 'buy' | 'sell'): StructuralLevel[] {
+  const filtered = levels
+    .filter(isLiquidityLevel)
+    .filter((level) => side === 'buy' ? level.type === 'high' || level.directionRelevance === 'LONG' : level.type === 'low' || level.directionRelevance === 'SHORT');
+
+  return filtered.sort((a, b) => {
+    const aRelevant = currentPrice == null ? true : side === 'buy' ? a.price >= currentPrice : a.price <= currentPrice;
+    const bRelevant = currentPrice == null ? true : side === 'buy' ? b.price >= currentPrice : b.price <= currentPrice;
+    if (aRelevant !== bRelevant) return aRelevant ? -1 : 1;
+    if (currentPrice != null) {
+      const distance = Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice);
+      if (distance !== 0) return distance;
+    }
+    const rank = sourceRank(a.source) - sourceRank(b.source);
+    if (rank !== 0) return rank;
+    return side === 'buy' ? a.price - b.price : b.price - a.price;
+  });
+}
+
+function uniqueLevels(levels: StructuralLevel[]): StructuralLevel[] {
+  const seen = new Set<string>();
+  return levels.filter((level) => {
+    const key = `${level.label}:${level.price}:${level.source}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function levelSourceLabel(level: StructuralLevel): string {
+  switch (level.source) {
+    case 'monthly_rth':
+      return 'Monthly RTH';
+    case 'monthly_eth':
+      return 'Monthly ETH';
+    case 'weekly_rth':
+      return 'Weekly RTH';
+    case 'weekly_eth':
+      return 'Weekly ETH';
+    case 'three_day_rth':
+      return '3D RTH';
+    case 'three_day_eth':
+      return '3D ETH';
+    case 'previous_rth':
+      return 'Prior RTH';
+    case 'prior_eth':
+      return 'Prior ETH';
+    case 'asian':
+      return 'Asian ETH';
+    case 'london':
+      return 'London ETH';
+    case 'ny_premarket':
+      return 'NY premarket';
+    case 'rth_morning':
+      return 'RTH morning';
+    case 'current_window':
+      return 'Active 5M/15M';
+    case 'full_context':
+      return level.contextRuleTags?.includes('4h_macro_context') ? '4H macro'
+        : level.contextRuleTags?.includes('1h_session_context') ? '1H session'
+        : 'Full ETH / HTF';
+    default:
+      return 'Chart context';
+  }
+}
+
+function formatLevelWithSource(level: StructuralLevel): string {
+  return `\`${level.price}\` ${level.label} _(${levelSourceLabel(level)})_`;
+}
+
+function formatLevelList(levels: StructuralLevel[], max = 3): string {
+  const selected = uniqueLevels(levels).slice(0, max);
+  if (!selected.length) return 'N/A';
+  return selected.map(formatLevelWithSource).join(' / ');
+}
+
+function levelsBySources(levels: StructuralLevel[], sources: StructuralLevel['source'][]): StructuralLevel[] {
+  return levels.filter((level) => sources.includes(level.source));
+}
+
+function formatLevelsOfInterest(context: Partial<ChartContext> | null): string {
+  const levels = context?.structuralLevels || [];
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const buySide = rankLiquidityLevels(levels, currentPrice, 'buy');
+  const sellSide = rankLiquidityLevels(levels, currentPrice, 'sell');
+  const decisionLevel = sellSide[0] || buySide[0] || null;
+  const upsideTargets = uniqueLevels(buySide).filter((level) => !decisionLevel || level.price !== decisionLevel.price).slice(0, 3);
+  const downsideTargets = uniqueLevels(sellSide).filter((level) => !decisionLevel || level.price !== decisionLevel.price).slice(0, 3);
+
+  if (!decisionLevel) {
+    return [
+      '🧱 No primary decision level was available from the imported OHLC.',
+      '🕯️ Wait for the live 5M chart to build active swing liquidity.',
+    ].join('\n');
+  }
+
+  return [
+    `Going into today’s session, the desk is focused on ${formatLevelWithSource(decisionLevel)}.`,
+    '',
+    `• 📈 Holding above ${formatLevelWithSource(decisionLevel)} keeps upside liquidity in play:`,
+    `  ${upsideTargets.length ? upsideTargets.map(formatLevelWithSource).join(' / ') : 'N/A'}`,
+    '',
+    `• 📉 Breaking and holding below ${formatLevelWithSource(decisionLevel)} opens downside liquidity:`,
+    `  ${downsideTargets.length ? downsideTargets.map(formatLevelWithSource).join(' / ') : 'N/A'}`,
+    '',
+    '🚫 Desk rule: this is not an entry signal. Let price sweep, reclaim, reject, or hold, then require the 5M model trigger.',
+  ].join('\n');
+}
+
+function formatMorningLiquidityLadder(context: Partial<ChartContext> | null): string {
+  const levels = context?.structuralLevels || [];
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const macroSources: StructuralLevel['source'][] = ['monthly_rth', 'monthly_eth', 'weekly_rth', 'weekly_eth', 'full_context'];
+  const sessionSources: StructuralLevel['source'][] = ['three_day_rth', 'three_day_eth', 'previous_rth', 'prior_eth', 'asian', 'london', 'ny_premarket'];
+  const executionSources: StructuralLevel['source'][] = ['rth_morning', 'current_window'];
+  const macro = levelsBySources(levels, macroSources);
+  const session = levelsBySources(levels, sessionSources);
+  const execution = levelsBySources(levels, executionSources);
+  const activeSwingHigh = context?.keyLevels?.activeSwingHigh;
+  const activeSwingLow = context?.keyLevels?.activeSwingLow;
+  const executionBuy = formatLevelList(rankLiquidityLevels(execution, currentPrice, 'buy'), 1);
+  const executionSell = formatLevelList(rankLiquidityLevels(execution, currentPrice, 'sell'), 1);
+  const executionText = [
+    `📈 Buy-side: ${executionBuy}${executionBuy === 'N/A' && typeof activeSwingHigh === 'number' ? ` / \`${activeSwingHigh}\` active 5M/15M swing high` : ''}`,
+    `📉 Sell-side: ${executionSell}${executionSell === 'N/A' && typeof activeSwingLow === 'number' ? ` / \`${activeSwingLow}\` active 5M/15M swing low` : ''}`,
+  ].join('\n');
+
+  return [
+    `💵 Current price: \`${moneyLine(currentPrice)}\``,
+    '',
+    '**🌐 Macro Liquidity - month/week/4H/1H context**',
+    `📈 Buy-side: ${formatLevelList(rankLiquidityLevels(macro, currentPrice, 'buy'), 2)}`,
+    `📉 Sell-side: ${formatLevelList(rankLiquidityLevels(macro, currentPrice, 'sell'), 2)}`,
+    '',
+    '**🕒 Session Liquidity - prior days / ETH / Asian / London / NY premarket**',
+    `📈 Buy-side: ${formatLevelList(rankLiquidityLevels(session, currentPrice, 'buy'), 2)}`,
+    `📉 Sell-side: ${formatLevelList(rankLiquidityLevels(session, currentPrice, 'sell'), 2)}`,
+    '',
+    '**🎯 Execution Liquidity - active 5M/15M map into the open**',
+    executionText,
+  ].join('\n');
+}
+
+function formatMorningSetupWatchlist(context: Partial<ChartContext> | null): string {
+  const levels = context?.structuralLevels || [];
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const buySide = rankLiquidityLevels(levels, currentPrice, 'buy');
+  const sellSide = rankLiquidityLevels(levels, currentPrice, 'sell');
+  const structure = context?.multiTimeframeContext?.alignment?.alignedDirection || context?.marketStructure?.trend || 'unknown';
+  const longArea = formatLevelList(sellSide, 2);
+  const longTargets = formatLevelList(buySide, 2);
+  const shortArea = formatLevelList(buySide, 2);
+  const shortTargets = formatLevelList(sellSide, 2);
+
+  return [
+    `🧭 Big-picture: \`${String(structure)}\`. With-structure ranks higher; against-structure stays conditional until failure confirms.`,
+    '',
+    `**1️⃣ 🟢 LONG - ${PROFESSIONAL_MODEL_ONE_LABEL}**`,
+    `📉 Stalk sell-side: ${longArea}.`,
+    '✅ Need: stop-run -> reclaim -> displacement -> structure shift -> imbalance pullback.',
+    `🎯 First targets: ${longTargets}.`,
+    '🛡️ Gate: 5M entry, structure stop, minimum 2.0R.',
+    '',
+    `**2️⃣ 🔴 SHORT - ${PROFESSIONAL_MODEL_TWO_LABEL}**`,
+    `📈 Stalk buy-side: ${shortArea}.`,
+    '✅ Need: raid -> failed continuation -> reclaim below swept high -> valid entry/retest.',
+    `🎯 First targets: ${shortTargets}.`,
+    '🛡️ Gate: counter-structure remains conditional until failure is clear.',
+  ].join('\n');
+}
+
+function formatWeeklyRecap(context: Partial<ChartContext> | null): string {
+  const story = context?.sessionStory;
+  const alignment = context?.multiTimeframeContext?.alignment;
+  const trend = context?.marketStructure?.trend || 'unknown';
+  return [
+    `🧭 Last imported structure: \`${String(trend)}\`.`,
+    alignment ? `🌐 Timeframe stack: 4H=${alignment.macroBias}, 1H=${alignment.sessionBias}, 15M=${alignment.liquidityBias}, 5M proxy=${alignment.executionBias}.` : '🌐 Timeframe stack unavailable from imported OHLC.',
+    story?.summary ? `📖 Session story: ${story.summary}` : '📖 Session story: no dominant prior-month/weekly narrative detected yet.',
+    story?.notes?.[0] ? `📝 Note: ${compactSentence(story.notes[0], 180)}` : null,
+    '⚠️ Recap is context only. The desk still requires approved 5M execution during Morning/Lunch windows.',
+  ].filter(Boolean).join('\n');
+}
+
+function formatWeeklyMarketContext(context: Partial<ChartContext> | null): string {
+  const alignment = context?.multiTimeframeContext?.alignment;
+  const htf = context?.higherTimeframeThesis;
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const bias = htf?.direction && htf.direction !== 'NO TRADE'
+    ? htf.direction
+    : alignment?.alignedDirection || 'UNKNOWN';
+  return [
+    `💵 Reference price: \`${moneyLine(currentPrice)}\``,
+    `🧭 Parent bias: \`${bias}\``,
+    htf?.reason ? `📌 HTF thesis: ${compactSentence(htf.reason, 180)}` : null,
+    context?.dealingRangeQuality
+      ? `⚖️ Dealing range: ${context.dealingRangeQuality.location} | Midpoint \`${moneyLine(context.dealingRangeQuality.midpoint)}\` | Source ${context.dealingRangeQuality.rangeSource || 'unknown'}`
+      : '⚖️ Dealing range: unavailable until enough OHLC range context is loaded.',
+    alignment?.conflicts?.length ? `⚠️ Conflict: ${compactSentence(alignment.conflicts.join(' '), 180)}` : '✅ No major timeframe conflict detected in the imported stack.',
+  ].filter(Boolean).join('\n');
+}
+
+function formatWeeklyLiquidityMap(context: Partial<ChartContext> | null): string {
+  const levels = context?.structuralLevels || [];
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const macroSources: StructuralLevel['source'][] = ['monthly_rth', 'monthly_eth', 'weekly_rth', 'weekly_eth', 'full_context'];
+  const sessionSources: StructuralLevel['source'][] = ['three_day_rth', 'three_day_eth', 'previous_rth', 'prior_eth'];
+  const macro = levelsBySources(levels, macroSources);
+  const session = levelsBySources(levels, sessionSources);
+  return [
+    '**🌐 Parent Liquidity - month/week/4H/1H**',
+    `📈 Buy-side: ${formatLevelList(rankLiquidityLevels(macro, currentPrice, 'buy'), 3)}`,
+    `📉 Sell-side: ${formatLevelList(rankLiquidityLevels(macro, currentPrice, 'sell'), 3)}`,
+    '',
+    '**🕒 Session Liquidity - prior RTH / 3D / ETH**',
+    `📈 Buy-side: ${formatLevelList(rankLiquidityLevels(session, currentPrice, 'buy'), 3)}`,
+    `📉 Sell-side: ${formatLevelList(rankLiquidityLevels(session, currentPrice, 'sell'), 3)}`,
+  ].join('\n');
+}
+
+function formatWeeklyLevelsOfInterest(context: Partial<ChartContext> | null): string {
+  return formatLevelsOfInterest(context)
+    .replace('Going into today’s session', 'Going into the week')
+    .replace('opens downside liquidity', 'opens downside liquidity for the week');
+}
+
+function formatWeeklyApprovedModels(context: Partial<ChartContext> | null): string {
+  const levels = context?.structuralLevels || [];
+  const currentPrice = typeof context?.keyLevels?.currentPrice === 'number' ? context.keyLevels.currentPrice : null;
+  const buySide = formatLevelList(rankLiquidityLevels(levels, currentPrice, 'buy'), 2);
+  const sellSide = formatLevelList(rankLiquidityLevels(levels, currentPrice, 'sell'), 2);
+  return [
+    `**1️⃣ 🟢 ${PROFESSIONAL_MODEL_ONE_LABEL}**`,
+    `📉 Best long stalk: sell-side sweep near ${sellSide}.`,
+    '✅ Required: stop-run -> reclaim -> displacement -> structure shift -> imbalance pullback -> 5M entry/structure stop -> minimum 2.0R.',
+    `🎯 Upside draw: ${buySide}.`,
+    '',
+    `**2️⃣ 🔴 ${PROFESSIONAL_MODEL_TWO_LABEL}**`,
+    `📈 Best short stalk: buy-side raid near ${buySide}.`,
+    '✅ Required: meaningful raid -> failed continuation -> reclaim -> valid entry/retest -> stop beyond sweep wick -> minimum 2.0R.',
+    `🎯 Downside draw: ${sellSide}.`,
+    '',
+    '🚫 Supporting evidence can improve quality, but it cannot create a third model.',
+  ].join('\n');
+}
+
+function formatWeeklyDeskRules(): string {
+  return [
+    '✅ Best trades: with big-picture structure, at meaningful liquidity, after sweep/reclaim, with clean 5M trigger and 2.0R.',
+    '🟡 Conditional only: counter-structure, minor structure break without inducement swept, news caution, chop, stale setup, or obstacle before 1R.',
+    '🔴 No trade: no sweep, no reclaim, no valid 5M trigger, wrong-side stop, under 2.0R, or outside approved scan windows.',
+    '🧠 Parent rule: big-picture structure is the map. The 5M execution chart is the trigger.',
+  ].join('\n');
 }
 
 function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: TargetObjective[] = []): string {
@@ -982,15 +1505,15 @@ function formatCandidateValue(candidate: SetupCandidate, fallbackObjectives: Tar
     levels.risk > 0 &&
     levels.risk < minimumPracticalRisk;
   return [
-    `Status: ${candidate.executionStatus}${candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : ''}`,
-    `Trigger: ${candidate.requiredTrigger || 'Needs confirmation'}`,
-    `Entry ${moneyLine(candidate.entry)} | Structure Stop ${moneyLine(levels.stop)} | Actual Risk ${moneyLine(levels.risk)} | T1 ${moneyLine(levels.target1)} | T2 ${moneyLine(levels.target2)}`,
+    `📊 Status: ${candidate.executionStatus}${candidate.blockReason ? ` | 🛑 Blocker: ${candidate.blockReason}` : ''}`,
+    `✅ Trigger: ${candidate.requiredTrigger || 'Needs confirmation'}`,
+    `🎯 Entry ${moneyLine(candidate.entry)} | 🛡️ Structure Stop ${moneyLine(levels.stop)} | ⚖️ Actual Risk ${moneyLine(levels.risk)} | 🏁 T1 ${moneyLine(levels.target1)} | 🏆 T2 ${moneyLine(levels.target2)}`,
     riskTooTight
-      ? `Stop Quality: TOO TIGHT for MES. Minimum practical stop is ${minimumPracticalRisk} points. Wait for cleaner structure or a wider pullback/retest stop.`
-      : `Stop Quality: ${typeof candidate.riskPoints === 'number' ? 'Acceptable practical range' : 'Unknown until entry/stop confirm'}`,
-    candidate.levelContextSummary ? `Market Map: ${candidate.levelContextSummary}` : 'Market Map: No clear session reaction zone attached.',
+      ? `🛑 Stop Quality: TOO TIGHT for MES. Minimum practical stop is ${minimumPracticalRisk} points. Wait for cleaner structure or a wider pullback/retest stop.`
+      : `🛡️ Stop Quality: ${typeof candidate.riskPoints === 'number' ? 'Acceptable practical range' : 'Unknown until entry/stop confirm'}`,
+    candidate.levelContextSummary ? `🗺️ Market Map: ${candidate.levelContextSummary}` : '🗺️ Market Map: No clear session reaction zone attached.',
     formatCandidateObjectives(candidate, fallbackObjectives),
-    `Plain English: ${candidate.nextAction || 'Wait for a cleaner trigger.'}`,
+    `🧠 Plain English: ${candidate.nextAction || 'Wait for a cleaner trigger.'}`,
   ].join('\n');
 }
 
@@ -1025,22 +1548,22 @@ function formatFiveWsScenario(candidate: SetupCandidate, objectives: TargetObjec
   const blocker = candidate.blockReason ? ` | Blocker: ${candidate.blockReason}` : '';
   return [
     `**${direction} - ${compactSetupName(candidate)}**`,
-    `Model: ${candidateModelType(candidate)} | Score: ${score}/100 | Decision: ${tradeDecisionFromScore(score)}`,
-    `Status: ${candidate.executionStatus}${blocker}`,
-    `Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
-    `Plan: Entry ${moneyLine(candidate.entry)} | Structure Stop ${moneyLine(levels.stop)} | Actual Risk ${moneyLine(levels.risk)}`,
-    `Targets: T1 ${moneyLine(levels.target1)} | T2 ${moneyLine(levels.target2)}`,
-    `Obstacle / Reaction Zone: ${compactObjective(obstacle)}`,
-    `Primary Liquidity: ${compactObjective(nearestLiquidity)}`,
-    uniqueLq2 ? `Next Liquidity: ${compactObjective(uniqueLq2)}` : null,
-    uniqueRunner ? `Runner Liquidity: ${compactObjective(uniqueRunner)}` : null,
-    targetInstruction ? `Note: ${targetInstruction}` : null,
+    `🎯 Model: ${candidateModelType(candidate)} | 📊 Score: ${score}/100 | ⚖️ Decision: ${tradeDecisionFromScore(score)}`,
+    `📊 Status: ${candidate.executionStatus}${blocker}`,
+    `✅ Trigger: ${candidate.requiredTrigger || 'Wait for confirmation'}`,
+    `📝 Plan: 🎯 Entry ${moneyLine(candidate.entry)} | 🛡️ Structure Stop ${moneyLine(levels.stop)} | ⚖️ Actual Risk ${moneyLine(levels.risk)}`,
+    `🏁 Targets: T1 ${moneyLine(levels.target1)} | T2 ${moneyLine(levels.target2)}`,
+    `🧱 Obstacle / Reaction Zone: ${compactObjective(obstacle)}`,
+    `💧 Primary Liquidity: ${compactObjective(nearestLiquidity)}`,
+    uniqueLq2 ? `💧 Next Liquidity: ${compactObjective(uniqueLq2)}` : null,
+    uniqueRunner ? `🏃 Runner Liquidity: ${compactObjective(uniqueRunner)}` : null,
+    targetInstruction ? `📝 Note: ${targetInstruction}` : null,
   ].filter(Boolean).join('\n');
 }
 
 function formatFiveWsWhere(candidates: SetupCandidate[], targetObjectives: TargetObjective[]): string {
   if (!candidates.length) {
-    return 'No active scenario levels. Wait for a clean 5M trigger.';
+    return '⚪ No active scenario levels. Wait for a clean 5M trigger.';
   }
   return candidates
     .slice(0, 2)
@@ -1050,16 +1573,16 @@ function formatFiveWsWhere(candidates: SetupCandidate[], targetObjectives: Targe
 
 function formatSessionStoryLine(analysis: AnalysisResult): string {
   const story = analysis.structuredChartContext?.sessionStory;
-  if (!story) return 'Session story: no dominant overnight/Asian/London/RTH relationship detected.';
+  if (!story) return '🧭 Session story: no dominant overnight/Asian/London/RTH relationship detected.';
   const zone = story.displacementZones?.[0];
   return [
-    `Session story: ${story.summary}`,
-    zone ? `Key zone: ${zone.label} ${zone.lower}-${zone.upper}` : null,
+    `🧭 Session story: ${story.summary}`,
+    zone ? `🧱 Key zone: ${zone.label} ${zone.lower}-${zone.upper}` : null,
   ].filter(Boolean).join('\n');
 }
 
 function formatFiveWsWhen(candidates: SetupCandidate[]): string {
-  if (!candidates.length) return 'When a clean 5M trigger forms.';
+  if (!candidates.length) return '⏳ When a clean 5M trigger forms.';
   return candidates
     .slice(0, 2)
     .map((candidate, index) => `${index + 1}. ${candidate.requiredTrigger || 'Wait for confirmation'}`)
@@ -1067,7 +1590,7 @@ function formatFiveWsWhen(candidates: SetupCandidate[]): string {
 }
 
 function formatBestScenarios(candidates: SetupCandidate[]): string {
-  if (!candidates.length) return 'No active long/short scenario. Wait for a clean 5M trigger.';
+  if (!candidates.length) return '⚪ No active long/short scenario. Wait for a clean 5M trigger.';
   return candidates
     .slice(0, 2)
     .map((candidate, index) => `${index + 1}. ${simpleScenarioLine(candidate)}`)
@@ -1094,14 +1617,14 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
     first.targetObjectivePlan?.runnerTarget ||
     nearestLiquidityByDirection(sourceObjectives, direction, first.entry, nearest);
   return [
-    `T1/T2: app-computed from confirmed ENTRY/STOP.`,
-    `Nearest obstacle/reaction: ${compactObjective(obstacle)}`,
-    `Nearest real liquidity: ${compactObjective(nearest)}`,
-    runner && !sameObjective(runner, nearest) ? `Runner liquidity: ${compactObjective(runner)}` : null,
+    `🏁 T1/T2: app-computed from confirmed ENTRY/STOP.`,
+    `🧱 Nearest obstacle/reaction: ${compactObjective(obstacle)}`,
+    `💧 Nearest real liquidity: ${compactObjective(nearest)}`,
+    runner && !sameObjective(runner, nearest) ? `🏃 Runner liquidity: ${compactObjective(runner)}` : null,
   ].filter(Boolean).join('\n');
 }
 
-function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): DiscordWebhookPayload {
+async function formatPlanPayload(job: SessionAlertJob, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): Promise<DiscordWebhookPayload> {
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
   const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
@@ -1128,39 +1651,50 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
     tradeDate,
     instrument,
   });
+  const dailyNewsBrief = await formatDailyPlanNewsBrief(tradeDate, analysis.structuredChartContext || null);
   const fields: DiscordEmbedField[] = [
     {
-      name: '1️⃣ What',
+      name: '1️⃣ 📊 What',
       value: discordValue(
         `**${finalStatusLabel}**\n` +
-        `${hasPlanningPaths && !normalized.canExecute ? 'Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.' : normalized.planningDecision}\n` +
-        `${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}\n` +
-        `Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`
+        `${hasPlanningPaths && !normalized.canExecute ? '⏳ Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.' : `🧠 ${normalized.planningDecision}`}\n` +
+        `🕒 ${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}\n` +
+        `⏱️ Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`
       ),
       inline: false,
     },
     {
-      name: '2️⃣ Where',
+      name: '2️⃣ 🗺️ Where',
       value: discordValue(formatCleanScenarios(candidates, targetObjectives)),
       inline: false,
     },
     {
-      name: '3️⃣ When',
+      name: '3️⃣ 📊 Trade Quality Score',
+      value: discordValue(candidates[0] ? formatTradeQualityScore(candidates[0]) : '⚪ No active trade plan to score.'),
+      inline: false,
+    },
+    {
+      name: '4️⃣ ⏳ When',
       value: discordValue(formatFiveWsWhen(candidates)),
       inline: false,
     },
     {
-      name: '4️⃣ Invalidation',
+      name: '5️⃣ 🛡️ Invalidation',
       value: discordValue(formatCleanInvalidations(candidates)),
       inline: false,
     },
     {
-      name: '5️⃣ Watch-Out',
+      name: '6️⃣ 🗞️ USA News Caution',
+      value: discordValue(dailyNewsBrief),
+      inline: false,
+    },
+    {
+      name: '7️⃣ ⚠️ Watch-Out',
       value: discordValue(
-        `${compactSentence(normalized.whyThisPlan, 160) || 'Do not chase. Let the 5M trigger prove the path.'}\n` +
-        `${components ? 'Button guide: 🟢 LONG T1 | 🏆 T2 | 🎯 liquidity target | 🛑 stopped | 🔴 SHORT T1 | ⚪ scratch | 🚫 not taken | ⏭ missed.' : 'RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
-        `${components ? 'Use the buttons only after you know what happened. They update RAG/journal learning only.' : ''}\n` +
-        'Decision support only. No automated orders were placed.'
+        `🚫 ${compactSentence(normalized.whyThisPlan, 160) || 'Do not chase. Let the 5M trigger prove the path.'}\n` +
+        `${components ? '🧠 Button guide: 🟢 LONG T1 | 🏆 T2 | 🎯 liquidity target | 🛑 stopped | 🔴 SHORT T1 | ⚪ scratch | 🚫 not taken | ⏭ missed.' : '🧠 RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
+        `${components ? '📝 Use the buttons only after you know what happened. They update RAG/journal learning only.' : ''}\n` +
+        '⚠️ Decision support only. No automated orders were placed.'
       ),
       inline: false,
     },
@@ -1168,11 +1702,11 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
 
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\nPlan ID: \`${planVersionId}\`${components ? '\nUse outcome buttons below to feed RAG.' : ''}`,
+    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\n🆔 Plan ID: \`${planVersionId}\`${components ? '\n🧠 Use outcome buttons below to feed RAG.' : ''}`,
     embeds: [
       {
         title: `📊 5 W Trading Card — ${tradeDate}`,
-        description: 'Decision support only. No automated orders were placed.',
+        description: '⚠️ Decision support only. No automated orders were placed.',
         color: statusColor(finalStatus),
         fields,
         footer: { text: 'Quant Desk • App-Owned Trade Pipeline • No automated orders' },
@@ -1183,42 +1717,133 @@ function formatPlanPayload(job: Exclude<AlertJob, 'premarket'>, tradeDate: strin
   };
 }
 
-function formatPremarketPayload(tradeDate: string, context: ReturnType<typeof buildNinjaChartContext>): DiscordWebhookPayload {
+async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartContext> | null, instrument: Instrument): Promise<DiscordWebhookPayload> {
+  const range = weeklyPlanRange(tradeDate);
+  const newsBrief = await formatWeeklyNewsBrief(tradeDate);
+  const levels = context?.structuralLevels || [];
+  return {
+    username: 'Quant Desk',
+    content: `# 🧭 Quant Desk Weekly Plan — ${instrument} ${range.label}\n🧠 Parent report for the week. Daily Morning/Lunch plans must trade inside this map.`,
+    embeds: [
+      {
+        title: `🧭 Master Trading Desk Weekly Plan — ${range.label}`,
+        description: '⚠️ Context only. This report builds the weekly map; it does not approve trades or place orders.',
+        color: 0xffd54f,
+        fields: [
+          {
+            name: '1️⃣ 📌 Weekly Recap',
+            value: discordValue(formatWeeklyRecap(context)),
+            inline: false,
+          },
+          {
+            name: '2️⃣ 🧱 Market Context',
+            value: discordValue(formatWeeklyMarketContext(context)),
+            inline: false,
+          },
+          {
+            name: '3️⃣ 🎯 Levels of Interest',
+            value: discordValue(formatWeeklyLevelsOfInterest(context)),
+            inline: false,
+          },
+          {
+            name: '4️⃣ 💧 Liquidity Map',
+            value: discordValue(formatWeeklyLiquidityMap(context)),
+            inline: false,
+          },
+          {
+            name: '5️⃣ 🧠 Approved Models For The Week',
+            value: discordValue(formatWeeklyApprovedModels(context)),
+            inline: false,
+          },
+          {
+            name: '6️⃣ 🗞️ USA News Calendar',
+            value: discordValue(newsBrief),
+            inline: false,
+          },
+          {
+            name: '7️⃣ ⚖️ Weekly Decision Rules',
+            value: discordValue(formatWeeklyDeskRules()),
+            inline: false,
+          },
+          {
+            name: '8️⃣ 🕒 Execution Windows',
+            value: discordValue([
+              '👀 9:30-10:00 AM ET: Opening observation only.',
+              '🔎 10:00-11:15 AM ET: Morning setup scanning after the opening range forms.',
+              '🍽️ 11:50 AM-1:00 PM ET: Lunch setup scanning.',
+              '🗺️ Outside those windows: Market Mapping only. No trade approval.',
+              `🧱 Structured levels loaded: ${levels.length}.`,
+            ].join('\n')),
+            inline: false,
+          },
+        ],
+        footer: { text: 'Quant Desk • Weekly Parent Map • App-Owned Trade Pipeline • No automated orders' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+async function formatPremarketPayload(tradeDate: string, context: Partial<ChartContext> | null, instrument: Instrument): Promise<DiscordWebhookPayload> {
   const levels = context?.structuralLevels || [];
   const high = context?.keyLevels?.overnightHigh;
   const low = context?.keyLevels?.overnightLow;
   const trend = context?.marketStructure?.trend || 'unknown';
+  const newsBrief = await formatMorningNewsBrief(tradeDate, context);
   return {
     username: 'Quant Desk',
+    content: `# 🌅 Quant Desk Morning Brief — ${instrument} ${tradeDate}\n🧠 Desk prep only. Trade alerts still require the live 5M scanner.`,
     embeds: [
       {
-        title: `🌙 Quant Desk Master Trading Desk Premarket ETH Rundown — ${tradeDate}`,
-        description: 'Context only. The 5M execution chart and app-owned pipeline still decide any trade plan.',
+        title: `🌙 Quant Desk Master Trading Desk Morning Brief — ${tradeDate}`,
+        description: '⚠️ Context only. The 5M execution chart and app-owned pipeline still decide any trade plan.',
         color: 0x2962ff,
         fields: [
           {
             name: '📈 Instrument / Source',
-            value: 'MES | NinjaTrader OHLC',
+            value: `📈 ${instrument} | 🕯️ NinjaTrader OHLC`,
             inline: true,
           },
           {
             name: '🧭 Broader Trend',
-            value: discordValue(String(trend)),
+            value: discordValue(`🧭 ${String(trend)}`),
             inline: true,
           },
           {
             name: '🌙 ETH Range',
-            value: discordValue(`High: \`${moneyLine(high)}\`\nLow: \`${moneyLine(low)}\``),
+            value: discordValue(`📈 High: \`${moneyLine(high)}\`\n📉 Low: \`${moneyLine(low)}\``),
             inline: true,
           },
           {
-            name: '🧱 Key Levels Into Morning',
-            value: discordValue(levels.slice(0, 8).map((level) => `• ${level.label}: ${level.price} (${level.type})`).join('\n') || 'No structural levels available.'),
+            name: '🗞️ USA News Caution',
+            value: discordValue(newsBrief),
+            inline: false,
+          },
+          {
+            name: '🧱 Levels of Interest',
+            value: discordValue(formatLevelsOfInterest(context)),
+            inline: false,
+          },
+          {
+            name: '🧱 Multi-Timeframe Liquidity Ladder',
+            value: discordValue(formatMorningLiquidityLadder(context)),
+            inline: false,
+          },
+          {
+            name: '🎯 Potential High-Quality Setups',
+            value: discordValue(formatMorningSetupWatchlist(context)),
             inline: false,
           },
           {
             name: '⚠️ Decision Support Only',
-            value: 'This rundown does not approve trades. Final execution requires the 5M chart, setup scanner, risk checks, and app-owned pipeline.',
+            value: [
+              '⚠️ This brief does not approve trades.',
+              '🗺️ The liquidity ladder tells us WHERE.',
+              '🎯 The approved model tells us WHEN.',
+              '🕯️ The 5M execution chart tells us WHETHER.',
+              '⚖️ The risk gate tells us IF IT IS WORTH TAKING.',
+              levels.length ? `🧱 Structured levels loaded: ${levels.length}.` : '🧱 No structural levels available.',
+            ].join('\n'),
             inline: false,
           },
         ],
@@ -1229,9 +1854,9 @@ function formatPremarketPayload(tradeDate: string, context: ReturnType<typeof bu
   };
 }
 
-async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean): Promise<void> {
+async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, files: string[] = []): Promise<void> {
   if (dryRun) {
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
     return;
   }
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
@@ -1240,20 +1865,36 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean): Pro
   }
   const separator = webhookUrl.includes('?') ? '&' : '?';
   const url = payload.components?.length ? `${webhookUrl}${separator}with_components=true` : webhookUrl;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  const validFiles = files.filter(Boolean);
+  const response = validFiles.length
+    ? await (async () => {
+        const form = new FormData();
+        form.append('payload_json', JSON.stringify(payload));
+        for (const [index, file] of validFiles.entries()) {
+          const bytes = await fs.readFile(file);
+          form.append(`files[${index}]`, new Blob([bytes], { type: 'image/png' }), path.basename(file));
+        }
+        return fetch(url, { method: 'POST', body: form });
+      })()
+    : await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
   if (!response.ok) {
     throw new Error(`Discord webhook failed (${response.status}).`);
   }
 }
 
 async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string): Promise<void> {
+  if (job === 'weekly') {
+    const context = await buildWeeklyContext(config, tradeDate);
+    await postDiscord(await formatWeeklyPayload(tradeDate, context, config.instrument), dryRun);
+    return;
+  }
   if (job === 'premarket') {
     const context = await buildPremarketContext(config, tradeDate);
-    await postDiscord(formatPremarketPayload(tradeDate, context), dryRun);
+    await postDiscord(await formatPremarketPayload(tradeDate, context, config.instrument), dryRun);
     return;
   }
   const analysis = await buildSessionAnalysis(config, job, tradeDate, asOfEt);
@@ -1265,7 +1906,18 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   } catch (error) {
     console.warn('Discord alert RAG pending save failed:', error instanceof Error ? error.message : String(error));
   }
-  await postDiscord(formatPlanPayload(job, tradeDate, analysis, planVersionId, config.instrument), dryRun);
+  const payload = await formatPlanPayload(job, tradeDate, analysis, planVersionId, config.instrument);
+  const chartMarkup = candidates[0]
+    ? await renderChartMarkup({
+        chartContext: analysis.structuredChartContext || null,
+        candidate: candidates[0],
+        instrument: config.instrument,
+        tradeDate,
+        sessionLabel: job,
+        filePrefix: `${job}-${tradeDate}-${config.instrument}`,
+      })
+    : null;
+  await postDiscord(payload, dryRun, chartMarkup ? [chartMarkup] : []);
 }
 
 async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<void> {
@@ -1277,6 +1929,7 @@ async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<
     const clock = getEtClock();
     for (const [jobName, jobConfig] of Object.entries(config.jobs) as Array<[AlertJob, SchedulerConfig['jobs'][AlertJob]]>) {
       const key = `${tradeDate}:${jobName}`;
+      if (jobName === 'weekly' && getDayOfWeek(tradeDate) !== 'Sunday') continue;
       if (jobConfig.enabled && clock >= jobConfig.timeEt && !state.sent[key]) {
         try {
           await runJob(jobName, config, dryRun, tradeDate, clock);
@@ -1310,8 +1963,8 @@ async function main() {
   const asOfEt = argValue('as-of') ? normalizeEtClock(argValue('as-of') as string) : undefined;
 
   if (once) {
-    if (!['premarket', 'morning', 'lunch'].includes(once)) {
-      throw new Error('--once must be premarket, morning, or lunch.');
+    if (!['weekly', 'premarket', 'morning', 'lunch'].includes(once)) {
+      throw new Error('--once must be weekly, premarket, morning, or lunch.');
     }
     await runJob(once, config, dryRun, tradeDate, asOfEt);
     return;

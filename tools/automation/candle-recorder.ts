@@ -179,10 +179,10 @@ async function main() {
   const maxStaleBarMinutes = numberArg('max-stale-bar-minutes', 10);
   const timestampModeArg = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'close';
   const barTimestampMode: BridgeTimestampMode = timestampModeArg === 'open' ? 'open' : 'close';
-  const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'central';
+  const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'eastern';
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)
-    : 'central';
+    : 'eastern';
   const once = hasArg('once');
 
   console.log('Quant Desk NinjaTrader candle recorder started.');

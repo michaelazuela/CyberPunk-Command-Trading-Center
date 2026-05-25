@@ -32,7 +32,7 @@ export const TIME_WINDOWS = {
     label: "Midnight Open",
     captureHour: 0, captureMinute: 0,
     timezone: "America/New_York",
-    note: "12:00 AM ET candle open — primary ICT daily bias anchor. NOT a separate session.",
+    note: "12:00 AM ET candle open — primary daily reference anchor. NOT a separate session.",
     statistics: {
       ES: { aboveRetrace: 0.58, belowRetrace: 0.69, bestDay: "Thursday" },
       NQ: { aboveRetrace: 0.57, belowRetrace: 0.63, bestDay: "Tuesday",

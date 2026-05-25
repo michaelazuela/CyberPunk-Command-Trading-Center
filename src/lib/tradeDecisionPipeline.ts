@@ -3,6 +3,7 @@ import {
   BiasAssessment,
   BiasDirection,
   ChartContext,
+  DecisionQualityScoreItem,
   ExecutionStatus,
   FinalOpportunitySelection,
   FinalTradePlan,
@@ -439,10 +440,163 @@ function hasActionablePlanLevels(candidate: SetupCandidate): boolean {
   return candidate.direction !== 'NO TRADE' && (isValidPrice(candidate.entry) || isValidPrice(candidate.stop));
 }
 
+function clampQualityScore(value: number, max: number): number {
+  return Math.max(0, Math.min(max, Math.round(value)));
+}
+
+function qualityStatus(score: number, max: number): DecisionQualityScoreItem['status'] {
+  if (score <= 0) return 'blocked';
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return 'strong';
+  if (ratio >= 0.45) return 'partial';
+  return 'weak';
+}
+
+function qualityRecommendation(candidate: SetupCandidate, score: number, hardBlocker: string | null): string {
+  if (hardBlocker) return `No trade: ${hardBlocker}`;
+  if (candidate.executionStatus !== ExecutionStatus.Executable && score >= 80) {
+    return 'High-quality map, but execution remains conditional until the missing 5M/risk gate confirms.';
+  }
+  if (score >= 80) return 'Qualified only if the 5M trigger, protected stop, actual risk, and target room remain confirmed.';
+  if (score >= 65) return 'Conditional: good map, but wait for the missing confirmation before execution.';
+  if (score >= 45) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
+  return 'No trade: score is below the desk threshold or required evidence is missing.';
+}
+
+function candidateTextIncludes(candidate: SetupCandidate, ...patterns: string[]): boolean {
+  const text = [
+    candidate.scenarioLabel,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.levelContextSummary,
+    candidate.invalidation,
+    ...(candidate.evidence || []),
+    ...(candidate.missingEvidence || []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  return patterns.some((pattern) => text.includes(pattern.toLowerCase()));
+}
+
+function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartContext): SetupCandidate {
+  const hardBlocker =
+    candidate.executionStatus === ExecutionStatus.Blocked ? candidate.blockReason || NoTradeReason.NoApprovedSetup :
+    candidate.blockReason === NoTradeReason.OutsideTimeWindow ? candidate.blockReason :
+    null;
+  const hasSweep = candidateTextIncludes(candidate, 'sweep', 'liquidity raid');
+  const hasReclaim = candidateTextIncludes(candidate, 'reclaim');
+  const hasDisplacement = candidateTextIncludes(candidate, 'displacement');
+  const hasMss = candidateTextIncludes(candidate, 'market structure shift', 'mss');
+  const hasFvg = candidateTextIncludes(candidate, 'fair value gap', 'fvg', 'imbalance');
+  const hasTurtle = candidate.setupType === SetupType.TurtleSoup || candidateTextIncludes(candidate, 'turtle soup');
+  const htfAligned = candidateTextIncludes(candidate, 'higher-timeframe', 'big-picture', 'structure supports') ||
+    chartContext.multiTimeframeContext?.alignment?.alignedDirection === candidate.direction;
+  const hasLiquidityMap =
+    Boolean(candidate.targetObjectivePlan?.liquidityTarget1 || candidate.targetObjectivePlan?.nearestLiquidityTarget) ||
+    Boolean((chartContext.sessionLevelContext?.levelsToWatch || []).length);
+  const riskAssessment = makeRiskAssessmentFromSetup(candidate);
+  const modelScore = clampQualityScore(
+    (hasSweep ? 6 : 0) +
+    (hasReclaim ? 6 : 0) +
+    (hasTurtle || hasFvg ? 7 : 0) +
+    (hasDisplacement || hasMss || hasTurtle ? 6 : 0),
+    25
+  );
+  const executionScore = clampQualityScore(
+    (candidate.requiredTrigger ? 6 : 0) +
+    (isValidPrice(candidate.entry) ? 5 : 0) +
+    (isValidPrice(candidate.stop) ? 5 : 0) +
+    (candidate.executionStatus === ExecutionStatus.Executable || candidate.executionStatus === ExecutionStatus.Conditional ? 4 : 0),
+    20
+  );
+  const liquidityScore = clampQualityScore(
+    (hasLiquidityMap ? 7 : 0) +
+    (candidate.levelContextScore ? Math.min(6, Math.round(candidate.levelContextScore / 2)) : 0) +
+    (candidateTextIncludes(candidate, 'premium/discount', 'breaker', 'overlap') ? 2 : 0),
+    15
+  );
+  const structureScore = clampQualityScore(
+    (htfAligned ? 10 : 4) +
+    (candidateTextIncludes(candidate, 'countertrend', 'do not fight big-picture') ? -5 : 3),
+    15
+  );
+  const riskScore = clampQualityScore(
+    (isValidPrice(candidate.stop) ? 5 : 0) +
+    (isValidPrice(candidate.target1) ? 5 : 0) +
+    (isValidPrice(candidate.target2) ? 5 : 0) +
+    (riskAssessment.status !== RiskStatus.Blocked && !candidate.blockReason ? 5 : 0),
+    20
+  );
+  const sessionScore = clampQualityScore(
+    chartContext.newsMacroCaution?.active && !chartContext.newsMacroCaution.confirmedAfterRelease ? 2 : 5,
+    5
+  );
+  const rawScore = modelScore + executionScore + liquidityScore + structureScore + riskScore + sessionScore;
+  const score = hardBlocker ? Math.min(rawScore, 44) : rawScore;
+  const scorecard: DecisionQualityScoreItem[] = [
+    {
+      label: 'Approved model completion',
+      score: modelScore,
+      max: 25,
+      status: qualityStatus(modelScore, 25),
+      note: candidate.setupType === SetupType.TurtleSoup ? 'Turtle Soup reversal sequence quality.' : 'Sweep -> MSS -> FVG retrace sequence quality.',
+    },
+    {
+      label: '5M execution quality',
+      score: executionScore,
+      max: 20,
+      status: qualityStatus(executionScore, 20),
+      note: '5M trigger, entry, stop, and executable/conditional readiness.',
+    },
+    {
+      label: '15M/session liquidity map',
+      score: liquidityScore,
+      max: 15,
+      status: qualityStatus(liquidityScore, 15),
+      note: candidate.levelContextSummary || 'Session liquidity context is limited.',
+    },
+    {
+      label: '60M/240M structure alignment',
+      score: structureScore,
+      max: 15,
+      status: qualityStatus(structureScore, 15),
+      note: htfAligned ? 'Higher-timeframe/big-picture context supports the idea.' : 'Higher-timeframe alignment is not confirmed.',
+    },
+    {
+      label: 'Risk and target room',
+      score: riskScore,
+      max: 20,
+      status: qualityStatus(riskScore, 20),
+      note: 'Protected stop, T1/T2, actual risk status, and blocker status.',
+    },
+    {
+      label: 'Time window / session quality',
+      score: sessionScore,
+      max: 5,
+      status: qualityStatus(sessionScore, 5),
+      note: chartContext.newsMacroCaution?.active ? 'Macro caution active; wait for post-release confirmation.' : 'No active macro/news caution penalty.',
+    },
+  ];
+
+  return {
+    ...candidate,
+    decisionQualityScore: score,
+    decisionQualityRecommendation: qualityRecommendation(candidate, score, hardBlocker),
+    decisionQualityScorecard: scorecard,
+    decisionQualityHardBlocker: hardBlocker,
+  };
+}
+
+function enrichDecisionQuality(candidates: SetupCandidate[], chartContext: ChartContext): SetupCandidate[] {
+  return candidates.map((candidate) => computeDecisionQuality(candidate, chartContext));
+}
+
+function qualitySort(a: SetupCandidate, b: SetupCandidate): number {
+  return (b.decisionQualityScore || 0) - (a.decisionQualityScore || 0) || rankSetupCandidate(b) - rankSetupCandidate(a);
+}
+
 function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | null {
   return candidates
     .filter(hasDetectedOpportunity)
-    .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a))[0] || null;
+    .sort(qualitySort)[0] || null;
 }
 
 function mergeSetupCandidates(scannerCandidates: SetupCandidate[], builderCandidates: SetupCandidate[]): SetupCandidate[] {
@@ -519,10 +673,10 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     result: input.result,
     chartContext,
   });
-  const setupCandidates = applyTargetObjectivesToCandidates(
+  const setupCandidates = enrichDecisionQuality(applyTargetObjectivesToCandidates(
     mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)),
     chartContext.structuralLevels || []
-  );
+  ), chartContext).sort(qualitySort);
   const selectedExecutable = setupCandidates.find((candidate) =>
     candidate.executionStatus === ExecutionStatus.Executable &&
     hasActionablePlanLevels(candidate)
@@ -577,6 +731,9 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     invalidation: selectedCandidate?.invalidation || displayCandidate?.invalidation || 'No valid invalidation defined.',
     reasoning: selectedCandidate?.nextAction || displayCandidate?.nextAction || 'No executable or conditional setup survived deterministic scan.',
     noTradeReason: selectedCandidate?.blockReason || displayCandidate?.blockReason || null,
+    decisionQualityScore: selectedCandidate?.decisionQualityScore ?? displayCandidate?.decisionQualityScore ?? null,
+    decisionQualityRecommendation: selectedCandidate?.decisionQualityRecommendation ?? displayCandidate?.decisionQualityRecommendation ?? null,
+    decisionQualityScorecard: selectedCandidate?.decisionQualityScorecard ?? displayCandidate?.decisionQualityScorecard ?? [],
   };
   const biasAssessment: BiasAssessment = {
     bias,

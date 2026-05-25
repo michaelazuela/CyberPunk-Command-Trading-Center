@@ -60,6 +60,15 @@ export interface ScannerConfidenceBreakdown {
   score: number;
   qualifiedReasons: string[];
   missingReasons: string[];
+  recommendation?: string;
+  scorecard?: Array<{
+    label: string;
+    score: number;
+    max: number;
+    status: 'strong' | 'partial' | 'weak' | 'blocked';
+    note: string;
+  }>;
+  hardBlocker?: string | null;
 }
 
 export interface StaleChaseResult {
@@ -401,6 +410,26 @@ const ICT_SCORE_THRESHOLDS = {
   QUALIFIED: 80,
 } as const;
 
+function clampScore(value: number, max: number): number {
+  return Math.max(0, Math.min(max, Math.round(value)));
+}
+
+function scoreStatus(score: number, max: number): 'strong' | 'partial' | 'weak' | 'blocked' {
+  if (score <= 0) return 'blocked';
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return 'strong';
+  if (ratio >= 0.45) return 'partial';
+  return 'weak';
+}
+
+function recommendationForScore(score: number, hardBlocker?: string | null): string {
+  if (hardBlocker) return `No trade: ${hardBlocker}`;
+  if (score >= ICT_SCORE_THRESHOLDS.QUALIFIED) return 'Qualified only if the 5M trigger, structure stop, actual risk, and target room remain confirmed.';
+  if (score >= ICT_SCORE_THRESHOLDS.CONDITIONAL) return 'Conditional: good map, but wait for the missing confirmation before execution.';
+  if (score >= ICT_SCORE_THRESHOLDS.WATCHLIST) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
+  return 'No trade: score is below the desk threshold or required evidence is missing.';
+}
+
 function isIctHardDisqualified(candidate: SetupCandidate): boolean {
   return Boolean(ictHardDisqualifierReason(candidate));
 }
@@ -556,18 +585,38 @@ export function scoreScannerCandidate(
   };
 
   if (!candidate) {
+    const hardBlocker = 'no ICT candidate/reference level';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
-      missingReasons: ['no ICT candidate/reference level'],
+      missingReasons: [hardBlocker],
+      hardBlocker,
+      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      scorecard: [{
+        label: 'Approved model',
+        score: 0,
+        max: 25,
+        status: 'blocked',
+        note: 'No approved Model 1 or Turtle Soup candidate was available.',
+      }],
     };
   }
 
   if (!window.allowsTradePlan || !isInsideWindowByEtMinutes || sessionWeight === 0) {
+    const hardBlocker = 'outside approved ICT execution session';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
-      missingReasons: ['outside approved ICT execution session'],
+      missingReasons: [hardBlocker],
+      hardBlocker,
+      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      scorecard: [{
+        label: 'Time window',
+        score: 0,
+        max: 10,
+        status: 'blocked',
+        note: 'The scanner is outside the approved morning/lunch execution window.',
+      }],
     };
   }
 
@@ -577,6 +626,15 @@ export function scoreScannerCandidate(
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
       missingReasons: [hardDisqualifierReason],
+      hardBlocker: hardDisqualifierReason,
+      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardDisqualifierReason),
+      scorecard: [{
+        label: 'Hard blocker',
+        score: 0,
+        max: 25,
+        status: 'blocked',
+        note: hardDisqualifierReason,
+      }],
     };
   }
 
@@ -591,10 +649,20 @@ export function scoreScannerCandidate(
     !higherTimeframeAligned;
 
   if (wickOnly) {
+    const hardBlocker = 'Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Turtle Soup, or higher-timeframe alignment';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons: [],
-      missingReasons: ['Wick rejection support is not enough without reclaim, displacement, market structure shift, FVG, Turtle Soup, or higher-timeframe alignment'],
+      missingReasons: [hardBlocker],
+      hardBlocker,
+      recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
+      scorecard: [{
+        label: 'Model evidence',
+        score: 0,
+        max: 25,
+        status: 'blocked',
+        note: 'Wick-only rejection is supporting evidence, not a standalone trade.',
+      }],
     };
   }
 
@@ -622,7 +690,96 @@ export function scoreScannerCandidate(
 
   const structureWeight = signals.isCountertrendAgainstBigPicture ? 0.6 : 1;
   const weightedScore = score * sessionWeight * structureWeight;
-  return { score: Math.max(0, Math.min(100, Math.round(weightedScore))), qualifiedReasons, missingReasons };
+  const finalScore = Math.max(0, Math.min(100, Math.round(weightedScore)));
+  const modelCompletion = clampScore(
+    (signals.hasLiquiditySweep ? 6 : 0) +
+    (signals.hasReclaimAfterSweep ? 6 : 0) +
+    (signals.hasTurtleSoupReversal || signals.hasFvgOrImbalanceEntry ? 7 : 0) +
+    (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0),
+    25
+  );
+  const executionQuality = clampScore(
+    (candidate.requiredTrigger ? 6 : 0) +
+    (isValidPrice(candidate.entry) ? 5 : 0) +
+    (isValidPrice(candidate.stop) ? 5 : 0) +
+    (candidate.executionStatus === ExecutionStatus.Executable || candidate.executionStatus === ExecutionStatus.Conditional ? 4 : 0),
+    20
+  );
+  const liquidityQuality = clampScore(
+    (signals.hasLiquiditySweep ? 5 : 0) +
+    (signals.hasPremiumDiscountAlignment ? 3 : 0) +
+    (candidate.levelContextScore ? Math.min(7, Math.round(candidate.levelContextScore / 2)) : 0),
+    15
+  );
+  const htfQuality = clampScore(
+    (higherTimeframeAligned ? 10 : 0) +
+    (signals.isCountertrendAgainstBigPicture ? -5 : 3),
+    15
+  );
+  const riskTargetQuality = clampScore(
+    (isValidPrice(candidate.stop) ? 5 : 0) +
+    (isValidPrice(candidate.target1) ? 5 : 0) +
+    (isValidPrice(candidate.target2) ? 5 : 0) +
+    (!signals.isStaleOrChasing ? 5 : 0),
+    20
+  );
+  const sessionQuality = clampScore(
+    (sessionWeight >= 1 ? 5 : sessionWeight > 0 ? 3 : 0) -
+    (signals.isStaleOrChasing ? 3 : 0),
+    5
+  );
+
+  return {
+    score: finalScore,
+    qualifiedReasons,
+    missingReasons,
+    hardBlocker: null,
+    recommendation: recommendationForScore(finalScore),
+    scorecard: [
+      {
+        label: 'Approved model completion',
+        score: modelCompletion,
+        max: 25,
+        status: scoreStatus(modelCompletion, 25),
+        note: signals.hasTurtleSoupReversal ? 'Turtle Soup evidence is present.' : signals.hasFvgOrImbalanceEntry ? 'Model 1 FVG/imbalance evidence is present.' : 'Approved model is still missing required evidence.',
+      },
+      {
+        label: '5M execution quality',
+        score: executionQuality,
+        max: 20,
+        status: scoreStatus(executionQuality, 20),
+        note: '5M trigger, entry, stop, and executable/conditional readiness.',
+      },
+      {
+        label: '15M/session liquidity map',
+        score: liquidityQuality,
+        max: 15,
+        status: scoreStatus(liquidityQuality, 15),
+        note: candidate.levelContextSummary || 'Session liquidity context is limited.',
+      },
+      {
+        label: '60M/240M structure alignment',
+        score: htfQuality,
+        max: 15,
+        status: scoreStatus(htfQuality, 15),
+        note: higherTimeframeAligned ? 'Higher-timeframe bias aligned.' : 'Higher-timeframe bias is not aligned or not confirmed.',
+      },
+      {
+        label: 'Risk and target room',
+        score: riskTargetQuality,
+        max: 20,
+        status: scoreStatus(riskTargetQuality, 20),
+        note: 'Structure stop, T1/T2 availability, and no stale/chase condition.',
+      },
+      {
+        label: 'Time window / session quality',
+        score: sessionQuality,
+        max: 5,
+        status: scoreStatus(sessionQuality, 5),
+        note: window.session === 'morning' ? 'Morning execution window has full weight.' : window.session === 'lunch' ? 'Lunch window uses stricter quality weight.' : 'Session quality is reduced.',
+      },
+    ],
+  };
 }
 
 export function applyStaleChaseGuard(args: {

@@ -61,6 +61,19 @@ interface ModelOneValidation {
 
 type TurtleSoupValidation = ModelOneValidation;
 
+interface EstablishedSweepLevelResult {
+  established: boolean;
+  reason: string | null;
+  missingReason: string | null;
+}
+
+interface CandidateQualityContext {
+  evidence: string[];
+  missingEvidence: string[];
+  score: number;
+  forceConditional: boolean;
+}
+
 export interface SetupScannerInput {
   sessionType: SetupSession;
   result?: AnalysisResult | null;
@@ -326,6 +339,501 @@ function bigPictureStructureForDirection(chartContext: ChartContext | null | und
     missingEvidence: alignedDirection !== direction
       ? 'Countertrend setup requires immediate failure confirmation; do not fight big-picture structure'
       : null,
+  };
+}
+
+function latestChartMinutes(chartContext?: ChartContext | null): number | null {
+  const explicit = minutesFromTimestamp(chartContext?.chartTimestamp || chartContext?.screenshotTimestamp);
+  if (explicit !== null) return explicit;
+  const candles = chartContext?.candles || [];
+  return minutesFromTimestamp(candles[candles.length - 1]?.timestamp);
+}
+
+function timeWindowQualityContext(chartContext?: ChartContext | null): CandidateQualityContext {
+  const minutes = latestChartMinutes(chartContext);
+  const sessionType = chartContext?.sessionType;
+  if (minutes === null || !isMorningOrLunchSession(sessionType)) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+
+  if (sessionType === 'morning' || sessionType === 'replay_morning') {
+    if (minutes >= 9 * 60 + 30 && minutes < 10 * 60) {
+      return {
+        evidence: ['Opening observation window'],
+        missingEvidence: ['Opening observation window; wait for confirmed post-open structure'],
+        score: -4,
+        forceConditional: false,
+      };
+    }
+    if (minutes >= 10 * 60 && minutes <= 10 * 60 + 30) {
+      return { evidence: ['High-quality morning time window'], missingEvidence: [], score: 8, forceConditional: false };
+    }
+    if (minutes > 10 * 60 + 30 && minutes <= 11 * 60 + 15) {
+      return { evidence: ['Approved morning time window'], missingEvidence: [], score: 4, forceConditional: false };
+    }
+  }
+
+  if (sessionType === 'lunch' || sessionType === 'replay_lunch') {
+    if (minutes >= 11 * 60 + 50 && minutes <= 12 * 60 + 20) {
+      return { evidence: ['High-quality lunch time window'], missingEvidence: [], score: 6, forceConditional: false };
+    }
+    if (minutes > 12 * 60 + 20 && minutes <= 13 * 60) {
+      return {
+        evidence: ['Approved lunch time window'],
+        missingEvidence: ['Late-window setup requires cleaner structure and no chase entry'],
+        score: 2,
+        forceConditional: false,
+      };
+    }
+  }
+
+  return { evidence: [], missingEvidence: ['Outside approved session'], score: -20, forceConditional: false };
+}
+
+function liquidityDrawContext(chartContext: ChartContext | null | undefined, direction: Direction): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  const opposingTarget = (chartContext.targetObjectives || []).some((target) =>
+    target.direction === direction &&
+    (target.type === 'liquidity_pool' || target.type === 'high' || target.type === 'low') &&
+    isReadableConfidence(target.confidence)
+  );
+  const directionalLevel = [
+    ...(chartContext.structuralLevels || []),
+    ...(chartContext.sessionLevelContext?.levels || []),
+  ].some((level) =>
+    isReadableConfidence(level.confidence) &&
+    (level.type === 'liquidity_pool' || level.type === 'high' || level.type === 'low' || level.type === 'swing') &&
+    (level.directionRelevance === direction || level.directionRelevance === 'BOTH')
+  );
+
+  const keyLevels = chartContext.keyLevels || {};
+  const keyLevelDraw = direction === 'LONG'
+    ? Boolean(keyLevels.previousDayHigh || keyLevels.priorDayHigh || keyLevels.overnightHigh || keyLevels.asianHigh || keyLevels.londonHigh || keyLevels.nyPremarketHigh || keyLevels.activeSwingHigh)
+    : Boolean(keyLevels.previousDayLow || keyLevels.priorDayLow || keyLevels.overnightLow || keyLevels.asianLow || keyLevels.londonLow || keyLevels.nyPremarketLow || keyLevels.activeSwingLow);
+
+  if (opposingTarget || directionalLevel || keyLevelDraw) {
+    return { evidence: ['Draw on opposing liquidity identified'], missingEvidence: [], score: 6, forceConditional: false };
+  }
+  return { evidence: [], missingEvidence: ['No clear draw on liquidity'], score: -6, forceConditional: false };
+}
+
+function sweepFirstContext(validation: ModelOneValidation | null): CandidateQualityContext {
+  if (!validation) return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  const hasSweep = validation.evidence.some((item) =>
+    item === 'Liquidity sweep confirmed' ||
+    item === 'Liquidity raid confirmed' ||
+    item.includes('Sweep below') ||
+    item.includes('Sweep above')
+  );
+  const hasReclaim = validation.evidence.includes('Reclaim after sweep confirmed');
+  if (hasSweep && hasReclaim) {
+    return { evidence: ['Sweep-first sequence confirmed'], missingEvidence: [], score: 5, forceConditional: false };
+  }
+  if (hasSweep && !hasReclaim) {
+    return { evidence: [], missingEvidence: ['Do not enter on sweep candle; reclaim confirmation required'], score: -10, forceConditional: true };
+  }
+  return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+}
+
+function higherTimeframeThesisContext(chartContext: ChartContext | null | undefined, direction: Direction): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  const explicit = chartContext.higherTimeframeThesis;
+  const thesisDirection = explicit?.direction && explicit.direction !== 'NO TRADE'
+    ? explicit.direction
+    : chartContext.multiTimeframeContext?.alignment?.alignedDirection || 'NO TRADE';
+  if (thesisDirection !== 'LONG' && thesisDirection !== 'SHORT') {
+    return {
+      evidence: [],
+      missingEvidence: ['Higher-timeframe thesis unclear; no-trade or conditional only'],
+      score: -8,
+      forceConditional: false,
+    };
+  }
+  const aligned = thesisDirection === direction;
+  const thesisText = thesisDirection === 'LONG' ? 'bullish' : 'bearish';
+  const confidenceBonus = explicit?.confidence === 'High' ? 8 : explicit?.confidence === 'Medium' ? 5 : 3;
+  return {
+    evidence: [`Higher-timeframe thesis is ${thesisText}`],
+    missingEvidence: aligned ? [] : ['Structure signal conflicts with higher-timeframe thesis'],
+    score: aligned ? confidenceBonus : -14,
+    forceConditional: !aligned,
+  };
+}
+
+function meaningfulChochLocation(chartContext: ChartContext | null | undefined): boolean {
+  if (!chartContext) return false;
+  if (chartContext.structureQualityContext?.chochAtMeaningfulLocation) return true;
+  const locationType = chartContext.structureQualityContext?.chochLocationType;
+  if (locationType && locationType !== 'midrange' && locationType !== 'unknown') return true;
+  const hasStrongLevel = [
+    ...(chartContext.structuralLevels || []),
+    ...(chartContext.sessionLevelContext?.levels || []),
+  ].some((level) =>
+    isReadableConfidence(level.confidence) &&
+    (level.strengthLabel === 'High' || (level.strengthScore || 0) >= 60) &&
+    (level.source !== 'current_window' || level.type === 'liquidity_pool')
+  );
+  return Boolean(
+    hasStrongLevel ||
+    (chartContext.fvgZones || []).some((zone) => isReadableConfidence(zone.confidence)) ||
+    (chartContext.breakerZones || []).some((zone) => isReadableConfidence(zone.confidence))
+  );
+}
+
+function inferredStructureQualityContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+  validation: ModelOneValidation | null,
+) {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  if (chartContext.structureQualityContext) return chartContext.structureQualityContext;
+
+  const hasBos = Boolean(chartContext.setupReadyFacts?.breakOfStructure || chartContext.marketStructure?.marketStructureShift);
+  if (!hasBos) return null;
+
+  const hasInducementSweep = Boolean(
+    validation?.evidence.some((item) =>
+      item === 'Liquidity sweep confirmed' ||
+      item === 'Liquidity raid confirmed' ||
+      item.includes('Sweep below') ||
+      item.includes('Sweep above')
+    ) ||
+    chartContext.setupReadyFacts?.sweepThenReclaim ||
+    (chartContext.liquidityEvents || []).some((event) => event.type === 'sweep' && event.direction === direction && isReadableConfidence(event.confidence))
+  );
+  const closeConfirmed = Boolean(
+    chartContext.candleFacts?.closeAboveKeyLevel && direction === 'LONG' ||
+    chartContext.candleFacts?.closeBelowKeyLevel && direction === 'SHORT' ||
+    chartContext.setupReadyFacts?.breakOfStructure
+  );
+  const validPullback = Boolean(
+    hasInducementSweep &&
+    closeConfirmed &&
+    (chartContext.candleFacts?.pullbackPresent || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed)
+  );
+  return {
+    direction,
+    structureEvent: hasInducementSweep && closeConfirmed ? 'major_bos' : 'minor_bos',
+    structureTimeframe: 'mixed',
+    executionTimeframeConfirmed: closeConfirmed,
+    inducementSwept: hasInducementSweep,
+    validPullbackConfirmed: validPullback,
+    structureBreakConfirmedByClose: closeConfirmed,
+    wickOnlyBreak: !closeConfirmed,
+    oldInducementStale: !hasInducementSweep,
+    newInducementRequired: !hasInducementSweep,
+    noChaseRequired: !hasInducementSweep,
+    inducementFresh: hasInducementSweep,
+    inducementAgeBars: null,
+    chochAtMeaningfulLocation: false,
+    chochLocationType: 'unknown',
+    conflictsWithHigherTimeframeThesis: false,
+    reasons: [],
+    missingReasons: [],
+  } as const;
+}
+
+function structureQualityContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+  validation: ModelOneValidation | null,
+): CandidateQualityContext {
+  const structure = inferredStructureQualityContext(chartContext, direction, validation);
+  if (!structure) return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+
+  const evidence = [...(structure.reasons || [])];
+  const missingEvidence = [...(structure.missingReasons || [])];
+  let score = 0;
+  let forceConditional = false;
+
+  if (structure.structureBreakConfirmedByClose) {
+    evidence.push('Structure break confirmed by candle close');
+  } else if (structure.wickOnlyBreak) {
+    missingEvidence.push('Wick-only break is not structure confirmation');
+    score -= 12;
+    forceConditional = true;
+  }
+
+  if (structure.structureEvent === 'major_bos' && structure.inducementSwept) {
+    evidence.push('Major BOS confirmed after inducement sweep');
+    evidence.push('Liquidity engineered before structure break');
+    evidence.push('Structure supports continuation');
+    score += 12;
+  }
+
+  if (structure.structureEvent === 'minor_bos' || (!structure.inducementSwept && structure.newInducementRequired)) {
+    missingEvidence.push('Minor BOS only');
+    missingEvidence.push('Inducement was not swept before structure break');
+    missingEvidence.push('Wait for new inducement sweep');
+    missingEvidence.push('Do not chase BOS candle');
+    missingEvidence.push('A break of structure confirms direction only after liquidity has been engineered. If inducement was not swept, treat the break as minor and wait for the new inducement.');
+    if (structure.oldInducementStale) missingEvidence.push('Original inducement is stale');
+    score -= 22;
+    forceConditional = true;
+  }
+
+  if (structure.validPullbackConfirmed) {
+    evidence.push('Valid pullback confirmed');
+    evidence.push('Pullback grab occurred');
+    evidence.push('Closing break confirmed');
+    score += 7;
+  } else if (structure.inducementSwept && !structure.structureBreakConfirmedByClose) {
+    missingEvidence.push('Pullback grab occurred; closing break required');
+    score -= 8;
+    forceConditional = true;
+  }
+
+  if (structure.structureEvent === 'choch') {
+    if (structure.chochAtMeaningfulLocation || meaningfulChochLocation(chartContext)) {
+      evidence.push('CHOCH at meaningful higher-timeframe level');
+      score += 5;
+    } else {
+      missingEvidence.push('Random CHOCH location; do not flip bias yet');
+      score -= 10;
+      forceConditional = true;
+    }
+  }
+
+  if (structure.conflictsWithHigherTimeframeThesis) {
+    missingEvidence.push('Structure signal conflicts with higher-timeframe thesis');
+    score -= 12;
+    forceConditional = true;
+  }
+
+  return {
+    evidence,
+    missingEvidence,
+    score,
+    forceConditional,
+  };
+}
+
+function reversalLogicIsStrong(validation: ModelOneValidation | null): boolean {
+  if (!validation) return false;
+  return validation.evidence.includes('Liquidity raid confirmed') &&
+    validation.evidence.includes('Failed continuation confirmed') &&
+    validation.evidence.includes('Reclaim after sweep confirmed');
+}
+
+function dealingRangeContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+  validation: ModelOneValidation | null,
+): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  const explicit = chartContext.dealingRangeQuality;
+  const currentPrice = explicit?.currentPrice ?? parsePrice(chartContext.keyLevels.currentPrice);
+  const rangeHigh = explicit?.rangeHigh ??
+    parsePrice(chartContext.keyLevels.activeSwingHigh) ??
+    parsePrice(chartContext.keyLevels.priorDayHigh) ??
+    parsePrice(chartContext.keyLevels.overnightHigh);
+  const rangeLow = explicit?.rangeLow ??
+    parsePrice(chartContext.keyLevels.activeSwingLow) ??
+    parsePrice(chartContext.keyLevels.priorDayLow) ??
+    parsePrice(chartContext.keyLevels.overnightLow);
+  const midpoint = explicit?.midpoint ?? (rangeHigh !== null && rangeLow !== null ? (rangeHigh + rangeLow) / 2 : null);
+  const location = explicit?.location && explicit.location !== 'unknown'
+    ? explicit.location
+    : currentPrice !== null && midpoint !== null
+      ? Math.abs(currentPrice - midpoint) <= TRADE_RULES.targetModel.tickSize * 2
+        ? 'equilibrium'
+        : currentPrice > midpoint ? 'premium' : 'discount'
+      : 'unknown';
+
+  if (location === 'unknown') return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+
+  const strongReversal = reversalLogicIsStrong(validation);
+  if (direction === 'LONG' && location === 'discount') {
+    return { evidence: ['Premium/discount alignment'], missingEvidence: [], score: 7, forceConditional: false };
+  }
+  if (direction === 'SHORT' && location === 'premium') {
+    return { evidence: ['Premium/discount alignment'], missingEvidence: [], score: 7, forceConditional: false };
+  }
+  if ((direction === 'LONG' && location === 'premium') || (direction === 'SHORT' && location === 'discount')) {
+    return strongReversal
+      ? {
+          evidence: ['Premium/discount conflict accepted only because reversal logic is strong'],
+          missingEvidence: [],
+          score: -2,
+          forceConditional: false,
+        }
+      : {
+          evidence: [],
+          missingEvidence: [direction === 'LONG'
+            ? 'Avoid longs in premium unless reversal logic is strong'
+            : 'Avoid shorts in discount unless reversal logic is strong'],
+          score: -14,
+          forceConditional: true,
+        };
+  }
+
+  return {
+    evidence: ['Price near dealing range equilibrium; require cleaner confirmation'],
+    missingEvidence: [],
+    score: -3,
+    forceConditional: false,
+  };
+}
+
+function targetBeforeEntryContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+  entry: number | null,
+  risk: number | null,
+): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT') || entry === null || risk === null || risk <= 0) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  const oneR = direction === 'LONG' ? entry + risk : entry - risk;
+  const obstacle = (chartContext.targetObjectives || [])
+    .filter((target) =>
+      isReadableConfidence(target.confidence) &&
+      target.type !== 'liquidity_pool' &&
+      target.type !== 'high' &&
+      target.type !== 'low' &&
+      (direction === 'LONG'
+        ? target.price > entry && target.price < oneR
+        : target.price < entry && target.price > oneR)
+    )
+    .sort((a, b) => Math.abs(a.price - entry) - Math.abs(b.price - entry))[0];
+
+  if (obstacle) {
+    return {
+      evidence: [],
+      missingEvidence: [`Nearest obstacle sits before 1R at ${roundToTick(obstacle.price)}`],
+      score: -24,
+      forceConditional: true,
+    };
+  }
+
+  return { evidence: ['No major obstacle before 1R'], missingEvidence: [], score: 5, forceConditional: false };
+}
+
+function displacementQualityContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  const displacement = (chartContext.displacementCandles || [])
+    .filter((candle) => candle.direction === direction && isReadableConfidence(candle.confidence))
+    .sort((a, b) => (b.displacementScore || 0) - (a.displacementScore || 0))[0];
+  if (!displacement) return { evidence: [], missingEvidence: ['Displacement quality unavailable'], score: 0, forceConditional: false };
+
+  const closeAtExtreme = direction === 'LONG'
+    ? displacement.closeLocation === 'top_quarter'
+    : displacement.closeLocation === 'bottom_quarter';
+  const bodyQuality = (displacement.bodyToRange || 0) >= 0.6 || (displacement.displacementScore || 0) >= 75;
+  const leavesFvg = Boolean(displacement.leavesImbalance);
+  const breaksStructure = Boolean(displacement.breaksStructure);
+
+  if ((displacement.quality === 'high_quality' || (bodyQuality && closeAtExtreme && leavesFvg && breaksStructure))) {
+    return { evidence: ['Tier A displacement confirmed'], missingEvidence: [], score: 9, forceConditional: false };
+  }
+  if (displacement.quality === 'confirmed' || (bodyQuality && (closeAtExtreme || leavesFvg || breaksStructure))) {
+    return { evidence: ['Tier B displacement confirmed'], missingEvidence: [], score: 5, forceConditional: false };
+  }
+  return {
+    evidence: [],
+    missingEvidence: ['Weak displacement quality; body, close location, or FVG left behind is insufficient'],
+    score: -8,
+    forceConditional: false,
+  };
+}
+
+function sessionNarrativeContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+): CandidateQualityContext {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) {
+    return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  }
+  if (chartContext.marketStructure?.chopRangeCondition || chartContext.marketStructure?.compressionCondition || chartContext.sessionStory?.bias === 'WAIT' || chartContext.sessionStory?.bias === 'BALANCED') {
+    return {
+      evidence: ['Session narrative: chop'],
+      missingEvidence: ['Chop/consolidation no-trade'],
+      score: -25,
+      forceConditional: true,
+    };
+  }
+
+  const bias = chartContext.sessionStory?.bias;
+  const directionalBias = bias === 'LONG' || bias === 'SHORT' ? bias : null;
+  const expansion = Boolean(chartContext.marketStructure?.expansionCondition || (chartContext.displacementCandles || []).length);
+  const retracement = Boolean(chartContext.candleFacts?.pullbackPresent || chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed);
+  const reversal = Boolean((chartContext.failedBreakEvents || []).some((event) => event.direction === direction && isReadableConfidence(event.confidence)));
+
+  if (reversal) {
+    return { evidence: ['Session narrative: reversal'], missingEvidence: [], score: 5, forceConditional: false };
+  }
+  if (retracement) {
+    return { evidence: ['Session narrative: retracement'], missingEvidence: [], score: 5, forceConditional: false };
+  }
+  if (expansion && (!directionalBias || directionalBias === direction)) {
+    return { evidence: ['Session narrative: expansion'], missingEvidence: [], score: 4, forceConditional: false };
+  }
+  if (directionalBias && directionalBias !== direction) {
+    return {
+      evidence: [],
+      missingEvidence: ['Session narrative conflicts with candidate direction'],
+      score: -10,
+      forceConditional: true,
+    };
+  }
+  return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+}
+
+function newsMacroCautionContext(chartContext: ChartContext | null | undefined): CandidateQualityContext {
+  const caution = chartContext?.newsMacroCaution;
+  if (!caution?.active) return { evidence: [], missingEvidence: [], score: 0, forceConditional: false };
+  if (caution.confirmedAfterRelease) {
+    return {
+      evidence: ['High-impact news volatility already confirmed by post-release structure'],
+      missingEvidence: [],
+      score: -2,
+      forceConditional: false,
+    };
+  }
+  return {
+    evidence: [],
+    missingEvidence: [`High-impact news caution window${caution.eventLabel ? `: ${caution.eventLabel}` : ''}`],
+    score: -20,
+    forceConditional: true,
+  };
+}
+
+function candidateQualityContext(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction,
+  validation: ModelOneValidation | null,
+  entry: number | null,
+  risk: number | null,
+  includeMissing: boolean,
+): CandidateQualityContext {
+  const parts = [
+    higherTimeframeThesisContext(chartContext, direction),
+    timeWindowQualityContext(chartContext),
+    liquidityDrawContext(chartContext, direction),
+    sweepFirstContext(validation),
+    structureQualityContext(chartContext, direction, validation),
+    dealingRangeContext(chartContext, direction, validation),
+    targetBeforeEntryContext(chartContext, direction, entry, risk),
+    displacementQualityContext(chartContext, direction),
+    sessionNarrativeContext(chartContext, direction),
+    newsMacroCautionContext(chartContext),
+  ];
+  return {
+    evidence: parts.flatMap((part) => part.evidence),
+    missingEvidence: includeMissing ? parts.flatMap((part) => part.missingEvidence) : [],
+    score: parts.reduce((sum, part) => sum + part.score, 0),
+    forceConditional: parts.some((part) => part.forceConditional),
   };
 }
 
@@ -755,6 +1263,123 @@ function sweepExtremeForDirection(
     : parsePrice(failedBreak?.sweptExtreme) ?? parsePrice(sweepCandle?.high) ?? parsePrice(chartContext.keyLevels.activeSwingHigh) ?? parsePrice(sweep.level);
 }
 
+function minutesFromTimestamp(value?: string | null): number | null {
+  if (!value) return null;
+  const match = String(value).match(/T?(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
+}
+
+function levelMatches(a: number | null, b: number | null, tolerance = TRADE_RULES.targetModel.tickSize * 2): boolean {
+  return a !== null && b !== null && Math.abs(a - b) <= tolerance;
+}
+
+function establishedSweepLevel(
+  chartContext: ChartContext,
+  direction: Direction,
+  sweep: NonNullable<ChartContext['liquidityEvents']>[number] | undefined,
+): EstablishedSweepLevelResult {
+  const level = parsePrice(sweep?.level);
+  const label = normalizeText(sweep?.sweptLevelLabel).toUpperCase();
+  const evidence = normalizeText(sweep?.evidence).toUpperCase();
+  const text = `${label} ${evidence}`;
+  const strongLabel = hasAny(text, [
+    'PRIOR',
+    'PREVIOUS',
+    'SESSION',
+    'RTH',
+    'ETH',
+    'ASIAN',
+    'LONDON',
+    'NY PREMARKET',
+    'OVERNIGHT',
+    'WEEK',
+    'MONTH',
+    'SWING',
+    'EQUAL HIGH',
+    'EQUAL LOW',
+    'BUY-SIDE',
+    'SELL-SIDE',
+  ]);
+
+  if (strongLabel) {
+    return {
+      established: true,
+      reason: 'Established liquidity level confirmed',
+      missingReason: null,
+    };
+  }
+
+  const strongSources = new Set([
+    'previous_rth',
+    'prior_eth',
+    'three_day_rth',
+    'three_day_eth',
+    'weekly_rth',
+    'weekly_eth',
+    'monthly_rth',
+    'monthly_eth',
+    'asian',
+    'london',
+    'ny_premarket',
+    'rth_morning',
+    'lunch',
+    'full_context',
+  ]);
+  const levels = [
+    ...(chartContext.structuralLevels || []),
+    ...(chartContext.sessionLevelContext?.levels || []),
+  ];
+  const matchingLevel = levels.find((item) => {
+    const directional =
+      item.directionRelevance === 'BOTH' ||
+      item.directionRelevance === direction ||
+      (direction === 'LONG' && (item.type === 'low' || item.type === 'support' || item.type === 'liquidity_pool' || item.type === 'swing')) ||
+      (direction === 'SHORT' && (item.type === 'high' || item.type === 'resistance' || item.type === 'liquidity_pool' || item.type === 'swing'));
+    return directional &&
+      levelMatches(level, parsePrice(item.price)) &&
+      isReadableConfidence(item.confidence) &&
+      (strongSources.has(item.source) || item.strengthLabel === 'High' || (item.strengthScore || 0) >= 60);
+  });
+  if (matchingLevel) {
+    return {
+      established: true,
+      reason: 'Established liquidity level confirmed',
+      missingReason: null,
+    };
+  }
+
+  const candles = chartContext.candles || [];
+  const sweepIndex = sweep?.timestamp
+    ? candles.findIndex((candle) => candle.timestamp === sweep.timestamp)
+    : -1;
+  if (sweepIndex >= 4 || (sweepIndex >= 0 && candles.length - 1 - sweepIndex >= 4)) {
+    return {
+      established: true,
+      reason: 'Established liquidity level confirmed',
+      missingReason: null,
+    };
+  }
+
+  const sweepMinutes = minutesFromTimestamp(sweep?.timestamp);
+  const chartMinutes = minutesFromTimestamp(chartContext.chartTimestamp || chartContext.screenshotTimestamp);
+  if (sweepMinutes !== null && chartMinutes !== null && chartMinutes - sweepMinutes >= 20) {
+    return {
+      established: true,
+      reason: 'Established liquidity level confirmed',
+      missingReason: null,
+    };
+  }
+
+  return {
+    established: false,
+    reason: null,
+    missingReason: 'Turtle Soup requires an established prior swing or session liquidity level',
+  };
+}
+
 function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfirmation = false): TurtleSoupValidation | null {
   if (!chartContext) return null;
   const liquidityEvents = [...(chartContext.liquidityEvents || []), ...(chartContext.liquiditySweeps || [])];
@@ -797,6 +1422,10 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   } else {
     missingEvidence.push('Wick-only rejection is not enough without a meaningful liquidity raid');
   }
+
+  const establishedLevel = establishedSweepLevel(chartContext, direction, sweep);
+  if (establishedLevel.reason) evidence.push(establishedLevel.reason);
+  if (establishedLevel.missingReason) missingEvidence.push(establishedLevel.missingReason);
 
   const reclaimEvents = chartContext.reclaimEvents || [];
   const level = parsePrice(sweep?.level);
@@ -895,6 +1524,7 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
 
   const fullSequence =
     hasSweep &&
+    establishedLevel.established &&
     hasReclaim &&
     hasFailedContinuation &&
     entry !== null &&
@@ -902,7 +1532,7 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     target2 !== null &&
     hasTwoR &&
     !bigPicture.countertrend;
-  const possible = !fullSequence && hasSweep;
+  const possible = !fullSequence && hasSweep && establishedLevel.established;
 
   return {
     detected: fullSequence,
@@ -921,10 +1551,10 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     requiredTrigger: direction === 'LONG'
       ? bigPicture.countertrend
         ? 'Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure.'
-        : 'Bullish Turtle Soup requires a sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
+        : 'Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.'
       : bigPicture.countertrend
         ? 'Countertrend bearish Turtle Soup requires immediate reclaim failure against the bullish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure.'
-        : 'Bearish Turtle Soup requires a buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
+        : 'Bearish Turtle Soup requires an established buy-side liquidity raid, reclaim below the swept high, valid entry after reclaim or retrace, and stop beyond the sweep wick.',
     confidence: breakerFvgConfluence?.entryInside && (fullSequence || possible)
       ? fullSequence ? 'High' : 'Medium'
       : fullSequence ? 'High' : possible ? 'Medium' : 'Low',
@@ -1284,6 +1914,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const invalidation = primaryValidation?.invalidation ?? structuredEvidence?.invalidation ?? (allowNarrativeFallback ? bestFact?.invalidation : null) ?? null;
   const confidence = primaryValidation?.confidence || structuredEvidence?.confidence || bestFact?.confidence || confidenceForStatus(detected ? SetupCandidateStatus.Detected : possible ? SetupCandidateStatus.Possible : SetupCandidateStatus.NotDetected);
   const levelContext = levelContextScoreForDirection(input.chartContext, direction);
+  const qualityContext = candidateQualityContext(input.chartContext, direction, primaryValidation, entryPrice, risk, detected || possible);
 
   const detectedStatus =
     !allowed ? SetupCandidateStatus.Invalid :
@@ -1306,10 +1937,15 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   const executionAfterBigPicture = bigPicture.countertrend && execution.executionStatus === ExecutionStatus.Executable
     ? { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending }
     : execution;
+  const executionAfterStructureQuality = qualityContext.forceConditional && executionAfterBigPicture.executionStatus === ExecutionStatus.Executable
+    ? { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending }
+    : executionAfterBigPicture;
   const visibleStatus =
     bigPicture.countertrend && detectedStatus === SetupCandidateStatus.Detected
       ? SetupCandidateStatus.Possible
-      : executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide && detectedStatus === SetupCandidateStatus.Detected
+      : qualityContext.forceConditional && detectedStatus === SetupCandidateStatus.Detected
+      ? SetupCandidateStatus.Possible
+      : executionAfterStructureQuality.blockReason === NoTradeReason.RiskTooWide && detectedStatus === SetupCandidateStatus.Detected
       ? SetupCandidateStatus.Detected
       : detectedStatus;
 
@@ -1329,11 +1965,14 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stopClarity: stopPrice !== null ? 1 : detected || possible ? 0.35 : 0,
     targetClarity: targets.target1 !== null && targets.target2 !== null ? 1 : 0,
     proximityScore: detected ? 0.75 : possible ? 0.55 : 0,
-    levelContextScore: levelContext.score,
-    levelContextSummary: levelContext.summary,
+    levelContextScore: levelContext.score + qualityContext.score,
+    levelContextSummary: qualityContext.evidence.length
+      ? `${levelContext.summary} ${qualityContext.evidence.join('. ')}.`
+      : levelContext.summary,
     evidence: Array.from(new Set([
       ...(primaryValidation?.evidence?.length ? primaryValidation.evidence : structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
       ...(bigPicture.evidence ? [bigPicture.evidence] : []),
+      ...(detected || possible ? qualityContext.evidence : []),
       ...(detected || possible ? supportingEvidenceNotes(input.chartContext) : []),
     ])),
     missingEvidence: missingMorningWindowContext
@@ -1342,25 +1981,29 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
       ? Array.from(new Set([
           ...(primaryValidation?.missingEvidence || structuredEvidence?.missingEvidence || []),
           ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+          ...qualityContext.missingEvidence,
           'Exact entry/stop levels require manual confirmation.',
         ]))
       : Array.from(new Set([
           ...(primaryValidation?.missingEvidence?.length ? primaryValidation.missingEvidence : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence),
           ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+          ...qualityContext.missingEvidence,
         ])),
-    executionStatus: executionAfterBigPicture.executionStatus,
-    blockReason: executionAfterBigPicture.blockReason,
+    executionStatus: executionAfterStructureQuality.executionStatus,
+    blockReason: executionAfterStructureQuality.blockReason,
     requiredTrigger: primaryValidation?.requiredTrigger || structuredEvidence?.requiredTrigger || bestFact?.requiredTrigger || (detected || possible ? entry.defaultRequiredTrigger : null),
     nextAction:
       missingMorningWindowContext
         ? 'Load or complete Morning 15M/5M context first. Lunch subtypes cannot activate from the Lunch chart alone.'
         : bigPicture.countertrend
         ? 'Countertrend conditional only. Requires immediate reclaim failure and fresh 5M confirmation. Do not fight big-picture structure.'
-        : executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide
+        : qualityContext.forceConditional
+        ? 'Structure quality is conditional. Wait for engineered liquidity, new inducement sweep, or a clean post-sweep retest. Do not chase the BOS candle.'
+        : executionAfterStructureQuality.blockReason === NoTradeReason.RiskTooWide
         ? 'Execution blocked by actual risk. Preserve the setup and wait for a cleaner retest with a structure stop inside the allowed risk limit.'
         : entry.defaultNextAction,
     reducedRiskPlan:
-      executionAfterBigPicture.blockReason === NoTradeReason.RiskTooWide
+      executionAfterStructureQuality.blockReason === NoTradeReason.RiskTooWide
         ? {
             direction,
             entry: null,

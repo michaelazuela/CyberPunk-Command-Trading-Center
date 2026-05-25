@@ -9,3 +9,5 @@ coverage/
 supabase/.temp/
 tools/automation/.discord-alert-state.json
 tools/automation/.nt-scanner-state.json
+tools/automation/.macro-calendar-cache.json
+tools/automation/chart-markups/

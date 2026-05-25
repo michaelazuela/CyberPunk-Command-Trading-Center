@@ -14,7 +14,6 @@ import {
   getNinjaBridgeSnapshot,
   type NinjaBridgeBar,
 } from '../../src/lib/ninjaTraderBridge';
-import { normalizeCandidateIctModelLabel } from '../../src/lib/ictModelLabels';
 import {
   assessBridgeBarStaleness,
   applyStaleChaseGuard,
@@ -39,6 +38,16 @@ import {
 } from '../../src/lib/localScannerEngine';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
+import { renderChartMarkup } from './chart-markup-renderer';
+import {
+  PROFESSIONAL_MODEL_ONE_LABEL,
+  PROFESSIONAL_MODEL_TWO_LABEL,
+  professionalCandidateModelLabel,
+  professionalizeReportText,
+  type ProfessionalModelLabel,
+} from './professional-report-language';
+import { formatXHashtags } from './x-hashtags';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -66,6 +75,7 @@ interface ScannerConfig {
   allowRetestOnlyEntries: boolean;
   maxStaleBarMinutes: number;
   marketMapRefreshSeconds: number;
+  macroCalendarEnabled: boolean;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
 }
@@ -145,8 +155,9 @@ function printHelp() {
     '  --afternoon true               Enable optional afternoon window.',
     '  --max-stale-bar-minutes 10     Refuse live scans when latest completed 5M bar is older than this.',
     '  --market-map-refresh-seconds 300 Refresh durable look-left map while outside trade windows.',
+    '  --macro-calendar false         Disable high-impact macro calendar caution.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
-    '  --bar-time-zone central        Timezone for NinjaTrader bar timestamps without offsets: central, eastern, pacific, or local.',
+    '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
   ].join('\n'));
 }
 
@@ -154,10 +165,10 @@ function loadConfig(): ScannerConfig {
   const dryRun = hasArg('dry-run');
   const once = hasArg('once');
   const timestampMode = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'close';
-  const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'central';
+  const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'eastern';
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)
-    : 'central';
+    : 'eastern';
   return {
     instrument: ((argValue('instrument') || 'MES') as Instrument),
     bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES 06-26',
@@ -182,6 +193,7 @@ function loadConfig(): ScannerConfig {
     allowRetestOnlyEntries: boolArg('allow-retest-only', DEFAULT_SCANNER_RISK_GUARDS.allowRetestOnlyEntries),
     maxStaleBarMinutes: numberArg('max-stale-bar-minutes', 10),
     marketMapRefreshSeconds: Math.max(60, numberArg('market-map-refresh-seconds', 300)),
+    macroCalendarEnabled: boolArg('macro-calendar', true),
     barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
     barTimeZone,
   };
@@ -261,7 +273,7 @@ function recentHistoricalWindow(timeframe: MarketBarTimeframe, limit: number): {
 }
 
 function clip(value: string, max = 1024): string {
-  const text = value.trim() || 'N/A';
+  const text = professionalizeReportText(value).trim() || 'N/A';
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
 }
 
@@ -285,8 +297,8 @@ function planName(candidate: SetupCandidate | null): string {
   return modelType(candidate);
 }
 
-function modelType(candidate: SetupCandidate | null): 'Sweep -> MSS -> FVG Retrace' | 'Turtle Soup Reversal' | 'ICT setup' {
-  return normalizeCandidateIctModelLabel(candidate);
+function modelType(candidate: SetupCandidate | null): ProfessionalModelLabel {
+  return professionalCandidateModelLabel(candidate);
 }
 
 function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
@@ -308,37 +320,37 @@ function riskReward(candidate: SetupCandidate | null): string {
   return `${(Math.abs(candidate.target1 - candidate.entry) / candidate.riskPoints).toFixed(2)}R`;
 }
 
-function sanitizeIctReason(reason: string): string {
+function sanitizeScannerReason(reason: string): string {
   const text = reason.toLowerCase();
   if (text.includes('liquidity sweep') || text.includes('sweep identified')) return 'Liquidity sweep confirmed';
   if (text.includes('reclaim after sweep')) return 'Reclaim after sweep confirmed';
   if (text.includes('wick rejection')) return 'Wick rejection support';
-  if (text.includes('turtle soup')) return 'Turtle Soup reversal';
-  if (text.includes('breaker + fvg') || text.includes('breaker/fvg')) return 'Breaker + FVG overlap confluence';
+  if (text.includes('turtle soup')) return PROFESSIONAL_MODEL_TWO_LABEL;
+  if (text.includes('breaker + fvg') || text.includes('breaker/fvg')) return 'Failed-breakout zone + imbalance overlap confluence';
   if (text.includes('displacement') || text.includes('expansion') || text.includes('impulse')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed displacement' : 'Displacement confirmed';
-  if (text.includes('market structure shift')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed market structure shift' : 'Market structure shift confirmed';
-  if (text.includes('fair value gap') || text.includes('fvg') || text.includes('imbalance')) return text.includes('no ') || text.includes('missing') ? 'No fair value gap / imbalance entry model' : 'Fair value gap / imbalance entry model';
+  if (text.includes('market structure shift')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed structure shift' : 'Structure shift confirmed';
+  if (text.includes('fair value gap') || text.includes('fvg') || text.includes('imbalance')) return text.includes('no ') || text.includes('missing') ? 'No price imbalance entry model' : 'Price imbalance entry model';
   if (text.includes('premium') || text.includes('discount') || text.includes('range location')) return 'Premium/discount alignment';
   if (text.includes('higher-timeframe')) return 'Higher-timeframe bias aligned';
   if (text.includes('entry') || text.includes('stop') || text.includes('target')) return 'Entry, stop, and target available';
   if (text.includes('minimum 2.0r') || text.includes('low ev')) return text.includes('unavailable') ? 'Minimum 2.0R unavailable' : 'Minimum 2.0R available';
-  if (text.includes('stale') || text.includes('chase') || text.includes('expired')) return 'ICT setup expired: stale/chase guard active';
+  if (text.includes('stale') || text.includes('chase') || text.includes('expired')) return 'Trade setup expired: stale/chase guard active';
   if (text.includes('chop') || text.includes('consolidation') || text.includes('overlap')) return 'Chop/consolidation no-trade';
   if (text.includes('outside')) return 'Outside approved session';
   if (text.includes('no confirmed liquidity') || text.includes('liquidity sweep missing')) return 'No confirmed liquidity sweep';
-  return reason;
+  return professionalizeReportText(reason);
 }
 
 function uniqueReasons(reasons: string[]): string {
-  const selected = [...new Set(reasons.map(sanitizeIctReason))].slice(0, 6);
+  const selected = [...new Set(reasons.map(sanitizeScannerReason))].slice(0, 6);
   return selected.length ? selected.join('\n') : 'N/A';
 }
 
 function hardDisqualifierReason(reasons: string[]): string {
   const hard = reasons
-    .map(sanitizeIctReason)
+    .map(sanitizeScannerReason)
     .find((reason) =>
-      reason === 'ICT setup expired: stale/chase guard active' ||
+      reason === 'Trade setup expired: stale/chase guard active' ||
       reason === 'Chop/consolidation no-trade' ||
       reason === 'Outside approved session' ||
       reason === 'No confirmed displacement' ||
@@ -457,13 +469,14 @@ function mergeBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): Ninja
   return [...byTime.values()].sort((a, b) => String(a.time).localeCompare(String(b.time)));
 }
 
-function analysisFromBars(args: {
+async function analysisFromBars(args: {
   config: ScannerConfig;
   session: LiveSession;
   tradeDate: string;
   bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
-}): AnalysisResult {
-  const chartContext = buildNinjaChartContext({
+  asOf?: Date;
+}): Promise<AnalysisResult> {
+  const baseChartContext = buildNinjaChartContext({
     bars5m: args.bars['5m'],
     bars15m: args.bars['15m'],
     bars60m: args.bars['60m'],
@@ -472,6 +485,9 @@ function analysisFromBars(args: {
     instrument: args.config.instrument,
     tradeDate: args.tradeDate,
   });
+  const chartContext = args.config.macroCalendarEnabled
+    ? await applyNewsMacroCaution(baseChartContext, args.asOf || new Date(), loadMacroCalendarConfig())
+    : baseChartContext;
 
   return {
     dayType: 'NO TRADE',
@@ -572,7 +588,7 @@ async function refreshMarketMapContext(args: {
       '60m': mergeBars(args.liveBars['60m'], cachedBars['60m']),
       '240m': mergeBars(args.liveBars['240m'], cachedBars['240m']),
     };
-    const analysis = analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
+    const analysis = await analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
     const objectives = analysis.structuredChartContext?.targetObjectives?.length || 0;
     args.state.lastMarketMapRefreshBySession[key] = new Date().toISOString();
     return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives).`;
@@ -605,49 +621,55 @@ function buildDiscordPayload(args: {
   const model = modelType(candidate);
   const decision = tradeDecisionFromScore(args.confidence.score);
   const planLine = [
-    `Instrument: ${args.config.instrument}`,
-    `Session: ${args.session}`,
-    `Timestamp used for scoring: ${args.scoringTimestamp} (${args.scoringTimestampSource})`,
-    `Direction: ${candidate?.direction || 'N/A'}`,
-    `Model type: ${model}`,
-    `Score: ${args.confidence.score}/100`,
-    `Trade decision: ${decision}`,
-    `Current: ${money(args.currentPrice)} | Completed 5M: ${args.completed5m?.time || 'N/A'}`,
+    `📈 Instrument: ${args.config.instrument}`,
+    `🕒 Session: ${args.session}`,
+    `⏱️ Timestamp used for scoring: ${args.scoringTimestamp} (${args.scoringTimestampSource})`,
+    `🧭 Direction: ${candidate?.direction || 'N/A'}`,
+    `🎯 Model type: ${model}`,
+    `📊 Score: ${args.confidence.score}/100`,
+    `⚖️ Trade decision: ${decision}`,
+    `💵 Current: ${money(args.currentPrice)} | 🕯️ Completed 5M: ${args.completed5m?.time || 'N/A'}`,
   ].join('\n');
   const executionLine = [
-    `Trigger: ${trigger}`,
-    `Entry area: ${money(candidate?.entry)}`,
-    `Stop: ${money(candidate?.stop)}`,
-    `Target: ${money(candidate?.target1)}${candidate?.target2 ? ` | Runner: ${money(candidate.target2)}` : ''}`,
-    `Risk/reward: ${riskReward(candidate)}`,
+    `✅ Trigger: ${trigger}`,
+    `🎯 Entry area: ${money(candidate?.entry)}`,
+    `🛡️ Stop: ${money(candidate?.stop)}`,
+    `🏁 Target: ${money(candidate?.target1)}${candidate?.target2 ? ` | 🏃 Runner: ${money(candidate.target2)}` : ''}`,
+    `⚖️ Risk/reward: ${riskReward(candidate)}`,
   ].join('\n');
   const targetLine = [
-    objectiveLine('Obstacle / Reaction Zone', targetPlan?.obstacleTarget1 || targetPlan?.nearestObstacleTarget),
-    objectiveLine('Primary Liquidity Target', targetPlan?.liquidityTarget1 || targetPlan?.nearestLiquidityTarget || args.targetCascade.activeTarget),
-    objectiveLine('Runner Liquidity', targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget),
-    `Target Cascade: ${args.targetCascade.path.join(' ')}`,
+    objectiveLine('🧱 Obstacle / Reaction Zone', targetPlan?.obstacleTarget1 || targetPlan?.nearestObstacleTarget),
+    objectiveLine('💧 Primary Liquidity Target', targetPlan?.liquidityTarget1 || targetPlan?.nearestLiquidityTarget || args.targetCascade.activeTarget),
+    objectiveLine('🏃 Runner Liquidity', targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget),
+    `🪜 Target Cascade: ${args.targetCascade.path.join(' ')}`,
   ].join('\n');
   const reasonLine = [
-    `Alert qualification: ${args.alertReason}`,
-    `Qualified reasons:\n${uniqueReasons(args.confidence.qualifiedReasons)}`,
-    `Missing reasons:\n${uniqueReasons(args.confidence.missingReasons)}`,
-    `Hard disqualifier: ${hardDisqualifierReason(args.confidence.missingReasons)}`,
+    `📊 Overall score: ${args.confidence.score}/100`,
+    `🧭 Recommendation: ${args.confidence.recommendation || 'Use the score as decision support only; hard gates still control execution.'}`,
+    args.confidence.scorecard?.length
+      ? `📋 Score breakdown:\n${args.confidence.scorecard.map((item) => `• ${item.status === 'strong' ? '✅' : item.status === 'partial' ? '🟡' : item.status === 'weak' ? '⚠️' : '🛑'} ${item.label}: ${item.score}/${item.max} - ${item.note}`).join('\n')}`
+      : null,
+    `✅ Alert qualification: ${args.alertReason}`,
+    `🟢 Qualified reasons:\n${uniqueReasons(args.confidence.qualifiedReasons)}`,
+    `🟡 Missing reasons:\n${uniqueReasons(args.confidence.missingReasons)}`,
+    `🛑 Hard disqualifier: ${hardDisqualifierReason(args.confidence.missingReasons)}`,
   ].filter(Boolean).join('\n');
 
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(args.state)} Quant Desk ICT Scanner Alert — ${decision}\nDecision support only. No automated orders were placed.`,
+    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${decision}\n⚠️ Decision support only. No automated orders were placed.`,
     embeds: [
       {
         title: `📊 Local Scanner Trading Card — ${args.tradeDate}`,
-        description: 'Do not execute from the card alone. Wait for the 5M trigger, structure stop, risk check, and target room confirmation.',
+        description: '⚠️ Do not execute from the card alone. Wait for the 5M trigger, structure stop, risk check, and target room confirmation.',
         color: statusColor(args.state),
         fields: [
-          { name: '1️⃣ Trade State', value: clip(planLine), inline: false },
-          { name: '2️⃣ ICT Plan', value: clip(executionLine), inline: false },
-          { name: '3️⃣ Targets', value: clip(targetLine), inline: false },
-          { name: '4️⃣ Invalidation / No Chase', value: clip(`${invalidation}\n${args.staleReason || 'Preferred retest entry required. No chase entry.'}`), inline: false },
-          { name: '5️⃣ Alert Quality', value: clip(reasonLine), inline: false },
+          { name: '1️⃣ 📊 Trade State', value: clip(planLine), inline: false },
+          { name: '2️⃣ 🧠 Execution Plan', value: clip(executionLine), inline: false },
+          { name: '3️⃣ 🎯 Targets', value: clip(targetLine), inline: false },
+          { name: '4️⃣ 🛡️ Invalidation / No Chase', value: clip(`🧱 ${invalidation}\n🚫 ${args.staleReason || 'Preferred retest entry required. No chase entry.'}`), inline: false },
+          { name: '5️⃣ ✅ Alert Quality', value: clip(reasonLine), inline: false },
+          { name: '6️⃣ 📣 X Tags', value: clip(formatXHashtags('chart_plan')), inline: false },
         ],
         footer: { text: 'Quant Desk • Local Scanner • Read-only bridge • No automated orders' },
         timestamp: new Date().toISOString(),
@@ -656,18 +678,29 @@ function buildDiscordPayload(args: {
   };
 }
 
-async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig): Promise<void> {
+async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<void> {
   if (config.dryRun || !config.discordEnabled) {
-    console.log(JSON.stringify(payload, null, 2));
+    console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
     return;
   }
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  const validFiles = files.filter(Boolean);
+  const response = validFiles.length
+    ? await (async () => {
+        const form = new FormData();
+        form.append('payload_json', JSON.stringify(payload));
+        for (const [index, file] of validFiles.entries()) {
+          const bytes = await fs.readFile(file);
+          form.append(`files[${index}]`, new Blob([bytes], { type: 'image/png' }), path.basename(file));
+        }
+        return fetch(webhookUrl, { method: 'POST', body: form });
+      })()
+    : await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
   if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
 }
 
@@ -684,50 +717,50 @@ function buildWindowStartPayload(args: {
     ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
     : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
   const fullSchedule = [
-    `Before ${TRADE_RULES.executionWindows.openingObservation.startET} ET: Market Mapping only`,
-    `${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
-    `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
-    `${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Market Mapping only`,
-    `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
-    `After ${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Market Mapping only`,
+    `🗺️ Before ${TRADE_RULES.executionWindows.openingObservation.startET} ET: Market Mapping only`,
+    `👀 ${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
+    `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
+    `🗺️ ${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Market Mapping only`,
+    `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
+    `🗺️ After ${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Market Mapping only`,
   ].join('\n');
   return {
     username: 'Quant Desk',
-    content: `# Quant Desk Scanner Window Active — ${sessionLabel}\nDecision support only. No automated orders were placed.`,
+    content: `# 🟢 Quant Desk Scanner Window Active — ${sessionLabel}\n⚠️ Decision support only. No automated orders were placed.`,
     embeds: [
       {
-        title: `${sessionLabel} Setup Scanner Online — ${args.tradeDate}`,
-        description: 'The live scanner is connected and actively checking the two approved ICT models. Keep an eye out for a confirmed setup during this window. This notice is not a trade alert, and no-trade remains a valid professional decision.',
+        title: `🟢 ${sessionLabel} Setup Scanner Online — ${args.tradeDate}`,
+        description: '🔎 The live scanner is connected and actively checking the two approved trade models. Keep an eye out for a confirmed setup during this window. This notice is not a trade alert, and no-trade remains a valid professional decision.',
         color: 0x00bcd4,
         fields: [
           {
-            name: 'Scanner Window',
+            name: '🕒 Scanner Window',
             value: clip([
-              `Window: ${args.windowLabel}`,
-              `Time: ${windowRange}`,
-              `Instrument: ${args.config.instrument}`,
-              `Bridge instrument: ${args.config.bridgeInstrument}`,
+              `🪟 Window: ${args.windowLabel}`,
+              `⏰ Time: ${windowRange}`,
+              `📈 Instrument: ${args.config.instrument}`,
+              `🌉 Bridge instrument: ${args.config.bridgeInstrument}`,
             ].join('\n')),
             inline: false,
           },
           {
-            name: 'Full Scanner Schedule',
+            name: '📅 Full Scanner Schedule',
             value: clip(fullSchedule),
             inline: false,
           },
           {
-            name: 'Live Data',
+            name: '📡 Live Data',
             value: clip([
-              `Bridge: ${args.config.bridgeUrl}`,
-              `Poll cadence: ${args.config.pollSeconds}s`,
-              `Current price: ${money(args.currentPrice)}`,
-              `Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
+              `🌉 Bridge: ${args.config.bridgeUrl}`,
+              `🔁 Poll cadence: ${args.config.pollSeconds}s`,
+              `💵 Current price: ${money(args.currentPrice)}`,
+              `🕯️ Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
             ].join('\n')),
             inline: false,
           },
           {
-            name: 'Approved Models',
-            value: 'Sweep -> MSS -> FVG Retrace\nTurtle Soup Reversal',
+            name: '✅ Approved Models',
+            value: `1️⃣ ${PROFESSIONAL_MODEL_ONE_LABEL}\n2️⃣ ${PROFESSIONAL_MODEL_TWO_LABEL}`,
             inline: false,
           },
         ],
@@ -861,7 +894,8 @@ async function runCycle(config: ScannerConfig): Promise<void> {
         '240m': mergeBars(liveBars['240m'], cachedBars['240m']),
       }
     : liveBars;
-  const analysis = analysisFromBars({ config, session, tradeDate, bars });
+  const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
+  const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
   const candidate = chooseBestCandidate(normalized.setupCandidates, currentPrice, config);
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
@@ -943,7 +977,17 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       alertReason: alertDecision.reason,
     });
     payload.content = `${payload.content}\nPlan ID: \`${planVersionId}\``;
-    await postDiscord(payload, config);
+    const chartMarkup = candidate
+      ? await renderChartMarkup({
+          chartContext: analysis.structuredChartContext || null,
+          candidate,
+          instrument: config.instrument,
+          tradeDate,
+          sessionLabel: session,
+          filePrefix: `scanner-${session}-${tradeDate}-${config.instrument}`,
+        })
+      : null;
+    await postDiscord(payload, config, chartMarkup ? [chartMarkup] : []);
     state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt: new Date().toISOString() };
   }
 

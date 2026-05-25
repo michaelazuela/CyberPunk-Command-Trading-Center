@@ -1307,6 +1307,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.stop! < 7394);
     assert.equal(turtle.target2, 7404);
     assert.ok(turtle.evidence.includes('Liquidity raid confirmed'));
+    assert.ok(turtle.evidence.includes('Established liquidity level confirmed'));
     assert.ok(turtle.evidence.includes('Sweep below sell-side liquidity confirmed'));
     assert.ok(turtle.evidence.includes('Reclaim after sweep confirmed'));
     assert.ok(turtle.evidence.includes('Failed continuation confirmed'));
@@ -1328,6 +1329,433 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.stop! > 7406);
     assert.equal(turtle.target2, 7396);
     assert.ok(turtle.evidence.includes('Sweep above buy-side liquidity confirmed'));
+    assert.ok(turtle.evidence.includes('Established liquidity level confirmed'));
+  }],
+
+  ['Turtle Soup requires an established prior swing or session liquidity level', () => {
+    const context = bullishTurtleSoupContext();
+    context.liquidityEvents = (context.liquidityEvents || []).map((event) => ({
+      ...event,
+      sweptLevelLabel: 'fresh local wick',
+      evidence: 'Fresh local wick was tagged by the execution chart.',
+    }));
+    context.liquiditySweeps = (context.liquiditySweeps || []).map((event) => ({
+      ...event,
+      sweptLevelLabel: 'fresh local wick',
+      evidence: 'Fresh local wick was tagged by the execution chart.',
+    }));
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.NotDetected);
+    assert.notEqual(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.missingEvidence.includes('Turtle Soup requires an established prior swing or session liquidity level'));
+  }],
+
+  ['Turtle Soup accepts a matching established session liquidity level', () => {
+    const context = bullishTurtleSoupContext();
+    context.liquidityEvents = (context.liquidityEvents || []).map((event) => ({
+      ...event,
+      sweptLevelLabel: 'local low',
+      evidence: 'Local low was swept and reclaimed.',
+    }));
+    context.liquiditySweeps = (context.liquiditySweeps || []).map((event) => ({
+      ...event,
+      sweptLevelLabel: 'local low',
+      evidence: 'Local low was swept and reclaimed.',
+    }));
+    context.structuralLevels = [{
+      label: 'Previous RTH low',
+      price: 7396,
+      type: 'low',
+      source: 'previous_rth',
+      directionRelevance: 'LONG',
+      confidence: 'High',
+      strengthScore: 85,
+      strengthLabel: 'High',
+      evidence: 'Prior RTH sell-side liquidity.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.evidence.includes('Established liquidity level confirmed'));
+  }],
+
+  ['Killzone-style context supports approved models without creating a new model', () => {
+    const context = bullishTurtleSoupContext();
+    context.chartTimestamp = '2026-05-08T10:15:00';
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.evidence.includes('High-quality morning time window'));
+    assert.ok(turtle.evidence.includes('Draw on opposing liquidity identified'));
+    assert.ok(turtle.evidence.includes('Sweep-first sequence confirmed'));
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+  }],
+
+  ['Late lunch context stays supportive only and requires cleaner no-chase structure', () => {
+    const context = bullishTurtleSoupContext();
+    context.sessionType = 'replay_lunch';
+    context.chartTimestamp = '2026-05-08T12:45:00';
+
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.ok(turtle.evidence.includes('Approved lunch time window'));
+    assert.ok(turtle.missingEvidence.includes('Late-window setup requires cleaner structure and no chase entry'));
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+  }],
+
+  ['Major BOS after inducement sweep boosts approved Model 1 structure quality', () => {
+    const context = structuredContext();
+    context.higherTimeframeThesis = {
+      direction: 'LONG',
+      confidence: 'High',
+      sourceTimeframes: ['240m', '60m', '15m'],
+      reason: 'Higher-timeframe thesis is bullish.',
+      invalidationLevel: 7396,
+      drawOnLiquidity: 7420,
+      drawOnLiquidityLabel: 'Prior day high',
+    };
+    context.structureQualityContext = {
+      direction: 'LONG',
+      structureEvent: 'major_bos',
+      structureTimeframe: '15m',
+      executionTimeframeConfirmed: true,
+      inducementSwept: true,
+      validPullbackConfirmed: true,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: false,
+      inducementFresh: true,
+      inducementAgeBars: 3,
+      reasons: [],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.ok(modelOne.evidence.includes('Higher-timeframe thesis is bullish'));
+    assert.ok(modelOne.evidence.includes('Major BOS confirmed after inducement sweep'));
+    assert.ok(modelOne.evidence.includes('Liquidity engineered before structure break'));
+    assert.ok(modelOne.evidence.includes('Valid pullback confirmed'));
+  }],
+
+  ['Major BOS after inducement sweep can support Turtle Soup without becoming a model', () => {
+    const context = bullishTurtleSoupContext();
+    context.chartTimestamp = '2026-05-08T10:15:00';
+    context.higherTimeframeThesis = {
+      direction: 'LONG',
+      confidence: 'Medium',
+      sourceTimeframes: ['60m', '15m'],
+      reason: 'Higher-timeframe thesis is bullish.',
+      drawOnLiquidity: 7404,
+      drawOnLiquidityLabel: 'Opposing buy-side liquidity',
+    };
+    context.structureQualityContext = {
+      direction: 'LONG',
+      structureEvent: 'major_bos',
+      structureTimeframe: '15m',
+      executionTimeframeConfirmed: true,
+      inducementSwept: true,
+      validPullbackConfirmed: true,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: false,
+      inducementFresh: true,
+      inducementAgeBars: 2,
+      reasons: [],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
+    assert.ok(turtle.evidence.includes('Major BOS confirmed after inducement sweep'));
+    assert.ok(turtle.evidence.includes('Valid pullback confirmed'));
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+  }],
+
+  ['Minor BOS without inducement downgrades otherwise valid setup to Conditional', () => {
+    const context = structuredContext();
+    context.structureQualityContext = {
+      direction: 'LONG',
+      structureEvent: 'minor_bos',
+      structureTimeframe: '15m',
+      executionTimeframeConfirmed: false,
+      inducementSwept: false,
+      validPullbackConfirmed: false,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: true,
+      newInducementRequired: true,
+      noChaseRequired: true,
+      inducementFresh: false,
+      inducementAgeBars: 8,
+      reasons: [],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.detectedStatus, SetupCandidateStatus.Possible);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Minor BOS only'));
+    assert.ok(modelOne.missingEvidence.includes('Inducement was not swept before structure break'));
+    assert.ok(modelOne.missingEvidence.includes('Wait for new inducement sweep'));
+    assert.ok(modelOne.missingEvidence.includes('Do not chase BOS candle'));
+    assert.ok(modelOne.missingEvidence.includes('Original inducement is stale'));
+    assert.ok(modelOne.nextAction.includes('Do not chase the BOS candle'));
+  }],
+
+  ['Wick grab alone is not valid pullback confirmation', () => {
+    const context = structuredContext();
+    context.structureQualityContext = {
+      direction: 'LONG',
+      structureEvent: 'major_bos',
+      structureTimeframe: '15m',
+      executionTimeframeConfirmed: false,
+      inducementSwept: true,
+      validPullbackConfirmed: false,
+      structureBreakConfirmedByClose: false,
+      wickOnlyBreak: true,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: true,
+      inducementFresh: true,
+      inducementAgeBars: 1,
+      reasons: ['Pullback grab occurred'],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.evidence.includes('Pullback grab occurred'));
+    assert.ok(modelOne.missingEvidence.includes('Wick-only break is not structure confirmation'));
+    assert.ok(modelOne.missingEvidence.includes('Pullback grab occurred; closing break required'));
+  }],
+
+  ['CHOCH at meaningful higher-timeframe level can support reversal quality', () => {
+    const context = bearishTurtleSoupContext();
+    context.higherTimeframeThesis = {
+      direction: 'SHORT',
+      confidence: 'High',
+      sourceTimeframes: ['240m', '60m'],
+      reason: 'Higher-timeframe thesis is bearish.',
+      drawOnLiquidity: 7396,
+      drawOnLiquidityLabel: 'Opposing sell-side liquidity',
+    };
+    context.structureQualityContext = {
+      direction: 'SHORT',
+      structureEvent: 'choch',
+      structureTimeframe: '15m',
+      executionTimeframeConfirmed: true,
+      inducementSwept: true,
+      validPullbackConfirmed: true,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: false,
+      inducementFresh: true,
+      inducementAgeBars: 2,
+      chochAtMeaningfulLocation: true,
+      chochLocationType: 'prior_rth',
+      reasons: [],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.ok(turtle.evidence.includes('CHOCH at meaningful higher-timeframe level'));
+    assert.ok(!turtle.missingEvidence.includes('Random CHOCH location; do not flip bias yet'));
+  }],
+
+  ['Random CHOCH location does not flip bias or approve execution by itself', () => {
+    const context = bearishTurtleSoupContext();
+    context.higherTimeframeThesis = {
+      direction: 'LONG',
+      confidence: 'High',
+      sourceTimeframes: ['240m', '60m'],
+      reason: 'Higher-timeframe thesis is bullish.',
+      drawOnLiquidity: 7416,
+      drawOnLiquidityLabel: 'Prior high',
+    };
+    context.structureQualityContext = {
+      direction: 'SHORT',
+      structureEvent: 'choch',
+      structureTimeframe: '5m',
+      executionTimeframeConfirmed: true,
+      inducementSwept: true,
+      validPullbackConfirmed: true,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: false,
+      inducementFresh: true,
+      inducementAgeBars: 1,
+      chochAtMeaningfulLocation: false,
+      chochLocationType: 'midrange',
+      conflictsWithHigherTimeframeThesis: true,
+      reasons: [],
+      missingReasons: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(turtle.missingEvidence.includes('Random CHOCH location; do not flip bias yet'));
+    assert.ok(turtle.missingEvidence.includes('Structure signal conflicts with higher-timeframe thesis'));
+    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+  }],
+
+  ['Premium discount alignment supports longs from discount', () => {
+    const context = structuredContext();
+    context.dealingRangeQuality = {
+      rangeHigh: 7420,
+      rangeLow: 7380,
+      midpoint: 7400,
+      currentPrice: 7396,
+      location: 'discount',
+      rangeSource: '15m',
+      confidence: 'High',
+      reason: 'Price is below equilibrium.',
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.ok(modelOne.evidence.includes('Premium/discount alignment'));
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+  }],
+
+  ['Long in premium is conditional unless reversal logic is strong', () => {
+    const context = structuredContext();
+    context.dealingRangeQuality = {
+      rangeHigh: 7420,
+      rangeLow: 7380,
+      midpoint: 7400,
+      currentPrice: 7412,
+      location: 'premium',
+      rangeSource: '15m',
+      confidence: 'High',
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.includes('Avoid longs in premium unless reversal logic is strong'));
+  }],
+
+  ['Target-before-entry check downgrades trade when nearest obstacle sits before 1R', () => {
+    const context = structuredContext();
+    context.targetObjectives = [{
+      label: '15M reaction obstacle',
+      price: 7402,
+      direction: 'LONG',
+      source: 'app',
+      type: 'imbalance_zone',
+      confidence: 'High',
+      score: 70,
+      reason: 'Obstacle sits before one R from entry.',
+    }];
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.some((item) => item.includes('Nearest obstacle sits before 1R')));
+  }],
+
+  ['Tier A displacement quality boosts structure reasons', () => {
+    const context = structuredContext();
+    context.displacementCandles = (context.displacementCandles || []).map((candle) => ({
+      ...candle,
+      quality: 'high_quality',
+      bodyToRange: 0.72,
+      closeLocation: 'top_quarter',
+      leavesImbalance: true,
+      breaksStructure: true,
+    }));
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.ok(modelOne.evidence.includes('Tier A displacement confirmed'));
+  }],
+
+  ['Chop session narrative downgrades otherwise valid setups', () => {
+    const context = structuredContext();
+    context.marketStructure = { ...context.marketStructure!, chopRangeCondition: true };
+    context.sessionStory = {
+      segments: [],
+      displacementZones: [],
+      relationships: [],
+      bias: 'WAIT',
+      summary: 'Balanced overlapping session.',
+      targetLevels: [],
+      notes: [],
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.evidence.includes('Session narrative: chop'));
+    assert.ok(modelOne.missingEvidence.includes('Chop/consolidation no-trade'));
+  }],
+
+  ['News macro caution window downgrades unconfirmed setup', () => {
+    const context = structuredContext();
+    context.newsMacroCaution = {
+      active: true,
+      eventLabel: 'High-impact macro release',
+      minutesUntil: 2,
+      confirmedAfterRelease: false,
+      reason: 'Volatility event pending.',
+    };
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(modelOne.missingEvidence.some((item) => item.includes('High-impact news caution window')));
   }],
 
   ['big-picture bullish structure keeps countertrend bearish Turtle Soup conditional in morning', () => {

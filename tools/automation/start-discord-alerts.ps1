@@ -51,7 +51,9 @@ if (-not $NoRecorder) {
     "--bridge-url",
     $BridgeUrl,
     "--poll-seconds",
-    "60"
+    "60",
+    "--bar-time-zone",
+    "eastern"
   )
 
   try {
@@ -74,7 +76,9 @@ $argsList = @(
   "--bridge-url",
   $BridgeUrl,
   "--poll-seconds",
-  "60"
+  "60",
+  "--bar-time-zone",
+  "eastern"
 )
 
 if ($DryRun) {
