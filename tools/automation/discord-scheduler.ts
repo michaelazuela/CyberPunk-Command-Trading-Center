@@ -19,7 +19,7 @@ import {
   loadWeeklyVisualMacroCalendarConfig,
   type MacroCalendarEvent,
 } from './macro-calendar';
-import { renderChartMarkup } from './chart-markup-renderer';
+import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -70,6 +70,12 @@ interface DiscordWebhookPayload {
   components?: DiscordActionRow[];
 }
 
+interface CompactDiscordAttachmentState {
+  chartPlan: boolean;
+  priceLevelMap: boolean;
+  auditLogPath?: string | null;
+}
+
 interface DiscordLinkButton {
   type: 2;
   style: 5;
@@ -86,6 +92,7 @@ interface DiscordActionRow {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.discord-alert-state.json');
+const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 
 const DEFAULT_CONFIG: SchedulerConfig = {
   instrument: 'MES',
@@ -1629,67 +1636,196 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
   ].filter(Boolean).join('\n');
 }
 
-async function formatPlanPayload(job: SessionAlertJob, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): Promise<DiscordWebhookPayload> {
-  const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
-  const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
-  const bestCandidate = candidates[0] || null;
-  const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
-  const finalStatus = normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
-  const hasPlanningPaths = candidates.length > 0;
-  const deskDecision = bestCandidate?.direction && bestCandidate.direction !== 'NO TRADE'
-    ? bestCandidate.direction
-    : hasPlanningPaths && !normalized.canExecute
-      ? 'WAIT / CONDITIONAL'
-      : normalized.decisionLabel || normalized.decision;
-  const finalStatusLabel = `${statusEmoji(finalStatus)} ${deskDecision}`;
-  const planningLine = bestCandidate
-    ? `🧠 Candidate status: ${bestCandidate.executionStatus}. ${bestCandidate.executionStatus === 'Executable' ? 'All hard gates still require final trader confirmation.' : 'No execution until the 5M trigger, structure stop, actual risk, and target room confirm.'}`
-    : hasPlanningPaths && !normalized.canExecute
-      ? '⏳ Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.'
-      : `🧠 ${normalized.planningDecision}`;
-  const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
-  const scoringTimestamp =
-    analysis.structuredChartContext?.chartTimestamp ||
-    analysis.structuredChartContext?.screenshotTimestamp ||
-    analysis.sessionLog?.timestamp ||
-    new Date().toISOString();
-  const scoringTimestampSource =
-    analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
-    analysis.structuredChartContext?.screenshotTimestamp ? 'screenshotTimestamp' :
-    analysis.sessionLog?.timestamp ? 'analysis session timestamp' :
-    'system time fallback';
+type NormalizedAppTradePlan = ReturnType<typeof buildAppTradePlan>;
+
+function sessionDisplayName(job: SessionAlertJob): string {
+  return job === 'morning' ? 'Morning' : 'Lunch';
+}
+
+function sessionWindowLabel(job: SessionAlertJob): string {
+  return job === 'morning'
+    ? `${MORNING_EXECUTION_START_ET}-${MORNING_EXECUTION_END_ET} ET`
+    : `${LUNCH_EXECUTION_START_ET}-${LUNCH_EXECUTION_END_ET} ET`;
+}
+
+function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
+  if (candidate?.executionStatus) return candidate.executionStatus;
+  if (normalized.canExecute) return 'Executable';
+  if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'Blocked';
+  return 'Conditional';
+}
+
+function compactTradeDirection(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
+  if (candidate?.direction && candidate.direction !== 'NO TRADE') return candidate.direction;
+  return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'WAIT';
+}
+
+function compactLevelsLine(candidate: SetupCandidate | null): string {
+  if (!candidate) return 'Levels: no active candidate levels available.';
+  const levels = candidateLevels(candidate);
+  const liquidityTarget =
+    candidate.targetObjectivePlan?.liquidityTarget1 ||
+    candidate.targetObjectivePlan?.nearestLiquidityTarget ||
+    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
+    null;
+  return [
+    `Entry ${moneyLine(candidate.entry)}`,
+    `Stop ${moneyLine(levels.stop)}`,
+    `T1 ${moneyLine(levels.target1)}`,
+    `T2 ${moneyLine(levels.target2)}`,
+    `Liquidity ${moneyLine(liquidityTarget?.price)}`,
+  ].join(' | ');
+}
+
+function compactActionLine(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
+  if (!candidate) return 'Action: no trade plan candidate. Keep this as market mapping only.';
+  if (candidate.executionStatus === 'Executable') return 'Action: verify completed 5M trigger, protected stop, and target room before acting.';
+  if (candidate.executionStatus === 'Blocked') return `Action: blocked. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
+  return `Action: wait. ${candidate.requiredTrigger || candidate.nextAction || 'Confirmation still required.'}`;
+}
+
+function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
+  if (!hasCandidate) return 'Attachments: not generated because no active plan candidate was available.';
+  if (attachments.chartPlan && attachments.priceLevelMap) return 'Attachments: Chart Plan + Price Level Map attached.';
+  return 'Attachments: unavailable. Review local logs before using this alert.';
+}
+
+function compactDiscordSummary(args: {
+  job: SessionAlertJob;
+  tradeDate: string;
+  instrument: Instrument;
+  planVersionId: string;
+  normalized: NormalizedAppTradePlan;
+  candidates: SetupCandidate[];
+  attachments: CompactDiscordAttachmentState;
+}): DiscordWebhookPayload {
+  const bestCandidate = args.candidates[0] || null;
+  const finalStatus = args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
+  const direction = compactTradeDirection(bestCandidate, args.normalized);
+  const decision = compactSessionDecisionLabel(bestCandidate, args.normalized);
+  const score = bestCandidate ? candidateConfidenceScore(bestCandidate) : null;
+  const scoreLabel = score === null ? 'N/A' : `${score}/100`;
+  const quality = score === null ? null : scannerAlertQualityFromScore(score).label;
+  const model = bestCandidate ? compactSetupName(bestCandidate) : 'No approved model candidate';
   const components = buildOutcomeComponents({
-    planVersionId,
-    sessionType: job,
-    tradeDate,
-    instrument,
+    planVersionId: args.planVersionId,
+    sessionType: args.job,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
   });
-  const dailyNewsBrief = await formatDailyPlanNewsBrief(tradeDate, analysis.structuredChartContext || null);
-  const fields: DiscordEmbedField[] = [];
-  const summary = [
-    `**${finalStatusLabel}**`,
-    planningLine,
-    `Session: ${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}`,
-    `Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`,
-    candidates[0] ? `Score: ${candidateConfidenceScore(candidates[0])}/100 | ${scannerAlertQualityFromScore(candidateConfidenceScore(candidates[0])).label}` : null,
-    dailyNewsBrief.includes('Active caution: none') ? 'USA news caution: none active at scoring timestamp.' : 'USA news caution: review before acting.',
-  ].filter(Boolean).join('\n');
+  const lines = [
+    `**${direction} ${sessionDisplayName(args.job)} Alert - ${decision}**`,
+    `Model: ${model}`,
+    `Score: ${scoreLabel}${quality ? ` | ${quality}` : ''}`,
+    compactLevelsLine(bestCandidate),
+    compactActionLine(bestCandidate, args.normalized),
+    `Window: ${sessionWindowLabel(args.job)}`,
+    compactAttachmentLine(args.attachments, Boolean(bestCandidate)),
+  ];
 
   return {
     username: 'Quant Desk',
-    content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\n🆔 Plan ID: \`${planVersionId}\`${components ? '\n🧠 Use outcome buttons below to feed RAG.' : ''}`,
+    content: `${statusEmoji(finalStatus)} Quant Desk ${sessionDisplayName(args.job)} Alert | ${args.instrument} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
     embeds: [
       {
-        title: `📊 Approved Trade Plan Render — ${tradeDate}`,
-        description: discordValue(`${summary}\n\nDecision support only. No automated orders were placed.`, 4096),
+        title: 'Compact Trade Plan Summary',
+        description: professionalizeReportText(`${lines.join('\n')}\n\nDecision support only. No automated orders.`),
         color: statusColor(finalStatus),
-        fields,
-        footer: { text: 'Quant Desk • App-Owned Trade Pipeline • No automated orders' },
+        fields: [],
+        footer: { text: 'Quant Desk • App-Owned Trade Pipeline • Chart Plan + Price Level Map when available' },
         timestamp: new Date().toISOString(),
       },
     ],
     ...(components ? { components } : {}),
   };
+}
+
+function flattenDiscordPayloadText(payload: DiscordWebhookPayload): string {
+  return [
+    payload.content || '',
+    ...payload.embeds.flatMap((embed) => [
+      embed.title,
+      embed.description || '',
+      embed.footer?.text || '',
+      ...embed.fields.flatMap((field) => [field.name, field.value]),
+    ]),
+  ].join('\n');
+}
+
+function validateDiscordPayload(payload: DiscordWebhookPayload, files: string[] = []): void {
+  const contentLength = payload.content?.length || 0;
+  if (contentLength > 2000) {
+    throw new Error(`Discord payload blocked: content is ${contentLength} characters, above the 2000 character limit.`);
+  }
+  const mainText = flattenDiscordPayloadText(payload);
+  if (mainText.length > 2000) {
+    throw new Error(`Discord payload blocked: compact alert text is ${mainText.length} characters, above the 2000 character limit.`);
+  }
+  if (mainText.includes('Missing rea...') || mainText.includes('Qualified rea...') || mainText.includes('Target casc...') || mainText.includes('Audit det...')) {
+    throw new Error('Discord payload blocked: truncation artifact detected in main alert text.');
+  }
+  if (/(\bMissing reasons|\bQualified reasons|\bTarget cascade|\bAudit detail)/i.test(mainText)) {
+    throw new Error('Discord payload blocked: audit-only detail leaked into compact alert text.');
+  }
+  for (const embed of payload.embeds) {
+    if (embed.title.length > 256) throw new Error('Discord payload blocked: embed title exceeds 256 characters.');
+    if ((embed.description || '').length > 4096) throw new Error('Discord payload blocked: embed description exceeds 4096 characters.');
+    if (embed.fields.length > 25) throw new Error('Discord payload blocked: embed has more than 25 fields.');
+    for (const field of embed.fields) {
+      if (field.name.length > 256) throw new Error('Discord payload blocked: embed field name exceeds 256 characters.');
+      if (field.value.length > 1024) throw new Error('Discord payload blocked: embed field value exceeds 1024 characters.');
+    }
+  }
+  const validFiles = files.filter(Boolean);
+  if (validFiles.length > 0 && validFiles.length < 2) {
+    console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
+  }
+  if (mainText.length > 1200) {
+    console.warn(`Discord payload warning: compact alert text is ${mainText.length} characters; preferred normal output is under 1200.`);
+  }
+}
+
+async function writeDiscordAuditLog(args: {
+  job: SessionAlertJob;
+  tradeDate: string;
+  instrument: Instrument;
+  planVersionId: string;
+  analysis: AnalysisResult;
+  normalized: NormalizedAppTradePlan;
+  candidates: SetupCandidate[];
+  chartMarkup: string | null;
+  levelMap: string | null;
+}): Promise<string> {
+  await fs.mkdir(DISCORD_AUDIT_DIR, { recursive: true });
+  const file = path.join(DISCORD_AUDIT_DIR, `${args.job}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
+  await fs.writeFile(file, JSON.stringify({
+    createdAt: new Date().toISOString(),
+    job: args.job,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    planVersionId: args.planVersionId,
+    normalizedPlan: args.normalized,
+    candidates: args.candidates,
+    structuredChartContext: args.analysis.structuredChartContext || null,
+    sessionLog: args.analysis.sessionLog || null,
+    attachments: {
+      chartMarkup: args.chartMarkup,
+      priceLevelMap: args.levelMap,
+    },
+  }, null, 2));
+  return file;
+}
+
+async function formatPlanPayload(args: {
+  job: SessionAlertJob;
+  tradeDate: string;
+  planVersionId: string;
+  instrument: Instrument;
+  normalized: NormalizedAppTradePlan;
+  candidates: SetupCandidate[];
+  attachments: CompactDiscordAttachmentState;
+}): Promise<DiscordWebhookPayload> {
+  return compactDiscordSummary(args);
 }
 
 async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartContext> | null, instrument: Instrument): Promise<DiscordWebhookPayload> {
@@ -1893,18 +2029,51 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   } catch (error) {
     console.warn('Discord alert RAG pending save failed:', error instanceof Error ? error.message : String(error));
   }
-  const payload = await formatPlanPayload(job, tradeDate, analysis, planVersionId, config.instrument);
-  const chartMarkup = candidates[0]
-    ? await renderChartMarkup({
+  const renderInput = candidates[0]
+    ? {
         chartContext: analysis.structuredChartContext || null,
         candidate: candidates[0],
         instrument: config.instrument,
         tradeDate,
         sessionLabel: job,
         filePrefix: `${job}-${tradeDate}-${config.instrument}`,
-      })
+      }
     : null;
-  await postDiscord(payload, dryRun, chartMarkup ? [chartMarkup] : []);
+  const chartMarkup = renderInput ? await renderChartMarkup(renderInput) : null;
+  const levelMap = renderInput ? await renderPriceLevelMap(renderInput) : null;
+  if (candidates[0] && !chartMarkup) {
+    throw new Error('Discord trade plan blocked: approved daily trade-plan render was not produced.');
+  }
+  if (candidates[0] && !levelMap) {
+    throw new Error('Discord trade plan blocked: approved price level map render was not produced.');
+  }
+  const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
+  const auditLogPath = await writeDiscordAuditLog({
+    job,
+    tradeDate,
+    instrument: config.instrument,
+    planVersionId,
+    analysis,
+    normalized,
+    candidates,
+    chartMarkup,
+    levelMap,
+  });
+  const payload = await formatPlanPayload({
+    job,
+    tradeDate,
+    planVersionId,
+    instrument: config.instrument,
+    normalized,
+    candidates,
+    attachments: {
+      chartPlan: Boolean(chartMarkup),
+      priceLevelMap: Boolean(levelMap),
+      auditLogPath,
+    },
+  });
+  validateDiscordPayload(payload, files);
+  await postDiscord(payload, dryRun, files);
 }
 
 async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<void> {

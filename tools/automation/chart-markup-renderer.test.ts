@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type ChartContext, type SetupCandidate } from '../../src/types';
-import { renderChartMarkup } from './chart-markup-renderer';
+import { renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `chart-markup-renderer-${Date.now()}`);
 
@@ -38,6 +38,27 @@ const chartContext: Partial<ChartContext> = {
     level: 7077.25,
     sweptLevelLabel: 'Sell-side liquidity',
     reclaimed: true,
+    timestamp: candles[18].timestamp,
+    confidence: 'High',
+  }],
+  reclaimEvents: [{
+    direction: 'LONG',
+    reclaimedLevel: 7077.25,
+    levelLabel: 'Sell-side liquidity',
+    timestamp: candles[22].timestamp,
+    candleIndex: 22,
+    confidence: 'High',
+  }],
+  displacementCandles: [{
+    direction: 'LONG',
+    candleIndex: 30,
+    timestamp: candles[30].timestamp,
+    open: candles[30].open,
+    high: candles[30].high,
+    low: candles[30].low,
+    close: candles[30].close,
+    bodyPoints: Math.abs(candles[30].close - candles[30].open),
+    rangePoints: candles[30].high - candles[30].low,
     confidence: 'High',
   }],
   marketStructure: {
@@ -136,6 +157,150 @@ try {
   assert.ok(output);
   const stat = await fs.stat(output);
   assert.ok(stat.size > 20_000);
+  const approvedFormat = await verifyApprovedDailyTradePlanRender(output);
+  assert.deepEqual(approvedFormat, { ok: true });
+  const longAnchors = resolveChartMarkerAnchorFacts({
+    chartContext,
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.equal(longAnchors.sweep?.candleIndex, 18);
+  assert.equal(longAnchors.sweep?.price, candles[18].low);
+  assert.equal(longAnchors.sweep?.source, 'event_timestamp');
+  assert.equal(longAnchors.reclaim?.candleIndex, 22);
+  assert.equal(longAnchors.reclaim?.price, 7077.25);
+  assert.equal(longAnchors.reclaim?.source, 'event_candle_index');
+  assert.equal(longAnchors.displacement?.candleIndex, 30);
+  assert.equal(longAnchors.displacement?.price, candles[30].close);
+
+  const shortCandles = Array.from({ length: 28 }, (_, index) => {
+    const base = 7560 + Math.sin(index / 3) * 1.2 + index * 0.03;
+    const open = index === 9 ? 7563.6 : base;
+    const close = index === 9 ? 7564.4 : index === 12 ? 7564.4 : index === 18 ? 7558.4 : base - 0.2;
+    return {
+      index,
+      timestamp: `2026-05-22T${String(10 + Math.floor(index / 12)).padStart(2, '0')}:${String((index % 12) * 5).padStart(2, '0')}:00-04:00`,
+      open,
+      high: index === 9 ? 7565.75 : Math.max(open, close) + 0.35,
+      low: Math.min(open, close) - 0.35,
+      close,
+      direction: close >= open ? 'bullish' as const : 'bearish' as const,
+      confidence: 'High' as const,
+    };
+  });
+  const shortContext: Partial<ChartContext> = {
+    candles: shortCandles,
+    fvgZones: [{ direction: 'SHORT', lower: 7563.69, upper: 7564.31, midpoint: 7564, confidence: 'High' }],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'SHORT',
+      level: 7565,
+      sweptLevelLabel: 'Buy-side liquidity',
+      reclaimed: true,
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'SHORT',
+      reclaimedLevel: 7565,
+      levelLabel: 'Buy-side liquidity',
+      timestamp: shortCandles[12].timestamp,
+      candleIndex: 12,
+      confidence: 'High',
+    }],
+    displacementCandles: [{
+      direction: 'SHORT',
+      candleIndex: 18,
+      timestamp: shortCandles[18].timestamp,
+      open: shortCandles[18].open,
+      high: shortCandles[18].high,
+      low: shortCandles[18].low,
+      close: shortCandles[18].close,
+      bodyPoints: Math.abs(shortCandles[18].close - shortCandles[18].open),
+      rangePoints: shortCandles[18].high - shortCandles[18].low,
+      confidence: 'High',
+    }],
+  };
+  const shortCandidate: SetupCandidate = {
+    ...candidate,
+    direction: 'SHORT',
+    entry: 7564,
+    stop: 7566,
+    target1: 7561,
+    target2: 7558,
+    targetObjectivePlan: {
+      ...candidate.targetObjectivePlan,
+      liquidityTarget1: {
+        label: 'Sell-side liquidity',
+        price: 7554,
+        direction: 'SHORT',
+        source: 'london',
+        type: 'low',
+        confidence: 'High',
+        score: 90,
+        reason: 'Sell-side liquidity below entry.',
+      },
+    },
+  };
+  const shortAnchors = resolveChartMarkerAnchorFacts({
+    chartContext: shortContext,
+    candidate: shortCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.equal(shortAnchors.sweep?.candleIndex, 9);
+  assert.equal(shortAnchors.sweep?.price, shortCandles[9].high);
+  assert.equal(shortAnchors.sweep?.source, 'crossed_swept_level');
+  assert.equal(shortAnchors.reclaim?.candleIndex, 12);
+  assert.equal(shortAnchors.reclaim?.price, 7565);
+  assert.equal(shortAnchors.displacement?.candleIndex, 18);
+  assert.equal(shortAnchors.displacement?.price, shortCandles[18].close);
+  const shortOutput = await renderChartMarkup({
+    chartContext: shortContext,
+    candidate: shortCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'short-test',
+  });
+  assert.ok(shortOutput);
+  assert.deepEqual(await verifyApprovedDailyTradePlanRender(shortOutput), { ok: true });
+  const shortLevelMap = await renderPriceLevelMap({
+    chartContext: shortContext,
+    candidate: shortCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'short-test',
+  });
+  assert.ok(shortLevelMap);
+  assert.deepEqual(await verifyApprovedDailyTradePlanRender(shortLevelMap), { ok: true });
+
+  const missingAnchors = resolveChartMarkerAnchorFacts({
+    chartContext: { candles: shortCandles, liquiditySweeps: [], reclaimEvents: [], displacementCandles: [] },
+    candidate: shortCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.deepEqual(missingAnchors, { sweep: null, reclaim: null, displacement: null });
+
+  const levelMap = await renderPriceLevelMap({
+    chartContext,
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'test',
+  });
+  assert.ok(levelMap);
+  const levelMapFormat = await verifyApprovedDailyTradePlanRender(levelMap);
+  assert.deepEqual(levelMapFormat, { ok: true });
   console.log('chart markup renderer tests passed');
 } finally {
   await fs.rm(outputDir, { recursive: true, force: true });
