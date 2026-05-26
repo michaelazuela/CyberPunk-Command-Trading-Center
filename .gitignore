@@ -7,6 +7,11 @@ coverage/
 .env*
 !.env.example
 supabase/.temp/
+/Session
+/reports/approval/
+/test-screenshots/
+tools/automation/Session
+tools/automation/Supabase
 tools/automation/.discord-alert-state.json
 tools/automation/.nt-scanner-state.json
 tools/automation/.macro-calendar-cache.json
