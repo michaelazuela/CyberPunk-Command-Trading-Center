@@ -27,7 +27,6 @@ import {
   scannerAlertKey,
   scannerContextLogLabel,
   scannerContextState,
-  scannerAlertQualityFromScore,
   scannerStateFromDecision,
   scoreScannerCandidate,
   shouldSendScannerAlert,
@@ -50,9 +49,7 @@ import {
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
-  professionalCandidateModelLabel,
   professionalizeReportText,
-  type ProfessionalModelLabel,
 } from './professional-report-language';
 
 dotenv.config({ quiet: true });
@@ -269,93 +266,6 @@ function recentHistoricalWindow(timeframe: MarketBarTimeframe, limit: number): {
 function clip(value: string, max = 1024): string {
   const text = professionalizeReportText(value).trim() || 'N/A';
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
-}
-
-function statusColor(state: ScannerState): number {
-  if (state === 'Approved' || state === 'Executable') return 0x00c853;
-  if (state === 'Conditional' || state === 'TriggerPending' || state === 'Missed') return 0xffd600;
-  if (state === 'Blocked' || state === 'NoTrade') return 0xff6d00;
-  return 0x78909c;
-}
-
-function statusEmoji(state: ScannerState): string {
-  if (state === 'Approved' || state === 'Executable') return '🟢';
-  if (state === 'Conditional' || state === 'TriggerPending') return '🟡';
-  if (state === 'Missed') return '⏭️';
-  if (state === 'Blocked') return '🟠';
-  return '⚪';
-}
-
-function planName(candidate: SetupCandidate | null): string {
-  if (!candidate) return 'No active plan';
-  return modelType(candidate);
-}
-
-function modelType(candidate: SetupCandidate | null): ProfessionalModelLabel {
-  return professionalCandidateModelLabel(candidate);
-}
-
-function tradeDecisionFromScore(score: number): 'No Trade' | 'Watchlist' | 'Conditional' | 'Qualified' {
-  if (score >= 80) return 'Qualified';
-  if (score >= 65) return 'Conditional';
-  if (score >= 45) return 'Watchlist';
-  return 'No Trade';
-}
-
-function riskReward(candidate: SetupCandidate | null): string {
-  if (
-    typeof candidate?.entry !== 'number' ||
-    typeof candidate?.target1 !== 'number' ||
-    typeof candidate?.riskPoints !== 'number' ||
-    candidate.riskPoints <= 0
-  ) {
-    return 'N/A';
-  }
-  return `${(Math.abs(candidate.target1 - candidate.entry) / candidate.riskPoints).toFixed(2)}R`;
-}
-
-function sanitizeScannerReason(reason: string): string {
-  const text = reason.toLowerCase();
-  if (text.includes('liquidity sweep') || text.includes('sweep identified')) return 'Liquidity sweep confirmed';
-  if (text.includes('reclaim after sweep')) return 'Reclaim after sweep confirmed';
-  if (text.includes('wick rejection')) return 'Wick rejection support';
-  if (text.includes('turtle soup')) return PROFESSIONAL_MODEL_TWO_LABEL;
-  if (text.includes('breaker + fvg') || text.includes('breaker/fvg')) return 'Failed-breakout zone + imbalance overlap confluence';
-  if (text.includes('displacement') || text.includes('expansion') || text.includes('impulse')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed displacement' : 'Displacement confirmed';
-  if (text.includes('market structure shift')) return text.includes('no confirmed') || text.includes('missing') ? 'No confirmed structure shift' : 'Structure shift confirmed';
-  if (text.includes('fair value gap') || text.includes('fvg') || text.includes('imbalance')) return text.includes('no ') || text.includes('missing') ? 'No price imbalance entry model' : 'Price imbalance entry model';
-  if (text.includes('premium') || text.includes('discount') || text.includes('range location')) return 'Premium/discount alignment';
-  if (text.includes('higher-timeframe')) return 'Higher-timeframe bias aligned';
-  if (text.includes('entry') || text.includes('stop') || text.includes('target')) return 'Entry, stop, and target available';
-  if (text.includes('minimum 2.0r') || text.includes('low ev')) return text.includes('unavailable') ? 'Minimum 2.0R unavailable' : 'Minimum 2.0R available';
-  if (text.includes('stale') || text.includes('chase') || text.includes('expired')) return 'Trade setup expired: stale/chase guard active';
-  if (text.includes('chop') || text.includes('consolidation') || text.includes('overlap')) return 'Chop/consolidation no-trade';
-  if (text.includes('outside')) return 'Outside approved session';
-  if (text.includes('no confirmed liquidity') || text.includes('liquidity sweep missing')) return 'No confirmed liquidity sweep';
-  return professionalizeReportText(reason);
-}
-
-function uniqueReasons(reasons: string[]): string {
-  const selected = [...new Set(reasons.map(sanitizeScannerReason))].slice(0, 6);
-  return selected.length ? selected.join('\n') : 'N/A';
-}
-
-function hardDisqualifierReason(reasons: string[]): string {
-  const hard = reasons
-    .map(sanitizeScannerReason)
-    .find((reason) =>
-      reason === 'Trade setup expired: stale/chase guard active' ||
-      reason === 'Chop/consolidation no-trade' ||
-      reason === 'Outside approved session' ||
-      reason === 'No confirmed displacement' ||
-      reason === 'Minimum 2.0R unavailable'
-    );
-  return hard || 'N/A';
-}
-
-function objectiveLine(label: string, objective: TargetObjective | null | undefined): string {
-  if (!objective) return `${label}: N/A`;
-  return `${label}: ${objective.price} ${objective.label}`;
 }
 
 async function writeScannerDiscordAuditLog(args: {
