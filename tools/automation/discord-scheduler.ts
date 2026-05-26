@@ -1631,13 +1631,21 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
 async function formatPlanPayload(job: SessionAlertJob, tradeDate: string, analysis: AnalysisResult, planVersionId: string, instrument: Instrument): Promise<DiscordWebhookPayload> {
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
+  const bestCandidate = candidates[0] || null;
   const header = job === 'morning' ? 'Morning Plan Alert' : 'Lunch Plan Alert';
   const finalStatus = normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
   const hasPlanningPaths = candidates.length > 0;
-  const deskDecision = hasPlanningPaths && !normalized.canExecute
-    ? 'WAIT / CONDITIONAL'
-    : normalized.decisionLabel || normalized.decision;
+  const deskDecision = bestCandidate?.direction && bestCandidate.direction !== 'NO TRADE'
+    ? bestCandidate.direction
+    : hasPlanningPaths && !normalized.canExecute
+      ? 'WAIT / CONDITIONAL'
+      : normalized.decisionLabel || normalized.decision;
   const finalStatusLabel = `${statusEmoji(finalStatus)} ${deskDecision}`;
+  const planningLine = bestCandidate
+    ? `🧠 Candidate status: ${bestCandidate.executionStatus}. ${bestCandidate.executionStatus === 'Executable' ? 'All hard gates still require final trader confirmation.' : 'No execution until the 5M trigger, structure stop, actual risk, and target room confirm.'}`
+    : hasPlanningPaths && !normalized.canExecute
+      ? '⏳ Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.'
+      : `🧠 ${normalized.planningDecision}`;
   const targetObjectives = analysis.structuredChartContext?.targetObjectives || [];
   const scoringTimestamp =
     analysis.structuredChartContext?.chartTimestamp ||
@@ -1661,7 +1669,7 @@ async function formatPlanPayload(job: SessionAlertJob, tradeDate: string, analys
       name: '1️⃣ 📊 What',
       value: discordValue(
         `**${finalStatusLabel}**\n` +
-        `${hasPlanningPaths && !normalized.canExecute ? '⏳ Planning paths only. No execution until the 5M trigger confirms, stop is tied to structure, actual risk is acceptable, and target room is clear.' : `🧠 ${normalized.planningDecision}`}\n` +
+        `${planningLine}\n` +
         `🕒 ${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}\n` +
         `⏱️ Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`
       ),
