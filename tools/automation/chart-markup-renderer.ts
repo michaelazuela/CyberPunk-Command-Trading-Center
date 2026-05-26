@@ -512,24 +512,43 @@ function renderNarrativeMarkers(isLong: boolean, anchors: ChartMarkerAnchors): s
 }
 
 function renderDirectionLogo(isLong: boolean): string {
-  const color = isLong ? '#4ade80' : '#fb923c';
-  const glow = isLong ? '#22c55e' : '#f97316';
-  if (isLong) {
-    return `
-      <g transform="translate(470 29)">
-        <circle cx="32" cy="32" r="31" fill="${glow}" opacity=".13" />
-        <path d="M11 23 L2 7 L21 16 C27 10 37 10 43 16 L62 7 L53 23 C58 34 51 50 38 55 L32 60 L26 55 C13 50 6 34 11 23 Z" fill="${color}" opacity=".92" />
-        <path d="M21 31 L29 35 M43 31 L35 35" stroke="#020403" stroke-width="3.2" stroke-linecap="round" />
-        <path d="M29 45 L35 45" stroke="#020403" stroke-width="3.2" stroke-linecap="round" />
-      </g>
+  const accent = isLong ? '#27ff69' : '#f0a236';
+  const deepAccent = isLong ? '#0f7a37' : '#8c521c';
+  const shadow = isLong ? '#072b1c' : '#2b1707';
+  const candles = isLong
+    ? `
+      <rect x="13" y="42" width="3" height="12" fill="#9cff8c" opacity=".9" />
+      <rect x="20" y="36" width="3" height="18" fill="#73f46e" opacity=".9" />
+      <rect x="27" y="30" width="3" height="24" fill="#48db66" opacity=".9" />
+    `
+    : `
+      <rect x="35" y="32" width="3" height="22" fill="#f7c36a" opacity=".9" />
+      <rect x="42" y="38" width="3" height="16" fill="#d9953a" opacity=".9" />
+      <rect x="49" y="44" width="3" height="10" fill="#b97426" opacity=".9" />
     `;
-  }
+  const mark = isLong
+    ? `
+      <path d="M14 25 L8 10 L25 17 C30 10 38 10 43 17 L60 10 L54 25 C58 35 52 49 40 54 L32 59 L24 54 C12 49 6 35 14 25 Z" fill="${deepAccent}" stroke="#b8ffb4" stroke-width="1.2" />
+      <path d="M18 25 L27 18 L37 16 L47 25 L43 41 L32 48 L21 41 Z" fill="${accent}" opacity=".82" />
+      <path d="M25 18 L28 38 L19 26 M37 16 L35 39 L47 26 M28 38 L32 48 L35 39" stroke="#ccffd1" stroke-width="1" opacity=".62" />
+      <path d="M22 33 L29 36 M42 33 L35 36" stroke="#020403" stroke-width="2.5" stroke-linecap="round" />
+    `
+    : `
+      <path d="M15 24 L13 12 L25 17 C29 13 35 13 39 17 L51 12 L49 24 C56 34 50 49 39 55 L32 59 L25 55 C14 49 8 34 15 24 Z" fill="${deepAccent}" stroke="#ffe0a5" stroke-width="1.2" />
+      <path d="M18 25 L29 17 L40 18 L48 28 L44 42 L32 49 L20 42 Z" fill="${accent}" opacity=".82" />
+      <path d="M29 17 L25 39 L18 25 M40 18 L38 39 L48 28 M25 39 L32 49 L38 39" stroke="#ffe7b8" stroke-width="1" opacity=".58" />
+      <path d="M22 34 L29 36 M42 34 L35 36" stroke="#020403" stroke-width="2.5" stroke-linecap="round" />
+      <path d="M27 45 L37 45" stroke="#020403" stroke-width="2.6" stroke-linecap="round" />
+    `;
   return `
     <g transform="translate(470 29)">
-      <circle cx="32" cy="32" r="31" fill="${glow}" opacity=".13" />
-      <path d="M15 23 L12 9 L25 15 C29 12 35 12 39 15 L52 9 L49 23 C56 33 51 49 38 55 L32 60 L26 55 C13 49 8 33 15 23 Z" fill="${color}" opacity=".92" />
-      <path d="M22 32 L29 35 M42 32 L35 35" stroke="#020403" stroke-width="3.2" stroke-linecap="round" />
-      <path d="M27 45 L37 45" stroke="#020403" stroke-width="3.2" stroke-linecap="round" />
+      <circle cx="32" cy="32" r="34" fill="#dff9ff" opacity=".22" />
+      <circle cx="32" cy="32" r="31" fill="#020807" stroke="#22d3ee" stroke-width="3.2" />
+      <circle cx="32" cy="32" r="27" fill="${shadow}" opacity=".92" />
+      <path d="M8 55 L58 8" stroke="#22d3ee" stroke-width="2.1" opacity=".8" />
+      ${candles}
+      ${mark}
+      <text x="32" y="56" text-anchor="middle" font-size="8.5" font-weight="950" fill="#f8fafc" opacity=".9">YMT</text>
     </g>
   `;
 }
