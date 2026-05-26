@@ -58,6 +58,7 @@ interface DiscordEmbed {
   description?: string;
   color: number;
   fields: DiscordEmbedField[];
+  image?: { url: string };
   footer: { text: string };
   timestamp: string;
 }
@@ -1664,61 +1665,23 @@ async function formatPlanPayload(job: SessionAlertJob, tradeDate: string, analys
     instrument,
   });
   const dailyNewsBrief = await formatDailyPlanNewsBrief(tradeDate, analysis.structuredChartContext || null);
-  const fields: DiscordEmbedField[] = [
-    {
-      name: '1️⃣ 📊 What',
-      value: discordValue(
-        `**${finalStatusLabel}**\n` +
-        `${planningLine}\n` +
-        `🕒 ${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}\n` +
-        `⏱️ Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`
-      ),
-      inline: false,
-    },
-    {
-      name: '2️⃣ 🗺️ Where',
-      value: discordValue(formatCleanScenarios(candidates, targetObjectives)),
-      inline: false,
-    },
-    {
-      name: '3️⃣ 📊 Trade Quality Score',
-      value: discordValue(candidates[0] ? formatTradeQualityScore(candidates[0]) : '⚪ No active trade plan to score.'),
-      inline: false,
-    },
-    {
-      name: '4️⃣ ⏳ When',
-      value: discordValue(formatFiveWsWhen(candidates)),
-      inline: false,
-    },
-    {
-      name: '5️⃣ 🛡️ Invalidation',
-      value: discordValue(formatCleanInvalidations(candidates)),
-      inline: false,
-    },
-    {
-      name: '6️⃣ 🗞️ USA News Caution',
-      value: discordValue(dailyNewsBrief),
-      inline: false,
-    },
-    {
-      name: '7️⃣ ⚠️ Watch-Out',
-      value: discordValue(
-        `🚫 ${compactSentence(normalized.whyThisPlan, 160) || 'Do not chase. Let the 5M trigger prove the path.'}\n` +
-        `${components ? '🧠 Button guide: 🟢 LONG T1 | 🏆 T2 | 🎯 liquidity target | 🛑 stopped | 🔴 SHORT T1 | ⚪ scratch | 🚫 not taken | ⏭ missed.' : '🧠 RAG buttons are not shown until DISCORD_OUTCOME_BASE_URL and DISCORD_OUTCOME_SECRET are set.'}\n` +
-        `${components ? '📝 Use the buttons only after you know what happened. They update RAG/journal learning only.' : ''}\n` +
-        '⚠️ Decision support only. No automated orders were placed.'
-      ),
-      inline: false,
-    },
-  ];
+  const fields: DiscordEmbedField[] = [];
+  const summary = [
+    `**${finalStatusLabel}**`,
+    planningLine,
+    `Session: ${job === 'morning' ? 'Morning Analysis' : 'Lunch Review'} | ${instrument} | ${tradeDate}`,
+    `Timestamp used for scoring: ${scoringTimestamp} (${scoringTimestampSource})`,
+    candidates[0] ? `Score: ${candidateConfidenceScore(candidates[0])}/100 | ${scannerAlertQualityFromScore(candidateConfidenceScore(candidates[0])).label}` : null,
+    dailyNewsBrief.includes('Active caution: none') ? 'USA news caution: none active at scoring timestamp.' : 'USA news caution: review before acting.',
+  ].filter(Boolean).join('\n');
 
   return {
     username: 'Quant Desk',
     content: `# ${statusEmoji(finalStatus)} Quant Desk ${header} — ${deskDecision}\n🆔 Plan ID: \`${planVersionId}\`${components ? '\n🧠 Use outcome buttons below to feed RAG.' : ''}`,
     embeds: [
       {
-        title: `📊 5 W Trading Card — ${tradeDate}`,
-        description: '⚠️ Decision support only. No automated orders were placed.',
+        title: `📊 Approved Trade Plan Render — ${tradeDate}`,
+        description: discordValue(`${summary}\n\nDecision support only. No automated orders were placed.`, 4096),
         color: statusColor(finalStatus),
         fields,
         footer: { text: 'Quant Desk • App-Owned Trade Pipeline • No automated orders' },
@@ -1878,10 +1841,22 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
   const separator = webhookUrl.includes('?') ? '&' : '?';
   const url = payload.components?.length ? `${webhookUrl}${separator}with_components=true` : webhookUrl;
   const validFiles = files.filter(Boolean);
+  const payloadWithImage = validFiles[0] && payload.embeds[0]
+    ? {
+        ...payload,
+        embeds: [
+          {
+            ...payload.embeds[0],
+            image: { url: `attachment://${path.basename(validFiles[0])}` },
+          },
+          ...payload.embeds.slice(1),
+        ],
+      }
+    : payload;
   const response = validFiles.length
     ? await (async () => {
         const form = new FormData();
-        form.append('payload_json', JSON.stringify(payload));
+        form.append('payload_json', JSON.stringify(payloadWithImage));
         for (const [index, file] of validFiles.entries()) {
           const bytes = await fs.readFile(file);
           form.append(`files[${index}]`, new Blob([bytes], { type: 'image/png' }), path.basename(file));
@@ -1891,7 +1866,7 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
     : await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payloadWithImage),
       });
   if (!response.ok) {
     throw new Error(`Discord webhook failed (${response.status}).`);

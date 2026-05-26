@@ -42,7 +42,7 @@ function compact(value?: string | null, max = 78): string {
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
 }
 
-function validCandles(chartContext: Partial<ChartContext> | null): Required<Pick<ChartCandleFact, 'index' | 'open' | 'high' | 'low' | 'close'>>[] {
+function validCandles(chartContext: Partial<ChartContext> | null): Array<Required<Pick<ChartCandleFact, 'index' | 'open' | 'high' | 'low' | 'close'>> & { timestamp?: string | null }> {
   return (chartContext?.candles || [])
     .filter((candle) => isPrice(candle.open) && isPrice(candle.high) && isPrice(candle.low) && isPrice(candle.close))
     .map((candle, fallbackIndex) => ({
@@ -51,6 +51,7 @@ function validCandles(chartContext: Partial<ChartContext> | null): Required<Pick
       high: candle.high as number,
       low: candle.low as number,
       close: candle.close as number,
+      timestamp: candle.timestamp || null,
     }))
     .slice(-90);
 }
@@ -95,6 +96,43 @@ function renderCandle(candle: Required<Pick<ChartCandleFact, 'open' | 'high' | '
     <line x1="${x}" y1="${y(candle.high)}" x2="${x}" y2="${y(candle.low)}" stroke="${color}" stroke-width="2" />
     <rect x="${x - 5}" y="${bodyTop}" width="10" height="${bodyHeight}" fill="${color}" rx="1" />
   `;
+}
+
+function renderManagedLines(
+  levels: Array<{ label: string; price: number | null | undefined; color: string; dash?: string; width?: number }>,
+  y: (price: number) => number,
+): string {
+  const valid = levels
+    .filter((level): level is { label: string; price: number; color: string; dash?: string; width?: number } => isPrice(level.price))
+    .map((level) => ({ ...level, rawY: y(level.price) }))
+    .sort((a, b) => a.rawY - b.rawY);
+
+  const minGap = 42;
+  for (let index = 1; index < valid.length; index += 1) {
+    if (valid[index].rawY - valid[index - 1].rawY < minGap) {
+      valid[index].rawY = valid[index - 1].rawY + minGap;
+    }
+  }
+  for (let index = valid.length - 2; index >= 0; index -= 1) {
+    if (valid[index + 1].rawY > 890 && valid[index + 1].rawY - valid[index].rawY < minGap) {
+      valid[index].rawY = valid[index + 1].rawY - minGap;
+    }
+  }
+
+  return valid.map((level) => {
+    const actualY = y(level.price);
+    const labelY = Math.max(36, Math.min(890, level.rawY));
+    const connector = Math.abs(labelY - actualY) > 3
+      ? `<line x1="1508" y1="${actualY}" x2="1516" y2="${labelY}" stroke="${level.color}" stroke-width="1.5" opacity=".65" />`
+      : '';
+    return `
+      <line x1="64" y1="${actualY}" x2="1510" y2="${actualY}" stroke="${level.color}" stroke-width="${level.width || 2}" ${level.dash ? `stroke-dasharray="${level.dash}"` : ''} />
+      ${connector}
+      <text x="1468" y="${labelY - 10}" text-anchor="end" class="line-label" fill="${level.color}">${escapeHtml(level.label)}</text>
+      <rect x="1518" y="${labelY - 17}" width="92" height="34" rx="7" fill="${level.color}" opacity="0.92" />
+      <text x="1564" y="${labelY + 6}" text-anchor="middle" class="price-pill">${money(level.price)}</text>
+    `;
+  }).join('');
 }
 
 function qualityColor(score: number, max: number): string {
@@ -213,6 +251,16 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const plot = { left: 64, top: 70, right: 1510, bottom: 905 };
   const xStep = (plot.right - plot.left) / Math.max(1, candles.length - 1);
   const y = (price: number) => plot.bottom - ((price - low) / (high - low)) * (plot.bottom - plot.top);
+  const visibleTimeLabels = candles
+    .map((candle, index) => ({ candle, index }))
+    .filter((_, index, source) => index === 0 || index === source.length - 1 || index % Math.max(1, Math.floor(source.length / 6)) === 0)
+    .map(({ candle, index }) => {
+      const raw = String(candle.timestamp || '');
+      const time = raw.match(/T(\d{2}:\d{2})/)?.[1] || raw.match(/\b(\d{2}:\d{2})\b/)?.[1] || '';
+      return time
+        ? `<text x="${plot.left + index * xStep}" y="942" text-anchor="middle" class="time-axis">${escapeHtml(time)}</text>`
+        : '';
+    }).join('');
   const entryZone = isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="790" y="${y(entryHigh)}" width="650" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
        <text x="1115" y="${(y(entryHigh) + y(entryLow)) / 2 - 4}" text-anchor="middle" class="zone-title">Entry / Imbalance Pullback</text>
@@ -226,6 +274,16 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       ? `<polyline points="1250,${y(entryLow)} 1330,${y(t1 || entryLow)} 1380,${y(entryLow)} 1490,${y(t2)}" fill="none" stroke="${pathColor}" stroke-width="3" stroke-dasharray="10 9" marker-end="url(#arrow)" />`
       : '';
   const sweepLabel = isLong ? 'Sell-side sweep' : 'Buy-side sweep';
+  const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
+  const managedLines = renderManagedLines([
+    { label: sweepLabel, price: sweep?.level || null, color: '#f97316', dash: '8 7', width: 2.5 },
+    { label: isLong ? 'Stop below sweep low' : 'Stop above sweep high', price: stop, color: '#ef4444', width: 3 },
+    sameT1T2
+      ? { label: 'T1/T2 2.0R', price: t2, color: '#facc15', dash: '8 7', width: 2.5 }
+      : { label: 'T1 1.5R', price: t1, color: '#facc15', dash: '8 7', width: 2.5 },
+    sameT1T2 ? { label: '', price: null, color: '#facc15' } : { label: 'T2 2.0R', price: t2, color: '#facc15', dash: '8 7', width: 2.5 },
+    { label: isLong ? 'Buy-side liquidity' : 'Sell-side liquidity', price: liquidity, color: '#2f8cff', width: 3 },
+  ], y);
   const contextBias = input.chartContext?.multiTimeframeContext?.alignment?.alignedDirection || input.chartContext?.marketStructure?.trend || 'unknown';
   const trendBias = input.chartContext?.multiTimeframeContext?.alignment?.executionBias || input.chartContext?.marketStructure?.trend || 'unknown';
   const narrative = compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 44);
@@ -250,6 +308,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .zone-title { font-size: 30px; font-weight: 900; fill: #f8fafc; }
     .zone-sub { font-size: 25px; font-weight: 850; fill: #f8fafc; }
     .axis { fill: #e5e7eb; font-size: 20px; font-weight: 700; }
+    .time-axis { fill: #f8fafc; font-size: 21px; font-weight: 800; }
     .step { font-size: 21px; fill: #f8fafc; font-weight: 760; }
     .step-num { font-size: 22px; fill: #4ade80; font-weight: 900; }
     .context-title { font-size: 21px; fill: #f8fafc; letter-spacing: 1.5px; }
@@ -275,12 +334,10 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${priceTicks.map((price) => `<line x1="${plot.left}" y1="${y(price)}" x2="${plot.right}" y2="${y(price)}" stroke="#12201c" stroke-width="1" /><text x="${plot.right + 12}" y="${y(price) + 7}" class="axis">${money(price)}</text>`).join('')}
   ${candles.map((candle, index) => renderCandle(candle, plot.left + index * xStep, y)).join('')}
   ${entryZone}
-  ${renderLine(sweepLabel, sweep?.level || null, y, '#f97316', '8 7', 2.5)}
-  ${renderLine(isLong ? 'Stop below sweep low' : 'Stop above sweep high', stop, y, '#ef4444', '', 3)}
-  ${renderLine('T1 1.5R', t1, y, '#facc15', '8 7', 2.5)}
-  ${renderLine('T2 2.0R', t2, y, '#facc15', '8 7', 2.5)}
-  ${renderLine(isLong ? 'Buy-side liquidity' : 'Sell-side liquidity', liquidity, y, '#2f8cff', '', 3)}
+  ${managedLines}
   ${projectedPath}
+  <line x1="${plot.left}" y1="${plot.bottom}" x2="${plot.right}" y2="${plot.bottom}" stroke="#e5e7eb" stroke-width="1.3" />
+  ${visibleTimeLabels}
   <rect x="16" y="20" width="450" height="325" rx="12" fill="#050908" stroke="#22c55e" stroke-width="2" opacity=".96" />
   <text x="36" y="62" class="panel-title">${escapeHtml(input.instrument)} • 5M CHART</text>
   <line x1="16" y1="82" x2="466" y2="82" stroke="#334155" />
