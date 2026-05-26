@@ -424,19 +424,46 @@ export interface ChartMarkerAnchorFacts {
   displacement: ChartMarkerAnchorFact | null;
 }
 
-function labelPoint(anchor: ChartPoint, dx: number, dy: number): ChartPoint {
+function labelPoint(anchor: ChartPoint, dx: number, dy: number, maxX = 1180): ChartPoint {
   return {
-    x: clamp(anchor.x + dx, 472, 1180),
+    x: clamp(anchor.x + dx, 472, maxX),
     y: clamp(anchor.y + dy, 190, 865),
   };
+}
+
+function spreadLabelPoints(points: Array<ChartPoint | null>, minimumGap = 78): Array<ChartPoint | null> {
+  const keyed = points
+    .map((point, index) => point ? { ...point, index } : null)
+    .filter((point): point is ChartPoint & { index: number } => Boolean(point))
+    .sort((a, b) => a.y - b.y);
+  for (let index = 1; index < keyed.length; index += 1) {
+    if (keyed[index].y - keyed[index - 1].y < minimumGap) {
+      keyed[index].y = keyed[index - 1].y + minimumGap;
+    }
+  }
+  for (let index = keyed.length - 1; index >= 0; index -= 1) {
+    if (keyed[index].y > 850) {
+      keyed[index].y = 850;
+    }
+    if (index > 0 && keyed[index].y - keyed[index - 1].y < minimumGap) {
+      keyed[index - 1].y = keyed[index].y - minimumGap;
+    }
+  }
+  const spread = [...points];
+  for (const point of keyed) {
+    spread[point.index] = { x: point.x, y: clamp(point.y, 190, 850) };
+  }
+  return spread;
 }
 
 function renderNarrativeMarkers(isLong: boolean, anchors: ChartMarkerAnchors): string {
   const color = isLong ? '#4ade80' : '#fb923c';
   const accent = isLong ? '#4ade80' : '#fb923c';
-  const displacementLabel = anchors.displacement ? labelPoint(anchors.displacement, isLong ? -210 : -190, isLong ? -44 : -36) : null;
-  const sweepLabel = anchors.sweep ? labelPoint(anchors.sweep, 22, isLong ? 24 : 22) : null;
-  const reclaimLabel = anchors.reclaim ? labelPoint(anchors.reclaim, 52, isLong ? 84 : 92) : null;
+  const [displacementLabel, sweepLabel, reclaimLabel] = spreadLabelPoints([
+    anchors.displacement ? labelPoint(anchors.displacement, isLong ? -210 : -130, isLong ? -44 : 70, isLong ? 1180 : 1260) : null,
+    anchors.sweep ? labelPoint(anchors.sweep, 22, isLong ? 24 : 22) : null,
+    anchors.reclaim ? labelPoint(anchors.reclaim, 52, isLong ? 84 : 92) : null,
+  ]);
   const displacementMarkup = anchors.displacement && displacementLabel
     ? isLong
       ? `

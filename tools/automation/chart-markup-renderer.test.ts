@@ -169,11 +169,55 @@ try {
   assert.equal(longAnchors.sweep?.candleIndex, 18);
   assert.equal(longAnchors.sweep?.price, candles[18].low);
   assert.equal(longAnchors.sweep?.source, 'event_timestamp');
+  assert.ok(longAnchors.sweep.price <= 7077.25);
   assert.equal(longAnchors.reclaim?.candleIndex, 22);
   assert.equal(longAnchors.reclaim?.price, 7077.25);
   assert.equal(longAnchors.reclaim?.source, 'event_candle_index');
   assert.equal(longAnchors.displacement?.candleIndex, 30);
   assert.equal(longAnchors.displacement?.price, candles[30].close);
+  const longFallbackAnchors = resolveChartMarkerAnchorFacts({
+    chartContext: {
+      ...chartContext,
+      liquiditySweeps: [{
+        type: 'sweep',
+        direction: 'LONG',
+        level: 7077.25,
+        sweptLevelLabel: 'Sell-side liquidity',
+        reclaimed: true,
+        confidence: 'High',
+      }],
+      reclaimEvents: [{
+        direction: 'LONG',
+        reclaimedLevel: 7077.25,
+        levelLabel: 'Sell-side liquidity',
+        timestamp: candles[22].timestamp,
+        confidence: 'High',
+      }],
+      displacementCandles: [{
+        direction: 'LONG',
+        candleIndex: 999,
+        timestamp: candles[30].timestamp,
+        open: candles[30].open,
+        high: candles[30].high,
+        low: candles[30].low,
+        close: candles[30].close,
+        bodyPoints: Math.abs(candles[30].close - candles[30].open),
+        rangePoints: candles[30].high - candles[30].low,
+        confidence: 'High',
+      }],
+    },
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.equal(longFallbackAnchors.sweep?.candleIndex, 18);
+  assert.equal(longFallbackAnchors.sweep?.source, 'crossed_swept_level');
+  assert.equal(longFallbackAnchors.sweep?.price, candles[18].low);
+  assert.equal(longFallbackAnchors.reclaim?.candleIndex, 22);
+  assert.equal(longFallbackAnchors.reclaim?.source, 'event_timestamp');
+  assert.equal(longFallbackAnchors.displacement?.candleIndex, 30);
+  assert.equal(longFallbackAnchors.displacement?.source, 'event_timestamp');
 
   const shortCandles = Array.from({ length: 28 }, (_, index) => {
     const base = 7560 + Math.sin(index / 3) * 1.2 + index * 0.03;
@@ -253,6 +297,7 @@ try {
   assert.equal(shortAnchors.sweep?.candleIndex, 9);
   assert.equal(shortAnchors.sweep?.price, shortCandles[9].high);
   assert.equal(shortAnchors.sweep?.source, 'crossed_swept_level');
+  assert.ok(shortAnchors.sweep.price >= 7565);
   assert.equal(shortAnchors.reclaim?.candleIndex, 12);
   assert.equal(shortAnchors.reclaim?.price, 7565);
   assert.equal(shortAnchors.displacement?.candleIndex, 18);
@@ -288,6 +333,26 @@ try {
     sessionLabel: 'morning',
   });
   assert.deepEqual(missingAnchors, { sweep: null, reclaim: null, displacement: null });
+  const noCrossingSweepAnchors = resolveChartMarkerAnchorFacts({
+    chartContext: {
+      candles: shortCandles,
+      liquiditySweeps: [{
+        type: 'sweep',
+        direction: 'SHORT',
+        level: 9000,
+        sweptLevelLabel: 'Buy-side liquidity',
+        reclaimed: true,
+        confidence: 'High',
+      }],
+      reclaimEvents: [],
+      displacementCandles: [],
+    },
+    candidate: shortCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.deepEqual(noCrossingSweepAnchors, { sweep: null, reclaim: null, displacement: null });
 
   const levelMap = await renderPriceLevelMap({
     chartContext,
