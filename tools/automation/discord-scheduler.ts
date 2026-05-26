@@ -21,6 +21,12 @@ import {
 } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
 import {
+  compactDiscordSummary,
+  validateDiscordPayload,
+  type CompactDiscordAttachmentState,
+  type DiscordWebhookPayload,
+} from './discord-alert-format';
+import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
   professionalCandidateModelLabel,
@@ -45,35 +51,6 @@ interface SchedulerConfig {
 
 interface AlertState {
   sent: Record<string, string>;
-}
-
-interface DiscordEmbedField {
-  name: string;
-  value: string;
-  inline?: boolean;
-}
-
-interface DiscordEmbed {
-  title: string;
-  description?: string;
-  color: number;
-  fields: DiscordEmbedField[];
-  image?: { url: string };
-  footer: { text: string };
-  timestamp: string;
-}
-
-interface DiscordWebhookPayload {
-  username: string;
-  content?: string;
-  embeds: DiscordEmbed[];
-  components?: DiscordActionRow[];
-}
-
-interface CompactDiscordAttachmentState {
-  chartPlan: boolean;
-  priceLevelMap: boolean;
-  auditLogPath?: string | null;
 }
 
 interface DiscordLinkButton {
@@ -1638,153 +1615,6 @@ function formatTargetFocus(candidates: SetupCandidate[], objectives: TargetObjec
 
 type NormalizedAppTradePlan = ReturnType<typeof buildAppTradePlan>;
 
-function sessionDisplayName(job: SessionAlertJob): string {
-  return job === 'morning' ? 'Morning' : 'Lunch';
-}
-
-function sessionWindowLabel(job: SessionAlertJob): string {
-  return job === 'morning'
-    ? `${MORNING_EXECUTION_START_ET}-${MORNING_EXECUTION_END_ET} ET`
-    : `${LUNCH_EXECUTION_START_ET}-${LUNCH_EXECUTION_END_ET} ET`;
-}
-
-function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
-  if (candidate?.executionStatus) return candidate.executionStatus;
-  if (normalized.canExecute) return 'Executable';
-  if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'Blocked';
-  return 'Conditional';
-}
-
-function compactTradeDirection(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
-  if (candidate?.direction && candidate.direction !== 'NO TRADE') return candidate.direction;
-  return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'WAIT';
-}
-
-function compactLevelsLine(candidate: SetupCandidate | null): string {
-  if (!candidate) return 'Levels: no active candidate levels available.';
-  const levels = candidateLevels(candidate);
-  const liquidityTarget =
-    candidate.targetObjectivePlan?.liquidityTarget1 ||
-    candidate.targetObjectivePlan?.nearestLiquidityTarget ||
-    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
-    null;
-  return [
-    `Entry ${moneyLine(candidate.entry)}`,
-    `Stop ${moneyLine(levels.stop)}`,
-    `T1 ${moneyLine(levels.target1)}`,
-    `T2 ${moneyLine(levels.target2)}`,
-    `Liquidity ${moneyLine(liquidityTarget?.price)}`,
-  ].join(' | ');
-}
-
-function compactActionLine(candidate: SetupCandidate | null, normalized: NormalizedAppTradePlan): string {
-  if (!candidate) return 'Action: no trade plan candidate. Keep this as market mapping only.';
-  if (candidate.executionStatus === 'Executable') return 'Action: verify completed 5M trigger, protected stop, and target room before acting.';
-  if (candidate.executionStatus === 'Blocked') return `Action: blocked. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
-  return `Action: wait. ${candidate.requiredTrigger || candidate.nextAction || 'Confirmation still required.'}`;
-}
-
-function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
-  if (!hasCandidate) return 'Attachments: not generated because no active plan candidate was available.';
-  if (attachments.chartPlan && attachments.priceLevelMap) return 'Attachments: Chart Plan + Price Level Map attached.';
-  return 'Attachments: unavailable. Review local logs before using this alert.';
-}
-
-function compactDiscordSummary(args: {
-  job: SessionAlertJob;
-  tradeDate: string;
-  instrument: Instrument;
-  planVersionId: string;
-  normalized: NormalizedAppTradePlan;
-  candidates: SetupCandidate[];
-  attachments: CompactDiscordAttachmentState;
-}): DiscordWebhookPayload {
-  const bestCandidate = args.candidates[0] || null;
-  const finalStatus = args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
-  const direction = compactTradeDirection(bestCandidate, args.normalized);
-  const decision = compactSessionDecisionLabel(bestCandidate, args.normalized);
-  const score = bestCandidate ? candidateConfidenceScore(bestCandidate) : null;
-  const scoreLabel = score === null ? 'N/A' : `${score}/100`;
-  const quality = score === null ? null : scannerAlertQualityFromScore(score).label;
-  const model = bestCandidate ? compactSetupName(bestCandidate) : 'No approved model candidate';
-  const components = buildOutcomeComponents({
-    planVersionId: args.planVersionId,
-    sessionType: args.job,
-    tradeDate: args.tradeDate,
-    instrument: args.instrument,
-  });
-  const lines = [
-    `**${direction} ${sessionDisplayName(args.job)} Alert - ${decision}**`,
-    `Model: ${model}`,
-    `Score: ${scoreLabel}${quality ? ` | ${quality}` : ''}`,
-    compactLevelsLine(bestCandidate),
-    compactActionLine(bestCandidate, args.normalized),
-    `Window: ${sessionWindowLabel(args.job)}`,
-    compactAttachmentLine(args.attachments, Boolean(bestCandidate)),
-  ];
-
-  return {
-    username: 'Quant Desk',
-    content: `${statusEmoji(finalStatus)} Quant Desk ${sessionDisplayName(args.job)} Alert | ${args.instrument} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
-    embeds: [
-      {
-        title: 'Compact Trade Plan Summary',
-        description: professionalizeReportText(`${lines.join('\n')}\n\nDecision support only. No automated orders.`),
-        color: statusColor(finalStatus),
-        fields: [],
-        footer: { text: 'Quant Desk • App-Owned Trade Pipeline • Chart Plan + Price Level Map when available' },
-        timestamp: new Date().toISOString(),
-      },
-    ],
-    ...(components ? { components } : {}),
-  };
-}
-
-function flattenDiscordPayloadText(payload: DiscordWebhookPayload): string {
-  return [
-    payload.content || '',
-    ...payload.embeds.flatMap((embed) => [
-      embed.title,
-      embed.description || '',
-      embed.footer?.text || '',
-      ...embed.fields.flatMap((field) => [field.name, field.value]),
-    ]),
-  ].join('\n');
-}
-
-function validateDiscordPayload(payload: DiscordWebhookPayload, files: string[] = []): void {
-  const contentLength = payload.content?.length || 0;
-  if (contentLength > 2000) {
-    throw new Error(`Discord payload blocked: content is ${contentLength} characters, above the 2000 character limit.`);
-  }
-  const mainText = flattenDiscordPayloadText(payload);
-  if (mainText.length > 2000) {
-    throw new Error(`Discord payload blocked: compact alert text is ${mainText.length} characters, above the 2000 character limit.`);
-  }
-  if (mainText.includes('Missing rea...') || mainText.includes('Qualified rea...') || mainText.includes('Target casc...') || mainText.includes('Audit det...')) {
-    throw new Error('Discord payload blocked: truncation artifact detected in main alert text.');
-  }
-  if (/(\bMissing reasons|\bQualified reasons|\bTarget cascade|\bAudit detail)/i.test(mainText)) {
-    throw new Error('Discord payload blocked: audit-only detail leaked into compact alert text.');
-  }
-  for (const embed of payload.embeds) {
-    if (embed.title.length > 256) throw new Error('Discord payload blocked: embed title exceeds 256 characters.');
-    if ((embed.description || '').length > 4096) throw new Error('Discord payload blocked: embed description exceeds 4096 characters.');
-    if (embed.fields.length > 25) throw new Error('Discord payload blocked: embed has more than 25 fields.');
-    for (const field of embed.fields) {
-      if (field.name.length > 256) throw new Error('Discord payload blocked: embed field name exceeds 256 characters.');
-      if (field.value.length > 1024) throw new Error('Discord payload blocked: embed field value exceeds 1024 characters.');
-    }
-  }
-  const validFiles = files.filter(Boolean);
-  if (validFiles.length > 0 && validFiles.length < 2) {
-    console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
-  }
-  if (mainText.length > 1200) {
-    console.warn(`Discord payload warning: compact alert text is ${mainText.length} characters; preferred normal output is under 1200.`);
-  }
-}
-
 async function writeDiscordAuditLog(args: {
   job: SessionAlertJob;
   tradeDate: string;
@@ -1825,7 +1655,25 @@ async function formatPlanPayload(args: {
   candidates: SetupCandidate[];
   attachments: CompactDiscordAttachmentState;
 }): Promise<DiscordWebhookPayload> {
-  return compactDiscordSummary(args);
+  return compactDiscordSummary({
+    session: args.job,
+    tradeDate: args.tradeDate,
+    planVersionId: args.planVersionId,
+    instrument: args.instrument,
+    normalized: args.normalized,
+    candidates: args.candidates,
+    attachments: args.attachments,
+    sourceLabel: args.job === 'morning' ? 'Morning' : 'Lunch',
+    windowLabel: args.job === 'morning'
+      ? `${MORNING_EXECUTION_START_ET}-${MORNING_EXECUTION_END_ET} ET`
+      : `${LUNCH_EXECUTION_START_ET}-${LUNCH_EXECUTION_END_ET} ET`,
+    components: buildOutcomeComponents({
+      planVersionId: args.planVersionId,
+      sessionType: args.job,
+      tradeDate: args.tradeDate,
+      instrument: args.instrument,
+    }),
+  });
 }
 
 async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartContext> | null, instrument: Instrument): Promise<DiscordWebhookPayload> {

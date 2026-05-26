@@ -40,7 +40,13 @@ import {
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
-import { renderChartMarkup } from './chart-markup-renderer';
+import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
+import {
+  compactDiscordSummary,
+  validateDiscordPayload,
+  type CompactDiscordAttachmentState,
+  type DiscordWebhookPayload,
+} from './discord-alert-format';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -48,7 +54,6 @@ import {
   professionalizeReportText,
   type ProfessionalModelLabel,
 } from './professional-report-language';
-import { formatXHashtags } from './x-hashtags';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -88,22 +93,10 @@ interface ScannerStateFile {
   lastMarketMapRefreshBySession: Record<string, string>;
 }
 
-interface DiscordWebhookPayload {
-  username: string;
-  content?: string;
-  embeds: Array<{
-    title: string;
-    description?: string;
-    color: number;
-    fields: Array<{ name: string; value: string; inline?: boolean }>;
-    footer: { text: string };
-    timestamp: string;
-  }>;
-}
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
+const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 
@@ -365,6 +358,55 @@ function objectiveLine(label: string, objective: TargetObjective | null | undefi
   return `${label}: ${objective.price} ${objective.label}`;
 }
 
+async function writeScannerDiscordAuditLog(args: {
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  planVersionId: string;
+  state: ScannerState;
+  confidence: ReturnType<typeof scoreScannerCandidate>;
+  candidate: SetupCandidate | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  scoringTimestamp: string;
+  scoringTimestampSource: string;
+  windowLabel: string;
+  staleReason: string | null;
+  targetCascade: ReturnType<typeof buildTargetCascade>;
+  alertReason: string;
+  chartMarkup: string | null;
+  levelMap: string | null;
+}): Promise<string> {
+  await fs.mkdir(DISCORD_AUDIT_DIR, { recursive: true });
+  const file = path.join(DISCORD_AUDIT_DIR, `scanner-${args.session}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
+  await fs.writeFile(file, JSON.stringify({
+    createdAt: new Date().toISOString(),
+    source: 'live-scanner',
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    planVersionId: args.planVersionId,
+    state: args.state,
+    confidence: args.confidence,
+    candidate: args.candidate,
+    normalizedPlan: args.normalized,
+    currentPrice: args.currentPrice,
+    completed5m: args.completed5m,
+    scoringTimestamp: args.scoringTimestamp,
+    scoringTimestampSource: args.scoringTimestampSource,
+    windowLabel: args.windowLabel,
+    staleReason: args.staleReason,
+    targetCascade: args.targetCascade,
+    alertReason: args.alertReason,
+    attachments: {
+      chartMarkup: args.chartMarkup,
+      priceLevelMap: args.levelMap,
+    },
+  }, null, 2));
+  return file;
+}
+
 function mappingSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession {
   if (window.session === 'lunch') return 'lunch';
   if (window.nextWindowLabel?.toLowerCase().includes('midday')) return 'lunch';
@@ -606,83 +648,28 @@ function buildDiscordPayload(args: {
   confidence: ReturnType<typeof scoreScannerCandidate>;
   candidate: SetupCandidate | null;
   normalized: ReturnType<typeof buildAppTradePlan>;
-  currentPrice: number | null;
-  completed5m: NinjaBridgeBar | null;
-  scoringTimestamp: string;
-  scoringTimestampSource: string;
   windowLabel: string;
-  staleReason: string | null;
-  targetCascade: ReturnType<typeof buildTargetCascade>;
-  alertReason: string;
+  planVersionId: string;
+  attachments: CompactDiscordAttachmentState;
 }): DiscordWebhookPayload {
-  const candidate = args.candidate;
-  const targetPlan = candidate?.targetObjectivePlan;
-  const trigger = candidate?.requiredTrigger || 'Wait for completed 5M trigger.';
-  const invalidation = candidate?.invalidation || args.normalized.invalidation || 'Do not execute without structure invalidation.';
-  const model = modelType(candidate);
-  const decision = tradeDecisionFromScore(args.confidence.score);
-  const alertQuality = scannerAlertQualityFromScore(args.confidence.score);
-  const planLine = [
-    `📈 Instrument: ${args.config.instrument}`,
-    `🕒 Session: ${args.session}`,
-    `🪟 Window: ${args.windowLabel}`,
-    `⏱️ Timestamp used for scoring: ${args.scoringTimestamp} (${args.scoringTimestampSource})`,
-    `🧭 Direction: ${candidate?.direction || 'N/A'}`,
-    `🎯 Model type: ${model}`,
-    `📊 Score: ${args.confidence.score}/100`,
-    `🏷️ Alert tier: ${alertQuality.label}`,
-    `⚖️ Trade decision: ${decision}`,
-    `💵 Current: ${money(args.currentPrice)} | 🕯️ Completed 5M: ${args.completed5m?.time || 'N/A'}`,
-  ].join('\n');
-  const executionLine = [
-    `✅ Trigger: ${trigger}`,
-    `🎯 Entry area: ${money(candidate?.entry)}`,
-    `🛡️ Stop: ${money(candidate?.stop)}`,
-    `🏁 Target: ${money(candidate?.target1)}${candidate?.target2 ? ` | 🏃 Runner: ${money(candidate.target2)}` : ''}`,
-    `⚖️ Risk/reward: ${riskReward(candidate)}`,
-  ].join('\n');
-  const targetLine = [
-    objectiveLine('🧱 Obstacle / Reaction Zone', targetPlan?.obstacleTarget1 || targetPlan?.nearestObstacleTarget),
-    objectiveLine('💧 Primary Liquidity Target', targetPlan?.liquidityTarget1 || targetPlan?.nearestLiquidityTarget || args.targetCascade.activeTarget),
-    objectiveLine('🏃 Runner Liquidity', targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget),
-    `🪜 Target Cascade: ${args.targetCascade.path.join(' ')}`,
-  ].join('\n');
-  const reasonLine = [
-    `📊 Overall score: ${args.confidence.score}/100`,
-    `🧭 Recommendation: ${args.confidence.recommendation || 'Use the score as decision support only; hard gates still control execution.'}`,
-    args.confidence.scorecard?.length
-      ? `📋 Score breakdown:\n${args.confidence.scorecard.map((item) => `• ${item.status === 'strong' ? '✅' : item.status === 'partial' ? '🟡' : item.status === 'weak' ? '⚠️' : '🛑'} ${item.label}: ${item.score}/${item.max} - ${item.note}`).join('\n')}`
-      : null,
-    `✅ Alert qualification: ${args.alertReason}`,
-    `🟢 Qualified reasons:\n${uniqueReasons(args.confidence.qualifiedReasons)}`,
-    `🟡 Missing reasons:\n${uniqueReasons(args.confidence.missingReasons)}`,
-    `🛑 Hard disqualifier: ${hardDisqualifierReason(args.confidence.missingReasons)}`,
-  ].filter(Boolean).join('\n');
-
-  return {
-    username: 'Quant Desk',
-    content: `# ${statusEmoji(args.state)} Quant Desk Scanner Alert — ${alertQuality.label}\n⚠️ Decision support only. No automated orders were placed.`,
-    embeds: [
-      {
-        title: `📊 Local Scanner Trading Card — ${args.tradeDate}`,
-        description: '⚠️ Do not execute from the card alone. Wait for the 5M trigger, structure stop, risk check, and target room confirmation.',
-        color: statusColor(args.state),
-        fields: [
-          { name: '1️⃣ 📊 Trade State', value: clip(planLine), inline: false },
-          { name: '2️⃣ 🧠 Execution Plan', value: clip(executionLine), inline: false },
-          { name: '3️⃣ 🎯 Targets', value: clip(targetLine), inline: false },
-          { name: '4️⃣ 🛡️ Invalidation / No Chase', value: clip(`🧱 ${invalidation}\n🚫 ${args.staleReason || 'Preferred retest entry required. No chase entry.'}`), inline: false },
-          { name: '5️⃣ ✅ Alert Quality', value: clip(reasonLine), inline: false },
-          { name: '6️⃣ 📣 X Tags', value: clip(formatXHashtags('chart_plan')), inline: false },
-        ],
-        footer: { text: 'Quant Desk • Local Scanner • Read-only bridge • No automated orders' },
-        timestamp: new Date().toISOString(),
-      },
-    ],
-  };
+  return compactDiscordSummary({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    planVersionId: args.planVersionId,
+    normalized: args.normalized,
+    candidates: args.candidate ? [args.candidate] : [],
+    attachments: args.attachments,
+    sourceLabel: 'Scanner',
+    windowLabel: args.windowLabel,
+    scoreOverride: args.confidence.score,
+    decisionOverride: args.state,
+    statusOverride: args.state,
+  });
 }
 
 async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<void> {
+  validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
     console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
     return;
@@ -963,10 +950,24 @@ async function runCycle(config: ScannerConfig): Promise<void> {
 
   if (alertDecision.shouldSend) {
     const planVersionId = createPlanVersionId(session, tradeDate);
-    const payload = buildDiscordPayload({
+    const renderInput = candidate
+      ? {
+          chartContext: analysis.structuredChartContext || null,
+          candidate,
+          instrument: config.instrument,
+          tradeDate,
+          sessionLabel: session,
+          filePrefix: `scanner-${session}-${tradeDate}-${config.instrument}`,
+        }
+      : null;
+    const chartMarkup = renderInput ? await renderChartMarkup(renderInput) : null;
+    const levelMap = renderInput ? await renderPriceLevelMap(renderInput) : null;
+    const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
+    const auditLogPath = await writeScannerDiscordAuditLog({
       session,
       tradeDate,
-      config,
+      instrument: config.instrument,
+      planVersionId,
       state: stateForAlert,
       confidence,
       candidate,
@@ -979,19 +980,26 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       staleReason: stale.reason,
       targetCascade,
       alertReason: alertDecision.reason,
+      chartMarkup,
+      levelMap,
     });
-    payload.content = `${payload.content}\nPlan ID: \`${planVersionId}\``;
-    const chartMarkup = candidate
-      ? await renderChartMarkup({
-          chartContext: analysis.structuredChartContext || null,
-          candidate,
-          instrument: config.instrument,
-          tradeDate,
-          sessionLabel: session,
-          filePrefix: `scanner-${session}-${tradeDate}-${config.instrument}`,
-        })
-      : null;
-    await postDiscord(payload, config, chartMarkup ? [chartMarkup] : []);
+    const payload = buildDiscordPayload({
+      session,
+      tradeDate,
+      config,
+      state: stateForAlert,
+      confidence,
+      candidate,
+      normalized,
+      windowLabel: window.label,
+      planVersionId,
+      attachments: {
+        chartPlan: Boolean(chartMarkup),
+        priceLevelMap: Boolean(levelMap),
+        auditLogPath,
+      },
+    });
+    await postDiscord(payload, config, files);
     state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt: new Date().toISOString() };
   }
 
