@@ -68,7 +68,7 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
   assert.ok(text.length < 1200, `expected compact payload under 1200 chars, got ${text.length}`);
   assert.ok(!/Score breakdown|Target Cascade|Target cascade|Qualified reasons|Missing reasons|Missing rea\.\.\.|Audit detail/i.test(text));
   assert.ok(text.includes('Compact Trade Plan Summary'));
-  assert.ok(text.includes('Chart Plan + Price Level Map attached'));
+  assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
 }
 
 const normalized = {
@@ -126,11 +126,19 @@ assert.ok(scanner.content?.includes('Quant Desk Scanner Alert'));
 
 assert.equal(
   compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),
-  'Attachments: unavailable. Review local logs before using this alert.'
+  'Details: Chart Plan attached. Price Level Map unavailable.'
+);
+assert.equal(
+  compactAttachmentLine({ chartPlan: false, priceLevelMap: true }, true),
+  'Details: Price Level Map attached. Chart Plan unavailable.'
 );
 assert.equal(
   compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, true),
-  'Attachments: unavailable. Review local logs before using this alert.'
+  'Details: Visual attachments unavailable — review local logs before action.'
+);
+assert.equal(
+  compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, false),
+  'Details: Visual attachments not generated because no active plan candidate was available.'
 );
 
 assert.throws(() => validateDiscordPayload({

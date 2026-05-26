@@ -149,9 +149,11 @@ function compactActionLine(candidate: SetupCandidate | null, normalized: Compact
 }
 
 export function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
-  if (!hasCandidate) return 'Attachments: not generated because no active plan candidate was available.';
-  if (attachments.chartPlan && attachments.priceLevelMap) return 'Attachments: Chart Plan + Price Level Map attached.';
-  return 'Attachments: unavailable. Review local logs before using this alert.';
+  if (!hasCandidate) return 'Details: Visual attachments not generated because no active plan candidate was available.';
+  if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: See attached Chart Plan + Price Level Map.';
+  if (attachments.chartPlan) return 'Details: Chart Plan attached. Price Level Map unavailable.';
+  if (attachments.priceLevelMap) return 'Details: Price Level Map attached. Chart Plan unavailable.';
+  return 'Details: Visual attachments unavailable — review local logs before action.';
 }
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
