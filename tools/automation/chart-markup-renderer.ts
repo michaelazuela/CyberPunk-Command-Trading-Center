@@ -1,9 +1,8 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 import type { ChartCandleFact, ChartContext, DecisionQualityScoreItem, DisplacementCandleFact, FvgZoneFact, LiquidityEventFact, ReclaimEventFact, SetupCandidate } from '../../src/types';
 import { professionalCandidateModelLabel } from './professional-report-language';
+import { renderHtmlToApprovedPng, validatePngFile } from './render-html-to-png';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -954,63 +953,43 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
 }
 
 export async function verifyApprovedDailyTradePlanRender(outputPath: string): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const bytes = await fs.readFile(outputPath);
-  if (bytes.length < 24) return { ok: false, reason: 'render file is too small' };
-  const pngSignature = '89504e470d0a1a0a';
-  if (bytes.subarray(0, 8).toString('hex') !== pngSignature) {
-    return { ok: false, reason: 'render is not a PNG file' };
-  }
-  const width = bytes.readUInt32BE(16);
-  const height = bytes.readUInt32BE(20);
-  if (width !== APPROVED_RENDER_WIDTH || height !== APPROVED_RENDER_HEIGHT) {
-    return { ok: false, reason: `render dimensions ${width}x${height} do not match approved ${APPROVED_RENDER_WIDTH}x${APPROVED_RENDER_HEIGHT}` };
-  }
-  if (bytes.length < 50_000) return { ok: false, reason: 'render file size is unexpectedly small' };
-  return { ok: true };
+  return validatePngFile(outputPath, {
+    expectedWidth: APPROVED_RENDER_WIDTH,
+    expectedHeight: APPROVED_RENDER_HEIGHT,
+    minBytes: 50_000,
+  });
 }
 
 export async function renderChartMarkup(input: ChartMarkupRenderInput): Promise<string | null> {
   if (!input.candidate || !input.chartContext?.candles?.length) return null;
   const outputDir = input.outputDir || DEFAULT_OUTPUT_DIR;
-  await fs.mkdir(outputDir, { recursive: true });
   const safePrefix = (input.filePrefix || `${input.tradeDate}-${input.sessionLabel}-${input.candidate.direction}`).replace(/[^a-z0-9_-]+/gi, '-');
   const outputPath = path.join(outputDir, `${safePrefix}-${Date.now()}.png`);
   const html = buildChartHtml(input);
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: APPROVED_RENDER_WIDTH, height: APPROVED_RENDER_HEIGHT }, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.screenshot({ path: outputPath, type: 'png', fullPage: false });
-    const verification = await verifyApprovedDailyTradePlanRender(outputPath);
-    if (verification.ok === false) {
-      await fs.rm(outputPath, { force: true });
-      throw new Error(`Approved daily trade plan render failed QA: ${verification.reason}`);
-    }
-    return outputPath;
-  } finally {
-    await browser.close();
-  }
+  return renderHtmlToApprovedPng({
+    html,
+    outputPath,
+    viewport: { width: APPROVED_RENDER_WIDTH, height: APPROVED_RENDER_HEIGHT },
+    expectedWidth: APPROVED_RENDER_WIDTH,
+    expectedHeight: APPROVED_RENDER_HEIGHT,
+    minBytes: 50_000,
+    failureLabel: 'Approved daily trade plan render',
+  });
 }
 
 export async function renderPriceLevelMap(input: ChartMarkupRenderInput): Promise<string | null> {
   if (!input.candidate || !input.chartContext?.candles?.length) return null;
   const outputDir = input.outputDir || DEFAULT_OUTPUT_DIR;
-  await fs.mkdir(outputDir, { recursive: true });
   const safePrefix = (input.filePrefix || `${input.tradeDate}-${input.sessionLabel}-${input.candidate.direction}`).replace(/[^a-z0-9_-]+/gi, '-');
   const outputPath = path.join(outputDir, `${safePrefix}-${LEVEL_MAP_SUFFIX}-${Date.now()}.png`);
   const html = buildLevelMapHtml(input);
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: APPROVED_RENDER_WIDTH, height: APPROVED_RENDER_HEIGHT }, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.screenshot({ path: outputPath, type: 'png', fullPage: false });
-    const verification = await verifyApprovedDailyTradePlanRender(outputPath);
-    if (verification.ok === false) {
-      await fs.rm(outputPath, { force: true });
-      throw new Error(`Approved price level map render failed QA: ${verification.reason}`);
-    }
-    return outputPath;
-  } finally {
-    await browser.close();
-  }
+  return renderHtmlToApprovedPng({
+    html,
+    outputPath,
+    viewport: { width: APPROVED_RENDER_WIDTH, height: APPROVED_RENDER_HEIGHT },
+    expectedWidth: APPROVED_RENDER_WIDTH,
+    expectedHeight: APPROVED_RENDER_HEIGHT,
+    minBytes: 50_000,
+    failureLabel: 'Approved price level map render',
+  });
 }

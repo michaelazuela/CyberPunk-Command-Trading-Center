@@ -145,6 +145,27 @@ const candidate: SetupCandidate = {
 };
 
 try {
+  const missingCandidateChart = await renderChartMarkup({
+    chartContext,
+    candidate: null,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'missing-candidate',
+  });
+  assert.equal(missingCandidateChart, null);
+  const missingCandidateLevelMap = await renderPriceLevelMap({
+    chartContext,
+    candidate: null,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'missing-candidate',
+  });
+  assert.equal(missingCandidateLevelMap, null);
+
   const output = await renderChartMarkup({
     chartContext,
     candidate,
@@ -323,6 +344,7 @@ try {
     filePrefix: 'short-test',
   });
   assert.ok(shortLevelMap);
+  assert.match(path.basename(shortLevelMap), /level-map/);
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(shortLevelMap), { ok: true });
 
   const missingAnchors = resolveChartMarkerAnchorFacts({
@@ -364,6 +386,7 @@ try {
     filePrefix: 'test',
   });
   assert.ok(levelMap);
+  assert.match(path.basename(levelMap), /level-map/);
   const levelMapFormat = await verifyApprovedDailyTradePlanRender(levelMap);
   assert.deepEqual(levelMapFormat, { ok: true });
   console.log('chart markup renderer tests passed');
