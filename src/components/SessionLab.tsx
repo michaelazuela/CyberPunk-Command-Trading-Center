@@ -1167,126 +1167,161 @@ export default function SessionLab({
       <div className="card-base p-4 mb-6 font-mono">
         <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">NinjaTrader Bridge</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">Data / Model Status</div>
             <div className="mt-1 text-[10px] text-[var(--txt3)]">
-              Read-only live OHLC and account snapshot from NinjaTrader Desktop. Screenshots still work if the bridge is disconnected.
+              Live review stays focused on screenshot staging, analysis, decision, and outcome. Advanced controls are available below when needed.
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className={cn('qd-badge', bridge.connected ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
               {bridge.connected ? 'Connected' : 'Disconnected'}
             </span>
+            <span className="qd-badge opacity-80">{bridgeInstrument}</span>
+            <span className={cn('qd-badge', bridge.bars5m.length ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
+              {bridge.bars5m.length ? 'OHLC available' : 'OHLC unavailable'}
+            </span>
+            <span className="qd-badge opacity-80">{modelConfig.workflowSpeedMode}</span>
             <button type="button" onClick={() => void refreshNinjaBridge()} className="qd-btn-ghost px-3 py-1 text-[10px]" disabled={bridge.loading}>
               {bridge.loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
-            <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Bridge Instrument</label>
-            <input
-              value={bridgeInstrument}
-              onChange={event => setBridgeInstrument(event.target.value)}
-              onBlur={() => void refreshNinjaBridge()}
-              className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
-              placeholder="MES 06-26"
-            />
+        <details className="border border-[var(--b1)] bg-[var(--bg)] p-3">
+          <summary className="cursor-pointer select-none text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">
+            Advanced data/model controls
+          </summary>
+          <div className="mt-2 text-[10px] text-[var(--txt3)]">
+            Bridge, provider, cache, and diagnostic controls for troubleshooting. Leave collapsed during normal live review.
           </div>
-          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
-            <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Account</label>
-            <select
-              value={bridgeAccount}
-              onChange={event => setBridgeAccount(event.target.value)}
-              className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
-            >
-              {(bridge.accounts.length ? bridge.accounts : ['Sim101', '206257']).map(account => <option key={account} value={account}>{account}</option>)}
-            </select>
-          </div>
-          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
-            <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 5M Candle</div>
-            <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars5m[bridge.bars5m.length - 1])}</div>
-            <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars5m.length} cached bars</div>
-          </div>
-          <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
-            <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 15M Candle</div>
-            <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars15m[bridge.bars15m.length - 1])}</div>
-            <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars15m.length} cached bars</div>
-          </div>
-        </div>
 
-        <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] md:grid-cols-5">
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">4H Macro: </span>
-            <span className="text-[var(--txt)]">{bridge.bars240m.length ? `${bridge.bars240m.length} bars` : 'N/A'}</span>
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-4">
+            <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+              <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Bridge Instrument</label>
+              <input
+                value={bridgeInstrument}
+                onChange={event => setBridgeInstrument(event.target.value)}
+                onBlur={() => void refreshNinjaBridge()}
+                className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
+                placeholder="MES 06-26"
+              />
+            </div>
+            <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+              <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Account</label>
+              <select
+                value={bridgeAccount}
+                onChange={event => setBridgeAccount(event.target.value)}
+                className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
+              >
+                {(bridge.accounts.length ? bridge.accounts : ['Sim101', '206257']).map(account => <option key={account} value={account}>{account}</option>)}
+              </select>
+            </div>
+            <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 5M Candle</div>
+              <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars5m[bridge.bars5m.length - 1])}</div>
+              <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars5m.length} cached bars</div>
+            </div>
+            <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
+              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Latest 15M Candle</div>
+              <div className="mt-2 text-[10px] text-[var(--txt)]">{summarizeBridgeBar(bridge.bars15m[bridge.bars15m.length - 1])}</div>
+              <div className="mt-1 text-[9px] text-[var(--txt3)]">{bridge.bars15m.length} cached bars</div>
+            </div>
           </div>
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">1H Session: </span>
-            <span className="text-[var(--txt)]">{bridge.bars60m.length ? `${bridge.bars60m.length} bars` : 'N/A'}</span>
-          </div>
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">NinjaTrader: </span>
-            <span className="text-[var(--txt)]">{bridge.health?.ninjaTraderVersion || 'N/A'}</span>
-          </div>
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">Market Store: </span>
-            <span className="text-[var(--txt)]">
-              {bridge.marketDataSource === 'market_bars' ? 'market_bars cache' : bridge.marketDataSource === 'mixed' ? 'cache + bridge' : bridge.marketDataSource === 'bridge_fallback' ? 'bridge fallback' : 'N/A'}
-            </span>
-          </div>
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">Current / H / L: </span>
-            <span className="text-[var(--txt)]">{formatBridgePrice(bridge.snapshot?.currentPrice)} / {formatBridgePrice(bridge.snapshot?.sessionHigh)} / {formatBridgePrice(bridge.snapshot?.sessionLow)}</span>
-          </div>
-          <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
-            <span className="text-[var(--txt3)]">Positions: </span>
-            <span className="text-[var(--txt)]">{bridge.positions.length ? bridge.positions.map(position => `${position.instrument} ${position.marketPosition} ${position.quantity}`).join(', ') : 'Flat / none returned'}</span>
-          </div>
-        </div>
 
-        {bridge.marketDataMessage && (
-          <div className="mt-3 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2 text-[10px] text-[var(--txt2)]">
-            Data path: NinjaTrader Bridge to market_bars Supabase cache to session structure / targets to setup scanner to ranking to trade decision pipeline to UI / Discord / RAG. {bridge.marketDataMessage}
+          <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] md:grid-cols-5">
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">4H Macro: </span>
+              <span className="text-[var(--txt)]">{bridge.bars240m.length ? `${bridge.bars240m.length} bars` : 'N/A'}</span>
+            </div>
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">1H Session: </span>
+              <span className="text-[var(--txt)]">{bridge.bars60m.length ? `${bridge.bars60m.length} bars` : 'N/A'}</span>
+            </div>
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">NinjaTrader: </span>
+              <span className="text-[var(--txt)]">{bridge.health?.ninjaTraderVersion || 'N/A'}</span>
+            </div>
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">Market Store: </span>
+              <span className="text-[var(--txt)]">
+                {bridge.marketDataSource === 'market_bars' ? 'market_bars cache' : bridge.marketDataSource === 'mixed' ? 'cache + bridge' : bridge.marketDataSource === 'bridge_fallback' ? 'bridge fallback' : 'N/A'}
+              </span>
+            </div>
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">Current / H / L: </span>
+              <span className="text-[var(--txt)]">{formatBridgePrice(bridge.snapshot?.currentPrice)} / {formatBridgePrice(bridge.snapshot?.sessionHigh)} / {formatBridgePrice(bridge.snapshot?.sessionLow)}</span>
+            </div>
+            <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">
+              <span className="text-[var(--txt3)]">Positions: </span>
+              <span className="text-[var(--txt)]">{bridge.positions.length ? bridge.positions.map(position => `${position.instrument} ${position.marketPosition} ${position.quantity}`).join(', ') : 'Flat / none returned'}</span>
+            </div>
           </div>
-        )}
 
-        {bridge.error && (
-          <div className="mt-3 border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-2 text-[10px] text-[var(--orange)]">
-            Bridge unavailable: {bridge.error}. Open NinjaTrader and keep the AddOn compiled/running, or continue with screenshot-only analysis.
-          </div>
-        )}
-      </div>
+          {bridge.marketDataMessage && (
+            <div className="mt-3 border border-[var(--green)]/20 bg-[var(--green)]/5 p-2 text-[10px] text-[var(--txt2)]">
+              Data path: NinjaTrader Bridge to market_bars Supabase cache to session structure / targets to setup scanner to ranking to trade decision pipeline to UI / Discord / RAG. {bridge.marketDataMessage}
+            </div>
+          )}
 
-      <div className="card-base p-4 mb-6">
-        <div className="flex items-center justify-between gap-4 mb-3">
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Session Readiness</div>
-            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and Lunch / PM are separate workflows with separate screenshots, analysis state, proof flow, and RAG records.</div>
-          </div>
-          <span className="qd-badge">APP-OWNED DECISION</span>
-        </div>
-        <div className="mb-3 border border-[var(--b1)] bg-[var(--bg)] p-3 font-mono">
-          <div className="mb-3">
+          {bridge.error && (
+            <div className="mt-3 border border-[var(--orange)]/30 bg-[var(--orange)]/10 p-2 text-[10px] text-[var(--orange)]">
+              Bridge unavailable: {bridge.error}. Open NinjaTrader and keep the AddOn compiled/running, or continue with screenshot-only analysis.
+            </div>
+          )}
+
+          <div className="mt-3 border border-[var(--b1)] bg-[var(--bg)] p-3 font-mono">
+            <div className="mb-3">
+              <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Workflow Speed</div>
+                  <div className="text-[10px] text-[var(--txt2)]">Fast for live trading. Audit for slower cross-checks and replay review.</div>
+                </div>
+                <span className="qd-badge">{modelConfig.workflowSpeedMode}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                {[
+                  { value: 'fast', label: 'Fast', note: 'Gemini Flash first. OpenAI fallback if Gemini times out.' },
+                  { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback.' },
+                  { value: 'audit', label: 'Audit', note: 'Gemini Pro + OpenAI validation.' },
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateSpeedMode(option.value as ModelConfig['workflowSpeedMode'])}
+                    className={cn(
+                      'border px-3 py-2 text-left transition-colors',
+                      modelConfig.workflowSpeedMode === option.value
+                        ? 'border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)]'
+                        : 'border-[var(--b2)] bg-transparent text-[var(--txt2)] hover:border-[var(--txt2)] hover:text-[var(--txt)]'
+                    )}
+                  >
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.12em]">{option.label}</span>
+                    <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Workflow Speed</div>
-                <div className="text-[10px] text-[var(--txt2)]">Fast for live trading. Audit for slower cross-checks and replay review.</div>
+                <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Extraction Provider</div>
+                <div className="text-[10px] text-[var(--txt2)]">Advanced data/model control. Leave unchanged during live review unless troubleshooting.</div>
               </div>
-              <span className="qd-badge">{modelConfig.workflowSpeedMode}</span>
+              <span className="qd-badge">{modelConfig.providerMode.replace(/_/g, ' ')}</span>
             </div>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
               {[
-                { value: 'fast', label: 'Fast', note: 'Gemini Flash first. OpenAI fallback if Gemini times out.' },
-                { value: 'balanced', label: 'Balanced', note: 'Gemini Flash with OpenAI fallback.' },
-                { value: 'audit', label: 'Audit', note: 'Gemini Pro + OpenAI validation.' },
+                { value: 'gemini_only', label: 'Gemini Only', note: 'Primary extractor only.' },
+                { value: 'gemini_openai_validation', label: 'Gemini + OpenAI Validation', note: 'OpenAI cross-checks levels.' },
+                { value: 'openai_fallback', label: 'OpenAI Fallback', note: 'Facts-only fallback if Gemini fails.' },
               ].map(option => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => updateSpeedMode(option.value as ModelConfig['workflowSpeedMode'])}
+                  onClick={() => updateProviderMode(option.value as ModelConfig['providerMode'])}
                   className={cn(
                     'border px-3 py-2 text-left transition-colors',
-                    modelConfig.workflowSpeedMode === option.value
+                    modelConfig.providerMode === option.value
                       ? 'border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)]'
                       : 'border-[var(--b2)] bg-transparent text-[var(--txt2)] hover:border-[var(--txt2)] hover:text-[var(--txt)]'
                   )}
@@ -1297,36 +1332,16 @@ export default function SessionLab({
               ))}
             </div>
           </div>
+        </details>
+      </div>
 
-          <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Extraction Provider</div>
-              <div className="text-[10px] text-[var(--txt2)]">Advanced data/model control. Leave unchanged during live review unless troubleshooting.</div>
-            </div>
-            <span className="qd-badge">{modelConfig.providerMode.replace(/_/g, ' ')}</span>
+      <div className="card-base p-4 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Session Readiness</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and Lunch / PM are separate workflows with separate screenshots, analysis state, proof flow, and RAG records.</div>
           </div>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            {[
-              { value: 'gemini_only', label: 'Gemini Only', note: 'Primary extractor only.' },
-              { value: 'gemini_openai_validation', label: 'Gemini + OpenAI Validation', note: 'OpenAI cross-checks levels.' },
-              { value: 'openai_fallback', label: 'OpenAI Fallback', note: 'Facts-only fallback if Gemini fails.' },
-            ].map(option => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => updateProviderMode(option.value as ModelConfig['providerMode'])}
-                className={cn(
-                  'border px-3 py-2 text-left transition-colors',
-                  modelConfig.providerMode === option.value
-                    ? 'border-[var(--orange)] bg-[var(--orange)]/10 text-[var(--orange)]'
-                    : 'border-[var(--b2)] bg-transparent text-[var(--txt2)] hover:border-[var(--txt2)] hover:text-[var(--txt)]'
-                )}
-              >
-                <span className="block text-[10px] font-bold uppercase tracking-[0.12em]">{option.label}</span>
-                <span className="block text-[9px] text-[var(--txt3)]">{option.note}</span>
-              </button>
-            ))}
-          </div>
+          <span className="qd-badge">APP-OWNED DECISION</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {readinessItems.map(item => (
