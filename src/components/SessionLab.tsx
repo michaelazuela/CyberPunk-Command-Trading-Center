@@ -39,6 +39,13 @@ type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunc
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 type OutcomePlanChoice = 'main' | `candidate:${number}`;
 type UploadedImage = UploadedWorkflowImage;
+type WorkflowStepTone = 'pending' | 'ready' | 'active' | 'complete' | 'blocked';
+
+interface WorkflowStep {
+  label: string;
+  value: string;
+  tone: WorkflowStepTone;
+}
 
 interface NinjaBridgeState {
   connected: boolean;
@@ -89,6 +96,46 @@ const SESSION_OUTCOMES: Array<WorkflowOutcomeOption<SessionOutcome>> = [
     className: 'border-[var(--orange)]/40 bg-[var(--orange)]/10 text-[var(--orange)] hover:bg-[var(--orange)]/20',
   },
 ];
+
+const WORKFLOW_STEP_TONE_CLASSES: Record<WorkflowStepTone, string> = {
+  pending: 'border-[var(--b2)] bg-[var(--bg)] text-[var(--txt3)]',
+  ready: 'border-[var(--orange)]/30 bg-[var(--orange)]/10 text-[var(--orange)]',
+  active: 'border-[var(--blue)]/30 bg-[var(--blue)]/10 text-[var(--blue)]',
+  complete: 'border-[var(--green)]/30 bg-[var(--green)]/10 text-[var(--green)]',
+  blocked: 'border-[var(--red)]/30 bg-[var(--red)]/10 text-[var(--red)]',
+};
+
+function SessionChip({ label, value, tone = 'pending' }: { label: string; value?: string; tone?: WorkflowStepTone }) {
+  return (
+    <span className={cn('inline-flex items-center gap-1 border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em]', WORKFLOW_STEP_TONE_CLASSES[tone])}>
+      <span className="text-[var(--txt3)]">{label}</span>
+      {value && <span className="font-bold text-[var(--txt)]">{value}</span>}
+    </span>
+  );
+}
+
+function WorkflowStrip({ title, steps }: { title: string; steps: WorkflowStep[] }) {
+  return (
+    <div className="border border-[var(--b1)] bg-[var(--bg)] p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--txt)]">{title}</div>
+      </div>
+      <div className="flex flex-wrap items-stretch gap-2">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.label}>
+            <div className={cn('min-w-[132px] flex-1 border px-2.5 py-2 font-mono', WORKFLOW_STEP_TONE_CLASSES[step.tone])}>
+              <div className="text-[9px] uppercase tracking-[0.14em] opacity-80">{step.label}</div>
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em]">{step.value}</div>
+            </div>
+            {index < steps.length - 1 && (
+              <div className="hidden items-center text-[var(--txt3)] lg:flex">-&gt;</div>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function todayLocalDate(): string {
   const now = new Date();
@@ -1113,6 +1160,50 @@ export default function SessionLab({
   const lunchReadyToAnalyze = Boolean(lunchExecImg) && !lunchResult;
   const morningStatus = morningResult ? 'Result ready' : morningReadyToAnalyze ? 'Ready to analyze' : 'Waiting for 5M screenshot';
   const lunchStatus = lunchResult ? 'Result ready' : lunchReadyToAnalyze ? 'Ready to analyze' : 'Waiting for Lunch / PM 5M screenshot';
+  const journalStatusFor = (result: AnalysisResult | null, saveStatus: string | null): WorkflowStep => {
+    if (!result) return { label: 'Journal/RAG', value: 'Not started', tone: 'pending' };
+    if (saveStatus?.startsWith('Running')) return { label: 'Journal/RAG', value: 'Pending', tone: 'active' };
+    if (saveStatus?.startsWith('Saved to Supabase + RAG')) return { label: 'Journal/RAG', value: 'Saved', tone: 'complete' };
+    if (saveStatus?.includes('failed') || saveStatus?.includes('Login required')) return { label: 'Journal/RAG', value: 'Pending', tone: 'ready' };
+    return { label: 'Journal/RAG', value: 'Pending', tone: 'ready' };
+  };
+  const outcomeStatusFor = (sessionType: 'morning' | 'lunch', result: AnalysisResult | null, outcome: SessionOutcome | null): WorkflowStep => {
+    if (!result) return { label: 'Outcome/Proof', value: 'Not started', tone: 'pending' };
+    if (proofFlow.active && proofFlow.sessionType === sessionType) return { label: 'Outcome/Proof', value: 'Proof pending', tone: 'active' };
+    if (outcome) return { label: 'Outcome/Proof', value: 'Complete', tone: 'complete' };
+    return { label: 'Outcome/Proof', value: 'Outcome pending', tone: 'ready' };
+  };
+  const workflowStepsFor = (sessionType: 'morning' | 'lunch'): WorkflowStep[] => {
+    const isMorning = sessionType === 'morning';
+    const executionImage = isMorning ? morningExecImg : lunchExecImg;
+    const result = isMorning ? morningResult : lunchResult;
+    const isAnalyzing = isMorning ? isAnalyzingMorning : isAnalyzingLunch;
+    const outcome = isMorning ? morningOutcome : lunchOutcome;
+    const saveStatus = isMorning ? morningSaveStatus : lunchSaveStatus;
+    const staged = Boolean(executionImage || result);
+
+    return [
+      {
+        label: 'Screenshot staged',
+        value: staged ? 'Staged' : 'Awaiting screenshot',
+        tone: staged ? 'complete' : 'pending',
+      },
+      {
+        label: 'Analyze',
+        value: result ? 'Complete' : isAnalyzing ? 'Analysis running' : staged ? 'Ready to analyze' : 'Blocked',
+        tone: result ? 'complete' : isAnalyzing ? 'active' : staged ? 'ready' : 'blocked',
+      },
+      {
+        label: 'Decision',
+        value: result ? 'Decision ready' : isAnalyzing ? 'Analysis running' : 'Awaiting decision',
+        tone: result ? 'complete' : isAnalyzing ? 'active' : 'pending',
+      },
+      outcomeStatusFor(sessionType, result, outcome),
+      journalStatusFor(result, saveStatus),
+    ];
+  };
+  const morningWorkflowSteps = workflowStepsFor('morning');
+  const lunchWorkflowSteps = workflowStepsFor('lunch');
   const morningRequirements = [
     { label: '15M ETH context', value: morningEthImg ? 'Attached' : 'Optional context only', ready: Boolean(morningEthImg) },
     { label: '5M execution chart', value: morningExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(morningExecImg) },
@@ -1161,6 +1252,21 @@ export default function SessionLab({
             <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
             Trading Workflow defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the explicit Morning or Lunch / PM analysis button.
           </p>
+        </div>
+      </div>
+
+      <div className="card-base p-4 mb-6">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <SessionChip label="Morning / AM" tone={morningResult ? 'complete' : morningReadyToAnalyze ? 'ready' : 'pending'} />
+          <SessionChip label="Lunch / PM Review" tone={lunchResult ? 'complete' : lunchReadyToAnalyze ? 'ready' : 'pending'} />
+          <SessionChip label="Trade Date:" value={tradeDate} />
+          <SessionChip label="Instrument:" value={instrument} />
+          <SessionChip label="Bridge:" value={bridge.connected ? 'Connected' : 'Disconnected'} tone={bridge.connected ? 'complete' : 'ready'} />
+          <SessionChip label="OHLC:" value={bridge.bars5m.length ? 'Available' : 'Unavailable'} tone={bridge.bars5m.length ? 'complete' : 'ready'} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <WorkflowStrip title="Morning / AM" steps={morningWorkflowSteps} />
+          <WorkflowStrip title="Lunch / PM Review" steps={lunchWorkflowSteps} />
         </div>
       </div>
 
