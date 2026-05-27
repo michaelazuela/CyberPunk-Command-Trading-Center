@@ -33,8 +33,10 @@ import {
   toEtMinutes,
   type BridgeTimeZoneMode,
   type BridgeTimestampMode,
+  type ScannerConfidenceBreakdown,
   type ScannerState,
   type ScannerThresholds,
+  type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
 import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
@@ -58,7 +60,7 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 type Instrument = 'MES' | 'MNQ';
 type LiveSession = 'morning' | 'lunch';
 
-interface ScannerConfig {
+export interface ScannerConfig {
   instrument: Instrument;
   bridgeInstrument: string;
   bridgeUrl: string;
@@ -283,13 +285,15 @@ async function writeScannerDiscordAuditLog(args: {
   scoringTimestampSource: string;
   windowLabel: string;
   staleReason: string | null;
-  targetCascade: ReturnType<typeof buildTargetCascade>;
+  targetCascade: TargetCascadeResult;
   alertReason: string;
   chartMarkup: string | null;
   levelMap: string | null;
+  auditDir?: string;
 }): Promise<string> {
-  await fs.mkdir(DISCORD_AUDIT_DIR, { recursive: true });
-  const file = path.join(DISCORD_AUDIT_DIR, `scanner-${args.session}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  await fs.mkdir(auditDir, { recursive: true });
+  const file = path.join(auditDir, `scanner-${args.session}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
   await fs.writeFile(file, JSON.stringify({
     createdAt: new Date().toISOString(),
     source: 'live-scanner',
@@ -553,9 +557,9 @@ async function refreshMarketMapContext(args: {
 function buildDiscordPayload(args: {
   session: LiveSession;
   tradeDate: string;
-  config: ScannerConfig;
+  config: Pick<ScannerConfig, 'instrument'>;
   state: ScannerState;
-  confidence: ReturnType<typeof scoreScannerCandidate>;
+  confidence: ScannerConfidenceBreakdown;
   candidate: SetupCandidate | null;
   normalized: ReturnType<typeof buildAppTradePlan>;
   windowLabel: string;
@@ -576,6 +580,88 @@ function buildDiscordPayload(args: {
     decisionOverride: args.state,
     statusOverride: args.state,
   });
+}
+
+export async function prepareLiveScannerDiscordAlertArtifacts(args: {
+  session: LiveSession;
+  tradeDate: string;
+  config: Pick<ScannerConfig, 'instrument'>;
+  state: ScannerState;
+  confidence: ScannerConfidenceBreakdown;
+  candidate: SetupCandidate | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  scoringTimestamp: string;
+  scoringTimestampSource: string;
+  windowLabel: string;
+  staleReason: string | null;
+  targetCascade: TargetCascadeResult;
+  alertReason: string;
+  planVersionId: string;
+  outputDir?: string;
+  auditDir?: string;
+}): Promise<{
+  payload: DiscordWebhookPayload;
+  files: string[];
+  chartMarkup: string | null;
+  levelMap: string | null;
+  auditLogPath: string;
+}> {
+  const renderInput = args.candidate
+    ? {
+        chartContext: args.chartContext || null,
+        candidate: args.candidate,
+        instrument: args.config.instrument,
+        tradeDate: args.tradeDate,
+        sessionLabel: args.session,
+        outputDir: args.outputDir,
+        filePrefix: `scanner-${args.session}-${args.tradeDate}-${args.config.instrument}`,
+      }
+    : null;
+  const chartMarkup = renderInput ? await renderChartMarkup(renderInput) : null;
+  const levelMap = renderInput ? await renderPriceLevelMap(renderInput) : null;
+  const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
+  const auditLogPath = await writeScannerDiscordAuditLog({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    planVersionId: args.planVersionId,
+    state: args.state,
+    confidence: args.confidence,
+    candidate: args.candidate,
+    normalized: args.normalized,
+    currentPrice: args.currentPrice,
+    completed5m: args.completed5m,
+    scoringTimestamp: args.scoringTimestamp,
+    scoringTimestampSource: args.scoringTimestampSource,
+    windowLabel: args.windowLabel,
+    staleReason: args.staleReason,
+    targetCascade: args.targetCascade,
+    alertReason: args.alertReason,
+    chartMarkup,
+    levelMap,
+    auditDir: args.auditDir,
+  });
+  const payload = buildDiscordPayload({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    config: args.config,
+    state: args.state,
+    confidence: args.confidence,
+    candidate: args.candidate,
+    normalized: args.normalized,
+    windowLabel: args.windowLabel,
+    planVersionId: args.planVersionId,
+    attachments: {
+      chartPlan: Boolean(chartMarkup),
+      priceLevelMap: Boolean(levelMap),
+      auditLogPath,
+    },
+  });
+  validateDiscordPayload(payload, files);
+  return { payload, files, chartMarkup, levelMap, auditLogPath };
 }
 
 async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<void> {
@@ -860,28 +946,16 @@ async function runCycle(config: ScannerConfig): Promise<void> {
 
   if (alertDecision.shouldSend) {
     const planVersionId = createPlanVersionId(session, tradeDate);
-    const renderInput = candidate
-      ? {
-          chartContext: analysis.structuredChartContext || null,
-          candidate,
-          instrument: config.instrument,
-          tradeDate,
-          sessionLabel: session,
-          filePrefix: `scanner-${session}-${tradeDate}-${config.instrument}`,
-        }
-      : null;
-    const chartMarkup = renderInput ? await renderChartMarkup(renderInput) : null;
-    const levelMap = renderInput ? await renderPriceLevelMap(renderInput) : null;
-    const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
-    const auditLogPath = await writeScannerDiscordAuditLog({
+    const alertArtifacts = await prepareLiveScannerDiscordAlertArtifacts({
       session,
       tradeDate,
-      instrument: config.instrument,
+      config,
       planVersionId,
       state: stateForAlert,
       confidence,
       candidate,
       normalized,
+      chartContext: analysis.structuredChartContext || null,
       currentPrice,
       completed5m,
       scoringTimestamp: scoringDate.toISOString(),
@@ -890,26 +964,8 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       staleReason: stale.reason,
       targetCascade,
       alertReason: alertDecision.reason,
-      chartMarkup,
-      levelMap,
     });
-    const payload = buildDiscordPayload({
-      session,
-      tradeDate,
-      config,
-      state: stateForAlert,
-      confidence,
-      candidate,
-      normalized,
-      windowLabel: window.label,
-      planVersionId,
-      attachments: {
-        chartPlan: Boolean(chartMarkup),
-        priceLevelMap: Boolean(levelMap),
-        auditLogPath,
-      },
-    });
-    await postDiscord(payload, config, files);
+    await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
     state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt: new Date().toISOString() };
   }
 
@@ -936,7 +992,9 @@ async function main() {
   } while (!config.once && config.continuousMode);
 }
 
-main().catch((error) => {
-  console.error(formatError(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch((error) => {
+    console.error(formatError(error));
+    process.exitCode = 1;
+  });
+}
