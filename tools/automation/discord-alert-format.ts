@@ -43,6 +43,26 @@ export interface CompactNormalizedPlan {
   invalidation?: string | null;
 }
 
+export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
+  'Local Scanner Trading Card',
+  'Trade State',
+  'Execution Plan',
+  'Invalidation / No Chase',
+  'Alert Quality',
+  'Score breakdown',
+  'Qualified reasons',
+  'Missing reasons',
+  'X Tags',
+  'Do not execute from the card alone',
+  'Target Cascade',
+  'Overall score',
+  'Alert qualification',
+  'Quant Desk • Local Scanner',
+  'Read-only bridge',
+] as const;
+
+const OLD_REPORT_TRUNCATION_ARTIFACT = /\b(?:Missing rea|Qualified rea|Target casc|Audit det|Counte|Counter)\.\.\./i;
+
 interface CompactDiscordSummaryArgs {
   session: CompactDiscordSession;
   tradeDate: string;
@@ -215,10 +235,15 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
   if (mainText.length > 2000) {
     throw new Error(`Discord payload blocked: compact alert text is ${mainText.length} characters, above the 2000 character limit.`);
   }
-  if (mainText.includes('Missing rea...') || mainText.includes('Qualified rea...') || mainText.includes('Target casc...') || mainText.includes('Audit det...')) {
+  if (OLD_REPORT_TRUNCATION_ARTIFACT.test(mainText)) {
     throw new Error('Discord payload blocked: truncation artifact detected in main alert text.');
   }
-  if (/(\bMissing reasons|\bQualified reasons|\bTarget cascade|\bAudit detail|\bScore breakdown)/i.test(mainText)) {
+  const loweredMainText = mainText.toLowerCase();
+  const leakedOldSection = BANNED_ACTIVE_DISCORD_ALERT_TEXT.find((marker) => loweredMainText.includes(marker.toLowerCase()));
+  if (leakedOldSection) {
+    throw new Error(`Discord payload blocked: old long-form scanner card section leaked into compact alert text (${leakedOldSection}).`);
+  }
+  if (/\bAudit detail/i.test(mainText)) {
     throw new Error('Discord payload blocked: audit-only detail leaked into compact alert text.');
   }
   for (const embed of payload.embeds) {

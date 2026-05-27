@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  BANNED_ACTIVE_DISCORD_ALERT_TEXT,
   compactAttachmentLine,
   compactDiscordSummary,
   flattenDiscordPayloadText,
@@ -66,7 +67,10 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
   validateDiscordPayload(payload, files);
   const text = flattenDiscordPayloadText(payload);
   assert.ok(text.length < 1200, `expected compact payload under 1200 chars, got ${text.length}`);
-  assert.ok(!/Score breakdown|Target Cascade|Target cascade|Qualified reasons|Missing reasons|Missing rea\.\.\.|Audit detail/i.test(text));
+  for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
+    assert.ok(!text.toLowerCase().includes(marker.toLowerCase()), `compact payload leaked old long-form marker: ${marker}`);
+  }
+  assert.ok(!/Missing rea\.\.\.|Qualified rea\.\.\.|Target casc\.\.\.|Audit det\.\.\.|Counte\.\.\.|Audit detail|\{"/i.test(text));
   assert.ok(text.includes('Compact Trade Plan Summary'));
   assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
 }
@@ -147,6 +151,34 @@ assert.throws(() => validateDiscordPayload({
   embeds: [{
     title: 'Compact Trade Plan Summary',
     description: 'Missing rea...',
+    color: 0,
+    fields: [],
+    footer: { text: 'Quant Desk' },
+    timestamp: new Date().toISOString(),
+  }],
+}), /truncation artifact/);
+
+for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
+  assert.throws(() => validateDiscordPayload({
+    username: 'Quant Desk',
+    content: 'Bad payload',
+    embeds: [{
+      title: 'Compact Trade Plan Summary',
+      description: `Old report leaked into the compact alert:\n${marker}`,
+      color: 0,
+      fields: [],
+      footer: { text: 'Quant Desk' },
+      timestamp: new Date().toISOString(),
+    }],
+  }), /old long-form scanner card section/);
+}
+
+assert.throws(() => validateDiscordPayload({
+  username: 'Quant Desk',
+  content: 'Bad payload',
+  embeds: [{
+    title: 'Compact Trade Plan Summary',
+    description: 'Counte...',
     color: 0,
     fields: [],
     footer: { text: 'Quant Desk' },

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
-import { flattenDiscordPayloadText } from './discord-alert-format';
+import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import { prepareLiveScannerDiscordAlertArtifacts } from './nt-scanner';
 import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
@@ -180,7 +180,10 @@ try {
   assert.ok(text.includes('Compact Trade Plan Summary'));
   assert.ok(text.includes('Quant Desk Scanner Alert'));
   assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
-  assert.ok(!/Score breakdown|Target cascade|Qualified reasons|Missing reasons|Missing rea\.\.\.|Audit detail|\{"/i.test(text));
+  for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
+    assert.ok(!text.toLowerCase().includes(marker.toLowerCase()), `live scanner payload leaked old long-form marker: ${marker}`);
+  }
+  assert.ok(!/Missing rea\.\.\.|Qualified rea\.\.\.|Target casc\.\.\.|Audit det\.\.\.|Counte\.\.\.|Audit detail|\{"/i.test(text));
 
   const auditText = await fs.readFile(result.auditLogPath, 'utf8');
   const audit = JSON.parse(auditText);
