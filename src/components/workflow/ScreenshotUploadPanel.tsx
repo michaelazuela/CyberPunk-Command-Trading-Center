@@ -2,18 +2,12 @@ import React from 'react';
 import { Brain, Upload, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { OCRResult } from '../../lib/gemini';
+import ScreenshotPrecheckStatus, { type ScreenshotStatusItem } from './ScreenshotPrecheckStatus';
 
 export interface UploadedWorkflowImage {
   dataUrl: string;
   ocrResult?: OCRResult | null;
   storagePath?: string;
-}
-
-export type ScreenshotStatusTone = 'neutral' | 'checking' | 'complete' | 'warning' | 'error';
-
-export interface ScreenshotStatusItem {
-  label: string;
-  tone: ScreenshotStatusTone;
 }
 
 interface ScreenshotUploadPanelProps<TTarget extends string> {
@@ -27,14 +21,6 @@ interface ScreenshotUploadPanelProps<TTarget extends string> {
   hintText?: string;
   statusItems?: ScreenshotStatusItem[];
 }
-
-const SCREENSHOT_STATUS_CLASSES: Record<ScreenshotStatusTone, string> = {
-  neutral: 'border-[var(--b2)] bg-[var(--b1)]/30 text-[var(--txt3)]',
-  checking: 'border-[var(--blue)]/30 bg-[var(--blue)]/10 text-[var(--blue)]',
-  complete: 'border-[var(--green)]/30 bg-[var(--green)]/10 text-[var(--green)]',
-  warning: 'border-[var(--orange)]/30 bg-[var(--orange)]/10 text-[var(--orange)]',
-  error: 'border-[var(--red)]/30 bg-[var(--red)]/10 text-[var(--red)]',
-};
 
 export default function ScreenshotUploadPanel<TTarget extends string>({
   target,
@@ -102,15 +88,9 @@ export default function ScreenshotUploadPanel<TTarget extends string>({
         </div>
       )}
 
-      {statusItems.length > 0 && (
-        <div className="mt-3 flex w-full flex-col gap-1 font-mono">
-          {statusItems.map(item => (
-            <div key={item.label} className={cn('border px-2 py-1 text-[9px] uppercase tracking-[0.1em]', SCREENSHOT_STATUS_CLASSES[item.tone])}>
-              Status: {item.label}
-            </div>
-          ))}
-        </div>
-      )}
+      <ScreenshotPrecheckStatus items={statusItems} />
     </div>
   );
 }
+
+export type { ScreenshotStatusItem } from './ScreenshotPrecheckStatus';

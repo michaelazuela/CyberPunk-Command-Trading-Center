@@ -12,6 +12,9 @@ import TradeProofPanel from './TradeProofPanel';
 import ScreenshotUploadPanel, { type ScreenshotStatusItem, type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
+import AdvancedDataModelControls from './workflow/AdvancedDataModelControls';
+import SessionContextChips, { type SessionContextChip } from './workflow/SessionContextChips';
+import WorkflowStatusStrip, { type WorkflowStep } from './workflow/WorkflowStatusStrip';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 import { applyWorkflowSpeedMode, loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
 import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
@@ -39,15 +42,8 @@ type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunc
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 type OutcomePlanChoice = 'main' | `candidate:${number}`;
 type UploadedImage = UploadedWorkflowImage;
-type WorkflowStepTone = 'pending' | 'ready' | 'active' | 'complete' | 'blocked';
 type PrecheckStatus = 'idle' | 'checking' | 'complete' | 'unavailable';
 type ScreenshotTarget = Exclude<SessionPasteTarget, null>;
-
-interface WorkflowStep {
-  label: string;
-  value: string;
-  tone: WorkflowStepTone;
-}
 
 interface NinjaBridgeState {
   connected: boolean;
@@ -98,46 +94,6 @@ const SESSION_OUTCOMES: Array<WorkflowOutcomeOption<SessionOutcome>> = [
     className: 'border-[var(--orange)]/40 bg-[var(--orange)]/10 text-[var(--orange)] hover:bg-[var(--orange)]/20',
   },
 ];
-
-const WORKFLOW_STEP_TONE_CLASSES: Record<WorkflowStepTone, string> = {
-  pending: 'border-[var(--b2)] bg-[var(--bg)] text-[var(--txt3)]',
-  ready: 'border-[var(--orange)]/30 bg-[var(--orange)]/10 text-[var(--orange)]',
-  active: 'border-[var(--blue)]/30 bg-[var(--blue)]/10 text-[var(--blue)]',
-  complete: 'border-[var(--green)]/30 bg-[var(--green)]/10 text-[var(--green)]',
-  blocked: 'border-[var(--red)]/30 bg-[var(--red)]/10 text-[var(--red)]',
-};
-
-function SessionChip({ label, value, tone = 'pending' }: { label: string; value?: string; tone?: WorkflowStepTone }) {
-  return (
-    <span className={cn('inline-flex items-center gap-1 border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em]', WORKFLOW_STEP_TONE_CLASSES[tone])}>
-      <span className="text-[var(--txt3)]">{label}</span>
-      {value && <span className="font-bold text-[var(--txt)]">{value}</span>}
-    </span>
-  );
-}
-
-function WorkflowStrip({ title, steps }: { title: string; steps: WorkflowStep[] }) {
-  return (
-    <div className="border border-[var(--b1)] bg-[var(--bg)] p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--txt)]">{title}</div>
-      </div>
-      <div className="flex flex-wrap items-stretch gap-2">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.label}>
-            <div className={cn('min-w-[132px] flex-1 border px-2.5 py-2 font-mono', WORKFLOW_STEP_TONE_CLASSES[step.tone])}>
-              <div className="text-[9px] uppercase tracking-[0.14em] opacity-80">{step.label}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em]">{step.value}</div>
-            </div>
-            {index < steps.length - 1 && (
-              <div className="hidden items-center text-[var(--txt3)] lg:flex">-&gt;</div>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function hasUsableOcrMetadata(image: UploadedImage | null): boolean {
   const ocr = image?.ocrResult;
@@ -1235,6 +1191,14 @@ export default function SessionLab({
   };
   const morningWorkflowSteps = workflowStepsFor('morning');
   const lunchWorkflowSteps = workflowStepsFor('lunch');
+  const sessionContextChips: SessionContextChip[] = [
+    { label: 'Morning / AM', tone: morningResult ? 'complete' : morningReadyToAnalyze ? 'ready' : 'pending' },
+    { label: 'Lunch / PM Review', tone: lunchResult ? 'complete' : lunchReadyToAnalyze ? 'ready' : 'pending' },
+    { label: 'Trade Date:', value: tradeDate },
+    { label: 'Instrument:', value: instrument },
+    { label: 'Bridge:', value: bridge.connected ? 'Connected' : 'Disconnected', tone: bridge.connected ? 'complete' : 'ready' },
+    { label: 'OHLC:', value: bridge.bars5m.length ? 'Available' : 'Unavailable', tone: bridge.bars5m.length ? 'complete' : 'ready' },
+  ];
   const screenshotStatusItemsFor = (
     target: ScreenshotTarget,
     image: UploadedImage | null,
@@ -1326,17 +1290,10 @@ export default function SessionLab({
       </div>
 
       <div className="card-base p-4 mb-6">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <SessionChip label="Morning / AM" tone={morningResult ? 'complete' : morningReadyToAnalyze ? 'ready' : 'pending'} />
-          <SessionChip label="Lunch / PM Review" tone={lunchResult ? 'complete' : lunchReadyToAnalyze ? 'ready' : 'pending'} />
-          <SessionChip label="Trade Date:" value={tradeDate} />
-          <SessionChip label="Instrument:" value={instrument} />
-          <SessionChip label="Bridge:" value={bridge.connected ? 'Connected' : 'Disconnected'} tone={bridge.connected ? 'complete' : 'ready'} />
-          <SessionChip label="OHLC:" value={bridge.bars5m.length ? 'Available' : 'Unavailable'} tone={bridge.bars5m.length ? 'complete' : 'ready'} />
-        </div>
+        <SessionContextChips chips={sessionContextChips} />
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-          <WorkflowStrip title="Morning / AM" steps={morningWorkflowSteps} />
-          <WorkflowStrip title="Lunch / PM Review" steps={lunchWorkflowSteps} />
+          <WorkflowStatusStrip title="Morning / AM" steps={morningWorkflowSteps} />
+          <WorkflowStatusStrip title="Lunch / PM Review" steps={lunchWorkflowSteps} />
         </div>
       </div>
 
@@ -1363,14 +1320,7 @@ export default function SessionLab({
           </div>
         </div>
 
-        <details className="border border-[var(--b1)] bg-[var(--bg)] p-3">
-          <summary className="cursor-pointer select-none text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--txt)]">
-            Advanced data/model controls
-          </summary>
-          <div className="mt-2 text-[10px] text-[var(--txt3)]">
-            Bridge, provider, cache, and diagnostic controls for troubleshooting. Leave collapsed during normal live review.
-          </div>
-
+        <AdvancedDataModelControls>
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-4">
             <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">
               <label className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Bridge Instrument</label>
@@ -1508,7 +1458,7 @@ export default function SessionLab({
               ))}
             </div>
           </div>
-        </details>
+        </AdvancedDataModelControls>
       </div>
 
       <div className="card-base p-4 mb-6">
