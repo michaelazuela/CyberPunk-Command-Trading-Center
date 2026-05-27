@@ -72,7 +72,6 @@ Frontend:
 - `src/components/FinalTradePlanCard.tsx`: reusable trade plan / decision display component.
 - `src/components/ReplayLab.tsx`: retained legacy/reference replay component, not an active `App.tsx` tab.
 - `docs/TRADING_RULES_REFERENCE.md`: current source-of-truth-aligned rules reference for active primary models, supporting evidence, deprecated historical setup families, risk/target standards, and alert/reporting standards.
-- `src/components/Rules.tsx`: retained temporary legacy/reference source material, not an active `App.tsx` tab. Do not activate it as-is.
 - Removed legacy UI shells/components: old standalone analysis/dashboard UI, old agent animation/progress/model panel UI, old API cost panel, old Monte Carlo panel, and the unused workflow mode toggle.
 
 Trading configuration:
@@ -196,9 +195,8 @@ Active navigation in `src/App.tsx`:
 Retained legacy/reference components:
 
 - `ReplayLab.tsx`
-- `Rules.tsx`
 
-These components are not active `App.tsx` tabs. They should not be re-added to main navigation unless the user explicitly asks and the primary-model-only architecture is preserved.
+This component is not an active `App.tsx` tab. It should not be re-added to main navigation unless the user explicitly asks and the primary-model-only architecture is preserved. The retired Rules UI was converted into `docs/TRADING_RULES_REFERENCE.md` and removed.
 
 ## 6. Current Replay Window Workflow
 
@@ -254,7 +252,7 @@ Current known/incomplete items:
 
 - Legacy UI cleanup removed the old standalone analysis/dashboard shells and their orphaned child panels. `SessionLab` remains the active Trading Workflow shell.
 - `ReplayLab` is retained as a legacy/reference component pending a product decision.
-- `Rules.tsx` is retained only as temporary legacy/reference source material after conversion into `docs/TRADING_RULES_REFERENCE.md`; it may be removed later if it remains unreferenced.
+- The retired Rules UI was converted into `docs/TRADING_RULES_REFERENCE.md` and removed.
 - `conditionalPlanBuilder.ts` still contains deprecated internal builder code, but returned candidates are filtered to primary models. A later phase should remove or archive unused deprecated builder branches.
 - Some tests still mention deprecated component/builders as negative tests to prove they do not create active candidates.
 - `AGENTS.md` still contains older examples of approved setup types in a few explanatory bullets. Update carefully only if it will not confuse future agents.

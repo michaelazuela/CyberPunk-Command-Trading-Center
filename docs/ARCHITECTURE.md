@@ -32,7 +32,6 @@
 - `src/components/SessionLab.tsx`: active Morning / AM and Lunch / PM Review workflow shell. It owns screenshot staging display, the workflow strip, session chips, advanced data/model disclosure, decision display, outcome/proof, and journal/RAG status.
 - `src/components/ReplayLab.tsx`: retained legacy/reference replay component. It is not an active `App.tsx` tab unless explicitly reintroduced later.
 - `docs/TRADING_RULES_REFERENCE.md`: current source-of-truth-aligned rules reference for active primary models, supporting evidence, deprecated historical setup families, risk/target standards, and alert/reporting standards.
-- `src/components/Rules.tsx`: retained temporary legacy/reference source material. It is not an active `App.tsx` tab and should not be activated as-is.
 - `src/lib/gemini.ts`: screenshot analysis client and prompt construction.
 - `src/lib/openai.ts`: optional OpenAI chart-fact validation client.
 - `src/lib/planEngine.ts`: app-owned plan orchestration.
@@ -50,7 +49,7 @@
 - `functions/api/gemini.js`: Cloudflare Gemini proxy.
 - `supabase/migrations`: database schema history.
 
-Removed legacy UI shells are not part of the active architecture: old standalone analysis/dashboard components and their old animation/progress/model/cost/simulation child panels were removed during legacy UI cleanup after route-map smoke coverage was added.
+Removed legacy UI shells are not part of the active architecture: old standalone analysis/dashboard components, the retired Rules UI, and their old animation/progress/model/cost/simulation child panels were removed during legacy UI cleanup after route-map smoke coverage was added.
 
 ## Discord And Renderer Standard
 

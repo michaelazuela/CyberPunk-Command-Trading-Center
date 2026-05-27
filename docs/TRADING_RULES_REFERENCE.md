@@ -1,6 +1,6 @@
 # Trading Rules Reference
 
-This document is a reference guide for the current MES/MNQ decision-support workflow. It preserves useful trading concepts from the retired `Rules.tsx` playbook, but the app-owned trading engine remains the source of truth.
+This document is a reference guide for the current MES/MNQ decision-support workflow. It preserves useful trading concepts from the retired Rules UI playbook, but the app-owned trading engine remains the source of truth.
 
 Source-of-truth files:
 
@@ -86,7 +86,7 @@ Midnight Open is retained as context and RAG memory. It can help frame session l
 
 ## Deprecated / Historical Reference
 
-The old `Rules.tsx` playbook included several concepts that may still be useful as educational background. They are not active standalone trade models in the current app-owned decision pipeline unless the setup registry is changed later.
+The old Rules UI playbook included several concepts that may still be useful as educational background. They are not active standalone trade models in the current app-owned decision pipeline unless the setup registry is changed later.
 
 Deprecated or historical concepts include:
 
@@ -101,7 +101,7 @@ Deprecated or historical concepts include:
 
 These concepts should not be shown as active rules in live trade cards, Discord alerts, or the Trading Workflow. If they appear in historical notes, they should be clearly marked as reference only.
 
-The old strategy ranking table, average R/R claims, and fixed "best strategy" ordering from `Rules.tsx` are not part of the current engine authority.
+The old strategy ranking table, average R/R claims, and fixed "best strategy" ordering from the retired Rules UI are not part of the current engine authority.
 
 ## Risk, Stop, And Target Standard
 
@@ -154,8 +154,6 @@ Current standard:
 - Discord outcome buttons may update learning/journal fields only.
 - No Discord alert places a trade or overrides risk gates.
 
-## Rules.tsx Status
+## Retired Rules UI Status
 
-`src/components/Rules.tsx` is retained temporarily as legacy/reference source material. It is not an active `App.tsx` tab and should not be activated as-is.
-
-After this markdown reference is accepted, `Rules.tsx` may be removed in a later cleanup phase if it remains unreferenced.
+The old React Rules UI has been retired. This markdown file is now the maintained rules reference.
