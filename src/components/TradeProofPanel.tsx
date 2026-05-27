@@ -163,7 +163,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
              <h4 className="text-[11px] uppercase text-[var(--txt)] font-bold tracking-[0.16em]">Trade Proof Review</h4>
            </div>
            <p className="mt-1 text-[10px] text-[var(--txt3)]">
-             Optional evidence for Replay Lab. Paste or upload the chart outcome so RAG can learn whether stop held and T1/T2 were reached.
+             Optional evidence for the journal. Paste or upload the chart outcome so RAG can learn whether stop held and T1/T2 were reached.
            </p>
          </div>
          <div className="flex items-center gap-2">

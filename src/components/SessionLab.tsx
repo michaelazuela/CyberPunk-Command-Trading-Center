@@ -458,7 +458,7 @@ export default function SessionLab({
     const summary = [
       `${bridgeInstrument} ${sessionType} OHLC loaded through ${bridge.marketDataSource === 'market_bars' ? 'Supabase market_bars cache' : bridge.marketDataSource === 'mixed' ? 'Supabase market_bars cache with bridge fallback' : 'NinjaTrader bridge fallback'}.`,
       `4H/1H/15M define context and liquidity targets; 5M remains execution authority.`,
-      `${sessionType === 'morning' ? 'Morning' : 'PM'} 5M execution window bars: ${(executionBars5m.length ? executionBars5m : bridge.bars5m).length}.`,
+      `${sessionType === 'morning' ? 'Morning' : 'Lunch / PM'} 5M execution window bars: ${(executionBars5m.length ? executionBars5m : bridge.bars5m).length}.`,
       `Latest 4H: ${summarizeBridgeBar(latest240m)}.`,
       `Latest 1H: ${summarizeBridgeBar(latest60m)}.`,
       `Latest 5M: ${summarizeBridgeBar(latest5m)}.`,
@@ -568,7 +568,7 @@ export default function SessionLab({
     { label: 'Midnight Open', value: midnightOpen ? 'SET' : 'OPTIONAL', ready: Boolean(midnightOpen) },
     { label: 'Morning 15M', value: morningEthImg ? 'ATTACHED' : 'OPTIONAL', ready: Boolean(morningEthImg) },
     { label: 'Morning 5M', value: morningExecImg || morningResult ? 'READY' : 'REQUIRED', ready: Boolean(morningExecImg || morningResult) },
-    { label: 'PM 5M', value: lunchExecImg || lunchResult ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
+    { label: 'Lunch / PM 5M', value: lunchExecImg || lunchResult ? 'READY' : 'OPTIONAL', ready: Boolean(lunchExecImg || lunchResult) },
     { label: 'NinjaTrader', value: bridge.connected ? 'CONNECTED' : 'OPTIONAL', ready: bridge.connected },
     { label: 'RAG Save', value: morningSaveStatus || lunchSaveStatus ? 'ACTIVE' : 'ON ANALYSIS', ready: true },
   ];
@@ -851,7 +851,7 @@ export default function SessionLab({
 
   const persistLunchAnalysis = async (analysis: AnalysisResult, execImage: UploadedImage, ethContextUrl: string | null, morning5mContextUrl: string | null) => {
     try {
-      setLunchSaveStatus('Analysis ready. Saving PM setup to Supabase + RAG in the background...');
+      setLunchSaveStatus('Analysis ready. Saving Lunch / PM setup to Supabase + RAG in the background...');
       let execUrl = execImage.dataUrl;
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -904,12 +904,12 @@ export default function SessionLab({
 
   const runLunchAnalysis = async () => {
     if (!lunchExecImg) {
-      setLunchError('Required: 5M PM Execution screenshot.');
+      setLunchError('Required: 5M Lunch / PM Execution screenshot.');
       return;
     }
     setIsAnalyzingLunch(true);
     setLunchError(null);
-    setLunchSaveStatus('Running PM analysis...');
+    setLunchSaveStatus('Running Lunch / PM analysis...');
 
     try {
       const bridgeContext = buildBridgeAnalysisContext('lunch');
@@ -936,8 +936,8 @@ export default function SessionLab({
         ...(session.aiSettings || { temperature: 0 }),
         customInstructions: mergeCustomInstructions(session.aiSettings?.customInstructions, [
           approvedRuleRefinements,
-          'THIS IS THE PM REVIEW WORKFLOW. Treat Morning 15M ETH and Morning 5M images as context only. The PM 5M image is the execution chart. Extract structured facts only; final trade approval belongs to the app-owned plan engine and trade decision pipeline.',
-          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help frame PM review, but PM 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
+          'THIS IS THE LUNCH / PM REVIEW WORKFLOW. Treat Morning 15M ETH and Morning 5M images as context only. The Lunch / PM 5M image is the execution chart. Extract structured facts only; final trade approval belongs to the app-owned plan engine and trade decision pipeline.',
+          bridge.connected ? `NINJATRADER LIVE OHLC CONTEXT: ${bridgeContext.summary} Use this as structured market data support. Morning context can help frame Lunch / PM review, but Lunch / PM 5M remains execution authority. Final approval still belongs to the app-owned pipeline.` : '',
         ]),
       };
       const rawAnalysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument, session.riskPercent) as AnalysisResult;
@@ -952,7 +952,7 @@ export default function SessionLab({
         morningExecImg?.dataUrl || session.morningScreenshot || null
       );
     } catch (error: any) {
-      setLunchError(error.message || 'PM analysis failed.');
+      setLunchError(error.message || 'Lunch / PM analysis failed.');
       setLunchSaveStatus(null);
     } finally {
       setIsAnalyzingLunch(false);
@@ -1112,16 +1112,16 @@ export default function SessionLab({
   const morningReadyToAnalyze = Boolean(morningExecImg) && !morningResult;
   const lunchReadyToAnalyze = Boolean(lunchExecImg) && !lunchResult;
   const morningStatus = morningResult ? 'Result ready' : morningReadyToAnalyze ? 'Ready to analyze' : 'Waiting for 5M screenshot';
-  const lunchStatus = lunchResult ? 'Result ready' : lunchReadyToAnalyze ? 'Ready to analyze' : 'Waiting for PM 5M screenshot';
+  const lunchStatus = lunchResult ? 'Result ready' : lunchReadyToAnalyze ? 'Ready to analyze' : 'Waiting for Lunch / PM 5M screenshot';
   const morningRequirements = [
     { label: '15M ETH context', value: morningEthImg ? 'Attached' : 'Optional context only', ready: Boolean(morningEthImg) },
     { label: '5M execution chart', value: morningExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(morningExecImg) },
-    { label: 'Analyze click', value: morningResult ? 'Complete' : 'Manual button required', ready: Boolean(morningResult) },
+    { label: 'Analysis', value: morningResult ? 'Complete' : 'Waiting for explicit Analyze click.', ready: Boolean(morningResult) },
   ];
   const lunchRequirements = [
-    { label: 'Morning context', value: morningResult || session.analysisResult ? 'Available' : 'Optional; PM can run without it', ready: Boolean(morningResult || session.analysisResult) },
-    { label: 'PM 5M execution chart', value: lunchExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(lunchExecImg) },
-    { label: 'Analyze click', value: lunchResult ? 'Complete' : 'Manual button required', ready: Boolean(lunchResult) },
+    { label: 'Morning context', value: morningResult || session.analysisResult ? 'Available' : 'Optional; Lunch / PM can run without it', ready: Boolean(morningResult || session.analysisResult) },
+    { label: 'Lunch / PM 5M execution chart', value: lunchExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(lunchExecImg) },
+    { label: 'Analysis', value: lunchResult ? 'Complete' : 'Waiting for explicit Analyze click.', ready: Boolean(lunchResult) },
   ];
 
   return (
@@ -1159,7 +1159,7 @@ export default function SessionLab({
         <div className="col-span-1 lg:col-span-2">
           <p className="text-[10px] flex items-start gap-2 bg-[var(--green)]/10 border border-[var(--green)]/20 p-2 text-[var(--green)]">
             <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
-            Trading Workflow defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the explicit Morning or PM analysis button.
+            Trading Workflow defaults to today's browser date. Uploading or pasting screenshots only stages them. Analysis runs only when you click the explicit Morning or Lunch / PM analysis button.
           </p>
         </div>
       </div>
@@ -1261,7 +1261,7 @@ export default function SessionLab({
         <div className="flex items-center justify-between gap-4 mb-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--txt3)]">Session Readiness</div>
-            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and PM are separate workflows with separate screenshots, analysis state, proof flow, and RAG records.</div>
+            <div className="text-[12px] text-[var(--txt2)] mt-1">Morning and Lunch / PM are separate workflows with separate screenshots, analysis state, proof flow, and RAG records.</div>
           </div>
           <span className="qd-badge">APP-OWNED DECISION</span>
         </div>
@@ -1301,7 +1301,7 @@ export default function SessionLab({
           <div className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--txt3)]">Extraction Provider</div>
-              <div className="text-[10px] text-[var(--txt2)]">Advanced override. Speed mode sets this automatically, but you can still choose the provider behavior directly.</div>
+              <div className="text-[10px] text-[var(--txt2)]">Advanced data/model control. Leave unchanged during live review unless troubleshooting.</div>
             </div>
             <span className="qd-badge">{modelConfig.providerMode.replace(/_/g, ' ')}</span>
           </div>
@@ -1442,9 +1442,9 @@ export default function SessionLab({
           <div className="flex flex-col gap-3 border-b border-[var(--b2)] pb-3">
             <div className="flex justify-between items-start gap-3">
               <div>
-                <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">PM REVIEW</h2>
+                <h2 className="text-[14px] font-mono font-bold text-[var(--txt)]">LUNCH / PM REVIEW</h2>
                 <div className="mt-1 text-[10px] text-[var(--txt3)]">
-                  PM workflow only. Morning context can frame the read; PM 5M remains execution authority.
+                  Lunch / PM workflow. Morning context can frame the read; Lunch / PM 5M remains execution authority.
                 </div>
               </div>
               <span className={cn('qd-badge', lunchReadyToAnalyze || lunchResult ? 'border-[var(--green)]/30 text-[var(--green)]' : 'border-[var(--orange)]/30 text-[var(--orange)]')}>
@@ -1453,7 +1453,7 @@ export default function SessionLab({
             </div>
             <div className="flex items-center gap-2">
               <TimezoneToggle selectedTimezone={lunchTimezone} onChange={setLunchTimezone} />
-              <WorkflowResetButton onClick={resetLunch}>Reset PM</WorkflowResetButton>
+              <WorkflowResetButton onClick={resetLunch}>Reset Lunch / PM</WorkflowResetButton>
             </div>
             <div className="grid gap-2 md:grid-cols-3">
               {lunchRequirements.map(item => (
@@ -1467,18 +1467,18 @@ export default function SessionLab({
 
           {!lunchResult && (
             <>
-              <ScreenshotUploadPanel target="lunch_5m_execution" label="5m PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
+              <ScreenshotUploadPanel target="lunch_5m_execution" label="5M Lunch / PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
               <div className="text-[10px] text-[var(--txt2)] border border-[var(--b2)] p-2">
-                PM uses Morning 15M ETH and Morning 5M context when available, but the PM 5M chart remains the execution chart.
+                Lunch / PM uses Morning 15M ETH and Morning 5M context when available, but the Lunch / PM 5M chart remains the execution chart.
               </div>
               <div className="border border-[var(--b2)] bg-[var(--bg)] p-2 text-[10px] text-[var(--txt2)]">
-                Preview must be visible above before analysis. Upload/paste is staging only; PM analysis starts only from this button.
+                Preview must be visible above before analysis. Upload/paste is staging only; Lunch / PM analysis starts only from this button.
               </div>
-              {morningResult || session.analysisResult ? <div className="text-[10px] text-[var(--green)] bg-[var(--green)]/10 p-2">+ Morning context available for PM review</div> : <div className="text-[10px] text-[var(--orange)] bg-[var(--orange)]/10 p-2">Morning context not available yet. PM can still run from its own 5M chart.</div>}
+              {morningResult || session.analysisResult ? <div className="text-[10px] text-[var(--green)] bg-[var(--green)]/10 p-2">+ Morning context available for Lunch / PM review</div> : <div className="text-[10px] text-[var(--orange)] bg-[var(--orange)]/10 p-2">Morning context not available yet. Lunch / PM can still run from its own 5M chart.</div>}
               {lunchError && <div className="text-[var(--red)] text-[10px] bg-[var(--red)]/10 p-2">{lunchError}</div>}
               {lunchSaveStatus && <div className="text-[var(--green)] text-[10px] bg-[var(--green)]/10 p-2 border border-[var(--green)]/20">{lunchSaveStatus}</div>}
               <button onClick={runLunchAnalysis} disabled={isAnalyzingLunch} className="qd-btn-primary mt-2 flex justify-center py-3">
-                {isAnalyzingLunch ? 'Analyzing PM 5M...' : 'Analyze PM 5M'}
+                {isAnalyzingLunch ? 'Analyzing Lunch / PM 5M...' : 'Analyze Lunch / PM 5M'}
               </button>
             </>
           )}
@@ -1487,8 +1487,8 @@ export default function SessionLab({
             <div className="flex flex-col gap-4 font-mono">
               <div className="bg-[var(--bg)] p-4 border border-[var(--b2)] text-[12px]">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-[10px] text-[var(--txt2)] font-bold">PM Result</h3>
-                  <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">PM only</span>
+                  <h3 className="text-[10px] text-[var(--txt2)] font-bold">Lunch / PM Result</h3>
+                  <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">Lunch / PM only</span>
                 </div>
                 <div className="mb-3 grid gap-2 md:grid-cols-3">
                   <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">

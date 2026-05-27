@@ -466,7 +466,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
             {hasLunchSubtype ? 'Lunch Setup Scan Results' : 'Setup Scan Results'}
           </div>
           <div className="mt-1 text-[10px] font-mono text-[var(--txt3)]">
-            {isOpen ? 'Setup Detected is separate from Execution Approved. Blocked setups stay visible.' : 'Collapsed audit. Open to review detected, conditional, blocked, and rejected setups.'}
+            {isOpen ? 'Setup Detected is separate from Execution Approved. Blocked setups stay visible.' : 'Open to review detected, conditional, blocked, and rejected setups.'}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -707,7 +707,7 @@ function DecisionStepAudit({ plan }: { plan: NormalizedTradePlan }) {
 
 export default function FinalTradePlanCard({
   plan,
-  title = "3. FINAL TRADE PLAN",
+  title = "TRADE PLAN / DECISION",
   agentLearningUsed,
   windowValid = true,
   killSwitchClear = true,
