@@ -9,7 +9,7 @@ import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
 import { TimezoneToggle } from './TimezoneToggle';
 import TradeProofPanel from './TradeProofPanel';
-import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
+import ScreenshotUploadPanel, { type ScreenshotStatusItem, type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
@@ -40,6 +40,8 @@ type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 type OutcomePlanChoice = 'main' | `candidate:${number}`;
 type UploadedImage = UploadedWorkflowImage;
 type WorkflowStepTone = 'pending' | 'ready' | 'active' | 'complete' | 'blocked';
+type PrecheckStatus = 'idle' | 'checking' | 'complete' | 'unavailable';
+type ScreenshotTarget = Exclude<SessionPasteTarget, null>;
 
 interface WorkflowStep {
   label: string;
@@ -135,6 +137,16 @@ function WorkflowStrip({ title, steps }: { title: string; steps: WorkflowStep[] 
       </div>
     </div>
   );
+}
+
+function hasUsableOcrMetadata(image: UploadedImage | null): boolean {
+  const ocr = image?.ocrResult;
+  return Boolean(ocr?.ticker || ocr?.timeframe || ocr?.currentPrice || ocr?.lastTimestamp);
+}
+
+function shortAnalysisError(error: string | null): string | null {
+  if (!error) return null;
+  return error.replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
 function todayLocalDate(): string {
@@ -425,6 +437,11 @@ export default function SessionLab({
   const [lunchOutcomePlanChoice, setLunchOutcomePlanChoice] = useState<OutcomePlanChoice>('main');
   const [morningTradeTaken, setMorningTradeTaken] = useState<boolean | null>(null);
   const [lunchTradeTaken, setLunchTradeTaken] = useState<boolean | null>(null);
+  const [precheckStatus, setPrecheckStatus] = useState<Record<ScreenshotTarget, PrecheckStatus>>({
+    morning_eth_context: 'idle',
+    morning_5m_execution: 'idle',
+    lunch_5m_execution: 'idle',
+  });
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
   const [bridgeInstrument, setBridgeInstrument] = useState('MES 06-26');
   const [bridgeAccount, setBridgeAccount] = useState('Sim101');
@@ -626,6 +643,13 @@ export default function SessionLab({
     if (target === 'lunch_5m_execution') setLunchExecImg(image);
   };
 
+  const clearStagedImage = (target: ScreenshotTarget) => {
+    setPrecheckStatus(current => ({ ...current, [target]: 'idle' }));
+    if (target === 'morning_eth_context') setMorningEthImg(null);
+    if (target === 'morning_5m_execution') setMorningExecImg(null);
+    if (target === 'lunch_5m_execution') setLunchExecImg(null);
+  };
+
   const handleGlobalClick = useCallback((event: MouseEvent) => {
     const target = event.target as HTMLElement;
     if (target.closest('.morning-eth-slot')) setActivePasteTarget('morning_eth_context');
@@ -639,13 +663,18 @@ export default function SessionLab({
   const processImage = async (dataUrl: string, target: SessionPasteTarget) => {
     if (!target) return;
     setStagedImage(target, { dataUrl });
+    setPrecheckStatus(current => ({ ...current, [target]: 'checking' }));
 
     try {
       const ocr = await preCheckChartInfo(dataUrl);
       if (ocr) {
         setStagedImage(target, { dataUrl, ocrResult: ocr });
+        setPrecheckStatus(current => ({ ...current, [target]: 'complete' }));
+      } else {
+        setPrecheckStatus(current => ({ ...current, [target]: 'unavailable' }));
       }
     } catch (error) {
+      setPrecheckStatus(current => ({ ...current, [target]: 'unavailable' }));
       console.warn('[SessionLab] OCR precheck failed; screenshot remains staged for manual analysis.', error);
     }
   };
@@ -700,6 +729,7 @@ export default function SessionLab({
     setMorningOutcome(null);
     setMorningOutcomePlanChoice('main');
     setMorningTradeTaken(null);
+    setPrecheckStatus(current => ({ ...current, morning_eth_context: 'idle', morning_5m_execution: 'idle' }));
     setProofFlow(current => current.sessionType === 'morning' ? { active: false } : current);
     onUpdate({ analysisResult: undefined, morningScreenshot: undefined, morningEthScreenshot: undefined, dayType: undefined });
   };
@@ -714,6 +744,7 @@ export default function SessionLab({
     setLunchOutcome(null);
     setLunchOutcomePlanChoice('main');
     setLunchTradeTaken(null);
+    setPrecheckStatus(current => ({ ...current, lunch_5m_execution: 'idle' }));
     setProofFlow(current => current.sessionType === 'lunch' ? { active: false } : current);
     onUpdate({ lunchAnalysisResult: undefined, lunchScreenshot: undefined });
   };
@@ -1204,6 +1235,45 @@ export default function SessionLab({
   };
   const morningWorkflowSteps = workflowStepsFor('morning');
   const lunchWorkflowSteps = workflowStepsFor('lunch');
+  const screenshotStatusItemsFor = (
+    target: ScreenshotTarget,
+    image: UploadedImage | null,
+    result: AnalysisResult | null,
+    isAnalyzing: boolean,
+    error: string | null
+  ): ScreenshotStatusItem[] => {
+    const analysisError = shortAnalysisError(error);
+    if (analysisError) return [{ label: `Analysis error: ${analysisError}`, tone: 'error' }];
+    if (isAnalyzing) return [{ label: 'Analysis running', tone: 'checking' }];
+    if (result) return [{ label: 'Analysis complete', tone: 'complete' }];
+    if (!image) return [{ label: 'Awaiting screenshot', tone: 'neutral' }];
+    if (precheckStatus[target] === 'checking') return [{ label: 'Checking chart metadata...', tone: 'checking' }];
+
+    const items: ScreenshotStatusItem[] = [
+      { label: 'Screenshot staged — analysis has not run yet.', tone: 'complete' },
+    ];
+
+    if (precheckStatus[target] === 'complete' && image.ocrResult) {
+      items.push({ label: 'OCR complete', tone: 'complete' });
+      items.push({
+        label: hasUsableOcrMetadata(image)
+          ? 'Chart metadata check complete'
+          : 'Chart metadata check unavailable — screenshot still staged.',
+        tone: hasUsableOcrMetadata(image) ? 'complete' : 'warning',
+      });
+      return items;
+    }
+
+    if (precheckStatus[target] === 'unavailable') {
+      items.push({ label: 'OCR unavailable — screenshot still staged.', tone: 'warning' });
+      items.push({ label: 'Chart metadata check unavailable — screenshot still staged.', tone: 'warning' });
+    }
+
+    return items;
+  };
+  const morningEthStatusItems = screenshotStatusItemsFor('morning_eth_context', morningEthImg, null, false, null);
+  const morningExecStatusItems = screenshotStatusItemsFor('morning_5m_execution', morningExecImg, morningResult, isAnalyzingMorning, morningError);
+  const lunchExecStatusItems = screenshotStatusItemsFor('lunch_5m_execution', lunchExecImg, lunchResult, isAnalyzingLunch, lunchError);
   const morningRequirements = [
     { label: '15M ETH context', value: morningEthImg ? 'Attached' : 'Optional context only', ready: Boolean(morningEthImg) },
     { label: '5M execution chart', value: morningExecImg ? 'Preview staged' : 'Required before analysis', ready: Boolean(morningExecImg) },
@@ -1489,8 +1559,8 @@ export default function SessionLab({
 
           {!morningResult && (
             <>
-              <ScreenshotUploadPanel target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => setMorningEthImg(null)} onActivate={setActivePasteTarget} hintText={`Context only. Paste/upload range: ${formatReplayRange('morning_eth_context', morningTimezone)}`} />
-              <ScreenshotUploadPanel target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => setMorningExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('morning_5m_execution', morningTimezone)}`} />
+              <ScreenshotUploadPanel target="morning_eth_context" label="15m ETH Context" img={morningEthImg} onUpload={handleFileUpload} onClear={() => clearStagedImage('morning_eth_context')} onActivate={setActivePasteTarget} statusItems={morningEthImg ? morningEthStatusItems : []} hintText={`Context only. Paste/upload range: ${formatReplayRange('morning_eth_context', morningTimezone)}`} />
+              <ScreenshotUploadPanel target="morning_5m_execution" label="5m Morning Execution" img={morningExecImg} onUpload={handleFileUpload} onClear={() => clearStagedImage('morning_5m_execution')} onActivate={setActivePasteTarget} statusItems={morningExecStatusItems} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('morning_5m_execution', morningTimezone)}`} />
               <div className="border border-[var(--b2)] bg-[var(--bg)] p-2 text-[10px] text-[var(--txt2)]">
                 Preview must be visible above before analysis. Pasting or uploading only stages the screenshot; it does not start the analyzer.
               </div>
@@ -1588,7 +1658,7 @@ export default function SessionLab({
 
           {!lunchResult && (
             <>
-              <ScreenshotUploadPanel target="lunch_5m_execution" label="5M Lunch / PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => setLunchExecImg(null)} onActivate={setActivePasteTarget} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
+              <ScreenshotUploadPanel target="lunch_5m_execution" label="5M Lunch / PM Execution" img={lunchExecImg} onUpload={handleFileUpload} onClear={() => clearStagedImage('lunch_5m_execution')} onActivate={setActivePasteTarget} statusItems={lunchExecStatusItems} isRequired hintText={`Required execution chart. Paste/upload range: ${formatReplayRange('lunch_5m_execution', lunchTimezone)}`} />
               <div className="text-[10px] text-[var(--txt2)] border border-[var(--b2)] p-2">
                 Lunch / PM uses Morning 15M ETH and Morning 5M context when available, but the Lunch / PM 5M chart remains the execution chart.
               </div>
