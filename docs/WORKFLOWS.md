@@ -1,6 +1,25 @@
 # Workflows
 
-## Morning Analysis
+## Trading Workflow
+
+The active live UI is the `Trading Workflow` tab in `src/App.tsx`, rendered by `SessionLab`.
+
+Core flow:
+
+1. Screenshot staged.
+2. Analyze.
+3. Decision.
+4. Outcome/Proof.
+5. Journal/RAG.
+
+The live sessions are:
+
+- Morning / AM.
+- Lunch / PM Review.
+
+The workflow shows session chips, visible screenshot/OCR/precheck states, and an `Advanced data/model controls` disclosure for bridge, provider, cache, and diagnostic controls.
+
+## Morning / AM
 
 Required context:
 
@@ -12,15 +31,16 @@ Required context:
 Expected flow:
 
 1. Upload/paste screenshot.
-2. Run analysis.
-3. Retrieve RAG context before analysis.
-4. Generate chart interpretation.
-5. Build app-owned normalized trade plan.
-6. Display no-trade if the app-owned plan is not executable.
-7. Save setup and RAG learning.
-8. If a trade is taken, save proof/outcome later.
+2. Confirm the staged/precheck state.
+3. Run analysis with the explicit Analyze button.
+4. Retrieve RAG context before analysis.
+5. Generate chart interpretation.
+6. Build app-owned normalized trade plan.
+7. Display no-trade if the app-owned plan is not executable.
+8. Save setup and RAG learning.
+9. If a trade is taken, save proof/outcome later.
 
-## Lunch Review
+## Lunch / PM Review
 
 Required context:
 
@@ -31,12 +51,15 @@ Required context:
 Expected flow:
 
 1. Upload/paste lunch screenshot.
-2. Retrieve similar historical lunch/replay records.
-3. Analyze trap/reversal/continuation behavior.
-4. Build app-owned normalized trade plan.
-5. Save setup and RAG learning.
+2. Confirm the staged/precheck state.
+3. Retrieve RAG context before analysis.
+4. Analyze trap/reversal/continuation behavior.
+5. Build app-owned normalized trade plan.
+6. Save setup and RAG learning.
 
 ## Replay Lab
+
+`ReplayLab.tsx` is retained as a legacy/reference component and is not an active `App.tsx` tab. Product direction is pending before it should be reintroduced.
 
 Required context:
 

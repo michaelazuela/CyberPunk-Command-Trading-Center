@@ -1629,7 +1629,7 @@ export default function SessionLab({
               <div className="bg-[var(--bg)] p-4 border border-[var(--b2)] text-[12px]">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-[10px] text-[var(--txt2)] font-bold">Lunch / PM Result</h3>
-                  <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">Lunch / PM only</span>
+                  <span className="qd-badge border-[var(--orange)]/30 text-[var(--orange)]">Lunch / PM Review</span>
                 </div>
                 <div className="mb-3 grid gap-2 md:grid-cols-3">
                   <div className="border border-[var(--b1)] bg-[var(--s1)] p-2">

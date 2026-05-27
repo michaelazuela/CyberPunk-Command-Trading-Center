@@ -28,7 +28,7 @@ Chosen v1 recommendations:
 NinjaTrader 8 Desktop
   -> QuantDeskBridge NinjaScript AddOn
   -> local read-only HTTP endpoints on 127.0.0.1:8765
-  -> Session Lab / Replay Lab reads structured bars and account snapshots
+  -> Trading Workflow / SessionLab reads structured bars and account snapshots
   -> app-owned setup scanner, plan engine, and trade decision pipeline decide
 ```
 

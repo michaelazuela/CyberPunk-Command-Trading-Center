@@ -1,6 +1,6 @@
 # Project Handoff: Quant Desk MES/MNQ Trading App
 
-Last updated: 2026-05-21
+Last updated: 2026-05-26
 
 ## 1. Current Project Purpose
 
@@ -10,7 +10,7 @@ This repository is a MES/MNQ futures trading decision-support platform. The curr
 - Supabase stores market bars, RAG records, trade/journal records, and app data.
 - Cloudflare Pages hosts the app and provides API functions for model calls and Discord interaction endpoints.
 - Discord is the primary trade-alert surface.
-- The web UI is now primarily a RAG/admin dashboard, not the main live trading cockpit.
+- The web UI includes an active Trading Workflow for Morning / AM and Lunch / PM Review, plus RAG/admin, archive, and settings tabs.
 - The system must never place automated orders.
 
 The app should generate decision-support plans only. Trade approval authority remains with app-owned deterministic engines, not AI text, screenshots, Discord cards, or time windows alone.
@@ -63,13 +63,16 @@ Top-level guidance:
 
 Frontend:
 
-- `src/App.tsx`: current navigation shell. Active tabs are `RAG Admin`, `Trade Archive`, and `Settings`.
-- `src/components/AdminDashboard.tsx`: current primary UI surface for RAG/admin status and logs.
+- `src/App.tsx`: current navigation shell. Active tabs are `RAG Admin`, `Trading Workflow`, `Trade Archive`, and `Settings`.
+- `src/components/AdminDashboard.tsx`: active RAG/admin status, logs, Discord/RAG visibility, and operational checks.
 - `src/components/DataHealthPanel.tsx`: checks Supabase/RAG/market bar health.
+- `src/components/SessionLab.tsx`: active Trading Workflow for Morning / AM and Lunch / PM Review. It includes the workflow strip, session chips, visible screenshot/precheck states, advanced data/model controls disclosure, decision card, outcome/proof flow, and journal/RAG status.
 - `src/components/TradeLog.tsx`: trade archive view.
 - `src/components/Settings.tsx`: system configuration UI.
-- `src/components/FinalTradePlanCard.tsx`: reusable trade plan display component. It still exists, but the web UI is no longer the primary trade-alert surface.
-- `src/components/SessionLab.tsx`, `src/components/ReplayLab.tsx`, `src/components/Analysis.tsx`, `src/components/LunchReversal.tsx`: legacy/live workflow components still present in the repo for reference/testing, but not active navigation in `App.tsx`.
+- `src/components/FinalTradePlanCard.tsx`: reusable trade plan / decision display component.
+- `src/components/ReplayLab.tsx`: retained legacy/reference replay component, not an active `App.tsx` tab.
+- `src/components/Rules.tsx`: retained legacy/reference rule UI, not an active `App.tsx` tab.
+- Removed legacy UI shells/components: old standalone analysis/dashboard UI, old agent animation/progress/model panel UI, old API cost panel, old Monte Carlo panel, and the unused workflow mode toggle.
 
 Trading configuration:
 
@@ -176,25 +179,25 @@ Execution authority rules:
 Active navigation in `src/App.tsx`:
 
 - `RAG Admin`
-  - Current primary tab.
   - Intended for data health, RAG/admin status, logs, Discord/RAG visibility, and operational checks.
+- `Trading Workflow`
+  - Active `SessionLab` workflow for Morning / AM and Lunch / PM Review.
+  - User flow: Screenshot staged -> Analyze -> Decision -> Outcome/Proof -> Journal/RAG.
+  - Advanced bridge/model/provider diagnostics live behind `Advanced data/model controls`.
+  - Screenshot/OCR/precheck states are visible and session-specific.
 - `Trade Archive`
   - Trade/journal archive.
   - Used for historical trade records, not live execution.
 - `Settings`
   - Local app settings.
-  - Includes account/risk fields, but live execution decisions are now intended to be driven by deterministic scanner/Discord flow.
+  - Discord/scanner/Supabase/UI configuration visibility.
 
-Deprecated or de-emphasized as active workflow:
+Retained legacy/reference components:
 
-- `SessionLab.tsx`
 - `ReplayLab.tsx`
-- `Analysis.tsx`
-- `LunchReversal.tsx`
-- `Dashboard.tsx`
 - `Rules.tsx`
 
-These components may still exist for reference, testing, or future admin-only tooling. They should not be re-added to main navigation as live trading cockpits unless the user explicitly asks and the new primary-model-only architecture is preserved.
+These components are not active `App.tsx` tabs. They should not be re-added to main navigation unless the user explicitly asks and the primary-model-only architecture is preserved.
 
 ## 6. Current Replay Window Workflow
 
@@ -248,8 +251,8 @@ Important wording:
 
 Current known/incomplete items:
 
-- The old UI workflow files are still present in `src/components`, though not active navigation. A future cleanup may archive or remove them after confirming nothing imports them.
-- `SessionLab`/`ReplayLab` may still contain older assumptions and should not be treated as the active source of truth.
+- Legacy UI cleanup removed the old standalone analysis/dashboard shells and their orphaned child panels. `SessionLab` remains the active Trading Workflow shell.
+- `ReplayLab` and `Rules` are retained legacy/reference components pending a product decision.
 - `conditionalPlanBuilder.ts` still contains deprecated internal builder code, but returned candidates are filtered to primary models. A later phase should remove or archive unused deprecated builder branches.
 - Some tests still mention deprecated component/builders as negative tests to prove they do not create active candidates.
 - `AGENTS.md` still contains older examples of approved setup types in a few explanatory bullets. Update carefully only if it will not confuse future agents.
@@ -257,7 +260,7 @@ Current known/incomplete items:
   - `src/lib/rag.ts` is both dynamically and statically imported.
   - Main JS chunk is over 500 kB.
   These are warnings, not current build failures.
-- Discord alert card formatting has been iterated many times. Keep it concise and professional; avoid long narrative cards.
+- Discord alerts use the shared compact summary formatter across scheduled Morning, scheduled Lunch, and live scanner alerts. Main content stays short and validated before send. Chart Plan and Price Level Map / Risk-Reward Ladder are the standard visual attachments when an active plan candidate exists. Audit JSON stays outside the main message.
 - The market data recorder/backfill depends on NinjaTrader and the bridge being open. If the latest completed 5M candle is stale, restart NinjaTrader/bridge/local live script and check bar timezone/timestamp mode.
 - Supabase RAG outcome button flow requires these environment values in Cloudflare/local automation where applicable:
   - `SUPABASE_URL` or `VITE_SUPABASE_URL`
@@ -280,7 +283,7 @@ Current validation status from latest Phase D work:
 - User wants a disciplined futures trading desk product voice: direct, specific, risk-first, no hype.
 - User does not want the app to sound like an ICT glossary. Use professional trading vocabulary.
 - User wants Discord to be the primary trade-alert interface.
-- User wants the UI to focus on RAG/admin/database/logging functions.
+- User wants the UI to keep live review clear and disciplined while Discord remains the primary alert surface.
 - User wants NinjaTrader OHLC treated as factual when available.
 - User wants all timeframes machine-readable before engines consume them.
 - User wants higher timeframe context:
@@ -289,12 +292,7 @@ Current validation status from latest Phase D work:
   - 15M: session map, liquidity, displacement, imbalance, targets.
   - 5M: execution trigger, stop, risk, final approval.
 - User wants real liquidity targets distinguished from obstacles/reaction zones.
-- User wants concise Discord cards using a 5W style:
-  - What
-  - Where
-  - When
-  - Why
-  - Watch-out/Invalidation
+- User wants concise Discord cards using the shared compact alert-summary standard.
 - User wants Discord outcome buttons to feed RAG/journal learning.
 - User does not want automated order placement.
 - User wants no Firebase of any kind.
@@ -310,18 +308,7 @@ Start every next session with:
 git status --short
 ```
 
-Respect unrelated modified/untracked files. At the time this handoff was created, several files were already modified from prior phases:
-
-- `src/config/setupRegistry.ts`
-- `src/types.ts`
-- `src/lib/localScannerEngine.ts`
-- `src/lib/localScannerEngine.test.ts`
-- `tools/automation/discord-scheduler.ts`
-- `tools/automation/nt-scanner.ts`
-- `src/config/setupRegistry.test.ts`
-- `test-screenshots/`
-- `tools/automation/Session`
-- `tools/automation/Supabase`
+Respect unrelated modified/untracked files. Generated dry-run artifacts should remain ignored.
 
 Recommended next technical steps:
 
@@ -346,10 +333,10 @@ npm run build
 5. Make sure Discord alerts consume the same primary candidate selection as scanner/pipeline.
    - Discord should not show supporting evidence as the model type.
    - Discord should show model type as `Sweep -> MSS -> FVG Retrace` or `Turtle Soup Reversal`.
-6. Confirm RAG/admin UI reflects the new architecture:
-   - Discord primary.
-   - UI admin/logs/search/settings only.
-   - No live trading cockpit language.
+6. Confirm the UI reflects the current architecture:
+   - Discord primary for alerts.
+   - Trading Workflow for live Morning / AM and Lunch / PM Review.
+   - RAG/admin/logs/search/settings remain operational support surfaces.
 7. Test local live workflow with NinjaTrader open:
 
 ```bash

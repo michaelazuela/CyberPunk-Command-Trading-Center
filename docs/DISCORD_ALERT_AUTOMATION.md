@@ -8,7 +8,9 @@ Quant Desk can run a local NinjaTrader-to-Discord alert process for decision sup
 - Pulls OHLC bars from the read-only NinjaTrader bridge.
 - Builds structured chart context from ETH and RTH data.
 - Runs the app-owned plan engine and deterministic trade decision pipeline.
-- Sends the resulting Morning or Lunch plan to Discord.
+- Sends the resulting Morning, Lunch, or live scanner decision-support alert to Discord with the shared compact summary formatter.
+- Attaches Chart Plan and Price Level Map / Risk-Reward Ladder PNGs when an active plan candidate exists.
+- Keeps detailed audit JSON outside the main Discord message.
 - Does not place orders.
 
 ## Why It Runs Locally
@@ -100,3 +102,15 @@ Lunch:
 - The 15M ETH chart remains context only.
 - The 5M chart remains execution authority.
 - Final approval still comes from the app-owned plan engine and trade decision pipeline.
+- Main Discord content must remain compact and validated before send.
+- Morning scheduled, Lunch scheduled, and live scanner alerts use the same compact alert structure and attachment fallback language.
+- If visual attachments are unavailable, the alert should say so clearly instead of silently falling back to chart-only output.
+
+## Visual Attachments
+
+Current active trade alerts use two separate visual attachments when available:
+
+- Chart Plan: the OHLC-driven chart annotation card.
+- Price Level Map / Risk-Reward Ladder: entry, stop, risk, T1, T2, and liquidity context.
+
+Numbered chart annotations anchor to real OHLC event coordinates. Collision handling may move labels, but not the underlying price/time anchor.
