@@ -30,7 +30,8 @@
   - `Trade Archive` -> `src/components/TradeLog.tsx`.
   - `Settings` -> `src/components/Settings.tsx`, with `DataHealthPanel.tsx`.
 - `src/components/SessionLab.tsx`: active Morning / AM and Lunch / PM Review workflow shell. It owns screenshot staging display, the workflow strip, session chips, advanced data/model disclosure, decision display, outcome/proof, and journal/RAG status.
-- `src/components/ReplayLab.tsx`: retained legacy/reference replay component. It is not an active `App.tsx` tab unless explicitly reintroduced later.
+- `src/components/ReplayLab.tsx`: retained inactive replay/backtest source material. It is not an active `App.tsx` tab and should not be activated as-is.
+- `docs/REPLAY_BACKTEST_REQUIREMENTS.md`: preserved replay/backtest requirements and future rewrite architecture.
 - `docs/TRADING_RULES_REFERENCE.md`: current source-of-truth-aligned rules reference for active primary models, supporting evidence, deprecated historical setup families, risk/target standards, and alert/reporting standards.
 - `src/lib/gemini.ts`: screenshot analysis client and prompt construction.
 - `src/lib/openai.ts`: optional OpenAI chart-fact validation client.

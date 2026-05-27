@@ -70,7 +70,8 @@ Frontend:
 - `src/components/TradeLog.tsx`: trade archive view.
 - `src/components/Settings.tsx`: system configuration UI.
 - `src/components/FinalTradePlanCard.tsx`: reusable trade plan / decision display component.
-- `src/components/ReplayLab.tsx`: retained legacy/reference replay component, not an active `App.tsx` tab.
+- `src/components/ReplayLab.tsx`: retained inactive replay/backtest source material, not an active `App.tsx` tab and not safe to activate as-is.
+- `docs/REPLAY_BACKTEST_REQUIREMENTS.md`: preserved replay/backtest requirements and future rewrite architecture.
 - `docs/TRADING_RULES_REFERENCE.md`: current source-of-truth-aligned rules reference for active primary models, supporting evidence, deprecated historical setup families, risk/target standards, and alert/reporting standards.
 - Removed legacy UI shells/components: old standalone analysis/dashboard UI, old agent animation/progress/model panel UI, old API cost panel, old Monte Carlo panel, and the unused workflow mode toggle.
 
@@ -192,11 +193,11 @@ Active navigation in `src/App.tsx`:
   - Local app settings.
   - Discord/scanner/Supabase/UI configuration visibility.
 
-Retained legacy/reference components:
+Retained inactive source material:
 
 - `ReplayLab.tsx`
 
-This component is not an active `App.tsx` tab. It should not be re-added to main navigation unless the user explicitly asks and the primary-model-only architecture is preserved. The retired Rules UI was converted into `docs/TRADING_RULES_REFERENCE.md` and removed.
+This component is not an active `App.tsx` tab. It should not be re-added to main navigation unless it is rewritten around shared Trading Workflow components and the primary-model-only architecture is preserved. The retired Rules UI was converted into `docs/TRADING_RULES_REFERENCE.md` and removed.
 
 ## 6. Current Replay Window Workflow
 
@@ -215,7 +216,7 @@ Current intended replay flow:
 
 Known tension:
 
-- Old Replay Lab UI still exists but should be treated as deprecated UI unless repurposed as admin/testing only.
+- Old Replay Lab UI still exists but should be treated as inactive source material unless rewritten. See `docs/REPLAY_BACKTEST_REQUIREMENTS.md`.
 - Replay tests should validate the scanner/pipeline, not restore old custom setup families.
 
 ## 7. Current AM/PM Workflow Requirements
@@ -251,7 +252,7 @@ Important wording:
 Current known/incomplete items:
 
 - Legacy UI cleanup removed the old standalone analysis/dashboard shells and their orphaned child panels. `SessionLab` remains the active Trading Workflow shell.
-- `ReplayLab` is retained as a legacy/reference component pending a product decision.
+- `ReplayLab` is retained as inactive replay/backtest source material. Do not activate it as-is; rewrite around shared Trading Workflow components first.
 - The retired Rules UI was converted into `docs/TRADING_RULES_REFERENCE.md` and removed.
 - `conditionalPlanBuilder.ts` still contains deprecated internal builder code, but returned candidates are filtered to primary models. A later phase should remove or archive unused deprecated builder branches.
 - Some tests still mention deprecated component/builders as negative tests to prove they do not create active candidates.

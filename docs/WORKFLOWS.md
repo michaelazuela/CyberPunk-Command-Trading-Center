@@ -61,7 +61,9 @@ Expected flow:
 
 ## Replay Lab
 
-`ReplayLab.tsx` is retained as a legacy/reference component and is not an active `App.tsx` tab. Product direction is pending before it should be reintroduced.
+`ReplayLab.tsx` is retained as inactive replay/backtest source material and is not an active `App.tsx` tab. It should not be activated as-is.
+
+Current replay/backtest requirements and the proposed rewrite architecture are documented in `docs/REPLAY_BACKTEST_REQUIREMENTS.md`.
 
 Required context:
 
@@ -78,6 +80,8 @@ Expected flow:
 3. App runs replay analysis using `replay_morning` or `replay_lunch`.
 4. User marks the historical outcome: win, loss, scratch, no trade, or missed.
 5. Supabase stores the setup and RAG record.
+
+Future replay UI should be rebuilt with shared Trading Workflow components before any route is activated.
 
 ## Proof Review
 
