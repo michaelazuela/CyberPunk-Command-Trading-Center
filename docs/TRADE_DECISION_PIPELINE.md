@@ -19,8 +19,10 @@ The intended architecture must stay separated:
    When NinjaTrader OHLC is available, those imported OHLC fields are the fact authority. AI visual extraction may fill missing facts, but it must not overwrite OHLC-derived candles, levels, session story, or structural context.
 
 2. **Setup scanner**
-   Applies setup definitions:
-   "Does this meet Liquidity Sweep? FVG Pullback? Lunch Failed Low Reversal?"
+   Applies active primary setup definitions:
+   "Does this meet Sweep -> MSS -> FVG Retrace or Turtle Soup Reversal?"
+
+   Liquidity sweeps, FVG/imbalance facts, market structure shifts, resting liquidity, prior-session sweeps, and breaker/FVG overlap are supporting evidence. They do not create a third active executable model.
 
 3. **Ranking engine**
    Scores candidates:
@@ -164,39 +166,29 @@ Replay mode must use the entered trading date and replay session, not the upload
 
 The app-owned rule engine must classify setup opportunities. AI may describe candidates, but final setup selection belongs to the deterministic engine.
 
-The planned all-setup scan workflow requires the app to evaluate every approved setup type for the active session before returning a final decision. A single failed setup gate must not stop the scan.
+The current scanner evaluates the active primary setup models for the session before returning a final decision. A single failed setup gate must not stop the scan of the remaining primary opportunities.
 
 Examples:
 
-- Liquidity Sweep
-- Momentum / Runaway
-- Fair Value Gap / Imbalance
-- Initial Balance Extension
-- Opening Order Block
-- Order Block 61.8
-- Equal Highs / Equal Lows
-- Previous Day Sweep
-- Compression Breakout
-- Gap Fill
-- Breaker Block
-- Mitigation Block
+- Sweep -> MSS -> FVG Retrace
+- Turtle Soup Reversal
 - No Trade
 
-Setup detection must be separate from execution approval. A detected setup can still be blocked, conditional, or invalid for execution.
+Setup detection must be separate from execution approval. A detected primary setup can still be blocked, conditional, or invalid for execution.
 
-For the complete all-setup scan blueprint, see `docs/SETUP_SCAN_WORKFLOW.md`.
+For the current scan contract and historical context, see `docs/SETUP_SCAN_WORKFLOW.md`.
 
 #### Deterministic Conditional Plan Builder
 
 After structured chart extraction and setup scanning, the app may build deterministic conditional planning paths from confirmed levels and facts. This layer exists so a `Wait` or `NoTrade` result does not hide useful if/then paths.
 
-Examples:
+Historical examples that may still exist in reference notes or compatibility code:
 
 - Morning Failed High / Liquidity Rejection: short only after a failed hold above a key high/resistance and a confirmed break below reclaim/support.
 - Morning Reclaim Long: long only after price reclaims a key level and the pullback holds.
 - Lunch Review subtypes: built only from completed Morning-window context plus Lunch execution evidence.
 
-Conditional plan levels are projections, not approvals. T1/T2 are still app-computed from candidate ENTRY/STOP at 1.5R and 2.0R, and execution remains disabled until the pipeline approves the plan.
+Conditional plan levels are projections, not approvals. Current returned plans are filtered to the active primary setup models. T1/T2 are still app-computed from candidate ENTRY/STOP at 1.5R and 2.0R, and execution remains disabled until the pipeline approves the plan.
 
 ### 8. Validate Entry Trigger
 
@@ -225,15 +217,15 @@ Arbitrary stops are not allowed.
 
 ### 10. Validate Risk Limit
 
-The app must hard-block trades that drift from the fixed 5-point risk model. Risk is app-owned and must be:
+The app must hard-block trades when the protected structure stop exceeds the configured risk limit. Risk is app-owned and must be measured from actual entry to actual stop:
 
 ```text
-riskPoints = 5
+riskPoints = abs(entry - stop)
 ```
 
-If risk is missing or not exactly 5 points, the app must block execution. AI cannot override this.
+If risk is missing, too wide, or not tied to protected structure, the app must block execution. AI cannot override this.
 
-`RiskTooWide` means the visible structure cannot currently be expressed through the fixed 5-point model. It blocks execution only. It must not erase the detected setup candidate. The setup should remain visible as a conditional opportunity if the chart provides a valid trigger.
+`RiskTooWide` means the visible structure cannot currently be expressed inside the configured risk limit. It blocks execution only. It must not erase the detected setup candidate. The setup should remain visible as a conditional opportunity if the chart provides a valid trigger.
 
 For the detailed handling contract, see `docs/RISK_TOO_WIDE_HANDLING.md`.
 
@@ -271,7 +263,7 @@ The app must decide:
 
 The decision must be traceable to the rule engine.
 
-No-trade is returned only when the full setup scan finds no executable or conditional opportunity. Blocked candidates remain visible but cannot be selected as executable trades.
+No-trade is returned only when the primary model scan finds no executable or conditional opportunity. Blocked candidates remain visible but cannot be selected as executable trades.
 
 ### 14. Generate Final Trade Plan
 
@@ -313,4 +305,4 @@ AI extracts and explains. The app decides and computes.
 
 Confidence supports the decision. It does not approve the decision.
 
-Lunch-specific subtypes are deterministic inputs to the same pipeline. `LunchFailedHighReversal`, `LunchFailedLowReversal`, `LunchCompressionBreakout`, `LunchFailedContinuation`, and `LunchRangeReclaim` only evaluate after completed Morning window context is available. They do not bypass risk, trigger, invalidation, or target checks.
+Older Lunch-specific subtype names may remain in historical records or compatibility code, but they are not active standalone trade models in the current primary-model-only scanner. Lunch decisions still use the same pipeline gates: trigger, protected stop, risk, invalidation, target room, and time-window checks.

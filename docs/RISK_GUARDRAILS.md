@@ -35,12 +35,13 @@ Entry must come from a measurable trigger:
 - Reclaim of a defined level
 - Retest of a defined zone
 
-The app uses a fixed stop-risk model:
+The app uses a structure-first stop model:
 
-- LONG stop = `entry - 5 points`
-- SHORT stop = `entry + 5 points`
+- LONG stop must sit below protected structure.
+- SHORT stop must sit above protected structure.
+- Actual entry-to-stop risk is validated against the configured risk limit.
 
-Structural invalidation is still required, but it is a separate decision note. It tells the trader when the setup thesis is broken; it does not change the fixed 5-point risk model.
+Structural invalidation is still required. It tells the trader when the setup thesis is broken and must agree with the protected structure stop.
 
 Stop context should come from invalidating structure:
 
@@ -57,16 +58,16 @@ The app must reject arbitrary entry or stop values.
 Risk is calculated by the app:
 
 ```text
-riskPoints = 5
+riskPoints = abs(entry - stop)
 ```
 
-Risk must always equal 5 points for app-owned plans.
+Risk must fit inside the app's configured limit for app-owned executable plans.
 
 If `entry`, `stop`, or `riskPoints` is missing, the trade is not executable.
 
 ## Risk Limit
 
-The app must hard-block any executable plan that drifts away from the fixed 5-point stop model.
+The app must hard-block any executable plan whose protected structure stop exceeds the configured risk limit.
 
 Current constants define:
 
@@ -77,7 +78,7 @@ MAX_STOP_TYPE_2 = 5
 MAX_RISK_PER_TRADE = 0.02
 ```
 
-The app-owned rule engine must enforce the fixed stop distance before execution.
+The app-owned rule engine must enforce the risk limit before execution.
 
 Example:
 
@@ -91,12 +92,12 @@ Targets are app-computed only:
 
 ```text
 LONG:
-T1 = entry + 5 * 1.5
-T2 = entry + 5 * 2.0
+T1 = entry + riskPoints * 1.5
+T2 = entry + riskPoints * 2.0
 
 SHORT:
-T1 = entry - 5 * 1.5
-T2 = entry - 5 * 2.0
+T1 = entry - riskPoints * 1.5
+T2 = entry - riskPoints * 2.0
 ```
 
 Targets must be rounded to the valid tick size.

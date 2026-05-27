@@ -71,7 +71,8 @@ Frontend:
 - `src/components/Settings.tsx`: system configuration UI.
 - `src/components/FinalTradePlanCard.tsx`: reusable trade plan / decision display component.
 - `src/components/ReplayLab.tsx`: retained legacy/reference replay component, not an active `App.tsx` tab.
-- `src/components/Rules.tsx`: retained legacy/reference rule UI, not an active `App.tsx` tab.
+- `docs/TRADING_RULES_REFERENCE.md`: current source-of-truth-aligned rules reference for active primary models, supporting evidence, deprecated historical setup families, risk/target standards, and alert/reporting standards.
+- `src/components/Rules.tsx`: retained temporary legacy/reference source material, not an active `App.tsx` tab. Do not activate it as-is.
 - Removed legacy UI shells/components: old standalone analysis/dashboard UI, old agent animation/progress/model panel UI, old API cost panel, old Monte Carlo panel, and the unused workflow mode toggle.
 
 Trading configuration:
@@ -252,7 +253,8 @@ Important wording:
 Current known/incomplete items:
 
 - Legacy UI cleanup removed the old standalone analysis/dashboard shells and their orphaned child panels. `SessionLab` remains the active Trading Workflow shell.
-- `ReplayLab` and `Rules` are retained legacy/reference components pending a product decision.
+- `ReplayLab` is retained as a legacy/reference component pending a product decision.
+- `Rules.tsx` is retained only as temporary legacy/reference source material after conversion into `docs/TRADING_RULES_REFERENCE.md`; it may be removed later if it remains unreferenced.
 - `conditionalPlanBuilder.ts` still contains deprecated internal builder code, but returned candidates are filtered to primary models. A later phase should remove or archive unused deprecated builder branches.
 - Some tests still mention deprecated component/builders as negative tests to prove they do not create active candidates.
 - `AGENTS.md` still contains older examples of approved setup types in a few explanatory bullets. Update carefully only if it will not confuse future agents.

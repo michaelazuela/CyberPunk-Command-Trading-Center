@@ -1,35 +1,31 @@
 # Setup Scan Workflow
 
-This document defines the planned all-setup scan workflow for the MES/MNQ trading decision-support app. It is an implementation blueprint only. It does not change runtime behavior by itself.
+This document records the setup scan workflow for the MES/MNQ trading decision-support app. Earlier versions described an all-setup scan across many historical setup families; the current runtime is primary-model-only.
 
 ## Purpose
 
-The app must evaluate every approved price-action setup type on every analysis run. The goal is to avoid missing valid or conditional trade opportunities because one candidate failed an execution gate.
+The app must evaluate the current active primary setup models on every analysis run. Supporting evidence can strengthen or weaken those candidates, but it does not create a separate executable setup.
 
 AI may extract visible chart context. The app must own setup scanning, execution approval, ranking, and final trade selection.
 
-## Approved Setup Universe
+## Current Active Setup Universe
 
-The setup scanner must consider the approved setup types for the active session:
+The setup scanner creates active candidates only for the current primary models:
 
-- Order Block / 61.8%
+- Sweep -> MSS -> FVG Retrace
+- Turtle Soup Reversal
+
+Supporting evidence may contribute facts, reasons, missing evidence, tags, notes, and scoring signals:
+
 - Liquidity Sweep
-- Momentum / Runaway
-- Fair Value Gap
+- Fair Value Gap / Imbalance
 - FVG / Imbalance Pullback
 - Market Structure Shift / ChoCH
-- Opening Order Block
 - Equal Highs / Equal Lows
-- Initial Balance Extension
-- Previous Day High/Low Sweep
-- Compression Breakout
-- Opening Gap Fill
-- Breaker Block
-- Algo Kill Zone
-- Mitigation Block
-- Momentum Pullback / Breather Reclaim
+- Previous Day / Session Sweep
+- Breaker / FVG overlap
 
-If a setup is not allowed for a session, it should still be represented as unavailable or invalid for that session rather than silently disappearing from the system design.
+Deprecated or historical setup families should not create active candidates. They may remain in compatibility types, historical records, or reference docs only.
 
 ## Required Separation
 
@@ -47,7 +43,7 @@ Final selection answers: "Which executable or conditional opportunity is best?"
 
 ## Setup Candidate Contract
 
-Every scanned setup should produce a structured `SetupCandidate` record with:
+Every active primary setup candidate should produce a structured `SetupCandidate` record with:
 
 - `setupType`
 - `direction`
@@ -62,7 +58,7 @@ Every scanned setup should produce a structured `SetupCandidate` record with:
 - `nextAction`
 - `reducedRiskPlan`
 
-This is true even when the setup is not detected. The scan output should make absence explicit.
+Supporting evidence should be attached to the relevant primary candidate rather than emitted as a third executable model.
 
 ## Execution Status
 
@@ -76,16 +72,16 @@ Each candidate should receive one execution status:
 
 ## RiskTooWide Rule
 
-`RiskTooWide` blocks execution only. In the fixed-risk model, it means the current structure cannot be expressed through the required 5-point stop. It must not erase the detected setup candidate.
+`RiskTooWide` blocks execution only. It means the current protected structure cannot be expressed inside the configured risk limit. It must not erase the detected setup candidate.
 
 Correct handling:
 
 ```text
-Momentum / Runaway
+Sweep -> MSS -> FVG Retrace
 Status: Detected
 Execution: Blocked
 Reason: RiskTooWide
-Next Action: Wait for pullback/reclaim or cleaner 5-point trigger.
+Next Action: Wait for a cleaner structure stop or a valid retrace trigger.
 ```
 
 Incorrect handling:
@@ -97,7 +93,7 @@ Reason: RiskTooWide
 
 ## Ranking Rules
 
-After all setup candidates are created, the app should rank opportunities by:
+After active primary candidates are created, the app should rank opportunities by:
 
 - setup priority
 - confidence
@@ -115,9 +111,9 @@ The app should return:
 
 1. `bestExecutableCandidate`, if one exists
 2. `bestConditionalCandidate`, if no executable candidate exists
-3. `NoTrade`, only if no executable or conditional candidate exists
+3. `NoTrade`, only if no executable or conditional primary candidate exists
 
-No-trade is valid, but it must be the final result only after the full setup scan is complete.
+No-trade is valid, but it must be the final result only after the primary model scan is complete.
 
 ## Deterministic Conditional Builder
 
@@ -141,40 +137,41 @@ The final output should support a ranked scan view:
 ```text
 Setup Scan Results
 
-1. Momentum / Runaway
+1. Sweep -> MSS -> FVG Retrace
 Status: Detected
 Direction: Long
 Confidence: High
-Execution: Blocked
-Reason: RiskTooWide
-Next Action: Generate pullback/reclaim plan
-
-2. FVG / Imbalance Pullback
-Status: Possible
-Direction: Long
-Confidence: Medium
 Execution: Conditional
-Reason: Needs pullback into imbalance
+Reason: Waiting for retrace into imbalance
+
+2. Turtle Soup Reversal
+Status: Possible
+Direction: Short
+Confidence: Medium
+Execution: NotDetected
+Reason: Sweep/reclaim sequence not complete
 
 3. Liquidity Sweep
-Status: NotDetected
+Status: Supporting evidence only
 
 Best Trade Opportunity:
-Conditional Momentum Pullback Long
+Conditional Sweep -> MSS -> FVG Retrace Long
 ```
 
 ## Non-Negotiables
 
-- The app evaluates all approved setup types every time.
+- The app evaluates active primary setup models every time.
+- Supporting evidence is not a standalone executable setup.
+- Deprecated setup families must not create active candidates.
 - Setup detection is separate from execution approval.
 - `RiskTooWide` blocks execution only.
 - `RiskTooWide` must not erase the detected setup candidate.
 - The app ranks executable and conditional opportunities.
-- `NoTrade` is returned only when no executable or conditional setup exists.
+- `NoTrade` is returned only when no executable or conditional primary candidate exists.
 
-## Lunch Review Subtypes
+## Deprecated Lunch Review Subtypes
 
-The scanner evaluates five Lunch-only subtypes for `lunch` and `replay_lunch`:
+Older docs and internal compatibility branches referenced five Lunch-only subtypes:
 
 - Lunch Failed High Reversal
 - Lunch Failed Low Reversal
@@ -182,4 +179,4 @@ The scanner evaluates five Lunch-only subtypes for `lunch` and `replay_lunch`:
 - Lunch Failed Continuation
 - Lunch Range Reclaim
 
-These subtypes require completed Morning window context. Missing Morning context prevents the subtype from activating. `RiskTooWide` blocks execution only; it does not erase a detected Lunch subtype.
+These are not active standalone trade models in the current primary-model-only scanner. Lunch still uses the same primary model families, with completed Morning context and session structure acting as evidence/context.
