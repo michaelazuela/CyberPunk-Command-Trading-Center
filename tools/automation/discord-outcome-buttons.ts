@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { DISCORD_PROOF_PROMPT } from '../../src/agents/proofLearningAgent';
 
 type SessionType = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
@@ -75,6 +76,8 @@ function buildOutcomeUrl(args: Omit<OutcomeButtonArgs, 'direction'> & {
     tt: args.tradeTaken,
     dir: args.direction,
     hit: args.targetHit,
+    pp: args.tradeTaken,
+    pm: args.tradeTaken ? DISCORD_PROOF_PROMPT : null,
   };
   const encodedPayload = base64Url(JSON.stringify(payload));
   const signature = signOutcomePayload(encodedPayload);

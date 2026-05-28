@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
+import { DISCORD_PROOF_PROMPT } from '../../src/agents/proofLearningAgent';
 
 const previousBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousSecret = process.env.DISCORD_OUTCOME_SECRET;
@@ -15,6 +16,13 @@ function urls(components: ReturnType<typeof buildOutcomeComponents>): string[] {
   return (components || []).flatMap((row) => row.components.map((component) => component.url));
 }
 
+function decodeOutcomePayload(url: string): Record<string, any> {
+  const token = new URL(url).searchParams.get('t');
+  assert.ok(token);
+  const [payload] = token.split('.');
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+}
+
 try {
   const baseArgs = {
     planVersionId: 'PLAN-TEST',
@@ -28,6 +36,18 @@ try {
   assert.ok(!labels(longComponents).includes('Short Win'));
   assert.ok(!labels(longComponents).includes('Short Loss'));
   assert.ok(urls(longComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
+  assert.ok(urls(longComponents).every((url) => !/5320|5316|entry|stop|target|riskPoints|canExecute/i.test(url)));
+  const longPayloads = urls(longComponents).map(decodeOutcomePayload);
+  assert.equal(longPayloads[0].dir, 'LONG');
+  assert.equal(longPayloads[0].tt, true);
+  assert.equal(longPayloads[0].pp, true);
+  assert.equal(longPayloads[0].pm, DISCORD_PROOF_PROMPT);
+  assert.equal(longPayloads[3].tr, 'missed_trade');
+  assert.equal(longPayloads[3].tt, false);
+  assert.equal(longPayloads[3].pp, false);
+  assert.equal(longPayloads[4].tr, 'no_trade');
+  assert.equal(longPayloads[4].dir, 'NONE');
+  assert.equal(longPayloads[4].pm, null);
 
   const shortComponents = buildOutcomeComponents({ ...baseArgs, direction: 'SHORT' });
   assert.deepEqual(labels(shortComponents), ['Short Win', 'Short Loss', 'Scratch', 'Missed', 'No Trade']);
