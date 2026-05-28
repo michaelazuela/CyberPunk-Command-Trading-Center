@@ -9,6 +9,10 @@ import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-${Date.now()}`);
 const auditDir = path.join(outputDir, 'discord-audit');
+const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
+const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
+process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
+process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;
@@ -180,6 +184,10 @@ try {
   assert.ok(text.includes('Compact Trade Plan Summary'));
   assert.ok(text.includes('Quant Desk Scanner Alert'));
   assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
+  const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
+  assert.deepEqual(componentLabels, ['Long Win', 'Long Loss', 'Scratch', 'Missed', 'No Trade']);
+  assert.ok(!componentLabels.includes('Short Win'));
+  assert.ok(!componentLabels.includes('Short Loss'));
   for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
     assert.ok(!text.toLowerCase().includes(marker.toLowerCase()), `live scanner payload leaked old long-form marker: ${marker}`);
   }
@@ -197,5 +205,9 @@ try {
 
   console.log(`live scanner fixture alert verified: mainText=${text.length}, files=${result.files.length}, audit=${result.auditLogPath}`);
 } finally {
+  if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;
+  else process.env.DISCORD_OUTCOME_BASE_URL = previousOutcomeBaseUrl;
+  if (previousOutcomeSecret === undefined) delete process.env.DISCORD_OUTCOME_SECRET;
+  else process.env.DISCORD_OUTCOME_SECRET = previousOutcomeSecret;
   await fs.rm(outputDir, { recursive: true, force: true });
 }

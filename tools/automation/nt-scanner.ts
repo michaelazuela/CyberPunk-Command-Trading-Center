@@ -48,6 +48,7 @@ import {
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
 } from './discord-alert-format';
+import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -579,6 +580,13 @@ function buildDiscordPayload(args: {
     scoreOverride: args.confidence.score,
     decisionOverride: args.state,
     statusOverride: args.state,
+    components: buildOutcomeComponents({
+      planVersionId: args.planVersionId,
+      sessionType: args.session,
+      tradeDate: args.tradeDate,
+      instrument: args.config.instrument,
+      direction: args.candidate?.direction,
+    }),
   });
 }
 
@@ -672,6 +680,7 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
   }
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
+  const url = discordWebhookUrlForPayload(webhookUrl, payload.components);
   const validFiles = files.filter(Boolean);
   const response = validFiles.length
     ? await (async () => {
@@ -681,9 +690,9 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
           const bytes = await fs.readFile(file);
           form.append(`files[${index}]`, new Blob([bytes], { type: 'image/png' }), path.basename(file));
         }
-        return fetch(webhookUrl, { method: 'POST', body: form });
+        return fetch(url, { method: 'POST', body: form });
       })()
-    : await fetch(webhookUrl, {
+    : await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

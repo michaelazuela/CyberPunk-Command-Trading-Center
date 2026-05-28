@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +25,7 @@ import {
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
 } from './discord-alert-format';
+import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -49,19 +49,6 @@ interface SchedulerConfig {
 
 interface AlertState {
   sent: Record<string, string>;
-}
-
-interface DiscordLinkButton {
-  type: 2;
-  style: 5;
-  label: string;
-  url: string;
-  emoji?: { name: string };
-}
-
-interface DiscordActionRow {
-  type: 1;
-  components: DiscordLinkButton[];
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -362,128 +349,6 @@ function truncateDiscord(value: string, maxLength: number): string {
 function discordValue(value: string, maxLength = 1024): string {
   const cleaned = professionalizeReportText(value).trim() || 'N/A';
   return truncateDiscord(cleaned, maxLength);
-}
-
-function getOutcomeBaseUrl(): string | null {
-  const raw =
-    process.env.DISCORD_OUTCOME_BASE_URL ||
-    process.env.APP_URL ||
-    process.env.VITE_AUTH_REDIRECT_URL ||
-    '';
-  return raw ? raw.replace(/\/$/, '') : null;
-}
-
-function base64Url(input: string): string {
-  return Buffer.from(input, 'utf8').toString('base64url');
-}
-
-function signOutcomePayload(encodedPayload: string): string | null {
-  const secret = process.env.DISCORD_OUTCOME_SECRET || '';
-  if (!secret) return null;
-  return crypto.createHmac('sha256', secret).update(encodedPayload).digest('hex');
-}
-
-function buildOutcomeUrl(args: {
-  planVersionId: string;
-  sessionType: SessionAlertJob;
-  tradeDate: string;
-  instrument: Instrument;
-  outcome: string;
-  tradeResult: 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
-  tradeTaken: boolean;
-  direction?: 'LONG' | 'SHORT' | 'NONE';
-  targetHit?: 'T1' | 'T2' | 'NEAREST_LIQUIDITY' | 'STOP' | 'NONE';
-}): string | null {
-  const baseUrl = getOutcomeBaseUrl();
-  if (!baseUrl) return null;
-  const payload = {
-    v: 1,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 14,
-    pid: args.planVersionId,
-    s: args.sessionType,
-    d: args.tradeDate,
-    i: args.instrument,
-    dow: getDayOfWeek(args.tradeDate),
-    o: args.outcome,
-    tr: args.tradeResult,
-    tt: args.tradeTaken,
-    dir: args.direction || 'NONE',
-    hit: args.targetHit || 'NONE',
-  };
-  const encodedPayload = base64Url(JSON.stringify(payload));
-  const signature = signOutcomePayload(encodedPayload);
-  if (!signature) return null;
-  return `${baseUrl}/api/discord-outcome?t=${encodeURIComponent(`${encodedPayload}.${signature}`)}`;
-}
-
-function outcomeButton(label: string, emoji: string, url: string): DiscordLinkButton {
-  return {
-    type: 2,
-    style: 5,
-    label,
-    emoji: { name: emoji },
-    url,
-  };
-}
-
-function buildOutcomeComponents(args: {
-  planVersionId: string;
-  sessionType: SessionAlertJob;
-  tradeDate: string;
-  instrument: Instrument;
-}): DiscordActionRow[] | undefined {
-  const makeUrl = (
-    outcome: string,
-    tradeResult: 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade',
-    tradeTaken: boolean,
-    direction: 'LONG' | 'SHORT' | 'NONE',
-    targetHit: 'T1' | 'T2' | 'NEAREST_LIQUIDITY' | 'STOP' | 'NONE'
-  ) => buildOutcomeUrl({ ...args, outcome, tradeResult, tradeTaken, direction, targetHit });
-
-  const longT1 = makeUrl('long_t1', 'win', true, 'LONG', 'T1');
-  const longT2 = makeUrl('long_t2', 'win', true, 'LONG', 'T2');
-  const longLiquidity = makeUrl('long_nearest_liquidity', 'win', true, 'LONG', 'NEAREST_LIQUIDITY');
-  const longStopped = makeUrl('long_stopped', 'loss', true, 'LONG', 'STOP');
-  const shortT1 = makeUrl('short_t1', 'win', true, 'SHORT', 'T1');
-  const shortT2 = makeUrl('short_t2', 'win', true, 'SHORT', 'T2');
-  const shortLiquidity = makeUrl('short_nearest_liquidity', 'win', true, 'SHORT', 'NEAREST_LIQUIDITY');
-  const shortStopped = makeUrl('short_stopped', 'loss', true, 'SHORT', 'STOP');
-  const scratch = makeUrl('scratch', 'scratch', true, 'NONE', 'NONE');
-  const notTaken = makeUrl('not_taken', 'no_trade', false, 'NONE', 'NONE');
-  const missed = makeUrl('missed_trade', 'missed_trade', false, 'NONE', 'NONE');
-
-  if (!longT1 || !longT2 || !longLiquidity || !longStopped || !shortT1 || !shortT2 || !shortLiquidity || !shortStopped || !scratch || !notTaken || !missed) {
-    return undefined;
-  }
-
-  return [
-    {
-      type: 1,
-      components: [
-        outcomeButton('LONG T1 Hit', '🟢', longT1),
-        outcomeButton('LONG T2 Hit', '🏆', longT2),
-        outcomeButton('LONG Liquidity', '🎯', longLiquidity),
-        outcomeButton('LONG Stopped', '🛑', longStopped),
-      ],
-    },
-    {
-      type: 1,
-      components: [
-        outcomeButton('SHORT T1 Hit', '🔴', shortT1),
-        outcomeButton('SHORT T2 Hit', '🏆', shortT2),
-        outcomeButton('SHORT Liquidity', '🎯', shortLiquidity),
-        outcomeButton('SHORT Stopped', '🛑', shortStopped),
-      ],
-    },
-    {
-      type: 1,
-      components: [
-        outcomeButton('Scratch / BE', '⚪', scratch),
-        outcomeButton('Not Taken', '🚫', notTaken),
-        outcomeButton('Missed Trade', '⏭️', missed),
-      ],
-    },
-  ];
 }
 
 function supabaseRestUrl(): string | null {
@@ -1049,6 +914,7 @@ async function formatPlanPayload(args: {
   candidates: SetupCandidate[];
   attachments: CompactDiscordAttachmentState;
 }): Promise<DiscordWebhookPayload> {
+  const selectedCandidate = args.candidates[0] || null;
   return compactDiscordSummary({
     session: args.job,
     tradeDate: args.tradeDate,
@@ -1066,6 +932,7 @@ async function formatPlanPayload(args: {
       sessionType: args.job,
       tradeDate: args.tradeDate,
       instrument: args.instrument,
+      direction: selectedCandidate?.direction,
     }),
   });
 }
@@ -1216,8 +1083,7 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
   if (!webhookUrl) {
     throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run is used. Add it once to .env.local as DISCORD_WEBHOOK_URL=your_discord_webhook_url.');
   }
-  const separator = webhookUrl.includes('?') ? '&' : '?';
-  const url = payload.components?.length ? `${webhookUrl}${separator}with_components=true` : webhookUrl;
+  const url = discordWebhookUrlForPayload(webhookUrl, payload.components);
   const validFiles = files.filter(Boolean);
   const payloadWithImage = validFiles[0] && payload.embeds[0]
     ? {

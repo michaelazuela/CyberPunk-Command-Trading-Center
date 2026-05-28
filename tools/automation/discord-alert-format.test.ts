@@ -6,7 +6,13 @@ import {
   flattenDiscordPayloadText,
   validateDiscordPayload,
 } from './discord-alert-format';
+import { buildOutcomeComponents } from './discord-outcome-buttons';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+
+const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
+const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
+process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
+process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
@@ -93,9 +99,17 @@ const morning = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Morning',
   windowLabel: '09:30-11:15 ET',
+  components: buildOutcomeComponents({
+    planVersionId: 'MORNING-TEST',
+    sessionType: 'morning',
+    tradeDate: '2026-05-26',
+    instrument: 'MES',
+    direction: 'LONG',
+  }),
 });
 assertCompactPayload(morning, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(morning.content?.includes('Quant Desk Morning Alert'));
+assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long Win', 'Long Loss', 'Scratch', 'Missed', 'No Trade']);
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -107,9 +121,18 @@ const lunch = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Lunch',
   windowLabel: '11:50-13:00 ET',
+  components: buildOutcomeComponents({
+    planVersionId: 'LUNCH-TEST',
+    sessionType: 'lunch',
+    tradeDate: '2026-05-26',
+    instrument: 'MES',
+    direction: 'SHORT',
+  }),
 });
 assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(lunch.content?.includes('Quant Desk Lunch Alert'));
+assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short Win', 'Short Loss', 'Scratch', 'Missed', 'No Trade']);
+assert.ok(!JSON.stringify(lunch.components).includes('Long Win'));
 
 const scanner = compactDiscordSummary({
   session: 'morning',
@@ -187,3 +210,8 @@ assert.throws(() => validateDiscordPayload({
 }), /truncation artifact/);
 
 console.log('Discord compact alert formatter verified.');
+
+if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;
+else process.env.DISCORD_OUTCOME_BASE_URL = previousOutcomeBaseUrl;
+if (previousOutcomeSecret === undefined) delete process.env.DISCORD_OUTCOME_SECRET;
+else process.env.DISCORD_OUTCOME_SECRET = previousOutcomeSecret;
