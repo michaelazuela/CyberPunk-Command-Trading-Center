@@ -481,7 +481,7 @@ export function buildAgentLearningSummary(similarSetups: SimilarSetup[]) {
   }
 
   if (avgPnlTicks !== null && avgPnlTicks < 0) {
-    riskWarning = `Historically negative expectancy observed on similar setups (avg ${avgPnlTicks.toFixed(1)} ticks). Tighten stops if entering.`;
+    riskWarning = `Historically negative expectancy observed on similar setups (avg ${avgPnlTicks.toFixed(1)} ticks). Do not modify stop rules automatically. Treat this as a caution flag and require stronger confirmation or mark for rule review.`;
   }
 
   if (bestMatch && bestMatch.tradeResult?.toLowerCase() === 'loss') {

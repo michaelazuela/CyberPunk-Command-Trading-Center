@@ -163,7 +163,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     Use the historical and previous session context above to:
     1. Calibrate confidence based on similar setup outcomes.
     2. Note patterns, such as similar setups winning or losing.
-    3. Adjust bias if historical win rate contradicts the current chart signal.
+    3. Adjust confidence and warnings if historical win rate conflicts with the current chart signal. Do not let memory alter setup rules, entry, stop, targets, time windows, or final approval.
     4. Return historical_context_used as true if similar setups were provided.
     5. Carry forward relevant context from the previous session (e.g., morning ETH levels, Midnight Open analysis).
     6. Do not let historical replay data replace current chart analysis. First perform independent rule-based analysis from the current screenshot. Then use Replay/RAG records only as supporting evidence to adjust confidence and explain whether similar historical setups succeeded or failed.

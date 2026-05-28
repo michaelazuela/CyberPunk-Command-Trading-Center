@@ -37,6 +37,7 @@ import {
   upsertMarketBarsToCache,
   type MarketBarTimeframe,
 } from '../lib/marketDataStore';
+import { buildWorkflowDecision, buildWorkflowRagContext, mergeChartFacts } from '../agents/workflowOrchestrator';
 
 type SessionPasteTarget = 'morning_eth_context' | 'morning_5m_execution' | 'lunch_5m_execution' | null;
 type SessionOutcome = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
@@ -209,55 +210,6 @@ function summarizeBridgeBar(bar: NinjaBridgeBar | null | undefined): string {
   return `${new Date(bar.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} O ${formatBridgePrice(bar.open)} H ${formatBridgePrice(bar.high)} L ${formatBridgePrice(bar.low)} C ${formatBridgePrice(bar.close)}`;
 }
 
-function mergeBridgeContextIntoAnalysis(
-  analysis: AnalysisResult,
-  bridgeContext: Partial<AnalysisResult['structuredChartContext']> | null,
-  bridgeSummary: string
-): AnalysisResult {
-  if (!bridgeContext) return analysis;
-  const existing = analysis.structuredChartContext || {};
-  const ohlcAuthoritySummary = `${bridgeSummary} OHLC fields from NinjaTrader are factual and take precedence over AI visual extraction.`;
-  return {
-    ...analysis,
-    reasoning: `${analysis.reasoning || ''}\n\n[NINJATRADER BRIDGE] ${ohlcAuthoritySummary}`.trim(),
-    structuredChartContext: {
-      ...existing,
-      ...bridgeContext,
-      keyLevels: {
-        ...(existing.keyLevels || {}),
-        ...(bridgeContext.keyLevels || {}),
-      },
-      extractedLevels: bridgeContext.extractedLevels || existing.extractedLevels,
-      candles: bridgeContext.candles || existing.candles,
-      swings: bridgeContext.swings || existing.swings,
-      fvgZones: bridgeContext.fvgZones || existing.fvgZones,
-      liquidityEvents: bridgeContext.liquidityEvents || existing.liquidityEvents,
-      liquiditySweeps: bridgeContext.liquiditySweeps || existing.liquiditySweeps,
-      reclaimEvents: bridgeContext.reclaimEvents || existing.reclaimEvents,
-      failedBreakEvents: bridgeContext.failedBreakEvents || existing.failedBreakEvents,
-      displacementCandles: bridgeContext.displacementCandles || existing.displacementCandles,
-      setupReadyFacts: bridgeContext.setupReadyFacts || existing.setupReadyFacts,
-      structuralLevels: bridgeContext.structuralLevels || existing.structuralLevels,
-      sessionLevelContext: bridgeContext.sessionLevelContext || existing.sessionLevelContext,
-      sessionStory: bridgeContext.sessionStory || existing.sessionStory,
-      targetObjectives: bridgeContext.targetObjectives || existing.targetObjectives,
-      marketStructure: bridgeContext.marketStructure || existing.marketStructure,
-      candleFacts: bridgeContext.candleFacts || existing.candleFacts,
-      marketContext: bridgeContext.marketContext || existing.marketContext,
-      ocrText: bridgeContext.ocrText || existing.ocrText,
-      extractionWarnings: bridgeContext.extractionWarnings || existing.extractionWarnings,
-    },
-    agentReports: [
-      ...(analysis.agentReports || []),
-      {
-        agentName: 'NinjaTrader Bridge',
-        findings: bridgeSummary,
-        status: 'SUCCESS' as const,
-      },
-    ],
-  };
-}
-
 function OutcomePlanSelector({
   plan,
   value,
@@ -418,8 +370,8 @@ export default function SessionLab({
     error: null,
   });
 
-  const normalizedMorningPlan = morningResult ? buildAppTradePlan(morningResult, { sessionType: 'morning', instrument }) : null;
-  const normalizedLunchPlan = lunchResult ? buildAppTradePlan(lunchResult, { sessionType: 'lunch', instrument }) : null;
+  const normalizedMorningPlan = morningResult ? buildWorkflowDecision(morningResult, { sessionType: 'morning', instrument }).plan : null;
+  const normalizedLunchPlan = lunchResult ? buildWorkflowDecision(lunchResult, { sessionType: 'lunch', instrument }).plan : null;
   const approvedRuleRefinements = buildRuleRefinementText(customRules);
 
   const updateProviderMode = (providerMode: ModelConfig['providerMode']) => {
@@ -709,7 +661,7 @@ export default function SessionLab({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { setupId: null, ragId: null, status: 'Login required: analysis completed but was not saved to Supabase.' };
 
-    const plan = buildAppTradePlan(analysis, { sessionType, instrument });
+    const plan = buildWorkflowDecision(analysis, { sessionType, instrument }).plan;
     const planVersionId = createPlanVersionId(sessionType, tradeDate);
     const setupSignature = createSetupSignature({ sessionType, instrument, tradeDate, plan });
     const chartTimezone = sessionType === 'morning' ? morningTimezone : lunchTimezone;
@@ -782,7 +734,8 @@ export default function SessionLab({
     if (setupError || !setupRow?.id) throw new Error(`Supabase setup save failed: ${setupError?.message || 'No setup ID returned.'}`);
 
     const { saveToRAG } = await import('../lib/rag');
-    const ragResult = await saveToRAG({
+    const ragResult = await saveToRAG(buildWorkflowRagContext({
+      context: {
       sessionType,
       workflowMode: sessionType,
       sessionMode: sessionType,
@@ -839,8 +792,9 @@ export default function SessionLab({
       afternoon_test_plan_json: analysis.afternoonTestPlan || null,
       midnight_open_review_json: analysis.midnightAnalysis || null,
       required_screenshot_range: requiredScreenshotRange,
-      trade_plan_json: setupData.trade_plan_json,
-    });
+        trade_plan_json: setupData.trade_plan_json,
+      },
+    }));
 
     const receipt = buildSaveReceipt({
       planVersionId,
@@ -923,7 +877,7 @@ export default function SessionLab({
         ]),
       };
       const rawAnalysis = await analyzeChart(payload, morningSettings, session.accountEquity, undefined, undefined, 'morning', undefined, midnightOpen || undefined, instrument, session.riskPercent) as AnalysisResult;
-      const analysis = mergeBridgeContextIntoAnalysis(rawAnalysis, bridgeContext.structuredContext, bridgeContext.summary);
+      const analysis = mergeChartFacts({ analysis: rawAnalysis, ohlcContext: bridgeContext.structuredContext, ohlcSummary: bridgeContext.summary });
 
       setMorningResult(analysis);
       onUpdate({ analysisResult: analysis, morningScreenshot: morningExecImg.dataUrl, morningEthScreenshot: morningEthImg?.dataUrl, dayType: analysis.dayType });
@@ -955,7 +909,7 @@ export default function SessionLab({
         }
         : lunchExecImg.dataUrl;
       const previousAnalysis = morningResult || session.analysisResult ? {
-        appOwnedPlan: buildAppTradePlan((morningResult || session.analysisResult)!, { sessionType: 'morning', instrument }),
+        appOwnedPlan: buildWorkflowDecision((morningResult || session.analysisResult)!, { sessionType: 'morning', instrument }).plan,
         midnightOpenPrice: (morningResult || session.analysisResult)?.midnightOpenPrice,
         ethContextReview: (morningResult || session.analysisResult)?.ethContextReview,
         structuredChartContext: (morningResult || session.analysisResult)?.structuredChartContext,
@@ -975,7 +929,7 @@ export default function SessionLab({
         ]),
       };
       const rawAnalysis = await analyzeChart(payload, lunchSettings, session.accountEquity, previousAnalysis, undefined, 'lunch', undefined, midnightOpen || (morningResult || session.analysisResult)?.midnightOpenPrice?.toString(), instrument, session.riskPercent) as AnalysisResult;
-      const analysis = mergeBridgeContextIntoAnalysis(rawAnalysis, bridgeContext.structuredContext, bridgeContext.summary);
+      const analysis = mergeChartFacts({ analysis: rawAnalysis, ohlcContext: bridgeContext.structuredContext, ohlcSummary: bridgeContext.summary });
 
       setLunchResult(analysis);
       onUpdate({ lunchAnalysisResult: analysis, lunchScreenshot: lunchExecImg.dataUrl });
@@ -1041,53 +995,55 @@ export default function SessionLab({
         });
         await supabase.from('setups').update({ outcome, replay_status: 'verified', contracts }).eq('id', setupId);
         const { saveToRAG } = await import('../lib/rag');
-        await saveToRAG({
-          setupId,
-          sessionType,
-          workflowMode: sessionType,
-          sessionMode: sessionType,
-          ampm: sessionType === 'morning' ? 'AM' : 'PM',
-          chartTimezone: sessionType === 'morning' ? morningTimezone : lunchTimezone,
-          instrument,
-          tradeDate,
-          dayOfWeek: new Date(`${tradeDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' }),
-          geminiConfidence: result.confidence as any,
-          geminiAnalysisJson: result,
-          tradeResult: outcomeToRag(outcome),
-          outcome,
-          proofSubmitted: false,
-          tradeConfirmed: true,
-          tradeTaken: executableOutcome,
-          ruleVersion: result.planVersionId || null,
-          workflowTimestamp: new Date().toISOString(),
-          chartContext: result.structuredChartContext || null,
-          setupCandidates: (result as any).tradeDecision?.setupCandidates || result.candidate_trade_plans || [],
-          selectedSetup: selectedCandidate || result.best_trade_plan || null,
-          finalTradePlan: actualPlan || null,
-          contracts,
-          entryPrice: actualPlan?.entry,
-          stopPrice: actualPlan?.stop,
-          t1: actualPlan?.t1,
-          t2: actualPlan?.t2,
-          riskPoints: actualPlan?.riskPoints,
-          accountEquity: session.accountEquity,
-          riskPercent: session.riskPercent,
-          riskBudgetDollars: selectedRiskSizing.riskBudgetDollars,
-          planSource: selectedCandidate ? 'user_selected_setup_candidate' : actualPlan?.source,
-          whyThisPlan: actualPlan?.whyThisPlan,
-          invalidation: actualPlan?.invalidation,
-          notes: `Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\nRisk sizing: ${selectedRiskSizing.summary}\n${selectedCandidate ? 'User selected a conditional/setup-scan candidate instead of the main plan.' : 'User selected the main app plan.'}`,
-          trade_plan_json: {
-            selected_outcome_plan_key: selectedOutcomePlan.key,
-            selected_outcome_plan_label: selectedOutcomePlan.label,
-            selected_outcome_candidate: selectedCandidate,
-            selected_outcome_plan: actualPlan,
-            selected_outcome_risk_sizing: selectedRiskSizing,
-            account_equity: session.accountEquity,
-            risk_percent: session.riskPercent,
-            normalized_plan: plan,
+        await saveToRAG(buildWorkflowRagContext({
+          context: {
+            setupId,
+            sessionType,
+            workflowMode: sessionType,
+            sessionMode: sessionType,
+            ampm: sessionType === 'morning' ? 'AM' : 'PM',
+            chartTimezone: sessionType === 'morning' ? morningTimezone : lunchTimezone,
+            instrument,
+            tradeDate,
+            dayOfWeek: new Date(`${tradeDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' }),
+            geminiConfidence: result.confidence as any,
+            geminiAnalysisJson: result,
+            tradeResult: outcomeToRag(outcome),
+            outcome,
+            proofSubmitted: false,
+            tradeConfirmed: true,
+            tradeTaken: executableOutcome,
+            ruleVersion: result.planVersionId || null,
+            workflowTimestamp: new Date().toISOString(),
+            chartContext: result.structuredChartContext || null,
+            setupCandidates: (result as any).tradeDecision?.setupCandidates || result.candidate_trade_plans || [],
+            selectedSetup: selectedCandidate || result.best_trade_plan || null,
+            finalTradePlan: actualPlan || null,
+            contracts,
+            entryPrice: actualPlan?.entry,
+            stopPrice: actualPlan?.stop,
+            t1: actualPlan?.t1,
+            t2: actualPlan?.t2,
+            riskPoints: actualPlan?.riskPoints,
+            accountEquity: session.accountEquity,
+            riskPercent: session.riskPercent,
+            riskBudgetDollars: selectedRiskSizing.riskBudgetDollars,
+            planSource: selectedCandidate ? 'user_selected_setup_candidate' : actualPlan?.source,
+            whyThisPlan: actualPlan?.whyThisPlan,
+            invalidation: actualPlan?.invalidation,
+            notes: `Trade Taken: ${tradeTaken ? 'yes' : 'no'}\nOutcome plan: ${selectedOutcomePlan.label}\nRisk sizing: ${selectedRiskSizing.summary}\n${selectedCandidate ? 'User selected a conditional/setup-scan candidate instead of the main plan.' : 'User selected the main app plan.'}`,
+            trade_plan_json: {
+              selected_outcome_plan_key: selectedOutcomePlan.key,
+              selected_outcome_plan_label: selectedOutcomePlan.label,
+              selected_outcome_candidate: selectedCandidate,
+              selected_outcome_plan: actualPlan,
+              selected_outcome_risk_sizing: selectedRiskSizing,
+              account_equity: session.accountEquity,
+              risk_percent: session.riskPercent,
+              normalized_plan: plan,
+            },
           },
-        });
+        }));
       }
 
       if (onAddTrade && executableOutcome && actualPlan) {
