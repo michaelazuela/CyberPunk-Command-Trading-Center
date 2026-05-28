@@ -44,6 +44,10 @@ function compact(value?: string | null, max = 78): string {
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
 }
 
+function sessionPlanPrefix(sessionLabel: string): 'AM' | 'PM' {
+  return /lunch|pm/i.test(sessionLabel) ? 'PM' : 'AM';
+}
+
 function validCandles(chartContext: Partial<ChartContext> | null): Array<Required<Pick<ChartCandleFact, 'index' | 'open' | 'high' | 'low' | 'close'>> & { timestamp?: string | null }> {
   return (chartContext?.candles || [])
     .filter((candle) => isPrice(candle.open) && isPrice(candle.high) && isPrice(candle.low) && isPrice(candle.close))
@@ -64,11 +68,12 @@ function clamp(value: number, min: number, max: number): number {
 
 function matchingFvg(chartContext: Partial<ChartContext> | null, candidate: SetupCandidate): FvgZoneFact | null {
   const entry = candidate.entry;
+  if (!isPrice(entry)) return null;
   const zones = chartContext?.fvgZones || [];
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
   const matching = zones
     .filter((zone) => zone.direction === direction && isPrice(zone.lower) && isPrice(zone.upper))
-    .filter((zone) => !isPrice(entry) || ((zone.lower as number) <= entry && entry <= (zone.upper as number)))
+    .filter((zone) => (zone.lower as number) <= entry && entry <= (zone.upper as number))
     .sort((a, b) => Math.abs(((a.midpoint || a.lower || 0) as number) - (entry || 0)) - Math.abs(((b.midpoint || b.lower || 0) as number) - (entry || 0)));
   return matching[0] || null;
 }
@@ -263,7 +268,7 @@ function renderManagedLines(
     .map((level) => ({ ...level, rawY: y(level.price) }))
     .sort((a, b) => a.rawY - b.rawY);
 
-  const minGap = 42;
+  const minGap = 50;
   for (let index = 1; index < valid.length; index += 1) {
     if (valid[index].rawY - valid[index - 1].rawY < minGap) {
       valid[index].rawY = valid[index - 1].rawY + minGap;
@@ -284,9 +289,9 @@ function renderManagedLines(
     return `
       <line x1="${x.lineStart}" y1="${actualY}" x2="${x.lineEnd}" y2="${actualY}" stroke="${level.color}" stroke-width="${level.width || 2}" ${level.dash ? `stroke-dasharray="${level.dash}"` : ''} />
       ${connector}
-      <text x="${x.text}" y="${labelY - 10}" text-anchor="end" class="line-label" fill="${level.color}">${escapeHtml(level.label)}</text>
-      <rect x="${x.pill}" y="${labelY - 17}" width="94" height="34" rx="7" fill="${level.color}" opacity="0.92" />
-      <text x="${x.pill + 47}" y="${labelY + 6}" text-anchor="middle" class="price-pill">${money(level.price)}</text>
+      <text x="${x.text}" y="${labelY - 12}" text-anchor="end" class="line-label" fill="${level.color}">${escapeHtml(level.label)}</text>
+      <rect x="${x.pill}" y="${labelY - 20}" width="112" height="40" rx="8" fill="${level.color}" opacity="0.92" />
+      <text x="${x.pill + 56}" y="${labelY + 7}" text-anchor="middle" class="price-pill">${money(level.price)}</text>
     `;
   }).join('');
 }
@@ -373,6 +378,58 @@ function statusColor(status: string): string {
   return '#38bdf8';
 }
 
+function planDisplayStatus(model: PlanRenderModel): 'EXECUTABLE' | 'CONDITIONAL' | 'WAIT' | 'BLOCKED' | 'NO TRADE' {
+  const status = String(model.candidate.executionStatus || model.displayStatus || '').toLowerCase();
+  if (status.includes('executable')) return 'EXECUTABLE';
+  if (status.includes('conditional')) return 'CONDITIONAL';
+  if (status.includes('blocked') || status.includes('error')) return 'BLOCKED';
+  if (model.candidate.direction === 'NO TRADE') return 'NO TRADE';
+  return 'WAIT';
+}
+
+function actionStateLine(status: ReturnType<typeof planDisplayStatus>): string {
+  if (status === 'EXECUTABLE') return 'Action: trigger must stay confirmed';
+  if (status === 'BLOCKED') return 'Action: blocked by rule/risk gate';
+  if (status === 'NO TRADE') return 'Action: stand down';
+  return 'Action: wait for 5M trigger';
+}
+
+function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRenderModel): string {
+  const status = planDisplayStatus(model);
+  const accent = model.isLong ? '#4ade80' : '#fb923c';
+  const headerFill = status === 'BLOCKED' || status === 'NO TRADE'
+    ? '#2a0d0d'
+    : model.isLong
+      ? '#062315'
+      : '#261406';
+  const prefix = sessionPlanPrefix(input.sessionLabel);
+  const title = `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
+  return `
+    <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
+    <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
+    <rect x="1290" y="35" width="192" height="38" rx="19" fill="${statusColor(status)}" opacity=".94" />
+    <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(status)}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(model.model, 42))}</text>
+    <text x="1076" y="94" class="banner-action">${escapeHtml(actionStateLine(status))}</text>
+  `;
+}
+
+function renderRiskStrip(model: PlanRenderModel): string {
+  const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
+  const status = planDisplayStatus(model);
+  const border = status === 'BLOCKED' ? '#ef4444' : status === 'EXECUTABLE' ? '#22c55e' : '#facc15';
+  const t1 = targetDataError ? 'review' : isPrice(model.r1) ? `${model.r1.toFixed(1)}R` : 'N/A';
+  const t2 = targetDataError ? 'review' : isPrice(model.r2) ? `${model.r2.toFixed(1)}R` : 'N/A';
+  return `
+    <rect x="466" y="126" width="912" height="48" rx="8" fill="#050908" stroke="${border}" stroke-width="1.6" opacity=".96" />
+    <text x="488" y="157" class="risk-strip">Risk: <tspan fill="#f8fafc">${model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
+    <text x="690" y="157" class="risk-strip">Dollars: <tspan fill="#f8fafc">N/A</tspan></text>
+    <text x="872" y="157" class="risk-strip">Contracts: <tspan fill="#f8fafc">N/A</tspan></text>
+    <text x="1092" y="157" class="risk-strip">T1: <tspan fill="#facc15">${escapeHtml(t1)}</tspan></text>
+    <text x="1238" y="157" class="risk-strip">T2: <tspan fill="#facc15">${escapeHtml(t2)}</tspan></text>
+  `;
+}
+
 function renderRiskSummary(model: PlanRenderModel): string {
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
   const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
@@ -394,8 +451,8 @@ function renderValidationNotice(model: PlanRenderModel): string {
   const primary = model.validationMessages.find((message) => message.includes('Data Error')) || model.validationMessages[0];
   const message = compact(primary, 74);
   return `
-    <rect x="466" y="126" width="620" height="42" rx="7" fill="#130807" stroke="${color}" stroke-width="1.5" opacity=".94" />
-    <text x="482" y="153" class="validation" fill="${color}">${escapeHtml(message)}</text>
+    <rect x="466" y="182" width="620" height="42" rx="7" fill="#130807" stroke="${color}" stroke-width="1.5" opacity=".94" />
+    <text x="482" y="209" class="validation" fill="${color}">${escapeHtml(message)}</text>
   `;
 }
 
@@ -458,6 +515,10 @@ function spreadLabelPoints(points: Array<ChartPoint | null>, minimumGap = 78): A
 function renderNarrativeMarkers(isLong: boolean, anchors: ChartMarkerAnchors): string {
   const color = isLong ? '#4ade80' : '#fb923c';
   const accent = isLong ? '#4ade80' : '#fb923c';
+  const markerBadge = (point: ChartPoint, label: string, badgeColor: string) => `
+    <circle cx="${point.x + 17}" cy="${point.y - 14}" r="20" fill="#020403" stroke="${badgeColor}" stroke-width="4" />
+    <text x="${point.x + 17}" y="${point.y - 3}" text-anchor="middle" class="marker-badge" fill="${badgeColor}">${label}</text>
+  `;
   const [displacementLabel, sweepLabel, reclaimLabel] = spreadLabelPoints([
     anchors.displacement ? labelPoint(anchors.displacement, isLong ? -210 : -130, isLong ? -44 : 70, isLong ? 1180 : 1260) : null,
     anchors.sweep ? labelPoint(anchors.sweep, 22, isLong ? 24 : 22) : null,
@@ -466,33 +527,33 @@ function renderNarrativeMarkers(isLong: boolean, anchors: ChartMarkerAnchors): s
   const displacementMarkup = anchors.displacement && displacementLabel
     ? isLong
       ? `
-        <text x="${displacementLabel.x}" y="${displacementLabel.y}" class="marker-num">③</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Displacement Up</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y + 20}" class="marker-copy">Strong bullish move</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y + 44}" class="marker-copy">creates imbalance</text>
+        ${markerBadge(displacementLabel, '3', accent)}
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Displacement Up</text>
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 20}" class="marker-copy">Strong bullish move</text>
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 44}" class="marker-copy">creates imbalance</text>
         <line x1="${displacementLabel.x + 142}" y1="${displacementLabel.y + 18}" x2="${anchors.displacement.x}" y2="${anchors.displacement.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
       `
       : `
-        <text x="${displacementLabel.x}" y="${displacementLabel.y}" class="marker-num">③</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Failure Down</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y + 20}" class="marker-copy">Failed push lower</text>
-        <text x="${displacementLabel.x + 38}" y="${displacementLabel.y + 44}" class="marker-copy">confirms rejection</text>
+        ${markerBadge(displacementLabel, '3', accent)}
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Failure Down</text>
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 20}" class="marker-copy">Failed push lower</text>
+        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 44}" class="marker-copy">confirms rejection</text>
         <line x1="${displacementLabel.x + 142}" y1="${displacementLabel.y + 18}" x2="${anchors.displacement.x}" y2="${anchors.displacement.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
       `
     : '';
   const sweepMarkup = anchors.sweep && sweepLabel
     ? `
-      <text x="${sweepLabel.x}" y="${sweepLabel.y}" class="sweep-num">①</text>
-      <text x="${sweepLabel.x + 42}" y="${sweepLabel.y - 2}" class="sweep-title">${isLong ? 'Sweep' : 'Raid'}</text>
-      <text x="${sweepLabel.x + 42}" y="${sweepLabel.y + 23}" class="annotation-copy">Liquidity taken</text>
+      ${markerBadge(sweepLabel, '1', '#f59e0b')}
+      <text x="${sweepLabel.x + 52}" y="${sweepLabel.y - 2}" class="sweep-title">${isLong ? 'Sweep' : 'Raid'}</text>
+      <text x="${sweepLabel.x + 52}" y="${sweepLabel.y + 23}" class="annotation-copy">Liquidity taken</text>
       <line x1="${sweepLabel.x + 62}" y1="${sweepLabel.y - 24}" x2="${anchors.sweep.x}" y2="${anchors.sweep.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
     `
     : '';
   const reclaimMarkup = anchors.reclaim && reclaimLabel
     ? `
-      <text x="${reclaimLabel.x}" y="${reclaimLabel.y}" class="marker-num">②</text>
-      <text x="${reclaimLabel.x + 44}" y="${reclaimLabel.y - 2}" class="marker-title" fill="${color}">Reclaim</text>
-      <text x="${reclaimLabel.x + 44}" y="${reclaimLabel.y + 23}" class="annotation-copy">Close back ${isLong ? 'above' : 'below'}</text>
+      ${markerBadge(reclaimLabel, '2', color)}
+      <text x="${reclaimLabel.x + 54}" y="${reclaimLabel.y - 2}" class="marker-title" fill="${color}">Reclaim</text>
+      <text x="${reclaimLabel.x + 54}" y="${reclaimLabel.y + 23}" class="annotation-copy">Close back ${isLong ? 'above' : 'below'}</text>
       <line x1="${reclaimLabel.x + 28}" y1="${reclaimLabel.y - 22}" x2="${anchors.reclaim.x}" y2="${anchors.reclaim.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
     `
     : '';
@@ -690,7 +751,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const high = maxPrice + pad;
   const width = APPROVED_RENDER_WIDTH;
   const height = APPROVED_RENDER_HEIGHT;
-  const plot = { left: 450, top: 112, right: 1426, bottom: 914 };
+  const plot = { left: 450, top: 146, right: 1408, bottom: 914 };
   const xStep = (plot.right - plot.left) / Math.max(1, candles.length - 1);
   const y = (price: number) => plot.bottom - ((price - low) / (high - low)) * (plot.bottom - plot.top);
   const markerAnchors = buildMarkerAnchors(plan, xStep, plot.left, y);
@@ -700,14 +761,14 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .map(({ candle, index }) => {
       const raw = String(candle.timestamp || '');
       const time = raw.match(/T(\d{2}:\d{2})/)?.[1] || raw.match(/\b(\d{2}:\d{2})\b/)?.[1] || '';
-      const labelX = clamp(plot.left + index * xStep, 486, 1376);
+      const labelX = clamp(plot.left + index * xStep, 486, 1358);
       return time
         ? `<text x="${labelX}" y="944" text-anchor="middle" class="time-axis">${escapeHtml(time)}</text>`
         : '';
     }).join('');
   const entryZone = isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="648" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
-       <text x="1082" y="${(y(entryHigh) + y(entryLow)) / 2 - 4}" text-anchor="middle" class="zone-title">Entry / Imbalance Pullback</text>
+       <text x="1082" y="${(y(entryHigh) + y(entryLow)) / 2 - 4}" text-anchor="middle" class="zone-title">Entry Zone</text>
        <text x="1082" y="${(y(entryHigh) + y(entryLow)) / 2 + 26}" text-anchor="middle" class="zone-sub">${money(entryLow)} - ${money(entryHigh)}</text>`
     : '';
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
@@ -722,13 +783,14 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
   const managedLines = renderManagedLines([
     { label: sweepLabel, price: sweep || null, color: '#f97316', dash: '8 7', width: 2.5 },
-    { label: isLong ? 'Stop below sweep low' : 'Stop above sweep high', price: stop, color: '#ef4444', width: 3 },
+    { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
+    { label: 'Stop', price: stop, color: '#ef4444', width: 3 },
     targetsValidForChart && sameT1T2
       ? { label: 'T1/T2 2.0R', price: t2, color: '#facc15', dash: '8 7', width: 2.5 }
       : { label: targetsValidForChart ? 'T1 1.5R' : '', price: targetsValidForChart ? t1 : null, color: '#facc15', dash: '8 7', width: 2.5 },
     sameT1T2 ? { label: '', price: null, color: '#facc15' } : { label: targetsValidForChart ? 'T2 2.0R' : '', price: targetsValidForChart ? t2 : null, color: '#facc15', dash: '8 7', width: 2.5 },
-    { label: targetsValidForChart ? (isLong ? 'Buy-side liquidity' : 'Sell-side liquidity') : '', price: targetsValidForChart ? liquidity : null, color: '#2f8cff', width: 3 },
-  ], y, { lineStart: 450, lineEnd: 1426, text: 1406, pill: 1422 });
+    { label: targetsValidForChart ? 'Liquidity' : '', price: targetsValidForChart ? liquidity : null, color: '#2f8cff', width: 3 },
+  ], y, { lineStart: 450, lineEnd: 1408, text: 1386, pill: 1402 });
 
   return `<!doctype html>
 <html>
@@ -742,11 +804,15 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     svg { width: ${width}px; height: ${height}px; display: block; }
     .title { font-size: 36px; font-weight: 900; letter-spacing: 1px; }
     .subtitle { font-size: 28px; font-weight: 800; fill: #4ade80; }
+    .banner-title { font-size: 34px; font-weight: 950; letter-spacing: .6px; }
+    .banner-sub { font-size: 24px; font-weight: 900; }
+    .banner-action { font-size: 21px; font-weight: 950; fill: #f8fafc; }
+    .banner-status { font-size: 20px; font-weight: 950; fill: #020403; }
     .panel-title { font-size: 26px; font-weight: 900; fill: #f8fafc; }
     .panel-text { font-size: 18px; font-weight: 800; fill: #f8fafc; }
     .small { font-size: 17px; fill: #cbd5e1; }
-    .line-label { font-size: 21px; font-weight: 850; }
-    .price-pill { font-size: 22px; font-weight: 900; fill: white; }
+    .line-label { font-size: 23px; font-weight: 900; }
+    .price-pill { font-size: 24px; font-weight: 950; fill: white; }
     .zone-title { font-size: 28px; font-weight: 900; fill: #f8fafc; }
     .zone-sub { font-size: 23px; font-weight: 850; fill: #f8fafc; }
     .axis { fill: #e5e7eb; font-size: 20px; font-weight: 700; }
@@ -755,8 +821,10 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .context-mini { font-size: 15px; fill: #f8fafc; font-weight: 850; }
     .context-value { font-size: 15px; fill: #4ade80; font-weight: 850; }
     .status-badge { font-size: 15px; font-weight: 950; fill: #020403; }
+    .risk-strip { font-size: 20px; fill: #cbd5e1; font-weight: 900; }
     .validation { font-size: 17px; font-weight: 900; }
     .marker-num { font-size: 35px; fill: #4ade80; font-weight: 900; }
+    .marker-badge { font-size: 27px; font-weight: 950; }
     .marker-title { font-size: 20px; font-weight: 900; }
     .marker-copy { font-size: 17px; fill: #dbeafe; }
     .annotation-copy { font-size: 17px; fill: #dbeafe; }
@@ -781,6 +849,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     </marker>
   </defs>
   <rect x="0" y="0" width="${width}" height="${height}" fill="transparent" />
+  ${renderDirectionalHeader(input, plan)}
   ${Array.from({ length: 12 }, (_, index) => `<line x1="${plot.left + index * ((plot.right - plot.left) / 11)}" y1="${plot.top}" x2="${plot.left + index * ((plot.right - plot.left) / 11)}" y2="${plot.bottom}" stroke="#12201c" stroke-width="1" />`).join('')}
   ${priceTicks.map((price) => {
     const yy = y(price);
@@ -790,6 +859,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${entryZone}
   ${managedLines}
   ${projectedPath}
+  ${renderRiskStrip(plan)}
   <line x1="${plot.left}" y1="${plot.bottom}" x2="${plot.right}" y2="${plot.bottom}" stroke="#e5e7eb" stroke-width="1.3" />
   ${visibleTimeLabels}
   <rect x="14" y="20" width="428" height="214" rx="9" fill="#050908" stroke="${statusColor(plan.displayStatus)}" stroke-width="2" opacity=".96" />
@@ -806,11 +876,6 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${renderRiskSummary(plan)}
   ${renderAlertQuality(candidate)}
   ${renderDirectionLogo(isLong)}
-  <text x="558" y="62" class="title" fill="#f8fafc">${direction} PLAN</text>
-  <text x="558" y="99" class="subtitle">${escapeHtml(model)}</text>
-  <rect x="860" y="34" width="146" height="34" rx="17" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
-  <text x="933" y="57" text-anchor="middle" class="status-badge">${escapeHtml(plan.displayStatus)}</text>
-  <line x1="464" y1="118" x2="932" y2="118" stroke="#166534" stroke-width="2" />
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
@@ -952,6 +1017,10 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
 </html>`;
 }
 
+export function buildChartMarkupHtmlForTest(input: ChartMarkupRenderInput): string {
+  return buildChartHtml(input);
+}
+
 export async function verifyApprovedDailyTradePlanRender(outputPath: string): Promise<{ ok: true } | { ok: false; reason: string }> {
   return validatePngFile(outputPath, {
     expectedWidth: APPROVED_RENDER_WIDTH,
@@ -962,6 +1031,7 @@ export async function verifyApprovedDailyTradePlanRender(outputPath: string): Pr
 
 export async function renderChartMarkup(input: ChartMarkupRenderInput): Promise<string | null> {
   if (!input.candidate || !input.chartContext?.candles?.length) return null;
+  if (input.candidate.direction !== 'LONG' && input.candidate.direction !== 'SHORT') return null;
   const outputDir = input.outputDir || DEFAULT_OUTPUT_DIR;
   const safePrefix = (input.filePrefix || `${input.tradeDate}-${input.sessionLabel}-${input.candidate.direction}`).replace(/[^a-z0-9_-]+/gi, '-');
   const outputPath = path.join(outputDir, `${safePrefix}-${Date.now()}.png`);
@@ -979,6 +1049,7 @@ export async function renderChartMarkup(input: ChartMarkupRenderInput): Promise<
 
 export async function renderPriceLevelMap(input: ChartMarkupRenderInput): Promise<string | null> {
   if (!input.candidate || !input.chartContext?.candles?.length) return null;
+  if (input.candidate.direction !== 'LONG' && input.candidate.direction !== 'SHORT') return null;
   const outputDir = input.outputDir || DEFAULT_OUTPUT_DIR;
   const safePrefix = (input.filePrefix || `${input.tradeDate}-${input.sessionLabel}-${input.candidate.direction}`).replace(/[^a-z0-9_-]+/gi, '-');
   const outputPath = path.join(outputDir, `${safePrefix}-${LEVEL_MAP_SUFFIX}-${Date.now()}.png`);

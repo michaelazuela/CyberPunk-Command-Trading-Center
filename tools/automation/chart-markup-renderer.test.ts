@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type ChartContext, type SetupCandidate } from '../../src/types';
-import { renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
+import { buildChartMarkupHtmlForTest, renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `chart-markup-renderer-${Date.now()}`);
 
@@ -165,6 +165,81 @@ try {
     filePrefix: 'missing-candidate',
   });
   assert.equal(missingCandidateLevelMap, null);
+
+  const candidateBeforeRender = JSON.stringify(candidate);
+  const chartHtml = buildChartMarkupHtmlForTest({
+    chartContext,
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'chart renderer must not mutate the input candidate');
+  assert.ok(chartHtml.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+  assert.ok(chartHtml.includes('Action: wait for 5M trigger'));
+  assert.ok(chartHtml.includes('Risk: <tspan fill="#f8fafc">5.00 pts</tspan>'));
+  assert.ok(chartHtml.includes('Contracts: <tspan fill="#f8fafc">N/A</tspan>'));
+  assert.ok(chartHtml.includes('T1: <tspan fill="#facc15">1.3R</tspan>'));
+  assert.ok(chartHtml.includes('T2: <tspan fill="#facc15">2.4R</tspan>'));
+  assert.ok(chartHtml.includes('Entry Zone'));
+  assert.ok(chartHtml.includes('7080.25'));
+  assert.ok(chartHtml.includes('7075.25'));
+  assert.ok(chartHtml.includes('7086.50'));
+  assert.ok(chartHtml.includes('7092.25'));
+  assert.ok(!chartHtml.includes('canExecute'));
+  assert.ok(!chartHtml.includes('noTradeReason'));
+
+  const noTradeCandidate: SetupCandidate = {
+    ...candidate,
+    direction: 'NO TRADE',
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: NoTradeReason.NoApprovedSetup,
+  };
+  const noTradeChart = await renderChartMarkup({
+    chartContext,
+    candidate: noTradeCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'no-trade',
+  });
+  assert.equal(noTradeChart, null, 'NO TRADE rendering must not invent entry/stop/target levels');
+  const noTradeMap = await renderPriceLevelMap({
+    chartContext,
+    candidate: noTradeCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+    outputDir,
+    filePrefix: 'no-trade',
+  });
+  assert.equal(noTradeMap, null, 'NO TRADE level map must not invent trade levels');
+
+  const missingLevelsCandidate: SetupCandidate = {
+    ...candidate,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+  };
+  const missingLevelsHtml = buildChartMarkupHtmlForTest({
+    chartContext,
+    candidate: missingLevelsCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.ok(missingLevelsHtml.includes('Entry Zone: <tspan fill="#4ade80">N/A - N/A</tspan>'));
+  assert.ok(missingLevelsHtml.includes('Stop: <tspan fill="#ef4444">N/A</tspan>'));
+  assert.ok(missingLevelsHtml.includes('Risk: <tspan fill="#f97316">N/A</tspan>'));
+  assert.ok(!missingLevelsHtml.includes('0.00'));
 
   const output = await renderChartMarkup({
     chartContext,
