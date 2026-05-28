@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildChartMarkupHtmlForTest, renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
+import { buildChartMarkupHtmlForTest, buildPriceLevelMapHtmlForTest, renderChartMarkup, renderPriceLevelMap, resolveChartMarkerAnchorFacts, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `chart-markup-renderer-${Date.now()}`);
 
@@ -116,6 +116,16 @@ const candidate: SetupCandidate = {
     targetModel: 'actual_r_with_structural_context',
     objectives: [],
     notes: [],
+    obstacleTarget1: {
+      label: 'Opening range reaction zone',
+      price: 7084.75,
+      direction: 'LONG',
+      source: 'rth_morning',
+      type: 'imbalance_zone',
+      confidence: 'Medium',
+      score: 64,
+      reason: 'Reaction zone before liquidity.',
+    },
     liquidityTarget1: {
       label: 'Buy-side liquidity',
       price: 7095.25,
@@ -125,6 +135,26 @@ const candidate: SetupCandidate = {
       confidence: 'High',
       score: 90,
       reason: 'Buy-side liquidity above entry.',
+    },
+    liquidityTarget2: {
+      label: 'Prior session high',
+      price: 7098.5,
+      direction: 'LONG',
+      source: 'previous_rth',
+      type: 'high',
+      confidence: 'High',
+      score: 86,
+      reason: 'Second real liquidity objective.',
+    },
+    liquidityRunnerTarget: {
+      label: 'Runner high',
+      price: 7101.25,
+      direction: 'LONG',
+      source: 'current_window',
+      type: 'high',
+      confidence: 'Medium',
+      score: 72,
+      reason: 'Runner objective if T2 clears.',
     },
   },
   invalidation: 'Invalid below sweep low.',
@@ -188,6 +218,33 @@ try {
   assert.ok(chartHtml.includes('7092.25'));
   assert.ok(!chartHtml.includes('canExecute'));
   assert.ok(!chartHtml.includes('noTradeReason'));
+
+  const levelMapHtml = buildPriceLevelMapHtmlForTest({
+    chartContext,
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'level map renderer must not mutate the input candidate');
+  assert.ok(levelMapHtml.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+  assert.ok(levelMapHtml.includes('Action: wait for 5M trigger'));
+  assert.ok(levelMapHtml.includes('pending trigger'));
+  assert.ok(levelMapHtml.includes('ENTRY WAIT'));
+  assert.ok(levelMapHtml.includes('STOP'));
+  assert.ok(levelMapHtml.includes('T1 1.5R'));
+  assert.ok(levelMapHtml.includes('T2 2.0R'));
+  assert.ok(levelMapHtml.includes('LQ1'));
+  assert.ok(levelMapHtml.includes('LQ2'));
+  assert.ok(levelMapHtml.includes('OBSTACLE'));
+  assert.ok(levelMapHtml.includes('RUNNER'));
+  assert.ok(levelMapHtml.includes('Risk 5.00 pts | Dollars N/A | Contracts N/A'));
+  assert.ok(levelMapHtml.includes('Obstacle 7084.75'));
+  assert.ok(levelMapHtml.includes('LQ1 7095.25'));
+  assert.ok(levelMapHtml.includes('LQ2 7098.50'));
+  assert.ok(levelMapHtml.includes('Runner 7101.25'));
+  assert.ok(!levelMapHtml.includes('canExecute'));
+  assert.ok(!levelMapHtml.includes('noTradeReason'));
 
   const noTradeCandidate: SetupCandidate = {
     ...candidate,

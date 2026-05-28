@@ -430,6 +430,11 @@ function renderRiskStrip(model: PlanRenderModel): string {
   `;
 }
 
+function latestClose(plan: PlanRenderModel): number | null {
+  const last = plan.candles[plan.candles.length - 1];
+  return isPrice(last?.close) ? last.close : null;
+}
+
 function renderRiskSummary(model: PlanRenderModel): string {
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
   const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
@@ -892,17 +897,24 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const height = APPROVED_RENDER_HEIGHT;
   const isLong = plan.isLong;
   const accent = isLong ? '#4ade80' : '#fb923c';
-  const pathColor = accent;
   const validTargets = !plan.validationMessages.some((message) => message.includes('Target Data Error'));
-  const levelRows = [
-    { key: 'liquidity', label: isLong ? 'Buy-side Liquidity' : 'Sell-side Liquidity', price: validTargets ? plan.liquidity : null, color: '#2f8cff' },
-    { key: 't2', label: nearlyEqual(plan.t1, plan.t2) ? 'T1 / T2' : 'T2 / 2.0R', price: validTargets ? plan.t2 : null, color: '#facc15' },
-    { key: 't1', label: 'T1 / 1.5R', price: validTargets && !nearlyEqual(plan.t1, plan.t2) ? plan.t1 : null, color: '#facc15' },
-    { key: 'entryTop', label: isLong ? 'FVG Top' : 'Entry Top', price: plan.entryHigh, color: accent },
-    { key: 'entryBottom', label: isLong ? 'FVG Bottom / Entry' : 'Entry Bottom', price: plan.entryLow, color: accent },
-    { key: 'sweep', label: isLong ? 'Sell-side Sweep' : 'Buy-side Sweep', price: plan.sweep, color: '#f97316' },
-    { key: 'stop', label: 'Stop Loss', price: plan.stop, color: '#ef4444' },
-  ].filter((row): row is { key: string; label: string; price: number; color: string } => isPrice(row.price));
+  const status = planDisplayStatus(plan);
+  const prefix = sessionPlanPrefix(input.sessionLabel);
+  const current = latestClose(plan);
+  const targetPlan = plan.candidate.targetObjectivePlan;
+  const levelRowSource: Array<{ key: string; label: string; price: number | null | undefined; color: string; dash?: string }> = [
+    { key: 'runner', label: 'RUNNER', price: validTargets ? targetPlan?.liquidityRunnerTarget?.price || targetPlan?.runnerTarget?.price : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'lq2', label: 'LQ2', price: validTargets ? targetPlan?.liquidityTarget2?.price : null, color: '#2f8cff', dash: '8 7' },
+    { key: 'lq1', label: 'LQ1', price: validTargets ? targetPlan?.liquidityTarget1?.price || targetPlan?.nearestLiquidityTarget?.price : null, color: '#2f8cff' },
+    { key: 't2', label: nearlyEqual(plan.t1, plan.t2) ? 'T1/T2' : 'T2 2.0R', price: validTargets ? plan.t2 : null, color: '#facc15', dash: '8 7' },
+    { key: 't1', label: 'T1 1.5R', price: validTargets && !nearlyEqual(plan.t1, plan.t2) ? plan.t1 : null, color: '#facc15', dash: '8 7' },
+    { key: 'obstacle', label: 'OBSTACLE', price: validTargets ? targetPlan?.obstacleTarget1?.price || targetPlan?.nearestObstacleTarget?.price : null, color: '#f97316', dash: '6 6' },
+    { key: 'current', label: 'CURRENT', price: current, color: '#e2e8f0', dash: '4 7' },
+    { key: 'entry', label: status === 'CONDITIONAL' || status === 'WAIT' ? 'ENTRY WAIT' : 'ENTRY', price: plan.entry, color: accent },
+    { key: 'stop', label: 'STOP', price: plan.stop, color: '#ef4444' },
+  ];
+  const levelRows = levelRowSource
+    .filter((row): row is { key: string; label: string; price: number; color: string; dash?: string } => isPrice(row.price));
   const prices = levelRows.length
     ? levelRows.map((row) => row.price)
     : plan.safeChartPrices.length
@@ -913,10 +925,10 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const pad = Math.max(1, (maxPrice - minPrice) * 0.18);
   const low = minPrice - pad;
   const high = maxPrice + pad;
-  const map = { left: 170, top: 190, right: 1230, bottom: 840 };
+  const map = { left: 146, top: 214, right: 1218, bottom: 800 };
   const y = (price: number) => map.bottom - ((price - low) / (high - low)) * (map.bottom - map.top);
-  const entryTopY = isPrice(plan.entryHigh) ? y(plan.entryHigh) : null;
-  const entryBottomY = isPrice(plan.entryLow) ? y(plan.entryLow) : null;
+  const entryTopY = isPrice(plan.entryHigh) ? y(plan.entryHigh) : isPrice(plan.entry) ? y(plan.entry) : null;
+  const entryBottomY = isPrice(plan.entryLow) ? y(plan.entryLow) : isPrice(plan.entry) ? y(plan.entry) : null;
   const stopY = isPrice(plan.stop) ? y(plan.stop) : null;
   const rewardEnd = validTargets && isPrice(plan.liquidity) ? y(plan.liquidity) : validTargets && isPrice(plan.t2) ? y(plan.t2) : null;
   const entryMid = isPrice(entryTopY) && isPrice(entryBottomY) ? (entryTopY + entryBottomY) / 2 : null;
@@ -930,36 +942,36 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
     ? `<rect x="${map.left}" y="${Math.min(entryTopY, entryBottomY)}" width="${map.right - map.left}" height="${Math.max(10, Math.abs(entryBottomY - entryTopY))}" fill="${accent}" opacity=".24" stroke="${accent}" stroke-width="2" />`
     : '';
   const validation = plan.validationMessages.length
-    ? `<rect x="112" y="878" width="1312" height="54" rx="8" fill="#130807" stroke="${plan.validationSeverity === 'error' ? '#ef4444' : '#f97316'}" />
-       <text x="768" y="912" text-anchor="middle" class="validation" fill="${plan.validationSeverity === 'error' ? '#ef4444' : '#f97316'}">${escapeHtml(compact(plan.validationMessages.find((message) => message.includes('Data Error')) || plan.validationMessages[0], 110))}</text>`
+    ? `<text x="768" y="815" text-anchor="middle" class="validation" fill="${plan.validationSeverity === 'error' ? '#ef4444' : '#f97316'}">${escapeHtml(compact(plan.validationMessages.find((message) => message.includes('Data Error')) || plan.validationMessages[0], 92))}</text>`
     : '';
   const positionedRows = levelRows
     .sort((a, b) => y(a.price) - y(b.price))
     .map((row) => ({ ...row, actualY: y(row.price), labelY: y(row.price) }));
   for (let index = 1; index < positionedRows.length; index += 1) {
-    if (positionedRows[index].labelY - positionedRows[index - 1].labelY < 44) {
-      positionedRows[index].labelY = positionedRows[index - 1].labelY + 44;
+    if (positionedRows[index].labelY - positionedRows[index - 1].labelY < 56) {
+      positionedRows[index].labelY = positionedRows[index - 1].labelY + 56;
     }
   }
   for (let index = positionedRows.length - 2; index >= 0; index -= 1) {
-    if (positionedRows[index + 1].labelY > map.bottom - 26 && positionedRows[index + 1].labelY - positionedRows[index].labelY < 44) {
-      positionedRows[index].labelY = positionedRows[index + 1].labelY - 44;
+    if (positionedRows[index + 1].labelY > map.bottom - 32 && positionedRows[index + 1].labelY - positionedRows[index].labelY < 56) {
+      positionedRows[index].labelY = positionedRows[index + 1].labelY - 56;
     }
   }
   const rows = positionedRows.length
     ? positionedRows
     .map((row) => {
       const yy = row.actualY;
-      const labelY = clamp(row.labelY, map.top + 30, map.bottom - 30);
+      const labelY = clamp(row.labelY, map.top + 36, map.bottom - 36);
       const connector = Math.abs(labelY - yy) > 3
-        ? `<line x1="${map.right}" y1="${yy}" x2="${map.right + 24}" y2="${labelY}" stroke="${row.color}" stroke-width="1.5" opacity=".55" />`
+        ? `<line x1="${map.right}" y1="${yy}" x2="${map.right + 30}" y2="${labelY}" stroke="${row.color}" stroke-width="1.7" opacity=".68" />`
         : '';
       return `
-        <line x1="${map.left}" y1="${yy}" x2="${map.right}" y2="${yy}" stroke="${row.color}" stroke-width="2.5" ${row.key === 't1' || row.key === 't2' ? 'stroke-dasharray="8 7"' : ''} />
+        <line x1="${map.left}" y1="${yy}" x2="${map.right}" y2="${yy}" stroke="${row.color}" stroke-width="${row.key === 'entry' || row.key === 'stop' ? 4 : 2.7}" ${row.dash ? `stroke-dasharray="${row.dash}"` : ''} />
         ${connector}
-        <text x="${map.left + 28}" y="${labelY - 12}" class="map-label" fill="${row.color}">${escapeHtml(row.label)}</text>
-        <rect x="${map.right + 26}" y="${labelY - 20}" width="126" height="40" rx="7" fill="${row.color}" opacity=".92" />
-        <text x="${map.right + 89}" y="${labelY + 7}" text-anchor="middle" class="map-price">${money(row.price)}</text>
+        <rect x="${map.left + 20}" y="${labelY - 24}" width="180" height="48" rx="8" fill="#020807" stroke="${row.color}" stroke-width="2" opacity=".95" />
+        <text x="${map.left + 110}" y="${labelY + 8}" text-anchor="middle" class="map-label" fill="${row.color}">${escapeHtml(row.label)}</text>
+        <rect x="${map.right + 30}" y="${labelY - 24}" width="156" height="48" rx="8" fill="${row.color}" opacity=".94" />
+        <text x="${map.right + 108}" y="${labelY + 9}" text-anchor="middle" class="map-price">${money(row.price)}</text>
       `;
     }).join('')
     : `
@@ -967,8 +979,15 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
         <text x="768" y="534" text-anchor="middle" class="small">No validated entry, stop, target, sweep, or liquidity levels were available.</text>
       `;
   const rrNote = validTargets
-    ? `Risk ${plan.risk ? plan.risk.toFixed(2) : 'N/A'} pts • T1 ${isPrice(plan.r1) ? plan.r1.toFixed(1) : 'N/A'}R • T2 ${isPrice(plan.r2) ? plan.r2.toFixed(1) : 'N/A'}R • Liquidity ${isPrice(plan.liquidityR) ? plan.liquidityR.toFixed(1) : 'N/A'}R`
+    ? `Risk ${plan.risk ? plan.risk.toFixed(2) : 'N/A'} pts | Dollars N/A | Contracts N/A | T1 ${isPrice(plan.r1) ? plan.r1.toFixed(1) : 'N/A'}R | T2 ${isPrice(plan.r2) ? plan.r2.toFixed(1) : 'N/A'}R`
     : 'Targets require validation before execution.';
+  const contextNote = [
+    targetPlan?.obstacleTarget1 ? `Obstacle ${money(targetPlan.obstacleTarget1.price)}` : null,
+    targetPlan?.liquidityTarget1 ? `LQ1 ${money(targetPlan.liquidityTarget1.price)}` : null,
+    targetPlan?.liquidityTarget2 ? `LQ2 ${money(targetPlan.liquidityTarget2.price)}` : null,
+    targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget ? `Runner ${money((targetPlan.liquidityRunnerTarget || targetPlan.runnerTarget)?.price)}` : null,
+  ].filter(Boolean).join(' | ') || 'No extra liquidity/obstacle context provided.';
+  const invalidationNote = compact(plan.candidate.invalidation || 'Invalidation follows protected structure stop.', 96);
 
   return `<!doctype html>
 <html>
@@ -980,34 +999,44 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
       radial-gradient(circle at 74% 18%, rgba(56,189,248,.13), transparent 34%),
       linear-gradient(180deg, #030703 0%, #060907 100%); overflow: hidden; }
     svg { width: ${width}px; height: ${height}px; display: block; }
-    .title { font-size: 54px; font-weight: 950; letter-spacing: 1px; fill: #f8fafc; }
-    .subtitle { font-size: 28px; font-weight: 850; fill: ${accent}; }
+    .title { font-size: 38px; font-weight: 950; letter-spacing: .7px; fill: #f8fafc; }
+    .subtitle { font-size: 24px; font-weight: 850; fill: ${accent}; }
     .small { font-size: 21px; fill: #cbd5e1; font-weight: 750; }
-    .map-label { font-size: 26px; font-weight: 950; }
-    .map-price { font-size: 25px; font-weight: 950; fill: white; }
+    .map-label { font-size: 25px; font-weight: 950; }
+    .map-price { font-size: 27px; font-weight: 950; fill: white; }
     .panel-title { font-size: 24px; font-weight: 950; fill: #f8fafc; }
-    .validation { font-size: 22px; font-weight: 950; }
+    .header-pill { font-size: 21px; font-weight: 950; fill: #020403; }
+    .action-title { font-size: 23px; font-weight: 950; fill: #f8fafc; }
+    .action-copy { font-size: 21px; font-weight: 850; fill: #dbeafe; }
+    .validation { font-size: 20px; font-weight: 950; }
   </style>
 </head>
 <body>
 <div class="wrap">
 <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <rect x="0" y="0" width="${width}" height="${height}" fill="transparent" />
-  ${Array.from({ length: 12 }, (_, index) => `<line x1="${120 + index * 116}" y1="120" x2="${120 + index * 116}" y2="862" stroke="#12201c" stroke-width="1" />`).join('')}
-  ${Array.from({ length: 8 }, (_, index) => `<line x1="112" y1="${190 + index * 92}" x2="1424" y2="${190 + index * 92}" stroke="#12201c" stroke-width="1" />`).join('')}
+  ${Array.from({ length: 12 }, (_, index) => `<line x1="${120 + index * 116}" y1="146" x2="${120 + index * 116}" y2="820" stroke="#12201c" stroke-width="1" />`).join('')}
+  ${Array.from({ length: 8 }, (_, index) => `<line x1="112" y1="${214 + index * 76}" x2="1424" y2="${214 + index * 76}" stroke="#12201c" stroke-width="1" />`).join('')}
   ${renderDirectionLogo(isLong).replace('translate(470 29)', 'translate(112 42)')}
-  <text x="202" y="88" class="title">${plan.direction} LEVEL MAP</text>
-  <text x="204" y="126" class="subtitle">${escapeHtml(plan.model)}</text>
-  <rect x="1114" y="50" width="286" height="50" rx="25" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
-  <text x="1257" y="83" text-anchor="middle" class="panel-title" fill="#020403">${escapeHtml(plan.displayStatus)}</text>
-  <text x="204" y="162" class="small">${escapeHtml(input.instrument)} • ${escapeHtml(input.sessionLabel.toUpperCase())} • Same data as chart and risk summary</text>
+  <rect x="202" y="32" width="1284" height="108" rx="12" fill="${isLong ? '#062315' : '#261406'}" stroke="${accent}" stroke-width="2.3" opacity=".97" />
+  <text x="232" y="76" class="title">[${prefix} PLAN] ${escapeHtml(input.instrument)} - ${plan.direction} ${status}</text>
+  <text x="232" y="112" class="subtitle">${escapeHtml(compact(plan.model, 54))}</text>
+  <rect x="1122" y="48" width="180" height="42" rx="21" fill="${statusColor(status)}" opacity=".94" />
+  <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status)}</text>
+  <rect x="1320" y="48" width="132" height="42" rx="21" fill="#e2e8f0" opacity=".94" />
+  <text x="1386" y="76" text-anchor="middle" class="header-pill">${money(current)}</text>
+  <text x="1122" y="116" class="action-copy">${escapeHtml(actionStateLine(status))}</text>
   <rect x="${map.left}" y="${map.top}" width="${map.right - map.left}" height="${map.bottom - map.top}" rx="12" fill="#030807" stroke="#164e63" stroke-width="2" opacity=".94" />
   ${rewardZone}
   ${riskZone}
   ${entryZone}
   ${rows}
-  <rect x="112" y="886" width="1312" height="54" rx="8" fill="#070b0f" stroke="#64748b" opacity=".9" />
-  <text x="768" y="920" text-anchor="middle" class="small">${escapeHtml(rrNote)}</text>
+  <rect x="112" y="824" width="1312" height="124" rx="10" fill="#070b0f" stroke="#64748b" opacity=".94" />
+  <text x="142" y="860" class="action-title">ACTION</text>
+  <text x="260" y="860" class="action-copy">${escapeHtml(actionStateLine(status))}${status === 'CONDITIONAL' || status === 'WAIT' ? ' - pending trigger' : ''}</text>
+  <text x="142" y="890" class="action-copy">${escapeHtml(rrNote)}</text>
+  <text x="142" y="916" class="action-copy">${escapeHtml(contextNote)}</text>
+  <text x="142" y="936" class="action-copy">Invalid: ${escapeHtml(invalidationNote)}</text>
   ${validation}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
   <text x="768" y="991" text-anchor="middle" class="small">Decision Support Only • No automated orders • Levels must match the active app-owned trade plan</text>
@@ -1019,6 +1048,10 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
 
 export function buildChartMarkupHtmlForTest(input: ChartMarkupRenderInput): string {
   return buildChartHtml(input);
+}
+
+export function buildPriceLevelMapHtmlForTest(input: ChartMarkupRenderInput): string {
+  return buildLevelMapHtml(input);
 }
 
 export async function verifyApprovedDailyTradePlanRender(outputPath: string): Promise<{ ok: true } | { ok: false; reason: string }> {
