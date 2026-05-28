@@ -1,6 +1,12 @@
 import { targetsFromEntryStop } from '../../src/config/tradeRules';
-import { scannerAlertQualityFromScore } from '../../src/lib/localScannerEngine';
 import { TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import {
+  assertDiscordReportDesignerIsAdvisoryOnly,
+  designDiscordVisualReport,
+  type DiscordDecisionStatus,
+  type MemoryHistoricalSupport,
+  type ReportDirection,
+} from '../../src/agents/discordReportDesignerAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
 
 export type CompactDiscordSession = 'morning' | 'lunch';
@@ -79,12 +85,20 @@ interface CompactDiscordSummaryArgs {
   statusOverride?: string | null;
 }
 
-function moneyLine(value: number | null | undefined): string {
-  return typeof value === 'number' && Number.isFinite(value) ? String(value) : 'N/A';
+function priceLine(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+function numberLine(value: number | null | undefined, digits = 2): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
 }
 
 function sessionDisplayName(session: CompactDiscordSession): string {
   return session === 'morning' ? 'Morning' : 'Lunch';
+}
+
+function sessionShortLabel(session: CompactDiscordSession): string {
+  return session === 'morning' ? 'AM' : 'PM';
 }
 
 function statusEmoji(status: string | undefined): string {
@@ -113,24 +127,6 @@ function candidateLevels(candidate: SetupCandidate): { stop: number | null; targ
   };
 }
 
-function candidateConfidenceScore(candidate: SetupCandidate): number {
-  if (typeof candidate.decisionQualityScore === 'number') return candidate.decisionQualityScore;
-  const base =
-    candidate.executionStatus === 'Executable' ? 55 :
-    candidate.executionStatus === 'Conditional' ? 42 :
-    candidate.executionStatus === 'Blocked' ? 35 :
-    20;
-  const confidence =
-    candidate.confidence === 'High' ? 15 :
-    candidate.confidence === 'Medium' ? 8 :
-    2;
-  const trigger = candidate.requiredTrigger ? 8 : 0;
-  const stop = candidate.stop ? 8 : 0;
-  const target = candidate.target1 && candidate.target2 ? 8 : 0;
-  const context = candidate.levelContextScore ? Math.min(6, Math.round(candidate.levelContextScore / 4)) : 0;
-  return Math.max(0, Math.min(100, Math.round(base + confidence + trigger + stop + target + context)));
-}
-
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
   if (override) return override;
   if (candidate?.executionStatus) return candidate.executionStatus;
@@ -139,33 +135,87 @@ function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalize
   return 'Conditional';
 }
 
-function compactTradeDirection(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
+function compactTradeDirection(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): ReportDirection {
   if (candidate?.direction && candidate.direction !== 'NO TRADE') return candidate.direction;
   return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'WAIT';
 }
 
-function compactLevelsLine(candidate: SetupCandidate | null): string {
-  if (!candidate) return 'Levels: no active candidate levels available.';
-  const levels = candidateLevels(candidate);
-  const liquidityTarget =
-    candidate.targetObjectivePlan?.liquidityTarget1 ||
-    candidate.targetObjectivePlan?.nearestLiquidityTarget ||
-    candidate.targetObjectivePlan?.liquidityRunnerTarget ||
-    null;
-  return [
-    `Entry ${moneyLine(candidate.entry)}`,
-    `Stop ${moneyLine(levels.stop)}`,
-    `T1 ${moneyLine(levels.target1)}`,
-    `T2 ${moneyLine(levels.target2)}`,
-    `Liquidity ${moneyLine(liquidityTarget?.price)}`,
-  ].join(' | ');
+function reportStatus(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): DiscordDecisionStatus {
+  const status = compactSessionDecisionLabel(candidate, normalized, override).toLowerCase();
+  if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
+  if (status.includes('approved') || status.includes('executable')) return 'EXECUTABLE';
+  if (status.includes('blocked') || status.includes('no trade') || status.includes('notrade')) return 'NO TRADE';
+  if (status.includes('conditional')) return 'CONDITIONAL';
+  return 'WAIT';
 }
 
-function compactActionLine(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
-  if (!candidate) return 'Action: no trade plan candidate. Keep this as market mapping only.';
-  if (candidate.executionStatus === 'Executable') return 'Action: verify completed 5M trigger, protected stop, and target room before acting.';
-  if (candidate.executionStatus === 'Blocked') return `Action: blocked. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
-  return `Action: wait. ${candidate.requiredTrigger || candidate.nextAction || 'Confirmation still required.'}`;
+function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
+  if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
+  if (status === 'CONDITIONAL') return 'WAIT - trigger not confirmed';
+  if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
+  return 'WAIT - app-owned pipeline has not approved execution';
+}
+
+function compactActionText(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
+  if (status === 'NO TRADE') return 'Stand down. Recheck at next scheduled scan.';
+  if (!candidate) return 'Stand down. No active plan candidate.';
+  if (status === 'EXECUTABLE') return 'Verify completed 5M trigger, protected stop, target room, and invalidation before trader action.';
+  if (candidate.executionStatus === 'Blocked') return `Stand down. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
+  return candidate.requiredTrigger || candidate.nextAction || 'Wait for completed 5M trigger. No early entry.';
+}
+
+function compactPlanLines(candidate: SetupCandidate): string[] {
+  const levels = candidateLevels(candidate);
+  return [
+    'Plan:',
+    `Entry: ${priceLine(candidate.entry)}`,
+    `Stop: ${priceLine(levels.stop)}`,
+    `T1: ${priceLine(levels.target1)}`,
+    `T2: ${priceLine(levels.target2)}`,
+    `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
+  ];
+}
+
+function compactKeyLevelLines(candidate: SetupCandidate | null): string[] {
+  const targetPlan = candidate?.targetObjectivePlan;
+  const resistance =
+    targetPlan?.liquidityTarget1?.type === 'high' ? targetPlan.liquidityTarget1.price :
+    targetPlan?.liquidityTarget2?.type === 'high' ? targetPlan.liquidityTarget2.price :
+    targetPlan?.nearestLiquidityTarget?.type === 'high' ? targetPlan.nearestLiquidityTarget.price :
+    null;
+  const support =
+    targetPlan?.liquidityTarget1?.type === 'low' ? targetPlan.liquidityTarget1.price :
+    targetPlan?.liquidityTarget2?.type === 'low' ? targetPlan.liquidityTarget2.price :
+    targetPlan?.nearestLiquidityTarget?.type === 'low' ? targetPlan.nearestLiquidityTarget.price :
+    null;
+  const liquidity =
+    targetPlan?.liquidityTarget1 ||
+    targetPlan?.nearestLiquidityTarget ||
+    targetPlan?.liquidityRunnerTarget ||
+    null;
+  return [
+    'Key Levels:',
+    `Resistance: ${priceLine(resistance)}`,
+    `Support: ${priceLine(support)}`,
+    `Liquidity: ${liquidity ? `${liquidity.label} ${priceLine(liquidity.price)}` : 'N/A'}`,
+  ];
+}
+
+function memoryLines(): string[] {
+  return [
+    'Memory:',
+    'Similar setups: 0',
+    'Historical support: Neutral',
+    'Warning: none',
+  ];
+}
+
+function memorySupportForDesigner(): MemoryHistoricalSupport {
+  return 'NEUTRAL';
+}
+
+function noTradeReason(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
+  return normalized.noTradeReason || candidate?.blockReason || 'No active plan candidate available.';
 }
 
 export function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
@@ -181,29 +231,82 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const finalStatus = args.statusOverride || args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
-  const score = typeof args.scoreOverride === 'number' ? args.scoreOverride : bestCandidate ? candidateConfidenceScore(bestCandidate) : null;
-  const scoreLabel = score === null ? 'N/A' : `${score}/100`;
-  const quality = score === null ? null : scannerAlertQualityFromScore(score).label;
+  const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);
   const model = bestCandidate ? professionalCandidateModelLabel(bestCandidate) : 'No approved model candidate';
-  const sourceLabel = args.sourceLabel || sessionDisplayName(args.session);
-  const windowLine = args.windowLabel ? `Window: ${args.windowLabel}` : `Session: ${sessionDisplayName(args.session)}`;
-  const lines = [
-    `**${direction} ${sourceLabel} Alert - ${decision}**`,
-    `Model: ${model}`,
-    `Score: ${scoreLabel}${quality ? ` | ${quality}` : ''}`,
-    compactLevelsLine(bestCandidate),
-    compactActionLine(bestCandidate, args.normalized),
-    windowLine,
-    compactAttachmentLine(args.attachments, Boolean(bestCandidate)),
-  ];
+  const reportKind = designerStatus === 'NO TRADE' ? 'REVIEW' : 'PLAN';
+  const sessionLabel = sessionShortLabel(args.session);
+  const headlineDirection = designerStatus === 'NO TRADE' ? 'NO TRADE' : direction;
+  const headlineStatus = designerStatus === 'NO TRADE' ? '' : ` ${decision.toUpperCase()}`;
+  const headline = `[${sessionLabel} ${reportKind}] ${args.instrument} - ${headlineDirection}${headlineStatus}`;
+  const levels = bestCandidate ? candidateLevels(bestCandidate) : { stop: null, target1: null, target2: null };
+  const action = compactActionText(bestCandidate, args.normalized, designerStatus);
+  const designerRecommendation = designDiscordVisualReport({
+    reportType: 'discord_alert',
+    headline,
+    session: sessionDisplayName(args.session),
+    instrument: args.instrument,
+    direction: headlineDirection,
+    status: designerStatus,
+    setupType: model,
+    actionInstruction: action,
+    entry: bestCandidate?.entry ?? null,
+    stop: levels.stop,
+    t1: levels.target1,
+    t2: levels.target2,
+    riskPoints: bestCandidate?.riskPoints ?? null,
+    riskDollars: null,
+    invalidation: bestCandidate?.invalidation || args.normalized.invalidation || null,
+    noTradeReason: noTradeReason(bestCandidate, args.normalized),
+    memory: {
+      similarSetupCount: 0,
+      completedSetupCount: 0,
+      historicalSupport: memorySupportForDesigner(),
+      confidenceAdjustment: 'neutral',
+      memoryWarning: null,
+    },
+  });
+  assertDiscordReportDesignerIsAdvisoryOnly(designerRecommendation as unknown as Record<string, unknown>);
+
+  const lines = bestCandidate && designerStatus !== 'NO TRADE'
+    ? [
+        designerRecommendation.headlineRecommendation,
+        `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
+        '',
+        ...compactPlanLines(bestCandidate),
+        '',
+        'Invalidation:',
+        bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.',
+        '',
+        ...memoryLines(),
+        '',
+        'Action:',
+        designerRecommendation.actionLine,
+        '',
+        compactAttachmentLine(args.attachments, true),
+        'Decision support only. No automated orders.',
+      ]
+    : [
+        designerRecommendation.headlineRecommendation,
+        `Reason: ${noTradeReason(bestCandidate, args.normalized)}`,
+        '',
+        ...compactKeyLevelLines(bestCandidate),
+        '',
+        ...memoryLines(),
+        '',
+        'Action:',
+        designerRecommendation.actionLine,
+        '',
+        compactAttachmentLine(args.attachments, Boolean(bestCandidate)),
+        'Decision support only. No automated orders.',
+      ];
 
   return {
     username: 'Quant Desk',
-    content: `${statusEmoji(finalStatus)} Quant Desk ${sourceLabel} Alert | ${args.instrument} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
+    content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
     embeds: [
       {
         title: 'Compact Trade Plan Summary',
-        description: professionalizeReportText(`${lines.join('\n')}\n\nDecision support only. No automated orders.`),
+        description: professionalizeReportText(lines.join('\n')),
         color: statusColor(finalStatus),
         fields: [],
         footer: { text: 'Quant Desk • App-Owned Trade Pipeline • Chart Plan + Price Level Map when available' },

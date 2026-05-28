@@ -78,7 +78,25 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
   }
   assert.ok(!/Missing rea\.\.\.|Qualified rea\.\.\.|Target casc\.\.\.|Audit det\.\.\.|Counte\.\.\.|Audit detail|\{"/i.test(text));
   assert.ok(text.includes('Compact Trade Plan Summary'));
+  assert.ok(text.includes('Status:'));
+  assert.ok(text.includes('Memory:'));
+  assert.ok(text.includes('Historical support: Neutral'));
+  assert.ok(text.includes('Warning: none'));
+  assert.ok(text.includes('Action:'));
   assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
+  assert.ok(!/Memory:[\s\S]*approve/i.test(text), 'memory display must not imply approval');
+}
+
+function assertNoExecutablePayloadKeys(value: unknown) {
+  const forbiddenKeys = new Set(['canExecute', 'entry', 'stop', 't1', 't2', 'T1', 'T2', 'setupType', 'riskPoints', 'noTradeReason']);
+  const visit = (node: unknown) => {
+    if (!node || typeof node !== 'object') return;
+    for (const key of Object.keys(node as Record<string, unknown>)) {
+      assert.ok(!forbiddenKeys.has(key), `formatter payload leaked executable object key: ${key}`);
+      visit((node as Record<string, unknown>)[key]);
+    }
+  };
+  visit(value);
 }
 
 const normalized = {
@@ -89,13 +107,15 @@ const normalized = {
   invalidation: 'Invalid if protected structure fails.',
 };
 
+const morningCandidate = sampleCandidate('LONG');
+const morningCandidateBefore = JSON.stringify(morningCandidate);
 const morning = compactDiscordSummary({
   session: 'morning',
   tradeDate: '2026-05-26',
   instrument: 'MES',
   planVersionId: 'MORNING-TEST',
   normalized,
-  candidates: [sampleCandidate('LONG')],
+  candidates: [morningCandidate],
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Morning',
   windowLabel: '09:30-11:15 ET',
@@ -108,7 +128,11 @@ const morning = compactDiscordSummary({
   }),
 });
 assertCompactPayload(morning, ['chart-plan.png', 'price-level-map.png']);
-assert.ok(morning.content?.includes('Quant Desk Morning Alert'));
+assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatter must not mutate the original candidate');
+assertNoExecutablePayloadKeys(morning);
+assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long Win', 'Long Loss', 'Scratch', 'Missed', 'No Trade']);
 
 const lunch = compactDiscordSummary({
@@ -130,7 +154,7 @@ const lunch = compactDiscordSummary({
   }),
 });
 assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
-assert.ok(lunch.content?.includes('Quant Desk Lunch Alert'));
+assert.ok(lunch.content?.includes('[PM PLAN] MES - SHORT CONDITIONAL'));
 assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short Win', 'Short Loss', 'Scratch', 'Missed', 'No Trade']);
 assert.ok(!JSON.stringify(lunch.components).includes('Long Win'));
 
@@ -149,7 +173,32 @@ const scanner = compactDiscordSummary({
   statusOverride: 'Conditional',
 });
 assertCompactPayload(scanner, ['chart-plan.png', 'price-level-map.png']);
-assert.ok(scanner.content?.includes('Quant Desk Scanner Alert'));
+assert.ok(scanner.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+
+const noTrade = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-05-26',
+  instrument: 'MES',
+  planVersionId: 'NO-TRADE-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.NoTrade,
+    decision: 'WAIT',
+    noTradeReason: 'No completed 5M trigger inside the active window.',
+    invalidation: null,
+  },
+  candidates: [],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Morning',
+});
+validateDiscordPayload(noTrade, []);
+const noTradeText = flattenDiscordPayloadText(noTrade);
+assert.ok(noTradeText.includes('[AM REVIEW] MES - NO TRADE'));
+assert.ok(noTradeText.includes('Reason: No completed 5M trigger inside the active window.'));
+assert.ok(noTradeText.includes('Key Levels:'));
+assert.ok(noTradeText.includes('Action:'));
+assert.ok(noTradeText.includes('Stand down. Recheck at next scheduled scan.'));
+assert.ok(!noTradeText.includes('Plan:'));
 
 assert.equal(
   compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),

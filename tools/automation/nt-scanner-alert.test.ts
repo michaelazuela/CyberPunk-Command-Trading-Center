@@ -182,8 +182,16 @@ try {
   assert.ok(text.length < 1200, `expected live scanner compact text under 1200 chars, got ${text.length}`);
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('Compact Trade Plan Summary'));
-  assert.ok(text.includes('Quant Desk Scanner Alert'));
+  assert.ok(text.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+  assert.ok(text.includes('Status: WAIT - trigger not confirmed'));
+  assert.ok(text.includes('Plan:'));
+  assert.ok(text.includes('Risk: 5.00 pts / N/A'));
+  assert.ok(text.includes('Invalidation:'));
+  assert.ok(text.includes('Memory:'));
+  assert.ok(text.includes('Historical support: Neutral'));
+  assert.ok(text.includes('Action:'));
   assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
+  assert.ok(!/Memory:[\s\S]*approve/i.test(text));
   const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
   assert.deepEqual(componentLabels, ['Long Win', 'Long Loss', 'Scratch', 'Missed', 'No Trade']);
   assert.ok(!componentLabels.includes('Short Win'));
