@@ -13,6 +13,8 @@ export interface ResearchOutcomeBar {
   low: number;
   close: number;
   volume?: number;
+  advisoryOnly?: true;
+  source?: string;
 }
 
 export interface ResearchOutcomeThresholds {
@@ -35,6 +37,9 @@ export interface ResearchOutcomeCandidate {
   advisoryOnly: true;
   sourcePath?: string;
   futureBars?: ResearchOutcomeBar[];
+  postSignalBars?: ResearchOutcomeBar[];
+  observationWindowBars?: ResearchOutcomeBar[];
+  referencePrice?: number | null;
   dataQualityNotes?: string[];
 }
 
@@ -197,11 +202,31 @@ function findReferenceAndFutureBars(candidate: ResearchOutcomeCandidate, sourceB
   notes: string[];
 } {
   const notes: string[] = [];
+  const candidateLevelBars = sortedBars(candidate.postSignalBars || candidate.observationWindowBars || candidate.futureBars || []);
+  if (candidateLevelBars.length && typeof candidate.referencePrice === 'number' && Number.isFinite(candidate.referencePrice)) {
+    const futureBars = candidateLevelBars.slice(0, thresholds.observationWindowBars);
+    if (futureBars.length < thresholds.observationWindowBars) {
+      notes.push(`Used candidate-level post-signal observation window with ${futureBars.length} bar(s), shorter than the configured ${thresholds.observationWindowBars}-bar window.`);
+    } else {
+      notes.push('Used candidate-level post-signal observation window from the source JSON.');
+    }
+    return {
+      referenceBar: {
+        time: candidateTimestamp(candidate) || futureBars[0].time,
+        open: candidate.referencePrice,
+        high: candidate.referencePrice,
+        low: candidate.referencePrice,
+        close: candidate.referencePrice,
+      },
+      futureBars,
+      notes,
+    };
+  }
   const candidateTime = candidateTimestamp(candidate);
   if (!candidateTime) {
     return { referenceBar: null, futureBars: [], notes: ['Candidate is missing a date/time, so outcome math cannot establish a neutral reference bar.'] };
   }
-  const bars = sortedBars(candidate.futureBars?.length ? candidate.futureBars : sourceBars);
+  const bars = sortedBars(candidateLevelBars.length ? candidateLevelBars : sourceBars);
   if (!bars.length) {
     return { referenceBar: null, futureBars: [], notes: ['No saved future 5M bars were available in the source JSON; no live or bridge data was requested.'] };
   }
@@ -552,6 +577,8 @@ function fromBackfillCandidate(event: ResearchCandidateEvent, instrument: string
     classification: event.classification,
     summary: event.summary,
     advisoryOnly: true,
+    postSignalBars: event.postSignalBars,
+    referencePrice: event.referencePrice,
     dataQualityNotes: event.dataQualityNotes,
   };
 }

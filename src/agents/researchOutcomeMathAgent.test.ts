@@ -52,6 +52,20 @@ assert.equal(longOutcome.outcomeClassification, 'favorable_then_failed');
 assert.equal(longOutcome.timeToMaxFavorableBars, 3);
 assert.equal(longOutcome.timeToMaxAdverseBars, 4);
 
+const candidateLevelOutcome = calculateResearchCandidateOutcome({
+  ...longCandidate,
+  referencePrice: 100,
+  postSignalBars: bars.slice(1).map((bar) => ({ ...bar, advisoryOnly: true })),
+}, [], {
+  thresholdOnePoints: 4,
+  thresholdTwoPoints: 8,
+  adverseThresholdPoints: 4,
+  observationWindowBars: 4,
+});
+assert.equal(candidateLevelOutcome.referencePrice, 100);
+assert.equal(candidateLevelOutcome.outcomeClassification, 'favorable_then_failed');
+assert.ok(candidateLevelOutcome.dataQualityNotes.some((note) => note.includes('candidate-level post-signal observation window')));
+
 const shortBars: ResearchOutcomeBar[] = [
   { time: '2026-05-28T11:00:00', open: 100, high: 101, low: 99, close: 100 },
   { time: '2026-05-28T11:05:00', open: 100, high: 101, low: 96, close: 97 },
@@ -163,12 +177,27 @@ const backfillSource = {
     possibleTurtleSoupOverlap: false,
     sourceSessionMetadata: { session: 'fixture', selectedConcept: 'all', dateRange: { from: '2026-05-28', to: '2026-05-28' } },
     researchOnlySignals: {},
+    referencePrice: 100,
+    postSignalBars: bars.slice(1).map((bar) => ({ ...bar, advisoryOnly: true })),
   }],
   researchBars: bars,
 };
 const extractedBackfill = extractOutcomeInputFromSource('backfill.json', backfillSource, 'MES');
 assert.equal(extractedBackfill.candidates.length, 1);
 assert.equal(extractedBackfill.bars5m?.length, bars.length);
+assert.equal(extractedBackfill.candidates[0].postSignalBars?.length, 4);
+assert.equal(extractedBackfill.candidates[0].referencePrice, 100);
+
+const candidateLevelReport = runResearchOutcomeMath({
+  sourcePath: 'candidate-level.json',
+  instrument: 'MES',
+  candidates: extractedBackfill.candidates,
+  bars5m: [],
+  thresholds: { thresholdOnePoints: 4, thresholdTwoPoints: 8, adverseThresholdPoints: 4, observationWindowBars: 4 },
+});
+assert.equal(candidateLevelReport.summary.evaluatedCandidates, 1);
+assert.equal(candidateLevelReport.summary.insufficientDataCandidates, 0);
+assert.ok(candidateLevelReport.candidateOutcomes[0].dataQualityNotes.some((note) => note.includes('candidate-level post-signal observation window')));
 
 const reviewSource = {
   reportType: 'research_sample_review_pack',

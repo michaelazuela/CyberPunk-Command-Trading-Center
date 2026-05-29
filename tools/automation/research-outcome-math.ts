@@ -83,12 +83,16 @@ function writeReport(out: string | null, report: ResearchOutcomeMathReport): { j
 }
 
 function renderPretty(report: ResearchOutcomeMathReport): string {
+  const candidateLevelObservationWindowsUsed = report.candidateOutcomes.filter((outcome) =>
+    outcome.dataQualityNotes.some((note) => note.includes('candidate-level post-signal observation window'))
+  ).length;
   return [
     `[RESEARCH OUTCOME MATH] ${report.instrument}`,
     `Source: ${report.sourcePath}`,
     `Candidates: ${report.summary.totalCandidates}`,
     `Evaluated: ${report.summary.evaluatedCandidates}`,
     `Insufficient data: ${report.summary.insufficientDataCandidates}`,
+    `Candidate-level observation windows used: ${candidateLevelObservationWindowsUsed}`,
     `Threshold one touch rate: ${report.summary.thresholdOneTouchRate ?? 'n/a'}`,
     `Threshold two touch rate: ${report.summary.thresholdTwoTouchRate ?? 'n/a'}`,
     `Adverse threshold touch rate: ${report.summary.adverseThresholdTouchRate ?? 'n/a'}`,

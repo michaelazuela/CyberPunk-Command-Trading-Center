@@ -23,6 +23,7 @@ const parsed = parseResearchBackfillArgs([
   '--source', 'both',
   '--concept', 'all',
   '--out', 'tools/automation/research-reports',
+  '--outcome-observation-bars', '6',
   '--json',
   '--pretty',
 ]);
@@ -34,6 +35,7 @@ assert.equal(parsed.concept, 'all');
 assert.equal(parsed.json, true);
 assert.equal(parsed.pretty, true);
 assert.equal(parsed.discord, false);
+assert.equal(parsed.outcomeObservationBars, 6);
 
 const completed = filterCompletedBars([
   { time: '2026-05-29T09:30:00', open: 1, high: 2, low: 1, close: 2, volume: 10 },
@@ -181,6 +183,101 @@ assert.ok(report.markdown.includes('sample threshold'));
 assert.ok(report.markdown.includes('Historical Research Backfill'));
 assert.ok(!/"entry"|"stop"|"T1"|"T2"/.test(JSON.stringify(report)));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:|Trade now|model promotion recommended/im.test(report.markdown));
+
+const observationReport = runHistoricalResearchBackfill({
+  from: '2026-05-28',
+  to: '2026-05-28',
+  instrument: 'MES',
+  selectedConcept: 'time_window_liquidity_delivery',
+  outcomeObservationBars: 2,
+  completedBars5m: [
+    { time: '2026-05-28T10:00:00', open: 100, high: 101, low: 99, close: 100 },
+    { time: '2026-05-28T10:05:00', open: 100, high: 104, low: 99, close: 103 },
+    { time: '2026-05-28T10:10:00', open: 103, high: 108, low: 102, close: 107 },
+    { time: '2026-05-28T10:15:00', open: 107, high: 109, low: 106, close: 108 },
+  ],
+  events: [{
+    concept: 'time_window_liquidity_delivery',
+    date: '2026-05-28',
+    time: '10:00',
+    direction: 'LONG',
+    window: '10:00-11:00 NY',
+    summary: 'Observation fixture.',
+    classification: 'advisory_only',
+  }],
+});
+const observedCandidate = observationReport.fullCandidateEvents?.[0];
+assert.equal(observedCandidate?.referencePrice, 100);
+assert.equal(observedCandidate?.observationWindowBarCount, 2);
+assert.equal(observedCandidate?.observationWindowMinutes, 10);
+assert.equal(observedCandidate?.postSignalBars?.length, 2);
+assert.deepEqual(observedCandidate?.postSignalBars?.map((bar) => bar.time), ['2026-05-28T10:05:00', '2026-05-28T10:10:00']);
+assert.ok(observedCandidate?.postSignalBars?.every((bar) => bar.advisoryOnly === true));
+assert.ok(observationReport.markdown.includes('Candidates with observation windows: 1'));
+assert.ok(observationReport.markdown.includes('Observation bars setting: 2'));
+assert.ok(observationReport.executiveSummary.some((line) => line.includes('post-signal observation windows')));
+for (const bar of observedCandidate?.postSignalBars || []) {
+  const keys = Object.keys(bar);
+  assert.equal(keys.includes('entry'), false);
+  assert.equal(keys.includes('stop'), false);
+  assert.equal(keys.includes('stopLoss'), false);
+  assert.equal(keys.includes('target'), false);
+  assert.equal(keys.includes('targets'), false);
+  assert.equal(keys.includes('T1'), false);
+  assert.equal(keys.includes('T2'), false);
+  assert.equal(keys.includes('riskReward'), false);
+  assert.equal(keys.includes('canExecute'), false);
+  assert.equal(keys.includes('executionApproved'), false);
+}
+
+const defaultObservationReport = runHistoricalResearchBackfill({
+  from: '2026-05-28',
+  to: '2026-05-28',
+  instrument: 'MES',
+  completedBars5m: Array.from({ length: 13 }, (_, index) => {
+    const time = new Date(Date.UTC(2026, 4, 28, 10, index * 5, 0));
+    return {
+      time: time.toISOString().slice(0, 19),
+      open: 100 + index,
+      high: 101 + index,
+      low: 99 + index,
+      close: 100 + index,
+    };
+  }),
+  events: [{
+    concept: 'time_window_liquidity_delivery',
+    date: '2026-05-28',
+    time: '10:00',
+    direction: 'LONG',
+    window: '10:00-11:00 NY',
+    summary: 'Default observation fixture.',
+    classification: 'advisory_only',
+  }],
+});
+assert.equal(defaultObservationReport.fullCandidateEvents?.[0].postSignalBars?.length, 12);
+assert.equal(defaultObservationReport.fullCandidateEvents?.[0].observationWindowMinutes, 60);
+
+const shortObservationReport = runHistoricalResearchBackfill({
+  from: '2026-05-28',
+  to: '2026-05-28',
+  instrument: 'MES',
+  outcomeObservationBars: 4,
+  completedBars5m: [
+    { time: '2026-05-28T10:00:00', open: 100, high: 101, low: 99, close: 100 },
+    { time: '2026-05-28T10:05:00', open: 100, high: 104, low: 99, close: 103 },
+  ],
+  events: [{
+    concept: 'time_window_liquidity_delivery',
+    date: '2026-05-28',
+    time: '10:00',
+    direction: 'LONG',
+    window: '10:00-11:00 NY',
+    summary: 'Short observation fixture.',
+    classification: 'advisory_only',
+  }],
+});
+assert.equal(shortObservationReport.fullCandidateEvents?.[0].postSignalBars?.length, 1);
+assert.ok(shortObservationReport.fullCandidateEvents?.[0].observationWindowDataQualityNotes?.some((note) => note.includes('Only 1 post-signal')));
 
 const timeWindow = report.conceptReports.find((concept) => concept.conceptId === 'time_window_liquidity_delivery');
 assert.equal(timeWindow?.advisoryOnlyCount, 1);

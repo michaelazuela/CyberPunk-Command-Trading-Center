@@ -17,6 +17,11 @@ export interface HistoricalResearchBar {
   volume?: number;
 }
 
+export interface ResearchObservationBar extends HistoricalResearchBar {
+  source?: string;
+  advisoryOnly: true;
+}
+
 export interface ResearchBackfillEvent {
   concept: ResearchBackfillConceptId;
   date: string;
@@ -57,6 +62,7 @@ export interface HistoricalResearchBackfillInput {
   sourceCoverage?: HistoricalResearchSourceCoverage;
   barCoverage?: HistoricalResearchBarCoverage[];
   detectorAudit?: Partial<Record<ResearchBackfillConceptId, HistoricalResearchDetectorAudit>>;
+  outcomeObservationBars?: number;
 }
 
 export interface HistoricalResearchSourceCoverage {
@@ -151,6 +157,12 @@ export interface ResearchCandidateEvent {
   detectorReason: string;
   warningFailureReason: string;
   dataQualityNotes: string[];
+  postSignalBars?: ResearchObservationBar[];
+  referencePrice?: number | null;
+  observationWindowBarCount?: number;
+  observationWindowMinutes?: number;
+  observationWindowSource?: string;
+  observationWindowDataQualityNotes?: string[];
   possibleModel1Overlap: boolean;
   possibleTurtleSoupOverlap: boolean;
   sourceSessionMetadata: {
@@ -381,8 +393,82 @@ function dataQualityNotesForEvent(event: ResearchBackfillEvent, input: Historica
   return notes;
 }
 
+function sortedResearchBars(bars: HistoricalResearchBar[] | undefined): HistoricalResearchBar[] {
+  return [...(bars || [])].sort((a, b) => a.time.localeCompare(b.time));
+}
+
+function candidateTime(event: ResearchBackfillEvent): string | null {
+  if (!event.date || !event.time) return null;
+  return `${event.date}T${event.time.length === 5 ? `${event.time}:00` : event.time}`;
+}
+
+function toObservationBar(bar: HistoricalResearchBar): ResearchObservationBar {
+  return {
+    time: bar.time,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    ...(bar.volume !== undefined ? { volume: bar.volume } : {}),
+    source: 'historical_5m_backfill',
+    advisoryOnly: true,
+  };
+}
+
+function buildObservationWindow(event: ResearchBackfillEvent, input: HistoricalResearchBackfillInput): {
+  postSignalBars: ResearchObservationBar[];
+  referencePrice: number | null;
+  observationWindowBarCount: number;
+  observationWindowMinutes: number;
+  observationWindowSource: string;
+  observationWindowDataQualityNotes: string[];
+} {
+  const observationBars = Math.max(1, Math.trunc(input.outcomeObservationBars || 12));
+  const observationWindowDataQualityNotes: string[] = [];
+  const timestamp = candidateTime(event);
+  const bars = sortedResearchBars(input.completedBars5m);
+  if (!timestamp) {
+    observationWindowDataQualityNotes.push('Candidate is missing a signal time, so no post-signal observation window was persisted.');
+    return {
+      postSignalBars: [],
+      referencePrice: null,
+      observationWindowBarCount: 0,
+      observationWindowMinutes: observationBars * 5,
+      observationWindowSource: 'historical_5m_backfill',
+      observationWindowDataQualityNotes,
+    };
+  }
+  const referenceIndex = bars.findIndex((bar) => bar.time >= timestamp);
+  if (referenceIndex < 0) {
+    observationWindowDataQualityNotes.push('No historical 5M reference bar was available at or after the candidate signal time.');
+    return {
+      postSignalBars: [],
+      referencePrice: null,
+      observationWindowBarCount: 0,
+      observationWindowMinutes: observationBars * 5,
+      observationWindowSource: 'historical_5m_backfill',
+      observationWindowDataQualityNotes,
+    };
+  }
+  const postSignalBars = bars.slice(referenceIndex + 1, referenceIndex + 1 + observationBars).map(toObservationBar);
+  if (!postSignalBars.length) {
+    observationWindowDataQualityNotes.push('No historical 5M bars were available after the candidate signal time.');
+  } else if (postSignalBars.length < observationBars) {
+    observationWindowDataQualityNotes.push(`Only ${postSignalBars.length} post-signal 5M bar(s) were available for the configured ${observationBars}-bar observation window.`);
+  }
+  return {
+    postSignalBars,
+    referencePrice: bars[referenceIndex].close,
+    observationWindowBarCount: postSignalBars.length,
+    observationWindowMinutes: observationBars * 5,
+    observationWindowSource: 'historical_5m_backfill',
+    observationWindowDataQualityNotes,
+  };
+}
+
 function toResearchCandidateEvent(event: ResearchBackfillEvent, input: HistoricalResearchBackfillInput): ResearchCandidateEvent {
   const classification = classificationFor(event);
+  const observationWindow = buildObservationWindow(event, input);
   return {
     date: event.date,
     time: event.time,
@@ -396,6 +482,12 @@ function toResearchCandidateEvent(event: ResearchBackfillEvent, input: Historica
     detectorReason: firstReason(event),
     warningFailureReason: firstReason(event),
     dataQualityNotes: dataQualityNotesForEvent(event, input),
+    postSignalBars: observationWindow.postSignalBars,
+    referencePrice: observationWindow.referencePrice,
+    observationWindowBarCount: observationWindow.observationWindowBarCount,
+    observationWindowMinutes: observationWindow.observationWindowMinutes,
+    observationWindowSource: observationWindow.observationWindowSource,
+    observationWindowDataQualityNotes: observationWindow.observationWindowDataQualityNotes,
     possibleModel1Overlap: classification === 'model1_overlap' || Boolean(event.model1Overlap),
     possibleTurtleSoupOverlap: classification === 'turtle_soup_overlap' || Boolean(event.turtleSoupOverlap || event.trueSweepReclaim),
     sourceSessionMetadata: {
@@ -527,6 +619,7 @@ function renderConceptMarkdown(index: number, report: HistoricalResearchConceptR
 
 export function renderHistoricalResearchBackfillMarkdown(report: Omit<HistoricalResearchBackfillReport, 'markdown'>): string {
   const conceptMap = new Map(report.conceptReports.map((concept) => [concept.conceptId, concept]));
+  const observationCounts = observationWindowCounts(report);
   return [
     `# Historical Research Backfill - ${report.instrument}`,
     '',
@@ -541,6 +634,9 @@ export function renderHistoricalResearchBackfillMarkdown(report: Omit<Historical
     `- Diagnostic reports: ${report.dataCoverage.diagnosticReports}`,
     `- Existing research notes: ${report.dataCoverage.existingResearchNotes}`,
     `- Full candidate events persisted: ${report.fullCandidateEvents?.length || 0}`,
+    `- Candidates with observation windows: ${observationCounts.withObservationWindows}`,
+    `- Candidates without observation windows: ${observationCounts.withoutObservationWindows}`,
+    `- Observation bars setting: ${observationCounts.observationBarsSetting}`,
     `- Skipped dates: ${report.dataCoverage.sourceCoverage.skippedDates.join(', ') || 'none'}`,
     `- Missing-data dates: ${report.dataCoverage.sourceCoverage.missingDataDates.join(', ') || 'none'}`,
     `- Data gaps: ${listOrNone(report.dataCoverage.dataGaps).join(' | ')}`,
@@ -610,6 +706,20 @@ function emptyConcept(conceptId: ResearchBackfillConceptId, from: string, to: st
   return buildConceptReport(conceptId, { from, to, instrument: 'MES', dataWarnings: [] }, []);
 }
 
+function observationWindowCounts(report: Pick<HistoricalResearchBackfillReport, 'fullCandidateEvents'>): {
+  withObservationWindows: number;
+  withoutObservationWindows: number;
+  observationBarsSetting: number;
+} {
+  const candidates = report.fullCandidateEvents || [];
+  const withObservationWindows = candidates.filter((candidate) => (candidate.postSignalBars || []).length > 0).length;
+  return {
+    withObservationWindows,
+    withoutObservationWindows: candidates.length - withObservationWindows,
+    observationBarsSetting: candidates[0]?.observationWindowMinutes ? Math.max(1, candidates[0].observationWindowMinutes / 5) : 12,
+  };
+}
+
 export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillInput): HistoricalResearchBackfillReport {
   const selectedConcept = input.selectedConcept || 'all';
   const concepts = selectedConcepts(selectedConcept);
@@ -630,6 +740,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
   const zeroCandidateExplanation = events.length === 0 ? explainZeroCandidates(input, detectorAudit) : [];
   const repeatedReasons = topStrings(events.flatMap((event) => event.failureReasons || []));
   const fullCandidateEvents = events.map((event) => toResearchCandidateEvent(event, input));
+  const withObservationWindows = fullCandidateEvents.filter((event) => (event.postSignalBars || []).length > 0).length;
   const continuedTracking = conceptReports
     .filter((concept) => concept.totalCandidates > 0 || concept.recommendation === 'consider_future_advisory_smoke_test')
     .map((concept) => `${concept.title}: ${concept.recommendation}; sample threshold ${concept.sampleThreshold.current}/${concept.sampleThreshold.minimum}.`);
@@ -643,6 +754,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     executiveSummary: [
       `Historical research scan covered ${input.from} to ${input.to} for ${input.instrument}.`,
       `${events.length} research candidate event(s) were classified from completed bars and existing records.`,
+      `${withObservationWindows} candidate(s) include research-only post-signal observation windows.`,
       `${advisoryOnlyTotal} event(s) remain advisory-only. No executable model promotion is recommended.`,
     ],
     dataCoverage: {

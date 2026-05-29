@@ -49,6 +49,7 @@ export interface ResearchBackfillCliOptions {
   auditDir: string;
   diagnosticDir: string;
   researchDir: string;
+  outcomeObservationBars: number;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -144,6 +145,7 @@ export function parseResearchBackfillArgs(args = process.argv.slice(2)): Researc
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
     diagnosticDir: readFlag(args, '--diagnostic-dir') || DEFAULT_DIAGNOSTIC_DIR,
     researchDir: readFlag(args, '--research-dir') || DEFAULT_RESEARCH_DIR,
+    outcomeObservationBars: Math.max(1, Number.parseInt(readFlag(args, '--outcome-observation-bars') || '12', 10) || 12),
   };
 }
 
@@ -731,6 +733,7 @@ export async function buildHistoricalResearchBackfillInput(options: ResearchBack
     detectorAudit,
     dataWarnings: [...dataWarnings, ...auditHistory.warnings],
     events,
+    outcomeObservationBars: options.outcomeObservationBars,
   };
 }
 
@@ -754,12 +757,20 @@ function writeReports(options: ResearchBackfillCliOptions, report: HistoricalRes
 }
 
 function compactDiscordReadableSummary(report: HistoricalResearchBackfillReport): string {
+  const candidates = report.fullCandidateEvents || [];
+  const withObservationWindows = candidates.filter((candidate) => (candidate.postSignalBars || []).length > 0).length;
+  const observationBarsSetting = candidates[0]?.observationWindowMinutes ? Math.max(1, candidates[0].observationWindowMinutes / 5) : 12;
   return [
     `[RESEARCH BACKFILL] ${report.instrument}`,
     `Range: ${report.from} to ${report.to}`,
     '',
     'Summary:',
     ...report.executiveSummary.map((line) => `- ${line}`),
+    `- Total persisted candidates: ${candidates.length}`,
+    `- Candidates with observation windows: ${withObservationWindows}`,
+    `- Candidates without observation windows: ${candidates.length - withObservationWindows}`,
+    `- Observation bars setting: ${observationBarsSetting}`,
+    '- Advisory-only confirmation: yes',
     '',
     'Concepts:',
     ...report.conceptReports.map((concept) => `- ${concept.title}: ${concept.totalCandidates} candidate(s), ${concept.advisoryOnlyCount} advisory-only, rule change: ${concept.ruleChangeRecommendation}.`),
