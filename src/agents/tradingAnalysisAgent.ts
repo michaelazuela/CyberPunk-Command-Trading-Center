@@ -96,6 +96,9 @@ export interface WeeklyTradingAnalysisReport {
   };
 }
 
+const DISCORD_WEEKLY_CONTENT_LIMIT = 1900;
+const DISCORD_TRUNCATION_NOTICE = 'Full report saved locally. See weekly report file for details.';
+
 function addDays(dateText: string, days: number): string {
   const [year, month, day] = dateText.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + days, 12));
@@ -194,6 +197,83 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     '',
     'Authority: Weekly report is read-only. No rule changes, entries, stops, targets, or model promotion.',
   ].join('\n');
+}
+
+function lineNumber(lines: string[], prefix: string): number {
+  const line = lines.find((item) => item.startsWith(prefix));
+  if (!line) return 0;
+  const value = Number(line.slice(prefix.length).trim());
+  return Number.isFinite(value) ? value : 0;
+}
+
+function compactResearchTitle(value: string): string {
+  const withoutBullet = value.replace(/^-\s*/, '').trim();
+  if (/Accumulation.*Manipulation.*Distribution/i.test(withoutBullet)) return 'AMD Range Model';
+  if (/False-Run Liquidity Fade/i.test(withoutBullet)) return 'False-Run Liquidity Fade';
+  if (/Final-Hour Liquidity Draw/i.test(withoutBullet)) return 'Final-Hour Liquidity Draw';
+  if (/Time-Window Liquidity Delivery/i.test(withoutBullet)) return 'Time-Window Liquidity Delivery';
+  return withoutBullet.replace(/\s+Watchlist$/i, '').slice(0, 72);
+}
+
+function compactResearchDeskLines(items: string[]): string[] {
+  if (!items.length || items[0].startsWith('No research briefs')) return ['- No research notes'];
+  return items.slice(0, 6).map((item) => {
+    const firstLine = item.split('\n')[0] || item;
+    return `- ${compactResearchTitle(firstLine)}: research-only`;
+  });
+}
+
+function enforceDiscordWeeklyLimit(message: string): string {
+  if (message.length <= DISCORD_WEEKLY_CONTENT_LIMIT) return message;
+  const suffix = `\n\n${DISCORD_TRUNCATION_NOTICE}`;
+  const maxBodyLength = DISCORD_WEEKLY_CONTENT_LIMIT - suffix.length;
+  const cut = message.slice(0, Math.max(0, maxBodyLength));
+  const lastBreak = cut.lastIndexOf('\n');
+  const body = lastBreak > 400 ? cut.slice(0, lastBreak).trimEnd() : cut.trimEnd();
+  return `${body}${suffix}`;
+}
+
+function compactDiscordWebhookMessage(report: Omit<WeeklyTradingAnalysisReport, 'discordMessage' | 'discordPayload'>): string {
+  const researchCandidates = lineNumber(report.sections.researchBackfill, '- Research candidates:');
+  const advisoryOnly = lineNumber(report.sections.researchBackfill, '- Advisory-only events:');
+  const approvedOverlaps = lineNumber(report.sections.researchBackfill, '- Approved model overlaps:');
+  const reportsScanned = lineNumber(report.sections.researchBackfill, '- Reports scanned:');
+  const keyStory =
+    report.counts.confirmedMissedApprovedTrades > 0
+      ? 'Approved setup alert gap found. Review scanner suppression before any rule discussion.'
+      : report.counts.alreadyTriggeredNoFreshEntry > 0
+        ? 'Already-triggered/no-fresh-entry events appeared in review. No chase and no rule change.'
+        : 'No approved missed-trade pattern found in existing records.';
+
+  const message = [
+    `[WEEKLY TRADING INTELLIGENCE] ${report.instrument}`,
+    `Week: ${report.weekStart} to ${report.weekEnding}`,
+    '',
+    'Summary:',
+    `- Trade alerts: ${report.counts.tradeAlerts}`,
+    `- Live watchlists: ${report.counts.watchlists}`,
+    `- Research candidates: ${researchCandidates}`,
+    `- Advisory-only: ${advisoryOnly}`,
+    `- Approved overlaps: ${approvedOverlaps}`,
+    '- Rule change: none',
+    '',
+    'Key Story:',
+    keyStory,
+    '',
+    'Research Desk:',
+    ...compactResearchDeskLines(report.sections.researchDesk),
+    '',
+    'Research Backfill:',
+    `Reports: ${reportsScanned} | Candidates: ${researchCandidates} | Promotions: 0`,
+    '',
+    'Action:',
+    'Continue collecting data. No executable model promotion.',
+    '',
+    'Authority:',
+    'Read-only. No rule changes, entries, stops, targets, or model promotion.',
+  ].join('\n');
+
+  return enforceDiscordWeeklyLimit(message);
 }
 
 function formatResearchDeskItem(note: NonNullable<WeeklyTradingAnalysisInput['researchNotes']>[number]): string {
@@ -356,12 +436,13 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
   };
 
   const discordMessage = compactDiscordMessage(partial);
+  const discordContent = compactDiscordWebhookMessage(partial);
   return {
     ...partial,
     discordMessage,
     discordPayload: {
       username: 'Quant Desk Weekly Report',
-      content: discordMessage,
+      content: discordContent,
       embeds: [],
     },
   };

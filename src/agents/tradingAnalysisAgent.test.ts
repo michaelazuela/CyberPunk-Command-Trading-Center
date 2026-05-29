@@ -126,6 +126,17 @@ assert.equal(report.approvalBoundary.weeklyReportRunsDiagnostics, false);
 assert.equal(report.discordPayload.embeds.length, 0);
 assert.equal('components' in report.discordPayload, false);
 assert.equal('files' in report.discordPayload, false);
+assert.ok(report.discordPayload.content.length <= 1900);
+assert.notEqual(report.discordPayload.content, report.discordMessage);
+assert.ok(report.discordPayload.content.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
+assert.ok(report.discordPayload.content.includes('Summary:'));
+assert.ok(report.discordPayload.content.includes('Research Desk:'));
+assert.ok(report.discordPayload.content.includes('- AMD Range Model: research-only'));
+assert.ok(report.discordPayload.content.includes('Research Backfill:\nReports: 1 | Candidates: 3 | Promotions: 0'));
+assert.ok(report.discordPayload.content.includes('Authority:\nRead-only. No rule changes, entries, stops, targets, or model promotion.'));
+assert.ok(!report.discordPayload.content.includes('Taxonomy:'));
+assert.ok(!report.discordPayload.content.includes('Fade a run toward ATH or major buy-side liquidity when price fails to sustain'));
+assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(report.discordPayload.content));
 assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage));
 assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
@@ -199,6 +210,53 @@ assert.ok(zeroWatchlistReport.discordMessage.includes('What We Learned: No watch
 assert.ok(zeroWatchlistReport.discordMessage.includes('Research Backfill:\n- Reports scanned: 0\n- Research candidates: 0\n- Advisory-only events: 0\n- Rule change: none'));
 assert.ok(!zeroWatchlistReport.discordMessage.includes('Advisory research-only events: 0'));
 assert.ok(!zeroWatchlistReport.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
+assert.ok(zeroWatchlistReport.discordPayload.content.length <= 1900);
+assert.ok(zeroWatchlistReport.discordPayload.content.includes('Research Backfill:\nReports: 0 | Candidates: 0 | Promotions: 0'));
+
+const oversizedNewsletter = buildWeeklyTradingAnalysisReport({
+  weekEnding: '2026-05-29',
+  instrument: 'MES',
+  tradeAlertRecords: Array.from({ length: 181 }, () => ({ state: 'Executable' })),
+  watchlistRecords: [],
+  researchBackfillReports: [{
+    reportType: 'historical_research_backfill',
+    instrument: 'MES',
+    conceptReports: Array.from({ length: 12 }, (_, index) => ({
+      conceptId: 'final_hour_liquidity_draw',
+      title: `Long Research Concept ${index}`,
+      totalCandidates: 50,
+      datesReviewed: { from: '2026-01-01', to: '2026-05-29' },
+      dataGaps: [],
+      classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 50 },
+      advisoryOnlyCount: 50,
+      approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+      commonReasons: [],
+      sampleEvents: [],
+      sampleThreshold: { minimum: 20, current: 50, met: true },
+      metrics: {},
+      recommendation: 'review_manually',
+      ruleChangeRecommendation: 'none',
+    })),
+    approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
+  }],
+  researchNotes: Array.from({ length: 30 }, (_, index) => ({
+    researchTitle: `Research Note ${index}`,
+    status: 'research_only',
+    candidateName: `Very Long Research Watchlist Title ${index} With Extra Words That Should Not Blow Up Discord`,
+    primaryIdea: 'This local pretty-only description is intentionally long and should not appear in compact Discord content.',
+    taxonomyNote: 'This taxonomy paragraph should stay out of compact Discord content.',
+    recommendedNextStep: 'Keep collecting examples.',
+    ruleChange: 'none',
+    includeInWeeklyNewsletter: true,
+  })),
+});
+assert.ok(oversizedNewsletter.discordPayload.content.length <= 1900);
+assert.ok(oversizedNewsletter.discordPayload.content.length <= 2000);
+assert.ok(oversizedNewsletter.discordPayload.content.includes('Research candidates: 600'));
+assert.ok(oversizedNewsletter.discordPayload.content.includes('Advisory-only: 600'));
+assert.ok(oversizedNewsletter.discordPayload.content.includes('Reports: 1 | Candidates: 600 | Promotions: 0'));
+assert.ok(!oversizedNewsletter.discordPayload.content.includes('This taxonomy paragraph'));
+assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(oversizedNewsletter.discordPayload.content));
 
 const parsed = parseWeeklyReportArgs([
   '--week-ending', '2026-05-29',
