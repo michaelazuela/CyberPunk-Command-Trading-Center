@@ -49,6 +49,13 @@ assert.equal(longOutcome.thresholdTwoTouched, true);
 assert.equal(longOutcome.adverseThresholdTouched, true);
 assert.equal(longOutcome.firstMeaningfulMove, 'favorable');
 assert.equal(longOutcome.outcomeClassification, 'favorable_then_failed');
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.advisoryOnly, true);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.executionApproved, false);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.hypotheticalReferencePrice, 100);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.hypotheticalThresholdOne, 104);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.hypotheticalThresholdTwo, 108);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.hypotheticalInvalidationReference, 96);
+assert.equal(longOutcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel, 'favorable_continuation');
 assert.equal(longOutcome.timeToMaxFavorableBars, 3);
 assert.equal(longOutcome.timeToMaxAdverseBars, 4);
 
@@ -89,6 +96,10 @@ assert.equal(shortOutcome.thresholdTwoTouched, true);
 assert.equal(shortOutcome.adverseThresholdTouched, false);
 assert.equal(shortOutcome.firstMeaningfulMove, 'favorable');
 assert.equal(shortOutcome.outcomeClassification, 'favorable_continuation');
+assert.equal(shortOutcome.hypotheticalOutcomeOverlay.hypotheticalThresholdOne, 96);
+assert.equal(shortOutcome.hypotheticalOutcomeOverlay.hypotheticalThresholdTwo, 92);
+assert.equal(shortOutcome.hypotheticalOutcomeOverlay.hypotheticalInvalidationReference, 104);
+assert.equal(shortOutcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel, 'favorable_continuation');
 
 const adverseFirst = calculateResearchCandidateOutcome(longCandidate, [
   { time: '2026-05-28T10:00:00', open: 100, high: 100.5, low: 99, close: 100 },
@@ -138,8 +149,12 @@ assert.equal(report.summary.evaluatedCandidates, 2);
 assert.equal(report.summary.insufficientDataCandidates, 1);
 assert.equal(report.summary.thresholdOneTouchRate, 1);
 assert.equal(report.summary.thresholdTwoTouchRate, 1);
+assert.equal(report.summary.hypotheticalOverlay.favorableContinuationCount, 2);
+assert.equal(report.summary.hypotheticalOverlay.partialFavorableCount, 0);
+assert.equal(report.summary.hypotheticalOverlay.insufficientDataCount, 1);
 assert.equal(report.conceptSummaries.length, 3);
 assert.ok(report.conceptSummaries.some((summary) => summary.concept === 'time_window_liquidity_delivery' && summary.medianMfePoints === 9));
+assert.ok(report.conceptSummaries.some((summary) => summary.concept === 'time_window_liquidity_delivery' && summary.hypotheticalOverlay.favorableContinuationCount === 1));
 assert.equal(report.approvalBoundary.outcomeMathApprovesTrade, false);
 assert.equal(report.approvalBoundary.outcomeMathChangesRules, false);
 assert.equal(report.approvalBoundary.outcomeMathCreatesEntry, false);
@@ -155,6 +170,10 @@ for (const outcome of report.candidateOutcomes) {
   assert.equal(keys.includes('stop'), false);
   assert.equal(keys.includes('target'), false);
   assert.equal(keys.includes('canExecute'), false);
+  assert.equal(Object.keys(outcome.hypotheticalOutcomeOverlay).includes('entry'), false);
+  assert.equal(Object.keys(outcome.hypotheticalOutcomeOverlay).includes('stop'), false);
+  assert.equal(Object.keys(outcome.hypotheticalOutcomeOverlay).includes('target'), false);
+  assert.equal(Object.keys(outcome.hypotheticalOutcomeOverlay).includes('canExecute'), false);
 }
 
 const backfillSource = {

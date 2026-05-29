@@ -17,6 +17,21 @@ import {
   runResearchModelValidationCli,
 } from '../../tools/automation/research-model-validation';
 
+const hypotheticalOverlaySummary = {
+  favorableContinuationCount: 1,
+  favorableContinuationRate: 1,
+  partialFavorableCount: 0,
+  partialFavorableRate: 0,
+  adverseFirstCount: 0,
+  adverseFirstRate: 0,
+  neutralNoResolutionCount: 0,
+  neutralNoResolutionRate: 0,
+  ambiguousSameBarCount: 0,
+  ambiguousSameBarRate: 0,
+  insufficientDataCount: 0,
+  insufficientDataRate: 0,
+};
+
 function outcomeReport(concepts: ResearchOutcomeMathReport['conceptSummaries']): ResearchOutcomeMathReport {
   return {
     reportType: 'research_outcome_math',
@@ -40,6 +55,7 @@ function outcomeReport(concepts: ResearchOutcomeMathReport['conceptSummaries']):
       adverseThresholdTouchRate: 0.3,
       favorableFirstRate: 0.7,
       adverseFirstRate: 0.2,
+      hypotheticalOverlay: hypotheticalOverlaySummary,
     },
     conceptSummaries: concepts,
     candidateOutcomes: concepts.flatMap((concept) => Array.from({ length: concept.totalCandidates }, (_, index) => ({
@@ -71,6 +87,25 @@ function outcomeReport(concepts: ResearchOutcomeMathReport['conceptSummaries']):
       adverseThresholdTouched: concept.adverseThresholdTouchRate !== null && concept.adverseThresholdTouchRate > 0.5,
       firstMeaningfulMove: 'favorable',
       outcomeClassification: 'favorable_continuation',
+      hypotheticalOutcomeOverlay: {
+        advisoryOnly: true,
+        executionApproved: false,
+        hypotheticalReferencePrice: 100,
+        hypotheticalInvalidationReference: 96,
+        hypotheticalThresholdOne: 104,
+        hypotheticalThresholdTwo: 108,
+        thresholdOnePoints: 4,
+        thresholdTwoPoints: 8,
+        adverseInvalidationPoints: 4,
+        observationWindowBars: 12,
+        firstResolvedEvent: 'favorable_threshold_two',
+        hypotheticalOutcomeLabel: 'favorable_continuation',
+        resolvedAtBarIndex: 1,
+        resolvedAtTime: '2026-05-28T10:05:00',
+        maxFavorableExcursionPoints: concept.medianMfePoints,
+        maxAdverseExcursionPoints: concept.medianMaePoints,
+        notes: [],
+      },
       dataQualityNotes: [],
     }))),
     markdown: '# fixture',
@@ -103,6 +138,7 @@ function concept(
     adverseFirstRate: favorableFirstRate === null ? null : 0.1,
     medianMfePoints: thresholdTwoTouchRate === null ? null : 10,
     medianMaePoints: adverseThresholdTouchRate === null ? null : 3,
+    hypotheticalOverlay: hypotheticalOverlaySummary,
     advisoryOnly: true,
   };
 }

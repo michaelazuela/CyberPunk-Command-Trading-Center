@@ -96,10 +96,16 @@ function renderPretty(report: ResearchOutcomeMathReport): string {
     `Threshold one touch rate: ${report.summary.thresholdOneTouchRate ?? 'n/a'}`,
     `Threshold two touch rate: ${report.summary.thresholdTwoTouchRate ?? 'n/a'}`,
     `Adverse threshold touch rate: ${report.summary.adverseThresholdTouchRate ?? 'n/a'}`,
+    `Hypothetical favorable continuation: ${report.summary.hypotheticalOverlay.favorableContinuationCount} (${report.summary.hypotheticalOverlay.favorableContinuationRate ?? 'n/a'})`,
+    `Hypothetical partial favorable: ${report.summary.hypotheticalOverlay.partialFavorableCount} (${report.summary.hypotheticalOverlay.partialFavorableRate ?? 'n/a'})`,
+    `Hypothetical adverse first: ${report.summary.hypotheticalOverlay.adverseFirstCount} (${report.summary.hypotheticalOverlay.adverseFirstRate ?? 'n/a'})`,
+    `Hypothetical neutral/no resolution: ${report.summary.hypotheticalOverlay.neutralNoResolutionCount} (${report.summary.hypotheticalOverlay.neutralNoResolutionRate ?? 'n/a'})`,
+    `Hypothetical ambiguous same bar: ${report.summary.hypotheticalOverlay.ambiguousSameBarCount} (${report.summary.hypotheticalOverlay.ambiguousSameBarRate ?? 'n/a'})`,
+    `Hypothetical insufficient data: ${report.summary.hypotheticalOverlay.insufficientDataCount} (${report.summary.hypotheticalOverlay.insufficientDataRate ?? 'n/a'})`,
     '',
     'Concepts:',
     ...report.conceptSummaries.map((summary) =>
-      `- ${summary.concept}: total=${summary.totalCandidates}, evaluated=${summary.evaluatedCandidates}, thresholdOne=${summary.thresholdOneTouchRate ?? 'n/a'}, thresholdTwo=${summary.thresholdTwoTouchRate ?? 'n/a'}, adverse=${summary.adverseThresholdTouchRate ?? 'n/a'}, medianMFE=${summary.medianMfePoints ?? 'n/a'}, medianMAE=${summary.medianMaePoints ?? 'n/a'}`
+      `- ${summary.concept}: total=${summary.totalCandidates}, evaluated=${summary.evaluatedCandidates}, thresholdOne=${summary.thresholdOneTouchRate ?? 'n/a'}, thresholdTwo=${summary.thresholdTwoTouchRate ?? 'n/a'}, adverse=${summary.adverseThresholdTouchRate ?? 'n/a'}, hypotheticalFavorableContinuation=${summary.hypotheticalOverlay.favorableContinuationCount}, hypotheticalPartial=${summary.hypotheticalOverlay.partialFavorableCount}, hypotheticalAdverseFirst=${summary.hypotheticalOverlay.adverseFirstCount}, medianMFE=${summary.medianMfePoints ?? 'n/a'}, medianMAE=${summary.medianMaePoints ?? 'n/a'}`
     ),
     '',
     'Authority: research-only. Thresholds are not entries, stops, or targets. No execution approval, rule change, or model promotion.',

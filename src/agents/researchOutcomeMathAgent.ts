@@ -4,6 +4,11 @@ import type {
   ResearchBackfillDirection,
   ResearchCandidateEvent,
 } from './historicalResearchBackfillAgent';
+import {
+  calculateResearchHypotheticalOutcomeOverlay,
+  type ResearchHypotheticalOutcomeLabel,
+  type ResearchHypotheticalOutcomeOverlay,
+} from './researchHypotheticalOutcomeOverlayAgent';
 import type { ResearchSampleReviewPack, ResearchReviewSample } from './researchSampleReviewAgent';
 
 export interface ResearchOutcomeBar {
@@ -80,7 +85,23 @@ export interface ResearchCandidateOutcome {
   adverseThresholdTouched: boolean | null;
   firstMeaningfulMove: FirstMeaningfulMove;
   outcomeClassification: OutcomeClassification;
+  hypotheticalOutcomeOverlay: ResearchHypotheticalOutcomeOverlay;
   dataQualityNotes: string[];
+}
+
+export interface ResearchHypotheticalOverlaySummary {
+  favorableContinuationCount: number;
+  favorableContinuationRate: number | null;
+  partialFavorableCount: number;
+  partialFavorableRate: number | null;
+  adverseFirstCount: number;
+  adverseFirstRate: number | null;
+  neutralNoResolutionCount: number;
+  neutralNoResolutionRate: number | null;
+  ambiguousSameBarCount: number;
+  ambiguousSameBarRate: number | null;
+  insufficientDataCount: number;
+  insufficientDataRate: number | null;
 }
 
 export interface ResearchOutcomeMathReport {
@@ -100,6 +121,7 @@ export interface ResearchOutcomeMathReport {
     adverseThresholdTouchRate: number | null;
     favorableFirstRate: number | null;
     adverseFirstRate: number | null;
+    hypotheticalOverlay: ResearchHypotheticalOverlaySummary;
   };
   conceptSummaries: Array<{
     concept: string;
@@ -112,6 +134,7 @@ export interface ResearchOutcomeMathReport {
     adverseFirstRate: number | null;
     medianMfePoints: number | null;
     medianMaePoints: number | null;
+    hypotheticalOverlay: ResearchHypotheticalOverlaySummary;
     advisoryOnly: true;
   }>;
   candidateOutcomes: ResearchCandidateOutcome[];
@@ -316,6 +339,13 @@ export function calculateResearchCandidateOutcome(
     adverseThresholdTouched: null,
     firstMeaningfulMove: 'insufficient_data',
     outcomeClassification: 'insufficient_data',
+    hypotheticalOutcomeOverlay: calculateResearchHypotheticalOutcomeOverlay({
+      direction: candidate.direction,
+      hypotheticalReferencePrice: null,
+      postSignalBars: [],
+      thresholds,
+      notes: [...baseNotes, ...notes],
+    }),
     dataQualityNotes: [...baseNotes, ...notes],
   });
 
@@ -326,6 +356,13 @@ export function calculateResearchCandidateOutcome(
   if (!referenceBar || !futureBars.length) return insufficient(notes);
 
   const referencePrice = referenceBar.close;
+  const hypotheticalOutcomeOverlay = calculateResearchHypotheticalOutcomeOverlay({
+    direction: candidate.direction,
+    hypotheticalReferencePrice: referencePrice,
+    postSignalBars: futureBars,
+    thresholds,
+    notes: [...baseNotes, ...notes],
+  });
   const favorableByBar = futureBars.map((bar) =>
     candidate.direction === 'LONG' ? bar.high - referencePrice : referencePrice - bar.low
   ).map((value) => Math.max(0, value));
@@ -371,6 +408,7 @@ export function calculateResearchCandidateOutcome(
     adverseThresholdTouched: adverseIndex !== null,
     firstMeaningfulMove: classification.firstMeaningfulMove,
     outcomeClassification: classification.outcomeClassification,
+    hypotheticalOutcomeOverlay,
     dataQualityNotes: [...baseNotes, ...notes],
   };
 }
@@ -398,6 +436,29 @@ function summarizeOutcomes(outcomes: ResearchCandidateOutcome[]) {
     adverseThresholdTouchRate: rate(outcomes, (outcome) => outcome.adverseThresholdTouched === true),
     favorableFirstRate: rate(outcomes, (outcome) => outcome.firstMeaningfulMove === 'favorable'),
     adverseFirstRate: rate(outcomes, (outcome) => outcome.firstMeaningfulMove === 'adverse'),
+    hypotheticalOverlay: summarizeHypotheticalOverlays(outcomes),
+  };
+}
+
+function overlayRate(outcomes: ResearchCandidateOutcome[], label: ResearchHypotheticalOutcomeLabel): number | null {
+  if (!outcomes.length) return null;
+  return round(outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === label).length / outcomes.length);
+}
+
+function summarizeHypotheticalOverlays(outcomes: ResearchCandidateOutcome[]): ResearchHypotheticalOverlaySummary {
+  return {
+    favorableContinuationCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'favorable_continuation').length,
+    favorableContinuationRate: overlayRate(outcomes, 'favorable_continuation'),
+    partialFavorableCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'partial_favorable').length,
+    partialFavorableRate: overlayRate(outcomes, 'partial_favorable'),
+    adverseFirstCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'adverse_first').length,
+    adverseFirstRate: overlayRate(outcomes, 'adverse_first'),
+    neutralNoResolutionCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'neutral_no_resolution').length,
+    neutralNoResolutionRate: overlayRate(outcomes, 'neutral_no_resolution'),
+    ambiguousSameBarCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'ambiguous_same_bar').length,
+    ambiguousSameBarRate: overlayRate(outcomes, 'ambiguous_same_bar'),
+    insufficientDataCount: outcomes.filter((outcome) => outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel === 'insufficient_data').length,
+    insufficientDataRate: overlayRate(outcomes, 'insufficient_data'),
   };
 }
 
@@ -417,6 +478,7 @@ function conceptSummaries(outcomes: ResearchCandidateOutcome[]): ResearchOutcome
       adverseFirstRate: summary.adverseFirstRate,
       medianMfePoints: median(conceptOutcomes.map((outcome) => outcome.maxFavorableExcursionPoints).filter((value): value is number => value !== null)),
       medianMaePoints: median(conceptOutcomes.map((outcome) => outcome.maxAdverseExcursionPoints).filter((value): value is number => value !== null)),
+      hypotheticalOverlay: summary.hypotheticalOverlay,
       advisoryOnly: true,
     };
   });
@@ -455,12 +517,18 @@ export function renderResearchOutcomeMathMarkdown(report: Omit<ResearchOutcomeMa
     `- Adverse threshold touch rate: ${report.summary.adverseThresholdTouchRate ?? 'n/a'}`,
     `- Favorable-first rate: ${report.summary.favorableFirstRate ?? 'n/a'}`,
     `- Adverse-first rate: ${report.summary.adverseFirstRate ?? 'n/a'}`,
+    `- Hypothetical favorable continuation: ${report.summary.hypotheticalOverlay.favorableContinuationCount} (${report.summary.hypotheticalOverlay.favorableContinuationRate ?? 'n/a'})`,
+    `- Hypothetical partial favorable: ${report.summary.hypotheticalOverlay.partialFavorableCount} (${report.summary.hypotheticalOverlay.partialFavorableRate ?? 'n/a'})`,
+    `- Hypothetical adverse first: ${report.summary.hypotheticalOverlay.adverseFirstCount} (${report.summary.hypotheticalOverlay.adverseFirstRate ?? 'n/a'})`,
+    `- Hypothetical neutral/no resolution: ${report.summary.hypotheticalOverlay.neutralNoResolutionCount} (${report.summary.hypotheticalOverlay.neutralNoResolutionRate ?? 'n/a'})`,
+    `- Hypothetical ambiguous same bar: ${report.summary.hypotheticalOverlay.ambiguousSameBarCount} (${report.summary.hypotheticalOverlay.ambiguousSameBarRate ?? 'n/a'})`,
+    `- Hypothetical insufficient data: ${report.summary.hypotheticalOverlay.insufficientDataCount} (${report.summary.hypotheticalOverlay.insufficientDataRate ?? 'n/a'})`,
     '',
     '## 5. Concept Outcome Summary',
-    ...report.conceptSummaries.map((summary) => `- ${summary.concept}: total=${summary.totalCandidates}, evaluated=${summary.evaluatedCandidates}, thresholdOne=${summary.thresholdOneTouchRate ?? 'n/a'}, thresholdTwo=${summary.thresholdTwoTouchRate ?? 'n/a'}, adverse=${summary.adverseThresholdTouchRate ?? 'n/a'}, medianMFE=${summary.medianMfePoints ?? 'n/a'}, medianMAE=${summary.medianMaePoints ?? 'n/a'}, advisoryOnly=${summary.advisoryOnly}`),
+    ...report.conceptSummaries.map((summary) => `- ${summary.concept}: total=${summary.totalCandidates}, evaluated=${summary.evaluatedCandidates}, thresholdOne=${summary.thresholdOneTouchRate ?? 'n/a'}, thresholdTwo=${summary.thresholdTwoTouchRate ?? 'n/a'}, adverse=${summary.adverseThresholdTouchRate ?? 'n/a'}, hypotheticalFavorableContinuation=${summary.hypotheticalOverlay.favorableContinuationCount}, hypotheticalPartial=${summary.hypotheticalOverlay.partialFavorableCount}, hypotheticalAdverseFirst=${summary.hypotheticalOverlay.adverseFirstCount}, medianMFE=${summary.medianMfePoints ?? 'n/a'}, medianMAE=${summary.medianMaePoints ?? 'n/a'}, advisoryOnly=${summary.advisoryOnly}`),
     '',
     '## 6. Candidate Outcome Details',
-    ...report.candidateOutcomes.slice(0, 40).map((outcome) => `- ${outcome.candidateId}: ${outcome.date} ${outcome.time || ''} ${outcome.direction} ${outcome.concept}; referencePrice=${outcome.referencePrice ?? 'n/a'}; MFE=${outcome.maxFavorableExcursionPoints ?? 'n/a'}; MAE=${outcome.maxAdverseExcursionPoints ?? 'n/a'}; firstMove=${outcome.firstMeaningfulMove}; classification=${outcome.outcomeClassification}; advisoryOnly=${outcome.advisoryOnly}`),
+    ...report.candidateOutcomes.slice(0, 40).map((outcome) => `- ${outcome.candidateId}: ${outcome.date} ${outcome.time || ''} ${outcome.direction} ${outcome.concept}; referencePrice=${outcome.referencePrice ?? 'n/a'}; MFE=${outcome.maxFavorableExcursionPoints ?? 'n/a'}; MAE=${outcome.maxAdverseExcursionPoints ?? 'n/a'}; firstMove=${outcome.firstMeaningfulMove}; classification=${outcome.outcomeClassification}; hypotheticalOutcome=${outcome.hypotheticalOutcomeOverlay.hypotheticalOutcomeLabel}; advisoryOnly=${outcome.advisoryOnly}`),
     ...(report.candidateOutcomes.length > 40 ? [`- ...${report.candidateOutcomes.length - 40} additional candidate outcome(s) in JSON output.`] : []),
     '',
     '## 7. Data Quality Notes',

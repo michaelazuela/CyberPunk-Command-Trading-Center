@@ -19,6 +19,21 @@ import {
   runResearchDiscordReviewCli,
 } from '../../tools/automation/research-discord-review';
 
+const hypotheticalOverlaySummary = {
+  favorableContinuationCount: 1,
+  favorableContinuationRate: 1,
+  partialFavorableCount: 0,
+  partialFavorableRate: 0,
+  adverseFirstCount: 0,
+  adverseFirstRate: 0,
+  neutralNoResolutionCount: 0,
+  neutralNoResolutionRate: 0,
+  ambiguousSameBarCount: 0,
+  ambiguousSameBarRate: 0,
+  insufficientDataCount: 0,
+  insufficientDataRate: 0,
+};
+
 function sample(id: string, reviewed = false): ResearchReviewSample {
   return {
     sampleId: id,
@@ -117,6 +132,7 @@ function outcomeReport(): ResearchOutcomeMathReport {
       adverseThresholdTouchRate: 0,
       favorableFirstRate: 1,
       adverseFirstRate: 0,
+      hypotheticalOverlay: hypotheticalOverlaySummary,
     },
     conceptSummaries: [],
     candidateOutcomes: [{
@@ -148,6 +164,25 @@ function outcomeReport(): ResearchOutcomeMathReport {
       adverseThresholdTouched: false,
       firstMeaningfulMove: 'favorable',
       outcomeClassification: 'favorable_continuation',
+      hypotheticalOutcomeOverlay: {
+        advisoryOnly: true,
+        executionApproved: false,
+        hypotheticalReferencePrice: 7600,
+        hypotheticalInvalidationReference: 7604,
+        hypotheticalThresholdOne: 7596,
+        hypotheticalThresholdTwo: 7592,
+        thresholdOnePoints: 4,
+        thresholdTwoPoints: 8,
+        adverseInvalidationPoints: 4,
+        observationWindowBars: 12,
+        firstResolvedEvent: 'favorable_threshold_two',
+        hypotheticalOutcomeLabel: 'favorable_continuation',
+        resolvedAtBarIndex: 3,
+        resolvedAtTime: '2026-05-28T10:20:00',
+        maxFavorableExcursionPoints: 12,
+        maxAdverseExcursionPoints: 2,
+        notes: [],
+      },
       dataQualityNotes: [],
     }],
     markdown: '# fixture',
@@ -176,6 +211,12 @@ assert.ok(payload.content.includes('false_run_liquidity_fade-001'));
 assert.ok(payload.content.includes('Research-only. This does not approve execution.'));
 assert.ok(payload.content.includes('Max favorable excursion: 12'));
 assert.ok(payload.content.includes('outcomeClassification: favorable_continuation'));
+assert.ok(payload.content.includes('Hypothetical research overlay:'));
+assert.ok(payload.content.includes('Reference price: 7600'));
+assert.ok(payload.content.includes('Favorable threshold one: 7596'));
+assert.ok(payload.content.includes('Adverse invalidation reference: 7604'));
+assert.ok(payload.content.includes('Hypothetical outcome: favorable_continuation'));
+assert.ok(payload.content.includes('Research-only. These are not entries, stops, or targets. This does not approve execution.'));
 assert.equal(payload.components.length, 2);
 const buttons = payload.components.flatMap((row) => row.components);
 assert.deepEqual(buttons.map((button) => button.label), [

@@ -190,6 +190,7 @@ export function buildResearchReviewComponents(packHash: string, sampleId: string
 
 function outcomeLines(outcome: ResearchCandidateOutcome | null): string[] {
   if (!outcome) return ['Outcome math: not attached'];
+  const overlay = outcome.hypotheticalOutcomeOverlay;
   return [
     'Outcome math:',
     `- Max favorable excursion: ${outcome.maxFavorableExcursionPoints ?? 'n/a'}`,
@@ -199,6 +200,18 @@ function outcomeLines(outcome: ResearchCandidateOutcome | null): string[] {
     `- adverseThresholdTouched: ${outcome.adverseThresholdTouched ?? 'n/a'}`,
     `- firstMeaningfulMove: ${outcome.firstMeaningfulMove}`,
     `- outcomeClassification: ${outcome.outcomeClassification}`,
+    ...(overlay ? [
+      '',
+      'Hypothetical research overlay:',
+      `Reference price: ${overlay.hypotheticalReferencePrice ?? 'n/a'}`,
+      `Favorable threshold one: ${overlay.hypotheticalThresholdOne ?? 'n/a'}`,
+      `Favorable threshold two: ${overlay.hypotheticalThresholdTwo ?? 'n/a'}`,
+      `Adverse invalidation reference: ${overlay.hypotheticalInvalidationReference ?? 'n/a'}`,
+      `First resolved event: ${overlay.firstResolvedEvent}`,
+      `Hypothetical outcome: ${overlay.hypotheticalOutcomeLabel}`,
+      '',
+      'Research-only. These are not entries, stops, or targets. This does not approve execution.',
+    ] : []),
   ];
 }
 
