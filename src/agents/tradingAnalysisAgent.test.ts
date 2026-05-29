@@ -90,6 +90,7 @@ assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
 assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
+assert.ok(report.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(report.discordMessage.includes([
@@ -110,6 +111,18 @@ assert.ok(report.discordMessage.includes([
 assert.ok(report.discordMessage.includes('research-only / not executable'));
 assert.ok(report.discordMessage.includes('Human Review Queue:'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:|Trade now|Entry confirmed|model promotion recommended/im.test(report.discordMessage));
+
+const zeroWatchlistReport = buildWeeklyTradingAnalysisReport({
+  weekEnding: '2026-05-29',
+  instrument: 'MES',
+  diagnosticReports: [],
+  watchlistRecords: [],
+  healthEvents: [{ status: 'READY', summary: 'OK' }],
+  tradeAlertRecords: [],
+});
+assert.ok(zeroWatchlistReport.discordMessage.includes('Watchlist alerts: 0'));
+assert.ok(zeroWatchlistReport.discordMessage.includes('What We Learned: No watchlist alerts fired this week. Continue collecting data.'));
+assert.ok(!zeroWatchlistReport.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 
 const parsed = parseWeeklyReportArgs([
   '--week-ending', '2026-05-29',

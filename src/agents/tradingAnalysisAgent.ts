@@ -153,6 +153,10 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
       : report.recommendations.advisoryOnlyDetectorReview
         ? 'Continue collecting advisory examples. No executable model promotion.'
         : 'Continue normal tracking. No rule change recommended.';
+  const whatWeLearned =
+    report.counts.watchlists > 0
+      ? `Watchlists improved awareness without creating trade authority. ${report.sections.watchlistPerformance[0]}`
+      : 'No watchlist alerts fired this week. Continue collecting data.';
 
   return [
     `[WEEKLY TRADING INTELLIGENCE] ${report.instrument}`,
@@ -170,7 +174,7 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     '',
     `Health / Data Quality: ${report.sections.scannerHealthSummary[0]} ${report.sections.dataQualityNotes[0] || ''}`,
     '',
-    `What We Learned: Watchlists improved awareness without creating trade authority. ${report.sections.watchlistPerformance[0]}`,
+    `What We Learned: ${whatWeLearned}`,
     '',
     'Research Desk:',
     ...(report.sections.researchDesk.length ? report.sections.researchDesk : ['- No new research notes this week.']),
