@@ -350,6 +350,7 @@ assert.ok(timeWindowPack.conceptSummaries[0].directionCounts.SHORT >= 1);
 assert.ok(Object.keys(timeWindowPack.conceptSummaries[0].windowCounts).length >= 2);
 assert.equal(timeWindowPack.conceptSummaries[0].availableSamples, 4);
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentApprovesTrade === false));
+assert.ok(timeWindowPack.samples.every((sample) => sample.advisoryOnly === true));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentChangesRules === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentCreatesEntry === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentCreatesTargets === false));

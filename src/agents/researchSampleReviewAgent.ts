@@ -14,6 +14,8 @@ export type ResearchSampleInspectionLabel =
   | 'insufficient_context'
   | 'reject';
 
+export type ResearchHumanInspectionLabel = ResearchSampleInspectionLabel | 'human_rule_review_queue';
+
 export type ResearchSampleConfidence = 'low' | 'medium' | 'high';
 
 export interface ResearchSampleReviewSourceReport {
@@ -38,6 +40,7 @@ export interface ResearchReviewSample {
   direction: ResearchBackfillDirection;
   window: string | null;
   classification: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only';
+  advisoryOnly: true;
   summary: string;
   whyAdvisoryOnly: string;
   model1Overlap: boolean;
@@ -59,16 +62,16 @@ export interface ResearchReviewSample {
     agentCreatesTargets: false;
     agentPromotesModel: false;
   };
-  humanInspectionLabel: null;
-  humanConfidence: null;
-  humanReason: null;
-  humanNotes: null;
-  humanReviewedAt: null;
-  humanReviewer: null;
-  agentHumanAgreement: null;
-  disagreementReason: null;
-  finalReviewLabel: null;
-  finalReviewNotes: null;
+  humanInspectionLabel: ResearchHumanInspectionLabel | null;
+  humanConfidence: ResearchSampleConfidence | null;
+  humanReason: string | null;
+  humanNotes: string | null;
+  humanReviewedAt: string | null;
+  humanReviewer: string | null;
+  agentHumanAgreement: boolean | null;
+  disagreementReason: string | null;
+  finalReviewLabel: ResearchHumanInspectionLabel | null;
+  finalReviewNotes: string | null;
 }
 
 export interface ResearchSampleConceptSummary {
@@ -268,6 +271,7 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
     direction: event.direction,
     window: event.window || null,
     classification: event.classification,
+    advisoryOnly: true,
     summary: event.summary,
     whyAdvisoryOnly: event.classification === 'advisory_only'
       ? reasonFor(candidate)
