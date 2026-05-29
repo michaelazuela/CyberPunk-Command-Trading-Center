@@ -32,7 +32,7 @@ const input = {
   currentModelComparisonTargets: [
     'Current Model 1',
     'Current Turtle Soup',
-    'Current ICT-style Displacement/FVG Pullback Watchlist',
+    'Current Displacement/FVG Pullback Watchlist',
     'Current conditional risk scoring behavior',
     'Current Discord advisory behavior',
   ],
@@ -41,7 +41,7 @@ const input = {
 const before = JSON.stringify(input);
 const brief = extractResearchBrief(input);
 assert.equal(JSON.stringify(input), before, 'extractor must not mutate transcript input');
-assert.equal(brief.candidateWatchlistModel.name, 'Final-Hour ICT-Style Liquidity Draw Watchlist');
+assert.equal(brief.candidateWatchlistModel.name, 'Final-Hour Liquidity Draw Watchlist');
 assert.equal(brief.candidateWatchlistModel.executable, false);
 assert.equal(brief.candidateWatchlistModel.createsEntries, false);
 assert.equal(brief.candidateWatchlistModel.createsStops, false);
@@ -70,7 +70,7 @@ assert.ok(!JSON.stringify(brief).includes('"t1"'));
 assert.ok(!JSON.stringify(brief).includes('"t2"'));
 
 const markdown = readFileSync('docs/research/ict-final-hour-liquidity-draw-research.md', 'utf8');
-assert.ok(markdown.includes('# ICT Final-Hour Liquidity Draw Research'));
+assert.ok(markdown.includes('# Final-Hour Liquidity Draw Research'));
 assert.ok(markdown.includes('## 8. Guardrails'));
 assert.ok(markdown.includes('## 5. Comparison to Existing 6K Rules'));
 assert.ok(markdown.includes('## 6. Bridge Data Research Plan'));

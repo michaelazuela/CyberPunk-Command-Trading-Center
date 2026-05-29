@@ -677,9 +677,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
         includeInWeeklyNewsletter: true,
       }
     : {
-        researchTitle: 'ICT Final-Hour Liquidity Draw Research',
+        researchTitle: 'Final-Hour Liquidity Draw Research',
         status: 'research_only',
-        candidateName: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
+        candidateName: 'Final-Hour Liquidity Draw Watchlist',
         primaryIdea: 'Late-day draw toward clean buy-side liquidity during the 3:15-3:45 ET final-hour macro window.',
         recommendedNextStep: 'Keep as research note and collect 20-30 bridge-backed examples before any human rule review.',
         ruleChange: 'none',
@@ -877,7 +877,7 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
       : falseRunResearch
       ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.'
-      : 'Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
+      : 'Final-Hour Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
     guardrails: amdResearch
       ? [
           'This is not an approved executable model.',

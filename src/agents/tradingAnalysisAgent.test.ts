@@ -52,9 +52,9 @@ const report = buildWeeklyTradingAnalysisReport({
   ],
   tradeAlertRecords: [{ state: 'Executable', sentAt: '2026-05-29T10:00:00Z' }],
   researchNotes: [{
-    researchTitle: 'ICT Final-Hour Liquidity Draw Research',
+    researchTitle: 'Final-Hour Liquidity Draw Research',
     status: 'research_only',
-    candidateName: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
+    candidateName: 'Final-Hour Liquidity Draw Watchlist',
     primaryIdea: 'Late-day draw toward clean buy-side liquidity during 3:15-3:45 ET.',
     recommendedNextStep: 'Collect 20-30 bridge-backed examples before rule review.',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
@@ -111,7 +111,8 @@ assert.ok(report.discordMessage.includes('Executive Summary:'));
 assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
 assert.ok(report.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
-assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
+assert.ok(report.discordMessage.includes('Final-Hour Liquidity Draw Watchlist'));
+assert.ok(!report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
 assert.ok(report.discordMessage.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));
@@ -124,7 +125,7 @@ assert.ok(report.discordMessage.includes([
   '  Rule change: none.',
 ].join('\n')));
 assert.ok(report.discordMessage.includes([
-  '- Final-Hour ICT-Style Liquidity Draw Watchlist',
+  '- Final-Hour Liquidity Draw Watchlist',
   '  Status: research-only / not executable',
   '  Idea: Late-day draw toward clean buy-side liquidity during 3:15-3:45 ET.',
   '  Next step: Collect 20-30 bridge-backed examples before rule review.',
@@ -257,6 +258,8 @@ assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
 assert.equal(collected.researchNotes?.length, 4);
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Final-Hour Liquidity Draw Watchlist'));
+assert.equal(collected.researchNotes?.some((note) => note.candidateName.includes('ICT')), false);
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Turtle Soup')));
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Time-Window Liquidity Delivery Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Accumulation–Manipulation–Distribution Range Model Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
@@ -278,6 +281,8 @@ assert.equal(newsletterSkip.skippedReason, 'Dry run.');
 assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Final-Hour Liquidity Draw Watchlist'));
+assert.ok(!newsletterSkip.report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));

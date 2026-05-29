@@ -54,6 +54,34 @@ export interface HistoricalResearchBackfillInput {
   existingResearchNotes?: string[];
   dataWarnings?: string[];
   events?: ResearchBackfillEvent[];
+  sourceCoverage?: HistoricalResearchSourceCoverage;
+  barCoverage?: HistoricalResearchBarCoverage[];
+  detectorAudit?: Partial<Record<ResearchBackfillConceptId, HistoricalResearchDetectorAudit>>;
+}
+
+export interface HistoricalResearchSourceCoverage {
+  localBridgeDatesScanned: string[];
+  supabaseRecordsScanned: number;
+  auditJsonRecordsScanned: number;
+  diagnosticReportsScanned: number;
+  skippedDates: string[];
+  missingDataDates: string[];
+}
+
+export interface HistoricalResearchBarCoverage {
+  timeframe: '5m' | '15m' | '60m' | '240m' | 'daily';
+  rawBarsLoaded: number;
+  barsFilteredIncomplete: number;
+  completedBarsRemaining: number;
+}
+
+export interface HistoricalResearchDetectorAudit {
+  conceptId: ResearchBackfillConceptId;
+  datesEvaluated: string[];
+  rawCandidatePrefilterCount: number;
+  rejectedCount: number;
+  topRejectionReasons: string[];
+  finalCandidateCount: number;
 }
 
 export interface HistoricalResearchConceptReport {
@@ -101,12 +129,16 @@ export interface HistoricalResearchBackfillReport {
   executiveSummary: string[];
   dataCoverage: {
     completed5mBars: number;
+    sourceCoverage: HistoricalResearchSourceCoverage;
+    barCoverage: HistoricalResearchBarCoverage[];
     supabaseRecords: number;
     auditRecords: number;
     diagnosticReports: number;
     existingResearchNotes: number;
     dataGaps: string[];
   };
+  detectorAudit: HistoricalResearchDetectorAudit[];
+  zeroCandidateExplanation: string[];
   conceptReports: HistoricalResearchConceptReport[];
   approvedModelOverlap: {
     model1: number;
@@ -281,6 +313,73 @@ function buildConceptReport(
   };
 }
 
+function uniqueDatesFromBars(bars: HistoricalResearchBar[] | undefined): string[] {
+  return [...new Set((bars || []).map((bar) => bar.time.slice(0, 10)).filter(Boolean))].sort();
+}
+
+function uniqueDatesFromEvents(events: ResearchBackfillEvent[]): string[] {
+  return [...new Set(events.map((event) => event.date).filter((date) => date && date !== 'unknown'))].sort();
+}
+
+function defaultSourceCoverage(input: HistoricalResearchBackfillInput): HistoricalResearchSourceCoverage {
+  const localBridgeDatesScanned = uniqueDatesFromBars(input.completedBars5m);
+  return {
+    localBridgeDatesScanned,
+    supabaseRecordsScanned: (input.supabaseRecords || []).length,
+    auditJsonRecordsScanned: (input.auditRecords || []).length,
+    diagnosticReportsScanned: (input.diagnosticReports || []).length,
+    skippedDates: [],
+    missingDataDates: localBridgeDatesScanned.length ? [] : [input.from === input.to ? input.from : `${input.from}..${input.to}`],
+  };
+}
+
+function defaultBarCoverage(input: HistoricalResearchBackfillInput): HistoricalResearchBarCoverage[] {
+  return [{
+    timeframe: '5m',
+    rawBarsLoaded: (input.completedBars5m || []).length,
+    barsFilteredIncomplete: 0,
+    completedBarsRemaining: (input.completedBars5m || []).length,
+  }];
+}
+
+function mergeDetectorAudit(
+  input: HistoricalResearchBackfillInput,
+  conceptId: ResearchBackfillConceptId,
+  events: ResearchBackfillEvent[],
+): HistoricalResearchDetectorAudit {
+  const provided = input.detectorAudit?.[conceptId];
+  const rejectionReasons = [
+    ...(provided?.topRejectionReasons || []),
+    ...events.flatMap((event) => event.failureReasons || []),
+  ];
+  return {
+    conceptId,
+    datesEvaluated: provided?.datesEvaluated?.length ? [...provided.datesEvaluated] : uniqueDatesFromEvents(events),
+    rawCandidatePrefilterCount: provided?.rawCandidatePrefilterCount ?? events.length,
+    rejectedCount: provided?.rejectedCount ?? 0,
+    topRejectionReasons: topStrings(rejectionReasons),
+    finalCandidateCount: events.length,
+  };
+}
+
+function explainZeroCandidates(input: HistoricalResearchBackfillInput, detectorAudit: HistoricalResearchDetectorAudit[]): string[] {
+  const reasons: string[] = [];
+  const sourceCoverage = input.sourceCoverage || defaultSourceCoverage(input);
+  const barCoverage = input.barCoverage || defaultBarCoverage(input);
+  const completedBars = barCoverage.reduce((sum, item) => sum + item.completedBarsRemaining, 0);
+  const rawPrefilter = detectorAudit.reduce((sum, item) => sum + item.rawCandidatePrefilterCount, 0);
+  const auditRecords = sourceCoverage.auditJsonRecordsScanned;
+  if (completedBars === 0) reasons.push('No completed bridge bars were available for detector evaluation.');
+  if (auditRecords > 0 && rawPrefilter === 0) {
+    reasons.push(`${auditRecords} audit JSON record(s) were scanned as history, but none contained a research concept or diagnostic classification that the backfill currently maps into candidate events.`);
+  }
+  if ((input.diagnosticReports || []).length === 0) reasons.push('No diagnostic replay reports were available to map approved/advisory classifications.');
+  if (rawPrefilter === 0 && completedBars > 0) reasons.push('Completed bars loaded, but concept detector prefilters did not find qualifying ranges in the configured windows.');
+  if (detectorAudit.some((item) => item.rejectedCount > 0)) reasons.push('Detector prefilters found reviewed records/bars, but all were rejected by research-only filters; see detector audit rejection reasons.');
+  if (!reasons.length) reasons.push('No research events were produced; detector implementation may need deeper concept-specific mapping.');
+  return reasons;
+}
+
 function listOrNone(values: string[]): string[] {
   return values.length ? values : ['none'];
 }
@@ -330,11 +429,23 @@ export function renderHistoricalResearchBackfillMarkdown(report: Omit<Historical
     '',
     '## 2. Data Coverage',
     `- Completed 5M bars: ${report.dataCoverage.completed5mBars}`,
+    `- Local bridge dates scanned: ${report.dataCoverage.sourceCoverage.localBridgeDatesScanned.join(', ') || 'none'}`,
     `- Supabase records: ${report.dataCoverage.supabaseRecords}`,
     `- Audit records: ${report.dataCoverage.auditRecords}`,
     `- Diagnostic reports: ${report.dataCoverage.diagnosticReports}`,
     `- Existing research notes: ${report.dataCoverage.existingResearchNotes}`,
+    `- Skipped dates: ${report.dataCoverage.sourceCoverage.skippedDates.join(', ') || 'none'}`,
+    `- Missing-data dates: ${report.dataCoverage.sourceCoverage.missingDataDates.join(', ') || 'none'}`,
     `- Data gaps: ${listOrNone(report.dataCoverage.dataGaps).join(' | ')}`,
+    '',
+    'Bar coverage:',
+    ...report.dataCoverage.barCoverage.map((item) => `- ${item.timeframe}: raw=${item.rawBarsLoaded}, incomplete filtered=${item.barsFilteredIncomplete}, completed=${item.completedBarsRemaining}`),
+    '',
+    'Zero-candidate explanation:',
+    ...listOrNone(report.zeroCandidateExplanation).map((line) => `- ${line}`),
+    '',
+    'Detector audit:',
+    ...report.detectorAudit.map((item) => `- ${CONCEPT_TITLES[item.conceptId]}: dates=${item.datesEvaluated.length}, raw prefilter=${item.rawCandidatePrefilterCount}, rejected=${item.rejectedCount}, final=${item.finalCandidateCount}, top rejection=${item.topRejectionReasons.join(' | ') || 'none'}`),
     '',
     renderConceptMarkdown(3, conceptMap.get('time_window_liquidity_delivery') || emptyConcept('time_window_liquidity_delivery', report.from, report.to)),
     '',
@@ -384,6 +495,11 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
   const selectedConcept = input.selectedConcept || 'all';
   const concepts = selectedConcepts(selectedConcept);
   const events = [...(input.events || [])].filter((event) => concepts.includes(event.concept));
+  const detectorAudit = concepts.map((conceptId) => mergeDetectorAudit(
+    input,
+    conceptId,
+    events.filter((event) => event.concept === conceptId),
+  ));
   const conceptReports = concepts.map((conceptId) => buildConceptReport(
     conceptId,
     input,
@@ -392,6 +508,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
   const model1 = conceptReports.reduce((sum, concept) => sum + concept.approvedModelOverlaps.model1, 0);
   const turtleSoup = conceptReports.reduce((sum, concept) => sum + concept.approvedModelOverlaps.turtleSoup, 0);
   const advisoryOnlyTotal = conceptReports.reduce((sum, concept) => sum + concept.advisoryOnlyCount, 0);
+  const zeroCandidateExplanation = events.length === 0 ? explainZeroCandidates(input, detectorAudit) : [];
   const repeatedReasons = topStrings(events.flatMap((event) => event.failureReasons || []));
   const continuedTracking = conceptReports
     .filter((concept) => concept.totalCandidates > 0 || concept.recommendation === 'consider_future_advisory_smoke_test')
@@ -410,12 +527,16 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     ],
     dataCoverage: {
       completed5mBars: (input.completedBars5m || []).length,
+      sourceCoverage: input.sourceCoverage || defaultSourceCoverage(input),
+      barCoverage: input.barCoverage || defaultBarCoverage(input),
       supabaseRecords: (input.supabaseRecords || []).length,
       auditRecords: (input.auditRecords || []).length,
       diagnosticReports: (input.diagnosticReports || []).length,
       existingResearchNotes: (input.existingResearchNotes || []).length,
       dataGaps: [...(input.dataWarnings || [])],
     },
+    detectorAudit,
+    zeroCandidateExplanation,
     conceptReports,
     approvedModelOverlap: {
       model1,

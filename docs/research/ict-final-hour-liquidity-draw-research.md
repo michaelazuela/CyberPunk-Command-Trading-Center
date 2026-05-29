@@ -1,4 +1,4 @@
-# ICT Final-Hour Liquidity Draw Research
+# Final-Hour Liquidity Draw Research
 
 ## 1. Source Summary
 
@@ -102,7 +102,7 @@
 ## 3. Candidate Watchlist Model
 
 Name:
-`Final-Hour ICT-Style Liquidity Draw Watchlist`
+`Final-Hour Liquidity Draw Watchlist`
 
 Purpose:
 Identify late-day conditions where price forms a foothold and appears likely to draw toward clean buy-side liquidity during the 3:15-3:45 ET macro window.
@@ -159,7 +159,7 @@ Current Turtle Soup:
 - Classification: partially covered.
 - Turtle Soup already handles sweep/reclaim reversals. A final-hour liquidity draw remains context only unless approved 5M gates confirm.
 
-Current ICT-style Displacement/FVG Pullback Watchlist:
+Current Displacement/FVG Pullback Watchlist:
 
 - Classification: partially covered.
 - Existing watchlists are advisory-only. This research candidate should follow the same boundary.
@@ -199,7 +199,7 @@ The future smoke test should:
 
 Draft only. Do not implement as a Discord alert in this phase.
 
-`Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.`
+`Final-Hour Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.`
 
 ## 8. Guardrails
 
@@ -222,9 +222,9 @@ Do not implement until more examples are collected and a separate human review a
 
 ```json
 {
-  "researchTitle": "ICT Final-Hour Liquidity Draw Research",
+  "researchTitle": "Final-Hour Liquidity Draw Research",
   "status": "research_only",
-  "candidateName": "Final-Hour ICT-Style Liquidity Draw Watchlist",
+  "candidateName": "Final-Hour Liquidity Draw Watchlist",
   "primaryIdea": "Late-day draw toward clean buy-side liquidity during the 3:15-3:45 ET final-hour macro window.",
   "recommendedNextStep": "Keep as research note and collect 20-30 bridge-backed examples before any human rule review.",
   "approvalBoundarySummary": "Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.",

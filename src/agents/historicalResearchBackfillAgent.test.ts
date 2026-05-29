@@ -137,6 +137,12 @@ assert.equal(report.conceptReports.length, 4);
 assert.equal(report.dataCoverage.completed5mBars, 1);
 assert.equal(report.dataCoverage.supabaseRecords, 1);
 assert.equal(report.dataCoverage.auditRecords, 1);
+assert.equal(report.dataCoverage.sourceCoverage.auditJsonRecordsScanned, 1);
+assert.equal(report.dataCoverage.barCoverage[0].timeframe, '5m');
+assert.equal(report.dataCoverage.barCoverage[0].completedBarsRemaining, 1);
+assert.equal(report.detectorAudit.length, 4);
+assert.equal(report.detectorAudit.some((audit) => audit.rawCandidatePrefilterCount > 0), true);
+assert.deepEqual(report.zeroCandidateExplanation, []);
 assert.equal(report.approvedModelOverlap.model1, 1);
 assert.equal(report.approvedModelOverlap.turtleSoup, 1);
 assert.equal(report.approvalBoundary.researchBackfillApprovesTrade, false);
@@ -185,6 +191,10 @@ const missingDataReport = runHistoricalResearchBackfill({
 assert.equal(missingDataReport.conceptReports.length, 4);
 assert.equal(missingDataReport.dataCoverage.dataGaps.length, 2);
 assert.equal(missingDataReport.conceptReports.every((concept) => concept.totalCandidates === 0), true);
+assert.ok(missingDataReport.zeroCandidateExplanation.some((reason) => reason.includes('No completed bridge bars')));
+assert.ok(missingDataReport.markdown.includes('Zero-candidate explanation:'));
+assert.ok(missingDataReport.markdown.includes('Detector audit:'));
+assert.ok(missingDataReport.markdown.includes('raw prefilter=0'));
 
 const temp = mkdtempSync(join(tmpdir(), 'research-backfill-'));
 const auditDir = join(temp, 'discord-audit');
@@ -200,6 +210,18 @@ writeFileSync(join(diagnosticDir, 'diagnostic.json'), JSON.stringify({
   tradeDate: '2026-05-20',
   instrument: 'MES',
   suspectedMoveDirection: 'LONG',
+}));
+writeFileSync(join(auditDir, 'scanner-1.json'), JSON.stringify({
+  source: 'live-scanner',
+  tradeDate: '2026-05-20',
+  instrument: 'MES',
+  alertType: 'trade',
+}));
+writeFileSync(join(auditDir, 'scanner-2.json'), JSON.stringify({
+  source: 'live-scanner',
+  tradeDate: '2026-05-21',
+  instrument: 'MES',
+  alertType: 'watchlist',
 }));
 writeFileSync(join(researchDir, 'time-window-note.md'), readFileSync('docs/research/time-window-liquidity-delivery-watchlist-research.md', 'utf8'));
 writeFileSync(join(researchReportDir, 'research-backfill.json'), JSON.stringify(report));
@@ -235,7 +257,38 @@ for (const [key, value] of Object.entries(savedSupabaseEnv)) {
 }
 assert.equal(builtInput.completedBars5m?.length, 0);
 assert.ok((builtInput.events?.length || 0) >= 1);
+assert.equal(builtInput.auditRecords?.length, 2);
+assert.ok(builtInput.detectorAudit?.time_window_liquidity_delivery?.topRejectionReasons.some((reason) => reason.includes('Audit records scanned')));
 assert.ok((builtInput.dataWarnings || []).some((warning) => warning.includes('Supabase config unavailable')) || (builtInput.supabaseRecords?.length || 0) >= 0);
+
+const auditOnlyZeroReport = runHistoricalResearchBackfill({
+  from: '2026-01-01',
+  to: '2026-05-29',
+  instrument: 'MES',
+  auditRecords: Array.from({ length: 182 }, (_, index) => ({ tradeDate: `2026-05-${String((index % 28) + 1).padStart(2, '0')}` })),
+  sourceCoverage: {
+    localBridgeDatesScanned: [],
+    supabaseRecordsScanned: 0,
+    auditJsonRecordsScanned: 182,
+    diagnosticReportsScanned: 0,
+    skippedDates: [],
+    missingDataDates: ['2026-01-01..2026-05-29'],
+  },
+  detectorAudit: {
+    time_window_liquidity_delivery: {
+      conceptId: 'time_window_liquidity_delivery',
+      datesEvaluated: ['2026-05-01'],
+      rawCandidatePrefilterCount: 0,
+      rejectedCount: 182,
+      topRejectionReasons: ['Audit records scanned but most do not carry researchConcept tags or diagnostic classifications.'],
+      finalCandidateCount: 0,
+    },
+  },
+  events: [],
+});
+assert.equal(auditOnlyZeroReport.dataCoverage.auditRecords, 182);
+assert.ok(auditOnlyZeroReport.zeroCandidateExplanation.some((reason) => reason.includes('182 audit JSON record(s) were scanned')));
+assert.ok(auditOnlyZeroReport.markdown.includes('Audit records: 182'));
 
 const weeklyOptions = parseWeeklyReportArgs([
   '--week-ending', '2026-05-29',

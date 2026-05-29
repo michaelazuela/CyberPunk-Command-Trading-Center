@@ -14,6 +14,10 @@ import {
   runHistoricalResearchBackfill,
   type HistoricalResearchBackfillInput,
   type HistoricalResearchBackfillReport,
+  type HistoricalResearchBarCoverage,
+  type HistoricalResearchDetectorAudit,
+  type HistoricalResearchSourceCoverage,
+  type ResearchBackfillConceptId,
   type ResearchBackfillConceptSelector,
   type ResearchBackfillEvent,
 } from '../../src/agents/historicalResearchBackfillAgent';
@@ -158,6 +162,19 @@ export function filterCompletedBars(
   });
 }
 
+function barCoverageFor(
+  timeframe: HistoricalResearchBarCoverage['timeframe'],
+  rawBars: NinjaBridgeBar[],
+  completedBars: NinjaBridgeBar[],
+): HistoricalResearchBarCoverage {
+  return {
+    timeframe,
+    rawBarsLoaded: rawBars.length,
+    barsFilteredIncomplete: Math.max(0, rawBars.length - completedBars.length),
+    completedBarsRemaining: completedBars.length,
+  };
+}
+
 async function readJsonFiles(dir: string): Promise<unknown[]> {
   if (!existsSync(dir)) return [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -183,23 +200,53 @@ async function readResearchNotes(dir: string): Promise<string[]> {
   return notes;
 }
 
-async function fetchCompletedBridgeBars(options: ResearchBackfillCliOptions, warnings: string[]): Promise<NinjaBridgeBar[]> {
-  if (options.source === 'supabase') return [];
-  const instrument = options.bridgeInstrument || `${options.instrument} 06-26`;
-  try {
-    const response = await getNinjaHistoricalBars({
-      instrument,
-      timeframe: '5m',
-      from: `${options.from}T00:00:00`,
-      to: `${options.to}T23:59:59`,
-      limit: 50_000,
-      baseUrl: options.bridgeUrl,
-    });
-    return filterCompletedBars(response.bars || [], '5m', options.barTimestampMode, options.barTimeZone);
-  } catch (error) {
-    warnings.push(`Local bridge data unavailable: ${error instanceof Error ? error.message : String(error)}`);
-    return [];
+async function fetchCompletedBridgeBars(options: ResearchBackfillCliOptions, warnings: string[]): Promise<{
+  bars5m: NinjaBridgeBar[];
+  barCoverage: HistoricalResearchBarCoverage[];
+}> {
+  if (options.source === 'supabase') {
+    return {
+      bars5m: [],
+      barCoverage: [
+        barCoverageFor('5m', [], []),
+        barCoverageFor('15m', [], []),
+        barCoverageFor('60m', [], []),
+        barCoverageFor('240m', [], []),
+        barCoverageFor('daily', [], []),
+      ],
+    };
   }
+  const instrument = options.bridgeInstrument || `${options.instrument} 06-26`;
+  const coverage: HistoricalResearchBarCoverage[] = [];
+  let bars5m: NinjaBridgeBar[] = [];
+  const timeframes: Array<{ requested: NinjaBridgeTimeframe; report: HistoricalResearchBarCoverage['timeframe'] }> = [
+    { requested: '5m', report: '5m' },
+    { requested: '15m', report: '15m' },
+    { requested: '60m', report: '60m' },
+    { requested: '240m', report: '240m' },
+  ];
+  for (const timeframe of timeframes) {
+    try {
+      const response = await getNinjaHistoricalBars({
+        instrument,
+        timeframe: timeframe.requested,
+        from: `${options.from}T00:00:00`,
+        to: `${options.to}T23:59:59`,
+        limit: timeframe.requested === '5m' ? 50_000 : 20_000,
+        baseUrl: options.bridgeUrl,
+      });
+      const rawBars = response.bars || [];
+      const completed = filterCompletedBars(rawBars, timeframe.requested, options.barTimestampMode, options.barTimeZone);
+      coverage.push(barCoverageFor(timeframe.report, rawBars, completed));
+      if (timeframe.requested === '5m') bars5m = completed;
+    } catch (error) {
+      warnings.push(`Local bridge ${timeframe.requested} data unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      coverage.push(barCoverageFor(timeframe.report, [], []));
+    }
+  }
+  coverage.push(barCoverageFor('daily', [], []));
+  warnings.push('Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.');
+  return { bars5m, barCoverage: coverage };
 }
 
 async function loadSupabaseRecords(options: ResearchBackfillCliOptions, warnings: string[]): Promise<unknown[]> {
@@ -409,9 +456,92 @@ function deriveEventsFromRecords(records: unknown[]): ResearchBackfillEvent[] {
   return events;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+}
+
+function deriveEventsFromAuditRecords(records: unknown[]): ResearchBackfillEvent[] {
+  const events: ResearchBackfillEvent[] = [];
+  for (const value of records) {
+    const record = asRecord(value);
+    const researchConcept = String(record.researchConcept || record.concept || '');
+    if (!researchConcept) continue;
+    const conceptMap: Record<string, ResearchBackfillConceptId> = {
+      time_window_liquidity_delivery: 'time_window_liquidity_delivery',
+      false_run_liquidity_fade: 'false_run_liquidity_fade',
+      amd_range_model: 'amd_range_model',
+      final_hour_liquidity_draw: 'final_hour_liquidity_draw',
+    };
+    const concept = conceptMap[researchConcept];
+    if (!concept) continue;
+    events.push({
+      concept,
+      date: String(record.tradeDate || record.date || 'unknown'),
+      time: typeof record.alertTimestamp === 'string' ? record.alertTimestamp.slice(11, 16) : null,
+      direction: String(record.direction || 'NO TRADE') as ResearchBackfillEvent['direction'],
+      window: String(record.session || record.alertType || 'audit_history'),
+      summary: 'Audit record carried an explicit research concept tag.',
+      classification: 'advisory_only',
+      failureReasons: ['Audit-derived research event remains advisory-only.'],
+    });
+  }
+  return events;
+}
+
+function uniqueDates(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))].sort();
+}
+
+function buildSourceCoverage(options: ResearchBackfillCliOptions, completedBars5m: NinjaBridgeBar[], auditRecords: unknown[], diagnosticReports: unknown[], supabaseRecords: unknown[]): HistoricalResearchSourceCoverage {
+  const localBridgeDatesScanned = uniqueDates(completedBars5m.map((bar) => bar.time.slice(0, 10)));
+  return {
+    localBridgeDatesScanned,
+    supabaseRecordsScanned: supabaseRecords.length,
+    auditJsonRecordsScanned: auditRecords.length,
+    diagnosticReportsScanned: diagnosticReports.length,
+    skippedDates: [],
+    missingDataDates: localBridgeDatesScanned.length ? [] : [`${options.from}..${options.to}`],
+  };
+}
+
+function buildDetectorAudit(events: ResearchBackfillEvent[], auditRecords: unknown[], completedBars5m: NinjaBridgeBar[]): Partial<Record<ResearchBackfillConceptId, HistoricalResearchDetectorAudit>> {
+  const dateUniverse = uniqueDates([
+    ...completedBars5m.map((bar) => bar.time.slice(0, 10)),
+    ...auditRecords.map((record) => String(asRecord(record).tradeDate || '').slice(0, 10)).filter(Boolean),
+  ]);
+  const concepts: ResearchBackfillConceptId[] = [
+    'time_window_liquidity_delivery',
+    'false_run_liquidity_fade',
+    'amd_range_model',
+    'final_hour_liquidity_draw',
+  ];
+  const result: Partial<Record<ResearchBackfillConceptId, HistoricalResearchDetectorAudit>> = {};
+  for (const concept of concepts) {
+    const conceptEvents = events.filter((event) => event.concept === concept);
+    const auditTaggedForConcept = auditRecords.filter((record) => String(asRecord(record).researchConcept || asRecord(record).concept || '') === concept).length;
+    const rawCandidatePrefilterCount = conceptEvents.length + auditTaggedForConcept;
+    const rejectedCount = auditRecords.length - auditTaggedForConcept;
+    const topRejectionReasons = [
+      completedBars5m.length ? '' : 'No completed 5M bars loaded for bar-based detector.',
+      auditRecords.length ? 'Audit records scanned but most do not carry researchConcept tags or diagnostic classifications.' : 'No audit JSON records available.',
+      rawCandidatePrefilterCount ? '' : 'No bar-based or record-based prefilter candidate matched this concept.',
+    ].filter(Boolean);
+    result[concept] = {
+      conceptId: concept,
+      datesEvaluated: dateUniverse,
+      rawCandidatePrefilterCount,
+      rejectedCount,
+      topRejectionReasons,
+      finalCandidateCount: conceptEvents.length,
+    };
+  }
+  return result;
+}
+
 export async function buildHistoricalResearchBackfillInput(options: ResearchBackfillCliOptions): Promise<HistoricalResearchBackfillInput> {
   const dataWarnings: string[] = [];
-  const completedBars5m = await fetchCompletedBridgeBars(options, dataWarnings);
+  const bridgeData = await fetchCompletedBridgeBars(options, dataWarnings);
+  const completedBars5m = bridgeData.bars5m;
   const supabaseRecords = await loadSupabaseRecords(options, dataWarnings);
   const auditHistory = await loadDiscordAuditHistory(options.auditDir);
   const diagnosticReports = await readJsonFiles(options.diagnosticDir);
@@ -420,7 +550,10 @@ export async function buildHistoricalResearchBackfillInput(options: ResearchBack
     ...deriveEventsFromBars(completedBars5m),
     ...deriveEventsFromRecords(diagnosticReports),
     ...deriveEventsFromRecords(supabaseRecords),
+    ...deriveEventsFromAuditRecords(auditHistory.events),
   ];
+  const sourceCoverage = buildSourceCoverage(options, completedBars5m, auditHistory.events, diagnosticReports, supabaseRecords);
+  const detectorAudit = buildDetectorAudit(events, auditHistory.events, completedBars5m);
 
   return {
     from: options.from,
@@ -432,6 +565,9 @@ export async function buildHistoricalResearchBackfillInput(options: ResearchBack
     auditRecords: auditHistory.events,
     diagnosticReports,
     existingResearchNotes,
+    sourceCoverage,
+    barCoverage: bridgeData.barCoverage,
+    detectorAudit,
     dataWarnings: [...dataWarnings, ...auditHistory.warnings],
     events,
   };
@@ -466,6 +602,7 @@ function compactDiscordReadableSummary(report: HistoricalResearchBackfillReport)
     '',
     'Concepts:',
     ...report.conceptReports.map((concept) => `- ${concept.title}: ${concept.totalCandidates} candidate(s), ${concept.advisoryOnlyCount} advisory-only, rule change: ${concept.ruleChangeRecommendation}.`),
+    ...(report.zeroCandidateExplanation.length ? ['', 'Zero-candidate explanation:', ...report.zeroCandidateExplanation.map((line) => `- ${line}`)] : []),
     '',
     'Authority: research-only. No entries, stops, T1/T2, outcome buttons, model promotion, or rule changes.',
   ].join('\n');
