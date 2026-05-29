@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   createResearchDiscordStateEntry,
   type ResearchDiscordReviewState,
@@ -107,6 +107,24 @@ function writeFixtureState(statePath: string, reviewPackPath: string): ResearchD
   return state;
 }
 
+function writeStateForSample(statePath: string, reviewPackPath: string, sampleId: string, packHash = 'packhash001'): ResearchDiscordReviewState {
+  const entry = createResearchDiscordStateEntry({
+    packHash,
+    reviewPackPath,
+    sampleId,
+    discordMessageId: 'message-1',
+    discordChannelId: 'channel-1',
+    postedAt: '2026-05-29T20:00:00.000Z',
+  });
+  const state: ResearchDiscordReviewState = {
+    reportType: 'research_discord_review_state',
+    updatedAt: '2026-05-29T20:00:00.000Z',
+    entries: [entry],
+  };
+  writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  return state;
+}
+
 function writeOneSampleFixture(tempDir: string, packName: string, mutateSample?: (sample: Record<string, unknown>) => void): {
   reviewPackPath: string;
   statePath: string;
@@ -124,6 +142,17 @@ function writeOneSampleFixture(tempDir: string, packName: string, mutateSample?:
 function click(statePathInput: string) {
   return handleResearchDiscordReviewInteraction({
     customId: 'research_review|packhash001|false_run_liquidity_fade-001|new_model_candidate_review',
+    statePath: statePathInput,
+    user: { id: 'user-1', username: 'Michael' },
+    channelId: 'channel-1',
+    messageId: 'message-1',
+    reviewedAt: '2026-05-29T22:30:00.000Z',
+  });
+}
+
+function clickSample005(statePathInput: string, label = 'keep_advisory') {
+  return handleResearchDiscordReviewInteraction({
+    customId: `research_review|packhash005|time_window_liquidity_delivery-005|${label}`,
     statePath: statePathInput,
     user: { id: 'user-1', username: 'Michael' },
     channelId: 'channel-1',
@@ -221,6 +250,54 @@ for (const [packName, mutate] of [
   assert.equal(readFileSync(unsafeFixture.reviewPackPath, 'utf8'), unsafeOriginal);
   assert.equal(existsSync(unsafeResult.reviewedPackPath || join(temp, packName.replace(/\.json$/i, '.reviewed.json'))), false);
 }
+
+const realReviewPackSource = resolve('tools/automation/research-review-packs/research-sample-review-MES-all-2026-05-29.json');
+assert.equal(existsSync(realReviewPackSource), true);
+const realPackTempDir = join(temp, 'real-pack-005');
+mkdirSync(realPackTempDir, { recursive: true });
+const realPackTempPath = join(realPackTempDir, 'research-sample-review-MES-all-2026-05-29.json');
+const realStatePath = join(realPackTempDir, 'discord-review-state.json');
+writeFileSync(realPackTempPath, readFileSync(realReviewPackSource, 'utf8'), 'utf8');
+writeStateForSample(realStatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
+const realPackOriginal = readFileSync(realPackTempPath, 'utf8');
+const keepAdvisory005 = clickSample005(realStatePath);
+assert.equal(keepAdvisory005.ok, true);
+assert.equal(keepAdvisory005.sampleId, 'time_window_liquidity_delivery-005');
+assert.equal(keepAdvisory005.selectedLabel, 'keep_advisory');
+assert.equal(readFileSync(realPackTempPath, 'utf8'), realPackOriginal);
+const reviewed005 = JSON.parse(readFileSync(keepAdvisory005.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+const reviewed005Sample = reviewed005.samples.find((sample) => sample.sampleId === 'time_window_liquidity_delivery-005');
+assert.ok(reviewed005Sample);
+assert.equal(reviewed005Sample.humanInspectionLabel, 'keep_advisory');
+assert.equal(reviewed005Sample.advisoryOnly, true);
+assert.equal(reviewed005Sample.agentApprovalBoundary.agentApprovesTrade, false);
+assert.ok(!/"entry"|"stop"|"target"|"canExecute"/.test(JSON.stringify(reviewed005Sample)));
+
+const model1StatePath = join(realPackTempDir, 'discord-review-state-model1.json');
+writeStateForSample(model1StatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
+const model1Review005 = clickSample005(model1StatePath, 'possible_model1_mapping_review');
+assert.equal(model1Review005.ok, false);
+assert.ok(model1Review005.responseContent.includes('Insufficient Context'));
+assert.equal(existsSync(join(realPackTempDir, 'research-sample-review-MES-all-2026-05-29.reviewed.json')), true);
+
+const turtleStatePath = join(realPackTempDir, 'discord-review-state-turtle.json');
+writeStateForSample(turtleStatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
+const turtleReview005 = clickSample005(turtleStatePath, 'possible_turtle_soup_mapping_review');
+assert.equal(turtleReview005.ok, false);
+assert.ok(turtleReview005.responseContent.includes('Insufficient Context'));
+
+const missingActivePackStatePath = join(realPackTempDir, 'discord-review-state-missing-active-sample.json');
+writeStateForSample(missingActivePackStatePath, realPackTempPath, 'missing-sample-999', 'packhash005');
+const missingActivePackSample = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|packhash005|missing-sample-999|keep_advisory',
+  statePath: missingActivePackStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-1',
+});
+assert.equal(missingActivePackSample.ok, false);
+assert.ok(missingActivePackSample.responseContent.includes('Sample not found in active review pack JSON'));
+assert.ok(missingActivePackSample.responseContent.includes('No review was written'));
 
 const result = handleResearchDiscordReviewInteraction({
   customId,

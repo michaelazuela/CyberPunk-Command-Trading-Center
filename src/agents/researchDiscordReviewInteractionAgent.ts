@@ -134,6 +134,42 @@ function reviewedPaths(reviewPackPath: string): { jsonFile: string; markdownFile
   };
 }
 
+function activeReviewPackCandidates(primaryReviewPackPath: string): string[] {
+  const resolved = path.resolve(primaryReviewPackPath);
+  const parsed = path.parse(resolved);
+  const candidates = [resolved];
+  if (/\.reviewed$/i.test(parsed.name)) {
+    candidates.push(path.join(parsed.dir, `${parsed.name.replace(/\.reviewed$/i, '')}${parsed.ext || '.json'}`));
+  } else {
+    candidates.push(path.join(parsed.dir, `${parsed.name}.reviewed${parsed.ext || '.json'}`));
+  }
+  try {
+    const activePacks = fs.readdirSync(parsed.dir)
+      .filter((name) => /^research-sample-review-.*\.json$/i.test(name))
+      .map((name) => path.join(parsed.dir, name));
+    candidates.push(...activePacks);
+  } catch {
+    // Missing folders are handled by the normal candidate load path.
+  }
+  return [...new Set(candidates)];
+}
+
+function resolveReviewPackForSample(reviewPackPath: string, sampleId: string): {
+  reviewPackPath: string;
+  pack: ResearchSampleReviewPack;
+  sample: ResearchReviewSample;
+} | null {
+  for (const candidatePath of activeReviewPackCandidates(reviewPackPath)) {
+    if (!fs.existsSync(candidatePath)) continue;
+    const pack = loadReviewPack(candidatePath);
+    assertPackBoundaryAllowsLegacyAdvisoryOnly(pack);
+    const sample = pack.samples.find((item) => item.sampleId === sampleId);
+    console.info(`[research-discord-interactions] lookup pack=${candidatePath}; sampleId=${sampleId}; found=${sample ? 'yes' : 'no'}`);
+    if (sample) return { reviewPackPath: candidatePath, pack, sample };
+  }
+  return null;
+}
+
 function findStateEntry(
   state: ResearchDiscordReviewState,
   customId: ResearchDiscordReviewCustomId,
@@ -270,6 +306,10 @@ function rejected(reason: string): ResearchDiscordInteractionResult {
   };
 }
 
+function rejectedSampleNotFound(sampleId: string): ResearchDiscordInteractionResult {
+  return rejected(`Sample not found in active review pack JSON: ${sampleId}. No review was written.`);
+}
+
 function rejectedSafety(): ResearchDiscordInteractionResult {
   return {
     ok: false,
@@ -304,11 +344,15 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
   } catch (error) {
     return rejected(error instanceof Error ? error.message : String(error));
   }
+  console.info(`[research-discord-interactions] customId=${customId.namespace}|${customId.packHash}|${customId.sampleId}|${customId.label}; action=${customId.label}; sampleId=${customId.sampleId}`);
 
   const statePath = path.resolve(input.statePath);
   const state = readJsonFile<ResearchDiscordReviewState>(statePath, emptyResearchDiscordReviewState());
   const entry = findStateEntry(state, customId);
-  if (!entry) return rejected('No local state mapping was found for this packHash and sampleId.');
+  if (!entry) {
+    console.warn(`[research-discord-interactions] rejection=no_state_mapping; sampleId=${customId.sampleId}`);
+    return rejected('No local state mapping was found for this packHash and sampleId.');
+  }
 
   if (entry.reviewed) {
     if (entry.reviewedBy === input.user.id && entry.selectedLabel === customId.label) {
@@ -327,12 +371,22 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
     return rejected('Sample was already reviewed through Discord. Use CLI/manual override for changes.');
   }
 
-  const reviewPackPath = path.resolve(entry.reviewPackPath);
-  const pack = loadReviewPack(reviewPackPath);
-  assertPackBoundaryAllowsLegacyAdvisoryOnly(pack);
-  const sample = pack.samples.find((item) => item.sampleId === entry.sampleId);
-  if (!sample) return rejected(`Sample not found in review pack: ${entry.sampleId}`);
+  const resolved = resolveReviewPackForSample(entry.reviewPackPath, entry.sampleId);
+  if (!resolved) {
+    console.warn(`[research-discord-interactions] rejection=sample_not_found; sampleId=${entry.sampleId}; reviewPackPath=${path.resolve(entry.reviewPackPath)}`);
+    return rejectedSampleNotFound(entry.sampleId);
+  }
+  const { reviewPackPath, pack, sample } = resolved;
   assertResearchOnlySampleBoundary(sample);
+
+  if (customId.label === 'possible_model1_mapping_review' && sample.classification !== 'model1_overlap' && sample.model1Overlap !== true) {
+    console.warn(`[research-discord-interactions] rejection=insufficient_model1_context; sampleId=${entry.sampleId}; reviewPackPath=${reviewPackPath}`);
+    return rejected('Insufficient Context: this sample does not include Model 1 mapping context. No review was written.');
+  }
+  if (customId.label === 'possible_turtle_soup_mapping_review' && sample.classification !== 'turtle_soup_overlap' && sample.turtleSoupOverlap !== true) {
+    console.warn(`[research-discord-interactions] rejection=insufficient_turtle_soup_context; sampleId=${entry.sampleId}; reviewPackPath=${reviewPackPath}`);
+    return rejected('Insufficient Context: this sample does not include Turtle Soup mapping context. No review was written.');
+  }
 
   const reviewedAt = input.reviewedAt || new Date().toISOString();
   const result = applyHumanReviewToPack({
