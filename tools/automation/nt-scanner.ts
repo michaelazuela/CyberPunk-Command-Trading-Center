@@ -38,7 +38,7 @@ import {
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
-import { scoreConditionalCandidateRisk } from '../../src/agents/conditionalCandidateRiskAgent';
+import { scoreConditionalCandidateRiskForDisplay } from '../../src/agents/conditionalCandidateRiskAgent';
 import {
   buildWatchlistEmbeddingText,
   buildWatchlistMemoryRecord,
@@ -354,11 +354,7 @@ async function writeScannerDiscordAuditLog(args: {
   await fs.mkdir(auditDir, { recursive: true });
   const file = path.join(auditDir, `scanner-${args.session}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
   const conditionalRiskScore = args.candidate
-    ? scoreConditionalCandidateRisk({
-        candidate: args.candidate,
-        priceExtended: Boolean(args.scannerReviewStatus),
-        freshRetestCouldTightenRisk: Boolean(args.candidate.requiredTrigger?.toLowerCase().includes('retest')),
-      })
+    ? scoreConditionalCandidateRiskForDisplay(args.candidate)
     : null;
   await fs.writeFile(file, JSON.stringify({
     createdAt: new Date().toISOString(),

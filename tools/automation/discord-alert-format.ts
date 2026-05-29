@@ -8,9 +8,8 @@ import {
   type ReportDirection,
 } from '../../src/agents/discordReportDesignerAgent';
 import {
-  scoreConditionalCandidateRisk,
+  scoreConditionalCandidateRiskForDisplay,
   type ConditionalCandidateRiskScore,
-  type HigherTimeframeRiskAlignment,
 } from '../../src/agents/conditionalCandidateRiskAgent';
 import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
@@ -226,32 +225,6 @@ function compactPlanLines(candidate: SetupCandidate): string[] {
   ];
 }
 
-function inferHigherTimeframeRiskAlignment(candidate: SetupCandidate): HigherTimeframeRiskAlignment {
-  const text = [
-    candidate.levelContextSummary,
-    candidate.decisionQualityRecommendation,
-    ...candidate.evidence,
-    ...candidate.missingEvidence,
-  ].filter(Boolean).join(' ').toLowerCase();
-  if (/\bhtf\b.*\baligned\b|higher[- ]timeframe.*\baligned\b|4h.*1h.*15m.*5m.*long|4h.*1h.*15m.*5m.*short/.test(text)) return 'aligned';
-  if (/\bhtf\b.*\bconflict|higher[- ]timeframe.*\bconflict|conflicts with higher/.test(text)) return 'conflict';
-  if (/\bmixed\b.*\bhtf\b|\bhtf\b.*\bmixed\b|higher[- ]timeframe.*\bmixed\b/.test(text)) return 'mixed';
-  return 'unknown';
-}
-
-function inferPriceExtended(candidate: SetupCandidate): boolean {
-  const text = [
-    candidate.blockReason,
-    candidate.requiredTrigger,
-    candidate.nextAction,
-    candidate.levelContextSummary,
-    candidate.decisionQualityRecommendation,
-    ...candidate.evidence,
-    ...candidate.missingEvidence,
-  ].filter(Boolean).join(' ').toLowerCase();
-  return /extended|chasing|chase|already triggered|no fresh entry/.test(text);
-}
-
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
     ? `Risk remains blocked by ${riskScore.blockReason}.`
@@ -264,12 +237,7 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
   if (candidate.blockReason !== NoTradeReason.RiskTooWide && normalized.noTradeReason !== NoTradeReason.RiskTooWide) {
     return [];
   }
-  const score = scoreConditionalCandidateRisk({
-    candidate,
-    higherTimeframeAlignment: inferHigherTimeframeRiskAlignment(candidate),
-    priceExtended: inferPriceExtended(candidate),
-    freshRetestCouldTightenRisk: Boolean(candidate.requiredTrigger?.toLowerCase().includes('retest')),
-  });
+  const score = scoreConditionalCandidateRiskForDisplay(candidate);
   return [
     'Conditional Risk:',
     `Decision: WAIT | Executable by app: NO | canExecute: false`,

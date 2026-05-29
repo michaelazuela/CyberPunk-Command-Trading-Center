@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
-import { scoreConditionalCandidateRisk } from './conditionalCandidateRiskAgent';
+import {
+  inferHigherTimeframeRiskAlignment,
+  inferPriceExtended,
+  scoreConditionalCandidateRisk,
+  scoreConditionalCandidateRiskForDisplay,
+} from './conditionalCandidateRiskAgent';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, type SetupCandidate } from '../types';
 
 function turtleSoupCandidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
@@ -67,6 +72,20 @@ const extendedScore = scoreConditionalCandidateRisk({
 assert.ok(extendedScore.score <= 49, 'RiskTooWide plus price extension must cap at high-risk range or lower');
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('Do not chase')));
 assert.ok(extendedScore.advisoryNotes.some((note) => note.includes('tighter retest trigger')));
+
+const displayScore = scoreConditionalCandidateRiskForDisplay(turtleSoupCandidate({
+  requiredTrigger: 'Wait for a fresh completed 5M retest that keeps risk inside limits.',
+  nextAction: 'Manual decision only. Do not chase the reclaim candle.',
+  evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
+}));
+assert.equal(displayScore.score, 49, 'shared display/audit scorer should apply the extended RiskTooWide cap');
+assert.equal(displayScore.label, 'High risk');
+assert.equal(inferHigherTimeframeRiskAlignment(turtleSoupCandidate({
+  evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.'],
+})), 'aligned');
+assert.equal(inferPriceExtended(turtleSoupCandidate({
+  nextAction: 'Manual decision only. Do not chase the reclaim candle.',
+})), true);
 
 const insideLimitCandidate = turtleSoupCandidate({
   entry: 7593,

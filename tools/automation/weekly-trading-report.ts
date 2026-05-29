@@ -29,6 +29,7 @@ export interface WeeklyReportCliOptions {
   json: boolean;
   diagnosticDir: string;
   auditDir: string;
+  researchDir: string;
   stateFile: string;
   dryRun: boolean;
 }
@@ -41,6 +42,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_DIAGNOSTIC_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
+const DEFAULT_RESEARCH_DIR = path.resolve(__dirname, '../../docs/research');
 const DEFAULT_STATE_FILE = path.join(__dirname, '.weekly-trading-report-state.json');
 
 function readFlag(args: string[], flag: string): string | null {
@@ -89,6 +91,7 @@ export function parseWeeklyReportArgs(args = process.argv.slice(2)): WeeklyRepor
     json: hasFlag(args, '--json'),
     diagnosticDir: readFlag(args, '--diagnostic-dir') || DEFAULT_DIAGNOSTIC_DIR,
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
+    researchDir: readFlag(args, '--research-dir') || DEFAULT_RESEARCH_DIR,
     stateFile: readFlag(args, '--state-file') || DEFAULT_STATE_FILE,
     dryRun: hasFlag(args, '--dry-run'),
   };
@@ -107,6 +110,35 @@ async function readJsonFiles(dir: string): Promise<unknown[]> {
     }
   }
   return values;
+}
+
+async function readResearchSummaries(dir: string): Promise<NonNullable<WeeklyTradingAnalysisInput['researchNotes']>> {
+  if (!existsSync(dir)) return [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const summaries: NonNullable<WeeklyTradingAnalysisInput['researchNotes']> = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+    try {
+      const markdown = await fs.readFile(path.join(dir, entry.name), 'utf8');
+      const match = markdown.match(/## 10\. Weekly Newsletter Summary[\s\S]*?```json\s*([\s\S]*?)```/);
+      if (!match?.[1]) continue;
+      const parsed = JSON.parse(match[1]);
+      if (parsed?.includeInWeeklyNewsletter === true && parsed?.status === 'research_only') {
+        summaries.push({
+          researchTitle: String(parsed.researchTitle || entry.name),
+          status: 'research_only',
+          candidateName: String(parsed.candidateName || parsed.researchTitle || entry.name),
+          primaryIdea: String(parsed.primaryIdea || 'Research note only.'),
+          recommendedNextStep: String(parsed.recommendedNextStep || 'Continue research collection.'),
+          approvalBoundarySummary: String(parsed.approvalBoundarySummary || 'Research only.'),
+          includeInWeeklyNewsletter: true,
+        });
+      }
+    } catch {
+      continue;
+    }
+  }
+  return summaries;
 }
 
 function sameInstrument(value: unknown, instrument: string): boolean {
@@ -144,6 +176,7 @@ export async function collectWeeklyReportInput(options: WeeklyReportCliOptions):
   const auditHistory = await loadDiscordAuditHistory(options.auditDir);
   const watchlistHistory = await loadWatchlistAuditHistory(options.auditDir);
   const healthHistory = await loadHealthAuditHistory(options.auditDir);
+  const researchNotes = await readResearchSummaries(options.researchDir);
   const auditEvents = auditHistory.events.filter((event) => !event.instrument || event.instrument.toUpperCase() === options.instrument);
   return {
     weekEnding: options.weekEnding,
@@ -154,6 +187,7 @@ export async function collectWeeklyReportInput(options: WeeklyReportCliOptions):
     tradeAlertRecords: auditEvents.filter((event) => event.alertType === 'trade').map(eventToTradeAlertRecord),
     proofRecords: [],
     auditEvents,
+    researchNotes,
     dataWarnings: auditHistory.warnings,
   };
 }
@@ -275,6 +309,7 @@ export async function publishWeeklyTradingNewsletter(options: {
   dryRun: boolean;
   diagnosticDir?: string;
   auditDir?: string;
+  researchDir?: string;
   stateFile?: string;
 }): Promise<{ report: WeeklyTradingAnalysisReport; sent: boolean; skippedReason: string | null }> {
   const cliOptions: WeeklyReportCliOptions = {
@@ -286,6 +321,7 @@ export async function publishWeeklyTradingNewsletter(options: {
     json: false,
     diagnosticDir: options.diagnosticDir || DEFAULT_DIAGNOSTIC_DIR,
     auditDir: options.auditDir || DEFAULT_AUDIT_DIR,
+    researchDir: options.researchDir || DEFAULT_RESEARCH_DIR,
     stateFile: options.stateFile || DEFAULT_STATE_FILE,
     dryRun: options.dryRun,
   };

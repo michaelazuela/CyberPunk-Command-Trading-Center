@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildWeeklyTradingAnalysisReport } from './tradingAnalysisAgent';
@@ -51,6 +51,15 @@ const report = buildWeeklyTradingAnalysisReport({
     { status: 'BLOCKED', summary: 'Bridge stale' },
   ],
   tradeAlertRecords: [{ state: 'Executable', sentAt: '2026-05-29T10:00:00Z' }],
+  researchNotes: [{
+    researchTitle: 'ICT Final-Hour Liquidity Draw Research',
+    status: 'research_only',
+    candidateName: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
+    primaryIdea: 'Late-day draw toward clean buy-side liquidity during 3:15-3:45 ET.',
+    recommendedNextStep: 'Collect 20-30 bridge-backed examples before rule review.',
+    approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
+    includeInWeeklyNewsletter: true,
+  }],
 });
 
 assert.equal(report.reportType, 'weekly_trading_intelligence');
@@ -70,7 +79,11 @@ assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage
 assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
 assert.ok(report.discordMessage.includes('Key Story:'));
+assert.ok(report.discordMessage.includes('Research Desk:'));
+assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
+assert.ok(report.discordMessage.includes('research-only / not executable'));
 assert.ok(report.discordMessage.includes('Human Review Queue:'));
+assert.ok(!/^Entry:|^Stop:|^T1:|^T2:|Trade now|Entry confirmed|model promotion recommended/im.test(report.discordMessage));
 
 const parsed = parseWeeklyReportArgs([
   '--week-ending', '2026-05-29',
@@ -93,8 +106,10 @@ assert.equal(shouldSendWeeklyDiscordReport(state, report), false);
 const temp = mkdtempSync(join(tmpdir(), 'weekly-report-'));
 const diagnosticDir = join(temp, 'diagnostic-reports');
 const auditDir = join(temp, 'discord-audit');
+const researchDir = join(temp, 'research');
 mkdirSync(diagnosticDir, { recursive: true });
 mkdirSync(auditDir, { recursive: true });
+mkdirSync(researchDir, { recursive: true });
 writeFileSync(join(diagnosticDir, 'diagnostic.json'), JSON.stringify({
   finalClassification: 'C_UNAPPROVED_ICT_FVG_WATCHLIST',
   instrument: 'MES',
@@ -116,6 +131,7 @@ writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
   health: { status: 'DEGRADED', warnings: ['Macro calendar unavailable'] },
   instrument: 'MES',
 }));
+writeFileSync(join(researchDir, 'ict-note.md'), readFileSync('docs/research/ict-final-hour-liquidity-draw-research.md', 'utf8'));
 
 const missingHistory = await loadDiscordAuditHistory(join(temp, 'missing-audit-folder'));
 assert.equal(missingHistory.events.length, 0);
@@ -142,12 +158,14 @@ const collected = await collectWeeklyReportInput({
   ...parsed,
   diagnosticDir,
   auditDir,
+  researchDir,
   stateFile: join(temp, 'state.json'),
 });
 assert.equal(collected.diagnosticReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
+assert.equal(collected.researchNotes?.length, 1);
 assert.ok((collected.auditEvents?.length || 0) >= 3);
 
 const newsletterSkip = await publishWeeklyTradingNewsletter({
@@ -157,11 +175,15 @@ const newsletterSkip = await publishWeeklyTradingNewsletter({
   dryRun: true,
   diagnosticDir,
   auditDir,
+  researchDir,
   stateFile: join(temp, 'newsletter-state.json'),
 });
 assert.equal(newsletterSkip.sent, false);
 assert.equal(newsletterSkip.skippedReason, 'Dry run.');
 assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
+assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
+assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(newsletterSkip.report.discordMessage));
 
 const immutableInput = {
   weekEnding: '2026-05-29',

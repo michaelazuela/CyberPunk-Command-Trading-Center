@@ -21,6 +21,15 @@ export interface WeeklyTradingAnalysisInput {
   tradeAlertRecords?: Array<{ state?: string | null; decision?: string | null; sentAt?: string | null }>;
   proofRecords?: Array<{ outcome?: string | null; tradeTaken?: boolean | null }>;
   auditEvents?: WeeklyScannerAuditEventSummary[];
+  researchNotes?: Array<{
+    researchTitle: string;
+    status: 'research_only' | string;
+    candidateName: string;
+    primaryIdea: string;
+    recommendedNextStep: string;
+    approvalBoundarySummary?: string;
+    includeInWeeklyNewsletter?: boolean;
+  }>;
   dataWarnings?: string[];
 }
 
@@ -39,6 +48,7 @@ export interface WeeklyTradingAnalysisReport {
     repeatedNoTradeReasons: string[];
     watchlistPerformance: string[];
     bugsSuppressionIssues: string[];
+    researchDesk: string[];
     humanReviewRecommendations: string[];
     doNotChangeYetItems: string[];
     dataQualityNotes: string[];
@@ -160,6 +170,9 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     '',
     `What We Learned: Watchlists improved awareness without creating trade authority. ${report.sections.watchlistPerformance[0]}`,
     '',
+    'Research Desk:',
+    ...(report.sections.researchDesk.length ? report.sections.researchDesk.map((item) => `- ${item}`) : ['- No new research notes this week.']),
+    '',
     'Human Review Queue:',
     `- ${recommendation}`,
     '- No automatic rule change recommended.',
@@ -175,6 +188,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
   const diagnostics = [...(input.diagnosticReports || [])];
   const watchlists = [...(input.watchlistRecords || [])];
   const auditEvents = [...(input.auditEvents || [])];
+  const researchNotes = [...(input.researchNotes || [])].filter((note) => note.includeInWeeklyNewsletter !== false);
   const health = countHealth(input.healthEvents);
   const classifications = countClassifications(diagnostics);
   const weekStart = weekStartFromEnding(input.weekEnding);
@@ -211,6 +225,11 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
           ? 'Scanner bug investigation required: approved setup with no alert appears in existing diagnostic reports.'
           : 'No approved missed-trade alert bug found in existing diagnostic reports.',
       ],
+      researchDesk: researchNotes.length
+        ? researchNotes.map((note) =>
+            `${note.candidateName} | Status: research-only / not executable | Idea: ${note.primaryIdea} | Next step: ${note.recommendedNextStep} | Rule change: none.`
+          )
+        : ['No research briefs were added to this weekly report.'],
       humanReviewRecommendations: [
         classifications.C_UNAPPROVED_ICT_FVG_WATCHLIST > 0
           ? 'Continue collecting ICT-style advisory examples before human rule review.'

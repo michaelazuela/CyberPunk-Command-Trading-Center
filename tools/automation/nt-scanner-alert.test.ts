@@ -307,6 +307,82 @@ try {
   assert.ok(!text.includes('Fixture target cascade remains audit-only.'));
   assert.ok(result.auditLogPath.startsWith(auditDir));
 
+  const riskTooWideCandidate: SetupCandidate = {
+    ...candidate,
+    setupType: SetupType.TurtleSoup,
+    scenarioLabel: 'Turtle Soup LONG',
+    entry: 7597,
+    stop: 7588.75,
+    target1: 7620,
+    target2: 7620,
+    riskPoints: 8.25,
+    blockReason: 'RiskTooWide' as any,
+    requiredTrigger: 'Wait for a fresh completed 5M retest that keeps risk inside limits.',
+    nextAction: 'Manual decision only. Do not chase the reclaim candle.',
+    evidence: ['HTF stack aligned LONG: 4H / 1H / 15M / 5M.', 'Sell-side sweep and reclaim confirmed.'],
+  };
+  const riskResult = await prepareLiveScannerDiscordAlertArtifacts({
+    session: 'morning',
+    tradeDate: '2026-05-29',
+    config: { instrument: 'MES' },
+    state: 'Conditional',
+    confidence: {
+      score: 82,
+      qualifiedReasons: ['RiskTooWide advisory fixture.'],
+      missingReasons: [],
+      recommendation: 'Manual decision required.',
+      hardBlocker: 'RiskTooWide',
+    },
+    candidate: riskTooWideCandidate,
+    normalized: {
+      canExecute: false,
+      decisionStatus: TradeDecisionStatus.Wait,
+      decision: 'LONG',
+      noTradeReason: 'RiskTooWide',
+      invalidation: riskTooWideCandidate.invalidation,
+    } as any,
+    chartContext: chartContext as ChartContext,
+    currentPrice: 7604.25,
+    completed5m: {
+      time: '2026-05-29T11:25:00-04:00',
+      open: 7599.25,
+      high: 7600,
+      low: 7593.5,
+      close: 7599.5,
+      volume: 1000,
+    },
+    scoringTimestamp: '2026-05-29T11:25:00-04:00',
+    scoringTimestampSource: 'fixture completed 5M candle',
+    windowLabel: 'Morning Setup Scanner',
+    staleReason: null,
+    targetCascade: {
+      activeTarget: null,
+      activeTimeframe: null,
+      sweptTargets: [],
+      promotedTarget: null,
+      path: [],
+      targetRoomPoor: false,
+      reason: 'RiskTooWide target cascade fixture.',
+    },
+    alertReason: 'RiskTooWide conditional advisory fixture.',
+    planVersionId: 'SCANNER-RISKTOOWIDE-FIXTURE',
+    outputDir,
+    auditDir,
+  });
+  const riskText = flattenDiscordPayloadText(riskResult.payload);
+  const riskAudit = JSON.parse(await fs.readFile(riskResult.auditLogPath, 'utf8'));
+  const displayedScore = riskText.match(/Risk Score: (\d+)\/100 - ([^\n]+)/);
+  assert.ok(displayedScore, 'Discord payload must include risk score and label');
+  assert.equal(Number(displayedScore[1]), riskAudit.conditionalRiskScore.score);
+  assert.equal(displayedScore[2], riskAudit.conditionalRiskScore.label);
+  assert.equal(riskAudit.conditionalRiskScore.canExecute, false);
+  assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
+  assert.equal(riskAudit.conditionalRiskScore.score, 49);
+  assert.equal(riskResult.payload.components, undefined);
+  assert.ok(riskText.includes('Decision: WAIT | Executable by app: NO | canExecute: false'));
+  assert.ok(riskText.includes('Manual decision required'));
+  assert.ok(riskText.includes('Do not chase'));
+
   console.log(`live scanner fixture alert verified: mainText=${text.length}, files=${result.files.length}, audit=${result.auditLogPath}`);
 } finally {
   if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;

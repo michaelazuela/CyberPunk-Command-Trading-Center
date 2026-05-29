@@ -71,6 +71,41 @@ function isRiskTooWide(candidate: SetupCandidate): boolean {
   return candidate.blockReason === NoTradeReason.RiskTooWide;
 }
 
+export function inferHigherTimeframeRiskAlignment(candidate: SetupCandidate): HigherTimeframeRiskAlignment {
+  const text = [
+    candidate.levelContextSummary,
+    candidate.decisionQualityRecommendation,
+    ...candidate.evidence,
+    ...candidate.missingEvidence,
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/\bhtf\b.*\baligned\b|higher[- ]timeframe.*\baligned\b|4h.*1h.*15m.*5m.*long|4h.*1h.*15m.*5m.*short/.test(text)) return 'aligned';
+  if (/\bhtf\b.*\bconflict|higher[- ]timeframe.*\bconflict|conflicts with higher/.test(text)) return 'conflict';
+  if (/\bmixed\b.*\bhtf\b|\bhtf\b.*\bmixed\b|higher[- ]timeframe.*\bmixed\b/.test(text)) return 'mixed';
+  return 'unknown';
+}
+
+export function inferPriceExtended(candidate: SetupCandidate): boolean {
+  const text = [
+    candidate.blockReason,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.levelContextSummary,
+    candidate.decisionQualityRecommendation,
+    ...candidate.evidence,
+    ...candidate.missingEvidence,
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /extended|chasing|chase|already triggered|no fresh entry/.test(text);
+}
+
+export function scoreConditionalCandidateRiskForDisplay(candidate: SetupCandidate): ConditionalCandidateRiskScore {
+  return scoreConditionalCandidateRisk({
+    candidate,
+    higherTimeframeAlignment: inferHigherTimeframeRiskAlignment(candidate),
+    priceExtended: inferPriceExtended(candidate),
+    freshRetestCouldTightenRisk: Boolean(candidate.requiredTrigger?.toLowerCase().includes('retest')),
+  });
+}
+
 export function scoreConditionalCandidateRisk(
   input: ScoreConditionalCandidateRiskInput,
 ): ConditionalCandidateRiskScore {
