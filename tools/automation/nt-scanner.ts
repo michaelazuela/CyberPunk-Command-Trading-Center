@@ -16,7 +16,6 @@ import {
 } from '../../src/lib/ninjaTraderBridge';
 import {
   assessBridgeBarStaleness,
-  applyStaleChaseGuard,
   buildTargetCascade,
   DEFAULT_SCANNER_RISK_GUARDS,
   getScannerTradeDate,
@@ -27,7 +26,7 @@ import {
   scannerAlertKey,
   scannerContextLogLabel,
   scannerContextState,
-  scannerStateFromDecision,
+  selectScannerPlan,
   scoreScannerCandidate,
   shouldSendScannerAlert,
   toEtMinutes,
@@ -38,7 +37,7 @@ import {
   type ScannerThresholds,
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
-import { TradeDecisionStatus, type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
@@ -286,6 +285,8 @@ async function writeScannerDiscordAuditLog(args: {
   scoringTimestampSource: string;
   windowLabel: string;
   staleReason: string | null;
+  scannerReviewStatus?: string | null;
+  scannerAuditWarnings?: string[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
   chartMarkup: string | null;
@@ -312,6 +313,8 @@ async function writeScannerDiscordAuditLog(args: {
     scoringTimestampSource: args.scoringTimestampSource,
     windowLabel: args.windowLabel,
     staleReason: args.staleReason,
+    scannerReviewStatus: args.scannerReviewStatus || null,
+    scannerAuditWarnings: args.scannerAuditWarnings || [],
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     attachments: {
@@ -469,28 +472,6 @@ async function analysisFromBars(args: {
   };
 }
 
-function chooseBestCandidate(
-  candidates: SetupCandidate[] | undefined,
-  currentPrice: number | null,
-  config: ScannerConfig
-): SetupCandidate | null {
-  return (candidates || [])
-    .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT')
-    .filter((candidate) => candidate.executionStatus === 'Executable' || candidate.executionStatus === 'Conditional' || candidate.executionStatus === 'Blocked')
-    .filter((candidate) => !applyStaleChaseGuard({
-      candidate,
-      currentPrice,
-      guards: {
-        maxChaseDistancePoints: config.maxChaseDistancePoints,
-        maxChaseDistanceR: config.maxChaseDistanceR,
-        staleSetupMaxCandles: config.staleSetupMaxCandles,
-        targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
-        allowRetestOnlyEntries: config.allowRetestOnlyEntries,
-      },
-    }).stale)
-    .sort((a, b) => (b.rankScore || b.priority || 0) - (a.rankScore || a.priority || 0))[0] || null;
-}
-
 function analysisTimestampDate(analysis: AnalysisResult, completed5m: NinjaBridgeBar | null, config: ScannerConfig): Date {
   const structured = analysis.structuredChartContext;
   const timestamp =
@@ -605,6 +586,8 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   scoringTimestampSource: string;
   windowLabel: string;
   staleReason: string | null;
+  scannerReviewStatus?: string | null;
+  scannerAuditWarnings?: string[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
   planVersionId: string;
@@ -646,6 +629,8 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     scoringTimestampSource: args.scoringTimestampSource,
     windowLabel: args.windowLabel,
     staleReason: args.staleReason,
+    scannerReviewStatus: args.scannerReviewStatus,
+    scannerAuditWarnings: args.scannerAuditWarnings,
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     chartMarkup,
@@ -893,7 +878,6 @@ async function runCycle(config: ScannerConfig): Promise<void> {
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
   const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
-  const candidate = chooseBestCandidate(normalized.setupCandidates, currentPrice, config);
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
   const scoringTimestampSource =
     analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
@@ -902,6 +886,33 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     completed5m?.time ? 'latest completed 5M candle' :
     'system time fallback';
   const currentEtMinutes = toEtMinutes(scoringDate);
+  const scannerGuards = {
+    maxChaseDistancePoints: config.maxChaseDistancePoints,
+    maxChaseDistanceR: config.maxChaseDistanceR,
+    staleSetupMaxCandles: config.staleSetupMaxCandles,
+    targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
+    allowRetestOnlyEntries: config.allowRetestOnlyEntries,
+  };
+  const initialSelection = selectScannerPlan({
+    normalized,
+    currentPrice,
+    guards: scannerGuards,
+  });
+  const initialCandidate = initialSelection.candidate;
+  const objectives = (analysis.structuredChartContext?.targetObjectives || initialCandidate?.targetObjectivePlan?.objectives || []) as TargetObjective[];
+  const targetCascade = buildTargetCascade({
+    candidate: initialCandidate,
+    objectives,
+    recentBars: bars['5m'],
+    lookbackCandles: config.targetAlreadySweptLookbackCandles,
+  });
+  const selection = selectScannerPlan({
+    normalized,
+    currentPrice,
+    guards: scannerGuards,
+    targetCascade,
+  });
+  const candidate = selection.candidate;
   const confidence = scoreScannerCandidate(
     candidate,
     window,
@@ -909,34 +920,11 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === candidate?.direction,
     currentEtMinutes,
   );
-  const stale = applyStaleChaseGuard({
-    candidate,
-    currentPrice,
-    guards: {
-      maxChaseDistancePoints: config.maxChaseDistancePoints,
-      maxChaseDistanceR: config.maxChaseDistanceR,
-      staleSetupMaxCandles: config.staleSetupMaxCandles,
-      targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
-      allowRetestOnlyEntries: config.allowRetestOnlyEntries,
-    },
-  });
-  const objectives = (analysis.structuredChartContext?.targetObjectives || candidate?.targetObjectivePlan?.objectives || []) as TargetObjective[];
-  const targetCascade = buildTargetCascade({
-    candidate,
-    objectives,
-    recentBars: bars['5m'],
-    lookbackCandles: config.targetAlreadySweptLookbackCandles,
-  });
-  const decisionState = scannerStateFromDecision({
-    decisionStatus: normalized.decisionStatus || (normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
-    candidate,
-    stale,
-    targetCascade,
-  });
-  const stateForAlert =
-    candidate?.executionStatus === 'Executable' && decisionState === 'Conditional'
-      ? 'Executable'
-      : decisionState;
+  const stale = selection.stale;
+  const stateForAlert = selection.stateForAlert;
+  if (selection.auditWarnings.length) {
+    console.warn(`[scanner] selection audit: ${selection.auditWarnings.join(' | ')}`);
+  }
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];
   const alertDecision = shouldSendScannerAlert({
@@ -971,6 +959,8 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       scoringTimestampSource,
       windowLabel: window.label,
       staleReason: stale.reason,
+      scannerReviewStatus: selection.reviewStatus,
+      scannerAuditWarnings: selection.auditWarnings,
       targetCascade,
       alertReason: alertDecision.reason,
     });
