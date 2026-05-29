@@ -1,7 +1,19 @@
 import fs from 'node:fs/promises';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  exportPendingHumanReviewTemplate,
+  importHumanReviewTemplate,
+  parseHumanReviewTemplateCsv,
+  parseHumanReviewTemplateJson,
+  renderHumanReviewTemplateCsv,
+  renderHumanReviewTemplateJson,
+  SUPPORTED_HUMAN_REVIEW_CONFIDENCE,
+  SUPPORTED_HUMAN_REVIEW_LABELS,
+  type HumanReviewTemplateExport,
+  type HumanReviewTemplateImportResult,
+} from '../../src/agents/researchHumanReviewBatchAgent';
 import {
   applyHumanReviewToPack,
   isHumanReviewConfidence,
@@ -26,6 +38,8 @@ export interface ResearchHumanReviewCliOptions {
   overwrite: boolean;
   listPending: boolean;
   summary: boolean;
+  exportTemplate: string | null;
+  importTemplate: string | null;
   pretty: boolean;
   json: boolean;
 }
@@ -68,6 +82,8 @@ export function parseResearchHumanReviewArgs(args = process.argv.slice(2)): Rese
     overwrite: hasFlag(args, '--overwrite'),
     listPending: hasFlag(args, '--list-pending'),
     summary: hasFlag(args, '--summary'),
+    exportTemplate: readFlag(args, '--export-template'),
+    importTemplate: readFlag(args, '--import-template'),
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
   };
@@ -97,9 +113,28 @@ function reviewedJsonPath(file: string, overwrite: boolean): string {
 function writeReviewedPack(file: string, pack: ResearchSampleReviewPack, overwrite: boolean): { jsonFile: string; markdownFile: string } {
   const jsonFile = reviewedJsonPath(file, overwrite);
   const markdownFile = jsonFile.replace(/\.json$/i, '.md');
+  mkdirSync(path.dirname(jsonFile), { recursive: true });
   writeFileSync(jsonFile, `${JSON.stringify(pack, null, 2)}\n`, 'utf8');
   writeFileSync(markdownFile, `${renderHumanReviewMarkdown(pack)}\n`, 'utf8');
   return { jsonFile, markdownFile };
+}
+
+function writeTemplate(file: string, exported: HumanReviewTemplateExport): string {
+  const resolved = path.resolve(file);
+  mkdirSync(path.dirname(resolved), { recursive: true });
+  const content = resolved.toLowerCase().endsWith('.json')
+    ? renderHumanReviewTemplateJson(exported.rows)
+    : renderHumanReviewTemplateCsv(exported.rows);
+  writeFileSync(resolved, content, 'utf8');
+  return resolved;
+}
+
+async function readTemplateRows(file: string) {
+  const resolved = path.resolve(file);
+  const text = await fs.readFile(resolved, 'utf8');
+  return resolved.toLowerCase().endsWith('.json')
+    ? parseHumanReviewTemplateJson(text)
+    : parseHumanReviewTemplateCsv(text);
 }
 
 function renderPending(pack: ResearchSampleReviewPack): string {
@@ -152,6 +187,44 @@ function renderUpdate(result: HumanReviewCaptureResult, sourcePath: string, outp
   ].join('\n');
 }
 
+function renderTemplateExport(exported: HumanReviewTemplateExport, sourcePath: string, outputPath: string): string {
+  return [
+    '[RESEARCH HUMAN REVIEW TEMPLATE EXPORTED]',
+    `Review pack: ${sourcePath}`,
+    `Template output path: ${outputPath}`,
+    `Total samples: ${exported.totalSamples}`,
+    `Pending samples exported: ${exported.pendingSamplesExported}`,
+    `Supported labels: ${SUPPORTED_HUMAN_REVIEW_LABELS.join(', ')}`,
+    `Supported confidence: ${SUPPORTED_HUMAN_REVIEW_CONFIDENCE.join(', ')}`,
+    `Advisory-only confirmed: ${exported.advisoryOnlyConfirmed ? 'yes' : 'no'}`,
+    '',
+    'Authority: research-only. Template rows cannot approve execution.',
+  ].join('\n');
+}
+
+function renderTemplateImport(result: HumanReviewTemplateImportResult, sourcePath: string, templatePath: string, outputPath: string): string {
+  return [
+    '[RESEARCH HUMAN REVIEW TEMPLATE IMPORTED]',
+    `Review pack: ${sourcePath}`,
+    `Template input path: ${templatePath}`,
+    `Rows read: ${result.rowsRead}`,
+    `Rows applied: ${result.rowsApplied}`,
+    `Rows skipped blank: ${result.rowsSkippedBlank}`,
+    `Rows rejected: ${result.rowsRejected}`,
+    `Reviewed samples: ${result.reviewedSampleCount}`,
+    `Pending samples: ${result.pendingSampleCount}`,
+    `Agreement count: ${result.agreementCount}`,
+    `Disagreement count: ${result.disagreementCount}`,
+    `Advisory-only confirmed: ${result.advisoryOnlyConfirmed ? 'yes' : 'no'}`,
+    `Output path: ${outputPath}`,
+    ...(result.rejectedRows.length
+      ? ['', 'Rejected rows:', ...result.rejectedRows.map((row) => `- ${row.sampleId}: ${row.reason}`)]
+      : []),
+    '',
+    'Authority: research-only. Batch review does not approve trades or rule changes.',
+  ].join('\n');
+}
+
 export async function runResearchHumanReviewCli(rawArgs = process.argv.slice(2)): Promise<void> {
   const options = parseResearchHumanReviewArgs(rawArgs);
   const sourcePath = path.resolve(options.reviewPack);
@@ -169,6 +242,25 @@ export async function runResearchHumanReviewCli(rawArgs = process.argv.slice(2))
     const summary = summarizeHumanReviewProgress(pack);
     if (options.json) console.log(JSON.stringify(summary, null, 2));
     if (options.pretty) console.log(renderSummary(pack));
+    return;
+  }
+
+  if (options.exportTemplate) {
+    const exported = exportPendingHumanReviewTemplate(pack);
+    const outputPath = writeTemplate(options.exportTemplate, exported);
+    if (options.json) console.log(JSON.stringify(exported, null, 2));
+    if (options.pretty) console.log(renderTemplateExport(exported, sourcePath, outputPath));
+    return;
+  }
+
+  if (options.importTemplate) {
+    if (!options.reviewer) throw new Error('--reviewer is required when importing a human review template.');
+    const templatePath = path.resolve(options.importTemplate);
+    const rows = await readTemplateRows(templatePath);
+    const result = importHumanReviewTemplate(pack, rows, options.reviewer);
+    const files = writeReviewedPack(sourcePath, result.updatedPack, options.overwrite);
+    if (options.json) console.log(JSON.stringify(result, null, 2));
+    if (options.pretty) console.log(renderTemplateImport(result, sourcePath, templatePath, files.jsonFile));
     return;
   }
 
