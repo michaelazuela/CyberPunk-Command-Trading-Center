@@ -181,6 +181,116 @@ function fixtureReport(): HistoricalResearchBackfillReport {
         ],
       },
     ],
+    fullCandidateEvents: [
+      {
+        date: '2026-01-02',
+        time: '03:00',
+        instrument: 'MES',
+        concept: 'time_window_liquidity_delivery',
+        direction: 'LONG',
+        window: '3:00-4:00 NY',
+        classification: 'advisory_only',
+        advisoryOnly: true,
+        summary: 'Defined window showed liquidity-delivery range expansion.',
+        detectorReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: false,
+        possibleTurtleSoupOverlap: false,
+        sourceSessionMetadata: { session: '3:00-4:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { drawIdentified: true, fvgOrInefficiency: true },
+      },
+      {
+        date: '2026-02-03',
+        time: '10:00',
+        instrument: 'MES',
+        concept: 'time_window_liquidity_delivery',
+        direction: 'SHORT',
+        window: '10:00-11:00 NY',
+        classification: 'model1_overlap',
+        advisoryOnly: true,
+        summary: 'Model 1 overlap marker from historical record.',
+        detectorReason: 'Possible Model 1 overlap remains human-review-only.',
+        warningFailureReason: 'Possible Model 1 overlap remains human-review-only.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: true,
+        possibleTurtleSoupOverlap: false,
+        sourceSessionMetadata: { session: '10:00-11:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { drawIdentified: true },
+      },
+      {
+        date: '2026-03-04',
+        time: '14:00',
+        instrument: 'MES',
+        concept: 'time_window_liquidity_delivery',
+        direction: 'LONG',
+        window: '2:00-3:00 NY',
+        classification: 'turtle_soup_overlap',
+        advisoryOnly: true,
+        summary: 'Turtle Soup overlap marker from historical record.',
+        detectorReason: 'Possible Turtle Soup overlap remains human-review-only.',
+        warningFailureReason: 'Possible Turtle Soup overlap remains human-review-only.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: false,
+        possibleTurtleSoupOverlap: true,
+        sourceSessionMetadata: { session: '2:00-3:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { trueSweepReclaim: true },
+      },
+      {
+        date: '2026-04-05',
+        time: '10:30',
+        instrument: 'MES',
+        concept: 'time_window_liquidity_delivery',
+        direction: 'SHORT',
+        window: '10:00-11:00 NY',
+        classification: 'advisory_only',
+        advisoryOnly: true,
+        summary: 'Fourth full candidate advisory sample.',
+        detectorReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: false,
+        possibleTurtleSoupOverlap: false,
+        sourceSessionMetadata: { session: '10:00-11:00 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { drawIdentified: true },
+      },
+      {
+        date: '2026-01-07',
+        time: '12:10',
+        instrument: 'MES',
+        concept: 'false_run_liquidity_fade',
+        direction: 'SHORT',
+        window: 'regular_session',
+        classification: 'advisory_only',
+        advisoryOnly: true,
+        summary: 'Price pressed a major intraday high and later delivered lower.',
+        detectorReason: 'False-run behavior needs sweep/reclaim validation before Turtle Soup mapping.',
+        warningFailureReason: 'False-run behavior needs sweep/reclaim validation before Turtle Soup mapping.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: false,
+        possibleTurtleSoupOverlap: false,
+        sourceSessionMetadata: { session: 'regular_session', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { reachedDrawAfterFact: true, failedOrReversed: true },
+      },
+      {
+        date: '2026-01-08',
+        time: '15:15',
+        instrument: 'MES',
+        concept: 'final_hour_liquidity_draw',
+        direction: 'LONG',
+        window: '3:15-3:45 NY',
+        classification: 'advisory_only',
+        advisoryOnly: true,
+        summary: 'Final-hour range expansion showed a possible liquidity draw.',
+        detectorReason: 'Final-hour condition remains advisory-only unless current approved gates pass independently.',
+        warningFailureReason: 'Final-hour condition remains advisory-only unless current approved gates pass independently.',
+        dataQualityNotes: ['Full candidate event fixture.'],
+        possibleModel1Overlap: false,
+        possibleTurtleSoupOverlap: false,
+        sourceSessionMetadata: { session: '3:15-3:45 NY', selectedConcept: 'all', dateRange: { from: '2026-01-01', to: '2026-05-29' } },
+        researchOnlySignals: { cleanLiquidityDraw: true, footholdPresent: true },
+      },
+    ],
     approvedModelOverlap: { model1: 1, turtleSoup: 1, total: 2 },
     advisoryOnlyFindings: [],
     repeatedFailureNoEntryReasons: [],
@@ -228,6 +338,8 @@ const timeWindowPack = createResearchSampleReviewPack({
 });
 
 assert.equal(timeWindowPack.reportType, 'research_sample_review_pack');
+assert.equal(timeWindowPack.sampleSourceMode, 'full_candidate_events');
+assert.ok(timeWindowPack.markdown.includes('Sample review used full candidate events'));
 assert.equal(timeWindowPack.selectedSampleCount, 3);
 assert.equal(timeWindowPack.samples.length, 3);
 assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel === 'possible_model1_mapping_review'));
@@ -236,6 +348,7 @@ assert.ok(timeWindowPack.samples.some((sample) => sample.agentInspectionLabel ==
 assert.ok(timeWindowPack.conceptSummaries[0].directionCounts.LONG >= 1);
 assert.ok(timeWindowPack.conceptSummaries[0].directionCounts.SHORT >= 1);
 assert.ok(Object.keys(timeWindowPack.conceptSummaries[0].windowCounts).length >= 2);
+assert.equal(timeWindowPack.conceptSummaries[0].availableSamples, 4);
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentApprovesTrade === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentChangesRules === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentCreatesEntry === false));
@@ -285,6 +398,22 @@ assert.ok(allPack.conceptSummaries.some((summary) => summary.concept === 'final_
 assert.ok(allPack.samples.every((sample) => sample.agentInspectionLabel !== 'possible_model1_mapping_review' || sample.agentApprovalBoundary.agentApprovesTrade === false));
 assert.ok(allPack.samples.every((sample) => sample.agentInspectionLabel !== 'possible_turtle_soup_mapping_review' || sample.agentApprovalBoundary.agentApprovesTrade === false));
 
+const previewOnlyReport: HistoricalResearchBackfillReport = {
+  ...report,
+  fullCandidateEvents: [],
+};
+const previewPack = createResearchSampleReviewPack({
+  instrument: 'MES',
+  concept: 'time_window_liquidity_delivery',
+  sampleSize: 3,
+  sourceReports: [{ path: 'fixture/preview-only.json', report: previewOnlyReport }],
+  generatedAt: '2026-05-29T21:00:00.000Z',
+});
+assert.equal(previewPack.sampleSourceMode, 'preview_sample_events');
+assert.equal(previewPack.selectedSampleCount, 3);
+assert.equal(previewPack.conceptSummaries[0].availableSamples, 5);
+assert.ok(previewPack.markdown.includes('preview sample events'));
+
 const before = JSON.stringify(sourceReports);
 createResearchSampleReviewPack({
   instrument: 'MES',
@@ -307,4 +436,3 @@ assert.equal(loaded[0].report.reportType, 'historical_research_backfill');
 assert.equal(readFileSync(join(nested, 'research-backfill.json'), 'utf8').includes('historical_research_backfill'), true);
 
 console.log('Research sample review agent verified.');
-

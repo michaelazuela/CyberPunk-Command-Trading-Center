@@ -1,6 +1,7 @@
 import type {
   HistoricalResearchBackfillReport,
   HistoricalResearchConceptReport,
+  ResearchCandidateEvent,
   ResearchBackfillConceptId,
   ResearchBackfillConceptSelector,
   ResearchBackfillDirection,
@@ -94,6 +95,7 @@ export interface ResearchSampleReviewPack {
   requestedSampleSize: number;
   selectedSampleCount: number;
   sourceReportPaths: string[];
+  sampleSourceMode: 'full_candidate_events' | 'preview_sample_events';
   executiveSummary: string[];
   conceptSummaries: ResearchSampleConceptSummary[];
   sampleSelectionMethod: string[];
@@ -131,7 +133,8 @@ interface CandidateSample {
   sourcePath: string;
   report: HistoricalResearchBackfillReport;
   conceptReport: HistoricalResearchConceptReport;
-  event: HistoricalResearchConceptReport['sampleEvents'][number];
+  event: HistoricalResearchConceptReport['sampleEvents'][number] | ResearchCandidateEvent;
+  sourceMode: 'full_candidate_events' | 'preview_sample_events';
 }
 
 function selectedConcepts(concept: ResearchBackfillConceptSelector): ResearchBackfillConceptId[] {
@@ -166,10 +169,12 @@ function topValues(values: string[], limit = 5): string[] {
 }
 
 function reasonFor(candidate: CandidateSample): string {
+  if ('detectorReason' in candidate.event) return candidate.event.detectorReason;
   return candidate.conceptReport.commonReasons[0] || 'Research sample remains advisory until a human review compares it against approved 6K gates.';
 }
 
 function dataQualityNotes(candidate: CandidateSample): string[] {
+  if ('dataQualityNotes' in candidate.event) return [...candidate.event.dataQualityNotes];
   const notes: string[] = [];
   if (!candidate.event.time) notes.push('Sample time is missing in the source report.');
   if (!candidate.event.window) notes.push('Sample window is missing in the source report.');
@@ -251,8 +256,8 @@ function inspectCandidate(candidate: CandidateSample): Pick<
 
 function buildReviewSample(candidate: CandidateSample, index: number): ResearchReviewSample {
   const event = candidate.event;
-  const model1Overlap = event.classification === 'model1_overlap';
-  const turtleSoupOverlap = event.classification === 'turtle_soup_overlap';
+  const model1Overlap = event.classification === 'model1_overlap' || ('possibleModel1Overlap' in event && event.possibleModel1Overlap);
+  const turtleSoupOverlap = event.classification === 'turtle_soup_overlap' || ('possibleTurtleSoupOverlap' in event && event.possibleTurtleSoupOverlap);
   const inspection = inspectCandidate(candidate);
   return {
     sampleId: `${candidate.conceptReport.conceptId}-${String(index + 1).padStart(3, '0')}`,
@@ -261,7 +266,7 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
     concept: candidate.conceptReport.conceptId,
     conceptTitle: candidate.conceptReport.title,
     direction: event.direction,
-    window: event.window,
+    window: event.window || null,
     classification: event.classification,
     summary: event.summary,
     whyAdvisoryOnly: event.classification === 'advisory_only'
@@ -299,15 +304,33 @@ function collectCandidates(input: ResearchSampleReviewInput): CandidateSample[] 
   const candidates: CandidateSample[] = [];
   for (const source of input.sourceReports) {
     if (source.report.instrument !== input.instrument) continue;
+    const conceptReportsById = new Map(source.report.conceptReports.map((conceptReport) => [conceptReport.conceptId, conceptReport]));
+    if (source.report.fullCandidateEvents?.length) {
+      for (const event of source.report.fullCandidateEvents) {
+        if (!concepts.has(event.concept)) continue;
+        const conceptReport = conceptReportsById.get(event.concept);
+        if (!conceptReport) continue;
+        candidates.push({ sourcePath: source.path, report: source.report, conceptReport, event, sourceMode: 'full_candidate_events' });
+      }
+      continue;
+    }
     for (const conceptReport of source.report.conceptReports) {
       if (!concepts.has(conceptReport.conceptId)) continue;
       for (const event of conceptReport.sampleEvents) {
-        candidates.push({ sourcePath: source.path, report: source.report, conceptReport, event });
+        candidates.push({ sourcePath: source.path, report: source.report, conceptReport, event, sourceMode: 'preview_sample_events' });
       }
     }
   }
+  const conceptsWithFullCandidates = new Set(
+    candidates
+      .filter((candidate) => candidate.sourceMode === 'full_candidate_events')
+      .map((candidate) => candidate.conceptReport.conceptId),
+  );
+  const preferredCandidates = candidates.filter((candidate) =>
+    candidate.sourceMode === 'full_candidate_events' || !conceptsWithFullCandidates.has(candidate.conceptReport.conceptId)
+  );
   const byKey = new Map<string, CandidateSample>();
-  for (const candidate of candidates) if (!byKey.has(keyFor(candidate))) byKey.set(keyFor(candidate), candidate);
+  for (const candidate of preferredCandidates) if (!byKey.has(keyFor(candidate))) byKey.set(keyFor(candidate), candidate);
   return [...byKey.values()].sort((a, b) => {
     const dateCompare = a.event.date.localeCompare(b.event.date);
     if (dateCompare) return dateCompare;
@@ -457,6 +480,9 @@ export function createResearchSampleReviewPack(input: ResearchSampleReviewInput)
   const allCandidates = collectCandidates(input);
   const selectedCandidates = selectRepresentativeSamples(allCandidates, input.sampleSize);
   const samples = selectedCandidates.map(buildReviewSample);
+  const sampleSourceMode = selectedCandidates.some((candidate) => candidate.sourceMode === 'full_candidate_events')
+    ? 'full_candidate_events'
+    : 'preview_sample_events';
   const concepts = selectedConcepts(input.concept);
   const conceptSummaries = concepts.map((concept) => summarizeConcept(concept, allCandidates, samples));
   const possibleMappings = samples
@@ -470,14 +496,20 @@ export function createResearchSampleReviewPack(input: ResearchSampleReviewInput)
     requestedSampleSize: input.sampleSize,
     selectedSampleCount: samples.length,
     sourceReportPaths: [...new Set(input.sourceReports.map((source) => source.path))].sort(),
+    sampleSourceMode,
     executiveSummary: [
       `Selected ${samples.length} representative sample(s) from ${allCandidates.length} available sample event(s).`,
+      sampleSourceMode === 'full_candidate_events'
+        ? 'Sample review used full candidate events from research backfill reports.'
+        : 'Sample review used preview sample events only because full candidate events were not available.',
       'Agent inspection is research-only and does not approve trades.',
       'Human review is required before any model or rule discussion.',
     ],
     conceptSummaries,
     sampleSelectionMethod: [
-      'Samples are selected from saved research backfill report sample events only.',
+      sampleSourceMode === 'full_candidate_events'
+        ? 'Samples are selected from persisted full candidate events when available.'
+        : 'Samples are selected from saved preview sample events because full candidate events are unavailable.',
       'Selection prioritizes date spread, direction diversity, window diversity, classification diversity, warning/failure reason diversity, advisory-only status, and possible existing-model mapping indicators.',
       'If source reports only store preview samples, the review pack cannot recover unsaved candidate details.',
     ],

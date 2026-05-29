@@ -134,6 +134,25 @@ assert.equal(JSON.stringify(fixtureInput), before);
 assert.equal(report.reportType, 'historical_research_backfill');
 assert.equal(report.instrument, 'MES');
 assert.equal(report.conceptReports.length, 4);
+assert.equal(report.fullCandidateEvents.length, 6);
+assert.ok(report.fullCandidateEvents.every((event) => event.advisoryOnly === true));
+assert.ok(report.fullCandidateEvents.every((event) => event.instrument === 'MES'));
+assert.ok(report.fullCandidateEvents.some((event) => event.possibleModel1Overlap));
+assert.ok(report.fullCandidateEvents.some((event) => event.possibleTurtleSoupOverlap));
+assert.ok(report.markdown.includes('Full candidate events persisted: 6'));
+for (const event of report.fullCandidateEvents) {
+  const keys = Object.keys(event);
+  assert.equal(keys.includes('entry'), false);
+  assert.equal(keys.includes('stop'), false);
+  assert.equal(keys.includes('stopLoss'), false);
+  assert.equal(keys.includes('target'), false);
+  assert.equal(keys.includes('targets'), false);
+  assert.equal(keys.includes('T1'), false);
+  assert.equal(keys.includes('T2'), false);
+  assert.equal(keys.includes('riskReward'), false);
+  assert.equal(keys.includes('canExecute'), false);
+  assert.equal(keys.includes('executionApproved'), false);
+}
 assert.equal(report.dataCoverage.completed5mBars, 1);
 assert.equal(report.dataCoverage.supabaseRecords, 1);
 assert.equal(report.dataCoverage.auditRecords, 1);
@@ -189,6 +208,7 @@ const missingDataReport = runHistoricalResearchBackfill({
   events: [],
 });
 assert.equal(missingDataReport.conceptReports.length, 4);
+assert.equal(missingDataReport.fullCandidateEvents.length, 0);
 assert.equal(missingDataReport.dataCoverage.dataGaps.length, 2);
 assert.equal(missingDataReport.conceptReports.every((concept) => concept.totalCandidates === 0), true);
 assert.ok(missingDataReport.zeroCandidateExplanation.some((reason) => reason.includes('No completed bridge bars')));

@@ -138,6 +138,41 @@ export interface HistoricalResearchConceptReport {
   ruleChangeRecommendation: 'none' | 'human_review_only';
 }
 
+export interface ResearchCandidateEvent {
+  date: string;
+  time: string | null;
+  instrument: string;
+  concept: ResearchBackfillConceptId;
+  direction: ResearchBackfillDirection;
+  window: string | null;
+  classification: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only';
+  advisoryOnly: true;
+  summary: string;
+  detectorReason: string;
+  warningFailureReason: string;
+  dataQualityNotes: string[];
+  possibleModel1Overlap: boolean;
+  possibleTurtleSoupOverlap: boolean;
+  sourceSessionMetadata: {
+    session: string | null;
+    selectedConcept: ResearchBackfillConceptSelector;
+    dateRange: { from: string; to: string };
+  };
+  researchOnlySignals: {
+    trueSweepReclaim?: boolean;
+    drawIdentified?: boolean;
+    fvgOrInefficiency?: boolean;
+    cleanLiquidityDraw?: boolean;
+    footholdPresent?: boolean;
+    htfConflict?: boolean;
+    accumulationZone?: boolean;
+    manipulationLeg?: boolean;
+    distributionFollowThrough?: boolean;
+    reachedDrawAfterFact?: boolean;
+    failedOrReversed?: boolean;
+  };
+}
+
 export interface HistoricalResearchBackfillReport {
   reportType: 'historical_research_backfill';
   generatedAt: string;
@@ -159,6 +194,7 @@ export interface HistoricalResearchBackfillReport {
   detectorAudit: HistoricalResearchDetectorAudit[];
   zeroCandidateExplanation: string[];
   conceptReports: HistoricalResearchConceptReport[];
+  fullCandidateEvents?: ResearchCandidateEvent[];
   approvedModelOverlap: {
     model1: number;
     turtleSoup: number;
@@ -332,6 +368,57 @@ function buildConceptReport(
   };
 }
 
+function firstReason(event: ResearchBackfillEvent): string {
+  return event.failureReasons?.[0] || event.warningPatterns?.[0] || 'Research candidate remains advisory-only until current approved 6K gates are independently reviewed.';
+}
+
+function dataQualityNotesForEvent(event: ResearchBackfillEvent, input: HistoricalResearchBackfillInput): string[] {
+  const notes: string[] = [];
+  if (!event.time) notes.push('Event time is missing from source context.');
+  if (!event.window) notes.push('Event window/session is missing from source context.');
+  for (const warning of input.dataWarnings || []) notes.push(warning);
+  if (!notes.length) notes.push('Research event includes date, time/window, direction, classification, and detector summary.');
+  return notes;
+}
+
+function toResearchCandidateEvent(event: ResearchBackfillEvent, input: HistoricalResearchBackfillInput): ResearchCandidateEvent {
+  const classification = classificationFor(event);
+  return {
+    date: event.date,
+    time: event.time,
+    instrument: input.instrument,
+    concept: event.concept,
+    direction: event.direction,
+    window: event.window || null,
+    classification,
+    advisoryOnly: true,
+    summary: event.summary,
+    detectorReason: firstReason(event),
+    warningFailureReason: firstReason(event),
+    dataQualityNotes: dataQualityNotesForEvent(event, input),
+    possibleModel1Overlap: classification === 'model1_overlap' || Boolean(event.model1Overlap),
+    possibleTurtleSoupOverlap: classification === 'turtle_soup_overlap' || Boolean(event.turtleSoupOverlap || event.trueSweepReclaim),
+    sourceSessionMetadata: {
+      session: event.window || null,
+      selectedConcept: input.selectedConcept || 'all',
+      dateRange: { from: input.from, to: input.to },
+    },
+    researchOnlySignals: {
+      trueSweepReclaim: event.trueSweepReclaim,
+      drawIdentified: event.drawIdentified,
+      fvgOrInefficiency: event.fvgOrInefficiency,
+      cleanLiquidityDraw: event.cleanLiquidityDraw,
+      footholdPresent: event.footholdPresent,
+      htfConflict: event.htfConflict,
+      accumulationZone: event.accumulationZone,
+      manipulationLeg: event.manipulationLeg,
+      distributionFollowThrough: event.distributionFollowThrough,
+      reachedDrawAfterFact: event.reachedDrawAfterFact,
+      failedOrReversed: event.failedOrReversed,
+    },
+  };
+}
+
 function uniqueDatesFromBars(bars: HistoricalResearchBar[] | undefined): string[] {
   return [...new Set((bars || []).map((bar) => bar.time.slice(0, 10)).filter(Boolean))].sort();
 }
@@ -453,6 +540,7 @@ export function renderHistoricalResearchBackfillMarkdown(report: Omit<Historical
     `- Audit records: ${report.dataCoverage.auditRecords}`,
     `- Diagnostic reports: ${report.dataCoverage.diagnosticReports}`,
     `- Existing research notes: ${report.dataCoverage.existingResearchNotes}`,
+    `- Full candidate events persisted: ${report.fullCandidateEvents?.length || 0}`,
     `- Skipped dates: ${report.dataCoverage.sourceCoverage.skippedDates.join(', ') || 'none'}`,
     `- Missing-data dates: ${report.dataCoverage.sourceCoverage.missingDataDates.join(', ') || 'none'}`,
     `- Data gaps: ${listOrNone(report.dataCoverage.dataGaps).join(' | ')}`,
@@ -541,6 +629,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
   const advisoryOnlyTotal = conceptReports.reduce((sum, concept) => sum + concept.advisoryOnlyCount, 0);
   const zeroCandidateExplanation = events.length === 0 ? explainZeroCandidates(input, detectorAudit) : [];
   const repeatedReasons = topStrings(events.flatMap((event) => event.failureReasons || []));
+  const fullCandidateEvents = events.map((event) => toResearchCandidateEvent(event, input));
   const continuedTracking = conceptReports
     .filter((concept) => concept.totalCandidates > 0 || concept.recommendation === 'consider_future_advisory_smoke_test')
     .map((concept) => `${concept.title}: ${concept.recommendation}; sample threshold ${concept.sampleThreshold.current}/${concept.sampleThreshold.minimum}.`);
@@ -569,6 +658,7 @@ export function runHistoricalResearchBackfill(input: HistoricalResearchBackfillI
     detectorAudit,
     zeroCandidateExplanation,
     conceptReports,
+    fullCandidateEvents,
     approvedModelOverlap: {
       model1,
       turtleSoup,

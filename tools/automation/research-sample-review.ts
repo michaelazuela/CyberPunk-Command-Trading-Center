@@ -136,6 +136,7 @@ function renderPrettySummary(pack: ResearchSampleReviewPack): string {
     `[RESEARCH SAMPLE REVIEW] ${pack.instrument}`,
     `Concept: ${pack.concept}`,
     `Samples: ${pack.selectedSampleCount}/${pack.requestedSampleSize}`,
+    `Sample source: ${pack.sampleSourceMode === 'full_candidate_events' ? 'full candidate events' : 'preview sample events only'}`,
     '',
     'Concepts:',
     ...pack.conceptSummaries.map((summary) =>
@@ -174,4 +175,3 @@ if (process.argv[1]?.replace(/\\/g, '/').endsWith('/tools/automation/research-sa
     process.exitCode = 1;
   });
 }
-
