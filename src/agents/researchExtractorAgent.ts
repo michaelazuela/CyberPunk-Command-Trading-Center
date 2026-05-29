@@ -23,7 +23,9 @@ export interface ResearchBriefWeeklySummary {
   status: 'research_only';
   candidateName: string;
   primaryIdea: string;
+  taxonomyNote?: string;
   recommendedNextStep: string;
+  ruleChange?: 'none' | string;
   approvalBoundarySummary: string;
   includeInWeeklyNewsletter: true;
 }
@@ -39,7 +41,7 @@ export interface ResearchBrief {
   };
   extractedConcepts: ResearchConcept[];
   candidateWatchlistModel: {
-    name: 'Final-Hour ICT-Style Liquidity Draw Watchlist';
+    name: string;
     purpose: string;
     status: 'research_candidate_only';
     executable: false;
@@ -143,6 +145,108 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
     currentCoverage: 'already_covered',
     watchlistOnly: true,
   },
+  'Fading run toward all-time high / major buy-side liquidity': {
+    plainEnglishMeaning: 'Price aggressively moves toward ATH, high of day, or major buy-side liquidity, then fails to sustain the run.',
+    whyItMayMatterFor6K: 'It may identify a research-only bearish fade context without replacing Turtle Soup sweep/reclaim requirements.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Judas Swing / false run logic as a source concept, with taxonomy caution': {
+    plainEnglishMeaning: 'A false move concept that must be labeled carefully because strict Judas Swing has a specific session-open definition.',
+    whyItMayMatterFor6K: 'It can help taxonomy, but should route true sweep/reclaim events through existing Turtle Soup.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Market Maker Sell Model / MMSM as source narrative': {
+    plainEnglishMeaning: 'A bearish delivery narrative where price moves from buy-side inducement toward sell-side liquidity.',
+    whyItMayMatterFor6K: 'Useful research language only; it cannot approve trades or become a parallel executable model.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Sell-side draw after buy-side failure': {
+    plainEnglishMeaning: 'After price fails near buy-side liquidity, the next contextual draw may be clean sell-side liquidity below.',
+    whyItMayMatterFor6K: '6K already maps liquidity targets, but this false-run fade pattern is not approved as an execution model.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Relative equal lows / clean lows as downside liquidity': {
+    plainEnglishMeaning: 'Clean lows below price may become a downside liquidity objective after bearish delivery begins.',
+    whyItMayMatterFor6K: 'This overlaps with market-map liquidity context but must not create entries or targets by itself.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'Suspension block / premium zone': {
+    plainEnglishMeaning: 'A premium-side reference area where bearish delivery may begin if price cannot continue higher.',
+    whyItMayMatterFor6K: 'May be tagged for research, not execution authority.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'Bearish fair value gap / SIBI': {
+    plainEnglishMeaning: 'A bearish imbalance that may mark sell-side delivery from the premium area.',
+    whyItMayMatterFor6K: 'FVG facts can support current analysis, but are not standalone approval gates.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Inversion fair value gap': {
+    plainEnglishMeaning: 'A former imbalance flips behavior and acts as resistance/support context.',
+    whyItMayMatterFor6K: 'Useful bridge-research context only unless current approved gates separately confirm.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Order block and down-close candle support/resistance behavior': {
+    plainEnglishMeaning: 'A candle or order-block reference may become the structure price reacts from.',
+    whyItMayMatterFor6K: 'Current 6K may observe structure, but this cannot replace the 5M trigger/risk pipeline.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Wick consequent encroachment / body staying below wick midpoint': {
+    plainEnglishMeaning: 'Bodies failing to close above a wick midpoint may show inability to sustain bullish delivery.',
+    whyItMayMatterFor6K: 'Potential research filter only; not an approved trigger.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'Bodies must stay below premium wick / IFVG midpoint': {
+    plainEnglishMeaning: 'Bearish control is suspected only while closes respect the premium boundary.',
+    whyItMayMatterFor6K: 'May support future smoke-test labeling, but cannot create execution authority.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'Price fails to rip higher when it should': {
+    plainEnglishMeaning: 'Price hesitates or rejects when bullish continuation should be immediate.',
+    whyItMayMatterFor6K: 'A caution/context idea only; subjective behavior must be translated into bridge facts before testing.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Speed and distance needed for bearish delivery': {
+    plainEnglishMeaning: 'The fade idea needs decisive bearish movement, not slow chop.',
+    whyItMayMatterFor6K: 'Could be a future descriptive metric, but not a current setup gate.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Spending too much time in a zone as caution': {
+    plainEnglishMeaning: 'If price lingers in the premium zone without dropping, the fade idea weakens.',
+    whyItMayMatterFor6K: 'Useful research caution that aligns with wait/no-trade discipline.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Partial-taking when price stalls near target': {
+    plainEnglishMeaning: 'Manual trade management may reduce exposure if price stalls near a draw.',
+    whyItMayMatterFor6K: 'Research-only management note; it must not alter app targets or outcome behavior.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Avoid chasing after move already delivers': {
+    plainEnglishMeaning: 'If the downside move has already happened, the idea becomes review context only.',
+    whyItMayMatterFor6K: 'Aligns with existing no-chase and stale/no-fresh-entry protections.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'Manual discretion around fast wicks / manipulation risk': {
+    plainEnglishMeaning: 'Fast wick behavior requires caution and should not be automated into trade authority.',
+    whyItMayMatterFor6K: 'Supports research guardrails and manual review only.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
 };
 
 function normalizeConceptName(value: string): string {
@@ -168,7 +272,23 @@ function sourceDateFromTranscript(transcriptText: string): string | null {
   return match?.[1] || null;
 }
 
+function isFalseRunResearch(input: ResearchExtractorInput): boolean {
+  const haystack = [
+    input.sourceTitle,
+    input.sessionContext,
+    input.transcriptText,
+    ...input.requestedConcepts,
+  ].join(' ').toLowerCase();
+  return haystack.includes('fading run to ath') ||
+    haystack.includes('false-run') ||
+    haystack.includes('false run') ||
+    haystack.includes('judas') ||
+    haystack.includes('mmsm') ||
+    haystack.includes('liquidity fade near highs');
+}
+
 export function extractResearchBrief(input: ResearchExtractorInput): ResearchBrief {
+  const falseRunResearch = isFalseRunResearch(input);
   const requestedConcepts = [...input.requestedConcepts];
   const extractedConcepts = requestedConcepts.map((rawConcept) => {
     const conceptName = normalizeConceptName(rawConcept);
@@ -189,11 +309,20 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
 
   const comparisonToExistingRules = input.currentModelComparisonTargets.map((target) => {
     const lower = target.toLowerCase();
+    if (falseRunResearch && lower.includes('turtle')) {
+      return {
+        target,
+        comparison: 'partially_covered' as const,
+        note: 'A true sweep/raid plus reclaim should be evaluated through existing Turtle Soup; false-run behavior without true sweep + reclaim remains research-only context.',
+      };
+    }
     if (lower.includes('model 1')) {
       return {
         target,
         comparison: 'partially_covered' as const,
-        note: 'Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates; the final-hour draw idea cannot bypass those gates.',
+        note: falseRunResearch
+          ? 'Model 1 gates cannot be bypassed by MMSM/Judas Swing narrative or a false-run read.'
+          : 'Model 1 already requires approved sweep/reclaim/displacement/MSS/FVG gates; the final-hour draw idea cannot bypass those gates.',
       };
     }
     if (lower.includes('turtle')) {
@@ -224,15 +353,28 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     };
   });
 
-  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = {
-    researchTitle: 'ICT Final-Hour Liquidity Draw Research',
-    status: 'research_only',
-    candidateName: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
-    primaryIdea: 'Late-day draw toward clean buy-side liquidity during the 3:15-3:45 ET final-hour macro window.',
-    recommendedNextStep: 'Keep as research note and collect 20-30 bridge-backed examples before any human rule review.',
-    approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
-    includeInWeeklyNewsletter: true,
-  };
+  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = falseRunResearch
+    ? {
+        researchTitle: 'False-Run Liquidity Fade Near Highs Research',
+        status: 'research_only',
+        candidateName: 'False-Run Liquidity Fade Near Highs Watchlist',
+        primaryIdea: 'Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
+        taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+        recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
+        ruleChange: 'none',
+        approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
+        includeInWeeklyNewsletter: true,
+      }
+    : {
+        researchTitle: 'ICT Final-Hour Liquidity Draw Research',
+        status: 'research_only',
+        candidateName: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
+        primaryIdea: 'Late-day draw toward clean buy-side liquidity during the 3:15-3:45 ET final-hour macro window.',
+        recommendedNextStep: 'Keep as research note and collect 20-30 bridge-backed examples before any human rule review.',
+        ruleChange: 'none',
+        approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
+        includeInWeeklyNewsletter: true,
+      };
 
   return {
     sourceSummary: {
@@ -245,8 +387,10 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     },
     extractedConcepts,
     candidateWatchlistModel: {
-      name: 'Final-Hour ICT-Style Liquidity Draw Watchlist',
-      purpose: 'Identify late-day conditions where price forms a foothold and appears likely to draw toward clean buy-side liquidity during the 3:15-3:45 ET macro window.',
+      name: weeklyNewsletterSummary.candidateName,
+      purpose: falseRunResearch
+        ? 'Identify research-only bearish conditions where price runs toward ATH, high of day, or major buy-side liquidity, fails to sustain, then starts drawing toward sell-side liquidity.'
+        : 'Identify late-day conditions where price forms a foothold and appears likely to draw toward clean buy-side liquidity during the 3:15-3:45 ET macro window.',
       status: 'research_candidate_only',
       executable: false,
       createsEntries: false,
@@ -255,52 +399,110 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       createsOutcomeButtons: false,
       createsAutoAlerts: false,
     },
-    candidateConditions: {
-      contextConditions: [
-        'Instrument: ES/MES first; NQ/MNQ only as a later study.',
-        'Time window: 3:15-3:45 ET final-hour macro.',
-        'Optional observation around 3:30 ET, but do not hard-code as a rule yet.',
-        'Larger-timeframe context must not strongly conflict.',
-      ],
-      structureConditions: [
-        'Price has stopped going lower.',
-        'Price forms or respects a foothold.',
-        'Foothold may be IFVG, FVG, order block, or down-close candle support.',
-        'Clean relative equal highs or smooth highs exist above as potential buy-side liquidity.',
-        'There is room to target the liquidity before major resistance.',
-        'Price begins to displace/spring higher from the foothold.',
-      ],
-      invalidationCautionConditions: [
-        'Price already reached the liquidity draw.',
-        'Price is too extended to chase.',
-        'Larger timeframe directly conflicts.',
-        'No clean liquidity draw exists.',
-        'Price remains jagged/noisy without clear foothold.',
-        'Risk would be too wide under current approved rules.',
-      ],
-    },
+    candidateConditions: falseRunResearch
+      ? {
+          contextConditions: [
+            'Instrument: ES/MES first; NQ/MNQ later only after study.',
+            'Price has recently run aggressively toward ATH, high of day, or major buy-side liquidity.',
+            'Price fails to take or sustain above the high.',
+            'Larger-timeframe context must not strongly conflict with bearish fade.',
+            'There must be meaningful sell-side liquidity below.',
+          ],
+          structureConditions: [
+            'Price trades into premium zone / suspension block / bearish FVG / IFVG / order block.',
+            'Bodies remain below key wick midpoint / consequent encroachment / bearish premium boundary.',
+            'Failed continuation higher appears after a buy-side run.',
+            'Bearish displacement begins from the premium area.',
+            'Sell-side imbalance or bearish FVG forms.',
+            'Price starts drawing toward clean sell-side liquidity.',
+          ],
+          invalidationCautionConditions: [
+            'ATH or buy-side liquidity is cleanly taken and sustained.',
+            'Bodies close above premium wick midpoint / IFVG midpoint.',
+            'Price spends too much time in the bearish zone without dropping.',
+            'Larger timeframe strongly supports continuation higher.',
+            'Price already reached sell-side target.',
+            'Move is too extended to chase.',
+            'Risk would be too wide under current approved rules.',
+            'No true sweep + reclaim exists, meaning it cannot be treated as Turtle Soup.',
+          ],
+        }
+      : {
+          contextConditions: [
+            'Instrument: ES/MES first; NQ/MNQ only as a later study.',
+            'Time window: 3:15-3:45 ET final-hour macro.',
+            'Optional observation around 3:30 ET, but do not hard-code as a rule yet.',
+            'Larger-timeframe context must not strongly conflict.',
+          ],
+          structureConditions: [
+            'Price has stopped going lower.',
+            'Price forms or respects a foothold.',
+            'Foothold may be IFVG, FVG, order block, or down-close candle support.',
+            'Clean relative equal highs or smooth highs exist above as potential buy-side liquidity.',
+            'There is room to target the liquidity before major resistance.',
+            'Price begins to displace/spring higher from the foothold.',
+          ],
+          invalidationCautionConditions: [
+            'Price already reached the liquidity draw.',
+            'Price is too extended to chase.',
+            'Larger timeframe directly conflicts.',
+            'No clean liquidity draw exists.',
+            'Price remains jagged/noisy without clear foothold.',
+            'Risk would be too wide under current approved rules.',
+          ],
+        },
     comparisonToExistingRules,
-    bridgeDataResearchPlan: [
-      'Use local bridge data only.',
-      'Replay completed bars.',
-      'Focus on 3:15-3:45 ET.',
-      'Identify clean relative equal highs above.',
-      'Identify whether price stopped going lower before the move.',
-      'Identify candidate footholds: IFVG/FVG/order block/down-close candle.',
-      'Determine whether price displaced toward the liquidity draw.',
-      'Determine whether T1/T2 would have been met only as after-action context.',
-      'Track 20-30 examples before any rule approval discussion.',
-    ],
-    advisoryDiscordDraft: 'Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
-    guardrails: [
-      'This is not an approved executable model.',
-      'Do not create entries, stops, T1/T2, or outcome buttons.',
-      'Do not override Model 1 or Turtle Soup.',
-      'Do not allow this to approve trades.',
-      'Do not use later success to retroactively validate an invalid setup.',
-      'Collect 20-30 examples first.',
-    ],
-    recommendedNextStep: 'Keep as research note only and create a future advisory-only smoke test prompt after enough examples are collected.',
+    bridgeDataResearchPlan: falseRunResearch
+      ? [
+          'Use local bridge data only.',
+          'Replay completed bars only.',
+          'Focus on sessions where price runs toward ATH / HOD / buy-side liquidity.',
+          'Identify whether price actually swept/raided established liquidity.',
+          'Identify whether price reclaimed after the sweep.',
+          'If sweep + reclaim exists, classify through current Turtle Soup gates.',
+          'If no sweep + reclaim exists, classify as advisory-only false-run / liquidity-fade context.',
+          'Identify bearish FVG/SIBI/IFVG/order block/premium wick structures.',
+          'Identify whether bodies stayed below the relevant midpoint.',
+          'Identify downside sell-side liquidity target.',
+          'Determine whether price displaced toward sell-side liquidity.',
+          'Track whether the move was already too extended.',
+          'Track 20-30 examples before any rule approval discussion.',
+        ]
+      : [
+          'Use local bridge data only.',
+          'Replay completed bars.',
+          'Focus on 3:15-3:45 ET.',
+          'Identify clean relative equal highs above.',
+          'Identify whether price stopped going lower before the move.',
+          'Identify candidate footholds: IFVG/FVG/order block/down-close candle.',
+          'Determine whether price displaced toward the liquidity draw.',
+          'Determine whether T1/T2 would have been met only as after-action context.',
+          'Track 20-30 examples before any rule approval discussion.',
+        ],
+    advisoryDiscordDraft: falseRunResearch
+      ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.'
+      : 'Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
+    guardrails: falseRunResearch
+      ? [
+          'This is not an approved executable model.',
+          'Do not create entries, stops, T1/T2, or outcome buttons.',
+          'Do not override Model 1 or Turtle Soup.',
+          'Do not allow this to approve trades.',
+          'Do not duplicate Turtle Soup under a new Judas Swing or false-run label.',
+          'Do not use later downside delivery to retroactively validate an invalid setup.',
+          'Collect 20-30 examples first.',
+        ]
+      : [
+          'This is not an approved executable model.',
+          'Do not create entries, stops, T1/T2, or outcome buttons.',
+          'Do not override Model 1 or Turtle Soup.',
+          'Do not allow this to approve trades.',
+          'Do not use later success to retroactively validate an invalid setup.',
+          'Collect 20-30 examples first.',
+        ],
+    recommendedNextStep: falseRunResearch
+      ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected.'
+      : 'Keep as research note only and create a future advisory-only smoke test prompt after enough examples are collected.',
     weeklyNewsletterSummary,
     approvalBoundary: {
       researchApprovesTrade: false,

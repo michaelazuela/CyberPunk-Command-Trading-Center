@@ -120,7 +120,7 @@ async function readResearchSummaries(dir: string): Promise<NonNullable<WeeklyTra
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     try {
       const markdown = await fs.readFile(path.join(dir, entry.name), 'utf8');
-      const match = markdown.match(/## 10\. Weekly Newsletter Summary[\s\S]*?```json\s*([\s\S]*?)```/);
+      const match = markdown.match(/## (?:10|11)\. Weekly Newsletter Summary[\s\S]*?```json\s*([\s\S]*?)```/);
       if (!match?.[1]) continue;
       const parsed = JSON.parse(match[1]);
       if (parsed?.includeInWeeklyNewsletter === true && parsed?.status === 'research_only') {
@@ -129,7 +129,9 @@ async function readResearchSummaries(dir: string): Promise<NonNullable<WeeklyTra
           status: 'research_only',
           candidateName: String(parsed.candidateName || parsed.researchTitle || entry.name),
           primaryIdea: String(parsed.primaryIdea || 'Research note only.'),
+          taxonomyNote: parsed.taxonomyNote ? String(parsed.taxonomyNote) : undefined,
           recommendedNextStep: String(parsed.recommendedNextStep || 'Continue research collection.'),
+          ruleChange: String(parsed.ruleChange || 'none'),
           approvalBoundarySummary: String(parsed.approvalBoundarySummary || 'Research only.'),
           includeInWeeklyNewsletter: true,
         });

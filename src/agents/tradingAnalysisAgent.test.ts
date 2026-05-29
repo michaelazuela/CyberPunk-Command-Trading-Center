@@ -59,6 +59,16 @@ const report = buildWeeklyTradingAnalysisReport({
     recommendedNextStep: 'Collect 20-30 bridge-backed examples before rule review.',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
     includeInWeeklyNewsletter: true,
+  }, {
+    researchTitle: 'False-Run Liquidity Fade Near Highs Research',
+    status: 'research_only',
+    candidateName: 'False-Run Liquidity Fade Near Highs Watchlist',
+    primaryIdea: 'Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
+    taxonomyNote: 'If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+    recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
+    ruleChange: 'none',
+    approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
+    includeInWeeklyNewsletter: true,
   }],
 });
 
@@ -81,6 +91,8 @@ assert.ok(report.discordMessage.includes('Executive Summary:'));
 assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
 assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
+assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
+assert.ok(report.discordMessage.includes('Taxonomy: If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.'));
 assert.ok(report.discordMessage.includes('research-only / not executable'));
 assert.ok(report.discordMessage.includes('Human Review Queue:'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:|Trade now|Entry confirmed|model promotion recommended/im.test(report.discordMessage));
@@ -132,6 +144,7 @@ writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
   instrument: 'MES',
 }));
 writeFileSync(join(researchDir, 'ict-note.md'), readFileSync('docs/research/ict-final-hour-liquidity-draw-research.md', 'utf8'));
+writeFileSync(join(researchDir, 'false-run-note.md'), readFileSync('docs/research/false-run-liquidity-fade-near-highs-research.md', 'utf8'));
 
 const missingHistory = await loadDiscordAuditHistory(join(temp, 'missing-audit-folder'));
 assert.equal(missingHistory.events.length, 0);
@@ -165,7 +178,8 @@ assert.equal(collected.diagnosticReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
-assert.equal(collected.researchNotes?.length, 1);
+assert.equal(collected.researchNotes?.length, 2);
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Turtle Soup')));
 assert.ok((collected.auditEvents?.length || 0) >= 3);
 
 const newsletterSkip = await publishWeeklyTradingNewsletter({
@@ -183,6 +197,8 @@ assert.equal(newsletterSkip.skippedReason, 'Dry run.');
 assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
+assert.ok(newsletterSkip.report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Rule change: none.'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(newsletterSkip.report.discordMessage));
 
 const immutableInput = {

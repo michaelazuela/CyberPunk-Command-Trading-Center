@@ -26,7 +26,9 @@ export interface WeeklyTradingAnalysisInput {
     status: 'research_only' | string;
     candidateName: string;
     primaryIdea: string;
+    taxonomyNote?: string;
     recommendedNextStep: string;
+    ruleChange?: string;
     approvalBoundarySummary?: string;
     includeInWeeklyNewsletter?: boolean;
   }>;
@@ -227,7 +229,13 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
       ],
       researchDesk: researchNotes.length
         ? researchNotes.map((note) =>
-            `${note.candidateName} | Status: research-only / not executable | Idea: ${note.primaryIdea} | Next step: ${note.recommendedNextStep} | Rule change: none.`
+            [
+              `${note.candidateName} | Status: research-only / not executable`,
+              `Idea: ${note.primaryIdea}`,
+              note.taxonomyNote ? `Taxonomy: ${note.taxonomyNote}` : null,
+              `Next step: ${note.recommendedNextStep}`,
+              `Rule change: ${note.ruleChange || 'none'}.`,
+            ].filter(Boolean).join(' | ')
           )
         : ['No research briefs were added to this weekly report.'],
       humanReviewRecommendations: [
