@@ -220,4 +220,79 @@ assert.ok(timeWindowMarkdown.includes('"ruleChange": "none"'));
 assert.ok(!/"candidateName":\s*".*(ICT|Silver Bullet)/i.test(timeWindowMarkdown));
 assert.ok(!/"researchTitle":\s*".*(ICT|Silver Bullet)/i.test(timeWindowMarkdown));
 
+const amdInput = {
+  sourceTitle: 'Uploaded transcript: Accumulation - Manipulation - Distribution',
+  sourceType: 'transcript',
+  transcriptText: `
+The transcript describes accumulation near the opening price, manipulation immediately after the opening price,
+distribution after range expansion, opening price as initial value, closing price as ending value,
+engineering liquidity, old highs/lows and equal highs/lows, and daily range behavior.
+`,
+  market: 'Forex concepts; 6K study would focus ES/MES first',
+  sessionContext: 'open/high/low/close range behavior and daily range framing',
+  requestedConcepts: [
+    'Accumulation near the opening price',
+    'Manipulation immediately after the opening price',
+    'Distribution after range expansion',
+    'Opening price as initial value reference',
+    'Closing price as post-imbalance ending value',
+    'Range expansion as dynamic price imbalance',
+    'Bullish AMD: buying near/below open after sell-side engineering',
+    'Bearish AMD: selling near/above open after buy-side engineering',
+    'Engineering liquidity',
+    'Neutralizing existing liquidity/stops',
+    'Pairing orders with willing counterparties',
+    'Run below old low to engineer sell-side liquidity in bullish context',
+    'Run above old high to engineer buy-side liquidity in bearish context',
+    'Distribution into buy stops above highs for bullish range',
+    'Distribution into sell stops below lows for bearish range',
+    'Old highs/lows and equal highs/lows as liquidity pools',
+    'Daily range concept as a reference frame',
+    'Applicability across charted time intervals',
+    'Anticipatory price skills',
+    'Avoid treating the concept as an entry model without approved 6K gates',
+  ],
+  currentModelComparisonTargets: [
+    'Current Model 1',
+    'Current Turtle Soup',
+    'Current Morning Continuation Watchlist',
+    'Current Bridge Diagnostic Replay categories',
+    'Current scanner health / selection safety layers',
+    'Current Discord advisory behavior',
+  ],
+};
+const amdBefore = JSON.stringify(amdInput);
+const amdBrief = extractResearchBrief(amdInput);
+assert.equal(JSON.stringify(amdInput), amdBefore, 'AMD extraction must not mutate input');
+assert.equal(amdBrief.candidateWatchlistModel.name, 'Accumulation–Manipulation–Distribution Range Model Watchlist');
+assert.equal(amdBrief.candidateWatchlistModel.executable, false);
+assert.equal(amdBrief.weeklyNewsletterSummary.status, 'research_only');
+assert.equal(amdBrief.weeklyNewsletterSummary.ruleChange, 'none');
+assert.ok(amdBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Turtle Soup'));
+assert.ok(!/ICT/i.test(amdBrief.weeklyNewsletterSummary.candidateName));
+assert.ok(!/ICT/i.test(amdBrief.weeklyNewsletterSummary.researchTitle));
+assert.ok(amdBrief.comparisonToExistingRules.some((item) => item.target.includes('Model 1') && item.note.includes('Model 1 gates independently pass')));
+assert.ok(amdBrief.comparisonToExistingRules.some((item) => item.target.includes('Turtle Soup') && item.note.includes('true sweep/raid plus reclaim')));
+assert.ok(amdBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Turtle Soup')));
+assert.ok(amdBrief.bridgeDataResearchPlan.some((item) => item.includes('completed bars only')));
+assert.ok(!JSON.stringify(amdBrief).includes('"canExecute":true'));
+assert.ok(!JSON.stringify(amdBrief).includes('"entry"'));
+assert.ok(!JSON.stringify(amdBrief).includes('"stop"'));
+assert.ok(!JSON.stringify(amdBrief).includes('"t1"'));
+assert.ok(!JSON.stringify(amdBrief).includes('"t2"'));
+
+const amdMarkdown = readFileSync('docs/research/accumulation-manipulation-distribution-range-model-research.md', 'utf8');
+assert.ok(amdMarkdown.includes('# Accumulation-Manipulation-Distribution Range Model Research'));
+assert.ok(amdMarkdown.includes('## 3. Accumulation-Manipulation-Distribution / 6K Taxonomy'));
+assert.ok(amdMarkdown.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));
+assert.ok(amdMarkdown.includes('This is not an approved 6K executable model.'));
+assert.ok(amdMarkdown.includes('If the setup satisfies current Model 1 gates, classify it through existing Model 1.'));
+assert.ok(amdMarkdown.includes('If the manipulation leg includes true sweep/raid plus reclaim, classify it through existing Turtle Soup.'));
+assert.ok(amdMarkdown.includes('If the setup only has accumulation + manipulation + distribution behavior without approved gates, keep it advisory-only research.'));
+assert.ok(amdMarkdown.includes('## 9. Guardrails'));
+assert.ok(amdMarkdown.includes('## 11. Weekly Newsletter Summary'));
+assert.ok(amdMarkdown.includes('"ruleChange": "none"'));
+assert.ok(!/"candidateName":\s*".*ICT/i.test(amdMarkdown));
+assert.ok(!/"researchTitle":\s*".*ICT/i.test(amdMarkdown));
+
 console.log('Research extractor agent verified.');

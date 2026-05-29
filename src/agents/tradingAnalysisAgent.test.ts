@@ -79,6 +79,16 @@ const report = buildWeeklyTradingAnalysisReport({
     ruleChange: 'none',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
     includeInWeeklyNewsletter: true,
+  }, {
+    researchTitle: 'Accumulation-Manipulation-Distribution Range Model Research',
+    status: 'research_only',
+    candidateName: 'Accumulation–Manipulation–Distribution Range Model Watchlist',
+    primaryIdea: 'Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
+    taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+    recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
+    ruleChange: 'none',
+    approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
+    includeInWeeklyNewsletter: true,
   }],
 });
 
@@ -104,6 +114,7 @@ assert.ok(report.discordMessage.includes('What We Learned: Watchlists improved a
 assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
+assert.ok(report.discordMessage.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));
 assert.ok(report.discordMessage.includes([
   '- False-Run Liquidity Fade Near Highs Watchlist',
   '  Status: research-only / not executable',
@@ -125,6 +136,14 @@ assert.ok(report.discordMessage.includes([
   '  Idea: Study FVG/inefficiency delivery toward liquidity during defined market windows.',
   '  Taxonomy: If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
   '  Next step: Collect 20-30 bridge-backed examples per window before any rule review.',
+  '  Rule change: none.',
+].join('\n')));
+assert.ok(report.discordMessage.includes([
+  '- Accumulation–Manipulation–Distribution Range Model Watchlist',
+  '  Status: research-only / not executable',
+  '  Idea: Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
+  '  Taxonomy: If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+  '  Next step: Collect 20-30 bridge-backed examples before any rule review.',
   '  Rule change: none.',
 ].join('\n')));
 assert.ok(report.discordMessage.includes('research-only / not executable'));
@@ -192,6 +211,7 @@ writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
 writeFileSync(join(researchDir, 'ict-note.md'), readFileSync('docs/research/ict-final-hour-liquidity-draw-research.md', 'utf8'));
 writeFileSync(join(researchDir, 'false-run-note.md'), readFileSync('docs/research/false-run-liquidity-fade-near-highs-research.md', 'utf8'));
 writeFileSync(join(researchDir, 'time-window-note.md'), readFileSync('docs/research/time-window-liquidity-delivery-watchlist-research.md', 'utf8'));
+writeFileSync(join(researchDir, 'amd-note.md'), readFileSync('docs/research/accumulation-manipulation-distribution-range-model-research.md', 'utf8'));
 
 const missingHistory = await loadDiscordAuditHistory(join(temp, 'missing-audit-folder'));
 assert.equal(missingHistory.events.length, 0);
@@ -225,9 +245,10 @@ assert.equal(collected.diagnosticReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
-assert.equal(collected.researchNotes?.length, 3);
+assert.equal(collected.researchNotes?.length, 4);
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Turtle Soup')));
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Time-Window Liquidity Delivery Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Accumulation–Manipulation–Distribution Range Model Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
 assert.ok((collected.auditEvents?.length || 0) >= 3);
 
 const newsletterSkip = await publishWeeklyTradingNewsletter({
@@ -247,6 +268,7 @@ assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
 assert.ok(newsletterSkip.report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Accumulation–Manipulation–Distribution Range Model Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Rule change: none.'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(newsletterSkip.report.discordMessage));
 

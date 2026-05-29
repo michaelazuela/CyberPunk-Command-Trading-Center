@@ -355,6 +355,126 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
     currentCoverage: 'already_covered',
     watchlistOnly: true,
   },
+  'Accumulation near the opening price': {
+    plainEnglishMeaning: 'Price compresses or balances around an opening reference before directional expansion.',
+    whyItMayMatterFor6K: 'May help describe session story and range context, but cannot approve trades.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Manipulation immediately after the opening price': {
+    plainEnglishMeaning: 'Price runs one side of the opening range or nearby liquidity before reversing.',
+    whyItMayMatterFor6K: 'May overlap Turtle Soup only when a true sweep/raid plus reclaim occurs.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Distribution after range expansion': {
+    plainEnglishMeaning: 'After manipulation, price expands toward the opposite side of the range or liquidity pool.',
+    whyItMayMatterFor6K: 'Useful after-action context only; it cannot retroactively approve a setup.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Opening price as initial value reference': {
+    plainEnglishMeaning: 'The open is treated as the first reference for whether price is accumulating above, below, or around value.',
+    whyItMayMatterFor6K: 'Could support bridge-backed research around open references without changing current time windows.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Closing price as post-imbalance ending value': {
+    plainEnglishMeaning: 'The close reflects where price finished after imbalance or distribution.',
+    whyItMayMatterFor6K: 'After-action context only; not an entry or exit rule.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Range expansion as dynamic price imbalance': {
+    plainEnglishMeaning: 'A range expansion can show active imbalance away from the accumulation area.',
+    whyItMayMatterFor6K: 'May support displacement research, but existing approved gates still decide execution.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Bullish AMD: buying near/below open after sell-side engineering': {
+    plainEnglishMeaning: 'A bullish research case studies a sell-side run below open/old low followed by expansion higher.',
+    whyItMayMatterFor6K: 'Routes through Turtle Soup if sweep + reclaim qualifies; otherwise remains advisory context.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Bearish AMD: selling near/above open after buy-side engineering': {
+    plainEnglishMeaning: 'A bearish research case studies a buy-side run above open/old high followed by expansion lower.',
+    whyItMayMatterFor6K: 'Routes through Turtle Soup if sweep + reclaim qualifies; otherwise remains advisory context.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Engineering liquidity': {
+    plainEnglishMeaning: 'Price creates or draws participation near visible liquidity before delivery.',
+    whyItMayMatterFor6K: 'Useful research narrative, not execution authority.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Neutralizing existing liquidity/stops': {
+    plainEnglishMeaning: 'Price trades through visible stops or liquidity before reversing or expanding.',
+    whyItMayMatterFor6K: 'May overlap liquidity sweep facts when bridge data confirms them.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Pairing orders with willing counterparties': {
+    plainEnglishMeaning: 'The source describes liquidity as the mechanism that lets larger orders transact.',
+    whyItMayMatterFor6K: 'Educational context only; no app logic should be derived from it directly.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Run below old low to engineer sell-side liquidity in bullish context': {
+    plainEnglishMeaning: 'A bullish research case watches a run below an old low before potential higher delivery.',
+    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Turtle Soup.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Run above old high to engineer buy-side liquidity in bearish context': {
+    plainEnglishMeaning: 'A bearish research case watches a run above an old high before potential lower delivery.',
+    whyItMayMatterFor6K: 'If it is a true sweep plus reclaim, evaluate through Turtle Soup.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Distribution into buy stops above highs for bullish range': {
+    plainEnglishMeaning: 'A bullish range may expand into buy-side liquidity above highs.',
+    whyItMayMatterFor6K: 'After-action target context only; app targets remain deterministic.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Distribution into sell stops below lows for bearish range': {
+    plainEnglishMeaning: 'A bearish range may expand into sell-side liquidity below lows.',
+    whyItMayMatterFor6K: 'After-action target context only; app targets remain deterministic.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Old highs/lows and equal highs/lows as liquidity pools': {
+    plainEnglishMeaning: 'Prior highs/lows and equal highs/lows can mark visible liquidity.',
+    whyItMayMatterFor6K: 'Already part of market-map context, not standalone approval.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'Daily range concept as a reference frame': {
+    plainEnglishMeaning: 'The day can be studied as open, manipulation, expansion, and close behavior.',
+    whyItMayMatterFor6K: 'May help research daily session story without altering execution gates.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Applicability across charted time intervals': {
+    plainEnglishMeaning: 'The source presents the lens as usable across different chart intervals.',
+    whyItMayMatterFor6K: '6K must still preserve 5M execution authority and HTF context boundaries.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Anticipatory price skills': {
+    plainEnglishMeaning: 'The concept aims to improve anticipation of likely delivery paths.',
+    whyItMayMatterFor6K: 'May support review language, but cannot become prediction theater or approval logic.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Avoid treating the concept as an entry model without approved 6K gates': {
+    plainEnglishMeaning: 'AMD is a lens, not an app-approved entry model.',
+    whyItMayMatterFor6K: 'Directly protects Model 1, Turtle Soup, risk, and scanner selection authority.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
 };
 
 function normalizeConceptName(value: string): string {
@@ -409,9 +529,25 @@ function isTimeWindowResearch(input: ResearchExtractorInput): boolean {
     haystack.includes('fvg / inefficiency as draw');
 }
 
+function isAmdResearch(input: ResearchExtractorInput): boolean {
+  const haystack = [
+    input.sourceTitle,
+    input.sessionContext,
+    input.transcriptText,
+    ...input.requestedConcepts,
+  ].join(' ').toLowerCase();
+  return haystack.includes('accumulation - manipulation - distribution') ||
+    haystack.includes('accumulation manipulation distribution') ||
+    haystack.includes('accumulation-manipulation-distribution') ||
+    haystack.includes('amd') ||
+    haystack.includes('opening price as initial value') ||
+    haystack.includes('range expansion as dynamic price imbalance');
+}
+
 export function extractResearchBrief(input: ResearchExtractorInput): ResearchBrief {
   const falseRunResearch = isFalseRunResearch(input);
   const timeWindowResearch = isTimeWindowResearch(input);
+  const amdResearch = isAmdResearch(input);
   const requestedConcepts = [...input.requestedConcepts];
   const extractedConcepts = requestedConcepts.map((rawConcept) => {
     const conceptName = normalizeConceptName(rawConcept);
@@ -432,6 +568,20 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
 
   const comparisonToExistingRules = input.currentModelComparisonTargets.map((target) => {
     const lower = target.toLowerCase();
+    if (amdResearch && lower.includes('model 1')) {
+      return {
+        target,
+        comparison: 'partially_covered' as const,
+        note: 'AMD context may overlap Model 1 only when current Model 1 gates independently pass.',
+      };
+    }
+    if (amdResearch && lower.includes('turtle')) {
+      return {
+        target,
+        comparison: 'partially_covered' as const,
+        note: 'AMD manipulation may overlap Turtle Soup when the manipulation leg creates a true sweep/raid plus reclaim.',
+      };
+    }
     if (timeWindowResearch && lower.includes('model 1')) {
       return {
         target,
@@ -490,7 +640,19 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     };
   });
 
-  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = timeWindowResearch
+  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = amdResearch
+    ? {
+        researchTitle: 'Accumulation-Manipulation-Distribution Range Model Research',
+        status: 'research_only',
+        candidateName: 'Accumulation–Manipulation–Distribution Range Model Watchlist',
+        primaryIdea: 'Study open-based accumulation, liquidity manipulation, and later distribution behavior.',
+        taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        recommendedNextStep: 'Collect 20-30 bridge-backed examples before any rule review.',
+        ruleChange: 'none',
+        approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
+        includeInWeeklyNewsletter: true,
+      }
+    : timeWindowResearch
     ? {
         researchTitle: 'Time-Window Liquidity Delivery Research',
         status: 'research_only',
@@ -537,7 +699,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     extractedConcepts,
     candidateWatchlistModel: {
       name: weeklyNewsletterSummary.candidateName,
-      purpose: timeWindowResearch
+      purpose: amdResearch
+        ? 'Identify research-only conditions where price accumulates near an opening reference, manipulates one side of liquidity, then distributes/expands toward the opposite liquidity side.'
+        : timeWindowResearch
         ? 'Identify research-only conditions where a defined time window, FVG/inefficiency, and draw on liquidity align, while still requiring current approved 6K rules before any trade can be considered.'
         : falseRunResearch
         ? 'Identify research-only bearish conditions where price runs toward ATH, high of day, or major buy-side liquidity, fails to sustain, then starts drawing toward sell-side liquidity.'
@@ -550,7 +714,31 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       createsOutcomeButtons: false,
       createsAutoAlerts: false,
     },
-    candidateConditions: timeWindowResearch
+    candidateConditions: amdResearch
+      ? {
+          contextConditions: [
+            'Instrument: ES/MES first for 6K study; Forex source concepts are research-only context.',
+            'Opening reference must be known.',
+            'Accumulation/consolidation appears around the opening reference.',
+            'Larger-timeframe context must not strongly conflict.',
+            'There must be clear liquidity on one or both sides of the accumulation range.',
+          ],
+          structureConditions: [
+            'Bullish research case: price accumulates near the open, runs below the open or old low, engineers or neutralizes sell-side liquidity, reverses/expands higher, and distributes toward buy-side liquidity.',
+            'Bearish research case: price accumulates near the open, runs above the open or old high, engineers or neutralizes buy-side liquidity, reverses/expands lower, and distributes toward sell-side liquidity.',
+          ],
+          invalidationCautionConditions: [
+            'No clear opening reference.',
+            'No clear accumulation.',
+            'No liquidity run/manipulation.',
+            'No true sweep + reclaim if attempting to map to Turtle Soup.',
+            'No Model 1 gates if attempting to map to Model 1.',
+            'Larger-timeframe context conflicts.',
+            'Price already reached the likely distribution target.',
+            'Risk would be too wide under current approved rules.',
+          ],
+        }
+      : timeWindowResearch
       ? {
           contextConditions: [
             'Instrument: ES/MES first; NQ/MNQ later only after study.',
@@ -629,7 +817,21 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           ],
         },
     comparisonToExistingRules,
-    bridgeDataResearchPlan: timeWindowResearch
+    bridgeDataResearchPlan: amdResearch
+      ? [
+          'Use local bridge data only.',
+          'Replay completed bars only.',
+          'Define an opening reference for the test session.',
+          'Identify accumulation around the opening reference.',
+          'Identify manipulation through nearby old high/low or equal high/low.',
+          'Determine whether the manipulation produced a true sweep/raid plus reclaim.',
+          'If sweep + reclaim exists, classify through Turtle Soup gates.',
+          'Determine whether Model 1 gates independently passed.',
+          'If approved gates do not pass, classify as advisory-only AMD research.',
+          'Track the later distribution direction as after-action context only.',
+          'Track 20-30 examples before any rule approval discussion.',
+        ]
+      : timeWindowResearch
       ? [
           'Use local bridge data only.',
           'Replay completed bars only.',
@@ -669,12 +871,24 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Determine whether T1/T2 would have been met only as after-action context.',
           'Track 20-30 examples before any rule approval discussion.',
         ],
-    advisoryDiscordDraft: timeWindowResearch
+    advisoryDiscordDraft: amdResearch
+      ? 'Accumulation-Manipulation-Distribution range behavior forming. Watch only - price may be engineering liquidity around the opening reference. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
+      : timeWindowResearch
       ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
       : falseRunResearch
       ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.'
       : 'Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
-    guardrails: timeWindowResearch
+    guardrails: amdResearch
+      ? [
+          'This is not an approved executable model.',
+          'Do not create entries, stops, T1/T2, or outcome buttons.',
+          'Do not override Model 1 or Turtle Soup.',
+          'Do not allow this to approve trades.',
+          'Do not duplicate Model 1 or Turtle Soup under an AMD label.',
+          'Do not use later distribution success to retroactively validate an invalid setup.',
+          'Collect 20-30 examples first.',
+        ]
+      : timeWindowResearch
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
@@ -702,7 +916,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Do not use later success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ],
-    recommendedNextStep: timeWindowResearch
+    recommendedNextStep: amdResearch
+      ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected.'
+      : timeWindowResearch
       ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected per window.'
       : falseRunResearch
       ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected.'
