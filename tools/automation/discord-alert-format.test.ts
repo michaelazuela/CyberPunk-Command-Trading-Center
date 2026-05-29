@@ -5,10 +5,13 @@ import {
   compactDiscordSummary,
   flattenDiscordPayloadText,
   morningWatchlistDiscordSummary,
+  scannerHealthDiscordSummary,
+  shouldSendScannerHealthAlert,
   validateDiscordPayload,
 } from './discord-alert-format';
 import { buildOutcomeComponents } from './discord-outcome-buttons';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { evaluateScannerHealth } from '../../src/agents/scannerHealthAgent';
 
 const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
@@ -245,6 +248,101 @@ assert.equal(watchlist.components, undefined);
 assert.equal(JSON.stringify(watchlist).includes('Win'), false);
 assert.equal(JSON.stringify(watchlist).includes('Loss'), false);
 assert.equal(JSON.stringify(watchlist).includes('Scratch'), false);
+
+assert.equal(shouldSendScannerHealthAlert('READY', 'READY'), false);
+assert.equal(shouldSendScannerHealthAlert('DEGRADED', 'DEGRADED'), false);
+assert.equal(shouldSendScannerHealthAlert('BLOCKED', 'BLOCKED'), false);
+assert.equal(shouldSendScannerHealthAlert('READY', 'DEGRADED'), true);
+assert.equal(shouldSendScannerHealthAlert('DEGRADED', 'BLOCKED'), true);
+assert.equal(shouldSendScannerHealthAlert('BLOCKED', 'READY'), true);
+assert.equal(shouldSendScannerHealthAlert(null, 'READY'), false);
+assert.equal(shouldSendScannerHealthAlert(undefined, 'DEGRADED'), true);
+assert.equal(shouldSendScannerHealthAlert(undefined, 'BLOCKED'), true);
+
+const healthBase = {
+  config: {
+    appInstrument: 'MES',
+    bridgeInstrument: 'MES 06-26',
+    timestampMode: 'close',
+    barTimeZone: 'eastern',
+    discordEnabled: true,
+    dryRun: false,
+    macroCalendarEnabled: true,
+    maxStaleBarMinutes: 10,
+  },
+  bridgeHealth: { ok: true, defaultInstrument: 'MES 06-26' },
+  bridgeReachable: true,
+  latestCompleted5mBar: { time: '2026-05-28T10:00:00-04:00', open: 7500, high: 7510, low: 7498, close: 7508, volume: 1000 },
+  barStaleness: { stale: false, latestTime: '2026-05-28T10:00:00-04:00', ageMinutes: 2, maxAllowedMinutes: 10, reason: null },
+  discordWebhookConfigured: true,
+  marketMapStatus: { loaded: true, usableBars: 400, fallbackBridgeDataAvailable: true },
+  scannerStateFileStatus: { status: 'ok' as const },
+  macroCalendarStatus: { enabled: true, loaded: true },
+};
+
+const readyHealth = evaluateScannerHealth(healthBase);
+const readyHealthBefore = JSON.stringify(readyHealth);
+const readyHealthPayload = scannerHealthDiscordSummary({
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  dryRun: false,
+  report: readyHealth,
+});
+validateDiscordPayload(readyHealthPayload, []);
+const readyHealthText = flattenDiscordPayloadText(readyHealthPayload);
+assert.ok(readyHealthText.includes('[SCANNER HEALTH] MES - READY'));
+assert.ok(readyHealthText.includes('Status: Alerts can be trusted'));
+assert.ok(readyHealthText.includes('Action: Scanner recovered. Trade/watchlist alerts may resume.'));
+assert.equal(JSON.stringify(readyHealth), readyHealthBefore);
+
+const degradedHealth = evaluateScannerHealth({
+  ...healthBase,
+  macroCalendarStatus: { enabled: true, unavailable: true, message: 'Macro calendar unavailable' },
+});
+const degradedPayload = scannerHealthDiscordSummary({
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  dryRun: false,
+  report: degradedHealth,
+});
+validateDiscordPayload(degradedPayload, []);
+const degradedText = flattenDiscordPayloadText(degradedPayload);
+assert.ok(degradedText.includes('[SCANNER HEALTH] MES - DEGRADED'));
+assert.ok(degradedText.includes('Status: Alerts allowed with caution'));
+assert.ok(degradedText.includes('Warnings:'));
+assert.ok(degradedText.includes('Macro calendar unavailable'));
+assert.ok(degradedText.includes('Action: Scanner continues. Review warnings if alerts look unusual.'));
+
+const blockedHealth = evaluateScannerHealth({
+  ...healthBase,
+  bridgeReachable: false,
+  bridgeHealth: { ok: false, error: 'Bridge unreachable' },
+  latestCompleted5mBar: null,
+  barStaleness: { stale: true, latestTime: null, ageMinutes: null, maxAllowedMinutes: 10, reason: 'Latest completed 5M candle is stale' },
+});
+const blockedPayload = scannerHealthDiscordSummary({
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  dryRun: false,
+  report: blockedHealth,
+});
+validateDiscordPayload(blockedPayload, []);
+const blockedText = flattenDiscordPayloadText(blockedPayload);
+assert.ok(blockedText.includes('[SCANNER HEALTH] MES - BLOCKED'));
+assert.ok(blockedText.includes('Status: Trade/watchlist alerts suppressed'));
+assert.ok(blockedText.includes('Blocking reasons:'));
+assert.ok(blockedText.includes('Bridge unreachable'));
+assert.ok(blockedText.includes('Action: Fix NinjaTrader/bridge/data issue, then restart or wait for recovery.'));
+
+for (const payload of [readyHealthPayload, degradedPayload, blockedPayload]) {
+  const text = flattenDiscordPayloadText(payload);
+  assert.equal(payload.components, undefined);
+  assert.ok(!/^Entry:/m.test(text));
+  assert.ok(!/^Stop:/m.test(text));
+  assert.ok(!/^T1:/m.test(text));
+  assert.ok(!/^T2:/m.test(text));
+  assert.ok(!/risk\/reward ladder|Win|Loss|Scratch|ApprovedTrade|Executable trade|Trade now|Entry confirmed/i.test(text));
+}
 
 assert.equal(
   compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),

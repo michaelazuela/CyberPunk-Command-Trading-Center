@@ -47,6 +47,7 @@ import {
   canSendAlertsFromHealth,
   evaluateScannerHealth,
   type ScannerHealthReport,
+  type ScannerHealthStatus,
   type ScannerStateFileHealth,
 } from '../../src/agents/scannerHealthAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
@@ -56,6 +57,8 @@ import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer'
 import {
   compactDiscordSummary,
   morningWatchlistDiscordSummary,
+  scannerHealthDiscordSummary,
+  shouldSendScannerHealthAlert,
   validateDiscordPayload,
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
@@ -104,6 +107,8 @@ interface ScannerStateFile {
   windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
+  lastHealthStatus: ScannerHealthStatus | null;
+  lastHealthAlertSentAt: string | null;
 }
 
 interface ScannerStateReadResult {
@@ -216,7 +221,15 @@ function sleep(ms: number): Promise<void> {
 }
 
 function emptyScannerState(): ScannerStateFile {
-  return { sent: {}, watchlistSent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
+  return {
+    sent: {},
+    watchlistSent: {},
+    windowStartSent: {},
+    lastCompleted5mBySession: {},
+    lastMarketMapRefreshBySession: {},
+    lastHealthStatus: null,
+    lastHealthAlertSentAt: null,
+  };
 }
 
 async function readStateWithHealth(): Promise<ScannerStateReadResult> {
@@ -229,6 +242,8 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         windowStartSent: parsed.windowStartSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
         lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
+        lastHealthStatus: parsed.lastHealthStatus || null,
+        lastHealthAlertSentAt: parsed.lastHealthAlertSentAt || null,
       },
       health: { status: 'ok', message: 'Scanner state file is readable.' },
     };
@@ -840,6 +855,44 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
   if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
 }
 
+async function sendScannerHealthAlertIfNeeded(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  report: ScannerHealthReport;
+}): Promise<void> {
+  const previousStatus = args.state.lastHealthStatus;
+  const currentStatus = args.report.status;
+  if (!shouldSendScannerHealthAlert(previousStatus, currentStatus)) return;
+
+  if (!args.config.discordEnabled) {
+    args.state.lastHealthStatus = currentStatus;
+    console.log(`[scanner-health] Discord health alert skipped because Discord is disabled: ${previousStatus || 'none'} -> ${currentStatus}`);
+    return;
+  }
+
+  if (!args.config.dryRun && !process.env.DISCORD_WEBHOOK_URL) {
+    args.state.lastHealthStatus = currentStatus;
+    console.warn(`[scanner-health] Discord health alert skipped because DISCORD_WEBHOOK_URL is not configured: ${previousStatus || 'none'} -> ${currentStatus}`);
+    return;
+  }
+
+  const payload = scannerHealthDiscordSummary({
+    instrument: args.config.instrument,
+    bridgeInstrument: args.config.bridgeInstrument,
+    dryRun: args.config.dryRun,
+    report: args.report,
+  });
+
+  try {
+    await postDiscord(payload, args.config);
+    args.state.lastHealthStatus = currentStatus;
+    args.state.lastHealthAlertSentAt = new Date().toISOString();
+    console.log(`[scanner-health] Health alert status change: ${previousStatus || 'none'} -> ${currentStatus}`);
+  } catch (error) {
+    console.warn(`[scanner-health] Discord health alert failed: ${formatError(error)}`);
+  }
+}
+
 function buildWindowStartPayload(args: {
   session: LiveSession;
   tradeDate: string;
@@ -1017,6 +1070,8 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       errors: healthErrors,
     });
     logScannerHealth(healthReport);
+    await sendScannerHealthAlertIfNeeded({ config, state, report: healthReport });
+    await writeState(state);
     console.log(`[scanner] ${new Date().toISOString()} NoData: bridge unavailable.`);
     return;
   }
@@ -1080,6 +1135,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     scannerWindow: window,
   });
   logScannerHealth(healthReport);
+  await sendScannerHealthAlertIfNeeded({ config, state, report: healthReport });
 
   if (!canSendAlertsFromHealth(healthReport)) {
     console.log(`[scanner] NoData: ${healthReport.blockingReasons.join(' | ')}`);

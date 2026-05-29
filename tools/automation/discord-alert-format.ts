@@ -7,6 +7,7 @@ import {
   type MemoryHistoricalSupport,
   type ReportDirection,
 } from '../../src/agents/discordReportDesignerAgent';
+import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
 
@@ -92,6 +93,13 @@ interface MorningWatchlistDiscordArgs {
   watchlist: MorningContinuationWatchlistResult;
 }
 
+interface ScannerHealthDiscordArgs {
+  instrument: CompactDiscordInstrument;
+  bridgeInstrument: string;
+  dryRun: boolean;
+  report: ScannerHealthReport;
+}
+
 function priceLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
@@ -122,6 +130,36 @@ function statusColor(status: string | undefined): number {
   if (status === TradeDecisionStatus.NoTrade || status === TradeDecisionStatus.OutsideRules || status === 'Blocked' || status === 'NoTrade') return 0xd50000;
   if (status === TradeDecisionStatus.InvalidScreenshot || status === 'NoData') return 0x78909c;
   return 0xff6d00;
+}
+
+function healthStatusColor(status: ScannerHealthStatus): number {
+  if (status === 'READY') return 0x00c853;
+  if (status === 'DEGRADED') return 0xffa000;
+  return 0xd50000;
+}
+
+function healthStatusLine(status: ScannerHealthStatus): string {
+  if (status === 'READY') return 'Status: Alerts can be trusted';
+  if (status === 'DEGRADED') return 'Status: Alerts allowed with caution';
+  return 'Status: Trade/watchlist alerts suppressed';
+}
+
+function healthActionLine(status: ScannerHealthStatus): string {
+  if (status === 'READY') return 'Action: Scanner recovered. Trade/watchlist alerts may resume.';
+  if (status === 'DEGRADED') return 'Action: Scanner continues. Review warnings if alerts look unusual.';
+  return 'Action: Fix NinjaTrader/bridge/data issue, then restart or wait for recovery.';
+}
+
+function healthCheckMessage(report: ScannerHealthReport, key: string, fallback: string): string {
+  return report.checks.find((item) => item.key === key)?.message || fallback;
+}
+
+export function shouldSendScannerHealthAlert(
+  previousStatus: ScannerHealthStatus | null | undefined,
+  currentStatus: ScannerHealthStatus,
+): boolean {
+  if (!previousStatus) return currentStatus === 'DEGRADED' || currentStatus === 'BLOCKED';
+  return previousStatus !== currentStatus;
 }
 
 function candidateLevels(candidate: SetupCandidate): { stop: number | null; target1: number | null; target2: number | null } {
@@ -362,6 +400,55 @@ export function morningWatchlistDiscordSummary(args: MorningWatchlistDiscordArgs
         color: 0xffa000,
         fields: [],
         footer: { text: 'Quant Desk • Watchlist only • Existing app-owned rules must confirm any future trade' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+export function scannerHealthDiscordSummary(args: ScannerHealthDiscordArgs): DiscordWebhookPayload {
+  const report = args.report;
+  const mode = args.dryRun ? 'dry-run' : 'live';
+  const warnings = report.warnings.slice(0, 4);
+  const blockingReasons = report.blockingReasons.slice(0, 4);
+  const detailLines = report.status === 'BLOCKED'
+    ? [
+        'Blocking reasons:',
+        ...(blockingReasons.length ? blockingReasons.map((reason) => `- ${reason}`) : ['- Alert trust is blocked by scanner health.']),
+      ]
+    : report.status === 'DEGRADED'
+      ? [
+          'Warnings:',
+          ...(warnings.length ? warnings.map((warning) => `- ${warning}`) : ['- Scanner health is degraded.']),
+        ]
+      : [
+          `Bridge: ${healthCheckMessage(report, 'bridge_reachable', 'OK')}`,
+          `Latest 5M: ${healthCheckMessage(report, 'latest_5m_bar_current', 'Current')}`,
+          `Instrument: ${args.instrument} / ${args.bridgeInstrument}`,
+          `Mode: ${mode}`,
+        ];
+  const description = [
+    `[SCANNER HEALTH] ${args.instrument} - ${report.status}`,
+    healthStatusLine(report.status),
+    '',
+    ...detailLines,
+    '',
+    healthActionLine(report.status),
+    '',
+    'Operational status only. Not a trade alert. No action levels or outcome buttons are included.',
+    'Decision support only. No automated orders.',
+  ].join('\n');
+
+  return {
+    username: 'Quant Desk',
+    content: `[SCANNER HEALTH] ${args.instrument} - ${report.status}`,
+    embeds: [
+      {
+        title: 'Scanner Health',
+        description: professionalizeReportText(description),
+        color: healthStatusColor(report.status),
+        fields: [],
+        footer: { text: 'Quant Desk • Scanner health • Operational status only' },
         timestamp: new Date().toISOString(),
       },
     ],
