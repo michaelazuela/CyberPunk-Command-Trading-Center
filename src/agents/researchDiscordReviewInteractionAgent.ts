@@ -13,7 +13,7 @@ import type {
   ResearchDiscordReviewStateEntry,
 } from './researchDiscordReviewQueueAgent';
 import { emptyResearchDiscordReviewState } from './researchDiscordReviewQueueAgent';
-import type { ResearchSampleReviewPack } from './researchSampleReviewAgent';
+import type { ResearchReviewSample, ResearchSampleReviewPack } from './researchSampleReviewAgent';
 
 export interface ResearchDiscordReviewCustomId {
   namespace: 'research_review';
@@ -67,8 +67,11 @@ const PROHIBITED_EXECUTABLE_KEYS = new Set([
   't2',
   'riskReward',
   'canExecute',
+  'executionApproved',
   'orderInstructions',
+  'orderInstruction',
   'tradeAlerts',
+  'tradeAlert',
   'alerts',
   'outcomeButtons',
   'ragPayload',
@@ -152,8 +155,11 @@ export function validateResearchDiscordInteractionUser(userId: string, allowedUs
   }
 }
 
-function assertSampleBoundary(pack: ResearchSampleReviewPack): void {
-  assertNoExecutableReviewFields(pack);
+export function researchOnlySafetyFailureResponse(): string {
+  return 'Review rejected: sample failed research-only safety validation. No review was written.\nResearch-only. This does not approve execution.';
+}
+
+function assertResearchPackBoundary(pack: ResearchSampleReviewPack): void {
   if (
     pack.approvalBoundary.sampleReviewApprovesTrade !== false ||
     pack.approvalBoundary.sampleReviewChangesRules !== false ||
@@ -164,19 +170,28 @@ function assertSampleBoundary(pack: ResearchSampleReviewPack): void {
   ) {
     throw new Error('Review pack approval boundary is not research-only.');
   }
-  for (const sample of pack.samples) {
-    const boundary = sample.agentApprovalBoundary;
-    if (
-      sample.advisoryOnly !== true ||
-      boundary.agentApprovesTrade !== false ||
-      boundary.agentChangesRules !== false ||
-      boundary.agentCreatesEntry !== false ||
-      boundary.agentCreatesTargets !== false ||
-      boundary.agentPromotesModel !== false
-    ) {
-      throw new Error(`Sample ${sample.sampleId} does not preserve the research-only boundary.`);
-    }
+}
+
+function assertResearchOnlySampleBoundary(sample: ResearchReviewSample): void {
+  const boundary = sample.agentApprovalBoundary;
+  if (
+    (sample as { advisoryOnly?: boolean }).advisoryOnly === false ||
+    !boundary ||
+    boundary.agentApprovesTrade !== false ||
+    boundary.agentChangesRules !== false ||
+    boundary.agentCreatesEntry !== false ||
+    boundary.agentCreatesTargets !== false ||
+    boundary.agentPromotesModel !== false
+  ) {
+    throw new Error(`Sample ${sample.sampleId} does not preserve the research-only boundary.`);
   }
+}
+
+function assertPackBoundaryAllowsLegacyAdvisoryOnly(pack: ResearchSampleReviewPack): void {
+  assertNoExecutableReviewFields(pack);
+  assertNoExecutableDiscordInteractionFields(pack.samples);
+  assertResearchPackBoundary(pack);
+  for (const sample of pack.samples) assertResearchOnlySampleBoundary(sample);
 }
 
 function prohibitedPaths(value: unknown, pathName = 'value'): string[] {
@@ -255,7 +270,33 @@ function rejected(reason: string): ResearchDiscordInteractionResult {
   };
 }
 
+function rejectedSafety(): ResearchDiscordInteractionResult {
+  return {
+    ok: false,
+    status: 'rejected',
+    sampleId: null,
+    selectedLabel: null,
+    reviewedPackPath: null,
+    reviewedMarkdownPath: null,
+    responseContent: researchOnlySafetyFailureResponse(),
+    ephemeral: true,
+  };
+}
+
 export function handleResearchDiscordReviewInteraction(input: ResearchDiscordInteractionContext): ResearchDiscordInteractionResult {
+  try {
+    return handleResearchDiscordReviewInteractionUnsafe(input);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[research-discord-interactions] safe rejection: ${message}`);
+    if (/research-only|prohibited executable|executionApproved|canExecute|approval boundary|advisoryOnly|invalid agent approval boundary/i.test(message)) {
+      return rejectedSafety();
+    }
+    return rejected('Unexpected research review interaction error. No review was written.');
+  }
+}
+
+function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInteractionContext): ResearchDiscordInteractionResult {
   let customId: ResearchDiscordReviewCustomId;
   try {
     customId = parseResearchDiscordReviewCustomId(input.customId);
@@ -288,9 +329,10 @@ export function handleResearchDiscordReviewInteraction(input: ResearchDiscordInt
 
   const reviewPackPath = path.resolve(entry.reviewPackPath);
   const pack = loadReviewPack(reviewPackPath);
-  assertSampleBoundary(pack);
+  assertPackBoundaryAllowsLegacyAdvisoryOnly(pack);
   const sample = pack.samples.find((item) => item.sampleId === entry.sampleId);
   if (!sample) return rejected(`Sample not found in review pack: ${entry.sampleId}`);
+  assertResearchOnlySampleBoundary(sample);
 
   const reviewedAt = input.reviewedAt || new Date().toISOString();
   const result = applyHumanReviewToPack({
@@ -303,7 +345,7 @@ export function handleResearchDiscordReviewInteraction(input: ResearchDiscordInt
     notes: reviewNotes(input, customId.label),
     reviewedAt,
   });
-  assertSampleBoundary(result.updatedPack);
+  assertPackBoundaryAllowsLegacyAdvisoryOnly(result.updatedPack);
   assertNoExecutableDiscordInteractionFields(result.updatedPack.samples);
 
   const files = reviewedPaths(reviewPackPath);

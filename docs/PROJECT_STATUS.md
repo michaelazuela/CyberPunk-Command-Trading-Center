@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-05-29
+Task: Harden Discord research interaction safety handling for legacy review packs.
+Files changed: research Discord interaction agent/tests, research Discord interaction automation server wrapper, project status.
+Reason: Prevent crashes when legacy research samples omit `advisoryOnly` while still rejecting explicit unsafe/executable fields.
+Tests run: git diff --check; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; isolated same-sample simulation.
+Result: Passed.
+Trading logic changed: No.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Build still reports pre-existing chunk-size/dynamic-import warnings.
+Next recommended action: Restart the local interaction server and retry the Discord button click through the Cloudflare Tunnel.
+
+## Previous Change
+
+Date: 2026-05-29
 Task: Add Discord research review interaction handler.
 Files changed: research Discord interaction agent/tests, research Discord interaction automation CLI/server, research review state typing, package script wiring, environment example.
 Reason: Allow research review Discord button clicks to update reviewed copies of sample review packs while preserving advisory-only boundaries.

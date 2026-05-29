@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   handleResearchDiscordReviewInteraction,
+  researchOnlySafetyFailureResponse,
   type ResearchDiscordInteractionResult,
 } from '../../src/agents/researchDiscordReviewInteractionAgent';
 
@@ -137,44 +138,51 @@ async function startServer(options: ResearchDiscordInteractionsCliOptions): Prom
   const app = express();
   app.use(express.json({ verify: rawBodySaver }));
   app.post('/interactions', async (req, res) => {
-    const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody || Buffer.from(JSON.stringify(req.body));
-    const valid = verifyDiscordSignature(
-      rawBody,
-      req.header('x-signature-timestamp'),
-      req.header('x-signature-ed25519'),
-      publicKey,
-    );
-    if (!valid) {
-      res.status(401).send('invalid request signature');
-      return;
-    }
+    try {
+      const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody || Buffer.from(JSON.stringify(req.body));
+      const valid = verifyDiscordSignature(
+        rawBody,
+        req.header('x-signature-timestamp'),
+        req.header('x-signature-ed25519'),
+        publicKey,
+      );
+      if (!valid) {
+        console.warn('[research-discord-interactions] rejected request with invalid Discord signature.');
+        res.status(401).send('invalid request signature');
+        return;
+      }
 
-    const payload = req.body as Record<string, unknown>;
-    if (payload.type === 1) {
-      res.json({ type: 1 });
-      return;
-    }
+      const payload = req.body as Record<string, unknown>;
+      if (payload.type === 1) {
+        res.json({ type: 1 });
+        return;
+      }
 
-    const data = payload.data && typeof payload.data === 'object' ? payload.data as Record<string, unknown> : {};
-    const message = payload.message && typeof payload.message === 'object' ? payload.message as Record<string, unknown> : {};
-    const customId = typeof data.custom_id === 'string' ? data.custom_id : '';
-    const user = interactionUser(payload);
-    const result = handleResearchDiscordReviewInteraction({
-      customId,
-      statePath: options.statePath,
-      user,
-      channelId: typeof payload.channel_id === 'string' ? payload.channel_id : null,
-      messageId: typeof message.id === 'string' ? message.id : null,
-      allowedUserIds: allowedUserIds(),
-      messageContent: typeof message.content === 'string' ? message.content : null,
-      messageComponents: Array.isArray(message.components) ? message.components as never : undefined,
-    });
-    await editDiscordMessage(
-      typeof payload.channel_id === 'string' ? payload.channel_id : null,
-      typeof message.id === 'string' ? message.id : null,
-      result.messageUpdate,
-    );
-    res.json(discordEphemeral(result.responseContent));
+      const data = payload.data && typeof payload.data === 'object' ? payload.data as Record<string, unknown> : {};
+      const message = payload.message && typeof payload.message === 'object' ? payload.message as Record<string, unknown> : {};
+      const customId = typeof data.custom_id === 'string' ? data.custom_id : '';
+      const user = interactionUser(payload);
+      const result = handleResearchDiscordReviewInteraction({
+        customId,
+        statePath: options.statePath,
+        user,
+        channelId: typeof payload.channel_id === 'string' ? payload.channel_id : null,
+        messageId: typeof message.id === 'string' ? message.id : null,
+        allowedUserIds: allowedUserIds(),
+        messageContent: typeof message.content === 'string' ? message.content : null,
+        messageComponents: Array.isArray(message.components) ? message.components as never : undefined,
+      });
+      if (!result.ok) console.warn(`[research-discord-interactions] interaction rejected: ${result.status}`);
+      await editDiscordMessage(
+        typeof payload.channel_id === 'string' ? payload.channel_id : null,
+        typeof message.id === 'string' ? message.id : null,
+        result.messageUpdate,
+      );
+      res.json(discordEphemeral(result.responseContent));
+    } catch (error) {
+      console.error(`[research-discord-interactions] safe server error response: ${error instanceof Error ? error.message : String(error)}`);
+      res.json(discordEphemeral(researchOnlySafetyFailureResponse()));
+    }
   });
   await new Promise<void>((resolve) => {
     app.listen(options.port, () => resolve());

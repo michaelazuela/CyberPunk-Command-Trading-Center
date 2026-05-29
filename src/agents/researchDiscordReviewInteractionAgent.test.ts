@@ -9,6 +9,7 @@ import {
 import {
   handleResearchDiscordReviewInteraction,
   parseResearchDiscordReviewCustomId,
+  researchOnlySafetyFailureResponse,
   validateResearchDiscordInteractionUser,
 } from './researchDiscordReviewInteractionAgent';
 import type { ResearchSampleReviewPack } from './researchSampleReviewAgent';
@@ -106,6 +107,31 @@ function writeFixtureState(statePath: string, reviewPackPath: string): ResearchD
   return state;
 }
 
+function writeOneSampleFixture(tempDir: string, packName: string, mutateSample?: (sample: Record<string, unknown>) => void): {
+  reviewPackPath: string;
+  statePath: string;
+} {
+  const pack = fixturePack();
+  const sample = pack.samples[0] as unknown as Record<string, unknown>;
+  mutateSample?.(sample);
+  const reviewPackPath = join(tempDir, packName);
+  const statePath = join(tempDir, `${packName.replace(/\.json$/i, '')}-state.json`);
+  writeFileSync(reviewPackPath, `${JSON.stringify(pack, null, 2)}\n`, 'utf8');
+  writeFixtureState(statePath, reviewPackPath);
+  return { reviewPackPath, statePath };
+}
+
+function click(statePathInput: string) {
+  return handleResearchDiscordReviewInteraction({
+    customId: 'research_review|packhash001|false_run_liquidity_fade-001|new_model_candidate_review',
+    statePath: statePathInput,
+    user: { id: 'user-1', username: 'Michael' },
+    channelId: 'channel-1',
+    messageId: 'message-1',
+    reviewedAt: '2026-05-29T22:30:00.000Z',
+  });
+}
+
 const parsedCustomId = parseResearchDiscordReviewCustomId('research_review|packhash001|false_run_liquidity_fade-001|new_model_candidate_review');
 assert.equal(parsedCustomId.namespace, 'research_review');
 assert.equal(parsedCustomId.packHash, 'packhash001');
@@ -168,6 +194,33 @@ const missingSample = handleResearchDiscordReviewInteraction({
 });
 assert.equal(missingSample.ok, false);
 assert.ok(missingSample.responseContent.includes('Sample not found'));
+
+const legacyFixture = writeOneSampleFixture(temp, 'legacy-review-pack.json', (sample) => {
+  delete sample.advisoryOnly;
+});
+const legacyOriginal = readFileSync(legacyFixture.reviewPackPath, 'utf8');
+const legacyResult = click(legacyFixture.statePath);
+assert.equal(legacyResult.ok, true);
+assert.equal(existsSync(legacyResult.reviewedPackPath as string), true);
+assert.equal(readFileSync(legacyFixture.reviewPackPath, 'utf8'), legacyOriginal);
+const legacyReviewedPack = JSON.parse(readFileSync(legacyResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+assert.equal(legacyReviewedPack.samples[0].advisoryOnly, true);
+assert.equal(legacyReviewedPack.samples[0].humanInspectionLabel, 'new_model_candidate_review');
+assert.ok(!/"entry"|"stop"|"target"|"canExecute"/.test(JSON.stringify(legacyReviewedPack)));
+
+for (const [packName, mutate] of [
+  ['unsafe-advisory-false.json', (sample: Record<string, unknown>) => { sample.advisoryOnly = false; }],
+  ['unsafe-can-execute.json', (sample: Record<string, unknown>) => { sample.canExecute = true; }],
+  ['unsafe-entry.json', (sample: Record<string, unknown>) => { sample.entry = 7597; }],
+] as const) {
+  const unsafeFixture = writeOneSampleFixture(temp, packName, mutate);
+  const unsafeOriginal = readFileSync(unsafeFixture.reviewPackPath, 'utf8');
+  const unsafeResult = click(unsafeFixture.statePath);
+  assert.equal(unsafeResult.ok, false);
+  assert.equal(unsafeResult.responseContent, researchOnlySafetyFailureResponse());
+  assert.equal(readFileSync(unsafeFixture.reviewPackPath, 'utf8'), unsafeOriginal);
+  assert.equal(existsSync(unsafeResult.reviewedPackPath || join(temp, packName.replace(/\.json$/i, '.reviewed.json'))), false);
+}
 
 const result = handleResearchDiscordReviewInteraction({
   customId,
