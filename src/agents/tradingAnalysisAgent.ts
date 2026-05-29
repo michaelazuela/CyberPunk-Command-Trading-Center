@@ -171,7 +171,7 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     `- Diagnostic replays: ${report.counts.diagnosticReplays}`,
     `- Confirmed missed approved trades: ${report.counts.confirmedMissedApprovedTrades}`,
     `- Already-triggered/no-fresh-entry: ${report.counts.alreadyTriggeredNoFreshEntry}`,
-    `- Advisory research-only events: ${report.counts.ictStyleWatchlistOnlyEvents}`,
+    `- Live advisory watchlist alerts: ${report.counts.ictStyleWatchlistOnlyEvents}`,
     '',
     `Key Story: ${keyFinding}`,
     '',

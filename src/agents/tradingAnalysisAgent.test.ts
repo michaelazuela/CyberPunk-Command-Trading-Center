@@ -130,7 +130,8 @@ assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage
 assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
 assert.ok(!report.discordMessage.includes('ICT-style'));
-assert.ok(report.discordMessage.includes('Advisory research-only events: 1'));
+assert.ok(!report.discordMessage.includes('Advisory research-only events: 1'));
+assert.ok(report.discordMessage.includes('Live advisory watchlist alerts: 1'));
 assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
 assert.ok(report.discordMessage.includes('Research Backfill:'));
@@ -193,8 +194,10 @@ const zeroWatchlistReport = buildWeeklyTradingAnalysisReport({
   tradeAlertRecords: [],
 });
 assert.ok(zeroWatchlistReport.discordMessage.includes('Watchlist alerts: 0'));
+assert.ok(zeroWatchlistReport.discordMessage.includes('Live advisory watchlist alerts: 0'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('What We Learned: No watchlist alerts fired this week. Continue collecting data.'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('Research Backfill:\n- Reports scanned: 0\n- Research candidates: 0\n- Advisory-only events: 0\n- Rule change: none'));
+assert.ok(!zeroWatchlistReport.discordMessage.includes('Advisory research-only events: 0'));
 assert.ok(!zeroWatchlistReport.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 
 const parsed = parseWeeklyReportArgs([
@@ -323,6 +326,7 @@ assert.equal(newsletterSkip.skippedReason, 'Dry run.');
 assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Backfill:'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Live advisory watchlist alerts: 1'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Reports scanned: 1'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research candidates: 2'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Advisory-only events: 2'));
