@@ -851,6 +851,30 @@ export interface FinalTradePlan {
   noTradeReason?: NoTradeReason | null;
 }
 
+export type EarlyMoveReviewStatus = 'already_triggered_no_fresh_entry';
+
+export interface EarlyMoveReview {
+  status: EarlyMoveReviewStatus;
+  direction: 'LONG' | 'SHORT';
+  moveStart: number;
+  moveExtreme: number;
+  triggerArea: number | null;
+  currentPrice: number | null;
+  movePoints: number;
+  freshEntryAvailable: false;
+  summary: string;
+  reason: string;
+  action: string;
+  journalSuggestion: string;
+  approvalBoundary: {
+    approvesTrade: false;
+    changesEntry: false;
+    changesStop: false;
+    changesTargets: false;
+    changesRisk: false;
+  };
+}
+
 export interface MorningPlan extends FinalTradePlan {
   sessionType: 'morning' | 'replay_morning';
   requiredScreenshotRange: string;
@@ -866,6 +890,7 @@ export interface TradeDecision {
   setupAssessment: SetupAssessment;
   setupCandidates?: SetupCandidate[];
   opportunitySelection?: FinalOpportunitySelection;
+  earlyMoveReview?: EarlyMoveReview | null;
   riskAssessment: RiskAssessment;
   finalTradePlan: FinalTradePlan;
   noTradeReason?: NoTradeReason | null;

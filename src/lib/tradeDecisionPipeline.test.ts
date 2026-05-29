@@ -1943,6 +1943,175 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
   }],
 
+  ['40b. Stale bearish Turtle Soup is blocked after current 5M trades through the stop', () => {
+    const context = {
+      ...structuredContext({
+        keyLevels: {
+          currentPrice: 106,
+          activeSwingHigh: 106,
+          activeSwingLow: 98,
+          nearestResistance: 104,
+          nearestSupport: 98,
+        },
+        candles: [
+          { index: 1, timestamp: '09:40', open: 102, high: 103, low: 101, close: 102, direction: 'doji', confidence: 'High' },
+          { index: 2, timestamp: '09:45', open: 104.25, high: 105.25, low: 102.5, close: 103.75, direction: 'bearish', isRejection: true, confidence: 'High' },
+          { index: 3, timestamp: '09:50', open: 103.75, high: 104, low: 100, close: 100.5, direction: 'bearish', isExpansion: true, confidence: 'High' },
+          { index: 4, timestamp: '09:55', open: 100.5, high: 106, low: 100, close: 106, direction: 'bullish', isExpansion: true, confidence: 'High' },
+        ],
+        liquiditySweeps: [{
+          type: 'sweep',
+          direction: 'SHORT',
+          level: 104,
+          sweptLevelLabel: 'Buy-side liquidity',
+          reclaimed: true,
+          timestamp: '09:45',
+          confidence: 'High',
+          evidence: 'Price swept above buy-side liquidity and reclaimed lower.',
+        }],
+        displacementCandles: [{
+          direction: 'SHORT',
+          candleIndex: 3,
+          timestamp: '09:50',
+          session: 'rth_morning',
+          open: 103.5,
+          high: 104,
+          low: 100,
+          close: 100.5,
+          bodyPoints: 3,
+          rangePoints: 4,
+          bodyToRange: 0.75,
+          closeLocation: 'bottom_quarter',
+          displacementScore: 6,
+          quality: 'confirmed',
+          leavesImbalance: false,
+          breaksStructure: true,
+          confidence: 'High',
+          evidence: 'Bearish expansion confirms reversal attempt.',
+        }],
+        targetObjectives: [{
+          label: 'Opposing sell-side liquidity',
+          price: 98,
+          direction: 'SHORT',
+          source: 'ninjatrader',
+          type: 'liquidity_pool',
+          confidence: 'High',
+          score: 90,
+          distancePoints: 5.5,
+          rMultiple: 3.14,
+          reason: 'Opposing sell-side liquidity below the failed breakout.',
+        }],
+        marketStructure: {
+          trend: 'bullish',
+          higherHigh: true,
+          higherLow: true,
+          lowerHigh: false,
+          lowerLow: false,
+          marketStructureShift: true,
+          chopRangeCondition: false,
+          compressionCondition: false,
+          expansionCondition: true,
+        },
+        setupReadyFacts: {
+          sweepThenReclaim: true,
+          breakOfStructure: true,
+          notes: [],
+        },
+      }),
+      sessionType: 'replay_morning',
+      instrument: 'MES',
+      tradeDate: '2026-05-19',
+      timeframe: '5m',
+      screenshotUsability: 'usable',
+    } as ChartContext;
+
+    const result = runTradeDecisionPipeline({
+      result: baseResult({
+        dayType: 'SHORT',
+        reasoning: 'Bridge replay should not keep a stopped short candidate alive.',
+        structuredChartContext: context,
+      }),
+      sessionType: 'replay_morning',
+      instrument: 'MES',
+      tradeDate: '2026-05-19',
+    });
+    const staleShort = result.setupCandidates?.find((item) => item.setupType === SetupType.TurtleSoup && item.direction === 'SHORT');
+
+    assert.ok(staleShort);
+    assert.equal(staleShort.executionStatus, ExecutionStatus.Blocked);
+    assert.equal(staleShort.blockReason, NoTradeReason.InvalidStopLocation);
+    assert.ok(staleShort.missingEvidence.some((item) => item.includes('traded through the structure stop/invalidation')));
+    assert.notEqual(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.TurtleSoup);
+    assert.notEqual(result.finalTradePlan.direction, 'SHORT');
+  }],
+
+  ['40c. Morning bridge first move is flagged as already triggered with no fresh entry', () => {
+    const bars5m: NinjaBridgeBar[] = [
+      { time: '2026-05-28T09:30:00-04:00', open: 7535.75, high: 7538.75, low: 7534.75, close: 7535.25, volume: 1000 },
+      { time: '2026-05-28T09:35:00-04:00', open: 7535.25, high: 7537.25, low: 7527.75, close: 7530.00, volume: 1000 },
+      { time: '2026-05-28T09:40:00-04:00', open: 7530.00, high: 7530.00, low: 7525.50, close: 7527.25, volume: 1000 },
+      { time: '2026-05-28T09:45:00-04:00', open: 7527.25, high: 7530.25, low: 7525.50, close: 7528.75, volume: 1000 },
+      { time: '2026-05-28T09:50:00-04:00', open: 7528.50, high: 7532.00, low: 7526.00, close: 7527.25, volume: 1000 },
+      { time: '2026-05-28T09:55:00-04:00', open: 7527.25, high: 7537.25, low: 7526.25, close: 7531.75, volume: 1000 },
+      { time: '2026-05-28T10:00:00-04:00', open: 7531.75, high: 7536.25, low: 7530.50, close: 7535.75, volume: 1000 },
+      { time: '2026-05-28T10:05:00-04:00', open: 7535.75, high: 7539.75, low: 7533.50, close: 7536.50, volume: 1000 },
+      { time: '2026-05-28T10:10:00-04:00', open: 7536.25, high: 7540.25, low: 7533.50, close: 7540.25, volume: 1000 },
+      { time: '2026-05-28T10:15:00-04:00', open: 7540.25, high: 7574.00, low: 7535.00, close: 7564.75, volume: 1000 },
+      { time: '2026-05-28T10:20:00-04:00', open: 7564.75, high: 7568.75, low: 7555.50, close: 7564.50, volume: 1000 },
+    ];
+    const bridgeContext = buildNinjaChartContext({
+      bars5m,
+      sessionType: 'replay_morning',
+      instrument: 'MES',
+      tradeDate: '2026-05-28',
+    });
+    assert.ok(bridgeContext);
+
+    const result = runTradeDecisionPipeline({
+      result: baseResult({
+        dayType: 'NO TRADE',
+        reasoning: 'Bridge replay shows early upside expansion, but no fresh entry should be approved.',
+        current_rule_analysis: {
+          summary: 'First move already expanded; wait for a pullback or new trigger.',
+          setup_detected: 'No Setup',
+          rule_category: 'None',
+          entry: null,
+          stop: null,
+          target_1: null,
+          target_2: null,
+          no_trade_reason: 'Move already triggered',
+          base_confidence: 'Medium',
+        },
+        structuredChartContext: {
+          ...bridgeContext,
+          setupEvidence: {},
+          proposedEntry: null,
+          proposedStop: null,
+          entryConfirmed: false,
+          stopConfirmed: false,
+          requiresManualConfirmation: true,
+        },
+      }),
+      sessionType: 'replay_morning',
+      instrument: 'MES',
+      tradeDate: '2026-05-28',
+    });
+
+    assert.equal(result.earlyMoveReview?.status, 'already_triggered_no_fresh_entry');
+    assert.equal(result.earlyMoveReview?.direction, 'LONG');
+    assert.equal(result.earlyMoveReview?.freshEntryAvailable, false);
+    assert.equal(result.earlyMoveReview?.approvalBoundary.approvesTrade, false);
+    assert.equal(result.earlyMoveReview?.approvalBoundary.changesEntry, false);
+    assert.equal(result.earlyMoveReview?.approvalBoundary.changesStop, false);
+    assert.equal(result.earlyMoveReview?.approvalBoundary.changesTargets, false);
+    assert.ok(result.earlyMoveReview?.summary.includes('7525.5'));
+    assert.ok(result.earlyMoveReview?.action.includes('No fresh entry'));
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.notEqual(result.finalTradePlan.direction, 'LONG');
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(result.finalTradePlan.stop, null);
+  }],
+
   ['41. Breaker and FVG overlap alone does not create a trade candidate', () => {
     const context = {
       ...structuredContext({

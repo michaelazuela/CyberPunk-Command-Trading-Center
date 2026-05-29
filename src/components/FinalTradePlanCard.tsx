@@ -413,6 +413,36 @@ function SessionStoryPanel({ plan }: { plan: NormalizedTradePlan }) {
   );
 }
 
+function EarlyMoveReviewPanel({ plan }: { plan: NormalizedTradePlan }) {
+  const review = plan.earlyMoveReview;
+  if (!review) return null;
+
+  return (
+    <div className="mb-4 border border-[var(--amber)]/35 bg-[var(--amber)]/5 p-3 font-mono">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--amber)]">Early Move Review</div>
+          <div className="mt-1 text-[11px] font-bold text-[var(--txt)]">
+            First move detected - {formatDirection(review.direction)} opportunity may have already triggered.
+          </div>
+        </div>
+        <span className="qd-badge border-[var(--amber)]/30 text-[var(--amber)]">
+          {review.status.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <div className="grid gap-1 text-[10px] text-[var(--txt2)]">
+        <div><span className="text-[var(--txt)]">Review:</span> {review.summary}</div>
+        <div><span className="text-[var(--txt)]">Reason:</span> {review.reason}</div>
+        <div><span className="text-[var(--txt)]">Action:</span> {review.action}</div>
+        <div><span className="text-[var(--txt)]">Journal:</span> {review.journalSuggestion}</div>
+        <div className="text-[var(--amber)]">
+          Display-only. This review does not approve a trade or change entry, stop, targets, risk, or rule gates.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function bestOpportunityLabel(plan: NormalizedTradePlan): string {
   const executable = plan.opportunitySelection?.bestExecutableCandidate;
   const conditional = plan.opportunitySelection?.bestConditionalCandidate;
@@ -772,6 +802,7 @@ export default function FinalTradePlanCard({
       <SessionStoryPanel plan={plan} />
       <SessionLevelContextPanel plan={plan} />
       <SetupScanResults plan={plan} />
+      <EarlyMoveReviewPanel plan={plan} />
       {!plan.canExecute && <ConditionalPlansPanel plan={plan} />}
 
       {!plan.canExecute ? (

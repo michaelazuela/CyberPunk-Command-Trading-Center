@@ -1,4 +1,4 @@
-import { AnalysisResult, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SessionStory, SetupCandidate, TradeDecisionStatus } from '../types';
+import { AnalysisResult, EarlyMoveReview, FinalOpportunitySelection, NoTradeReason, SessionLevelContext, SessionStory, SetupCandidate, TradeDecisionStatus } from '../types';
 import { SYSTEM_RULES } from '../constants';
 import { targetsFromEntryStop } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
@@ -50,6 +50,7 @@ export interface NormalizedTradePlan {
   decisionAuditTrail?: TradeDecisionStepResult[];
   setupCandidates?: SetupCandidate[];
   opportunitySelection?: FinalOpportunitySelection;
+  earlyMoveReview?: EarlyMoveReview | null;
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
   consistencyWarnings?: string[];
@@ -251,6 +252,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    earlyMoveReview: pipeline.earlyMoveReview,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     sessionStory: pipeline.chartContext.sessionStory,
     rejectedAlternatives: []
@@ -499,6 +501,7 @@ export function normalizeTradePlan(
       invalidation: result.current_rule_analysis?.no_trade_reason || defaultPlan.invalidation,
       setupCandidates: pipeline.setupCandidates || [],
       opportunitySelection: pipeline.opportunitySelection,
+      earlyMoveReview: pipeline.earlyMoveReview,
       sessionLevelContext: pipeline.chartContext.sessionLevelContext,
       sessionStory: pipeline.chartContext.sessionStory,
       consistencyWarnings: advisoryCandidates.some(isExecutable)
@@ -551,6 +554,7 @@ export function normalizeTradePlan(
     decisionAuditTrail: pipeline.auditTrail,
     setupCandidates: pipeline.setupCandidates || [],
     opportunitySelection: pipeline.opportunitySelection,
+    earlyMoveReview: pipeline.earlyMoveReview,
     sessionLevelContext: pipeline.chartContext.sessionLevelContext,
     sessionStory: pipeline.chartContext.sessionStory,
     setupName: executableCandidate.setupName,

@@ -4,6 +4,7 @@ import {
   BiasDirection,
   ChartContext,
   DecisionQualityScoreItem,
+  EarlyMoveReview,
   ExecutionStatus,
   FinalOpportunitySelection,
   FinalTradePlan,
@@ -12,6 +13,7 @@ import {
   RiskAssessment,
   RiskStatus,
   SetupCandidate,
+  SetupCandidateStatus,
   SetupAssessment,
   SetupType,
   TradeDecision,
@@ -638,6 +640,150 @@ function mergeSetupCandidates(scannerCandidates: SetupCandidate[], builderCandid
   return merged.sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 }
 
+function candidateInvalidatedByCurrentPrice(candidate: SetupCandidate, chartContext: ChartContext): boolean {
+  if (
+    candidate.direction !== 'LONG' &&
+    candidate.direction !== 'SHORT'
+  ) {
+    return false;
+  }
+  const invalidationPrice = isValidPrice(candidate.stop)
+    ? candidate.stop
+    : parsePrice(candidate.invalidation);
+  if (!isValidPrice(invalidationPrice)) return false;
+
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice);
+  const candles = chartContext.candles || [];
+  const latestCandle = candles[candles.length - 1];
+  const latestHigh = parsePrice(latestCandle?.high);
+  const latestLow = parsePrice(latestCandle?.low);
+
+  if (candidate.direction === 'LONG') {
+    return (
+      (currentPrice !== null && currentPrice <= invalidationPrice) ||
+      (latestLow !== null && latestLow <= invalidationPrice)
+    );
+  }
+
+  return (
+    (currentPrice !== null && currentPrice >= invalidationPrice) ||
+    (latestHigh !== null && latestHigh >= invalidationPrice)
+  );
+}
+
+function blockInvalidatedCandidates(candidates: SetupCandidate[], chartContext: ChartContext): SetupCandidate[] {
+  return candidates.map((candidate) => {
+    if (!candidateInvalidatedByCurrentPrice(candidate, chartContext)) return candidate;
+
+    return {
+      ...candidate,
+      detectedStatus: SetupCandidateStatus.Blocked,
+      executionStatus: ExecutionStatus.Blocked,
+      blockReason: NoTradeReason.InvalidStopLocation,
+      missingEvidence: Array.from(new Set([
+        ...(candidate.missingEvidence || []),
+        'Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation.',
+      ])),
+      nextAction: 'Candidate invalidated. Stand down; do not reuse this stale entry/stop plan.',
+    };
+  });
+}
+
+function readableCandles(chartContext: ChartContext) {
+  return (chartContext.candles || [])
+    .filter((candle) =>
+      isValidPrice(candle.open) &&
+      isValidPrice(candle.high) &&
+      isValidPrice(candle.low) &&
+      isValidPrice(candle.close)
+    )
+    .sort((a, b) => a.index - b.index);
+}
+
+function buildAlreadyTriggeredLongReview(chartContext: ChartContext): EarlyMoveReview | null {
+  const candles = readableCandles(chartContext);
+  if (candles.length < 4) return null;
+
+  let bestMove: {
+    startIndex: number;
+    extremeIndex: number;
+    moveStart: number;
+    moveExtreme: number;
+    movePoints: number;
+  } | null = null;
+
+  for (let startIndex = 0; startIndex < candles.length - 1; startIndex += 1) {
+    const startLow = candles[startIndex].low as number;
+    for (let extremeIndex = startIndex + 1; extremeIndex < candles.length; extremeIndex += 1) {
+      const extremeHigh = candles[extremeIndex].high as number;
+      const movePoints = roundToTick(extremeHigh - startLow);
+      if (!bestMove || movePoints > bestMove.movePoints) {
+        bestMove = {
+          startIndex,
+          extremeIndex,
+          moveStart: startLow,
+          moveExtreme: extremeHigh,
+          movePoints,
+        };
+      }
+    }
+  }
+
+  if (!bestMove || bestMove.movePoints < TRADE_RULES.maxRiskPoints * 2) return null;
+
+  const impulseCandles = candles.slice(bestMove.startIndex + 1, bestMove.extremeIndex + 1);
+  const hasBullishExpansion = impulseCandles.some((candle) => {
+    const body = Math.abs((candle.close as number) - (candle.open as number));
+    const range = (candle.high as number) - (candle.low as number);
+    return candle.direction === 'bullish' && (
+      candle.isExpansion ||
+      candle.bodyQuality === 'large' ||
+      (range > 0 && body / range >= 0.6 && body >= TRADE_RULES.maxRiskPoints)
+    );
+  });
+  if (!hasBullishExpansion) return null;
+
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? (candles[candles.length - 1].close as number);
+  const distanceFromBase = currentPrice !== null ? roundToTick(currentPrice - bestMove.moveStart) : bestMove.movePoints;
+  const alreadyExtended = distanceFromBase >= TRADE_RULES.maxRiskPoints * 2 || bestMove.movePoints >= TRADE_RULES.maxRiskPoints * 3;
+  if (!alreadyExtended) return null;
+
+  const triggerCandle = candles[bestMove.extremeIndex];
+  const triggerArea = parsePrice(triggerCandle.close) ?? bestMove.moveExtreme;
+
+  return {
+    status: 'already_triggered_no_fresh_entry',
+    direction: 'LONG',
+    moveStart: bestMove.moveStart,
+    moveExtreme: bestMove.moveExtreme,
+    triggerArea,
+    currentPrice,
+    movePoints: bestMove.movePoints,
+    freshEntryAvailable: false,
+    summary: `First move detected - long opportunity may have already triggered from approximately ${bestMove.moveStart} toward ${bestMove.moveExtreme}.`,
+    reason: 'The 5M execution chart shows an early upside expansion that is already extended beyond the app risk window. This is not a fresh executable entry.',
+    action: 'Move is extended into resistance/liquidity. No fresh entry unless a new pullback/retest forms and passes the app-owned rule gates.',
+    journalSuggestion: `Missed move review: expansion from approximately ${bestMove.moveStart} toward ${bestMove.moveExtreme} should be journaled as a missed/early move if no alert was generated.`,
+    approvalBoundary: {
+      approvesTrade: false,
+      changesEntry: false,
+      changesStop: false,
+      changesTargets: false,
+      changesRisk: false,
+    },
+  };
+}
+
+function buildEarlyMoveReview(chartContext: ChartContext, selectedCandidate: SetupCandidate | null): EarlyMoveReview | null {
+  if (sessionKey(chartContext.sessionType) !== 'morning') return null;
+  const review = buildAlreadyTriggeredLongReview(chartContext);
+  if (!review) return null;
+  if (selectedCandidate?.direction === 'LONG' && selectedCandidate.executionStatus === ExecutionStatus.Executable) {
+    return null;
+  }
+  return review;
+}
+
 function finalStatusFromSelection(
   selectedExecutable: SetupCandidate | null,
   selectedConditional: SetupCandidate | null,
@@ -674,7 +820,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     chartContext,
   });
   const setupCandidates = enrichDecisionQuality(applyTargetObjectivesToCandidates(
-    mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)),
+    blockInvalidatedCandidates(mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)), chartContext),
     chartContext.structuralLevels || []
   ), chartContext).sort(qualitySort);
   const selectedExecutable = setupCandidates.find((candidate) =>
@@ -861,6 +1007,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     finalDecision: finalStatus,
     noTradeReason: finalPlan.noTradeReason || null,
   };
+  const earlyMoveReview = buildEarlyMoveReview(chartContext, selectedCandidate);
 
   return {
     status: finalStatus,
@@ -870,6 +1017,7 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     setupAssessment,
     setupCandidates,
     opportunitySelection,
+    earlyMoveReview,
     riskAssessment,
     finalTradePlan: finalPlan,
     noTradeReason: finalPlan.noTradeReason,
