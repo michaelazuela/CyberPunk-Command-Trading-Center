@@ -44,7 +44,11 @@ export interface ResearchDiscordReviewStateEntry {
   postedAt: string;
   labelOptions: ResearchReviewButtonLabel[];
   advisoryOnly: true;
-  reviewed: false;
+  reviewed: boolean;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  selectedLabel?: ResearchReviewButtonLabel;
+  reviewedPackPath?: string;
 }
 
 export interface ResearchDiscordReviewState {
