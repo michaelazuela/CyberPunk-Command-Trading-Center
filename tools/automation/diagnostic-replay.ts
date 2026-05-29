@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   getNinjaHistoricalBars,
   type NinjaBridgeBar,
@@ -12,6 +13,7 @@ import {
   type BridgeDiagnosticReplayInput,
   type DiagnosticDirection,
 } from '../../src/agents/bridgeDiagnosticReplayAgent';
+import { loadScannerAuditHistory } from './scanner-audit-import';
 
 type BarTimestampMode = 'open' | 'close';
 type BarTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
@@ -29,12 +31,16 @@ export interface DiagnosticReplayCliOptions {
   out: string | null;
   pretty: boolean;
   json: boolean;
+  auditDir: string;
 }
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 const DEFAULT_BRIDGE_URL = process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const DEFAULT_AUDIT_DIR = join(__dirname, 'discord-audit');
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -88,6 +94,7 @@ export function parseDiagnosticReplayArgs(args = process.argv.slice(2)): Diagnos
     out: readFlag(args, '--out'),
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
+    auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
   };
 }
 
@@ -148,6 +155,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
   const bars15m = await fetchBars(options, '15m', contextFrom, to);
   const bars60m = await fetchBars(options, '60m', contextFrom, to);
   const bars240m = await fetchBars(options, '240m', `${options.date}T00:00:00`, to);
+  const auditHistory = await loadScannerAuditHistory(options.auditDir);
 
   return {
     tradeDate: options.date,
@@ -162,7 +170,8 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
     replayWindow: { from: options.from, to: options.to },
     suspectedMoveDirection: options.direction,
     scannerAlertSent: null,
-    scannerAlertReason: 'CLI diagnostic did not load scanner audit state in Phase 9.',
+    scannerAlertReason: auditHistory.warnings.length ? auditHistory.warnings.join(' | ') : null,
+    scannerAuditEvents: auditHistory.events,
   };
 }
 
@@ -178,6 +187,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `FVG Bounds: ${report.fvgBounds.map((zone) => `${zone.sourceTimeframe} ${zone.direction} ${zone.lower}-${zone.upper} @ ${zone.formedAt}`).join('; ') || 'none'}`,
     `Pullback: ${report.pullbackReview.status} - ${report.pullbackReview.summary}`,
     `Scanner: ${report.scannerAlertReview.reason}`,
+    `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,
     `Authority: diagnostic only; no rules changed; no trade approval created.`,
   ];

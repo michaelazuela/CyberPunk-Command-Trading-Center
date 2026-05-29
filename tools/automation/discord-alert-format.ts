@@ -1,5 +1,5 @@
 import { targetsFromEntryStop } from '../../src/config/tradeRules';
-import { TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import {
   assertDiscordReportDesignerIsAdvisoryOnly,
   designDiscordVisualReport,
@@ -7,6 +7,11 @@ import {
   type MemoryHistoricalSupport,
   type ReportDirection,
 } from '../../src/agents/discordReportDesignerAgent';
+import {
+  scoreConditionalCandidateRisk,
+  type ConditionalCandidateRiskScore,
+  type HigherTimeframeRiskAlignment,
+} from '../../src/agents/conditionalCandidateRiskAgent';
 import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
@@ -221,6 +226,63 @@ function compactPlanLines(candidate: SetupCandidate): string[] {
   ];
 }
 
+function inferHigherTimeframeRiskAlignment(candidate: SetupCandidate): HigherTimeframeRiskAlignment {
+  const text = [
+    candidate.levelContextSummary,
+    candidate.decisionQualityRecommendation,
+    ...candidate.evidence,
+    ...candidate.missingEvidence,
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/\bhtf\b.*\baligned\b|higher[- ]timeframe.*\baligned\b|4h.*1h.*15m.*5m.*long|4h.*1h.*15m.*5m.*short/.test(text)) return 'aligned';
+  if (/\bhtf\b.*\bconflict|higher[- ]timeframe.*\bconflict|conflicts with higher/.test(text)) return 'conflict';
+  if (/\bmixed\b.*\bhtf\b|\bhtf\b.*\bmixed\b|higher[- ]timeframe.*\bmixed\b/.test(text)) return 'mixed';
+  return 'unknown';
+}
+
+function inferPriceExtended(candidate: SetupCandidate): boolean {
+  const text = [
+    candidate.blockReason,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.levelContextSummary,
+    candidate.decisionQualityRecommendation,
+    ...candidate.evidence,
+    ...candidate.missingEvidence,
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /extended|chasing|chase|already triggered|no fresh entry/.test(text);
+}
+
+function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
+  const hardBlock = riskScore.blockReason
+    ? `Risk remains blocked by ${riskScore.blockReason}.`
+    : 'This score is advisory only.';
+  const mainReason = riskScore.reasons[0] || hardBlock;
+  return `${mainReason} ${hardBlock}`.trim();
+}
+
+function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
+  if (candidate.blockReason !== NoTradeReason.RiskTooWide && normalized.noTradeReason !== NoTradeReason.RiskTooWide) {
+    return [];
+  }
+  const score = scoreConditionalCandidateRisk({
+    candidate,
+    higherTimeframeAlignment: inferHigherTimeframeRiskAlignment(candidate),
+    priceExtended: inferPriceExtended(candidate),
+    freshRetestCouldTightenRisk: Boolean(candidate.requiredTrigger?.toLowerCase().includes('retest')),
+  });
+  return [
+    'Conditional Risk:',
+    `Decision: WAIT | Executable by app: NO | canExecute: false`,
+    `Block: ${normalized.noTradeReason || candidate.blockReason || 'manual review required'}`,
+    `Max risk: ${numberLine(score.maxAllowedRiskPoints)} pts`,
+    `Risk Score: ${score.score}/100 - ${score.label}`,
+    `Risk R/R: ${numberLine(score.estimatedRiskReward, 2)}`,
+    `Reason: ${compactRiskScoreReason(score)}`,
+    'Manual: This is not an app-approved executable trade. Risk is outside current limits when blocked. Manual decision required.',
+    'Watch: Wait for a fresh completed 5M trigger/retest that keeps risk inside limits. Do not chase.',
+  ];
+}
+
 function compactKeyLevelLines(candidate: SetupCandidate | null): string[] {
   const targetPlan = candidate?.targetObjectivePlan;
   const resistance =
@@ -311,6 +373,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     },
   });
   assertDiscordReportDesignerIsAdvisoryOnly(designerRecommendation as unknown as Record<string, unknown>);
+  const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
@@ -319,6 +382,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         '',
         ...compactPlanLines(bestCandidate),
         '',
+        ...riskLines,
+        ...(riskLines.length ? [''] : []),
         'Invalidation:',
         bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.',
         '',
@@ -345,6 +410,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         'Decision support only. No automated orders.',
       ];
 
+  const includeComponents = Boolean(args.components && !riskLines.length);
   return {
     username: 'Quant Desk',
     content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
@@ -358,7 +424,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         timestamp: new Date().toISOString(),
       },
     ],
-    ...(args.components ? { components: args.components } : {}),
+    ...(includeComponents ? { components: args.components } : {}),
   };
 }
 

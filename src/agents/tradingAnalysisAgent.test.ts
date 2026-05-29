@@ -6,9 +6,16 @@ import { buildWeeklyTradingAnalysisReport } from './tradingAnalysisAgent';
 import {
   collectWeeklyReportInput,
   parseWeeklyReportArgs,
+  publishWeeklyTradingNewsletter,
   shouldSendWeeklyDiscordReport,
   weeklyReportKey,
 } from '../../tools/automation/weekly-trading-report';
+import {
+  loadDiscordAuditHistory,
+  loadHealthAuditHistory,
+  loadWatchlistAuditHistory,
+  normalizeScannerAuditRecord,
+} from '../../tools/automation/scanner-audit-import';
 
 const report = buildWeeklyTradingAnalysisReport({
   weekEnding: '2026-05-29',
@@ -61,6 +68,9 @@ assert.equal('components' in report.discordPayload, false);
 assert.equal('files' in report.discordPayload, false);
 assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage));
 assert.ok(report.discordMessage.includes('No rule changes'));
+assert.ok(report.discordMessage.includes('Executive Summary:'));
+assert.ok(report.discordMessage.includes('Key Story:'));
+assert.ok(report.discordMessage.includes('Human Review Queue:'));
 
 const parsed = parseWeeklyReportArgs([
   '--week-ending', '2026-05-29',
@@ -73,6 +83,7 @@ assert.equal(parsed.weekEnding, '2026-05-29');
 assert.equal(parsed.instrument, 'MES');
 assert.equal(parsed.discord, false);
 assert.equal(parsed.pretty, true);
+assert.equal(parsed.dryRun, false);
 
 const state = { sent: {} as Record<string, string> };
 assert.equal(shouldSendWeeklyDiscordReport(state, report), true);
@@ -95,9 +106,37 @@ writeFileSync(join(auditDir, 'watchlist.json'), JSON.stringify({
 }));
 writeFileSync(join(auditDir, 'scanner.json'), JSON.stringify({
   source: 'live-scanner',
+  tradeDate: '2026-05-29',
   instrument: 'MES',
   state: 'Conditional',
+  candidates: [{ setupType: 'TurtleSoup', direction: 'LONG', executionStatus: 'Conditional' }],
+  attachments: { chartMarkup: 'chart.png', priceLevelMap: 'map.png' },
 }));
+writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
+  health: { status: 'DEGRADED', warnings: ['Macro calendar unavailable'] },
+  instrument: 'MES',
+}));
+
+const missingHistory = await loadDiscordAuditHistory(join(temp, 'missing-audit-folder'));
+assert.equal(missingHistory.events.length, 0);
+assert.equal(missingHistory.warnings.length, 1);
+
+const normalizedTradeAudit = normalizeScannerAuditRecord({
+  source: 'live-scanner',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  state: 'Executable',
+  candidates: [{ setupType: 'TurtleSoup', direction: 'LONG', executionStatus: 'Executable' }],
+  attachments: { chartMarkup: 'chart.png' },
+}, join(auditDir, 'scanner.json'));
+assert.equal(normalizedTradeAudit.alertType, 'trade');
+assert.equal(normalizedTradeAudit.candidateSetupType, 'TurtleSoup');
+assert.equal(normalizedTradeAudit.attachmentsGenerated, true);
+
+const watchlistHistory = await loadWatchlistAuditHistory(auditDir);
+assert.equal(watchlistHistory.events.length, 1);
+const healthHistory = await loadHealthAuditHistory(auditDir);
+assert.equal(healthHistory.events.length, 1);
 
 const collected = await collectWeeklyReportInput({
   ...parsed,
@@ -108,6 +147,21 @@ const collected = await collectWeeklyReportInput({
 assert.equal(collected.diagnosticReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
+assert.equal(collected.healthEvents?.length, 1);
+assert.ok((collected.auditEvents?.length || 0) >= 3);
+
+const newsletterSkip = await publishWeeklyTradingNewsletter({
+  weekEnding: '2026-05-29',
+  instrument: 'MES',
+  discord: true,
+  dryRun: true,
+  diagnosticDir,
+  auditDir,
+  stateFile: join(temp, 'newsletter-state.json'),
+});
+assert.equal(newsletterSkip.sent, false);
+assert.equal(newsletterSkip.skippedReason, 'Dry run.');
+assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 
 const immutableInput = {
   weekEnding: '2026-05-29',

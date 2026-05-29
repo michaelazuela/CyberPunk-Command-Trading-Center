@@ -2,6 +2,16 @@ import type { BridgeDiagnosticClassification, BridgeDiagnosticReplayReport } fro
 import type { WatchlistMemoryRecord, WatchlistPerformanceRecord } from './morningContinuationWatchlistAgent';
 import type { ScannerHealthStatus } from './scannerHealthAgent';
 
+export interface WeeklyScannerAuditEventSummary {
+  alertType: 'trade' | 'watchlist' | 'health' | 'diagnostic' | 'unknown';
+  tradeDate: string | null;
+  instrument: string | null;
+  session: string | null;
+  scannerState: string | null;
+  healthStatus: string | null;
+  auditWarnings: string[];
+}
+
 export interface WeeklyTradingAnalysisInput {
   weekEnding: string;
   instrument: 'MES' | 'MNQ' | string;
@@ -10,6 +20,8 @@ export interface WeeklyTradingAnalysisInput {
   healthEvents?: Array<{ status?: ScannerHealthStatus | string | null; summary?: string | null; warnings?: string[]; blockingReasons?: string[] }>;
   tradeAlertRecords?: Array<{ state?: string | null; decision?: string | null; sentAt?: string | null }>;
   proofRecords?: Array<{ outcome?: string | null; tradeTaken?: boolean | null }>;
+  auditEvents?: WeeklyScannerAuditEventSummary[];
+  dataWarnings?: string[];
 }
 
 export interface WeeklyTradingAnalysisReport {
@@ -29,6 +41,7 @@ export interface WeeklyTradingAnalysisReport {
     bugsSuppressionIssues: string[];
     humanReviewRecommendations: string[];
     doNotChangeYetItems: string[];
+    dataQualityNotes: string[];
   };
   counts: {
     tradeAlerts: number;
@@ -133,17 +146,26 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     `[WEEKLY TRADING INTELLIGENCE] ${report.instrument}`,
     `Week: ${report.weekStart} to ${report.weekEnding}`,
     '',
-    'Summary:',
-    `Trade alerts: ${report.counts.tradeAlerts}`,
-    `Watchlists: ${report.counts.watchlists}`,
-    `Diagnostic replays: ${report.counts.diagnosticReplays}`,
-    `Confirmed missed approved trades: ${report.counts.confirmedMissedApprovedTrades}`,
-    `Already-triggered/no-fresh-entry: ${report.counts.alreadyTriggeredNoFreshEntry}`,
-    `ICT-style watchlist-only events: ${report.counts.ictStyleWatchlistOnlyEvents}`,
+    'Executive Summary:',
+    `- Trade alerts: ${report.counts.tradeAlerts}`,
+    `- Watchlist alerts: ${report.counts.watchlists}`,
+    `- Diagnostic replays: ${report.counts.diagnosticReplays}`,
+    `- Confirmed missed approved trades: ${report.counts.confirmedMissedApprovedTrades}`,
+    `- Already-triggered/no-fresh-entry: ${report.counts.alreadyTriggeredNoFreshEntry}`,
+    `- ICT-style watchlist-only events: ${report.counts.ictStyleWatchlistOnlyEvents}`,
     '',
-    `Key finding: ${keyFinding}`,
+    `Key Story: ${keyFinding}`,
     '',
-    `Recommendation: ${recommendation}`,
+    `Health / Data Quality: ${report.sections.scannerHealthSummary[0]} ${report.sections.dataQualityNotes[0] || ''}`,
+    '',
+    `What We Learned: Watchlists improved awareness without creating trade authority. ${report.sections.watchlistPerformance[0]}`,
+    '',
+    'Human Review Queue:',
+    `- ${recommendation}`,
+    '- No automatic rule change recommended.',
+    '',
+    'Do Not Change Yet:',
+    '- No executable model promotion. Continue collecting data.',
     '',
     'Authority: Weekly report is read-only. No rule changes, entries, stops, targets, or model promotion.',
   ].join('\n');
@@ -152,6 +174,7 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
 export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInput): WeeklyTradingAnalysisReport {
   const diagnostics = [...(input.diagnosticReports || [])];
   const watchlists = [...(input.watchlistRecords || [])];
+  const auditEvents = [...(input.auditEvents || [])];
   const health = countHealth(input.healthEvents);
   const classifications = countClassifications(diagnostics);
   const weekStart = weekStartFromEnding(input.weekEnding);
@@ -197,6 +220,11 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
         'Do not change trading rules.',
         'Do not promote watchlists into executable models.',
         'Do not use weekly summaries as entry evidence.',
+      ],
+      dataQualityNotes: [
+        input.dataWarnings?.length
+          ? `Data warnings: ${input.dataWarnings.join(' | ')}`
+          : `Existing audit events scanned: ${auditEvents.length}. Weekly report did not run bridge diagnostics.`,
       ],
     },
     counts: {

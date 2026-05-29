@@ -10,7 +10,7 @@ import {
   validateDiscordPayload,
 } from './discord-alert-format';
 import { buildOutcomeComponents } from './discord-outcome-buttons';
-import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import { evaluateScannerHealth } from '../../src/agents/scannerHealthAgent';
 
 const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
@@ -178,6 +178,63 @@ const scanner = compactDiscordSummary({
 });
 assertCompactPayload(scanner, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(scanner.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+
+const riskTooWideCandidate = sampleCandidate('LONG');
+riskTooWideCandidate.setupType = SetupType.TurtleSoup;
+riskTooWideCandidate.scenarioLabel = 'Turtle Soup LONG';
+riskTooWideCandidate.entry = 7597;
+riskTooWideCandidate.stop = 7588.75;
+riskTooWideCandidate.target1 = 7620;
+riskTooWideCandidate.target2 = 7620;
+riskTooWideCandidate.riskPoints = 8.25;
+riskTooWideCandidate.blockReason = NoTradeReason.RiskTooWide;
+riskTooWideCandidate.executionStatus = ExecutionStatus.Conditional;
+riskTooWideCandidate.requiredTrigger = 'Wait for a fresh completed 5M retest that keeps risk inside limits.';
+riskTooWideCandidate.nextAction = 'Manual decision only. Do not chase the reclaim candle.';
+riskTooWideCandidate.evidence = [
+  'Sell-side sweep at 10:50.',
+  'Reclaim at 10:55.',
+  'HTF stack aligned LONG: 4H / 1H / 15M / 5M.',
+  'Target room toward 7620.',
+];
+const riskTooWideBefore = JSON.stringify(riskTooWideCandidate);
+const riskTooWidePayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  planVersionId: 'RISK-WIDE-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: NoTradeReason.RiskTooWide,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [riskTooWideCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  decisionOverride: 'Conditional',
+  statusOverride: 'Conditional',
+  components: buildOutcomeComponents({
+    planVersionId: 'RISK-WIDE-TEST',
+    sessionType: 'morning',
+    tradeDate: '2026-05-29',
+    instrument: 'MES',
+    direction: 'LONG',
+  }),
+});
+validateDiscordPayload(riskTooWidePayload, ['chart-plan.png', 'price-level-map.png']);
+assert.equal(JSON.stringify(riskTooWideCandidate), riskTooWideBefore, 'risk advisory formatter must not mutate the candidate');
+const riskTooWideText = flattenDiscordPayloadText(riskTooWidePayload);
+assert.ok(riskTooWideText.includes('Conditional Risk:'));
+assert.ok(riskTooWideText.includes('Decision: WAIT | Executable by app: NO | canExecute: false'));
+assert.ok(riskTooWideText.includes('Block: RiskTooWide'));
+assert.ok(riskTooWideText.includes('Risk Score:'));
+assert.ok(riskTooWideText.includes('Manual decision required'));
+assert.ok(riskTooWideText.includes('This is not an app-approved executable trade.'));
+assert.ok(riskTooWideText.includes('Do not chase'));
+assert.ok(!/ApprovedTrade|Trade now|Entry confirmed/i.test(riskTooWideText));
+assert.equal(riskTooWidePayload.components, undefined);
 
 const noTrade = compactDiscordSummary({
   session: 'morning',

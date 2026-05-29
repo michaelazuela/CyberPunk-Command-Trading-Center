@@ -3,6 +3,7 @@ import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType } from '../types';
 import { runBridgeDiagnosticReplay, type BridgeDiagnosticReplayInput } from './bridgeDiagnosticReplayAgent';
 import { parseDiagnosticReplayArgs } from '../../tools/automation/diagnostic-replay';
+import { normalizeScannerAuditRecord } from '../../tools/automation/scanner-audit-import';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1000 };
@@ -86,6 +87,28 @@ assert.equal(approvedNoAlert.finalClassification, 'A_VALID_APPROVED_NO_ALERT');
 assert.equal(approvedNoAlert.tradePlanFeasibility.applicable, true);
 assert.equal(approvedNoAlert.targetOutcomeReview.applicable, true);
 assert.equal(approvedNoAlert.newPlanRecommendation.recommendationType, 'scanner_bug_fix');
+assert.equal(approvedNoAlert.scannerAuditContext.scannerAuditStatus, 'missing');
+
+const auditEvent = normalizeScannerAuditRecord({
+  createdAt: '2026-05-29T14:05:00Z',
+  source: 'live-scanner',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  session: 'morning',
+  state: 'Executable',
+  candidates: [candidate()],
+  attachments: { chartMarkup: 'chart.png', priceLevelMap: 'levels.png' },
+  scannerAuditWarnings: ['Audit warning sample.'],
+}, 'C:/tmp/scanner-audit.json');
+const approvedWithAudit = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [candidate({ riskPoints: 10, target1: 123, target2: 128 })],
+  scannerSelectedCandidate: candidate({ riskPoints: 10, target1: 123, target2: 128 }),
+  scannerAuditEvents: [auditEvent],
+}));
+assert.equal(approvedWithAudit.finalClassification, 'A_VALID_APPROVED_NO_ALERT');
+assert.equal(approvedWithAudit.scannerAuditContext.scannerAuditStatus, 'present');
+assert.equal(approvedWithAudit.scannerAuditContext.matchingEvents.length, 1);
+assert.ok(approvedWithAudit.scannerAuditContext.summary.includes('trade alert audit'));
 
 const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate()],
@@ -183,6 +206,7 @@ const noHtfApproval = runBridgeDiagnosticReplay(input({
 }));
 assert.equal(noHtfApproval.finalClassification, 'C_UNAPPROVED_ICT_FVG_WATCHLIST');
 assert.equal(noHtfApproval.higherTimeframeConfirmation, 'missing');
+assert.equal(noHtfApproval.scannerAuditContext.scannerAuditStatus, 'missing');
 
 const laterTargetHitDoesNotPromote = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [

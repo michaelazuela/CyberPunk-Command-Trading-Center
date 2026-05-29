@@ -8,6 +8,12 @@ import {
   type WeeklyTradingAnalysisInput,
   type WeeklyTradingAnalysisReport,
 } from '../../src/agents/tradingAnalysisAgent';
+import {
+  loadDiscordAuditHistory,
+  loadHealthAuditHistory,
+  loadWatchlistAuditHistory,
+  type ScannerAuditEvent,
+} from './scanner-audit-import';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -24,6 +30,7 @@ export interface WeeklyReportCliOptions {
   diagnosticDir: string;
   auditDir: string;
   stateFile: string;
+  dryRun: boolean;
 }
 
 interface WeeklyReportState {
@@ -53,8 +60,20 @@ function boolValue(value: string | null, fallback: boolean): boolean {
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 }
 
+function etDate(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 function requireDate(value: string | null): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('--week-ending must use YYYY-MM-DD format.');
+  if (value === 'auto') return etDate();
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('--week-ending must use YYYY-MM-DD format or auto.');
   return value;
 }
 
@@ -71,6 +90,7 @@ export function parseWeeklyReportArgs(args = process.argv.slice(2)): WeeklyRepor
     diagnosticDir: readFlag(args, '--diagnostic-dir') || DEFAULT_DIAGNOSTIC_DIR,
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
     stateFile: readFlag(args, '--state-file') || DEFAULT_STATE_FILE,
+    dryRun: hasFlag(args, '--dry-run'),
   };
 }
 
@@ -121,17 +141,50 @@ function watchlistFromAudit(value: unknown): unknown {
 
 export async function collectWeeklyReportInput(options: WeeklyReportCliOptions): Promise<WeeklyTradingAnalysisInput> {
   const diagnostics = await readJsonFiles(options.diagnosticDir);
-  const audits = await readJsonFiles(options.auditDir);
+  const auditHistory = await loadDiscordAuditHistory(options.auditDir);
+  const watchlistHistory = await loadWatchlistAuditHistory(options.auditDir);
+  const healthHistory = await loadHealthAuditHistory(options.auditDir);
+  const auditEvents = auditHistory.events.filter((event) => !event.instrument || event.instrument.toUpperCase() === options.instrument);
   return {
     weekEnding: options.weekEnding,
     instrument: options.instrument,
     diagnosticReports: diagnostics.filter(isDiagnosticReport).filter((item) => sameInstrument(item, options.instrument)) as WeeklyTradingAnalysisInput['diagnosticReports'],
-    watchlistRecords: audits.filter(isWatchlistRecord).map(watchlistFromAudit) as WeeklyTradingAnalysisInput['watchlistRecords'],
-    healthEvents: audits
-      .filter((item) => item && typeof item === 'object' && 'health' in item)
-      .map((item) => (item as Record<string, unknown>).health as WeeklyTradingAnalysisInput['healthEvents'][number]),
-    tradeAlertRecords: audits.filter(isTradeAlertAudit).filter((item) => sameInstrument(item, options.instrument)) as WeeklyTradingAnalysisInput['tradeAlertRecords'],
+    watchlistRecords: watchlistHistory.events.map(eventToWatchlistRecord) as WeeklyTradingAnalysisInput['watchlistRecords'],
+    healthEvents: healthHistory.events.map(eventToHealthRecord),
+    tradeAlertRecords: auditEvents.filter((event) => event.alertType === 'trade').map(eventToTradeAlertRecord),
     proofRecords: [],
+    auditEvents,
+    dataWarnings: auditHistory.warnings,
+  };
+}
+
+function eventToWatchlistRecord(event: ScannerAuditEvent) {
+  return {
+    memoryType: 'watchlist_context',
+    watchlistType: event.watchlistType || 'morning_continuation_watchlist',
+    tradeDate: event.tradeDate || '',
+    instrument: event.instrument || '',
+    session: 'morning',
+    direction: event.direction || 'NO TRADE',
+    status: event.watchlistStatus || 'WATCH_ONLY',
+    auditWarnings: event.auditWarnings,
+  };
+}
+
+function eventToHealthRecord(event: ScannerAuditEvent) {
+  return {
+    status: event.healthStatus,
+    summary: event.suppressionOrBlockReason,
+    warnings: event.auditWarnings,
+    blockingReasons: event.healthStatus === 'BLOCKED' && event.suppressionOrBlockReason ? [event.suppressionOrBlockReason] : [],
+  };
+}
+
+function eventToTradeAlertRecord(event: ScannerAuditEvent) {
+  return {
+    state: event.scannerState,
+    decision: event.direction,
+    sentAt: event.alertTimestamp,
   };
 }
 
@@ -179,8 +232,7 @@ function writeReport(out: string, report: WeeklyTradingAnalysisReport): string {
 
 export async function runWeeklyReportCli(rawArgs = process.argv.slice(2)): Promise<void> {
   const options = parseWeeklyReportArgs(rawArgs);
-  const input = await collectWeeklyReportInput(options);
-  const report = buildWeeklyTradingAnalysisReport(input);
+  const report = await buildWeeklyReportFromHistory(options);
 
   if (options.out) {
     console.log(`Weekly report saved: ${writeReport(options.out, report)}`);
@@ -189,10 +241,16 @@ export async function runWeeklyReportCli(rawArgs = process.argv.slice(2)): Promi
   if (options.discord) {
     const state = await readState(options.stateFile);
     if (shouldSendWeeklyDiscordReport(state, report)) {
-      await postDiscordReport(report);
-      state.sent[weeklyReportKey(report)] = new Date().toISOString();
-      await writeState(options.stateFile, state);
-      console.log(`Weekly Discord report sent: ${weeklyReportKey(report)}`);
+      if (options.dryRun) {
+        console.log(`Weekly Discord report dry-run: ${weeklyReportKey(report)}`);
+      } else if (!process.env.DISCORD_WEBHOOK_URL) {
+        console.log(`Weekly Discord report skipped; DISCORD_WEBHOOK_URL is not configured: ${weeklyReportKey(report)}`);
+      } else {
+        await postDiscordReport(report);
+        state.sent[weeklyReportKey(report)] = new Date().toISOString();
+        await writeState(options.stateFile, state);
+        console.log(`Weekly Discord report sent: ${weeklyReportKey(report)}`);
+      }
     } else {
       console.log(`Weekly Discord report already sent: ${weeklyReportKey(report)}`);
     }
@@ -203,6 +261,44 @@ export async function runWeeklyReportCli(rawArgs = process.argv.slice(2)): Promi
   } else if (options.pretty) {
     console.log(report.discordMessage);
   }
+}
+
+export async function buildWeeklyReportFromHistory(options: WeeklyReportCliOptions): Promise<WeeklyTradingAnalysisReport> {
+  const input = await collectWeeklyReportInput(options);
+  return buildWeeklyTradingAnalysisReport(input);
+}
+
+export async function publishWeeklyTradingNewsletter(options: {
+  weekEnding: string;
+  instrument: Instrument;
+  discord: boolean;
+  dryRun: boolean;
+  diagnosticDir?: string;
+  auditDir?: string;
+  stateFile?: string;
+}): Promise<{ report: WeeklyTradingAnalysisReport; sent: boolean; skippedReason: string | null }> {
+  const cliOptions: WeeklyReportCliOptions = {
+    weekEnding: options.weekEnding === 'auto' ? etDate() : options.weekEnding,
+    instrument: options.instrument,
+    discord: options.discord,
+    out: null,
+    pretty: true,
+    json: false,
+    diagnosticDir: options.diagnosticDir || DEFAULT_DIAGNOSTIC_DIR,
+    auditDir: options.auditDir || DEFAULT_AUDIT_DIR,
+    stateFile: options.stateFile || DEFAULT_STATE_FILE,
+    dryRun: options.dryRun,
+  };
+  const report = await buildWeeklyReportFromHistory(cliOptions);
+  if (!options.discord) return { report, sent: false, skippedReason: 'Discord disabled.' };
+  const state = await readState(cliOptions.stateFile);
+  if (!shouldSendWeeklyDiscordReport(state, report)) return { report, sent: false, skippedReason: 'Already sent.' };
+  if (options.dryRun) return { report, sent: false, skippedReason: 'Dry run.' };
+  if (!process.env.DISCORD_WEBHOOK_URL) return { report, sent: false, skippedReason: 'DISCORD_WEBHOOK_URL missing.' };
+  await postDiscordReport(report);
+  state.sent[weeklyReportKey(report)] = new Date().toISOString();
+  await writeState(cliOptions.stateFile, state);
+  return { report, sent: true, skippedReason: null };
 }
 
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('/tools/automation/weekly-trading-report.ts')) {

@@ -32,6 +32,29 @@ export interface DiagnosticGateReview {
   executableUnderCurrentRules: boolean;
 }
 
+export interface DiagnosticScannerAuditEvent {
+  alertTimestamp: string | null;
+  tradeDate: string | null;
+  instrument: string | null;
+  session: string | null;
+  alertType: 'trade' | 'watchlist' | 'health' | 'diagnostic' | 'unknown';
+  candidateSetupType: string | null;
+  direction: string | null;
+  scannerState: string | null;
+  selectedCandidateDirection: string | null;
+  selectedCandidateStatus: string | null;
+  healthStatus: string | null;
+  watchlistType: string | null;
+  watchlistStatus: string | null;
+  suppressionOrBlockReason: string | null;
+  auditWarnings: string[];
+  discordAlertSent: boolean | null;
+  attachmentsGenerated: boolean;
+  outcomeButtonsIncluded: boolean;
+  ragOrSupabaseWriteAttempted: boolean;
+  originalFilePath: string;
+}
+
 export interface BridgeDiagnosticReplayInput {
   tradeDate: string;
   instrument: 'MES' | 'MNQ' | string;
@@ -48,6 +71,7 @@ export interface BridgeDiagnosticReplayInput {
   scannerState?: string | null;
   scannerAlertSent?: boolean | null;
   scannerAlertReason?: string | null;
+  scannerAuditEvents?: DiagnosticScannerAuditEvent[] | null;
   watchlistDetected?: boolean | null;
   replayWindow: { from: string; to: string };
   suspectedMoveDirection: DiagnosticDirection;
@@ -87,6 +111,12 @@ export interface BridgeDiagnosticReplayReport {
     alertState: string | null;
     alertSent: boolean;
     reason: string;
+  };
+  scannerAuditContext: {
+    scannerAuditStatus: 'present' | 'missing';
+    matchingEvents: DiagnosticScannerAuditEvent[];
+    summary: string;
+    warnings: string[];
   };
   tradePlanFeasibility: {
     applicable: boolean;
@@ -549,6 +579,30 @@ function newPlanRecommendation(classification: BridgeDiagnosticClassification) {
   };
 }
 
+function matchingAuditEvents(input: BridgeDiagnosticReplayInput): DiagnosticScannerAuditEvent[] {
+  return [...(input.scannerAuditEvents || [])].filter((event) => {
+    if (event.tradeDate && event.tradeDate !== input.tradeDate) return false;
+    if (event.instrument && event.instrument.toUpperCase() !== String(input.instrument).toUpperCase()) return false;
+    if (event.session && !String(event.session).toLowerCase().includes(input.session.replace('replay_', ''))) return false;
+    return true;
+  });
+}
+
+function auditSummary(classification: BridgeDiagnosticClassification, events: DiagnosticScannerAuditEvent[]): string {
+  if (!events.length) return 'scannerAuditStatus: missing. No audit file matched this diagnostic window.';
+  const tradeEvents = events.filter((event) => event.alertType === 'trade');
+  const watchlistEvents = events.filter((event) => event.alertType === 'watchlist');
+  const healthEvents = events.filter((event) => event.alertType === 'health');
+  const sent = events.some((event) => event.discordAlertSent === true || event.alertType === 'trade');
+  const suppressed = events.find((event) => event.suppressionOrBlockReason);
+  if (classification === 'A_VALID_APPROVED_NO_ALERT' || classification === 'B_APPROVED_ALREADY_TRIGGERED') {
+    if (sent) return `scannerAuditStatus: present. Audit history shows ${tradeEvents.length} trade alert audit event(s); review exact send state before calling an alert bug.`;
+    if (suppressed) return `scannerAuditStatus: present. Audit history shows suppression/block reason: ${suppressed.suppressionOrBlockReason}.`;
+    return 'scannerAuditStatus: present. Audit files exist, but no trade alert send evidence was found.';
+  }
+  return `scannerAuditStatus: present. Events found: trade=${tradeEvents.length}, watchlist=${watchlistEvents.length}, health=${healthEvents.length}. Audit context is supporting evidence only.`;
+}
+
 export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): BridgeDiagnosticReplayReport {
   const bars5m = sortedBars(input.bars5m);
   const bars15m = sortedBars(input.bars15m);
@@ -579,6 +633,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   const targetReview = targetOutcome(finalClassification, approvedCandidate, bars5m);
   const planApplicable = finalClassification === 'A_VALID_APPROVED_NO_ALERT' || finalClassification === 'B_APPROVED_ALREADY_TRIGGERED';
   const recommendation = newPlanRecommendation(finalClassification);
+  const auditEvents = matchingAuditEvents(input);
 
   return {
     finalClassification,
@@ -614,7 +669,13 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
       selectedCandidateDirection: input.scannerSelectedCandidate?.direction || approvedCandidate?.direction || null,
       alertState: input.scannerState || null,
       alertSent: Boolean(input.scannerAlertSent),
-      reason: input.scannerAlertReason || (input.scannerAlertSent ? 'Scanner alert was reported as sent.' : 'No scanner alert was reported in diagnostic input.'),
+      reason: input.scannerAlertReason || auditSummary(finalClassification, auditEvents) || (input.scannerAlertSent ? 'Scanner alert was reported as sent.' : 'No scanner alert was reported in diagnostic input.'),
+    },
+    scannerAuditContext: {
+      scannerAuditStatus: auditEvents.length ? 'present' : 'missing',
+      matchingEvents: auditEvents,
+      summary: auditSummary(finalClassification, auditEvents),
+      warnings: auditEvents.flatMap((event) => event.auditWarnings || []),
     },
     tradePlanFeasibility: {
       applicable: planApplicable,

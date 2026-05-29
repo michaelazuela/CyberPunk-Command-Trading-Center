@@ -25,6 +25,7 @@ import {
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
 } from './discord-alert-format';
+import { publishWeeklyTradingNewsletter } from './weekly-trading-report';
 import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
@@ -35,7 +36,7 @@ import {
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
 
-type AlertJob = 'weekly' | 'premarket' | 'morning' | 'lunch';
+type AlertJob = 'weekly' | 'weeklyNewsletter' | 'premarket' | 'morning' | 'lunch';
 type SessionAlertJob = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
 
@@ -66,6 +67,7 @@ const DEFAULT_CONFIG: SchedulerConfig = {
     morning: { enabled: true, timeEt: '10:10' },
     lunch: { enabled: true, timeEt: '13:00' },
     weekly: { enabled: true, timeEt: '08:00' },
+    weeklyNewsletter: { enabled: true, timeEt: process.env.WEEKLY_NEWSLETTER_TIME_ET || '16:05' },
   },
 };
 
@@ -94,6 +96,7 @@ function printHelp() {
     'Usage:',
     '  npm run nt:discord-alerts',
     '  npm run nt:discord-alerts -- --once weekly --dry-run',
+    '  npm run nt:discord-alerts -- --once weeklyNewsletter --dry-run',
     '  npm run nt:discord-alerts -- --once morning --dry-run',
     '  npm run nt:discord-alerts -- --once lunch',
     '',
@@ -102,8 +105,8 @@ function printHelp() {
     '  NINJATRADER_BRIDGE_URL    Optional, defaults to http://127.0.0.1:8765.',
     '',
     'Options:',
-    '  --once weekly|premarket|morning|lunch   Run one alert immediately.',
-    '  --session weekly|premarket|morning|lunch Alias for --once, for replay/manual tests.',
+    '  --once weekly|weeklyNewsletter|premarket|morning|lunch   Run one alert immediately.',
+    '  --session weekly|weeklyNewsletter|premarket|morning|lunch Alias for --once, for replay/manual tests.',
     '  --date YYYY-MM-DD                 Trade date for --once/--session.',
     '  --as-of HH:MM                    End the replay/manual analysis at this ET time.',
     '  --dry-run                       Build the message without posting to Discord.',
@@ -1118,6 +1121,19 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
 }
 
 async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string): Promise<void> {
+  if (job === 'weeklyNewsletter') {
+    const result = await publishWeeklyTradingNewsletter({
+      weekEnding: tradeDate,
+      instrument: config.instrument,
+      discord: true,
+      dryRun,
+    });
+    if (result.skippedReason) {
+      console.log(`Weekly trading newsletter not posted: ${result.skippedReason}`);
+      if (dryRun) console.log(result.report.discordMessage);
+    }
+    return;
+  }
   if (job === 'weekly') {
     const context = await buildWeeklyContext(config, tradeDate);
     await postDiscord(await formatWeeklyPayload(tradeDate, context, config.instrument), dryRun);
@@ -1194,6 +1210,7 @@ async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<
     for (const [jobName, jobConfig] of Object.entries(config.jobs) as Array<[AlertJob, SchedulerConfig['jobs'][AlertJob]]>) {
       const key = `${tradeDate}:${jobName}`;
       if (jobName === 'weekly' && getDayOfWeek(tradeDate) !== 'Sunday') continue;
+      if (jobName === 'weeklyNewsletter' && getDayOfWeek(tradeDate) !== 'Friday') continue;
       if (jobConfig.enabled && clock >= jobConfig.timeEt && !state.sent[key]) {
         try {
           await runJob(jobName, config, dryRun, tradeDate, clock);
@@ -1227,8 +1244,8 @@ async function main() {
   const asOfEt = argValue('as-of') ? normalizeEtClock(argValue('as-of') as string) : undefined;
 
   if (once) {
-    if (!['weekly', 'premarket', 'morning', 'lunch'].includes(once)) {
-      throw new Error('--once must be weekly, premarket, morning, or lunch.');
+    if (!['weekly', 'weeklyNewsletter', 'premarket', 'morning', 'lunch'].includes(once)) {
+      throw new Error('--once must be weekly, weeklyNewsletter, premarket, morning, or lunch.');
     }
     await runJob(once, config, dryRun, tradeDate, asOfEt);
     return;
