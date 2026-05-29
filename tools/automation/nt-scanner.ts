@@ -26,7 +26,6 @@ import {
   scannerAlertKey,
   scannerContextLogLabel,
   scannerContextState,
-  selectScannerPlan,
   scoreScannerCandidate,
   shouldSendScannerAlert,
   toEtMinutes,
@@ -37,6 +36,7 @@ import {
   type ScannerThresholds,
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
+import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
