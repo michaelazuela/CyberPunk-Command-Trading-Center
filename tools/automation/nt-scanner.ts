@@ -13,6 +13,7 @@ import {
   getNinjaBridgePositions,
   getNinjaBridgeSnapshot,
   type NinjaBridgeBar,
+  type NinjaBridgeHealth,
 } from '../../src/lib/ninjaTraderBridge';
 import {
   assessBridgeBarStaleness,
@@ -42,6 +43,7 @@ import {
   buildWatchlistMemoryRecord,
   detectMorningContinuationWatchlist,
 } from '../../src/agents/morningContinuationWatchlistAgent';
+import { evaluateScannerHealth, type ScannerHealthReport, type ScannerStateFileHealth } from '../../src/agents/scannerHealthAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
@@ -97,6 +99,11 @@ interface ScannerStateFile {
   windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
+}
+
+interface ScannerStateReadResult {
+  state: ScannerStateFile;
+  health: ScannerStateFileHealth;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -203,19 +210,40 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function readState(): Promise<ScannerStateFile> {
+function emptyScannerState(): ScannerStateFile {
+  return { sent: {}, watchlistSent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
+}
+
+async function readStateWithHealth(): Promise<ScannerStateReadResult> {
   try {
     const parsed = JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Partial<ScannerStateFile>;
     return {
-      sent: parsed.sent || {},
-      watchlistSent: parsed.watchlistSent || {},
-      windowStartSent: parsed.windowStartSent || {},
-      lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
-      lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
+      state: {
+        sent: parsed.sent || {},
+        watchlistSent: parsed.watchlistSent || {},
+        windowStartSent: parsed.windowStartSent || {},
+        lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
+        lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
+      },
+      health: { status: 'ok', message: 'Scanner state file is readable.' },
     };
-  } catch {
-    return { sent: {}, watchlistSent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
+  } catch (error) {
+    const message = formatError(error);
+    const isMissing = typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'ENOENT';
+    return {
+      state: emptyScannerState(),
+      health: {
+        status: isMissing ? 'missing_initialized' : 'corrupt',
+        message: isMissing
+          ? 'Scanner state file was missing and initialized safely.'
+          : `Scanner state file could not be read; using an empty in-memory state for this cycle: ${message}`,
+      },
+    };
   }
+}
+
+async function readState(): Promise<ScannerStateFile> {
+  return (await readStateWithHealth()).state;
 }
 
 async function writeState(state: ScannerStateFile): Promise<void> {
@@ -900,21 +928,90 @@ async function sendWindowStartAlert(args: {
   console.log(`[scanner] Sent ${args.session} scanner window start heartbeat.`);
 }
 
+function liveMarketMapStatus(liveBars: Partial<Record<MarketBarTimeframe, NinjaBridgeBar[]>>) {
+  const availableTimeframes = TIMEFRAMES.filter((timeframe) => (liveBars[timeframe] || []).length > 0);
+  const usableBars = availableTimeframes.reduce((total, timeframe) => total + (liveBars[timeframe] || []).length, 0);
+  const loaded = availableTimeframes.length === TIMEFRAMES.length;
+  const fallbackBridgeDataAvailable = usableBars > 0;
+
+  return {
+    loaded,
+    usableBars,
+    partial: availableTimeframes.length > 0 && !loaded,
+    fallbackBridgeDataAvailable,
+    message: loaded
+      ? 'Live bridge bars are available across scanner market-map timeframes.'
+      : fallbackBridgeDataAvailable
+        ? 'Market-map cache may be incomplete, but live 5M/15M bridge context is available.'
+        : 'Required market-map context is missing from live bridge bars.',
+  };
+}
+
+function logScannerHealth(report: ScannerHealthReport): void {
+  console.log(`[scanner-health] ${report.summary} ${report.recommendedAction}`);
+  if (report.warnings.length) {
+    console.warn(`[scanner-health] warnings: ${report.warnings.join(' | ')}`);
+  }
+  if (report.blockingReasons.length) {
+    console.warn(`[scanner-health] blocking: ${report.blockingReasons.join(' | ')}`);
+  }
+}
+
 async function runCycle(config: ScannerConfig): Promise<void> {
   const now = new Date();
   const window = resolveScannerWindow(now, config.afternoonEnabled);
   const tradeDate = getScannerTradeDate(now);
-  const state = await readState();
+  const stateRead = await readStateWithHealth();
+  const state = stateRead.state;
 
   let healthOk = false;
+  let bridgeHealth: NinjaBridgeHealth | null = null;
+  const healthErrors: string[] = [];
   try {
-    const health = await getNinjaBridgeHealth(config.bridgeUrl);
-    healthOk = Boolean(health.ok);
+    bridgeHealth = await getNinjaBridgeHealth(config.bridgeUrl);
+    healthOk = Boolean(bridgeHealth.ok);
   } catch (error) {
-    console.error(`[scanner] bridge health failed: ${formatError(error)}`);
+    const message = formatError(error);
+    healthErrors.push(`Bridge health failed: ${message}`);
+    console.error(`[scanner] bridge health failed: ${message}`);
   }
 
   if (!healthOk) {
+    const healthReport = evaluateScannerHealth({
+      config: {
+        appInstrument: config.instrument,
+        bridgeInstrument: config.bridgeInstrument,
+        bridgeUrl: config.bridgeUrl,
+        timestampMode: config.barTimestampMode,
+        barTimeZone: config.barTimeZone,
+        discordEnabled: config.discordEnabled,
+        dryRun: config.dryRun,
+        macroCalendarEnabled: config.macroCalendarEnabled,
+        maxStaleBarMinutes: config.maxStaleBarMinutes,
+      },
+      bridgeHealth,
+      bridgeReachable: false,
+      latestCompleted5mBar: null,
+      barStaleness: {
+        stale: true,
+        latestTime: null,
+        ageMinutes: null,
+        maxAllowedMinutes: config.maxStaleBarMinutes,
+        reason: 'Latest completed 5M bar unavailable because bridge health failed.',
+      },
+      discordWebhookConfigured: Boolean(process.env.DISCORD_WEBHOOK_URL),
+      marketMapStatus: { loaded: false, usableBars: 0, fallbackBridgeDataAvailable: false },
+      scannerStateFileStatus: stateRead.health,
+      macroCalendarStatus: {
+        enabled: config.macroCalendarEnabled,
+        loaded: !config.macroCalendarEnabled,
+        unavailable: config.macroCalendarEnabled,
+        message: config.macroCalendarEnabled ? 'Macro calendar was not evaluated because bridge health failed.' : 'Macro calendar is disabled intentionally.',
+      },
+      scannerWindow: window,
+      errors: healthErrors,
+    });
+    logScannerHealth(healthReport);
     console.log(`[scanner] ${new Date().toISOString()} NoData: bridge unavailable.`);
     return;
   }
@@ -947,6 +1044,43 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     timestampMode: config.barTimestampMode,
     timeZoneMode: config.barTimeZone,
   });
+
+  const healthReport = evaluateScannerHealth({
+    config: {
+      appInstrument: config.instrument,
+      bridgeInstrument: config.bridgeInstrument,
+      bridgeUrl: config.bridgeUrl,
+      timestampMode: config.barTimestampMode,
+      barTimeZone: config.barTimeZone,
+      discordEnabled: config.discordEnabled,
+      dryRun: config.dryRun,
+      macroCalendarEnabled: config.macroCalendarEnabled,
+      maxStaleBarMinutes: config.maxStaleBarMinutes,
+    },
+    bridgeHealth,
+    bridgeReachable: healthOk,
+    latestCompleted5mBar: completed5m,
+    barStaleness: bridgeFreshness,
+    discordWebhookConfigured: Boolean(process.env.DISCORD_WEBHOOK_URL),
+    marketMapStatus: liveMarketMapStatus(liveBars),
+    scannerStateFileStatus: stateRead.health,
+    macroCalendarStatus: {
+      enabled: config.macroCalendarEnabled,
+      loaded: config.macroCalendarEnabled,
+      unavailable: false,
+      message: config.macroCalendarEnabled
+        ? 'Macro calendar is enabled; detailed event caution is evaluated during analysis.'
+        : 'Macro calendar is disabled intentionally.',
+    },
+    scannerWindow: window,
+  });
+  logScannerHealth(healthReport);
+
+  if (healthReport.status === 'BLOCKED') {
+    console.log(`[scanner] NoData: ${healthReport.blockingReasons.join(' | ')}`);
+    await writeState(state);
+    return;
+  }
 
   if (bridgeFreshness.stale) {
     console.log(`[scanner] NoData: ${bridgeFreshness.reason}`);
