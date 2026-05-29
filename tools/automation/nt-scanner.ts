@@ -37,6 +37,7 @@ import {
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
+import { detectMorningContinuationWatchlist } from '../../src/agents/morningContinuationWatchlistAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
@@ -924,6 +925,27 @@ async function runCycle(config: ScannerConfig): Promise<void> {
   const stateForAlert = selection.stateForAlert;
   if (selection.auditWarnings.length) {
     console.warn(`[scanner] selection audit: ${selection.auditWarnings.join(' | ')}`);
+  }
+  const watchlist = detectMorningContinuationWatchlist({
+    tradeDate,
+    instrument: config.instrument,
+    window,
+    bars5m: bars['5m'],
+    currentPrice,
+    higherTimeframeAlignment:
+      analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === 'LONG' ||
+      analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === 'SHORT'
+        ? analysis.structuredChartContext.multiTimeframeContext.alignment.alignedDirection
+        : null,
+    normalizedPlan: normalized,
+    selectedCandidate: candidate,
+    scannerState: stateForAlert,
+  });
+  if (watchlist.watchlistDetected) {
+    console.log(
+      `[scanner] [AM WATCHLIST] ${config.instrument} — ${watchlist.direction} DEVELOPING | WATCH ONLY — NO FRESH ENTRY | ${watchlist.reason} | ${watchlist.requiredNextCondition}`
+    );
+    console.warn(`[scanner] watchlist audit: ${watchlist.auditWarnings.join(' | ')}`);
   }
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];
