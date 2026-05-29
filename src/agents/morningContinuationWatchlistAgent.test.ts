@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../types';
 import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
-import { detectMorningContinuationWatchlist } from './morningContinuationWatchlistAgent';
+import {
+  buildWatchlistEmbeddingText,
+  buildWatchlistMemoryRecord,
+  detectMorningContinuationWatchlist,
+} from './morningContinuationWatchlistAgent';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1000 };
@@ -150,6 +154,55 @@ assert.equal('entry' in result, false);
 assert.equal('stop' in result, false);
 assert.equal('t1' in result, false);
 assert.equal('t2' in result, false);
+
+const memoryRecord = buildWatchlistMemoryRecord({
+  watchlist: result,
+  tradeDate: '2026-05-28',
+  instrument: 'MES',
+  session: 'morning',
+  bars5m: morningMoveBars,
+  currentPriceAtAlert: 7564.75,
+  reasonNoEntry: result.reason,
+  scannerState: 'Missed',
+  selectedCandidateSnapshot: null,
+  normalizedPlanSnapshot: plan,
+});
+assert.equal(memoryRecord.memoryType, 'watchlist_context');
+assert.equal(memoryRecord.watchlistType, 'morning_continuation_watchlist');
+assert.equal(memoryRecord.status, 'WATCH_ONLY');
+assert.equal(memoryRecord.canExecute, false);
+assert.equal(memoryRecord.tradeAlertEligible, false);
+assert.equal(memoryRecord.freshEntryAvailable, false);
+assert.equal(memoryRecord.laterValidSetupFormed, null);
+assert.equal(memoryRecord.laterSetupType, null);
+assert.equal(memoryRecord.laterOutcome, null);
+assert.equal(memoryRecord.laterReviewTimestamp, null);
+assert.equal(memoryRecord.reviewNotes, null);
+assert.equal(memoryRecord.approvalBoundary.watchlistApprovesTrade, false);
+assert.equal(memoryRecord.approvalBoundary.watchlistChangesRules, false);
+assert.equal(memoryRecord.approvalBoundary.watchlistCreatesEntry, false);
+assert.equal(memoryRecord.approvalBoundary.watchlistCreatesTargets, false);
+assert.equal(memoryRecord.approvalBoundary.watchlistOverridesScanner, false);
+assert.equal(memoryRecord.approvalBoundary.ragMemoryApprovesTrade, false);
+assert.equal(memoryRecord.approvalBoundary.ragMemoryChangesRules, false);
+assert.ok(memoryRecord.notes.some((note) => note.includes('future context only')));
+assert.equal('entry' in memoryRecord, false);
+assert.equal('stop' in memoryRecord, false);
+assert.equal('t1' in memoryRecord, false);
+assert.equal('t2' in memoryRecord, false);
+assert.equal('tradeResult' in memoryRecord, false);
+assert.equal('pnlTicks' in memoryRecord, false);
+assert.equal(JSON.stringify(morningMoveBars), beforeBars);
+assert.equal(JSON.stringify(plan), beforePlan);
+
+const embeddingText = buildWatchlistEmbeddingText(memoryRecord);
+assert.ok(embeddingText.includes('WATCHLIST CONTEXT ONLY'));
+assert.ok(embeddingText.includes('not a trade'));
+assert.ok(embeddingText.includes('No entry, stop, or targets were generated.'));
+assert.ok(embeddingText.includes('This record does not approve trades.'));
+assert.ok(embeddingText.includes('Future use is context/caution only.'));
+assert.ok(embeddingText.includes('cannot approve trades, change rules, create entries, create targets, or override scanner gates'));
+assert.ok(!/RAG approved|approved the trade|History confirms this trade|changes the rule|now executable/i.test(embeddingText));
 
 const lunchResult = detectMorningContinuationWatchlist({
   tradeDate: '2026-05-28',

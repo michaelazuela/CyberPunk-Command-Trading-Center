@@ -37,7 +37,11 @@ import {
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
-import { detectMorningContinuationWatchlist } from '../../src/agents/morningContinuationWatchlistAgent';
+import {
+  buildWatchlistEmbeddingText,
+  buildWatchlistMemoryRecord,
+  detectMorningContinuationWatchlist,
+} from '../../src/agents/morningContinuationWatchlistAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
@@ -337,6 +341,8 @@ async function writeScannerWatchlistAuditLog(args: {
   currentPrice: number | null;
   windowLabel: string;
   watchlist: ReturnType<typeof detectMorningContinuationWatchlist>;
+  memoryRecord: ReturnType<typeof buildWatchlistMemoryRecord>;
+  embeddingText: string;
   auditDir?: string;
 }): Promise<string> {
   const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
@@ -353,6 +359,13 @@ async function writeScannerWatchlistAuditLog(args: {
     currentPrice: args.currentPrice,
     completed5m: args.completed5m,
     watchlist: args.watchlist,
+    watchlistMemory: {
+      record: args.memoryRecord,
+      embeddingText: args.embeddingText,
+      storage: 'scanner_audit_json_only',
+      message: 'Watchlist saved for future context only. This does not change trade rules or future approval gates.',
+      authority: 'Watchlist history may inform caution/context, not execution authority.',
+    },
     approvalBoundary: args.watchlist.approvalBoundary,
     discord: {
       advisoryOnly: true,
@@ -360,6 +373,10 @@ async function writeScannerWatchlistAuditLog(args: {
       attachmentsGenerated: false,
       outcomeButtonsIncluded: false,
       ragMemoryWritten: false,
+    },
+    persistence: {
+      supabaseRagWriteAttempted: false,
+      reason: 'Existing RAG persistence is trade/setup-oriented; Phase 7C stores watchlist context in audit JSON only to avoid trade-memory contamination.',
     },
   }, null, 2));
   return file;
@@ -629,8 +646,31 @@ export async function prepareLiveScannerWatchlistAlertArtifacts(args: {
   currentPrice: number | null;
   windowLabel: string;
   watchlist: ReturnType<typeof detectMorningContinuationWatchlist>;
+  selectedCandidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+  scannerState?: ScannerState | null;
+  bars5m?: NinjaBridgeBar[];
   auditDir?: string;
-}): Promise<{ payload: DiscordWebhookPayload; files: string[]; auditLogPath: string }> {
+}): Promise<{
+  payload: DiscordWebhookPayload;
+  files: string[];
+  auditLogPath: string;
+  memoryRecord: ReturnType<typeof buildWatchlistMemoryRecord>;
+}> {
+  const memoryRecord = buildWatchlistMemoryRecord({
+    watchlist: args.watchlist,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: 'morning',
+    bars5m: args.bars5m || [],
+    currentPriceAtAlert: args.currentPrice,
+    reasonNoEntry: args.watchlist.reason,
+    scannerState: args.scannerState || null,
+    selectedCandidateSnapshot: args.selectedCandidate || null,
+    normalizedPlanSnapshot: args.normalized || null,
+    auditWarnings: ['Phase 7C stored this as context-only audit memory. No Supabase/RAG trade-memory write was attempted.'],
+  });
+  const embeddingText = buildWatchlistEmbeddingText(memoryRecord);
   const auditLogPath = await writeScannerWatchlistAuditLog({
     tradeDate: args.tradeDate,
     instrument: args.instrument,
@@ -639,6 +679,8 @@ export async function prepareLiveScannerWatchlistAlertArtifacts(args: {
     currentPrice: args.currentPrice,
     windowLabel: args.windowLabel,
     watchlist: args.watchlist,
+    memoryRecord,
+    embeddingText,
     auditDir: args.auditDir,
   });
   const payload = morningWatchlistDiscordSummary({
@@ -648,7 +690,7 @@ export async function prepareLiveScannerWatchlistAlertArtifacts(args: {
   });
   const files: string[] = [];
   validateDiscordPayload(payload, files);
-  return { payload, files, auditLogPath };
+  return { payload, files, auditLogPath, memoryRecord };
 }
 
 export async function prepareLiveScannerDiscordAlertArtifacts(args: {
@@ -1041,6 +1083,10 @@ async function runCycle(config: ScannerConfig): Promise<void> {
         currentPrice,
         windowLabel: window.label,
         watchlist,
+        selectedCandidate: candidate,
+        normalized,
+        scannerState: stateForAlert,
+        bars5m: bars['5m'],
       });
       await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);
       state.watchlistSent[watchlistKey] = { direction: watchlist.direction, sentAt: new Date().toISOString() };

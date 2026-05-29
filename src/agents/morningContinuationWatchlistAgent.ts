@@ -44,6 +44,63 @@ export interface MorningContinuationWatchlistInput {
   scannerState?: ScannerState | null;
 }
 
+export interface WatchlistMemoryRecord {
+  memoryType: 'watchlist_context';
+  watchlistType: 'morning_continuation_watchlist';
+  tradeDate: string;
+  instrument: string;
+  session: 'morning';
+  direction: WatchlistDirection;
+  status: 'WATCH_ONLY';
+  freshEntryAvailable: false;
+  tradeAlertEligible: false;
+  canExecute: false;
+  currentPriceAtAlert: number | null;
+  openingRangeHigh: number | null;
+  openingRangeLow: number | null;
+  displacementTime: string | null;
+  displacementRange: number | null;
+  distanceFromTrigger: number | null;
+  distanceFromNearestStructureStop: number | null;
+  reasonNoEntry: string;
+  scannerState: ScannerState | null;
+  selectedCandidateSnapshot: SetupCandidate | null;
+  normalizedPlanSnapshot: NormalizedTradePlan | null;
+  evidence: string[];
+  missingEvidence: string[];
+  auditWarnings: string[];
+  laterValidSetupFormed: null;
+  laterSetupType: null;
+  laterOutcome: null;
+  laterReviewTimestamp: null;
+  reviewNotes: null;
+  notes: string[];
+  approvalBoundary: MorningContinuationWatchlistResult['approvalBoundary'] & {
+    ragMemoryApprovesTrade: false;
+    ragMemoryChangesRules: false;
+  };
+}
+
+export interface WatchlistMemoryInput {
+  watchlist: MorningContinuationWatchlistResult;
+  tradeDate: string;
+  instrument: string;
+  session: 'morning';
+  bars5m?: NinjaBridgeBar[];
+  currentPriceAtAlert?: number | null;
+  openingRangeHigh?: number | null;
+  openingRangeLow?: number | null;
+  displacementTime?: string | null;
+  displacementRange?: number | null;
+  distanceFromTrigger?: number | null;
+  distanceFromNearestStructureStop?: number | null;
+  reasonNoEntry?: string | null;
+  scannerState?: ScannerState | null;
+  selectedCandidateSnapshot?: SetupCandidate | null;
+  normalizedPlanSnapshot?: NormalizedTradePlan | null;
+  auditWarnings?: string[];
+}
+
 function baseResult(overrides: Partial<MorningContinuationWatchlistResult> = {}): MorningContinuationWatchlistResult {
   return {
     watchlistDetected: false,
@@ -106,6 +163,21 @@ function bodyQuality(bar: NinjaBridgeBar): number {
   const range = Math.max(0, bar.high - bar.low);
   if (!range) return 0;
   return Math.abs(bar.close - bar.open) / range;
+}
+
+function cloneOrNull<T>(value: T | null | undefined): T | null {
+  return value ? JSON.parse(JSON.stringify(value)) as T : null;
+}
+
+function displacementBarForDirection(bars: NinjaBridgeBar[], direction: WatchlistDirection): NinjaBridgeBar | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  return [...bars]
+    .filter((bar) => direction === 'LONG' ? bar.close > bar.open : bar.close < bar.open)
+    .sort((a, b) => {
+      const aBody = Math.abs(a.close - a.open);
+      const bBody = Math.abs(b.close - b.open);
+      return bBody - aBody;
+    })[0] || null;
 }
 
 export function detectMorningContinuationWatchlist(input: MorningContinuationWatchlistInput): MorningContinuationWatchlistResult {
@@ -206,4 +278,91 @@ export function detectMorningContinuationWatchlist(input: MorningContinuationWat
     ],
     auditWarnings,
   });
+}
+
+export function buildWatchlistMemoryRecord(input: WatchlistMemoryInput): WatchlistMemoryRecord {
+  const bars = sortedBars(input.bars5m || []);
+  const openingRange = openingRangeFromBars(bars);
+  const openingRangeHigh = isValidPrice(input.openingRangeHigh) ? input.openingRangeHigh : openingRange.high;
+  const openingRangeLow = isValidPrice(input.openingRangeLow) ? input.openingRangeLow : openingRange.low;
+  const currentPriceAtAlert = isValidPrice(input.currentPriceAtAlert) ? input.currentPriceAtAlert : null;
+  const displacementBar = displacementBarForDirection(bars, input.watchlist.direction);
+  const displacementRange = isValidPrice(input.displacementRange)
+    ? input.displacementRange
+    : displacementBar
+      ? Math.abs(displacementBar.high - displacementBar.low)
+      : null;
+  const distanceFromTrigger = isValidPrice(input.distanceFromTrigger)
+    ? input.distanceFromTrigger
+    : input.watchlist.direction === 'LONG' && isValidPrice(currentPriceAtAlert) && isValidPrice(openingRangeHigh)
+      ? currentPriceAtAlert - openingRangeHigh
+      : input.watchlist.direction === 'SHORT' && isValidPrice(currentPriceAtAlert) && isValidPrice(openingRangeLow)
+        ? openingRangeLow - currentPriceAtAlert
+        : null;
+
+  return {
+    memoryType: 'watchlist_context',
+    watchlistType: 'morning_continuation_watchlist',
+    tradeDate: input.tradeDate,
+    instrument: input.instrument,
+    session: 'morning',
+    direction: input.watchlist.direction,
+    status: 'WATCH_ONLY',
+    freshEntryAvailable: false,
+    tradeAlertEligible: false,
+    canExecute: false,
+    currentPriceAtAlert,
+    openingRangeHigh,
+    openingRangeLow,
+    displacementTime: input.displacementTime || displacementBar?.time || null,
+    displacementRange,
+    distanceFromTrigger,
+    distanceFromNearestStructureStop: isValidPrice(input.distanceFromNearestStructureStop)
+      ? input.distanceFromNearestStructureStop
+      : null,
+    reasonNoEntry: input.reasonNoEntry || input.watchlist.reason,
+    scannerState: input.scannerState || null,
+    selectedCandidateSnapshot: cloneOrNull(input.selectedCandidateSnapshot),
+    normalizedPlanSnapshot: cloneOrNull(input.normalizedPlanSnapshot),
+    evidence: [...input.watchlist.evidence],
+    missingEvidence: [...input.watchlist.missingEvidence],
+    auditWarnings: [...input.watchlist.auditWarnings, ...(input.auditWarnings || [])],
+    laterValidSetupFormed: null,
+    laterSetupType: null,
+    laterOutcome: null,
+    laterReviewTimestamp: null,
+    reviewNotes: null,
+    notes: [
+      'Watchlist saved for future context only.',
+      'This does not change trade rules or future approval gates.',
+      'Watchlist history may inform caution/context, not execution authority.',
+    ],
+    approvalBoundary: {
+      ...input.watchlist.approvalBoundary,
+      ragMemoryApprovesTrade: false,
+      ragMemoryChangesRules: false,
+    },
+  };
+}
+
+export function buildWatchlistEmbeddingText(record: WatchlistMemoryRecord): string {
+  return [
+    'WATCHLIST CONTEXT ONLY',
+    'This is a watchlist context record, not a trade.',
+    'No entry, stop, or targets were generated.',
+    'This record does not approve trades.',
+    'Future use is context/caution only.',
+    `Type: ${record.watchlistType}`,
+    `Status: ${record.status} - NO FRESH ENTRY`,
+    `Trade date: ${record.tradeDate}`,
+    `Instrument: ${record.instrument}`,
+    `Session: ${record.session}`,
+    `Direction: ${record.direction}`,
+    `Current price at alert: ${record.currentPriceAtAlert ?? 'unknown'}`,
+    `Reason: ${record.reasonNoEntry}`,
+    `Evidence: ${record.evidence.join(' | ') || 'none'}`,
+    `Missing evidence: ${record.missingEvidence.join(' | ') || 'none'}`,
+    'Action at time: Do not chase. Wait for existing current rules to confirm.',
+    'Authority note: This record cannot approve trades, change rules, create entries, create targets, or override scanner gates.',
+  ].join('\n');
 }

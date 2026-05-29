@@ -159,6 +159,22 @@ try {
         watchlistOverridesScanner: false,
       },
     },
+    scannerState: 'Missed',
+    bars5m: [{
+      time: '2026-05-28T10:10:00-04:00',
+      open: 7536.25,
+      high: 7540.25,
+      low: 7533.5,
+      close: 7540.25,
+      volume: 1000,
+    }, {
+      time: '2026-05-28T10:15:00-04:00',
+      open: 7540.25,
+      high: 7574,
+      low: 7535,
+      close: 7564.75,
+      volume: 1000,
+    }],
     auditDir,
   });
 
@@ -183,6 +199,24 @@ try {
   assert.equal(watchlistAudit.discord.attachmentsGenerated, false);
   assert.equal(watchlistAudit.discord.outcomeButtonsIncluded, false);
   assert.equal(watchlistAudit.discord.ragMemoryWritten, false);
+  assert.equal(watchlistAudit.persistence.supabaseRagWriteAttempted, false);
+  assert.equal(watchlistAudit.watchlistMemory.record.memoryType, 'watchlist_context');
+  assert.equal(watchlistAudit.watchlistMemory.record.canExecute, false);
+  assert.equal(watchlistAudit.watchlistMemory.record.tradeAlertEligible, false);
+  assert.equal(watchlistAudit.watchlistMemory.record.freshEntryAvailable, false);
+  assert.equal(watchlistAudit.watchlistMemory.record.laterValidSetupFormed, null);
+  assert.equal(watchlistAudit.watchlistMemory.record.laterSetupType, null);
+  assert.equal(watchlistAudit.watchlistMemory.record.laterOutcome, null);
+  assert.equal(watchlistAudit.watchlistMemory.record.approvalBoundary.ragMemoryApprovesTrade, false);
+  assert.equal(watchlistAudit.watchlistMemory.record.approvalBoundary.ragMemoryChangesRules, false);
+  assert.ok(watchlistAudit.watchlistMemory.embeddingText.includes('WATCHLIST CONTEXT ONLY'));
+  assert.ok(watchlistAudit.watchlistMemory.embeddingText.includes('not a trade'));
+  assert.ok(!('entry' in watchlistAudit.watchlistMemory.record));
+  assert.ok(!('stop' in watchlistAudit.watchlistMemory.record));
+  assert.ok(!('t1' in watchlistAudit.watchlistMemory.record));
+  assert.ok(!('t2' in watchlistAudit.watchlistMemory.record));
+  assert.ok(!('tradeResult' in watchlistAudit.watchlistMemory.record));
+  assert.equal(watchlistResult.memoryRecord.memoryType, 'watchlist_context');
 
   const result = await prepareLiveScannerDiscordAlertArtifacts({
     session: 'morning',
