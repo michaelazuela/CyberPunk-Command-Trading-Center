@@ -1,0 +1,236 @@
+import assert from 'node:assert/strict';
+import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
+import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType } from '../types';
+import { runBridgeDiagnosticReplay, type BridgeDiagnosticReplayInput } from './bridgeDiagnosticReplayAgent';
+import { parseDiagnosticReplayArgs } from '../../tools/automation/diagnostic-replay';
+
+function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
+  return { time, open, high, low, close, volume: 1000 };
+}
+
+const base5m = [
+  bar('2026-05-29T09:30:00', 100, 101, 99, 100.5),
+  bar('2026-05-29T09:35:00', 100.5, 101, 100, 100.75),
+  bar('2026-05-29T09:40:00', 100.75, 108, 100.5, 107.5),
+  bar('2026-05-29T09:45:00', 107.5, 109, 106.5, 108.5),
+  bar('2026-05-29T09:50:00', 108.5, 110, 103, 104.5),
+  bar('2026-05-29T09:55:00', 104.5, 109, 104, 108.75),
+  bar('2026-05-29T10:00:00', 108.75, 112, 108, 111.5),
+  bar('2026-05-29T10:05:00', 111.5, 114, 111, 113.5),
+];
+
+const bullish15m = [
+  bar('2026-05-29T09:30:00', 100, 103, 99, 102),
+  bar('2026-05-29T09:45:00', 102, 111, 101.5, 110),
+  bar('2026-05-29T10:00:00', 110, 114, 108, 113),
+];
+
+const bullish60m = [
+  bar('2026-05-29T08:00:00', 96, 100, 95, 99),
+  bar('2026-05-29T09:00:00', 99, 106, 98, 105),
+  bar('2026-05-29T10:00:00', 105, 114, 104, 113),
+];
+
+const bullish240m = [
+  bar('2026-05-29T02:00:00', 92, 98, 91, 97),
+  bar('2026-05-29T06:00:00', 97, 106, 96, 104),
+  bar('2026-05-29T10:00:00', 104, 114, 103, 113),
+];
+
+function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
+  return {
+    setupType: SetupType.SweepMssFvgRetrace,
+    direction: 'LONG',
+    detectedStatus: SetupCandidateStatus.Detected,
+    confidence: 'High',
+    priority: 98,
+    entry: 108,
+    stop: 103,
+    target1: 115.5,
+    target2: 118,
+    riskPoints: 5,
+    invalidation: 'Below 103',
+    evidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Minimum 2.0R'],
+    missingEvidence: [],
+    executionStatus: ExecutionStatus.Executable,
+    blockReason: null,
+    requiredTrigger: 'Completed 5M reclaim from FVG.',
+    nextAction: 'Execute only if trigger remains confirmed.',
+    reducedRiskPlan: null,
+    ...overrides,
+  };
+}
+
+function input(overrides: Partial<BridgeDiagnosticReplayInput> = {}): BridgeDiagnosticReplayInput {
+  return {
+    tradeDate: '2026-05-29',
+    instrument: 'MES',
+    session: 'morning',
+    bars5m: base5m,
+    bars15m: bullish15m,
+    bars60m: bullish60m,
+    bars240m: bullish240m,
+    replayWindow: { from: '09:30', to: '10:15' },
+    suspectedMoveDirection: 'LONG',
+    scannerAlertSent: false,
+    ...overrides,
+  };
+}
+
+const approvedNoAlert = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [candidate({ riskPoints: 10, target1: 123, target2: 128 })],
+  scannerSelectedCandidate: candidate({ riskPoints: 10, target1: 123, target2: 128 }),
+  scannerState: 'Executable',
+}));
+assert.equal(approvedNoAlert.finalClassification, 'A_VALID_APPROVED_NO_ALERT');
+assert.equal(approvedNoAlert.tradePlanFeasibility.applicable, true);
+assert.equal(approvedNoAlert.targetOutcomeReview.applicable, true);
+assert.equal(approvedNoAlert.newPlanRecommendation.recommendationType, 'scanner_bug_fix');
+
+const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [candidate()],
+  scannerSelectedCandidate: candidate(),
+  scannerState: 'Missed',
+  normalizedPlan: {
+    decision: 'LONG',
+    decisionLabel: 'LONG',
+    executionDecision: 'Already triggered',
+    planningDecision: 'Missed',
+    hasConditionalPlans: false,
+    entry: 108,
+    stop: 103,
+    t1: 115.5,
+    t2: 118,
+    riskPoints: 5,
+    riskRewardT1: '1.5R',
+    riskRewardT2: '2.0R',
+    finalConfidence: 'High',
+    whyThisPlan: 'Already triggered.',
+    invalidation: 'Below 103',
+    source: 'app_rule_engine',
+    canExecute: false,
+    decisionStatus: undefined,
+    earlyMoveReview: {
+      status: 'already_triggered_no_fresh_entry',
+      direction: 'LONG',
+      moveStart: 108,
+      moveExtreme: 114,
+      triggerArea: 108,
+      currentPrice: 113.5,
+      movePoints: 5.5,
+      freshEntryAvailable: false,
+      summary: 'Move already triggered.',
+      reason: 'No fresh entry.',
+      action: 'Do not chase.',
+      journalSuggestion: 'Journal as missed.',
+      approvalBoundary: {
+        approvesTrade: false,
+        changesEntry: false,
+        changesStop: false,
+        changesTargets: false,
+        changesRisk: false,
+      },
+    },
+  },
+}));
+assert.equal(approvedAlreadyTriggered.finalClassification, 'B_APPROVED_ALREADY_TRIGGERED');
+assert.equal(approvedAlreadyTriggered.tradePlanFeasibility.alreadyTriggered, true);
+assert.equal(approvedAlreadyTriggered.targetOutcomeReview.finalReplayOutcome, 'already extended before valid fresh entry');
+
+const ictOnly = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [
+    candidate({
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: null,
+      missingEvidence: ['Liquidity sweep/raid missing', 'Market structure shift missing'],
+    }),
+  ],
+  scannerState: 'Watching',
+}));
+assert.equal(ictOnly.finalClassification, 'C_UNAPPROVED_ICT_FVG_WATCHLIST');
+assert.equal(ictOnly.tradePlanFeasibility.applicable, false);
+assert.equal(ictOnly.tradePlanFeasibility.candidateEntryTrigger, null);
+assert.equal(ictOnly.tradePlanFeasibility.candidateStop, null);
+assert.equal(ictOnly.tradePlanFeasibility.t1, null);
+assert.equal(ictOnly.tradePlanFeasibility.t2, null);
+assert.equal(ictOnly.targetOutcomeReview.applicable, false);
+assert.equal(ictOnly.targetOutcomeReview.t1, null);
+assert.equal(ictOnly.newPlanRecommendation.recommendationType, 'advisory_watchlist');
+assert.equal(ictOnly.newPlanRecommendation.mustRemainAdvisory, true);
+assert.equal(ictOnly.newPlanRecommendation.requiresSeparateApproval, true);
+assert.equal(ictOnly.advisoryOnlyDetectorRecommendation.recommended, true);
+
+const weak = runBridgeDiagnosticReplay(input({
+  bars5m: [
+    bar('2026-05-29T09:30:00', 100, 101, 99, 100.25),
+    bar('2026-05-29T09:35:00', 100.25, 101, 99.5, 100),
+    bar('2026-05-29T09:40:00', 100, 101, 99.75, 100.1),
+    bar('2026-05-29T09:45:00', 100.1, 101, 99.8, 100.2),
+  ],
+  bars15m: [],
+  bars60m: [],
+  bars240m: [],
+  approvedSetupCandidates: [],
+}));
+assert.equal(weak.finalClassification, 'D_NO_VALID_SETUP');
+assert.equal(weak.newPlanRecommendation.recommendBuild, false);
+
+const noHtfApproval = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [candidate()],
+  scannerSelectedCandidate: candidate(),
+  bars60m: [],
+  bars240m: [],
+}));
+assert.equal(noHtfApproval.finalClassification, 'C_UNAPPROVED_ICT_FVG_WATCHLIST');
+assert.equal(noHtfApproval.higherTimeframeConfirmation, 'missing');
+
+const laterTargetHitDoesNotPromote = runBridgeDiagnosticReplay(input({
+  approvedSetupCandidates: [
+    candidate({
+      executionStatus: ExecutionStatus.Blocked,
+      blockReason: NoTradeReason.InvalidStopLocation,
+      missingEvidence: ['Candidate stop was invalid.'],
+    }),
+  ],
+}));
+assert.equal(laterTargetHitDoesNotPromote.finalClassification, 'C_UNAPPROVED_ICT_FVG_WATCHLIST');
+assert.equal(laterTargetHitDoesNotPromote.targetOutcomeReview.applicable, false);
+
+const immutableInput = input({
+  approvedSetupCandidates: [candidate()],
+  scannerSelectedCandidate: candidate(),
+});
+const before = JSON.stringify(immutableInput);
+const immutableReport = runBridgeDiagnosticReplay(immutableInput);
+assert.equal(JSON.stringify(immutableInput), before);
+assert.deepEqual(immutableReport.approvalBoundary, {
+  diagnosticApprovesTrade: false,
+  diagnosticChangesRules: false,
+  diagnosticCreatesEntry: false,
+  diagnosticCreatesTargets: false,
+  diagnosticOverridesScanner: false,
+  diagnosticPromotesModel: false,
+  diagnosticBuildsNewPlan: false,
+});
+
+const parsed = parseDiagnosticReplayArgs([
+  '--date', '2026-05-28',
+  '--instrument', 'MES',
+  '--bridge-instrument', 'MES 06-26',
+  '--from', '09:30',
+  '--to', '11:15',
+  '--direction', 'LONG',
+  '--bridge-url', 'http://127.0.0.1:8765',
+  '--bar-timestamp-mode', 'close',
+  '--bar-time-zone', 'eastern',
+  '--pretty',
+]);
+assert.equal(parsed.date, '2026-05-28');
+assert.equal(parsed.instrument, 'MES');
+assert.equal(parsed.bridgeInstrument, 'MES 06-26');
+assert.equal(parsed.from, '09:30');
+assert.equal(parsed.to, '11:15');
+assert.equal(parsed.direction, 'LONG');
+assert.equal(parsed.pretty, true);
+
+console.log('Bridge diagnostic replay agent verified.');

@@ -17,3 +17,6 @@ tools/automation/.nt-scanner-state.json
 tools/automation/.macro-calendar-cache.json
 tools/automation/chart-markups/
 tools/automation/discord-audit/
+tools/automation/diagnostic-reports/
+tools/automation/weekly-reports/
+tools/automation/.weekly-trading-report-state.json
