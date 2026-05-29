@@ -26,6 +26,21 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo Checking whether port 8787 is already in use...
+netstat -ano | findstr /R /C:":8787 .*LISTENING" >nul 2>nul
+if not errorlevel 1 (
+  echo.
+  echo Port 8787 is already in use.
+  echo The Discord research interaction service may already be running.
+  echo Close the existing service window or stop the process before starting another copy.
+  echo.
+  echo Matching port/PID information:
+  netstat -ano | findstr :8787
+  echo.
+  pause
+  exit /b 1
+)
+
 echo Starting Discord research interaction service...
 start "6K Discord Research Interactions" cmd /k "cd /d ""%CD%"" && npm run research:discord-interactions"
 
