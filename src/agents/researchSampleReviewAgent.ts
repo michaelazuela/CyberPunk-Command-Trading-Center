@@ -1,0 +1,514 @@
+import type {
+  HistoricalResearchBackfillReport,
+  HistoricalResearchConceptReport,
+  ResearchBackfillConceptId,
+  ResearchBackfillConceptSelector,
+  ResearchBackfillDirection,
+} from './historicalResearchBackfillAgent';
+
+export type ResearchSampleInspectionLabel =
+  | 'keep_advisory'
+  | 'possible_model1_mapping_review'
+  | 'possible_turtle_soup_mapping_review'
+  | 'insufficient_context'
+  | 'reject';
+
+export type ResearchSampleConfidence = 'low' | 'medium' | 'high';
+
+export interface ResearchSampleReviewSourceReport {
+  path: string;
+  report: HistoricalResearchBackfillReport;
+}
+
+export interface ResearchSampleReviewInput {
+  instrument: string;
+  concept: ResearchBackfillConceptSelector;
+  sampleSize: number;
+  sourceReports: ResearchSampleReviewSourceReport[];
+  generatedAt?: string;
+}
+
+export interface ResearchReviewSample {
+  sampleId: string;
+  date: string;
+  time: string | null;
+  concept: ResearchBackfillConceptId;
+  conceptTitle: string;
+  direction: ResearchBackfillDirection;
+  window: string | null;
+  classification: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only';
+  summary: string;
+  whyAdvisoryOnly: string;
+  model1Overlap: boolean;
+  turtleSoupOverlap: boolean;
+  researchDetectorReason: string;
+  warningFailureReason: string;
+  dataQualityNotes: string[];
+  sampleSourceReportPath: string;
+  agentInspectionLabel: ResearchSampleInspectionLabel;
+  agentConfidence: ResearchSampleConfidence;
+  agentReason: string;
+  agentEvidence: string[];
+  agentConcerns: string[];
+  agentRecommendedNextStep: 'continue_tracking' | 'human_review_only' | 'reject_sample' | 'collect_more_context';
+  agentApprovalBoundary: {
+    agentApprovesTrade: false;
+    agentChangesRules: false;
+    agentCreatesEntry: false;
+    agentCreatesTargets: false;
+    agentPromotesModel: false;
+  };
+  humanInspectionLabel: null;
+  humanConfidence: null;
+  humanReason: null;
+  humanNotes: null;
+  humanReviewedAt: null;
+  humanReviewer: null;
+  agentHumanAgreement: null;
+  disagreementReason: null;
+  finalReviewLabel: null;
+  finalReviewNotes: null;
+}
+
+export interface ResearchSampleConceptSummary {
+  concept: ResearchBackfillConceptId;
+  title: string;
+  sourceReports: number;
+  availableSamples: number;
+  selectedSamples: number;
+  classificationCounts: {
+    advisoryOnly: number;
+    model1Overlap: number;
+    turtleSoupOverlap: number;
+  };
+  directionCounts: Record<string, number>;
+  windowCounts: Record<string, number>;
+  commonReasons: string[];
+}
+
+export interface ResearchSampleReviewPack {
+  reportType: 'research_sample_review_pack';
+  generatedAt: string;
+  instrument: string;
+  concept: ResearchBackfillConceptSelector;
+  requestedSampleSize: number;
+  selectedSampleCount: number;
+  sourceReportPaths: string[];
+  executiveSummary: string[];
+  conceptSummaries: ResearchSampleConceptSummary[];
+  sampleSelectionMethod: string[];
+  samples: ResearchReviewSample[];
+  possibleExistingModelMappingReview: string[];
+  advisoryOnlyFindings: string[];
+  humanReviewQuestions: string[];
+  doNotChangeYetItems: string[];
+  approvalBoundary: {
+    sampleReviewApprovesTrade: false;
+    sampleReviewChangesRules: false;
+    sampleReviewCreatesEntry: false;
+    sampleReviewCreatesTargets: false;
+    sampleReviewPromotesModel: false;
+    sampleReviewWritesRagMemory: false;
+  };
+  markdown: string;
+}
+
+const CONCEPT_ORDER: ResearchBackfillConceptId[] = [
+  'time_window_liquidity_delivery',
+  'false_run_liquidity_fade',
+  'amd_range_model',
+  'final_hour_liquidity_draw',
+];
+
+const CONCEPT_TITLES: Record<ResearchBackfillConceptId, string> = {
+  time_window_liquidity_delivery: 'Time-Window Liquidity Delivery',
+  false_run_liquidity_fade: 'False-Run Liquidity Fade Near Highs',
+  amd_range_model: 'Accumulation-Manipulation-Distribution Range Model',
+  final_hour_liquidity_draw: 'Final-Hour Liquidity Draw',
+};
+
+interface CandidateSample {
+  sourcePath: string;
+  report: HistoricalResearchBackfillReport;
+  conceptReport: HistoricalResearchConceptReport;
+  event: HistoricalResearchConceptReport['sampleEvents'][number];
+}
+
+function selectedConcepts(concept: ResearchBackfillConceptSelector): ResearchBackfillConceptId[] {
+  return concept === 'all' ? CONCEPT_ORDER : [concept];
+}
+
+function keyFor(candidate: CandidateSample): string {
+  const event = candidate.event;
+  return [
+    candidate.conceptReport.conceptId,
+    event.date,
+    event.time || '',
+    event.direction,
+    event.window || '',
+    event.classification,
+    event.summary,
+  ].join('|');
+}
+
+function pushCount(map: Record<string, number>, key: string | null | undefined): void {
+  const normalized = key && key.trim() ? key : 'unspecified';
+  map[normalized] = (map[normalized] || 0) + 1;
+}
+
+function topValues(values: string[], limit = 5): string[] {
+  const counts = new Map<string, number>();
+  for (const value of values.filter(Boolean)) counts.set(value, (counts.get(value) || 0) + 1);
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, limit)
+    .map(([value, count]) => `${value} (${count})`);
+}
+
+function reasonFor(candidate: CandidateSample): string {
+  return candidate.conceptReport.commonReasons[0] || 'Research sample remains advisory until a human review compares it against approved 6K gates.';
+}
+
+function dataQualityNotes(candidate: CandidateSample): string[] {
+  const notes: string[] = [];
+  if (!candidate.event.time) notes.push('Sample time is missing in the source report.');
+  if (!candidate.event.window) notes.push('Sample window is missing in the source report.');
+  for (const gap of candidate.conceptReport.dataGaps) notes.push(gap);
+  if (!notes.length) notes.push('Source report provided date, time/window, direction, classification, and summary.');
+  return notes;
+}
+
+function inspectCandidate(candidate: CandidateSample): Pick<
+  ResearchReviewSample,
+  'agentInspectionLabel' | 'agentConfidence' | 'agentReason' | 'agentEvidence' | 'agentConcerns' | 'agentRecommendedNextStep'
+> {
+  const event = candidate.event;
+  const reason = reasonFor(candidate);
+  const evidence = [
+    `${event.date} ${event.time || 'time unavailable'} ${event.direction}`,
+    event.window ? `Window: ${event.window}` : 'Window unavailable',
+    event.summary,
+    `Source classification: ${event.classification}`,
+  ];
+  const concerns = [
+    'Agent inspection is research-only and cannot approve execution.',
+    reason,
+  ];
+
+  if (!event.date || !event.summary || !event.time) {
+    return {
+      agentInspectionLabel: 'insufficient_context',
+      agentConfidence: 'low',
+      agentReason: 'The source sample is missing enough timestamp or summary context for a strong mapping review.',
+      agentEvidence: evidence,
+      agentConcerns: concerns,
+      agentRecommendedNextStep: 'collect_more_context',
+    };
+  }
+
+  if (event.classification === 'model1_overlap') {
+    return {
+      agentInspectionLabel: 'possible_model1_mapping_review',
+      agentConfidence: 'medium',
+      agentReason: 'The source report marked possible Model 1 overlap, so this should be reviewed by a human against the existing approved Model 1 gates.',
+      agentEvidence: evidence,
+      agentConcerns: [...concerns, 'Possible mapping is not an approval and does not change Model 1 gates.'],
+      agentRecommendedNextStep: 'human_review_only',
+    };
+  }
+
+  if (event.classification === 'turtle_soup_overlap') {
+    return {
+      agentInspectionLabel: 'possible_turtle_soup_mapping_review',
+      agentConfidence: 'medium',
+      agentReason: 'The source report marked possible Turtle Soup overlap, so this needs human review against true sweep, reclaim, risk, session, and target-room gates.',
+      agentEvidence: evidence,
+      agentConcerns: [...concerns, 'Possible mapping is not an approval and does not change Turtle Soup gates.'],
+      agentRecommendedNextStep: 'human_review_only',
+    };
+  }
+
+  if (/no meaningful|not worth|stop tracking/i.test(reason)) {
+    return {
+      agentInspectionLabel: 'reject',
+      agentConfidence: 'medium',
+      agentReason: 'The detector reason suggests the sample does not show enough meaningful research structure to keep in the review queue.',
+      agentEvidence: evidence,
+      agentConcerns: concerns,
+      agentRecommendedNextStep: 'reject_sample',
+    };
+  }
+
+  return {
+    agentInspectionLabel: 'keep_advisory',
+    agentConfidence: reason ? 'high' : 'medium',
+    agentReason: 'The sample has research structure, but no approved Model 1 or Turtle Soup mapping was confirmed by the source report.',
+    agentEvidence: evidence,
+    agentConcerns: concerns,
+    agentRecommendedNextStep: 'continue_tracking',
+  };
+}
+
+function buildReviewSample(candidate: CandidateSample, index: number): ResearchReviewSample {
+  const event = candidate.event;
+  const model1Overlap = event.classification === 'model1_overlap';
+  const turtleSoupOverlap = event.classification === 'turtle_soup_overlap';
+  const inspection = inspectCandidate(candidate);
+  return {
+    sampleId: `${candidate.conceptReport.conceptId}-${String(index + 1).padStart(3, '0')}`,
+    date: event.date,
+    time: event.time,
+    concept: candidate.conceptReport.conceptId,
+    conceptTitle: candidate.conceptReport.title,
+    direction: event.direction,
+    window: event.window,
+    classification: event.classification,
+    summary: event.summary,
+    whyAdvisoryOnly: event.classification === 'advisory_only'
+      ? reasonFor(candidate)
+      : 'Source report marked possible approved-model overlap; human review is still required before any rule discussion.',
+    model1Overlap,
+    turtleSoupOverlap,
+    researchDetectorReason: reasonFor(candidate),
+    warningFailureReason: reasonFor(candidate),
+    dataQualityNotes: dataQualityNotes(candidate),
+    sampleSourceReportPath: candidate.sourcePath,
+    ...inspection,
+    agentApprovalBoundary: {
+      agentApprovesTrade: false,
+      agentChangesRules: false,
+      agentCreatesEntry: false,
+      agentCreatesTargets: false,
+      agentPromotesModel: false,
+    },
+    humanInspectionLabel: null,
+    humanConfidence: null,
+    humanReason: null,
+    humanNotes: null,
+    humanReviewedAt: null,
+    humanReviewer: null,
+    agentHumanAgreement: null,
+    disagreementReason: null,
+    finalReviewLabel: null,
+    finalReviewNotes: null,
+  };
+}
+
+function collectCandidates(input: ResearchSampleReviewInput): CandidateSample[] {
+  const concepts = new Set(selectedConcepts(input.concept));
+  const candidates: CandidateSample[] = [];
+  for (const source of input.sourceReports) {
+    if (source.report.instrument !== input.instrument) continue;
+    for (const conceptReport of source.report.conceptReports) {
+      if (!concepts.has(conceptReport.conceptId)) continue;
+      for (const event of conceptReport.sampleEvents) {
+        candidates.push({ sourcePath: source.path, report: source.report, conceptReport, event });
+      }
+    }
+  }
+  const byKey = new Map<string, CandidateSample>();
+  for (const candidate of candidates) if (!byKey.has(keyFor(candidate))) byKey.set(keyFor(candidate), candidate);
+  return [...byKey.values()].sort((a, b) => {
+    const dateCompare = a.event.date.localeCompare(b.event.date);
+    if (dateCompare) return dateCompare;
+    return (a.event.time || '').localeCompare(b.event.time || '');
+  });
+}
+
+function diversityScore(candidate: CandidateSample, selected: CandidateSample[]): number {
+  const event = candidate.event;
+  let score = 0;
+  if (!selected.some((item) => item.event.direction === event.direction)) score += 4;
+  if (!selected.some((item) => item.event.window === event.window)) score += 3;
+  if (!selected.some((item) => item.event.classification === event.classification)) score += 3;
+  if (!selected.some((item) => item.event.date.slice(0, 7) === event.date.slice(0, 7))) score += 2;
+  if (!selected.some((item) => reasonFor(item) === reasonFor(candidate))) score += 2;
+  return score;
+}
+
+function selectRepresentativeSamples(candidates: CandidateSample[], sampleSize: number): CandidateSample[] {
+  const target = Math.max(0, sampleSize);
+  if (candidates.length <= target) return [...candidates];
+  const selected: CandidateSample[] = [];
+  const remaining = [...candidates];
+
+  while (selected.length < target && remaining.length) {
+    const strideIndex = selected.length === 0
+      ? 0
+      : Math.min(remaining.length - 1, Math.floor((selected.length * candidates.length) / target));
+    let bestIndex = strideIndex;
+    let bestScore = -1;
+    remaining.forEach((candidate, index) => {
+      const spreadPenalty = Math.abs(index - strideIndex) / Math.max(1, remaining.length);
+      const score = diversityScore(candidate, selected) - spreadPenalty;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+    selected.push(remaining.splice(bestIndex, 1)[0]);
+  }
+
+  return selected.sort((a, b) => {
+    const conceptCompare = CONCEPT_ORDER.indexOf(a.conceptReport.conceptId) - CONCEPT_ORDER.indexOf(b.conceptReport.conceptId);
+    if (conceptCompare) return conceptCompare;
+    const dateCompare = a.event.date.localeCompare(b.event.date);
+    if (dateCompare) return dateCompare;
+    return (a.event.time || '').localeCompare(b.event.time || '');
+  });
+}
+
+function summarizeConcept(concept: ResearchBackfillConceptId, candidates: CandidateSample[], samples: ResearchReviewSample[]): ResearchSampleConceptSummary {
+  const conceptCandidates = candidates.filter((candidate) => candidate.conceptReport.conceptId === concept);
+  const selected = samples.filter((sample) => sample.concept === concept);
+  const directionCounts: Record<string, number> = {};
+  const windowCounts: Record<string, number> = {};
+  for (const sample of selected) {
+    pushCount(directionCounts, sample.direction);
+    pushCount(windowCounts, sample.window);
+  }
+  return {
+    concept,
+    title: conceptCandidates[0]?.conceptReport.title || CONCEPT_TITLES[concept],
+    sourceReports: new Set(conceptCandidates.map((candidate) => candidate.sourcePath)).size,
+    availableSamples: conceptCandidates.length,
+    selectedSamples: selected.length,
+    classificationCounts: {
+      advisoryOnly: selected.filter((sample) => sample.classification === 'advisory_only').length,
+      model1Overlap: selected.filter((sample) => sample.classification === 'model1_overlap').length,
+      turtleSoupOverlap: selected.filter((sample) => sample.classification === 'turtle_soup_overlap').length,
+    },
+    directionCounts,
+    windowCounts,
+    commonReasons: topValues(selected.map((sample) => sample.warningFailureReason)),
+  };
+}
+
+function renderSample(sample: ResearchReviewSample): string {
+  return [
+    `### Sample ${sample.sampleId}`,
+    `- Date/time: ${sample.date} ${sample.time || 'pending'}`,
+    `- Concept: ${sample.conceptTitle}`,
+    `- Direction/window: ${sample.direction} / ${sample.window || 'unspecified'}`,
+    `- Classification: ${sample.classification}`,
+    `- Why advisory-only: ${sample.whyAdvisoryOnly}`,
+    `- Model 1 overlap: ${sample.model1Overlap ? 'yes' : 'no'}`,
+    `- Turtle Soup overlap: ${sample.turtleSoupOverlap ? 'yes' : 'no'}`,
+    `- Agent inspection: ${sample.agentInspectionLabel}`,
+    `- Agent confidence: ${sample.agentConfidence}`,
+    `- Agent reason: ${sample.agentReason}`,
+    `- Human review:`,
+    `  - Label: pending`,
+    `  - Notes: pending`,
+  ].join('\n');
+}
+
+export function renderResearchSampleReviewMarkdown(pack: Omit<ResearchSampleReviewPack, 'markdown'>): string {
+  return [
+    `# Research Sample Review Pack - ${pack.instrument}`,
+    '',
+    '## 1. Executive Summary',
+    ...pack.executiveSummary.map((line) => `- ${line}`),
+    '',
+    '## 2. Concept Summary',
+    ...pack.conceptSummaries.map((summary) => [
+      `- ${summary.title}: ${summary.selectedSamples}/${summary.availableSamples} selected`,
+      `  - Advisory-only: ${summary.classificationCounts.advisoryOnly}`,
+      `  - Model 1 mapping review: ${summary.classificationCounts.model1Overlap}`,
+      `  - Turtle Soup mapping review: ${summary.classificationCounts.turtleSoupOverlap}`,
+    ].join('\n')),
+    '',
+    '## 3. Sample Selection Method',
+    ...pack.sampleSelectionMethod.map((line) => `- ${line}`),
+    '',
+    '## 4. Representative Samples',
+    ...pack.samples.map(renderSample),
+    '',
+    '## 5. Agent Inspection Results',
+    ...pack.samples.map((sample) => `- ${sample.sampleId}: ${sample.agentInspectionLabel} (${sample.agentConfidence}) - ${sample.agentReason}`),
+    '',
+    '## 6. Human Review Fields To Complete',
+    '- humanInspectionLabel',
+    '- humanConfidence',
+    '- humanReason',
+    '- humanNotes',
+    '- humanReviewedAt',
+    '- humanReviewer',
+    '',
+    '## 7. Possible Existing-Model Mapping Review',
+    ...(pack.possibleExistingModelMappingReview.length ? pack.possibleExistingModelMappingReview.map((line) => `- ${line}`) : ['- none']),
+    '',
+    '## 8. Advisory-Only Findings',
+    ...(pack.advisoryOnlyFindings.length ? pack.advisoryOnlyFindings.map((line) => `- ${line}`) : ['- none']),
+    '',
+    '## 9. Human Review Questions',
+    ...pack.humanReviewQuestions.map((line) => `- ${line}`),
+    '',
+    '## 10. Do-Not-Change-Yet Items',
+    '- Agent inspection does not approve trades.',
+    ...pack.doNotChangeYetItems.map((line) => `- ${line}`),
+    '',
+    '## 11. Approval Boundary',
+    ...Object.entries(pack.approvalBoundary).map(([key, value]) => `- ${key}: ${String(value)}`),
+  ].join('\n');
+}
+
+export function createResearchSampleReviewPack(input: ResearchSampleReviewInput): ResearchSampleReviewPack {
+  const allCandidates = collectCandidates(input);
+  const selectedCandidates = selectRepresentativeSamples(allCandidates, input.sampleSize);
+  const samples = selectedCandidates.map(buildReviewSample);
+  const concepts = selectedConcepts(input.concept);
+  const conceptSummaries = concepts.map((concept) => summarizeConcept(concept, allCandidates, samples));
+  const possibleMappings = samples
+    .filter((sample) => sample.agentInspectionLabel === 'possible_model1_mapping_review' || sample.agentInspectionLabel === 'possible_turtle_soup_mapping_review')
+    .map((sample) => `${sample.sampleId}: ${sample.agentInspectionLabel}; human review required before any rule discussion.`);
+  const packWithoutMarkdown: Omit<ResearchSampleReviewPack, 'markdown'> = {
+    reportType: 'research_sample_review_pack',
+    generatedAt: input.generatedAt || new Date().toISOString(),
+    instrument: input.instrument,
+    concept: input.concept,
+    requestedSampleSize: input.sampleSize,
+    selectedSampleCount: samples.length,
+    sourceReportPaths: [...new Set(input.sourceReports.map((source) => source.path))].sort(),
+    executiveSummary: [
+      `Selected ${samples.length} representative sample(s) from ${allCandidates.length} available sample event(s).`,
+      'Agent inspection is research-only and does not approve trades.',
+      'Human review is required before any model or rule discussion.',
+    ],
+    conceptSummaries,
+    sampleSelectionMethod: [
+      'Samples are selected from saved research backfill report sample events only.',
+      'Selection prioritizes date spread, direction diversity, window diversity, classification diversity, warning/failure reason diversity, advisory-only status, and possible existing-model mapping indicators.',
+      'If source reports only store preview samples, the review pack cannot recover unsaved candidate details.',
+    ],
+    samples,
+    possibleExistingModelMappingReview: possibleMappings,
+    advisoryOnlyFindings: samples
+      .filter((sample) => sample.classification === 'advisory_only')
+      .map((sample) => `${sample.sampleId}: remains advisory-only; ${sample.warningFailureReason}`),
+    humanReviewQuestions: [
+      'Does the sample actually satisfy current approved Model 1 gates?',
+      'Does the sample actually satisfy current Turtle Soup sweep, reclaim, risk, session, and target-room gates?',
+      'Is the detector reason meaningful enough to continue collecting this concept?',
+      'Should the sample remain advisory-only, be rejected, or be queued for human rule review?',
+    ],
+    doNotChangeYetItems: [
+      'Do not change trading rules from this review pack.',
+      'Do not add executable research models.',
+      'Do not add entries, stops, targets, alerts, outcome buttons, or RAG writes.',
+      'Do not use agent inspection to approve trades.',
+    ],
+    approvalBoundary: {
+      sampleReviewApprovesTrade: false,
+      sampleReviewChangesRules: false,
+      sampleReviewCreatesEntry: false,
+      sampleReviewCreatesTargets: false,
+      sampleReviewPromotesModel: false,
+      sampleReviewWritesRagMemory: false,
+    },
+  };
+  return {
+    ...packWithoutMarkdown,
+    markdown: renderResearchSampleReviewMarkdown(packWithoutMarkdown),
+  };
+}
