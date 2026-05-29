@@ -28,6 +28,7 @@ export interface WeeklyReportCliOptions {
   pretty: boolean;
   json: boolean;
   diagnosticDir: string;
+  researchReportDir: string;
   auditDir: string;
   researchDir: string;
   stateFile: string;
@@ -41,6 +42,7 @@ interface WeeklyReportState {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_DIAGNOSTIC_DIR = path.join(__dirname, 'diagnostic-reports');
+const DEFAULT_RESEARCH_REPORT_DIR = path.join(__dirname, 'research-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const DEFAULT_RESEARCH_DIR = path.resolve(__dirname, '../../docs/research');
 const DEFAULT_STATE_FILE = path.join(__dirname, '.weekly-trading-report-state.json');
@@ -90,6 +92,7 @@ export function parseWeeklyReportArgs(args = process.argv.slice(2)): WeeklyRepor
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
     diagnosticDir: readFlag(args, '--diagnostic-dir') || DEFAULT_DIAGNOSTIC_DIR,
+    researchReportDir: readFlag(args, '--research-report-dir') || DEFAULT_RESEARCH_REPORT_DIR,
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
     researchDir: readFlag(args, '--research-dir') || DEFAULT_RESEARCH_DIR,
     stateFile: readFlag(args, '--state-file') || DEFAULT_STATE_FILE,
@@ -153,6 +156,10 @@ function isDiagnosticReport(value: unknown): boolean {
   return Boolean(value && typeof value === 'object' && 'finalClassification' in value);
 }
 
+function isResearchBackfillReport(value: unknown): boolean {
+  return Boolean(value && typeof value === 'object' && (value as Record<string, unknown>).reportType === 'historical_research_backfill');
+}
+
 function isWatchlistRecord(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
@@ -175,6 +182,7 @@ function watchlistFromAudit(value: unknown): unknown {
 
 export async function collectWeeklyReportInput(options: WeeklyReportCliOptions): Promise<WeeklyTradingAnalysisInput> {
   const diagnostics = await readJsonFiles(options.diagnosticDir);
+  const researchBackfillReports = await readJsonFiles(options.researchReportDir);
   const auditHistory = await loadDiscordAuditHistory(options.auditDir);
   const watchlistHistory = await loadWatchlistAuditHistory(options.auditDir);
   const healthHistory = await loadHealthAuditHistory(options.auditDir);
@@ -184,6 +192,9 @@ export async function collectWeeklyReportInput(options: WeeklyReportCliOptions):
     weekEnding: options.weekEnding,
     instrument: options.instrument,
     diagnosticReports: diagnostics.filter(isDiagnosticReport).filter((item) => sameInstrument(item, options.instrument)) as WeeklyTradingAnalysisInput['diagnosticReports'],
+    researchBackfillReports: researchBackfillReports
+      .filter(isResearchBackfillReport)
+      .filter((item) => sameInstrument(item, options.instrument)) as WeeklyTradingAnalysisInput['researchBackfillReports'],
     watchlistRecords: watchlistHistory.events.map(eventToWatchlistRecord) as WeeklyTradingAnalysisInput['watchlistRecords'],
     healthEvents: healthHistory.events.map(eventToHealthRecord),
     tradeAlertRecords: auditEvents.filter((event) => event.alertType === 'trade').map(eventToTradeAlertRecord),
@@ -312,6 +323,7 @@ export async function publishWeeklyTradingNewsletter(options: {
   diagnosticDir?: string;
   auditDir?: string;
   researchDir?: string;
+  researchReportDir?: string;
   stateFile?: string;
 }): Promise<{ report: WeeklyTradingAnalysisReport; sent: boolean; skippedReason: string | null }> {
   const cliOptions: WeeklyReportCliOptions = {
@@ -322,6 +334,7 @@ export async function publishWeeklyTradingNewsletter(options: {
     pretty: true,
     json: false,
     diagnosticDir: options.diagnosticDir || DEFAULT_DIAGNOSTIC_DIR,
+    researchReportDir: options.researchReportDir || DEFAULT_RESEARCH_REPORT_DIR,
     auditDir: options.auditDir || DEFAULT_AUDIT_DIR,
     researchDir: options.researchDir || DEFAULT_RESEARCH_DIR,
     stateFile: options.stateFile || DEFAULT_STATE_FILE,

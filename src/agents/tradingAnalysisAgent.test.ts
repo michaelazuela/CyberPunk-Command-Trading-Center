@@ -182,14 +182,23 @@ assert.equal(shouldSendWeeklyDiscordReport(state, report), false);
 
 const temp = mkdtempSync(join(tmpdir(), 'weekly-report-'));
 const diagnosticDir = join(temp, 'diagnostic-reports');
+const researchReportDir = join(temp, 'research-reports');
 const auditDir = join(temp, 'discord-audit');
 const researchDir = join(temp, 'research');
 mkdirSync(diagnosticDir, { recursive: true });
+mkdirSync(researchReportDir, { recursive: true });
 mkdirSync(auditDir, { recursive: true });
 mkdirSync(researchDir, { recursive: true });
 writeFileSync(join(diagnosticDir, 'diagnostic.json'), JSON.stringify({
   finalClassification: 'C_UNAPPROVED_ICT_FVG_WATCHLIST',
   instrument: 'MES',
+}));
+writeFileSync(join(researchReportDir, 'research-backfill.json'), JSON.stringify({
+  reportType: 'historical_research_backfill',
+  instrument: 'MES',
+  from: '2026-01-01',
+  to: '2026-05-29',
+  executiveSummary: ['Research-only backfill summary.'],
 }));
 writeFileSync(join(auditDir, 'watchlist.json'), JSON.stringify({
   watchlistType: 'morning_continuation_watchlist',
@@ -237,11 +246,13 @@ assert.equal(healthHistory.events.length, 1);
 const collected = await collectWeeklyReportInput({
   ...parsed,
   diagnosticDir,
+  researchReportDir,
   auditDir,
   researchDir,
   stateFile: join(temp, 'state.json'),
 });
 assert.equal(collected.diagnosticReports?.length, 1);
+assert.equal(collected.researchBackfillReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
@@ -257,6 +268,7 @@ const newsletterSkip = await publishWeeklyTradingNewsletter({
   discord: true,
   dryRun: true,
   diagnosticDir,
+  researchReportDir,
   auditDir,
   researchDir,
   stateFile: join(temp, 'newsletter-state.json'),

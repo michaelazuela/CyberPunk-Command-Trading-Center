@@ -1,4 +1,5 @@
 import type { BridgeDiagnosticClassification, BridgeDiagnosticReplayReport } from './bridgeDiagnosticReplayAgent';
+import type { HistoricalResearchBackfillReport } from './historicalResearchBackfillAgent';
 import type { WatchlistMemoryRecord, WatchlistPerformanceRecord } from './morningContinuationWatchlistAgent';
 import type { ScannerHealthStatus } from './scannerHealthAgent';
 
@@ -16,6 +17,7 @@ export interface WeeklyTradingAnalysisInput {
   weekEnding: string;
   instrument: 'MES' | 'MNQ' | string;
   diagnosticReports?: Array<Partial<BridgeDiagnosticReplayReport>>;
+  researchBackfillReports?: Array<Partial<HistoricalResearchBackfillReport>>;
   watchlistRecords?: Array<Partial<WatchlistMemoryRecord | WatchlistPerformanceRecord>>;
   healthEvents?: Array<{ status?: ScannerHealthStatus | string | null; summary?: string | null; warnings?: string[]; blockingReasons?: string[] }>;
   tradeAlertRecords?: Array<{ state?: string | null; decision?: string | null; sentAt?: string | null }>;
@@ -203,6 +205,7 @@ function formatResearchDeskItem(note: NonNullable<WeeklyTradingAnalysisInput['re
 
 export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInput): WeeklyTradingAnalysisReport {
   const diagnostics = [...(input.diagnosticReports || [])];
+  const researchBackfills = [...(input.researchBackfillReports || [])];
   const watchlists = [...(input.watchlistRecords || [])];
   const auditEvents = [...(input.auditEvents || [])];
   const researchNotes = [...(input.researchNotes || [])].filter((note) => note.includeInWeeklyNewsletter !== false);
@@ -218,7 +221,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
     sections: {
       executiveSummary: [
         `Existing records only. Diagnostic replay was not run by this report.`,
-        `${diagnostics.length} diagnostic replay report(s), ${watchlists.length} watchlist record(s), ${(input.tradeAlertRecords || []).length} trade alert record(s).`,
+        `${diagnostics.length} diagnostic replay report(s), ${researchBackfills.length} research backfill report(s), ${watchlists.length} watchlist record(s), ${(input.tradeAlertRecords || []).length} trade alert record(s).`,
       ],
       scannerHealthSummary: [
         `READY=${health.READY}, DEGRADED=${health.DEGRADED}, BLOCKED=${health.BLOCKED}.`,
@@ -256,9 +259,14 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
         'Do not use weekly summaries as entry evidence.',
       ],
       dataQualityNotes: [
-        input.dataWarnings?.length
-          ? `Data warnings: ${input.dataWarnings.join(' | ')}`
-          : `Existing audit events scanned: ${auditEvents.length}. Weekly report did not run bridge diagnostics.`,
+        [
+          input.dataWarnings?.length
+            ? `Data warnings: ${input.dataWarnings.join(' | ')}`
+            : `Existing audit events scanned: ${auditEvents.length}. Weekly report did not run bridge diagnostics.`,
+          researchBackfills.length
+            ? `Research backfill reports scanned: ${researchBackfills.length}. Weekly report did not run backfill automatically.`
+            : null,
+        ].filter(Boolean).join(' '),
       ],
     },
     counts: {

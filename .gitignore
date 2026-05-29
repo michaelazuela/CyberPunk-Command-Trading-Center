@@ -18,5 +18,6 @@ tools/automation/.macro-calendar-cache.json
 tools/automation/chart-markups/
 tools/automation/discord-audit/
 tools/automation/diagnostic-reports/
+tools/automation/research-reports/
 tools/automation/weekly-reports/
 tools/automation/.weekly-trading-report-state.json
