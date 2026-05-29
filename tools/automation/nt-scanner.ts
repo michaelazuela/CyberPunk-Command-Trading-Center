@@ -44,6 +44,7 @@ import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
 import {
   compactDiscordSummary,
+  morningWatchlistDiscordSummary,
   validateDiscordPayload,
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
@@ -88,6 +89,7 @@ export interface ScannerConfig {
 
 interface ScannerStateFile {
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
+  watchlistSent: Record<string, { direction: string; sentAt: string }>;
   windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
@@ -202,12 +204,13 @@ async function readState(): Promise<ScannerStateFile> {
     const parsed = JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Partial<ScannerStateFile>;
     return {
       sent: parsed.sent || {},
+      watchlistSent: parsed.watchlistSent || {},
       windowStartSent: parsed.windowStartSent || {},
       lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
       lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
     };
   } catch {
-    return { sent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
+    return { sent: {}, watchlistSent: {}, windowStartSent: {}, lastCompleted5mBySession: {}, lastMarketMapRefreshBySession: {} };
   }
 }
 
@@ -321,6 +324,42 @@ async function writeScannerDiscordAuditLog(args: {
     attachments: {
       chartMarkup: args.chartMarkup,
       priceLevelMap: args.levelMap,
+    },
+  }, null, 2));
+  return file;
+}
+
+async function writeScannerWatchlistAuditLog(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  watchlistKey: string;
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  windowLabel: string;
+  watchlist: ReturnType<typeof detectMorningContinuationWatchlist>;
+  auditDir?: string;
+}): Promise<string> {
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  await fs.mkdir(auditDir, { recursive: true });
+  const safeKey = args.watchlistKey.replace(/[^a-zA-Z0-9._-]/g, '-');
+  const file = path.join(auditDir, `watchlist-${safeKey}.json`);
+  await fs.writeFile(file, JSON.stringify({
+    createdAt: new Date().toISOString(),
+    source: 'live-scanner-watchlist',
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    watchlistKey: args.watchlistKey,
+    windowLabel: args.windowLabel,
+    currentPrice: args.currentPrice,
+    completed5m: args.completed5m,
+    watchlist: args.watchlist,
+    approvalBoundary: args.watchlist.approvalBoundary,
+    discord: {
+      advisoryOnly: true,
+      tradeAlertEligible: false,
+      attachmentsGenerated: false,
+      outcomeButtonsIncluded: false,
+      ragMemoryWritten: false,
     },
   }, null, 2));
   return file;
@@ -570,6 +609,46 @@ function buildDiscordPayload(args: {
       direction: args.candidate?.direction,
     }),
   });
+}
+
+function scannerWatchlistAlertKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  direction: string;
+  watchlistType: string;
+}): string {
+  return `${args.tradeDate}:${args.instrument}:${args.session}:${args.direction}:${args.watchlistType}`;
+}
+
+export async function prepareLiveScannerWatchlistAlertArtifacts(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  watchlistKey: string;
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  windowLabel: string;
+  watchlist: ReturnType<typeof detectMorningContinuationWatchlist>;
+  auditDir?: string;
+}): Promise<{ payload: DiscordWebhookPayload; files: string[]; auditLogPath: string }> {
+  const auditLogPath = await writeScannerWatchlistAuditLog({
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    watchlistKey: args.watchlistKey,
+    completed5m: args.completed5m,
+    currentPrice: args.currentPrice,
+    windowLabel: args.windowLabel,
+    watchlist: args.watchlist,
+    auditDir: args.auditDir,
+  });
+  const payload = morningWatchlistDiscordSummary({
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    watchlist: args.watchlist,
+  });
+  const files: string[] = [];
+  validateDiscordPayload(payload, files);
+  return { payload, files, auditLogPath };
 }
 
 export async function prepareLiveScannerDiscordAlertArtifacts(args: {
@@ -946,6 +1025,29 @@ async function runCycle(config: ScannerConfig): Promise<void> {
       `[scanner] [AM WATCHLIST] ${config.instrument} — ${watchlist.direction} DEVELOPING | WATCH ONLY — NO FRESH ENTRY | ${watchlist.reason} | ${watchlist.requiredNextCondition}`
     );
     console.warn(`[scanner] watchlist audit: ${watchlist.auditWarnings.join(' | ')}`);
+    const watchlistKey = scannerWatchlistAlertKey({
+      tradeDate,
+      instrument: config.instrument,
+      session: window.session,
+      direction: watchlist.direction,
+      watchlistType: watchlist.watchlistType,
+    });
+    if (!state.watchlistSent[watchlistKey]) {
+      const watchlistArtifacts = await prepareLiveScannerWatchlistAlertArtifacts({
+        tradeDate,
+        instrument: config.instrument,
+        watchlistKey,
+        completed5m,
+        currentPrice,
+        windowLabel: window.label,
+        watchlist,
+      });
+      await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);
+      state.watchlistSent[watchlistKey] = { direction: watchlist.direction, sentAt: new Date().toISOString() };
+      console.log(`[scanner] Sent advisory watchlist alert: ${watchlistKey} | audit=${watchlistArtifacts.auditLogPath}`);
+    } else {
+      console.log(`[scanner] Advisory watchlist alert already sent for ${watchlistKey}.`);
+    }
   }
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];

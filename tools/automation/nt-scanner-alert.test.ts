@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
-import { prepareLiveScannerDiscordAlertArtifacts } from './nt-scanner';
+import { prepareLiveScannerDiscordAlertArtifacts, prepareLiveScannerWatchlistAlertArtifacts } from './nt-scanner';
 import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-${Date.now()}`);
@@ -122,6 +122,68 @@ const candidate: SetupCandidate = {
 };
 
 try {
+  const watchlistResult = await prepareLiveScannerWatchlistAlertArtifacts({
+    tradeDate: '2026-05-28',
+    instrument: 'MES',
+    watchlistKey: '2026-05-28:MES:morning:LONG:morning_continuation_watchlist',
+    completed5m: {
+      time: '2026-05-28T10:15:00-04:00',
+      open: 7540.25,
+      high: 7574,
+      low: 7535,
+      close: 7564.75,
+      volume: 1000,
+    },
+    currentPrice: 7564.75,
+    windowLabel: 'Morning Execution Window',
+    watchlist: {
+      watchlistDetected: true,
+      watchlistType: 'morning_continuation_watchlist',
+      direction: 'LONG',
+      status: 'WATCH_ONLY',
+      canExecute: false,
+      freshEntryAvailable: false,
+      tradeAlertEligible: false,
+      reason: 'Strong bullish continuation is developing, but no fresh entry remains under current approved rules.',
+      noChaseWarning: true,
+      requiredNextCondition: 'Wait for a completed 5M pullback or retest that passes existing approved rules.',
+      memoryEligible: true,
+      evidence: ['Strong bullish displacement detected after the open.'],
+      missingEvidence: ['No safe fresh structure stop is available from this watchlist event.'],
+      auditWarnings: ['Advisory only.'],
+      approvalBoundary: {
+        watchlistApprovesTrade: false,
+        watchlistChangesRules: false,
+        watchlistCreatesEntry: false,
+        watchlistCreatesTargets: false,
+        watchlistOverridesScanner: false,
+      },
+    },
+    auditDir,
+  });
+
+  assert.deepEqual(watchlistResult.files, []);
+  assert.equal(watchlistResult.payload.components, undefined);
+  const watchlistText = flattenDiscordPayloadText(watchlistResult.payload);
+  assert.ok(watchlistText.includes('[AM WATCHLIST] MES - LONG DEVELOPING'));
+  assert.ok(watchlistText.includes('WATCH ONLY - NO FRESH ENTRY'));
+  assert.ok(watchlistText.includes('DO NOT CHASE'));
+  assert.ok(!/^Entry:/m.test(watchlistText));
+  assert.ok(!/^Stop:/m.test(watchlistText));
+  assert.ok(!/^T1:/m.test(watchlistText));
+  assert.ok(!/^T2:/m.test(watchlistText));
+  assert.ok(!/Approved|Executable|Trade now|Entry confirmed/i.test(watchlistText));
+  assert.ok(!JSON.stringify(watchlistResult.payload).includes('Win'));
+  assert.ok(!JSON.stringify(watchlistResult.payload).includes('Loss'));
+  assert.ok(!JSON.stringify(watchlistResult.payload).includes('Scratch'));
+  const watchlistAudit = JSON.parse(await fs.readFile(watchlistResult.auditLogPath, 'utf8'));
+  assert.equal(watchlistAudit.source, 'live-scanner-watchlist');
+  assert.equal(watchlistAudit.discord.advisoryOnly, true);
+  assert.equal(watchlistAudit.discord.tradeAlertEligible, false);
+  assert.equal(watchlistAudit.discord.attachmentsGenerated, false);
+  assert.equal(watchlistAudit.discord.outcomeButtonsIncluded, false);
+  assert.equal(watchlistAudit.discord.ragMemoryWritten, false);
+
   const result = await prepareLiveScannerDiscordAlertArtifacts({
     session: 'morning',
     tradeDate: '2026-05-26',

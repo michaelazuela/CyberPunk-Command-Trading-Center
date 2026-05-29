@@ -7,6 +7,7 @@ import {
   type MemoryHistoricalSupport,
   type ReportDirection,
 } from '../../src/agents/discordReportDesignerAgent';
+import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
 
 export type CompactDiscordSession = 'morning' | 'lunch';
@@ -83,6 +84,12 @@ interface CompactDiscordSummaryArgs {
   scoreOverride?: number | null;
   decisionOverride?: string | null;
   statusOverride?: string | null;
+}
+
+interface MorningWatchlistDiscordArgs {
+  tradeDate: string;
+  instrument: CompactDiscordInstrument;
+  watchlist: MorningContinuationWatchlistResult;
 }
 
 function priceLine(value: number | null | undefined): string {
@@ -314,6 +321,50 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
       },
     ],
     ...(args.components ? { components: args.components } : {}),
+  };
+}
+
+export function morningWatchlistDiscordSummary(args: MorningWatchlistDiscordArgs): DiscordWebhookPayload {
+  const direction = args.watchlist.direction === 'SHORT' ? 'SHORT' : args.watchlist.direction === 'LONG' ? 'LONG' : 'NO TRADE';
+  const safeLine = (value: string) => professionalizeReportText(value).replace(/\bapproved\b/gi, 'current');
+  const why = safeLine(args.watchlist.evidence[0] || args.watchlist.reason);
+  const noChase = safeLine(
+    args.watchlist.missingEvidence.find((item) => item.toLowerCase().includes('structure stop')) ||
+    'Current price is extended from the original trigger / no fresh structure stop exists.'
+  );
+  const description = [
+    `[AM WATCHLIST] ${args.instrument} - ${direction} DEVELOPING`,
+    'Status: WATCH ONLY - NO FRESH ENTRY',
+    '',
+    'Why:',
+    why,
+    '',
+    'DO NOT CHASE:',
+    noChase,
+    '',
+    'Next valid condition:',
+    safeLine(args.watchlist.requiredNextCondition),
+    '',
+    'Action:',
+    'Watch only. No entry until current rules confirm.',
+    '',
+    'This is not a trade alert. No action levels or outcome buttons are included.',
+    'Decision support only. No automated orders.',
+  ].join('\n');
+
+  return {
+    username: 'Quant Desk',
+    content: `🟠 [AM WATCHLIST] ${args.instrument} - ${direction} DEVELOPING | WATCH ONLY - NO FRESH ENTRY | ${args.tradeDate}`,
+    embeds: [
+      {
+        title: 'Morning Continuation Watchlist',
+        description: professionalizeReportText(description),
+        color: 0xffa000,
+        fields: [],
+        footer: { text: 'Quant Desk • Watchlist only • Existing app-owned rules must confirm any future trade' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
   };
 }
 

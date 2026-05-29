@@ -4,6 +4,7 @@ import {
   compactAttachmentLine,
   compactDiscordSummary,
   flattenDiscordPayloadText,
+  morningWatchlistDiscordSummary,
   validateDiscordPayload,
 } from './discord-alert-format';
 import { buildOutcomeComponents } from './discord-outcome-buttons';
@@ -199,6 +200,51 @@ assert.ok(noTradeText.includes('Key Levels:'));
 assert.ok(noTradeText.includes('Action:'));
 assert.ok(noTradeText.includes('Stand down. Recheck at next scheduled scan.'));
 assert.ok(!noTradeText.includes('Plan:'));
+
+const watchlist = morningWatchlistDiscordSummary({
+  tradeDate: '2026-05-28',
+  instrument: 'MES',
+  watchlist: {
+    watchlistDetected: true,
+    watchlistType: 'morning_continuation_watchlist',
+    direction: 'LONG',
+    status: 'WATCH_ONLY',
+    canExecute: false,
+    freshEntryAvailable: false,
+    tradeAlertEligible: false,
+    reason: 'Strong bullish continuation is developing, but no fresh entry remains under current approved rules.',
+    noChaseWarning: true,
+    requiredNextCondition: 'Wait for a completed 5M pullback or retest that passes existing approved rules.',
+    memoryEligible: true,
+    evidence: ['Strong bullish displacement detected after the open.'],
+    missingEvidence: ['No safe fresh structure stop is available from this watchlist event.'],
+    auditWarnings: ['Advisory only.'],
+    approvalBoundary: {
+      watchlistApprovesTrade: false,
+      watchlistChangesRules: false,
+      watchlistCreatesEntry: false,
+      watchlistCreatesTargets: false,
+      watchlistOverridesScanner: false,
+    },
+  },
+});
+validateDiscordPayload(watchlist, []);
+const watchlistText = flattenDiscordPayloadText(watchlist);
+assert.ok(watchlistText.includes('[AM WATCHLIST] MES - LONG DEVELOPING'));
+assert.ok(watchlistText.includes('WATCH ONLY - NO FRESH ENTRY'));
+assert.ok(watchlistText.includes('DO NOT CHASE'));
+assert.ok(watchlistText.includes('Wait for a completed 5M pullback or retest that passes existing current rules.'));
+assert.ok(watchlistText.includes('Watch only. No entry until current rules confirm.'));
+assert.ok(!/^Entry:/m.test(watchlistText));
+assert.ok(!/^Stop:/m.test(watchlistText));
+assert.ok(!/^T1:/m.test(watchlistText));
+assert.ok(!/^T2:/m.test(watchlistText));
+assert.ok(!/Risk:|R\/R|risk\/reward ladder/i.test(watchlistText));
+assert.ok(!/Approved|Executable|Trade now|Entry confirmed/i.test(watchlistText));
+assert.equal(watchlist.components, undefined);
+assert.equal(JSON.stringify(watchlist).includes('Win'), false);
+assert.equal(JSON.stringify(watchlist).includes('Loss'), false);
+assert.equal(JSON.stringify(watchlist).includes('Scratch'), false);
 
 assert.equal(
   compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),
