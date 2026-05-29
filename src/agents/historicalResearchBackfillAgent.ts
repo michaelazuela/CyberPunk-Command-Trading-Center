@@ -66,6 +66,7 @@ export interface HistoricalResearchSourceCoverage {
   diagnosticReportsScanned: number;
   skippedDates: string[];
   missingDataDates: string[];
+  perDateBarCoverage?: HistoricalResearchPerDateBarCoverage[];
 }
 
 export interface HistoricalResearchBarCoverage {
@@ -73,6 +74,24 @@ export interface HistoricalResearchBarCoverage {
   rawBarsLoaded: number;
   barsFilteredIncomplete: number;
   completedBarsRemaining: number;
+  invalidTimestampCount?: number;
+  invalidOhlcCount?: number;
+  requestFailures?: number;
+}
+
+export interface HistoricalResearchPerDateBarCoverage {
+  date: string;
+  window: string;
+  timeframe: '5m' | '15m' | '60m' | '240m';
+  from: string;
+  to: string;
+  rawBarsLoaded: number;
+  barsFilteredIncomplete: number;
+  completedBarsRemaining: number;
+  invalidTimestampCount: number;
+  invalidOhlcCount: number;
+  requestFailed: boolean;
+  errorMessage: string | null;
 }
 
 export interface HistoricalResearchDetectorAudit {
@@ -439,7 +458,19 @@ export function renderHistoricalResearchBackfillMarkdown(report: Omit<Historical
     `- Data gaps: ${listOrNone(report.dataCoverage.dataGaps).join(' | ')}`,
     '',
     'Bar coverage:',
-    ...report.dataCoverage.barCoverage.map((item) => `- ${item.timeframe}: raw=${item.rawBarsLoaded}, incomplete filtered=${item.barsFilteredIncomplete}, completed=${item.completedBarsRemaining}`),
+    ...report.dataCoverage.barCoverage.map((item) => `- ${item.timeframe}: raw=${item.rawBarsLoaded}, incomplete filtered=${item.barsFilteredIncomplete}, completed=${item.completedBarsRemaining}, invalid timestamps=${item.invalidTimestampCount || 0}, invalid OHLC=${item.invalidOhlcCount || 0}, request failures=${item.requestFailures || 0}`),
+    '',
+    'Per-date bridge coverage:',
+    ...(report.dataCoverage.sourceCoverage.perDateBarCoverage?.length
+      ? [
+          ...report.dataCoverage.sourceCoverage.perDateBarCoverage.slice(0, 40).map((item) =>
+            `- ${item.date} ${item.window} ${item.timeframe}: raw=${item.rawBarsLoaded}, completed=${item.completedBarsRemaining}, incomplete filtered=${item.barsFilteredIncomplete}, failed=${item.requestFailed ? 'yes' : 'no'}${item.errorMessage ? `, error=${item.errorMessage}` : ''}`
+          ),
+          ...(report.dataCoverage.sourceCoverage.perDateBarCoverage.length > 40
+            ? [`- ...${report.dataCoverage.sourceCoverage.perDateBarCoverage.length - 40} additional per-date coverage rows omitted from markdown; see JSON report.`]
+            : []),
+        ]
+      : ['- none']),
     '',
     'Zero-candidate explanation:',
     ...listOrNone(report.zeroCandidateExplanation).map((line) => `- ${line}`),

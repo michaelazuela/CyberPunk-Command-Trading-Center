@@ -16,6 +16,7 @@ import {
   type HistoricalResearchBackfillReport,
   type HistoricalResearchBarCoverage,
   type HistoricalResearchDetectorAudit,
+  type HistoricalResearchPerDateBarCoverage,
   type HistoricalResearchSourceCoverage,
   type ResearchBackfillConceptId,
   type ResearchBackfillConceptSelector,
@@ -57,6 +58,16 @@ const DEFAULT_OUT_DIR = path.join(__dirname, 'research-reports');
 const DEFAULT_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const DEFAULT_DIAGNOSTIC_DIR = path.join(__dirname, 'diagnostic-reports');
 const DEFAULT_RESEARCH_DIR = path.resolve(__dirname, '../../docs/research');
+const HISTORICAL_BRIDGE_TIMEFRAMES: Array<{ requested: NinjaBridgeTimeframe; report: HistoricalResearchBarCoverage['timeframe'] }> = [
+  { requested: '5m', report: '5m' },
+  { requested: '15m', report: '15m' },
+  { requested: '60m', report: '60m' },
+  { requested: '240m', report: '240m' },
+];
+const RESEARCH_BRIDGE_WINDOWS = [
+  { key: 'london_window', from: '03:00', to: '04:00' },
+  { key: 'rth_research_session', from: '09:30', to: '16:00' },
+] as const;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -144,6 +155,41 @@ function timeframeMinutes(timeframe: NinjaBridgeTimeframe): number {
   return 5;
 }
 
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(dateText: string, days: number): string {
+  const date = new Date(`${dateText}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return isoDate(date);
+}
+
+function datesBetween(from: string, to: string): string[] {
+  const dates: string[] = [];
+  for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
+    dates.push(cursor);
+  }
+  return dates;
+}
+
+function addCoverage(
+  aggregate: Map<HistoricalResearchBarCoverage['timeframe'], HistoricalResearchBarCoverage>,
+  timeframe: HistoricalResearchBarCoverage['timeframe'],
+  delta: Partial<Omit<HistoricalResearchBarCoverage, 'timeframe'>>,
+): void {
+  const current = aggregate.get(timeframe) || barCoverageFor(timeframe, 0, 0);
+  aggregate.set(timeframe, {
+    timeframe,
+    rawBarsLoaded: current.rawBarsLoaded + (delta.rawBarsLoaded || 0),
+    barsFilteredIncomplete: current.barsFilteredIncomplete + (delta.barsFilteredIncomplete || 0),
+    completedBarsRemaining: current.completedBarsRemaining + (delta.completedBarsRemaining || 0),
+    invalidTimestampCount: (current.invalidTimestampCount || 0) + (delta.invalidTimestampCount || 0),
+    invalidOhlcCount: (current.invalidOhlcCount || 0) + (delta.invalidOhlcCount || 0),
+    requestFailures: (current.requestFailures || 0) + (delta.requestFailures || 0),
+  });
+}
+
 export function filterCompletedBars(
   bars: NinjaBridgeBar[],
   timeframe: NinjaBridgeTimeframe,
@@ -151,27 +197,73 @@ export function filterCompletedBars(
   timeZone: BarTimeZoneMode,
   now = new Date(),
 ): NinjaBridgeBar[] {
+  return diagnoseBackfillBars(bars, timeframe, timestampMode, timeZone, now).completedBars;
+}
+
+function isValidOhlc(bar: NinjaBridgeBar): boolean {
+  return [bar.open, bar.high, bar.low, bar.close].every((value) => typeof value === 'number' && Number.isFinite(value) && value > 0) &&
+    bar.high >= Math.max(bar.open, bar.close) &&
+    bar.low <= Math.min(bar.open, bar.close);
+}
+
+function diagnoseBackfillBars(
+  bars: NinjaBridgeBar[],
+  timeframe: NinjaBridgeTimeframe,
+  timestampMode: BarTimestampMode,
+  timeZone: BarTimeZoneMode,
+  now = new Date(),
+): {
+  completedBars: NinjaBridgeBar[];
+  barsFilteredIncomplete: number;
+  invalidTimestampCount: number;
+  invalidOhlcCount: number;
+} {
   const minutes = timeframeMinutes(timeframe);
-  return bars.filter((bar) => {
+  const completedBars: NinjaBridgeBar[] = [];
+  let barsFilteredIncomplete = 0;
+  let invalidTimestampCount = 0;
+  let invalidOhlcCount = 0;
+
+  for (const bar of bars) {
+    if (!isValidOhlc(bar)) {
+      invalidOhlcCount += 1;
+      continue;
+    }
     const parsed = parseBridgeTime(bar.time, timeZone);
-    if (!parsed) return false;
+    if (!parsed) {
+      invalidTimestampCount += 1;
+      continue;
+    }
     const completedAt = timestampMode === 'close'
       ? parsed.getTime()
       : parsed.getTime() + minutes * 60_000;
-    return completedAt <= now.getTime();
-  });
+    if (completedAt <= now.getTime()) {
+      completedBars.push(bar);
+    } else {
+      barsFilteredIncomplete += 1;
+    }
+  }
+
+  return { completedBars, barsFilteredIncomplete, invalidTimestampCount, invalidOhlcCount };
 }
 
 function barCoverageFor(
   timeframe: HistoricalResearchBarCoverage['timeframe'],
-  rawBars: NinjaBridgeBar[],
-  completedBars: NinjaBridgeBar[],
+  rawBarsLoaded: number,
+  completedBarsRemaining: number,
+  barsFilteredIncomplete = 0,
+  invalidTimestampCount = 0,
+  invalidOhlcCount = 0,
+  requestFailures = 0,
 ): HistoricalResearchBarCoverage {
   return {
     timeframe,
-    rawBarsLoaded: rawBars.length,
-    barsFilteredIncomplete: Math.max(0, rawBars.length - completedBars.length),
-    completedBarsRemaining: completedBars.length,
+    rawBarsLoaded,
+    barsFilteredIncomplete,
+    completedBarsRemaining,
+    invalidTimestampCount,
+    invalidOhlcCount,
+    requestFailures,
   };
 }
 
@@ -203,50 +295,101 @@ async function readResearchNotes(dir: string): Promise<string[]> {
 async function fetchCompletedBridgeBars(options: ResearchBackfillCliOptions, warnings: string[]): Promise<{
   bars5m: NinjaBridgeBar[];
   barCoverage: HistoricalResearchBarCoverage[];
+  perDateBarCoverage: HistoricalResearchPerDateBarCoverage[];
 }> {
   if (options.source === 'supabase') {
     return {
       bars5m: [],
       barCoverage: [
-        barCoverageFor('5m', [], []),
-        barCoverageFor('15m', [], []),
-        barCoverageFor('60m', [], []),
-        barCoverageFor('240m', [], []),
-        barCoverageFor('daily', [], []),
+        barCoverageFor('5m', 0, 0),
+        barCoverageFor('15m', 0, 0),
+        barCoverageFor('60m', 0, 0),
+        barCoverageFor('240m', 0, 0),
+        barCoverageFor('daily', 0, 0),
       ],
+      perDateBarCoverage: [],
     };
   }
   const instrument = options.bridgeInstrument || `${options.instrument} 06-26`;
-  const coverage: HistoricalResearchBarCoverage[] = [];
-  let bars5m: NinjaBridgeBar[] = [];
-  const timeframes: Array<{ requested: NinjaBridgeTimeframe; report: HistoricalResearchBarCoverage['timeframe'] }> = [
-    { requested: '5m', report: '5m' },
-    { requested: '15m', report: '15m' },
-    { requested: '60m', report: '60m' },
-    { requested: '240m', report: '240m' },
-  ];
-  for (const timeframe of timeframes) {
-    try {
-      const response = await getNinjaHistoricalBars({
-        instrument,
-        timeframe: timeframe.requested,
-        from: `${options.from}T00:00:00`,
-        to: `${options.to}T23:59:59`,
-        limit: timeframe.requested === '5m' ? 50_000 : 20_000,
-        baseUrl: options.bridgeUrl,
-      });
-      const rawBars = response.bars || [];
-      const completed = filterCompletedBars(rawBars, timeframe.requested, options.barTimestampMode, options.barTimeZone);
-      coverage.push(barCoverageFor(timeframe.report, rawBars, completed));
-      if (timeframe.requested === '5m') bars5m = completed;
-    } catch (error) {
-      warnings.push(`Local bridge ${timeframe.requested} data unavailable: ${error instanceof Error ? error.message : String(error)}`);
-      coverage.push(barCoverageFor(timeframe.report, [], []));
+  const perDateBarCoverage: HistoricalResearchPerDateBarCoverage[] = [];
+  const bars5mByKey = new Map<string, NinjaBridgeBar>();
+  const aggregate = new Map<HistoricalResearchBarCoverage['timeframe'], HistoricalResearchBarCoverage>();
+  for (const timeframe of HISTORICAL_BRIDGE_TIMEFRAMES) {
+    aggregate.set(timeframe.report, barCoverageFor(timeframe.report, 0, 0));
+  }
+
+  for (const date of datesBetween(options.from, options.to)) {
+    for (const window of RESEARCH_BRIDGE_WINDOWS) {
+      const from = `${date}T${window.from}:00`;
+      const to = `${date}T${window.to}:00`;
+      for (const timeframe of HISTORICAL_BRIDGE_TIMEFRAMES) {
+        try {
+          const response = await getNinjaHistoricalBars({
+            instrument,
+            timeframe: timeframe.requested,
+            from,
+            to,
+            limit: 5000,
+            baseUrl: options.bridgeUrl,
+          });
+          const rawBars = response.bars || [];
+          const diagnostics = diagnoseBackfillBars(rawBars, timeframe.requested, options.barTimestampMode, options.barTimeZone);
+          addCoverage(aggregate, timeframe.report, {
+            rawBarsLoaded: rawBars.length,
+            completedBarsRemaining: diagnostics.completedBars.length,
+            barsFilteredIncomplete: diagnostics.barsFilteredIncomplete,
+            invalidTimestampCount: diagnostics.invalidTimestampCount,
+            invalidOhlcCount: diagnostics.invalidOhlcCount,
+            requestFailures: response.ok === false ? 1 : 0,
+          });
+          perDateBarCoverage.push({
+            date,
+            window: window.key,
+            timeframe: timeframe.report as HistoricalResearchPerDateBarCoverage['timeframe'],
+            from,
+            to,
+            rawBarsLoaded: rawBars.length,
+            barsFilteredIncomplete: diagnostics.barsFilteredIncomplete,
+            completedBarsRemaining: diagnostics.completedBars.length,
+            invalidTimestampCount: diagnostics.invalidTimestampCount,
+            invalidOhlcCount: diagnostics.invalidOhlcCount,
+            requestFailed: response.ok === false,
+            errorMessage: response.ok === false ? response.error || 'Bridge returned ok=false.' : null,
+          });
+          if (response.ok === false) warnings.push(`Local bridge ${date} ${window.key} ${timeframe.requested} returned ok=false: ${response.error || 'unknown error'}`);
+          if (timeframe.requested === '5m') {
+            for (const bar of diagnostics.completedBars) bars5mByKey.set(`${bar.time}|${bar.open}|${bar.high}|${bar.low}|${bar.close}`, bar);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          warnings.push(`Local bridge ${date} ${window.key} ${timeframe.requested} data unavailable: ${message}`);
+          addCoverage(aggregate, timeframe.report, { requestFailures: 1 });
+          perDateBarCoverage.push({
+            date,
+            window: window.key,
+            timeframe: timeframe.report as HistoricalResearchPerDateBarCoverage['timeframe'],
+            from,
+            to,
+            rawBarsLoaded: 0,
+            barsFilteredIncomplete: 0,
+            completedBarsRemaining: 0,
+            invalidTimestampCount: 0,
+            invalidOhlcCount: 0,
+            requestFailed: true,
+            errorMessage: message,
+          });
+        }
+      }
     }
   }
-  coverage.push(barCoverageFor('daily', [], []));
+  const coverage = HISTORICAL_BRIDGE_TIMEFRAMES.map((timeframe) => aggregate.get(timeframe.report) || barCoverageFor(timeframe.report, 0, 0));
+  coverage.push(barCoverageFor('daily', 0, 0));
   warnings.push('Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.');
-  return { bars5m, barCoverage: coverage };
+  return {
+    bars5m: [...bars5mByKey.values()].sort((a, b) => a.time.localeCompare(b.time)),
+    barCoverage: coverage,
+    perDateBarCoverage,
+  };
 }
 
 async function loadSupabaseRecords(options: ResearchBackfillCliOptions, warnings: string[]): Promise<unknown[]> {
@@ -492,15 +635,33 @@ function uniqueDates(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
 }
 
-function buildSourceCoverage(options: ResearchBackfillCliOptions, completedBars5m: NinjaBridgeBar[], auditRecords: unknown[], diagnosticReports: unknown[], supabaseRecords: unknown[]): HistoricalResearchSourceCoverage {
+function buildSourceCoverage(
+  options: ResearchBackfillCliOptions,
+  completedBars5m: NinjaBridgeBar[],
+  auditRecords: unknown[],
+  diagnosticReports: unknown[],
+  supabaseRecords: unknown[],
+  perDateBarCoverage: HistoricalResearchPerDateBarCoverage[],
+): HistoricalResearchSourceCoverage {
   const localBridgeDatesScanned = uniqueDates(completedBars5m.map((bar) => bar.time.slice(0, 10)));
+  const requestedDates = datesBetween(options.from, options.to);
+  const completedDateSet = new Set(localBridgeDatesScanned);
+  const failuresByDate = new Map<string, HistoricalResearchPerDateBarCoverage[]>();
+  for (const coverage of perDateBarCoverage) {
+    failuresByDate.set(coverage.date, [...(failuresByDate.get(coverage.date) || []), coverage]);
+  }
+  const skippedDates = requestedDates.filter((date) => {
+    const rows = failuresByDate.get(date) || [];
+    return rows.length > 0 && rows.every((row) => row.requestFailed);
+  });
   return {
     localBridgeDatesScanned,
     supabaseRecordsScanned: supabaseRecords.length,
     auditJsonRecordsScanned: auditRecords.length,
     diagnosticReportsScanned: diagnosticReports.length,
-    skippedDates: [],
-    missingDataDates: localBridgeDatesScanned.length ? [] : [`${options.from}..${options.to}`],
+    skippedDates,
+    missingDataDates: requestedDates.filter((date) => !completedDateSet.has(date)),
+    perDateBarCoverage,
   };
 }
 
@@ -552,7 +713,7 @@ export async function buildHistoricalResearchBackfillInput(options: ResearchBack
     ...deriveEventsFromRecords(supabaseRecords),
     ...deriveEventsFromAuditRecords(auditHistory.events),
   ];
-  const sourceCoverage = buildSourceCoverage(options, completedBars5m, auditHistory.events, diagnosticReports, supabaseRecords);
+  const sourceCoverage = buildSourceCoverage(options, completedBars5m, auditHistory.events, diagnosticReports, supabaseRecords, bridgeData.perDateBarCoverage);
   const detectorAudit = buildDetectorAudit(events, auditHistory.events, completedBars5m);
 
   return {

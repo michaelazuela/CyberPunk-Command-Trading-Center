@@ -205,6 +205,51 @@ mkdirSync(auditDir, { recursive: true });
 mkdirSync(diagnosticDir, { recursive: true });
 mkdirSync(researchDir, { recursive: true });
 mkdirSync(researchReportDir, { recursive: true });
+
+const originalFetch = globalThis.fetch;
+const bridgeRequests: URL[] = [];
+globalThis.fetch = (async (input: RequestInfo | URL) => {
+  const url = new URL(String(input));
+  bridgeRequests.push(url);
+  assert.equal(url.pathname.replace(/^\//, ''), 'historical-bars');
+  assert.equal(url.searchParams.get('instrument'), 'MES 06-26');
+  assert.ok(['5m', '15m', '60m', '240m'].includes(url.searchParams.get('timeframe') || ''));
+  const from = url.searchParams.get('from') || '2026-05-28T09:30:00';
+  return Response.json({
+    ok: true,
+    instrument: url.searchParams.get('instrument'),
+    timeframe: url.searchParams.get('timeframe'),
+    bars: [{ time: from, open: 7590, high: 7598, low: 7588, close: 7594, volume: 10 }],
+  });
+}) as typeof fetch;
+
+const bridgeLoadedInput = await buildHistoricalResearchBackfillInput({
+  ...parsed,
+  from: '2026-05-28',
+  to: '2026-05-29',
+  source: 'local',
+  bridgeInstrument: 'MES 06-26',
+  auditDir,
+  diagnosticDir,
+  researchDir,
+  out: researchReportDir,
+});
+globalThis.fetch = originalFetch;
+
+assert.ok(bridgeLoadedInput.completedBars5m && bridgeLoadedInput.completedBars5m.length > 0);
+assert.ok(bridgeLoadedInput.barCoverage?.some((coverage) => coverage.timeframe === '5m' && coverage.completedBarsRemaining > 0));
+assert.ok(bridgeLoadedInput.barCoverage?.every((coverage) => coverage.timeframe === 'daily' || (coverage.requestFailures || 0) === 0));
+assert.ok(bridgeLoadedInput.sourceCoverage?.perDateBarCoverage?.some((coverage) => coverage.date === '2026-05-28' && coverage.timeframe === '5m' && coverage.completedBarsRemaining > 0));
+assert.ok(bridgeLoadedInput.sourceCoverage?.localBridgeDatesScanned.includes('2026-05-28'));
+assert.ok(bridgeRequests.length >= 16);
+assert.ok(bridgeRequests.every((url) => {
+  const from = url.searchParams.get('from') || '';
+  const to = url.searchParams.get('to') || '';
+  return from.slice(0, 10) === to.slice(0, 10);
+}));
+assert.ok(bridgeRequests.some((url) => url.searchParams.get('from') === '2026-05-28T09:30:00'));
+assert.ok(bridgeRequests.some((url) => url.searchParams.get('to') === '2026-05-29T16:00:00'));
+
 writeFileSync(join(diagnosticDir, 'diagnostic.json'), JSON.stringify({
   finalClassification: 'C_UNAPPROVED_ICT_FVG_WATCHLIST',
   tradeDate: '2026-05-20',
