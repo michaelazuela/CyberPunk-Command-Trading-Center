@@ -173,7 +173,7 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     `What We Learned: Watchlists improved awareness without creating trade authority. ${report.sections.watchlistPerformance[0]}`,
     '',
     'Research Desk:',
-    ...(report.sections.researchDesk.length ? report.sections.researchDesk.map((item) => `- ${item}`) : ['- No new research notes this week.']),
+    ...(report.sections.researchDesk.length ? report.sections.researchDesk : ['- No new research notes this week.']),
     '',
     'Human Review Queue:',
     `- ${recommendation}`,
@@ -184,6 +184,17 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     '',
     'Authority: Weekly report is read-only. No rule changes, entries, stops, targets, or model promotion.',
   ].join('\n');
+}
+
+function formatResearchDeskItem(note: NonNullable<WeeklyTradingAnalysisInput['researchNotes']>[number]): string {
+  return [
+    `- ${note.candidateName}`,
+    `  Status: research-only / not executable`,
+    `  Idea: ${note.primaryIdea}`,
+    note.taxonomyNote ? `  Taxonomy: ${note.taxonomyNote}` : null,
+    `  Next step: ${note.recommendedNextStep}`,
+    `  Rule change: ${note.ruleChange || 'none'}.`,
+  ].filter(Boolean).join('\n');
 }
 
 export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInput): WeeklyTradingAnalysisReport {
@@ -228,15 +239,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
           : 'No approved missed-trade alert bug found in existing diagnostic reports.',
       ],
       researchDesk: researchNotes.length
-        ? researchNotes.map((note) =>
-            [
-              `${note.candidateName} | Status: research-only / not executable`,
-              `Idea: ${note.primaryIdea}`,
-              note.taxonomyNote ? `Taxonomy: ${note.taxonomyNote}` : null,
-              `Next step: ${note.recommendedNextStep}`,
-              `Rule change: ${note.ruleChange || 'none'}.`,
-            ].filter(Boolean).join(' | ')
-          )
+        ? researchNotes.map(formatResearchDeskItem)
         : ['No research briefs were added to this weekly report.'],
       humanReviewRecommendations: [
         classifications.C_UNAPPROVED_ICT_FVG_WATCHLIST > 0

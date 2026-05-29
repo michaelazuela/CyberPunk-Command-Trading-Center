@@ -92,7 +92,21 @@ assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
 assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
-assert.ok(report.discordMessage.includes('Taxonomy: If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.'));
+assert.ok(report.discordMessage.includes([
+  '- False-Run Liquidity Fade Near Highs Watchlist',
+  '  Status: research-only / not executable',
+  '  Idea: Fade a run toward ATH or major buy-side liquidity when price fails to sustain and begins drawing toward sell-side liquidity.',
+  '  Taxonomy: If sweep + reclaim exists, evaluate through existing Turtle Soup; otherwise keep as advisory research.',
+  '  Next step: Collect 20-30 bridge-backed examples before any rule review.',
+  '  Rule change: none.',
+].join('\n')));
+assert.ok(report.discordMessage.includes([
+  '- Final-Hour ICT-Style Liquidity Draw Watchlist',
+  '  Status: research-only / not executable',
+  '  Idea: Late-day draw toward clean buy-side liquidity during 3:15-3:45 ET.',
+  '  Next step: Collect 20-30 bridge-backed examples before rule review.',
+  '  Rule change: none.',
+].join('\n')));
 assert.ok(report.discordMessage.includes('research-only / not executable'));
 assert.ok(report.discordMessage.includes('Human Review Queue:'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:|Trade now|Entry confirmed|model promotion recommended/im.test(report.discordMessage));
