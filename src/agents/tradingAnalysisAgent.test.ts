@@ -50,7 +50,7 @@ const report = buildWeeklyTradingAnalysisReport({
     { status: 'DEGRADED', summary: 'Macro unavailable' },
     { status: 'BLOCKED', summary: 'Bridge stale' },
   ],
-  tradeAlertRecords: [{ state: 'Executable', sentAt: '2026-05-29T10:00:00Z' }],
+  tradeAlertRecords: [{ state: 'Executable', sentAt: '2026-05-29T10:00:00Z', sent: true }],
   researchBackfillReports: [{
     reportType: 'historical_research_backfill',
     instrument: 'MES',
@@ -117,6 +117,8 @@ assert.equal(report.reportType, 'weekly_trading_intelligence');
 assert.equal(report.counts.confirmedMissedApprovedTrades, 1);
 assert.equal(report.counts.alreadyTriggeredNoFreshEntry, 1);
 assert.equal(report.counts.ictStyleWatchlistOnlyEvents, 1);
+assert.equal(report.counts.tradeAlertsSent, 1);
+assert.equal(report.counts.tradeAuditEvents, 1);
 assert.equal(report.counts.watchlists, 1);
 assert.equal(report.counts.healthReady, 1);
 assert.equal(report.counts.healthDegraded, 1);
@@ -130,6 +132,9 @@ assert.ok(report.discordPayload.content.length <= 1900);
 assert.notEqual(report.discordPayload.content, report.discordMessage);
 assert.ok(report.discordPayload.content.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 assert.ok(report.discordPayload.content.includes('Summary:'));
+assert.ok(report.discordPayload.content.includes('Trade alerts sent: 1'));
+assert.ok(report.discordPayload.content.includes('Trade audit events: 1'));
+assert.ok(!report.discordPayload.content.includes('Trade alerts: 1'));
 assert.ok(report.discordPayload.content.includes('Research Desk:'));
 assert.ok(report.discordPayload.content.includes('- AMD Range Model: research-only'));
 assert.ok(report.discordPayload.content.includes('Research Backfill:\nReports: 1 | Candidates: 3 | Promotions: 0'));
@@ -140,6 +145,9 @@ assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(report.discordPayload.content));
 assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage));
 assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
+assert.ok(report.discordMessage.includes('Trade alerts sent: 1'));
+assert.ok(report.discordMessage.includes('Trade audit events: 1'));
+assert.ok(!report.discordMessage.includes('Trade alerts: 1'));
 assert.ok(!report.discordMessage.includes('ICT-style'));
 assert.ok(!report.discordMessage.includes('Advisory research-only events: 1'));
 assert.ok(report.discordMessage.includes('Live advisory watchlist alerts: 1'));
@@ -205,6 +213,8 @@ const zeroWatchlistReport = buildWeeklyTradingAnalysisReport({
   tradeAlertRecords: [],
 });
 assert.ok(zeroWatchlistReport.discordMessage.includes('Watchlist alerts: 0'));
+assert.ok(zeroWatchlistReport.discordMessage.includes('Trade alerts sent: 0'));
+assert.ok(zeroWatchlistReport.discordMessage.includes('Trade audit events: 0'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('Live advisory watchlist alerts: 0'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('What We Learned: No watchlist alerts fired this week. Continue collecting data.'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('Research Backfill:\n- Reports scanned: 0\n- Research candidates: 0\n- Advisory-only events: 0\n- Rule change: none'));
@@ -252,6 +262,10 @@ const oversizedNewsletter = buildWeeklyTradingAnalysisReport({
 });
 assert.ok(oversizedNewsletter.discordPayload.content.length <= 1900);
 assert.ok(oversizedNewsletter.discordPayload.content.length <= 2000);
+assert.ok(oversizedNewsletter.discordPayload.content.includes('Trade alerts sent: unknown'));
+assert.ok(oversizedNewsletter.discordPayload.content.includes('Trade audit events: 181'));
+assert.ok(!oversizedNewsletter.discordPayload.content.includes('Trade alerts: 181'));
+assert.ok(oversizedNewsletter.discordMessage.includes('Trade audit events are available; sent-alert count requires explicit sent flag.'));
 assert.ok(oversizedNewsletter.discordPayload.content.includes('Research candidates: 600'));
 assert.ok(oversizedNewsletter.discordPayload.content.includes('Advisory-only: 600'));
 assert.ok(oversizedNewsletter.discordPayload.content.includes('Reports: 1 | Candidates: 600 | Promotions: 0'));
@@ -314,6 +328,7 @@ writeFileSync(join(auditDir, 'scanner.json'), JSON.stringify({
   tradeDate: '2026-05-29',
   instrument: 'MES',
   state: 'Conditional',
+  discordSent: true,
   candidates: [{ setupType: 'TurtleSoup', direction: 'LONG', executionStatus: 'Conditional' }],
   attachments: { chartMarkup: 'chart.png', priceLevelMap: 'map.png' },
 }));
@@ -385,6 +400,11 @@ assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLI
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Backfill:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Live advisory watchlist alerts: 1'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Trade alerts sent: 1'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Trade audit events: 1'));
+assert.ok(newsletterSkip.report.discordPayload.content.includes('Trade alerts sent: 1'));
+assert.ok(newsletterSkip.report.discordPayload.content.includes('Trade audit events: 1'));
+assert.ok(!newsletterSkip.report.discordPayload.content.includes('Trade alerts: 1'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Reports scanned: 1'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research candidates: 2'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Advisory-only events: 2'));

@@ -45,6 +45,23 @@ function boolOrNull(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function sentStatusOrNull(record: Record<string, unknown>): boolean | null {
+  const explicit = [
+    record.discordAlertSent,
+    record.sent,
+    record.discordSent,
+    record.alertSent,
+    record.payloadSent,
+    record.posted,
+  ].map(boolOrNull).find((value) => value !== null);
+  if (explicit !== undefined) return explicit;
+  const webhookStatus = stringOrNull(record.webhookStatus);
+  if (!webhookStatus) return null;
+  if (/^(sent|posted|success|succeeded|ok|200|204)$/i.test(webhookStatus)) return true;
+  if (/^(failed|error|blocked|skipped)$/i.test(webhookStatus)) return false;
+  return null;
+}
+
 function firstString(...values: unknown[]): string | null {
   for (const value of values) {
     const found = stringOrNull(value);
@@ -123,7 +140,7 @@ export function normalizeScannerAuditRecord(value: unknown, filePath: string): S
       ...stringList(memory.auditWarnings),
       ...stringList(health.warnings),
     ],
-    discordAlertSent: boolOrNull(record.discordAlertSent),
+    discordAlertSent: sentStatusOrNull(record),
     attachmentsGenerated: Boolean(attachments.chartMarkup || attachments.priceLevelMap || attachments.chartPlan || attachments.priceLevelMap),
     outcomeButtonsIncluded: JSON.stringify(record.components || '').includes('custom_id'),
     ragOrSupabaseWriteAttempted: Boolean(record.rag || record.ragSave || record.supabase || record.persistence || record.storage),

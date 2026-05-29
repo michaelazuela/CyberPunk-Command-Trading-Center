@@ -232,6 +232,7 @@ function eventToTradeAlertRecord(event: ScannerAuditEvent) {
     state: event.scannerState,
     decision: event.direction,
     sentAt: event.alertTimestamp,
+    sent: event.discordAlertSent,
   };
 }
 

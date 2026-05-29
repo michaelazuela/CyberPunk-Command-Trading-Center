@@ -20,7 +20,7 @@ export interface WeeklyTradingAnalysisInput {
   researchBackfillReports?: Array<Partial<HistoricalResearchBackfillReport>>;
   watchlistRecords?: Array<Partial<WatchlistMemoryRecord | WatchlistPerformanceRecord>>;
   healthEvents?: Array<{ status?: ScannerHealthStatus | string | null; summary?: string | null; warnings?: string[]; blockingReasons?: string[] }>;
-  tradeAlertRecords?: Array<{ state?: string | null; decision?: string | null; sentAt?: string | null }>;
+  tradeAlertRecords?: Array<{ state?: string | null; decision?: string | null; sentAt?: string | null; sent?: boolean | null }>;
   proofRecords?: Array<{ outcome?: string | null; tradeTaken?: boolean | null }>;
   auditEvents?: WeeklyScannerAuditEventSummary[];
   researchNotes?: Array<{
@@ -60,6 +60,8 @@ export interface WeeklyTradingAnalysisReport {
   };
   counts: {
     tradeAlerts: number;
+    tradeAlertsSent: number | null;
+    tradeAuditEvents: number;
     watchlists: number;
     diagnosticReplays: number;
     confirmedMissedApprovedTrades: number;
@@ -169,7 +171,8 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     `Week: ${report.weekStart} to ${report.weekEnding}`,
     '',
     'Executive Summary:',
-    `- Trade alerts: ${report.counts.tradeAlerts}`,
+    `- Trade alerts sent: ${formatNullableCount(report.counts.tradeAlertsSent)}`,
+    `- Trade audit events: ${report.counts.tradeAuditEvents}`,
     `- Watchlist alerts: ${report.counts.watchlists}`,
     `- Diagnostic replays: ${report.counts.diagnosticReplays}`,
     `- Confirmed missed approved trades: ${report.counts.confirmedMissedApprovedTrades}`,
@@ -204,6 +207,17 @@ function lineNumber(lines: string[], prefix: string): number {
   if (!line) return 0;
   const value = Number(line.slice(prefix.length).trim());
   return Number.isFinite(value) ? value : 0;
+}
+
+function formatNullableCount(value: number | null): string {
+  return value === null ? 'unknown' : String(value);
+}
+
+function countSentAlerts(records: NonNullable<WeeklyTradingAnalysisInput['tradeAlertRecords']>): number | null {
+  if (!records.length) return 0;
+  const withSentFlag = records.filter((record) => typeof record.sent === 'boolean');
+  if (!withSentFlag.length) return null;
+  return withSentFlag.filter((record) => record.sent === true).length;
 }
 
 function compactResearchTitle(value: string): string {
@@ -250,7 +264,8 @@ function compactDiscordWebhookMessage(report: Omit<WeeklyTradingAnalysisReport, 
     `Week: ${report.weekStart} to ${report.weekEnding}`,
     '',
     'Summary:',
-    `- Trade alerts: ${report.counts.tradeAlerts}`,
+    `- Trade alerts sent: ${formatNullableCount(report.counts.tradeAlertsSent)}`,
+    `- Trade audit events: ${report.counts.tradeAuditEvents}`,
     `- Live watchlists: ${report.counts.watchlists}`,
     `- Research candidates: ${researchCandidates}`,
     `- Advisory-only: ${advisoryOnly}`,
@@ -342,11 +357,16 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
   const researchBackfills = [...(input.researchBackfillReports || [])];
   const watchlists = [...(input.watchlistRecords || [])];
   const auditEvents = [...(input.auditEvents || [])];
+  const tradeAlertRecords = [...(input.tradeAlertRecords || [])];
   const researchNotes = [...(input.researchNotes || [])].filter((note) => note.includeInWeeklyNewsletter !== false);
   const health = countHealth(input.healthEvents);
   const classifications = countClassifications(diagnostics);
   const weekStart = weekStartFromEnding(input.weekEnding);
   const researchBackfillSummary = summarizeResearchBackfills(researchBackfills);
+  const tradeAlertsSent = countSentAlerts(tradeAlertRecords);
+  const sentCountWarning = tradeAlertRecords.length > 0 && tradeAlertsSent === null
+    ? 'Trade audit events are available; sent-alert count requires explicit sent flag.'
+    : null;
 
   const partial: Omit<WeeklyTradingAnalysisReport, 'discordMessage' | 'discordPayload'> = {
     reportType: 'weekly_trading_intelligence' as const,
@@ -361,7 +381,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
       scannerHealthSummary: [
         `READY=${health.READY}, DEGRADED=${health.DEGRADED}, BLOCKED=${health.BLOCKED}.`,
       ],
-      tradeAlertsIssued: [`Trade alert records counted: ${(input.tradeAlertRecords || []).length}.`],
+      tradeAlertsIssued: [`Trade alerts sent: ${formatNullableCount(tradeAlertsSent)}. Trade audit events: ${tradeAlertRecords.length}.`],
       watchlistAlertsIssued: [`Watchlist records counted: ${watchlists.length}.`],
       diagnosticReplayClassifications: [
         `A=${classifications.A_VALID_APPROVED_NO_ALERT}, B=${classifications.B_APPROVED_ALREADY_TRIGGERED}, C=${classifications.C_UNAPPROVED_ICT_FVG_WATCHLIST}, D=${classifications.D_NO_VALID_SETUP}.`,
@@ -402,11 +422,14 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
           researchBackfills.length
             ? `Research backfill reports scanned: ${researchBackfills.length}. Weekly report did not run backfill automatically.`
             : null,
+          sentCountWarning,
         ].filter(Boolean).join(' '),
       ],
     },
     counts: {
-      tradeAlerts: (input.tradeAlertRecords || []).length,
+      tradeAlerts: tradeAlertRecords.length,
+      tradeAlertsSent,
+      tradeAuditEvents: tradeAlertRecords.length,
       watchlists: watchlists.length,
       diagnosticReplays: diagnostics.length,
       confirmedMissedApprovedTrades: classifications.A_VALID_APPROVED_NO_ALERT,
