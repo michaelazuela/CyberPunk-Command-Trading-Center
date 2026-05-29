@@ -243,6 +243,8 @@ function validationForConcept(
     const rejected = labelCount(humanMetrics, 'reject');
     const insufficientContext = labelCount(humanMetrics, 'insufficient_context');
     const humanRuleQueue = labelCount(humanMetrics, 'human_rule_review_queue');
+    const newModelCandidateReview = labelCount(humanMetrics, 'new_model_candidate_review');
+    const humanDesignInterest = humanRuleQueue + newModelCandidateReview;
     const rejectedRate = rate(rejected, humanReviewed) ?? 0;
     const insufficientContextRate = rate(insufficientContext, humanReviewed) ?? 0;
     const outcomeWeak =
@@ -274,11 +276,16 @@ function validationForConcept(
       confidence = 'medium';
       rationale = 'Agent-vs-human disagreement is too high for a stable research interpretation.';
       concerns.push(`Disagreement rate ${disagreementRate} exceeds ${criteria.maximumAgentHumanDisagreementRate}.`);
-    } else if (outcomePromising && humanRuleQueue > 0) {
+    } else if (outcomePromising && humanDesignInterest > 0) {
       label = 'human_model_design_discussion_only';
       confidence = 'medium';
       rationale = 'Outcome math is promising and enough human-reviewed samples exist for human-only model-design discussion.';
-      supportingEvidence.push(`${humanRuleQueue} human-reviewed sample(s) were queued for future rule discussion.`);
+      if (humanRuleQueue > 0) {
+        supportingEvidence.push(`${humanRuleQueue} human-reviewed sample(s) were queued for future rule discussion.`);
+      }
+      if (newModelCandidateReview > 0) {
+        supportingEvidence.push(`${newModelCandidateReview} human-reviewed sample(s) were marked as distinct research model candidates.`);
+      }
       concerns.push('Human model-design discussion is not execution approval.');
     } else {
       label = 'continue_research';
@@ -318,6 +325,9 @@ function renderConcept(validation: ResearchConceptValidation): string {
     validation.humanReviewMetrics
       ? `- Human review: reviewed=${validation.humanReviewMetrics.reviewedSamples}; pending=${validation.humanReviewMetrics.pendingSamples}; agreement=${validation.humanReviewMetrics.agreementRate ?? 'n/a'}; disagreement=${validation.humanReviewMetrics.disagreementRate ?? 'n/a'}`
       : '- Human review: not provided',
+    validation.humanReviewMetrics
+      ? `- Human label counts: ${Object.entries(validation.humanReviewMetrics.humanLabelCounts).map(([label, count]) => `${label}=${count}`).join(', ') || 'none'}`
+      : '- Human label counts: not provided',
     '- Concerns:',
     ...validation.concerns.map((concern) => `  - ${concern}`),
     '- Required before next phase:',

@@ -131,7 +131,9 @@ function sample(
     warningFailureReason: 'fixture',
     dataQualityNotes: [],
     sampleSourceReportPath: 'fixture',
-    agentInspectionLabel: humanLabel === 'human_rule_review_queue' ? 'keep_advisory' : humanLabel || 'keep_advisory',
+    agentInspectionLabel: humanLabel === 'human_rule_review_queue' || humanLabel === 'new_model_candidate_review'
+      ? 'keep_advisory'
+      : humanLabel || 'keep_advisory',
     agentConfidence: 'medium',
     agentReason: 'fixture',
     agentEvidence: ['fixture'],
@@ -231,12 +233,42 @@ assert.equal(strongValidation.humanReviewMetrics?.agreementRate, 0.9);
 assert.equal(strongValidation.humanReviewMetrics?.disagreementRate, 0.1);
 assert.equal(strongValidation.humanReviewMetrics?.humanLabelCounts.human_rule_review_queue, 1);
 
+const newModelCandidatePack = reviewPack([
+  ...Array.from({ length: 9 }, (_, index) => sample('false_run_liquidity_fade', index, 'keep_advisory', true)),
+  sample('false_run_liquidity_fade', 9, 'new_model_candidate_review', false),
+]);
+const newModelCandidateReport = runResearchModelValidation({
+  outcomeReport: outcomeReport([concept('false_run_liquidity_fade', 96, 96, 0.93, 0.23)]),
+  outcomeReportPath: 'outcome.json',
+  reviewPack: newModelCandidatePack,
+  reviewPackPath: 'reviewed.json',
+});
+const newModelCandidateValidation = labelFor(newModelCandidateReport, 'false_run_liquidity_fade');
+assert.equal(newModelCandidateValidation.researchValidationLabel, 'human_model_design_discussion_only');
+assert.equal(newModelCandidateValidation.humanReviewMetrics?.humanLabelCounts.new_model_candidate_review, 1);
+assert.ok(newModelCandidateValidation.supportingEvidence.some((line) => line.includes('distinct research model candidates')));
+assert.equal(newModelCandidateReport.approvalBoundary.validationPromotesModel, false);
+
 const weakReviewed = runResearchModelValidation({
   outcomeReport: outcomeReport([concept('time_window_liquidity_delivery', 60, 60, 0.10, 0.80, 0.2)]),
   outcomeReportPath: 'outcome.json',
   reviewPack: reviewPack(Array.from({ length: 10 }, (_, index) => sample('time_window_liquidity_delivery', index, 'reject', true))),
 });
 assert.equal(labelFor(weakReviewed, 'time_window_liquidity_delivery').researchValidationLabel, 'reject_research');
+
+const weakNewModelCandidate = runResearchModelValidation({
+  outcomeReport: outcomeReport([concept('time_window_liquidity_delivery', 60, 60, 0.10, 0.80, 0.2)]),
+  outcomeReportPath: 'outcome.json',
+  reviewPack: reviewPack(Array.from({ length: 10 }, (_, index) => sample('time_window_liquidity_delivery', index, 'new_model_candidate_review', false))),
+});
+assert.equal(labelFor(weakNewModelCandidate, 'time_window_liquidity_delivery').researchValidationLabel, 'reject_research');
+
+const adverseNewModelCandidate = runResearchModelValidation({
+  outcomeReport: outcomeReport([concept('final_hour_liquidity_draw', 96, 96, 0.90, 0.80)]),
+  outcomeReportPath: 'outcome.json',
+  reviewPack: reviewPack(Array.from({ length: 10 }, (_, index) => sample('final_hour_liquidity_draw', index, 'new_model_candidate_review', false))),
+});
+assert.notEqual(labelFor(adverseNewModelCandidate, 'final_hour_liquidity_draw').researchValidationLabel, 'human_model_design_discussion_only');
 
 const disagreementPack = reviewPack([
   ...Array.from({ length: 7 }, (_, index) => sample('time_window_liquidity_delivery', index, 'keep_advisory', true)),

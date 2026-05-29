@@ -111,6 +111,7 @@ assert.equal(exported.rows[0].humanReason, '');
 assert.equal(exported.rows[0].humanNotes, '');
 assert.equal(exported.rows.some((row) => row.sampleId === 'time_window_liquidity_delivery-003'), false);
 assert.ok(exported.rows[0].agentConcerns.includes('Agent inspection cannot approve execution'));
+assert.ok(exported.supportedLabels.includes('new_model_candidate_review'));
 
 const csv = renderHumanReviewTemplateCsv(exported.rows);
 const parsedRows = parseHumanReviewTemplateCsv(csv);
@@ -143,6 +144,17 @@ assert.equal(imported.updatedPack.samples[1].agentHumanAgreement, false);
 assert.ok(imported.updatedPack.samples[1].disagreementReason?.includes('Agent labeled this sample'));
 assert.ok(imported.updatedPack.samples.every((sample) => sample.advisoryOnly === true));
 assert.ok(imported.updatedPack.samples.every((sample) => sample.agentApprovalBoundary.agentApprovesTrade === false));
+
+const newModelRows = parsedRows.map((row) => ({ ...row }));
+newModelRows[0].humanInspectionLabel = 'new_model_candidate_review';
+newModelRows[0].humanConfidence = 'medium';
+newModelRows[0].humanReason = 'Distinct research behavior only.';
+const newModelImport = importHumanReviewTemplate(pack, newModelRows, 'Michael', '2026-05-29T23:01:00.000Z');
+assert.equal(newModelImport.rowsApplied, 1);
+assert.equal(newModelImport.rowsRejected, 0);
+assert.equal(newModelImport.updatedPack.samples[0].humanInspectionLabel, 'new_model_candidate_review');
+assert.equal(newModelImport.updatedPack.samples[0].finalReviewLabel, 'new_model_candidate_review');
+assert.ok(newModelImport.updatedPack.samples.every((sample) => sample.advisoryOnly === true));
 
 const blankRows = parsedRows.map((row) => ({ ...row }));
 const blankImport = importHumanReviewTemplate(pack, blankRows, 'Michael');

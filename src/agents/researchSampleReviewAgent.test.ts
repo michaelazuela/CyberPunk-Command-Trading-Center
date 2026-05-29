@@ -373,6 +373,8 @@ assert.equal(timeWindowPack.approvalBoundary.sampleReviewPromotesModel, false);
 assert.equal(timeWindowPack.approvalBoundary.sampleReviewWritesRagMemory, false);
 assert.ok(timeWindowPack.markdown.includes('## 5. Agent Inspection Results'));
 assert.ok(timeWindowPack.markdown.includes('## 6. Human Review Fields To Complete'));
+assert.ok(timeWindowPack.markdown.includes('new_model_candidate_review'));
+assert.ok(timeWindowPack.markdown.includes('not execution approval'));
 assert.ok(timeWindowPack.markdown.includes('## 10. Do-Not-Change-Yet Items'));
 assert.ok(timeWindowPack.markdown.includes('Agent inspection does not approve trades'));
 assert.ok(!/Trade now|approved executable|model promotion recommended/i.test(timeWindowPack.markdown));

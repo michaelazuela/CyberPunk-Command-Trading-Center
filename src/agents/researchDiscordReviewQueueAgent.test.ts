@@ -184,6 +184,7 @@ assert.deepEqual(buttons.map((button) => button.label), [
   'Model 1 Review',
   'Turtle Soup Review',
   'Human Rule Review Queue',
+  'New Model Candidate',
   'Insufficient Context',
 ]);
 assert.ok(buttons.every((button) => button.custom_id.startsWith(`research_review|${queue.packHash}|`)));
@@ -192,6 +193,7 @@ assert.ok(buttons.every((button) => RESEARCH_REVIEW_LABELS.some((label) => butto
 assert.ok(buttons.every((button) => button.custom_id.length <= 100));
 assert.ok(!buttons.some((button) => /approve trade|execute|take trade|valid setup|go live|greenlight|buy|sell/i.test(button.label)));
 assert.ok(!/"entry"|"stop"|"T1"|"T2"|"canExecute"/.test(JSON.stringify(payload)));
+assert.ok(buttons.some((button) => button.label === 'New Model Candidate' && button.custom_id.endsWith('|new_model_candidate_review')));
 
 const customId = buildResearchReviewCustomId(queue.packHash, 'sample with spaces!', 'keep_advisory');
 assert.equal(customId, `research_review|${queue.packHash}|samplewithspaces|keep_advisory`);

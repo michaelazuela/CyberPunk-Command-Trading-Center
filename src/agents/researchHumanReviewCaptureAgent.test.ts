@@ -152,6 +152,22 @@ assert.equal(disagreementResult.sample.agentHumanAgreement, false);
 assert.ok(disagreementResult.sample.disagreementReason?.includes('Agent labeled this sample'));
 assert.equal(disagreementResult.sample.finalReviewLabel, 'reject');
 
+const newModelCandidateResult = applyHumanReviewToPack({
+  reviewPack: pack,
+  sampleId: 'time_window_liquidity_delivery-001',
+  label: 'new_model_candidate_review',
+  confidence: 'medium',
+  reviewer: 'Michael',
+  notes: 'Distinct research behavior worth future model-design discussion, not execution approval.',
+  reviewedAt: '2026-05-29T22:06:00.000Z',
+});
+assert.equal(newModelCandidateResult.sample.humanInspectionLabel, 'new_model_candidate_review');
+assert.equal(newModelCandidateResult.sample.finalReviewLabel, 'new_model_candidate_review');
+assert.equal(newModelCandidateResult.sample.agentHumanAgreement, false);
+assert.ok(newModelCandidateResult.sample.finalReviewNotes?.includes('no execution approval'));
+assert.ok(newModelCandidateResult.updatedPack.samples.every((sample) => sample.advisoryOnly === true));
+assertNoExecutableReviewFields(newModelCandidateResult.updatedPack);
+
 const pending = listPendingHumanReviewSamples(agreementResult.updatedPack);
 assert.equal(pending.length, 1);
 assert.equal(pending[0].sampleId, 'time_window_liquidity_delivery-002');

@@ -69,6 +69,7 @@ export const RESEARCH_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
   'possible_model1_mapping_review',
   'possible_turtle_soup_mapping_review',
   'human_rule_review_queue',
+  'new_model_candidate_review',
   'insufficient_context',
 ];
 
@@ -78,6 +79,7 @@ const LABEL_TEXT: Record<ResearchReviewButtonLabel, string> = {
   possible_model1_mapping_review: 'Model 1 Review',
   possible_turtle_soup_mapping_review: 'Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
+  new_model_candidate_review: 'New Model Candidate',
   insufficient_context: 'Insufficient Context',
 };
 
@@ -87,6 +89,7 @@ const BUTTON_STYLE: Record<ResearchReviewButtonLabel, 1 | 2 | 3 | 4> = {
   possible_model1_mapping_review: 1,
   possible_turtle_soup_mapping_review: 1,
   human_rule_review_queue: 3,
+  new_model_candidate_review: 3,
   insufficient_context: 2,
 };
 

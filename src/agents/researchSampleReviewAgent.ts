@@ -14,7 +14,10 @@ export type ResearchSampleInspectionLabel =
   | 'insufficient_context'
   | 'reject';
 
-export type ResearchHumanInspectionLabel = ResearchSampleInspectionLabel | 'human_rule_review_queue';
+export type ResearchHumanInspectionLabel =
+  | ResearchSampleInspectionLabel
+  | 'human_rule_review_queue'
+  | 'new_model_candidate_review';
 
 export type ResearchSampleConfidence = 'low' | 'medium' | 'high';
 
@@ -461,6 +464,7 @@ export function renderResearchSampleReviewMarkdown(pack: Omit<ResearchSampleRevi
     '- humanNotes',
     '- humanReviewedAt',
     '- humanReviewer',
+    '- Supported label note: new_model_candidate_review means a distinct research pattern may deserve human-only future model design discussion; not execution approval.',
     '',
     '## 7. Possible Existing-Model Mapping Review',
     ...(pack.possibleExistingModelMappingReview.length ? pack.possibleExistingModelMappingReview.map((line) => `- ${line}`) : ['- none']),

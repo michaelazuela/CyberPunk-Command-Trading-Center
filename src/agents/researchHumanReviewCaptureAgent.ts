@@ -60,6 +60,7 @@ const HUMAN_LABELS: HumanReviewLabel[] = [
   'possible_model1_mapping_review',
   'possible_turtle_soup_mapping_review',
   'human_rule_review_queue',
+  'new_model_candidate_review',
   'insufficient_context',
 ];
 
