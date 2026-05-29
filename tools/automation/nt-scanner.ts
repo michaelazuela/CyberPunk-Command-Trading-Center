@@ -43,7 +43,12 @@ import {
   buildWatchlistMemoryRecord,
   detectMorningContinuationWatchlist,
 } from '../../src/agents/morningContinuationWatchlistAgent';
-import { evaluateScannerHealth, type ScannerHealthReport, type ScannerStateFileHealth } from '../../src/agents/scannerHealthAgent';
+import {
+  canSendAlertsFromHealth,
+  evaluateScannerHealth,
+  type ScannerHealthReport,
+  type ScannerStateFileHealth,
+} from '../../src/agents/scannerHealthAgent';
 import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
@@ -1076,7 +1081,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
   });
   logScannerHealth(healthReport);
 
-  if (healthReport.status === 'BLOCKED') {
+  if (!canSendAlertsFromHealth(healthReport)) {
     console.log(`[scanner] NoData: ${healthReport.blockingReasons.join(' | ')}`);
     await writeState(state);
     return;

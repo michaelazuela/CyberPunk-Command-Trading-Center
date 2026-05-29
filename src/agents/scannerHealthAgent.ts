@@ -8,11 +8,13 @@ import type { NinjaBridgeBar, NinjaBridgeHealth } from '../lib/ninjaTraderBridge
 
 export type ScannerHealthStatus = 'READY' | 'DEGRADED' | 'BLOCKED';
 export type ScannerHealthCheckStatus = 'pass' | 'warn' | 'fail';
+export type ScannerHealthCheckSeverity = 'info' | 'degraded' | 'blocking';
 
 export interface ScannerHealthCheck {
   key: string;
   label: string;
   status: ScannerHealthCheckStatus;
+  severity: ScannerHealthCheckSeverity;
   message: string;
   observed?: string | number | boolean | null;
   expected?: string | number | boolean | null;
@@ -103,27 +105,16 @@ const APPROVAL_BOUNDARY: ScannerHealthApprovalBoundary = {
   healthOverridesRisk: false,
 };
 
-const BLOCKING_CHECK_KEYS = new Set([
-  'bridge_reachable',
-  'latest_5m_bar_current',
-  'app_instrument',
-  'bridge_instrument',
-  'timestamp_mode',
-  'bar_timezone_mode',
-  'market_map_cache',
-  'scanner_state_file',
-  'startup_errors',
-]);
-
 function check(
   key: string,
   label: string,
   status: ScannerHealthCheckStatus,
+  severity: ScannerHealthCheckSeverity,
   message: string,
   observed?: string | number | boolean | null,
   expected?: string | number | boolean | null,
 ): ScannerHealthCheck {
-  return { key, label, status, message, observed, expected };
+  return { key, label, status, severity, message, observed, expected };
 }
 
 function normalizeInstrument(value: string | null | undefined): string {
@@ -144,6 +135,7 @@ function evaluateBridgeInstrument(appInstrument: string, bridgeInstrument: strin
       'bridge_instrument',
       'Correct bridge instrument',
       'fail',
+      'blocking',
       'Bridge instrument is missing.',
       bridgeInstrument || null,
       `${appInstrument || 'MES/MNQ'} contract prefix`,
@@ -156,6 +148,7 @@ function evaluateBridgeInstrument(appInstrument: string, bridgeInstrument: strin
       'bridge_instrument',
       'Correct bridge instrument',
       'pass',
+      'info',
       'Bridge instrument aligns with the app instrument.',
       bridgeInstrument,
       `${appInstrument} contract prefix`,
@@ -167,6 +160,7 @@ function evaluateBridgeInstrument(appInstrument: string, bridgeInstrument: strin
       'bridge_instrument',
       'Correct bridge instrument',
       'fail',
+      'blocking',
       'Bridge instrument is clearly mismatched with the app instrument.',
       bridgeInstrument,
       `${appInstrument} contract prefix`,
@@ -177,6 +171,7 @@ function evaluateBridgeInstrument(appInstrument: string, bridgeInstrument: strin
     'bridge_instrument',
     'Correct bridge instrument',
     'warn',
+    'degraded',
     'Bridge instrument prefix could not be confidently matched to the app instrument.',
     bridgeInstrument,
     `${appInstrument || 'MES/MNQ'} contract prefix`,
@@ -189,7 +184,7 @@ function evaluateLatestBar(input: ScannerHealthInput): ScannerHealthCheck {
   const expected = `${input.config.maxStaleBarMinutes ?? staleness?.maxAllowedMinutes ?? 'configured'} minute max`;
 
   if (!bar) {
-    return check('latest_5m_bar_current', 'Latest 5M bar current', 'fail', 'Latest completed 5M bar is missing.', null, expected);
+    return check('latest_5m_bar_current', 'Latest 5M bar current', 'fail', 'blocking', 'Latest completed 5M bar is missing.', null, expected);
   }
 
   if (staleness?.stale) {
@@ -197,6 +192,7 @@ function evaluateLatestBar(input: ScannerHealthInput): ScannerHealthCheck {
       'latest_5m_bar_current',
       'Latest 5M bar current',
       'fail',
+      'blocking',
       staleness.reason || 'Latest completed 5M bar is stale beyond the configured max.',
       staleness.latestTime || bar.time,
       expected,
@@ -212,13 +208,14 @@ function evaluateLatestBar(input: ScannerHealthInput): ScannerHealthCheck {
       'latest_5m_bar_current',
       'Latest 5M bar current',
       'warn',
+      'degraded',
       'Latest completed 5M bar is usable but approaching the stale threshold.',
       `${staleness.ageMinutes.toFixed(1)} minutes old`,
       expected,
     );
   }
 
-  return check('latest_5m_bar_current', 'Latest 5M bar current', 'pass', 'Latest completed 5M bar is current.', bar.time, expected);
+  return check('latest_5m_bar_current', 'Latest 5M bar current', 'pass', 'info', 'Latest completed 5M bar is current.', bar.time, expected);
 }
 
 function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefined): ScannerHealthCheck {
@@ -227,6 +224,7 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
       'market_map_cache',
       'Market map cache loaded',
       'pass',
+      'info',
       status.message || 'Market map/cache has usable context.',
       status.usableBars ?? null,
       'usable market context',
@@ -238,6 +236,7 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
       'market_map_cache',
       'Market map cache loaded',
       status.partial ? 'warn' : 'pass',
+      status.partial ? 'degraded' : 'info',
       status.message || 'Market map cache is incomplete, but fallback bridge bars are available.',
       status.usableBars ?? null,
       'cache or fallback bridge context',
@@ -249,6 +248,7 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
       'market_map_cache',
       'Market map cache loaded',
       'warn',
+      'degraded',
       status.message || 'Market map/cache is partially loaded.',
       status.usableBars ?? null,
       'complete or fallback market context',
@@ -259,6 +259,7 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
     'market_map_cache',
     'Market map cache loaded',
     'fail',
+    'blocking',
     status?.message || 'Market map/cache is missing required market context and no fallback bridge data was reported.',
     status?.usableBars ?? null,
     'usable market context',
@@ -268,13 +269,14 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
 function evaluateStateFile(status: ScannerStateFileHealth | null | undefined): ScannerHealthCheck {
   const stateStatus = status?.status || 'ok';
   if (stateStatus === 'ok') {
-    return check('scanner_state_file', 'Scanner state file healthy', 'pass', status?.message || 'Scanner state file is readable.');
+    return check('scanner_state_file', 'Scanner state file healthy', 'pass', 'info', status?.message || 'Scanner state file is readable.');
   }
   if (stateStatus === 'missing_initialized' || stateStatus === 'initialized') {
     return check(
       'scanner_state_file',
       'Scanner state file healthy',
       'warn',
+      'degraded',
       status?.message || 'Scanner state file was missing and initialized safely.',
       stateStatus,
       'readable or safely initialized state',
@@ -284,6 +286,7 @@ function evaluateStateFile(status: ScannerStateFileHealth | null | undefined): S
     'scanner_state_file',
     'Scanner state file healthy',
     'fail',
+    'blocking',
     status?.message || 'Scanner state file is unreadable or corrupt and could not be trusted.',
     stateStatus,
     'readable or safely initialized state',
@@ -313,6 +316,7 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
       'bridge_reachable',
       'NinjaTrader bridge reachable',
       bridgeReachable ? 'pass' : 'fail',
+      bridgeReachable ? 'info' : 'blocking',
       bridgeReachable ? 'NinjaTrader bridge health is reachable.' : (input.bridgeHealth?.error || 'NinjaTrader bridge is unreachable.'),
       bridgeReachable,
       true,
@@ -326,6 +330,7 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
       'app_instrument',
       'Correct app instrument',
       isSupportedAppInstrument(appInstrument) ? 'pass' : 'fail',
+      isSupportedAppInstrument(appInstrument) ? 'info' : 'blocking',
       isSupportedAppInstrument(appInstrument) ? 'App instrument is supported.' : 'App instrument is missing or unsupported.',
       appInstrument || null,
       'MES or MNQ',
@@ -335,61 +340,61 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
   checks.push(evaluateBridgeInstrument(appInstrument, bridgeInstrument));
 
   if (timestampMode === 'open' || timestampMode === 'close') {
-    checks.push(check('timestamp_mode', 'Timestamp mode', 'pass', 'Timestamp mode is known.', timestampMode, 'open or close'));
+    checks.push(check('timestamp_mode', 'Timestamp mode', 'pass', 'info', 'Timestamp mode is known.', timestampMode, 'open or close'));
   } else if (!timestampMode) {
-    checks.push(check('timestamp_mode', 'Timestamp mode', 'warn', 'Timestamp mode is missing or defaulted.', null, 'open or close'));
+    checks.push(check('timestamp_mode', 'Timestamp mode', 'warn', 'degraded', 'Timestamp mode is missing or defaulted.', null, 'open or close'));
   } else {
-    checks.push(check('timestamp_mode', 'Timestamp mode', 'fail', 'Timestamp mode is unsupported.', timestampMode, 'open or close'));
+    checks.push(check('timestamp_mode', 'Timestamp mode', 'fail', 'blocking', 'Timestamp mode is unsupported.', timestampMode, 'open or close'));
   }
 
   if (barTimeZone === 'local') {
-    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'warn', 'Bar timezone mode is local; verify machine timezone alignment.', barTimeZone, 'eastern, central, pacific, or local'));
+    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'warn', 'degraded', 'Bar timezone mode is local; verify machine timezone alignment.', barTimeZone, 'eastern, central, pacific, or local'));
   } else if (['eastern', 'central', 'pacific'].includes(barTimeZone)) {
-    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'pass', 'Bar timezone mode is supported.', barTimeZone, 'eastern, central, pacific, or local'));
+    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'pass', 'info', 'Bar timezone mode is supported.', barTimeZone, 'eastern, central, pacific, or local'));
   } else if (!barTimeZone) {
-    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'warn', 'Bar timezone mode is missing or defaulted.', null, 'eastern, central, pacific, or local'));
+    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'warn', 'degraded', 'Bar timezone mode is missing or defaulted.', null, 'eastern, central, pacific, or local'));
   } else {
-    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'fail', 'Bar timezone mode is unsupported.', barTimeZone, 'eastern, central, pacific, or local'));
+    checks.push(check('bar_timezone_mode', 'Bar timezone mode', 'fail', 'blocking', 'Bar timezone mode is unsupported.', barTimeZone, 'eastern, central, pacific, or local'));
   }
 
   if (!discordEnabled) {
-    checks.push(check('discord_webhook', 'Discord webhook configured', 'pass', 'Discord is disabled intentionally.', false, 'disabled or configured webhook'));
+    checks.push(check('discord_webhook', 'Discord webhook configured', 'pass', 'info', 'Discord is disabled intentionally.', false, 'disabled or configured webhook'));
   } else if (dryRun) {
-    checks.push(check('discord_webhook', 'Discord webhook configured', 'warn', 'Scanner is in dry-run mode; Discord sends are intentionally suppressed.', input.discordWebhookConfigured ?? false, 'dry-run or configured webhook'));
+    checks.push(check('discord_webhook', 'Discord webhook configured', 'warn', 'degraded', 'Scanner is in dry-run mode; Discord sends are intentionally suppressed.', input.discordWebhookConfigured ?? false, 'dry-run or configured webhook'));
   } else if (input.discordWebhookConfigured) {
-    checks.push(check('discord_webhook', 'Discord webhook configured', 'pass', 'Discord webhook is configured.', true, true));
+    checks.push(check('discord_webhook', 'Discord webhook configured', 'pass', 'info', 'Discord webhook is configured.', true, true));
   } else {
-    checks.push(check('discord_webhook', 'Discord webhook configured', 'fail', 'Discord is enabled but webhook configuration is missing.', false, true));
+    checks.push(check('discord_webhook', 'Discord webhook configured', 'fail', 'degraded', 'Discord is enabled but webhook configuration is missing.', false, true));
   }
 
   checks.push(evaluateMarketMap(input.marketMapStatus));
   checks.push(evaluateStateFile(input.scannerStateFileStatus));
 
   if (!macroEnabled) {
-    checks.push(check('macro_calendar', 'Macro calendar status', 'pass', 'Macro calendar is disabled intentionally.', false, 'disabled or loaded'));
+    checks.push(check('macro_calendar', 'Macro calendar status', 'pass', 'info', 'Macro calendar is disabled intentionally.', false, 'disabled or loaded'));
   } else if (input.macroCalendarStatus?.loaded) {
-    checks.push(check('macro_calendar', 'Macro calendar status', 'pass', input.macroCalendarStatus.message || 'Macro calendar is enabled and loaded.', true, true));
+    checks.push(check('macro_calendar', 'Macro calendar status', 'pass', 'info', input.macroCalendarStatus.message || 'Macro calendar is enabled and loaded.', true, true));
   } else if (input.macroCalendarStatus?.unavailable) {
-    checks.push(check('macro_calendar', 'Macro calendar status', 'warn', input.macroCalendarStatus.message || 'Macro calendar is enabled but unavailable.', 'unavailable', 'loaded'));
+    checks.push(check('macro_calendar', 'Macro calendar status', 'warn', 'degraded', input.macroCalendarStatus.message || 'Macro calendar is enabled but unavailable.', 'unavailable', 'loaded'));
   } else {
-    checks.push(check('macro_calendar', 'Macro calendar status', 'warn', input.macroCalendarStatus?.message || 'Macro calendar status was not confirmed for this cycle.', null, 'loaded or intentionally disabled'));
+    checks.push(check('macro_calendar', 'Macro calendar status', 'warn', 'degraded', input.macroCalendarStatus?.message || 'Macro calendar status was not confirmed for this cycle.', null, 'loaded or intentionally disabled'));
   }
 
   if (input.errors?.length) {
-    checks.push(check('startup_errors', 'Scanner startup/poll errors', 'fail', input.errors.join(' | '), input.errors.length, 0));
+    checks.push(check('startup_errors', 'Scanner startup/poll errors', 'fail', 'blocking', input.errors.join(' | '), input.errors.length, 0));
   }
 
   if (input.warnings?.length) {
-    checks.push(check('startup_warnings', 'Scanner startup/poll warnings', 'warn', input.warnings.join(' | '), input.warnings.length, 0));
+    checks.push(check('startup_warnings', 'Scanner startup/poll warnings', 'warn', 'degraded', input.warnings.join(' | '), input.warnings.length, 0));
   }
 
   const blockingReasons = checks
-    .filter((item) => item.status === 'fail' && BLOCKING_CHECK_KEYS.has(item.key))
+    .filter((item) => item.severity === 'blocking' && item.status === 'fail')
     .map((item) => item.message);
-  const warnings = checks.filter((item) => item.status === 'warn' || (item.status === 'fail' && !BLOCKING_CHECK_KEYS.has(item.key))).map((item) => item.message);
+  const warnings = checks.filter((item) => item.severity === 'degraded').map((item) => item.message);
   const status: ScannerHealthStatus = blockingReasons.length ? 'BLOCKED' : warnings.length ? 'DEGRADED' : 'READY';
   const ready = status === 'READY';
-  const canTrustAlerts = ready;
+  const canTrustAlerts = status !== 'BLOCKED';
   const passCount = checks.filter((item) => item.status === 'pass').length;
   const warnCount = checks.filter((item) => item.status === 'warn').length;
   const failCount = checks.filter((item) => item.status === 'fail').length;
@@ -405,4 +410,12 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
     recommendedAction: recommendedActionFor(status),
     approvalBoundary: { ...APPROVAL_BOUNDARY },
   };
+}
+
+export function healthBlocksAlerts(report: ScannerHealthReport): boolean {
+  return report.checks.some((item) => item.status === 'fail' && item.severity === 'blocking');
+}
+
+export function canSendAlertsFromHealth(report: ScannerHealthReport): boolean {
+  return !healthBlocksAlerts(report);
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
-import { evaluateScannerHealth, type ScannerHealthInput } from './scannerHealthAgent';
+import { canSendAlertsFromHealth, evaluateScannerHealth, healthBlocksAlerts, type ScannerHealthInput } from './scannerHealthAgent';
 
 function bar(overrides: Partial<NinjaBridgeBar> = {}): NinjaBridgeBar {
   return {
@@ -62,6 +62,8 @@ const ready = evaluateScannerHealth(baseInput());
 assert.equal(ready.status, 'READY');
 assert.equal(ready.ready, true);
 assert.equal(ready.canTrustAlerts, true);
+assert.equal(canSendAlertsFromHealth(ready), true);
+assert.equal(healthBlocksAlerts(ready), false);
 assert.equal(ready.blockingReasons.length, 0);
 
 const bridgeBlocked = evaluateScannerHealth(baseInput({
@@ -71,7 +73,10 @@ const bridgeBlocked = evaluateScannerHealth(baseInput({
 assert.equal(bridgeBlocked.status, 'BLOCKED');
 assert.equal(bridgeBlocked.ready, false);
 assert.equal(bridgeBlocked.canTrustAlerts, false);
+assert.equal(canSendAlertsFromHealth(bridgeBlocked), false);
+assert.equal(healthBlocksAlerts(bridgeBlocked), true);
 assert.ok(bridgeBlocked.blockingReasons.some((reason) => reason.includes('connection refused') || reason.includes('unreachable')));
+assert.equal(bridgeBlocked.checks.find((item) => item.key === 'bridge_reachable')?.severity, 'blocking');
 
 const missingBar = evaluateScannerHealth(baseInput({
   latestCompleted5mBar: null,
@@ -84,6 +89,7 @@ const missingBar = evaluateScannerHealth(baseInput({
   },
 }));
 assert.equal(missingBar.status, 'BLOCKED');
+assert.equal(canSendAlertsFromHealth(missingBar), false);
 assert.ok(missingBar.blockingReasons.some((reason) => reason.includes('5M bar')));
 
 const staleBar = evaluateScannerHealth(baseInput({
@@ -96,6 +102,7 @@ const staleBar = evaluateScannerHealth(baseInput({
   },
 }));
 assert.equal(staleBar.status, 'BLOCKED');
+assert.equal(canSendAlertsFromHealth(staleBar), false);
 assert.ok(staleBar.blockingReasons.some((reason) => reason.includes('stale')));
 
 const severeMismatch = evaluateScannerHealth(baseInput({
@@ -106,6 +113,7 @@ const severeMismatch = evaluateScannerHealth(baseInput({
   },
 }));
 assert.equal(severeMismatch.status, 'BLOCKED');
+assert.equal(canSendAlertsFromHealth(severeMismatch), false);
 assert.ok(severeMismatch.blockingReasons.some((reason) => reason.includes('mismatched')));
 
 const dryRunDiscord = evaluateScannerHealth(baseInput({
@@ -118,13 +126,52 @@ const dryRunDiscord = evaluateScannerHealth(baseInput({
 }));
 assert.equal(dryRunDiscord.status, 'DEGRADED');
 assert.equal(dryRunDiscord.blockingReasons.length, 0);
+assert.equal(dryRunDiscord.canTrustAlerts, true);
+assert.equal(canSendAlertsFromHealth(dryRunDiscord), true);
 assert.ok(dryRunDiscord.warnings.some((warning) => warning.includes('dry-run')));
+assert.equal(dryRunDiscord.checks.find((item) => item.key === 'discord_webhook')?.severity, 'degraded');
+
+const disabledDiscord = evaluateScannerHealth(baseInput({
+  config: {
+    ...baseInput().config,
+    discordEnabled: false,
+  },
+  discordWebhookConfigured: false,
+}));
+assert.equal(disabledDiscord.status, 'READY');
+assert.equal(canSendAlertsFromHealth(disabledDiscord), true);
 
 const macroUnavailable = evaluateScannerHealth(baseInput({
   macroCalendarStatus: { enabled: true, unavailable: true, message: 'Macro calendar fetch failed.' },
 }));
 assert.equal(macroUnavailable.status, 'DEGRADED');
+assert.equal(canSendAlertsFromHealth(macroUnavailable), true);
 assert.ok(macroUnavailable.warnings.some((warning) => warning.includes('Macro calendar fetch failed')));
+
+const partialMarketMap = evaluateScannerHealth(baseInput({
+  marketMapStatus: {
+    loaded: false,
+    partial: true,
+    usableBars: 120,
+    fallbackBridgeDataAvailable: true,
+    message: 'Partial market map with live bridge fallback.',
+  },
+}));
+assert.equal(partialMarketMap.status, 'DEGRADED');
+assert.equal(canSendAlertsFromHealth(partialMarketMap), true);
+assert.equal(partialMarketMap.checks.find((item) => item.key === 'market_map_cache')?.severity, 'degraded');
+
+const missingMarketMap = evaluateScannerHealth(baseInput({
+  marketMapStatus: {
+    loaded: false,
+    partial: false,
+    usableBars: 0,
+    fallbackBridgeDataAvailable: false,
+    message: 'No market context available.',
+  },
+}));
+assert.equal(missingMarketMap.status, 'BLOCKED');
+assert.equal(canSendAlertsFromHealth(missingMarketMap), false);
 
 const localTimezone = checkStatus(baseInput({
   config: {
@@ -134,12 +181,16 @@ const localTimezone = checkStatus(baseInput({
 }), 'bar_timezone_mode');
 assert.equal(localTimezone.report.status, 'DEGRADED');
 assert.equal(localTimezone.found.status, 'warn');
+assert.equal(localTimezone.found.severity, 'degraded');
+assert.equal(canSendAlertsFromHealth(localTimezone.report), true);
 
 const initializedState = checkStatus(baseInput({
   scannerStateFileStatus: { status: 'missing_initialized', message: 'State file was missing and initialized safely.' },
 }), 'scanner_state_file');
 assert.equal(initializedState.report.status, 'DEGRADED');
 assert.equal(initializedState.found.status, 'warn');
+assert.equal(initializedState.found.severity, 'degraded');
+assert.equal(canSendAlertsFromHealth(initializedState.report), true);
 
 const immutableInput = baseInput();
 const immutableBefore = JSON.stringify(immutableInput);
