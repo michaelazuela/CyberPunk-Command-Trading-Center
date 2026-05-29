@@ -6,6 +6,8 @@ import {
   buildWatchlistEmbeddingText,
   buildWatchlistMemoryRecord,
   detectMorningContinuationWatchlist,
+  reviewWatchlistPerformance,
+  type WatchlistPerformanceRecord,
 } from './morningContinuationWatchlistAgent';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
@@ -203,6 +205,75 @@ assert.ok(embeddingText.includes('This record does not approve trades.'));
 assert.ok(embeddingText.includes('Future use is context/caution only.'));
 assert.ok(embeddingText.includes('cannot approve trades, change rules, create entries, create targets, or override scanner gates'));
 assert.ok(!/RAG approved|approved the trade|History confirms this trade|changes the rule|now executable/i.test(embeddingText));
+
+function performanceRecord(
+  index: number,
+  overrides: Partial<WatchlistPerformanceRecord> = {}
+): WatchlistPerformanceRecord {
+  return {
+    ...(memoryRecord as WatchlistPerformanceRecord),
+    tradeDate: `2026-06-${String(index + 1).padStart(2, '0')}`,
+    instrument: index % 2 === 0 ? 'MES' : 'MNQ',
+    direction: index % 3 === 0 ? 'SHORT' : 'LONG',
+    reasonNoEntry: index % 2 === 0 ? 'No fresh pullback formed.' : 'No safe fresh structure stop was available.',
+    auditWarnings: index % 2 === 0 ? ['No chase guard stayed active.'] : ['Watchlist stayed context only.'],
+    laterValidSetupFormed: null,
+    laterSetupType: null,
+    laterOutcome: null,
+    laterReviewTimestamp: null,
+    reviewNotes: null,
+    ...overrides,
+  };
+}
+
+const smallPerformanceInput = [
+  performanceRecord(0, { laterValidSetupFormed: true, laterSetupType: 'SweepMssFvgRetrace', laterOutcome: 'later_valid_setup_formed' }),
+  performanceRecord(1, { laterOutcome: 'ran_without_fresh_entry', reviewNotes: 'Price ran without fresh entry.' }),
+  performanceRecord(2, { laterOutcome: 'reversed_or_failed', reviewNotes: 'Move reversed.' }),
+  performanceRecord(3),
+];
+const smallPerformanceBefore = JSON.stringify(smallPerformanceInput);
+const smallReview = reviewWatchlistPerformance(smallPerformanceInput);
+assert.equal(smallReview.recordCount, 4);
+assert.equal(smallReview.reviewWindow.sampleSizeMet, false);
+assert.equal(smallReview.laterValidSetupFormedCount, 1);
+assert.equal(smallReview.ranWithoutFreshEntryCount, 1);
+assert.equal(smallReview.reversedOrFailedCount, 1);
+assert.equal(smallReview.inconclusiveCount, 1);
+assert.ok(smallReview.recommendation.includes('Insufficient sample size'));
+assert.ok(smallReview.recommendation.includes('Do not infer performance quality'));
+assert.equal(smallReview.approvalBoundary.reviewApprovesTrade, false);
+assert.equal(smallReview.approvalBoundary.reviewChangesRules, false);
+assert.equal(smallReview.approvalBoundary.reviewPromotesModel, false);
+assert.equal(smallReview.approvalBoundary.reviewCreatesEntry, false);
+assert.equal(smallReview.approvalBoundary.reviewCreatesTargets, false);
+assert.equal(smallReview.approvalBoundary.reviewOverridesScanner, false);
+assert.equal('entry' in smallReview, false);
+assert.equal('stop' in smallReview, false);
+assert.equal('t1' in smallReview, false);
+assert.equal('t2' in smallReview, false);
+assert.equal('executionStatus' in smallReview, false);
+assert.equal(JSON.stringify(smallPerformanceInput), smallPerformanceBefore);
+
+const largePerformanceInput = Array.from({ length: 24 }, (_, index) => {
+  if (index < 8) return performanceRecord(index, { laterValidSetupFormed: true, laterSetupType: 'TurtleSoup', laterOutcome: 'valid_setup' });
+  if (index < 14) return performanceRecord(index, { laterOutcome: 'ran_without_pullback', reviewNotes: 'Ran without pullback.' });
+  if (index < 18) return performanceRecord(index, { laterOutcome: 'failed', reviewNotes: 'Failed and reversed.' });
+  return performanceRecord(index);
+});
+const largeReview = reviewWatchlistPerformance(largePerformanceInput);
+assert.equal(largeReview.recordCount, 24);
+assert.equal(largeReview.reviewWindow.sampleSizeMet, true);
+assert.equal(largeReview.laterValidSetupFormedCount, 8);
+assert.equal(largeReview.ranWithoutFreshEntryCount, 6);
+assert.equal(largeReview.reversedOrFailedCount, 4);
+assert.equal(largeReview.inconclusiveCount, 6);
+assert.ok(largeReview.commonReasonNoEntry.length > 0);
+assert.ok(largeReview.commonWarnings.length > 0);
+assert.ok(largeReview.noChaseProtectionNotes.some((note) => note.includes('did not produce executable trade authority')));
+assert.ok(largeReview.recommendation.includes('Descriptive watchlist review only'));
+assert.ok(largeReview.recommendation.includes('human review'));
+assert.ok(!/watchlist model is approved|promote this to executable|change rules automatically|use watchlist as entry evidence|rag confirms future trades|history approves this setup/i.test(largeReview.recommendation));
 
 const lunchResult = detectMorningContinuationWatchlist({
   tradeDate: '2026-05-28',

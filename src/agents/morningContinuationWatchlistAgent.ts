@@ -101,6 +101,60 @@ export interface WatchlistMemoryInput {
   auditWarnings?: string[];
 }
 
+export type WatchlistOutcomeClassification =
+  | 'later_valid_setup_formed'
+  | 'ran_without_fresh_entry'
+  | 'reversed_or_failed'
+  | 'inconclusive';
+
+export type WatchlistPerformanceRecord = Omit<
+  WatchlistMemoryRecord,
+  'laterValidSetupFormed' | 'laterSetupType' | 'laterOutcome' | 'laterReviewTimestamp' | 'reviewNotes'
+> & {
+  laterValidSetupFormed: boolean | null;
+  laterSetupType: string | null;
+  laterOutcome: WatchlistOutcomeClassification | 'valid_setup' | 'ran_without_pullback' | 'reversed' | 'failed' | null;
+  laterReviewTimestamp: string | null;
+  reviewNotes: string | null;
+};
+
+export interface WatchlistPerformanceReview {
+  recordCount: number;
+  reviewWindow: {
+    firstTradeDate: string | null;
+    lastTradeDate: string | null;
+    minimumRecommendedSample: number;
+    sampleSizeMet: boolean;
+  };
+  watchlistType: 'morning_continuation_watchlist';
+  instrumentBreakdown: Record<string, number>;
+  directionBreakdown: Record<WatchlistDirection, number>;
+  laterValidSetupFormedCount: number;
+  ranWithoutFreshEntryCount: number;
+  reversedOrFailedCount: number;
+  inconclusiveCount: number;
+  commonReasonNoEntry: string[];
+  commonWarnings: string[];
+  noChaseProtectionNotes: string[];
+  sampleRecords: Array<{
+    tradeDate: string;
+    instrument: string;
+    direction: WatchlistDirection;
+    classification: WatchlistOutcomeClassification;
+    reasonNoEntry: string;
+    laterSetupType: string | null;
+  }>;
+  recommendation: string;
+  approvalBoundary: {
+    reviewApprovesTrade: false;
+    reviewChangesRules: false;
+    reviewPromotesModel: false;
+    reviewCreatesEntry: false;
+    reviewCreatesTargets: false;
+    reviewOverridesScanner: false;
+  };
+}
+
 function baseResult(overrides: Partial<MorningContinuationWatchlistResult> = {}): MorningContinuationWatchlistResult {
   return {
     watchlistDetected: false,
@@ -365,4 +419,93 @@ export function buildWatchlistEmbeddingText(record: WatchlistMemoryRecord): stri
     'Action at time: Do not chase. Wait for existing current rules to confirm.',
     'Authority note: This record cannot approve trades, change rules, create entries, create targets, or override scanner gates.',
   ].join('\n');
+}
+
+function countBy<T extends string>(values: T[]): Record<T, number> {
+  return values.reduce((acc, value) => {
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {} as Record<T, number>);
+}
+
+function topValues(values: string[], limit = 5): string[] {
+  return Object.entries(countBy(values.filter(Boolean)))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([value, count]) => `${value} (${count})`);
+}
+
+function classifyWatchlistOutcome(record: WatchlistPerformanceRecord): WatchlistOutcomeClassification {
+  if (record.laterValidSetupFormed === true || record.laterOutcome === 'later_valid_setup_formed' || record.laterOutcome === 'valid_setup') {
+    return 'later_valid_setup_formed';
+  }
+  const combinedText = `${record.laterOutcome || ''} ${record.reviewNotes || ''}`.toLowerCase();
+  if (combinedText.includes('ran_without') || combinedText.includes('ran without') || combinedText.includes('no fresh entry')) {
+    return 'ran_without_fresh_entry';
+  }
+  if (combinedText.includes('reversed') || combinedText.includes('failed') || record.laterOutcome === 'reversed_or_failed') {
+    return 'reversed_or_failed';
+  }
+  return 'inconclusive';
+}
+
+export function reviewWatchlistPerformance(records: WatchlistPerformanceRecord[]): WatchlistPerformanceReview {
+  const copiedRecords = records.map((record) => cloneOrNull(record) as WatchlistPerformanceRecord);
+  const sorted = copiedRecords
+    .filter((record) => record.memoryType === 'watchlist_context' && record.watchlistType === 'morning_continuation_watchlist')
+    .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate));
+  const classifications = sorted.map(classifyWatchlistOutcome);
+  const sampleSizeMet = sorted.length >= 20;
+  const laterValidSetupFormedCount = classifications.filter((item) => item === 'later_valid_setup_formed').length;
+  const ranWithoutFreshEntryCount = classifications.filter((item) => item === 'ran_without_fresh_entry').length;
+  const reversedOrFailedCount = classifications.filter((item) => item === 'reversed_or_failed').length;
+  const inconclusiveCount = classifications.filter((item) => item === 'inconclusive').length;
+
+  return {
+    recordCount: sorted.length,
+    reviewWindow: {
+      firstTradeDate: sorted[0]?.tradeDate || null,
+      lastTradeDate: sorted[sorted.length - 1]?.tradeDate || null,
+      minimumRecommendedSample: 20,
+      sampleSizeMet,
+    },
+    watchlistType: 'morning_continuation_watchlist',
+    instrumentBreakdown: countBy(sorted.map((record) => record.instrument)),
+    directionBreakdown: {
+      LONG: 0,
+      SHORT: 0,
+      'NO TRADE': 0,
+      ...countBy(sorted.map((record) => record.direction)),
+    },
+    laterValidSetupFormedCount,
+    ranWithoutFreshEntryCount,
+    reversedOrFailedCount,
+    inconclusiveCount,
+    commonReasonNoEntry: topValues(sorted.map((record) => record.reasonNoEntry)),
+    commonWarnings: topValues(sorted.flatMap((record) => record.auditWarnings || [])),
+    noChaseProtectionNotes: [
+      'No-chase rule preserved discipline on events where price ran without a fresh structure stop.',
+      'Watchlist highlighted movement but did not produce executable trade authority.',
+      'Continue tracking until more examples are available.',
+    ],
+    sampleRecords: sorted.slice(0, 5).map((record, index) => ({
+      tradeDate: record.tradeDate,
+      instrument: record.instrument,
+      direction: record.direction,
+      classification: classifications[index],
+      reasonNoEntry: record.reasonNoEntry,
+      laterSetupType: record.laterSetupType,
+    })),
+    recommendation: sampleSizeMet
+      ? 'Descriptive watchlist review only. Patterns may be queued for human review, but this report does not recommend automatic rule changes or executable model promotion.'
+      : 'Insufficient sample size. Continue tracking until at least 20-30 watchlist events are available. Do not infer performance quality or recommend rule changes.',
+    approvalBoundary: {
+      reviewApprovesTrade: false,
+      reviewChangesRules: false,
+      reviewPromotesModel: false,
+      reviewCreatesEntry: false,
+      reviewCreatesTargets: false,
+      reviewOverridesScanner: false,
+    },
+  };
 }
