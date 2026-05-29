@@ -53,6 +53,7 @@ export interface WeeklyTradingAnalysisReport {
     watchlistPerformance: string[];
     bugsSuppressionIssues: string[];
     researchDesk: string[];
+    researchBackfill: string[];
     humanReviewRecommendations: string[];
     doNotChangeYetItems: string[];
     dataQualityNotes: string[];
@@ -170,7 +171,7 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     `- Diagnostic replays: ${report.counts.diagnosticReplays}`,
     `- Confirmed missed approved trades: ${report.counts.confirmedMissedApprovedTrades}`,
     `- Already-triggered/no-fresh-entry: ${report.counts.alreadyTriggeredNoFreshEntry}`,
-    `- ICT-style watchlist-only events: ${report.counts.ictStyleWatchlistOnlyEvents}`,
+    `- Advisory research-only events: ${report.counts.ictStyleWatchlistOnlyEvents}`,
     '',
     `Key Story: ${keyFinding}`,
     '',
@@ -180,6 +181,9 @@ function compactDiscordMessage(report: Omit<WeeklyTradingAnalysisReport, 'discor
     '',
     'Research Desk:',
     ...(report.sections.researchDesk.length ? report.sections.researchDesk : ['- No new research notes this week.']),
+    '',
+    'Research Backfill:',
+    ...report.sections.researchBackfill,
     '',
     'Human Review Queue:',
     `- ${recommendation}`,
@@ -203,6 +207,56 @@ function formatResearchDeskItem(note: NonNullable<WeeklyTradingAnalysisInput['re
   ].filter(Boolean).join('\n');
 }
 
+function numberValue(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function summarizeResearchBackfills(reports: Array<Partial<HistoricalResearchBackfillReport>>): {
+  reportsScanned: number;
+  researchCandidates: number;
+  advisoryOnlyEvents: number;
+  approvedModelOverlaps: number;
+} {
+  let researchCandidates = 0;
+  let advisoryOnlyEvents = 0;
+  let approvedModelOverlaps = 0;
+
+  for (const report of reports) {
+    if (Array.isArray(report.conceptReports)) {
+      for (const concept of report.conceptReports) {
+        researchCandidates += numberValue(concept.totalCandidates);
+        advisoryOnlyEvents += numberValue(concept.advisoryOnlyCount);
+        approvedModelOverlaps += numberValue(concept.approvedModelOverlaps?.model1) + numberValue(concept.approvedModelOverlaps?.turtleSoup);
+      }
+    } else {
+      researchCandidates += numberValue((report as { totalCandidates?: unknown }).totalCandidates);
+      advisoryOnlyEvents += numberValue((report as { advisoryOnlyCount?: unknown }).advisoryOnlyCount);
+      approvedModelOverlaps += numberValue(report.approvedModelOverlap?.total);
+    }
+  }
+
+  return {
+    reportsScanned: reports.length,
+    researchCandidates,
+    advisoryOnlyEvents,
+    approvedModelOverlaps,
+  };
+}
+
+function formatResearchBackfillSummary(summary: ReturnType<typeof summarizeResearchBackfills>): string[] {
+  const base = [
+    `- Reports scanned: ${summary.reportsScanned}`,
+    `- Research candidates: ${summary.researchCandidates}`,
+    `- Advisory-only events: ${summary.advisoryOnlyEvents}`,
+  ];
+  if (summary.researchCandidates > 0 || summary.approvedModelOverlaps > 0) {
+    base.push(`- Approved model overlaps: ${summary.approvedModelOverlaps}`);
+    base.push('- Executable model promotions: 0');
+  }
+  base.push('- Rule change: none');
+  return base;
+}
+
 export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInput): WeeklyTradingAnalysisReport {
   const diagnostics = [...(input.diagnosticReports || [])];
   const researchBackfills = [...(input.researchBackfillReports || [])];
@@ -212,6 +266,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
   const health = countHealth(input.healthEvents);
   const classifications = countClassifications(diagnostics);
   const weekStart = weekStartFromEnding(input.weekEnding);
+  const researchBackfillSummary = summarizeResearchBackfills(researchBackfills);
 
   const partial: Omit<WeeklyTradingAnalysisReport, 'discordMessage' | 'discordPayload'> = {
     reportType: 'weekly_trading_intelligence' as const,
@@ -248,9 +303,10 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
       researchDesk: researchNotes.length
         ? researchNotes.map(formatResearchDeskItem)
         : ['No research briefs were added to this weekly report.'],
+      researchBackfill: formatResearchBackfillSummary(researchBackfillSummary),
       humanReviewRecommendations: [
         classifications.C_UNAPPROVED_ICT_FVG_WATCHLIST > 0
-          ? 'Continue collecting ICT-style advisory examples before human rule review.'
+          ? 'Continue collecting advisory research-only examples before human rule review.'
           : 'No advisory detector review is required from current records.',
       ],
       doNotChangeYetItems: [

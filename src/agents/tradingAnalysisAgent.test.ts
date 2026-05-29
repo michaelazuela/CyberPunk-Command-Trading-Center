@@ -51,6 +51,27 @@ const report = buildWeeklyTradingAnalysisReport({
     { status: 'BLOCKED', summary: 'Bridge stale' },
   ],
   tradeAlertRecords: [{ state: 'Executable', sentAt: '2026-05-29T10:00:00Z' }],
+  researchBackfillReports: [{
+    reportType: 'historical_research_backfill',
+    instrument: 'MES',
+    conceptReports: [{
+      conceptId: 'time_window_liquidity_delivery',
+      title: 'Time-Window Liquidity Delivery',
+      totalCandidates: 3,
+      datesReviewed: { from: '2026-05-28', to: '2026-05-28' },
+      dataGaps: [],
+      classificationCounts: { model1Overlap: 0, turtleSoupOverlap: 0, advisoryOnly: 3 },
+      approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+      advisoryOnlyCount: 3,
+      commonReasons: [],
+      sampleEvents: [],
+      sampleThreshold: { minimum: 20, current: 3, met: false },
+      metrics: {},
+      recommendation: 'continue_collecting',
+      ruleChangeRecommendation: 'none',
+    }],
+    approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
+  }],
   researchNotes: [{
     researchTitle: 'Final-Hour Liquidity Draw Research',
     status: 'research_only',
@@ -108,8 +129,20 @@ assert.equal('files' in report.discordPayload, false);
 assert.ok(!/Trade now|Entry confirmed|ApprovedTrade/i.test(report.discordMessage));
 assert.ok(report.discordMessage.includes('No rule changes'));
 assert.ok(report.discordMessage.includes('Executive Summary:'));
+assert.ok(!report.discordMessage.includes('ICT-style'));
+assert.ok(report.discordMessage.includes('Advisory research-only events: 1'));
 assert.ok(report.discordMessage.includes('Key Story:'));
 assert.ok(report.discordMessage.includes('Research Desk:'));
+assert.ok(report.discordMessage.includes('Research Backfill:'));
+assert.ok(report.discordMessage.includes([
+  'Research Backfill:',
+  '- Reports scanned: 1',
+  '- Research candidates: 3',
+  '- Advisory-only events: 3',
+  '- Approved model overlaps: 0',
+  '- Executable model promotions: 0',
+  '- Rule change: none',
+].join('\n')));
 assert.ok(report.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 assert.ok(report.discordMessage.includes('Final-Hour Liquidity Draw Watchlist'));
 assert.ok(!report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
@@ -161,6 +194,7 @@ const zeroWatchlistReport = buildWeeklyTradingAnalysisReport({
 });
 assert.ok(zeroWatchlistReport.discordMessage.includes('Watchlist alerts: 0'));
 assert.ok(zeroWatchlistReport.discordMessage.includes('What We Learned: No watchlist alerts fired this week. Continue collecting data.'));
+assert.ok(zeroWatchlistReport.discordMessage.includes('Research Backfill:\n- Reports scanned: 0\n- Research candidates: 0\n- Advisory-only events: 0\n- Rule change: none'));
 assert.ok(!zeroWatchlistReport.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 
 const parsed = parseWeeklyReportArgs([
@@ -200,6 +234,14 @@ writeFileSync(join(researchReportDir, 'research-backfill.json'), JSON.stringify(
   from: '2026-01-01',
   to: '2026-05-29',
   executiveSummary: ['Research-only backfill summary.'],
+  conceptReports: [{
+    conceptId: 'final_hour_liquidity_draw',
+    title: 'Final-Hour Liquidity Draw',
+    totalCandidates: 2,
+    advisoryOnlyCount: 2,
+    approvedModelOverlaps: { model1: 0, turtleSoup: 0 },
+  }],
+  approvedModelOverlap: { model1: 0, turtleSoup: 0, total: 0 },
 }));
 writeFileSync(join(auditDir, 'watchlist.json'), JSON.stringify({
   watchlistType: 'morning_continuation_watchlist',
@@ -280,6 +322,12 @@ assert.equal(newsletterSkip.sent, false);
 assert.equal(newsletterSkip.skippedReason, 'Dry run.');
 assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLIGENCE] MES'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Research Backfill:'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Reports scanned: 1'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Research candidates: 2'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Advisory-only events: 2'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Executable model promotions: 0'));
+assert.ok(!newsletterSkip.report.discordMessage.includes('ICT-style'));
 assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Final-Hour Liquidity Draw Watchlist'));
 assert.ok(!newsletterSkip.report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
