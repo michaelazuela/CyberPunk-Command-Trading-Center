@@ -69,6 +69,16 @@ const report = buildWeeklyTradingAnalysisReport({
     ruleChange: 'none',
     approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
     includeInWeeklyNewsletter: true,
+  }, {
+    researchTitle: 'Time-Window Liquidity Delivery Research',
+    status: 'research_only',
+    candidateName: 'Time-Window Liquidity Delivery Watchlist',
+    primaryIdea: 'Study FVG/inefficiency delivery toward liquidity during defined market windows.',
+    taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+    recommendedNextStep: 'Collect 20-30 bridge-backed examples per window before any rule review.',
+    ruleChange: 'none',
+    approvalBoundarySummary: 'Research only: no rules, entries, stops, targets, alerts, or model promotion.',
+    includeInWeeklyNewsletter: true,
   }],
 });
 
@@ -93,6 +103,7 @@ assert.ok(report.discordMessage.includes('Research Desk:'));
 assert.ok(report.discordMessage.includes('What We Learned: Watchlists improved awareness without creating trade authority.'));
 assert.ok(report.discordMessage.includes('Final-Hour ICT-Style Liquidity Draw Watchlist'));
 assert.ok(report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
+assert.ok(report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
 assert.ok(report.discordMessage.includes([
   '- False-Run Liquidity Fade Near Highs Watchlist',
   '  Status: research-only / not executable',
@@ -106,6 +117,14 @@ assert.ok(report.discordMessage.includes([
   '  Status: research-only / not executable',
   '  Idea: Late-day draw toward clean buy-side liquidity during 3:15-3:45 ET.',
   '  Next step: Collect 20-30 bridge-backed examples before rule review.',
+  '  Rule change: none.',
+].join('\n')));
+assert.ok(report.discordMessage.includes([
+  '- Time-Window Liquidity Delivery Watchlist',
+  '  Status: research-only / not executable',
+  '  Idea: Study FVG/inefficiency delivery toward liquidity during defined market windows.',
+  '  Taxonomy: If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+  '  Next step: Collect 20-30 bridge-backed examples per window before any rule review.',
   '  Rule change: none.',
 ].join('\n')));
 assert.ok(report.discordMessage.includes('research-only / not executable'));
@@ -172,6 +191,7 @@ writeFileSync(join(auditDir, 'health.json'), JSON.stringify({
 }));
 writeFileSync(join(researchDir, 'ict-note.md'), readFileSync('docs/research/ict-final-hour-liquidity-draw-research.md', 'utf8'));
 writeFileSync(join(researchDir, 'false-run-note.md'), readFileSync('docs/research/false-run-liquidity-fade-near-highs-research.md', 'utf8'));
+writeFileSync(join(researchDir, 'time-window-note.md'), readFileSync('docs/research/time-window-liquidity-delivery-watchlist-research.md', 'utf8'));
 
 const missingHistory = await loadDiscordAuditHistory(join(temp, 'missing-audit-folder'));
 assert.equal(missingHistory.events.length, 0);
@@ -205,8 +225,9 @@ assert.equal(collected.diagnosticReports?.length, 1);
 assert.equal(collected.watchlistRecords?.length, 1);
 assert.equal(collected.tradeAlertRecords?.length, 1);
 assert.equal(collected.healthEvents?.length, 1);
-assert.equal(collected.researchNotes?.length, 2);
+assert.equal(collected.researchNotes?.length, 3);
 assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'False-Run Liquidity Fade Near Highs Watchlist' && note.taxonomyNote?.includes('Turtle Soup')));
+assert.ok(collected.researchNotes?.some((note) => note.candidateName === 'Time-Window Liquidity Delivery Watchlist' && note.taxonomyNote?.includes('Model 1 or Turtle Soup')));
 assert.ok((collected.auditEvents?.length || 0) >= 3);
 
 const newsletterSkip = await publishWeeklyTradingNewsletter({
@@ -225,6 +246,7 @@ assert.ok(newsletterSkip.report.discordMessage.includes('[WEEKLY TRADING INTELLI
 assert.ok(newsletterSkip.report.discordMessage.includes('Research Desk:'));
 assert.ok(newsletterSkip.report.discordMessage.includes('research-only / not executable'));
 assert.ok(newsletterSkip.report.discordMessage.includes('False-Run Liquidity Fade Near Highs Watchlist'));
+assert.ok(newsletterSkip.report.discordMessage.includes('Time-Window Liquidity Delivery Watchlist'));
 assert.ok(newsletterSkip.report.discordMessage.includes('Rule change: none.'));
 assert.ok(!/^Entry:|^Stop:|^T1:|^T2:/im.test(newsletterSkip.report.discordMessage));
 

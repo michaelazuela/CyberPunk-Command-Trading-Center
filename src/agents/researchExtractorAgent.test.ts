@@ -147,4 +147,77 @@ assert.ok(falseRunMarkdown.includes('## 9. Guardrails'));
 assert.ok(falseRunMarkdown.includes('## 11. Weekly Newsletter Summary'));
 assert.ok(falseRunMarkdown.includes('"ruleChange": "none"'));
 
+const timeWindowInput = {
+  sourceTitle: 'Uploaded 2023 mentorship transcript about time-based liquidity delivery',
+  sourceType: 'transcript',
+  transcriptText: `
+The transcript describes time-based market windows, a 10 handles / 40 ticks minimum framework,
+draw on liquidity, previous day high/low, previous session high/low, FVG / inefficiency,
+market structure shift plus FVG, bodies respecting the FVG, and one-market specialization.
+`,
+  market: 'index futures / ES',
+  sessionContext: 'time-based trading framework',
+  requestedConcepts: [
+    'Time-based market windows',
+    'Minimum framework: 10 handles / 40 ticks for index futures',
+    'Minimum framework is expected delivery range, not exact entry-to-exit demand',
+    'Draw on liquidity as primary skill',
+    'Previous day high/low as liquidity draw',
+    'Previous session high/low as liquidity draw',
+    'Previous weekly high/low as liquidity draw',
+    'New week opening gap as draw or expansion reference',
+    'FVG / inefficiency as draw or entry framework',
+    'London 3:00-4:00 NY window',
+    'AM 10:00-11:00 NY window',
+    'PM 2:00-3:00 NY window',
+    'FVG forms inside the 60-minute window',
+    'Market structure shift plus FVG as setup component',
+    'Bodies respecting the FVG',
+    'Entry may occur inside the window, but exit may occur later',
+    'Need for 20-30+ examples before considering rule approval',
+    'One-market specialization',
+  ],
+  currentModelComparisonTargets: [
+    'Current Model 1',
+    'Current Turtle Soup',
+    'Current Morning Continuation Watchlist',
+    'Current Bridge Diagnostic Replay categories',
+    'Current scanner health / selection safety layers',
+    'Current Discord advisory behavior',
+  ],
+};
+const timeWindowBefore = JSON.stringify(timeWindowInput);
+const timeWindowBrief = extractResearchBrief(timeWindowInput);
+assert.equal(JSON.stringify(timeWindowInput), timeWindowBefore, 'time-window extraction must not mutate input');
+assert.equal(timeWindowBrief.candidateWatchlistModel.name, 'Time-Window Liquidity Delivery Watchlist');
+assert.equal(timeWindowBrief.candidateWatchlistModel.executable, false);
+assert.equal(timeWindowBrief.weeklyNewsletterSummary.status, 'research_only');
+assert.equal(timeWindowBrief.weeklyNewsletterSummary.ruleChange, 'none');
+assert.ok(timeWindowBrief.weeklyNewsletterSummary.taxonomyNote?.includes('Model 1 or Turtle Soup'));
+assert.ok(!/ICT|Silver Bullet/i.test(timeWindowBrief.weeklyNewsletterSummary.candidateName));
+assert.ok(!/ICT|Silver Bullet/i.test(timeWindowBrief.weeklyNewsletterSummary.researchTitle));
+assert.ok(timeWindowBrief.comparisonToExistingRules.some((item) => item.target.includes('Model 1') && item.note.includes('only current Model 1 gates can approve')));
+assert.ok(timeWindowBrief.comparisonToExistingRules.some((item) => item.target.includes('Turtle Soup') && item.note.includes('existing Turtle Soup')));
+assert.ok(timeWindowBrief.guardrails.some((item) => item.includes('Do not duplicate Model 1 or Turtle Soup')));
+assert.ok(timeWindowBrief.bridgeDataResearchPlan.some((item) => item.includes('completed bars only')));
+assert.ok(!JSON.stringify(timeWindowBrief).includes('"canExecute":true'));
+assert.ok(!JSON.stringify(timeWindowBrief).includes('"entry"'));
+assert.ok(!JSON.stringify(timeWindowBrief).includes('"stop"'));
+assert.ok(!JSON.stringify(timeWindowBrief).includes('"t1"'));
+assert.ok(!JSON.stringify(timeWindowBrief).includes('"t2"'));
+
+const timeWindowMarkdown = readFileSync('docs/research/time-window-liquidity-delivery-watchlist-research.md', 'utf8');
+assert.ok(timeWindowMarkdown.includes('# Time-Window Liquidity Delivery Research'));
+assert.ok(timeWindowMarkdown.includes('## 3. Time-Window Liquidity Delivery / 6K Taxonomy'));
+assert.ok(timeWindowMarkdown.includes('Time-Window Liquidity Delivery Watchlist'));
+assert.ok(timeWindowMarkdown.includes('This is not an approved executable model.'));
+assert.ok(timeWindowMarkdown.includes('If the setup satisfies current Model 1 gates, classify it through existing Model 1.'));
+assert.ok(timeWindowMarkdown.includes('If the setup includes a true sweep/raid plus reclaim, classify it through existing Turtle Soup.'));
+assert.ok(timeWindowMarkdown.includes('If the setup only has time window + FVG/inefficiency + draw-on-liquidity, keep it advisory-only research.'));
+assert.ok(timeWindowMarkdown.includes('## 9. Guardrails'));
+assert.ok(timeWindowMarkdown.includes('## 11. Weekly Newsletter Summary'));
+assert.ok(timeWindowMarkdown.includes('"ruleChange": "none"'));
+assert.ok(!/"candidateName":\s*".*(ICT|Silver Bullet)/i.test(timeWindowMarkdown));
+assert.ok(!/"researchTitle":\s*".*(ICT|Silver Bullet)/i.test(timeWindowMarkdown));
+
 console.log('Research extractor agent verified.');

@@ -247,6 +247,114 @@ const CONCEPT_DETAILS: Record<string, Omit<ResearchConcept, 'conceptName' | 'tra
     currentCoverage: 'research_only',
     watchlistOnly: true,
   },
+  'Time-based market windows': {
+    plainEnglishMeaning: 'Defined market windows are studied as timing context for liquidity delivery.',
+    whyItMayMatterFor6K: 'May help research when current approved setups tend to appear, but cannot approve a trade.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Minimum framework: 10 handles / 40 ticks for index futures': {
+    plainEnglishMeaning: 'A minimum expected delivery range used for research, not a guaranteed target.',
+    whyItMayMatterFor6K: 'Could support after-action measurement without changing 6K target formulas.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Minimum framework is expected delivery range, not exact entry-to-exit demand': {
+    plainEnglishMeaning: 'The range expectation is contextual and should not be treated as an entry/exit prescription.',
+    whyItMayMatterFor6K: 'Protects app-owned targets and risk rules from source-model drift.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Draw on liquidity as primary skill': {
+    plainEnglishMeaning: 'The research focus is identifying where price is likely trying to deliver.',
+    whyItMayMatterFor6K: '6K already maps liquidity as context; execution still requires approved gates.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Previous day high/low as liquidity draw': {
+    plainEnglishMeaning: 'Prior-day extremes may act as draw or obstacle context.',
+    whyItMayMatterFor6K: 'Covered by market map context, not standalone approval.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'Previous session high/low as liquidity draw': {
+    plainEnglishMeaning: 'Prior session highs/lows may act as draw or obstacle context.',
+    whyItMayMatterFor6K: 'Covered by session map context, not standalone approval.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'Previous weekly high/low as liquidity draw': {
+    plainEnglishMeaning: 'Prior weekly extremes may act as higher-timeframe liquidity context.',
+    whyItMayMatterFor6K: 'Useful map context only; it cannot replace 5M execution authority.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'New week opening gap as draw or expansion reference': {
+    plainEnglishMeaning: 'A new week opening gap may become a draw, reference, or expansion context.',
+    whyItMayMatterFor6K: 'Potential research context; not an approved 6K trigger.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'FVG / inefficiency as draw or entry framework': {
+    plainEnglishMeaning: 'An imbalance may provide context for delivery or repricing.',
+    whyItMayMatterFor6K: 'FVG facts already support Model 1 context, but do not approve trades by themselves.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'London 3:00-4:00 NY window': {
+    plainEnglishMeaning: 'A London timing window to study for liquidity delivery behavior.',
+    whyItMayMatterFor6K: 'Research only; 6K execution windows remain unchanged.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'AM 10:00-11:00 NY window': {
+    plainEnglishMeaning: 'A morning timing window to study for liquidity delivery behavior.',
+    whyItMayMatterFor6K: 'Overlaps the morning workflow, but cannot change current session gates.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'PM 2:00-3:00 NY window': {
+    plainEnglishMeaning: 'An afternoon timing window to study for liquidity delivery behavior.',
+    whyItMayMatterFor6K: 'Research only; it does not create a new execution window.',
+    currentCoverage: 'not_covered',
+    watchlistOnly: true,
+  },
+  'FVG forms inside the 60-minute window': {
+    plainEnglishMeaning: 'The imbalance appears during the studied window.',
+    whyItMayMatterFor6K: 'May become a research tag, but current Model 1/Turtle Soup gates still decide.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Market structure shift plus FVG as setup component': {
+    plainEnglishMeaning: 'A structure shift and imbalance may support a setup component.',
+    whyItMayMatterFor6K: 'Partially overlaps Model 1, but Model 1 remains the approval path.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Bodies respecting the FVG': {
+    plainEnglishMeaning: 'Candle bodies respecting the imbalance may support the delivery thesis.',
+    whyItMayMatterFor6K: 'Potential research filter only unless current approved gates pass.',
+    currentCoverage: 'partially_covered',
+    watchlistOnly: true,
+  },
+  'Entry may occur inside the window, but exit may occur later': {
+    plainEnglishMeaning: 'The timing context may start a move that completes outside the window.',
+    whyItMayMatterFor6K: 'Research note only; it must not alter execution or target logic.',
+    currentCoverage: 'research_only',
+    watchlistOnly: true,
+  },
+  'Need for 20-30+ examples before considering rule approval': {
+    plainEnglishMeaning: 'The concept needs a meaningful sample before any rule review.',
+    whyItMayMatterFor6K: 'Aligns with current research-desk guardrails.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
+  'One-market specialization': {
+    plainEnglishMeaning: 'Study one market deeply before expanding to others.',
+    whyItMayMatterFor6K: 'Supports MES-first research discipline.',
+    currentCoverage: 'already_covered',
+    watchlistOnly: true,
+  },
 };
 
 function normalizeConceptName(value: string): string {
@@ -287,8 +395,23 @@ function isFalseRunResearch(input: ResearchExtractorInput): boolean {
     haystack.includes('liquidity fade near highs');
 }
 
+function isTimeWindowResearch(input: ResearchExtractorInput): boolean {
+  const haystack = [
+    input.sourceTitle,
+    input.sessionContext,
+    input.transcriptText,
+    ...input.requestedConcepts,
+  ].join(' ').toLowerCase();
+  return haystack.includes('time-window liquidity delivery') ||
+    haystack.includes('time window liquidity delivery') ||
+    haystack.includes('time-based market windows') ||
+    haystack.includes('10 handles / 40 ticks') ||
+    haystack.includes('fvg / inefficiency as draw');
+}
+
 export function extractResearchBrief(input: ResearchExtractorInput): ResearchBrief {
   const falseRunResearch = isFalseRunResearch(input);
+  const timeWindowResearch = isTimeWindowResearch(input);
   const requestedConcepts = [...input.requestedConcepts];
   const extractedConcepts = requestedConcepts.map((rawConcept) => {
     const conceptName = normalizeConceptName(rawConcept);
@@ -309,6 +432,20 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
 
   const comparisonToExistingRules = input.currentModelComparisonTargets.map((target) => {
     const lower = target.toLowerCase();
+    if (timeWindowResearch && lower.includes('model 1')) {
+      return {
+        target,
+        comparison: 'partially_covered' as const,
+        note: 'Time-window FVG/inefficiency plus liquidity draw may overlap with Model 1 components, but only current Model 1 gates can approve.',
+      };
+    }
+    if (timeWindowResearch && lower.includes('turtle')) {
+      return {
+        target,
+        comparison: 'partially_covered' as const,
+        note: 'A true sweep/raid plus reclaim should be evaluated through existing Turtle Soup; time-window context cannot approve by itself.',
+      };
+    }
     if (falseRunResearch && lower.includes('turtle')) {
       return {
         target,
@@ -353,7 +490,19 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     };
   });
 
-  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = falseRunResearch
+  const weeklyNewsletterSummary: ResearchBriefWeeklySummary = timeWindowResearch
+    ? {
+        researchTitle: 'Time-Window Liquidity Delivery Research',
+        status: 'research_only',
+        candidateName: 'Time-Window Liquidity Delivery Watchlist',
+        primaryIdea: 'Study FVG/inefficiency delivery toward liquidity during defined market windows.',
+        taxonomyNote: 'If Model 1 or Turtle Soup gates pass, classify through existing approved models; otherwise keep as advisory research.',
+        recommendedNextStep: 'Collect 20-30 bridge-backed examples per window before any rule review.',
+        ruleChange: 'none',
+        approvalBoundarySummary: 'Research only: no rules, scanner changes, entries, stops, targets, alerts, or model promotion.',
+        includeInWeeklyNewsletter: true,
+      }
+    : falseRunResearch
     ? {
         researchTitle: 'False-Run Liquidity Fade Near Highs Research',
         status: 'research_only',
@@ -388,7 +537,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
     extractedConcepts,
     candidateWatchlistModel: {
       name: weeklyNewsletterSummary.candidateName,
-      purpose: falseRunResearch
+      purpose: timeWindowResearch
+        ? 'Identify research-only conditions where a defined time window, FVG/inefficiency, and draw on liquidity align, while still requiring current approved 6K rules before any trade can be considered.'
+        : falseRunResearch
         ? 'Identify research-only bearish conditions where price runs toward ATH, high of day, or major buy-side liquidity, fails to sustain, then starts drawing toward sell-side liquidity.'
         : 'Identify late-day conditions where price forms a foothold and appears likely to draw toward clean buy-side liquidity during the 3:15-3:45 ET macro window.',
       status: 'research_candidate_only',
@@ -399,7 +550,33 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
       createsOutcomeButtons: false,
       createsAutoAlerts: false,
     },
-    candidateConditions: falseRunResearch
+    candidateConditions: timeWindowResearch
+      ? {
+          contextConditions: [
+            'Instrument: ES/MES first; NQ/MNQ later only after study.',
+            'Time windows to study: London 3:00-4:00 NY, AM 10:00-11:00 NY, PM 2:00-3:00 NY.',
+            'There must be a clear draw on liquidity.',
+            'Larger-timeframe context must not strongly conflict.',
+            'Minimum expected delivery framework should be at least 10 handles / 40 ticks for index futures, but this is not a trade target.',
+          ],
+          structureConditions: [
+            'FVG or inefficiency forms or is repriced inside the time window.',
+            'Market structure shift may be present.',
+            'Bodies respect the FVG/inefficiency.',
+            'Liquidity draw is identifiable before entry logic is considered.',
+            'Price has room to move toward the draw without immediate major obstruction.',
+          ],
+          invalidationCautionConditions: [
+            'No clear draw on liquidity.',
+            'Larger-timeframe context conflicts.',
+            'Price already reached the draw.',
+            'FVG is not respected.',
+            'Price is too extended to chase.',
+            'Risk would be too wide under current approved rules.',
+            'The condition does not satisfy current Model 1 or Turtle Soup gates.',
+          ],
+        }
+      : falseRunResearch
       ? {
           contextConditions: [
             'Instrument: ES/MES first; NQ/MNQ later only after study.',
@@ -452,7 +629,20 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           ],
         },
     comparisonToExistingRules,
-    bridgeDataResearchPlan: falseRunResearch
+    bridgeDataResearchPlan: timeWindowResearch
+      ? [
+          'Use local bridge data only.',
+          'Replay completed bars only.',
+          'Study the 3:00-4:00 NY, 10:00-11:00 NY, and 2:00-3:00 NY windows separately.',
+          'Identify the draw on liquidity before classifying any setup.',
+          'Identify FVG/inefficiency inside the window.',
+          'Identify whether MSS occurred.',
+          'Identify whether bodies respected the FVG.',
+          'Determine whether current Model 1 or Turtle Soup gates actually passed.',
+          'If approved gates do not pass, classify as advisory-only time-window research.',
+          'Track 20-30 examples per window before any rule approval discussion.',
+        ]
+      : falseRunResearch
       ? [
           'Use local bridge data only.',
           'Replay completed bars only.',
@@ -479,10 +669,22 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Determine whether T1/T2 would have been met only as after-action context.',
           'Track 20-30 examples before any rule approval discussion.',
         ],
-    advisoryDiscordDraft: falseRunResearch
+    advisoryDiscordDraft: timeWindowResearch
+      ? 'Time-Window Liquidity Delivery candidate forming. Watch only - a draw on liquidity and FVG/inefficiency may be aligning inside a defined market window. Evaluate only through current 6K Model 1 or Turtle Soup rules. Do not chase.'
+      : falseRunResearch
       ? 'False-Run Liquidity Fade Near Highs candidate forming. Watch only - price ran toward major buy-side liquidity / ATH and may be drawing back toward sell-side liquidity. If a true sweep + reclaim forms, evaluate through current Turtle Soup rules. Otherwise, keep this as research-only context. Do not chase.'
       : 'Final-Hour ICT-Style Liquidity Draw forming. Watch only - price may be drawing toward clean buy-side liquidity during the 3:15-3:45 macro. Wait for current approved 6K rules to confirm. Do not chase.',
-    guardrails: falseRunResearch
+    guardrails: timeWindowResearch
+      ? [
+          'This is not an approved executable model.',
+          'Do not create entries, stops, T1/T2, or outcome buttons.',
+          'Do not override Model 1 or Turtle Soup.',
+          'Do not allow this to approve trades.',
+          'Do not duplicate Model 1 or Turtle Soup under a time-window label.',
+          'Do not use later target delivery to retroactively validate an invalid setup.',
+          'Collect 20-30 examples per window first.',
+        ]
+      : falseRunResearch
       ? [
           'This is not an approved executable model.',
           'Do not create entries, stops, T1/T2, or outcome buttons.',
@@ -500,7 +702,9 @@ export function extractResearchBrief(input: ResearchExtractorInput): ResearchBri
           'Do not use later success to retroactively validate an invalid setup.',
           'Collect 20-30 examples first.',
         ],
-    recommendedNextStep: falseRunResearch
+    recommendedNextStep: timeWindowResearch
+      ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected per window.'
+      : falseRunResearch
       ? 'Keep as research note only and create a future advisory-only bridge smoke-test prompt after enough examples are collected.'
       : 'Keep as research note only and create a future advisory-only smoke test prompt after enough examples are collected.',
     weeklyNewsletterSummary,
