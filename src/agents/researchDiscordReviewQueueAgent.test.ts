@@ -208,7 +208,9 @@ assert.equal(queue.selectedSamples, 1);
 assert.equal(queue.items.length, 1);
 const payload = queue.items[0].payload;
 assert.ok(payload.content.includes('false_run_liquidity_fade-001'));
-assert.ok(payload.content.includes('Research-only. This does not approve execution.'));
+assert.ok(payload.content.includes('Recommended: Keep Advisory'));
+assert.ok(payload.content.includes('Suggested human action: Keep Advisory'));
+assert.ok(payload.content.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.ok(payload.content.includes('Max favorable excursion: 12'));
 assert.ok(payload.content.includes('outcomeClassification: favorable_continuation'));
 assert.ok(payload.content.includes('Hypothetical research overlay:'));
@@ -235,6 +237,14 @@ assert.ok(buttons.every((button) => button.custom_id.length <= 100));
 assert.ok(!buttons.some((button) => /approve trade|execute|take trade|valid setup|go live|greenlight|buy|sell/i.test(button.label)));
 assert.ok(!/"entry"|"stop"|"T1"|"T2"|"canExecute"/.test(JSON.stringify(payload)));
 assert.ok(buttons.some((button) => button.label === 'New Model Candidate' && button.custom_id.endsWith('|new_model_candidate_review')));
+
+const duplicateSkippedQueue = buildResearchDiscordReviewQueue({
+  reviewPack: pack,
+  reviewPackPath: 'fixture-review-pack.json',
+  skipSampleIds: ['false_run_liquidity_fade-001'],
+});
+assert.equal(duplicateSkippedQueue.pendingSamplesFound, 1);
+assert.equal(duplicateSkippedQueue.items[0].sample.sampleId, 'false_run_liquidity_fade-002');
 
 const customId = buildResearchReviewCustomId(queue.packHash, 'sample with spaces!', 'keep_advisory');
 assert.equal(customId, `research_review|${queue.packHash}|samplewithspaces|keep_advisory`);
@@ -324,7 +334,7 @@ process.env.RESEARCH_REVIEW_DISCORD_CHANNEL_ID = 'channel-1';
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
   assert.ok(String((init?.headers as Record<string, string>).Authorization).startsWith('Bot '));
-  assert.ok(String(init?.body).includes('Research-only. This does not approve execution.'));
+  assert.ok(String(init?.body).includes('Research-only. This does not approve execution, change rules, or create trades.'));
   return Response.json({ id: 'discord-message-1' });
 }) as typeof fetch;
 

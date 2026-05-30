@@ -20,6 +20,7 @@
     "research:outcome-math": "tsx tools/automation/research-outcome-math.ts",
     "research:model-validation": "tsx tools/automation/research-model-validation.ts",
     "research:discord-review": "tsx tools/automation/research-discord-review.ts",
+    "research:discord-review:post": "tsx tools/automation/research-discord-review-post.ts",
     "research:discord-interactions": "tsx tools/automation/research-discord-interactions.ts",
     "quant-desk:discord-scheduler": "tsx tools/automation/quant-desk-discord-scheduler.ts",
     "bridge:history-smoke": "tsx tools/automation/bridge-history-smoke.ts",

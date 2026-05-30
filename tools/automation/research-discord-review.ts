@@ -29,6 +29,7 @@ export interface ResearchDiscordReviewCliOptions {
   statePath: string;
   pretty: boolean;
   json: boolean;
+  skipSampleIds?: string[];
 }
 
 export interface ResearchDiscordPublishResult {
@@ -82,6 +83,7 @@ export function parseResearchDiscordReviewArgs(args = process.argv.slice(2)): Re
     statePath: readFlag(args, '--state-path') || process.env.RESEARCH_REVIEW_STATE_PATH || DEFAULT_STATE_PATH,
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
+    skipSampleIds: [],
   };
 }
 
@@ -135,18 +137,37 @@ function missingDiscordCredentials(): string[] {
 }
 
 async function postDiscordMessage(channelId: string, token: string, payload: ResearchDiscordMessagePayload): Promise<string> {
-  const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bot ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) throw new Error(`Discord research review post failed (${response.status}): ${await response.text()}`);
-  const parsed = await response.json() as { id?: string };
-  if (!parsed.id) throw new Error('Discord research review post succeeded but did not return a message id.');
-  return parsed.id;
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (response.ok) {
+      const parsed = await response.json() as { id?: string };
+      if (!parsed.id) throw new Error('Discord research review post succeeded but did not return a message id.');
+      return parsed.id;
+    }
+    const body = await response.text();
+    if (response.status === 429 && attempt < 5) {
+      let retryAfterMs = 1000;
+      try {
+        const parsed = JSON.parse(body) as { retry_after?: number };
+        if (typeof parsed.retry_after === 'number' && Number.isFinite(parsed.retry_after)) {
+          retryAfterMs = Math.max(250, Math.ceil(parsed.retry_after * 1000));
+        }
+      } catch {
+        retryAfterMs = 1000;
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+      continue;
+    }
+    throw new Error(`Discord research review post failed (${response.status}): ${body}`);
+  }
+  throw new Error('Discord research review post failed after retry attempts.');
 }
 
 export async function publishResearchDiscordReview(options: ResearchDiscordReviewCliOptions): Promise<ResearchDiscordPublishResult> {
@@ -160,6 +181,7 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
     reviewPackPath,
     outcomeReport,
     limit: options.limit,
+    skipSampleIds: options.skipSampleIds,
   });
   const missingCredentials = missingDiscordCredentials();
   if (!options.dryRun && missingCredentials.length) {
@@ -169,22 +191,22 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
   const token = process.env.RESEARCH_REVIEW_DISCORD_BOT_TOKEN || null;
   let messagesPosted = 0;
   const stateEntries = [];
+  let currentState = (!options.dryRun || options.writeDryRunState) ? await readState(options.statePath) : null;
   for (const item of queue.items) {
     const messageId = options.dryRun ? null : await postDiscordMessage(channelId as string, token as string, item.payload);
     if (!options.dryRun) messagesPosted += 1;
     if (!options.dryRun || options.writeDryRunState) {
-      stateEntries.push(createResearchDiscordStateEntry({
+      const entry = createResearchDiscordStateEntry({
         packHash: queue.packHash,
         reviewPackPath,
         sampleId: item.sample.sampleId,
         discordMessageId: messageId,
         discordChannelId: channelId || 'dry-run',
-      }));
+      });
+      stateEntries.push(entry);
+      currentState = appendResearchDiscordReviewState(currentState || emptyResearchDiscordReviewState(), [entry]);
+      writeState(options.statePath, currentState);
     }
-  }
-  if (stateEntries.length) {
-    const currentState = await readState(options.statePath);
-    writeState(options.statePath, appendResearchDiscordReviewState(currentState, stateEntries));
   }
   return {
     reviewPackPath,

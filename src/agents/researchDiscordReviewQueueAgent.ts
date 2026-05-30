@@ -33,6 +33,7 @@ export interface ResearchDiscordQueueInput {
   reviewPackPath: string;
   outcomeReport?: ResearchOutcomeMathReport | null;
   limit?: number;
+  skipSampleIds?: string[] | Set<string>;
 }
 
 export interface ResearchDiscordReviewStateEntry {
@@ -95,6 +96,16 @@ const BUTTON_STYLE: Record<ResearchReviewButtonLabel, 1 | 2 | 3 | 4> = {
   human_rule_review_queue: 3,
   new_model_candidate_review: 3,
   insufficient_context: 2,
+};
+
+const RECOMMENDATION_TEXT: Record<ResearchReviewButtonLabel, string> = {
+  keep_advisory: 'Recommended: Keep Advisory',
+  reject: 'Recommended: Reject',
+  possible_model1_mapping_review: 'Recommended: Queue for Model 1 Review',
+  possible_turtle_soup_mapping_review: 'Recommended: Queue for Turtle Soup Review',
+  human_rule_review_queue: 'Recommended: Human Rule Review Queue',
+  new_model_candidate_review: 'Recommended: New Model Candidate Review',
+  insufficient_context: 'Recommended: Insufficient Context',
 };
 
 const EXECUTION_ORIENTED_BUTTON_TEXT = /\b(approve trade|execute|take trade|valid setup|go live|greenlight|buy|sell)\b/i;
@@ -219,26 +230,31 @@ function outcomeLines(outcome: ResearchCandidateOutcome | null): string[] {
   ];
 }
 
-export function buildResearchReviewMessagePayload(sample: ResearchReviewSample, packHash: string, outcome: ResearchCandidateOutcome | null): ResearchDiscordMessagePayload {
+export function buildResearchReviewMessagePayload(sample: ResearchReviewSample, packHash: string, outcome: ResearchCandidateOutcome | null, instrument = 'MES'): ResearchDiscordMessagePayload {
   assertSampleBoundary(sample);
+  const recommendation = RECOMMENDATION_TEXT[sample.agentInspectionLabel] || 'Recommended: Keep Advisory';
   const content = [
     `[RESEARCH SAMPLE REVIEW] ${sample.sampleId}`,
+    `Symbol: ${instrument}`,
     `Concept: ${sample.conceptTitle}`,
     `Date/time: ${sample.date} ${sample.time || 'time pending'}`,
     `Direction/window: ${sample.direction} / ${sample.window || 'unspecified'}`,
     `Classification: ${sample.classification}`,
     `Summary: ${clip(sample.summary, 280)}`,
     `Why advisory-only: ${clip(sample.whyAdvisoryOnly, 280)}`,
+    recommendation,
     `Agent label: ${sample.agentInspectionLabel}`,
     `Agent confidence: ${sample.agentConfidence}`,
     `Agent reason: ${clip(sample.agentReason, 280)}`,
     `Agent concerns: ${clip(sample.agentConcerns.join(' | '), 280)}`,
+    `Suggested human action: ${recommendation.replace(/^Recommended: /, '')}`,
+    `Source review path: ${clip(sample.sampleSourceReportPath, 220)}`,
     ...outcomeLines(outcome),
     '',
-    'Research-only. This does not approve execution.',
+    'Research-only. This does not approve execution, change rules, or create trades.',
   ].join('\n');
   const payload: ResearchDiscordMessagePayload = {
-    content: content.length <= 1900 ? content : `${content.slice(0, 1840).trim()}\nFull sample context remains in the local review pack.\nResearch-only. This does not approve execution.`,
+    content: content.length <= 1900 ? content : `${content.slice(0, 1840).trim()}\nFull sample context remains in the local review pack.\nResearch-only. This does not approve execution, change rules, or create trades.`,
     components: buildResearchReviewComponents(packHash, sample.sampleId),
     allowed_mentions: { parse: [] },
   };
@@ -257,14 +273,15 @@ export function buildResearchDiscordReviewQueue(input: ResearchDiscordQueueInput
 } {
   assertNoExecutableResearchDiscordFields(input.reviewPack.samples);
   const packHash = createResearchReviewPackHash(input.reviewPackPath, input.reviewPack);
-  const pending = input.reviewPack.samples.filter((sample) => sample.humanInspectionLabel === null);
+  const skipSampleIds = new Set(input.skipSampleIds ? [...input.skipSampleIds] : []);
+  const pending = input.reviewPack.samples.filter((sample) => sample.humanInspectionLabel === null && !skipSampleIds.has(sample.sampleId));
   const selected = pending.slice(0, Math.max(0, input.limit ?? pending.length));
   const items = selected.map((sample) => {
     const outcome = outcomeForSample(sample, input.outcomeReport);
     return {
       sample,
       outcome,
-      payload: buildResearchReviewMessagePayload(sample, packHash, outcome),
+      payload: buildResearchReviewMessagePayload(sample, packHash, outcome, input.reviewPack.instrument),
     };
   });
   return {
