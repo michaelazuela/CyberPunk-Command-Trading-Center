@@ -34,6 +34,7 @@ export interface ResearchDiscordQueueInput {
   outcomeReport?: ResearchOutcomeMathReport | null;
   limit?: number;
   skipSampleIds?: string[] | Set<string>;
+  buttonMode?: 'legacy_research_review' | 'future_model_candidate_review';
 }
 
 export interface ResearchDiscordReviewStateEntry {
@@ -78,6 +79,11 @@ export const RESEARCH_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
   'insufficient_context',
 ];
 
+export const PRICE_ACTION_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
+  'approved_for_future_model_candidate_review',
+  'not_approved_for_future_model_candidate_review',
+];
+
 const LABEL_TEXT: Record<ResearchReviewButtonLabel, string> = {
   keep_advisory: 'Keep Advisory',
   reject: 'Reject',
@@ -85,6 +91,8 @@ const LABEL_TEXT: Record<ResearchReviewButtonLabel, string> = {
   possible_turtle_soup_mapping_review: 'Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
   new_model_candidate_review: 'New Model Candidate',
+  approved_for_future_model_candidate_review: 'Approved',
+  not_approved_for_future_model_candidate_review: 'Not Approved',
   insufficient_context: 'Insufficient Context',
 };
 
@@ -95,6 +103,8 @@ const BUTTON_STYLE: Record<ResearchReviewButtonLabel, 1 | 2 | 3 | 4> = {
   possible_turtle_soup_mapping_review: 1,
   human_rule_review_queue: 3,
   new_model_candidate_review: 3,
+  approved_for_future_model_candidate_review: 3,
+  not_approved_for_future_model_candidate_review: 4,
   insufficient_context: 2,
 };
 
@@ -105,6 +115,8 @@ const RECOMMENDATION_TEXT: Record<ResearchReviewButtonLabel, string> = {
   possible_turtle_soup_mapping_review: 'Recommended: Queue for Turtle Soup Review',
   human_rule_review_queue: 'Recommended: Human Rule Review Queue',
   new_model_candidate_review: 'Recommended: New Model Candidate Review',
+  approved_for_future_model_candidate_review: 'Human review: Approved for future model-candidate review',
+  not_approved_for_future_model_candidate_review: 'Human review: Not approved for future model-candidate review',
   insufficient_context: 'Recommended: Insufficient Context',
 };
 
@@ -185,18 +197,32 @@ function outcomeForSample(sample: ResearchReviewSample, outcomeReport?: Research
 
 export function buildResearchReviewCustomId(packHash: string, sampleId: string, label: ResearchReviewButtonLabel): string {
   const compactSampleId = sampleId.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 42);
-  const customId = `research_review|${packHash}|${compactSampleId}|${label}`;
+  const customIdLabel = label === 'approved_for_future_model_candidate_review'
+    ? 'approved'
+    : label === 'not_approved_for_future_model_candidate_review'
+      ? 'not_approved'
+      : label;
+  const customId = `research_review|${packHash}|${compactSampleId}|${customIdLabel}`;
   if (customId.length > 100) throw new Error(`Research review custom_id is too long for Discord: ${customId.length}`);
   return customId;
 }
 
 export function buildResearchReviewComponents(packHash: string, sampleId: string): ResearchDiscordActionRow[] {
-  const buttons = RESEARCH_REVIEW_LABELS.map((label): ResearchDiscordButton => ({
+  return buildResearchReviewComponentsForLabels(packHash, sampleId, RESEARCH_REVIEW_LABELS);
+}
+
+export function buildPriceActionReviewComponents(packHash: string, sampleId: string): ResearchDiscordActionRow[] {
+  return buildResearchReviewComponentsForLabels(packHash, sampleId, PRICE_ACTION_REVIEW_LABELS);
+}
+
+function buildResearchReviewComponentsForLabels(packHash: string, sampleId: string, labels: ResearchReviewButtonLabel[]): ResearchDiscordActionRow[] {
+  const buttons = labels.map((label): ResearchDiscordButton => ({
     type: 2,
     style: BUTTON_STYLE[label],
     label: LABEL_TEXT[label],
     custom_id: buildResearchReviewCustomId(packHash, sampleId, label),
   }));
+  if (buttons.length <= 5) return [{ type: 1, components: buttons }];
   return [
     { type: 1, components: buttons.slice(0, 5) },
     { type: 1, components: buttons.slice(5) },
@@ -230,7 +256,13 @@ function outcomeLines(outcome: ResearchCandidateOutcome | null): string[] {
   ];
 }
 
-export function buildResearchReviewMessagePayload(sample: ResearchReviewSample, packHash: string, outcome: ResearchCandidateOutcome | null, instrument = 'MES'): ResearchDiscordMessagePayload {
+export function buildResearchReviewMessagePayload(
+  sample: ResearchReviewSample,
+  packHash: string,
+  outcome: ResearchCandidateOutcome | null,
+  instrument = 'MES',
+  buttonMode: ResearchDiscordQueueInput['buttonMode'] = 'legacy_research_review',
+): ResearchDiscordMessagePayload {
   assertSampleBoundary(sample);
   const recommendation = RECOMMENDATION_TEXT[sample.agentInspectionLabel] || 'Recommended: Keep Advisory';
   const content = [
@@ -255,7 +287,9 @@ export function buildResearchReviewMessagePayload(sample: ResearchReviewSample, 
   ].join('\n');
   const payload: ResearchDiscordMessagePayload = {
     content: content.length <= 1900 ? content : `${content.slice(0, 1840).trim()}\nFull sample context remains in the local review pack.\nResearch-only. This does not approve execution, change rules, or create trades.`,
-    components: buildResearchReviewComponents(packHash, sample.sampleId),
+    components: buttonMode === 'future_model_candidate_review'
+      ? buildPriceActionReviewComponents(packHash, sample.sampleId)
+      : buildResearchReviewComponents(packHash, sample.sampleId),
     allowed_mentions: { parse: [] },
   };
   assertNoExecutableResearchDiscordFields(payload);
@@ -281,7 +315,7 @@ export function buildResearchDiscordReviewQueue(input: ResearchDiscordQueueInput
     return {
       sample,
       outcome,
-      payload: buildResearchReviewMessagePayload(sample, packHash, outcome, input.reviewPack.instrument),
+      payload: buildResearchReviewMessagePayload(sample, packHash, outcome, input.reviewPack.instrument, input.buttonMode),
     };
   });
   return {
@@ -322,6 +356,7 @@ export function createResearchDiscordStateEntry(args: {
   discordMessageId: string | null;
   discordChannelId: string;
   postedAt?: string;
+  labelOptions?: ResearchReviewButtonLabel[];
 }): ResearchDiscordReviewStateEntry {
   return {
     packHash: args.packHash,
@@ -330,7 +365,7 @@ export function createResearchDiscordStateEntry(args: {
     discordMessageId: args.discordMessageId,
     discordChannelId: args.discordChannelId,
     postedAt: args.postedAt || new Date().toISOString(),
-    labelOptions: RESEARCH_REVIEW_LABELS,
+    labelOptions: args.labelOptions || RESEARCH_REVIEW_LABELS,
     advisoryOnly: true,
     reviewed: false,
   };

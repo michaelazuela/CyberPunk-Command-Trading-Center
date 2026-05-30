@@ -17,9 +17,20 @@ export type ResearchSampleInspectionLabel =
 export type ResearchHumanInspectionLabel =
   | ResearchSampleInspectionLabel
   | 'human_rule_review_queue'
-  | 'new_model_candidate_review';
+  | 'new_model_candidate_review'
+  | 'approved_for_future_model_candidate_review'
+  | 'not_approved_for_future_model_candidate_review';
 
 export type ResearchSampleConfidence = 'low' | 'medium' | 'high';
+export type ResearchQualityScoreLabel = 'Strong' | 'Moderate' | 'Weak' | 'Incomplete' | 'Unavailable';
+
+export interface ResearchQualityScore {
+  score: number | null;
+  label: ResearchQualityScoreLabel;
+  reasons: string[];
+  source: 'existing-approved-score' | 'research-only-score';
+  researchOnly: true;
+}
 
 export interface ResearchSampleReviewSourceReport {
   path: string;
@@ -52,6 +63,7 @@ export interface ResearchReviewSample {
   warningFailureReason: string;
   dataQualityNotes: string[];
   sampleSourceReportPath: string;
+  researchQualityScore?: ResearchQualityScore;
   agentInspectionLabel: ResearchSampleInspectionLabel;
   agentConfidence: ResearchSampleConfidence;
   agentReason: string;
@@ -260,11 +272,143 @@ function inspectCandidate(candidate: CandidateSample): Pick<
   };
 }
 
+function researchQualityLabel(score: number | null, incomplete: boolean): ResearchQualityScoreLabel {
+  if (score === null) return incomplete ? 'Incomplete' : 'Unavailable';
+  if (score >= 80) return 'Strong';
+  if (score >= 65) return 'Moderate';
+  if (score >= 45) return 'Weak';
+  return 'Incomplete';
+}
+
+export function computeResearchQualityScore(input: {
+  date?: string | null;
+  time?: string | null;
+  direction?: ResearchBackfillDirection | string | null;
+  window?: string | null;
+  summary?: string | null;
+  classification?: 'model1_overlap' | 'turtle_soup_overlap' | 'advisory_only' | string | null;
+  model1Overlap?: boolean;
+  turtleSoupOverlap?: boolean;
+  dataQualityNotes?: string[];
+  agentInspectionLabel?: ResearchSampleInspectionLabel | string | null;
+  agentConfidence?: ResearchSampleConfidence | string | null;
+  researchDetectorReason?: string | null;
+  warningFailureReason?: string | null;
+}): ResearchQualityScore {
+  const reasons: string[] = [];
+  const missing: string[] = [];
+  if (!input.date) missing.push('date');
+  if (!input.time) missing.push('time');
+  if (!input.direction || input.direction === 'NO TRADE') missing.push('direction');
+  if (!input.summary) missing.push('summary');
+  if (missing.length) {
+    return {
+      score: null,
+      label: 'Incomplete',
+      reasons: [`Research quality score unavailable because required review field(s) are missing: ${missing.join(', ')}.`],
+      source: 'research-only-score',
+      researchOnly: true,
+    };
+  }
+
+  let score = 50;
+  reasons.push('Research-only score uses review-pack metadata only; it does not evaluate execution.');
+
+  if (input.window) {
+    score += 8;
+    reasons.push('Timestamp and review window are present.');
+  } else {
+    score -= 10;
+    reasons.push('Review window is missing.');
+  }
+
+  const confidence = input.agentConfidence;
+  if (confidence === 'high') {
+    score += 12;
+    reasons.push('Agent confidence is high.');
+  } else if (confidence === 'medium') {
+    score += 6;
+    reasons.push('Agent confidence is medium.');
+  } else {
+    score -= 8;
+    reasons.push('Agent confidence is low or unavailable.');
+  }
+
+  if (input.classification === 'model1_overlap' || input.classification === 'turtle_soup_overlap') {
+    score += 8;
+    reasons.push('Source classification flagged possible existing-model mapping review.');
+  } else if (input.classification === 'advisory_only') {
+    score += 4;
+    reasons.push('Source classification is advisory-only and preserved for review.');
+  } else {
+    score -= 8;
+    reasons.push('Source classification is missing or unrecognized.');
+  }
+
+  if (input.model1Overlap || input.turtleSoupOverlap) {
+    score += 6;
+    reasons.push('Possible existing-model overlap is marked for human review only.');
+  }
+
+  if (input.agentInspectionLabel === 'reject') {
+    score -= 22;
+    reasons.push('Agent inspection recommends rejecting the sample from research tracking.');
+  } else if (input.agentInspectionLabel === 'insufficient_context') {
+    score -= 18;
+    reasons.push('Agent inspection says context is insufficient.');
+  } else if (input.agentInspectionLabel === 'possible_model1_mapping_review' || input.agentInspectionLabel === 'possible_turtle_soup_mapping_review') {
+    score += 6;
+    reasons.push('Agent inspection queues the sample for human-only mapping review.');
+  } else if (input.agentInspectionLabel === 'keep_advisory') {
+    score += 4;
+    reasons.push('Agent inspection recommends keeping the sample advisory.');
+  }
+
+  const notes = input.dataQualityNotes || [];
+  const seriousQualityNotes = notes.filter((note) => /missing|unavailable|failed|malformed|invalid|only \d+/i.test(note));
+  if (seriousQualityNotes.length) {
+    score -= Math.min(18, seriousQualityNotes.length * 6);
+    reasons.push(`${seriousQualityNotes.length} data quality note(s) limit research confidence.`);
+  }
+
+  const reasonText = `${input.researchDetectorReason || ''} ${input.warningFailureReason || ''}`;
+  if (/not worth|no meaningful|stop tracking/i.test(reasonText)) {
+    score -= 20;
+    reasons.push('Detector reason suggests the sample may not be worth continued research tracking.');
+  }
+
+  const finalScore = Math.max(0, Math.min(100, Math.round(score)));
+  return {
+    score: finalScore,
+    label: researchQualityLabel(finalScore, false),
+    reasons,
+    source: 'research-only-score',
+    researchOnly: true,
+  };
+}
+
 function buildReviewSample(candidate: CandidateSample, index: number): ResearchReviewSample {
   const event = candidate.event;
   const model1Overlap = event.classification === 'model1_overlap' || ('possibleModel1Overlap' in event && event.possibleModel1Overlap);
   const turtleSoupOverlap = event.classification === 'turtle_soup_overlap' || ('possibleTurtleSoupOverlap' in event && event.possibleTurtleSoupOverlap);
   const inspection = inspectCandidate(candidate);
+  const reason = reasonFor(candidate);
+  const dataNotes = dataQualityNotes(candidate);
+  const researchQualityScore = computeResearchQualityScore({
+    date: event.date,
+    time: event.time,
+    direction: event.direction,
+    window: event.window || null,
+    summary: event.summary,
+    classification: event.classification,
+    model1Overlap,
+    turtleSoupOverlap,
+    dataQualityNotes: dataNotes,
+    researchDetectorReason: reason,
+    warningFailureReason: reason,
+    agentInspectionLabel: inspection.agentInspectionLabel,
+    agentConfidence: inspection.agentConfidence,
+  });
   return {
     sampleId: `${candidate.conceptReport.conceptId}-${String(index + 1).padStart(3, '0')}`,
     date: event.date,
@@ -277,14 +421,15 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
     advisoryOnly: true,
     summary: event.summary,
     whyAdvisoryOnly: event.classification === 'advisory_only'
-      ? reasonFor(candidate)
+      ? reason
       : 'Source report marked possible approved-model overlap; human review is still required before any rule discussion.',
     model1Overlap,
     turtleSoupOverlap,
-    researchDetectorReason: reasonFor(candidate),
-    warningFailureReason: reasonFor(candidate),
-    dataQualityNotes: dataQualityNotes(candidate),
+    researchDetectorReason: reason,
+    warningFailureReason: reason,
+    dataQualityNotes: dataNotes,
     sampleSourceReportPath: candidate.sourcePath,
+    researchQualityScore,
     ...inspection,
     agentApprovalBoundary: {
       agentApprovesTrade: false,
@@ -415,6 +560,7 @@ function summarizeConcept(concept: ResearchBackfillConceptId, candidates: Candid
 }
 
 function renderSample(sample: ResearchReviewSample): string {
+  const researchQuality = sample.researchQualityScore;
   return [
     `### Sample ${sample.sampleId}`,
     `- Date/time: ${sample.date} ${sample.time || 'pending'}`,
@@ -427,6 +573,7 @@ function renderSample(sample: ResearchReviewSample): string {
     `- Agent inspection: ${sample.agentInspectionLabel}`,
     `- Agent confidence: ${sample.agentConfidence}`,
     `- Agent reason: ${sample.agentReason}`,
+    `- Research Quality Score: ${!researchQuality ? 'Unavailable' : researchQuality.score === null ? researchQuality.label : `${researchQuality.score}/100 (${researchQuality.label})`}`,
     `- Human review:`,
     `  - Label: pending`,
     `  - Notes: pending`,

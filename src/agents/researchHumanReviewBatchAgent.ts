@@ -108,6 +108,8 @@ export const SUPPORTED_HUMAN_REVIEW_LABELS: HumanReviewLabel[] = [
   'possible_turtle_soup_mapping_review',
   'human_rule_review_queue',
   'new_model_candidate_review',
+  'approved_for_future_model_candidate_review',
+  'not_approved_for_future_model_candidate_review',
   'insufficient_context',
 ];
 

@@ -14,9 +14,18 @@ import {
   runResearchOutcomeMath,
 } from '../../src/agents/researchOutcomeMathAgent';
 import {
+  postResearchDiscordReviewMessage,
   publishResearchDiscordReview,
   type ResearchDiscordPublishResult,
 } from './research-discord-review';
+import { DEFAULT_PRICE_ACTION_REVIEW_CARD_DIR } from './price-action-review-card-renderer';
+import { resolveActiveBridgeInstrument, type ActiveBridgeInstrumentResolution } from './research-price-action-bars';
+import { writeLatestReviewPackManifest } from './research-review-pack-manifest';
+import {
+  generateResearchReviewChartReport,
+  type ResearchReviewChartReport,
+} from './research-review-chart-report';
+import type { ResearchDiscordMessagePayload } from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchDiscordReviewState } from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchHumanInspectionLabel, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
 
@@ -25,7 +34,7 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 type Instrument = 'MES' | 'MNQ';
 
-interface ResearchDiscordReviewPostOptions {
+export interface ResearchDiscordReviewPostOptions {
   from: string;
   to: string;
   symbol: Instrument;
@@ -37,8 +46,10 @@ interface ResearchDiscordReviewPostOptions {
   backfillOutDir: string;
   reviewPackOutDir: string;
   outcomeOutDir: string;
+  chartOutDir: string;
   statePath: string;
   limit: number;
+  withPriceActionCards: boolean;
 }
 
 interface WorkflowResult {
@@ -57,6 +68,12 @@ interface WorkflowResult {
   dryRun: boolean;
   discordChannelId: string | null;
   publishResult: ResearchDiscordPublishResult;
+  chartReport: ResearchReviewChartReport;
+  chartArtifactDir: string;
+  summaryMessagePosted: boolean;
+  chartArtifactsUploaded: boolean;
+  chartUploadFailure: string | null;
+  activeContract: ActiveBridgeInstrumentResolution | null;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +81,7 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_RESEARCH_REPORT_DIR = path.join(__dirname, 'research-reports');
 const DEFAULT_REVIEW_PACK_DIR = path.join(__dirname, 'research-review-packs');
 const DEFAULT_OUTCOME_REPORT_DIR = path.join(__dirname, 'research-outcome-reports');
+const DEFAULT_CHART_REPORT_DIR = path.join(__dirname, 'research-review-charts');
 const DEFAULT_STATE_PATH = path.join(DEFAULT_REVIEW_PACK_DIR, 'discord-review-state.json');
 
 const RECOMMENDATION_TEXT: Record<ResearchHumanInspectionLabel, string> = {
@@ -73,6 +91,8 @@ const RECOMMENDATION_TEXT: Record<ResearchHumanInspectionLabel, string> = {
   possible_turtle_soup_mapping_review: 'Queue for Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
   new_model_candidate_review: 'New Model Candidate Review',
+  approved_for_future_model_candidate_review: 'Approved for Future Model-Candidate Review',
+  not_approved_for_future_model_candidate_review: 'Not Approved for Future Model-Candidate Review',
   insufficient_context: 'Insufficient Context',
 };
 
@@ -132,8 +152,10 @@ export function parseResearchDiscordReviewPostArgs(args = process.argv.slice(2))
     backfillOutDir: readFlag(args, '--research-out') || DEFAULT_RESEARCH_REPORT_DIR,
     reviewPackOutDir: readFlag(args, '--review-out') || DEFAULT_REVIEW_PACK_DIR,
     outcomeOutDir: readFlag(args, '--outcome-out') || DEFAULT_OUTCOME_REPORT_DIR,
+    chartOutDir: readFlag(args, '--chart-out') || DEFAULT_CHART_REPORT_DIR,
     statePath: readFlag(args, '--state-path') || process.env.RESEARCH_REVIEW_STATE_PATH || DEFAULT_STATE_PATH,
     limit: numberFlag(args, '--limit', 30),
+    withPriceActionCards: hasFlag(args, '--with-price-action-cards'),
   };
 }
 
@@ -170,6 +192,128 @@ function reviewedOutputPath(reviewPackPath: string): string {
   return reviewPackPath.replace(/\.json$/i, '.reviewed.json');
 }
 
+function compactList(values: Array<{ name: string; count: number }>, limit = 5): string {
+  if (!values.length) return 'none';
+  return values.slice(0, limit).map((row) => `${row.name.slice(0, 56)}: ${row.count}`).join('; ');
+}
+
+function compactPath(file: string): string {
+  return path.basename(file);
+}
+
+function researchQualityLabelBreakdown(chartReport: ResearchReviewChartReport): Array<{ name: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const row of chartReport.visualization.researchQualityScoreBySample) {
+    const label = row.researchQualityLabel && row.researchQualityLabel !== 'Not provided'
+      ? row.researchQualityLabel
+      : row.researchQualityScore === null
+        ? 'Unavailable'
+        : 'Provided';
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([name, count]) => ({ name, count }));
+}
+
+export function selectDiscordChartAttachments(chartReport: ResearchReviewChartReport): string[] {
+  const data = chartReport.visualization;
+  return [
+    ...(data.summary.averageResearchQualityScore === null ? [] : [chartReport.chartPaths.riskScoreBySample]),
+    chartReport.chartPaths.countByBlockReason,
+    chartReport.chartPaths.countBySetupType,
+    chartReport.chartPaths.executableVsNonExecutable,
+    chartReport.chartPaths.reviewedSamplesByDate,
+  ];
+}
+
+export function buildSummaryPayload(result: {
+  from: string;
+  to: string;
+  symbol: Instrument;
+  reviewPackPath: string;
+  manifestPath: string;
+  chartReport: ResearchReviewChartReport;
+  uploadFailure?: string | null;
+}): ResearchDiscordMessagePayload {
+  const data = result.chartReport.visualization;
+  const chartArtifactDir = path.dirname(result.chartReport.summaryMarkdownPath);
+  const warningLines = data.warnings.length
+    ? [`- ${data.warnings.length} data completeness warning(s); see chart summary JSON/MD.`]
+    : ['- none'];
+  const uploadWarning = result.uploadFailure
+    ? [`Chart upload warning: ${result.uploadFailure.slice(0, 180)}`]
+    : [];
+  return {
+    content: [
+      `[RESEARCH REVIEW SUMMARY] ${result.symbol} ${result.from} to ${result.to}`,
+      'Primary workflow: CLI -> review pack -> latest manifest -> local chart artifacts -> Discord review attachments.',
+      '',
+      `Total reviewed samples: ${data.summary.totalReviewedSamples}`,
+      `Executable vs non-executable count: ${data.summary.executableCount} / ${data.summary.nonExecutableCount}`,
+      `Most common block reason: ${data.summary.mostCommonBlockReason}`,
+      `Average Research Quality Score: ${data.summary.averageResearchQualityScore === null ? 'Not provided' : data.summary.averageResearchQualityScore}`,
+      `Research Quality Score labels: ${compactList(researchQualityLabelBreakdown(result.chartReport))}`,
+      `Count by setup type: ${compactList(data.countBySetupType)}`,
+      `Count by block reason: ${compactList(data.countByBlockReason)}`,
+      '',
+      'Local chart artifacts written:',
+      `- ${compactPath(result.chartReport.chartPaths.riskScoreBySample)}`,
+      `- ${compactPath(result.chartReport.chartPaths.countByBlockReason)}`,
+      `- ${compactPath(result.chartReport.chartPaths.countBySetupType)}`,
+      `- ${compactPath(result.chartReport.chartPaths.executableVsNonExecutable)}`,
+      `- ${compactPath(result.chartReport.chartPaths.reviewedSamplesByDate)}`,
+      '',
+      `Review pack: ${compactPath(result.reviewPackPath)}`,
+      `Latest manifest: ${compactPath(result.manifestPath)}`,
+      `Local chart artifact folder: ${compactPath(chartArtifactDir)}`,
+      `Chart summary: ${compactPath(result.chartReport.summaryMarkdownPath)}`,
+      '',
+      'Warnings:',
+      ...warningLines,
+      ...uploadWarning,
+      '',
+      'Research Review Only. This does not approve execution, change rules, or create trades.',
+    ].join('\n'),
+    components: [],
+    allowed_mentions: { parse: [] },
+  };
+}
+
+export async function postResearchReviewSummaryWithChartArtifacts(args: {
+  channelId: string;
+  token: string;
+  from: string;
+  to: string;
+  symbol: Instrument;
+  reviewPackPath: string;
+  manifestPath: string;
+  chartReport: ResearchReviewChartReport;
+}): Promise<{ messagePosted: boolean; chartArtifactsUploaded: boolean; chartUploadFailure: string | null }> {
+  const summaryPayload = buildSummaryPayload(args);
+  const chartAttachments = selectDiscordChartAttachments(args.chartReport);
+  try {
+    await postResearchDiscordReviewMessage(args.channelId, args.token, summaryPayload, chartAttachments);
+    return {
+      messagePosted: true,
+      chartArtifactsUploaded: chartAttachments.length > 0,
+      chartUploadFailure: null,
+    };
+  } catch (error) {
+    const chartUploadFailure = error instanceof Error ? error.message : String(error);
+    console.warn(`Research review chart upload failed; posting text summary only: ${chartUploadFailure}`);
+    await postResearchDiscordReviewMessage(args.channelId, args.token, buildSummaryPayload({
+      ...args,
+      uploadFailure: chartUploadFailure,
+    }));
+    return {
+      messagePosted: true,
+      chartArtifactsUploaded: false,
+      chartUploadFailure,
+    };
+  }
+}
+
 export async function runResearchDiscordReviewPostWorkflow(options: ResearchDiscordReviewPostOptions): Promise<WorkflowResult> {
   const backfillArgs = [
     '--from', options.from,
@@ -196,6 +340,12 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
   const reviewPackPath = `${reviewBase}.json`;
   writeJson(reviewPackPath, reviewPack);
   writeText(`${reviewBase}.md`, reviewPack.markdown);
+  writeLatestReviewPackManifest({
+    reviewPackPath,
+    pack: reviewPack,
+    sourceAgent: 'researchDiscordReviewPostWorkflow',
+  });
+  const manifestPath = path.join(path.dirname(reviewPackPath), 'latest-review-pack.json');
 
   const outcomeInput = extractOutcomeInputFromSource(researchReportPath, backfillReport, options.symbol);
   const outcomeReport = runResearchOutcomeMath(outcomeInput);
@@ -204,9 +354,45 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
   writeJson(outcomeReportPath, outcomeReport);
   writeText(`${outcomeBase}.md`, outcomeReport.markdown);
 
+  const chartReport = await generateResearchReviewChartReport({
+    reviewPack,
+    reviewPackPath,
+    outDir: options.chartOutDir,
+    from: options.from,
+    to: options.to,
+    instrument: options.symbol,
+  });
+
   const state = await readDiscordReviewState(options.statePath);
   const postedSampleIds = new Set((state.entries || []).map((entry) => entry.sampleId));
   const skipSampleIds = options.force ? [] : reviewPack.samples.filter((sample) => postedSampleIds.has(sample.sampleId)).map((sample) => sample.sampleId);
+  const activeContract = options.withPriceActionCards
+    ? await resolveActiveBridgeInstrument({ bridgeUrl: process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765' })
+    : null;
+  let summaryMessagePosted = false;
+  let chartArtifactsUploaded = false;
+  let chartUploadFailure: string | null = null;
+  if (!options.dryRun) {
+    const channelId = process.env.RESEARCH_REVIEW_DISCORD_CHANNEL_ID;
+    const token = process.env.RESEARCH_REVIEW_DISCORD_BOT_TOKEN;
+    if (!channelId || !token) {
+      throw new Error('Missing Discord research review configuration: RESEARCH_REVIEW_DISCORD_BOT_TOKEN, RESEARCH_REVIEW_DISCORD_CHANNEL_ID. Use --dry-run to inspect payloads without posting.');
+    }
+    const summaryPost = await postResearchReviewSummaryWithChartArtifacts({
+      channelId,
+      token,
+      from: options.from,
+      to: options.to,
+      symbol: options.symbol,
+      reviewPackPath,
+      manifestPath,
+      chartReport,
+    });
+    summaryMessagePosted = summaryPost.messagePosted;
+    chartArtifactsUploaded = summaryPost.chartArtifactsUploaded;
+    chartUploadFailure = summaryPost.chartUploadFailure;
+  }
+
   const publishResult = await publishResearchDiscordReview({
     reviewPack: reviewPackPath,
     outcomeReport: outcomeReportPath,
@@ -219,6 +405,16 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
     pretty: true,
     json: false,
     skipSampleIds,
+    withPriceActionCards: options.withPriceActionCards,
+    priceActionCards: options.withPriceActionCards && activeContract ? {
+      enabled: true,
+      symbol: options.symbol,
+      bridgeInstrument: activeContract.instrument,
+      bridgeUrl: activeContract.bridgeUrl,
+      outputDir: DEFAULT_PRICE_ACTION_REVIEW_CARD_DIR,
+      dateRange: { from: options.from, to: options.to },
+      contractResolution: activeContract,
+    } : undefined,
   });
 
   return {
@@ -237,6 +433,12 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
     dryRun: options.dryRun,
     discordChannelId: publishResult.channelId,
     publishResult,
+    chartReport,
+    chartArtifactDir: path.dirname(chartReport.summaryMarkdownPath),
+    summaryMessagePosted,
+    chartArtifactsUploaded,
+    chartUploadFailure,
+    activeContract,
   };
 }
 
@@ -249,16 +451,37 @@ function renderResult(result: WorkflowResult): string {
     `Review pack path: ${result.reviewPackPath}`,
     `Reviewed output path: ${result.reviewedOutputPath}`,
     `Outcome report path: ${result.outcomeReportPath}`,
+    `Latest manifest path: ${path.join(path.dirname(result.reviewPackPath), 'latest-review-pack.json')}`,
+    `Chart summary path: ${result.chartReport.summaryMarkdownPath}`,
+    `Local chart artifact folder: ${result.chartArtifactDir}`,
+    `PriceActionReviewCard enabled: ${result.publishResult.priceActionCards.length ? 'true' : result.activeContract ? 'true' : 'false'}`,
+    `Resolved active contract: ${result.activeContract?.instrument || 'not requested'}`,
+    `Contract source: ${result.activeContract?.source || 'not requested'}`,
+    ...(result.activeContract?.warnings || []).map((warning) => `Contract warning: ${warning}`),
+    'PriceActionReviewCard PNGs:',
+    ...(result.publishResult.priceActionCards.length
+      ? result.publishResult.priceActionCards.map((card) => `- ${card.sampleId}: ${card.pngPath || 'unavailable'}; attached=${card.attached}; source=${card.dataSource}; warnings=${card.warnings.length}`)
+      : ['- none']),
+    `Research Quality Score average: ${result.chartReport.visualization.summary.averageResearchQualityScore === null ? 'Not provided' : result.chartReport.visualization.summary.averageResearchQualityScore}`,
+    `Research Quality Score labels: ${compactList(researchQualityLabelBreakdown(result.chartReport))}`,
+    'Local chart artifacts:',
+    ...Object.entries(result.chartReport.chartPaths).map(([label, file]) => `- ${label}: ${file}`),
+    'Local SVG audit artifacts:',
+    ...Object.entries(result.chartReport.svgChartPaths).map(([label, file]) => `- ${label}: ${file}`),
     `Samples selected: ${result.samplesSelected}`,
     'Agent recommendations summary:',
     ...Object.entries(result.recommendationCounts).map(([label, count]) => `- ${label}: ${count}`),
     `Cards posted: ${result.cardsPosted}`,
+    `Summary message posted: ${result.summaryMessagePosted ? 'true' : 'false'}`,
+    `Chart artifacts uploaded: ${result.chartArtifactsUploaded ? 'true' : 'false'}`,
+    `Chart upload failure: ${result.chartUploadFailure || 'none'}`,
     `Cards skipped as duplicates: ${result.skippedDuplicates}`,
     `Discord channel ID: ${result.discordChannelId || 'not configured'}`,
     `State file path: ${result.statePath}`,
     `Dry run: ${result.dryRun ? 'true' : 'false'}`,
     '',
-    'Research-only. This does not approve execution, change rules, or create trades.',
+    'Primary research-review workflow: CLI output -> review pack -> latest-review-pack manifest -> local chart/report artifacts -> Discord review post with chart attachments.',
+    'Research Review Only. This does not approve execution, change rules, or create trades.',
   ].join('\n');
 }
 

@@ -98,6 +98,8 @@ const LABEL_TEXT: Record<ResearchHumanInspectionLabel, string> = {
   possible_turtle_soup_mapping_review: 'Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
   new_model_candidate_review: 'New Model Candidate',
+  approved_for_future_model_candidate_review: 'Approved for Future Model-Candidate Review',
+  not_approved_for_future_model_candidate_review: 'Not Approved for Future Model-Candidate Review',
   insufficient_context: 'Insufficient Context',
 };
 

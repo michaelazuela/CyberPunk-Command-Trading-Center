@@ -3,17 +3,26 @@ import fs from 'node:fs/promises';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildPriceActionReviewCardModel } from '../../src/agents/priceActionReviewCardAgent';
 import {
   appendResearchDiscordReviewState,
   buildResearchDiscordReviewQueue,
   createResearchDiscordStateEntry,
   emptyResearchDiscordReviewState,
+  PRICE_ACTION_REVIEW_LABELS,
   summarizeResearchDiscordReviewState,
   type ResearchDiscordMessagePayload,
   type ResearchDiscordReviewState,
 } from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchOutcomeMathReport } from '../../src/agents/researchOutcomeMathAgent';
 import type { ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
+import { renderPriceActionReviewCard } from './price-action-review-card-renderer';
+import {
+  resolveActiveBridgeInstrument,
+  resolveResearchPriceActionBars,
+  type ActiveBridgeInstrumentResolution,
+  type ResearchPriceActionBarsResult,
+} from './research-price-action-bars';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -30,6 +39,30 @@ export interface ResearchDiscordReviewCliOptions {
   pretty: boolean;
   json: boolean;
   skipSampleIds?: string[];
+  withPriceActionCards?: boolean;
+  priceActionCards?: ResearchDiscordPriceActionCardOptions;
+}
+
+export interface ResearchDiscordPriceActionCardResult {
+  sampleId: string;
+  pngPath: string | null;
+  attached: boolean;
+  skipped: boolean;
+  warnings: string[];
+  dataSource: ResearchPriceActionBarsResult['dataSource'] | 'not_requested';
+  resolvedContract: string | null;
+}
+
+export interface ResearchDiscordPriceActionCardOptions {
+  enabled: boolean;
+  symbol: string;
+  bridgeInstrument?: string;
+  bridgeUrl?: string;
+  outputDir?: string;
+  dateRange?: { from: string; to: string } | null;
+  contractResolution?: ActiveBridgeInstrumentResolution | null;
+  resolveBars?: typeof resolveResearchPriceActionBars;
+  renderCard?: typeof renderPriceActionReviewCard;
 }
 
 export interface ResearchDiscordPublishResult {
@@ -45,11 +78,14 @@ export interface ResearchDiscordPublishResult {
   packHash: string;
   payloads: ResearchDiscordMessagePayload[];
   advisoryOnlyConfirmed: boolean;
+  priceActionCards: ResearchDiscordPriceActionCardResult[];
+  activeContract: ActiveBridgeInstrumentResolution | null;
 }
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_STATE_PATH = path.join(__dirname, 'research-review-packs', 'discord-review-state.json');
+const DISCORD_MESSAGE_LIMIT = 2000;
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -84,7 +120,18 @@ export function parseResearchDiscordReviewArgs(args = process.argv.slice(2)): Re
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
     skipSampleIds: [],
+    withPriceActionCards: hasFlag(args, '--with-price-action-cards'),
   };
+}
+
+function contentTypeFor(file: string): string {
+  const ext = path.extname(file).toLowerCase();
+  if (ext === '.svg') return 'image/svg+xml';
+  if (ext === '.png') return 'image/png';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.json') return 'application/json';
+  if (ext === '.md' || ext === '.txt') return 'text/plain';
+  return 'application/octet-stream';
 }
 
 function isReviewPack(value: unknown): value is ResearchSampleReviewPack {
@@ -136,16 +183,39 @@ function missingDiscordCredentials(): string[] {
   return missing;
 }
 
-async function postDiscordMessage(channelId: string, token: string, payload: ResearchDiscordMessagePayload): Promise<string> {
+function onlyPngFiles(files: string[]): string[] {
+  return files.filter((file) => path.extname(file).toLowerCase() === '.png');
+}
+
+export async function postResearchDiscordReviewMessage(channelId: string, token: string, payload: ResearchDiscordMessagePayload, files: string[] = []): Promise<string> {
+  if ((payload.content || '').length > DISCORD_MESSAGE_LIMIT) {
+    throw new Error(`Discord research review post content exceeds ${DISCORD_MESSAGE_LIMIT} characters.`);
+  }
+  const validFiles = files.filter(Boolean);
   for (let attempt = 1; attempt <= 5; attempt += 1) {
-    const response = await fetch(`https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bot ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    const url = `https://discord.com/api/v10/channels/${encodeURIComponent(channelId)}/messages`;
+    const response = validFiles.length
+      ? await (async () => {
+          const form = new FormData();
+          form.append('payload_json', JSON.stringify(payload));
+          for (const [index, file] of validFiles.entries()) {
+            const bytes = await fs.readFile(file);
+            form.append(`files[${index}]`, new Blob([bytes], { type: contentTypeFor(file) }), path.basename(file));
+          }
+          return fetch(url, {
+            method: 'POST',
+            headers: { Authorization: `Bot ${token}` },
+            body: form,
+          });
+        })()
+      : await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bot ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
     if (response.ok) {
       const parsed = await response.json() as { id?: string };
       if (!parsed.id) throw new Error('Discord research review post succeeded but did not return a message id.');
@@ -170,18 +240,168 @@ async function postDiscordMessage(channelId: string, token: string, payload: Res
   throw new Error('Discord research review post failed after retry attempts.');
 }
 
+function appendPriceActionWarnings(payload: ResearchDiscordMessagePayload, warnings: string[]): ResearchDiscordMessagePayload {
+  if (!warnings.length) return payload;
+  const warningText = [
+    '',
+    'Price action chart warning:',
+    ...warnings.slice(0, 4).map((warning) => `- ${warning.slice(0, 180)}`),
+  ].join('\n');
+  const content = `${payload.content}${warningText}`;
+  return {
+    ...payload,
+    content: content.length <= 1900
+      ? content
+      : `${payload.content.slice(0, 1680).trim()}\nPrice action chart warning: ${warnings[0].slice(0, 170)}\nResearch-only. This does not approve execution, change rules, or create trades.`,
+  };
+}
+
+function safeFilePart(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 120) || 'sample';
+}
+
+async function resolvePriceActionCardConfig(options: ResearchDiscordReviewCliOptions): Promise<{
+  config: ResearchDiscordPriceActionCardOptions | null;
+  activeContract: ActiveBridgeInstrumentResolution | null;
+}> {
+  const requested = options.withPriceActionCards || options.priceActionCards?.enabled;
+  if (!requested) return { config: null, activeContract: null };
+  const base = options.priceActionCards || {
+    enabled: true,
+    symbol: 'MES',
+  };
+  const bridgeUrl = base.bridgeUrl || 'http://127.0.0.1:8765';
+  const contractResolution = base.contractResolution || (base.bridgeInstrument
+    ? { instrument: base.bridgeInstrument, source: 'launcher-config' as const, warnings: [], bridgeUrl }
+    : await resolveActiveBridgeInstrument({ bridgeUrl }));
+  return {
+    config: {
+      ...base,
+      enabled: true,
+      bridgeUrl,
+      bridgeInstrument: contractResolution.instrument,
+      contractResolution,
+    },
+    activeContract: contractResolution,
+  };
+}
+
+async function buildPriceActionCardAttachment(args: {
+  item: ReturnType<typeof buildResearchDiscordReviewQueue>['items'][number];
+  packInstrument: string;
+  cardOptions: ResearchDiscordPriceActionCardOptions;
+}): Promise<{ payloadWarnings: string[]; attachmentPaths: string[]; result: ResearchDiscordPriceActionCardResult }> {
+  const resolveBars = args.cardOptions.resolveBars || resolveResearchPriceActionBars;
+  const renderCard = args.cardOptions.renderCard || renderPriceActionReviewCard;
+  const symbol = args.cardOptions.symbol || args.packInstrument || 'MES';
+  const resolvedContract = args.cardOptions.bridgeInstrument || args.cardOptions.contractResolution?.instrument || 'MES 06-26';
+  const range = args.cardOptions.dateRange;
+  const baseWarnings = [...(args.cardOptions.contractResolution?.warnings || [])];
+  try {
+    const bars = await resolveBars(args.item.sample, {
+      symbol,
+      bridgeInstrument: resolvedContract,
+      bridgeUrl: args.cardOptions.bridgeUrl,
+    });
+    const warnings = [...baseWarnings, ...bars.warnings];
+    if (!bars.bars5m.length || !bars.bars15m.length) {
+      const missing = 'Price action chart unavailable: missing bar data for sample window.';
+      return {
+        payloadWarnings: [missing, ...warnings],
+        attachmentPaths: [],
+        result: {
+          sampleId: args.item.sample.sampleId,
+          pngPath: null,
+          attached: false,
+          skipped: false,
+          warnings: [missing, ...warnings],
+          dataSource: bars.dataSource,
+          resolvedContract: bars.resolvedContract,
+        },
+      };
+    }
+    const model = buildPriceActionReviewCardModel({
+      sample: args.item.sample,
+      overlay: args.item.outcome?.hypotheticalOutcomeOverlay || null,
+      bars5m: bars.bars5m,
+      bars15m: bars.bars15m,
+      symbol,
+      contract: bars.resolvedContract,
+      dateRange: range,
+    });
+    const filePrefix = [
+      'price-action-review-card',
+      safeFilePart(symbol),
+      range ? `${safeFilePart(range.from)}-to-${safeFilePart(range.to)}` : 'review',
+      safeFilePart(args.item.sample.sampleId),
+    ].join('-');
+    const pngPath = await renderCard({
+      model,
+      outputDir: args.cardOptions.outputDir,
+      filePrefix,
+    });
+    const pngAttachments = onlyPngFiles([pngPath]);
+    if (!pngAttachments.length) {
+      const warning = 'Price action card renderer did not return a PNG attachment path.';
+      return {
+        payloadWarnings: [warning, ...warnings],
+        attachmentPaths: [],
+        result: {
+          sampleId: args.item.sample.sampleId,
+          pngPath,
+          attached: false,
+          skipped: false,
+          warnings: [warning, ...warnings],
+          dataSource: bars.dataSource,
+          resolvedContract: bars.resolvedContract,
+        },
+      };
+    }
+    return {
+      payloadWarnings: warnings,
+      attachmentPaths: pngAttachments,
+      result: {
+        sampleId: args.item.sample.sampleId,
+        pngPath: pngAttachments[0],
+        attached: true,
+        skipped: false,
+        warnings,
+        dataSource: bars.dataSource,
+        resolvedContract: bars.resolvedContract,
+      },
+    };
+  } catch (error) {
+    const warning = `Price action chart unavailable: ${error instanceof Error ? error.message : String(error)}`;
+    return {
+      payloadWarnings: [warning, ...baseWarnings],
+      attachmentPaths: [],
+      result: {
+        sampleId: args.item.sample.sampleId,
+        pngPath: null,
+        attached: false,
+        skipped: false,
+        warnings: [warning, ...baseWarnings],
+        dataSource: 'missing',
+        resolvedContract,
+      },
+    };
+  }
+}
+
 export async function publishResearchDiscordReview(options: ResearchDiscordReviewCliOptions): Promise<ResearchDiscordPublishResult> {
   if (!options.reviewPack) throw new Error('--review-pack is required with --publish-pending.');
   const reviewPackPath = path.resolve(options.reviewPack);
   const reviewPack = await loadJsonFile(reviewPackPath, isReviewPack, 'Review pack');
   const outcomeReportPath = options.outcomeReport ? path.resolve(options.outcomeReport) : null;
   const outcomeReport = outcomeReportPath ? await loadJsonFile(outcomeReportPath, isOutcomeReport, 'Outcome report') : null;
+  const usePriceActionReviewButtons = Boolean(options.withPriceActionCards || options.priceActionCards?.enabled);
   const queue = buildResearchDiscordReviewQueue({
     reviewPack,
     reviewPackPath,
     outcomeReport,
     limit: options.limit,
     skipSampleIds: options.skipSampleIds,
+    buttonMode: usePriceActionReviewButtons ? 'future_model_candidate_review' : 'legacy_research_review',
   });
   const missingCredentials = missingDiscordCredentials();
   if (!options.dryRun && missingCredentials.length) {
@@ -189,11 +409,25 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
   }
   const channelId = process.env.RESEARCH_REVIEW_DISCORD_CHANNEL_ID || null;
   const token = process.env.RESEARCH_REVIEW_DISCORD_BOT_TOKEN || null;
+  const priceActionConfig = await resolvePriceActionCardConfig(options);
+  const priceActionCards: ResearchDiscordPriceActionCardResult[] = [];
   let messagesPosted = 0;
   const stateEntries = [];
   let currentState = (!options.dryRun || options.writeDryRunState) ? await readState(options.statePath) : null;
   for (const item of queue.items) {
-    const messageId = options.dryRun ? null : await postDiscordMessage(channelId as string, token as string, item.payload);
+    let payload = item.payload;
+    let attachments: string[] = [];
+    if (priceActionConfig.config?.enabled) {
+      const card = await buildPriceActionCardAttachment({
+        item,
+        packInstrument: reviewPack.instrument,
+        cardOptions: priceActionConfig.config,
+      });
+      payload = appendPriceActionWarnings(payload, card.payloadWarnings);
+      attachments = onlyPngFiles(card.attachmentPaths);
+      priceActionCards.push(card.result);
+    }
+    const messageId = options.dryRun ? null : await postResearchDiscordReviewMessage(channelId as string, token as string, payload, attachments);
     if (!options.dryRun) messagesPosted += 1;
     if (!options.dryRun || options.writeDryRunState) {
       const entry = createResearchDiscordStateEntry({
@@ -202,6 +436,7 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
         sampleId: item.sample.sampleId,
         discordMessageId: messageId,
         discordChannelId: channelId || 'dry-run',
+        labelOptions: usePriceActionReviewButtons ? PRICE_ACTION_REVIEW_LABELS : undefined,
       });
       stateEntries.push(entry);
       currentState = appendResearchDiscordReviewState(currentState || emptyResearchDiscordReviewState(), [entry]);
@@ -221,6 +456,8 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
     packHash: queue.packHash,
     payloads: queue.items.map((item) => item.payload),
     advisoryOnlyConfirmed: queue.items.every((item) => (item.sample as { advisoryOnly?: boolean }).advisoryOnly !== false),
+    priceActionCards,
+    activeContract: priceActionConfig.activeContract,
   };
 }
 
@@ -238,6 +475,10 @@ function renderPublish(result: ResearchDiscordPublishResult): string {
     `Pack hash: ${result.packHash}`,
     `Missing credentials: ${result.missingCredentials.length ? result.missingCredentials.join(', ') : 'none'}`,
     `Advisory-only confirmation: ${result.advisoryOnlyConfirmed ? 'yes' : 'no'}`,
+    `Resolved active contract: ${result.activeContract?.instrument || 'not requested'}`,
+    `Contract source: ${result.activeContract?.source || 'not requested'}`,
+    ...(result.activeContract?.warnings || []).map((warning) => `Contract warning: ${warning}`),
+    `PriceActionReviewCard PNGs: ${result.priceActionCards.length ? result.priceActionCards.map((card) => `${card.sampleId}=${card.pngPath || 'unavailable'}`).join(' | ') : 'not requested'}`,
     '',
     'Authority: research-only. Discord review buttons do not approve execution.',
   ].join('\n');
