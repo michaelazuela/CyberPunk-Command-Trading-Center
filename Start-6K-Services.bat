@@ -8,12 +8,18 @@ REM Dashboard-managed Cloudflare Tunnel connector settings.
 REM The connector should be installed once with:
 REM cloudflared.exe service install <token>
 REM Do not paste the token into this file.
+set "DEFAULT_SYMBOL=MES"
+set "DEFAULT_CONTRACT=MES 06-26"
+set "BRIDGE_URL=http://127.0.0.1:8765"
 set "DISCORD_ENDPOINT=https://discord-bridge.urmomshouse.net/interactions"
 
 echo ========================================
 echo  Quant Desk / 6K Trading Service Launcher
 echo ========================================
 echo Project root: %CD%
+echo Default symbol: %DEFAULT_SYMBOL%
+echo Default contract: %DEFAULT_CONTRACT%
+echo Bridge URL: %BRIDGE_URL%
 echo Discord endpoint: %DISCORD_ENDPOINT%
 echo.
 
@@ -45,10 +51,47 @@ if not errorlevel 1 (
   echo Matching port/PID information:
   netstat -ano | findstr :8787
   echo.
-  echo Skipping duplicate Discord research interaction service startup.
+  echo Interaction receiver: already running. Skipping duplicate startup.
 ) else (
-  echo Starting Discord research interaction service...
+  echo Interaction receiver: starting...
   start "6K Discord Research Interactions" cmd /k "cd /d ""%CD%"" && npm run research:discord-interactions"
+  echo Interaction receiver: started in a separate window.
+)
+
+echo.
+echo Checking NinjaTrader bridge service...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $response = Invoke-RestMethod -Uri '%BRIDGE_URL%/health' -TimeoutSec 3; if ($response.ok -eq $true) { Write-Host 'Bridge service: running'; if ($response.defaultInstrument) { Write-Host ('Bridge default instrument: ' + $response.defaultInstrument) } } else { Write-Host 'Bridge service: reachable but reported not OK.' } } catch { Write-Host 'Bridge service: not reachable. Start NinjaTrader and confirm the QuantDeskBridge AddOn is compiled/running.' }"
+
+echo.
+echo Checking Quant Desk bar data / market cache service...
+set "BAR_DATA_PIDS="
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:candle-recorder') } | Select-Object -ExpandProperty ProcessId"`) do (
+  set "BAR_DATA_PIDS=%%P"
+)
+
+if defined BAR_DATA_PIDS (
+  echo Bar data service: already running.
+  echo Matching bar data process IDs:
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:candle-recorder') } | Select-Object -ExpandProperty ProcessId"
+) else (
+  echo Bar data service: starting for %DEFAULT_CONTRACT%...
+  start "Quant Desk Bar Data - %DEFAULT_CONTRACT%" cmd /k "cd /d ""%CD%"" && npm run nt:candle-recorder -- --instrument %DEFAULT_SYMBOL% --bridge-instrument ""%DEFAULT_CONTRACT%"" --bridge-url %BRIDGE_URL% --poll-seconds 60 --bar-time-zone eastern"
+)
+
+echo.
+echo Checking Quant Desk live scanner/watchlist service...
+set "SCANNER_PIDS="
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:scanner') } | Select-Object -ExpandProperty ProcessId"`) do (
+  set "SCANNER_PIDS=%%P"
+)
+
+if defined SCANNER_PIDS (
+  echo Scanner/watchlist service: already running.
+  echo Matching scanner process IDs:
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:scanner') } | Select-Object -ExpandProperty ProcessId"
+) else (
+  echo Scanner/watchlist service: starting for %DEFAULT_CONTRACT%...
+  start "Quant Desk Live Scanner - %DEFAULT_CONTRACT%" cmd /k "cd /d ""%CD%"" && npm run nt:scanner -- --instrument %DEFAULT_SYMBOL% --bridge-instrument ""%DEFAULT_CONTRACT%"" --bridge-url %BRIDGE_URL% --poll-seconds 60 --bar-time-zone eastern"
 )
 
 echo.
@@ -73,7 +116,7 @@ if not defined CF_SERVICE_NAME (
   sc query "%CF_SERVICE_NAME%"
   sc query "%CF_SERVICE_NAME%" | findstr /I /C:"RUNNING" >nul 2>nul
   if not errorlevel 1 (
-    echo Cloudflare Tunnel service is already running.
+    echo Cloudflare tunnel service: running.
   ) else (
     echo Cloudflare Tunnel service is not running. Attempting to start it...
     net start "%CF_SERVICE_NAME%"
@@ -83,7 +126,7 @@ if not defined CF_SERVICE_NAME (
       echo If Windows reports access denied, run this launcher as Administrator
       echo or start the service manually from Windows Services.
     ) else (
-      echo Cloudflare Tunnel service started.
+      echo Cloudflare tunnel service: started.
     )
   )
 )
@@ -104,14 +147,19 @@ for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass
 )
 
 if defined SCHEDULER_PIDS (
-  echo Quant Desk Discord scheduler may already be running.
+  echo Scheduler: already running.
   echo Matching scheduler process IDs:
   powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'quant-desk:discord-scheduler') } | Select-Object -ExpandProperty ProcessId"
   echo Skipping duplicate scheduler startup.
 ) else (
-  echo Starting Quant Desk Discord scheduler...
+  echo Scheduler: starting...
   start "Quant Desk Discord Scheduler" cmd /k "cd /d ""%CD%"" && npm run quant-desk:discord-scheduler"
+  echo Scheduler: started in a separate window.
 )
+
+echo.
+echo Daily research review posting: handled by Quant Desk Discord scheduler startup check when applicable.
+echo Bridge service: checked at %BRIDGE_URL%/health. Start NinjaTrader manually if the bridge is not reachable.
 
 REM Optional: uncomment if needed.
 REM start "6K Dev Server" cmd /k "cd /d ""%CD%"" && npm run dev"
