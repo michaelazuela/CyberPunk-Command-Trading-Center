@@ -20,6 +20,10 @@ echo Project root: %CD%
 echo Default symbol: %DEFAULT_SYMBOL%
 echo Default contract: %DEFAULT_CONTRACT%
 echo Bridge URL: %BRIDGE_URL%
+echo Bar data contract: %DEFAULT_CONTRACT%
+echo Bar data bridge URL: %BRIDGE_URL%
+echo Scanner contract: %DEFAULT_CONTRACT%
+echo Scanner bridge URL: %BRIDGE_URL%
 echo Discord endpoint: %DISCORD_ENDPOINT%
 echo.
 
@@ -71,10 +75,14 @@ for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass
 
 if defined BAR_DATA_PIDS (
   echo Bar data service: already running.
+  echo Bar data contract: %DEFAULT_CONTRACT%
+  echo Bar data bridge URL: %BRIDGE_URL%
   echo Matching bar data process IDs:
   powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:candle-recorder') } | Select-Object -ExpandProperty ProcessId"
 ) else (
   echo Bar data service: starting for %DEFAULT_CONTRACT%...
+  echo Bar data contract: %DEFAULT_CONTRACT%
+  echo Bar data bridge URL: %BRIDGE_URL%
   start "Quant Desk Bar Data - %DEFAULT_CONTRACT%" cmd /k "cd /d ""%CD%"" && npm run nt:candle-recorder -- --instrument %DEFAULT_SYMBOL% --bridge-instrument ""%DEFAULT_CONTRACT%"" --bridge-url %BRIDGE_URL% --poll-seconds 60 --bar-time-zone eastern"
 )
 
@@ -87,10 +95,14 @@ for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass
 
 if defined SCANNER_PIDS (
   echo Scanner/watchlist service: already running.
+  echo Scanner contract: %DEFAULT_CONTRACT%
+  echo Scanner bridge URL: %BRIDGE_URL%
   echo Matching scanner process IDs:
   powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'nt:scanner') } | Select-Object -ExpandProperty ProcessId"
 ) else (
   echo Scanner/watchlist service: starting for %DEFAULT_CONTRACT%...
+  echo Scanner contract: %DEFAULT_CONTRACT%
+  echo Scanner bridge URL: %BRIDGE_URL%
   start "Quant Desk Live Scanner - %DEFAULT_CONTRACT%" cmd /k "cd /d ""%CD%"" && npm run nt:scanner -- --instrument %DEFAULT_SYMBOL% --bridge-instrument ""%DEFAULT_CONTRACT%"" --bridge-url %BRIDGE_URL% --poll-seconds 60 --bar-time-zone eastern"
 )
 
