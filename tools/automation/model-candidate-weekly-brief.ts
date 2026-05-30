@@ -9,6 +9,7 @@ import {
   type ModelCandidateLedgerOptions,
   type ModelCandidateReviewLedger,
 } from './model-candidate-ledger';
+import { buildModelCandidateDecisionPostPayload } from './model-candidate-decisions';
 import { postResearchDiscordReviewMessage } from './research-discord-review';
 
 dotenv.config({ quiet: true });
@@ -50,6 +51,13 @@ export interface ModelCandidateWeeklyBriefResult {
   posted: boolean;
   skippedReason: string | null;
   messageId: string | null;
+  decisionPosts: {
+    conceptKey: string;
+    conceptTitle: string;
+    posted: boolean;
+    messageId: string | null;
+    skippedReason: string | null;
+  }[];
   statePath: string;
   missingDiscordConfig: string[];
 }
@@ -256,6 +264,45 @@ function briefKey(options: ModelCandidateWeeklyBriefOptions): string {
   return `${options.symbol}|${options.from}|${options.to}`;
 }
 
+function decisionSummaries(ledger: ModelCandidateReviewLedger): ModelCandidateConceptSummary[] {
+  return ledger.conceptSummaries.filter((summary) => summary.candidateReadinessStatus === 'candidate_review_recommended');
+}
+
+async function postDecisionFollowUps(ledger: ModelCandidateReviewLedger, options: ModelCandidateWeeklyBriefOptions, missing: string[]): Promise<ModelCandidateWeeklyBriefResult['decisionPosts']> {
+  return Promise.all(decisionSummaries(ledger).map(async (summary) => {
+    if (options.dryRun) {
+      return {
+        conceptKey: summary.concept,
+        conceptTitle: summary.conceptTitle,
+        posted: false,
+        messageId: null,
+        skippedReason: 'Dry-run; no Discord decision post made.',
+      };
+    }
+    if (missing.length) {
+      return {
+        conceptKey: summary.concept,
+        conceptTitle: summary.conceptTitle,
+        posted: false,
+        messageId: null,
+        skippedReason: `Missing Discord configuration: ${missing.join(', ')}`,
+      };
+    }
+    const messageId = await postResearchDiscordReviewMessage(
+      process.env.RESEARCH_REVIEW_DISCORD_CHANNEL_ID as string,
+      process.env.RESEARCH_REVIEW_DISCORD_BOT_TOKEN as string,
+      buildModelCandidateDecisionPostPayload(ledger, summary),
+    );
+    return {
+      conceptKey: summary.concept,
+      conceptTitle: summary.conceptTitle,
+      posted: true,
+      messageId,
+      skippedReason: null,
+    };
+  }));
+}
+
 export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeeklyBriefOptions): Promise<ModelCandidateWeeklyBriefResult> {
   const statePath = path.resolve(options.statePath);
   const state = await readState(statePath);
@@ -273,6 +320,7 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
     thresholds: options.thresholds,
   });
   const content = renderModelCandidateWeeklyBrief(ledger);
+  const missing = missingDiscordConfig();
   if (!options.force && state.postedBriefs[key]) {
     return {
       briefKey: key,
@@ -281,6 +329,7 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
       posted: false,
       skippedReason: 'Already posted.',
       messageId: state.postedBriefs[key].messageId,
+      decisionPosts: [],
       statePath,
       missingDiscordConfig: [],
     };
@@ -293,11 +342,11 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
       posted: false,
       skippedReason: 'Dry-run; no Discord post made.',
       messageId: null,
+      decisionPosts: await postDecisionFollowUps(ledger, options, missing),
       statePath,
       missingDiscordConfig: [],
     };
   }
-  const missing = missingDiscordConfig();
   if (missing.length) {
     return {
       briefKey: key,
@@ -306,6 +355,7 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
       posted: false,
       skippedReason: `Missing Discord configuration: ${missing.join(', ')}`,
       messageId: null,
+      decisionPosts: await postDecisionFollowUps(ledger, options, missing),
       statePath,
       missingDiscordConfig: missing,
     };
@@ -326,6 +376,7 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
     ledgerPath: ledger.outputPaths.jsonPath,
   };
   await writeState(statePath, state);
+  const decisionPosts = await postDecisionFollowUps(ledger, options, missing);
   return {
     briefKey: key,
     content,
@@ -333,6 +384,7 @@ export async function sendModelCandidateWeeklyBrief(options: ModelCandidateWeekl
     posted: true,
     skippedReason: null,
     messageId,
+    decisionPosts,
     statePath,
     missingDiscordConfig: [],
   };
@@ -346,6 +398,7 @@ function renderPretty(result: ModelCandidateWeeklyBriefResult): string {
     `Ledger Markdown: ${result.ledger.outputPaths.markdownPath}`,
     `Posted: ${result.posted ? 'yes' : 'no'}`,
     `Skipped reason: ${result.skippedReason || 'none'}`,
+    `Decision posts: ${result.decisionPosts.length}`,
     `State path: ${result.statePath}`,
     '',
     result.content,

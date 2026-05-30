@@ -8,6 +8,10 @@ import {
   researchOnlySafetyFailureResponse,
   type ResearchDiscordInteractionResult,
 } from '../../src/agents/researchDiscordReviewInteractionAgent';
+import {
+  handleModelCandidateDecisionInteraction,
+  type ModelCandidateDecisionInteractionResult,
+} from './model-candidate-decisions';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -18,6 +22,8 @@ export interface ResearchDiscordInteractionsCliOptions {
   discordUserId: string | null;
   discordUsername: string | null;
   statePath: string;
+  modelCandidateLedgerPath: string;
+  modelCandidateDecisionDir: string;
   port: number;
   pretty: boolean;
   json: boolean;
@@ -26,6 +32,8 @@ export interface ResearchDiscordInteractionsCliOptions {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_STATE_PATH = path.join(__dirname, 'research-review-packs', 'discord-review-state.json');
+const DEFAULT_MODEL_CANDIDATE_LEDGER_PATH = path.join(__dirname, 'model-candidate-ledger', 'model-candidate-review-ledger.json');
+const DEFAULT_MODEL_CANDIDATE_DECISION_DIR = path.join(__dirname, 'model-candidate-decisions');
 
 function readFlag(args: string[], flag: string): string | null {
   const index = args.indexOf(flag);
@@ -61,20 +69,22 @@ export function parseResearchDiscordInteractionsArgs(args = process.argv.slice(2
     discordUserId: readFlag(args, '--discord-user-id'),
     discordUsername: readFlag(args, '--discord-username'),
     statePath: readFlag(args, '--state-path') || process.env.RESEARCH_REVIEW_STATE_PATH || DEFAULT_STATE_PATH,
+    modelCandidateLedgerPath: readFlag(args, '--model-candidate-ledger-path') || process.env.MODEL_CANDIDATE_LEDGER_PATH || DEFAULT_MODEL_CANDIDATE_LEDGER_PATH,
+    modelCandidateDecisionDir: readFlag(args, '--model-candidate-decision-dir') || process.env.MODEL_CANDIDATE_DECISION_DIR || DEFAULT_MODEL_CANDIDATE_DECISION_DIR,
     port: numberFlag(args, '--port', Number.parseInt(process.env.RESEARCH_REVIEW_INTERACTION_PORT || '8787', 10) || 8787),
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
   };
 }
 
-function renderResult(result: ResearchDiscordInteractionResult): string {
+function renderResult(result: ResearchDiscordInteractionResult | ModelCandidateDecisionInteractionResult): string {
   return [
     '[RESEARCH DISCORD INTERACTION]',
     `Status: ${result.status}`,
-    `Sample id: ${result.sampleId || 'n/a'}`,
-    `Selected label: ${result.selectedLabel || 'n/a'}`,
-    `Reviewed pack: ${result.reviewedPackPath || 'n/a'}`,
-    `Reviewed markdown: ${result.reviewedMarkdownPath || 'n/a'}`,
+    'sampleId' in result ? `Sample id: ${result.sampleId || 'n/a'}` : `Concept key: ${result.conceptKey || 'n/a'}`,
+    'selectedLabel' in result ? `Selected label: ${result.selectedLabel || 'n/a'}` : `Decision: ${result.decision || 'n/a'}`,
+    'reviewedPackPath' in result ? `Reviewed pack: ${result.reviewedPackPath || 'n/a'}` : `Decision JSON: ${result.decisionJsonPath || 'n/a'}`,
+    'reviewedMarkdownPath' in result ? `Reviewed markdown: ${result.reviewedMarkdownPath || 'n/a'}` : `Decision Markdown: ${result.decisionMarkdownPath || 'n/a'}`,
     `OK: ${result.ok ? 'yes' : 'no'}`,
     '',
     result.responseContent,
@@ -162,22 +172,31 @@ async function startServer(options: ResearchDiscordInteractionsCliOptions): Prom
       const message = payload.message && typeof payload.message === 'object' ? payload.message as Record<string, unknown> : {};
       const customId = typeof data.custom_id === 'string' ? data.custom_id : '';
       const user = interactionUser(payload);
-      const result = handleResearchDiscordReviewInteraction({
-        customId,
-        statePath: options.statePath,
-        user,
-        channelId: typeof payload.channel_id === 'string' ? payload.channel_id : null,
-        messageId: typeof message.id === 'string' ? message.id : null,
-        allowedUserIds: allowedUserIds(),
-        messageContent: typeof message.content === 'string' ? message.content : null,
-        messageComponents: Array.isArray(message.components) ? message.components as never : undefined,
-      });
+      const result = customId.startsWith('model_candidate_decision|')
+        ? await handleModelCandidateDecisionInteraction({
+          customId,
+          ledgerPath: options.modelCandidateLedgerPath,
+          decisionDir: options.modelCandidateDecisionDir,
+          user,
+        })
+        : handleResearchDiscordReviewInteraction({
+          customId,
+          statePath: options.statePath,
+          user,
+          channelId: typeof payload.channel_id === 'string' ? payload.channel_id : null,
+          messageId: typeof message.id === 'string' ? message.id : null,
+          allowedUserIds: allowedUserIds(),
+          messageContent: typeof message.content === 'string' ? message.content : null,
+          messageComponents: Array.isArray(message.components) ? message.components as never : undefined,
+        });
       if (!result.ok) console.warn(`[research-discord-interactions] interaction rejected: ${result.status}`);
-      await editDiscordMessage(
-        typeof payload.channel_id === 'string' ? payload.channel_id : null,
-        typeof message.id === 'string' ? message.id : null,
-        result.messageUpdate,
-      );
+      if ('messageUpdate' in result) {
+        await editDiscordMessage(
+          typeof payload.channel_id === 'string' ? payload.channel_id : null,
+          typeof message.id === 'string' ? message.id : null,
+          result.messageUpdate,
+        );
+      }
       res.json(discordEphemeral(result.responseContent));
     } catch (error) {
       console.error(`[research-discord-interactions] safe server error response: ${error instanceof Error ? error.message : String(error)}`);
@@ -192,9 +211,20 @@ async function startServer(options: ResearchDiscordInteractionsCliOptions): Prom
   console.log('Authority: research-only. Button interactions do not approve execution.');
 }
 
-async function runSimulation(options: ResearchDiscordInteractionsCliOptions): Promise<ResearchDiscordInteractionResult> {
+async function runSimulation(options: ResearchDiscordInteractionsCliOptions): Promise<ResearchDiscordInteractionResult | ModelCandidateDecisionInteractionResult> {
   if (!options.customId) throw new Error('--custom-id is required with --simulate.');
   if (!options.discordUserId) throw new Error('--discord-user-id is required with --simulate.');
+  if (options.customId.startsWith('model_candidate_decision|')) {
+    return handleModelCandidateDecisionInteraction({
+      customId: options.customId,
+      ledgerPath: options.modelCandidateLedgerPath,
+      decisionDir: options.modelCandidateDecisionDir,
+      user: {
+        id: options.discordUserId,
+        username: options.discordUsername,
+      },
+    });
+  }
   return handleResearchDiscordReviewInteraction({
     customId: options.customId,
     statePath: options.statePath,
