@@ -1,0 +1,36 @@
+{
+  "reportType": "model_candidate_review_ledger",
+  "generatedAt": "2026-05-30T20:45:04.220Z",
+  "from": "2026-01-01",
+  "to": "2026-05-30",
+  "symbol": "MES",
+  "advisoryOnly": true,
+  "safety": {
+    "researchOnly": true,
+    "approvesExecution": false,
+    "changesRules": false,
+    "createsTrades": false,
+    "writesRag": false,
+    "writesJournal": false,
+    "message": "Research-only. This does not approve execution, change rules, or create trades."
+  },
+  "thresholds": {
+    "minimumReviewedSamples": 10,
+    "minimumApprovalRate": 0.7
+  },
+  "summary": {
+    "reviewedSamplesFound": 0,
+    "approvedCount": 0,
+    "notApprovedCount": 0,
+    "ignoredLegacyReviewedSamples": 2,
+    "conceptsReviewed": 0,
+    "candidateReviewRecommendedConcepts": 0
+  },
+  "entries": [],
+  "conceptSummaries": [],
+  "warnings": [],
+  "outputPaths": {
+    "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.json",
+    "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.md"
+  }
+}
