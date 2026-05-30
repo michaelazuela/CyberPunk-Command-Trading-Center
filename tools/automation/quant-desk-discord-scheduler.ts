@@ -7,6 +7,10 @@ import {
   publishResearchDiscordReview,
   type ResearchDiscordPublishResult,
 } from './research-discord-review';
+import {
+  sendModelCandidateWeeklyBrief,
+  type ModelCandidateWeeklyBriefResult,
+} from './model-candidate-weekly-brief';
 import type { ResearchDiscordReviewState } from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchHumanInspectionLabel, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
 
@@ -32,6 +36,9 @@ interface SchedulerOptions {
   reviewPackDir: string;
   outcomeReportDir: string;
   validationReportDir: string;
+  modelCandidateBriefStatePath: string;
+  modelCandidateLedgerOutDir: string;
+  modelCandidateChartDir: string;
   reviewPublishLimit: number;
   publishReviewOnStart: boolean;
 }
@@ -89,6 +96,9 @@ const DEFAULT_REVIEW_STATE_PATH = path.join(__dirname, 'research-review-packs', 
 const DEFAULT_REVIEW_PACK_DIR = path.join(__dirname, 'research-review-packs');
 const DEFAULT_OUTCOME_REPORT_DIR = path.join(__dirname, 'research-outcome-reports');
 const DEFAULT_VALIDATION_REPORT_DIR = path.join(__dirname, 'research-validation-reports');
+const DEFAULT_MODEL_CANDIDATE_LEDGER_DIR = path.join(__dirname, 'model-candidate-ledger');
+const DEFAULT_MODEL_CANDIDATE_BRIEF_STATE_PATH = path.join(DEFAULT_MODEL_CANDIDATE_LEDGER_DIR, 'model-candidate-weekly-brief-state.json');
+const DEFAULT_PRICE_ACTION_CARD_DIR = path.join(__dirname, 'research-review-charts', 'price-action-review-cards');
 const SAFETY_FOOTER = 'Research-only. This does not approve execution, change rules, or create trades.';
 
 const LABEL_TEXT: Record<ResearchHumanInspectionLabel, string> = {
@@ -163,6 +173,9 @@ export function parseQuantDeskDiscordSchedulerArgs(args = process.argv.slice(2))
     reviewPackDir: readFlag(args, '--review-pack-dir') || DEFAULT_REVIEW_PACK_DIR,
     outcomeReportDir: readFlag(args, '--outcome-report-dir') || DEFAULT_OUTCOME_REPORT_DIR,
     validationReportDir: readFlag(args, '--validation-report-dir') || DEFAULT_VALIDATION_REPORT_DIR,
+    modelCandidateBriefStatePath: readFlag(args, '--model-candidate-brief-state-path') || DEFAULT_MODEL_CANDIDATE_BRIEF_STATE_PATH,
+    modelCandidateLedgerOutDir: readFlag(args, '--model-candidate-ledger-out') || DEFAULT_MODEL_CANDIDATE_LEDGER_DIR,
+    modelCandidateChartDir: readFlag(args, '--model-candidate-chart-dir') || DEFAULT_PRICE_ACTION_CARD_DIR,
     reviewPublishLimit: numberFlag(args, '--review-publish-limit', Number.parseInt(process.env.QUANT_DESK_REVIEW_PUBLISH_LIMIT || '5', 10) || 5),
     publishReviewOnStart: boolFlag(args, '--publish-review-on-start', true),
   };
@@ -500,14 +513,36 @@ async function runStartupReviewPublish(options: SchedulerOptions, state: Schedul
   return result;
 }
 
-export async function sendScheduledReport(kind: ReportKind, options: SchedulerOptions, force: boolean): Promise<{ sent: boolean; skippedReason: string | null; content: string }> {
+export async function sendScheduledReport(kind: ReportKind, options: SchedulerOptions, force: boolean): Promise<{ sent: boolean; skippedReason: string | null; content: string; modelCandidateWeeklyBrief?: ModelCandidateWeeklyBriefResult }> {
   const state = await readState(options.statePath);
   const today = zonedParts(new Date(), options.timezone).date;
   const facts = await collectReviewFacts(options, state, today);
   const key = kind === 'daily' ? facts.reportDate : weekRange(facts.reportDate).weekKey;
   const records = kind === 'daily' ? state.dailyReports : state.weeklyReports;
   const content = kind === 'daily' ? buildDailyCloseBrief(facts) : buildWeeklyWrapBrief(facts);
-  if (!force && records[key]) return { sent: false, skippedReason: 'Already posted.', content };
+  if (!force && records[key]) {
+    const modelCandidateWeeklyBrief = kind === 'weekly'
+      ? await sendModelCandidateWeeklyBrief({
+        from: facts.weekStart,
+        to: facts.weekEnd,
+        symbol: options.instrument,
+        dryRun: options.dryRun,
+        force: false,
+        pretty: options.pretty,
+        json: false,
+        statePath: options.modelCandidateBriefStatePath,
+        reviewPackDir: options.reviewPackDir,
+        outcomeReportDir: options.outcomeReportDir,
+        chartDir: options.modelCandidateChartDir,
+        ledgerOutDir: options.modelCandidateLedgerOutDir,
+        thresholds: {
+          minimumReviewedSamples: 10,
+          minimumApprovalRate: 0.7,
+        },
+      })
+      : undefined;
+    return { sent: false, skippedReason: 'Already posted.', content, modelCandidateWeeklyBrief };
+  }
   let messageId: string | null = null;
   try {
     messageId = await postDiscordContent(content, options.dryRun);
@@ -517,7 +552,27 @@ export async function sendScheduledReport(kind: ReportKind, options: SchedulerOp
   }
   records[key] = { postedAt: new Date().toISOString(), messageId, dryRun: options.dryRun };
   await writeState(options.statePath, state);
-  return { sent: true, skippedReason: null, content };
+  const modelCandidateWeeklyBrief = kind === 'weekly'
+    ? await sendModelCandidateWeeklyBrief({
+      from: facts.weekStart,
+      to: facts.weekEnd,
+      symbol: options.instrument,
+      dryRun: options.dryRun,
+      force,
+      pretty: options.pretty,
+      json: false,
+      statePath: options.modelCandidateBriefStatePath,
+      reviewPackDir: options.reviewPackDir,
+      outcomeReportDir: options.outcomeReportDir,
+      chartDir: options.modelCandidateChartDir,
+      ledgerOutDir: options.modelCandidateLedgerOutDir,
+      thresholds: {
+        minimumReviewedSamples: 10,
+        minimumApprovalRate: 0.7,
+      },
+    })
+    : undefined;
+  return { sent: true, skippedReason: null, content, modelCandidateWeeklyBrief };
 }
 
 function nextRunLine(label: string, time: string, timezone: string): string {
@@ -543,7 +598,9 @@ async function runLoop(options: SchedulerOptions): Promise<void> {
   console.log(`Symbol: ${options.instrument}`);
   console.log(nextRunLine('Daily close brief', options.dailyTime, options.timezone));
   console.log(nextRunLine('Weekly wrap-up brief', options.weeklyTime, options.timezone));
+  console.log(nextRunLine('Model candidate weekly research brief', options.weeklyTime, options.timezone));
   console.log(`State file: ${path.resolve(options.statePath)}`);
+  console.log(`Model candidate brief state file: ${path.resolve(options.modelCandidateBriefStatePath)}`);
   console.log(SAFETY_FOOTER);
   setInterval(() => {
     void (async () => {

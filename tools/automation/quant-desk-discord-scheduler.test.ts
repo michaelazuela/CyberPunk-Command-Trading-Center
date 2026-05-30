@@ -16,8 +16,11 @@ const temp = mkdtempSync(join(tmpdir(), 'quant-desk-discord-scheduler-'));
 const reviewPackDir = join(temp, 'research-review-packs');
 const outcomeDir = join(temp, 'research-outcome-reports');
 const validationDir = join(temp, 'research-validation-reports');
+const modelCandidateLedgerDir = join(temp, 'model-candidate-ledger');
+const modelCandidateChartDir = join(temp, 'research-review-charts', 'price-action-review-cards');
 const statePath = join(temp, 'discord-report-state.json');
 const reviewStatePath = join(reviewPackDir, 'discord-review-state.json');
+const modelCandidateBriefStatePath = join(modelCandidateLedgerDir, 'model-candidate-weekly-brief-state.json');
 
 function writeJson(file: string, value: unknown): void {
   mkdirSync(dirname(file), { recursive: true });
@@ -192,6 +195,12 @@ const options = parseQuantDeskDiscordSchedulerArgs([
   outcomeDir,
   '--validation-report-dir',
   validationDir,
+  '--model-candidate-brief-state-path',
+  modelCandidateBriefStatePath,
+  '--model-candidate-ledger-out',
+  modelCandidateLedgerDir,
+  '--model-candidate-chart-dir',
+  modelCandidateChartDir,
 ]);
 
 const facts = await collectReviewFacts(options, {
@@ -234,5 +243,14 @@ const second = await sendScheduledReport('daily', options, false);
 assert.equal(second.sent, false);
 assert.equal(second.skippedReason, 'Already posted.');
 assert.ok(readFileSync(statePath, 'utf8').includes('quant_desk_discord_report_state'));
+
+const weekly = await sendScheduledReport('weekly', options, true);
+assert.equal(weekly.sent, true);
+assert.ok(weekly.modelCandidateWeeklyBrief);
+assert.equal(weekly.modelCandidateWeeklyBrief.posted, false);
+assert.equal(weekly.modelCandidateWeeklyBrief.skippedReason, 'Dry-run; no Discord post made.');
+assert.ok(weekly.modelCandidateWeeklyBrief.content.includes('Quant Desk Weekly Research Brief'));
+assert.ok(weekly.modelCandidateWeeklyBrief.content.includes('No new Approved / Not Approved model-candidate reviews were found this week.'));
+assert.ok(weekly.modelCandidateWeeklyBrief.content.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 
 console.log('Quant Desk Discord scheduler verified.');
