@@ -96,6 +96,23 @@ echo Configure the stable Cloudflare hostname once in Cloudflare,
 echo then save the endpoint URL once in the Discord Developer Portal.
 echo This launcher does not edit Discord settings.
 
+echo.
+echo Checking Quant Desk Discord report scheduler...
+set "SCHEDULER_PIDS="
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'quant-desk:discord-scheduler') } | Select-Object -ExpandProperty ProcessId"`) do (
+  set "SCHEDULER_PIDS=%%P"
+)
+
+if defined SCHEDULER_PIDS (
+  echo Quant Desk Discord scheduler may already be running.
+  echo Matching scheduler process IDs:
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process | Where-Object { ($_.Name -match 'node|npm') -and ($_.CommandLine -match 'quant-desk:discord-scheduler') } | Select-Object -ExpandProperty ProcessId"
+  echo Skipping duplicate scheduler startup.
+) else (
+  echo Starting Quant Desk Discord scheduler...
+  start "Quant Desk Discord Scheduler" cmd /k "cd /d ""%CD%"" && npm run quant-desk:discord-scheduler"
+)
+
 REM Optional: uncomment if needed.
 REM start "6K Dev Server" cmd /k "cd /d ""%CD%"" && npm run dev"
 
