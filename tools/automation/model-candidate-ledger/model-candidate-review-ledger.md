@@ -67,6 +67,25 @@ Model-Candidate Advisory Interpretation:
   - Missing-data warnings must be resolved before formal model-candidate review.
 - Boundary: research_only_not_execution_authority
 
+Model-Candidate Research Recommendation:
+- Status: keep_collecting_evidence
+- Recommendation: Keep collecting evidence.
+- Gate Results:
+  - Sample Count: fail
+  - Human Approval Rate: pass
+  - Missing Data: fail
+  - Adverse-First: pass
+  - Chart Evidence: pass
+  - Agent Assessment: pass
+  - P/L Support: not_meaningful_low_sample_count
+- Reasons:
+  - Reviewed sample count is below the 10-sample evidence gate.
+  - Estimated gross contract P/L is not meaningful until the core evidence base is large enough.
+  - Missing-data warnings must be resolved before formal model-candidate review.
+  - Estimated gross contract P/L is not meaningful while the reviewed sample count is below the minimum threshold.
+- Human Final Decision Required: Yes
+- Boundary: research_only_not_execution_authority
+
 ## Reviewed Evidence
 - final_hour_liquidity_draw-030: approved_for_future_model_candidate_review; Final-Hour Liquidity Draw; 2026-05-29 15:15; chart=price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-030.png; outcome=favorable_continuation
 

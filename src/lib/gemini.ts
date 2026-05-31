@@ -175,6 +175,17 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     The desk agent may summarize estimated gross P/L for review purposes only, but it must not promote a concept to model-candidate review based on P/L alone.
 
+    ## Model-Candidate Recommendation Rule
+
+    The agent may recommend that a concept move to formal model-candidate review/backtest only when the conservative research gates pass.
+
+    This is not live-model approval, not trade approval, not activation, and not proof of profitability.
+
+    Estimated gross contract P/L may support or weaken the recommendation, but it must not override sample count, human approval rate, chart/report evidence, missing-data warnings, adverse-first contradictions, or agent assessment quality.
+
+    The phrase candidate_review_recommended means only:
+    "Move to formal model-candidate review/backtest. Human final decision required."
+
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
     =========================================

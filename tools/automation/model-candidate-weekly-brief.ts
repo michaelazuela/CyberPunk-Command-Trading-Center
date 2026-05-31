@@ -181,6 +181,15 @@ function sectionLines(summaries: ModelCandidateConceptSummary[], fallback: strin
   return summaries.map((summary) => `- ${summaryLine(summary)} ${recommendation(summary)}`);
 }
 
+function researchRecommendationStatus(summary: ModelCandidateConceptSummary): ModelCandidateConceptSummary['modelCandidateResearchRecommendation']['status'] {
+  const recommendation = (summary as { modelCandidateResearchRecommendation?: ModelCandidateConceptSummary['modelCandidateResearchRecommendation'] }).modelCandidateResearchRecommendation;
+  if (recommendation) return recommendation.status;
+  if (summary.candidateReadinessStatus === 'candidate_review_recommended') return 'candidate_review_recommended';
+  if (summary.candidateReadinessStatus === 'reject_or_deprioritize') return 'reject_or_deprioritize';
+  if (summary.candidateReadinessStatus === 'insufficient_evidence') return 'keep_collecting_evidence';
+  return 'watchlist_candidate';
+}
+
 function notableLessons(ledger: ModelCandidateReviewLedger): string[] {
   if (!ledger.entries.length) {
     return ['- No new Approved / Not Approved model-candidate reviews were found this week. Continue reviewing PriceActionReviewCards to build the candidate ledger.'];
@@ -196,12 +205,13 @@ function notableLessons(ledger: ModelCandidateReviewLedger): string[] {
 }
 
 export function renderModelCandidateWeeklyBrief(ledger: ModelCandidateReviewLedger): string {
-  const ready = ledger.conceptSummaries.filter((summary) => summary.candidateReadinessStatus === 'candidate_review_recommended');
+  const ready = ledger.conceptSummaries.filter((summary) => researchRecommendationStatus(summary) === 'candidate_review_recommended');
   const needsMore = ledger.conceptSummaries.filter((summary) =>
-    summary.candidateReadinessStatus === 'insufficient_evidence' ||
-    summary.candidateReadinessStatus === 'watchlist_candidate'
+    researchRecommendationStatus(summary) === 'keep_collecting_evidence' ||
+    researchRecommendationStatus(summary) === 'watchlist_candidate' ||
+    researchRecommendationStatus(summary) === 'do_not_advance'
   );
-  const rejected = ledger.conceptSummaries.filter((summary) => summary.candidateReadinessStatus === 'reject_or_deprioritize');
+  const rejected = ledger.conceptSummaries.filter((summary) => researchRecommendationStatus(summary) === 'reject_or_deprioritize');
   const deskSummary = ledger.summary.reviewedSamplesFound
     ? `The desk reviewed ${ledger.summary.reviewedSamplesFound} model-candidate evidence sample(s): ${ledger.summary.approvedCount} approved and ${ledger.summary.notApprovedCount} not approved. ${ready.length ? `${ready.length} concept(s) have enough reviewed evidence for formal model-candidate backtest consideration.` : 'No concept is ready for formal candidate review yet.'}`
     : 'No new Approved / Not Approved model-candidate reviews were found this week. Continue reviewing PriceActionReviewCards to build the candidate ledger.';
@@ -265,7 +275,7 @@ function briefKey(options: ModelCandidateWeeklyBriefOptions): string {
 }
 
 function decisionSummaries(ledger: ModelCandidateReviewLedger): ModelCandidateConceptSummary[] {
-  return ledger.conceptSummaries.filter((summary) => summary.candidateReadinessStatus === 'candidate_review_recommended');
+  return ledger.conceptSummaries.filter((summary) => researchRecommendationStatus(summary) === 'candidate_review_recommended');
 }
 
 async function postDecisionFollowUps(ledger: ModelCandidateReviewLedger, options: ModelCandidateWeeklyBriefOptions, missing: string[]): Promise<ModelCandidateWeeklyBriefResult['decisionPosts']> {

@@ -76,6 +76,22 @@ function concept(overrides: Partial<ModelCandidateConceptSummary> = {}): ModelCa
       reasons: ['Move to formal model-candidate review/backtest. Human final decision required.'],
       boundary: 'research_only_not_execution_authority',
     },
+    modelCandidateResearchRecommendation: {
+      status: 'candidate_review_recommended',
+      recommendationText: 'Move to formal model-candidate review/backtest. Human final decision required.',
+      gateResults: {
+        sampleCountGate: 'pass',
+        humanApprovalRateGate: 'pass',
+        missingDataGate: 'pass',
+        adverseFirstGate: 'pass',
+        chartEvidenceGate: 'pass',
+        agentAssessmentGate: 'pass',
+        pnlSupportSignal: 'supportive',
+      },
+      reasons: ['Move to formal model-candidate review/backtest. Human final decision required.'],
+      humanFinalDecisionRequired: true,
+      boundary: 'research_only_not_execution_authority',
+    },
     ...overrides,
   };
 }
@@ -138,6 +154,9 @@ assert.deepEqual(priceActionLabels, ['Approved', 'Not Approved']);
 const payload = buildModelCandidateDecisionPostPayload(ledger, summary);
 assert.ok(payload.content.includes('[MODEL CANDIDATE DECISION] Time-Window Liquidity Delivery'));
 assert.ok(payload.content.includes(DECISION_SAFETY_MESSAGE));
+assert.ok(payload.content.includes('Research recommendation: candidate_review_recommended'));
+assert.ok(payload.content.includes('Recommendation: Move to formal model-candidate review/backtest. Human final decision required.'));
+assert.ok(payload.content.includes('Human final decision required: yes'));
 assert.deepEqual(payload.components.flatMap((row) => row.components.map((button) => button.label)), [
   'Approve for Formal Backtest',
   'Needs More Samples',

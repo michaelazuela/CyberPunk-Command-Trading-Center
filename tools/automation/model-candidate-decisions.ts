@@ -336,6 +336,7 @@ export function buildModelCandidateDecisionComponents(ledger: ModelCandidateRevi
 
 export function buildModelCandidateDecisionPostPayload(ledger: ModelCandidateReviewLedger, summary: ModelCandidateConceptSummary): ResearchDiscordMessagePayload {
   const approvalRate = summary.approvalRate === null ? 'n/a' : `${Math.round(summary.approvalRate * 100)}%`;
+  const researchRecommendation = (summary as { modelCandidateResearchRecommendation?: ModelCandidateConceptSummary['modelCandidateResearchRecommendation'] }).modelCandidateResearchRecommendation;
   return {
     content: [
       `[MODEL CANDIDATE DECISION] ${summary.conceptTitle}`,
@@ -345,6 +346,11 @@ export function buildModelCandidateDecisionPostPayload(ledger: ModelCandidateRev
       `Human approved / not approved: ${summary.humanApprovedCount} / ${summary.humanNotApprovedCount}`,
       `Approval rate: ${approvalRate}`,
       `Desk recommendation: ${summary.deskRecommendation}`,
+      ...(researchRecommendation ? [
+        `Research recommendation: ${researchRecommendation.status}`,
+        `Recommendation: ${researchRecommendation.recommendationText}`,
+        `Human final decision required: ${researchRecommendation.humanFinalDecisionRequired ? 'yes' : 'no'}`,
+      ] : []),
       'Human decision required: choose whether this concept moves to a formal backtest/design task, needs more samples, should be rejected, or should be held for review.',
       DECISION_SAFETY_MESSAGE,
       'No model activation is performed by these buttons.',
@@ -352,6 +358,15 @@ export function buildModelCandidateDecisionPostPayload(ledger: ModelCandidateRev
     components: buildModelCandidateDecisionComponents(ledger, summary),
     allowed_mentions: { parse: [] },
   };
+}
+
+function researchRecommendationStatus(summary: ModelCandidateConceptSummary): ModelCandidateConceptSummary['modelCandidateResearchRecommendation']['status'] {
+  const recommendation = (summary as { modelCandidateResearchRecommendation?: ModelCandidateConceptSummary['modelCandidateResearchRecommendation'] }).modelCandidateResearchRecommendation;
+  if (recommendation) return recommendation.status;
+  if (summary.candidateReadinessStatus === 'candidate_review_recommended') return 'candidate_review_recommended';
+  if (summary.candidateReadinessStatus === 'reject_or_deprioritize') return 'reject_or_deprioritize';
+  if (summary.candidateReadinessStatus === 'insufficient_evidence') return 'keep_collecting_evidence';
+  return 'watchlist_candidate';
 }
 
 function prohibitedPaths(value: unknown, pathName = 'value'): string[] {
@@ -552,6 +567,7 @@ export async function buildModelCandidateDecisionSummary(options: ModelCandidate
   }
   const decided = new Set(artifact.decisions.map((decision) => `${decision.symbol}|${decision.from}|${decision.to}|${decision.conceptKey}`));
   const pendingConcepts = ledger.conceptSummaries.filter((summary) =>
+    researchRecommendationStatus(summary) === 'candidate_review_recommended' &&
     !decided.has(`${ledger.symbol}|${ledger.from}|${ledger.to}|${summary.concept}`)
   );
   return { ledger, artifact, jsonPath, markdownPath, pendingConcepts };
@@ -574,7 +590,7 @@ function renderPrettySummary(result: Awaited<ReturnType<typeof buildModelCandida
     '',
     'Pending:',
     ...(result.pendingConcepts.length
-      ? result.pendingConcepts.map((summary) => `- ${summary.conceptTitle}: ${summary.candidateReadinessStatus}; ${summary.deskRecommendation}`)
+      ? result.pendingConcepts.map((summary) => `- ${summary.conceptTitle}: ${researchRecommendationStatus(summary)}; ${summary.modelCandidateResearchRecommendation?.recommendationText || summary.deskRecommendation}`)
       : ['- none']),
     '',
     DECISION_SAFETY_MESSAGE,

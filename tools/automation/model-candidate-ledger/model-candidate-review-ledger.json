@@ -1,6 +1,6 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T20:26:49.839Z",
+  "generatedAt": "2026-05-31T20:55:00.687Z",
   "from": "2026-01-01",
   "to": "2026-05-31",
   "symbol": "MES",
@@ -187,6 +187,27 @@
           "Estimated gross contract P/L is not meaningful until the core evidence base is large enough.",
           "Missing-data warnings must be resolved before formal model-candidate review."
         ],
+        "boundary": "research_only_not_execution_authority"
+      },
+      "modelCandidateResearchRecommendation": {
+        "status": "keep_collecting_evidence",
+        "recommendationText": "Keep collecting evidence.",
+        "gateResults": {
+          "sampleCountGate": "fail",
+          "humanApprovalRateGate": "pass",
+          "missingDataGate": "fail",
+          "adverseFirstGate": "pass",
+          "chartEvidenceGate": "pass",
+          "agentAssessmentGate": "pass",
+          "pnlSupportSignal": "not_meaningful_low_sample_count"
+        },
+        "reasons": [
+          "Reviewed sample count is below the 10-sample evidence gate.",
+          "Estimated gross contract P/L is not meaningful until the core evidence base is large enough.",
+          "Missing-data warnings must be resolved before formal model-candidate review.",
+          "Estimated gross contract P/L is not meaningful while the reviewed sample count is below the minimum threshold."
+        ],
+        "humanFinalDecisionRequired": true,
         "boundary": "research_only_not_execution_authority"
       }
     }
