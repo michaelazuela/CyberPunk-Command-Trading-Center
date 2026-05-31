@@ -149,6 +149,139 @@ try {
   assert.equal(shortModel.hypotheticalEntryLabel, '7600.00');
   assert.equal(shortModel.hypotheticalStopLossLabel, '7604.00');
 
+  const invalidLongModel = buildPriceActionReviewCardModel({
+    symbol: 'MES',
+    contract: 'MES 06-26',
+    sample: {
+      sampleId: 'invalid-long',
+      date: '2026-05-29',
+      time: '10:30',
+      conceptTitle: 'Invalid Long Overlay',
+      direction: 'LONG',
+      window: '10:00-11:00 NY',
+      agentInspectionLabel: 'keep_advisory',
+      advisoryOnly: true,
+    },
+    overlay: {
+      hypotheticalReferencePrice: 7002.5,
+      hypotheticalInvalidationReference: 7006.5,
+      hypotheticalThresholdOne: 6998.5,
+      hypotheticalThresholdTwo: 6994.5,
+      advisoryOnly: true,
+      executionApproved: false,
+    },
+    bars5m: bars5m(),
+    bars15m: bars15m(),
+  });
+  const invalidLongMetadata = await renderPriceActionReviewCardWithMetadata({
+    model: invalidLongModel,
+    outputDir,
+    filePrefix: 'price-action-review-card-invalid-long-fixture',
+  });
+  assert.equal(invalidLongMetadata.directionConsistency, 'fail');
+  assert.equal(invalidLongMetadata.visualQuality, 'fail');
+  assert.equal(invalidLongMetadata.cardAttachable, false);
+  assert.ok(invalidLongMetadata.chartWithheldReason?.includes('Overlay direction check failed for LONG sample.'));
+
+  const invalidShortModel = buildPriceActionReviewCardModel({
+    symbol: 'MES',
+    contract: 'MES 06-26',
+    sample: {
+      sampleId: 'invalid-short',
+      date: '2026-05-29',
+      time: '10:30',
+      conceptTitle: 'Invalid Short Overlay',
+      direction: 'SHORT',
+      window: '10:00-11:00 NY',
+      agentInspectionLabel: 'keep_advisory',
+      advisoryOnly: true,
+    },
+    overlay: {
+      hypotheticalReferencePrice: 7002.5,
+      hypotheticalInvalidationReference: 6998.5,
+      hypotheticalThresholdOne: 7006.5,
+      hypotheticalThresholdTwo: 7010.5,
+      advisoryOnly: true,
+      executionApproved: false,
+    },
+    bars5m: bars5m(),
+    bars15m: bars15m(),
+  });
+  const invalidShortMetadata = await renderPriceActionReviewCardWithMetadata({
+    model: invalidShortModel,
+    outputDir,
+    filePrefix: 'price-action-review-card-invalid-short-fixture',
+  });
+  assert.equal(invalidShortMetadata.directionConsistency, 'fail');
+  assert.equal(invalidShortMetadata.cardAttachable, false);
+
+  const compressedModel = buildPriceActionReviewCardModel({
+    symbol: 'MES',
+    contract: 'MES 06-26',
+    sample: {
+      sampleId: 'compressed-long',
+      date: '2026-05-29',
+      time: '10:30',
+      conceptTitle: 'Compressed Overlay',
+      direction: 'LONG',
+      window: '10:00-11:00 NY',
+      agentInspectionLabel: 'keep_advisory',
+      advisoryOnly: true,
+    },
+    overlay: {
+      hypotheticalReferencePrice: 7597,
+      hypotheticalInvalidationReference: 7593,
+      hypotheticalThresholdOne: 7800,
+      hypotheticalThresholdTwo: 7900,
+      advisoryOnly: true,
+      executionApproved: false,
+    },
+    bars5m: bars5m(),
+    bars15m: bars15m(),
+  });
+  const compressedMetadata = await renderPriceActionReviewCardWithMetadata({
+    model: compressedModel,
+    outputDir,
+    filePrefix: 'price-action-review-card-compressed-fixture',
+  });
+  assert.equal(compressedMetadata.directionConsistency, 'pass');
+  assert.ok(compressedMetadata.candleRangeCoveragePct < 35);
+  assert.equal(compressedMetadata.visualQuality, 'fail');
+  assert.equal(compressedMetadata.cardAttachable, false);
+
+  const collisionModel = buildPriceActionReviewCardModel({
+    symbol: 'MES',
+    contract: 'MES 06-26',
+    sample: {
+      sampleId: 'collision-long',
+      date: '2026-05-29',
+      time: '10:30',
+      conceptTitle: 'Collision Overlay',
+      direction: 'LONG',
+      window: '10:00-11:00 NY',
+      agentInspectionLabel: 'keep_advisory',
+      advisoryOnly: true,
+    },
+    overlay: {
+      hypotheticalReferencePrice: 7597,
+      hypotheticalInvalidationReference: 7596.95,
+      hypotheticalThresholdOne: 7597.05,
+      hypotheticalThresholdTwo: 7597.1,
+      advisoryOnly: true,
+      executionApproved: false,
+    },
+    bars5m: bars5m(),
+    bars15m: bars15m(),
+  });
+  const collisionMetadata = await renderPriceActionReviewCardWithMetadata({
+    model: collisionModel,
+    outputDir,
+    filePrefix: 'price-action-review-card-collision-fixture',
+  });
+  assert.equal(collisionMetadata.labelCollisionRisk, 'high');
+  assert.equal(collisionMetadata.visualQuality, 'fail');
+  assert.equal(collisionMetadata.cardAttachable, false);
+
   const missingModel = buildPriceActionReviewCardModel({
     symbol: 'MES',
     contract: 'MES 06-26',

@@ -27,6 +27,8 @@ export interface PriceActionReviewChartMetadata {
   timeRange: { from: string; to: string } | null;
   overlayLevelsAttempted: number;
   overlayLevelsRendered: number;
+  candleRangeCoveragePct: number;
+  labelCollisionRisk: 'low' | 'medium' | 'high';
 }
 
 export interface PriceActionReviewCardRenderMetadata {
@@ -35,6 +37,12 @@ export interface PriceActionReviewCardRenderMetadata {
   renderedSvg: false;
   mainChart: PriceActionReviewChartMetadata;
   contextChart: PriceActionReviewChartMetadata;
+  visualQuality: 'pass' | 'warn' | 'fail';
+  cardAttachable: boolean;
+  directionConsistency: 'pass' | 'fail' | 'unknown';
+  candleRangeCoveragePct: number;
+  labelCollisionRisk: 'low' | 'medium' | 'high';
+  chartWithheldReason?: string;
   warnings: string[];
 }
 
@@ -64,6 +72,13 @@ function parsePriceLabel(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function directionFromModel(model: PriceActionReviewCardModel): 'LONG' | 'SHORT' | 'UNKNOWN' {
+  const direction = model.directionWindowLabel.split('/')[0]?.trim().toUpperCase();
+  if (direction === 'LONG') return 'LONG';
+  if (direction === 'SHORT') return 'SHORT';
+  return 'UNKNOWN';
+}
+
 function priceLabel(value: string): string {
   const parsed = parsePriceLabel(value);
   return parsed === null ? escapeHtml(value) : parsed.toFixed(2);
@@ -85,6 +100,15 @@ function priceTicks(low: number, high: number, count: number): number[] {
   if (!Number.isFinite(low) || !Number.isFinite(high)) return [];
   if (Math.abs(high - low) < 0.01) return [low];
   return Array.from({ length: count }, (_, index) => high - ((high - low) / (count - 1)) * index);
+}
+
+function labelCollisionRisk(positions: number[], compact = false): 'low' | 'medium' | 'high' {
+  if (positions.length < 2) return 'low';
+  const sorted = [...positions].sort((left, right) => left - right);
+  const minGap = sorted.slice(1).reduce((smallest, value, index) => Math.min(smallest, Math.abs(value - sorted[index])), Number.POSITIVE_INFINITY);
+  if (minGap < (compact ? 8 : 12)) return 'high';
+  if (minGap < (compact ? 14 : 24)) return 'medium';
+  return 'low';
 }
 
 function chartSvg(args: {
@@ -109,6 +133,9 @@ function chartSvg(args: {
     ...bars.flatMap((bar) => [bar.high, bar.low]),
     ...levelPrices,
   ];
+  const candlePrices = bars.flatMap((bar) => [bar.high, bar.low]);
+  const candleLow = candlePrices.length ? Math.min(...candlePrices) : null;
+  const candleHigh = candlePrices.length ? Math.max(...candlePrices) : null;
   const min = prices.length ? Math.min(...prices) : 0;
   const max = prices.length ? Math.max(...prices) : 1;
   const padding = Math.max(1, (max - min) * 0.14);
@@ -140,11 +167,13 @@ function chartSvg(args: {
     ].join('');
   }).join('');
   let renderedLevels = 0;
+  const levelPositions: number[] = [];
   const levels = args.levels.map((level, index) => {
     const price = parsePriceLabel(level.value);
     if (price === null) return '';
     renderedLevels += 1;
     const ly = y(price);
+    levelPositions.push(ly);
     const labelY = Math.max(top + 14, Math.min(top + chartHeight - 6, ly - 4 + index * 2));
     return [
       `<line x1="${left}" y1="${ly}" x2="${left + chartWidth}" y2="${ly}" stroke="${level.color}" stroke-width="2" stroke-dasharray="8 7" opacity="0.9" />`,
@@ -187,7 +216,69 @@ function chartSvg(args: {
       timeRange: bars.length ? { from: bars[0].time, to: bars[bars.length - 1].time } : null,
       overlayLevelsAttempted: args.levels.length,
       overlayLevelsRendered: renderedLevels,
+      candleRangeCoveragePct: candleLow !== null && candleHigh !== null
+        ? ((candleHigh - candleLow) / Math.max(0.01, high - low)) * 100
+        : 0,
+      labelCollisionRisk: labelCollisionRisk(levelPositions, args.compact),
     },
+    warnings,
+  };
+}
+
+function evaluateDirectionConsistency(model: PriceActionReviewCardModel): { status: 'pass' | 'fail' | 'unknown'; warning?: string } {
+  const direction = directionFromModel(model);
+  const entry = parsePriceLabel(model.hypotheticalEntryLabel);
+  const stop = parsePriceLabel(model.hypotheticalStopLossLabel);
+  const t1 = parsePriceLabel(model.hypotheticalT1Label);
+  const t2 = parsePriceLabel(model.hypotheticalT2Label);
+  if (direction === 'UNKNOWN' || entry === null || stop === null || t1 === null || t2 === null) {
+    return { status: 'unknown', warning: 'Overlay direction check could not be completed because direction or overlay levels are unavailable.' };
+  }
+  const valid = direction === 'LONG'
+    ? stop < entry && t1 >= entry && t2 >= t1
+    : stop > entry && t1 <= entry && t2 <= t1;
+  if (!valid) return { status: 'fail', warning: `Overlay direction check failed for ${direction} sample.` };
+  return { status: 'pass' };
+}
+
+function evaluateVisualQuality(args: {
+  model: PriceActionReviewCardModel;
+  mainChart: PriceActionReviewChartMetadata;
+  contextChart: PriceActionReviewChartMetadata;
+  warnings: string[];
+}): Pick<PriceActionReviewCardRenderMetadata, 'visualQuality' | 'cardAttachable' | 'directionConsistency' | 'candleRangeCoveragePct' | 'labelCollisionRisk' | 'chartWithheldReason' | 'warnings'> {
+  const warnings = [...args.warnings];
+  const direction = evaluateDirectionConsistency(args.model);
+  if (direction.warning) warnings.push(direction.warning);
+  const coverage = args.mainChart.candleRangeCoveragePct;
+  const collisionRisk = args.mainChart.labelCollisionRisk === 'high' || args.contextChart.labelCollisionRisk === 'high'
+    ? 'high'
+    : args.mainChart.labelCollisionRisk === 'medium' || args.contextChart.labelCollisionRisk === 'medium'
+      ? 'medium'
+      : 'low';
+  const failReasons: string[] = [];
+  if (direction.status === 'fail') failReasons.push(direction.warning || 'Overlay direction check failed.');
+  if (coverage > 0 && coverage < 35) failReasons.push(`Candle range occupies ${coverage.toFixed(1)}% of the plotted 5M y-axis after overlay levels.`);
+  if (collisionRisk === 'high') failReasons.push('Overlay label collision risk is high.');
+  if (failReasons.length) {
+    const reason = `Price action card withheld: ${failReasons.join(' ')}`;
+    return {
+      visualQuality: 'fail',
+      cardAttachable: false,
+      directionConsistency: direction.status,
+      candleRangeCoveragePct: coverage,
+      labelCollisionRisk: collisionRisk,
+      chartWithheldReason: reason,
+      warnings: [reason, ...warnings],
+    };
+  }
+  const warn = direction.status === 'unknown' || collisionRisk === 'medium' || (coverage > 0 && coverage < 50);
+  return {
+    visualQuality: warn ? 'warn' : 'pass',
+    cardAttachable: true,
+    directionConsistency: direction.status,
+    candleRangeCoveragePct: coverage,
+    labelCollisionRisk: collisionRisk,
     warnings,
   };
 }
@@ -223,6 +314,12 @@ export function buildPriceActionReviewCardRenderDocument(model: PriceActionRevie
     : '<li>No missing-data warnings for provided Phase 2 inputs.</li>';
   const mainChart = chartSvg({ title: '5M Price Action - Research Review Window', timeframe: '5m', bars: model.bars5m, levels, width: 1034, height: 500 });
   const contextChart = chartSvg({ title: '15M Context', timeframe: '15m', bars: model.bars15m, levels: levels.slice(0, 2), width: 350, height: 158, compact: true });
+  const quality = evaluateVisualQuality({
+    model,
+    mainChart: mainChart.metadata,
+    contextChart: contextChart.metadata,
+    warnings: [...model.warnings, ...mainChart.warnings, ...contextChart.warnings],
+  });
 
   const html = `<!doctype html>
 <html>
@@ -508,7 +605,13 @@ export function buildPriceActionReviewCardRenderDocument(model: PriceActionRevie
     metadata: {
       mainChart: mainChart.metadata,
       contextChart: contextChart.metadata,
-      warnings: [...model.warnings, ...mainChart.warnings, ...contextChart.warnings],
+      visualQuality: quality.visualQuality,
+      cardAttachable: quality.cardAttachable,
+      directionConsistency: quality.directionConsistency,
+      candleRangeCoveragePct: quality.candleRangeCoveragePct,
+      labelCollisionRisk: quality.labelCollisionRisk,
+      ...(quality.chartWithheldReason ? { chartWithheldReason: quality.chartWithheldReason } : {}),
+      warnings: quality.warnings,
     },
   };
 }
@@ -550,6 +653,12 @@ export async function renderPriceActionReviewCardWithMetadata(input: PriceAction
     renderedSvg: false,
     mainChart: document.metadata.mainChart,
     contextChart: document.metadata.contextChart,
+    visualQuality: document.metadata.visualQuality,
+    cardAttachable: document.metadata.cardAttachable,
+    directionConsistency: document.metadata.directionConsistency,
+    candleRangeCoveragePct: document.metadata.candleRangeCoveragePct,
+    labelCollisionRisk: document.metadata.labelCollisionRisk,
+    ...(document.metadata.chartWithheldReason ? { chartWithheldReason: document.metadata.chartWithheldReason } : {}),
     warnings: document.metadata.warnings,
   };
 }

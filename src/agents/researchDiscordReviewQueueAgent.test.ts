@@ -4,10 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   appendResearchDiscordReviewState,
+  buildPriceActionReviewMessageContent,
   buildResearchDiscordReviewQueue,
   buildResearchReviewCustomId,
   createResearchDiscordStateEntry,
   emptyResearchDiscordReviewState,
+  PRICE_ACTION_REVIEW_LABELS,
   RESEARCH_REVIEW_LABELS,
   summarizeResearchDiscordReviewState,
 } from './researchDiscordReviewQueueAgent';
@@ -238,6 +240,88 @@ assert.ok(!buttons.some((button) => /approve trade|execute|take trade|valid setu
 assert.ok(!/"entry"|"stop"|"T1"|"T2"|"canExecute"/.test(JSON.stringify(payload)));
 assert.ok(buttons.some((button) => button.label === 'New Model Candidate' && button.custom_id.endsWith('|new_model_candidate_review')));
 
+const mismatchedOutcomeQueue = buildResearchDiscordReviewQueue({
+  reviewPack: {
+    ...pack,
+    samples: [{
+      ...pack.samples[0],
+      sampleId: 'reused-generated-id-016',
+      date: '2026-04-28',
+      time: '10:00',
+      direction: 'SHORT',
+    }],
+  },
+  reviewPackPath: 'fixture-review-pack.json',
+  outcomeReport: {
+    ...outcomeReport(),
+    candidateOutcomes: [{
+      ...outcomeReport().candidateOutcomes[0],
+      candidateId: 'reused-generated-id-016',
+      date: '2026-01-08',
+      time: '03:00',
+      direction: 'LONG',
+      concept: 'false_run_liquidity_fade',
+    }],
+  },
+  limit: 1,
+  buttonMode: 'future_model_candidate_review',
+});
+assert.equal(mismatchedOutcomeQueue.items[0].outcome, null);
+assert.ok(mismatchedOutcomeQueue.items[0].payload.content.includes('Entry: Unavailable'));
+assert.ok(mismatchedOutcomeQueue.items[0].payload.content.includes('Would it have worked?: Inconclusive'));
+assert.equal(mismatchedOutcomeQueue.items[0].payload.content.includes('Would it have worked?: Yes'), false);
+
+const priceActionButtonQueue = buildResearchDiscordReviewQueue({
+  reviewPack: pack,
+  reviewPackPath: 'fixture-review-pack.json',
+  outcomeReport: outcomeReport(),
+  limit: 1,
+  buttonMode: 'future_model_candidate_review',
+});
+const priceActionContent = priceActionButtonQueue.items[0].payload.content;
+assert.ok(priceActionContent.startsWith('[PRICE ACTION REVIEW] false_run_liquidity_fade-001'));
+assert.ok(priceActionContent.includes('Concept: False-Run Liquidity Fade Near Highs'));
+assert.ok(priceActionContent.includes('Date/Time: 2026-05-28 10:00'));
+assert.ok(priceActionContent.includes('Direction: SHORT'));
+assert.ok(priceActionContent.includes('Contract: detected contract pending'));
+assert.ok(priceActionContent.includes('Hypothetical Overlay:'));
+assert.ok(priceActionContent.includes('Entry: 7600'));
+assert.ok(priceActionContent.includes('Stop Loss: 7604'));
+assert.ok(priceActionContent.includes('T1: 7596'));
+assert.ok(priceActionContent.includes('T2: 7592'));
+assert.ok(priceActionContent.includes('Outcome Review:'));
+assert.ok(priceActionContent.includes('Would it have worked?: Yes'));
+assert.ok(priceActionContent.includes('Result: T2 hit'));
+assert.ok(priceActionContent.includes('Agent view: Keep advisory until human review compares this against current approved gates.'));
+assert.ok(priceActionContent.includes('Agent Recommendation:\nNeeds more samples'));
+assert.ok(priceActionContent.includes('Approve only if this is useful evidence for future model-candidate review.'));
+assert.ok(priceActionContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
+assert.equal(priceActionContent.includes('[RESEARCH SAMPLE REVIEW]'), false);
+assert.equal(priceActionContent.includes('Suggested human action: Keep Advisory'), false);
+const invalidOverlayContent = buildPriceActionReviewMessageContent(
+  priceActionButtonQueue.items[0].sample,
+  priceActionButtonQueue.items[0].outcome,
+  'MES 06-26',
+  'Price action card withheld: Overlay direction check failed for LONG sample.',
+);
+assert.ok(invalidOverlayContent.includes('Would it have worked?: Invalid overlay'));
+assert.ok(invalidOverlayContent.includes('Result: Invalid overlay'));
+assert.equal(invalidOverlayContent.includes('Would it have worked?: Yes'), false);
+assert.equal(invalidOverlayContent.includes('Result: T2 hit'), false);
+assert.ok(invalidOverlayContent.includes('Chart warning: Price action card withheld: Overlay direction check failed for LONG sample.'));
+const priceActionButtons = priceActionButtonQueue.items[0].payload.components.flatMap((row) => row.components);
+assert.deepEqual(priceActionButtons.map((button) => button.label), ['Approved', 'Not Approved']);
+assert.deepEqual(priceActionButtons.map((button) => button.custom_id.split('|').at(-1)), ['approved', 'not_approved']);
+assert.equal(priceActionButtons.some((button) => [
+  'Keep Advisory',
+  'Reject',
+  'Model 1 Review',
+  'Turtle Soup Review',
+  'Human Rule Review Queue',
+  'New Model Candidate',
+  'Insufficient Context',
+].includes(button.label)), false);
+
 const duplicateSkippedQueue = buildResearchDiscordReviewQueue({
   reviewPack: pack,
   reviewPackPath: 'fixture-review-pack.json',
@@ -313,6 +397,130 @@ assert.equal(dryRun.messagesPosted, 0);
 assert.equal(dryRun.missingCredentials.length, 2);
 assert.equal(existsSync(stateFile), false);
 
+let renderedCardCount = 0;
+let resolvedBarContract: string | undefined;
+const pngFile = join(temp, 'price-action-review-card-fixture.png');
+writeFileSync(pngFile, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+const priceActionDryRun = await publishResearchDiscordReview({
+  reviewPack: reviewFile,
+  outcomeReport: outcomeFile,
+  publishPending: true,
+  state: false,
+  limit: 1,
+  dryRun: true,
+  writeDryRunState: false,
+  statePath: join(temp, 'price-action-dry-state.json'),
+  pretty: true,
+  json: false,
+  withPriceActionCards: true,
+  priceActionCards: {
+    enabled: true,
+    symbol: 'MES',
+    bridgeInstrument: 'MES 09-26',
+    bridgeUrl: 'http://127.0.0.1:8765',
+    contractResolution: {
+      instrument: 'MES 09-26',
+      source: 'bridge-health',
+      warnings: [],
+      bridgeUrl: 'http://127.0.0.1:8765',
+    },
+    dateRange: { from: '2026-01-01', to: '2026-05-29' },
+    resolveBars: async (_sample, options) => {
+      resolvedBarContract = options.bridgeInstrument;
+      return {
+        bars5m: [
+          { time: '2026-05-28T09:45:00', open: 7600, high: 7601, low: 7599, close: 7600.5 },
+          { time: '2026-05-28T09:50:00', open: 7600.5, high: 7602, low: 7600, close: 7601.5 },
+          { time: '2026-05-28T09:55:00', open: 7601.5, high: 7602, low: 7598, close: 7599 },
+          { time: '2026-05-28T10:00:00', open: 7599, high: 7600, low: 7595, close: 7596 },
+        ],
+        bars15m: [
+          { time: '2026-05-28T09:30:00', open: 7602, high: 7604, low: 7599, close: 7600 },
+          { time: '2026-05-28T09:45:00', open: 7600, high: 7602, low: 7595, close: 7596 },
+        ],
+        dataSource: 'ninjatrader',
+        sourceByTimeframe: { '5m': 'ninjatrader', '15m': 'ninjatrader' },
+        warnings: [],
+        resolvedWindow: {
+          sampleTimestamp: '2026-05-28T10:00:00',
+          fiveMinute: { timeframe: '5m', from: '2026-05-28T09:45:00', to: '2026-05-28T10:15:00' },
+          fifteenMinute: { timeframe: '15m', from: '2026-05-28T09:30:00', to: '2026-05-28T10:30:00' },
+        },
+        resolvedContract: 'MES 09-26',
+        symbol: 'MES',
+        bridgeUrl: 'http://127.0.0.1:8765',
+        timezone: 'eastern',
+        advisoryOnly: true,
+        executionApproved: false,
+      };
+    },
+    renderCard: async (input) => {
+      renderedCardCount += 1;
+      assert.equal(input.model.contract, 'MES 09-26');
+      return pngFile;
+    },
+  },
+});
+assert.equal(priceActionDryRun.priceActionCards.length, 1);
+assert.equal(priceActionDryRun.priceActionCards[0].attached, true);
+assert.equal(priceActionDryRun.priceActionCards[0].pngPath?.endsWith('.png'), true);
+assert.ok(priceActionDryRun.payloads[0].content.includes('[PRICE ACTION REVIEW] false_run_liquidity_fade-001'));
+assert.ok(priceActionDryRun.payloads[0].content.includes('Contract: MES 09-26'));
+assert.equal(priceActionDryRun.payloads[0].content.includes('[RESEARCH SAMPLE REVIEW]'), false);
+assert.equal(resolvedBarContract, 'MES 09-26');
+assert.equal(renderedCardCount, 1);
+const priceActionDryRunButtons = priceActionDryRun.payloads[0].components.flatMap((row) => row.components).map((button) => button.label);
+assert.deepEqual(priceActionDryRunButtons, ['Approved', 'Not Approved']);
+
+const duplicateSkippedCards = await publishResearchDiscordReview({
+  reviewPack: reviewFile,
+  outcomeReport: outcomeFile,
+  publishPending: true,
+  state: false,
+  limit: 1,
+  dryRun: true,
+  writeDryRunState: false,
+  statePath: join(temp, 'price-action-skip-state.json'),
+  pretty: true,
+  json: false,
+  skipSampleIds: ['false_run_liquidity_fade-001'],
+  withPriceActionCards: true,
+  priceActionCards: {
+    enabled: true,
+    symbol: 'MES',
+    bridgeInstrument: 'MES 09-26',
+    contractResolution: {
+      instrument: 'MES 09-26',
+      source: 'bridge-health',
+      warnings: [],
+      bridgeUrl: 'http://127.0.0.1:8765',
+    },
+    resolveBars: priceActionDryRun.priceActionCards.length
+      ? async (selectedSample) => {
+          assert.equal(selectedSample.sampleId, 'false_run_liquidity_fade-002');
+          return {
+            bars5m: [],
+            bars15m: [],
+            dataSource: 'missing',
+            sourceByTimeframe: { '5m': 'missing', '15m': 'missing' },
+            warnings: ['fixture missing bars'],
+            resolvedWindow: { sampleTimestamp: null, fiveMinute: null, fifteenMinute: null },
+            resolvedContract: 'MES 09-26',
+            symbol: 'MES',
+            bridgeUrl: 'http://127.0.0.1:8765',
+            timezone: 'eastern',
+            advisoryOnly: true,
+            executionApproved: false,
+          };
+        }
+      : undefined,
+  },
+});
+assert.equal(duplicateSkippedCards.samplesSelected, 1);
+assert.equal(duplicateSkippedCards.priceActionCards[0].sampleId, 'false_run_liquidity_fade-002');
+assert.equal(duplicateSkippedCards.priceActionCards[0].attached, false);
+assert.ok(duplicateSkippedCards.priceActionCards[0].warnings.some((warning) => warning.includes('missing bar data')));
+
 await assert.rejects(
   () => publishResearchDiscordReview({
     reviewPack: reviewFile,
@@ -357,6 +565,200 @@ const writtenState = JSON.parse(readFileSync(stateFile, 'utf8'));
 assert.equal(writtenState.entries[0].discordMessageId, 'discord-message-1');
 assert.equal(writtenState.entries[0].discordChannelId, 'channel-1');
 assert.equal(writtenState.entries[0].advisoryOnly, true);
+
+let attachmentFetchSeen = false;
+globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+  assert.ok(init?.body instanceof FormData, 'price action card sample post should use multipart form data');
+  const form = init.body as FormData;
+  const payloadJson = String(form.get('payload_json'));
+  const payloadObject = JSON.parse(payloadJson);
+  const buttonLabels = payloadObject.components.flatMap((row: { components: Array<{ label: string }> }) => row.components.map((button) => button.label));
+  assert.deepEqual(buttonLabels, ['Approved', 'Not Approved']);
+  assert.equal(buttonLabels.includes('Keep Advisory'), false);
+  assert.equal(buttonLabels.includes('New Model Candidate'), false);
+  assert.ok(payloadJson.includes('[PRICE ACTION REVIEW] false_run_liquidity_fade-001'));
+  assert.ok(payloadJson.includes('Contract: MES 09-26'));
+  assert.ok(payloadJson.includes('Hypothetical Overlay:'));
+  assert.ok(payloadJson.includes('Outcome Review:'));
+  assert.ok(payloadJson.includes('Agent Recommendation:'));
+  assert.ok(payloadJson.includes('Approve only if this is useful evidence for future model-candidate review.'));
+  assert.ok(payloadJson.includes('Research-only. This does not approve execution, change rules, or create trades.'));
+  assert.equal(payloadJson.includes('"entry"'), false);
+  const file = form.get('files[0]') as File;
+  assert.equal(file.name.endsWith('.png'), true);
+  assert.equal(file.name.endsWith('.svg'), false);
+  attachmentFetchSeen = true;
+  return Response.json({ id: 'discord-price-card-1' });
+}) as typeof fetch;
+
+const postedWithCard = await publishResearchDiscordReview({
+  reviewPack: reviewFile,
+  outcomeReport: outcomeFile,
+  publishPending: true,
+  state: false,
+  limit: 1,
+  dryRun: false,
+  writeDryRunState: false,
+  statePath: join(temp, 'price-action-live-state.json'),
+  pretty: true,
+  json: false,
+  withPriceActionCards: true,
+  priceActionCards: {
+    enabled: true,
+    symbol: 'MES',
+    bridgeInstrument: 'MES 09-26',
+    contractResolution: {
+      instrument: 'MES 09-26',
+      source: 'bridge-health',
+      warnings: [],
+      bridgeUrl: 'http://127.0.0.1:8765',
+    },
+    resolveBars: async () => ({
+      bars5m: [
+        { time: '2026-05-28T09:45:00', open: 7600, high: 7601, low: 7599, close: 7600.5 },
+        { time: '2026-05-28T09:50:00', open: 7600.5, high: 7602, low: 7600, close: 7601.5 },
+        { time: '2026-05-28T09:55:00', open: 7601.5, high: 7602, low: 7598, close: 7599 },
+        { time: '2026-05-28T10:00:00', open: 7599, high: 7600, low: 7595, close: 7596 },
+      ],
+      bars15m: [
+        { time: '2026-05-28T09:30:00', open: 7602, high: 7604, low: 7599, close: 7600 },
+        { time: '2026-05-28T09:45:00', open: 7600, high: 7602, low: 7595, close: 7596 },
+      ],
+      dataSource: 'cache',
+      sourceByTimeframe: { '5m': 'cache', '15m': 'cache' },
+      warnings: [],
+      resolvedWindow: {
+        sampleTimestamp: '2026-05-28T10:00:00',
+        fiveMinute: { timeframe: '5m', from: '2026-05-28T09:45:00', to: '2026-05-28T10:15:00' },
+        fifteenMinute: { timeframe: '15m', from: '2026-05-28T09:30:00', to: '2026-05-28T10:30:00' },
+      },
+      resolvedContract: 'MES 09-26',
+      symbol: 'MES',
+      bridgeUrl: 'http://127.0.0.1:8765',
+      timezone: 'eastern',
+      advisoryOnly: true,
+      executionApproved: false,
+    }),
+    renderCard: async () => pngFile,
+  },
+});
+globalThis.fetch = originalFetch;
+assert.equal(postedWithCard.messagesPosted, 1);
+assert.equal(postedWithCard.priceActionCards[0].attached, true);
+assert.equal(attachmentFetchSeen, true);
+const priceActionState = JSON.parse(readFileSync(join(temp, 'price-action-live-state.json'), 'utf8'));
+assert.deepEqual(priceActionState.entries[0].labelOptions, PRICE_ACTION_REVIEW_LABELS);
+
+let withheldFetchSeen = false;
+globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+  assert.equal(typeof init?.body, 'string', 'withheld chart post should be JSON text only');
+  const payloadObject = JSON.parse(init?.body as string);
+  const buttonLabels = payloadObject.components.flatMap((row: { components: Array<{ label: string }> }) => row.components.map((button) => button.label));
+  assert.deepEqual(buttonLabels, ['Approved', 'Not Approved']);
+  assert.ok(payloadObject.content.includes('Price action card withheld'));
+  assert.ok(payloadObject.content.includes('Would it have worked?: Invalid overlay'));
+  assert.ok(payloadObject.content.includes('Result: Invalid overlay'));
+  assert.equal(payloadObject.content.includes('Would it have worked?: Yes'), false);
+  assert.equal(payloadObject.content.includes('Result: T2 hit'), false);
+  withheldFetchSeen = true;
+  return Response.json({ id: 'discord-price-card-withheld-1' });
+}) as typeof fetch;
+
+const withheldCardPost = await publishResearchDiscordReview({
+  reviewPack: reviewFile,
+  outcomeReport: outcomeFile,
+  publishPending: true,
+  state: false,
+  limit: 1,
+  dryRun: false,
+  writeDryRunState: false,
+  statePath: join(temp, 'price-action-withheld-state.json'),
+  pretty: true,
+  json: false,
+  withPriceActionCards: true,
+  priceActionCards: {
+    enabled: true,
+    symbol: 'MES',
+    bridgeInstrument: 'MES 09-26',
+    contractResolution: {
+      instrument: 'MES 09-26',
+      source: 'bridge-health',
+      warnings: [],
+      bridgeUrl: 'http://127.0.0.1:8765',
+    },
+    resolveBars: async () => ({
+      bars5m: [
+        { time: '2026-05-28T09:45:00', open: 7600, high: 7601, low: 7599, close: 7600.5 },
+        { time: '2026-05-28T09:50:00', open: 7600.5, high: 7602, low: 7600, close: 7601.5 },
+      ],
+      bars15m: [
+        { time: '2026-05-28T09:30:00', open: 7602, high: 7604, low: 7599, close: 7600 },
+        { time: '2026-05-28T09:45:00', open: 7600, high: 7602, low: 7595, close: 7596 },
+      ],
+      dataSource: 'cache',
+      sourceByTimeframe: { '5m': 'cache', '15m': 'cache' },
+      warnings: [],
+      resolvedWindow: {
+        sampleTimestamp: '2026-05-28T10:00:00',
+        fiveMinute: { timeframe: '5m', from: '2026-05-28T09:45:00', to: '2026-05-28T10:15:00' },
+        fifteenMinute: { timeframe: '15m', from: '2026-05-28T09:30:00', to: '2026-05-28T10:30:00' },
+      },
+      resolvedContract: 'MES 09-26',
+      symbol: 'MES',
+      bridgeUrl: 'http://127.0.0.1:8765',
+      timezone: 'eastern',
+      advisoryOnly: true,
+      executionApproved: false,
+    }),
+    renderCardWithMetadata: async () => ({
+      outputPath: pngFile,
+      renderedPng: true,
+      renderedSvg: false,
+      visualQuality: 'fail',
+      cardAttachable: false,
+      directionConsistency: 'fail',
+      candleRangeCoveragePct: 20,
+      labelCollisionRisk: 'high',
+      chartWithheldReason: 'Price action card withheld: Overlay direction check failed for LONG sample.',
+      mainChart: {
+        timeframe: '5m',
+        barsRendered: 2,
+        xAxisLabelsRendered: true,
+        yAxisLabelsRendered: true,
+        priceRange: { min: 7590, max: 7610 },
+        timeRange: { from: '2026-05-28T09:45:00', to: '2026-05-28T09:50:00' },
+        overlayLevelsAttempted: 4,
+        overlayLevelsRendered: 4,
+        candleRangeCoveragePct: 20,
+        labelCollisionRisk: 'high',
+      },
+      contextChart: {
+        timeframe: '15m',
+        barsRendered: 2,
+        xAxisLabelsRendered: true,
+        yAxisLabelsRendered: true,
+        priceRange: { min: 7590, max: 7610 },
+        timeRange: { from: '2026-05-28T09:30:00', to: '2026-05-28T09:45:00' },
+        overlayLevelsAttempted: 2,
+        overlayLevelsRendered: 2,
+        candleRangeCoveragePct: 20,
+        labelCollisionRisk: 'low',
+      },
+      warnings: ['Price action card withheld: Overlay direction check failed for LONG sample.'],
+    }),
+  },
+});
+globalThis.fetch = originalFetch;
+assert.equal(withheldCardPost.messagesPosted, 1);
+assert.equal(withheldCardPost.priceActionCards[0].attached, false);
+assert.equal(withheldCardPost.priceActionCards[0].chartWithheld, true);
+assert.equal(withheldCardPost.priceActionCards[0].postedTextOnly, true);
+assert.equal(withheldCardPost.priceActionCards[0].directionConsistency, 'fail');
+assert.equal(withheldFetchSeen, true);
+const withheldState = JSON.parse(readFileSync(join(temp, 'price-action-withheld-state.json'), 'utf8'));
+assert.equal(withheldState.entries[0].postedTextOnly, true);
+assert.equal(withheldState.entries[0].chartWithheld, true);
+assert.ok(withheldState.entries[0].chartWithheldReason.includes('Overlay direction check failed'));
 
 await runResearchDiscordReviewCli(['--state', '--state-path', stateFile, '--pretty']);
 await runResearchDiscordReviewCli(['--review-pack', reviewFile, '--publish-pending', '--limit', '1', '--dry-run', '--pretty', '--state-path', join(temp, 'dry-state.json')]);

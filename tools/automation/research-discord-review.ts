@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { buildPriceActionReviewCardModel } from '../../src/agents/priceActionReviewCardAgent';
 import {
   appendResearchDiscordReviewState,
+  buildPriceActionReviewMessageContent,
   buildResearchDiscordReviewQueue,
   createResearchDiscordStateEntry,
   emptyResearchDiscordReviewState,
@@ -16,7 +17,7 @@ import {
 } from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchOutcomeMathReport } from '../../src/agents/researchOutcomeMathAgent';
 import type { ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
-import { renderPriceActionReviewCard } from './price-action-review-card-renderer';
+import { renderPriceActionReviewCard, renderPriceActionReviewCardWithMetadata, type PriceActionReviewCardRenderResult } from './price-action-review-card-renderer';
 import {
   resolveActiveBridgeInstrument,
   resolveResearchPriceActionBars,
@@ -47,6 +48,14 @@ export interface ResearchDiscordPriceActionCardResult {
   sampleId: string;
   pngPath: string | null;
   attached: boolean;
+  postedTextOnly?: boolean;
+  chartWithheld?: boolean;
+  chartWithheldReason?: string;
+  visualQuality?: PriceActionReviewCardRenderResult['visualQuality'];
+  cardAttachable?: boolean;
+  directionConsistency?: PriceActionReviewCardRenderResult['directionConsistency'];
+  candleRangeCoveragePct?: number;
+  labelCollisionRisk?: PriceActionReviewCardRenderResult['labelCollisionRisk'];
   skipped: boolean;
   warnings: string[];
   dataSource: ResearchPriceActionBarsResult['dataSource'] | 'not_requested';
@@ -63,6 +72,7 @@ export interface ResearchDiscordPriceActionCardOptions {
   contractResolution?: ActiveBridgeInstrumentResolution | null;
   resolveBars?: typeof resolveResearchPriceActionBars;
   renderCard?: typeof renderPriceActionReviewCard;
+  renderCardWithMetadata?: typeof renderPriceActionReviewCardWithMetadata;
 }
 
 export interface ResearchDiscordPublishResult {
@@ -292,6 +302,7 @@ async function buildPriceActionCardAttachment(args: {
   cardOptions: ResearchDiscordPriceActionCardOptions;
 }): Promise<{ payloadWarnings: string[]; attachmentPaths: string[]; result: ResearchDiscordPriceActionCardResult }> {
   const resolveBars = args.cardOptions.resolveBars || resolveResearchPriceActionBars;
+  const renderCardWithMetadata = args.cardOptions.renderCardWithMetadata || (args.cardOptions.renderCard ? null : renderPriceActionReviewCardWithMetadata);
   const renderCard = args.cardOptions.renderCard || renderPriceActionReviewCard;
   const symbol = args.cardOptions.symbol || args.packInstrument || 'MES';
   const resolvedContract = args.cardOptions.bridgeInstrument || args.cardOptions.contractResolution?.instrument || 'MES 06-26';
@@ -313,6 +324,7 @@ async function buildPriceActionCardAttachment(args: {
           sampleId: args.item.sample.sampleId,
           pngPath: null,
           attached: false,
+          postedTextOnly: true,
           skipped: false,
           warnings: [missing, ...warnings],
           dataSource: bars.dataSource,
@@ -335,11 +347,45 @@ async function buildPriceActionCardAttachment(args: {
       range ? `${safeFilePart(range.from)}-to-${safeFilePart(range.to)}` : 'review',
       safeFilePart(args.item.sample.sampleId),
     ].join('-');
-    const pngPath = await renderCard({
-      model,
-      outputDir: args.cardOptions.outputDir,
-      filePrefix,
-    });
+    const rendered = renderCardWithMetadata
+      ? await renderCardWithMetadata({ model, outputDir: args.cardOptions.outputDir, filePrefix })
+      : {
+          outputPath: await renderCard({ model, outputDir: args.cardOptions.outputDir, filePrefix }),
+          renderedPng: true,
+          renderedSvg: false as const,
+          visualQuality: 'pass' as const,
+          cardAttachable: true,
+          directionConsistency: 'unknown' as const,
+          candleRangeCoveragePct: 100,
+          labelCollisionRisk: 'low' as const,
+          chartWithheldReason: undefined,
+          warnings: model.warnings,
+        };
+    const pngPath = rendered.outputPath;
+    if (!rendered.cardAttachable || rendered.visualQuality === 'fail') {
+      const warning = rendered.chartWithheldReason || 'Price action card withheld: overlay direction is inconsistent with sample direction or overlay levels make the chart unreadable.';
+      return {
+        payloadWarnings: [warning, ...warnings, ...rendered.warnings],
+        attachmentPaths: [],
+        result: {
+          sampleId: args.item.sample.sampleId,
+          pngPath,
+          attached: false,
+          postedTextOnly: true,
+          chartWithheld: true,
+          chartWithheldReason: warning,
+          visualQuality: rendered.visualQuality,
+          cardAttachable: rendered.cardAttachable,
+          directionConsistency: rendered.directionConsistency,
+          candleRangeCoveragePct: rendered.candleRangeCoveragePct,
+          labelCollisionRisk: rendered.labelCollisionRisk,
+          skipped: false,
+          warnings: [warning, ...warnings, ...rendered.warnings],
+          dataSource: bars.dataSource,
+          resolvedContract: bars.resolvedContract,
+        },
+      };
+    }
     const pngAttachments = onlyPngFiles([pngPath]);
     if (!pngAttachments.length) {
       const warning = 'Price action card renderer did not return a PNG attachment path.';
@@ -350,6 +396,7 @@ async function buildPriceActionCardAttachment(args: {
           sampleId: args.item.sample.sampleId,
           pngPath,
           attached: false,
+          postedTextOnly: true,
           skipped: false,
           warnings: [warning, ...warnings],
           dataSource: bars.dataSource,
@@ -364,8 +411,15 @@ async function buildPriceActionCardAttachment(args: {
         sampleId: args.item.sample.sampleId,
         pngPath: pngAttachments[0],
         attached: true,
+        postedTextOnly: false,
+        chartWithheld: false,
+        visualQuality: rendered.visualQuality,
+        cardAttachable: rendered.cardAttachable,
+        directionConsistency: rendered.directionConsistency,
+        candleRangeCoveragePct: rendered.candleRangeCoveragePct,
+        labelCollisionRisk: rendered.labelCollisionRisk,
         skipped: false,
-        warnings,
+        warnings: [...warnings, ...rendered.warnings],
         dataSource: bars.dataSource,
         resolvedContract: bars.resolvedContract,
       },
@@ -379,6 +433,7 @@ async function buildPriceActionCardAttachment(args: {
         sampleId: args.item.sample.sampleId,
         pngPath: null,
         attached: false,
+        postedTextOnly: true,
         skipped: false,
         warnings: [warning, ...baseWarnings],
         dataSource: 'missing',
@@ -417,16 +472,26 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
   for (const item of queue.items) {
     let payload = item.payload;
     let attachments: string[] = [];
+    let cardResult: ResearchDiscordPriceActionCardResult | null = null;
     if (priceActionConfig.config?.enabled) {
       const card = await buildPriceActionCardAttachment({
         item,
         packInstrument: reviewPack.instrument,
         cardOptions: priceActionConfig.config,
       });
+      cardResult = card.result;
+      const invalidOverlayReason = cardResult.directionConsistency === 'fail'
+        ? card.result.chartWithheldReason || 'Overlay direction check failed.'
+        : null;
+      payload = {
+        ...payload,
+        content: buildPriceActionReviewMessageContent(item.sample, item.outcome, card.result.resolvedContract, invalidOverlayReason),
+      };
       payload = appendPriceActionWarnings(payload, card.payloadWarnings);
       attachments = onlyPngFiles(card.attachmentPaths);
-      priceActionCards.push(card.result);
+      priceActionCards.push(cardResult);
     }
+    item.payload = payload;
     const messageId = options.dryRun ? null : await postResearchDiscordReviewMessage(channelId as string, token as string, payload, attachments);
     if (!options.dryRun) messagesPosted += 1;
     if (!options.dryRun || options.writeDryRunState) {
@@ -437,6 +502,9 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
         discordMessageId: messageId,
         discordChannelId: channelId || 'dry-run',
         labelOptions: usePriceActionReviewButtons ? PRICE_ACTION_REVIEW_LABELS : undefined,
+        postedTextOnly: Boolean(priceActionConfig.config?.enabled && !cardResult?.attached),
+        chartWithheld: Boolean(cardResult?.chartWithheld),
+        chartWithheldReason: cardResult?.chartWithheldReason,
       });
       stateEntries.push(entry);
       currentState = appendResearchDiscordReviewState(currentState || emptyResearchDiscordReviewState(), [entry]);

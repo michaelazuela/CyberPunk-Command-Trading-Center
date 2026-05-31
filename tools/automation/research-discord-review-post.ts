@@ -25,8 +25,12 @@ import {
   generateResearchReviewChartReport,
   type ResearchReviewChartReport,
 } from './research-review-chart-report';
-import type { ResearchDiscordMessagePayload } from '../../src/agents/researchDiscordReviewQueueAgent';
-import type { ResearchDiscordReviewState } from '../../src/agents/researchDiscordReviewQueueAgent';
+import {
+  PRICE_ACTION_REVIEW_LABELS,
+  type ResearchDiscordMessagePayload,
+  type ResearchDiscordReviewState,
+  type ResearchDiscordReviewStateEntry,
+} from '../../src/agents/researchDiscordReviewQueueAgent';
 import type { ResearchHumanInspectionLabel, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
 
 dotenv.config({ quiet: true });
@@ -62,10 +66,12 @@ interface WorkflowResult {
   reviewedOutputPath: string;
   outcomeReportPath: string;
   statePath: string;
+  samplesAvailable: number;
   samplesSelected: number;
   recommendationCounts: Record<string, number>;
   cardsPosted: number;
   skippedDuplicates: number;
+  remainingBacklog: number;
   dryRun: boolean;
   discordChannelId: string | null;
   publishResult: ResearchDiscordPublishResult;
@@ -76,6 +82,11 @@ interface WorkflowResult {
   chartUploadFailure: string | null;
   summaryPostSkippedReason: string | null;
   activeContract: ActiveBridgeInstrumentResolution | null;
+  cardsAttached: number;
+  cardsWithheld: number;
+  textOnlyPosts: number;
+  invalidOverlays: number;
+  uploadFailures: number;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -287,6 +298,12 @@ export function shouldPostResearchReviewSummaryCharts(options: Pick<ResearchDisc
   return !options.withPriceActionCards || options.postSummaryCharts;
 }
 
+export function isDuplicateForReviewMode(entry: ResearchDiscordReviewStateEntry, withPriceActionCards: boolean): boolean {
+  if (!withPriceActionCards) return true;
+  const labels = new Set(entry.labelOptions || []);
+  return labels.size === PRICE_ACTION_REVIEW_LABELS.length && PRICE_ACTION_REVIEW_LABELS.every((label) => labels.has(label));
+}
+
 export async function postResearchReviewSummaryWithChartArtifacts(args: {
   channelId: string;
   token: string;
@@ -371,7 +388,9 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
   });
 
   const state = await readDiscordReviewState(options.statePath);
-  const postedSampleIds = new Set((state.entries || []).map((entry) => entry.sampleId));
+  const postedSampleIds = new Set((state.entries || [])
+    .filter((entry) => isDuplicateForReviewMode(entry, options.withPriceActionCards))
+    .map((entry) => entry.sampleId));
   const skipSampleIds = options.force ? [] : reviewPack.samples.filter((sample) => postedSampleIds.has(sample.sampleId)).map((sample) => sample.sampleId);
   const activeContract = options.withPriceActionCards
     ? await resolveActiveBridgeInstrument({ bridgeUrl: process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765' })
@@ -429,6 +448,10 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
       contractResolution: activeContract,
     } : undefined,
   });
+  const cardsAttached = publishResult.priceActionCards.filter((card) => card.attached).length;
+  const cardsWithheld = publishResult.priceActionCards.filter((card) => card.chartWithheld).length;
+  const textOnlyPosts = publishResult.priceActionCards.filter((card) => card.postedTextOnly).length;
+  const invalidOverlays = publishResult.priceActionCards.filter((card) => card.directionConsistency === 'fail').length;
 
   return {
     from: options.from,
@@ -439,10 +462,12 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
     reviewedOutputPath: reviewedOutputPath(reviewPackPath),
     outcomeReportPath,
     statePath: path.resolve(options.statePath),
+    samplesAvailable: reviewPack.samples.length,
     samplesSelected: publishResult.samplesSelected,
     recommendationCounts: recommendationCounts(reviewPack),
     cardsPosted: publishResult.messagesPosted,
     skippedDuplicates: skipSampleIds.length,
+    remainingBacklog: Math.max(0, publishResult.pendingSamplesFound - publishResult.samplesSelected),
     dryRun: options.dryRun,
     discordChannelId: publishResult.channelId,
     publishResult,
@@ -453,6 +478,11 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
     chartUploadFailure,
     summaryPostSkippedReason,
     activeContract,
+    cardsAttached,
+    cardsWithheld,
+    textOnlyPosts,
+    invalidOverlays,
+    uploadFailures: chartUploadFailure ? 1 : 0,
   };
 }
 
@@ -474,10 +504,11 @@ function renderResult(result: WorkflowResult): string {
     ...(result.activeContract?.warnings || []).map((warning) => `Contract warning: ${warning}`),
     'PriceActionReviewCard PNGs:',
     ...(result.publishResult.priceActionCards.length
-      ? result.publishResult.priceActionCards.map((card) => `- ${card.sampleId}: ${card.pngPath || 'unavailable'}; attached=${card.attached}; source=${card.dataSource}; warnings=${card.warnings.length}`)
+      ? result.publishResult.priceActionCards.map((card) => `- ${card.sampleId}: ${card.pngPath || 'unavailable'}; attached=${card.attached}; withheld=${card.chartWithheld ? 'true' : 'false'}; visualQuality=${card.visualQuality || 'unknown'}; source=${card.dataSource}; warnings=${card.warnings.length}`)
       : ['- none']),
     `Research Quality Score average: ${result.chartReport.visualization.summary.averageResearchQualityScore === null ? 'Not provided' : result.chartReport.visualization.summary.averageResearchQualityScore}`,
     `Research Quality Score labels: ${compactList(researchQualityLabelBreakdown(result.chartReport))}`,
+    `Samples available: ${result.samplesAvailable}`,
     'Local chart artifacts:',
     ...Object.entries(result.chartReport.chartPaths).map(([label, file]) => `- ${label}: ${file}`),
     'Local SVG audit artifacts:',
@@ -486,11 +517,17 @@ function renderResult(result: WorkflowResult): string {
     'Agent recommendations summary:',
     ...Object.entries(result.recommendationCounts).map(([label, count]) => `- ${label}: ${count}`),
     `Cards posted: ${result.cardsPosted}`,
+    `Cards attached: ${result.cardsAttached}`,
+    `Cards withheld: ${result.cardsWithheld}`,
+    `Text-only posts: ${result.textOnlyPosts}`,
+    `Invalid overlays: ${result.invalidOverlays}`,
+    `Upload failures: ${result.uploadFailures}`,
     `Summary message posted: ${result.summaryMessagePosted ? 'true' : 'false'}`,
     `Summary post skipped reason: ${result.summaryPostSkippedReason || 'none'}`,
     `Chart artifacts uploaded: ${result.chartArtifactsUploaded ? 'true' : 'false'}`,
     `Chart upload failure: ${result.chartUploadFailure || 'none'}`,
     `Cards skipped as duplicates: ${result.skippedDuplicates}`,
+    `Remaining backlog after this run: ${result.remainingBacklog}`,
     `Discord channel ID: ${result.discordChannelId || 'not configured'}`,
     `State file path: ${result.statePath}`,
     `Dry run: ${result.dryRun ? 'true' : 'false'}`,

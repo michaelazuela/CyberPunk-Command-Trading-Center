@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   buildSummaryPayload,
+  isDuplicateForReviewMode,
   postResearchReviewSummaryWithChartArtifacts,
   selectDiscordChartAttachments,
   shouldPostResearchReviewSummaryCharts,
@@ -99,6 +100,39 @@ assert.equal(selectDiscordChartAttachments(scoredReport)[0], scoredReport.chartP
 assert.equal(shouldPostResearchReviewSummaryCharts({ withPriceActionCards: false, postSummaryCharts: false }), true);
 assert.equal(shouldPostResearchReviewSummaryCharts({ withPriceActionCards: true, postSummaryCharts: false }), false);
 assert.equal(shouldPostResearchReviewSummaryCharts({ withPriceActionCards: true, postSummaryCharts: true }), true);
+assert.equal(isDuplicateForReviewMode({
+  packHash: 'legacy',
+  reviewPackPath: 'review.json',
+  sampleId: 'sample-001',
+  discordMessageId: 'message-1',
+  discordChannelId: 'channel-1',
+  postedAt: '2026-05-30T20:00:00.000Z',
+  labelOptions: ['keep_advisory', 'reject'],
+  advisoryOnly: true,
+  reviewed: false,
+}, true), false);
+assert.equal(isDuplicateForReviewMode({
+  packHash: 'price-action',
+  reviewPackPath: 'review.json',
+  sampleId: 'sample-001',
+  discordMessageId: 'message-1',
+  discordChannelId: 'channel-1',
+  postedAt: '2026-05-30T20:00:00.000Z',
+  labelOptions: ['approved_for_future_model_candidate_review', 'not_approved_for_future_model_candidate_review'],
+  advisoryOnly: true,
+  reviewed: false,
+}, true), true);
+assert.equal(isDuplicateForReviewMode({
+  packHash: 'legacy',
+  reviewPackPath: 'review.json',
+  sampleId: 'sample-001',
+  discordMessageId: 'message-1',
+  discordChannelId: 'channel-1',
+  postedAt: '2026-05-30T20:00:00.000Z',
+  labelOptions: ['keep_advisory', 'reject'],
+  advisoryOnly: true,
+  reviewed: false,
+}, false), true);
 
 const payload = buildSummaryPayload({
   from: '2026-01-01',

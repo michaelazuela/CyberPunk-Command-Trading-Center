@@ -51,6 +51,9 @@ export interface ResearchDiscordReviewStateEntry {
   reviewedBy?: string;
   selectedLabel?: ResearchReviewButtonLabel;
   reviewedPackPath?: string;
+  postedTextOnly?: boolean;
+  chartWithheld?: boolean;
+  chartWithheldReason?: string;
 }
 
 export interface ResearchDiscordReviewState {
@@ -190,8 +193,10 @@ function clip(value: string, maxLength: number): string {
 function outcomeForSample(sample: ResearchReviewSample, outcomeReport?: ResearchOutcomeMathReport | null): ResearchCandidateOutcome | null {
   if (!outcomeReport) return null;
   return outcomeReport.candidateOutcomes.find((outcome) =>
-    outcome.candidateId === sample.sampleId ||
-    (outcome.concept === sample.concept && outcome.date === sample.date && outcome.time === sample.time)
+    outcome.concept === sample.concept &&
+    outcome.date === sample.date &&
+    outcome.time === sample.time &&
+    String(outcome.direction || '').toUpperCase() === String(sample.direction || '').toUpperCase()
   ) || null;
 }
 
@@ -256,6 +261,91 @@ function outcomeLines(outcome: ResearchCandidateOutcome | null): string[] {
   ];
 }
 
+function displayValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Unavailable';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'Unavailable';
+  return String(value);
+}
+
+function reviewWorkedLabel(outcome: ResearchCandidateOutcome | null, invalidOverlay = false): 'Yes' | 'No' | 'Partial' | 'Inconclusive' | 'Invalid overlay' {
+  if (invalidOverlay) return 'Invalid overlay';
+  if (!outcome) return 'Inconclusive';
+  const classification = outcome.outcomeClassification || '';
+  const overlayOutcome = outcome.hypotheticalOutcomeOverlay?.hypotheticalOutcomeLabel || '';
+  if (/insufficient|missing|inconclusive|ambiguous/i.test(`${classification} ${overlayOutcome}`)) return 'Inconclusive';
+  if (outcome.thresholdTwoTouched || /threshold_two|t2|favorable_continuation/i.test(`${classification} ${overlayOutcome}`)) return 'Yes';
+  if (outcome.thresholdOneTouched || /threshold_one|partial/i.test(`${classification} ${overlayOutcome}`)) return 'Partial';
+  if (outcome.adverseThresholdTouched || outcome.firstMeaningfulMove === 'adverse' || /adverse|stop/i.test(`${classification} ${overlayOutcome}`)) return 'No';
+  return 'Inconclusive';
+}
+
+function reviewResultLabel(outcome: ResearchCandidateOutcome | null, invalidOverlay = false): string {
+  if (invalidOverlay) return 'Invalid overlay';
+  if (!outcome) return 'Missing data';
+  const firstEvent = outcome.hypotheticalOutcomeOverlay?.firstResolvedEvent || '';
+  const classification = outcome.outcomeClassification || '';
+  if (/insufficient|missing/i.test(`${firstEvent} ${classification}`)) return 'Missing data';
+  if (/inconclusive|ambiguous/i.test(`${firstEvent} ${classification}`)) return 'Inconclusive';
+  if (/no[_ -]?trigger/i.test(`${firstEvent} ${classification}`)) return 'No trigger';
+  if (/threshold_two|t2/i.test(firstEvent) || outcome.thresholdTwoTouched) return 'T2 hit';
+  if (/threshold_one|t1/i.test(firstEvent) || outcome.thresholdOneTouched) return 'T1 hit';
+  if (/adverse|stop/i.test(firstEvent) || outcome.adverseThresholdTouched || outcome.firstMeaningfulMove === 'adverse') return 'Stop first';
+  return 'Inconclusive';
+}
+
+function candidateEvidenceRecommendation(label: ResearchHumanInspectionLabel): string {
+  if (label === 'new_model_candidate_review' || label === 'approved_for_future_model_candidate_review') {
+    return 'Useful candidate evidence';
+  }
+  if (label === 'reject' || label === 'not_approved_for_future_model_candidate_review') {
+    return 'Not useful candidate evidence';
+  }
+  if (label === 'insufficient_context') return 'Inconclusive';
+  return 'Needs more samples';
+}
+
+export function buildPriceActionReviewMessageContent(
+  sample: ResearchReviewSample,
+  outcome: ResearchCandidateOutcome | null,
+  contract: string | null = null,
+  invalidOverlayReason: string | null = null,
+): string {
+  const overlay = outcome?.hypotheticalOutcomeOverlay || null;
+  const agentView = clip(sample.agentReason || sample.summary || 'Research-only review sample awaiting human inspection.', 150);
+  const invalidOverlay = Boolean(invalidOverlayReason);
+  const content = [
+    `[PRICE ACTION REVIEW] ${sample.sampleId}`,
+    '',
+    `Concept: ${sample.conceptTitle}`,
+    `Date/Time: ${sample.date} ${sample.time || 'time pending'}`,
+    `Direction: ${sample.direction}`,
+    `Contract: ${contract || 'detected contract pending'}`,
+    '',
+    'Hypothetical Overlay:',
+    `Entry: ${displayValue(overlay?.hypotheticalReferencePrice ?? outcome?.referencePrice)}`,
+    `Stop Loss: ${displayValue(overlay?.hypotheticalInvalidationReference)}`,
+    `T1: ${displayValue(overlay?.hypotheticalThresholdOne)}`,
+    `T2: ${displayValue(overlay?.hypotheticalThresholdTwo)}`,
+    '',
+    'Outcome Review:',
+    `Would it have worked?: ${reviewWorkedLabel(outcome, invalidOverlay)}`,
+    `Result: ${reviewResultLabel(outcome, invalidOverlay)}`,
+    `Agent view: ${agentView}`,
+    ...(invalidOverlayReason ? [`Chart warning: ${invalidOverlayReason}`] : []),
+    '',
+    'Agent Recommendation:',
+    candidateEvidenceRecommendation(sample.agentInspectionLabel),
+    '',
+    'Human Action:',
+    'Approve only if this is useful evidence for future model-candidate review.',
+    '',
+    'Research-only. This does not approve execution, change rules, or create trades.',
+  ].join('\n');
+  return content.length <= 1900
+    ? content
+    : `${content.slice(0, 1840).trim()}\nFull sample context remains in the local review pack.\nResearch-only. This does not approve execution, change rules, or create trades.`;
+}
+
 export function buildResearchReviewMessagePayload(
   sample: ResearchReviewSample,
   packHash: string,
@@ -265,7 +355,7 @@ export function buildResearchReviewMessagePayload(
 ): ResearchDiscordMessagePayload {
   assertSampleBoundary(sample);
   const recommendation = RECOMMENDATION_TEXT[sample.agentInspectionLabel] || 'Recommended: Keep Advisory';
-  const content = [
+  const content = buttonMode === 'future_model_candidate_review' ? buildPriceActionReviewMessageContent(sample, outcome) : [
     `[RESEARCH SAMPLE REVIEW] ${sample.sampleId}`,
     `Symbol: ${instrument}`,
     `Concept: ${sample.conceptTitle}`,
@@ -357,6 +447,9 @@ export function createResearchDiscordStateEntry(args: {
   discordChannelId: string;
   postedAt?: string;
   labelOptions?: ResearchReviewButtonLabel[];
+  postedTextOnly?: boolean;
+  chartWithheld?: boolean;
+  chartWithheldReason?: string;
 }): ResearchDiscordReviewStateEntry {
   return {
     packHash: args.packHash,
@@ -368,6 +461,9 @@ export function createResearchDiscordStateEntry(args: {
     labelOptions: args.labelOptions || RESEARCH_REVIEW_LABELS,
     advisoryOnly: true,
     reviewed: false,
+    ...(args.postedTextOnly ? { postedTextOnly: true } : {}),
+    ...(args.chartWithheld ? { chartWithheld: true } : {}),
+    ...(args.chartWithheldReason ? { chartWithheldReason: args.chartWithheldReason } : {}),
   };
 }
 
