@@ -1,8 +1,8 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T04:25:24.726Z",
-  "from": "2026-01-01",
-  "to": "2026-05-30",
+  "generatedAt": "2026-05-31T19:31:00.360Z",
+  "from": "2026-05-28",
+  "to": "2026-05-31",
   "symbol": "MES",
   "advisoryOnly": true,
   "safety": {
@@ -19,59 +19,14 @@
     "minimumApprovalRate": 0.7
   },
   "summary": {
-    "reviewedSamplesFound": 2,
+    "reviewedSamplesFound": 1,
     "approvedCount": 1,
-    "notApprovedCount": 1,
-    "ignoredLegacyReviewedSamples": 2,
+    "notApprovedCount": 0,
+    "ignoredLegacyReviewedSamples": 0,
     "conceptsReviewed": 1,
     "candidateReviewRecommendedConcepts": 0
   },
   "entries": [
-    {
-      "sampleId": "final_hour_liquidity_draw-027",
-      "concept": "final_hour_liquidity_draw",
-      "conceptTitle": "Final-Hour Liquidity Draw",
-      "symbol": "MES",
-      "contract": "MES",
-      "date": "2026-05-01",
-      "time": "15:15",
-      "direction": "LONG",
-      "window": "3:15-3:45 NY",
-      "agentRecommendation": "keep_advisory",
-      "humanApprovalState": "not_approved_for_future_model_candidate_review",
-      "ledgerStatus": "human_not_approved_for_candidate_review",
-      "humanReason": "Human did not approve this sample as useful evidence for future model-candidate review.",
-      "humanNotes": "Discord reviewer/source: 397440351020908548\nDiscord message ID: 1510493400586256466\nDiscord channel ID: 1510035156725928206\nSelected label: not_approved_for_future_model_candidate_review\nAdvisory-only confirmation: reviewed sample remains research-only and does not approve execution, change rules, or create trades.",
-      "chartArtifactPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-027.png",
-      "outcomeMathSummary": {
-        "outcomeClassification": "favorable_then_failed",
-        "firstMeaningfulMove": "favorable",
-        "favorableThresholdOneTouched": true,
-        "favorableThresholdTwoTouched": false,
-        "adverseThresholdTouched": true,
-        "hypotheticalOutcomeLabel": "partial_favorable"
-      },
-      "warningState": {
-        "warnings": [
-          "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
-          "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
-          "Used candidate-level post-signal observation window from the source JSON."
-        ],
-        "missingChartArtifact": false,
-        "missingOutcomeMath": false
-      },
-      "sourceReviewPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-31.json",
-      "reviewedOutputPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-31.reviewed.json",
-      "reviewedAt": "2026-05-31T04:15:53.786Z",
-      "researchOnlyBoundary": {
-        "advisoryOnly": true,
-        "approvesExecution": false,
-        "changesRules": false,
-        "createsOrders": false,
-        "writesRag": false,
-        "writesJournal": false
-      }
-    },
     {
       "sampleId": "final_hour_liquidity_draw-030",
       "concept": "final_hour_liquidity_draw",
@@ -86,28 +41,61 @@
       "humanApprovalState": "approved_for_future_model_candidate_review",
       "ledgerStatus": "human_approved_for_candidate_review",
       "humanReason": "Human approved this sample as useful evidence for future model-candidate review only.",
-      "humanNotes": "Discord reviewer/source: 397440351020908548\nDiscord message ID: 1510493415530561736\nDiscord channel ID: 1510035156725928206\nSelected label: approved_for_future_model_candidate_review\nAdvisory-only confirmation: reviewed sample remains research-only and does not approve execution, change rules, or create trades.",
+      "humanNotes": "Discord user ID: 397440351020908548\nDiscord username: broadstreetbuilt\nDiscord channel ID: 1510035156725928206\nDiscord message ID: 1510511031728996363\nSelected label: approved_for_future_model_candidate_review\nHuman review: Approved for future model-candidate review\nAdvisory-only confirmation: reviewed sample remains research-only and does not approve execution, change rules, or create trades.",
       "chartArtifactPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-030.png",
       "outcomeMathSummary": {
-        "outcomeClassification": "favorable_continuation",
-        "firstMeaningfulMove": "favorable",
+        "outcomeClassification": "adverse_first",
+        "firstMeaningfulMove": "adverse",
         "favorableThresholdOneTouched": true,
         "favorableThresholdTwoTouched": true,
-        "adverseThresholdTouched": false,
-        "hypotheticalOutcomeLabel": "favorable_continuation"
+        "adverseThresholdTouched": true,
+        "hypotheticalOutcomeLabel": "adverse_first"
+      },
+      "estimatedGrossContractPnl": {
+        "rootSymbol": "MES",
+        "displayName": "Micro E-mini S&P 500",
+        "contracts": 1,
+        "pointValue": 5,
+        "tickSize": 0.25,
+        "tickValue": 1.25,
+        "currency": "USD",
+        "metadataSource": "static_contract_metadata",
+        "status": "available",
+        "note": "Research-only gross estimate for 1 MES contract. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.",
+        "mfePoints": 11.25,
+        "mfeTicks": 45,
+        "mfeDollars": 56.25,
+        "maePoints": -1.75,
+        "maeTicks": -7,
+        "maeDollars": -8.75,
+        "t1Points": 4,
+        "t1Ticks": 16,
+        "t1Dollars": 20,
+        "t2Points": 8,
+        "t2Ticks": 32,
+        "t2Dollars": 40,
+        "adversePoints": -4,
+        "adverseTicks": -16,
+        "adverseDollars": -20,
+        "firstMeaningfulMovePoints": 4,
+        "firstMeaningfulMoveTicks": 16,
+        "firstMeaningfulMoveDollars": 20,
+        "hypotheticalOutcomePoints": 8,
+        "hypotheticalOutcomeTicks": 32,
+        "hypotheticalOutcomeDollars": 40
       },
       "warningState": {
         "warnings": [
           "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
           "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
-          "Used candidate-level post-signal observation window from the source JSON."
+          "Used candidate-level post-signal observation window with 9 bar(s), shorter than the configured 12-bar window."
         ],
         "missingChartArtifact": false,
         "missingOutcomeMath": false
       },
       "sourceReviewPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-31.json",
       "reviewedOutputPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-31.reviewed.json",
-      "reviewedAt": "2026-05-31T04:14:19.660Z",
+      "reviewedAt": "2026-05-31T17:27:36.142Z",
       "researchOnlyBoundary": {
         "advisoryOnly": true,
         "approvesExecution": false,
@@ -122,29 +110,47 @@
     {
       "concept": "final_hour_liquidity_draw",
       "conceptTitle": "Final-Hour Liquidity Draw",
-      "totalSamplesReviewed": 2,
+      "totalSamplesReviewed": 1,
       "humanApprovedCount": 1,
-      "humanNotApprovedCount": 1,
-      "approvalRate": 0.5,
+      "humanNotApprovedCount": 0,
+      "approvalRate": 1,
       "agentRecommendationDistribution": {
-        "keep_advisory": 2
+        "keep_advisory": 1
       },
       "directionDistribution": {
-        "LONG": 2
+        "LONG": 1
       },
       "timeWindowDistribution": {
-        "3:15-3:45 NY": 2
+        "3:15-3:45 NY": 1
       },
       "outcomeSummary": {
-        "partial_favorable": 1,
-        "favorable_continuation": 1
+        "adverse_first": 1
       },
-      "chartAvailabilityCount": 2,
-      "missingDataWarningsCount": 6,
+      "chartAvailabilityCount": 1,
+      "missingDataWarningsCount": 3,
       "candidateReadinessStatus": "insufficient_evidence",
       "deskRecommendation": "Desk recommendation: insufficient evidence. Human final decision required before any model promotion or implementation."
     }
   ],
+  "estimatedGrossContractPnlSummary": {
+    "rootSymbol": "MES",
+    "displayName": "Micro E-mini S&P 500",
+    "contracts": 1,
+    "pointValue": 5,
+    "tickSize": 0.25,
+    "tickValue": 1.25,
+    "currency": "USD",
+    "sampleCountWithPnl": 1,
+    "sampleCountMissingPnl": 0,
+    "totalHypotheticalOutcomeDollars": 40,
+    "avgHypotheticalOutcomeDollars": 40,
+    "bestHypotheticalOutcomeDollars": 40,
+    "worstHypotheticalOutcomeDollars": 40,
+    "avgMfeDollars": 56.25,
+    "avgMaeDollars": -8.75,
+    "status": "available",
+    "note": "Research-only gross estimate. Not actual P/L. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects."
+  },
   "warnings": [],
   "outputPaths": {
     "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.json",
