@@ -57,7 +57,7 @@ export interface ResearchDiscordReviewPostOptions {
   postSummaryCharts: boolean;
 }
 
-interface WorkflowResult {
+export interface WorkflowResult {
   from: string;
   to: string;
   symbol: Instrument;

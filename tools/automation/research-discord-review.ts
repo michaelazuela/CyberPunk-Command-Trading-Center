@@ -56,6 +56,8 @@ export interface ResearchDiscordPriceActionCardResult {
   directionConsistency?: PriceActionReviewCardRenderResult['directionConsistency'];
   candleRangeCoveragePct?: number;
   labelCollisionRisk?: PriceActionReviewCardRenderResult['labelCollisionRisk'];
+  mainChart?: PriceActionReviewCardRenderResult['mainChart'];
+  contextChart?: PriceActionReviewCardRenderResult['contextChart'];
   skipped: boolean;
   warnings: string[];
   dataSource: ResearchPriceActionBarsResult['dataSource'] | 'not_requested';
@@ -353,6 +355,30 @@ async function buildPriceActionCardAttachment(args: {
           outputPath: await renderCard({ model, outputDir: args.cardOptions.outputDir, filePrefix }),
           renderedPng: true,
           renderedSvg: false as const,
+          mainChart: {
+            timeframe: '5m' as const,
+            barsRendered: bars.bars5m.length,
+            xAxisLabelsRendered: bars.bars5m.length > 0,
+            yAxisLabelsRendered: bars.bars5m.length > 0,
+            priceRange: null,
+            timeRange: null,
+            overlayLevelsAttempted: 0,
+            overlayLevelsRendered: 0,
+            candleRangeCoveragePct: 100,
+            labelCollisionRisk: 'low' as const,
+          },
+          contextChart: {
+            timeframe: '15m' as const,
+            barsRendered: bars.bars15m.length,
+            xAxisLabelsRendered: bars.bars15m.length > 0,
+            yAxisLabelsRendered: bars.bars15m.length > 0,
+            priceRange: null,
+            timeRange: null,
+            overlayLevelsAttempted: 0,
+            overlayLevelsRendered: 0,
+            candleRangeCoveragePct: 100,
+            labelCollisionRisk: 'low' as const,
+          },
           visualQuality: 'pass' as const,
           cardAttachable: true,
           directionConsistency: 'unknown' as const,
@@ -379,6 +405,8 @@ async function buildPriceActionCardAttachment(args: {
           directionConsistency: rendered.directionConsistency,
           candleRangeCoveragePct: rendered.candleRangeCoveragePct,
           labelCollisionRisk: rendered.labelCollisionRisk,
+          mainChart: rendered.mainChart,
+          contextChart: rendered.contextChart,
           skipped: false,
           warnings: [warning, ...warnings, ...rendered.warnings],
           dataSource: bars.dataSource,
@@ -418,6 +446,8 @@ async function buildPriceActionCardAttachment(args: {
         directionConsistency: rendered.directionConsistency,
         candleRangeCoveragePct: rendered.candleRangeCoveragePct,
         labelCollisionRisk: rendered.labelCollisionRisk,
+        mainChart: rendered.mainChart,
+        contextChart: rendered.contextChart,
         skipped: false,
         warnings: [...warnings, ...rendered.warnings],
         dataSource: bars.dataSource,
