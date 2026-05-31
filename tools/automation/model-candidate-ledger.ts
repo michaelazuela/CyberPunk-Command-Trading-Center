@@ -17,6 +17,10 @@ import {
   type EstimatedGrossContractPnl,
   type FuturesRootSymbol,
 } from '../../src/lib/futuresContractMetadata';
+import {
+  getHumanReviewLabelMetadata,
+  isFormalModelCandidateReviewLabel,
+} from '../../src/lib/humanReviewLabels';
 
 type Instrument = Exclude<FuturesRootSymbol, 'UNKNOWN'>;
 
@@ -276,6 +280,9 @@ export interface PreCandidateWatchlistSample {
   reviewedFile?: string;
   concept: string;
   label: string;
+  labelDisplayName?: string;
+  labelCategory?: string;
+  countsTowardCandidateGates?: boolean;
   agentAssessmentStatus?: string;
   chartEvidenceStatus?: string;
   chartPngPath?: string;
@@ -574,6 +581,7 @@ function sampleSymbol(sample: ResearchReviewSample): unknown {
 }
 
 function ledgerStatus(label: ResearchHumanInspectionLabel | null): ModelCandidateLedgerEntryStatus | null {
+  if (!isFormalModelCandidateReviewLabel(label)) return null;
   if (label === APPROVED_LABEL) return 'human_approved_for_candidate_review';
   if (label === NOT_APPROVED_LABEL) return 'human_not_approved_for_candidate_review';
   return null;
@@ -1455,6 +1463,7 @@ function summarizeWatchlistEstimatedGrossContractPnl(samples: ResearchReviewSamp
 
 function nextHumanActionForWatchlistSample(sample: ResearchReviewSample): PreCandidateWatchlistSample['nextHumanAction'] {
   const label = sampleReviewLabel(sample);
+  const metadata = getHumanReviewLabelMetadata(label);
   const evidenceStatus = sample.reviewEvidence?.evidenceStatus;
   if (
     !sample.reviewEvidence ||
@@ -1463,9 +1472,10 @@ function nextHumanActionForWatchlistSample(sample: ResearchReviewSample): PreCan
     evidenceStatus === 'chart_withheld' ||
     (!sample.reviewEvidence.chartPngPath && !sample.reviewEvidence.chartReportPath)
   ) return 'review_chart';
-  if (label === 'new_model_candidate_review' || label === 'watchlist_candidate') return 'decide_candidate_label';
-  if (/reject|deprioritize/i.test(label)) return 'reject_or_deprioritize';
-  if (label === 'keep_advisory') return 'keep_advisory';
+  if (metadata.suggestedNextAction === 'decide_formal_candidate_label') return 'decide_candidate_label';
+  if (metadata.category === 'reject_or_deprioritize') return 'reject_or_deprioritize';
+  if (metadata.suggestedNextAction === 'continue_observing') return 'keep_advisory';
+  if (metadata.suggestedNextAction === 'add_context_or_collect_more_samples') return 'collect_more_samples';
   return 'collect_more_samples';
 }
 
@@ -1482,13 +1492,13 @@ function buildWatchlistRecommendation(args: {
   if (chartEvidenceSummary.samplesMissingCharts > 0 || chartEvidenceSummary.samplesWithUnknownCharts > 0 || chartEvidenceSummary.samplesWithWithheldCharts > 0) {
     status = 'needs_more_chart_evidence';
     reasons.push('Chart/report evidence is missing, unknown, or withheld for at least one watchlist sample.');
-  } else if (labels.new_model_candidate_review || labels.watchlist_candidate) {
+  } else if (Object.keys(labels).some((label) => getHumanReviewLabelMetadata(label).suggestedNextAction === 'decide_formal_candidate_label')) {
     status = 'ready_for_human_candidate_label_review';
     reasons.push('Human label suggests candidate interest, but it is not one of the two formal model-candidate ledger labels.');
-  } else if (Object.keys(labels).every((label) => label === 'keep_advisory')) {
+  } else if (Object.keys(labels).every((label) => getHumanReviewLabelMetadata(label).suggestedNextAction === 'continue_observing')) {
     status = 'keep_advisory';
     reasons.push('Human labels currently keep this concept advisory-only.');
-  } else if (Object.keys(labels).some((label) => /reject|deprioritize/i.test(label))) {
+  } else if (Object.keys(labels).some((label) => getHumanReviewLabelMetadata(label).category === 'reject_or_deprioritize')) {
     status = 'reject_or_deprioritize';
     reasons.push('Human label suggests rejection or deprioritization.');
   }
@@ -1555,11 +1565,16 @@ async function buildPreCandidateWatchlistReport(options: ModelCandidateLedgerOpt
       watchlistRecommendation: buildWatchlistRecommendation({ samples, labels, agentAssessmentSummary, chartEvidenceSummary }),
       samples: rows.map(({ sample, reviewedFile }) => {
         const pnl = coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl);
+        const label = sampleReviewLabel(sample);
+        const labelMetadata = getHumanReviewLabelMetadata(label);
         return {
           sampleId: sample.sampleId,
           reviewedFile,
           concept: sample.concept,
-          label: sampleReviewLabel(sample),
+          label,
+          labelDisplayName: labelMetadata.displayName,
+          labelCategory: labelMetadata.category,
+          countsTowardCandidateGates: labelMetadata.countsTowardCandidateGates,
           agentAssessmentStatus: sample.agentAssessment?.status,
           chartEvidenceStatus: sample.reviewEvidence?.evidenceStatus,
           chartPngPath: sample.reviewEvidence?.chartPngPath,
@@ -1582,14 +1597,14 @@ async function buildPreCandidateWatchlistReport(options: ModelCandidateLedgerOpt
       humanReviewedSamples,
       formalLedgerEligibleSamples,
       watchlistSamples: watchlistSamples.length,
-      advisoryOnlySamples: watchlistSamples.filter(({ sample }) => sampleReviewLabel(sample) === 'keep_advisory').length,
-      rejectedOrDeprioritizedSamples: watchlistSamples.filter(({ sample }) => /reject|deprioritize/i.test(sampleReviewLabel(sample))).length,
+      advisoryOnlySamples: watchlistSamples.filter(({ sample }) => getHumanReviewLabelMetadata(sampleReviewLabel(sample)).category === 'advisory').length,
+      rejectedOrDeprioritizedSamples: watchlistSamples.filter(({ sample }) => getHumanReviewLabelMetadata(sampleReviewLabel(sample)).category === 'reject_or_deprioritize').length,
       samplesWithAgentAssessment: watchlistSamples.filter(({ sample }) => Boolean(sample.agentAssessment)).length,
       samplesWithChartEvidence: watchlistSamples.filter(({ sample }) => sample.reviewEvidence?.chartAvailable || sample.reviewEvidence?.chartPngPath || sample.reviewEvidence?.chartReportPath).length,
       samplesWithEstimatedGrossContractPnl: watchlistSamples.filter(({ sample }) => Boolean(coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl))).length,
     },
     concepts,
-    ignoredFormalLedgerReason: 'Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. They do not count toward formal model-candidate gates unless a human later applies a formal model-candidate label.',
+    ignoredFormalLedgerReason: 'Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. Only those two formal model-candidate labels count toward formal gates. Advisory/watchlist labels do not count unless a human later applies a formal model-candidate label.',
     outputPaths: {
       jsonPath: paths.watchlistJsonPath || path.join(path.resolve(options.outDir), 'model-candidate-watchlist.json'),
       markdownPath: paths.watchlistMarkdownPath || path.join(path.resolve(options.outDir), 'model-candidate-watchlist.md'),
@@ -1633,6 +1648,8 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
     `- Candidate review recommended concepts: ${ledger.summary.candidateReviewRecommendedConcepts}`,
     `- Minimum reviewed samples: ${ledger.thresholds.minimumReviewedSamples}`,
     `- Minimum approval rate: ${Math.round(ledger.thresholds.minimumApprovalRate * 100)}%`,
+    '- Formal ledger labels: approved_for_future_model_candidate_review; not_approved_for_future_model_candidate_review',
+    '- Advisory/watchlist labels are excluded from formal gates and tracked separately in the Pre-Candidate Watchlist Report.',
     '',
     '## Estimated Gross Contract P/L Summary, 1 Contract',
     `- Contract: ${pnl.rootSymbol === 'UNKNOWN' ? 'UNKNOWN' : `${pnl.rootSymbol} - ${pnl.displayName}`}`,
@@ -1733,7 +1750,10 @@ export function renderPreCandidateWatchlistMarkdown(report: PreCandidateWatchlis
         `### ${concept.conceptTitle || concept.concept}`,
         `- Concept: ${concept.concept}`,
         `- Watchlist Samples: ${concept.watchlistSampleCount}`,
-        `- Labels: ${Object.entries(concept.labels).sort().map(([label, count]) => `${label}=${count}`).join('; ') || 'none'}`,
+        `- Labels: ${Object.entries(concept.labels).sort().map(([label, count]) => {
+          const metadata = getHumanReviewLabelMetadata(label);
+          return `${label}=${count} (${metadata.category}; gates=${metadata.countsTowardCandidateGates ? 'yes' : 'no'}; next=${metadata.suggestedNextAction})`;
+        }).join('; ') || 'none'}`,
         `- Agent Assessment Summary: agrees=${concept.agentAssessmentSummary.agreesWithHuman}; partial=${concept.agentAssessmentSummary.partiallyAgreesWithHuman}; disagrees=${concept.agentAssessmentSummary.disagreesWithHuman}; unclear=${concept.agentAssessmentSummary.unclearInsufficientEvidence}`,
         `- Chart/Report Evidence: chart evidence=${concept.chartEvidenceSummary.samplesWithChartEvidence}; exact PNG=${concept.chartEvidenceSummary.samplesWithExactPngPath}; exact report=${concept.chartEvidenceSummary.samplesWithExactReportPath}; missing=${concept.chartEvidenceSummary.samplesMissingCharts}; unknown=${concept.chartEvidenceSummary.samplesWithUnknownCharts}; withheld=${concept.chartEvidenceSummary.samplesWithWithheldCharts}`,
         `- Estimated Gross Contract P/L: ${formatWatchlistPnl(concept.estimatedGrossContractPnlSummary)}`,
@@ -1743,9 +1763,9 @@ export function renderPreCandidateWatchlistMarkdown(report: PreCandidateWatchlis
         `- Boundary: ${concept.watchlistRecommendation.boundary}`,
         '',
         '## Samples',
-        '| Sample ID | Label | Agent Assessment | Chart Evidence | Estimated Gross P/L | Next Human Action |',
-        '|---|---|---|---|---|---|',
-        ...concept.samples.map((sample) => `| ${sample.sampleId} | ${sample.label} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartEvidenceStatus || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} | ${sample.nextHumanAction} |`),
+        '| Sample ID | Label | Category | Counts Toward Gates | Agent Assessment | Chart Evidence | Estimated Gross P/L | Next Human Action |',
+        '|---|---|---|---|---|---|---|---|',
+        ...concept.samples.map((sample) => `| ${sample.sampleId} | ${sample.labelDisplayName || sample.label} (${sample.label}) | ${sample.labelCategory || 'unknown'} | ${sample.countsTowardCandidateGates ? 'Yes' : 'No'} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartEvidenceStatus || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} | ${sample.nextHumanAction} |`),
       ].join('\n'))
       : ['- No pre-candidate watchlist samples found for this range.']),
   ].join('\n');

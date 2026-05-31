@@ -3,7 +3,7 @@
   "symbol": "MES",
   "from": "2026-01-01",
   "to": "2026-05-31",
-  "generatedAt": "2026-05-31T21:18:09.237Z",
+  "generatedAt": "2026-05-31T21:37:02.659Z",
   "boundary": "research_only_not_execution_authority",
   "summary": {
     "humanReviewedSamples": 3,
@@ -62,6 +62,9 @@
           "reviewedFile": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-29.reviewed.json",
           "concept": "time_window_liquidity_delivery",
           "label": "keep_advisory",
+          "labelDisplayName": "Keep Advisory",
+          "labelCategory": "advisory",
+          "countsTowardCandidateGates": false,
           "agentAssessmentStatus": "unclear_insufficient_evidence",
           "chartEvidenceStatus": "chart_withheld",
           "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-time_window_liquidity_delivery-003.png",
@@ -106,6 +109,9 @@
           "reviewedFile": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-30.reviewed.json",
           "concept": "time_window_liquidity_delivery",
           "label": "new_model_candidate_review",
+          "labelDisplayName": "Candidate Label Review",
+          "labelCategory": "watchlist",
+          "countsTowardCandidateGates": false,
           "agentAssessmentStatus": "partially_agrees_with_human",
           "chartEvidenceStatus": "chart_available",
           "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-time_window_liquidity_delivery-014.png",
@@ -148,7 +154,7 @@
       ]
     }
   ],
-  "ignoredFormalLedgerReason": "Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. They do not count toward formal model-candidate gates unless a human later applies a formal model-candidate label.",
+  "ignoredFormalLedgerReason": "Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. Only those two formal model-candidate labels count toward formal gates. Advisory/watchlist labels do not count unless a human later applies a formal model-candidate label.",
   "outputPaths": {
     "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.json",
     "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.md",

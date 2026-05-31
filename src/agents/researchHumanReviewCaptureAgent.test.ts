@@ -12,6 +12,10 @@ import {
 import type { ResearchSampleReviewPack } from './researchSampleReviewAgent';
 import { calculateEstimatedGrossContractPnl } from '../lib/futuresContractMetadata';
 import {
+  getHumanReviewLabelMetadata,
+  isFormalModelCandidateReviewLabel,
+} from '../lib/humanReviewLabels';
+import {
   parseResearchHumanReviewArgs,
   runResearchHumanReviewCli,
 } from '../../tools/automation/research-human-review';
@@ -114,6 +118,15 @@ assert.equal(parsed.confidence, 'medium');
 assert.equal(parsed.reviewer, 'Michael');
 assert.equal(parsed.pretty, true);
 
+assert.equal(isFormalModelCandidateReviewLabel('approved_for_future_model_candidate_review'), true);
+assert.equal(isFormalModelCandidateReviewLabel('not_approved_for_future_model_candidate_review'), true);
+assert.equal(isFormalModelCandidateReviewLabel('new_model_candidate_review'), false);
+assert.equal(isFormalModelCandidateReviewLabel('keep_advisory'), false);
+const unknownLabel = getHumanReviewLabelMetadata('approve_trade');
+assert.equal(unknownLabel.formalLedgerEligible, false);
+assert.equal(unknownLabel.countsTowardCandidateGates, false);
+assert.equal(unknownLabel.suggestedNextAction, 'manual_review_required');
+
 const pack = fixturePack();
 const before = JSON.stringify(pack);
 const agreementResult = applyHumanReviewToPack({
@@ -182,9 +195,22 @@ const newModelCandidateResult = applyHumanReviewToPack({
 assert.equal(newModelCandidateResult.sample.humanInspectionLabel, 'new_model_candidate_review');
 assert.equal(newModelCandidateResult.sample.finalReviewLabel, 'new_model_candidate_review');
 assert.equal(newModelCandidateResult.sample.agentHumanAgreement, false);
+assert.equal(newModelCandidateResult.sample.agentAssessment?.researchUsefulness, 'needs_chart');
 assert.ok(newModelCandidateResult.sample.finalReviewNotes?.includes('no execution approval'));
 assert.ok(newModelCandidateResult.updatedPack.samples.every((sample) => sample.advisoryOnly === true));
 assertNoExecutableReviewFields(newModelCandidateResult.updatedPack);
+
+const needsChartResult = applyHumanReviewToPack({
+  reviewPack: pack,
+  sampleId: 'time_window_liquidity_delivery-001',
+  label: 'needs_more_chart_evidence',
+  confidence: 'medium',
+  reviewer: 'Michael',
+  notes: 'Need clearer chart artifact before deciding.',
+  reviewedAt: '2026-05-29T22:07:00.000Z',
+});
+assert.equal(needsChartResult.sample.humanInspectionLabel, 'needs_more_chart_evidence');
+assert.equal(getHumanReviewLabelMetadata(needsChartResult.sample.humanInspectionLabel).formalLedgerEligible, false);
 
 const pending = listPendingHumanReviewSamples(agreementResult.updatedPack);
 assert.equal(pending.length, 1);
@@ -208,6 +234,10 @@ assert.ok(markdown.includes('Estimated Gross Contract P/L, 1 Contract'));
 assert.ok(markdown.includes('Contract: MES - Micro E-mini S&P 500'));
 assert.ok(markdown.includes('MFE: +23.00 pts / +92 ticks / +$115.00 gross'));
 assert.ok(markdown.includes('Hypothetical Outcome: +10.00 pts / +40 ticks / +$50.00 gross'));
+assert.ok(markdown.includes('Human Review Label:'));
+assert.ok(markdown.includes('- Category: advisory'));
+assert.ok(markdown.includes('- Counts Toward Formal Candidate Gates: No'));
+assert.ok(markdown.includes('- Suggested Next Action: continue_observing'));
 
 const partialPack = fixturePack();
 const partialResult = applyHumanReviewToPack({

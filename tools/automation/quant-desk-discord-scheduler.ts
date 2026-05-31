@@ -103,14 +103,17 @@ const SAFETY_FOOTER = 'Research-only. This does not approve execution, change ru
 
 const LABEL_TEXT: Record<ResearchHumanInspectionLabel, string> = {
   keep_advisory: 'Keep Advisory',
-  reject: 'Reject',
+  needs_more_chart_evidence: 'Need Chart Evidence',
+  needs_more_context: 'Need More Context',
+  reject: 'Reject/Deprioritize',
+  reject_or_deprioritize: 'Reject/Deprioritize',
   possible_model1_mapping_review: 'Model 1 Review',
   possible_turtle_soup_mapping_review: 'Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
-  new_model_candidate_review: 'New Model Candidate',
-  approved_for_future_model_candidate_review: 'Approved for Future Model-Candidate Review',
+  new_model_candidate_review: 'Candidate Label Review',
+  approved_for_future_model_candidate_review: 'Approve for Candidate Review',
   not_approved_for_future_model_candidate_review: 'Not Approved for Future Model-Candidate Review',
-  insufficient_context: 'Insufficient Context',
+  insufficient_context: 'Need More Context',
 };
 
 function readFlag(args: string[], flag: string): string | null {
@@ -317,7 +320,7 @@ function topCounts(map: Record<string, number>, limit = 5): string {
 }
 
 function labelLines(labelCounts: Record<ResearchHumanInspectionLabel, number>): string[] {
-  return (Object.keys(LABEL_TEXT) as ResearchHumanInspectionLabel[]).map((label) => `- ${LABEL_TEXT[label]}: ${labelCounts[label] || 0}`);
+  return (Object.keys(LABEL_TEXT) as ResearchHumanInspectionLabel[]).map((label) => `- ${LABEL_TEXT[label]} (${label}): ${labelCounts[label] || 0}`);
 }
 
 export async function collectReviewFacts(options: SchedulerOptions, state: SchedulerState, reportDate: string): Promise<ReviewFacts> {

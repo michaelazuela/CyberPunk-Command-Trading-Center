@@ -196,6 +196,18 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     The agent must not treat watchlist status as live-model approval, trade approval, or model activation.
 
+    ## Human Review Label Rule
+
+    Human review labels are research-only. They do not approve trades, live models, or execution.
+
+    Only the labels approved_for_future_model_candidate_review and not_approved_for_future_model_candidate_review are formal model-candidate ledger labels.
+
+    Advisory/watchlist labels such as keep_advisory, needs_more_chart_evidence, needs_more_context, and new_model_candidate_review do not count toward formal model-candidate gates unless a human later applies a formal candidate label.
+
+    The label approved_for_future_model_candidate_review means only that a reviewed sample may count as evidence for future formal model-candidate review/backtest. It is not live-model approval.
+
+    The label new_model_candidate_review means only that the sample may deserve human review for possible formal candidate labeling later. It is not a formal candidate approval.
+
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
     =========================================

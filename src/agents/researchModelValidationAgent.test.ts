@@ -169,6 +169,9 @@ function sample(
     sampleSourceReportPath: 'fixture',
     agentInspectionLabel: humanLabel === 'human_rule_review_queue' ||
       humanLabel === 'new_model_candidate_review' ||
+      humanLabel === 'needs_more_chart_evidence' ||
+      humanLabel === 'needs_more_context' ||
+      humanLabel === 'reject_or_deprioritize' ||
       humanLabel === 'approved_for_future_model_candidate_review' ||
       humanLabel === 'not_approved_for_future_model_candidate_review'
       ? 'keep_advisory'

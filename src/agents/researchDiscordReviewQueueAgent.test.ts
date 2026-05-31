@@ -224,16 +224,14 @@ assert.ok(payload.content.includes('Favorable threshold one: 7596'));
 assert.ok(payload.content.includes('Adverse invalidation reference: 7604'));
 assert.ok(payload.content.includes('Hypothetical outcome: favorable_continuation'));
 assert.ok(payload.content.includes('Research-only. These are not entries, stops, or targets. This does not approve execution.'));
-assert.equal(payload.components.length, 2);
+assert.equal(payload.components.length, 1);
 const buttons = payload.components.flatMap((row) => row.components);
 assert.deepEqual(buttons.map((button) => button.label), [
   'Keep Advisory',
-  'Reject',
-  'Model 1 Review',
-  'Turtle Soup Review',
-  'Human Rule Review Queue',
-  'New Model Candidate',
-  'Insufficient Context',
+  'Need Chart Evidence',
+  'Need More Context',
+  'Candidate Label Review',
+  'Reject/Deprioritize',
 ]);
 assert.ok(buttons.every((button) => button.custom_id.startsWith(`research_review|${queue.packHash}|`)));
 assert.ok(buttons.every((button) => button.custom_id.includes('|false_run_liquidity_fade-001|')));
@@ -241,7 +239,7 @@ assert.ok(buttons.every((button) => RESEARCH_REVIEW_LABELS.some((label) => butto
 assert.ok(buttons.every((button) => button.custom_id.length <= 100));
 assert.ok(!buttons.some((button) => /approve trade|execute|take trade|valid setup|go live|greenlight|buy|sell/i.test(button.label)));
 assert.ok(!/"entry"|"stop"|"T1"|"T2"|"canExecute"/.test(JSON.stringify(payload)));
-assert.ok(buttons.some((button) => button.label === 'New Model Candidate' && button.custom_id.endsWith('|new_model_candidate_review')));
+assert.ok(buttons.some((button) => button.label === 'Candidate Label Review' && button.custom_id.endsWith('|new_model_candidate_review')));
 
 const mismatchedOutcomeQueue = buildResearchDiscordReviewQueue({
   reviewPack: {
@@ -296,8 +294,9 @@ assert.ok(priceActionContent.includes('Outcome Review:'));
 assert.ok(priceActionContent.includes('Would it have worked?: Yes'));
 assert.ok(priceActionContent.includes('Result: T2 hit'));
 assert.ok(priceActionContent.includes('Agent view: Keep advisory until human review compares this against current approved gates.'));
-assert.ok(priceActionContent.includes('Agent Recommendation:\nNeeds more samples'));
-assert.ok(priceActionContent.includes('Approve only if this is useful evidence for future model-candidate review.'));
+assert.ok(priceActionContent.includes('Agent Recommendation:\nKeep Advisory - continue_observing'));
+assert.ok(priceActionContent.includes('Apply a formal candidate label only if this is useful evidence for future model-candidate review/backtest.'));
+assert.ok(priceActionContent.includes('Formal candidate labels do not approve live models, trades, or execution.'));
 assert.ok(priceActionContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.equal(priceActionContent.includes('[RESEARCH SAMPLE REVIEW]'), false);
 assert.equal(priceActionContent.includes('Suggested human action: Keep Advisory'), false);
@@ -336,16 +335,14 @@ assert.equal(invalidOverlayContent.includes('Would it have worked?: Yes'), false
 assert.equal(invalidOverlayContent.includes('Result: T2 hit'), false);
 assert.ok(invalidOverlayContent.includes('Chart warning: Price action card withheld: Overlay direction check failed for LONG sample.'));
 const priceActionButtons = priceActionButtonQueue.items[0].payload.components.flatMap((row) => row.components);
-assert.deepEqual(priceActionButtons.map((button) => button.label), ['Approved', 'Not Approved']);
+assert.deepEqual(priceActionButtons.map((button) => button.label), ['Approve for Candidate Review', 'Not Approved for Candidate Review']);
 assert.deepEqual(priceActionButtons.map((button) => button.custom_id.split('|').at(-1)), ['approved', 'not_approved']);
 assert.equal(priceActionButtons.some((button) => [
   'Keep Advisory',
-  'Reject',
-  'Model 1 Review',
-  'Turtle Soup Review',
-  'Human Rule Review Queue',
-  'New Model Candidate',
-  'Insufficient Context',
+  'Need Chart Evidence',
+  'Need More Context',
+  'Candidate Label Review',
+  'Reject/Deprioritize',
 ].includes(button.label)), false);
 
 const duplicateSkippedQueue = buildResearchDiscordReviewQueue({
@@ -506,7 +503,7 @@ assert.equal(priceActionDryRun.payloads[0].content.includes('[RESEARCH SAMPLE RE
 assert.equal(resolvedBarContract, 'MES 09-26');
 assert.equal(renderedCardCount, 1);
 const priceActionDryRunButtons = priceActionDryRun.payloads[0].components.flatMap((row) => row.components).map((button) => button.label);
-assert.deepEqual(priceActionDryRunButtons, ['Approved', 'Not Approved']);
+assert.deepEqual(priceActionDryRunButtons, ['Approve for Candidate Review', 'Not Approved for Candidate Review']);
 
 const duplicateSkippedCards = await publishResearchDiscordReview({
   reviewPack: reviewFile,
@@ -609,15 +606,16 @@ globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
   const payloadJson = String(form.get('payload_json'));
   const payloadObject = JSON.parse(payloadJson);
   const buttonLabels = payloadObject.components.flatMap((row: { components: Array<{ label: string }> }) => row.components.map((button) => button.label));
-  assert.deepEqual(buttonLabels, ['Approved', 'Not Approved']);
+  assert.deepEqual(buttonLabels, ['Approve for Candidate Review', 'Not Approved for Candidate Review']);
   assert.equal(buttonLabels.includes('Keep Advisory'), false);
-  assert.equal(buttonLabels.includes('New Model Candidate'), false);
+  assert.equal(buttonLabels.includes('Candidate Label Review'), false);
   assert.ok(payloadJson.includes('[PRICE ACTION REVIEW] false_run_liquidity_fade-001'));
   assert.ok(payloadJson.includes('Contract: MES 09-26'));
   assert.ok(payloadJson.includes('Hypothetical Overlay:'));
   assert.ok(payloadJson.includes('Outcome Review:'));
   assert.ok(payloadJson.includes('Agent Recommendation:'));
-  assert.ok(payloadJson.includes('Approve only if this is useful evidence for future model-candidate review.'));
+  assert.ok(payloadJson.includes('Apply a formal candidate label only if this is useful evidence for future model-candidate review/backtest.'));
+  assert.ok(payloadJson.includes('Formal candidate labels do not approve live models, trades, or execution.'));
   assert.ok(payloadJson.includes('Research-only. This does not approve execution, change rules, or create trades.'));
   assert.equal(payloadJson.includes('"entry"'), false);
   const file = form.get('files[0]') as File;
@@ -690,7 +688,7 @@ globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
   assert.equal(typeof init?.body, 'string', 'withheld chart post should be JSON text only');
   const payloadObject = JSON.parse(init?.body as string);
   const buttonLabels = payloadObject.components.flatMap((row: { components: Array<{ label: string }> }) => row.components.map((button) => button.label));
-  assert.deepEqual(buttonLabels, ['Approved', 'Not Approved']);
+  assert.deepEqual(buttonLabels, ['Approve for Candidate Review', 'Not Approved for Candidate Review']);
   assert.ok(payloadObject.content.includes('Price action card withheld'));
   assert.ok(payloadObject.content.includes('Would it have worked?: Invalid overlay'));
   assert.ok(payloadObject.content.includes('Result: Invalid overlay'));

@@ -99,14 +99,17 @@ const DEFAULT_STATE_PATH = path.join(DEFAULT_REVIEW_PACK_DIR, 'discord-review-st
 
 const RECOMMENDATION_TEXT: Record<ResearchHumanInspectionLabel, string> = {
   keep_advisory: 'Keep Advisory',
-  reject: 'Reject',
+  needs_more_chart_evidence: 'Need Chart Evidence',
+  needs_more_context: 'Need More Context',
+  reject: 'Reject/Deprioritize',
+  reject_or_deprioritize: 'Reject/Deprioritize',
   possible_model1_mapping_review: 'Queue for Model 1 Review',
   possible_turtle_soup_mapping_review: 'Queue for Turtle Soup Review',
   human_rule_review_queue: 'Human Rule Review Queue',
-  new_model_candidate_review: 'New Model Candidate Review',
-  approved_for_future_model_candidate_review: 'Approved for Future Model-Candidate Review',
+  new_model_candidate_review: 'Candidate Label Review',
+  approved_for_future_model_candidate_review: 'Approve for Candidate Review',
   not_approved_for_future_model_candidate_review: 'Not Approved for Future Model-Candidate Review',
-  insufficient_context: 'Insufficient Context',
+  insufficient_context: 'Need More Context',
 };
 
 function readFlag(args: string[], flag: string): string | null {

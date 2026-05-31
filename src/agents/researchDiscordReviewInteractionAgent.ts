@@ -14,6 +14,7 @@ import type {
 } from './researchDiscordReviewQueueAgent';
 import { emptyResearchDiscordReviewState } from './researchDiscordReviewQueueAgent';
 import type { ResearchReviewSample, ResearchSampleReviewPack } from './researchSampleReviewAgent';
+import { getHumanReviewLabelMetadata, isFormalModelCandidateReviewLabel } from '../lib/humanReviewLabels';
 
 export interface ResearchDiscordReviewCustomId {
   namespace: 'research_review';
@@ -260,7 +261,7 @@ function reviewerName(user: ResearchDiscordInteractionUser): string {
 }
 
 function isFutureModelCandidateApprovalLabel(label: HumanReviewLabel | null): boolean {
-  return label === 'approved_for_future_model_candidate_review' || label === 'not_approved_for_future_model_candidate_review';
+  return isFormalModelCandidateReviewLabel(label);
 }
 
 function canUpdateReviewedPhase5BDecision(entry: ResearchDiscordReviewStateEntry, label: HumanReviewLabel): boolean {
@@ -272,15 +273,12 @@ function canUpdateReviewedPhase5BDecision(entry: ResearchDiscordReviewStateEntry
 }
 
 function humanReviewDisplay(label: HumanReviewLabel | null): string {
-  if (label === 'approved_for_future_model_candidate_review') return 'Approved for future model-candidate review';
-  if (label === 'not_approved_for_future_model_candidate_review') return 'Not approved for future model-candidate review';
-  return label || 'pending';
+  if (!label) return 'pending';
+  return getHumanReviewLabelMetadata(label).displayName;
 }
 
 function humanReviewReason(label: HumanReviewLabel): string {
-  if (label === 'approved_for_future_model_candidate_review') return 'Human approved this sample as useful evidence for future model-candidate review only.';
-  if (label === 'not_approved_for_future_model_candidate_review') return 'Human did not approve this sample as useful evidence for future model-candidate review.';
-  return 'Selected in Discord research review queue.';
+  return getHumanReviewLabelMetadata(label).meaning;
 }
 
 function reviewNotes(input: ResearchDiscordInteractionContext, label: HumanReviewLabel): string {
@@ -289,7 +287,9 @@ function reviewNotes(input: ResearchDiscordInteractionContext, label: HumanRevie
     `Discord username: ${input.user.username || 'unavailable'}`,
     `Discord channel ID: ${input.channelId || 'unavailable'}`,
     `Discord message ID: ${input.messageId || 'unavailable'}`,
-    `Selected label: ${label}`,
+    `Selected label: ${humanReviewDisplay(label)} (${label})`,
+    `Label category: ${getHumanReviewLabelMetadata(label).category}`,
+    `Counts toward formal candidate gates: ${getHumanReviewLabelMetadata(label).countsTowardCandidateGates ? 'yes' : 'no'}`,
     ...(isFutureModelCandidateApprovalLabel(label) ? [`Human review: ${humanReviewDisplay(label)}`] : []),
     'Advisory-only confirmation: reviewed sample remains research-only and does not approve execution, change rules, or create trades.',
   ].join('\n');
@@ -308,7 +308,7 @@ function response(sampleId: string | null, label: HumanReviewLabel | null, revie
   if (status === 'reviewed') {
     return [
       `Sample reviewed: ${sampleId}`,
-      isFutureModelCandidateApprovalLabel(label) ? `Human review: ${humanReviewDisplay(label)}` : `Selected label: ${label}`,
+      isFutureModelCandidateApprovalLabel(label) ? `Human review: ${humanReviewDisplay(label)}` : `Selected label: ${humanReviewDisplay(label)} (${label})`,
       `Reviewed output: ${reviewedPath}`,
       safety,
     ].join('\n');
@@ -316,7 +316,7 @@ function response(sampleId: string | null, label: HumanReviewLabel | null, revie
   if (status === 'already_reviewed') {
     return [
       `Sample already reviewed: ${sampleId}`,
-      isFutureModelCandidateApprovalLabel(label) ? `Human review: ${humanReviewDisplay(label)}` : `Selected label: ${label}`,
+      isFutureModelCandidateApprovalLabel(label) ? `Human review: ${humanReviewDisplay(label)}` : `Selected label: ${humanReviewDisplay(label)} (${label})`,
       `Reviewed output: ${reviewedPath}`,
       safety,
     ].join('\n');
@@ -483,7 +483,7 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
   assertNoExecutableDiscordInteractionFields(updatedState);
 
   const reviewer = reviewerName(input.user);
-  const reviewedLabel = isFutureModelCandidateApprovalLabel(customId.label) ? humanReviewDisplay(customId.label) : customId.label;
+  const reviewedLabel = humanReviewDisplay(customId.label);
   const reviewLine = `Reviewed: ${reviewedLabel} by ${reviewer}\nResearch-only. This does not approve execution, change rules, or create trades.`;
   const baseContent = input.messageContent?.trim();
   const messageUpdate = {

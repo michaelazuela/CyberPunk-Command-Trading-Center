@@ -166,7 +166,7 @@ assert.ok(components.every((row) => row.components.every((button) => button.cust
 
 const priceActionLabels = buildPriceActionReviewComponents('packhash001', 'sample-001')
   .flatMap((row) => row.components.map((button) => button.label));
-assert.deepEqual(priceActionLabels, ['Approved', 'Not Approved']);
+assert.deepEqual(priceActionLabels, ['Approve for Candidate Review', 'Not Approved for Candidate Review']);
 
 const payload = buildModelCandidateDecisionPostPayload(ledger, summary);
 assert.ok(payload.content.includes('[MODEL CANDIDATE DECISION] Time-Window Liquidity Delivery'));

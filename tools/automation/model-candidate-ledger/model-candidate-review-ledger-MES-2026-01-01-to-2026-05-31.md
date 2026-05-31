@@ -1,7 +1,7 @@
 # Model Candidate Review Ledger - MES
 
 Date range: 2026-01-01 to 2026-05-31
-Generated at: 2026-05-31T21:18:09.237Z
+Generated at: 2026-05-31T21:37:02.659Z
 Fixed/current JSON: C:\Users\Mike\Documents\New project\tools\automation\model-candidate-ledger\model-candidate-review-ledger.json
 Fixed/current Markdown: C:\Users\Mike\Documents\New project\tools\automation\model-candidate-ledger\model-candidate-review-ledger.md
 Range-stamped JSON: C:\Users\Mike\Documents\New project\tools\automation\model-candidate-ledger\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.json
@@ -23,6 +23,8 @@ Human final decision required before any model promotion or implementation.
 - Candidate review recommended concepts: 0
 - Minimum reviewed samples: 10
 - Minimum approval rate: 70%
+- Formal ledger labels: approved_for_future_model_candidate_review; not_approved_for_future_model_candidate_review
+- Advisory/watchlist labels are excluded from formal gates and tracked separately in the Pre-Candidate Watchlist Report.
 
 ## Estimated Gross Contract P/L Summary, 1 Contract
 - Contract: MES - Micro E-mini S&P 500

@@ -8,6 +8,10 @@ import {
   type HumanReviewLabel,
 } from './researchHumanReviewCaptureAgent';
 import type { ResearchReviewSample, ResearchSampleReviewPack } from './researchSampleReviewAgent';
+import {
+  getHumanReviewLabelMetadata,
+  SUPPORTED_HUMAN_REVIEW_LABELS as HUMAN_REVIEW_LABEL_METADATA_KEYS,
+} from '../lib/humanReviewLabels';
 
 export interface HumanReviewTemplateRow {
   sampleId: string;
@@ -27,6 +31,7 @@ export interface HumanReviewTemplateRow {
   turtleSoupOverlap: string;
   sampleSourceReportPath: string;
   humanInspectionLabel: string;
+  humanInspectionLabelTaxonomy: string;
   humanConfidence: string;
   humanReason: string;
   humanNotes: string;
@@ -74,6 +79,7 @@ export const HUMAN_REVIEW_TEMPLATE_COLUMNS = [
   'turtleSoupOverlap',
   'sampleSourceReportPath',
   'humanInspectionLabel',
+  'humanInspectionLabelTaxonomy',
   'humanConfidence',
   'humanReason',
   'humanNotes',
@@ -101,17 +107,7 @@ const PROHIBITED_IMPORT_FIELDS = new Set([
   'journalPayload',
 ]);
 
-export const SUPPORTED_HUMAN_REVIEW_LABELS: HumanReviewLabel[] = [
-  'keep_advisory',
-  'reject',
-  'possible_model1_mapping_review',
-  'possible_turtle_soup_mapping_review',
-  'human_rule_review_queue',
-  'new_model_candidate_review',
-  'approved_for_future_model_candidate_review',
-  'not_approved_for_future_model_candidate_review',
-  'insufficient_context',
-];
+export const SUPPORTED_HUMAN_REVIEW_LABELS = HUMAN_REVIEW_LABEL_METADATA_KEYS as HumanReviewLabel[];
 
 export const SUPPORTED_HUMAN_REVIEW_CONFIDENCE: HumanReviewConfidence[] = ['low', 'medium', 'high'];
 
@@ -179,6 +175,12 @@ function rowFromSample(sample: ResearchReviewSample): HumanReviewTemplateRow {
     turtleSoupOverlap: String(sample.turtleSoupOverlap),
     sampleSourceReportPath: sample.sampleSourceReportPath,
     humanInspectionLabel: '',
+    humanInspectionLabelTaxonomy: SUPPORTED_HUMAN_REVIEW_LABELS
+      .map((label) => {
+        const metadata = getHumanReviewLabelMetadata(label);
+        return `${metadata.label}:${metadata.category}:formal=${metadata.formalLedgerEligible ? 'yes' : 'no'}:next=${metadata.suggestedNextAction}`;
+      })
+      .join(' | '),
     humanConfidence: '',
     humanReason: '',
     humanNotes: '',

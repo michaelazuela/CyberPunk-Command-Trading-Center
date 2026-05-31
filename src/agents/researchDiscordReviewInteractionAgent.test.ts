@@ -319,14 +319,14 @@ const model1StatePath = join(realPackTempDir, 'discord-review-state-model1.json'
 writeStateForSample(model1StatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
 const model1Review005 = clickSample005(model1StatePath, 'possible_model1_mapping_review');
 assert.equal(model1Review005.ok, false);
-assert.ok(model1Review005.responseContent.includes('Insufficient Context'));
+assert.ok(model1Review005.responseContent.includes('label is not allowed'));
 assert.equal(existsSync(join(realPackTempDir, 'research-sample-review-MES-all-2026-05-29.reviewed.json')), true);
 
 const turtleStatePath = join(realPackTempDir, 'discord-review-state-turtle.json');
 writeStateForSample(turtleStatePath, realPackTempPath, 'time_window_liquidity_delivery-005', 'packhash005');
 const turtleReview005 = clickSample005(turtleStatePath, 'possible_turtle_soup_mapping_review');
 assert.equal(turtleReview005.ok, false);
-assert.ok(turtleReview005.responseContent.includes('Insufficient Context'));
+assert.ok(turtleReview005.responseContent.includes('label is not allowed'));
 
 const missingActivePackStatePath = join(realPackTempDir, 'discord-review-state-missing-active-sample.json');
 writeStateForSample(missingActivePackStatePath, realPackTempPath, 'missing-sample-999', 'packhash005');
@@ -350,7 +350,7 @@ const result = handleResearchDiscordReviewInteraction({
   allowedUserIds: ['user-1'],
   reviewedAt: '2026-05-29T22:30:00.000Z',
   messageContent: '[RESEARCH SAMPLE REVIEW] false_run_liquidity_fade-001',
-  messageComponents: [{ type: 1, components: [{ type: 2, style: 3, label: 'New Model Candidate', custom_id: customId }] }],
+  messageComponents: [{ type: 1, components: [{ type: 2, style: 3, label: 'Candidate Label Review', custom_id: customId }] }],
 });
 assert.equal(result.ok, true);
 assert.equal(result.status, 'reviewed');
@@ -362,19 +362,21 @@ assert.equal(existsSync(result.reviewedPackPath as string), true);
 assert.equal(existsSync(result.reviewedMarkdownPath as string), true);
 assert.equal(readFileSync(reviewPackPath, 'utf8'), originalPackText);
 assert.ok(result.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
-assert.ok(result.messageUpdate?.content.includes('Reviewed: new_model_candidate_review by Michael'));
+assert.ok(result.messageUpdate?.content.includes('Reviewed: Candidate Label Review by Michael'));
 assert.equal((result.messageUpdate?.components?.[0].components[0] as { disabled?: boolean }).disabled, true);
 
 const reviewedPack = JSON.parse(readFileSync(result.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
 const reviewedSample = reviewedPack.samples[0];
 assert.equal(reviewedSample.humanInspectionLabel, 'new_model_candidate_review');
 assert.equal(reviewedSample.humanConfidence, 'medium');
-assert.equal(reviewedSample.humanReason, 'Selected in Discord research review queue.');
+assert.equal(reviewedSample.humanReason, 'This may be worth reviewing for possible formal candidate labeling later.');
 assert.ok(reviewedSample.humanNotes?.includes('Discord user ID: user-1'));
 assert.ok(reviewedSample.humanNotes?.includes('Discord username: Michael'));
 assert.ok(reviewedSample.humanNotes?.includes('Discord channel ID: channel-1'));
 assert.ok(reviewedSample.humanNotes?.includes('Discord message ID: message-1'));
-assert.ok(reviewedSample.humanNotes?.includes('Selected label: new_model_candidate_review'));
+assert.ok(reviewedSample.humanNotes?.includes('Selected label: Candidate Label Review (new_model_candidate_review)'));
+assert.ok(reviewedSample.humanNotes?.includes('Label category: watchlist'));
+assert.ok(reviewedSample.humanNotes?.includes('Counts toward formal candidate gates: no'));
 assert.ok(reviewedSample.humanNotes?.includes('Advisory-only confirmation'));
 assert.equal(reviewedSample.humanReviewedAt, '2026-05-29T22:30:00.000Z');
 assert.equal(reviewedSample.humanReviewer, 'Michael');
@@ -410,7 +412,7 @@ assert.equal(duplicateSame.status, 'already_reviewed');
 assert.ok(duplicateSame.responseContent.includes('already reviewed'));
 
 const duplicateDifferentLabel = handleResearchDiscordReviewInteraction({
-  customId: 'research_review|packhash001|false_run_liquidity_fade-001|reject',
+  customId: 'research_review|packhash001|false_run_liquidity_fade-001|keep_advisory',
   statePath,
   user: { id: 'user-1', username: 'Michael' },
   channelId: 'channel-1',
@@ -453,12 +455,12 @@ const approvedResult = handleResearchDiscordReviewInteraction({
 });
 assert.equal(approvedResult.ok, true);
 assert.equal(approvedResult.selectedLabel, 'approved_for_future_model_candidate_review');
-assert.ok(approvedResult.responseContent.includes('Human review: Approved for future model-candidate review'));
+assert.ok(approvedResult.responseContent.includes('Human review: Approve for Candidate Review'));
 assert.ok(approvedResult.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
-assert.ok(approvedResult.messageUpdate?.content.includes('Reviewed: Approved for future model-candidate review by Michael'));
+assert.ok(approvedResult.messageUpdate?.content.includes('Reviewed: Approve for Candidate Review by Michael'));
 const approvedPack = JSON.parse(readFileSync(approvedResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
 assert.equal(approvedPack.samples[0].humanInspectionLabel, 'approved_for_future_model_candidate_review');
-assert.equal(approvedPack.samples[0].humanReason, 'Human approved this sample as useful evidence for future model-candidate review only.');
+assert.equal(approvedPack.samples[0].humanReason, 'Human approves this reviewed sample as evidence for future formal model-candidate review/backtest.');
 assert.equal(approvedPack.samples[0].finalReviewLabel, 'approved_for_future_model_candidate_review');
 assert.equal(approvedPack.samples[0].reviewEvidence?.evidenceStatus, 'chart_available');
 assert.equal(approvedPack.samples[0].reviewEvidence?.chartPngPath, approvedState.entries[0].chartPngPath);
@@ -496,12 +498,12 @@ const notApprovedResult = handleResearchDiscordReviewInteraction({
   reviewedAt: '2026-05-29T22:45:00.000Z',
 });
 assert.equal(notApprovedResult.ok, true);
-assert.ok(notApprovedResult.responseContent.includes('Human review: Not approved for future model-candidate review'));
+assert.ok(notApprovedResult.responseContent.includes('Human review: Not Approved for Candidate Review'));
 assert.ok(notApprovedResult.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 const notApprovedPack = JSON.parse(readFileSync(notApprovedResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
 const notApprovedSample = notApprovedPack.samples.find((item) => item.sampleId === 'false_run_liquidity_fade-002');
 assert.equal(notApprovedSample?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
-assert.equal(notApprovedSample?.humanReason, 'Human did not approve this sample as useful evidence for future model-candidate review.');
+assert.equal(notApprovedSample?.humanReason, 'Human does not approve this sample as evidence for future formal model-candidate review/backtest.');
 assert.equal(notApprovedSample?.agentAssessment?.status, 'unclear_insufficient_evidence');
 assert.equal(notApprovedSample?.agentAssessment?.researchUsefulness, 'needs_chart');
 assert.equal(notApprovedSample?.agentAssessment?.chartEvidenceAvailable, false);

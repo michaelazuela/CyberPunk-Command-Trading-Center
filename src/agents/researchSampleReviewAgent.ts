@@ -7,6 +7,7 @@ import type {
   ResearchBackfillDirection,
 } from './historicalResearchBackfillAgent';
 import type { EstimatedGrossContractPnl } from '../lib/futuresContractMetadata';
+import { HUMAN_REVIEW_LABEL_METADATA } from '../lib/humanReviewLabels';
 
 export type ResearchSampleInspectionLabel =
   | 'keep_advisory'
@@ -19,6 +20,9 @@ export type ResearchHumanInspectionLabel =
   | ResearchSampleInspectionLabel
   | 'human_rule_review_queue'
   | 'new_model_candidate_review'
+  | 'needs_more_chart_evidence'
+  | 'needs_more_context'
+  | 'reject_or_deprioritize'
   | 'approved_for_future_model_candidate_review'
   | 'not_approved_for_future_model_candidate_review';
 
@@ -608,6 +612,7 @@ function summarizeConcept(concept: ResearchBackfillConceptId, candidates: Candid
 
 function renderSample(sample: ResearchReviewSample): string {
   const researchQuality = sample.researchQualityScore;
+  const pendingLabelInfo = HUMAN_REVIEW_LABEL_METADATA.keep_advisory;
   return [
     `### Sample ${sample.sampleId}`,
     `- Date/time: ${sample.date} ${sample.time || 'pending'}`,
@@ -623,6 +628,8 @@ function renderSample(sample: ResearchReviewSample): string {
     `- Research Quality Score: ${!researchQuality ? 'Unavailable' : researchQuality.score === null ? researchQuality.label : `${researchQuality.score}/100 (${researchQuality.label})`}`,
     `- Human review:`,
     `  - Label: pending`,
+    `  - Label taxonomy: choose a supported research-only label; formal candidate labels are explicitly marked in Section 6.`,
+    `  - Example advisory label: ${pendingLabelInfo.label} (${pendingLabelInfo.displayName}) - ${pendingLabelInfo.meaning}`,
     `  - Notes: pending`,
   ].join('\n');
 }
@@ -658,7 +665,9 @@ export function renderResearchSampleReviewMarkdown(pack: Omit<ResearchSampleRevi
     '- humanNotes',
     '- humanReviewedAt',
     '- humanReviewer',
-    '- Supported label note: new_model_candidate_review means a distinct research pattern may deserve human-only future model design discussion; not execution approval.',
+    '- Supported label taxonomy:',
+    ...Object.values(HUMAN_REVIEW_LABEL_METADATA).map((metadata) => `  - ${metadata.label}: ${metadata.displayName}; category=${metadata.category}; formalLedgerEligible=${metadata.formalLedgerEligible ? 'yes' : 'no'}; countsTowardCandidateGates=${metadata.countsTowardCandidateGates ? 'yes' : 'no'}; nextAction=${metadata.suggestedNextAction}; ${metadata.meaning}`),
+    '- Supported label note: new_model_candidate_review means possible future formal candidate-label review only; it is not formal candidate approval, model approval, or execution approval.',
     '',
     '## 7. Possible Existing-Model Mapping Review',
     ...(pack.possibleExistingModelMappingReview.length ? pack.possibleExistingModelMappingReview.map((line) => `- ${line}`) : ['- none']),

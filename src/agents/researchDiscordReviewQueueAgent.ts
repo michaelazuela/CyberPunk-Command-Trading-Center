@@ -5,6 +5,7 @@ import {
   calculateEstimatedGrossContractPnl,
   type EstimatedGrossContractPnl,
 } from '../lib/futuresContractMetadata';
+import { getHumanReviewLabelMetadata } from '../lib/humanReviewLabels';
 
 export type ResearchReviewButtonLabel = ResearchHumanInspectionLabel;
 
@@ -84,12 +85,10 @@ export interface ResearchDiscordStateSummary {
 
 export const RESEARCH_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
   'keep_advisory',
-  'reject',
-  'possible_model1_mapping_review',
-  'possible_turtle_soup_mapping_review',
-  'human_rule_review_queue',
+  'needs_more_chart_evidence',
+  'needs_more_context',
   'new_model_candidate_review',
-  'insufficient_context',
+  'reject_or_deprioritize',
 ];
 
 export const PRICE_ACTION_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
@@ -99,19 +98,25 @@ export const PRICE_ACTION_REVIEW_LABELS: ResearchReviewButtonLabel[] = [
 
 const LABEL_TEXT: Record<ResearchReviewButtonLabel, string> = {
   keep_advisory: 'Keep Advisory',
-  reject: 'Reject',
-  possible_model1_mapping_review: 'Model 1 Review',
-  possible_turtle_soup_mapping_review: 'Turtle Soup Review',
+  needs_more_chart_evidence: 'Need Chart Evidence',
+  needs_more_context: 'Need More Context',
+  reject: 'Reject/Deprioritize',
+  reject_or_deprioritize: 'Reject/Deprioritize',
+  possible_model1_mapping_review: 'Model 1 Mapping Review',
+  possible_turtle_soup_mapping_review: 'Turtle Soup Mapping Review',
   human_rule_review_queue: 'Human Rule Review Queue',
-  new_model_candidate_review: 'New Model Candidate',
-  approved_for_future_model_candidate_review: 'Approved',
-  not_approved_for_future_model_candidate_review: 'Not Approved',
-  insufficient_context: 'Insufficient Context',
+  new_model_candidate_review: 'Candidate Label Review',
+  approved_for_future_model_candidate_review: 'Approve for Candidate Review',
+  not_approved_for_future_model_candidate_review: 'Not Approved for Candidate Review',
+  insufficient_context: 'Need More Context',
 };
 
 const BUTTON_STYLE: Record<ResearchReviewButtonLabel, 1 | 2 | 3 | 4> = {
   keep_advisory: 2,
+  needs_more_chart_evidence: 2,
+  needs_more_context: 2,
   reject: 4,
+  reject_or_deprioritize: 4,
   possible_model1_mapping_review: 1,
   possible_turtle_soup_mapping_review: 1,
   human_rule_review_queue: 3,
@@ -123,14 +128,17 @@ const BUTTON_STYLE: Record<ResearchReviewButtonLabel, 1 | 2 | 3 | 4> = {
 
 const RECOMMENDATION_TEXT: Record<ResearchReviewButtonLabel, string> = {
   keep_advisory: 'Recommended: Keep Advisory',
-  reject: 'Recommended: Reject',
+  needs_more_chart_evidence: 'Recommended: Need Chart Evidence',
+  needs_more_context: 'Recommended: Need More Context',
+  reject: 'Recommended: Reject/Deprioritize',
+  reject_or_deprioritize: 'Recommended: Reject/Deprioritize',
   possible_model1_mapping_review: 'Recommended: Queue for Model 1 Review',
   possible_turtle_soup_mapping_review: 'Recommended: Queue for Turtle Soup Review',
   human_rule_review_queue: 'Recommended: Human Rule Review Queue',
-  new_model_candidate_review: 'Recommended: New Model Candidate Review',
-  approved_for_future_model_candidate_review: 'Human review: Approved for future model-candidate review',
-  not_approved_for_future_model_candidate_review: 'Human review: Not approved for future model-candidate review',
-  insufficient_context: 'Recommended: Insufficient Context',
+  new_model_candidate_review: 'Recommended: Candidate Label Review',
+  approved_for_future_model_candidate_review: 'Human review: Approve for Candidate Review',
+  not_approved_for_future_model_candidate_review: 'Human review: Not Approved for Candidate Review',
+  insufficient_context: 'Recommended: Need More Context',
 };
 
 const EXECUTION_ORIENTED_BUTTON_TEXT = /\b(approve trade|execute|take trade|valid setup|go live|greenlight|buy|sell)\b/i;
@@ -319,14 +327,11 @@ function reviewResultLabel(outcome: ResearchCandidateOutcome | null, invalidOver
 }
 
 function candidateEvidenceRecommendation(label: ResearchHumanInspectionLabel): string {
-  if (label === 'new_model_candidate_review' || label === 'approved_for_future_model_candidate_review') {
-    return 'Useful candidate evidence';
-  }
-  if (label === 'reject' || label === 'not_approved_for_future_model_candidate_review') {
-    return 'Not useful candidate evidence';
-  }
-  if (label === 'insufficient_context') return 'Inconclusive';
-  return 'Needs more samples';
+  const metadata = getHumanReviewLabelMetadata(label);
+  if (metadata.formalLedgerEligible) return metadata.displayName;
+  if (metadata.category === 'watchlist') return `${metadata.displayName} - ${metadata.meaning}`;
+  if (metadata.category === 'reject_or_deprioritize') return metadata.displayName;
+  return `${metadata.displayName} - ${metadata.suggestedNextAction}`;
 }
 
 export function buildPriceActionReviewMessageContent(
@@ -362,7 +367,8 @@ export function buildPriceActionReviewMessageContent(
     candidateEvidenceRecommendation(sample.agentInspectionLabel),
     '',
     'Human Action:',
-    'Approve only if this is useful evidence for future model-candidate review.',
+    'Apply a formal candidate label only if this is useful evidence for future model-candidate review/backtest.',
+    'Formal candidate labels do not approve live models, trades, or execution.',
     '',
     'Research-only. This does not approve execution, change rules, or create trades.',
   ].join('\n');

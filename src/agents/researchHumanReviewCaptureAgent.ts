@@ -11,6 +11,10 @@ import {
   coerceEstimatedGrossContractPnl,
   type EstimatedGrossContractPnl,
 } from '../lib/futuresContractMetadata';
+import {
+  getHumanReviewLabelMetadata,
+  SUPPORTED_HUMAN_REVIEW_LABELS,
+} from '../lib/humanReviewLabels';
 
 export type HumanReviewLabel = ResearchHumanInspectionLabel;
 export type HumanReviewConfidence = ResearchSampleConfidence;
@@ -72,17 +76,7 @@ const PROHIBITED_EXECUTABLE_FIELDS = new Set([
   'journalPayload',
 ]);
 
-const HUMAN_LABELS: HumanReviewLabel[] = [
-  'keep_advisory',
-  'reject',
-  'possible_model1_mapping_review',
-  'possible_turtle_soup_mapping_review',
-  'human_rule_review_queue',
-  'new_model_candidate_review',
-  'approved_for_future_model_candidate_review',
-  'not_approved_for_future_model_candidate_review',
-  'insufficient_context',
-];
+const HUMAN_LABELS = SUPPORTED_HUMAN_REVIEW_LABELS as HumanReviewLabel[];
 
 const HUMAN_CONFIDENCE: HumanReviewConfidence[] = ['low', 'medium', 'high'];
 
@@ -168,15 +162,19 @@ function disagreementReason(agentLabel: string | null, humanLabel: string | null
 
 function finalNotes(agentLabel: string | null, humanLabel: string, agreement: boolean | null): string {
   const agreementText = agreement === true ? 'labels agree' : agreement === false ? 'labels differ' : 'agreement is pending';
-  return `Agent label: ${agentLabel || 'missing'}; human label: ${humanLabel}; ${agreementText}. Research-only review: no execution approval, no rule change, and no model promotion.`;
+  const metadata = getHumanReviewLabelMetadata(humanLabel);
+  return `Agent label: ${agentLabel || 'missing'}; human label: ${humanLabel}; category=${metadata.category}; formalLedgerEligible=${metadata.formalLedgerEligible ? 'yes' : 'no'}; ${agreementText}. Research-only review: no execution approval, no rule change, and no model promotion.`;
 }
 
 function isHumanApprovalLabel(label: HumanReviewLabel): boolean {
-  return label === 'approved_for_future_model_candidate_review' || label === 'new_model_candidate_review';
+  return label === 'approved_for_future_model_candidate_review';
 }
 
 function isHumanRejectionLabel(label: HumanReviewLabel): boolean {
-  return label === 'not_approved_for_future_model_candidate_review' || label === 'reject' || label === 'insufficient_context';
+  const metadata = getHumanReviewLabelMetadata(label);
+  return label === 'not_approved_for_future_model_candidate_review' ||
+    metadata.category === 'reject_or_deprioritize' ||
+    metadata.suggestedNextAction === 'add_context_or_collect_more_samples';
 }
 
 function containsRiskBlocker(sample: ResearchReviewSample): boolean {
@@ -455,6 +453,7 @@ function renderReviewedSample(sample: ResearchReviewSample): string {
   const assessment = sample.agentAssessment;
   const evidence = sample.reviewEvidence;
   const pnl = coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl);
+  const labelMetadata = getHumanReviewLabelMetadata(sample.humanInspectionLabel || sample.finalReviewLabel);
   return [
     `### Sample: ${sample.sampleId}`,
     '',
@@ -469,6 +468,17 @@ function renderReviewedSample(sample: ResearchReviewSample): string {
     `- Decision: ${sample.humanInspectionLabel || 'pending'}`,
     '- Tags: none',
     `- Comment: ${sample.humanNotes || sample.humanReason || 'pending'}`,
+    '',
+    'Human Review Label:',
+    `- Label: ${labelMetadata.label}`,
+    `- Display Name: ${labelMetadata.displayName}`,
+    `- Category: ${labelMetadata.category}`,
+    `- Counts Toward Formal Candidate Gates: ${labelMetadata.countsTowardCandidateGates ? 'Yes' : 'No'}`,
+    `- Formal Ledger Eligible: ${labelMetadata.formalLedgerEligible ? 'Yes' : 'No'}`,
+    `- Meaning: ${labelMetadata.meaning}`,
+    `- Does Not Mean: ${labelMetadata.doesNotMean.join('; ')}`,
+    `- Suggested Next Action: ${labelMetadata.suggestedNextAction}`,
+    `- Boundary: ${labelMetadata.boundary}`,
     '',
     'Agent Assessment:',
     `- Status: ${assessment?.status || 'unclear_insufficient_evidence'}`,
@@ -566,7 +576,10 @@ export function renderHumanReviewMarkdown(pack: ResearchSampleReviewPack): strin
     '',
     '## 3. Agent/Human Agreement Summary',
     ...(Object.keys(summary.labelCounts).length
-      ? Object.entries(summary.labelCounts).map(([label, count]) => `- ${label}: ${count}`)
+      ? Object.entries(summary.labelCounts).map(([label, count]) => {
+        const metadata = getHumanReviewLabelMetadata(label);
+        return `- ${label}: ${count}; category=${metadata.category}; formalLedgerEligible=${metadata.formalLedgerEligible ? 'yes' : 'no'}; countsTowardCandidateGates=${metadata.countsTowardCandidateGates ? 'yes' : 'no'}`;
+      })
       : ['- No human labels captured yet.']),
     '',
     '## 4. Reviewed Samples',

@@ -388,6 +388,7 @@ assert.ok(!/\b(approved model|live model|trade approved|profitable system|activa
 assert.ok(geminiPromptSource.includes('## Model-Candidate Recommendation Rule'));
 assert.ok(geminiPromptSource.includes('candidate_review_recommended means only'));
 assert.ok(geminiPromptSource.includes('## Pre-Candidate Watchlist Rule'));
+assert.ok(geminiPromptSource.includes('## Human Review Label Rule'));
 assert.equal(watchlistJson.reportType, 'pre_candidate_watchlist');
 assert.equal(watchlistJson.boundary, 'research_only_not_execution_authority');
 assert.equal(watchlistJson.summary.humanReviewedSamples, 7);
@@ -400,10 +401,16 @@ assert.ok(watchlistJson.concepts.some((concept: { labels: Record<string, number>
 const watchlistFlf = watchlistJson.concepts.find((concept: { concept: string }) => concept.concept === 'false_run_liquidity_fade');
 assert.equal(watchlistFlf.watchlistRecommendation.status, 'needs_more_chart_evidence');
 assert.ok(watchlistFlf.watchlistRecommendation.reason.some((reason: string) => reason.includes('does not move samples into the formal ledger')));
-assert.ok(watchlistFlf.samples.some((row: { sampleId: string; nextHumanAction: string }) => row.sampleId === 'flf-watch-001' && row.nextHumanAction === 'review_chart'));
+assert.ok(watchlistFlf.samples.some((row: { sampleId: string; nextHumanAction: string; labelCategory: string; countsTowardCandidateGates: boolean }) =>
+  row.sampleId === 'flf-watch-001' &&
+  row.nextHumanAction === 'review_chart' &&
+  row.labelCategory === 'watchlist' &&
+  row.countsTowardCandidateGates === false));
 assert.ok(watchlistMarkdown.includes('# Pre-Candidate Watchlist Report'));
 assert.ok(watchlistMarkdown.includes('Boundary: research_only_not_execution_authority'));
 assert.ok(watchlistMarkdown.includes('new_model_candidate_review'));
+assert.ok(watchlistMarkdown.includes('watchlist; gates=no'));
+assert.ok(watchlistMarkdown.includes('| Sample ID | Label | Category | Counts Toward Gates |'));
 assert.ok(watchlistMarkdown.includes('Estimated Gross Contract P/L'));
 assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(watchlistMarkdown));
 assertNoExecutableLedgerFields(watchlistJson);

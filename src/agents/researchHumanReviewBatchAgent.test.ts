@@ -112,6 +112,10 @@ assert.equal(exported.rows[0].humanNotes, '');
 assert.equal(exported.rows.some((row) => row.sampleId === 'time_window_liquidity_delivery-003'), false);
 assert.ok(exported.rows[0].agentConcerns.includes('Agent inspection cannot approve execution'));
 assert.ok(exported.supportedLabels.includes('new_model_candidate_review'));
+assert.ok(exported.supportedLabels.includes('needs_more_chart_evidence'));
+assert.ok(exported.supportedLabels.includes('reject_or_deprioritize'));
+assert.ok(exported.rows[0].humanInspectionLabelTaxonomy.includes('new_model_candidate_review:watchlist:formal=no'));
+assert.ok(exported.rows[0].humanInspectionLabelTaxonomy.includes('approved_for_future_model_candidate_review:formal_candidate:formal=yes'));
 
 const csv = renderHumanReviewTemplateCsv(exported.rows);
 const parsedRows = parseHumanReviewTemplateCsv(csv);
