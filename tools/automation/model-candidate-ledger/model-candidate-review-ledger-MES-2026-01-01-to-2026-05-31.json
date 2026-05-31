@@ -1,6 +1,6 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T21:04:42.715Z",
+  "generatedAt": "2026-05-31T21:18:09.237Z",
   "from": "2026-01-01",
   "to": "2026-05-31",
   "symbol": "MES",
@@ -311,7 +311,11 @@
   "outputPaths": {
     "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.json",
     "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.md",
+    "watchlistJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.json",
+    "watchlistMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.md",
     "rangeJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.json",
-    "rangeMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.md"
+    "rangeMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.md",
+    "rangeWatchlistJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.json",
+    "rangeWatchlistMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.md"
   }
 }

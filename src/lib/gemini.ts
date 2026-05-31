@@ -186,6 +186,16 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     The phrase candidate_review_recommended means only:
     "Move to formal model-candidate review/backtest. Human final decision required."
 
+    ## Pre-Candidate Watchlist Rule
+
+    The pre-candidate watchlist tracks human-reviewed research samples that are not yet formal model-candidate ledger entries.
+
+    Watchlist/advisory samples may be useful for research triage, but they do not count toward formal model-candidate gates unless a human applies a formal candidate-review label.
+
+    The agent may recommend next human actions such as collecting more evidence, reviewing charts, keeping advisory, or deciding whether to apply a formal candidate label.
+
+    The agent must not treat watchlist status as live-model approval, trade approval, or model activation.
+
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
     =========================================

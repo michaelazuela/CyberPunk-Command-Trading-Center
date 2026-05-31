@@ -250,6 +250,7 @@ const samples = [
   sample('twld-004', 'time_window_liquidity_delivery', 'not_approved_for_future_model_candidate_review'),
   sample('flf-001', 'false_run_liquidity_fade', 'not_approved_for_future_model_candidate_review'),
   sample('legacy-001', 'false_run_liquidity_fade', 'keep_advisory'),
+  sample('flf-watch-001', 'false_run_liquidity_fade', 'new_model_candidate_review'),
 ];
 writeFileSync(path.join(reviewDir, 'research-sample-review-MES-all-2026-05-30.reviewed.json'), `${JSON.stringify(reviewPack(samples), null, 2)}\n`, 'utf8');
 writeFileSync(path.join(outcomeDir, 'research-outcome-math-MES-2026-05-30.json'), `${JSON.stringify(outcomeReport(['twld-001', 'twld-002', 'twld-003', 'twld-004']), null, 2)}\n`, 'utf8');
@@ -276,22 +277,30 @@ const ledger = await buildModelCandidateReviewLedger({
 assert.equal(ledger.summary.reviewedSamplesFound, 5);
 assert.equal(ledger.summary.approvedCount, 3);
 assert.equal(ledger.summary.notApprovedCount, 2);
-assert.equal(ledger.summary.ignoredLegacyReviewedSamples, 1);
-assert.equal(ledger.summary.humanReviewedSamplesFound, 6);
+assert.equal(ledger.summary.ignoredLegacyReviewedSamples, 2);
+assert.equal(ledger.summary.humanReviewedSamplesFound, 7);
 assert.equal(ledger.summary.reviewedFilesFound, 1);
 assert.equal(ledger.summary.reviewedFilesRead, 1);
-assert.equal(ledger.summary.ignoredReviewedSamples, 1);
+assert.equal(ledger.summary.ignoredReviewedSamples, 2);
 assert.equal(ledger.conceptSummaries.length, 2);
 assert.ok(ledger.outputPaths.rangeJsonPath?.endsWith('model-candidate-review-ledger-MES-2026-01-01-to-2026-05-30.json'));
 assert.ok(ledger.outputPaths.rangeMarkdownPath?.endsWith('model-candidate-review-ledger-MES-2026-01-01-to-2026-05-30.md'));
+assert.ok(ledger.outputPaths.watchlistJsonPath?.endsWith('model-candidate-watchlist.json'));
+assert.ok(ledger.outputPaths.watchlistMarkdownPath?.endsWith('model-candidate-watchlist.md'));
+assert.ok(ledger.outputPaths.rangeWatchlistJsonPath?.endsWith('model-candidate-watchlist-MES-2026-01-01-to-2026-05-30.json'));
+assert.ok(ledger.outputPaths.rangeWatchlistMarkdownPath?.endsWith('model-candidate-watchlist-MES-2026-01-01-to-2026-05-30.md'));
 assert.equal(existsSync(ledger.outputPaths.jsonPath), true);
 assert.equal(existsSync(ledger.outputPaths.markdownPath), true);
 assert.equal(existsSync(ledger.outputPaths.rangeJsonPath || ''), true);
 assert.equal(existsSync(ledger.outputPaths.rangeMarkdownPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.watchlistJsonPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.watchlistMarkdownPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.rangeWatchlistJsonPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.rangeWatchlistMarkdownPath || ''), true);
 assert.equal(ledger.reviewedArtifactDiagnostics.reviewedFilesFound, 1);
 assert.equal(ledger.reviewedArtifactDiagnostics.acceptedModelCandidateSamples, 5);
-assert.equal(ledger.reviewedArtifactDiagnostics.humanReviewedSamplesFound, 6);
-assert.equal(ledger.reviewedArtifactDiagnostics.ignoredSamplesByReason.unsupported_model_candidate_label, 1);
+assert.equal(ledger.reviewedArtifactDiagnostics.humanReviewedSamplesFound, 7);
+assert.equal(ledger.reviewedArtifactDiagnostics.ignoredSamplesByReason.unsupported_model_candidate_label, 2);
 const twld = ledger.conceptSummaries.find((summary) => summary.concept === 'time_window_liquidity_delivery');
 assert.ok(twld);
 assert.equal(twld.totalSamplesReviewed, 4);
@@ -357,6 +366,8 @@ assert.equal(ledger.entries.every((entry) => entry.researchOnlyBoundary.approves
 assertNoExecutableLedgerFields(ledger);
 assert.ok(!/"canExecute"|"executionApproved"|"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"orderInstructions"|"ragPayload"|"journalPayload"/.test(JSON.stringify(ledger)));
 const markdown = readFileSync(ledger.outputPaths.markdownPath, 'utf8');
+const watchlistJson = JSON.parse(readFileSync(ledger.outputPaths.watchlistJsonPath || '', 'utf8'));
+const watchlistMarkdown = readFileSync(ledger.outputPaths.watchlistMarkdownPath || '', 'utf8');
 const geminiPromptSource = readFileSync(path.join(process.cwd(), 'src/lib/gemini.ts'), 'utf8');
 assert.ok(markdown.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.ok(markdown.includes('Human final decision required before any model promotion or implementation.'));
@@ -369,13 +380,33 @@ assert.ok(markdown.includes('Model-Candidate Research Recommendation:'));
 assert.ok(markdown.includes('Human Final Decision Required: Yes'));
 assert.ok(markdown.includes('Reviewed Artifact Diagnostics'));
 assert.ok(markdown.includes('Reviewed files read: 1'));
-assert.ok(markdown.includes('unsupported_model_candidate_label: 1'));
+assert.ok(markdown.includes('unsupported_model_candidate_label: 2'));
 assert.ok(markdown.includes('Range-stamped JSON:'));
 assert.ok(markdown.includes('Boundary: research_only_not_execution_authority'));
 assert.ok(markdown.includes('supporting research/audit evidence only'));
 assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(markdown));
 assert.ok(geminiPromptSource.includes('## Model-Candidate Recommendation Rule'));
 assert.ok(geminiPromptSource.includes('candidate_review_recommended means only'));
+assert.ok(geminiPromptSource.includes('## Pre-Candidate Watchlist Rule'));
+assert.equal(watchlistJson.reportType, 'pre_candidate_watchlist');
+assert.equal(watchlistJson.boundary, 'research_only_not_execution_authority');
+assert.equal(watchlistJson.summary.humanReviewedSamples, 7);
+assert.equal(watchlistJson.summary.formalLedgerEligibleSamples, 5);
+assert.equal(watchlistJson.summary.watchlistSamples, 2);
+assert.equal(watchlistJson.summary.samplesWithEstimatedGrossContractPnl, 1);
+assert.equal(ledger.entries.some((entry) => entry.sampleId === 'legacy-001' || entry.sampleId === 'flf-watch-001'), false);
+assert.ok(watchlistJson.concepts.some((concept: { labels: Record<string, number> }) => concept.labels.keep_advisory === 1));
+assert.ok(watchlistJson.concepts.some((concept: { labels: Record<string, number> }) => concept.labels.new_model_candidate_review === 1));
+const watchlistFlf = watchlistJson.concepts.find((concept: { concept: string }) => concept.concept === 'false_run_liquidity_fade');
+assert.equal(watchlistFlf.watchlistRecommendation.status, 'needs_more_chart_evidence');
+assert.ok(watchlistFlf.watchlistRecommendation.reason.some((reason: string) => reason.includes('does not move samples into the formal ledger')));
+assert.ok(watchlistFlf.samples.some((row: { sampleId: string; nextHumanAction: string }) => row.sampleId === 'flf-watch-001' && row.nextHumanAction === 'review_chart'));
+assert.ok(watchlistMarkdown.includes('# Pre-Candidate Watchlist Report'));
+assert.ok(watchlistMarkdown.includes('Boundary: research_only_not_execution_authority'));
+assert.ok(watchlistMarkdown.includes('new_model_candidate_review'));
+assert.ok(watchlistMarkdown.includes('Estimated Gross Contract P/L'));
+assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(watchlistMarkdown));
+assertNoExecutableLedgerFields(watchlistJson);
 assert.equal(ledger.thresholds.minimumReviewedSamples, 4);
 assert.equal(ledger.thresholds.minimumApprovalRate, 0.7);
 assert.equal(ledger.summary.candidateReviewRecommendedConcepts, 1);
@@ -636,10 +667,11 @@ const multiFileLedger = await buildModelCandidateReviewLedger({
 });
 assert.equal(multiFileLedger.summary.reviewedFilesRead, 2);
 assert.equal(multiFileLedger.summary.reviewedSamplesFound, 6);
-assert.equal(multiFileLedger.summary.humanReviewedSamplesFound, 7);
+assert.equal(multiFileLedger.summary.humanReviewedSamplesFound, 8);
 assert.equal(multiFileLedger.reviewedArtifactDiagnostics.files.length, 2);
 assert.equal(multiFileLedger.reviewedArtifactDiagnostics.acceptedModelCandidateSamples, 6);
 assert.equal(existsSync(multiFileLedger.outputPaths.rangeJsonPath || ''), true);
+assert.equal(existsSync(multiFileLedger.outputPaths.rangeWatchlistJsonPath || ''), true);
 assertNoExecutableLedgerFields(multiFileLedger);
 
 const parsed = parseModelCandidateLedgerArgs([

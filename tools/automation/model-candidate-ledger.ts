@@ -264,6 +264,94 @@ export interface ModelCandidateReviewLedger {
     markdownPath: string;
     rangeJsonPath?: string;
     rangeMarkdownPath?: string;
+    watchlistJsonPath?: string;
+    watchlistMarkdownPath?: string;
+    rangeWatchlistJsonPath?: string;
+    rangeWatchlistMarkdownPath?: string;
+  };
+}
+
+export interface PreCandidateWatchlistSample {
+  sampleId: string;
+  reviewedFile?: string;
+  concept: string;
+  label: string;
+  agentAssessmentStatus?: string;
+  chartEvidenceStatus?: string;
+  chartPngPath?: string;
+  chartReportPath?: string;
+  estimatedGrossContractPnl?: EstimatedGrossContractPnl;
+  nextHumanAction:
+    | 'keep_advisory'
+    | 'review_chart'
+    | 'collect_more_samples'
+    | 'decide_candidate_label'
+    | 'reject_or_deprioritize';
+}
+
+export interface PreCandidateWatchlistReport {
+  reportType: 'pre_candidate_watchlist';
+  symbol: string;
+  from: string;
+  to: string;
+  generatedAt: string;
+  boundary: 'research_only_not_execution_authority';
+  summary: {
+    humanReviewedSamples: number;
+    formalLedgerEligibleSamples: number;
+    watchlistSamples: number;
+    advisoryOnlySamples: number;
+    rejectedOrDeprioritizedSamples: number;
+    samplesWithAgentAssessment: number;
+    samplesWithChartEvidence: number;
+    samplesWithEstimatedGrossContractPnl: number;
+  };
+  concepts: Array<{
+    concept: string;
+    conceptTitle?: string;
+    watchlistSampleCount: number;
+    labels: Record<string, number>;
+    agentAssessmentSummary: {
+      agreesWithHuman: number;
+      partiallyAgreesWithHuman: number;
+      disagreesWithHuman: number;
+      unclearInsufficientEvidence: number;
+    };
+    chartEvidenceSummary: {
+      samplesWithChartEvidence: number;
+      samplesWithExactPngPath: number;
+      samplesWithExactReportPath: number;
+      samplesMissingCharts: number;
+      samplesWithUnknownCharts: number;
+      samplesWithWithheldCharts: number;
+    };
+    estimatedGrossContractPnlSummary?: {
+      rootSymbol: FuturesRootSymbol;
+      sampleCountWithPnl: number;
+      sampleCountMissingPnl: number;
+      avgHypotheticalOutcomeDollars?: number;
+      avgMfeDollars?: number;
+      avgMaeDollars?: number;
+      status: 'available' | 'partial' | 'unavailable' | 'unavailable_unknown_contract';
+    };
+    watchlistRecommendation: {
+      status:
+        | 'keep_advisory'
+        | 'collect_more_evidence'
+        | 'needs_more_chart_evidence'
+        | 'ready_for_human_candidate_label_review'
+        | 'reject_or_deprioritize';
+      reason: string[];
+      boundary: 'research_only_not_execution_authority';
+    };
+    samples: PreCandidateWatchlistSample[];
+  }>;
+  ignoredFormalLedgerReason: string;
+  outputPaths: {
+    jsonPath: string;
+    markdownPath: string;
+    rangeJsonPath?: string;
+    rangeMarkdownPath?: string;
   };
 }
 
@@ -1153,7 +1241,7 @@ function prohibitedPaths(value: unknown, pathName = 'ledger'): string[] {
   return paths;
 }
 
-export function assertNoExecutableLedgerFields(ledger: ModelCandidateReviewLedger): void {
+export function assertNoExecutableLedgerFields(ledger: unknown): void {
   const paths = prohibitedPaths(ledger);
   if (paths.length) throw new Error(`Model candidate ledger contains prohibited executable field(s): ${paths.join(', ')}`);
 }
@@ -1289,6 +1377,232 @@ async function loadReviewedEntries(options: ModelCandidateLedgerOptions, outcome
   return { entries: entries.sort((left, right) => `${left.date} ${left.time || ''} ${left.sampleId}`.localeCompare(`${right.date} ${right.time || ''} ${right.sampleId}`)), ignoredLegacyReviewedSamples, diagnostics };
 }
 
+function sampleReviewLabel(sample: ResearchReviewSample): string {
+  return sample.humanInspectionLabel || sample.finalReviewLabel || 'human_reviewed_unlabeled';
+}
+
+function agentAssessmentSummaryForSamples(samples: ResearchReviewSample[]): PreCandidateWatchlistReport['concepts'][number]['agentAssessmentSummary'] {
+  return {
+    agreesWithHuman: samples.filter((sample) => sample.agentAssessment?.status === 'agrees_with_human').length,
+    partiallyAgreesWithHuman: samples.filter((sample) => sample.agentAssessment?.status === 'partially_agrees_with_human').length,
+    disagreesWithHuman: samples.filter((sample) => sample.agentAssessment?.status === 'disagrees_with_human').length,
+    unclearInsufficientEvidence: samples.filter((sample) => sample.agentAssessment?.status === 'unclear_insufficient_evidence' || !sample.agentAssessment).length,
+  };
+}
+
+function reviewEvidenceSummaryForSamples(samples: ResearchReviewSample[]): PreCandidateWatchlistReport['concepts'][number]['chartEvidenceSummary'] {
+  return {
+    samplesWithChartEvidence: samples.filter((sample) => sample.reviewEvidence?.chartAvailable || sample.reviewEvidence?.chartPngPath || sample.reviewEvidence?.chartReportPath).length,
+    samplesWithExactPngPath: samples.filter((sample) => Boolean(sample.reviewEvidence?.chartPngPath)).length,
+    samplesWithExactReportPath: samples.filter((sample) => Boolean(sample.reviewEvidence?.chartReportPath)).length,
+    samplesMissingCharts: samples.filter((sample) =>
+      sample.reviewEvidence?.evidenceStatus === 'chart_missing' ||
+      (
+        sample.reviewEvidence?.chartAvailable === false &&
+        sample.reviewEvidence.evidenceStatus !== 'chart_withheld' &&
+        sample.reviewEvidence.evidenceStatus !== 'chart_unknown'
+      )
+    ).length,
+    samplesWithUnknownCharts: samples.filter((sample) => !sample.reviewEvidence || sample.reviewEvidence.evidenceStatus === 'chart_unknown').length,
+    samplesWithWithheldCharts: samples.filter((sample) => sample.reviewEvidence?.chartWithheld || sample.reviewEvidence?.evidenceStatus === 'chart_withheld').length,
+  };
+}
+
+function summarizeWatchlistEstimatedGrossContractPnl(samples: ResearchReviewSample[], symbol: Instrument): PreCandidateWatchlistReport['concepts'][number]['estimatedGrossContractPnlSummary'] {
+  const pnlRows = samples
+    .map((sample) => coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl))
+    .filter((pnl): pnl is EstimatedGrossContractPnl => Boolean(pnl));
+  if (!pnlRows.length) {
+    return {
+      rootSymbol: FUTURES_CONTRACT_METADATA[symbol].rootSymbol,
+      sampleCountWithPnl: 0,
+      sampleCountMissingPnl: samples.length,
+      status: 'unavailable',
+    };
+  }
+  const knownRows = pnlRows.filter((pnl) => pnl.rootSymbol !== 'UNKNOWN');
+  if (!knownRows.length) {
+    return {
+      rootSymbol: 'UNKNOWN',
+      sampleCountWithPnl: 0,
+      sampleCountMissingPnl: samples.length,
+      status: 'unavailable_unknown_contract',
+    };
+  }
+  const hypothetical = knownRows.map((pnl) => pnl.hypotheticalOutcomeDollars).filter(finite);
+  const mfe = knownRows.map((pnl) => pnl.mfeDollars).filter(finite);
+  const mae = knownRows.map((pnl) => pnl.maeDollars).filter(finite);
+  const sampleCountWithPnl = knownRows.filter((pnl) =>
+    finite(pnl.hypotheticalOutcomeDollars) ||
+    finite(pnl.mfeDollars) ||
+    finite(pnl.maeDollars)
+  ).length;
+  const allSamplesHaveHypothetical = samples.length > 0 && hypothetical.length === samples.length;
+  return {
+    rootSymbol: knownRows[0]?.rootSymbol || FUTURES_CONTRACT_METADATA[symbol].rootSymbol,
+    sampleCountWithPnl,
+    sampleCountMissingPnl: Math.max(0, samples.length - sampleCountWithPnl),
+    ...(avg(hypothetical) !== undefined ? { avgHypotheticalOutcomeDollars: avg(hypothetical) } : {}),
+    ...(avg(mfe) !== undefined ? { avgMfeDollars: avg(mfe) } : {}),
+    ...(avg(mae) !== undefined ? { avgMaeDollars: avg(mae) } : {}),
+    status: sampleCountWithPnl === 0
+      ? 'unavailable'
+      : allSamplesHaveHypothetical
+        ? 'available'
+        : 'partial',
+  };
+}
+
+function nextHumanActionForWatchlistSample(sample: ResearchReviewSample): PreCandidateWatchlistSample['nextHumanAction'] {
+  const label = sampleReviewLabel(sample);
+  const evidenceStatus = sample.reviewEvidence?.evidenceStatus;
+  if (
+    !sample.reviewEvidence ||
+    evidenceStatus === 'chart_missing' ||
+    evidenceStatus === 'chart_unknown' ||
+    evidenceStatus === 'chart_withheld' ||
+    (!sample.reviewEvidence.chartPngPath && !sample.reviewEvidence.chartReportPath)
+  ) return 'review_chart';
+  if (label === 'new_model_candidate_review' || label === 'watchlist_candidate') return 'decide_candidate_label';
+  if (/reject|deprioritize/i.test(label)) return 'reject_or_deprioritize';
+  if (label === 'keep_advisory') return 'keep_advisory';
+  return 'collect_more_samples';
+}
+
+function buildWatchlistRecommendation(args: {
+  samples: ResearchReviewSample[];
+  labels: Record<string, number>;
+  agentAssessmentSummary: PreCandidateWatchlistReport['concepts'][number]['agentAssessmentSummary'];
+  chartEvidenceSummary: PreCandidateWatchlistReport['concepts'][number]['chartEvidenceSummary'];
+}): PreCandidateWatchlistReport['concepts'][number]['watchlistRecommendation'] {
+  const { samples, labels, agentAssessmentSummary, chartEvidenceSummary } = args;
+  const reasons: string[] = [];
+  let status: PreCandidateWatchlistReport['concepts'][number]['watchlistRecommendation']['status'] = 'collect_more_evidence';
+
+  if (chartEvidenceSummary.samplesMissingCharts > 0 || chartEvidenceSummary.samplesWithUnknownCharts > 0 || chartEvidenceSummary.samplesWithWithheldCharts > 0) {
+    status = 'needs_more_chart_evidence';
+    reasons.push('Chart/report evidence is missing, unknown, or withheld for at least one watchlist sample.');
+  } else if (labels.new_model_candidate_review || labels.watchlist_candidate) {
+    status = 'ready_for_human_candidate_label_review';
+    reasons.push('Human label suggests candidate interest, but it is not one of the two formal model-candidate ledger labels.');
+  } else if (Object.keys(labels).every((label) => label === 'keep_advisory')) {
+    status = 'keep_advisory';
+    reasons.push('Human labels currently keep this concept advisory-only.');
+  } else if (Object.keys(labels).some((label) => /reject|deprioritize/i.test(label))) {
+    status = 'reject_or_deprioritize';
+    reasons.push('Human label suggests rejection or deprioritization.');
+  }
+
+  if (agentAssessmentSummary.disagreesWithHuman > 0) reasons.push('Agent assessment disagrees with the human review on at least one sample; collect more evidence before any formal label change.');
+  if (agentAssessmentSummary.unclearInsufficientEvidence > 0) reasons.push('Agent assessment is unclear or insufficient for at least one sample.');
+  if (samples.some((sample) => coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl))) {
+    reasons.push('Estimated gross contract P/L is included as research context only and does not move samples into the formal ledger.');
+  }
+  if (!reasons.length) reasons.push('Keep collecting evidence before any formal model-candidate label decision.');
+
+  return {
+    status,
+    reason: [...new Set(reasons)],
+    boundary: 'research_only_not_execution_authority',
+  };
+}
+
+async function buildPreCandidateWatchlistReport(options: ModelCandidateLedgerOptions, generatedAt: string, paths: ModelCandidateReviewLedger['outputPaths']): Promise<PreCandidateWatchlistReport> {
+  const files = await listFiles(options.reviewPackDir, (name) => /^research-sample-review-.*\.reviewed\.json$/i.test(name));
+  const watchlistSamples: Array<{ sample: ResearchReviewSample; reviewedFile: string }> = [];
+  let humanReviewedSamples = 0;
+  let formalLedgerEligibleSamples = 0;
+  for (const file of files) {
+    try {
+      const parsed = await readJsonFile<unknown>(file);
+      if (!isReviewPack(parsed) || parsed.instrument !== options.symbol) continue;
+      for (const sample of parsed.samples) {
+        if (!inDateRange(sample.date, options.from, options.to) || !hasHumanReview(sample)) continue;
+        humanReviewedSamples += 1;
+        if (ledgerStatus(sample.humanInspectionLabel)) {
+          formalLedgerEligibleSamples += 1;
+          continue;
+        }
+        watchlistSamples.push({ sample, reviewedFile: file });
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const byConcept = new Map<string, Array<{ sample: ResearchReviewSample; reviewedFile: string }>>();
+  for (const row of watchlistSamples) {
+    const list = byConcept.get(row.sample.concept) || [];
+    list.push(row);
+    byConcept.set(row.sample.concept, list);
+  }
+
+  const concepts: PreCandidateWatchlistReport['concepts'] = [...byConcept.entries()].map(([concept, rows]) => {
+    const samples = rows.map((row) => row.sample);
+    const labels: Record<string, number> = {};
+    for (const sample of samples) increment(labels, sampleReviewLabel(sample));
+    const agentAssessmentSummary = agentAssessmentSummaryForSamples(samples);
+    const chartEvidenceSummary = reviewEvidenceSummaryForSamples(samples);
+    const estimatedGrossContractPnlSummary = summarizeWatchlistEstimatedGrossContractPnl(samples, options.symbol);
+    return {
+      concept,
+      conceptTitle: samples[0]?.conceptTitle || concept,
+      watchlistSampleCount: samples.length,
+      labels,
+      agentAssessmentSummary,
+      chartEvidenceSummary,
+      estimatedGrossContractPnlSummary,
+      watchlistRecommendation: buildWatchlistRecommendation({ samples, labels, agentAssessmentSummary, chartEvidenceSummary }),
+      samples: rows.map(({ sample, reviewedFile }) => {
+        const pnl = coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl);
+        return {
+          sampleId: sample.sampleId,
+          reviewedFile,
+          concept: sample.concept,
+          label: sampleReviewLabel(sample),
+          agentAssessmentStatus: sample.agentAssessment?.status,
+          chartEvidenceStatus: sample.reviewEvidence?.evidenceStatus,
+          chartPngPath: sample.reviewEvidence?.chartPngPath,
+          chartReportPath: sample.reviewEvidence?.chartReportPath,
+          ...(pnl ? { estimatedGrossContractPnl: pnl } : {}),
+          nextHumanAction: nextHumanActionForWatchlistSample(sample),
+        };
+      }),
+    };
+  }).sort((left, right) => right.watchlistSampleCount - left.watchlistSampleCount || left.concept.localeCompare(right.concept));
+
+  const report: PreCandidateWatchlistReport = {
+    reportType: 'pre_candidate_watchlist',
+    symbol: options.symbol,
+    from: options.from,
+    to: options.to,
+    generatedAt,
+    boundary: 'research_only_not_execution_authority',
+    summary: {
+      humanReviewedSamples,
+      formalLedgerEligibleSamples,
+      watchlistSamples: watchlistSamples.length,
+      advisoryOnlySamples: watchlistSamples.filter(({ sample }) => sampleReviewLabel(sample) === 'keep_advisory').length,
+      rejectedOrDeprioritizedSamples: watchlistSamples.filter(({ sample }) => /reject|deprioritize/i.test(sampleReviewLabel(sample))).length,
+      samplesWithAgentAssessment: watchlistSamples.filter(({ sample }) => Boolean(sample.agentAssessment)).length,
+      samplesWithChartEvidence: watchlistSamples.filter(({ sample }) => sample.reviewEvidence?.chartAvailable || sample.reviewEvidence?.chartPngPath || sample.reviewEvidence?.chartReportPath).length,
+      samplesWithEstimatedGrossContractPnl: watchlistSamples.filter(({ sample }) => Boolean(coerceEstimatedGrossContractPnl(sample.estimatedGrossContractPnl))).length,
+    },
+    concepts,
+    ignoredFormalLedgerReason: 'Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. They do not count toward formal model-candidate gates unless a human later applies a formal model-candidate label.',
+    outputPaths: {
+      jsonPath: paths.watchlistJsonPath || path.join(path.resolve(options.outDir), 'model-candidate-watchlist.json'),
+      markdownPath: paths.watchlistMarkdownPath || path.join(path.resolve(options.outDir), 'model-candidate-watchlist.md'),
+      ...(paths.rangeWatchlistJsonPath && paths.rangeWatchlistMarkdownPath ? {
+        rangeJsonPath: paths.rangeWatchlistJsonPath,
+        rangeMarkdownPath: paths.rangeWatchlistMarkdownPath,
+      } : {}),
+    },
+  };
+  assertNoExecutableLedgerFields(report);
+  return report;
+}
+
 export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewLedger): string {
   const pnl = ledger.estimatedGrossContractPnlSummary || summarizeEstimatedGrossContractPnl(ledger.entries, ledger.symbol);
   return [
@@ -1370,18 +1684,90 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
   ].join('\n');
 }
 
+function formatWatchlistPnl(summary: PreCandidateWatchlistReport['concepts'][number]['estimatedGrossContractPnlSummary']): string {
+  if (!summary) return 'Not recorded';
+  return [
+    summary.rootSymbol,
+    `samples with P/L ${summary.sampleCountWithPnl}`,
+    `missing ${summary.sampleCountMissingPnl}`,
+    `avg hypothetical ${formatLedgerDollars(summary.avgHypotheticalOutcomeDollars)}`,
+    `avg MFE ${formatLedgerDollars(summary.avgMfeDollars)}`,
+    `avg MAE ${formatLedgerDollars(summary.avgMaeDollars)}`,
+    `status ${summary.status}`,
+    'research-only context',
+  ].join('; ');
+}
+
+function samplePnlCell(pnl: EstimatedGrossContractPnl | undefined): string {
+  if (!pnl || pnl.rootSymbol === 'UNKNOWN') return 'Not recorded';
+  if (finite(pnl.hypotheticalOutcomeDollars)) return `${pnl.rootSymbol} ${formatLedgerDollars(pnl.hypotheticalOutcomeDollars)}`;
+  if (finite(pnl.mfeDollars) || finite(pnl.maeDollars)) return `${pnl.rootSymbol} partial; MFE ${formatLedgerDollars(pnl.mfeDollars)}; MAE ${formatLedgerDollars(pnl.maeDollars)}`;
+  return `${pnl.rootSymbol} ${pnl.status}`;
+}
+
+export function renderPreCandidateWatchlistMarkdown(report: PreCandidateWatchlistReport): string {
+  return [
+    '# Pre-Candidate Watchlist Report',
+    '',
+    `Symbol: ${report.symbol}`,
+    `Date range: ${report.from} to ${report.to}`,
+    `Generated at: ${report.generatedAt}`,
+    `Boundary: ${report.boundary}`,
+    '',
+    'This report tracks human-reviewed samples that are not yet formal model-candidate ledger entries. These samples do not count toward candidate-review gates unless a human later applies a formal model-candidate label.',
+    '',
+    '## Summary',
+    `- Human-reviewed samples: ${report.summary.humanReviewedSamples}`,
+    `- Formal ledger-eligible samples: ${report.summary.formalLedgerEligibleSamples}`,
+    `- Watchlist/advisory samples: ${report.summary.watchlistSamples}`,
+    `- Advisory-only samples: ${report.summary.advisoryOnlySamples}`,
+    `- Rejected/deprioritized samples: ${report.summary.rejectedOrDeprioritizedSamples}`,
+    `- Samples with agent assessment: ${report.summary.samplesWithAgentAssessment}`,
+    `- Samples with chart evidence: ${report.summary.samplesWithChartEvidence}`,
+    `- Samples with estimated gross contract P/L: ${report.summary.samplesWithEstimatedGrossContractPnl}`,
+    `- Formal ledger reason: ${report.ignoredFormalLedgerReason}`,
+    '',
+    '## Concepts',
+    ...(report.concepts.length
+      ? report.concepts.map((concept) => [
+        `### ${concept.conceptTitle || concept.concept}`,
+        `- Concept: ${concept.concept}`,
+        `- Watchlist Samples: ${concept.watchlistSampleCount}`,
+        `- Labels: ${Object.entries(concept.labels).sort().map(([label, count]) => `${label}=${count}`).join('; ') || 'none'}`,
+        `- Agent Assessment Summary: agrees=${concept.agentAssessmentSummary.agreesWithHuman}; partial=${concept.agentAssessmentSummary.partiallyAgreesWithHuman}; disagrees=${concept.agentAssessmentSummary.disagreesWithHuman}; unclear=${concept.agentAssessmentSummary.unclearInsufficientEvidence}`,
+        `- Chart/Report Evidence: chart evidence=${concept.chartEvidenceSummary.samplesWithChartEvidence}; exact PNG=${concept.chartEvidenceSummary.samplesWithExactPngPath}; exact report=${concept.chartEvidenceSummary.samplesWithExactReportPath}; missing=${concept.chartEvidenceSummary.samplesMissingCharts}; unknown=${concept.chartEvidenceSummary.samplesWithUnknownCharts}; withheld=${concept.chartEvidenceSummary.samplesWithWithheldCharts}`,
+        `- Estimated Gross Contract P/L: ${formatWatchlistPnl(concept.estimatedGrossContractPnlSummary)}`,
+        `- Watchlist Recommendation: ${concept.watchlistRecommendation.status}`,
+        '- Reason:',
+        ...(concept.watchlistRecommendation.reason.length ? concept.watchlistRecommendation.reason.map((reason) => `  - ${reason}`) : ['  - None recorded.']),
+        `- Boundary: ${concept.watchlistRecommendation.boundary}`,
+        '',
+        '## Samples',
+        '| Sample ID | Label | Agent Assessment | Chart Evidence | Estimated Gross P/L | Next Human Action |',
+        '|---|---|---|---|---|---|',
+        ...concept.samples.map((sample) => `| ${sample.sampleId} | ${sample.label} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartEvidenceStatus || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} | ${sample.nextHumanAction} |`),
+      ].join('\n'))
+      : ['- No pre-candidate watchlist samples found for this range.']),
+  ].join('\n');
+}
+
 function outputPaths(options: Pick<ModelCandidateLedgerOptions, 'outDir' | 'symbol' | 'from' | 'to' | 'writeRangeArtifact'>): ModelCandidateReviewLedger['outputPaths'] {
   const dir = path.resolve(options.outDir);
   const rangeBase = `model-candidate-review-ledger-${options.symbol}-${options.from}-to-${options.to}`;
+  const watchlistRangeBase = `model-candidate-watchlist-${options.symbol}-${options.from}-to-${options.to}`;
   const rangePaths = options.writeRangeArtifact !== false
     ? {
       rangeJsonPath: path.join(dir, `${rangeBase}.json`),
       rangeMarkdownPath: path.join(dir, `${rangeBase}.md`),
+      rangeWatchlistJsonPath: path.join(dir, `${watchlistRangeBase}.json`),
+      rangeWatchlistMarkdownPath: path.join(dir, `${watchlistRangeBase}.md`),
     }
     : {};
   return {
     jsonPath: path.join(dir, 'model-candidate-review-ledger.json'),
     markdownPath: path.join(dir, 'model-candidate-review-ledger.md'),
+    watchlistJsonPath: path.join(dir, 'model-candidate-watchlist.json'),
+    watchlistMarkdownPath: path.join(dir, 'model-candidate-watchlist.md'),
     ...rangePaths,
   };
 }
@@ -1394,9 +1780,10 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   const conceptSummaries = summarizeConcepts(entries, options.thresholds, options.symbol);
   const estimatedGrossContractPnlSummary = summarizeEstimatedGrossContractPnl(entries, options.symbol);
   const paths = outputPaths(options);
+  const generatedAt = new Date().toISOString();
   const ledger: ModelCandidateReviewLedger = {
     reportType: 'model_candidate_review_ledger',
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     from: options.from,
     to: options.to,
     symbol: options.symbol,
@@ -1431,12 +1818,21 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
     outputPaths: paths,
   };
   assertNoExecutableLedgerFields(ledger);
+  const watchlist = await buildPreCandidateWatchlistReport(options, generatedAt, paths);
   mkdirSync(path.dirname(paths.jsonPath), { recursive: true });
   writeFileSync(paths.jsonPath, `${JSON.stringify(ledger, null, 2)}\n`, 'utf8');
   writeFileSync(paths.markdownPath, `${renderModelCandidateLedgerMarkdown(ledger)}\n`, 'utf8');
+  if (paths.watchlistJsonPath && paths.watchlistMarkdownPath) {
+    writeFileSync(paths.watchlistJsonPath, `${JSON.stringify(watchlist, null, 2)}\n`, 'utf8');
+    writeFileSync(paths.watchlistMarkdownPath, `${renderPreCandidateWatchlistMarkdown(watchlist)}\n`, 'utf8');
+  }
   if (paths.rangeJsonPath && paths.rangeMarkdownPath) {
     writeFileSync(paths.rangeJsonPath, `${JSON.stringify({ ...ledger, outputPaths: paths }, null, 2)}\n`, 'utf8');
     writeFileSync(paths.rangeMarkdownPath, `${renderModelCandidateLedgerMarkdown(ledger)}\n`, 'utf8');
+  }
+  if (paths.rangeWatchlistJsonPath && paths.rangeWatchlistMarkdownPath) {
+    writeFileSync(paths.rangeWatchlistJsonPath, `${JSON.stringify({ ...watchlist, outputPaths: watchlist.outputPaths }, null, 2)}\n`, 'utf8');
+    writeFileSync(paths.rangeWatchlistMarkdownPath, `${renderPreCandidateWatchlistMarkdown(watchlist)}\n`, 'utf8');
   }
   return ledger;
 }
@@ -1448,9 +1844,17 @@ function renderPretty(ledger: ModelCandidateReviewLedger): string {
     `Symbol: ${ledger.symbol}`,
     `Ledger JSON: ${ledger.outputPaths.jsonPath}`,
     `Ledger Markdown: ${ledger.outputPaths.markdownPath}`,
+    ...(ledger.outputPaths.watchlistJsonPath && ledger.outputPaths.watchlistMarkdownPath ? [
+      `Watchlist JSON: ${ledger.outputPaths.watchlistJsonPath}`,
+      `Watchlist Markdown: ${ledger.outputPaths.watchlistMarkdownPath}`,
+    ] : []),
     ...(ledger.outputPaths.rangeJsonPath && ledger.outputPaths.rangeMarkdownPath ? [
       `Range JSON: ${ledger.outputPaths.rangeJsonPath}`,
       `Range Markdown: ${ledger.outputPaths.rangeMarkdownPath}`,
+    ] : []),
+    ...(ledger.outputPaths.rangeWatchlistJsonPath && ledger.outputPaths.rangeWatchlistMarkdownPath ? [
+      `Range Watchlist JSON: ${ledger.outputPaths.rangeWatchlistJsonPath}`,
+      `Range Watchlist Markdown: ${ledger.outputPaths.rangeWatchlistMarkdownPath}`,
     ] : []),
     `Reviewed samples found: ${ledger.summary.reviewedSamplesFound}`,
     `Human-reviewed samples found: ${ledger.summary.humanReviewedSamplesFound}`,

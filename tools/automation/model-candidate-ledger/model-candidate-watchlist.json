@@ -1,0 +1,158 @@
+{
+  "reportType": "pre_candidate_watchlist",
+  "symbol": "MES",
+  "from": "2026-01-01",
+  "to": "2026-05-31",
+  "generatedAt": "2026-05-31T21:18:09.237Z",
+  "boundary": "research_only_not_execution_authority",
+  "summary": {
+    "humanReviewedSamples": 3,
+    "formalLedgerEligibleSamples": 1,
+    "watchlistSamples": 2,
+    "advisoryOnlySamples": 1,
+    "rejectedOrDeprioritizedSamples": 0,
+    "samplesWithAgentAssessment": 2,
+    "samplesWithChartEvidence": 2,
+    "samplesWithEstimatedGrossContractPnl": 2
+  },
+  "concepts": [
+    {
+      "concept": "time_window_liquidity_delivery",
+      "conceptTitle": "Time-Window Liquidity Delivery",
+      "watchlistSampleCount": 2,
+      "labels": {
+        "keep_advisory": 1,
+        "new_model_candidate_review": 1
+      },
+      "agentAssessmentSummary": {
+        "agreesWithHuman": 0,
+        "partiallyAgreesWithHuman": 1,
+        "disagreesWithHuman": 0,
+        "unclearInsufficientEvidence": 1
+      },
+      "chartEvidenceSummary": {
+        "samplesWithChartEvidence": 2,
+        "samplesWithExactPngPath": 2,
+        "samplesWithExactReportPath": 2,
+        "samplesMissingCharts": 0,
+        "samplesWithUnknownCharts": 0,
+        "samplesWithWithheldCharts": 1
+      },
+      "estimatedGrossContractPnlSummary": {
+        "rootSymbol": "MES",
+        "sampleCountWithPnl": 2,
+        "sampleCountMissingPnl": 0,
+        "avgHypotheticalOutcomeDollars": 10,
+        "avgMfeDollars": 125,
+        "avgMaeDollars": -30,
+        "status": "available"
+      },
+      "watchlistRecommendation": {
+        "status": "needs_more_chart_evidence",
+        "reason": [
+          "Chart/report evidence is missing, unknown, or withheld for at least one watchlist sample.",
+          "Agent assessment is unclear or insufficient for at least one sample.",
+          "Estimated gross contract P/L is included as research context only and does not move samples into the formal ledger."
+        ],
+        "boundary": "research_only_not_execution_authority"
+      },
+      "samples": [
+        {
+          "sampleId": "time_window_liquidity_delivery-003",
+          "reviewedFile": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-29.reviewed.json",
+          "concept": "time_window_liquidity_delivery",
+          "label": "keep_advisory",
+          "agentAssessmentStatus": "unclear_insufficient_evidence",
+          "chartEvidenceStatus": "chart_withheld",
+          "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-time_window_liquidity_delivery-003.png",
+          "chartReportPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\research-review-chart-report-MES-2026-01-01-to-2026-05-30.md",
+          "estimatedGrossContractPnl": {
+            "rootSymbol": "MES",
+            "displayName": "Micro E-mini S&P 500",
+            "contracts": 1,
+            "pointValue": 5,
+            "tickSize": 0.25,
+            "tickValue": 1.25,
+            "currency": "USD",
+            "metadataSource": "static_contract_metadata",
+            "status": "available",
+            "note": "Research-only gross estimate for 1 MES contract. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.",
+            "mfePoints": 34.75,
+            "mfeTicks": 139,
+            "mfeDollars": 173.75,
+            "maePoints": -2,
+            "maeTicks": -8,
+            "maeDollars": -10,
+            "t1Points": 4,
+            "t1Ticks": 16,
+            "t1Dollars": 20,
+            "t2Points": 8,
+            "t2Ticks": 32,
+            "t2Dollars": 40,
+            "adversePoints": -4,
+            "adverseTicks": -16,
+            "adverseDollars": -20,
+            "firstMeaningfulMovePoints": 4,
+            "firstMeaningfulMoveTicks": 16,
+            "firstMeaningfulMoveDollars": 20,
+            "hypotheticalOutcomePoints": 8,
+            "hypotheticalOutcomeTicks": 32,
+            "hypotheticalOutcomeDollars": 40
+          },
+          "nextHumanAction": "review_chart"
+        },
+        {
+          "sampleId": "time_window_liquidity_delivery-014",
+          "reviewedFile": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-30.reviewed.json",
+          "concept": "time_window_liquidity_delivery",
+          "label": "new_model_candidate_review",
+          "agentAssessmentStatus": "partially_agrees_with_human",
+          "chartEvidenceStatus": "chart_available",
+          "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-time_window_liquidity_delivery-014.png",
+          "chartReportPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\research-review-chart-report-MES-2026-01-01-to-2026-05-30.md",
+          "estimatedGrossContractPnl": {
+            "rootSymbol": "MES",
+            "displayName": "Micro E-mini S&P 500",
+            "contracts": 1,
+            "pointValue": 5,
+            "tickSize": 0.25,
+            "tickValue": 1.25,
+            "currency": "USD",
+            "metadataSource": "static_contract_metadata",
+            "status": "available",
+            "note": "Research-only gross estimate for 1 MES contract. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.",
+            "mfePoints": 15.25,
+            "mfeTicks": 61,
+            "mfeDollars": 76.25,
+            "maePoints": -10,
+            "maeTicks": -40,
+            "maeDollars": -50,
+            "t1Points": 4,
+            "t1Ticks": 16,
+            "t1Dollars": 20,
+            "t2Points": 8,
+            "t2Ticks": 32,
+            "t2Dollars": 40,
+            "adversePoints": -4,
+            "adverseTicks": -16,
+            "adverseDollars": -20,
+            "firstMeaningfulMovePoints": -4,
+            "firstMeaningfulMoveTicks": -16,
+            "firstMeaningfulMoveDollars": -20,
+            "hypotheticalOutcomePoints": -4,
+            "hypotheticalOutcomeTicks": -16,
+            "hypotheticalOutcomeDollars": -20
+          },
+          "nextHumanAction": "decide_candidate_label"
+        }
+      ]
+    }
+  ],
+  "ignoredFormalLedgerReason": "Watchlist/advisory samples are human-reviewed but do not use approved_for_future_model_candidate_review or not_approved_for_future_model_candidate_review. They do not count toward formal model-candidate gates unless a human later applies a formal model-candidate label.",
+  "outputPaths": {
+    "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.json",
+    "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.md",
+    "rangeJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.json",
+    "rangeMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.md"
+  }
+}
