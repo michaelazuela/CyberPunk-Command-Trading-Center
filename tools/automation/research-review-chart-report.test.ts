@@ -25,6 +25,20 @@ try {
         direction: 'LONG',
         agentInspectionLabel: 'keep_advisory',
         warningFailureReason: 'Approved Model 1 or Turtle Soup gates were not evaluated by research backfill.',
+        reviewEvidence: {
+          chartAvailable: true,
+          chartWithheld: false,
+          chartPngPath: 'tools/automation/research-review-charts/card.png',
+          chartReportPath: 'tools/automation/research-review-charts/report.md',
+          evidenceStatus: 'chart_available',
+        },
+        estimatedGrossContractPnl: {
+          rootSymbol: 'MES',
+          status: 'available',
+          hypotheticalOutcomeDollars: 40,
+          mfeDollars: 56.25,
+          maeDollars: -8.75,
+        },
         advisoryOnly: true,
       }],
     },
@@ -59,6 +73,11 @@ try {
   assert.ok(markdown.includes('Research Review Only'));
   assert.ok(markdown.includes('Total reviewed samples: 1'));
   assert.ok(markdown.includes('Average Research Quality Score: Not provided'));
+  assert.ok(markdown.includes('Samples with chart/report evidence: 1'));
+  assert.ok(markdown.includes('Samples with estimated gross contract P/L: 1'));
+  assert.ok(markdown.includes('Research-only estimated gross contract P/L. Not actual P/L, not net P/L, not live P/L, and not model approval.'));
+  assert.ok(markdown.includes('MES research-only estimated gross contract P/L: Hyp +$40.00 gross; MFE +$56.25 gross; MAE -$8.75 gross'));
+  assert.ok(!markdown.includes('profitable system'));
 
   const scoredReport = await generateResearchReviewChartReport({
     reviewPackPath: 'fixture/scored-review.json',

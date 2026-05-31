@@ -71,6 +71,9 @@ export interface ResearchDiscordPriceActionCardOptions {
   bridgeUrl?: string;
   outputDir?: string;
   dateRange?: { from: string; to: string } | null;
+  chartReportPath?: string | null;
+  chartSvgPath?: string | null;
+  sourceReviewCard?: string | null;
   contractResolution?: ActiveBridgeInstrumentResolution | null;
   resolveBars?: typeof resolveResearchPriceActionBars;
   renderCard?: typeof renderPriceActionReviewCard;
@@ -535,6 +538,11 @@ export async function publishResearchDiscordReview(options: ResearchDiscordRevie
         postedTextOnly: Boolean(priceActionConfig.config?.enabled && !cardResult?.attached),
         chartWithheld: Boolean(cardResult?.chartWithheld),
         chartWithheldReason: cardResult?.chartWithheldReason,
+        chartPngPath: cardResult?.pngPath,
+        chartSvgPath: priceActionConfig.config?.chartSvgPath,
+        chartReportPath: priceActionConfig.config?.chartReportPath,
+        sourceReviewCard: priceActionConfig.config?.sourceReviewCard || (priceActionConfig.config?.enabled ? 'Discord PriceActionReviewCard post' : null),
+        estimatedGrossContractPnl: item.estimatedGrossContractPnl,
       });
       stateEntries.push(entry);
       currentState = appendResearchDiscordReviewState(currentState || emptyResearchDiscordReviewState(), [entry]);

@@ -445,6 +445,8 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
       bridgeUrl: activeContract.bridgeUrl,
       outputDir: DEFAULT_PRICE_ACTION_REVIEW_CARD_DIR,
       dateRange: { from: options.from, to: options.to },
+      chartReportPath: chartReport.summaryMarkdownPath,
+      sourceReviewCard: 'Discord PriceActionReviewCard post',
       contractResolution: activeContract,
     } : undefined,
   });

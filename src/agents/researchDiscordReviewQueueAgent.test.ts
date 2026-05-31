@@ -367,12 +367,20 @@ const state = appendResearchDiscordReviewState(emptyResearchDiscordReviewState()
     discordMessageId: '123',
     discordChannelId: 'channel-1',
     postedAt: '2026-05-29T20:00:00.000Z',
+    chartPngPath: 'tools/automation/research-review-charts/price-action-review-card-fixture.png',
+    chartSvgPath: 'tools/automation/research-review-charts/price-action-review-card-fixture.svg',
+    chartReportPath: 'tools/automation/research-review-charts/research-review-chart-report-fixture.md',
+    sourceReviewCard: 'Discord PriceActionReviewCard post',
     estimatedGrossContractPnl: queue.items[0].estimatedGrossContractPnl,
   }),
 ]);
 assert.equal(state.entries.length, 1);
 assert.equal(state.entries[0].advisoryOnly, true);
 assert.equal(state.entries[0].reviewed, false);
+assert.equal(state.entries[0].chartPngPath, 'tools/automation/research-review-charts/price-action-review-card-fixture.png');
+assert.equal(state.entries[0].chartSvgPath, 'tools/automation/research-review-charts/price-action-review-card-fixture.svg');
+assert.equal(state.entries[0].chartReportPath, 'tools/automation/research-review-charts/research-review-chart-report-fixture.md');
+assert.equal(state.entries[0].sourceReviewCard, 'Discord PriceActionReviewCard post');
 assert.equal(state.entries[0].estimatedGrossContractPnl?.rootSymbol, 'MES');
 const stateSummary = summarizeResearchDiscordReviewState('state.json', state);
 assert.equal(stateSummary.totalPostedSamples, 1);

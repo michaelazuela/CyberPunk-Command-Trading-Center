@@ -11,6 +11,7 @@ import type {
   HistoricalResearchBackfillReport,
   ResearchBackfillConceptSelector,
 } from '../../src/agents/historicalResearchBackfillAgent';
+import { writeLatestReviewPackManifest } from './research-review-pack-manifest';
 
 type Instrument = 'MES' | 'MNQ';
 
@@ -162,6 +163,11 @@ export async function runResearchSampleReviewCli(rawArgs = process.argv.slice(2)
   });
   const files = writeReviewPack(options, pack);
   if (files) {
+    writeLatestReviewPackManifest({
+      reviewPackPath: files.jsonFile,
+      pack,
+      sourceAgent: 'researchSampleReviewAgent',
+    });
     console.log(`Research sample review saved: ${files.jsonFile}`);
     console.log(`Research sample review markdown saved: ${files.markdownFile}`);
   }
