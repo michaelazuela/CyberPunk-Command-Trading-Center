@@ -18,6 +18,30 @@ export interface PriceActionReviewCardRenderInput {
   filePrefix?: string;
 }
 
+export interface PriceActionReviewChartMetadata {
+  timeframe: '5m' | '15m';
+  barsRendered: number;
+  xAxisLabelsRendered: boolean;
+  yAxisLabelsRendered: boolean;
+  priceRange: { min: number; max: number } | null;
+  timeRange: { from: string; to: string } | null;
+  overlayLevelsAttempted: number;
+  overlayLevelsRendered: number;
+}
+
+export interface PriceActionReviewCardRenderMetadata {
+  outputPath: string;
+  renderedPng: boolean;
+  renderedSvg: false;
+  mainChart: PriceActionReviewChartMetadata;
+  contextChart: PriceActionReviewChartMetadata;
+  warnings: string[];
+}
+
+export interface PriceActionReviewCardRenderResult extends PriceActionReviewCardRenderMetadata {
+  outputPath: string;
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -50,19 +74,33 @@ function visibleTime(value: string): string {
   return match?.[1] || value.slice(11, 16) || value;
 }
 
+function uniqueTickIndexes(length: number, requested: number): number[] {
+  if (length <= 0) return [];
+  if (length === 1) return [0];
+  const count = Math.min(length, requested);
+  return [...new Set(Array.from({ length: count }, (_, index) => Math.round((index / (count - 1)) * (length - 1))))];
+}
+
+function priceTicks(low: number, high: number, count: number): number[] {
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return [];
+  if (Math.abs(high - low) < 0.01) return [low];
+  return Array.from({ length: count }, (_, index) => high - ((high - low) / (count - 1)) * index);
+}
+
 function chartSvg(args: {
   title: string;
+  timeframe: '5m' | '15m';
   bars: PriceActionReviewBar[];
   levels: Array<{ label: string; value: string; color: string }>;
   width: number;
   height: number;
   compact?: boolean;
-}): string {
+}): { html: string; metadata: PriceActionReviewChartMetadata; warnings: string[] } {
   const { width, height } = args;
-  const left = args.compact ? 36 : 60;
-  const right = args.compact ? 92 : 138;
+  const left = args.compact ? 50 : 74;
+  const right = args.compact ? 94 : 146;
   const top = args.compact ? 42 : 58;
-  const bottom = args.compact ? 36 : 54;
+  const bottom = args.compact ? 44 : 64;
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
   const bars = args.bars.filter((bar) => [bar.open, bar.high, bar.low, bar.close].every(isPrice));
@@ -79,9 +117,16 @@ function chartSvg(args: {
   const y = (price: number) => top + ((high - price) / Math.max(0.01, high - low)) * chartHeight;
   const x = (index: number) => left + (bars.length <= 1 ? chartWidth / 2 : (index / (bars.length - 1)) * chartWidth);
   const candleWidth = args.compact ? 9 : 18;
-  const grid = Array.from({ length: 5 }, (_, index) => {
-    const gy = top + (chartHeight / 4) * index;
-    return `<line x1="${left}" y1="${gy}" x2="${left + chartWidth}" y2="${gy}" stroke="rgba(148,163,184,0.16)" stroke-width="1" />`;
+  const warnings: string[] = [];
+  if (bars.length < 2) warnings.push(`Insufficient ${args.timeframe} bars for reliable axis rendering.`);
+  const yTickValues = priceTicks(low, high, args.compact ? 3 : 5);
+  const xTickIndexes = uniqueTickIndexes(bars.length, args.compact ? 2 : 4);
+  const grid = yTickValues.map((price) => {
+    const gy = y(price);
+    return [
+      `<line x1="${left}" y1="${gy}" x2="${left + chartWidth}" y2="${gy}" stroke="rgba(148,163,184,0.16)" stroke-width="1" />`,
+      `<text x="${left - 10}" y="${gy + 4}" class="price-axis" text-anchor="end">${price.toFixed(2)}</text>`,
+    ].join('');
   }).join('');
   const candles = bars.map((bar, index) => {
     const bullish = bar.close >= bar.open;
@@ -94,9 +139,11 @@ function chartSvg(args: {
       `<rect x="${cx - candleWidth / 2}" y="${bodyTop}" width="${candleWidth}" height="${Math.max(3, bodyBottom - bodyTop)}" rx="2" fill="${color}" />`,
     ].join('');
   }).join('');
+  let renderedLevels = 0;
   const levels = args.levels.map((level, index) => {
     const price = parsePriceLabel(level.value);
     if (price === null) return '';
+    renderedLevels += 1;
     const ly = y(price);
     const labelY = Math.max(top + 14, Math.min(top + chartHeight - 6, ly - 4 + index * 2));
     return [
@@ -105,17 +152,20 @@ function chartSvg(args: {
     ].join('');
   }).join('');
   const times = bars.length ? [
-    `<text x="${left}" y="${height - 14}" class="time">${escapeHtml(visibleTime(bars[0].time))}</text>`,
-    `<text x="${left + chartWidth}" y="${height - 14}" class="time end">${escapeHtml(visibleTime(bars[bars.length - 1].time))}</text>`,
+    ...xTickIndexes.map((index) => {
+      const labelX = x(index);
+      const anchor = index === 0 ? 'start' : index === bars.length - 1 ? 'end' : 'middle';
+      return `<text x="${labelX}" y="${height - 18}" class="time" text-anchor="${anchor}">${escapeHtml(visibleTime(bars[index].time))}</text>`;
+    }),
   ].join('') : `<text x="${left}" y="${top + 36}" class="empty">No valid provided bars available.</text>`;
 
-  return `
+  const html = `
     <svg class="chart-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(args.title)}">
       <style>
         .chart-title { fill: #f8fafc; font: 800 ${args.compact ? 15 : 25}px Arial, sans-serif; letter-spacing: 0; }
         .axis-label { font: 800 ${args.compact ? 10 : 14}px Arial, sans-serif; letter-spacing: 0; }
-        .time { fill: #94a3b8; font: 600 ${args.compact ? 10 : 12}px Arial, sans-serif; letter-spacing: 0; }
-        .end { text-anchor: end; }
+        .price-axis { fill: #cbd5e1; font: 800 ${args.compact ? 9 : 12}px Arial, sans-serif; letter-spacing: 0; }
+        .time { fill: #cbd5e1; font: 800 ${args.compact ? 9 : 12}px Arial, sans-serif; letter-spacing: 0; }
         .empty { fill: #f97316; font: 700 16px Arial, sans-serif; letter-spacing: 0; }
       </style>
       <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#0b1018" stroke="rgba(56,189,248,0.22)" />
@@ -126,6 +176,20 @@ function chartSvg(args: {
       ${times}
     </svg>
   `;
+  return {
+    html,
+    metadata: {
+      timeframe: args.timeframe,
+      barsRendered: bars.length,
+      xAxisLabelsRendered: xTickIndexes.length > 0,
+      yAxisLabelsRendered: yTickValues.length > 0,
+      priceRange: prices.length ? { min: low, max: high } : null,
+      timeRange: bars.length ? { from: bars[0].time, to: bars[bars.length - 1].time } : null,
+      overlayLevelsAttempted: args.levels.length,
+      overlayLevelsRendered: renderedLevels,
+    },
+    warnings,
+  };
 }
 
 function metric(label: string, value: string, tone = 'neutral'): string {
@@ -146,7 +210,7 @@ function logoDataUri(): string {
   return `data:image/png;base64,${bytes.toString('base64')}`;
 }
 
-export function buildPriceActionReviewCardHtmlForTest(model: PriceActionReviewCardModel): string {
+export function buildPriceActionReviewCardRenderDocument(model: PriceActionReviewCardModel): { html: string; metadata: Omit<PriceActionReviewCardRenderMetadata, 'outputPath' | 'renderedPng' | 'renderedSvg'> } {
   const logoUrl = logoDataUri() || pathToFileURL(LOGO_PATH).toString();
   const levels = [
     { label: 'Entry', value: model.hypotheticalEntryLabel, color: '#22c55e' },
@@ -157,8 +221,10 @@ export function buildPriceActionReviewCardHtmlForTest(model: PriceActionReviewCa
   const warnings = model.warnings.length
     ? model.warnings.slice(0, 3).map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')
     : '<li>No missing-data warnings for provided Phase 2 inputs.</li>';
+  const mainChart = chartSvg({ title: '5M Price Action - Research Review Window', timeframe: '5m', bars: model.bars5m, levels, width: 1034, height: 500 });
+  const contextChart = chartSvg({ title: '15M Context', timeframe: '15m', bars: model.bars15m, levels: levels.slice(0, 2), width: 350, height: 158, compact: true });
 
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -394,10 +460,10 @@ export function buildPriceActionReviewCardHtmlForTest(model: PriceActionReviewCa
       </header>
       <main class="body">
         <div class="main-chart">
-          ${chartSvg({ title: '5M Price Action - Research Review Window', bars: model.bars5m, levels, width: 1034, height: 500 })}
+          ${mainChart.html}
         </div>
         <aside class="side">
-          ${chartSvg({ title: '15M Context', bars: model.bars15m, levels: levels.slice(0, 2), width: 350, height: 158, compact: true })}
+          ${contextChart.html}
           <section class="panel">
             <div class="panel-title">Review Rail</div>
             ${row('Concept', model.conceptLabel)}
@@ -437,6 +503,18 @@ export function buildPriceActionReviewCardHtmlForTest(model: PriceActionReviewCa
     </section>
   </body>
 </html>`;
+  return {
+    html,
+    metadata: {
+      mainChart: mainChart.metadata,
+      contextChart: contextChart.metadata,
+      warnings: [...model.warnings, ...mainChart.warnings, ...contextChart.warnings],
+    },
+  };
+}
+
+export function buildPriceActionReviewCardHtmlForTest(model: PriceActionReviewCardModel): string {
+  return buildPriceActionReviewCardRenderDocument(model).html;
 }
 
 function defaultOutputPath(input: PriceActionReviewCardRenderInput): string {
@@ -445,9 +523,14 @@ function defaultOutputPath(input: PriceActionReviewCardRenderInput): string {
 }
 
 export async function renderPriceActionReviewCard(input: PriceActionReviewCardRenderInput): Promise<string> {
+  return (await renderPriceActionReviewCardWithMetadata(input)).outputPath;
+}
+
+export async function renderPriceActionReviewCardWithMetadata(input: PriceActionReviewCardRenderInput): Promise<PriceActionReviewCardRenderResult> {
   const outputPath = path.resolve(input.outputPath || defaultOutputPath(input));
+  const document = buildPriceActionReviewCardRenderDocument(input.model);
   const rendered = await renderHtmlToApprovedPng({
-    html: buildPriceActionReviewCardHtmlForTest(input.model),
+    html: document.html,
     outputPath,
     viewport: { width: PRICE_ACTION_REVIEW_CARD_WIDTH, height: PRICE_ACTION_REVIEW_CARD_HEIGHT },
     expectedWidth: PRICE_ACTION_REVIEW_CARD_WIDTH,
@@ -461,5 +544,12 @@ export async function renderPriceActionReviewCard(input: PriceActionReviewCardRe
     minBytes: 20_000,
   });
   if (verification.ok === false) throw new Error(`PriceActionReviewCard PNG validation failed: ${verification.reason}`);
-  return rendered;
+  return {
+    outputPath: rendered,
+    renderedPng: true,
+    renderedSvg: false,
+    mainChart: document.metadata.mainChart,
+    contextChart: document.metadata.contextChart,
+    warnings: document.metadata.warnings,
+  };
 }

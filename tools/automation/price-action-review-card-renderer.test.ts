@@ -9,6 +9,7 @@ import {
 import {
   buildPriceActionReviewCardHtmlForTest,
   renderPriceActionReviewCard,
+  renderPriceActionReviewCardWithMetadata,
 } from './price-action-review-card-renderer';
 
 const outputDir = mkdtempSync(path.join(tmpdir(), 'price-action-review-card-'));
@@ -181,6 +182,14 @@ try {
   assert.ok(html.includes('Buy/Sell Now'));
   assert.ok(html.includes('Pending Human Review'));
   assert.ok(html.includes('PNG artifact only'));
+  assert.ok(html.includes('5M Price Action - Research Review Window'));
+  assert.ok(html.includes('15M Context'));
+  assert.ok(html.includes('10:00'));
+  assert.ok(html.includes('10:15'));
+  assert.ok(html.includes('759'));
+  assert.ok(html.includes('760'));
+  assert.ok(html.includes('Entry 7597.00'));
+  assert.ok(html.includes('Stop 7593.00'));
   const forbiddenMethodLabel = ['I', 'C', 'T'].join('');
   assert.equal(html.replace(/data:image\/png;base64,[^"]+/g, '').includes(forbiddenMethodLabel), false);
 
@@ -196,6 +205,38 @@ try {
   assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   const generated = readdirSync(outputDir);
   assert.equal(generated.some((file) => file.toLowerCase().endsWith('.svg')), false);
+
+  const metadataOutput = await renderPriceActionReviewCardWithMetadata({
+    model,
+    outputDir,
+    filePrefix: 'price-action-review-card-axis-metadata-fixture',
+  });
+  assert.equal(metadataOutput.renderedPng, true);
+  assert.equal(metadataOutput.renderedSvg, false);
+  assert.equal(metadataOutput.mainChart.timeframe, '5m');
+  assert.equal(metadataOutput.mainChart.barsRendered, 6);
+  assert.equal(metadataOutput.mainChart.xAxisLabelsRendered, true);
+  assert.equal(metadataOutput.mainChart.yAxisLabelsRendered, true);
+  assert.equal(metadataOutput.mainChart.overlayLevelsAttempted, 4);
+  assert.equal(metadataOutput.mainChart.overlayLevelsRendered, 4);
+  assert.ok(metadataOutput.mainChart.priceRange?.min !== metadataOutput.mainChart.priceRange?.max);
+  assert.equal(metadataOutput.mainChart.timeRange?.from, '2026-05-29T10:10:00-04:00');
+  assert.equal(metadataOutput.mainChart.timeRange?.to, '2026-05-29T10:35:00-04:00');
+  assert.equal(metadataOutput.contextChart.timeframe, '15m');
+  assert.equal(metadataOutput.contextChart.barsRendered, 2);
+  assert.equal(metadataOutput.contextChart.xAxisLabelsRendered, true);
+  assert.equal(metadataOutput.contextChart.yAxisLabelsRendered, true);
+  assert.equal(metadataOutput.contextChart.overlayLevelsRendered, 2);
+  assert.equal(metadataOutput.warnings.some((warning) => warning.includes('Insufficient bars for reliable axis rendering')), false);
+
+  const insufficientMetadata = await renderPriceActionReviewCardWithMetadata({
+    model: missingModel,
+    outputDir,
+    filePrefix: 'price-action-review-card-axis-insufficient-fixture',
+  });
+  assert.ok(insufficientMetadata.warnings.some((warning) => warning.includes('Insufficient 5m bars for reliable axis rendering.')));
+  assert.ok(insufficientMetadata.warnings.some((warning) => warning.includes('Insufficient 15m bars for reliable axis rendering.')));
+  assert.equal(insufficientMetadata.renderedSvg, false);
 
   console.log(`PriceActionReviewCard renderer verified: ${output}`);
 } finally {
