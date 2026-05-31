@@ -15,12 +15,15 @@ tools/automation/Supabase
 tools/automation/.discord-alert-state.json
 tools/automation/.nt-scanner-state.json
 tools/automation/.macro-calendar-cache.json
+tools/automation/discord-report-state.json
 tools/automation/chart-markups/
 tools/automation/discord-audit/
 tools/automation/diagnostic-reports/
 tools/automation/research-reports/
 tools/automation/research-outcome-reports/
+tools/automation/research-review-charts/
 tools/automation/research-validation-reports/
-tools/automation/research-review-packs/
+tools/automation/research-review-packs/*
+!tools/automation/research-review-packs/latest-review-pack.json
 tools/automation/weekly-reports/
 tools/automation/.weekly-trading-report-state.json

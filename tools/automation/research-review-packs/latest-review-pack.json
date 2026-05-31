@@ -1,0 +1,13 @@
+{
+  "reportType": "latest_research_review_pack_manifest",
+  "packPath": "tools/automation/research-review-packs/research-sample-review-MES-all-2026-05-31.json",
+  "packFile": "research-sample-review-MES-all-2026-05-31.json",
+  "generatedAt": "2026-05-31T04:48:53.898Z",
+  "instrument": "MES",
+  "session": "research-review",
+  "scope": "all",
+  "sampleCount": 30,
+  "sourceAgent": "researchDiscordReviewPostWorkflow",
+  "reviewPackId": "research-sample-review-MES-all-2026-05-31",
+  "updatedAt": "2026-05-31T04:48:53.900Z"
+}
