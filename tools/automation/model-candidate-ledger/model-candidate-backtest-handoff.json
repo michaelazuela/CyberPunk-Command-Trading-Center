@@ -1,0 +1,243 @@
+{
+  "reportType": "model_candidate_backtest_handoff",
+  "symbol": "MES",
+  "from": "2026-01-01",
+  "to": "2026-05-31",
+  "generatedAt": "2026-05-31T21:51:13.093Z",
+  "boundary": "research_only_not_execution_authority",
+  "summary": {
+    "conceptCount": 2,
+    "candidateReviewRecommendedCount": 0,
+    "watchlistCount": 1,
+    "keepCollectingEvidenceCount": 1,
+    "doNotAdvanceCount": 0,
+    "rejectedOrDeprioritizedCount": 0
+  },
+  "concepts": [
+    {
+      "concept": "final_hour_liquidity_draw",
+      "conceptTitle": "Final-Hour Liquidity Draw",
+      "researchRecommendation": {
+        "status": "keep_collecting_evidence",
+        "recommendationText": "Keep collecting evidence.",
+        "humanFinalDecisionRequired": true,
+        "boundary": "research_only_not_execution_authority"
+      },
+      "gateResults": {
+        "sampleCountGate": "fail",
+        "humanApprovalRateGate": "pass",
+        "missingDataGate": "fail",
+        "adverseFirstGate": "pass",
+        "chartEvidenceGate": "pass",
+        "agentAssessmentGate": "pass",
+        "pnlSupportSignal": "not_meaningful_low_sample_count"
+      },
+      "evidenceSummary": {
+        "reviewedSamples": 1,
+        "formalLedgerEligibleSamples": 1,
+        "humanApprovedCount": 1,
+        "humanNotApprovedCount": 0,
+        "humanApprovalRate": 1,
+        "agentAssessmentSummary": {
+          "agreesWithHuman": 0,
+          "partiallyAgreesWithHuman": 1,
+          "disagreesWithHuman": 0,
+          "unclearInsufficientEvidence": 0
+        },
+        "chartEvidenceSummary": {
+          "samplesWithChartEvidence": 1,
+          "samplesWithExactPngPath": 1,
+          "samplesWithExactReportPath": 1,
+          "samplesMissingCharts": 0,
+          "samplesWithUnknownCharts": 0,
+          "samplesWithWithheldCharts": 0
+        },
+        "estimatedGrossContractPnlSummary": {
+          "rootSymbol": "MES",
+          "sampleCountWithPnl": 1,
+          "sampleCountMissingPnl": 0,
+          "avgHypotheticalOutcomeDollars": 40,
+          "totalHypotheticalOutcomeDollars": 40,
+          "bestHypotheticalOutcomeDollars": 40,
+          "worstHypotheticalOutcomeDollars": 40,
+          "avgMfeDollars": 56.25,
+          "avgMaeDollars": -8.75,
+          "status": "available"
+        },
+        "adverseFirstContradictionCount": 0,
+        "missingDataWarningCount": 3
+      },
+      "supportingSamples": [
+        {
+          "sampleId": "final_hour_liquidity_draw-030",
+          "reviewedFile": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-packs\\research-sample-review-MES-all-2026-05-31.reviewed.json",
+          "humanLabel": "approved_for_future_model_candidate_review",
+          "agentAssessmentStatus": "partially_agrees_with_human",
+          "chartReportPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\research-review-chart-report-MES-2026-01-01-to-2026-05-30.md",
+          "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-030.png",
+          "estimatedGrossContractPnl": {
+            "rootSymbol": "MES",
+            "displayName": "Micro E-mini S&P 500",
+            "contracts": 1,
+            "pointValue": 5,
+            "tickSize": 0.25,
+            "tickValue": 1.25,
+            "currency": "USD",
+            "metadataSource": "static_contract_metadata",
+            "status": "available",
+            "note": "Research-only gross estimate for 1 MES contract. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.",
+            "mfePoints": 11.25,
+            "mfeTicks": 45,
+            "mfeDollars": 56.25,
+            "maePoints": -1.75,
+            "maeTicks": -7,
+            "maeDollars": -8.75,
+            "t1Points": 4,
+            "t1Ticks": 16,
+            "t1Dollars": 20,
+            "t2Points": 8,
+            "t2Ticks": 32,
+            "t2Dollars": 40,
+            "adversePoints": -4,
+            "adverseTicks": -16,
+            "adverseDollars": -20,
+            "firstMeaningfulMovePoints": 4,
+            "firstMeaningfulMoveTicks": 16,
+            "firstMeaningfulMoveDollars": 20,
+            "hypotheticalOutcomePoints": 8,
+            "hypotheticalOutcomeTicks": 32,
+            "hypotheticalOutcomeDollars": 40
+          },
+          "outcomeSummary": {
+            "outcomeClassification": "favorable_continuation",
+            "firstMeaningfulMove": "favorable",
+            "favorableThresholdOneTouched": true,
+            "favorableThresholdTwoTouched": true,
+            "adverseThresholdTouched": false,
+            "hypotheticalOutcomeLabel": "favorable_continuation"
+          }
+        }
+      ],
+      "backtestReadiness": {
+        "status": "blocked_by_missing_evidence",
+        "reasons": [
+          "Missing-data warnings must be resolved before formal backtest review.",
+          "Reviewed sample count is below the 10-sample evidence gate.",
+          "Estimated gross contract P/L is not meaningful until the core evidence base is large enough.",
+          "Missing-data warnings must be resolved before formal model-candidate review.",
+          "Estimated gross contract P/L is not meaningful while the reviewed sample count is below the minimum threshold."
+        ],
+        "requiredBacktestDefinitions": {
+          "entryModel": "missing",
+          "exitModel": "missing",
+          "stopModel": "missing",
+          "targetModel": "missing",
+          "fillAssumption": "missing",
+          "commissionAssumption": "missing",
+          "slippageAssumption": "missing",
+          "positionSizing": "missing",
+          "sessionFilter": "missing"
+        },
+        "nextHumanAction": "define_backtest_assumptions"
+      }
+    },
+    {
+      "concept": "time_window_liquidity_delivery",
+      "conceptTitle": "Time-Window Liquidity Delivery",
+      "researchRecommendation": {
+        "status": "watchlist_candidate",
+        "recommendationText": "Watchlist candidate.",
+        "humanFinalDecisionRequired": true,
+        "boundary": "research_only_not_execution_authority"
+      },
+      "gateResults": {
+        "sampleCountGate": "fail",
+        "humanApprovalRateGate": "not_applicable",
+        "missingDataGate": "pass",
+        "adverseFirstGate": "pass",
+        "chartEvidenceGate": "fail",
+        "agentAssessmentGate": "pass",
+        "pnlSupportSignal": "supportive"
+      },
+      "evidenceSummary": {
+        "reviewedSamples": 0,
+        "formalLedgerEligibleSamples": 0,
+        "humanApprovedCount": 0,
+        "humanNotApprovedCount": 0,
+        "agentAssessmentSummary": {
+          "agreesWithHuman": 0,
+          "partiallyAgreesWithHuman": 1,
+          "disagreesWithHuman": 0,
+          "unclearInsufficientEvidence": 1
+        },
+        "chartEvidenceSummary": {
+          "samplesWithChartEvidence": 2,
+          "samplesWithExactPngPath": 2,
+          "samplesWithExactReportPath": 2,
+          "samplesMissingCharts": 0,
+          "samplesWithUnknownCharts": 0,
+          "samplesWithWithheldCharts": 1
+        },
+        "estimatedGrossContractPnlSummary": {
+          "rootSymbol": "MES",
+          "sampleCountWithPnl": 2,
+          "sampleCountMissingPnl": 0,
+          "avgHypotheticalOutcomeDollars": 10,
+          "avgMfeDollars": 125,
+          "avgMaeDollars": -30,
+          "status": "available"
+        },
+        "adverseFirstContradictionCount": 0,
+        "missingDataWarningCount": 0
+      },
+      "supportingSamples": [],
+      "watchlistSamples": [
+        {
+          "sampleId": "time_window_liquidity_delivery-003",
+          "label": "keep_advisory",
+          "reason": [
+            "Chart/report evidence is missing, unknown, or withheld for at least one watchlist sample.",
+            "Agent assessment is unclear or insufficient for at least one sample.",
+            "Estimated gross contract P/L is included as research context only and does not move samples into the formal ledger."
+          ],
+          "nextHumanAction": "review_chart"
+        },
+        {
+          "sampleId": "time_window_liquidity_delivery-014",
+          "label": "new_model_candidate_review",
+          "reason": [
+            "Chart/report evidence is missing, unknown, or withheld for at least one watchlist sample.",
+            "Agent assessment is unclear or insufficient for at least one sample.",
+            "Estimated gross contract P/L is included as research context only and does not move samples into the formal ledger."
+          ],
+          "nextHumanAction": "decide_candidate_label"
+        }
+      ],
+      "backtestReadiness": {
+        "status": "watchlist_only",
+        "reasons": [
+          "Concept is currently watchlist/advisory only and does not have formal model-candidate ledger evidence.",
+          "A human must apply a formal model-candidate label before this can move toward formal backtest review."
+        ],
+        "requiredBacktestDefinitions": {
+          "entryModel": "missing",
+          "exitModel": "missing",
+          "stopModel": "missing",
+          "targetModel": "missing",
+          "fillAssumption": "missing",
+          "commissionAssumption": "missing",
+          "slippageAssumption": "missing",
+          "positionSizing": "missing",
+          "sessionFilter": "missing"
+        },
+        "nextHumanAction": "keep_on_watchlist"
+      }
+    }
+  ],
+  "outputPaths": {
+    "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff.json",
+    "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff.md",
+    "rangeJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-31.json",
+    "rangeMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-31.md"
+  }
+}

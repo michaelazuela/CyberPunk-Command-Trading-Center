@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   assertNoExecutableLedgerFields,
+  buildModelCandidateBacktestHandoff,
   buildModelCandidateResearchRecommendation,
   buildModelCandidateReviewLedger,
   interpretModelCandidateAdvisoryEvidence,
@@ -289,6 +290,10 @@ assert.ok(ledger.outputPaths.watchlistJsonPath?.endsWith('model-candidate-watchl
 assert.ok(ledger.outputPaths.watchlistMarkdownPath?.endsWith('model-candidate-watchlist.md'));
 assert.ok(ledger.outputPaths.rangeWatchlistJsonPath?.endsWith('model-candidate-watchlist-MES-2026-01-01-to-2026-05-30.json'));
 assert.ok(ledger.outputPaths.rangeWatchlistMarkdownPath?.endsWith('model-candidate-watchlist-MES-2026-01-01-to-2026-05-30.md'));
+assert.ok(ledger.outputPaths.backtestHandoffJsonPath?.endsWith('model-candidate-backtest-handoff.json'));
+assert.ok(ledger.outputPaths.backtestHandoffMarkdownPath?.endsWith('model-candidate-backtest-handoff.md'));
+assert.ok(ledger.outputPaths.rangeBacktestHandoffJsonPath?.endsWith('model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-30.json'));
+assert.ok(ledger.outputPaths.rangeBacktestHandoffMarkdownPath?.endsWith('model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-30.md'));
 assert.equal(existsSync(ledger.outputPaths.jsonPath), true);
 assert.equal(existsSync(ledger.outputPaths.markdownPath), true);
 assert.equal(existsSync(ledger.outputPaths.rangeJsonPath || ''), true);
@@ -297,6 +302,10 @@ assert.equal(existsSync(ledger.outputPaths.watchlistJsonPath || ''), true);
 assert.equal(existsSync(ledger.outputPaths.watchlistMarkdownPath || ''), true);
 assert.equal(existsSync(ledger.outputPaths.rangeWatchlistJsonPath || ''), true);
 assert.equal(existsSync(ledger.outputPaths.rangeWatchlistMarkdownPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.backtestHandoffJsonPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.backtestHandoffMarkdownPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.rangeBacktestHandoffJsonPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.rangeBacktestHandoffMarkdownPath || ''), true);
 assert.equal(ledger.reviewedArtifactDiagnostics.reviewedFilesFound, 1);
 assert.equal(ledger.reviewedArtifactDiagnostics.acceptedModelCandidateSamples, 5);
 assert.equal(ledger.reviewedArtifactDiagnostics.humanReviewedSamplesFound, 7);
@@ -368,6 +377,8 @@ assert.ok(!/"canExecute"|"executionApproved"|"entry"|"stop"|"stopLoss"|"target"|
 const markdown = readFileSync(ledger.outputPaths.markdownPath, 'utf8');
 const watchlistJson = JSON.parse(readFileSync(ledger.outputPaths.watchlistJsonPath || '', 'utf8'));
 const watchlistMarkdown = readFileSync(ledger.outputPaths.watchlistMarkdownPath || '', 'utf8');
+const handoffJson = JSON.parse(readFileSync(ledger.outputPaths.backtestHandoffJsonPath || '', 'utf8'));
+const handoffMarkdown = readFileSync(ledger.outputPaths.backtestHandoffMarkdownPath || '', 'utf8');
 const geminiPromptSource = readFileSync(path.join(process.cwd(), 'src/lib/gemini.ts'), 'utf8');
 assert.ok(markdown.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.ok(markdown.includes('Human final decision required before any model promotion or implementation.'));
@@ -389,6 +400,7 @@ assert.ok(geminiPromptSource.includes('## Model-Candidate Recommendation Rule'))
 assert.ok(geminiPromptSource.includes('candidate_review_recommended means only'));
 assert.ok(geminiPromptSource.includes('## Pre-Candidate Watchlist Rule'));
 assert.ok(geminiPromptSource.includes('## Human Review Label Rule'));
+assert.ok(geminiPromptSource.includes('## Formal Backtest Handoff Rule'));
 assert.equal(watchlistJson.reportType, 'pre_candidate_watchlist');
 assert.equal(watchlistJson.boundary, 'research_only_not_execution_authority');
 assert.equal(watchlistJson.summary.humanReviewedSamples, 7);
@@ -414,6 +426,22 @@ assert.ok(watchlistMarkdown.includes('| Sample ID | Label | Category | Counts To
 assert.ok(watchlistMarkdown.includes('Estimated Gross Contract P/L'));
 assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(watchlistMarkdown));
 assertNoExecutableLedgerFields(watchlistJson);
+assert.equal(handoffJson.reportType, 'model_candidate_backtest_handoff');
+assert.equal(handoffJson.boundary, 'research_only_not_execution_authority');
+assert.equal(handoffJson.summary.conceptCount, 2);
+assert.equal(handoffJson.summary.candidateReviewRecommendedCount, 0);
+assert.equal(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'time_window_liquidity_delivery').backtestReadiness.status, 'not_ready_collect_more_evidence');
+assert.equal(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'false_run_liquidity_fade').backtestReadiness.status, 'blocked_by_missing_evidence');
+assert.equal(handoffJson.concepts.every((concept: { backtestReadiness: { requiredBacktestDefinitions: Record<string, string> } }) =>
+  Object.values(concept.backtestReadiness.requiredBacktestDefinitions).every((status) => status === 'missing')), true);
+assert.ok(handoffJson.concepts.find((concept: { concept: string }) => concept.concept === 'time_window_liquidity_delivery').supportingSamples.length === 4);
+assert.ok(handoffMarkdown.includes('# Model-Candidate Backtest Handoff'));
+assert.ok(handoffMarkdown.includes('This report is a research-only handoff package'));
+assert.ok(handoffMarkdown.includes('Entry Model | missing'));
+assert.ok(handoffMarkdown.includes('Status: not_ready_collect_more_evidence'));
+assert.ok(handoffMarkdown.includes('Status: blocked_by_missing_evidence'));
+assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(handoffMarkdown));
+assertNoExecutableLedgerFields(handoffJson);
 assert.equal(ledger.thresholds.minimumReviewedSamples, 4);
 assert.equal(ledger.thresholds.minimumApprovalRate, 0.7);
 assert.equal(ledger.summary.candidateReviewRecommendedConcepts, 1);
@@ -476,6 +504,41 @@ assert.equal(supportiveRecommendation.gateResults.chartEvidenceGate, 'pass');
 assert.equal(supportiveRecommendation.gateResults.agentAssessmentGate, 'pass');
 assert.equal(supportiveRecommendation.gateResults.pnlSupportSignal, 'supportive');
 assert.equal(supportiveRecommendation.humanFinalDecisionRequired, true);
+const readyHandoff = buildModelCandidateBacktestHandoff({
+  ...ledger,
+  entries: [],
+  conceptSummaries: [{
+    ...twld,
+    totalSamplesReviewed: 10,
+    humanApprovedCount: 8,
+    humanNotApprovedCount: 2,
+    approvalRate: 0.8,
+    candidateReadinessStatus: 'candidate_review_recommended',
+    modelCandidateAdvisoryEvidence: sufficientEvidence,
+    modelCandidateAdvisoryInterpretation: supportiveInterpretation,
+    modelCandidateResearchRecommendation: supportiveRecommendation,
+  }],
+} as typeof ledger, { ...watchlistJson, concepts: [] });
+assert.equal(readyHandoff.concepts[0].backtestReadiness.status, 'ready_for_formal_backtest_review');
+assert.equal(readyHandoff.concepts[0].backtestReadiness.nextHumanAction, 'define_backtest_assumptions');
+assert.equal(readyHandoff.concepts[0].backtestReadiness.requiredBacktestDefinitions.entryModel, 'missing');
+assertNoExecutableLedgerFields(readyHandoff);
+
+const watchlistOnlyHandoff = buildModelCandidateBacktestHandoff({
+  ...ledger,
+  entries: [],
+  conceptSummaries: [],
+} as typeof ledger, {
+  ...watchlistJson,
+  concepts: [{
+    ...watchlistFlf,
+    concept: 'watchlist_only_fixture',
+    conceptTitle: 'Watchlist Only Fixture',
+  }],
+});
+assert.equal(watchlistOnlyHandoff.concepts[0].backtestReadiness.status, 'watchlist_only');
+assert.equal(watchlistOnlyHandoff.concepts[0].supportingSamples.length, 0);
+assert.notEqual(watchlistOnlyHandoff.concepts[0].researchRecommendation.status, 'candidate_review_recommended');
 
 const lowApprovalInterpretation = interpretModelCandidateAdvisoryEvidence({
   evidence: { ...sufficientEvidence, humanApprovedCount: 6, humanNotApprovedCount: 4, humanApprovalRate: 0.6 },

@@ -208,6 +208,16 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     The label new_model_candidate_review means only that the sample may deserve human review for possible formal candidate labeling later. It is not a formal candidate approval.
 
+    ## Formal Backtest Handoff Rule
+
+    A backtest handoff package is research-only. It may recommend that a concept is ready for formal backtest review only when the formal model-candidate recommendation gates have already passed.
+
+    The package must not approve models for live use, approve a trade, activate a model, or imply actual/net P/L.
+
+    Estimated gross contract P/L is supporting context only. It does not replace a true backtest and must not make a concept ready by itself.
+
+    If required backtest assumptions are missing, the agent must say what must be defined before a true backtest can be run.
+
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
     =========================================

@@ -272,6 +272,10 @@ export interface ModelCandidateReviewLedger {
     watchlistMarkdownPath?: string;
     rangeWatchlistJsonPath?: string;
     rangeWatchlistMarkdownPath?: string;
+    backtestHandoffJsonPath?: string;
+    backtestHandoffMarkdownPath?: string;
+    rangeBacktestHandoffJsonPath?: string;
+    rangeBacktestHandoffMarkdownPath?: string;
   };
 }
 
@@ -354,6 +358,96 @@ export interface PreCandidateWatchlistReport {
     samples: PreCandidateWatchlistSample[];
   }>;
   ignoredFormalLedgerReason: string;
+  outputPaths: {
+    jsonPath: string;
+    markdownPath: string;
+    rangeJsonPath?: string;
+    rangeMarkdownPath?: string;
+  };
+}
+
+export interface ModelCandidateBacktestHandoff {
+  reportType: 'model_candidate_backtest_handoff';
+  symbol: string;
+  from: string;
+  to: string;
+  generatedAt: string;
+  boundary: 'research_only_not_execution_authority';
+  summary: {
+    conceptCount: number;
+    candidateReviewRecommendedCount: number;
+    watchlistCount: number;
+    keepCollectingEvidenceCount: number;
+    doNotAdvanceCount: number;
+    rejectedOrDeprioritizedCount: number;
+  };
+  concepts: Array<{
+    concept: string;
+    conceptTitle?: string;
+    researchRecommendation: {
+      status: ModelCandidateResearchRecommendation['status'];
+      recommendationText: string;
+      humanFinalDecisionRequired: true;
+      boundary: 'research_only_not_execution_authority';
+    };
+    gateResults: ModelCandidateResearchRecommendation['gateResults'];
+    evidenceSummary: {
+      reviewedSamples: number;
+      formalLedgerEligibleSamples: number;
+      humanApprovedCount: number;
+      humanNotApprovedCount: number;
+      humanApprovalRate?: number;
+      agentAssessmentSummary: ModelCandidateAdvisoryEvidence['agentAssessmentSummary'];
+      chartEvidenceSummary: ModelCandidateAdvisoryEvidence['reviewEvidenceSummary'];
+      estimatedGrossContractPnlSummary?: ModelCandidateAdvisoryEvidence['estimatedGrossContractPnlSummary'];
+      adverseFirstContradictionCount: number;
+      missingDataWarningCount: number;
+    };
+    supportingSamples: Array<{
+      sampleId: string;
+      reviewedFile?: string;
+      humanLabel: string;
+      agentAssessmentStatus?: string;
+      chartReportPath?: string;
+      chartPngPath?: string;
+      estimatedGrossContractPnl?: EstimatedGrossContractPnl;
+      outcomeSummary?: ModelCandidateLedgerEntry['outcomeMathSummary'];
+    }>;
+    watchlistSamples?: Array<{
+      sampleId: string;
+      label: string;
+      reason?: string[];
+      nextHumanAction?: string;
+    }>;
+    backtestReadiness: {
+      status:
+        | 'ready_for_formal_backtest_review'
+        | 'not_ready_collect_more_evidence'
+        | 'watchlist_only'
+        | 'blocked_by_missing_evidence'
+        | 'reject_or_deprioritize';
+      reasons: string[];
+      requiredBacktestDefinitions: {
+        entryModel: 'defined' | 'missing';
+        exitModel: 'defined' | 'missing';
+        stopModel: 'defined' | 'missing';
+        targetModel: 'defined' | 'missing';
+        fillAssumption: 'defined' | 'missing';
+        commissionAssumption: 'defined' | 'missing';
+        slippageAssumption: 'defined' | 'missing';
+        positionSizing: 'defined' | 'missing';
+        sessionFilter: 'defined' | 'missing';
+      };
+      nextHumanAction:
+        | 'approve_formal_backtest_design'
+        | 'define_backtest_assumptions'
+        | 'collect_more_reviewed_samples'
+        | 'resolve_missing_chart_evidence'
+        | 'resolve_adverse_contradictions'
+        | 'keep_on_watchlist'
+        | 'reject_or_deprioritize';
+    };
+  }>;
   outputPaths: {
     jsonPath: string;
     markdownPath: string;
@@ -1722,6 +1816,382 @@ function samplePnlCell(pnl: EstimatedGrossContractPnl | undefined): string {
   return `${pnl.rootSymbol} ${pnl.status}`;
 }
 
+function missingBacktestDefinitions(): ModelCandidateBacktestHandoff['concepts'][number]['backtestReadiness']['requiredBacktestDefinitions'] {
+  return {
+    entryModel: 'missing',
+    exitModel: 'missing',
+    stopModel: 'missing',
+    targetModel: 'missing',
+    fillAssumption: 'missing',
+    commissionAssumption: 'missing',
+    slippageAssumption: 'missing',
+    positionSizing: 'missing',
+    sessionFilter: 'missing',
+  };
+}
+
+function determineBacktestReadiness(args: {
+  recommendation: ModelCandidateResearchRecommendation;
+  evidence: ModelCandidateAdvisoryEvidence;
+  watchlistOnly: boolean;
+}): ModelCandidateBacktestHandoff['concepts'][number]['backtestReadiness'] {
+  const { recommendation, evidence, watchlistOnly } = args;
+  const definitions = missingBacktestDefinitions();
+  const reasons: string[] = [];
+
+  if (watchlistOnly) {
+    reasons.push('Concept is currently watchlist/advisory only and does not have formal model-candidate ledger evidence.');
+    reasons.push('A human must apply a formal model-candidate label before this can move toward formal backtest review.');
+    return {
+      status: 'watchlist_only',
+      reasons,
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'keep_on_watchlist',
+    };
+  }
+
+  if (recommendation.status === 'reject_or_deprioritize') {
+    reasons.push('Research recommendation is reject or deprioritize.');
+    return {
+      status: 'reject_or_deprioritize',
+      reasons,
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'reject_or_deprioritize',
+    };
+  }
+
+  const chart = evidence.reviewEvidenceSummary;
+  const hasChartBlock = chart.samplesMissingCharts > 0 || chart.samplesWithUnknownCharts > 0 || chart.samplesWithWithheldCharts > 0 || recommendation.gateResults.chartEvidenceGate === 'fail';
+  if (hasChartBlock) {
+    reasons.push('Chart/report evidence is missing, unknown, or withheld.');
+    reasons.push('Resolve chart/report evidence before formal backtest review.');
+    return {
+      status: 'blocked_by_missing_evidence',
+      reasons: [...new Set([...reasons, ...recommendation.reasons])],
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'resolve_missing_chart_evidence',
+    };
+  }
+
+  if (evidence.adverseFirstContradictionCount > 0 || recommendation.gateResults.adverseFirstGate === 'fail') {
+    reasons.push('Adverse-first contradictions must be resolved before formal backtest review.');
+    return {
+      status: 'not_ready_collect_more_evidence',
+      reasons: [...new Set([...reasons, ...recommendation.reasons])],
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'resolve_adverse_contradictions',
+    };
+  }
+
+  if (evidence.missingDataWarningCount > 0 || recommendation.gateResults.missingDataGate === 'fail') {
+    reasons.push('Missing-data warnings must be resolved before formal backtest review.');
+    return {
+      status: 'blocked_by_missing_evidence',
+      reasons: [...new Set([...reasons, ...recommendation.reasons])],
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'define_backtest_assumptions',
+    };
+  }
+
+  if (recommendation.gateResults.sampleCountGate === 'fail') {
+    reasons.push('Reviewed sample count is below the minimum formal evidence threshold.');
+    return {
+      status: 'not_ready_collect_more_evidence',
+      reasons: [...new Set([...reasons, ...recommendation.reasons])],
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'collect_more_reviewed_samples',
+    };
+  }
+
+  if (recommendation.status === 'candidate_review_recommended') {
+    reasons.push('Formal model-candidate recommendation gates have passed.');
+    reasons.push('Required true-backtest assumptions still need human definition before a true backtest can be run.');
+    return {
+      status: 'ready_for_formal_backtest_review',
+      reasons: [...new Set([...reasons, ...recommendation.reasons])],
+      requiredBacktestDefinitions: definitions,
+      nextHumanAction: 'define_backtest_assumptions',
+    };
+  }
+
+  reasons.push('Research recommendation has not reached formal backtest review readiness.');
+  return {
+    status: 'not_ready_collect_more_evidence',
+    reasons: [...new Set([...reasons, ...recommendation.reasons])],
+    requiredBacktestDefinitions: definitions,
+    nextHumanAction: recommendation.status === 'watchlist_candidate' ? 'keep_on_watchlist' : 'collect_more_reviewed_samples',
+  };
+}
+
+function buildBacktestHandoffConceptFromSummary(
+  summary: ModelCandidateConceptSummary,
+  entries: ModelCandidateLedgerEntry[],
+): ModelCandidateBacktestHandoff['concepts'][number] {
+  const evidence = summary.modelCandidateAdvisoryEvidence;
+  const recommendation = summary.modelCandidateResearchRecommendation;
+  return {
+    concept: summary.concept,
+    conceptTitle: summary.conceptTitle,
+    researchRecommendation: {
+      status: recommendation.status,
+      recommendationText: recommendation.recommendationText,
+      humanFinalDecisionRequired: true,
+      boundary: 'research_only_not_execution_authority',
+    },
+    gateResults: recommendation.gateResults,
+    evidenceSummary: {
+      reviewedSamples: summary.totalSamplesReviewed,
+      formalLedgerEligibleSamples: summary.totalSamplesReviewed,
+      humanApprovedCount: summary.humanApprovedCount,
+      humanNotApprovedCount: summary.humanNotApprovedCount,
+      ...(summary.approvalRate === null ? {} : { humanApprovalRate: summary.approvalRate }),
+      agentAssessmentSummary: evidence.agentAssessmentSummary,
+      chartEvidenceSummary: evidence.reviewEvidenceSummary,
+      estimatedGrossContractPnlSummary: evidence.estimatedGrossContractPnlSummary,
+      adverseFirstContradictionCount: evidence.adverseFirstContradictionCount,
+      missingDataWarningCount: evidence.missingDataWarningCount,
+    },
+    supportingSamples: entries.map((entry) => ({
+      sampleId: entry.sampleId,
+      reviewedFile: entry.reviewedOutputPath,
+      humanLabel: entry.humanApprovalState,
+      ...(entry.agentAssessmentStatus ? { agentAssessmentStatus: entry.agentAssessmentStatus } : {}),
+      ...(entry.reviewEvidence?.chartReportPath ? { chartReportPath: entry.reviewEvidence.chartReportPath } : {}),
+      ...(entry.reviewEvidence?.chartPngPath || entry.chartArtifactPath ? { chartPngPath: entry.reviewEvidence?.chartPngPath || entry.chartArtifactPath || undefined } : {}),
+      ...(entry.estimatedGrossContractPnl ? { estimatedGrossContractPnl: entry.estimatedGrossContractPnl } : {}),
+      outcomeSummary: entry.outcomeMathSummary,
+    })),
+    backtestReadiness: determineBacktestReadiness({
+      recommendation,
+      evidence,
+      watchlistOnly: false,
+    }),
+  };
+}
+
+function buildBacktestHandoffConceptFromWatchlist(
+  concept: PreCandidateWatchlistReport['concepts'][number],
+): ModelCandidateBacktestHandoff['concepts'][number] {
+  const evidence: ModelCandidateAdvisoryEvidence = {
+    sampleCount: 0,
+    humanApprovedCount: 0,
+    humanNotApprovedCount: 0,
+    agentAssessmentSummary: concept.agentAssessmentSummary,
+    reviewEvidenceSummary: concept.chartEvidenceSummary,
+    estimatedGrossContractPnlSummary: concept.estimatedGrossContractPnlSummary,
+    missingDataWarningCount: 0,
+    adverseFirstContradictionCount: 0,
+    boundary: 'research_only_not_execution_authority',
+  };
+  const recommendation: ModelCandidateResearchRecommendation = {
+    status: 'watchlist_candidate',
+    recommendationText: 'Watchlist candidate.',
+    gateResults: {
+      sampleCountGate: 'fail',
+      humanApprovalRateGate: 'not_applicable',
+      missingDataGate: 'pass',
+      adverseFirstGate: 'pass',
+      chartEvidenceGate: concept.chartEvidenceSummary.samplesMissingCharts > 0 || concept.chartEvidenceSummary.samplesWithUnknownCharts > 0 || concept.chartEvidenceSummary.samplesWithWithheldCharts > 0 ? 'fail' : 'partial',
+      agentAssessmentGate: concept.agentAssessmentSummary.disagreesWithHuman > 0 ? 'partial' : 'pass',
+      pnlSupportSignal: concept.estimatedGrossContractPnlSummary?.status === 'partial' ? 'partial' : concept.estimatedGrossContractPnlSummary ? 'supportive' : 'unavailable',
+    },
+    reasons: [
+      'Concept is present only in the pre-candidate watchlist.',
+      'Watchlist/advisory labels do not count toward formal model-candidate gates.',
+    ],
+    humanFinalDecisionRequired: true,
+    boundary: 'research_only_not_execution_authority',
+  };
+  return {
+    concept: concept.concept,
+    conceptTitle: concept.conceptTitle,
+    researchRecommendation: {
+      status: recommendation.status,
+      recommendationText: recommendation.recommendationText,
+      humanFinalDecisionRequired: true,
+      boundary: 'research_only_not_execution_authority',
+    },
+    gateResults: recommendation.gateResults,
+    evidenceSummary: {
+      reviewedSamples: 0,
+      formalLedgerEligibleSamples: 0,
+      humanApprovedCount: 0,
+      humanNotApprovedCount: 0,
+      agentAssessmentSummary: concept.agentAssessmentSummary,
+      chartEvidenceSummary: concept.chartEvidenceSummary,
+      estimatedGrossContractPnlSummary: concept.estimatedGrossContractPnlSummary,
+      adverseFirstContradictionCount: 0,
+      missingDataWarningCount: 0,
+    },
+    supportingSamples: [],
+    watchlistSamples: concept.samples.map((sample) => ({
+      sampleId: sample.sampleId,
+      label: sample.label,
+      reason: concept.watchlistRecommendation.reason,
+      nextHumanAction: sample.nextHumanAction,
+    })),
+    backtestReadiness: determineBacktestReadiness({
+      recommendation,
+      evidence,
+      watchlistOnly: true,
+    }),
+  };
+}
+
+export function buildModelCandidateBacktestHandoff(
+  ledger: ModelCandidateReviewLedger,
+  watchlist: PreCandidateWatchlistReport,
+): ModelCandidateBacktestHandoff {
+  const entriesByConcept = new Map<string, ModelCandidateLedgerEntry[]>();
+  for (const entry of ledger.entries) {
+    const list = entriesByConcept.get(entry.concept) || [];
+    list.push(entry);
+    entriesByConcept.set(entry.concept, list);
+  }
+  const concepts = ledger.conceptSummaries.map((summary) =>
+    buildBacktestHandoffConceptFromSummary(summary, entriesByConcept.get(summary.concept) || []));
+  const formalConcepts = new Set(concepts.map((concept) => concept.concept));
+  for (const watchlistConcept of watchlist.concepts) {
+    if (!formalConcepts.has(watchlistConcept.concept)) {
+      concepts.push(buildBacktestHandoffConceptFromWatchlist(watchlistConcept));
+    }
+  }
+  const report: ModelCandidateBacktestHandoff = {
+    reportType: 'model_candidate_backtest_handoff',
+    symbol: ledger.symbol,
+    from: ledger.from,
+    to: ledger.to,
+    generatedAt: ledger.generatedAt,
+    boundary: 'research_only_not_execution_authority',
+    summary: {
+      conceptCount: concepts.length,
+      candidateReviewRecommendedCount: concepts.filter((concept) => concept.researchRecommendation.status === 'candidate_review_recommended').length,
+      watchlistCount: concepts.filter((concept) => concept.backtestReadiness.status === 'watchlist_only' || concept.researchRecommendation.status === 'watchlist_candidate').length,
+      keepCollectingEvidenceCount: concepts.filter((concept) => concept.researchRecommendation.status === 'keep_collecting_evidence').length,
+      doNotAdvanceCount: concepts.filter((concept) => concept.researchRecommendation.status === 'do_not_advance').length,
+      rejectedOrDeprioritizedCount: concepts.filter((concept) => concept.researchRecommendation.status === 'reject_or_deprioritize').length,
+    },
+    concepts: concepts.sort((left, right) => {
+      const rank = (status: ModelCandidateBacktestHandoff['concepts'][number]['backtestReadiness']['status']) => ({
+        ready_for_formal_backtest_review: 0,
+        not_ready_collect_more_evidence: 1,
+        blocked_by_missing_evidence: 2,
+        watchlist_only: 3,
+        reject_or_deprioritize: 4,
+      })[status];
+      return rank(left.backtestReadiness.status) - rank(right.backtestReadiness.status) || left.concept.localeCompare(right.concept);
+    }),
+    outputPaths: {
+      jsonPath: ledger.outputPaths.backtestHandoffJsonPath || path.join(path.dirname(ledger.outputPaths.jsonPath), 'model-candidate-backtest-handoff.json'),
+      markdownPath: ledger.outputPaths.backtestHandoffMarkdownPath || path.join(path.dirname(ledger.outputPaths.markdownPath), 'model-candidate-backtest-handoff.md'),
+      ...(ledger.outputPaths.rangeBacktestHandoffJsonPath && ledger.outputPaths.rangeBacktestHandoffMarkdownPath ? {
+        rangeJsonPath: ledger.outputPaths.rangeBacktestHandoffJsonPath,
+        rangeMarkdownPath: ledger.outputPaths.rangeBacktestHandoffMarkdownPath,
+      } : {}),
+    },
+  };
+  assertNoExecutableLedgerFields(report);
+  return report;
+}
+
+function formatJsonSummary(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+function renderBacktestDefinitions(definitions: ModelCandidateBacktestHandoff['concepts'][number]['backtestReadiness']['requiredBacktestDefinitions']): string[] {
+  const rows = [
+    ['Entry Model', definitions.entryModel],
+    ['Exit Model', definitions.exitModel],
+    ['Stop Model', definitions.stopModel],
+    ['Target Model', definitions.targetModel],
+    ['Fill Assumption', definitions.fillAssumption],
+    ['Commission Assumption', definitions.commissionAssumption],
+    ['Slippage Assumption', definitions.slippageAssumption],
+    ['Position Sizing', definitions.positionSizing],
+    ['Session Filter', definitions.sessionFilter],
+  ];
+  return [
+    '| Definition | Status |',
+    '|---|---|',
+    ...rows.map(([definition, status]) => `| ${definition} | ${status} |`),
+  ];
+}
+
+export function renderModelCandidateBacktestHandoffMarkdown(report: ModelCandidateBacktestHandoff): string {
+  return [
+    '# Model-Candidate Backtest Handoff',
+    '',
+    `Symbol: ${report.symbol}`,
+    `Date range: ${report.from} to ${report.to}`,
+    `Generated at: ${report.generatedAt}`,
+    `Boundary: ${report.boundary}`,
+    '',
+    'This report is a research-only handoff package. It does not approve models for live use, does not approve trading, and does not activate execution.',
+    '',
+    '## Summary',
+    `- Concepts reviewed: ${report.summary.conceptCount}`,
+    `- Ready for formal backtest review: ${report.concepts.filter((concept) => concept.backtestReadiness.status === 'ready_for_formal_backtest_review').length}`,
+    `- Watchlist only: ${report.concepts.filter((concept) => concept.backtestReadiness.status === 'watchlist_only').length}`,
+    `- Keep collecting evidence: ${report.summary.keepCollectingEvidenceCount}`,
+    `- Do not advance: ${report.summary.doNotAdvanceCount}`,
+    `- Reject/deprioritize: ${report.summary.rejectedOrDeprioritizedCount}`,
+    '',
+    ...report.concepts.map((concept) => [
+      `## Concept: ${concept.conceptTitle || concept.concept}`,
+      '',
+      '### Research Recommendation',
+      `- Status: ${concept.researchRecommendation.status}`,
+      `- Recommendation: ${concept.researchRecommendation.recommendationText}`,
+      `- Human Final Decision Required: ${concept.researchRecommendation.humanFinalDecisionRequired ? 'Yes' : 'No'}`,
+      `- Boundary: ${concept.researchRecommendation.boundary}`,
+      '',
+      '### Gate Results',
+      `- Sample Count: ${concept.gateResults.sampleCountGate}`,
+      `- Human Approval Rate: ${concept.gateResults.humanApprovalRateGate}`,
+      `- Missing Data: ${concept.gateResults.missingDataGate}`,
+      `- Adverse-First: ${concept.gateResults.adverseFirstGate}`,
+      `- Chart Evidence: ${concept.gateResults.chartEvidenceGate}`,
+      `- Agent Assessment: ${concept.gateResults.agentAssessmentGate}`,
+      `- P/L Support: ${concept.gateResults.pnlSupportSignal}`,
+      '',
+      '### Evidence Summary',
+      `- Reviewed Samples: ${concept.evidenceSummary.reviewedSamples}`,
+      `- Formal Ledger-Eligible Samples: ${concept.evidenceSummary.formalLedgerEligibleSamples}`,
+      `- Human Approved: ${concept.evidenceSummary.humanApprovedCount}`,
+      `- Human Not Approved: ${concept.evidenceSummary.humanNotApprovedCount}`,
+      `- Human Approval Rate: ${formatApprovalRate(concept.evidenceSummary.humanApprovalRate ?? null)}`,
+      `- Agent Assessment Summary: ${formatJsonSummary(concept.evidenceSummary.agentAssessmentSummary)}`,
+      `- Chart/Report Evidence: ${formatJsonSummary(concept.evidenceSummary.chartEvidenceSummary)}`,
+      `- Estimated Gross Contract P/L: ${formatWatchlistPnl(concept.evidenceSummary.estimatedGrossContractPnlSummary)}`,
+      `- Missing Data Warnings: ${concept.evidenceSummary.missingDataWarningCount}`,
+      `- Adverse-First Contradictions: ${concept.evidenceSummary.adverseFirstContradictionCount}`,
+      '',
+      '### Backtest Readiness',
+      `- Status: ${concept.backtestReadiness.status}`,
+      '- Reasons:',
+      ...(concept.backtestReadiness.reasons.length ? concept.backtestReadiness.reasons.map((reason) => `  - ${reason}`) : ['  - None recorded.']),
+      `- Next Human Action: ${concept.backtestReadiness.nextHumanAction}`,
+      '',
+      '### Required Backtest Definitions',
+      ...renderBacktestDefinitions(concept.backtestReadiness.requiredBacktestDefinitions),
+      '',
+      '### Supporting Samples',
+      '| Sample ID | Human Label | Agent Assessment | Chart Report | Estimated Gross P/L |',
+      '|---|---|---|---|---|',
+      ...(concept.supportingSamples.length
+        ? concept.supportingSamples.map((sample) => `| ${sample.sampleId} | ${sample.humanLabel} | ${sample.agentAssessmentStatus || 'Not recorded'} | ${sample.chartReportPath || 'Not recorded'} | ${samplePnlCell(sample.estimatedGrossContractPnl)} |`)
+        : ['| Not recorded | Not recorded | Not recorded | Not recorded | Not recorded |']),
+      ...(concept.watchlistSamples?.length ? [
+        '',
+        '### Watchlist Samples',
+        '| Sample ID | Label | Next Human Action |',
+        '|---|---|---|',
+        ...concept.watchlistSamples.map((sample) => `| ${sample.sampleId} | ${sample.label} | ${sample.nextHumanAction || 'Not recorded'} |`),
+      ] : []),
+    ].join('\n')),
+  ].join('\n');
+}
+
 export function renderPreCandidateWatchlistMarkdown(report: PreCandidateWatchlistReport): string {
   return [
     '# Pre-Candidate Watchlist Report',
@@ -1775,12 +2245,15 @@ function outputPaths(options: Pick<ModelCandidateLedgerOptions, 'outDir' | 'symb
   const dir = path.resolve(options.outDir);
   const rangeBase = `model-candidate-review-ledger-${options.symbol}-${options.from}-to-${options.to}`;
   const watchlistRangeBase = `model-candidate-watchlist-${options.symbol}-${options.from}-to-${options.to}`;
+  const backtestHandoffRangeBase = `model-candidate-backtest-handoff-${options.symbol}-${options.from}-to-${options.to}`;
   const rangePaths = options.writeRangeArtifact !== false
     ? {
       rangeJsonPath: path.join(dir, `${rangeBase}.json`),
       rangeMarkdownPath: path.join(dir, `${rangeBase}.md`),
       rangeWatchlistJsonPath: path.join(dir, `${watchlistRangeBase}.json`),
       rangeWatchlistMarkdownPath: path.join(dir, `${watchlistRangeBase}.md`),
+      rangeBacktestHandoffJsonPath: path.join(dir, `${backtestHandoffRangeBase}.json`),
+      rangeBacktestHandoffMarkdownPath: path.join(dir, `${backtestHandoffRangeBase}.md`),
     }
     : {};
   return {
@@ -1788,6 +2261,8 @@ function outputPaths(options: Pick<ModelCandidateLedgerOptions, 'outDir' | 'symb
     markdownPath: path.join(dir, 'model-candidate-review-ledger.md'),
     watchlistJsonPath: path.join(dir, 'model-candidate-watchlist.json'),
     watchlistMarkdownPath: path.join(dir, 'model-candidate-watchlist.md'),
+    backtestHandoffJsonPath: path.join(dir, 'model-candidate-backtest-handoff.json'),
+    backtestHandoffMarkdownPath: path.join(dir, 'model-candidate-backtest-handoff.md'),
     ...rangePaths,
   };
 }
@@ -1839,12 +2314,17 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   };
   assertNoExecutableLedgerFields(ledger);
   const watchlist = await buildPreCandidateWatchlistReport(options, generatedAt, paths);
+  const handoff = buildModelCandidateBacktestHandoff(ledger, watchlist);
   mkdirSync(path.dirname(paths.jsonPath), { recursive: true });
   writeFileSync(paths.jsonPath, `${JSON.stringify(ledger, null, 2)}\n`, 'utf8');
   writeFileSync(paths.markdownPath, `${renderModelCandidateLedgerMarkdown(ledger)}\n`, 'utf8');
   if (paths.watchlistJsonPath && paths.watchlistMarkdownPath) {
     writeFileSync(paths.watchlistJsonPath, `${JSON.stringify(watchlist, null, 2)}\n`, 'utf8');
     writeFileSync(paths.watchlistMarkdownPath, `${renderPreCandidateWatchlistMarkdown(watchlist)}\n`, 'utf8');
+  }
+  if (paths.backtestHandoffJsonPath && paths.backtestHandoffMarkdownPath) {
+    writeFileSync(paths.backtestHandoffJsonPath, `${JSON.stringify(handoff, null, 2)}\n`, 'utf8');
+    writeFileSync(paths.backtestHandoffMarkdownPath, `${renderModelCandidateBacktestHandoffMarkdown(handoff)}\n`, 'utf8');
   }
   if (paths.rangeJsonPath && paths.rangeMarkdownPath) {
     writeFileSync(paths.rangeJsonPath, `${JSON.stringify({ ...ledger, outputPaths: paths }, null, 2)}\n`, 'utf8');
@@ -1853,6 +2333,10 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   if (paths.rangeWatchlistJsonPath && paths.rangeWatchlistMarkdownPath) {
     writeFileSync(paths.rangeWatchlistJsonPath, `${JSON.stringify({ ...watchlist, outputPaths: watchlist.outputPaths }, null, 2)}\n`, 'utf8');
     writeFileSync(paths.rangeWatchlistMarkdownPath, `${renderPreCandidateWatchlistMarkdown(watchlist)}\n`, 'utf8');
+  }
+  if (paths.rangeBacktestHandoffJsonPath && paths.rangeBacktestHandoffMarkdownPath) {
+    writeFileSync(paths.rangeBacktestHandoffJsonPath, `${JSON.stringify({ ...handoff, outputPaths: handoff.outputPaths }, null, 2)}\n`, 'utf8');
+    writeFileSync(paths.rangeBacktestHandoffMarkdownPath, `${renderModelCandidateBacktestHandoffMarkdown(handoff)}\n`, 'utf8');
   }
   return ledger;
 }
@@ -1875,6 +2359,14 @@ function renderPretty(ledger: ModelCandidateReviewLedger): string {
     ...(ledger.outputPaths.rangeWatchlistJsonPath && ledger.outputPaths.rangeWatchlistMarkdownPath ? [
       `Range Watchlist JSON: ${ledger.outputPaths.rangeWatchlistJsonPath}`,
       `Range Watchlist Markdown: ${ledger.outputPaths.rangeWatchlistMarkdownPath}`,
+    ] : []),
+    ...(ledger.outputPaths.backtestHandoffJsonPath && ledger.outputPaths.backtestHandoffMarkdownPath ? [
+      `Backtest handoff JSON: ${ledger.outputPaths.backtestHandoffJsonPath}`,
+      `Backtest handoff Markdown: ${ledger.outputPaths.backtestHandoffMarkdownPath}`,
+    ] : []),
+    ...(ledger.outputPaths.rangeBacktestHandoffJsonPath && ledger.outputPaths.rangeBacktestHandoffMarkdownPath ? [
+      `Range Backtest handoff JSON: ${ledger.outputPaths.rangeBacktestHandoffJsonPath}`,
+      `Range Backtest handoff Markdown: ${ledger.outputPaths.rangeBacktestHandoffMarkdownPath}`,
     ] : []),
     `Reviewed samples found: ${ledger.summary.reviewedSamplesFound}`,
     `Human-reviewed samples found: ${ledger.summary.humanReviewedSamplesFound}`,

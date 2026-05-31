@@ -2,7 +2,7 @@
 
 Symbol: MES
 Date range: 2026-01-01 to 2026-05-31
-Generated at: 2026-05-31T21:37:02.659Z
+Generated at: 2026-05-31T21:51:13.093Z
 Boundary: research_only_not_execution_authority
 
 This report tracks human-reviewed samples that are not yet formal model-candidate ledger entries. These samples do not count toward candidate-review gates unless a human later applies a formal model-candidate label.

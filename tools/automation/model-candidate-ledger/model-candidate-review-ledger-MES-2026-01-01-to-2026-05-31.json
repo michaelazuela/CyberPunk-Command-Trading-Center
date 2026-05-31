@@ -1,6 +1,6 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T21:37:02.659Z",
+  "generatedAt": "2026-05-31T21:51:13.093Z",
   "from": "2026-01-01",
   "to": "2026-05-31",
   "symbol": "MES",
@@ -313,9 +313,13 @@
     "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger.md",
     "watchlistJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.json",
     "watchlistMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist.md",
+    "backtestHandoffJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff.json",
+    "backtestHandoffMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff.md",
     "rangeJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.json",
     "rangeMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-review-ledger-MES-2026-01-01-to-2026-05-31.md",
     "rangeWatchlistJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.json",
-    "rangeWatchlistMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.md"
+    "rangeWatchlistMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-watchlist-MES-2026-01-01-to-2026-05-31.md",
+    "rangeBacktestHandoffJsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-31.json",
+    "rangeBacktestHandoffMarkdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\model-candidate-ledger\\model-candidate-backtest-handoff-MES-2026-01-01-to-2026-05-31.md"
   }
 }
