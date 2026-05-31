@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import type { ResearchOutcomeMathReport, ResearchCandidateOutcome } from './researchOutcomeMathAgent';
 import type { ResearchReviewSample, ResearchSampleReviewPack, ResearchHumanInspectionLabel } from './researchSampleReviewAgent';
+import {
+  calculateEstimatedGrossContractPnl,
+  type EstimatedGrossContractPnl,
+} from '../lib/futuresContractMetadata';
 
 export type ResearchReviewButtonLabel = ResearchHumanInspectionLabel;
 
@@ -25,6 +29,7 @@ export interface ResearchDiscordMessagePayload {
 export interface ResearchDiscordQueueItem {
   sample: ResearchReviewSample;
   outcome: ResearchCandidateOutcome | null;
+  estimatedGrossContractPnl: EstimatedGrossContractPnl;
   payload: ResearchDiscordMessagePayload;
 }
 
@@ -54,6 +59,11 @@ export interface ResearchDiscordReviewStateEntry {
   postedTextOnly?: boolean;
   chartWithheld?: boolean;
   chartWithheldReason?: string;
+  chartPngPath?: string;
+  chartSvgPath?: string;
+  chartReportPath?: string;
+  sourceReviewCard?: string;
+  estimatedGrossContractPnl?: EstimatedGrossContractPnl;
 }
 
 export interface ResearchDiscordReviewState {
@@ -200,6 +210,15 @@ function outcomeForSample(sample: ResearchReviewSample, outcomeReport?: Research
   ) || null;
 }
 
+function sampleSymbol(sample: ResearchReviewSample): unknown {
+  const record = sample as ResearchReviewSample & {
+    symbol?: unknown;
+    instrument?: unknown;
+    contract?: unknown;
+  };
+  return record.symbol || record.instrument || record.contract;
+}
+
 export function buildResearchReviewCustomId(packHash: string, sampleId: string, label: ResearchReviewButtonLabel): string {
   const compactSampleId = sampleId.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 42);
   const customIdLabel = label === 'approved_for_future_model_candidate_review'
@@ -270,12 +289,17 @@ function displayValue(value: unknown): string {
 function reviewWorkedLabel(outcome: ResearchCandidateOutcome | null, invalidOverlay = false): 'Yes' | 'No' | 'Partial' | 'Inconclusive' | 'Invalid overlay' {
   if (invalidOverlay) return 'Invalid overlay';
   if (!outcome) return 'Inconclusive';
+  const firstEvent = outcome.hypotheticalOutcomeOverlay?.firstResolvedEvent || '';
   const classification = outcome.outcomeClassification || '';
   const overlayOutcome = outcome.hypotheticalOutcomeOverlay?.hypotheticalOutcomeLabel || '';
-  if (/insufficient|missing|inconclusive|ambiguous/i.test(`${classification} ${overlayOutcome}`)) return 'Inconclusive';
-  if (outcome.thresholdTwoTouched || /threshold_two|t2|favorable_continuation/i.test(`${classification} ${overlayOutcome}`)) return 'Yes';
-  if (outcome.thresholdOneTouched || /threshold_one|partial/i.test(`${classification} ${overlayOutcome}`)) return 'Partial';
-  if (outcome.adverseThresholdTouched || outcome.firstMeaningfulMove === 'adverse' || /adverse|stop/i.test(`${classification} ${overlayOutcome}`)) return 'No';
+  const resolvedText = `${firstEvent} ${classification} ${overlayOutcome}`;
+  if (/insufficient|missing|inconclusive|ambiguous/i.test(resolvedText)) return 'Inconclusive';
+  if (/adverse|stop/i.test(firstEvent) || /adverse_first/i.test(resolvedText)) return 'No';
+  if (/threshold_two|t2/i.test(firstEvent) || /favorable_continuation/i.test(resolvedText)) return 'Yes';
+  if (/threshold_one|partial/i.test(firstEvent) || /partial/i.test(resolvedText)) return 'Partial';
+  if (outcome.adverseThresholdTouched || outcome.firstMeaningfulMove === 'adverse' || /adverse|stop/i.test(resolvedText)) return 'No';
+  if (outcome.thresholdTwoTouched) return 'Yes';
+  if (outcome.thresholdOneTouched) return 'Partial';
   return 'Inconclusive';
 }
 
@@ -287,6 +311,7 @@ function reviewResultLabel(outcome: ResearchCandidateOutcome | null, invalidOver
   if (/insufficient|missing/i.test(`${firstEvent} ${classification}`)) return 'Missing data';
   if (/inconclusive|ambiguous/i.test(`${firstEvent} ${classification}`)) return 'Inconclusive';
   if (/no[_ -]?trigger/i.test(`${firstEvent} ${classification}`)) return 'No trigger';
+  if (/adverse|stop/i.test(firstEvent) || /adverse_first/i.test(classification)) return 'Stop first';
   if (/threshold_two|t2/i.test(firstEvent) || outcome.thresholdTwoTouched) return 'T2 hit';
   if (/threshold_one|t1/i.test(firstEvent) || outcome.thresholdOneTouched) return 'T1 hit';
   if (/adverse|stop/i.test(firstEvent) || outcome.adverseThresholdTouched || outcome.firstMeaningfulMove === 'adverse') return 'Stop first';
@@ -402,9 +427,15 @@ export function buildResearchDiscordReviewQueue(input: ResearchDiscordQueueInput
   const selected = pending.slice(0, Math.max(0, input.limit ?? pending.length));
   const items = selected.map((sample) => {
     const outcome = outcomeForSample(sample, input.outcomeReport);
+    const estimatedGrossContractPnl = calculateEstimatedGrossContractPnl({
+      outcome,
+      sampleSymbol: sampleSymbol(sample),
+      reviewPackSymbol: input.reviewPack.instrument,
+    });
     return {
       sample,
       outcome,
+      estimatedGrossContractPnl,
       payload: buildResearchReviewMessagePayload(sample, packHash, outcome, input.reviewPack.instrument, input.buttonMode),
     };
   });
@@ -450,6 +481,11 @@ export function createResearchDiscordStateEntry(args: {
   postedTextOnly?: boolean;
   chartWithheld?: boolean;
   chartWithheldReason?: string;
+  chartPngPath?: string | null;
+  chartSvgPath?: string | null;
+  chartReportPath?: string | null;
+  sourceReviewCard?: string | null;
+  estimatedGrossContractPnl?: EstimatedGrossContractPnl | null;
 }): ResearchDiscordReviewStateEntry {
   return {
     packHash: args.packHash,
@@ -464,6 +500,11 @@ export function createResearchDiscordStateEntry(args: {
     ...(args.postedTextOnly ? { postedTextOnly: true } : {}),
     ...(args.chartWithheld ? { chartWithheld: true } : {}),
     ...(args.chartWithheldReason ? { chartWithheldReason: args.chartWithheldReason } : {}),
+    ...(args.chartPngPath ? { chartPngPath: args.chartPngPath } : {}),
+    ...(args.chartSvgPath ? { chartSvgPath: args.chartSvgPath } : {}),
+    ...(args.chartReportPath ? { chartReportPath: args.chartReportPath } : {}),
+    ...(args.sourceReviewCard ? { sourceReviewCard: args.sourceReviewCard } : {}),
+    ...(args.estimatedGrossContractPnl ? { estimatedGrossContractPnl: args.estimatedGrossContractPnl } : {}),
   };
 }
 

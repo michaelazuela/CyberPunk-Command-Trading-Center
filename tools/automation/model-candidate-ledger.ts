@@ -4,8 +4,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ResearchOutcomeMathReport, ResearchCandidateOutcome } from '../../src/agents/researchOutcomeMathAgent';
 import type { ResearchHumanInspectionLabel, ResearchReviewSample, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
+import {
+  calculateEstimatedGrossContractPnl,
+  coerceEstimatedGrossContractPnl,
+  FUTURES_CONTRACT_METADATA,
+  type EstimatedGrossContractPnl,
+  type FuturesRootSymbol,
+} from '../../src/lib/futuresContractMetadata';
 
-type Instrument = 'MES' | 'MNQ';
+type Instrument = Exclude<FuturesRootSymbol, 'UNKNOWN'>;
 
 export type ModelCandidateLedgerEntryStatus =
   | 'research_sample'
@@ -61,6 +68,7 @@ export interface ModelCandidateLedgerEntry {
     adverseThresholdTouched: boolean | null;
     hypotheticalOutcomeLabel: string | null;
   };
+  estimatedGrossContractPnl?: EstimatedGrossContractPnl;
   warningState: {
     warnings: string[];
     missingChartArtifact: boolean;
@@ -77,6 +85,26 @@ export interface ModelCandidateLedgerEntry {
     writesRag: false;
     writesJournal: false;
   };
+}
+
+export interface EstimatedGrossContractPnlSummary {
+  rootSymbol: FuturesRootSymbol;
+  displayName: string;
+  contracts: 1;
+  pointValue: number;
+  tickSize: number;
+  tickValue: number;
+  currency: 'USD';
+  sampleCountWithPnl: number;
+  sampleCountMissingPnl: number;
+  totalHypotheticalOutcomeDollars?: number;
+  avgHypotheticalOutcomeDollars?: number;
+  bestHypotheticalOutcomeDollars?: number;
+  worstHypotheticalOutcomeDollars?: number;
+  avgMfeDollars?: number;
+  avgMaeDollars?: number;
+  status: 'available' | 'partial' | 'unavailable' | 'unavailable_unknown_contract';
+  note: string;
 }
 
 export interface ModelCandidateConceptSummary {
@@ -126,6 +154,7 @@ export interface ModelCandidateReviewLedger {
   };
   entries: ModelCandidateLedgerEntry[];
   conceptSummaries: ModelCandidateConceptSummary[];
+  estimatedGrossContractPnlSummary?: EstimatedGrossContractPnlSummary;
   warnings: string[];
   outputPaths: {
     jsonPath: string;
@@ -196,7 +225,7 @@ function requireDate(value: string | null, flag: string): string {
 
 function parseInstrument(value: string | null): Instrument {
   const symbol = (value || 'MES').toUpperCase();
-  if (symbol !== 'MES' && symbol !== 'MNQ') throw new Error('--symbol must be MES or MNQ.');
+  if (symbol !== 'MES' && symbol !== 'MNQ' && symbol !== 'ES' && symbol !== 'NQ') throw new Error('--symbol must be MES, MNQ, ES, or NQ.');
   return symbol;
 }
 
@@ -306,6 +335,15 @@ function contractFromChartPath(file: string | null): string | null {
   return match ? match[1] : null;
 }
 
+function sampleSymbol(sample: ResearchReviewSample): unknown {
+  const record = sample as ResearchReviewSample & {
+    symbol?: unknown;
+    instrument?: unknown;
+    contract?: unknown;
+  };
+  return record.symbol || record.instrument || record.contract;
+}
+
 function ledgerStatus(label: ResearchHumanInspectionLabel | null): ModelCandidateLedgerEntryStatus | null {
   if (label === APPROVED_LABEL) return 'human_approved_for_candidate_review';
   if (label === NOT_APPROVED_LABEL) return 'human_not_approved_for_candidate_review';
@@ -349,6 +387,13 @@ function entryForSample(args: {
   ].filter(Boolean);
   if (!args.chartPath) warnings.push('PriceActionReviewCard PNG artifact not found for reviewed sample.');
   if (!args.outcome) warnings.push('Outcome math not found for reviewed sample.');
+  const estimatedGrossContractPnl = coerceEstimatedGrossContractPnl(args.sample.estimatedGrossContractPnl) ||
+    calculateEstimatedGrossContractPnl({
+      outcome: args.outcome,
+      sampleSymbol: sampleSymbol(args.sample),
+      reviewPackSymbol: args.symbol,
+      ledgerSymbol: args.symbol,
+    });
   return {
     sampleId: args.sample.sampleId,
     concept: args.sample.concept,
@@ -373,6 +418,7 @@ function entryForSample(args: {
       adverseThresholdTouched: args.outcome?.adverseThresholdTouched ?? null,
       hypotheticalOutcomeLabel: args.outcome?.hypotheticalOutcomeOverlay?.hypotheticalOutcomeLabel || null,
     },
+    estimatedGrossContractPnl,
     warningState: {
       warnings,
       missingChartArtifact: !args.chartPath,
@@ -456,6 +502,78 @@ function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: Mod
   }).sort((left, right) => right.totalSamplesReviewed - left.totalSamplesReviewed || left.concept.localeCompare(right.concept));
 }
 
+function finite(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function avg(values: number[]): number | undefined {
+  return values.length ? round(values.reduce((total, value) => total + value, 0) / values.length) : undefined;
+}
+
+function summarizeEstimatedGrossContractPnl(entries: ModelCandidateLedgerEntry[], symbol: Instrument): EstimatedGrossContractPnlSummary {
+  const metadata = FUTURES_CONTRACT_METADATA[symbol];
+  const withAnyPnl = entries.filter((entry) => {
+    const pnl = entry.estimatedGrossContractPnl;
+    return Boolean(pnl && pnl.rootSymbol !== 'UNKNOWN' && (
+      finite(pnl.hypotheticalOutcomeDollars) ||
+      finite(pnl.mfeDollars) ||
+      finite(pnl.maeDollars)
+    ));
+  });
+  const hypothetical = withAnyPnl
+    .map((entry) => entry.estimatedGrossContractPnl?.hypotheticalOutcomeDollars)
+    .filter(finite);
+  const mfe = withAnyPnl
+    .map((entry) => entry.estimatedGrossContractPnl?.mfeDollars)
+    .filter(finite);
+  const mae = withAnyPnl
+    .map((entry) => entry.estimatedGrossContractPnl?.maeDollars)
+    .filter(finite);
+  const sampleCountWithPnl = withAnyPnl.length;
+  const sampleCountMissingPnl = Math.max(0, entries.length - sampleCountWithPnl);
+  const allSamplesHaveHypothetical = entries.length > 0 && hypothetical.length === entries.length;
+  const partial = sampleCountWithPnl > 0 && !allSamplesHaveHypothetical;
+  const status: EstimatedGrossContractPnlSummary['status'] = entries.length === 0 || sampleCountWithPnl === 0
+    ? 'unavailable'
+    : partial
+      ? 'partial'
+      : 'available';
+  const note = status === 'partial'
+    ? 'P/L summary is partial because MFE/MAE exists, but no defined hypothetical outcome model was available for all samples.'
+    : 'Research-only gross estimate. Not actual P/L. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.';
+  return {
+    rootSymbol: metadata.rootSymbol,
+    displayName: metadata.displayName,
+    contracts: 1,
+    pointValue: metadata.pointValue,
+    tickSize: metadata.tickSize,
+    tickValue: metadata.tickValue,
+    currency: metadata.currency,
+    sampleCountWithPnl,
+    sampleCountMissingPnl,
+    ...(hypothetical.length ? {
+      totalHypotheticalOutcomeDollars: round(hypothetical.reduce((total, value) => total + value, 0)),
+      avgHypotheticalOutcomeDollars: avg(hypothetical),
+      bestHypotheticalOutcomeDollars: round(Math.max(...hypothetical)),
+      worstHypotheticalOutcomeDollars: round(Math.min(...hypothetical)),
+    } : {}),
+    ...(avg(mfe) !== undefined ? { avgMfeDollars: avg(mfe) } : {}),
+    ...(avg(mae) !== undefined ? { avgMaeDollars: avg(mae) } : {}),
+    status,
+    note,
+  };
+}
+
+function formatLedgerDollars(value: number | undefined): string {
+  if (!finite(value)) return 'Not recorded';
+  const prefix = value > 0 ? '+$' : value < 0 ? '-$' : '$';
+  return `${prefix}${Math.abs(value).toFixed(2)} gross`;
+}
+
 function prohibitedPaths(value: unknown, pathName = 'ledger'): string[] {
   if (!value || typeof value !== 'object') return [];
   const paths: string[] = [];
@@ -535,6 +653,7 @@ async function loadReviewedEntries(options: ModelCandidateLedgerOptions, outcome
 }
 
 export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewLedger): string {
+  const pnl = ledger.estimatedGrossContractPnlSummary || summarizeEstimatedGrossContractPnl(ledger.entries, ledger.symbol);
   return [
     `# Model Candidate Review Ledger - ${ledger.symbol}`,
     '',
@@ -552,6 +671,21 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
     `- Candidate review recommended concepts: ${ledger.summary.candidateReviewRecommendedConcepts}`,
     `- Minimum reviewed samples: ${ledger.thresholds.minimumReviewedSamples}`,
     `- Minimum approval rate: ${Math.round(ledger.thresholds.minimumApprovalRate * 100)}%`,
+    '',
+    '## Estimated Gross Contract P/L Summary, 1 Contract',
+    `- Contract: ${pnl.rootSymbol === 'UNKNOWN' ? 'UNKNOWN' : `${pnl.rootSymbol} - ${pnl.displayName}`}`,
+    `- Point Value: ${pnl.pointValue ? `$${pnl.pointValue.toFixed(2)}` : 'Not recorded'}`,
+    `- Tick Size: ${pnl.tickSize || 'Not recorded'}`,
+    `- Tick Value: ${pnl.tickValue ? `$${pnl.tickValue.toFixed(2)}` : 'Not recorded'}`,
+    `- Samples with P/L: ${pnl.sampleCountWithPnl}`,
+    `- Samples missing P/L: ${pnl.sampleCountMissingPnl}`,
+    `- Avg Hypothetical Outcome: ${formatLedgerDollars(pnl.avgHypotheticalOutcomeDollars)}`,
+    `- Best Hypothetical Outcome: ${formatLedgerDollars(pnl.bestHypotheticalOutcomeDollars)}`,
+    `- Worst Hypothetical Outcome: ${formatLedgerDollars(pnl.worstHypotheticalOutcomeDollars)}`,
+    `- Avg MFE: ${formatLedgerDollars(pnl.avgMfeDollars)}`,
+    `- Avg MAE: ${formatLedgerDollars(pnl.avgMaeDollars)}`,
+    `- Status: ${pnl.status}`,
+    `- Note: ${pnl.note}`,
     '',
     '## Concept Summary',
     ...(ledger.conceptSummaries.length
@@ -594,6 +728,7 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   const chartFiles = await loadChartFiles(path.resolve(options.chartDir));
   const { entries, ignoredLegacyReviewedSamples } = await loadReviewedEntries(options, outcomes, chartFiles, warnings);
   const conceptSummaries = summarizeConcepts(entries, options.thresholds);
+  const estimatedGrossContractPnlSummary = summarizeEstimatedGrossContractPnl(entries, options.symbol);
   const paths = outputPaths(options.outDir);
   const ledger: ModelCandidateReviewLedger = {
     reportType: 'model_candidate_review_ledger',
@@ -622,6 +757,7 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
     },
     entries,
     conceptSummaries,
+    estimatedGrossContractPnlSummary,
     warnings,
     outputPaths: paths,
   };
@@ -645,6 +781,8 @@ function renderPretty(ledger: ModelCandidateReviewLedger): string {
     `Ignored legacy reviewed samples: ${ledger.summary.ignoredLegacyReviewedSamples}`,
     `Concepts reviewed: ${ledger.summary.conceptsReviewed}`,
     `Candidate review recommended concepts: ${ledger.summary.candidateReviewRecommendedConcepts}`,
+    `Estimated gross contract P/L status: ${(ledger.estimatedGrossContractPnlSummary || summarizeEstimatedGrossContractPnl(ledger.entries, ledger.symbol)).status}`,
+    `Estimated gross contract P/L samples: with=${(ledger.estimatedGrossContractPnlSummary || summarizeEstimatedGrossContractPnl(ledger.entries, ledger.symbol)).sampleCountWithPnl}; missing=${(ledger.estimatedGrossContractPnlSummary || summarizeEstimatedGrossContractPnl(ledger.entries, ledger.symbol)).sampleCountMissingPnl}`,
     'Concept-level summary:',
     ...(ledger.conceptSummaries.length
       ? ledger.conceptSummaries.map((summary) => `- ${summary.concept}: reviewed=${summary.totalSamplesReviewed}; approved=${summary.humanApprovedCount}; notApproved=${summary.humanNotApprovedCount}; approvalRate=${summary.approvalRate === null ? 'n/a' : Math.round(summary.approvalRate * 100)}%; readiness=${summary.candidateReadinessStatus}`)

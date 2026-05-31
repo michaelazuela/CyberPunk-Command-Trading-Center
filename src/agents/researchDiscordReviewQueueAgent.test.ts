@@ -208,6 +208,9 @@ const queue = buildResearchDiscordReviewQueue({
 assert.equal(queue.pendingSamplesFound, 2);
 assert.equal(queue.selectedSamples, 1);
 assert.equal(queue.items.length, 1);
+assert.equal(queue.items[0].estimatedGrossContractPnl.rootSymbol, 'MES');
+assert.equal(queue.items[0].estimatedGrossContractPnl.status, 'available');
+assert.equal(queue.items[0].estimatedGrossContractPnl.hypotheticalOutcomeDollars, 40);
 const payload = queue.items[0].payload;
 assert.ok(payload.content.includes('false_run_liquidity_fade-001'));
 assert.ok(payload.content.includes('Recommended: Keep Advisory'));
@@ -298,6 +301,29 @@ assert.ok(priceActionContent.includes('Approve only if this is useful evidence f
 assert.ok(priceActionContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.equal(priceActionContent.includes('[RESEARCH SAMPLE REVIEW]'), false);
 assert.equal(priceActionContent.includes('Suggested human action: Keep Advisory'), false);
+const adverseFirstEvenWithLaterTargetContent = buildPriceActionReviewMessageContent(
+  priceActionButtonQueue.items[0].sample,
+  {
+    ...priceActionButtonQueue.items[0].outcome!,
+    thresholdOneTouched: true,
+    thresholdTwoTouched: true,
+    adverseThresholdTouched: true,
+    firstMeaningfulMove: 'adverse',
+    outcomeClassification: 'adverse_first',
+    hypotheticalOutcomeOverlay: {
+      ...priceActionButtonQueue.items[0].outcome!.hypotheticalOutcomeOverlay,
+      firstResolvedEvent: 'adverse_invalidation',
+      hypotheticalOutcomeLabel: 'adverse_first',
+      resolvedAtBarIndex: 1,
+      resolvedAtTime: '2026-05-28T10:10:00',
+    },
+  },
+  'MES 06-26',
+);
+assert.ok(adverseFirstEvenWithLaterTargetContent.includes('Would it have worked?: No'));
+assert.ok(adverseFirstEvenWithLaterTargetContent.includes('Result: Stop first'));
+assert.equal(adverseFirstEvenWithLaterTargetContent.includes('Would it have worked?: Yes'), false);
+assert.equal(adverseFirstEvenWithLaterTargetContent.includes('Result: T2 hit'), false);
 const invalidOverlayContent = buildPriceActionReviewMessageContent(
   priceActionButtonQueue.items[0].sample,
   priceActionButtonQueue.items[0].outcome,
@@ -341,11 +367,13 @@ const state = appendResearchDiscordReviewState(emptyResearchDiscordReviewState()
     discordMessageId: '123',
     discordChannelId: 'channel-1',
     postedAt: '2026-05-29T20:00:00.000Z',
+    estimatedGrossContractPnl: queue.items[0].estimatedGrossContractPnl,
   }),
 ]);
 assert.equal(state.entries.length, 1);
 assert.equal(state.entries[0].advisoryOnly, true);
 assert.equal(state.entries[0].reviewed, false);
+assert.equal(state.entries[0].estimatedGrossContractPnl?.rootSymbol, 'MES');
 const stateSummary = summarizeResearchDiscordReviewState('state.json', state);
 assert.equal(stateSummary.totalPostedSamples, 1);
 assert.equal(stateSummary.pendingPostedSamples, 1);

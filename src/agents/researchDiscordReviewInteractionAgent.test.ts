@@ -14,6 +14,7 @@ import {
   validateResearchDiscordInteractionUser,
 } from './researchDiscordReviewInteractionAgent';
 import type { ResearchSampleReviewPack } from './researchSampleReviewAgent';
+import { calculateEstimatedGrossContractPnl } from '../lib/futuresContractMetadata';
 import {
   parseResearchDiscordInteractionsArgs,
   runResearchDiscordInteractionsCli,
@@ -99,6 +100,7 @@ function writeFixtureState(statePath: string, reviewPackPath: string): ResearchD
     discordMessageId: 'message-1',
     discordChannelId: 'channel-1',
     postedAt: '2026-05-29T20:00:00.000Z',
+    estimatedGrossContractPnl: calculateEstimatedGrossContractPnl({ outcome: null, sampleSymbol: 'MES' }),
   });
   const state: ResearchDiscordReviewState = {
     reportType: 'research_discord_review_state',
@@ -273,6 +275,8 @@ assert.equal(readFileSync(legacyFixture.reviewPackPath, 'utf8'), legacyOriginal)
 const legacyReviewedPack = JSON.parse(readFileSync(legacyResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
 assert.equal(legacyReviewedPack.samples[0].advisoryOnly, true);
 assert.equal(legacyReviewedPack.samples[0].humanInspectionLabel, 'new_model_candidate_review');
+assert.equal(legacyReviewedPack.samples[0].estimatedGrossContractPnl?.rootSymbol, 'MES');
+assert.equal(readFileSync(legacyResult.reviewedMarkdownPath as string, 'utf8').includes('Estimated Gross Contract P/L, 1 Contract'), true);
 assert.ok(!/"entry"|"stop"|"target"|"canExecute"/.test(JSON.stringify(legacyReviewedPack)));
 
 for (const [packName, mutate] of [
@@ -431,7 +435,12 @@ assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|
 const approvedPackPath = join(temp, 'approved-price-action-review-pack.json');
 const approvedStatePath = join(temp, 'approved-price-action-state.json');
 writeFileSync(approvedPackPath, `${JSON.stringify(fixturePack(), null, 2)}\n`, 'utf8');
-writeStateForSample(approvedStatePath, approvedPackPath, 'false_run_liquidity_fade-001', 'packhash901', PRICE_ACTION_REVIEW_LABELS);
+const approvedState = writeStateForSample(approvedStatePath, approvedPackPath, 'false_run_liquidity_fade-001', 'packhash901', PRICE_ACTION_REVIEW_LABELS);
+approvedState.entries[0].chartPngPath = join(temp, 'price-action-review-card-false_run_liquidity_fade-001.png');
+approvedState.entries[0].chartSvgPath = join(temp, 'audit-chart-false_run_liquidity_fade-001.svg');
+approvedState.entries[0].chartReportPath = join(temp, 'research-review-chart-report.md');
+approvedState.entries[0].sourceReviewCard = 'Discord PriceActionReviewCard post';
+writeFileSync(approvedStatePath, `${JSON.stringify(approvedState, null, 2)}\n`, 'utf8');
 const approvedCustomId = 'research_review|packhash901|false_run_liquidity_fade-001|approved';
 const approvedResult = handleResearchDiscordReviewInteraction({
   customId: approvedCustomId,
@@ -451,6 +460,17 @@ const approvedPack = JSON.parse(readFileSync(approvedResult.reviewedPackPath as 
 assert.equal(approvedPack.samples[0].humanInspectionLabel, 'approved_for_future_model_candidate_review');
 assert.equal(approvedPack.samples[0].humanReason, 'Human approved this sample as useful evidence for future model-candidate review only.');
 assert.equal(approvedPack.samples[0].finalReviewLabel, 'approved_for_future_model_candidate_review');
+assert.equal(approvedPack.samples[0].reviewEvidence?.evidenceStatus, 'chart_available');
+assert.equal(approvedPack.samples[0].reviewEvidence?.chartPngPath, approvedState.entries[0].chartPngPath);
+assert.equal(approvedPack.samples[0].reviewEvidence?.chartSvgPath, approvedState.entries[0].chartSvgPath);
+assert.equal(approvedPack.samples[0].reviewEvidence?.chartReportPath, approvedState.entries[0].chartReportPath);
+assert.equal(approvedPack.samples[0].agentAssessment?.boundary, 'research_only_not_execution_authority');
+assert.equal(approvedPack.samples[0].agentAssessment?.chartEvidenceAvailable, true);
+assert.equal(approvedPack.samples[0].agentAssessment?.chartReportReference, approvedState.entries[0].chartReportPath);
+assert.ok(approvedPack.samples[0].agentAssessment?.evidenceChecked.includes('Reviewed JSON'));
+assert.ok(approvedPack.samples[0].agentAssessment?.evidenceChecked.some((item) => item.includes(approvedState.entries[0].chartPngPath as string)));
+assert.ok(approvedPack.samples[0].agentAssessment?.evidenceChecked.some((item) => item.includes(approvedState.entries[0].chartSvgPath as string)));
+assert.ok(approvedPack.samples[0].agentAssessment?.evidenceChecked.some((item) => item.includes(approvedState.entries[0].chartReportPath as string)));
 assert.equal(approvedPack.samples[0].advisoryOnly, true);
 assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentApprovesTrade, false);
 assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentChangesRules, false);
@@ -462,7 +482,11 @@ assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|
 const notApprovedPackPath = join(temp, 'not-approved-price-action-review-pack.json');
 const notApprovedStatePath = join(temp, 'not-approved-price-action-state.json');
 writeFileSync(notApprovedPackPath, `${JSON.stringify(fixturePack(), null, 2)}\n`, 'utf8');
-writeStateForSample(notApprovedStatePath, notApprovedPackPath, 'false_run_liquidity_fade-002', 'packhash902', PRICE_ACTION_REVIEW_LABELS);
+const notApprovedState = writeStateForSample(notApprovedStatePath, notApprovedPackPath, 'false_run_liquidity_fade-002', 'packhash902', PRICE_ACTION_REVIEW_LABELS);
+notApprovedState.entries[0].chartWithheld = true;
+notApprovedState.entries[0].chartWithheldReason = 'Price action card withheld: missing bar data for sample window.';
+notApprovedState.entries[0].chartPngPath = join(temp, 'withheld-price-action-review-card.png');
+writeFileSync(notApprovedStatePath, `${JSON.stringify(notApprovedState, null, 2)}\n`, 'utf8');
 const notApprovedResult = handleResearchDiscordReviewInteraction({
   customId: 'research_review|packhash902|false_run_liquidity_fade-002|not_approved',
   statePath: notApprovedStatePath,
@@ -478,6 +502,12 @@ const notApprovedPack = JSON.parse(readFileSync(notApprovedResult.reviewedPackPa
 const notApprovedSample = notApprovedPack.samples.find((item) => item.sampleId === 'false_run_liquidity_fade-002');
 assert.equal(notApprovedSample?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
 assert.equal(notApprovedSample?.humanReason, 'Human did not approve this sample as useful evidence for future model-candidate review.');
+assert.equal(notApprovedSample?.agentAssessment?.status, 'unclear_insufficient_evidence');
+assert.equal(notApprovedSample?.agentAssessment?.researchUsefulness, 'needs_chart');
+assert.equal(notApprovedSample?.agentAssessment?.chartEvidenceAvailable, false);
+assert.equal(notApprovedSample?.reviewEvidence?.chartWithheld, true);
+assert.equal(notApprovedSample?.reviewEvidence?.evidenceStatus, 'chart_withheld');
+assert.equal(notApprovedSample?.reviewEvidence?.chartPngPath, notApprovedState.entries[0].chartPngPath);
 assert.equal(notApprovedSample?.advisoryOnly, true);
 assert.equal(notApprovedSample?.agentApprovalBoundary.agentApprovesTrade, false);
 
@@ -498,10 +528,17 @@ phase5bPack.samples = phase5bPack.samples.map((sample, index) => ({
 const phase5bPackPath = join(phase5bDir, 'research-sample-review-MES-all-2026-05-31.json');
 const phase5bStatePath = join(phase5bDir, 'discord-review-state.json');
 writeFileSync(phase5bPackPath, `${JSON.stringify(phase5bPack, null, 2)}\n`, 'utf8');
-writeStateForSamples(phase5bStatePath, phase5bPackPath, [
+const phase5bState = writeStateForSamples(phase5bStatePath, phase5bPackPath, [
   { sampleId: 'final_hour_liquidity_draw-030', packHash: 'phase5b030' },
   { sampleId: 'final_hour_liquidity_draw-027', packHash: 'phase5b027' },
 ], PRICE_ACTION_REVIEW_LABELS);
+for (const entry of phase5bState.entries) {
+  entry.chartPngPath = join(phase5bDir, `price-action-review-card-${entry.sampleId}.png`);
+  entry.chartSvgPath = join(phase5bDir, `research-review-chart-report-${entry.sampleId}.svg`);
+  entry.chartReportPath = join(phase5bDir, 'research-review-chart-report-MES-2026-01-01-to-2026-05-31.md');
+  entry.sourceReviewCard = 'Discord PriceActionReviewCard post';
+}
+writeFileSync(phase5bStatePath, `${JSON.stringify(phase5bState, null, 2)}\n`, 'utf8');
 
 const approved030 = handleResearchDiscordReviewInteraction({
   customId: 'research_review|phase5b030|final_hour_liquidity_draw-030|approved',
@@ -531,10 +568,24 @@ const merged030 = mergedPhase5bPack.samples.find((sample) => sample.sampleId ===
 const merged027 = mergedPhase5bPack.samples.find((sample) => sample.sampleId === 'final_hour_liquidity_draw-027');
 assert.equal(merged030?.humanInspectionLabel, 'approved_for_future_model_candidate_review');
 assert.equal(merged027?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(merged030?.agentAssessment?.boundary, 'research_only_not_execution_authority');
+assert.equal(merged027?.agentAssessment?.boundary, 'research_only_not_execution_authority');
+assert.equal(merged030?.agentAssessment?.chartEvidenceAvailable, true);
+assert.equal(merged027?.agentAssessment?.chartEvidenceAvailable, true);
+assert.equal(merged030?.reviewEvidence?.chartPngPath, phase5bState.entries[0].chartPngPath);
+assert.equal(merged027?.reviewEvidence?.chartPngPath, phase5bState.entries[1].chartPngPath);
+assert.equal(merged030?.reviewEvidence?.chartSvgPath, phase5bState.entries[0].chartSvgPath);
+assert.equal(merged027?.reviewEvidence?.chartReportPath, phase5bState.entries[1].chartReportPath);
 assert.equal(mergedPhase5bPack.samples.filter((sample) => sample.humanInspectionLabel !== null).length, 2);
 const mergedPhase5bMarkdown = readFileSync(notApproved027.reviewedMarkdownPath as string, 'utf8');
 assert.ok(mergedPhase5bMarkdown.includes('final_hour_liquidity_draw-030'));
 assert.ok(mergedPhase5bMarkdown.includes('final_hour_liquidity_draw-027'));
+assert.ok(mergedPhase5bMarkdown.includes('Agent Assessment:'));
+assert.ok(mergedPhase5bMarkdown.includes('Boundary: research_only_not_execution_authority'));
+assert.ok(mergedPhase5bMarkdown.includes('Chart/Report:'));
+assert.ok(mergedPhase5bMarkdown.includes('Evidence Status:'));
+assert.ok(mergedPhase5bMarkdown.includes('PNG:'));
+assert.ok(mergedPhase5bMarkdown.includes('Report:'));
 assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"canExecute"|"ragPayload"|"journalPayload"/.test(JSON.stringify(mergedPhase5bPack)));
 
 const phase5bLedgerOut = join(phase5bDir, 'ledger-out');
@@ -570,6 +621,11 @@ const updatedPhase5bPack = JSON.parse(readFileSync(update030.reviewedPackPath as
 const updated030Samples = updatedPhase5bPack.samples.filter((sample) => sample.sampleId === 'final_hour_liquidity_draw-030');
 assert.equal(updated030Samples.length, 1);
 assert.equal(updated030Samples[0].humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(updated030Samples[0].reviewEvidence?.evidenceStatus, 'chart_available');
+assert.equal(updated030Samples[0].reviewEvidence?.chartPngPath, phase5bState.entries[0].chartPngPath);
+assert.equal(updated030Samples[0].reviewEvidence?.chartSvgPath, phase5bState.entries[0].chartSvgPath);
+assert.equal(updated030Samples[0].reviewEvidence?.chartReportPath, phase5bState.entries[0].chartReportPath);
+assert.equal(updated030Samples[0].agentAssessment?.boundary, 'research_only_not_execution_authority');
 assert.equal(updatedPhase5bPack.samples.find((sample) => sample.sampleId === 'final_hour_liquidity_draw-027')?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
 assert.equal(updatedPhase5bPack.samples.filter((sample) => sample.humanInspectionLabel !== null).length, 2);
 

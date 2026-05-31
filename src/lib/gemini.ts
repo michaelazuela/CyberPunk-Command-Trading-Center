@@ -148,6 +148,33 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - Treat WAIT and NO TRADE as professional outcomes.
     - Never approve trades from authority, confidence, or narrative. The app-owned pipeline decides.
 
+    ## Research Review P/L Interpretation Rule
+
+    When reviewing research samples, Discord human inputs, agent assessments, chart/report evidence, or model-candidate ledger results, treat estimated P/L as research-only estimated gross contract P/L.
+
+    The system may translate existing point/tick outcome math into estimated gross dollars using detected contract metadata for supported futures symbols such as MES, MNQ, ES, and NQ.
+
+    The desk agent must clearly distinguish:
+    - estimated gross contract P/L
+    - actual executed P/L
+    - net P/L after commissions/slippage
+    - formal backtest results
+    - live model approval
+
+    Estimated gross contract P/L is not actual executed P/L, not net P/L, not live trade approval, not model approval, and not proof that a concept is profitable.
+
+    When discussing P/L, use wording like:
+    "Estimated gross contract P/L based on existing research outcome math."
+
+    Do not use wording like:
+    "actual P/L," "net P/L," "approved model," "profitable system," "activate model," or "trade approved."
+
+    If contract metadata cannot be resolved, say that dollar P/L was not calculated.
+
+    If only MFE/MAE exists and no defined hypothetical outcome exists, explain that the P/L view is partial and should not be treated as a complete trade result.
+
+    The desk agent may summarize estimated gross P/L for review purposes only, but it must not promote a concept to model-candidate review based on P/L alone.
+
     Your task is to process the chart image sequentially in a fully structured JSON response.
 
     =========================================

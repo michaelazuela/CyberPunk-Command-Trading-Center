@@ -6,6 +6,7 @@ import type {
   ResearchBackfillConceptSelector,
   ResearchBackfillDirection,
 } from './historicalResearchBackfillAgent';
+import type { EstimatedGrossContractPnl } from '../lib/futuresContractMetadata';
 
 export type ResearchSampleInspectionLabel =
   | 'keep_advisory'
@@ -23,6 +24,25 @@ export type ResearchHumanInspectionLabel =
 
 export type ResearchSampleConfidence = 'low' | 'medium' | 'high';
 export type ResearchQualityScoreLabel = 'Strong' | 'Moderate' | 'Weak' | 'Incomplete' | 'Unavailable';
+export type AgentHumanInputAssessmentStatus =
+  | 'agrees_with_human'
+  | 'partially_agrees_with_human'
+  | 'disagrees_with_human'
+  | 'unclear_insufficient_evidence';
+export type AgentHumanInputQuality =
+  | 'reasonable'
+  | 'too_aggressive'
+  | 'too_conservative'
+  | 'missed_risk'
+  | 'missed_context'
+  | 'needs_more_evidence'
+  | 'invalid_or_inconsistent';
+export type AgentHumanResearchUsefulness =
+  | 'useful'
+  | 'questionable'
+  | 'invalid'
+  | 'needs_chart'
+  | 'needs_more_context';
 
 export interface ResearchQualityScore {
   score: number | null;
@@ -30,6 +50,28 @@ export interface ResearchQualityScore {
   reasons: string[];
   source: 'existing-approved-score' | 'research-only-score';
   researchOnly: true;
+}
+
+export interface AgentHumanInputAssessment {
+  status: AgentHumanInputAssessmentStatus;
+  humanInputQuality: AgentHumanInputQuality;
+  researchUsefulness: AgentHumanResearchUsefulness;
+  reason: string;
+  evidenceChecked: string[];
+  chartReportReference: string | null;
+  chartEvidenceAvailable: boolean | null;
+  boundary: 'research_only_not_execution_authority';
+  assessedAt: string;
+}
+
+export interface ResearchReviewEvidence {
+  chartAvailable: boolean;
+  chartWithheld: boolean;
+  chartPngPath?: string;
+  chartSvgPath?: string;
+  chartReportPath?: string;
+  sourceReviewCard?: string;
+  evidenceStatus: 'chart_available' | 'chart_withheld' | 'chart_missing' | 'chart_unknown';
 }
 
 export interface ResearchSampleReviewSourceReport {
@@ -85,6 +127,9 @@ export interface ResearchReviewSample {
   humanReviewer: string | null;
   agentHumanAgreement: boolean | null;
   disagreementReason: string | null;
+  reviewEvidence?: ResearchReviewEvidence | null;
+  agentAssessment?: AgentHumanInputAssessment | null;
+  estimatedGrossContractPnl?: EstimatedGrossContractPnl | null;
   finalReviewLabel: ResearchHumanInspectionLabel | null;
   finalReviewNotes: string | null;
 }
@@ -446,6 +491,8 @@ function buildReviewSample(candidate: CandidateSample, index: number): ResearchR
     humanReviewer: null,
     agentHumanAgreement: null,
     disagreementReason: null,
+    reviewEvidence: null,
+    agentAssessment: null,
     finalReviewLabel: null,
     finalReviewNotes: null,
   };

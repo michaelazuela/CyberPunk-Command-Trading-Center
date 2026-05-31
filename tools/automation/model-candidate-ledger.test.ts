@@ -251,15 +251,25 @@ const flf = ledger.conceptSummaries.find((summary) => summary.concept === 'false
 assert.ok(flf);
 assert.equal(flf.candidateReadinessStatus, 'insufficient_evidence');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.humanApprovalState, 'approved_for_future_model_candidate_review');
+assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.rootSymbol, 'MES');
+assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.hypotheticalOutcomeDollars, 40);
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.humanApprovalState, 'not_approved_for_future_model_candidate_review');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.warningState.missingOutcomeMath, true);
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.warningState.missingChartArtifact, true);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.rootSymbol, 'MES');
+assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountWithPnl, 4);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountMissingPnl, 1);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.avgHypotheticalOutcomeDollars, 40);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.status, 'partial');
+assert.ok(ledger.estimatedGrossContractPnlSummary?.note.includes('P/L summary is partial'));
 assert.equal(ledger.entries.every((entry) => entry.researchOnlyBoundary.approvesExecution === false), true);
 assertNoExecutableLedgerFields(ledger);
 assert.ok(!/"canExecute"|"executionApproved"|"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"orderInstructions"|"ragPayload"|"journalPayload"/.test(JSON.stringify(ledger)));
 const markdown = readFileSync(ledger.outputPaths.markdownPath, 'utf8');
 assert.ok(markdown.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.ok(markdown.includes('Human final decision required before any model promotion or implementation.'));
+assert.ok(markdown.includes('Estimated Gross Contract P/L Summary, 1 Contract'));
+assert.ok(markdown.includes('Avg Hypothetical Outcome: +$40.00 gross'));
 
 const parsed = parseModelCandidateLedgerArgs([
   '--from', '2026-01-01',

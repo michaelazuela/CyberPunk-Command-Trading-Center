@@ -167,7 +167,10 @@ function sample(
     warningFailureReason: 'fixture',
     dataQualityNotes: [],
     sampleSourceReportPath: 'fixture',
-    agentInspectionLabel: humanLabel === 'human_rule_review_queue' || humanLabel === 'new_model_candidate_review'
+    agentInspectionLabel: humanLabel === 'human_rule_review_queue' ||
+      humanLabel === 'new_model_candidate_review' ||
+      humanLabel === 'approved_for_future_model_candidate_review' ||
+      humanLabel === 'not_approved_for_future_model_candidate_review'
       ? 'keep_advisory'
       : humanLabel || 'keep_advisory',
     agentConfidence: 'medium',

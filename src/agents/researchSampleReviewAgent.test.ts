@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  computeResearchQualityScore,
   createResearchSampleReviewPack,
   type ResearchSampleReviewSourceReport,
 } from './researchSampleReviewAgent';
@@ -355,6 +356,10 @@ assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentCreatesEntry === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentCreatesTargets === false));
 assert.ok(timeWindowPack.samples.every((sample) => sample.agentApprovalBoundary.agentPromotesModel === false));
+assert.ok(timeWindowPack.samples.every((sample) => sample.researchQualityScore.researchOnly === true));
+assert.ok(timeWindowPack.samples.every((sample) => sample.researchQualityScore.source === 'research-only-score'));
+assert.ok(timeWindowPack.samples.every((sample) => typeof sample.researchQualityScore.score === 'number'));
+assert.ok(timeWindowPack.markdown.includes('Research Quality Score'));
 assert.ok(timeWindowPack.samples.every((sample) => sample.humanInspectionLabel === null));
 assert.ok(timeWindowPack.samples.every((sample) => sample.humanConfidence === null));
 assert.ok(timeWindowPack.samples.every((sample) => sample.humanReason === null));
@@ -387,6 +392,33 @@ for (const sample of timeWindowPack.samples) {
   assert.equal(keys.includes('t2'), false);
   assert.equal((sample as unknown as { canExecute?: boolean }).canExecute, undefined);
 }
+
+const incompleteQuality = computeResearchQualityScore({
+  date: '2026-01-02',
+  time: null,
+  direction: 'LONG',
+  summary: 'Missing time fixture.',
+  classification: 'advisory_only',
+});
+assert.equal(incompleteQuality.score, null);
+assert.equal(incompleteQuality.label, 'Incomplete');
+assert.equal(incompleteQuality.researchOnly, true);
+assert.ok(incompleteQuality.reasons[0].includes('missing'));
+
+const weakQuality = computeResearchQualityScore({
+  date: '2026-01-02',
+  time: '10:00',
+  direction: 'LONG',
+  window: '10:00-11:00 NY',
+  summary: 'No meaningful range expansion.',
+  classification: 'advisory_only',
+  agentInspectionLabel: 'reject',
+  agentConfidence: 'low',
+  researchDetectorReason: 'No meaningful range expansion.',
+  warningFailureReason: 'No meaningful range expansion.',
+});
+assert.equal(weakQuality.source, 'research-only-score');
+assert.ok((weakQuality.score || 0) < 50);
 
 const allPack = createResearchSampleReviewPack({
   instrument: 'MES',

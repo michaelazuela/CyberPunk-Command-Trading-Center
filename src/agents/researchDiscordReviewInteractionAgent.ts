@@ -438,6 +438,21 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
     reason: humanReviewReason(customId.label),
     notes: reviewNotes(input, customId.label),
     reviewedAt,
+    evidence: {
+      chartAvailable: entry.chartWithheld === true
+        ? false
+        : (entry.chartPngPath || entry.chartSvgPath || entry.chartReportPath || entry.sourceReviewCard || entry.labelOptions?.some((label) => isFutureModelCandidateApprovalLabel(label as HumanReviewLabel)))
+          ? true
+          : null,
+      chartWithheld: entry.chartWithheld === true,
+      chartReportReference: entry.chartWithheld === true ? null : 'Discord PriceActionReviewCard post',
+      chartWithheldReason: entry.chartWithheldReason || null,
+      chartPngPath: entry.chartPngPath || null,
+      chartSvgPath: entry.chartSvgPath || null,
+      chartReportPath: entry.chartReportPath || null,
+      sourceReviewCard: entry.sourceReviewCard || (entry.labelOptions?.some((label) => isFutureModelCandidateApprovalLabel(label as HumanReviewLabel)) ? 'Discord PriceActionReviewCard post' : null),
+    },
+    estimatedGrossContractPnl: entry.estimatedGrossContractPnl || null,
   });
   assertPackBoundaryAllowsLegacyAdvisoryOnly(result.updatedPack);
   assertNoExecutableDiscordInteractionFields(result.updatedPack.samples);

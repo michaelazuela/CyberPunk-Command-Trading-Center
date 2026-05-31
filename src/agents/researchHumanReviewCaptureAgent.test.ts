@@ -10,6 +10,7 @@ import {
   summarizeHumanReviewProgress,
 } from './researchHumanReviewCaptureAgent';
 import type { ResearchSampleReviewPack } from './researchSampleReviewAgent';
+import { calculateEstimatedGrossContractPnl } from '../lib/futuresContractMetadata';
 import {
   parseResearchHumanReviewArgs,
   runResearchHumanReviewCli,
@@ -123,6 +124,21 @@ const agreementResult = applyHumanReviewToPack({
   reviewer: 'Michael',
   notes: 'Good advisory context, but not enough for rule discussion.',
   reviewedAt: '2026-05-29T22:00:00.000Z',
+  estimatedGrossContractPnl: calculateEstimatedGrossContractPnl({
+    outcome: {
+      maxFavorableExcursionPoints: 23,
+      maxAdverseExcursionPoints: 4.25,
+      thresholdOnePoints: 6,
+      thresholdTwoPoints: 10,
+      adverseThresholdPoints: 6,
+      firstMeaningfulMove: 'favorable',
+      hypotheticalOutcomeOverlay: {
+        firstResolvedEvent: 'favorable_threshold_two',
+        hypotheticalOutcomeLabel: 'favorable_continuation',
+      },
+    } as any,
+    sampleSymbol: 'MESU6',
+  }),
 });
 
 assert.equal(JSON.stringify(pack), before);
@@ -134,6 +150,8 @@ assert.equal(agreementResult.sample.agentHumanAgreement, true);
 assert.equal(agreementResult.sample.disagreementReason, null);
 assert.equal(agreementResult.sample.finalReviewLabel, 'keep_advisory');
 assert.ok(agreementResult.sample.finalReviewNotes?.includes('no execution approval'));
+assert.equal(agreementResult.sample.estimatedGrossContractPnl?.rootSymbol, 'MES');
+assert.equal(agreementResult.sample.estimatedGrossContractPnl?.hypotheticalOutcomeDollars, 50);
 assert.equal(agreementResult.updatedPack.samples[1].humanInspectionLabel, null);
 assert.ok(agreementResult.updatedPack.samples.every((sample) => sample.advisoryOnly === true));
 assert.ok(agreementResult.updatedPack.samples.every((sample) => sample.agentApprovalBoundary.agentApprovesTrade === false));
@@ -186,6 +204,34 @@ assert.ok(markdown.includes('## 2. Human Review Progress'));
 assert.ok(markdown.includes('## 3. Agent/Human Agreement Summary'));
 assert.ok(markdown.includes('## 7. Advisory-Only Boundary'));
 assert.ok(markdown.includes('No entries, stops, targets'));
+assert.ok(markdown.includes('Estimated Gross Contract P/L, 1 Contract'));
+assert.ok(markdown.includes('Contract: MES - Micro E-mini S&P 500'));
+assert.ok(markdown.includes('MFE: +23.00 pts / +92 ticks / +$115.00 gross'));
+assert.ok(markdown.includes('Hypothetical Outcome: +10.00 pts / +40 ticks / +$50.00 gross'));
+
+const partialPack = fixturePack();
+const partialResult = applyHumanReviewToPack({
+  reviewPack: partialPack,
+  sampleId: 'time_window_liquidity_delivery-001',
+  label: 'keep_advisory',
+  confidence: 'medium',
+  reviewer: 'Michael',
+  reviewedAt: '2026-05-29T22:03:00.000Z',
+});
+assert.equal(partialResult.sample.estimatedGrossContractPnl?.status, 'unavailable_no_outcome_math');
+assert.ok(renderHumanReviewMarkdown(partialResult.updatedPack).includes('Hypothetical Outcome: Not available - no defined hypothetical exit model.'));
+
+const unknownPack = { ...fixturePack(), instrument: 'YM' };
+const unknownResult = applyHumanReviewToPack({
+  reviewPack: unknownPack,
+  sampleId: 'time_window_liquidity_delivery-001',
+  label: 'keep_advisory',
+  confidence: 'medium',
+  reviewer: 'Michael',
+  reviewedAt: '2026-05-29T22:04:00.000Z',
+});
+assert.equal(unknownResult.sample.estimatedGrossContractPnl?.status, 'unavailable_unknown_contract');
+assert.equal(unknownResult.sample.estimatedGrossContractPnl?.hypotheticalOutcomeDollars, undefined);
 
 const badPack = fixturePack();
 (badPack.samples[0] as unknown as { entry: number }).entry = 7597;
