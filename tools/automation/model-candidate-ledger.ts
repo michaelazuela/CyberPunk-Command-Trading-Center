@@ -151,6 +151,34 @@ export interface ModelCandidateAdvisoryEvidence {
   boundary: 'research_only_not_execution_authority';
 }
 
+export interface ModelCandidateAdvisoryInterpretation {
+  advisoryStatus:
+    | 'do_not_advance'
+    | 'keep_collecting_evidence'
+    | 'watchlist_candidate'
+    | 'candidate_review_recommended'
+    | 'reject_or_deprioritize';
+  evidenceBase: 'too_small' | 'developing' | 'sufficient_for_review';
+  humanReviewSignal: 'supportive' | 'mixed' | 'not_supportive' | 'insufficient';
+  agentAssessmentSignal: 'supportive' | 'mixed' | 'negative' | 'unclear' | 'insufficient';
+  chartEvidenceSignal: 'sufficient' | 'partial' | 'missing_or_unknown';
+  pnlSignal:
+    | 'supportive_after_core_gates'
+    | 'partial_not_decisive'
+    | 'adverse_or_mixed'
+    | 'unavailable'
+    | 'not_meaningful_low_sample_count';
+  nextAction:
+    | 'collect_more_reviewed_samples'
+    | 'resolve_missing_evidence'
+    | 'resolve_adverse_contradictions'
+    | 'continue_watchlist'
+    | 'move_to_formal_model_candidate_backtest_human_final_decision_required'
+    | 'reject_or_deprioritize';
+  reasons: string[];
+  boundary: 'research_only_not_execution_authority';
+}
+
 export interface ModelCandidateConceptSummary {
   concept: string;
   conceptTitle: string;
@@ -167,6 +195,7 @@ export interface ModelCandidateConceptSummary {
   candidateReadinessStatus: ModelCandidateReadinessStatus;
   deskRecommendation: string;
   modelCandidateAdvisoryEvidence: ModelCandidateAdvisoryEvidence;
+  modelCandidateAdvisoryInterpretation: ModelCandidateAdvisoryInterpretation;
 }
 
 export interface ModelCandidateReviewLedger {
@@ -215,6 +244,7 @@ const DEFAULT_CHART_DIR = path.join(__dirname, 'research-review-charts', 'price-
 const DEFAULT_OUT_DIR = path.join(__dirname, 'model-candidate-ledger');
 const SAFETY_MESSAGE = 'Research-only. This does not approve execution, change rules, or create trades.' as const;
 const FINAL_DECISION_MESSAGE = 'Human final decision required before any model promotion or implementation.';
+const ADVISORY_MINIMUM_REVIEWED_SAMPLES = 10;
 const APPROVED_LABEL = 'approved_for_future_model_candidate_review' as const;
 const NOT_APPROVED_LABEL = 'not_approved_for_future_model_candidate_review' as const;
 const PROHIBITED_LEDGER_KEYS = new Set([
@@ -562,6 +592,124 @@ function summarizeModelCandidateAdvisoryEvidence(args: {
   };
 }
 
+export function interpretModelCandidateAdvisoryEvidence(args: {
+  evidence: ModelCandidateAdvisoryEvidence;
+  candidateReadinessStatus: ModelCandidateReadinessStatus;
+  thresholds: ModelCandidateLedgerOptions['thresholds'];
+}): ModelCandidateAdvisoryInterpretation {
+  const { evidence, candidateReadinessStatus, thresholds } = args;
+  const reasons: string[] = [];
+  const approvalRate = evidence.humanApprovalRate;
+  const minimumApprovalRate = thresholds.minimumApprovalRate;
+  const belowCoreSampleGate = evidence.sampleCount < ADVISORY_MINIMUM_REVIEWED_SAMPLES;
+  const evidenceBase: ModelCandidateAdvisoryInterpretation['evidenceBase'] = belowCoreSampleGate
+    ? 'too_small'
+    : evidence.sampleCount < Math.max(ADVISORY_MINIMUM_REVIEWED_SAMPLES, thresholds.minimumReviewedSamples)
+      ? 'developing'
+      : 'sufficient_for_review';
+
+  const humanReviewSignal: ModelCandidateAdvisoryInterpretation['humanReviewSignal'] = approvalRate === undefined
+    ? 'insufficient'
+    : approvalRate >= minimumApprovalRate
+      ? 'supportive'
+      : approvalRate >= 0.35
+        ? 'mixed'
+        : 'not_supportive';
+
+  const agent = evidence.agentAssessmentSummary;
+  const assessedCount = agent.agreesWithHuman + agent.partiallyAgreesWithHuman + agent.disagreesWithHuman;
+  const supportiveAgentCount = agent.agreesWithHuman + agent.partiallyAgreesWithHuman;
+  const agentAssessmentSignal: ModelCandidateAdvisoryInterpretation['agentAssessmentSignal'] = assessedCount === 0
+    ? agent.unclearInsufficientEvidence > 0 ? 'unclear' : 'insufficient'
+    : agent.disagreesWithHuman > supportiveAgentCount
+      ? 'negative'
+      : agent.disagreesWithHuman > 0
+        ? 'mixed'
+        : 'supportive';
+
+  const review = evidence.reviewEvidenceSummary;
+  const chartProblemCount = review.samplesMissingCharts + review.samplesWithUnknownCharts + review.samplesWithWithheldCharts;
+  const chartEvidenceSignal: ModelCandidateAdvisoryInterpretation['chartEvidenceSignal'] = chartProblemCount > 0 || review.samplesWithChartEvidence === 0
+    ? 'missing_or_unknown'
+    : review.samplesWithChartEvidence >= evidence.sampleCount && review.samplesWithExactReportPath >= evidence.sampleCount
+      ? 'sufficient'
+      : 'partial';
+
+  const pnl = evidence.estimatedGrossContractPnlSummary;
+  const hasHypothetical = finite(pnl?.avgHypotheticalOutcomeDollars);
+  const pnlSignal: ModelCandidateAdvisoryInterpretation['pnlSignal'] = belowCoreSampleGate
+    ? 'not_meaningful_low_sample_count'
+    : !pnl || pnl.status === 'unavailable' || pnl.status === 'unavailable_unknown_contract'
+      ? 'unavailable'
+      : pnl.status === 'partial' || !hasHypothetical
+        ? 'partial_not_decisive'
+        : (pnl.avgHypotheticalOutcomeDollars as number) <= 0 ||
+            (finite(pnl.worstHypotheticalOutcomeDollars) && pnl.worstHypotheticalOutcomeDollars < 0)
+          ? 'adverse_or_mixed'
+          : 'supportive_after_core_gates';
+
+  if (belowCoreSampleGate) reasons.push(`Reviewed sample count is below the ${ADVISORY_MINIMUM_REVIEWED_SAMPLES}-sample evidence gate.`);
+  if (belowCoreSampleGate) reasons.push('Estimated gross contract P/L is not meaningful until the core evidence base is large enough.');
+  if (humanReviewSignal === 'mixed') reasons.push(`Human approval rate is below the ${Math.round(minimumApprovalRate * 100)}% review gate.`);
+  if (humanReviewSignal === 'not_supportive') reasons.push('Human review signal is not supportive.');
+  if (agentAssessmentSignal === 'mixed') reasons.push('Agent assessments are mixed and should be reviewed beside the human notes and chart evidence.');
+  if (agentAssessmentSignal === 'negative') reasons.push('Agent assessments are negative relative to the human review signal.');
+  if (agentAssessmentSignal === 'unclear' || agentAssessmentSignal === 'insufficient') reasons.push('Agent assessment evidence is unclear or insufficient.');
+  if (evidence.missingDataWarningCount > 0) reasons.push('Missing-data warnings must be resolved before formal model-candidate review.');
+  if (evidence.adverseFirstContradictionCount > 0) reasons.push('Adverse-first contradictions must be resolved before formal model-candidate review.');
+  if (chartEvidenceSignal === 'missing_or_unknown') reasons.push('Chart/report evidence is missing, withheld, or unknown.');
+  if (chartEvidenceSignal === 'partial') reasons.push('Chart/report evidence is partial and should be completed where available.');
+  if (pnlSignal === 'partial_not_decisive') reasons.push('Estimated gross contract P/L is partial and not decisive because a defined hypothetical outcome is not available for every reviewed sample.');
+  if (pnlSignal === 'partial_not_decisive' && pnl && finite(pnl.avgMfeDollars) && !hasHypothetical) reasons.push('MFE-only evidence is excursion context, not a completed outcome translation.');
+  if (pnlSignal === 'adverse_or_mixed') reasons.push('Estimated gross contract P/L is adverse or mixed and should be treated as a caution.');
+  if (pnlSignal === 'unavailable') reasons.push('Estimated gross contract P/L is unavailable for this concept.');
+
+  const blocksCandidateReview = (
+    belowCoreSampleGate ||
+    humanReviewSignal !== 'supportive' ||
+    evidence.missingDataWarningCount > 0 ||
+    evidence.adverseFirstContradictionCount > 0 ||
+    chartEvidenceSignal !== 'sufficient'
+  );
+
+  let advisoryStatus: ModelCandidateAdvisoryInterpretation['advisoryStatus'];
+  let nextAction: ModelCandidateAdvisoryInterpretation['nextAction'];
+  if (candidateReadinessStatus === 'reject_or_deprioritize') {
+    advisoryStatus = 'reject_or_deprioritize';
+    nextAction = 'reject_or_deprioritize';
+    if (!reasons.length) reasons.push('Existing readiness status is reject or deprioritize.');
+  } else if (belowCoreSampleGate) {
+    advisoryStatus = 'keep_collecting_evidence';
+    nextAction = 'collect_more_reviewed_samples';
+  } else if (evidence.missingDataWarningCount > 0 || chartEvidenceSignal !== 'sufficient') {
+    advisoryStatus = 'do_not_advance';
+    nextAction = 'resolve_missing_evidence';
+  } else if (evidence.adverseFirstContradictionCount > 0) {
+    advisoryStatus = 'do_not_advance';
+    nextAction = 'resolve_adverse_contradictions';
+  } else if (candidateReadinessStatus === 'candidate_review_recommended' && !blocksCandidateReview) {
+    advisoryStatus = 'candidate_review_recommended';
+    nextAction = 'move_to_formal_model_candidate_backtest_human_final_decision_required';
+    reasons.push('Move to formal model-candidate review/backtest. Human final decision required.');
+  } else {
+    advisoryStatus = 'watchlist_candidate';
+    nextAction = humanReviewSignal === 'supportive' ? 'continue_watchlist' : 'collect_more_reviewed_samples';
+    if (!reasons.length) reasons.push('Keep collecting evidence.');
+  }
+
+  return {
+    advisoryStatus,
+    evidenceBase,
+    humanReviewSignal,
+    agentAssessmentSignal,
+    chartEvidenceSignal,
+    pnlSignal,
+    nextAction,
+    reasons,
+    boundary: 'research_only_not_execution_authority',
+  };
+}
+
 function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: ModelCandidateLedgerOptions['thresholds'], symbol: Instrument): ModelCandidateConceptSummary[] {
   const byConcept = new Map<string, ModelCandidateLedgerEntry[]>();
   for (const entry of entries) {
@@ -599,6 +747,20 @@ function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: Mod
     const deskRecommendation = candidateReadinessStatus === 'candidate_review_recommended'
       ? `Desk recommendation: candidate review recommended. ${FINAL_DECISION_MESSAGE}`
       : `Desk recommendation: ${candidateReadinessStatus.replace(/_/g, ' ')}. ${FINAL_DECISION_MESSAGE}`;
+    const modelCandidateAdvisoryEvidence = summarizeModelCandidateAdvisoryEvidence({
+      rows,
+      approved,
+      notApproved,
+      approvalRate,
+      missingDataWarningsCount,
+      adverseFirstCount,
+      symbol,
+    });
+    const modelCandidateAdvisoryInterpretation = interpretModelCandidateAdvisoryEvidence({
+      evidence: modelCandidateAdvisoryEvidence,
+      candidateReadinessStatus,
+      thresholds,
+    });
     return {
       concept,
       conceptTitle: rows[0]?.conceptTitle || concept,
@@ -614,15 +776,8 @@ function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: Mod
       missingDataWarningsCount,
       candidateReadinessStatus,
       deskRecommendation,
-      modelCandidateAdvisoryEvidence: summarizeModelCandidateAdvisoryEvidence({
-        rows,
-        approved,
-        notApproved,
-        approvalRate,
-        missingDataWarningsCount,
-        adverseFirstCount,
-        symbol,
-      }),
+      modelCandidateAdvisoryEvidence,
+      modelCandidateAdvisoryInterpretation,
     };
   }).sort((left, right) => right.totalSamplesReviewed - left.totalSamplesReviewed || left.concept.localeCompare(right.concept));
 }
@@ -669,7 +824,7 @@ function summarizeEstimatedGrossContractPnl(entries: ModelCandidateLedgerEntry[]
       : 'available';
   const note = status === 'partial'
     ? 'P/L summary is partial because MFE/MAE exists, but no defined hypothetical outcome model was available for all samples.'
-    : 'Research-only gross estimate. Not actual P/L. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.';
+    : 'Research-only gross estimate. Not executed performance. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.';
   return {
     rootSymbol: metadata.rootSymbol,
     displayName: metadata.displayName,
@@ -722,6 +877,22 @@ function renderAdvisoryEvidenceMarkdown(evidence: ModelCandidateAdvisoryEvidence
     `- Missing Data Warnings: ${evidence.missingDataWarningCount}`,
     `- Adverse-First Contradictions: ${evidence.adverseFirstContradictionCount}`,
     `- Boundary: ${evidence.boundary}`,
+  ];
+}
+
+function renderAdvisoryInterpretationMarkdown(interpretation: ModelCandidateAdvisoryInterpretation): string[] {
+  return [
+    'Model-Candidate Advisory Interpretation:',
+    `- Advisory Status: ${interpretation.advisoryStatus}`,
+    `- Evidence Base: ${interpretation.evidenceBase}`,
+    `- Human Review Signal: ${interpretation.humanReviewSignal}`,
+    `- Agent Assessment Signal: ${interpretation.agentAssessmentSignal}`,
+    `- Chart Evidence Signal: ${interpretation.chartEvidenceSignal}`,
+    `- P/L Signal: ${interpretation.pnlSignal}`,
+    `- Next Action: ${interpretation.nextAction}`,
+    '- Reasons:',
+    ...(interpretation.reasons.length ? interpretation.reasons.map((reason) => `  - ${reason}`) : ['  - None recorded.']),
+    `- Boundary: ${interpretation.boundary}`,
   ];
 }
 
@@ -852,6 +1023,8 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
         `- ${summary.deskRecommendation}`,
         '',
         ...renderAdvisoryEvidenceMarkdown(summary.modelCandidateAdvisoryEvidence),
+        '',
+        ...renderAdvisoryInterpretationMarkdown(summary.modelCandidateAdvisoryInterpretation),
       ].join('\n'))
       : ['- No approved/not-approved PriceActionReviewCard reviews found for this range.']),
     '',

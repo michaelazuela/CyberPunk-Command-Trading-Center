@@ -65,6 +65,17 @@ function concept(overrides: Partial<ModelCandidateConceptSummary> = {}): ModelCa
       adverseFirstContradictionCount: 0,
       boundary: 'research_only_not_execution_authority',
     },
+    modelCandidateAdvisoryInterpretation: {
+      advisoryStatus: 'candidate_review_recommended',
+      evidenceBase: 'sufficient_for_review',
+      humanReviewSignal: 'supportive',
+      agentAssessmentSignal: 'mixed',
+      chartEvidenceSignal: 'sufficient',
+      pnlSignal: 'supportive_after_core_gates',
+      nextAction: 'move_to_formal_model_candidate_backtest_human_final_decision_required',
+      reasons: ['Move to formal model-candidate review/backtest. Human final decision required.'],
+      boundary: 'research_only_not_execution_authority',
+    },
     ...overrides,
   };
 }

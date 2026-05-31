@@ -5,11 +5,13 @@ import path from 'node:path';
 import {
   assertNoExecutableLedgerFields,
   buildModelCandidateReviewLedger,
+  interpretModelCandidateAdvisoryEvidence,
   parseModelCandidateLedgerArgs,
   runModelCandidateLedgerCli,
 } from './model-candidate-ledger';
 import type { ResearchOutcomeMathReport } from '../../src/agents/researchOutcomeMathAgent';
 import type { ResearchHumanInspectionLabel, ResearchReviewSample, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
+import type { ModelCandidateAdvisoryEvidence } from './model-candidate-ledger';
 
 function sample(id: string, concept: string, label: ResearchHumanInspectionLabel | null, date = '2026-05-28'): ResearchReviewSample {
   return {
@@ -296,6 +298,12 @@ assert.equal(twld.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummar
 assert.equal(twld.modelCandidateAdvisoryEvidence.missingDataWarningCount, 0);
 assert.equal(twld.modelCandidateAdvisoryEvidence.adverseFirstContradictionCount, 0);
 assert.equal(twld.modelCandidateAdvisoryEvidence.boundary, 'research_only_not_execution_authority');
+assert.equal(twld.modelCandidateAdvisoryInterpretation.evidenceBase, 'too_small');
+assert.equal(twld.modelCandidateAdvisoryInterpretation.pnlSignal, 'not_meaningful_low_sample_count');
+assert.equal(twld.modelCandidateAdvisoryInterpretation.advisoryStatus, 'keep_collecting_evidence');
+assert.equal(twld.modelCandidateAdvisoryInterpretation.nextAction, 'collect_more_reviewed_samples');
+assert.equal(twld.modelCandidateAdvisoryInterpretation.boundary, 'research_only_not_execution_authority');
+assert.ok(twld.modelCandidateAdvisoryInterpretation.reasons.some((reason) => reason.includes('10-sample evidence gate')));
 assert.ok(twld.deskRecommendation.includes('Human final decision required before any model promotion or implementation.'));
 const flf = ledger.conceptSummaries.find((summary) => summary.concept === 'false_run_liquidity_fade');
 assert.ok(flf);
@@ -305,6 +313,8 @@ assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary
 assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.avgMfeDollars, 100);
 assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.status, 'partial');
 assert.equal(flf.modelCandidateAdvisoryEvidence.sampleCount < ledger.thresholds.minimumReviewedSamples, true);
+assert.equal(flf.modelCandidateAdvisoryInterpretation.pnlSignal, 'not_meaningful_low_sample_count');
+assert.ok(flf.modelCandidateAdvisoryInterpretation.reasons.some((reason) => reason.includes('not meaningful')));
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.humanApprovalState, 'approved_for_future_model_candidate_review');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.rootSymbol, 'MES');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.hypotheticalOutcomeDollars, 40);
@@ -329,11 +339,129 @@ assert.ok(markdown.includes('Human final decision required before any model prom
 assert.ok(markdown.includes('Estimated Gross Contract P/L Summary, 1 Contract'));
 assert.ok(markdown.includes('Avg Hypothetical Outcome: +$40.00 gross'));
 assert.ok(markdown.includes('Model-Candidate Advisory Evidence:'));
+assert.ok(markdown.includes('Model-Candidate Advisory Interpretation:'));
+assert.ok(markdown.includes('P/L Signal: not_meaningful_low_sample_count'));
 assert.ok(markdown.includes('Boundary: research_only_not_execution_authority'));
 assert.ok(markdown.includes('supporting research/audit evidence only'));
+assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(markdown));
 assert.equal(ledger.thresholds.minimumReviewedSamples, 4);
 assert.equal(ledger.thresholds.minimumApprovalRate, 0.7);
 assert.equal(ledger.summary.candidateReviewRecommendedConcepts, 1);
+
+const sufficientEvidence: ModelCandidateAdvisoryEvidence = {
+  sampleCount: 10,
+  humanApprovedCount: 8,
+  humanNotApprovedCount: 2,
+  humanApprovalRate: 0.8,
+  agentAssessmentSummary: {
+    agreesWithHuman: 8,
+    partiallyAgreesWithHuman: 1,
+    disagreesWithHuman: 1,
+    unclearInsufficientEvidence: 0,
+  },
+  reviewEvidenceSummary: {
+    samplesWithChartEvidence: 10,
+    samplesWithExactPngPath: 10,
+    samplesWithExactReportPath: 10,
+    samplesMissingCharts: 0,
+    samplesWithUnknownCharts: 0,
+    samplesWithWithheldCharts: 0,
+  },
+  estimatedGrossContractPnlSummary: {
+    rootSymbol: 'MES',
+    sampleCountWithPnl: 10,
+    sampleCountMissingPnl: 0,
+    avgHypotheticalOutcomeDollars: 40,
+    totalHypotheticalOutcomeDollars: 400,
+    bestHypotheticalOutcomeDollars: 80,
+    worstHypotheticalOutcomeDollars: 10,
+    avgMfeDollars: 70,
+    avgMaeDollars: -20,
+    status: 'available',
+  },
+  missingDataWarningCount: 0,
+  adverseFirstContradictionCount: 0,
+  boundary: 'research_only_not_execution_authority',
+};
+const supportiveInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: sufficientEvidence,
+  candidateReadinessStatus: 'candidate_review_recommended',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(supportiveInterpretation.advisoryStatus, 'candidate_review_recommended');
+assert.equal(supportiveInterpretation.pnlSignal, 'supportive_after_core_gates');
+assert.equal(supportiveInterpretation.nextAction, 'move_to_formal_model_candidate_backtest_human_final_decision_required');
+
+const lowApprovalInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: { ...sufficientEvidence, humanApprovedCount: 6, humanNotApprovedCount: 4, humanApprovalRate: 0.6 },
+  candidateReadinessStatus: 'watchlist_candidate',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.notEqual(lowApprovalInterpretation.advisoryStatus, 'candidate_review_recommended');
+assert.equal(lowApprovalInterpretation.humanReviewSignal, 'mixed');
+assert.ok(lowApprovalInterpretation.reasons.some((reason) => reason.includes('70% review gate')));
+
+const missingDataInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: { ...sufficientEvidence, missingDataWarningCount: 1 },
+  candidateReadinessStatus: 'watchlist_candidate',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(missingDataInterpretation.advisoryStatus, 'do_not_advance');
+assert.equal(missingDataInterpretation.nextAction, 'resolve_missing_evidence');
+
+const adverseFirstInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: { ...sufficientEvidence, adverseFirstContradictionCount: 1 },
+  candidateReadinessStatus: 'watchlist_candidate',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(adverseFirstInterpretation.advisoryStatus, 'do_not_advance');
+assert.equal(adverseFirstInterpretation.nextAction, 'resolve_adverse_contradictions');
+
+const missingChartInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: {
+    ...sufficientEvidence,
+    reviewEvidenceSummary: { ...sufficientEvidence.reviewEvidenceSummary, samplesMissingCharts: 1, samplesWithChartEvidence: 9, samplesWithExactPngPath: 9, samplesWithExactReportPath: 9 },
+  },
+  candidateReadinessStatus: 'candidate_review_recommended',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.notEqual(missingChartInterpretation.advisoryStatus, 'candidate_review_recommended');
+assert.equal(missingChartInterpretation.chartEvidenceSignal, 'missing_or_unknown');
+
+const partialPnlInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: {
+    ...sufficientEvidence,
+    estimatedGrossContractPnlSummary: {
+      rootSymbol: 'MES',
+      sampleCountWithPnl: 10,
+      sampleCountMissingPnl: 0,
+      avgMfeDollars: 75,
+      status: 'partial',
+    },
+  },
+  candidateReadinessStatus: 'candidate_review_recommended',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(partialPnlInterpretation.pnlSignal, 'partial_not_decisive');
+assert.ok(partialPnlInterpretation.reasons.some((reason) => reason.includes('MFE-only evidence')));
+
+const adversePnlInterpretation = interpretModelCandidateAdvisoryEvidence({
+  evidence: {
+    ...sufficientEvidence,
+    estimatedGrossContractPnlSummary: {
+      ...sufficientEvidence.estimatedGrossContractPnlSummary,
+      avgHypotheticalOutcomeDollars: -10,
+      totalHypotheticalOutcomeDollars: -100,
+      bestHypotheticalOutcomeDollars: 20,
+      worstHypotheticalOutcomeDollars: -40,
+      status: 'available',
+    },
+  },
+  candidateReadinessStatus: 'watchlist_candidate',
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(adversePnlInterpretation.pnlSignal, 'adverse_or_mixed');
+assert.notEqual(adversePnlInterpretation.advisoryStatus, 'candidate_review_recommended');
 
 const parsed = parseModelCandidateLedgerArgs([
   '--from', '2026-01-01',

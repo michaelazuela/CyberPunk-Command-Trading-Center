@@ -1,6 +1,6 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T19:44:54.312Z",
+  "generatedAt": "2026-05-31T20:26:49.839Z",
   "from": "2026-01-01",
   "to": "2026-05-31",
   "symbol": "MES",
@@ -173,6 +173,21 @@
         "missingDataWarningCount": 3,
         "adverseFirstContradictionCount": 0,
         "boundary": "research_only_not_execution_authority"
+      },
+      "modelCandidateAdvisoryInterpretation": {
+        "advisoryStatus": "keep_collecting_evidence",
+        "evidenceBase": "too_small",
+        "humanReviewSignal": "supportive",
+        "agentAssessmentSignal": "supportive",
+        "chartEvidenceSignal": "sufficient",
+        "pnlSignal": "not_meaningful_low_sample_count",
+        "nextAction": "collect_more_reviewed_samples",
+        "reasons": [
+          "Reviewed sample count is below the 10-sample evidence gate.",
+          "Estimated gross contract P/L is not meaningful until the core evidence base is large enough.",
+          "Missing-data warnings must be resolved before formal model-candidate review."
+        ],
+        "boundary": "research_only_not_execution_authority"
       }
     }
   ],
@@ -193,7 +208,7 @@
     "avgMfeDollars": 56.25,
     "avgMaeDollars": -8.75,
     "status": "available",
-    "note": "Research-only gross estimate. Not actual P/L. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects."
+    "note": "Research-only gross estimate. Not executed performance. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects."
   },
   "warnings": [],
   "outputPaths": {

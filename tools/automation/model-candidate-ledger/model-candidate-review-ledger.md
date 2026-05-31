@@ -28,7 +28,7 @@ Human final decision required before any model promotion or implementation.
 - Avg MFE: +$56.25 gross
 - Avg MAE: -$8.75 gross
 - Status: available
-- Note: Research-only gross estimate. Not actual P/L. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.
+- Note: Research-only gross estimate. Not executed performance. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.
 
 ## Concept Summary
 ### Final-Hour Liquidity Draw
@@ -51,6 +51,20 @@ Model-Candidate Advisory Evidence:
 - Estimated Gross Contract P/L Summary: MES; samples with P/L 1; missing 0; avg hypothetical +$40.00 gross; avg MFE +$56.25 gross; avg MAE -$8.75 gross; status available; supporting research/audit evidence only
 - Missing Data Warnings: 3
 - Adverse-First Contradictions: 0
+- Boundary: research_only_not_execution_authority
+
+Model-Candidate Advisory Interpretation:
+- Advisory Status: keep_collecting_evidence
+- Evidence Base: too_small
+- Human Review Signal: supportive
+- Agent Assessment Signal: supportive
+- Chart Evidence Signal: sufficient
+- P/L Signal: not_meaningful_low_sample_count
+- Next Action: collect_more_reviewed_samples
+- Reasons:
+  - Reviewed sample count is below the 10-sample evidence gate.
+  - Estimated gross contract P/L is not meaningful until the core evidence base is large enough.
+  - Missing-data warnings must be resolved before formal model-candidate review.
 - Boundary: research_only_not_execution_authority
 
 ## Reviewed Evidence
