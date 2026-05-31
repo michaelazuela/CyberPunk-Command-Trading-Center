@@ -57,6 +57,42 @@ function sample(id: string, concept: string, label: ResearchHumanInspectionLabel
     humanReviewer: label ? 'Michael' : null,
     agentHumanAgreement: label === 'keep_advisory' ? true : label ? false : null,
     disagreementReason: label && label !== 'keep_advisory' ? 'fixture disagreement' : null,
+    reviewEvidence: label ? {
+      chartAvailable: !id.startsWith('flf'),
+      chartWithheld: false,
+      chartPngPath: !id.startsWith('flf') ? `fixtures/${id}.png` : undefined,
+      chartReportPath: !id.startsWith('flf') ? `fixtures/${id}.md` : undefined,
+      sourceReviewCard: !id.startsWith('flf') ? `fixtures/${id}.json` : undefined,
+      evidenceStatus: id.startsWith('flf') ? 'chart_missing' : 'chart_available',
+    } : null,
+    agentAssessment: label ? {
+      status: label === 'approved_for_future_model_candidate_review'
+        ? 'agrees_with_human'
+        : 'disagrees_with_human',
+      humanInputQuality: label === 'approved_for_future_model_candidate_review' ? 'reasonable' : 'needs_more_evidence',
+      researchUsefulness: label === 'approved_for_future_model_candidate_review' ? 'useful' : 'needs_chart',
+      reason: 'fixture agent assessment',
+      evidenceChecked: ['fixture chart/report evidence'],
+      chartReportReference: !id.startsWith('flf') ? `fixtures/${id}.md` : null,
+      chartEvidenceAvailable: !id.startsWith('flf'),
+      boundary: 'research_only_not_execution_authority',
+      assessedAt: '2026-05-29T20:05:00.000Z',
+    } : null,
+    estimatedGrossContractPnl: id.startsWith('flf') ? {
+      rootSymbol: 'MES',
+      displayName: 'Micro E-mini S&P 500',
+      contracts: 1,
+      pointValue: 5,
+      tickSize: 0.25,
+      tickValue: 1.25,
+      currency: 'USD',
+      metadataSource: 'static_contract_metadata',
+      mfePoints: 20,
+      mfeTicks: 80,
+      mfeDollars: 100,
+      status: 'partial',
+      note: 'Research-only gross estimate for 1 MES contract. Excludes commissions, slippage, spread, fills, partial fills, taxes, fees, and live execution effects.',
+    } : undefined,
     finalReviewLabel: label,
     finalReviewNotes: label ? 'Research-only final label.' : null,
   };
@@ -246,19 +282,41 @@ assert.equal(twld.humanApprovedCount, 3);
 assert.equal(twld.humanNotApprovedCount, 1);
 assert.equal(twld.approvalRate, 0.75);
 assert.equal(twld.candidateReadinessStatus, 'candidate_review_recommended');
+assert.equal(twld.modelCandidateAdvisoryEvidence.sampleCount, 4);
+assert.equal(twld.modelCandidateAdvisoryEvidence.humanApprovedCount, 3);
+assert.equal(twld.modelCandidateAdvisoryEvidence.humanNotApprovedCount, 1);
+assert.equal(twld.modelCandidateAdvisoryEvidence.humanApprovalRate, 0.75);
+assert.equal(twld.modelCandidateAdvisoryEvidence.agentAssessmentSummary.agreesWithHuman, 3);
+assert.equal(twld.modelCandidateAdvisoryEvidence.agentAssessmentSummary.disagreesWithHuman, 1);
+assert.equal(twld.modelCandidateAdvisoryEvidence.reviewEvidenceSummary.samplesWithChartEvidence, 4);
+assert.equal(twld.modelCandidateAdvisoryEvidence.reviewEvidenceSummary.samplesWithExactPngPath, 4);
+assert.equal(twld.modelCandidateAdvisoryEvidence.reviewEvidenceSummary.samplesWithExactReportPath, 4);
+assert.equal(twld.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.rootSymbol, 'MES');
+assert.equal(twld.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.avgHypotheticalOutcomeDollars, 40);
+assert.equal(twld.modelCandidateAdvisoryEvidence.missingDataWarningCount, 0);
+assert.equal(twld.modelCandidateAdvisoryEvidence.adverseFirstContradictionCount, 0);
+assert.equal(twld.modelCandidateAdvisoryEvidence.boundary, 'research_only_not_execution_authority');
 assert.ok(twld.deskRecommendation.includes('Human final decision required before any model promotion or implementation.'));
 const flf = ledger.conceptSummaries.find((summary) => summary.concept === 'false_run_liquidity_fade');
 assert.ok(flf);
 assert.equal(flf.candidateReadinessStatus, 'insufficient_evidence');
+assert.equal(flf.modelCandidateAdvisoryEvidence.reviewEvidenceSummary.samplesMissingCharts, 1);
+assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.sampleCountWithPnl, 1);
+assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.avgMfeDollars, 100);
+assert.equal(flf.modelCandidateAdvisoryEvidence.estimatedGrossContractPnlSummary?.status, 'partial');
+assert.equal(flf.modelCandidateAdvisoryEvidence.sampleCount < ledger.thresholds.minimumReviewedSamples, true);
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.humanApprovalState, 'approved_for_future_model_candidate_review');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.rootSymbol, 'MES');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.estimatedGrossContractPnl?.hypotheticalOutcomeDollars, 40);
+assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.agentAssessmentStatus, 'agrees_with_human');
+assert.equal(ledger.entries.find((entry) => entry.sampleId === 'twld-001')?.reviewEvidence?.chartReportPath, 'fixtures/twld-001.md');
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.humanApprovalState, 'not_approved_for_future_model_candidate_review');
+assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.estimatedGrossContractPnl?.mfeDollars, 100);
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.warningState.missingOutcomeMath, true);
 assert.equal(ledger.entries.find((entry) => entry.sampleId === 'flf-001')?.warningState.missingChartArtifact, true);
 assert.equal(ledger.estimatedGrossContractPnlSummary?.rootSymbol, 'MES');
-assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountWithPnl, 4);
-assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountMissingPnl, 1);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountWithPnl, 5);
+assert.equal(ledger.estimatedGrossContractPnlSummary?.sampleCountMissingPnl, 0);
 assert.equal(ledger.estimatedGrossContractPnlSummary?.avgHypotheticalOutcomeDollars, 40);
 assert.equal(ledger.estimatedGrossContractPnlSummary?.status, 'partial');
 assert.ok(ledger.estimatedGrossContractPnlSummary?.note.includes('P/L summary is partial'));
@@ -270,6 +328,12 @@ assert.ok(markdown.includes('Research-only. This does not approve execution, cha
 assert.ok(markdown.includes('Human final decision required before any model promotion or implementation.'));
 assert.ok(markdown.includes('Estimated Gross Contract P/L Summary, 1 Contract'));
 assert.ok(markdown.includes('Avg Hypothetical Outcome: +$40.00 gross'));
+assert.ok(markdown.includes('Model-Candidate Advisory Evidence:'));
+assert.ok(markdown.includes('Boundary: research_only_not_execution_authority'));
+assert.ok(markdown.includes('supporting research/audit evidence only'));
+assert.equal(ledger.thresholds.minimumReviewedSamples, 4);
+assert.equal(ledger.thresholds.minimumApprovalRate, 0.7);
+assert.equal(ledger.summary.candidateReviewRecommendedConcepts, 1);
 
 const parsed = parseModelCandidateLedgerArgs([
   '--from', '2026-01-01',

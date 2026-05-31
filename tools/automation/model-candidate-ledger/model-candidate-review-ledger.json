@@ -1,7 +1,7 @@
 {
   "reportType": "model_candidate_review_ledger",
-  "generatedAt": "2026-05-31T19:31:00.360Z",
-  "from": "2026-05-28",
+  "generatedAt": "2026-05-31T19:44:54.312Z",
+  "from": "2026-01-01",
   "to": "2026-05-31",
   "symbol": "MES",
   "advisoryOnly": true,
@@ -22,7 +22,7 @@
     "reviewedSamplesFound": 1,
     "approvedCount": 1,
     "notApprovedCount": 0,
-    "ignoredLegacyReviewedSamples": 0,
+    "ignoredLegacyReviewedSamples": 2,
     "conceptsReviewed": 1,
     "candidateReviewRecommendedConcepts": 0
   },
@@ -44,12 +44,12 @@
       "humanNotes": "Discord user ID: 397440351020908548\nDiscord username: broadstreetbuilt\nDiscord channel ID: 1510035156725928206\nDiscord message ID: 1510511031728996363\nSelected label: approved_for_future_model_candidate_review\nHuman review: Approved for future model-candidate review\nAdvisory-only confirmation: reviewed sample remains research-only and does not approve execution, change rules, or create trades.",
       "chartArtifactPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-030.png",
       "outcomeMathSummary": {
-        "outcomeClassification": "adverse_first",
-        "firstMeaningfulMove": "adverse",
+        "outcomeClassification": "favorable_continuation",
+        "firstMeaningfulMove": "favorable",
         "favorableThresholdOneTouched": true,
         "favorableThresholdTwoTouched": true,
-        "adverseThresholdTouched": true,
-        "hypotheticalOutcomeLabel": "adverse_first"
+        "adverseThresholdTouched": false,
+        "hypotheticalOutcomeLabel": "favorable_continuation"
       },
       "estimatedGrossContractPnl": {
         "rootSymbol": "MES",
@@ -84,11 +84,20 @@
         "hypotheticalOutcomeTicks": 32,
         "hypotheticalOutcomeDollars": 40
       },
+      "agentAssessmentStatus": "partially_agrees_with_human",
+      "reviewEvidence": {
+        "chartAvailable": true,
+        "chartWithheld": false,
+        "chartPngPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\price-action-review-cards\\price-action-review-card-MES-2026-01-01-to-2026-05-30-final_hour_liquidity_draw-030.png",
+        "chartReportPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\research-review-charts\\research-review-chart-report-MES-2026-01-01-to-2026-05-30.md",
+        "sourceReviewCard": "Discord PriceActionReviewCard post",
+        "evidenceStatus": "chart_available"
+      },
       "warningState": {
         "warnings": [
           "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
           "Daily bridge bars are not requested in this phase because the current local bridge timeframe contract does not expose a daily historical timeframe.",
-          "Used candidate-level post-signal observation window with 9 bar(s), shorter than the configured 12-bar window."
+          "Used candidate-level post-signal observation window from the source JSON."
         ],
         "missingChartArtifact": false,
         "missingOutcomeMath": false
@@ -124,12 +133,47 @@
         "3:15-3:45 NY": 1
       },
       "outcomeSummary": {
-        "adverse_first": 1
+        "favorable_continuation": 1
       },
       "chartAvailabilityCount": 1,
       "missingDataWarningsCount": 3,
       "candidateReadinessStatus": "insufficient_evidence",
-      "deskRecommendation": "Desk recommendation: insufficient evidence. Human final decision required before any model promotion or implementation."
+      "deskRecommendation": "Desk recommendation: insufficient evidence. Human final decision required before any model promotion or implementation.",
+      "modelCandidateAdvisoryEvidence": {
+        "sampleCount": 1,
+        "humanApprovedCount": 1,
+        "humanNotApprovedCount": 0,
+        "humanApprovalRate": 1,
+        "agentAssessmentSummary": {
+          "agreesWithHuman": 0,
+          "partiallyAgreesWithHuman": 1,
+          "disagreesWithHuman": 0,
+          "unclearInsufficientEvidence": 0
+        },
+        "reviewEvidenceSummary": {
+          "samplesWithChartEvidence": 1,
+          "samplesWithExactPngPath": 1,
+          "samplesWithExactReportPath": 1,
+          "samplesMissingCharts": 0,
+          "samplesWithUnknownCharts": 0,
+          "samplesWithWithheldCharts": 0
+        },
+        "estimatedGrossContractPnlSummary": {
+          "rootSymbol": "MES",
+          "sampleCountWithPnl": 1,
+          "sampleCountMissingPnl": 0,
+          "avgHypotheticalOutcomeDollars": 40,
+          "totalHypotheticalOutcomeDollars": 40,
+          "bestHypotheticalOutcomeDollars": 40,
+          "worstHypotheticalOutcomeDollars": 40,
+          "avgMfeDollars": 56.25,
+          "avgMaeDollars": -8.75,
+          "status": "available"
+        },
+        "missingDataWarningCount": 3,
+        "adverseFirstContradictionCount": 0,
+        "boundary": "research_only_not_execution_authority"
+      }
     }
   ],
   "estimatedGrossContractPnlSummary": {

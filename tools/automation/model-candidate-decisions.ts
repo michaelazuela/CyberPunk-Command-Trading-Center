@@ -10,7 +10,7 @@ import {
 } from './model-candidate-ledger';
 import type { ResearchDiscordActionRow, ResearchDiscordMessagePayload } from '../../src/agents/researchDiscordReviewQueueAgent';
 
-type Instrument = 'MES' | 'MNQ';
+type Instrument = 'MES' | 'MNQ' | 'ES' | 'NQ';
 
 export type ModelCandidateDecisionLabel =
   | 'approved_for_formal_backtest'

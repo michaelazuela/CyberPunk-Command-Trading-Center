@@ -35,6 +35,36 @@ function concept(overrides: Partial<ModelCandidateConceptSummary> = {}): ModelCa
     missingDataWarningsCount: 0,
     candidateReadinessStatus: 'candidate_review_recommended',
     deskRecommendation: 'Desk recommendation: candidate review recommended. Human final decision required before any model promotion or implementation.',
+    modelCandidateAdvisoryEvidence: {
+      sampleCount: 12,
+      humanApprovedCount: 9,
+      humanNotApprovedCount: 3,
+      humanApprovalRate: 0.75,
+      agentAssessmentSummary: {
+        agreesWithHuman: 9,
+        partiallyAgreesWithHuman: 0,
+        disagreesWithHuman: 3,
+        unclearInsufficientEvidence: 0,
+      },
+      reviewEvidenceSummary: {
+        samplesWithChartEvidence: 12,
+        samplesWithExactPngPath: 12,
+        samplesWithExactReportPath: 12,
+        samplesMissingCharts: 0,
+        samplesWithUnknownCharts: 0,
+        samplesWithWithheldCharts: 0,
+      },
+      estimatedGrossContractPnlSummary: {
+        rootSymbol: 'MES',
+        sampleCountWithPnl: 12,
+        sampleCountMissingPnl: 0,
+        avgHypotheticalOutcomeDollars: 40,
+        status: 'available',
+      },
+      missingDataWarningCount: 0,
+      adverseFirstContradictionCount: 0,
+      boundary: 'research_only_not_execution_authority',
+    },
     ...overrides,
   };
 }

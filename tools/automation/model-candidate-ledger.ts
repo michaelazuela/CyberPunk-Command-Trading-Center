@@ -3,7 +3,13 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ResearchOutcomeMathReport, ResearchCandidateOutcome } from '../../src/agents/researchOutcomeMathAgent';
-import type { ResearchHumanInspectionLabel, ResearchReviewSample, ResearchSampleReviewPack } from '../../src/agents/researchSampleReviewAgent';
+import type {
+  AgentHumanInputAssessmentStatus,
+  ResearchHumanInspectionLabel,
+  ResearchReviewEvidence,
+  ResearchReviewSample,
+  ResearchSampleReviewPack,
+} from '../../src/agents/researchSampleReviewAgent';
 import {
   calculateEstimatedGrossContractPnl,
   coerceEstimatedGrossContractPnl,
@@ -69,6 +75,8 @@ export interface ModelCandidateLedgerEntry {
     hypotheticalOutcomeLabel: string | null;
   };
   estimatedGrossContractPnl?: EstimatedGrossContractPnl;
+  agentAssessmentStatus?: AgentHumanInputAssessmentStatus | null;
+  reviewEvidence?: ResearchReviewEvidence | null;
   warningState: {
     warnings: string[];
     missingChartArtifact: boolean;
@@ -107,6 +115,42 @@ export interface EstimatedGrossContractPnlSummary {
   note: string;
 }
 
+export interface ModelCandidateAdvisoryEvidence {
+  sampleCount: number;
+  humanApprovedCount: number;
+  humanNotApprovedCount: number;
+  humanApprovalRate?: number;
+  agentAssessmentSummary: {
+    agreesWithHuman: number;
+    partiallyAgreesWithHuman: number;
+    disagreesWithHuman: number;
+    unclearInsufficientEvidence: number;
+  };
+  reviewEvidenceSummary: {
+    samplesWithChartEvidence: number;
+    samplesWithExactPngPath: number;
+    samplesWithExactReportPath: number;
+    samplesMissingCharts: number;
+    samplesWithUnknownCharts: number;
+    samplesWithWithheldCharts: number;
+  };
+  estimatedGrossContractPnlSummary?: {
+    rootSymbol: FuturesRootSymbol;
+    sampleCountWithPnl: number;
+    sampleCountMissingPnl: number;
+    avgHypotheticalOutcomeDollars?: number;
+    totalHypotheticalOutcomeDollars?: number;
+    bestHypotheticalOutcomeDollars?: number;
+    worstHypotheticalOutcomeDollars?: number;
+    avgMfeDollars?: number;
+    avgMaeDollars?: number;
+    status: 'available' | 'partial' | 'unavailable' | 'unavailable_unknown_contract';
+  };
+  missingDataWarningCount: number;
+  adverseFirstContradictionCount: number;
+  boundary: 'research_only_not_execution_authority';
+}
+
 export interface ModelCandidateConceptSummary {
   concept: string;
   conceptTitle: string;
@@ -122,6 +166,7 @@ export interface ModelCandidateConceptSummary {
   missingDataWarningsCount: number;
   candidateReadinessStatus: ModelCandidateReadinessStatus;
   deskRecommendation: string;
+  modelCandidateAdvisoryEvidence: ModelCandidateAdvisoryEvidence;
 }
 
 export interface ModelCandidateReviewLedger {
@@ -419,6 +464,8 @@ function entryForSample(args: {
       hypotheticalOutcomeLabel: args.outcome?.hypotheticalOutcomeOverlay?.hypotheticalOutcomeLabel || null,
     },
     estimatedGrossContractPnl,
+    agentAssessmentStatus: args.sample.agentAssessment?.status || null,
+    reviewEvidence: args.sample.reviewEvidence || null,
     warningState: {
       warnings,
       missingChartArtifact: !args.chartPath,
@@ -446,7 +493,76 @@ function readinessFor(args: {
   return 'watchlist_candidate';
 }
 
-function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: ModelCandidateLedgerOptions['thresholds']): ModelCandidateConceptSummary[] {
+function advisoryPnlSummary(summary: EstimatedGrossContractPnlSummary): ModelCandidateAdvisoryEvidence['estimatedGrossContractPnlSummary'] {
+  return {
+    rootSymbol: summary.rootSymbol,
+    sampleCountWithPnl: summary.sampleCountWithPnl,
+    sampleCountMissingPnl: summary.sampleCountMissingPnl,
+    ...(finite(summary.avgHypotheticalOutcomeDollars) ? { avgHypotheticalOutcomeDollars: summary.avgHypotheticalOutcomeDollars } : {}),
+    ...(finite(summary.totalHypotheticalOutcomeDollars) ? { totalHypotheticalOutcomeDollars: summary.totalHypotheticalOutcomeDollars } : {}),
+    ...(finite(summary.bestHypotheticalOutcomeDollars) ? { bestHypotheticalOutcomeDollars: summary.bestHypotheticalOutcomeDollars } : {}),
+    ...(finite(summary.worstHypotheticalOutcomeDollars) ? { worstHypotheticalOutcomeDollars: summary.worstHypotheticalOutcomeDollars } : {}),
+    ...(finite(summary.avgMfeDollars) ? { avgMfeDollars: summary.avgMfeDollars } : {}),
+    ...(finite(summary.avgMaeDollars) ? { avgMaeDollars: summary.avgMaeDollars } : {}),
+    status: summary.status,
+  };
+}
+
+function summarizeModelCandidateAdvisoryEvidence(args: {
+  rows: ModelCandidateLedgerEntry[];
+  approved: number;
+  notApproved: number;
+  approvalRate: number | null;
+  missingDataWarningsCount: number;
+  adverseFirstCount: number;
+  symbol: Instrument;
+}): ModelCandidateAdvisoryEvidence {
+  const agentAssessmentSummary = {
+    agreesWithHuman: 0,
+    partiallyAgreesWithHuman: 0,
+    disagreesWithHuman: 0,
+    unclearInsufficientEvidence: 0,
+  };
+  const reviewEvidenceSummary = {
+    samplesWithChartEvidence: 0,
+    samplesWithExactPngPath: 0,
+    samplesWithExactReportPath: 0,
+    samplesMissingCharts: 0,
+    samplesWithUnknownCharts: 0,
+    samplesWithWithheldCharts: 0,
+  };
+
+  for (const row of args.rows) {
+    if (row.agentAssessmentStatus === 'agrees_with_human') agentAssessmentSummary.agreesWithHuman += 1;
+    else if (row.agentAssessmentStatus === 'partially_agrees_with_human') agentAssessmentSummary.partiallyAgreesWithHuman += 1;
+    else if (row.agentAssessmentStatus === 'disagrees_with_human') agentAssessmentSummary.disagreesWithHuman += 1;
+    else agentAssessmentSummary.unclearInsufficientEvidence += 1;
+
+    const evidence = row.reviewEvidence;
+    const evidenceStatus = evidence?.evidenceStatus;
+    if (evidence?.chartAvailable || row.chartArtifactPath) reviewEvidenceSummary.samplesWithChartEvidence += 1;
+    if (evidence?.chartPngPath || row.chartArtifactPath) reviewEvidenceSummary.samplesWithExactPngPath += 1;
+    if (evidence?.chartReportPath) reviewEvidenceSummary.samplesWithExactReportPath += 1;
+    if (evidenceStatus === 'chart_missing' || (!evidenceStatus && row.warningState.missingChartArtifact)) reviewEvidenceSummary.samplesMissingCharts += 1;
+    if (evidenceStatus === 'chart_unknown') reviewEvidenceSummary.samplesWithUnknownCharts += 1;
+    if (evidence?.chartWithheld || evidenceStatus === 'chart_withheld') reviewEvidenceSummary.samplesWithWithheldCharts += 1;
+  }
+
+  return {
+    sampleCount: args.rows.length,
+    humanApprovedCount: args.approved,
+    humanNotApprovedCount: args.notApproved,
+    ...(args.approvalRate === null ? {} : { humanApprovalRate: args.approvalRate }),
+    agentAssessmentSummary,
+    reviewEvidenceSummary,
+    estimatedGrossContractPnlSummary: advisoryPnlSummary(summarizeEstimatedGrossContractPnl(args.rows, args.symbol)),
+    missingDataWarningCount: args.missingDataWarningsCount,
+    adverseFirstContradictionCount: args.adverseFirstCount,
+    boundary: 'research_only_not_execution_authority',
+  };
+}
+
+function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: ModelCandidateLedgerOptions['thresholds'], symbol: Instrument): ModelCandidateConceptSummary[] {
   const byConcept = new Map<string, ModelCandidateLedgerEntry[]>();
   for (const entry of entries) {
     const list = byConcept.get(entry.concept) || [];
@@ -498,6 +614,15 @@ function summarizeConcepts(entries: ModelCandidateLedgerEntry[], thresholds: Mod
       missingDataWarningsCount,
       candidateReadinessStatus,
       deskRecommendation,
+      modelCandidateAdvisoryEvidence: summarizeModelCandidateAdvisoryEvidence({
+        rows,
+        approved,
+        notApproved,
+        approvalRate,
+        missingDataWarningsCount,
+        adverseFirstCount,
+        symbol,
+      }),
     };
   }).sort((left, right) => right.totalSamplesReviewed - left.totalSamplesReviewed || left.concept.localeCompare(right.concept));
 }
@@ -572,6 +697,32 @@ function formatLedgerDollars(value: number | undefined): string {
   if (!finite(value)) return 'Not recorded';
   const prefix = value > 0 ? '+$' : value < 0 ? '-$' : '$';
   return `${prefix}${Math.abs(value).toFixed(2)} gross`;
+}
+
+function formatApprovalRate(value: number | null | undefined): string {
+  return value === null || value === undefined ? 'n/a' : `${Math.round(value * 100)}%`;
+}
+
+function renderAdvisoryEvidenceMarkdown(evidence: ModelCandidateAdvisoryEvidence): string[] {
+  const agent = evidence.agentAssessmentSummary;
+  const review = evidence.reviewEvidenceSummary;
+  const pnl = evidence.estimatedGrossContractPnlSummary;
+  const pnlSummary = pnl
+    ? `${pnl.rootSymbol}; samples with P/L ${pnl.sampleCountWithPnl}; missing ${pnl.sampleCountMissingPnl}; avg hypothetical ${formatLedgerDollars(pnl.avgHypotheticalOutcomeDollars)}; avg MFE ${formatLedgerDollars(pnl.avgMfeDollars)}; avg MAE ${formatLedgerDollars(pnl.avgMaeDollars)}; status ${pnl.status}; supporting research/audit evidence only`
+    : 'Not recorded';
+  return [
+    'Model-Candidate Advisory Evidence:',
+    `- Reviewed Samples: ${evidence.sampleCount}`,
+    `- Human Approved: ${evidence.humanApprovedCount}`,
+    `- Human Not Approved: ${evidence.humanNotApprovedCount}`,
+    `- Human Approval Rate: ${formatApprovalRate(evidence.humanApprovalRate)}`,
+    `- Agent Assessment Summary: agrees=${agent.agreesWithHuman}; partial=${agent.partiallyAgreesWithHuman}; disagrees=${agent.disagreesWithHuman}; unclear=${agent.unclearInsufficientEvidence}`,
+    `- Chart/Report Evidence: chart evidence=${review.samplesWithChartEvidence}; exact PNG=${review.samplesWithExactPngPath}; exact report=${review.samplesWithExactReportPath}; missing=${review.samplesMissingCharts}; unknown=${review.samplesWithUnknownCharts}; withheld=${review.samplesWithWithheldCharts}`,
+    `- Estimated Gross Contract P/L Summary: ${pnlSummary}`,
+    `- Missing Data Warnings: ${evidence.missingDataWarningCount}`,
+    `- Adverse-First Contradictions: ${evidence.adverseFirstContradictionCount}`,
+    `- Boundary: ${evidence.boundary}`,
+  ];
 }
 
 function prohibitedPaths(value: unknown, pathName = 'ledger'): string[] {
@@ -694,11 +845,13 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
         `- Concept: ${summary.concept}`,
         `- Reviewed: ${summary.totalSamplesReviewed}`,
         `- Approved / Not approved: ${summary.humanApprovedCount} / ${summary.humanNotApprovedCount}`,
-        `- Approval rate: ${summary.approvalRate === null ? 'n/a' : `${Math.round(summary.approvalRate * 100)}%`}`,
+        `- Approval rate: ${formatApprovalRate(summary.approvalRate)}`,
         `- Chart artifacts available: ${summary.chartAvailabilityCount}`,
         `- Missing-data warnings: ${summary.missingDataWarningsCount}`,
         `- Candidate readiness: ${summary.candidateReadinessStatus}`,
         `- ${summary.deskRecommendation}`,
+        '',
+        ...renderAdvisoryEvidenceMarkdown(summary.modelCandidateAdvisoryEvidence),
       ].join('\n'))
       : ['- No approved/not-approved PriceActionReviewCard reviews found for this range.']),
     '',
@@ -727,7 +880,7 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   const outcomes = await loadOutcomeMap(path.resolve(options.outcomeReportDir), options.symbol, options.from, options.to, warnings);
   const chartFiles = await loadChartFiles(path.resolve(options.chartDir));
   const { entries, ignoredLegacyReviewedSamples } = await loadReviewedEntries(options, outcomes, chartFiles, warnings);
-  const conceptSummaries = summarizeConcepts(entries, options.thresholds);
+  const conceptSummaries = summarizeConcepts(entries, options.thresholds, options.symbol);
   const estimatedGrossContractPnlSummary = summarizeEstimatedGrossContractPnl(entries, options.symbol);
   const paths = outputPaths(options.outDir);
   const ledger: ModelCandidateReviewLedger = {

@@ -9,6 +9,39 @@ import {
 } from './model-candidate-weekly-brief';
 import type { ModelCandidateReviewLedger } from './model-candidate-ledger';
 
+function advisoryEvidence(sampleCount: number, approved: number, notApproved: number, warnings: number, adverseFirst = 0): ModelCandidateReviewLedger['conceptSummaries'][number]['modelCandidateAdvisoryEvidence'] {
+  return {
+    sampleCount,
+    humanApprovedCount: approved,
+    humanNotApprovedCount: notApproved,
+    humanApprovalRate: sampleCount ? approved / sampleCount : undefined,
+    agentAssessmentSummary: {
+      agreesWithHuman: approved,
+      partiallyAgreesWithHuman: 0,
+      disagreesWithHuman: notApproved,
+      unclearInsufficientEvidence: 0,
+    },
+    reviewEvidenceSummary: {
+      samplesWithChartEvidence: Math.max(0, sampleCount - warnings),
+      samplesWithExactPngPath: Math.max(0, sampleCount - warnings),
+      samplesWithExactReportPath: Math.max(0, sampleCount - warnings),
+      samplesMissingCharts: warnings,
+      samplesWithUnknownCharts: 0,
+      samplesWithWithheldCharts: 0,
+    },
+    estimatedGrossContractPnlSummary: {
+      rootSymbol: 'MES',
+      sampleCountWithPnl: Math.max(0, sampleCount - warnings),
+      sampleCountMissingPnl: warnings,
+      avgHypotheticalOutcomeDollars: 40,
+      status: warnings ? 'partial' : 'available',
+    },
+    missingDataWarningCount: warnings,
+    adverseFirstContradictionCount: adverseFirst,
+    boundary: 'research_only_not_execution_authority',
+  };
+}
+
 function ledgerFixture(overrides: Partial<ModelCandidateReviewLedger> = {}): ModelCandidateReviewLedger {
   const base: ModelCandidateReviewLedger = {
     reportType: 'model_candidate_review_ledger',
@@ -138,6 +171,7 @@ function ledgerFixture(overrides: Partial<ModelCandidateReviewLedger> = {}): Mod
         missingDataWarningsCount: 0,
         candidateReadinessStatus: 'candidate_review_recommended',
         deskRecommendation: 'Desk recommendation: candidate review recommended. Human final decision required before any model promotion or implementation.',
+        modelCandidateAdvisoryEvidence: advisoryEvidence(10, 8, 2, 0),
       },
       {
         concept: 'accumulation_manipulation_distribution',
@@ -154,6 +188,7 @@ function ledgerFixture(overrides: Partial<ModelCandidateReviewLedger> = {}): Mod
         missingDataWarningsCount: 1,
         candidateReadinessStatus: 'insufficient_evidence',
         deskRecommendation: 'Desk recommendation: insufficient evidence. Human final decision required before any model promotion or implementation.',
+        modelCandidateAdvisoryEvidence: advisoryEvidence(4, 3, 1, 1),
       },
       {
         concept: 'false_run_liquidity_fade',
@@ -170,6 +205,7 @@ function ledgerFixture(overrides: Partial<ModelCandidateReviewLedger> = {}): Mod
         missingDataWarningsCount: 2,
         candidateReadinessStatus: 'reject_or_deprioritize',
         deskRecommendation: 'Desk recommendation: reject or deprioritize. Human final decision required before any model promotion or implementation.',
+        modelCandidateAdvisoryEvidence: advisoryEvidence(10, 2, 8, 2, 6),
       },
     ],
     warnings: [],
