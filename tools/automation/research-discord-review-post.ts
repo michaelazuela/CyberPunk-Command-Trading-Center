@@ -50,6 +50,7 @@ export interface ResearchDiscordReviewPostOptions {
   statePath: string;
   limit: number;
   withPriceActionCards: boolean;
+  postSummaryCharts: boolean;
 }
 
 interface WorkflowResult {
@@ -73,6 +74,7 @@ interface WorkflowResult {
   summaryMessagePosted: boolean;
   chartArtifactsUploaded: boolean;
   chartUploadFailure: string | null;
+  summaryPostSkippedReason: string | null;
   activeContract: ActiveBridgeInstrumentResolution | null;
 }
 
@@ -156,6 +158,7 @@ export function parseResearchDiscordReviewPostArgs(args = process.argv.slice(2))
     statePath: readFlag(args, '--state-path') || process.env.RESEARCH_REVIEW_STATE_PATH || DEFAULT_STATE_PATH,
     limit: numberFlag(args, '--limit', 30),
     withPriceActionCards: hasFlag(args, '--with-price-action-cards'),
+    postSummaryCharts: hasFlag(args, '--post-summary-charts'),
   };
 }
 
@@ -280,6 +283,10 @@ export function buildSummaryPayload(result: {
   };
 }
 
+export function shouldPostResearchReviewSummaryCharts(options: Pick<ResearchDiscordReviewPostOptions, 'withPriceActionCards' | 'postSummaryCharts'>): boolean {
+  return !options.withPriceActionCards || options.postSummaryCharts;
+}
+
 export async function postResearchReviewSummaryWithChartArtifacts(args: {
   channelId: string;
   token: string;
@@ -372,25 +379,31 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
   let summaryMessagePosted = false;
   let chartArtifactsUploaded = false;
   let chartUploadFailure: string | null = null;
+  const postSummaryCharts = shouldPostResearchReviewSummaryCharts(options);
+  const summaryPostSkippedReason = postSummaryCharts
+    ? null
+    : 'Skipped because --with-price-action-cards is active. Use --post-summary-charts to also post the summary chart report.';
   if (!options.dryRun) {
     const channelId = process.env.RESEARCH_REVIEW_DISCORD_CHANNEL_ID;
     const token = process.env.RESEARCH_REVIEW_DISCORD_BOT_TOKEN;
     if (!channelId || !token) {
       throw new Error('Missing Discord research review configuration: RESEARCH_REVIEW_DISCORD_BOT_TOKEN, RESEARCH_REVIEW_DISCORD_CHANNEL_ID. Use --dry-run to inspect payloads without posting.');
     }
-    const summaryPost = await postResearchReviewSummaryWithChartArtifacts({
-      channelId,
-      token,
-      from: options.from,
-      to: options.to,
-      symbol: options.symbol,
-      reviewPackPath,
-      manifestPath,
-      chartReport,
-    });
-    summaryMessagePosted = summaryPost.messagePosted;
-    chartArtifactsUploaded = summaryPost.chartArtifactsUploaded;
-    chartUploadFailure = summaryPost.chartUploadFailure;
+    if (postSummaryCharts) {
+      const summaryPost = await postResearchReviewSummaryWithChartArtifacts({
+        channelId,
+        token,
+        from: options.from,
+        to: options.to,
+        symbol: options.symbol,
+        reviewPackPath,
+        manifestPath,
+        chartReport,
+      });
+      summaryMessagePosted = summaryPost.messagePosted;
+      chartArtifactsUploaded = summaryPost.chartArtifactsUploaded;
+      chartUploadFailure = summaryPost.chartUploadFailure;
+    }
   }
 
   const publishResult = await publishResearchDiscordReview({
@@ -438,6 +451,7 @@ export async function runResearchDiscordReviewPostWorkflow(options: ResearchDisc
     summaryMessagePosted,
     chartArtifactsUploaded,
     chartUploadFailure,
+    summaryPostSkippedReason,
     activeContract,
   };
 }
@@ -473,6 +487,7 @@ function renderResult(result: WorkflowResult): string {
     ...Object.entries(result.recommendationCounts).map(([label, count]) => `- ${label}: ${count}`),
     `Cards posted: ${result.cardsPosted}`,
     `Summary message posted: ${result.summaryMessagePosted ? 'true' : 'false'}`,
+    `Summary post skipped reason: ${result.summaryPostSkippedReason || 'none'}`,
     `Chart artifacts uploaded: ${result.chartArtifactsUploaded ? 'true' : 'false'}`,
     `Chart upload failure: ${result.chartUploadFailure || 'none'}`,
     `Cards skipped as duplicates: ${result.skippedDuplicates}`,
@@ -480,7 +495,9 @@ function renderResult(result: WorkflowResult): string {
     `State file path: ${result.statePath}`,
     `Dry run: ${result.dryRun ? 'true' : 'false'}`,
     '',
-    'Primary research-review workflow: CLI output -> review pack -> latest-review-pack manifest -> local chart/report artifacts -> Discord review post with chart attachments.',
+    result.publishResult.priceActionCards.length || result.activeContract
+      ? 'Primary research-review workflow: CLI output -> review pack -> latest-review-pack manifest -> local artifacts -> Discord per-sample PriceActionReviewCard PNG posts.'
+      : 'Primary research-review workflow: CLI output -> review pack -> latest-review-pack manifest -> local chart/report artifacts -> Discord review summary with chart attachments.',
     'Research Review Only. This does not approve execution, change rules, or create trades.',
   ].join('\n');
 }
