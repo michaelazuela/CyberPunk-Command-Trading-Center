@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, BookOpenText, Database, FileText, MessageSquareText, RefreshCw, Search, ServerCog, TriangleAlert } from 'lucide-react';
 import DataHealthPanel from './DataHealthPanel';
+import ResearchReviewDashboard from './ResearchReviewDashboard';
 import { supabase } from '../lib/supabase';
 import { cn } from '../lib/utils';
 
@@ -144,6 +145,8 @@ export default function AdminDashboard({ isAuthenticated = false }: { isAuthenti
       </div>
 
       <DataHealthPanel />
+
+      <ResearchReviewDashboard />
 
       <section className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4">
         <div className="card-base">
