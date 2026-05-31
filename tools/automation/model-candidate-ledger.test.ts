@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -277,7 +277,21 @@ assert.equal(ledger.summary.reviewedSamplesFound, 5);
 assert.equal(ledger.summary.approvedCount, 3);
 assert.equal(ledger.summary.notApprovedCount, 2);
 assert.equal(ledger.summary.ignoredLegacyReviewedSamples, 1);
+assert.equal(ledger.summary.humanReviewedSamplesFound, 6);
+assert.equal(ledger.summary.reviewedFilesFound, 1);
+assert.equal(ledger.summary.reviewedFilesRead, 1);
+assert.equal(ledger.summary.ignoredReviewedSamples, 1);
 assert.equal(ledger.conceptSummaries.length, 2);
+assert.ok(ledger.outputPaths.rangeJsonPath?.endsWith('model-candidate-review-ledger-MES-2026-01-01-to-2026-05-30.json'));
+assert.ok(ledger.outputPaths.rangeMarkdownPath?.endsWith('model-candidate-review-ledger-MES-2026-01-01-to-2026-05-30.md'));
+assert.equal(existsSync(ledger.outputPaths.jsonPath), true);
+assert.equal(existsSync(ledger.outputPaths.markdownPath), true);
+assert.equal(existsSync(ledger.outputPaths.rangeJsonPath || ''), true);
+assert.equal(existsSync(ledger.outputPaths.rangeMarkdownPath || ''), true);
+assert.equal(ledger.reviewedArtifactDiagnostics.reviewedFilesFound, 1);
+assert.equal(ledger.reviewedArtifactDiagnostics.acceptedModelCandidateSamples, 5);
+assert.equal(ledger.reviewedArtifactDiagnostics.humanReviewedSamplesFound, 6);
+assert.equal(ledger.reviewedArtifactDiagnostics.ignoredSamplesByReason.unsupported_model_candidate_label, 1);
 const twld = ledger.conceptSummaries.find((summary) => summary.concept === 'time_window_liquidity_delivery');
 assert.ok(twld);
 assert.equal(twld.totalSamplesReviewed, 4);
@@ -353,6 +367,10 @@ assert.ok(markdown.includes('Model-Candidate Advisory Interpretation:'));
 assert.ok(markdown.includes('P/L Signal: not_meaningful_low_sample_count'));
 assert.ok(markdown.includes('Model-Candidate Research Recommendation:'));
 assert.ok(markdown.includes('Human Final Decision Required: Yes'));
+assert.ok(markdown.includes('Reviewed Artifact Diagnostics'));
+assert.ok(markdown.includes('Reviewed files read: 1'));
+assert.ok(markdown.includes('unsupported_model_candidate_label: 1'));
+assert.ok(markdown.includes('Range-stamped JSON:'));
 assert.ok(markdown.includes('Boundary: research_only_not_execution_authority'));
 assert.ok(markdown.includes('supporting research/audit evidence only'));
 assert.ok(!/\b(approved model|live model|trade approved|profitable system|activate model|deploy|actual P\/L|net P\/L)\b/i.test(markdown));
@@ -596,6 +614,33 @@ const positivePnlLowSampleRecommendation = buildModelCandidateResearchRecommenda
 });
 assert.notEqual(positivePnlLowSampleRecommendation.status, 'candidate_review_recommended');
 assert.equal(positivePnlLowSampleRecommendation.gateResults.sampleCountGate, 'fail');
+
+writeFileSync(path.join(reviewDir, 'research-sample-review-MES-extra-2026-05-30.reviewed.json'), `${JSON.stringify(reviewPack([
+  sample('twld-006', 'time_window_liquidity_delivery', 'approved_for_future_model_candidate_review'),
+]), null, 2)}\n`, 'utf8');
+writeFileSync(path.join(chartDir, 'price-action-review-card-MES-2026-01-01-to-2026-05-30-twld-006.png'), 'png fixture', 'utf8');
+const multiFileLedger = await buildModelCandidateReviewLedger({
+  from: '2026-01-01',
+  to: '2026-05-30',
+  symbol: 'MES',
+  reviewPackDir: reviewDir,
+  outcomeReportDir: outcomeDir,
+  chartDir,
+  outDir: path.join(temp, 'multi-file-ledger'),
+  pretty: true,
+  json: false,
+  thresholds: {
+    minimumReviewedSamples: 4,
+    minimumApprovalRate: 0.7,
+  },
+});
+assert.equal(multiFileLedger.summary.reviewedFilesRead, 2);
+assert.equal(multiFileLedger.summary.reviewedSamplesFound, 6);
+assert.equal(multiFileLedger.summary.humanReviewedSamplesFound, 7);
+assert.equal(multiFileLedger.reviewedArtifactDiagnostics.files.length, 2);
+assert.equal(multiFileLedger.reviewedArtifactDiagnostics.acceptedModelCandidateSamples, 6);
+assert.equal(existsSync(multiFileLedger.outputPaths.rangeJsonPath || ''), true);
+assertNoExecutableLedgerFields(multiFileLedger);
 
 const parsed = parseModelCandidateLedgerArgs([
   '--from', '2026-01-01',

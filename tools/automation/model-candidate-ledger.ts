@@ -44,6 +44,7 @@ export interface ModelCandidateLedgerOptions {
   outDir: string;
   pretty: boolean;
   json: boolean;
+  writeRangeArtifact?: boolean;
   thresholds: {
     minimumReviewedSamples: number;
     minimumApprovalRate: number;
@@ -246,17 +247,58 @@ export interface ModelCandidateReviewLedger {
     approvedCount: number;
     notApprovedCount: number;
     ignoredLegacyReviewedSamples: number;
+    humanReviewedSamplesFound: number;
+    reviewedFilesFound: number;
+    reviewedFilesRead: number;
+    ignoredReviewedSamples: number;
     conceptsReviewed: number;
     candidateReviewRecommendedConcepts: number;
   };
   entries: ModelCandidateLedgerEntry[];
   conceptSummaries: ModelCandidateConceptSummary[];
   estimatedGrossContractPnlSummary?: EstimatedGrossContractPnlSummary;
+  reviewedArtifactDiagnostics: ReviewedArtifactDiagnostics;
   warnings: string[];
   outputPaths: {
     jsonPath: string;
     markdownPath: string;
+    rangeJsonPath?: string;
+    rangeMarkdownPath?: string;
   };
+}
+
+export interface IgnoredReviewedSampleDiagnostic {
+  sampleId: string;
+  date: string | null;
+  concept: string | null;
+  humanInspectionLabel: string | null;
+  reasons: string[];
+}
+
+export interface ReviewedFileDiagnostic {
+  filePath: string;
+  fileName: string;
+  status: 'read' | 'ignored_wrong_symbol' | 'ignored_not_review_pack' | 'malformed';
+  instrument: string | null;
+  sampleCount: number;
+  acceptedModelCandidateSamples: number;
+  humanReviewedSamples: number;
+  ignoredSamples: IgnoredReviewedSampleDiagnostic[];
+  notes: string[];
+}
+
+export interface ReviewedArtifactDiagnostics {
+  reviewedFilesFound: number;
+  reviewedFilesRead: number;
+  reviewedFilesMalformed: number;
+  reviewedFilesWrongSymbol: number;
+  reviewedSamplesScanned: number;
+  humanReviewedSamplesFound: number;
+  acceptedModelCandidateSamples: number;
+  ignoredReviewedSamples: number;
+  ignoredSamplesByReason: Record<string, number>;
+  files: ReviewedFileDiagnostic[];
+  note: string;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -346,6 +388,7 @@ export function parseModelCandidateLedgerArgs(args = process.argv.slice(2)): Mod
     outDir: readFlag(args, '--out') || DEFAULT_OUT_DIR,
     pretty: hasFlag(args, '--pretty') || !hasFlag(args, '--json'),
     json: hasFlag(args, '--json'),
+    writeRangeArtifact: !hasFlag(args, '--no-write-range-artifact') || hasFlag(args, '--write-range-artifact'),
     thresholds: {
       minimumReviewedSamples: numberFlag(args, '--minimum-reviewed-samples', 10),
       minimumApprovalRate: numberFlag(args, '--minimum-approval-rate', 0.7),
@@ -446,6 +489,40 @@ function ledgerStatus(label: ResearchHumanInspectionLabel | null): ModelCandidat
   if (label === APPROVED_LABEL) return 'human_approved_for_candidate_review';
   if (label === NOT_APPROVED_LABEL) return 'human_not_approved_for_candidate_review';
   return null;
+}
+
+function hasHumanReview(sample: ResearchReviewSample): boolean {
+  return Boolean(sample.humanInspectionLabel || sample.finalReviewLabel || sample.humanReviewedAt);
+}
+
+function addIgnoredReason(map: Record<string, number>, reason: string): void {
+  map[reason] = (map[reason] || 0) + 1;
+}
+
+function ignoredSampleDiagnostic(sample: ResearchReviewSample, reasons: string[]): IgnoredReviewedSampleDiagnostic {
+  return {
+    sampleId: sample.sampleId,
+    date: sample.date || null,
+    concept: sample.concept || null,
+    humanInspectionLabel: sample.humanInspectionLabel || null,
+    reasons,
+  };
+}
+
+function emptyReviewedArtifactDiagnostics(): ReviewedArtifactDiagnostics {
+  return {
+    reviewedFilesFound: 0,
+    reviewedFilesRead: 0,
+    reviewedFilesMalformed: 0,
+    reviewedFilesWrongSymbol: 0,
+    reviewedSamplesScanned: 0,
+    humanReviewedSamplesFound: 0,
+    acceptedModelCandidateSamples: 0,
+    ignoredReviewedSamples: 0,
+    ignoredSamplesByReason: {},
+    files: [],
+    note: 'No reviewed artifacts were found. Generated review packs are ignored by git; regenerate local artifacts before expecting historical ledger coverage.',
+  };
 }
 
 function researchOnlyBoundary(sample: ResearchReviewSample): ModelCandidateLedgerEntry['researchOnlyBoundary'] {
@@ -1036,6 +1113,35 @@ function renderResearchRecommendationMarkdown(recommendation: ModelCandidateRese
   ];
 }
 
+function renderReviewedArtifactDiagnosticsMarkdown(diagnostics: ReviewedArtifactDiagnostics): string[] {
+  return [
+    '## Reviewed Artifact Diagnostics',
+    `- Reviewed files found: ${diagnostics.reviewedFilesFound}`,
+    `- Reviewed files read: ${diagnostics.reviewedFilesRead}`,
+    `- Malformed reviewed files: ${diagnostics.reviewedFilesMalformed}`,
+    `- Wrong-symbol reviewed files: ${diagnostics.reviewedFilesWrongSymbol}`,
+    `- Reviewed samples scanned: ${diagnostics.reviewedSamplesScanned}`,
+    `- Human-reviewed samples found: ${diagnostics.humanReviewedSamplesFound}`,
+    `- Ledger-eligible model-candidate samples: ${diagnostics.acceptedModelCandidateSamples}`,
+    `- Ignored reviewed samples: ${diagnostics.ignoredReviewedSamples}`,
+    `- Note: ${diagnostics.note}`,
+    '',
+    '### Ignored Reasons',
+    ...(Object.keys(diagnostics.ignoredSamplesByReason).length
+      ? Object.entries(diagnostics.ignoredSamplesByReason).sort().map(([reason, count]) => `- ${reason}: ${count}`)
+      : ['- none']),
+    '',
+    '### Reviewed Files Read',
+    ...(diagnostics.files.length
+      ? diagnostics.files.map((file) => [
+        `- ${file.fileName}: status=${file.status}; instrument=${file.instrument || 'unknown'}; samples=${file.sampleCount}; humanReviewed=${file.humanReviewedSamples}; accepted=${file.acceptedModelCandidateSamples}; ignored=${file.ignoredSamples.length}`,
+        ...(file.notes.length ? file.notes.map((note) => `  - Note: ${note}`) : []),
+        ...(file.ignoredSamples.length ? file.ignoredSamples.map((sample) => `  - Ignored ${sample.sampleId} (${sample.date || 'date unknown'}; ${sample.humanInspectionLabel || 'no label'}): ${sample.reasons.join(', ')}`) : []),
+      ].join('\n'))
+      : ['- none']),
+  ];
+}
+
 function prohibitedPaths(value: unknown, pathName = 'ledger'): string[] {
   if (!value || typeof value !== 'object') return [];
   const paths: string[] = [];
@@ -1077,20 +1183,78 @@ async function loadChartFiles(chartDir: string): Promise<string[]> {
 async function loadReviewedEntries(options: ModelCandidateLedgerOptions, outcomes: Map<string, ResearchCandidateOutcome>, chartFiles: string[], warnings: string[]): Promise<{
   entries: ModelCandidateLedgerEntry[];
   ignoredLegacyReviewedSamples: number;
+  diagnostics: ReviewedArtifactDiagnostics;
 }> {
   const files = await listFiles(options.reviewPackDir, (name) => /^research-sample-review-.*\.reviewed\.json$/i.test(name));
   const entries: ModelCandidateLedgerEntry[] = [];
   let ignoredLegacyReviewedSamples = 0;
   const seen = new Set<string>();
+  const diagnostics = emptyReviewedArtifactDiagnostics();
+  diagnostics.reviewedFilesFound = files.length;
+  if (!files.length) warnings.push(`No reviewed research sample packs found in ${path.resolve(options.reviewPackDir)}. Generated review packs may be ignored locally and must be regenerated for historical coverage.`);
   for (const file of files) {
+    const fileDiagnostic: ReviewedFileDiagnostic = {
+      filePath: file,
+      fileName: path.basename(file),
+      status: 'read',
+      instrument: null,
+      sampleCount: 0,
+      acceptedModelCandidateSamples: 0,
+      humanReviewedSamples: 0,
+      ignoredSamples: [],
+      notes: [],
+    };
     try {
       const parsed = await readJsonFile<unknown>(file);
-      if (!isReviewPack(parsed) || parsed.instrument !== options.symbol) continue;
+      if (!isReviewPack(parsed)) {
+        fileDiagnostic.status = 'ignored_not_review_pack';
+        fileDiagnostic.notes.push('File did not match the research_sample_review_pack schema.');
+        diagnostics.files.push(fileDiagnostic);
+        continue;
+      }
+      fileDiagnostic.instrument = parsed.instrument;
+      fileDiagnostic.sampleCount = parsed.samples.length;
+      diagnostics.reviewedSamplesScanned += parsed.samples.length;
+      if (parsed.instrument !== options.symbol) {
+        fileDiagnostic.status = 'ignored_wrong_symbol';
+        fileDiagnostic.notes.push(`Pack instrument ${parsed.instrument} did not match requested symbol ${options.symbol}.`);
+        diagnostics.reviewedFilesWrongSymbol += 1;
+        diagnostics.files.push(fileDiagnostic);
+        continue;
+      }
+      diagnostics.reviewedFilesRead += 1;
       for (const sample of parsed.samples) {
-        if (!inDateRange(sample.date, options.from, options.to)) continue;
+        const ignoredReasons: string[] = [];
+        const inRange = inDateRange(sample.date, options.from, options.to);
+        const humanReviewed = hasHumanReview(sample);
+        if (!inRange) {
+          if (humanReviewed) {
+            ignoredReasons.push('outside_date_range');
+            fileDiagnostic.ignoredSamples.push(ignoredSampleDiagnostic(sample, ignoredReasons));
+            addIgnoredReason(diagnostics.ignoredSamplesByReason, 'outside_date_range');
+          }
+          continue;
+        }
+        if (!humanReviewed) continue;
+        diagnostics.humanReviewedSamplesFound += 1;
+        fileDiagnostic.humanReviewedSamples += 1;
+        if (!sample.humanInspectionLabel) ignoredReasons.push('missing_reviewed_label');
         const status = ledgerStatus(sample.humanInspectionLabel);
+        if (sample.humanInspectionLabel && !status) {
+          ignoredReasons.push('unsupported_model_candidate_label');
+          ignoredReasons.push('legacy_reviewed_format');
+          ignoredLegacyReviewedSamples += 1;
+        }
+        if (!sample.agentAssessment) ignoredReasons.push('no_agentAssessment');
+        if (!sample.reviewEvidence) ignoredReasons.push('no_reviewEvidence');
+        if (!sample.reviewEvidence?.chartPngPath && !sample.reviewEvidence?.chartReportPath) ignoredReasons.push('missing_chart_report_evidence');
+        if (!sample.estimatedGrossContractPnl) ignoredReasons.push('no_estimatedGrossContractPnl');
+        if (ignoredReasons.length && !status) {
+          fileDiagnostic.ignoredSamples.push(ignoredSampleDiagnostic(sample, ignoredReasons));
+          for (const reason of ignoredReasons) addIgnoredReason(diagnostics.ignoredSamplesByReason, reason);
+          continue;
+        }
         if (!status) {
-          if (sample.humanInspectionLabel) ignoredLegacyReviewedSamples += 1;
           continue;
         }
         const dedupeKey = `${sample.sampleId}|${sample.humanReviewedAt || ''}|${file}`;
@@ -1106,12 +1270,23 @@ async function loadReviewedEntries(options: ModelCandidateLedgerOptions, outcome
           chartPath,
           symbol: options.symbol,
         }));
+        fileDiagnostic.acceptedModelCandidateSamples += 1;
+        diagnostics.acceptedModelCandidateSamples += 1;
       }
+      diagnostics.files.push(fileDiagnostic);
     } catch (error) {
+      diagnostics.reviewedFilesMalformed += 1;
+      fileDiagnostic.status = 'malformed';
+      fileDiagnostic.notes.push(error instanceof Error ? error.message : String(error));
+      diagnostics.files.push(fileDiagnostic);
       warnings.push(`Reviewed pack skipped: ${file}; ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  return { entries: entries.sort((left, right) => `${left.date} ${left.time || ''} ${left.sampleId}`.localeCompare(`${right.date} ${right.time || ''} ${right.sampleId}`)), ignoredLegacyReviewedSamples };
+  diagnostics.ignoredReviewedSamples = diagnostics.files.reduce((total, file) => total + file.ignoredSamples.length, 0);
+  diagnostics.note = files.length
+    ? 'Reviewed artifact diagnostics explain the difference between all human-reviewed samples and model-candidate ledger-eligible samples.'
+    : diagnostics.note;
+  return { entries: entries.sort((left, right) => `${left.date} ${left.time || ''} ${left.sampleId}`.localeCompare(`${right.date} ${right.time || ''} ${right.sampleId}`)), ignoredLegacyReviewedSamples, diagnostics };
 }
 
 export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewLedger): string {
@@ -1120,12 +1295,23 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
     `# Model Candidate Review Ledger - ${ledger.symbol}`,
     '',
     `Date range: ${ledger.from} to ${ledger.to}`,
+    `Generated at: ${ledger.generatedAt}`,
+    `Fixed/current JSON: ${ledger.outputPaths.jsonPath}`,
+    `Fixed/current Markdown: ${ledger.outputPaths.markdownPath}`,
+    ...(ledger.outputPaths.rangeJsonPath && ledger.outputPaths.rangeMarkdownPath ? [
+      `Range-stamped JSON: ${ledger.outputPaths.rangeJsonPath}`,
+      `Range-stamped Markdown: ${ledger.outputPaths.rangeMarkdownPath}`,
+    ] : ['Range-stamped output: not written for this run']),
     '',
     SAFETY_MESSAGE,
     FINAL_DECISION_MESSAGE,
     '',
     '## Summary',
     `- Reviewed samples found: ${ledger.summary.reviewedSamplesFound}`,
+    `- Human-reviewed samples found: ${ledger.summary.humanReviewedSamplesFound}`,
+    `- Reviewed files found: ${ledger.summary.reviewedFilesFound}`,
+    `- Reviewed files read: ${ledger.summary.reviewedFilesRead}`,
+    `- Ignored reviewed samples: ${ledger.summary.ignoredReviewedSamples}`,
     `- Human approved: ${ledger.summary.approvedCount}`,
     `- Human not approved: ${ledger.summary.notApprovedCount}`,
     `- Ignored legacy reviewed samples: ${ledger.summary.ignoredLegacyReviewedSamples}`,
@@ -1179,14 +1365,24 @@ export function renderModelCandidateLedgerMarkdown(ledger: ModelCandidateReviewL
     '',
     '## Warnings',
     ...(ledger.warnings.length ? ledger.warnings.map((warning) => `- ${warning}`) : ['- none']),
+    '',
+    ...renderReviewedArtifactDiagnosticsMarkdown(ledger.reviewedArtifactDiagnostics),
   ].join('\n');
 }
 
-function outputPaths(outDir: string): { jsonPath: string; markdownPath: string } {
-  const dir = path.resolve(outDir);
+function outputPaths(options: Pick<ModelCandidateLedgerOptions, 'outDir' | 'symbol' | 'from' | 'to' | 'writeRangeArtifact'>): ModelCandidateReviewLedger['outputPaths'] {
+  const dir = path.resolve(options.outDir);
+  const rangeBase = `model-candidate-review-ledger-${options.symbol}-${options.from}-to-${options.to}`;
+  const rangePaths = options.writeRangeArtifact !== false
+    ? {
+      rangeJsonPath: path.join(dir, `${rangeBase}.json`),
+      rangeMarkdownPath: path.join(dir, `${rangeBase}.md`),
+    }
+    : {};
   return {
     jsonPath: path.join(dir, 'model-candidate-review-ledger.json'),
     markdownPath: path.join(dir, 'model-candidate-review-ledger.md'),
+    ...rangePaths,
   };
 }
 
@@ -1194,10 +1390,10 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   const warnings: string[] = [];
   const outcomes = await loadOutcomeMap(path.resolve(options.outcomeReportDir), options.symbol, options.from, options.to, warnings);
   const chartFiles = await loadChartFiles(path.resolve(options.chartDir));
-  const { entries, ignoredLegacyReviewedSamples } = await loadReviewedEntries(options, outcomes, chartFiles, warnings);
+  const { entries, ignoredLegacyReviewedSamples, diagnostics } = await loadReviewedEntries(options, outcomes, chartFiles, warnings);
   const conceptSummaries = summarizeConcepts(entries, options.thresholds, options.symbol);
   const estimatedGrossContractPnlSummary = summarizeEstimatedGrossContractPnl(entries, options.symbol);
-  const paths = outputPaths(options.outDir);
+  const paths = outputPaths(options);
   const ledger: ModelCandidateReviewLedger = {
     reportType: 'model_candidate_review_ledger',
     generatedAt: new Date().toISOString(),
@@ -1220,12 +1416,17 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
       approvedCount: entries.filter((entry) => entry.humanApprovalState === APPROVED_LABEL).length,
       notApprovedCount: entries.filter((entry) => entry.humanApprovalState === NOT_APPROVED_LABEL).length,
       ignoredLegacyReviewedSamples,
+      humanReviewedSamplesFound: diagnostics.humanReviewedSamplesFound,
+      reviewedFilesFound: diagnostics.reviewedFilesFound,
+      reviewedFilesRead: diagnostics.reviewedFilesRead,
+      ignoredReviewedSamples: diagnostics.ignoredReviewedSamples,
       conceptsReviewed: conceptSummaries.length,
       candidateReviewRecommendedConcepts: conceptSummaries.filter((summary) => summary.candidateReadinessStatus === 'candidate_review_recommended').length,
     },
     entries,
     conceptSummaries,
     estimatedGrossContractPnlSummary,
+    reviewedArtifactDiagnostics: diagnostics,
     warnings,
     outputPaths: paths,
   };
@@ -1233,6 +1434,10 @@ export async function buildModelCandidateReviewLedger(options: ModelCandidateLed
   mkdirSync(path.dirname(paths.jsonPath), { recursive: true });
   writeFileSync(paths.jsonPath, `${JSON.stringify(ledger, null, 2)}\n`, 'utf8');
   writeFileSync(paths.markdownPath, `${renderModelCandidateLedgerMarkdown(ledger)}\n`, 'utf8');
+  if (paths.rangeJsonPath && paths.rangeMarkdownPath) {
+    writeFileSync(paths.rangeJsonPath, `${JSON.stringify({ ...ledger, outputPaths: paths }, null, 2)}\n`, 'utf8');
+    writeFileSync(paths.rangeMarkdownPath, `${renderModelCandidateLedgerMarkdown(ledger)}\n`, 'utf8');
+  }
   return ledger;
 }
 
@@ -1243,7 +1448,14 @@ function renderPretty(ledger: ModelCandidateReviewLedger): string {
     `Symbol: ${ledger.symbol}`,
     `Ledger JSON: ${ledger.outputPaths.jsonPath}`,
     `Ledger Markdown: ${ledger.outputPaths.markdownPath}`,
+    ...(ledger.outputPaths.rangeJsonPath && ledger.outputPaths.rangeMarkdownPath ? [
+      `Range JSON: ${ledger.outputPaths.rangeJsonPath}`,
+      `Range Markdown: ${ledger.outputPaths.rangeMarkdownPath}`,
+    ] : []),
     `Reviewed samples found: ${ledger.summary.reviewedSamplesFound}`,
+    `Human-reviewed samples found: ${ledger.summary.humanReviewedSamplesFound}`,
+    `Reviewed files read: ${ledger.summary.reviewedFilesRead}/${ledger.summary.reviewedFilesFound}`,
+    `Ignored reviewed samples: ${ledger.summary.ignoredReviewedSamples}`,
     `Human approved: ${ledger.summary.approvedCount}`,
     `Human not approved: ${ledger.summary.notApprovedCount}`,
     `Ignored legacy reviewed samples: ${ledger.summary.ignoredLegacyReviewedSamples}`,
