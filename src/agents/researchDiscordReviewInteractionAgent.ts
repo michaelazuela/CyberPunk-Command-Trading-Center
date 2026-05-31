@@ -132,7 +132,8 @@ function loadReviewPack(file: string): ResearchSampleReviewPack {
 function reviewedPaths(reviewPackPath: string): { jsonFile: string; markdownFile: string } {
   const parsed = path.parse(path.resolve(reviewPackPath));
   const ext = parsed.ext || '.json';
-  const jsonFile = path.join(parsed.dir, `${parsed.name}.reviewed${ext}`);
+  const baseName = parsed.name.replace(/\.reviewed$/i, '');
+  const jsonFile = path.join(parsed.dir, `${baseName}.reviewed${ext}`);
   return {
     jsonFile,
     markdownFile: jsonFile.replace(/\.json$/i, '.md'),
@@ -142,11 +143,13 @@ function reviewedPaths(reviewPackPath: string): { jsonFile: string; markdownFile
 function activeReviewPackCandidates(primaryReviewPackPath: string): string[] {
   const resolved = path.resolve(primaryReviewPackPath);
   const parsed = path.parse(resolved);
-  const candidates = [resolved];
+  const candidates: string[] = [];
   if (/\.reviewed$/i.test(parsed.name)) {
+    candidates.push(resolved);
     candidates.push(path.join(parsed.dir, `${parsed.name.replace(/\.reviewed$/i, '')}${parsed.ext || '.json'}`));
   } else {
     candidates.push(path.join(parsed.dir, `${parsed.name}.reviewed${parsed.ext || '.json'}`));
+    candidates.push(resolved);
   }
   try {
     const activePacks = fs.readdirSync(parsed.dir)
@@ -258,6 +261,14 @@ function reviewerName(user: ResearchDiscordInteractionUser): string {
 
 function isFutureModelCandidateApprovalLabel(label: HumanReviewLabel | null): boolean {
   return label === 'approved_for_future_model_candidate_review' || label === 'not_approved_for_future_model_candidate_review';
+}
+
+function canUpdateReviewedPhase5BDecision(entry: ResearchDiscordReviewStateEntry, label: HumanReviewLabel): boolean {
+  return Boolean(
+    entry.reviewed &&
+    isFutureModelCandidateApprovalLabel(label) &&
+    isFutureModelCandidateApprovalLabel((entry.selectedLabel || null) as HumanReviewLabel | null)
+  );
 }
 
 function humanReviewDisplay(label: HumanReviewLabel | null): string {
@@ -395,10 +406,12 @@ function handleResearchDiscordReviewInteractionUnsafe(input: ResearchDiscordInte
         updatedState: state,
       };
     }
-    return rejected('Sample was already reviewed through Discord. Use CLI/manual override for changes.');
+    if (!canUpdateReviewedPhase5BDecision(entry, customId.label)) {
+      return rejected('Sample was already reviewed through Discord. Use CLI/manual override for changes.');
+    }
   }
 
-  const resolved = resolveReviewPackForSample(entry.reviewPackPath, entry.sampleId);
+  const resolved = resolveReviewPackForSample(entry.reviewedPackPath || entry.reviewPackPath, entry.sampleId);
   if (!resolved) {
     console.warn(`[research-discord-interactions] rejection=sample_not_found; sampleId=${entry.sampleId}; reviewPackPath=${path.resolve(entry.reviewPackPath)}`);
     return rejectedSampleNotFound(entry.sampleId);

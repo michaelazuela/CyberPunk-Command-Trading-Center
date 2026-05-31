@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   createResearchDiscordStateEntry,
+  PRICE_ACTION_REVIEW_LABELS,
   type ResearchDiscordReviewState,
 } from './researchDiscordReviewQueueAgent';
 import {
@@ -17,6 +18,7 @@ import {
   parseResearchDiscordInteractionsArgs,
   runResearchDiscordInteractionsCli,
 } from '../../tools/automation/research-discord-interactions';
+import { buildModelCandidateReviewLedger } from '../../tools/automation/model-candidate-ledger';
 
 function fixturePack(): ResearchSampleReviewPack {
   return {
@@ -107,7 +109,13 @@ function writeFixtureState(statePath: string, reviewPackPath: string): ResearchD
   return state;
 }
 
-function writeStateForSample(statePath: string, reviewPackPath: string, sampleId: string, packHash = 'packhash001'): ResearchDiscordReviewState {
+function writeStateForSample(
+  statePath: string,
+  reviewPackPath: string,
+  sampleId: string,
+  packHash = 'packhash001',
+  labelOptions?: ResearchDiscordReviewState['entries'][number]['labelOptions'],
+): ResearchDiscordReviewState {
   const entry = createResearchDiscordStateEntry({
     packHash,
     reviewPackPath,
@@ -115,11 +123,35 @@ function writeStateForSample(statePath: string, reviewPackPath: string, sampleId
     discordMessageId: 'message-1',
     discordChannelId: 'channel-1',
     postedAt: '2026-05-29T20:00:00.000Z',
+    labelOptions,
   });
   const state: ResearchDiscordReviewState = {
     reportType: 'research_discord_review_state',
     updatedAt: '2026-05-29T20:00:00.000Z',
     entries: [entry],
+  };
+  writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  return state;
+}
+
+function writeStateForSamples(
+  statePath: string,
+  reviewPackPath: string,
+  samples: Array<{ sampleId: string; packHash: string; messageId?: string }>,
+  labelOptions?: ResearchDiscordReviewState['entries'][number]['labelOptions'],
+): ResearchDiscordReviewState {
+  const state: ResearchDiscordReviewState = {
+    reportType: 'research_discord_review_state',
+    updatedAt: '2026-05-29T20:00:00.000Z',
+    entries: samples.map((sample) => createResearchDiscordStateEntry({
+      packHash: sample.packHash,
+      reviewPackPath,
+      sampleId: sample.sampleId,
+      discordMessageId: sample.messageId || `${sample.sampleId}-message`,
+      discordChannelId: 'channel-1',
+      postedAt: '2026-05-29T20:00:00.000Z',
+      labelOptions,
+    })),
   };
   writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
   return state;
@@ -166,6 +198,12 @@ assert.equal(parsedCustomId.namespace, 'research_review');
 assert.equal(parsedCustomId.packHash, 'packhash001');
 assert.equal(parsedCustomId.sampleId, 'false_run_liquidity_fade-001');
 assert.equal(parsedCustomId.label, 'new_model_candidate_review');
+const parsedApprovedCustomId = parseResearchDiscordReviewCustomId('research_review|packhash001|false_run_liquidity_fade-001|approved_for_future_model_candidate_review');
+assert.equal(parsedApprovedCustomId.label, 'approved_for_future_model_candidate_review');
+const parsedApprovedAliasCustomId = parseResearchDiscordReviewCustomId('research_review|packhash001|false_run_liquidity_fade-001|approved');
+assert.equal(parsedApprovedAliasCustomId.label, 'approved_for_future_model_candidate_review');
+const parsedNotApprovedAliasCustomId = parseResearchDiscordReviewCustomId('research_review|packhash001|false_run_liquidity_fade-001|not_approved');
+assert.equal(parsedNotApprovedAliasCustomId.label, 'not_approved_for_future_model_candidate_review');
 assert.throws(() => parseResearchDiscordReviewCustomId('trade_review|packhash001|sample|keep_advisory'), /namespace/);
 assert.throws(() => parseResearchDiscordReviewCustomId('research_review|packhash001|sample|approve_trade'), /Unsupported/);
 validateResearchDiscordInteractionUser('user-1', ['user-1']);
@@ -319,7 +357,7 @@ assert.ok(result.reviewedMarkdownPath?.endsWith('review-pack.reviewed.md'));
 assert.equal(existsSync(result.reviewedPackPath as string), true);
 assert.equal(existsSync(result.reviewedMarkdownPath as string), true);
 assert.equal(readFileSync(reviewPackPath, 'utf8'), originalPackText);
-assert.ok(result.responseContent.includes('Research-only. This does not approve execution.'));
+assert.ok(result.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
 assert.ok(result.messageUpdate?.content.includes('Reviewed: new_model_candidate_review by Michael'));
 assert.equal((result.messageUpdate?.components?.[0].components[0] as { disabled?: boolean }).disabled, true);
 
@@ -389,6 +427,161 @@ assert.ok(duplicateDifferentUser.responseContent.includes('already reviewed'));
 
 const reviewedJson = JSON.stringify(reviewedPack);
 assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"canExecute"/.test(reviewedJson));
+
+const approvedPackPath = join(temp, 'approved-price-action-review-pack.json');
+const approvedStatePath = join(temp, 'approved-price-action-state.json');
+writeFileSync(approvedPackPath, `${JSON.stringify(fixturePack(), null, 2)}\n`, 'utf8');
+writeStateForSample(approvedStatePath, approvedPackPath, 'false_run_liquidity_fade-001', 'packhash901', PRICE_ACTION_REVIEW_LABELS);
+const approvedCustomId = 'research_review|packhash901|false_run_liquidity_fade-001|approved';
+const approvedResult = handleResearchDiscordReviewInteraction({
+  customId: approvedCustomId,
+  statePath: approvedStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-1',
+  reviewedAt: '2026-05-29T22:40:00.000Z',
+  messageContent: '[RESEARCH SAMPLE REVIEW] false_run_liquidity_fade-001',
+});
+assert.equal(approvedResult.ok, true);
+assert.equal(approvedResult.selectedLabel, 'approved_for_future_model_candidate_review');
+assert.ok(approvedResult.responseContent.includes('Human review: Approved for future model-candidate review'));
+assert.ok(approvedResult.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
+assert.ok(approvedResult.messageUpdate?.content.includes('Reviewed: Approved for future model-candidate review by Michael'));
+const approvedPack = JSON.parse(readFileSync(approvedResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+assert.equal(approvedPack.samples[0].humanInspectionLabel, 'approved_for_future_model_candidate_review');
+assert.equal(approvedPack.samples[0].humanReason, 'Human approved this sample as useful evidence for future model-candidate review only.');
+assert.equal(approvedPack.samples[0].finalReviewLabel, 'approved_for_future_model_candidate_review');
+assert.equal(approvedPack.samples[0].advisoryOnly, true);
+assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentApprovesTrade, false);
+assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentChangesRules, false);
+assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentCreatesEntry, false);
+assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentCreatesTargets, false);
+assert.equal(approvedPack.samples[0].agentApprovalBoundary.agentPromotesModel, false);
+assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"canExecute"|"ragPayload"|"journalPayload"/.test(JSON.stringify(approvedPack)));
+
+const notApprovedPackPath = join(temp, 'not-approved-price-action-review-pack.json');
+const notApprovedStatePath = join(temp, 'not-approved-price-action-state.json');
+writeFileSync(notApprovedPackPath, `${JSON.stringify(fixturePack(), null, 2)}\n`, 'utf8');
+writeStateForSample(notApprovedStatePath, notApprovedPackPath, 'false_run_liquidity_fade-002', 'packhash902', PRICE_ACTION_REVIEW_LABELS);
+const notApprovedResult = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|packhash902|false_run_liquidity_fade-002|not_approved',
+  statePath: notApprovedStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-1',
+  reviewedAt: '2026-05-29T22:45:00.000Z',
+});
+assert.equal(notApprovedResult.ok, true);
+assert.ok(notApprovedResult.responseContent.includes('Human review: Not approved for future model-candidate review'));
+assert.ok(notApprovedResult.responseContent.includes('Research-only. This does not approve execution, change rules, or create trades.'));
+const notApprovedPack = JSON.parse(readFileSync(notApprovedResult.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+const notApprovedSample = notApprovedPack.samples.find((item) => item.sampleId === 'false_run_liquidity_fade-002');
+assert.equal(notApprovedSample?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(notApprovedSample?.humanReason, 'Human did not approve this sample as useful evidence for future model-candidate review.');
+assert.equal(notApprovedSample?.advisoryOnly, true);
+assert.equal(notApprovedSample?.agentApprovalBoundary.agentApprovesTrade, false);
+
+const phase5bDir = join(temp, 'phase5b-merge');
+mkdirSync(phase5bDir, { recursive: true });
+const phase5bPack = fixturePack();
+phase5bPack.samples = phase5bPack.samples.map((sample, index) => ({
+  ...sample,
+  sampleId: index === 0 ? 'final_hour_liquidity_draw-030' : 'final_hour_liquidity_draw-027',
+  date: '2026-05-13',
+  time: index === 0 ? '15:45' : '15:15',
+  concept: 'final_hour_liquidity_draw',
+  conceptTitle: 'Final-Hour Liquidity Draw',
+  direction: 'LONG',
+  window: '3:15-3:45 NY',
+  agentReason: 'Research-only final-hour liquidity draw review sample.',
+}));
+const phase5bPackPath = join(phase5bDir, 'research-sample-review-MES-all-2026-05-31.json');
+const phase5bStatePath = join(phase5bDir, 'discord-review-state.json');
+writeFileSync(phase5bPackPath, `${JSON.stringify(phase5bPack, null, 2)}\n`, 'utf8');
+writeStateForSamples(phase5bStatePath, phase5bPackPath, [
+  { sampleId: 'final_hour_liquidity_draw-030', packHash: 'phase5b030' },
+  { sampleId: 'final_hour_liquidity_draw-027', packHash: 'phase5b027' },
+], PRICE_ACTION_REVIEW_LABELS);
+
+const approved030 = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|phase5b030|final_hour_liquidity_draw-030|approved',
+  statePath: phase5bStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-030',
+  reviewedAt: '2026-05-31T04:14:19.660Z',
+});
+assert.equal(approved030.ok, true);
+assert.equal(approved030.selectedLabel, 'approved_for_future_model_candidate_review');
+
+const notApproved027 = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|phase5b027|final_hour_liquidity_draw-027|not_approved',
+  statePath: phase5bStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-027',
+  reviewedAt: '2026-05-31T04:15:53.786Z',
+});
+assert.equal(notApproved027.ok, true);
+assert.equal(notApproved027.selectedLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(notApproved027.reviewedPackPath, approved030.reviewedPackPath);
+
+const mergedPhase5bPack = JSON.parse(readFileSync(notApproved027.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+const merged030 = mergedPhase5bPack.samples.find((sample) => sample.sampleId === 'final_hour_liquidity_draw-030');
+const merged027 = mergedPhase5bPack.samples.find((sample) => sample.sampleId === 'final_hour_liquidity_draw-027');
+assert.equal(merged030?.humanInspectionLabel, 'approved_for_future_model_candidate_review');
+assert.equal(merged027?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(mergedPhase5bPack.samples.filter((sample) => sample.humanInspectionLabel !== null).length, 2);
+const mergedPhase5bMarkdown = readFileSync(notApproved027.reviewedMarkdownPath as string, 'utf8');
+assert.ok(mergedPhase5bMarkdown.includes('final_hour_liquidity_draw-030'));
+assert.ok(mergedPhase5bMarkdown.includes('final_hour_liquidity_draw-027'));
+assert.ok(!/"entry"|"stop"|"stopLoss"|"target"|"targets"|"T1"|"T2"|"riskReward"|"canExecute"|"ragPayload"|"journalPayload"/.test(JSON.stringify(mergedPhase5bPack)));
+
+const phase5bLedgerOut = join(phase5bDir, 'ledger-out');
+const phase5bLedger = await buildModelCandidateReviewLedger({
+  from: '2026-01-01',
+  to: '2026-05-31',
+  symbol: 'MES',
+  reviewPackDir: phase5bDir,
+  outcomeReportDir: join(phase5bDir, 'outcomes'),
+  chartDir: join(phase5bDir, 'charts'),
+  outDir: phase5bLedgerOut,
+  pretty: true,
+  json: false,
+  thresholds: { minimumReviewedSamples: 10, minimumApprovalRate: 0.7 },
+});
+assert.equal(phase5bLedger.summary.reviewedSamplesFound, 2);
+assert.equal(phase5bLedger.summary.approvedCount, 1);
+assert.equal(phase5bLedger.summary.notApprovedCount, 1);
+assert.equal(phase5bLedger.entries.some((entry) => entry.sampleId === 'final_hour_liquidity_draw-030'), true);
+assert.equal(phase5bLedger.entries.some((entry) => entry.sampleId === 'final_hour_liquidity_draw-027'), true);
+
+const update030 = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|phase5b030|final_hour_liquidity_draw-030|not_approved',
+  statePath: phase5bStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-030',
+  reviewedAt: '2026-05-31T04:20:00.000Z',
+});
+assert.equal(update030.ok, true);
+assert.equal(update030.selectedLabel, 'not_approved_for_future_model_candidate_review');
+const updatedPhase5bPack = JSON.parse(readFileSync(update030.reviewedPackPath as string, 'utf8')) as ResearchSampleReviewPack;
+const updated030Samples = updatedPhase5bPack.samples.filter((sample) => sample.sampleId === 'final_hour_liquidity_draw-030');
+assert.equal(updated030Samples.length, 1);
+assert.equal(updated030Samples[0].humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(updatedPhase5bPack.samples.find((sample) => sample.sampleId === 'final_hour_liquidity_draw-027')?.humanInspectionLabel, 'not_approved_for_future_model_candidate_review');
+assert.equal(updatedPhase5bPack.samples.filter((sample) => sample.humanInspectionLabel !== null).length, 2);
+
+const disallowedPriceActionLabel = handleResearchDiscordReviewInteraction({
+  customId: 'research_review|packhash902|false_run_liquidity_fade-002|keep_advisory',
+  statePath: notApprovedStatePath,
+  user: { id: 'user-1', username: 'Michael' },
+  channelId: 'channel-1',
+  messageId: 'message-1',
+});
+assert.equal(disallowedPriceActionLabel.ok, false);
+assert.ok(disallowedPriceActionLabel.responseContent.includes('already reviewed') || disallowedPriceActionLabel.responseContent.includes('not allowed'));
 
 const parsedArgs = parseResearchDiscordInteractionsArgs([
   '--simulate',
