@@ -70,6 +70,7 @@ import {
   PROFESSIONAL_MODEL_TWO_LABEL,
   professionalizeReportText,
 } from './professional-report-language';
+import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -123,6 +124,29 @@ const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
+const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
+
+type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
+
+export interface ScannerWebhookResolution {
+  url: string | null;
+  source: ScannerWebhookEnvKey | null;
+  usingGenericFallback: boolean;
+}
+
+export function resolveScannerDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): ScannerWebhookResolution {
+  for (const key of SCANNER_WEBHOOK_ENV_KEYS) {
+    const url = env[key]?.trim();
+    if (url) {
+      return {
+        url,
+        source: key,
+        usingGenericFallback: key === 'DISCORD_WEBHOOK_URL',
+      };
+    }
+  }
+  return { url: null, source: null, usingGenericFallback: false };
+}
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -165,7 +189,7 @@ function printHelp() {
     '  --once                         Run one poll cycle and exit.',
     '  --dry-run                      Print/log alert payloads instead of posting to Discord.',
     '  --instrument MES|MNQ           Logical app instrument, defaults to MES.',
-    '  --bridge-instrument "MES 06-26" NinjaTrader bridge instrument.',
+    '  --bridge-instrument "MES 06-26" NinjaTrader bridge instrument. If omitted or passed as MES/MNQ root only, scanner uses bridge /health defaultInstrument.',
     '  --bridge-url URL               Defaults to http://127.0.0.1:8765.',
     '  --poll-seconds 60              Poll cadence, minimum 15 seconds for continuous mode.',
     '  --discord false                Disable Discord sends but keep scanner logs.',
@@ -176,6 +200,9 @@ function printHelp() {
     '  --macro-calendar false         Disable high-impact macro calendar caution.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
+    '',
+    'Discord webhook precedence:',
+    '  QUANT_DESK_SCANNER_WEBHOOK_URL, then SCANNER_DISCORD_WEBHOOK_URL, then legacy DISCORD_WEBHOOK_URL.',
   ].join('\n'));
 }
 
@@ -189,7 +216,7 @@ function loadConfig(): ScannerConfig {
     : 'eastern';
   return {
     instrument: ((argValue('instrument') || 'MES') as Instrument),
-    bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES 06-26',
+    bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES',
     bridgeUrl: argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765',
     account: argValue('account') || process.env.NINJATRADER_ACCOUNT || 'Sim101',
     pollSeconds: Math.max(once ? 1 : 15, numberArg('poll-seconds', 60)),
@@ -838,9 +865,14 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
     console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
     return;
   }
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
-  const url = discordWebhookUrlForPayload(webhookUrl, payload.components);
+  const webhook = resolveScannerDiscordWebhookUrl();
+  if (!webhook.url) {
+    throw new Error('QUANT_DESK_SCANNER_WEBHOOK_URL or SCANNER_DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
+  }
+  if (webhook.usingGenericFallback) {
+    console.warn('[scanner-discord] Using legacy DISCORD_WEBHOOK_URL. Prefer QUANT_DESK_SCANNER_WEBHOOK_URL for scanner-specific Discord separation.');
+  }
+  const url = discordWebhookUrlForPayload(webhook.url, payload.components);
   const validFiles = files.filter(Boolean);
   const response = validFiles.length
     ? await (async () => {
@@ -875,9 +907,10 @@ async function sendScannerHealthAlertIfNeeded(args: {
     return;
   }
 
-  if (!args.config.dryRun && !process.env.DISCORD_WEBHOOK_URL) {
+  const webhook = resolveScannerDiscordWebhookUrl();
+  if (!args.config.dryRun && !webhook.url) {
     args.state.lastHealthStatus = currentStatus;
-    console.warn(`[scanner-health] Discord health alert skipped because DISCORD_WEBHOOK_URL is not configured: ${previousStatus || 'none'} -> ${currentStatus}`);
+    console.warn(`[scanner-health] Discord health alert skipped because scanner Discord webhook is not configured: ${previousStatus || 'none'} -> ${currentStatus}`);
     return;
   }
 
@@ -1020,7 +1053,8 @@ function logScannerHealth(report: ScannerHealthReport): void {
   }
 }
 
-async function runCycle(config: ScannerConfig): Promise<void> {
+async function runCycle(baseConfig: ScannerConfig): Promise<void> {
+  let config = baseConfig;
   const now = new Date();
   const window = resolveScannerWindow(now, config.afternoonEnabled);
   const tradeDate = getScannerTradeDate(now);
@@ -1062,7 +1096,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
         maxAllowedMinutes: config.maxStaleBarMinutes,
         reason: 'Latest completed 5M bar unavailable because bridge health failed.',
       },
-      discordWebhookConfigured: Boolean(process.env.DISCORD_WEBHOOK_URL),
+      discordWebhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
       marketMapStatus: { loaded: false, usableBars: 0, fallbackBridgeDataAvailable: false },
       scannerStateFileStatus: stateRead.health,
       macroCalendarStatus: {
@@ -1080,6 +1114,19 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     console.log(`[scanner] ${new Date().toISOString()} NoData: bridge unavailable.`);
     return;
   }
+
+  const instrumentResolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl: config.bridgeUrl,
+    appInstrument: config.instrument,
+    requestedBridgeInstrument: config.bridgeInstrument,
+  }, {
+    getHealth: async () => bridgeHealth as NinjaBridgeHealth,
+  });
+  if (instrumentResolution.instrument !== config.bridgeInstrument || instrumentResolution.warning) {
+    console.log(`[scanner-bridge] Active bridge instrument: ${instrumentResolution.instrument} (${instrumentResolution.source}).`);
+    if (instrumentResolution.warning) console.warn(`[scanner-bridge] ${instrumentResolution.warning}`);
+  }
+  config = { ...config, bridgeInstrument: instrumentResolution.instrument };
 
   const [snapshot, positions, liveBars] = await Promise.all([
     getNinjaBridgeSnapshot(config.bridgeInstrument, config.bridgeUrl).catch(() => null),
@@ -1126,7 +1173,7 @@ async function runCycle(config: ScannerConfig): Promise<void> {
     bridgeReachable: healthOk,
     latestCompleted5mBar: completed5m,
     barStaleness: bridgeFreshness,
-    discordWebhookConfigured: Boolean(process.env.DISCORD_WEBHOOK_URL),
+    discordWebhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
     marketMapStatus: liveMarketMapStatus(liveBars),
     scannerStateFileStatus: stateRead.health,
     macroCalendarStatus: {

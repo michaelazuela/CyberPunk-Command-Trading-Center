@@ -4,7 +4,7 @@ param(
   [string]$Once,
   [string]$BridgeUrl = "http://127.0.0.1:8765",
   [string]$Instrument = "MES",
-  [string]$BridgeInstrument = "MES 06-26",
+  [string]$BridgeInstrument = "MES",
   [switch]$NoRecorder
 )
 
@@ -22,11 +22,11 @@ Write-Host ""
 Write-Host "Keep this window open during market hours. Close it to stop alerts." -ForegroundColor Yellow
 Write-Host ""
 
-if (-not $DryRun -and [string]::IsNullOrWhiteSpace($env:DISCORD_WEBHOOK_URL)) {
-  $secret = Read-Host "Paste Discord webhook URL for this session" -AsSecureString
+if (-not $DryRun -and [string]::IsNullOrWhiteSpace($env:QUANT_DESK_SCANNER_WEBHOOK_URL) -and [string]::IsNullOrWhiteSpace($env:SCANNER_DISCORD_WEBHOOK_URL) -and [string]::IsNullOrWhiteSpace($env:DISCORD_WEBHOOK_URL)) {
+  $secret = Read-Host "Paste Quant Desk scanner Discord webhook URL for this session" -AsSecureString
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)
   try {
-    $env:DISCORD_WEBHOOK_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    $env:QUANT_DESK_SCANNER_WEBHOOK_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
   } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
   }

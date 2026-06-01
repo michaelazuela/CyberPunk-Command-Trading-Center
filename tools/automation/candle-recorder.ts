@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
 import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -173,7 +174,7 @@ async function recordOnce({
 async function main() {
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
-  const bridgeInstrument = argValue('bridge-instrument') || 'MES 06-26';
+  let bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES';
   const pollSeconds = Number(argValue('poll-seconds') || '60');
   const limit = Math.max(10, Math.min(450, Number(argValue('limit') || '120')));
   const maxStaleBarMinutes = numberArg('max-stale-bar-minutes', 10);
@@ -184,6 +185,14 @@ async function main() {
     ? (timeZoneArg as BridgeTimeZoneMode)
     : 'eastern';
   const once = hasArg('once');
+
+  const instrumentResolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl,
+    appInstrument: instrument,
+    requestedBridgeInstrument: bridgeInstrument,
+  });
+  bridgeInstrument = instrumentResolution.instrument;
+  if (instrumentResolution.warning) console.warn(`[market-cache] ${instrumentResolution.warning}`);
 
   console.log('Quant Desk NinjaTrader candle recorder started.');
   console.log(`Bridge: ${bridgeUrl} | Instrument: ${bridgeInstrument} | Timeframes: ${TIMEFRAMES.join(', ')} | Bar time: ${barTimeZone}/${barTimestampMode}`);

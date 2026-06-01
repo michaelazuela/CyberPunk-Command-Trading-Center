@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
-import { prepareLiveScannerDiscordAlertArtifacts, prepareLiveScannerWatchlistAlertArtifacts } from './nt-scanner';
+import {
+  prepareLiveScannerDiscordAlertArtifacts,
+  prepareLiveScannerWatchlistAlertArtifacts,
+  resolveScannerDiscordWebhookUrl,
+} from './nt-scanner';
 import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-${Date.now()}`);
@@ -13,6 +17,30 @@ const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
+
+assert.deepEqual(resolveScannerDiscordWebhookUrl({}), { url: null, source: null, usingGenericFallback: false });
+assert.deepEqual(resolveScannerDiscordWebhookUrl({ DISCORD_WEBHOOK_URL: 'https://discord.example/generic' }), {
+  url: 'https://discord.example/generic',
+  source: 'DISCORD_WEBHOOK_URL',
+  usingGenericFallback: true,
+});
+assert.deepEqual(resolveScannerDiscordWebhookUrl({
+  DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
+  SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',
+}), {
+  url: 'https://discord.example/scanner',
+  source: 'SCANNER_DISCORD_WEBHOOK_URL',
+  usingGenericFallback: false,
+});
+assert.deepEqual(resolveScannerDiscordWebhookUrl({
+  DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
+  SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',
+  QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.example/quant-desk-scanner',
+}), {
+  url: 'https://discord.example/quant-desk-scanner',
+  source: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+  usingGenericFallback: false,
+});
 
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;
