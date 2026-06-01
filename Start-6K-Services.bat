@@ -9,7 +9,7 @@ REM The connector should be installed once with:
 REM cloudflared.exe service install <token>
 REM Do not paste the token into this file.
 set "DEFAULT_SYMBOL=MES"
-set "DEFAULT_CONTRACT=MES 06-26"
+set "DEFAULT_CONTRACT=MES"
 set "BRIDGE_URL=http://127.0.0.1:8765"
 set "DISCORD_ENDPOINT=https://discord-bridge.urmomshouse.net/interactions"
 
