@@ -1,0 +1,1153 @@
+{
+  "reportType": "time_window_liquidity_delivery_human_review",
+  "generatedAt": "2026-06-01T02:20:58.755Z",
+  "symbol": "MES",
+  "from": "2018-01-01",
+  "to": "2026-05-31",
+  "windowStudied": "AM",
+  "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+  "boundary": "research_only_not_execution_authority",
+  "researchOnlyWarning": "Research-only. This human review file does not approve trades and does not create execution authority.",
+  "safety": {
+    "activatesModel": false,
+    "approvesExecution": false,
+    "createsTrade": false,
+    "changesScanner": false,
+    "changesRules": false
+  },
+  "supportedLabels": [
+    "strong_advisory_candidate",
+    "covered_by_model_1",
+    "covered_by_turtle_soup",
+    "weak_or_noisy",
+    "needs_chart_review",
+    "reject_time_window_standalone"
+  ],
+  "summary": {
+    "totalSamples": 46,
+    "reviewedSamples": 11,
+    "unreviewedSamples": 35,
+    "labelCounts": {
+      "strong_advisory_candidate": 1,
+      "covered_by_model_1": 0,
+      "covered_by_turtle_soup": 0,
+      "weak_or_noisy": 2,
+      "needs_chart_review": 1,
+      "reject_time_window_standalone": 7
+    },
+    "summaryRecommendation": [
+      "No automatic promotion is created. Review labels remain research-only.",
+      "Most reviewed advisory-only samples are weak or rejected; keep AM TWLD advisory-only."
+    ]
+  },
+  "samples": [
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-09-06",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-09-06 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "needs_chart_review",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "Clean draw with FVG and MSS, but delivery failed. Need chart review to determine whether this is useful failure behavior or invalidates standalone TWLD. TWLD-5: Applied from chart-evidence recommendation keep_needs_chart_review -> needs_chart_review. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-10-16",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-10-16 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "FVG and MSS present, but delivery was not observed. Need chart confirmation before deciding standalone value. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-04",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-12-04 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "strong_advisory_candidate",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T01:45:31.369Z",
+      "reviewerNotes": "Best advisory-only example in this set: delivery achieved with FVG and MSS toward opening range low. Still research-only and not execution authority.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-05",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-12-05 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "FVG and MSS present, but delivery was not observed. Need chart review before deciding whether this is standalone TWLD or noise. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-22",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-12-22 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "FVG and MSS present, but delivery was not observed. Need chart review before deciding whether the draw was actionable or already invalid. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-07-04",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-07-04 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "weak_or_noisy",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T01:45:34.279Z",
+      "reviewerNotes": "Failed delivery, no MSS, and July 4 holiday session may distort liquidity behavior. Weak standalone TWLD sample.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-09-03",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-09-03 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "Prior day high draw with FVG and MSS, but delivery was not observed. Need chart confirmation before deciding standalone value. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-11-29",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-11-29 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "weak_or_noisy",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T01:45:36.163Z",
+      "reviewerNotes": "No observed delivery and likely holiday-thinned session after Thanksgiving. Weak standalone TWLD sample unless chart shows exceptional context.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-12-27",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-12-27 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "FVG and MSS present, but delivery was not observed. Holiday-week context requires chart review before deciding. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-02-02",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2026-02-02 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "Prior day low draw with FVG and MSS, but delivery was not observed. Need chart review before deciding standalone value. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-04-14",
+      "sourceBucket": "advisory_only_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2026-04-14 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "reviewer": "human",
+      "reviewedAt": "2026-06-01T02:20:58.754Z",
+      "reviewerNotes": "Previous week low draw with FVG and MSS, but delivery was not observed. Need chart review before deciding standalone value. TWLD-5: Applied from chart-evidence recommendation reject_time_window_standalone -> reject_time_window_standalone. Research-only; no execution authority created.",
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2025-10-21",
+      "sourceBucket": "best_clean_draw_delivery_achieved_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-10-21 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2023-09-27",
+      "sourceBucket": "best_clean_draw_delivery_achieved_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-09-27 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2025-07-18",
+      "sourceBucket": "best_clean_draw_delivery_achieved_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-07-18 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2024-07-15",
+      "sourceBucket": "best_clean_draw_delivery_achieved_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-07-15 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2024-12-13",
+      "sourceBucket": "best_clean_draw_delivery_achieved_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-12-13 10:00-11:00",
+      "suggestedLabel": "strong_advisory_candidate",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-28",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-11-28 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-27",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-11-27 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2023-11-06",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-11-06 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-06-26",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-06-26 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-11",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-11-11 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-05-16",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-05-16 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-11-28",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-11-28 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-07-25",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-07-25 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-06-19",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-06-19 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2023-12-20",
+      "sourceBucket": "clean_draw_failed_delivery_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-12-20 10:00-11:00",
+      "suggestedLabel": "weak_or_noisy",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-10-21",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-10-21 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2023-09-27",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-09-27 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-07-18",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-07-18 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2024-07-15",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-07-15 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2024-12-13",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-12-13 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-11-28",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-11-28 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-11-27",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-11-27 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2023-11-06",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-11-06 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-04-09",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-04-09 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "model_1_overlap_samples-am_liquidity_delivery_window-2025-06-26",
+      "sourceBucket": "model_1_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-06-26 10:00-11:00",
+      "suggestedLabel": "covered_by_model_1",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-04-07",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-04-07 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-10-27",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-10-27 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-04-15",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-04-15 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2023-11-24",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2023-11-24 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-09-23",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-09-23 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2024-01-23",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-01-23 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-02-17",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-02-17 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2024-05-22",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2024-05-22 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-07-08",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-07-08 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    },
+    {
+      "sampleId": "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-08-25",
+      "sourceBucket": "turtle_soup_overlap_samples",
+      "window": "AM 10:00-11:00 NY",
+      "symbol": "MES",
+      "dateTime": "2025-08-25 10:00-11:00",
+      "suggestedLabel": "covered_by_turtle_soup",
+      "finalHumanLabel": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reviewerNotes": null,
+      "sourceCuratedPackPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.json",
+      "boundary": "research_only_not_execution_authority",
+      "safety": {
+        "activatesModel": false,
+        "approvesExecution": false,
+        "createsTrade": false,
+        "changesScanner": false,
+        "changesRules": false
+      }
+    }
+  ],
+  "outputPaths": {
+    "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\reviewed\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.reviewed.json",
+    "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\review-packs\\reviewed\\time-window-liquidity-delivery-AM-curated-review-pack-MES-2018-01-01-to-2026-05-31.reviewed.md"
+  },
+  "chartEvidenceApplication": {
+    "appliedAt": "2026-06-01T02:20:58.754Z",
+    "sourceChartEvidencePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\chart-evidence\\time-window-liquidity-delivery-AM-chart-evidence-MES-2018-01-01-to-2026-05-31.json",
+    "beforeSummary": {
+      "totalSamples": 46,
+      "reviewedSamples": 11,
+      "unreviewedSamples": 35,
+      "labelCounts": {
+        "strong_advisory_candidate": 1,
+        "covered_by_model_1": 0,
+        "covered_by_turtle_soup": 0,
+        "weak_or_noisy": 2,
+        "needs_chart_review": 8,
+        "reject_time_window_standalone": 0
+      },
+      "summaryRecommendation": [
+        "No automatic promotion is created. Review labels remain research-only.",
+        "Many samples need chart review; generate or attach charts before deciding."
+      ]
+    },
+    "afterSummary": {
+      "totalSamples": 46,
+      "reviewedSamples": 11,
+      "unreviewedSamples": 35,
+      "labelCounts": {
+        "strong_advisory_candidate": 1,
+        "covered_by_model_1": 0,
+        "covered_by_turtle_soup": 0,
+        "weak_or_noisy": 2,
+        "needs_chart_review": 1,
+        "reject_time_window_standalone": 7
+      },
+      "summaryRecommendation": [
+        "No automatic promotion is created. Review labels remain research-only.",
+        "Most reviewed advisory-only samples are weak or rejected; keep AM TWLD advisory-only."
+      ]
+    },
+    "samplesUpdated": [
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-09-06",
+        "recommendation": "keep_needs_chart_review",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "needs_chart_review",
+        "changed": false
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-10-16",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-05",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-22",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-09-03",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-12-27",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-02-02",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      },
+      {
+        "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-04-14",
+        "recommendation": "reject_time_window_standalone",
+        "previousFinalHumanLabel": "needs_chart_review",
+        "appliedFinalHumanLabel": "reject_time_window_standalone",
+        "changed": true
+      }
+    ],
+    "samplesPreserved": [
+      "advisory_only_samples-am_liquidity_delivery_window-2023-12-04",
+      "advisory_only_samples-am_liquidity_delivery_window-2024-07-04",
+      "advisory_only_samples-am_liquidity_delivery_window-2024-11-29",
+      "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2025-10-21",
+      "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2023-09-27",
+      "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2025-07-18",
+      "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2024-07-15",
+      "best_clean_draw_delivery_achieved_samples-am_liquidity_delivery_window-2024-12-13",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-28",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-27",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2023-11-06",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-06-26",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-11-11",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-05-16",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-11-28",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2025-07-25",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2024-06-19",
+      "clean_draw_failed_delivery_samples-am_liquidity_delivery_window-2023-12-20",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-10-21",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2023-09-27",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-07-18",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2024-07-15",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2024-12-13",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-11-28",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-11-27",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2023-11-06",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-04-09",
+      "model_1_overlap_samples-am_liquidity_delivery_window-2025-06-26",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-04-07",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-10-27",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-04-15",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2023-11-24",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-09-23",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2024-01-23",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-02-17",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2024-05-22",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-07-08",
+      "turtle_soup_overlap_samples-am_liquidity_delivery_window-2025-08-25"
+    ],
+    "note": "Chart-evidence recommendations were applied as research-only human review labels. This does not approve trades, models, alerts, or execution.",
+    "boundary": "research_only_not_execution_authority"
+  }
+}

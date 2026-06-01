@@ -1,0 +1,511 @@
+{
+  "reportType": "time_window_liquidity_delivery_htf_first_reconsideration",
+  "generatedAt": "2026-06-01T03:04:20.206Z",
+  "symbol": "MES",
+  "from": "2018-01-01",
+  "to": "2026-05-31",
+  "boundary": "research_only_not_execution_authority",
+  "researchOnlyWarning": "Research-only HTF-first TWLD report. This does not approve trades, create execution authority, or mutate human labels.",
+  "timeframeDiscovery": {
+    "codedSupportedTimeframes": [
+      "1m",
+      "5m",
+      "15m",
+      "60m",
+      "240m",
+      "1h",
+      "4h",
+      "30m",
+      "daily",
+      "session"
+    ],
+    "discoveredHigherTimeframes": [
+      "15m",
+      "30m",
+      "1h",
+      "60m",
+      "240m",
+      "4h",
+      "daily",
+      "session"
+    ],
+    "cachedMarketBarTimeframes": [
+      "5m",
+      "15m",
+      "60m",
+      "240m"
+    ],
+    "bridgeOnlyTimeframes": [
+      "1m",
+      "1h",
+      "4h"
+    ],
+    "diagnosticOnlyTimeframes": [
+      "30m",
+      "daily"
+    ],
+    "chartContextTimeframes": [
+      "4h",
+      "1h",
+      "15m",
+      "5m"
+    ],
+    "sessionDerivedTimeframes": [
+      "session",
+      "daily"
+    ],
+    "executionTimeframe": "5m",
+    "executionTimeframeRole": "execution_only",
+    "notes": [
+      "Discovered from NinjaBridgeTimeframe, MarketBarTimeframe, diagnostic replay input fields, chart context types, and session-derived level structures.",
+      "5m is execution-only. All coded timeframes above 5m are draw-context candidates.",
+      "Cached historical OHLC currently covers 5m, 15m, 60m, and 240m. 1h/4h are aliases for 60m/240m. 30m and daily are diagnostic/input-only unless supplied elsewhere."
+    ]
+  },
+  "amSummary": {
+    "candidateCount": 710,
+    "htfDrawPresentCount": 710,
+    "htfDrawMissingCount": 0,
+    "deliveryDuringWindowCount": 192,
+    "deliveryAfterWindowCount": 282,
+    "executionConflictCount": 18,
+    "bucketCounts": {
+      "priority_1_htf_draw_delivery_achieved": 192,
+      "priority_2_htf_draw_delivery_failed": 18,
+      "priority_3_htf_draw_delivery_not_observed": 500,
+      "priority_4_execution_only_without_htf_draw": 0,
+      "priority_5_no_valid_draw_or_noisy": 0
+    }
+  },
+  "pmSummary": {
+    "candidateCount": 257,
+    "htfDrawPresentCount": 257,
+    "htfDrawMissingCount": 0,
+    "deliveryDuringWindowCount": 39,
+    "deliveryAfterWindowCount": 60,
+    "executionConflictCount": 21,
+    "bucketCounts": {
+      "priority_1_htf_draw_delivery_achieved": 39,
+      "priority_2_htf_draw_delivery_failed": 21,
+      "priority_3_htf_draw_delivery_not_observed": 197,
+      "priority_4_execution_only_without_htf_draw": 0,
+      "priority_5_no_valid_draw_or_noisy": 0
+    }
+  },
+  "priorAmLabelsThatMayNeedReconsideration": [
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-10-16",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-05",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2023-12-22",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-07-04",
+      "finalHumanLabel": "weak_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-09-03",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-11-29",
+      "finalHumanLabel": "weak_or_noisy",
+      "htfFirstBucket": "priority_1_htf_draw_delivery_achieved",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2024-12-27",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-02-02",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    },
+    {
+      "sampleId": "advisory_only_samples-am_liquidity_delivery_window-2026-04-14",
+      "finalHumanLabel": "reject_time_window_standalone",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior weak/reject label may deserve chart review because HTF-first context found a higher-timeframe draw."
+    }
+  ],
+  "priorPmTriageSamplesThatMayNeedReconsideration": [
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-11-08",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-11-10",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-11-09",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-17",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-02-26",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-03-05",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-20",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-27",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_2_htf_draw_delivery_failed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-11-10",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-02-06",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_2_htf_draw_delivery_failed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-12-23",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-03-01",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-26",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-02-09",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-15",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-12-20",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-11-20",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-12-27",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-01-19",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-09",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-02-03",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-02-02",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-01-10",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-31",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-02-21",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-02-13",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-30",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-12-11",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-01-08",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-12-08",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-12-16",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-12-04",
+      "priorBucket": "priority_4_fvg_mss_not_observed",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-14",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-01-24",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-11-07",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-11-06",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-11-11",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-12-17",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-02-22",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_2_htf_draw_delivery_failed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-03-03",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-03-03",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-11-13",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-02-03",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2025-02-05",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-02-17",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-06",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-11-11",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-23",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-03-07",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2026-01-14",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-12-12",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-12-10",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2024-02-01",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-12-29",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    },
+    {
+      "sampleId": "advisory_only_samples-pm_liquidity_delivery_window-2023-12-05",
+      "priorBucket": "priority_5_low_quality_or_noisy",
+      "htfFirstBucket": "priority_3_htf_draw_delivery_not_observed",
+      "reason": "Prior PM triage priority may be too low because HTF-first context found a draw above 5M."
+    }
+  ],
+  "recommendedNextHumanReviewSet": [
+    "advisory_only_samples-am_liquidity_delivery_window-2023-10-16",
+    "advisory_only_samples-am_liquidity_delivery_window-2023-12-05",
+    "advisory_only_samples-am_liquidity_delivery_window-2023-12-22",
+    "advisory_only_samples-am_liquidity_delivery_window-2024-07-04",
+    "advisory_only_samples-am_liquidity_delivery_window-2024-09-03",
+    "advisory_only_samples-am_liquidity_delivery_window-2024-11-29",
+    "advisory_only_samples-am_liquidity_delivery_window-2024-12-27",
+    "advisory_only_samples-am_liquidity_delivery_window-2026-02-02",
+    "advisory_only_samples-am_liquidity_delivery_window-2026-04-14",
+    "advisory_only_samples-pm_liquidity_delivery_window-2023-11-13",
+    "advisory_only_samples-pm_liquidity_delivery_window-2025-11-17",
+    "advisory_only_samples-pm_liquidity_delivery_window-2024-11-08",
+    "advisory_only_samples-pm_liquidity_delivery_window-2023-11-10",
+    "advisory_only_samples-pm_liquidity_delivery_window-2023-11-09",
+    "advisory_only_samples-pm_liquidity_delivery_window-2025-01-17",
+    "advisory_only_samples-pm_liquidity_delivery_window-2025-02-26",
+    "advisory_only_samples-pm_liquidity_delivery_window-2026-03-05",
+    "advisory_only_samples-pm_liquidity_delivery_window-2026-01-20",
+    "advisory_only_samples-pm_liquidity_delivery_window-2026-01-27",
+    "advisory_only_samples-pm_liquidity_delivery_window-2025-11-10",
+    "advisory_only_samples-pm_liquidity_delivery_window-2026-02-06"
+  ],
+  "previousAmConclusion": "reopen",
+  "outputPaths": {
+    "jsonPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\htf-first\\time-window-liquidity-delivery-HTF-first-reconsideration-MES-2018-01-01-to-2026-05-31.json",
+    "markdownPath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\time-window-liquidity-delivery\\htf-first\\time-window-liquidity-delivery-HTF-first-reconsideration-MES-2018-01-01-to-2026-05-31.md"
+  }
+}
