@@ -162,23 +162,24 @@ interface DirectionalAnalysis {
 
 const MIN_BARS_FOR_STRUCTURE = 5;
 const MINIMUM_CONTEXT_DESCRIPTIONS: Record<HtfMssTimeframe, string> = {
-  '5M': 'Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.',
-  '15M': 'At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.',
-  '1H': 'At least 4 completed trading days of structured 1H context.',
-  '4H': 'At least 7 completed trading days, preferably 20+ completed 4H candles when available.',
+  '5M': '30 calendar days when available; active setup-scan window remains the execution trigger authority.',
+  '15M': '30 calendar days when available.',
+  '1H': '30 calendar days when available.',
+  '4H': '30 calendar days when available.',
 };
 
 const MINIMUM_CONTEXT_BARS: Record<HtfMssTimeframe, number> = {
-  '5M': 5,
-  '15M': 40,
-  '1H': 24,
-  '4H': 20,
+  '5M': 500,
+  '15M': 500,
+  '1H': 120,
+  '4H': 40,
 };
 
-const MINIMUM_CONTEXT_DAYS: Partial<Record<HtfMssTimeframe, number>> = {
-  '15M': 2,
-  '1H': 4,
-  '4H': 7,
+const MINIMUM_CONTEXT_DAYS: Record<HtfMssTimeframe, number> = {
+  '5M': 30,
+  '15M': 30,
+  '1H': 30,
+  '4H': 30,
 };
 
 function isFiniteNumber(value: unknown): value is number {

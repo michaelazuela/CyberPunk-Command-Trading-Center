@@ -105,6 +105,7 @@ export interface ScannerConfig {
 
 interface ScannerStateFile {
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
+  alertDeliveries: Record<string, ScannerAlertDeliveryRecord>;
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
   windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
@@ -118,15 +119,67 @@ interface ScannerStateReadResult {
   health: ScannerStateFileHealth;
 }
 
+export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
+
+export interface ScannerAlertDeliveryRecord {
+  alertKey: string;
+  planVersionId: string;
+  instrument: Instrument;
+  tradeDate: string;
+  session: LiveSession;
+  state: ScannerState;
+  confidence: number;
+  candidate: {
+    setupType: string | null;
+    direction: string | null;
+    entry: number | null;
+    stop: number | null;
+    target1: number | null;
+    target2: number | null;
+  };
+  deliveryStatus: ScannerAlertDeliveryStatus;
+  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  httpStatus: number | null;
+  error: string | null;
+  attemptedAt: string;
+  sentAt: string | null;
+  auditLogPath: string | null;
+  stale: boolean;
+  retryEligible: boolean;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
+export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
 const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
 
 type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
+
+export type ScannerHistoryCoverageSource =
+  | 'market_bars'
+  | 'market_bars_bridge_repair'
+  | 'bridge_repair'
+  | 'missing';
+
+export interface ScannerHistoryCoverageRecord {
+  timeframe: MarketBarTimeframe;
+  requiredLookbackDays: number;
+  requestedFrom: string;
+  requestedTo: string;
+  barsLoaded: number;
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  source: ScannerHistoryCoverageSource;
+  cacheBars: number;
+  bridgeRepairBars: number;
+  selfHealed: boolean;
+  sufficient: boolean;
+  warning: string | null;
+}
 
 export interface ScannerWebhookResolution {
   url: string | null;
@@ -146,6 +199,105 @@ export function resolveScannerDiscordWebhookUrl(env: NodeJS.ProcessEnv = process
     }
   }
   return { url: null, source: null, usingGenericFallback: false };
+}
+
+function sanitizedError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .replace(/https:\/\/discord\.com\/api\/webhooks\/[^\s"'`]+/gi, 'https://discord.com/api/webhooks/[redacted]')
+    .replace(/(QUANT_DESK_SCANNER_WEBHOOK_URL|SCANNER_DISCORD_WEBHOOK_URL|DISCORD_WEBHOOK_URL)=\S+/gi, '$1=[redacted]')
+    .slice(0, 500);
+}
+
+function candidateDeliverySnapshot(candidate: SetupCandidate | null): ScannerAlertDeliveryRecord['candidate'] {
+  return {
+    setupType: candidate?.setupType || null,
+    direction: candidate?.direction || null,
+    entry: typeof candidate?.entry === 'number' ? candidate.entry : null,
+    stop: typeof candidate?.stop === 'number' ? candidate.stop : null,
+    target1: typeof candidate?.target1 === 'number' ? candidate.target1 : null,
+    target2: typeof candidate?.target2 === 'number' ? candidate.target2 : null,
+  };
+}
+
+export function createPendingScannerAlertDeliveryRecord(args: {
+  alertKey: string;
+  planVersionId: string;
+  instrument: Instrument;
+  tradeDate: string;
+  session: LiveSession;
+  state: ScannerState;
+  confidence: number;
+  candidate: SetupCandidate | null;
+  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  auditLogPath: string | null;
+  attemptedAt?: string;
+  stale?: boolean;
+}): ScannerAlertDeliveryRecord {
+  const stale = Boolean(args.stale);
+  return {
+    alertKey: args.alertKey,
+    planVersionId: args.planVersionId,
+    instrument: args.instrument,
+    tradeDate: args.tradeDate,
+    session: args.session,
+    state: args.state,
+    confidence: args.confidence,
+    candidate: candidateDeliverySnapshot(args.candidate),
+    deliveryStatus: 'pending',
+    webhookSource: args.webhookSource,
+    httpStatus: null,
+    error: null,
+    attemptedAt: args.attemptedAt || new Date().toISOString(),
+    sentAt: null,
+    auditLogPath: args.auditLogPath,
+    stale,
+    retryEligible: !stale,
+  };
+}
+
+export function markScannerAlertDeliverySent(
+  record: ScannerAlertDeliveryRecord,
+  args: { sentAt?: string; httpStatus?: number | null; webhookSource?: ScannerAlertDeliveryRecord['webhookSource'] } = {},
+): ScannerAlertDeliveryRecord {
+  return {
+    ...record,
+    deliveryStatus: 'sent',
+    webhookSource: args.webhookSource ?? record.webhookSource,
+    httpStatus: args.httpStatus ?? record.httpStatus,
+    error: null,
+    sentAt: args.sentAt || new Date().toISOString(),
+    retryEligible: false,
+  };
+}
+
+export function markScannerAlertDeliveryFailed(
+  record: ScannerAlertDeliveryRecord,
+  args: { error: unknown; httpStatus?: number | null; stale?: boolean; webhookSource?: ScannerAlertDeliveryRecord['webhookSource'] },
+): ScannerAlertDeliveryRecord {
+  const stale = args.stale ?? record.stale;
+  return {
+    ...record,
+    deliveryStatus: stale ? 'failed_stale_no_retry' : 'failed',
+    webhookSource: args.webhookSource ?? record.webhookSource,
+    httpStatus: args.httpStatus ?? record.httpStatus,
+    error: sanitizedError(args.error),
+    stale,
+    retryEligible: !stale,
+  };
+}
+
+export function markScannerAlertDeliverySkipped(
+  record: ScannerAlertDeliveryRecord,
+  args: { reason: string; webhookSource: 'dry_run' | 'discord_disabled' },
+): ScannerAlertDeliveryRecord {
+  return {
+    ...record,
+    deliveryStatus: 'skipped',
+    webhookSource: args.webhookSource,
+    error: args.reason,
+    retryEligible: false,
+  };
 }
 
 function argValue(name: string): string | null {
@@ -251,6 +403,7 @@ function sleep(ms: number): Promise<void> {
 function emptyScannerState(): ScannerStateFile {
   return {
     sent: {},
+    alertDeliveries: {},
     watchlistSent: {},
     windowStartSent: {},
     lastCompleted5mBySession: {},
@@ -266,6 +419,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
     return {
       state: {
         sent: parsed.sent || {},
+        alertDeliveries: parsed.alertDeliveries || {},
         watchlistSent: parsed.watchlistSent || {},
         windowStartSent: parsed.windowStartSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
@@ -298,19 +452,100 @@ async function writeState(state: ScannerStateFile): Promise<void> {
   await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
 }
 
-function previousCalendarDate(tradeDate: string): string {
-  return calendarDateBefore(tradeDate, 1);
+export interface MissedScannerDeliveryFinding {
+  auditFile: string;
+  alertKey: string;
+  planVersionId: string | null;
+  tradeDate: string | null;
+  session: string | null;
+  instrument: string | null;
+  reason: string;
+  deliveryStatus: ScannerAlertDeliveryStatus | 'missing';
+  candidate: ScannerAlertDeliveryRecord['candidate'];
+}
+
+function candidateFromAudit(audit: any): SetupCandidate | null {
+  const candidate = audit?.candidate;
+  if (!candidate || typeof candidate !== 'object') return null;
+  return candidate as SetupCandidate;
+}
+
+function auditCanExecute(audit: any): boolean {
+  return audit?.source === 'live-scanner'
+    && audit?.normalizedPlan?.canExecute === true
+    && audit?.normalizedPlan?.decisionStatus === 'ApprovedTrade';
+}
+
+export async function findMissedExecutableScannerDeliveries(args: {
+  auditDir?: string;
+  state: ScannerStateFile;
+  tradeDate?: string;
+  instrument?: Instrument;
+}): Promise<MissedScannerDeliveryFinding[]> {
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(auditDir);
+  } catch {
+    return [];
+  }
+
+  const findings: MissedScannerDeliveryFinding[] = [];
+  for (const name of entries) {
+    if (!name.endsWith('.json') || !name.startsWith('scanner-')) continue;
+    const auditFile = path.join(auditDir, name);
+    let audit: any;
+    try {
+      audit = JSON.parse(await fs.readFile(auditFile, 'utf8'));
+    } catch {
+      continue;
+    }
+    if (!auditCanExecute(audit)) continue;
+    if (args.tradeDate && audit.tradeDate !== args.tradeDate) continue;
+    if (args.instrument && audit.instrument !== args.instrument) continue;
+    const candidate = candidateFromAudit(audit);
+    if (!candidate) continue;
+    const alertKey = scannerAlertKey({
+      tradeDate: audit.tradeDate,
+      instrument: audit.instrument,
+      session: audit.session,
+      candidate,
+      state: audit.state,
+    });
+    if (args.state.sent[alertKey]) continue;
+    const delivery = args.state.alertDeliveries?.[alertKey];
+    findings.push({
+      auditFile,
+      alertKey,
+      planVersionId: typeof audit.planVersionId === 'string' ? audit.planVersionId : null,
+      tradeDate: typeof audit.tradeDate === 'string' ? audit.tradeDate : null,
+      session: typeof audit.session === 'string' ? audit.session : null,
+      instrument: typeof audit.instrument === 'string' ? audit.instrument : null,
+      reason: 'Executable scanner audit has normalizedPlan.canExecute=true, but no matching confirmed state.sent record exists.',
+      deliveryStatus: delivery?.deliveryStatus || 'missing',
+      candidate: candidateDeliverySnapshot(candidate),
+    });
+  }
+  return findings;
+}
+
+async function warnOnMissedExecutableScannerDeliveries(args: {
+  auditDir?: string;
+  state: ScannerStateFile;
+  tradeDate: string;
+  instrument: Instrument;
+}): Promise<void> {
+  const findings = await findMissedExecutableScannerDeliveries(args);
+  for (const finding of findings) {
+    console.warn(
+      `[scanner-delivery] Missed delivery diagnostic: ${finding.reason} alertKey=${finding.alertKey} status=${finding.deliveryStatus} audit=${finding.auditFile}`
+    );
+  }
 }
 
 function calendarDateBefore(tradeDate: string, days: number): string {
   const date = new Date(`${tradeDate}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
-}
-
-function previousMonthStartDate(tradeDate: string): string {
-  const [year, month] = tradeDate.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 2, 1));
   return date.toISOString().slice(0, 10);
 }
 
@@ -349,6 +584,44 @@ function recentHistoricalWindow(timeframe: MarketBarTimeframe, limit: number): {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
+export function buildScannerHistoryPreloadPlan(tradeDate: string, session: LiveSession): Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }> {
+  const fromDate = calendarDateBefore(tradeDate, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS);
+  const to = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
+  return Object.fromEntries(TIMEFRAMES.map((timeframe) => [
+    timeframe,
+    {
+      from: etDateTime(fromDate, '00:00'),
+      to,
+      requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+      limit: MARKET_STRUCTURE_CACHE_LIMIT,
+    },
+  ])) as Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }>;
+}
+
+function barTimeMs(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function barsCoverRequestedLookback(bars: NinjaBridgeBar[], requestedFrom: string, requestedTo: string): boolean {
+  if (!bars.length) return false;
+  const sorted = mergeBars([], bars);
+  const first = barTimeMs(sorted[0]?.time);
+  const last = barTimeMs(sorted[sorted.length - 1]?.time);
+  const from = barTimeMs(requestedFrom);
+  const to = barTimeMs(requestedTo);
+  if (first === null || last === null || from === null || to === null) return false;
+  const oneBarToleranceMs = 30 * 60_000;
+  return first <= from + oneBarToleranceMs && last >= to - oneBarToleranceMs;
+}
+
+export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRecord): string {
+  const status = record.sufficient ? 'sufficient' : 'insufficient';
+  const healed = record.selfHealed ? ', self-healed from bridge' : '';
+  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}`;
+}
+
 function clip(value: string, max = 1024): string {
   const text = professionalizeReportText(value).trim() || 'N/A';
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
@@ -371,6 +644,7 @@ async function writeScannerDiscordAuditLog(args: {
   staleReason: string | null;
   scannerReviewStatus?: string | null;
   scannerAuditWarnings?: string[];
+  historyCoverage?: ScannerHistoryCoverageRecord[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
   chartMarkup: string | null;
@@ -403,6 +677,8 @@ async function writeScannerDiscordAuditLog(args: {
     staleReason: args.staleReason,
     scannerReviewStatus: args.scannerReviewStatus || null,
     scannerAuditWarnings: args.scannerAuditWarnings || [],
+    historyCoverage: args.historyCoverage || [],
+    historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     attachments: {
@@ -535,29 +811,126 @@ async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTim
   return Object.fromEntries(entries) as Record<MarketBarTimeframe, NinjaBridgeBar[]>;
 }
 
-async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
+async function fetchScannerHistoryFrame(args: {
+  config: ScannerConfig;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  limit: number;
+}): Promise<{ bars: NinjaBridgeBar[]; coverage: ScannerHistoryCoverageRecord }> {
   const marketConfig = loadMarketDataConfig();
-  const priorDate = previousCalendarDate(tradeDate);
-  const marketStructureStartDate = previousMonthStartDate(tradeDate);
-  const contextTo = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
-  const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
-    const from = timeframe === '5m'
-      ? etDateTime(priorDate, '18:00')
-      : etDateTime(marketStructureStartDate, '18:00');
-    if (marketConfig) {
-      const cached = await fetchCachedMarketBars({
-        instrument: config.bridgeInstrument,
-        timeframe,
-        from,
-        to: contextTo,
+  let cached: NinjaBridgeBar[] = [];
+  if (marketConfig) {
+    try {
+      cached = await fetchCachedMarketBars({
+        instrument: args.config.bridgeInstrument,
+        timeframe: args.timeframe,
+        from: args.from,
+        to: args.to,
         config: marketConfig,
-        limit: timeframe === '5m' ? 6000 : MARKET_STRUCTURE_CACHE_LIMIT,
+        limit: args.limit,
       });
-      if (cached.length) return [timeframe, cached] as const;
+    } catch (error) {
+      console.warn(`[scanner-history] ${args.timeframe}: market_bars preload failed, attempting bridge self-heal: ${formatError(error)}`);
     }
-    return [timeframe, []] as const;
+  }
+
+  let repaired: NinjaBridgeBar[] = [];
+  const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to);
+  if (!cacheSufficient) {
+    try {
+      const historical = await getNinjaHistoricalBars({
+        instrument: args.config.bridgeInstrument,
+        timeframe: args.timeframe,
+        from: args.from,
+        to: args.to,
+        limit: args.limit,
+        baseUrl: args.config.bridgeUrl,
+      });
+      repaired = historical.ok ? historical.bars || [] : [];
+      if (!repaired.length) {
+        console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
+      } else if (marketConfig) {
+        try {
+          await upsertMarketBars({
+            bars: repaired,
+            instrument: args.config.instrument,
+            bridgeInstrument: args.config.bridgeInstrument,
+            timeframe: args.timeframe,
+            config: marketConfig,
+          });
+        } catch (error) {
+          console.warn(`[scanner-history] ${args.timeframe}: self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal failed: ${formatError(error)}`);
+    }
+  }
+
+  const bars = mergeBars(repaired, cached);
+  const sorted = mergeBars([], bars);
+  const sufficient = barsCoverRequestedLookback(sorted, args.from, args.to);
+  const source: ScannerHistoryCoverageSource =
+    cached.length && repaired.length ? 'market_bars_bridge_repair' :
+    cached.length ? 'market_bars' :
+    repaired.length ? 'bridge_repair' :
+    'missing';
+  const coverage: ScannerHistoryCoverageRecord = {
+    timeframe: args.timeframe,
+    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+    requestedFrom: args.from,
+    requestedTo: args.to,
+    barsLoaded: sorted.length,
+    rangeStart: sorted[0]?.time || null,
+    rangeEnd: sorted[sorted.length - 1]?.time || null,
+    source,
+    cacheBars: cached.length,
+    bridgeRepairBars: repaired.length,
+    selfHealed: repaired.length > 0,
+    sufficient,
+    warning: sufficient
+      ? null
+      : `HTF history preload insufficient for ${args.timeframe}: required ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days from ${args.from} to ${args.to}; loaded ${sorted.length} bars from ${sorted[0]?.time || 'N/A'} to ${sorted[sorted.length - 1]?.time || 'N/A'}.`,
+  };
+  return { bars: sorted, coverage };
+}
+
+export async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
+  const result = await fetchLookLeftContext(config, tradeDate, session);
+  return result.bars;
+}
+
+async function fetchLookLeftContext(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<{
+  bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+  coverage: ScannerHistoryCoverageRecord[];
+}> {
+  const marketConfig = loadMarketDataConfig();
+  const plan = buildScannerHistoryPreloadPlan(tradeDate, session);
+  const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
+    const frame = plan[timeframe];
+    const loaded = await fetchScannerHistoryFrame({
+      config,
+      timeframe,
+      from: frame.from,
+      to: frame.to,
+      limit: frame.limit,
+    });
+    if (!marketConfig && loaded.coverage.source === 'bridge_repair') {
+      loaded.coverage.warning = loaded.coverage.warning || `${timeframe}: market_bars config unavailable; using bridge self-heal only.`;
+    }
+    return [timeframe, loaded] as const;
   }));
-  return Object.fromEntries(entries) as Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+  const coverage = entries.map(([, loaded]) => loaded.coverage);
+  coverage.forEach((item) => {
+    const line = summarizeScannerHistoryCoverage(item);
+    if (item.sufficient) console.log(`[scanner-history] ${line}`);
+    else console.warn(`[scanner-history] ${line} | ${item.warning}`);
+  });
+  return {
+    bars: Object.fromEntries(entries.map(([timeframe, loaded]) => [timeframe, loaded.bars])) as Record<MarketBarTimeframe, NinjaBridgeBar[]>,
+    coverage,
+  };
 }
 
 function mergeBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): NinjaBridgeBar[] {
@@ -657,17 +1030,17 @@ async function refreshMarketMapContext(args: {
   }
 
   try {
-    const cachedBars = await fetchLookLeftBars(args.config, args.tradeDate, session);
+    const lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, session);
     const bars = {
-      '5m': mergeBars(args.liveBars['5m'], cachedBars['5m']),
-      '15m': mergeBars(args.liveBars['15m'], cachedBars['15m']),
-      '60m': mergeBars(args.liveBars['60m'], cachedBars['60m']),
-      '240m': mergeBars(args.liveBars['240m'], cachedBars['240m']),
+      '5m': mergeBars(args.liveBars['5m'], lookLeft.bars['5m']),
+      '15m': mergeBars(args.liveBars['15m'], lookLeft.bars['15m']),
+      '60m': mergeBars(args.liveBars['60m'], lookLeft.bars['60m']),
+      '240m': mergeBars(args.liveBars['240m'], lookLeft.bars['240m']),
     };
     const analysis = await analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
     const objectives = analysis.structuredChartContext?.targetObjectives?.length || 0;
     args.state.lastMarketMapRefreshBySession[key] = new Date().toISOString();
-    return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives).`;
+    return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives; history ${lookLeft.coverage.map(summarizeScannerHistoryCoverage).join(' | ')}).`;
   } catch (error) {
     return `market map refresh skipped: ${formatError(error)}`;
   }
@@ -790,6 +1163,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   staleReason: string | null;
   scannerReviewStatus?: string | null;
   scannerAuditWarnings?: string[];
+  historyCoverage?: ScannerHistoryCoverageRecord[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
   planVersionId: string;
@@ -833,6 +1207,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     staleReason: args.staleReason,
     scannerReviewStatus: args.scannerReviewStatus,
     scannerAuditWarnings: args.scannerAuditWarnings,
+    historyCoverage: args.historyCoverage,
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     chartMarkup,
@@ -859,15 +1234,39 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   return { payload, files, chartMarkup, levelMap, auditLogPath };
 }
 
-async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<void> {
+interface ScannerDiscordPostReceipt {
+  deliveryStatus: 'sent' | 'skipped';
+  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  httpStatus: number | null;
+}
+
+class ScannerDiscordPostError extends Error {
+  httpStatus: number | null;
+  webhookSource: ScannerWebhookEnvKey | null;
+
+  constructor(message: string, args: { httpStatus?: number | null; webhookSource?: ScannerWebhookEnvKey | null } = {}) {
+    super(message);
+    this.name = 'ScannerDiscordPostError';
+    this.httpStatus = args.httpStatus ?? null;
+    this.webhookSource = args.webhookSource ?? null;
+  }
+}
+
+async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<ScannerDiscordPostReceipt> {
   validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
     console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
-    return;
+    return {
+      deliveryStatus: 'skipped',
+      webhookSource: config.dryRun ? 'dry_run' : 'discord_disabled',
+      httpStatus: null,
+    };
   }
   const webhook = resolveScannerDiscordWebhookUrl();
   if (!webhook.url) {
-    throw new Error('QUANT_DESK_SCANNER_WEBHOOK_URL or SCANNER_DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.');
+    throw new ScannerDiscordPostError('QUANT_DESK_SCANNER_WEBHOOK_URL or SCANNER_DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.', {
+      webhookSource: webhook.source,
+    });
   }
   if (webhook.usingGenericFallback) {
     console.warn('[scanner-discord] Using legacy DISCORD_WEBHOOK_URL. Prefer QUANT_DESK_SCANNER_WEBHOOK_URL for scanner-specific Discord separation.');
@@ -889,7 +1288,17 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-  if (!response.ok) throw new Error(`Discord webhook failed (${response.status}): ${await response.text()}`);
+  if (!response.ok) {
+    throw new ScannerDiscordPostError(`Discord webhook failed (${response.status}): ${await response.text()}`, {
+      httpStatus: response.status,
+      webhookSource: webhook.source,
+    });
+  }
+  return {
+    deliveryStatus: 'sent',
+    webhookSource: webhook.source,
+    httpStatus: response.status,
+  };
 }
 
 async function sendScannerHealthAlertIfNeeded(args: {
@@ -1232,16 +1641,18 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
   }
 
-  const cachedBars = await fetchLookLeftBars(config, tradeDate, session).catch((error) => {
-    console.warn(`[scanner] Supabase look-left cache unavailable: ${formatError(error)}`);
+  const lookLeft = await fetchLookLeftContext(config, tradeDate, session).catch((error) => {
+    console.warn(`[scanner] 30-day scanner history preload unavailable: ${formatError(error)}`);
     return null;
   });
-  const bars = cachedBars
+  const historyCoverage = lookLeft?.coverage || [];
+  const historyWarnings = historyCoverage.flatMap((item) => item.warning ? [item.warning] : []);
+  const bars = lookLeft
     ? {
-        '5m': mergeBars(liveBars['5m'], cachedBars['5m']),
-        '15m': mergeBars(liveBars['15m'], cachedBars['15m']),
-        '60m': mergeBars(liveBars['60m'], cachedBars['60m']),
-        '240m': mergeBars(liveBars['240m'], cachedBars['240m']),
+        '5m': mergeBars(liveBars['5m'], lookLeft.bars['5m']),
+        '15m': mergeBars(liveBars['15m'], lookLeft.bars['15m']),
+        '60m': mergeBars(liveBars['60m'], lookLeft.bars['60m']),
+        '240m': mergeBars(liveBars['240m'], lookLeft.bars['240m']),
       }
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
@@ -1335,9 +1746,17 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         scannerState: stateForAlert,
         bars5m: bars['5m'],
       });
-      await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);
-      state.watchlistSent[watchlistKey] = { direction: watchlist.direction, sentAt: new Date().toISOString() };
-      console.log(`[scanner] Sent advisory watchlist alert: ${watchlistKey} | audit=${watchlistArtifacts.auditLogPath}`);
+      try {
+        const receipt = await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);
+        if (receipt.deliveryStatus === 'sent') {
+          state.watchlistSent[watchlistKey] = { direction: watchlist.direction, sentAt: new Date().toISOString() };
+          console.log(`[scanner] Sent advisory watchlist alert: ${watchlistKey} | audit=${watchlistArtifacts.auditLogPath}`);
+        } else {
+          console.log(`[scanner] Advisory watchlist alert skipped (${receipt.webhookSource || 'unknown'}): ${watchlistKey} | audit=${watchlistArtifacts.auditLogPath}`);
+        }
+      } catch (error) {
+        console.warn(`[scanner] Advisory watchlist delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
+      }
     } else {
       console.log(`[scanner] Advisory watchlist alert already sent for ${watchlistKey}.`);
     }
@@ -1358,6 +1777,18 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
 
+  const previousDelivery = state.alertDeliveries[alertKey];
+  if (!alertDecision.shouldSend && stale.stale && previousDelivery?.deliveryStatus === 'failed' && previousDelivery.retryEligible) {
+    state.alertDeliveries[alertKey] = {
+      ...previousDelivery,
+      deliveryStatus: 'failed_stale_no_retry',
+      stale: true,
+      retryEligible: false,
+      error: previousDelivery.error || 'Discord delivery failed earlier; setup is now stale, so no retry will be attempted.',
+    };
+    console.warn(`[scanner-delivery] Failed alert delivery is now stale; no retry will be attempted: ${alertKey}`);
+  }
+
   if (alertDecision.shouldSend) {
     const planVersionId = createPlanVersionId(session, tradeDate);
     const alertArtifacts = await prepareLiveScannerDiscordAlertArtifacts({
@@ -1377,15 +1808,58 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       windowLabel: window.label,
       staleReason: stale.reason,
       scannerReviewStatus: selection.reviewStatus,
-      scannerAuditWarnings: selection.auditWarnings,
+      scannerAuditWarnings: [...selection.auditWarnings, ...historyWarnings],
+      historyCoverage,
       targetCascade,
       alertReason: alertDecision.reason,
     });
-    await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
-    state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt: new Date().toISOString() };
+    const pendingDelivery = createPendingScannerAlertDeliveryRecord({
+      alertKey,
+      planVersionId,
+      instrument: config.instrument,
+      tradeDate,
+      session,
+      state: stateForAlert,
+      confidence: confidence.score,
+      candidate,
+      webhookSource: config.dryRun ? 'dry_run' : (!config.discordEnabled ? 'discord_disabled' : resolveScannerDiscordWebhookUrl().source),
+      auditLogPath: alertArtifacts.auditLogPath,
+      stale: stale.stale,
+    });
+    state.alertDeliveries[alertKey] = pendingDelivery;
+    await writeState(state);
+
+    try {
+      const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
+      if (receipt.deliveryStatus === 'sent') {
+        const sentAt = new Date().toISOString();
+        state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+        state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
+          sentAt,
+          httpStatus: receipt.httpStatus,
+          webhookSource: receipt.webhookSource,
+        });
+      } else {
+        state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {
+          reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
+          webhookSource: receipt.webhookSource === 'discord_disabled' ? 'discord_disabled' : 'dry_run',
+        });
+      }
+    } catch (error) {
+      const httpStatus = error instanceof ScannerDiscordPostError ? error.httpStatus : null;
+      const webhookSource = error instanceof ScannerDiscordPostError ? error.webhookSource : null;
+      state.alertDeliveries[alertKey] = markScannerAlertDeliveryFailed(pendingDelivery, {
+        error,
+        httpStatus,
+        webhookSource,
+        stale: stale.stale,
+      });
+      console.warn(`[scanner-delivery] Executable alert delivery failed safely; scanner remains active and may retry while the setup remains fresh: ${sanitizedError(error)}`);
+    }
   }
 
   await writeState(state);
+  await warnOnMissedExecutableScannerDeliveries({ state, tradeDate, instrument: config.instrument });
 }
 
 async function main() {

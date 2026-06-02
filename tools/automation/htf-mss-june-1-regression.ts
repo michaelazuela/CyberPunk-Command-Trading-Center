@@ -29,11 +29,11 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
   return { time, open, high, low, close, volume: 1000 };
 }
 
-function padContextBars(seed: NinjaBridgeBar[], timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
-  const targetCount = timeframe === '15m' ? 40 : timeframe === '60m' ? 24 : 20;
-  const stepMinutes = timeframe === '15m' ? 15 : timeframe === '60m' ? 60 : 240;
+function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+  const targetCount = timeframe === '240m' ? 180 : 520;
+  const stepMinutes = timeframe === '240m' ? 240 : timeframe === '60m' ? 90 : timeframe === '15m' ? 90 : 90;
   const fillerCount = Math.max(0, targetCount - seed.length);
-  const start = new Date('2026-05-25T00:00:00-04:00').getTime();
+  const start = new Date('2026-05-01T00:00:00-04:00').getTime();
   const filler = Array.from({ length: fillerCount }, (_, index) => {
     const time = new Date(start + index * stepMinutes * 60 * 1000).toISOString();
     const base = 7600 + (index % 4) * 0.25;
@@ -80,7 +80,7 @@ function buildHtfState(): HtfLiquidityDrawState {
     bars4H: bullishPotentialBars('240m'),
     bars1H: bullishPotentialBars('60m'),
     bars15M: bullishPotentialBars('15m'),
-    bars5M: juneOneBullishFiveMinuteBars(),
+    bars5M: padContextBars(juneOneBullishFiveMinuteBars(), '5m'),
     externalBuySideLiquidityTarget: 'prior RTH high / London high / full ETH high 7611.75, 7622.50, 7632.75',
     chartTimestamp: '2026-06-01T14:10:00-04:00',
   });

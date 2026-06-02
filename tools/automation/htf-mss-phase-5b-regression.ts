@@ -32,15 +32,15 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
   return { time, open, high, low, close, volume: 1000 };
 }
 
-function padContextBars(seed: NinjaBridgeBar[], timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
-  const targetCount = timeframe === '15m' ? 40 : timeframe === '60m' ? 24 : 20;
-  const stepMinutes = timeframe === '15m' ? 15 : timeframe === '60m' ? 60 : 240;
+function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+  const targetCount = timeframe === '240m' ? 180 : 520;
+  const stepMinutes = timeframe === '240m' ? 240 : 90;
   const fillerCount = Math.max(0, targetCount - seed.length);
-  const start = new Date('2026-05-25T00:00:00-04:00').getTime();
+  const start = new Date('2026-05-02T00:00:00-04:00').getTime();
   const filler = Array.from({ length: fillerCount }, (_, index) => {
     const time = new Date(start + index * stepMinutes * 60 * 1000).toISOString();
-    const base = 7610 - (index % 4) * 0.25;
-    return bar(time, base, base + 1, base - 1, index % 2 === 0 ? base - 0.25 : base + 0.25);
+    const base = 7612 + (index % 2) * 0.1;
+    return bar(time, base, base + 0.5, base - 0.5, base);
   });
   return [...filler, ...seed];
 }
@@ -73,7 +73,7 @@ function bearishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar
     bar(`2026-06-02T${prefix[2]}:00-04:00`, 7611, 7613, 7610, 7612),
     bar(`2026-06-02T${prefix[3]}:00-04:00`, 7612, 7614, 7611, 7613),
     bar(`2026-06-02T${prefix[4]}:00-04:00`, 7613, 7615, 7612, 7614),
-    bar(`2026-06-02T${prefix[5]}:00-04:00`, 7614, 7616, 7613, 7614.5),
+    bar(`2026-06-02T${prefix[5]}:00-04:00`, 7614, 7616, 7610.5, 7611),
   ], timeframe);
 }
 
@@ -82,7 +82,7 @@ function buildBearishHtfState(chartTimestamp = '2026-06-02T14:10:00-04:00'): Htf
     bars4H: bearishPotentialBars('240m'),
     bars1H: bearishPotentialBars('60m'),
     bars15M: bearishPotentialBars('15m'),
-    bars5M: phase5bBearishFiveMinuteBars(),
+    bars5M: padContextBars(phase5bBearishFiveMinuteBars(), '5m'),
     externalSellSideLiquidityTarget: 'prior RTH low / London low / full ETH low 7580.00, 7576.00',
     chartTimestamp,
   });

@@ -156,12 +156,14 @@ The 5M chart remains the execution chart for entry trigger, active swing, stop p
 
 Before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, the desk must load enough structured OHLC context to make the higher-timeframe story reliable.
 
-Minimum structured lookback:
+Minimum structured scanner preload:
 
-- 5M: active execution window only, plus enough bars for the current trigger sequence.
-- 15M: at least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.
-- 1H: at least 4 completed trading days.
-- 4H: at least 7 completed trading days, preferably 20+ completed 4H candles when available.
+- 5M: 30 calendar days when available, with the active execution window used as the execution trigger authority.
+- 15M: 30 calendar days when available.
+- 1H: 30 calendar days when available.
+- 4H: 30 calendar days when available.
+
+The scanner must read durable `market_bars` first and attempt NinjaTrader bridge repair/backfill when the 30-day preload is incomplete. If the 30-day preload still cannot be loaded, report it as an operational data-quality defect for HTF structural classification rather than a normal market-structure conclusion.
 
 If minimum context is missing:
 

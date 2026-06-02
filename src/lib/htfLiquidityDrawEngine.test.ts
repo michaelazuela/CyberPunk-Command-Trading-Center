@@ -114,16 +114,20 @@ function bearishDigestionBars(): NinjaBridgeBar[] {
   ];
 }
 
-function sufficientHtfContext(seed: NinjaBridgeBar[], count = 40): NinjaBridgeBar[] {
+function sufficientHtfContext(seed: NinjaBridgeBar[], count = 520): NinjaBridgeBar[] {
+  const baseMs = Date.parse('2026-05-01T00:00:00Z');
+  const intervalMs = 90 * 60 * 1000;
+  const timeForIndex = (index: number) => new Date(baseMs + index * intervalMs).toISOString();
   const fillerCount = Math.max(0, count - seed.length);
-  const filler = Array.from({ length: fillerCount }, (_, index) =>
-    bar(index, 100, 101, 99, index % 2 === 0 ? 100.25 : 99.75)
-  );
+  const filler = Array.from({ length: fillerCount }, (_, index) => ({
+    ...bar(index, 100, 101, 99, index % 2 === 0 ? 100.25 : 99.75),
+    time: timeForIndex(index),
+  }));
   return [
     ...filler,
     ...seed.map((item, index) => ({
       ...item,
-      time: bar(fillerCount + index, item.open, item.high, item.low, item.close).time,
+      time: timeForIndex(fillerCount + index),
     })),
   ];
 }
@@ -175,7 +179,7 @@ const pendingState = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(bullishPendingBars()),
-  bars5M: bullishPendingBars(),
+  bars5M: sufficientHtfContext(bullishPendingBars()),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
 });
 assert.equal(pendingState.classification, 'MSS_TRIGGER_PENDING');
@@ -198,7 +202,7 @@ const confirmedCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(bullishPendingBars()),
-  bars5M: bullishConfirmedBars(),
+  bars5M: sufficientHtfContext(bullishConfirmedBars()),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
   chartTimestamp: '2026-06-01T10:35:00',
 });
@@ -225,7 +229,7 @@ const refined15mSupport = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
-  bars5M: bullishConfirmedBars(),
+  bars5M: sufficientHtfContext(bullishConfirmedBars()),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
   chartTimestamp: '2026-06-01T14:05:00',
 });
@@ -237,7 +241,7 @@ const failed15mReclaimStaysBlocked = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBullishReclaimFailedBars()),
-  bars5M: bullishConfirmedBars(),
+  bars5M: sufficientHtfContext(bullishConfirmedBars()),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
   chartTimestamp: '2026-06-01T14:05:00',
 });
@@ -248,7 +252,7 @@ const bearishCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(bearishPendingBars()),
-  bars5M: bearishConfirmedBars(),
+  bars5M: sufficientHtfContext(bearishConfirmedBars()),
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T14:10:00',
 });
@@ -262,7 +266,7 @@ const refined15mBearishSupport = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
-  bars5M: bearishConfirmedBars(),
+  bars5M: sufficientHtfContext(bearishConfirmedBars()),
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T14:10:00',
 });
@@ -274,7 +278,7 @@ const fifteenThirtyOutside = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(bearishPendingBars()),
-  bars5M: bearishConfirmedBars(),
+  bars5M: sufficientHtfContext(bearishConfirmedBars()),
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T15:30:00',
 });
@@ -317,7 +321,7 @@ const derivedFromChartContext = buildHtfLiquidityDrawStateFromChartContext({
     fourHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     oneHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     fifteenMinute: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
-    fiveMinute: { candles: candleFacts(bullishConfirmedBars()) },
+    fiveMinute: { candles: candleFacts(sufficientHtfContext(bullishConfirmedBars())) },
     targetMap: {
       nearestUpsideLiquidity: { label: 'prior RTH high', price: 104 },
       levelsToWatch: [],

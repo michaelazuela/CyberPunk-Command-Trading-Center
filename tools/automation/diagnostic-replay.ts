@@ -14,6 +14,7 @@ import {
   type DiagnosticDirection,
 } from '../../src/agents/bridgeDiagnosticReplayAgent';
 import { loadScannerAuditHistory } from './scanner-audit-import';
+import { SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS } from './nt-scanner';
 
 type BarTimestampMode = 'open' | 'close';
 type BarTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
@@ -147,14 +148,20 @@ function buildIso(date: string, clock: string): string {
   return `${date}T${clock}:00`;
 }
 
+function calendarDateBefore(dateText: string, days: number): string {
+  const date = new Date(`${dateText}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
 async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<BridgeDiagnosticReplayInput> {
   const from = buildIso(options.date, options.from);
   const to = buildIso(options.date, options.to);
-  const contextFrom = buildIso(options.date, '00:00');
+  const contextFrom = buildIso(calendarDateBefore(options.date, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS), '00:00');
   const bars5m = await fetchBars(options, '5m', from, to);
   const bars15m = await fetchBars(options, '15m', contextFrom, to);
   const bars60m = await fetchBars(options, '60m', contextFrom, to);
-  const bars240m = await fetchBars(options, '240m', `${options.date}T00:00:00`, to);
+  const bars240m = await fetchBars(options, '240m', contextFrom, to);
   const auditHistory = await loadScannerAuditHistory(options.auditDir);
 
   return {
@@ -189,6 +196,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Scanner: ${report.scannerAlertReview.reason}`,
     `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,
+    `Data boundary: Review requests ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days of structured context for 15M/1H/4H and is bounded to currently available completed bars.`,
     `Authority: diagnostic only; no rules changed; no trade approval created.`,
   ];
   return lines.join('\n');

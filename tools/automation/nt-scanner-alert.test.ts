@@ -5,9 +5,17 @@ import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
+  buildScannerHistoryPreloadPlan,
+  createPendingScannerAlertDeliveryRecord,
+  findMissedExecutableScannerDeliveries,
+  markScannerAlertDeliveryFailed,
+  markScannerAlertDeliverySent,
+  markScannerAlertDeliverySkipped,
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
+  SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+  summarizeScannerHistoryCoverage,
 } from './nt-scanner';
 import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
@@ -41,6 +49,36 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
   source: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
   usingGenericFallback: false,
 });
+
+assert.equal(SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS, 30);
+const morningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning');
+assert.deepEqual(Object.keys(morningHistoryPlan).sort(), ['15m', '240m', '5m', '60m']);
+for (const timeframe of ['5m', '15m', '60m', '240m'] as const) {
+  assert.equal(morningHistoryPlan[timeframe].requiredLookbackDays, 30);
+  assert.equal(morningHistoryPlan[timeframe].from, '2026-05-03T00:00:00-04:00');
+  assert.equal(morningHistoryPlan[timeframe].to, '2026-06-02T12:00:00-04:00');
+}
+const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
+assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T15:30:00-04:00');
+const selfHealedSummary = summarizeScannerHistoryCoverage({
+  timeframe: '240m',
+  requiredLookbackDays: 30,
+  requestedFrom: '2026-05-03T00:00:00-04:00',
+  requestedTo: '2026-06-02T12:00:00-04:00',
+  barsLoaded: 180,
+  rangeStart: '2026-05-03T00:00:00',
+  rangeEnd: '2026-06-02T12:00:00',
+  source: 'market_bars_bridge_repair',
+  cacheBars: 100,
+  bridgeRepairBars: 80,
+  selfHealed: true,
+  sufficient: true,
+  warning: null,
+});
+assert.ok(selfHealedSummary.includes('240m: sufficient'));
+assert.ok(selfHealedSummary.includes('source=market_bars_bridge_repair'));
+assert.ok(selfHealedSummary.includes('self-healed from bridge'));
 
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;
@@ -149,7 +187,95 @@ const candidate: SetupCandidate = {
   ],
 };
 
+const pendingDelivery = createPendingScannerAlertDeliveryRecord({
+  alertKey: '2026-06-02|MES|morning|LONG|TurtleSoup|7603.25|Approved',
+  planVersionId: 'MORNING-20260602-140348',
+  instrument: 'MES',
+  tradeDate: '2026-06-02',
+  session: 'morning',
+  state: 'Approved',
+  confidence: 96,
+  candidate,
+  webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+  auditLogPath: path.join(auditDir, 'scanner-delivery-test.json'),
+  attemptedAt: '2026-06-02T14:03:48.000Z',
+});
+assert.equal(pendingDelivery.deliveryStatus, 'pending');
+assert.equal(pendingDelivery.retryEligible, true);
+assert.equal(pendingDelivery.candidate.entry, candidate.entry);
+assert.equal(pendingDelivery.candidate.stop, candidate.stop);
+assert.equal(pendingDelivery.candidate.target1, candidate.target1);
+assert.equal(pendingDelivery.candidate.target2, candidate.target2);
+const sentDelivery = markScannerAlertDeliverySent(pendingDelivery, { sentAt: '2026-06-02T14:03:49.000Z', httpStatus: 204 });
+assert.equal(sentDelivery.deliveryStatus, 'sent');
+assert.equal(sentDelivery.retryEligible, false);
+assert.equal(sentDelivery.httpStatus, 204);
+const failedDelivery = markScannerAlertDeliveryFailed(pendingDelivery, {
+  error: new Error('Discord webhook failed (401): https://discord.com/api/webhooks/sensitive-token'),
+  httpStatus: 401,
+});
+assert.equal(failedDelivery.deliveryStatus, 'failed');
+assert.equal(failedDelivery.retryEligible, true);
+assert.equal(failedDelivery.httpStatus, 401);
+assert.ok(!failedDelivery.error?.includes('sensitive-token'));
+const staleFailedDelivery = markScannerAlertDeliveryFailed(pendingDelivery, { error: 'stale now', stale: true });
+assert.equal(staleFailedDelivery.deliveryStatus, 'failed_stale_no_retry');
+assert.equal(staleFailedDelivery.retryEligible, false);
+const skippedDelivery = markScannerAlertDeliverySkipped(pendingDelivery, { reason: 'dry-run', webhookSource: 'dry_run' });
+assert.equal(skippedDelivery.deliveryStatus, 'skipped');
+assert.equal(skippedDelivery.retryEligible, false);
+
 try {
+  await fs.mkdir(auditDir, { recursive: true });
+  const missedAuditPath = path.join(auditDir, 'scanner-morning-2026-06-02-MES-MORNING-DELIVERY-MISSED.json');
+  await fs.writeFile(missedAuditPath, `${JSON.stringify({
+    source: 'live-scanner',
+    session: 'morning',
+    tradeDate: '2026-06-02',
+    instrument: 'MES',
+    planVersionId: 'MORNING-DELIVERY-MISSED',
+    state: 'Approved',
+    candidate: {
+      ...candidate,
+      setupType: SetupType.TurtleSoup,
+      direction: 'LONG',
+      entry: 7603.25,
+      stop: 7599,
+      target1: 7611.75,
+      target2: 7620,
+    },
+    normalizedPlan: {
+      canExecute: true,
+      decisionStatus: 'ApprovedTrade',
+    },
+  }, null, 2)}\n`, 'utf8');
+  const deliveryState: any = {
+    sent: {},
+    watchlistSent: {},
+    windowStartSent: {},
+    lastCompleted5mBySession: {},
+    lastMarketMapRefreshBySession: {},
+    lastHealthStatus: null,
+    lastHealthAlertSentAt: null,
+  };
+  const missed = await findMissedExecutableScannerDeliveries({
+    auditDir,
+    state: deliveryState,
+    tradeDate: '2026-06-02',
+    instrument: 'MES',
+  });
+  assert.equal(missed.length, 1);
+  assert.equal(missed[0].deliveryStatus, 'missing');
+  assert.equal(missed[0].candidate.entry, 7603.25);
+  deliveryState.sent[missed[0].alertKey] = { state: 'Approved', confidence: 96, sentAt: '2026-06-02T14:03:49.000Z' };
+  const noMissed = await findMissedExecutableScannerDeliveries({
+    auditDir,
+    state: deliveryState,
+    tradeDate: '2026-06-02',
+    instrument: 'MES',
+  });
+  assert.equal(noMissed.length, 0);
+
   const watchlistResult = await prepareLiveScannerWatchlistAlertArtifacts({
     tradeDate: '2026-05-28',
     instrument: 'MES',
