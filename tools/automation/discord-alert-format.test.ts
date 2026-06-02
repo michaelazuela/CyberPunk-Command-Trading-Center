@@ -135,10 +135,10 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
   assert.ok(text.includes('Compact Trade Plan Summary'));
   assert.ok(text.includes('Status:'));
   assert.ok(text.includes('Memory:'));
-  assert.ok(text.includes('Historical support: Neutral'));
+  assert.ok(text.includes('History: Neutral'));
   assert.ok(text.includes('Warning: none'));
   assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
+  assert.ok(text.includes('Details: Chart Plan + Price Level Map attached.'));
   assert.ok(!/Memory:[\s\S]*approve/i.test(text), 'memory display must not imply approval');
 }
 
@@ -187,9 +187,9 @@ assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatte
 assertNoExecutablePayloadKeys(morning);
 assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
-assert.ok(flattenDiscordPayloadText(morning).includes('App T1 (1.5R):'));
-assert.ok(flattenDiscordPayloadText(morning).includes('App T2 (2.0R):'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Liquidity / Runner Objectives:'));
+assert.ok(flattenDiscordPayloadText(morning).includes('App T1 1.5R:'));
+assert.ok(flattenDiscordPayloadText(morning).includes('App T2 2.0R:'));
+assert.ok(flattenDiscordPayloadText(morning).includes('LQ / Runner Objectives:'));
 assert.equal(/^T1:/m.test(flattenDiscordPayloadText(morning)), false);
 assert.equal(/^T2:/m.test(flattenDiscordPayloadText(morning)), false);
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
@@ -375,11 +375,11 @@ validateDiscordPayload(riskTooWidePayload, ['chart-plan.png', 'price-level-map.p
 assert.equal(JSON.stringify(riskTooWideCandidate), riskTooWideBefore, 'risk advisory formatter must not mutate the candidate');
 const riskTooWideText = flattenDiscordPayloadText(riskTooWidePayload);
 assert.ok(riskTooWideText.includes('Conditional Risk:'));
-assert.ok(riskTooWideText.includes('Decision: WAIT | Executable by app: NO | canExecute: false'));
+assert.ok(riskTooWideText.includes('Decision: WAIT | App executable: NO | canExecute: false'));
 assert.ok(riskTooWideText.includes('Block: RiskTooWide'));
 assert.ok(riskTooWideText.includes('Risk Score:'));
 assert.ok(riskTooWideText.includes('Manual decision required'));
-assert.ok(riskTooWideText.includes('This is not an app-approved executable trade.'));
+assert.ok(riskTooWideText.includes('Not app-approved executable.'));
 assert.ok(riskTooWideText.includes('Do not chase'));
 assert.ok(!/ApprovedTrade|Trade now|Entry confirmed/i.test(riskTooWideText));
 assert.equal(riskTooWidePayload.components, undefined);

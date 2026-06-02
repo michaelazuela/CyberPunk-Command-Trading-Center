@@ -480,9 +480,9 @@ try {
   assert.ok(text.includes('Risk: 5.00 pts / N/A'));
   assert.ok(text.includes('Invalidation:'));
   assert.ok(text.includes('Memory:'));
-  assert.ok(text.includes('Historical support: Neutral'));
+  assert.ok(text.includes('History: Neutral'));
   assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: See attached Chart Plan + Price Level Map.'));
+  assert.ok(text.includes('Details: Chart Plan + Price Level Map attached.'));
   assert.ok(!/Memory:[\s\S]*approve/i.test(text));
   const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
   assert.deepEqual(componentLabels, ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
@@ -575,7 +575,7 @@ try {
   assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
   assert.equal(riskAudit.conditionalRiskScore.score, 49);
   assert.equal(riskResult.payload.components, undefined);
-  assert.ok(riskText.includes('Decision: WAIT | Executable by app: NO | canExecute: false'));
+  assert.ok(riskText.includes('Decision: WAIT | App executable: NO | canExecute: false'));
   assert.ok(riskText.includes('Manual decision required'));
   assert.ok(riskText.includes('Do not chase'));
 

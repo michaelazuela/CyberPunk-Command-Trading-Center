@@ -167,7 +167,7 @@ export function provenanceLines(result: SchedulerReplayProvenanceResult): string
   ];
   const latest = result.liveExecutableAudits[result.liveExecutableAudits.length - 1];
   if (latest) {
-    lines.push(`Live scanner source of truth: ${latest.planVersionId || path.basename(latest.auditFile)} | ${latest.direction || 'UNKNOWN'} | Entry ${latest.entry ?? 'N/A'} | Stop ${latest.stop ?? 'N/A'}.`);
+    lines.push(`Live source: ${latest.planVersionId || path.basename(latest.auditFile)} | ${latest.direction || 'UNKNOWN'} | Entry ${latest.entry ?? 'N/A'} | Stop ${latest.stop ?? 'N/A'}.`);
   }
   return lines;
 }

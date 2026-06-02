@@ -1261,7 +1261,7 @@ async function runRepostScannerAudit(auditFile: string, dryRun: boolean): Promis
   const provenance: SchedulerReplayProvenanceResult = {
     mode: 'live_scanner_audit',
     status: 'clear',
-    note: 'Correction/repost from the exact live scanner audit record. This record is the historical source of truth for the alert.',
+    note: 'Exact live scanner audit repost; historical alert source of truth.',
     liveExecutableAudits: [audit],
   };
   const correctedPayload = applyProvenanceToPayload(payload, provenance, 'Correction Provenance');

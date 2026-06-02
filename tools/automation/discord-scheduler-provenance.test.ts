@@ -111,7 +111,7 @@ const allowed = await evaluateSchedulerReplayProvenance({
 assert.equal(allowed.status, 'allowed_post_facto');
 const lines = provenanceLines(allowed).join('\n');
 assert.ok(lines.includes('Source: post-facto scheduler replay summary.'));
-assert.ok(lines.includes('Live scanner source of truth: MORNING-20260602-140348'));
+assert.ok(lines.includes('Live source: MORNING-20260602-140348'));
 
 const clear = await evaluateSchedulerReplayProvenance({
   auditDir,

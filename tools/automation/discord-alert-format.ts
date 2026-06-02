@@ -236,8 +236,8 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     'Plan:',
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
-    `App T1 (1.5R): ${priceLine(levels.target1)}`,
-    `App T2 (2.0R): ${priceLine(levels.target2)}`,
+    `App T1 1.5R: ${priceLine(levels.target1)}`,
+    `App T2 2.0R: ${priceLine(levels.target2)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
   ];
 }
@@ -250,7 +250,7 @@ function compactLiquidityObjectiveLines(candidate: SetupCandidate): string[] {
   const runner = targetPlan.liquidityRunnerTarget || targetPlan.runnerTarget || null;
   if (!lq1 && !lq2 && !runner) return [];
   return [
-    'Liquidity / Runner Objectives:',
+    'LQ / Runner Objectives:',
     `LQ1: ${lq1 ? `${lq1.label} ${priceLine(lq1.price)}` : 'N/A'}`,
     `LQ2: ${lq2 ? `${lq2.label} ${priceLine(lq2.price)}` : 'N/A'}`,
     `Runner: ${runner ? `${runner.label} ${priceLine(runner.price)}` : 'N/A'}`,
@@ -272,14 +272,13 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
   const score = scoreConditionalCandidateRiskForDisplay(candidate);
   return [
     'Conditional Risk:',
-    `Decision: WAIT | Executable by app: NO | canExecute: false`,
+    `Decision: WAIT | App executable: NO | canExecute: false`,
     `Block: ${normalized.noTradeReason || candidate.blockReason || 'manual review required'}`,
     `Max risk: ${numberLine(score.maxAllowedRiskPoints)} pts`,
     `Risk Score: ${score.score}/100 - ${score.label}`,
-    `Risk R/R: ${numberLine(score.estimatedRiskReward, 2)}`,
     `Reason: ${compactRiskScoreReason(score)}`,
-    'Manual: This is not an app-approved executable trade. Risk is outside current limits when blocked. Manual decision required.',
-    'Watch: Wait for a fresh completed 5M trigger/retest that keeps risk inside limits. Do not chase.',
+    'Manual: Not app-approved executable. Manual decision required.',
+    'Watch: Fresh completed 5M trigger/retest only. Do not chase.',
   ];
 }
 
@@ -320,8 +319,8 @@ function compactKeyLevelLines(candidate: SetupCandidate | null): string[] {
 function memoryLines(): string[] {
   return [
     'Memory:',
-    'Similar setups: 0',
-    'Historical support: Neutral',
+    'Similar: 0',
+    'History: Neutral',
     'Warning: none',
   ];
 }
@@ -336,7 +335,7 @@ function noTradeReason(candidate: SetupCandidate | null, normalized: CompactNorm
 
 export function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
   if (!hasCandidate) return 'Details: Visual attachments not generated because no active plan candidate was available.';
-  if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: See attached Chart Plan + Price Level Map.';
+  if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: Chart Plan + Price Level Map attached.';
   if (attachments.chartPlan) return 'Details: Chart Plan attached. Price Level Map unavailable.';
   if (attachments.priceLevelMap) return 'Details: Price Level Map attached. Chart Plan unavailable.';
   return 'Details: Visual attachments unavailable — review local logs before action.';
