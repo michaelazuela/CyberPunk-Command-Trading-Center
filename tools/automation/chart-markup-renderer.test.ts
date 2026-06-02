@@ -211,13 +211,52 @@ try {
   assert.ok(chartHtml.includes('Contracts: <tspan fill="#f8fafc">N/A</tspan>'));
   assert.ok(chartHtml.includes('T1: <tspan fill="#facc15">1.3R</tspan>'));
   assert.ok(chartHtml.includes('T2: <tspan fill="#facc15">2.4R</tspan>'));
-  assert.ok(chartHtml.includes('Entry Zone'));
+  assert.ok(chartHtml.includes('LONG ENTRY ZONE'));
   assert.ok(chartHtml.includes('7080.25'));
   assert.ok(chartHtml.includes('7075.25'));
   assert.ok(chartHtml.includes('7086.50'));
   assert.ok(chartHtml.includes('7092.25'));
   assert.ok(!chartHtml.includes('canExecute'));
   assert.ok(!chartHtml.includes('noTradeReason'));
+
+  const earlyMorningCandles = Array.from({ length: 20 }, (_, index) => {
+    const totalMinutes = 8 * 60 + 30 + index * 5;
+    const hour = Math.floor(totalMinutes / 60);
+    const minute = totalMinutes % 60;
+    const base = 7600 + index * 0.25;
+    return {
+      index,
+      timestamp: `2026-06-02T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-04:00`,
+      open: base,
+      high: base + 0.75,
+      low: base - 0.75,
+      close: base + 0.25,
+      direction: 'bullish' as const,
+      confidence: 'High' as const,
+    };
+  });
+  const earlyMorningHtml = buildChartMarkupHtmlForTest({
+    chartContext: { ...chartContext, candles: earlyMorningCandles },
+    candidate: {
+      ...candidate,
+      entry: 7603.25,
+      stop: 7599,
+      target1: 7611.75,
+      target2: 7620,
+      riskPoints: 4.25,
+    },
+    instrument: 'MES',
+    tradeDate: '2026-06-02',
+    sessionLabel: 'morning',
+  });
+  assert.ok(!earlyMorningHtml.includes('>08:30<'), 'AM chart card should not waste visual room on 08:30 when 09:00 context is available.');
+  assert.ok(earlyMorningHtml.includes('>09:00<'), 'AM chart card should start visible time labels at 09:00 when possible.');
+  assert.ok(earlyMorningHtml.includes('>10:05<'), 'AM chart card should keep the latest completed candle visible.');
+  assert.equal(earlyMorningHtml.includes('>10:00<') && earlyMorningHtml.includes('>10:05<'), false, 'Adjacent final time labels must not overlap.');
+  assert.ok(earlyMorningHtml.includes('width="610"'), 'Entry-zone band should stop before the protected price-axis gutter.');
+  assert.ok(!earlyMorningHtml.includes('x2="1408"'), 'Chart grid/level lines should not draw into the protected price-axis gutter.');
+  assert.ok(earlyMorningHtml.includes('class="axis"'), 'Price-axis labels should still render.');
+  assert.ok(earlyMorningHtml.includes('<text x="1418"'), 'Price-axis labels should stay in the fixed right-side rail.');
 
   const levelMapHtml = buildPriceLevelMapHtmlForTest({
     chartContext,

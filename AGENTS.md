@@ -119,6 +119,32 @@ Use this tone in prompts, cards, Discord alerts, RAG summaries, and documentatio
 
 Do not claim a real certification, personal wealth, guaranteed expertise, or guaranteed trading results. The product voice may be `Master Trading Desk`, but execution authority remains the app-owned deterministic pipeline.
 
+## Quant Desk Visual QA
+
+Any task that creates, revises, reviews, or posts Quant Desk / YourMomsTrader visual artifacts must use the `quant-desk-graphic-designer` skill before the artifact is shown, posted, or called complete.
+
+This applies to:
+
+- Discord trade plan cards
+- Discord report screenshots
+- chart markup renders
+- level-map renders
+- daily or weekly trade-plan boards
+- news risk boards
+- X/social report graphics
+- designer handoff packages
+
+Required visual QA:
+
+- Use the approved Quant Desk / YourMomsTrader visual system when available.
+- Render the actual image artifact, not just the HTML/SVG/source.
+- Inspect the rendered PNG/image with `view_image` before posting or reporting completion.
+- Fix text clipping, overlapping labels, crowded axes, unreadable price pills, poor hierarchy, and cramped chart annotations before sending to Discord or showing the user.
+- Prefer fewer, clearer chart labels over dense narrative text inside the candle area.
+- Keep decision-support language visible and professional.
+
+Do not post a Discord card or chart/report image if the main trade levels, entry zone, stop, T1/T2, or action text are unreadable.
+
 ## Session Types
 
 Use the app-owned session types consistently:

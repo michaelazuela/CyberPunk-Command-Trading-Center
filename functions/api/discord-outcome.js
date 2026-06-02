@@ -105,6 +105,70 @@ function outcomeSummary(payload) {
   return payload.tr === 'missed_trade' ? 'Trade marked MISSED.' : 'Trade marked NOT TAKEN.';
 }
 
+function outcomeLockLabel(payload) {
+  if (payload.hit === 'T1') return `${payload.dir || ''} T1 saved`.trim();
+  if (payload.hit === 'T2') return `${payload.dir || ''} T2 saved`.trim();
+  if (payload.hit === 'STOP') return `${payload.dir || ''} stopped saved`.trim();
+  if (payload.tr === 'scratch') return 'Scratch saved';
+  if (payload.tr === 'missed_trade') return 'Missed saved';
+  if (payload.tr === 'no_trade') return 'No trade saved';
+  return 'Outcome saved';
+}
+
+function disabledButton(label, customId) {
+  return {
+    type: 2,
+    style: 2,
+    label,
+    custom_id: customId.slice(0, 100),
+    disabled: true,
+  };
+}
+
+function buildLockedOutcomeComponents(payload) {
+  const planId = String(payload.pid || 'plan').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
+  return [
+    {
+      type: 1,
+      components: [
+        disabledButton(outcomeLockLabel(payload), `rag_saved_${planId}`),
+        disabledButton('RAG submitted', `rag_submitted_${planId}`),
+        disabledButton('No automated orders', `decision_support_${planId}`),
+      ],
+    },
+  ];
+}
+
+function discordWebhookUrl(context) {
+  return (
+    getEnv(context, 'QUANT_DESK_SCANNER_WEBHOOK_URL') ||
+    getEnv(context, 'SCANNER_DISCORD_WEBHOOK_URL') ||
+    getEnv(context, 'DISCORD_WEBHOOK_URL')
+  );
+}
+
+async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
+  const messageId = typeof discordMessage?.messageId === 'string' ? discordMessage.messageId : '';
+  const webhookUrl = discordWebhookUrl(context);
+  if (!messageId || !webhookUrl) {
+    return { edited: false, reason: !messageId ? 'missing_discord_message_id' : 'missing_discord_webhook_url' };
+  }
+  const url = new URL(webhookUrl);
+  url.search = '';
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/messages/${encodeURIComponent(messageId)}`;
+  const response = await fetch(url.toString(), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      components: buildLockedOutcomeComponents(payload),
+    }),
+  });
+  if (!response.ok) {
+    return { edited: false, reason: `discord_patch_failed_${response.status}` };
+  }
+  return { edited: true, reason: null };
+}
+
 function journalResultR(existingJournalRecord, payload, tradeResult) {
   if (!payload.tt || tradeResult === 'no_trade' || tradeResult === 'missed_trade') return null;
   if (tradeResult === 'scratch') return 0;
@@ -202,7 +266,7 @@ async function persistOutcome(context, payload) {
       body: JSON.stringify(patchPayload),
     });
     if (!response.ok) throw new Error(`Supabase outcome update failed (${response.status}): ${await response.text()}`);
-    return existing.id;
+    return { rowId: existing.id, discordMessage: tradePlanJson.discordMessage || null };
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
@@ -215,7 +279,10 @@ async function persistOutcome(context, payload) {
   });
   if (!response.ok) throw new Error(`Supabase outcome insert failed (${response.status}): ${await response.text()}`);
   const rows = await response.json().catch(() => []);
-  return Array.isArray(rows) && rows[0]?.id ? rows[0].id : payload.pid;
+  return {
+    rowId: Array.isArray(rows) && rows[0]?.id ? rows[0].id : payload.pid,
+    discordMessage: tradePlanJson.discordMessage || null,
+  };
 }
 
 export async function onRequestGet(context) {
@@ -227,8 +294,12 @@ export async function onRequestGet(context) {
       return html('Missing DISCORD_OUTCOME_SECRET in Cloudflare environment.', 500);
     }
     const payload = await verifyToken(token, secret);
-    const rowId = await persistOutcome(context, payload);
-    return html(`Saved to RAG. Plan ${payload.pid}. ${outcomeSummary(payload)} Row ${String(rowId).slice(0, 8)}.`);
+    const result = await persistOutcome(context, payload);
+    const lock = await lockDiscordOutcomeMessage(context, payload, result.discordMessage);
+    const lockText = lock.edited
+      ? 'Discord card locked.'
+      : `Discord card lock unavailable (${lock.reason}).`;
+    return html(`Saved to RAG. ${lockText} Plan ${payload.pid}. ${outcomeSummary(payload)} Row ${String(result.rowId).slice(0, 8)}.`);
   } catch (error) {
     return html(error instanceof Error ? error.message : String(error), 400);
   }

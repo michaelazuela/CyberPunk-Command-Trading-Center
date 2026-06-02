@@ -349,6 +349,7 @@ export function formatCompactHtfContextSufficiencyLines(input: {
     'HTF Context:',
     `Status: ${display.status} | Reliability: ${display.reliability}`,
     `Bars: ${barLine}`,
+    'Minimum: 30 calendar days when available',
     `Usage: ${display.htfUsage}`,
     `Candidate Promotion: ${display.candidatePromotion}`,
   ];

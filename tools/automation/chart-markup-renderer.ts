@@ -62,6 +62,32 @@ function validCandles(chartContext: Partial<ChartContext> | null): Array<Require
     .slice(-90);
 }
 
+function minutesFromTimestamp(value?: string | null): number | null {
+  if (!value) return null;
+  const direct = value.match(/T(\d{2}):(\d{2})/) || value.match(/\b(\d{2}):(\d{2})\b/);
+  if (!direct) return null;
+  return Number(direct[1]) * 60 + Number(direct[2]);
+}
+
+function sessionRenderStartMinutes(sessionLabel: string): number | null {
+  if (/lunch|pm/i.test(sessionLabel)) return 12 * 60;
+  if (/morning|am/i.test(sessionLabel)) return 9 * 60;
+  return null;
+}
+
+function candlesForVisualWindow(
+  candles: ReturnType<typeof validCandles>,
+  sessionLabel: string,
+): ReturnType<typeof validCandles> {
+  const startMinutes = sessionRenderStartMinutes(sessionLabel);
+  if (startMinutes === null) return candles;
+  const clipped = candles.filter((candle) => {
+    const minutes = minutesFromTimestamp(candle.timestamp);
+    return minutes === null || minutes >= startMinutes;
+  });
+  return clipped.length >= 12 ? clipped : candles;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -155,7 +181,7 @@ function targetLooksStale(price: number | null, candles: PlanRenderModel['candle
 
 function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const candidate = input.candidate;
-  const candles = validCandles(input.chartContext);
+  const candles = candlesForVisualWindow(validCandles(input.chartContext), input.sessionLabel);
   if (!candidate || candles.length < 3) {
     throw new Error('Chart markup requires a selected candidate and at least 3 valid candles.');
   }
@@ -268,7 +294,7 @@ function renderManagedLines(
     .map((level) => ({ ...level, rawY: y(level.price) }))
     .sort((a, b) => a.rawY - b.rawY);
 
-  const minGap = 50;
+  const minGap = 56;
   for (let index = 1; index < valid.length; index += 1) {
     if (valid[index].rawY - valid[index - 1].rawY < minGap) {
       valid[index].rawY = valid[index - 1].rawY + minGap;
@@ -289,9 +315,9 @@ function renderManagedLines(
     return `
       <line x1="${x.lineStart}" y1="${actualY}" x2="${x.lineEnd}" y2="${actualY}" stroke="${level.color}" stroke-width="${level.width || 2}" ${level.dash ? `stroke-dasharray="${level.dash}"` : ''} />
       ${connector}
-      <text x="${x.text}" y="${labelY - 12}" text-anchor="end" class="line-label" fill="${level.color}">${escapeHtml(level.label)}</text>
-      <rect x="${x.pill}" y="${labelY - 20}" width="112" height="40" rx="8" fill="${level.color}" opacity="0.92" />
-      <text x="${x.pill + 56}" y="${labelY + 7}" text-anchor="middle" class="price-pill">${money(level.price)}</text>
+      <text x="${x.text}" y="${labelY - 10}" text-anchor="end" class="line-label" fill="${level.color}">${escapeHtml(level.label)}</text>
+      <rect x="${x.pill}" y="${labelY - 18}" width="106" height="36" rx="8" fill="${level.color}" opacity="0.92" />
+      <text x="${x.pill + 53}" y="${labelY + 6}" text-anchor="middle" class="price-pill">${money(level.price)}</text>
     `;
   }).join('');
 }
@@ -521,45 +547,30 @@ function renderNarrativeMarkers(isLong: boolean, anchors: ChartMarkerAnchors): s
   const color = isLong ? '#4ade80' : '#fb923c';
   const accent = isLong ? '#4ade80' : '#fb923c';
   const markerBadge = (point: ChartPoint, label: string, badgeColor: string) => `
-    <circle cx="${point.x + 17}" cy="${point.y - 14}" r="20" fill="#020403" stroke="${badgeColor}" stroke-width="4" />
-    <text x="${point.x + 17}" y="${point.y - 3}" text-anchor="middle" class="marker-badge" fill="${badgeColor}">${label}</text>
+    <circle cx="${point.x}" cy="${point.y}" r="17" fill="#020403" stroke="${badgeColor}" stroke-width="3.5" />
+    <text x="${point.x}" y="${point.y + 8}" text-anchor="middle" class="marker-badge" fill="${badgeColor}">${label}</text>
   `;
   const [displacementLabel, sweepLabel, reclaimLabel] = spreadLabelPoints([
-    anchors.displacement ? labelPoint(anchors.displacement, isLong ? -210 : -130, isLong ? -44 : 70, isLong ? 1180 : 1260) : null,
-    anchors.sweep ? labelPoint(anchors.sweep, 22, isLong ? 24 : 22) : null,
-    anchors.reclaim ? labelPoint(anchors.reclaim, 52, isLong ? 84 : 92) : null,
-  ]);
+    anchors.displacement ? labelPoint(anchors.displacement, isLong ? -42 : 42, isLong ? -34 : 34, 1320) : null,
+    anchors.sweep ? labelPoint(anchors.sweep, isLong ? -34 : 34, isLong ? -34 : 34, 1320) : null,
+    anchors.reclaim ? labelPoint(anchors.reclaim, isLong ? 34 : -34, isLong ? 36 : -36, 1320) : null,
+  ], 42);
   const displacementMarkup = anchors.displacement && displacementLabel
-    ? isLong
-      ? `
-        ${markerBadge(displacementLabel, '3', accent)}
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Displacement Up</text>
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 20}" class="marker-copy">Strong bullish move</text>
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 44}" class="marker-copy">creates imbalance</text>
-        <line x1="${displacementLabel.x + 142}" y1="${displacementLabel.y + 18}" x2="${anchors.displacement.x}" y2="${anchors.displacement.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
-      `
-      : `
-        ${markerBadge(displacementLabel, '3', accent)}
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y - 5}" class="marker-title" fill="${accent}">Failure Down</text>
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 20}" class="marker-copy">Failed push lower</text>
-        <text x="${displacementLabel.x + 50}" y="${displacementLabel.y + 44}" class="marker-copy">confirms rejection</text>
-        <line x1="${displacementLabel.x + 142}" y1="${displacementLabel.y + 18}" x2="${anchors.displacement.x}" y2="${anchors.displacement.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
-      `
+    ? `
+      <line x1="${displacementLabel.x}" y1="${displacementLabel.y}" x2="${anchors.displacement.x}" y2="${anchors.displacement.y}" stroke="${accent}" stroke-width="1.8" opacity=".72" />
+      ${markerBadge(displacementLabel, '3', accent)}
+    `
     : '';
   const sweepMarkup = anchors.sweep && sweepLabel
     ? `
+      <line x1="${sweepLabel.x}" y1="${sweepLabel.y}" x2="${anchors.sweep.x}" y2="${anchors.sweep.y}" stroke="#f59e0b" stroke-width="1.8" opacity=".72" />
       ${markerBadge(sweepLabel, '1', '#f59e0b')}
-      <text x="${sweepLabel.x + 52}" y="${sweepLabel.y - 2}" class="sweep-title">${isLong ? 'Sweep' : 'Raid'}</text>
-      <text x="${sweepLabel.x + 52}" y="${sweepLabel.y + 23}" class="annotation-copy">Liquidity taken</text>
-      <line x1="${sweepLabel.x + 62}" y1="${sweepLabel.y - 24}" x2="${anchors.sweep.x}" y2="${anchors.sweep.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
     `
     : '';
   const reclaimMarkup = anchors.reclaim && reclaimLabel
     ? `
+      <line x1="${reclaimLabel.x}" y1="${reclaimLabel.y}" x2="${anchors.reclaim.x}" y2="${anchors.reclaim.y}" stroke="${color}" stroke-width="1.8" opacity=".72" />
       ${markerBadge(reclaimLabel, '2', color)}
-      <text x="${reclaimLabel.x + 54}" y="${reclaimLabel.y - 2}" class="marker-title" fill="${color}">Reclaim</text>
-      <text x="${reclaimLabel.x + 54}" y="${reclaimLabel.y + 23}" class="annotation-copy">Close back ${isLong ? 'above' : 'below'}</text>
-      <line x1="${reclaimLabel.x + 28}" y1="${reclaimLabel.y - 22}" x2="${anchors.reclaim.x}" y2="${anchors.reclaim.y}" stroke="#f8fafc" stroke-width="2" marker-end="url(#whiteArrow)" />
     `
     : '';
   if (isLong) {
@@ -727,6 +738,39 @@ function buildMarkerAnchors(
   };
 }
 
+function renderTimeAxisLabels(candles: PlanRenderModel['candles'], xStep: number, plotLeft: number, plotRight: number): string {
+  const interval = Math.max(1, Math.ceil(candles.length / 5));
+  const lastIndex = candles.length - 1;
+  const candidates = candles
+    .map((candle, index) => ({ candle, index }))
+    .filter(({ index }) => index === 0 || index === lastIndex || index % interval === 0)
+    .map(({ candle, index }) => {
+      const raw = String(candle.timestamp || '');
+      const time = raw.match(/T(\d{2}:\d{2})/)?.[1] || raw.match(/\b(\d{2}:\d{2})\b/)?.[1] || '';
+      return {
+        time,
+        index,
+        labelX: clamp(plotLeft + index * xStep, plotLeft + 36, plotRight - 18),
+      };
+    })
+    .filter((item) => item.time);
+  const minSpacing = 96;
+  const spaced: typeof candidates = [];
+  for (const item of candidates) {
+    const previous = spaced[spaced.length - 1];
+    if (!previous || item.labelX - previous.labelX >= minSpacing) {
+      spaced.push(item);
+      continue;
+    }
+    if (item.index === lastIndex && spaced.length > 1) {
+      spaced[spaced.length - 1] = item;
+    }
+  }
+  return spaced
+    .map((item) => `<text x="${item.labelX}" y="944" text-anchor="middle" class="time-axis">${escapeHtml(item.time)}</text>`)
+    .join('');
+}
+
 function buildChartHtml(input: ChartMarkupRenderInput): string {
   const plan = buildPlanRenderModel(input);
   const {
@@ -756,25 +800,15 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const high = maxPrice + pad;
   const width = APPROVED_RENDER_WIDTH;
   const height = APPROVED_RENDER_HEIGHT;
-  const plot = { left: 450, top: 146, right: 1408, bottom: 914 };
+  const plot = { left: 450, top: 146, right: 1368, bottom: 914 };
+  const priceAxisX = 1418;
   const xStep = (plot.right - plot.left) / Math.max(1, candles.length - 1);
   const y = (price: number) => plot.bottom - ((price - low) / (high - low)) * (plot.bottom - plot.top);
   const markerAnchors = buildMarkerAnchors(plan, xStep, plot.left, y);
-  const visibleTimeLabels = candles
-    .map((candle, index) => ({ candle, index }))
-    .filter((_, index, source) => index === 0 || index === source.length - 1 || index % Math.max(1, Math.floor(source.length / 6)) === 0)
-    .map(({ candle, index }) => {
-      const raw = String(candle.timestamp || '');
-      const time = raw.match(/T(\d{2}:\d{2})/)?.[1] || raw.match(/\b(\d{2}:\d{2})\b/)?.[1] || '';
-      const labelX = clamp(plot.left + index * xStep, 486, 1358);
-      return time
-        ? `<text x="${labelX}" y="944" text-anchor="middle" class="time-axis">${escapeHtml(time)}</text>`
-        : '';
-    }).join('');
+  const visibleTimeLabels = renderTimeAxisLabels(candles, xStep, plot.left, plot.right);
   const entryZone = isPrice(entryLow) && isPrice(entryHigh)
-    ? `<rect x="758" y="${y(entryHigh)}" width="648" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
-       <text x="1082" y="${(y(entryHigh) + y(entryLow)) / 2 - 4}" text-anchor="middle" class="zone-title">Entry Zone</text>
-       <text x="1082" y="${(y(entryHigh) + y(entryLow)) / 2 + 26}" text-anchor="middle" class="zone-sub">${money(entryLow)} - ${money(entryHigh)}</text>`
+    ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
+       <text x="772" y="${Math.max(188, y(entryHigh) - 10)}" class="zone-title">${isLong ? 'LONG ENTRY ZONE' : 'SHORT ENTRY ZONE'}</text>`
     : '';
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
   const pathColor = isLong ? '#4ade80' : '#fb923c';
@@ -784,18 +818,15 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     : targetsValidForChart && !isLong && isPrice(entryLow) && isPrice(t2)
       ? `<polyline points="1160,${y(entryLow)} 1236,${y(t1 || entryLow)} 1284,${y(entryLow)} 1326,${y(t2)}" fill="none" stroke="${pathColor}" stroke-width="3" stroke-dasharray="10 9" marker-end="url(#arrow)" />`
       : '';
-  const sweepLabel = isLong ? 'Sell-side sweep' : 'Buy-side sweep';
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
   const managedLines = renderManagedLines([
-    { label: sweepLabel, price: sweep || null, color: '#f97316', dash: '8 7', width: 2.5 },
     { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
     { label: 'Stop', price: stop, color: '#ef4444', width: 3 },
     targetsValidForChart && sameT1T2
       ? { label: 'T1/T2 2.0R', price: t2, color: '#facc15', dash: '8 7', width: 2.5 }
       : { label: targetsValidForChart ? 'T1 1.5R' : '', price: targetsValidForChart ? t1 : null, color: '#facc15', dash: '8 7', width: 2.5 },
     sameT1T2 ? { label: '', price: null, color: '#facc15' } : { label: targetsValidForChart ? 'T2 2.0R' : '', price: targetsValidForChart ? t2 : null, color: '#facc15', dash: '8 7', width: 2.5 },
-    { label: targetsValidForChart ? 'Liquidity' : '', price: targetsValidForChart ? liquidity : null, color: '#2f8cff', width: 3 },
-  ], y, { lineStart: 450, lineEnd: 1408, text: 1386, pill: 1402 });
+  ], y, { lineStart: plot.left, lineEnd: plot.right - 8, text: plot.right - 20, pill: 1406 });
 
   return `<!doctype html>
 <html>
@@ -816,10 +847,10 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .panel-title { font-size: 26px; font-weight: 900; fill: #f8fafc; }
     .panel-text { font-size: 18px; font-weight: 800; fill: #f8fafc; }
     .small { font-size: 17px; fill: #cbd5e1; }
-    .line-label { font-size: 23px; font-weight: 900; }
-    .price-pill { font-size: 24px; font-weight: 950; fill: white; }
-    .zone-title { font-size: 28px; font-weight: 900; fill: #f8fafc; }
-    .zone-sub { font-size: 23px; font-weight: 850; fill: #f8fafc; }
+    .line-label { font-size: 20px; font-weight: 900; }
+    .price-pill { font-size: 21px; font-weight: 950; fill: white; }
+    .zone-title { font-size: 20px; font-weight: 950; fill: #f8fafc; letter-spacing: .7px; }
+    .zone-sub { font-size: 20px; font-weight: 850; fill: #f8fafc; }
     .axis { fill: #e5e7eb; font-size: 20px; font-weight: 700; }
     .time-axis { fill: #f8fafc; font-size: 21px; font-weight: 800; }
     .context-title { font-size: 21px; fill: #f8fafc; letter-spacing: 1.5px; }
@@ -829,7 +860,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .risk-strip { font-size: 20px; fill: #cbd5e1; font-weight: 900; }
     .validation { font-size: 17px; font-weight: 900; }
     .marker-num { font-size: 35px; fill: #4ade80; font-weight: 900; }
-    .marker-badge { font-size: 27px; font-weight: 950; }
+    .marker-badge { font-size: 25px; font-weight: 950; }
     .marker-title { font-size: 20px; font-weight: 900; }
     .marker-copy { font-size: 17px; fill: #dbeafe; }
     .annotation-copy { font-size: 17px; fill: #dbeafe; }
@@ -858,7 +889,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${Array.from({ length: 12 }, (_, index) => `<line x1="${plot.left + index * ((plot.right - plot.left) / 11)}" y1="${plot.top}" x2="${plot.left + index * ((plot.right - plot.left) / 11)}" y2="${plot.bottom}" stroke="#12201c" stroke-width="1" />`).join('')}
   ${priceTicks.map((price) => {
     const yy = y(price);
-    return `<line x1="${plot.left}" y1="${yy}" x2="${plot.right}" y2="${yy}" stroke="#12201c" stroke-width="1" /><text x="${plot.right + 10}" y="${clamp(yy + 7, 38, 887)}" class="axis">${money(price)}</text>`;
+    return `<line x1="${plot.left}" y1="${yy}" x2="${plot.right}" y2="${yy}" stroke="#12201c" stroke-width="1" /><text x="${priceAxisX}" y="${clamp(yy + 7, 38, 887)}" class="axis">${money(price)}</text>`;
   }).join('')}
   ${candles.map((candle, index) => renderCandle(candle, plot.left + index * xStep, y)).join('')}
   ${entryZone}

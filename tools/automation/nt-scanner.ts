@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
+import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { TRADE_RULES } from '../../src/config/tradeRules';
 import {
   buildNinjaChartContext,
@@ -140,6 +141,7 @@ export interface ScannerAlertDeliveryRecord {
   deliveryStatus: ScannerAlertDeliveryStatus;
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
   httpStatus: number | null;
+  discordMessageId: string | null;
   error: string | null;
   attemptedAt: string;
   sentAt: string | null;
@@ -215,6 +217,27 @@ function sanitizedError(error: unknown): string {
     .slice(0, 500);
 }
 
+function getDayOfWeek(tradeDate: string): string {
+  return new Date(`${tradeDate}T12:00:00`).toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'long',
+  });
+}
+
+function supabaseRestUrl(): string | null {
+  const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  return raw ? raw.replace(/\/$/, '') : null;
+}
+
+function supabaseRagHeaders(serviceRoleKey: string): Record<string, string> {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+}
+
 function candidateDeliverySnapshot(candidate: SetupCandidate | null): ScannerAlertDeliveryRecord['candidate'] {
   return {
     setupType: candidate?.setupType || null,
@@ -253,6 +276,7 @@ export function createPendingScannerAlertDeliveryRecord(args: {
     deliveryStatus: 'pending',
     webhookSource: args.webhookSource,
     httpStatus: null,
+    discordMessageId: null,
     error: null,
     attemptedAt: args.attemptedAt || new Date().toISOString(),
     sentAt: null,
@@ -264,13 +288,19 @@ export function createPendingScannerAlertDeliveryRecord(args: {
 
 export function markScannerAlertDeliverySent(
   record: ScannerAlertDeliveryRecord,
-  args: { sentAt?: string; httpStatus?: number | null; webhookSource?: ScannerAlertDeliveryRecord['webhookSource'] } = {},
+  args: {
+    sentAt?: string;
+    httpStatus?: number | null;
+    webhookSource?: ScannerAlertDeliveryRecord['webhookSource'];
+    discordMessageId?: string | null;
+  } = {},
 ): ScannerAlertDeliveryRecord {
   return {
     ...record,
     deliveryStatus: 'sent',
     webhookSource: args.webhookSource ?? record.webhookSource,
     httpStatus: args.httpStatus ?? record.httpStatus,
+    discordMessageId: args.discordMessageId ?? record.discordMessageId,
     error: null,
     sentAt: args.sentAt || new Date().toISOString(),
     retryEligible: false,
@@ -1098,6 +1128,149 @@ function buildDiscordPayload(args: {
   });
 }
 
+async function upsertScannerDiscordAlertRagRecord(args: {
+  planVersionId: string;
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  analysis: AnalysisResult;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  candidate: SetupCandidate | null;
+  confidence: number;
+}): Promise<void> {
+  const supabaseUrl = supabaseRestUrl();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const userId = process.env.DISCORD_RAG_USER_ID || '';
+  if (!supabaseUrl || !serviceRoleKey || !userId) {
+    console.warn('Scanner Discord alert RAG pending save skipped. Set SUPABASE_URL/VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID to let Discord buttons update RAG and lock the card after save.');
+    return;
+  }
+
+  const journalRecord = buildTradeJournalRecord({
+    dateTime: new Date().toISOString(),
+    instrument: args.instrument,
+    session: args.session,
+    candidate: args.candidate,
+    scannerScore: args.confidence,
+    entry: args.normalized.entry ?? args.candidate?.entry ?? null,
+    stop: args.normalized.stop ?? args.candidate?.stop ?? null,
+    target: args.normalized.t1 ?? args.candidate?.target1 ?? null,
+    outcome: 'pending',
+    discordAlertId: args.planVersionId,
+    notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
+  });
+  const payload = {
+    user_id: userId,
+    session_type: args.session,
+    trade_date: args.tradeDate,
+    day_of_week: getDayOfWeek(args.tradeDate),
+    instrument: args.instrument,
+    trade_result: 'pending',
+    outcome: null,
+    source: 'discord_alert',
+    analysis_mode: 'live',
+    setup_quality_score: 0.5,
+    plan_version_id: args.planVersionId,
+    entry_price: args.normalized.entry ?? args.candidate?.entry ?? null,
+    stop_price: args.normalized.stop ?? args.candidate?.stop ?? null,
+    target_1_price: args.normalized.t1 ?? args.candidate?.target1 ?? null,
+    target_2_price: args.normalized.t2 ?? args.candidate?.target2 ?? null,
+    risk_points: args.normalized.riskPoints ?? args.candidate?.riskPoints ?? null,
+    embedding_text: [
+      `Scanner Discord alert pending outcome for ${args.session} ${args.instrument} on ${args.tradeDate}.`,
+      `Plan: ${args.normalized.decisionLabel || args.normalized.decision} ${args.normalized.setupName || args.candidate?.setupType || ''}.`,
+      `Journal model: ${journalRecord.modelType}. Tags: ${journalRecord.setupTags.join(', ') || 'none'}. Planned R: ${journalRecord.plannedR ?? 'pending'}.`,
+      'Outcome buttons record trader-confirmed review only; no automated orders are placed.',
+    ].join(' '),
+    trade_plan_json: {
+      planVersionId: args.planVersionId,
+      discordOutcomeButtons: true,
+      journalRecord,
+      normalizedPlan: args.normalized,
+      setupCandidates: args.candidate ? [args.candidate] : [],
+      targetObjectives: args.analysis.structuredChartContext?.targetObjectives || [],
+      outcome: {
+        tradeTaken: null,
+        direction: null,
+        targetHit: null,
+        source: 'discord_button_pending',
+      },
+      approvalBoundary: {
+        discordOutcomeApprovesTrade: false,
+        ragSaveApprovesTrade: false,
+        buttonClickPlacesOrder: false,
+      },
+    },
+    gemini_analysis_json: args.analysis,
+    notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
+  };
+
+  const headers = supabaseRagHeaders(serviceRoleKey);
+  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!updateResponse.ok) {
+    throw new Error(`Scanner Discord alert RAG update failed (${updateResponse.status}): ${await updateResponse.text()}`);
+  }
+  const updatedRows = await updateResponse.json().catch(() => []);
+  if (Array.isArray(updatedRows) && updatedRows.length > 0) return;
+
+  const insertResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!insertResponse.ok) {
+    throw new Error(`Scanner Discord alert RAG insert failed (${insertResponse.status}): ${await insertResponse.text()}`);
+  }
+}
+
+async function attachDiscordMessageReceiptToRagRecord(args: {
+  planVersionId: string;
+  discordMessageId: string | null;
+  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+}): Promise<void> {
+  if (!args.discordMessageId) return;
+  const supabaseUrl = supabaseRestUrl();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!supabaseUrl || !serviceRoleKey) return;
+
+  const headers = supabaseRagHeaders(serviceRoleKey);
+  const lookup = await fetch(
+    `${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
+    { headers },
+  );
+  if (!lookup.ok) {
+    console.warn(`Scanner Discord message receipt lookup skipped (${lookup.status}).`);
+    return;
+  }
+  const rows = await lookup.json().catch(() => []);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!row?.id) return;
+  const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object' ? row.trade_plan_json : {};
+  const patch = {
+    trade_plan_json: {
+      ...existingPlanJson,
+      discordMessage: {
+        messageId: args.discordMessageId,
+        webhookSource: args.webhookSource,
+        editAfterOutcome: true,
+        storedAt: new Date().toISOString(),
+      },
+    },
+  };
+  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(row.id)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(patch),
+  });
+  if (!update.ok) {
+    console.warn(`Scanner Discord message receipt update skipped (${update.status}).`);
+  }
+}
+
 function scannerWatchlistAlertKey(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -1255,6 +1428,7 @@ interface ScannerDiscordPostReceipt {
   deliveryStatus: 'sent' | 'skipped';
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
   httpStatus: number | null;
+  discordMessageId: string | null;
 }
 
 class ScannerDiscordPostError extends Error {
@@ -1277,6 +1451,7 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
       deliveryStatus: 'skipped',
       webhookSource: config.dryRun ? 'dry_run' : 'discord_disabled',
       httpStatus: null,
+      discordMessageId: null,
     };
   }
   const webhook = resolveScannerDiscordWebhookUrl();
@@ -1311,10 +1486,21 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
       webhookSource: webhook.source,
     });
   }
+  const bodyText = await response.text().catch(() => '');
+  let discordMessageId: string | null = null;
+  if (bodyText.trim()) {
+    try {
+      const parsed = JSON.parse(bodyText);
+      discordMessageId = typeof parsed?.id === 'string' ? parsed.id : null;
+    } catch {
+      discordMessageId = null;
+    }
+  }
   return {
     deliveryStatus: 'sent',
     webhookSource: webhook.source,
     httpStatus: response.status,
+    discordMessageId,
   };
 }
 
@@ -1830,6 +2016,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       targetCascade,
       alertReason: alertDecision.reason,
     });
+    try {
+      await upsertScannerDiscordAlertRagRecord({
+        planVersionId,
+        session,
+        tradeDate,
+        instrument: config.instrument,
+        analysis,
+        normalized,
+        candidate,
+        confidence: confidence.score,
+      });
+    } catch (error) {
+      console.warn(`Scanner Discord alert RAG pending save failed safely: ${sanitizedError(error)}`);
+    }
     const pendingDelivery = createPendingScannerAlertDeliveryRecord({
       alertKey,
       planVersionId,
@@ -1851,10 +2051,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+        await attachDiscordMessageReceiptToRagRecord({
+          planVersionId,
+          discordMessageId: receipt.discordMessageId,
+          webhookSource: receipt.webhookSource,
+        });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
           sentAt,
           httpStatus: receipt.httpStatus,
           webhookSource: receipt.webhookSource,
+          discordMessageId: receipt.discordMessageId,
         });
       } else {
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {

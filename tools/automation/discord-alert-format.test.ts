@@ -87,7 +87,7 @@ function htfStateFixture(dataLimited = false): Pick<HtfLiquidityDrawState, 'htfC
           barsLoaded: dataLimited ? 4 : 22,
           rangeStart: '2026-05-25T00:00:00-04:00',
           rangeEnd: '2026-06-01T14:00:00-04:00',
-          minimumExpectedDescription: 'At least 7 completed trading days, preferably 20+ completed 4H candles when available.',
+          minimumExpectedDescription: '30 calendar days when available.',
           minimumSatisfied: !dataLimited,
           status: dataLimited ? 'data_limited' : 'sufficient',
         },
@@ -96,7 +96,7 @@ function htfStateFixture(dataLimited = false): Pick<HtfLiquidityDrawState, 'htfC
           barsLoaded: dataLimited ? 8 : 62,
           rangeStart: '2026-05-25T00:00:00-04:00',
           rangeEnd: '2026-06-01T14:00:00-04:00',
-          minimumExpectedDescription: 'At least 4 completed trading days of structured 1H context.',
+          minimumExpectedDescription: '30 calendar days when available.',
           minimumSatisfied: !dataLimited,
           status: dataLimited ? 'data_limited' : 'sufficient',
         },
@@ -105,7 +105,7 @@ function htfStateFixture(dataLimited = false): Pick<HtfLiquidityDrawState, 'htfC
           barsLoaded: dataLimited ? 16 : 86,
           rangeStart: '2026-05-30T00:00:00-04:00',
           rangeEnd: '2026-06-01T14:00:00-04:00',
-          minimumExpectedDescription: 'At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.',
+          minimumExpectedDescription: '30 calendar days when available.',
           minimumSatisfied: !dataLimited,
           status: dataLimited ? 'data_limited' : 'sufficient',
         },
@@ -114,7 +114,7 @@ function htfStateFixture(dataLimited = false): Pick<HtfLiquidityDrawState, 'htfC
           barsLoaded: 43,
           rangeStart: '2026-06-01T12:00:00-04:00',
           rangeEnd: '2026-06-01T15:30:00-04:00',
-          minimumExpectedDescription: 'Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.',
+          minimumExpectedDescription: '30 calendar days when available; active setup-scan window remains the execution trigger authority.',
           minimumSatisfied: true,
           status: 'sufficient',
         },
@@ -188,7 +188,7 @@ assertNoExecutablePayloadKeys(morning);
 assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
-assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long Win', 'Long Loss', 'Scratch', 'Missed', 'No Trade']);
+assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -210,8 +210,8 @@ const lunch = compactDiscordSummary({
 });
 assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(lunch.content?.includes('[PM PLAN] MES - SHORT CONDITIONAL'));
-assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short Win', 'Short Loss', 'Scratch', 'Missed', 'No Trade']);
-assert.ok(!JSON.stringify(lunch.components).includes('Long Win'));
+assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
+assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
 
 const scanner = compactDiscordSummary({
   session: 'morning',
@@ -262,6 +262,7 @@ assert.ok(scannerReadyText.includes('QUALIFIED CONDITIONAL'));
 assert.ok(scannerReadyText.includes('WAIT - trigger not confirmed'));
 assert.ok(scannerReadyText.includes('HTF Context:'));
 assert.ok(scannerReadyText.includes('Status: sufficient | Reliability: structural'));
+assert.ok(scannerReadyText.includes('Minimum: 30 calendar days when available'));
 assert.ok(scannerReadyText.includes('Usage: structural confirmation allowed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
@@ -292,6 +293,7 @@ validateDiscordPayload(dataLimitedScannerPayload, ['chart-plan.png', 'price-leve
 const dataLimitedScannerText = flattenDiscordPayloadText(dataLimitedScannerPayload);
 assert.ok(dataLimitedScannerText.includes('HTF Context:'));
 assert.ok(dataLimitedScannerText.includes('Status: partial | Reliability: data_limited'));
+assert.ok(dataLimitedScannerText.includes('Minimum: 30 calendar days when available'));
 assert.ok(dataLimitedScannerText.includes('Usage: context only; not structural confirmation'));
 assert.ok(dataLimitedScannerText.includes('Candidate Promotion: blocked by data-limited HTF context'));
 assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready|structural confirmation allowed/i.test(dataLimitedScannerText), false);

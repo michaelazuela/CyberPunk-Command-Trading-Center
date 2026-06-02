@@ -1,6 +1,4 @@
 import crypto from 'node:crypto';
-import { DISCORD_PROOF_PROMPT } from '../../src/agents/proofLearningAgent';
-
 type SessionType = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
 type TradeDirection = 'LONG' | 'SHORT';
@@ -77,7 +75,6 @@ function buildOutcomeUrl(args: Omit<OutcomeButtonArgs, 'direction'> & {
     dir: args.direction,
     hit: args.targetHit,
     pp: args.tradeTaken,
-    pm: args.tradeTaken ? DISCORD_PROOF_PROMPT : null,
   };
   const encodedPayload = base64Url(JSON.stringify(payload));
   const signature = signOutcomePayload(encodedPayload);
@@ -106,13 +103,14 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
     targetHit: TargetHit,
   ) => buildOutcomeUrl({ ...args, outcome, tradeResult, tradeTaken, direction, targetHit });
 
-  const win = makeUrl(`${args.direction.toLowerCase()}_win`, 'win', true, args.direction, 'NONE');
+  const t1Hit = makeUrl(`${args.direction.toLowerCase()}_t1_hit`, 'win', true, args.direction, 'T1');
+  const t2Hit = makeUrl(`${args.direction.toLowerCase()}_t2_hit`, 'win', true, args.direction, 'T2');
   const loss = makeUrl(`${args.direction.toLowerCase()}_loss`, 'loss', true, args.direction, 'STOP');
   const scratch = makeUrl('scratch', 'scratch', true, args.direction, 'NONE');
   const missed = makeUrl('missed_trade', 'missed_trade', false, args.direction, 'NONE');
   const noTrade = makeUrl('not_taken', 'no_trade', false, 'NONE', 'NONE');
 
-  if (!win || !loss || !scratch || !missed || !noTrade) {
+  if (!t1Hit || !t2Hit || !loss || !scratch || !missed || !noTrade) {
     console.warn('Outcome buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
     return undefined;
   }
@@ -120,20 +118,30 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
   const directionLabel = args.direction === 'LONG' ? 'Long' : 'Short';
   const winEmoji = args.direction === 'LONG' ? '🟢' : '🔴';
 
-  return [{
-    type: 1,
-    components: [
-      outcomeButton(`${directionLabel} Win`, winEmoji, win),
-      outcomeButton(`${directionLabel} Loss`, '🛑', loss),
-      outcomeButton('Scratch', '⚪', scratch),
-      outcomeButton('Missed', '⏭️', missed),
-      outcomeButton('No Trade', '🚫', noTrade),
-    ],
-  }];
+  return [
+    {
+      type: 1,
+      components: [
+        outcomeButton(`${directionLabel} T1 Hit`, winEmoji, t1Hit),
+        outcomeButton(`${directionLabel} T2 Hit`, winEmoji, t2Hit),
+        outcomeButton(`${directionLabel} Stopped`, '🛑', loss),
+        outcomeButton('Scratch', '⚪', scratch),
+        outcomeButton('No Trade', '🚫', noTrade),
+      ],
+    },
+    {
+      type: 1,
+      components: [
+        outcomeButton('Missed', '⏭️', missed),
+      ],
+    },
+  ];
 }
 
 export function discordWebhookUrlForPayload(webhookUrl: string, components?: unknown[]): string {
   if (!components?.length) return webhookUrl;
-  const separator = webhookUrl.includes('?') ? '&' : '?';
-  return `${webhookUrl}${separator}with_components=true`;
+  const url = new URL(webhookUrl);
+  url.searchParams.set('with_components', 'true');
+  url.searchParams.set('wait', 'true');
+  return url.toString();
 }

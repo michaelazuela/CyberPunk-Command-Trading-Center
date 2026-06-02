@@ -458,6 +458,53 @@ async function upsertDiscordAlertRagRecord(args: {
   }
 }
 
+async function attachDiscordMessageReceiptToRagRecord(args: {
+  planVersionId: string;
+  discordMessageId: string | null;
+  webhookSource: string | null;
+}): Promise<void> {
+  if (!args.discordMessageId) return;
+  const supabaseUrl = supabaseRestUrl();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!supabaseUrl || !serviceRoleKey) return;
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+  const lookup = await fetch(
+    `${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
+    { headers },
+  );
+  if (!lookup.ok) {
+    console.warn(`Discord alert message receipt lookup skipped (${lookup.status}).`);
+    return;
+  }
+  const rows = await lookup.json().catch(() => []);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!row?.id) return;
+  const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object' ? row.trade_plan_json : {};
+  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(row.id)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({
+      trade_plan_json: {
+        ...existingPlanJson,
+        discordMessage: {
+          messageId: args.discordMessageId,
+          webhookSource: args.webhookSource,
+          editAfterOutcome: true,
+          storedAt: new Date().toISOString(),
+        },
+      },
+    }),
+  });
+  if (!update.ok) {
+    console.warn(`Discord alert message receipt update skipped (${update.status}).`);
+  }
+}
+
 function currentPriceFromAnalysis(analysis: AnalysisResult): number | null {
   const currentPrice = analysis.structuredChartContext?.keyLevels?.currentPrice;
   if (typeof currentPrice === 'number' && Number.isFinite(currentPrice)) return currentPrice;
@@ -1077,10 +1124,10 @@ async function formatPremarketPayload(tradeDate: string, context: Partial<ChartC
   };
 }
 
-async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, files: string[] = []): Promise<void> {
+async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, files: string[] = []): Promise<{ discordMessageId: string | null }> {
   if (dryRun) {
     console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
-    return;
+    return { discordMessageId: null };
   }
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) {
@@ -1117,6 +1164,14 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
       });
   if (!response.ok) {
     throw new Error(`Discord webhook failed (${response.status}).`);
+  }
+  const bodyText = await response.text().catch(() => '');
+  if (!bodyText.trim()) return { discordMessageId: null };
+  try {
+    const parsed = JSON.parse(bodyText);
+    return { discordMessageId: typeof parsed?.id === 'string' ? parsed.id : null };
+  } catch {
+    return { discordMessageId: null };
   }
 }
 
@@ -1197,7 +1252,12 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
     },
   });
   validateDiscordPayload(payload, files);
-  await postDiscord(payload, dryRun, files);
+  const receipt = await postDiscord(payload, dryRun, files);
+  await attachDiscordMessageReceiptToRagRecord({
+    planVersionId,
+    discordMessageId: receipt.discordMessageId,
+    webhookSource: dryRun ? 'dry_run' : 'DISCORD_WEBHOOK_URL',
+  });
 }
 
 async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<void> {
