@@ -3,11 +3,13 @@ import { SetupType, type SetupCandidate } from '../types';
 export type IctModelLabel =
   | 'Sweep -> MSS -> FVG Retrace'
   | 'Turtle Soup Reversal'
+  | 'HTF Draw Continuation After Raid/Reclaim'
   | 'ICT setup';
 
 export function normalizeIctModelLabel(setupType?: SetupType | string | null): IctModelLabel {
   if (setupType === SetupType.SweepMssFvgRetrace) return 'Sweep -> MSS -> FVG Retrace';
   if (setupType === SetupType.TurtleSoup) return 'Turtle Soup Reversal';
+  if (setupType === SetupType.HtfDrawContinuationAfterRaid) return 'HTF Draw Continuation After Raid/Reclaim';
   return 'ICT setup';
 }
 

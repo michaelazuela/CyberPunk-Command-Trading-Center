@@ -32,6 +32,7 @@ export enum SetupType {
   FairValueGap = 'FairValueGap',
   FvgImbalancePullback = 'FvgImbalancePullback',
   MarketStructureShift = 'MarketStructureShift',
+  HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
   InitialBalanceExtension = 'InitialBalanceExtension',
@@ -678,6 +679,7 @@ export interface ChartContext {
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
   multiTimeframeContext?: MultiTimeframeContext;
+  htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   higherTimeframeThesis?: HigherTimeframeThesis;
   structureQualityContext?: StructureQualityContext;
   dealingRangeQuality?: DealingRangeQuality;
@@ -705,6 +707,69 @@ export interface ChartContext {
   extractionWarnings?: ChartExtractionWarnings;
   marketContext: string;
   ocrText?: string | null;
+}
+
+export type TradingPlanCandidateState =
+  | 'HTF_DRAW_DETECTED'
+  | 'RAID_RECLAIM_DEVELOPING'
+  | 'MSS_TRIGGER_PENDING'
+  | 'MSS_TRIGGER_CONFIRMED'
+  | 'REVERSAL_DELIVERY_PLAN_CANDIDATE'
+  | 'QUALIFIED_CONDITIONAL'
+  | 'EXECUTABLE'
+  | 'NO_QUALIFIED_STATE';
+
+export interface TimeframeMssCandidateState {
+  timeframe: '4H' | '1H' | '15M' | '5M';
+  direction: 'bullish' | 'bearish' | 'neutral' | 'unknown';
+  status:
+    | 'potential_mss'
+    | 'confirmed'
+    | 'failed'
+    | 'pending_confirm'
+    | 'not_confirmed'
+    | 'conflicting'
+    | 'unknown';
+  lifecycleState:
+    | 'no_mss'
+    | 'potential_mss'
+    | 'mss_trigger_pending'
+    | 'confirmed_mss'
+    | 'post_mss_digestion'
+    | 'failed_mss'
+    | 'opposite_mss_confirmed'
+    | 'conflicting_mss'
+    | 'unknown';
+  evidence: string[];
+  invalidationLevel?: number;
+  confirmationLevel?: number;
+  externalLiquidityTarget?: string;
+  confidence: number;
+}
+
+export interface HtfLiquidityDrawCandidateState {
+  source: 'ninjatrader_ohlc';
+  authority: 'ohlc_facts_only';
+  boundary: 'context_only_not_execution_authority' | 'candidate_creation_only_not_execution_authority';
+  macroContext: 'bullish' | 'bearish' | 'neutral' | 'unknown' | 'conflicting';
+  liquidityRaidState: 'sell_side_raid' | 'buy_side_raid' | 'none' | 'unknown';
+  classification:
+    | 'HTF_DRAW_DETECTED'
+    | 'RAID_RECLAIM_DEVELOPING'
+    | 'MSS_TRIGGER_PENDING'
+    | 'MSS_TRIGGER_CONFIRMED'
+    | 'NO_QUALIFIED_STATE'
+    | 'FAILED_MSS'
+    | 'POST_MSS_DIGESTION'
+    | 'CONFLICTING_MSS';
+  timeframeStates: TimeframeMssCandidateState[];
+  fiveMinuteState: TimeframeMssCandidateState;
+  htfDrawContinuationPending: boolean;
+  confidence: number;
+  notes: string[];
+  blockers: string[];
+  createsTradingPlanCandidate: boolean;
+  approvesExecution: false;
 }
 
 export interface BiasAssessment {
@@ -793,6 +858,9 @@ export interface MissingLevelRequirement {
 export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
+  candidateState?: TradingPlanCandidateState;
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss';
+  htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;
   confidence: 'High' | 'Medium' | 'Low';

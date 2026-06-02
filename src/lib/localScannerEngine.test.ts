@@ -556,6 +556,18 @@ assert.equal(turtleJournal.modelType, 'Turtle Soup Reversal');
 assert.ok(turtleJournal.setupTags.includes('Turtle Soup'));
 assert.ok(turtleJournal.setupTags.includes('breaker/FVG confluence'));
 
+const htfDrawJournal = buildTradeJournalRecord({
+  dateTime: '2026-05-19T10:18:00-04:00',
+  instrument: 'MES',
+  session: 'morning',
+  candidate: candidate({
+    setupType: SetupType.HtfDrawContinuationAfterRaid,
+    scenarioLabel: 'HTF Draw Continuation After Raid/Reclaim',
+    evidence: ['HTF liquidity draw detected', '5M MSS trigger confirmed', 'sell-side raid + bullish 5M MSS'],
+  }),
+});
+assert.equal(htfDrawJournal.modelType, 'HTF Draw Continuation After Raid/Reclaim');
+
 for (const setupType of [
   SetupType.LiquiditySweep,
   SetupType.FairValueGap,
@@ -635,8 +647,10 @@ for (const setupType of [
 
 assert.equal(normalizeIctModelLabel(SetupType.SweepMssFvgRetrace), 'Sweep -> MSS -> FVG Retrace');
 assert.equal(normalizeIctModelLabel(SetupType.TurtleSoup), 'Turtle Soup Reversal');
+assert.equal(normalizeIctModelLabel(SetupType.HtfDrawContinuationAfterRaid), 'HTF Draw Continuation After Raid/Reclaim');
 assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.SweepMssFvgRetrace })), 'Sweep -> MSS -> FVG Retrace');
 assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.TurtleSoup })), 'Turtle Soup Reversal');
+assert.equal(normalizeCandidateIctModelLabel(candidate({ setupType: SetupType.HtfDrawContinuationAfterRaid })), 'HTF Draw Continuation After Raid/Reclaim');
 
 assert.equal(
   actualResultRFromExit({ direction: 'LONG', entry: 100, stop: 96, exit: 108 }),

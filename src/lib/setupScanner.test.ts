@@ -728,6 +728,166 @@ function withBigPictureStructure(context: ChartContext, alignedDirection: 'LONG'
   };
 }
 
+function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartContext> = {}): ChartContext {
+  const bullish = direction === 'LONG';
+  const context = structuredContext();
+  return {
+    ...context,
+    sessionType: 'morning',
+    chartTimestamp: '2026-06-01T10:35:00-04:00',
+    marketContext: 'HTF draw continuation after raid/reclaim fixture.',
+    keyLevels: {
+      ...context.keyLevels,
+      currentPrice: bullish ? 7604 : 7600,
+      activeSwingLow: bullish ? 7580 : 7596,
+      activeSwingHigh: bullish ? 7606 : 7624,
+      previousDayHigh: bullish ? 7624 : context.keyLevels.previousDayHigh,
+      previousDayLow: bullish ? context.keyLevels.previousDayLow : 7580,
+      overnightHigh: bullish ? 7632.75 : context.keyLevels.overnightHigh,
+      overnightLow: bullish ? context.keyLevels.overnightLow : 7576,
+    },
+    marketStructure: {
+      trend: bullish ? 'bullish' : 'bearish',
+      higherHigh: bullish,
+      higherLow: bullish,
+      lowerHigh: !bullish,
+      lowerLow: !bullish,
+      marketStructureShift: false,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: false,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: bullish ? 'bullish' : 'bearish',
+      expansionCandlePresent: false,
+      rejectionWickPresent: false,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: false,
+      pullbackPresent: false,
+      closeAboveKeyLevel: bullish,
+      closeBelowKeyLevel: !bullish,
+    },
+    fvgZones: [],
+    liquidityEvents: [],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    failedBreakEvents: [],
+    displacementCandles: [],
+    setupReadyFacts: {
+      sweepThenReclaim: false,
+      breakOfStructure: false,
+      pullbackIntoFvg: false,
+      fvgReclaimed: false,
+    },
+    setupEvidence: {},
+    proposedEntry: bullish ? 7604 : 7600,
+    proposedStop: bullish ? 7600 : 7604,
+    riskPoints: 4,
+    riskStatus: 'WithinLimit',
+    entryConfirmed: false,
+    stopConfirmed: false,
+    targetObjectives: [{
+      label: bullish ? 'Prior RTH high / full ETH high' : 'Prior RTH low / full ETH low',
+      price: bullish ? 7624 : 7580,
+      direction,
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 92,
+      reason: 'External liquidity draw target.',
+    }],
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'context_only_not_execution_authority',
+      macroContext: bullish ? 'bullish' : 'bearish',
+      liquidityRaidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
+      classification: 'MSS_TRIGGER_CONFIRMED',
+      htfDrawContinuationPending: true,
+      confidence: 86,
+      notes: ['HTF draw continuation fixture.'],
+      blockers: ['Execution still requires deterministic app gates.'],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: bullish ? 'bullish' : 'bearish',
+        status: 'confirmed',
+        lifecycleState: 'confirmed_mss',
+        evidence: [
+          bullish
+            ? 'Confirmed close above prior 5M swing high 7602 with displacement.'
+            : 'Confirmed close below prior 5M swing low 7602 with displacement.',
+        ],
+        confirmationLevel: bullish ? 7602 : 7602,
+        invalidationLevel: bullish ? 7580 : 7624,
+        externalLiquidityTarget: bullish ? 'prior RTH high / full ETH high' : 'prior RTH low / full ETH low',
+        confidence: 90,
+      },
+      timeframeStates: [
+        {
+          timeframe: '4H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['4H draw supports the direction.'],
+          externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '1H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['1H structure supports the direction.'],
+          externalLiquidityTarget: bullish ? 'prior RTH high' : 'prior RTH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '15M',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'potential_mss',
+          lifecycleState: 'potential_mss',
+          evidence: ['15M raid/reclaim is potential but aligned.'],
+          externalLiquidityTarget: bullish ? 'prior RTH high' : 'prior RTH low',
+          confidence: 70,
+        },
+        {
+          timeframe: '5M',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: [
+            bullish
+              ? 'Confirmed close above prior 5M swing high 7602 with displacement.'
+              : 'Confirmed close below prior 5M swing low 7602 with displacement.',
+          ],
+          confirmationLevel: 7602,
+          invalidationLevel: bullish ? 7580 : 7624,
+          externalLiquidityTarget: bullish ? 'prior RTH high / full ETH high' : 'prior RTH low / full ETH low',
+          confidence: 90,
+        },
+      ],
+    },
+    ...overrides,
+  };
+}
+
+function htfPathwayCandidate(result: ReturnType<typeof scanSetupCandidates>) {
+  return result.candidates.find((candidate) =>
+    candidate.pathway === 'htf_liquidity_draw_mss' &&
+    candidate.detectedStatus !== SetupCandidateStatus.NotDetected
+  ) || null;
+}
+
+function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
+  return (
+    candidate.setupType === SetupType.SweepMssFvgRetrace ||
+    candidate.setupType === SetupType.TurtleSoup ||
+    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
+  );
+}
+
 const tests: Array<[string, () => void]> = [
   ['Phase G computeZoneOverlap returns valid overlap for intersecting zones', () => {
     assert.deepEqual(computeZoneOverlap(7398, 7401, 7400, 7402), {
@@ -867,7 +1027,7 @@ const tests: Array<[string, () => void]> = [
     const momentum = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumRunaway);
 
     assert.equal(momentum, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['supporting evidence text contributes to the primary model without creating support candidates', () => {
@@ -1005,7 +1165,7 @@ const tests: Array<[string, () => void]> = [
     const breather = result.candidates.find((candidate) => candidate.setupType === SetupType.MomentumPullbackBreatherReclaim);
 
     assert.equal(breather, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['structured chart context is preferred over narrative text matching', () => {
@@ -1294,6 +1454,212 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate, null);
   }],
 
+  ['Phase 3 bullish HTF draw pathway creates trading-plan candidate after sell-side raid and confirmed bullish 5M MSS', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+    const primaryModel = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.direction, 'LONG');
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(htfCandidate.blockReason, null);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.createsTradingPlanCandidate, true);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.approvesExecution, false);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.boundary, 'candidate_creation_only_not_execution_authority');
+    assert.ok(htfCandidate.evidence.includes('5M MSS trigger confirmed'));
+    assert.ok(htfCandidate.evidence.includes('External liquidity target exists: full ETH high'));
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+    assert.equal(primaryModel?.detectedStatus, SetupCandidateStatus.NotDetected);
+  }],
+
+  ['Phase 3 bearish HTF draw pathway creates trading-plan candidate after buy-side raid and confirmed bearish 5M MSS', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('SHORT'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.direction, 'SHORT');
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(htfCandidate.blockReason, null);
+    assert.ok(htfCandidate.requiredTrigger?.includes('buy-side raid'));
+    assert.ok(htfCandidate.evidence.includes('5M MSS trigger confirmed'));
+    assert.ok(htfCandidate.evidence.includes('External liquidity target exists: full ETH low'));
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
+  ['Phase 3 15M potential MSS supports candidate creation only when 5M MSS confirms', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'potential_mss');
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+  }],
+
+  ['Phase 3 15M pending confirm still supports candidate creation after 5M MSS confirms', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '15M'
+        ? { ...state, status: 'pending_confirm', lifecycleState: 'mss_trigger_pending', evidence: ['15M raid/reclaim is pending confirmation but aligned.'] }
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'pending_confirm');
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
+  ['Phase 3 no HTF draw pathway candidate is created when the 5M MSS trigger is missing', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'not_confirmed',
+      lifecycleState: 'no_mss',
+      evidence: ['5M has not confirmed a swing break/reclaim.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3 5M potential MSS stays pending and cannot create a reversal-delivery candidate', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'MSS_TRIGGER_PENDING';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'potential_mss',
+      lifecycleState: 'mss_trigger_pending',
+      evidence: ['Potential 5M MSS forming, but no confirmed close through swing high with displacement yet.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.ok(result.candidates.every((candidate) => candidate.candidateState !== 'REVERSAL_DELIVERY_PLAN_CANDIDATE'));
+    assert.ok(result.candidates.every((candidate) => candidate.executionStatus !== ExecutionStatus.Executable));
+  }],
+
+  ['Phase 3 4H potential MSS updates macro context but does not create a candidate by itself', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'HTF_DRAW_DETECTED';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'not_confirmed',
+      lifecycleState: 'no_mss',
+      evidence: ['5M trigger is absent.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '4H'
+        ? { ...state, status: 'potential_mss', lifecycleState: 'potential_mss', evidence: ['4H potential MSS context only.'] }
+        : state.timeframe === '5M'
+        ? context.htfLiquidityDrawState!.fiveMinuteState
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(context.htfLiquidityDrawState.timeframeStates.find((state) => state.timeframe === '4H')?.status, 'potential_mss');
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3 1H potential MSS updates session structure but does not create a candidate by itself', () => {
+    const context = htfMssContext('SHORT');
+    context.htfLiquidityDrawState!.classification = 'HTF_DRAW_DETECTED';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'not_confirmed',
+      lifecycleState: 'no_mss',
+      evidence: ['5M trigger is absent.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '1H'
+        ? { ...state, status: 'potential_mss', lifecycleState: 'potential_mss', evidence: ['1H potential MSS context only.'] }
+        : state.timeframe === '5M'
+        ? context.htfLiquidityDrawState!.fiveMinuteState
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(context.htfLiquidityDrawState.timeframeStates.find((state) => state.timeframe === '1H')?.status, 'potential_mss');
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3 HTF draw alone does not create an executable trade', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'HTF_DRAW_DETECTED';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'not_confirmed',
+      lifecycleState: 'no_mss',
+      evidence: ['HTF bullish draw exists, but 5M MSS is absent.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3 deterministic executable gates authorize execution after HTF/MSS model gates complete', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
+  ['Phase 3 RiskTooWide remains blocking for HTF/MSS pathway candidates', () => {
+    const context = htfMssContext('LONG', {
+      proposedEntry: 7604,
+      proposedStop: 7588,
+      riskPoints: 16,
+      riskStatus: 'RiskTooWide',
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.candidateState, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(htfCandidate.blockReason, NoTradeReason.RiskTooWide);
+    assert.ok(htfCandidate.missingEvidence.includes('RiskTooWide remains a hard execution block'));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3 HTF/MSS pathway can create a candidate when the legacy scanner identifies no setup', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+    const legacyDetected = result.candidates.filter((candidate) => candidate.pathway !== 'htf_liquidity_draw_mss' && candidate.detectedStatus === SetupCandidateStatus.Detected);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(legacyDetected.length, 0);
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
   ['Phase F bullish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
     const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: bullishTurtleSoupContext(), result: null });
     const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
@@ -1399,7 +1765,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.evidence.includes('High-quality morning time window'));
     assert.ok(turtle.evidence.includes('Draw on opposing liquidity identified'));
     assert.ok(turtle.evidence.includes('Sweep-first sequence confirmed'));
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['Late lunch context stays supportive only and requires cleaner no-chase structure', () => {
@@ -1413,7 +1779,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle);
     assert.ok(turtle.evidence.includes('Approved lunch time window'));
     assert.ok(turtle.missingEvidence.includes('Late-window setup requires cleaner structure and no chase entry'));
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['Major BOS after inducement sweep boosts approved Model 1 structure quality', () => {
@@ -1492,7 +1858,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
     assert.ok(turtle.evidence.includes('Major BOS confirmed after inducement sweep'));
     assert.ok(turtle.evidence.includes('Valid pullback confirmed'));
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['Minor BOS without inducement downgrades otherwise valid setup to Conditional', () => {
@@ -1635,7 +2001,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
     assert.ok(turtle.missingEvidence.includes('Random CHOCH location; do not flip bias yet'));
     assert.ok(turtle.missingEvidence.includes('Structure signal conflicts with higher-timeframe thesis'));
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['Premium discount alignment supports longs from discount', () => {
@@ -1935,7 +2301,7 @@ const tests: Array<[string, () => void]> = [
       result: resultWithText('Neutral structured context should preserve the primary-model-only candidate set.', 7397, 7393.75, 'TRIGGERED'),
     });
 
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
     for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
       assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
     }
@@ -2022,7 +2388,7 @@ const tests: Array<[string, () => void]> = [
     });
 
     assert.equal(result.candidates.find((candidate) => candidate.setupType === SetupType.BreakerBlock), undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['Phase G Breaker plus FVG overlap cannot override missing Model 1 sweep', () => {
@@ -2160,7 +2526,7 @@ const tests: Array<[string, () => void]> = [
       result: resultWithText('Neutral structured context should preserve the primary-model-only candidate set.', 7397, 7393.75, 'TRIGGERED'),
     });
 
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
     for (const entry of SETUP_REGISTRY.filter((entry) => entry.role === 'deprecated')) {
       assert.equal(result.candidates.find((candidate) => candidate.setupType === entry.setupType), undefined);
     }
@@ -2188,7 +2554,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.deepEqual(
       new Set(result.candidates.map((candidate) => candidate.setupType)),
-      new Set([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup])
+      new Set([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup, SetupType.HtfDrawContinuationAfterRaid])
     );
     assert.ok(result.candidates.every((candidate) => candidate.scenarioLabel !== 'BreakerBlock'));
   }],
@@ -2449,7 +2815,7 @@ const tests: Array<[string, () => void]> = [
     const failedHigh = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedHighReversal);
 
     assert.equal(failedHigh, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
   }],
 
@@ -2462,7 +2828,7 @@ const tests: Array<[string, () => void]> = [
     const failedHigh = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedHighReversal);
 
     assert.equal(failedHigh, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.LunchFailedHighReversal);
   }],
 
@@ -2528,7 +2894,7 @@ const tests: Array<[string, () => void]> = [
     const failedLow = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedLowReversal);
 
     assert.equal(failedLow, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['deprecated lunch compression evidence does not create an active candidate', () => {
@@ -2565,7 +2931,7 @@ const tests: Array<[string, () => void]> = [
     const compression = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchCompressionBreakout);
 
     assert.equal(compression, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['deprecated lunch failed-continuation evidence does not create an active candidate', () => {
@@ -2595,7 +2961,7 @@ const tests: Array<[string, () => void]> = [
     const failedContinuation = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchFailedContinuation);
 
     assert.equal(failedContinuation, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
   ['deprecated lunch range-reclaim evidence does not create an active candidate', () => {
@@ -2629,7 +2995,7 @@ const tests: Array<[string, () => void]> = [
     const rangeReclaim = result.candidates.find((candidate) => candidate.setupType === SetupType.LunchRangeReclaim);
 
     assert.equal(rangeReclaim, undefined);
-    assert.ok(result.candidates.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 ];
 

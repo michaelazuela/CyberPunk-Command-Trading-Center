@@ -27,7 +27,11 @@ function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: st
   assertContainsAll(actual, expected, label);
 }
 
-const primaryExpected = [SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup];
+const primaryExpected = [
+  SetupType.SweepMssFvgRetrace,
+  SetupType.TurtleSoup,
+  SetupType.HtfDrawContinuationAfterRaid,
+];
 const supportingExpected = [
   SetupType.LiquiditySweep,
   SetupType.FairValueGap,

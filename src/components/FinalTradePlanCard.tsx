@@ -80,6 +80,7 @@ function formatSetupType(setupType?: SetupType | string): string {
     [SetupType.FairValueGap]: 'Fair Value Gap',
     [SetupType.FvgImbalancePullback]: 'FVG / Imbalance Pullback',
     [SetupType.MarketStructureShift]: 'Market Structure Shift / ChoCH',
+    [SetupType.HtfDrawContinuationAfterRaid]: 'HTF Draw Continuation After Raid/Reclaim',
     [SetupType.OpeningOrderBlock]: 'Opening Order Block',
     [SetupType.EqualHighsLows]: 'Equal Highs / Equal Lows',
     [SetupType.InitialBalanceExtension]: 'Initial Balance Extension',

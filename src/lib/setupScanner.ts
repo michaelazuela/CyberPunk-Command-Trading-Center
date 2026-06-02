@@ -6,6 +6,7 @@ import {
   SetupCandidate,
   SetupCandidateStatus,
   SetupType,
+  TradingPlanCandidateState,
 } from '../types';
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 import {
@@ -17,6 +18,8 @@ import {
 type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
 type ReadConfidence = Exclude<ChartContext['levelReadConfidence'], undefined>;
+
+export const HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD = 70;
 
 interface ZoneOverlap {
   valid: boolean;
@@ -313,6 +316,19 @@ function isMorningOrLunchSession(sessionType?: ChartContext['sessionType'] | Set
     sessionType === 'replay_morning' ||
     sessionType === 'lunch' ||
     sessionType === 'replay_lunch';
+}
+
+function isInsideApprovedSetupScanWindow(chartContext?: ChartContext | null): boolean {
+  if (!chartContext || !isMorningOrLunchSession(chartContext.sessionType)) return false;
+  const minutes = latestChartMinutes(chartContext);
+  if (minutes === null) return false;
+  if (chartContext.sessionType === 'morning' || chartContext.sessionType === 'replay_morning') {
+    return minutes >= 10 * 60 && minutes < 12 * 60;
+  }
+  if (chartContext.sessionType === 'lunch' || chartContext.sessionType === 'replay_lunch') {
+    return minutes >= 12 * 60 && minutes < 15 * 60 + 30;
+  }
+  return false;
 }
 
 function bigPictureStructureForDirection(chartContext: ChartContext | null | undefined, direction: Direction): {
@@ -2016,6 +2032,235 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
   };
 }
 
+function notDetectedHtfDrawCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'htf_liquidity_draw_mss',
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'HTF liquidity draw model requires structured 4H/1H/15M/5M OHLC-derived state.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'No HTF draw continuation candidate. Wait for structured HTF draw, raid/reclaim, confirmed 5M MSS, and deterministic app gates.',
+    reducedRiskPlan: null,
+  };
+}
+
+function htfDirectionToPlanDirection(direction: string | null | undefined): Direction {
+  if (direction === 'bullish') return 'LONG';
+  if (direction === 'bearish') return 'SHORT';
+  return 'NO TRADE';
+}
+
+function htfStateForTimeframe(chartContext: ChartContext, timeframe: '4H' | '1H' | '15M' | '5M') {
+  return chartContext.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === timeframe) ||
+    (timeframe === '5M' ? chartContext.htfLiquidityDrawState?.fiveMinuteState : undefined);
+}
+
+function htfMssConfirmationTypeValid(fiveMinuteEvidence: string[]): boolean {
+  const text = fiveMinuteEvidence.join(' ').toLowerCase();
+  return text.includes('confirmed close') &&
+    (text.includes('swing high') || text.includes('swing low')) &&
+    text.includes('displacement');
+}
+
+function htfMacroSupportsDirection(chartContext: ChartContext, direction: Direction): boolean {
+  const state = chartContext.htfLiquidityDrawState;
+  if (!state || direction === 'NO TRADE') return false;
+  if (state.macroContext === 'conflicting') return false;
+  if (state.macroContext === 'neutral' || state.macroContext === 'unknown') return true;
+  return htfDirectionToPlanDirection(state.macroContext) === direction;
+}
+
+function fifteenMinuteSupportsCandidate(chartContext: ChartContext, direction: Direction): boolean {
+  const fifteen = htfStateForTimeframe(chartContext, '15M');
+  if (!fifteen || direction === 'NO TRADE') return false;
+  if (fifteen.direction !== 'neutral' && fifteen.direction !== 'unknown' && htfDirectionToPlanDirection(fifteen.direction) !== direction) {
+    return false;
+  }
+  return fifteen.status === 'confirmed' || fifteen.status === 'potential_mss' || fifteen.status === 'pending_confirm';
+}
+
+function htfExternalTargetLabel(chartContext: ChartContext, direction: Direction): string | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const directionalTimeframeTarget = chartContext.htfLiquidityDrawState?.timeframeStates.find((state) =>
+    htfDirectionToPlanDirection(state.direction) === direction &&
+    typeof state.externalLiquidityTarget === 'string' &&
+    state.externalLiquidityTarget.trim().length > 0
+  )?.externalLiquidityTarget;
+  if (directionalTimeframeTarget) return directionalTimeframeTarget;
+  const objective = (chartContext.targetObjectives || []).find((target) =>
+    target.direction === direction &&
+    target.type !== 'imbalance_zone' &&
+    target.type !== 'gap' &&
+    isReadableConfidence(target.confidence)
+  );
+  if (objective) return `${objective.label} ${objective.price}`;
+  const keyLevels = chartContext.keyLevels || {};
+  if (direction === 'LONG') {
+    if (keyLevels.previousDayHigh || keyLevels.priorDayHigh) return 'prior RTH high / previous day high';
+    if (keyLevels.overnightHigh) return 'full ETH high';
+    if (keyLevels.londonHigh) return 'London high';
+    if (keyLevels.activeSwingHigh) return 'active swing high';
+  } else {
+    if (keyLevels.previousDayLow || keyLevels.priorDayLow) return 'prior RTH low / previous day low';
+    if (keyLevels.overnightLow) return 'full ETH low';
+    if (keyLevels.londonLow) return 'London low';
+    if (keyLevels.activeSwingLow) return 'active swing low';
+  }
+  return null;
+}
+
+function candidateStateForHtfCandidate(args: {
+  risk: number | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  invalidation: string | null;
+  riskStatus?: ChartContext['riskStatus'];
+}): TradingPlanCandidateState {
+  const riskTooWide = args.riskStatus === 'RiskTooWide' || (args.risk !== null && args.risk > TRADE_RULES.maxRiskPoints);
+  if (!riskTooWide && args.entry !== null && args.stop !== null && args.target1 !== null && args.target2 !== null && args.invalidation) {
+    return 'EXECUTABLE';
+  }
+  return 'REVERSAL_DELIVERY_PLAN_CANDIDATE';
+}
+
+function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  const state = chartContext?.htfLiquidityDrawState;
+  if (!chartContext || !state) return null;
+  const fiveMinute = state.fiveMinuteState;
+  const direction = htfDirectionToPlanDirection(fiveMinute.direction);
+  const fifteenMinute = htfStateForTimeframe(chartContext, '15M');
+  const targetLabel = htfExternalTargetLabel(chartContext, direction);
+  const macroSupported = htfMacroSupportsDirection(chartContext, direction);
+  const fifteenSupports = fifteenMinuteSupportsCandidate(chartContext, direction);
+  const fiveMinuteConfirmed = fiveMinute.status === 'confirmed' &&
+    (fiveMinute.lifecycleState === 'confirmed_mss' || fiveMinute.lifecycleState === 'post_mss_digestion') &&
+    htfMssConfirmationTypeValid(fiveMinute.evidence || []);
+  const confidence = Math.max(state.confidence || 0, fiveMinute.confidence || 0);
+
+  if (
+    !isInsideApprovedSetupScanWindow(chartContext) ||
+    direction === 'NO TRADE' ||
+    !fiveMinuteConfirmed ||
+    !macroSupported ||
+    !fifteenSupports ||
+    !targetLabel ||
+    confidence < HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD
+  ) {
+    return null;
+  }
+
+  const entry = parsePrice(chartContext.proposedEntry);
+  const stop = parsePrice(chartContext.proposedStop);
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const computed = computedTargets(direction, entry, stop);
+  const target2 = computed.target2;
+  const target1 = computed.target1;
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the sell-side raid/reclaim structure stop near ${stop}.`
+      : `Invalid if price trades above the buy-side raid/reclaim structure stop near ${stop}.`
+    : null;
+  const riskTooWide = chartContext.riskStatus === 'RiskTooWide' || (risk !== null && risk > TRADE_RULES.maxRiskPoints);
+  const candidateState = candidateStateForHtfCandidate({
+    risk,
+    entry,
+    stop,
+    target1,
+    target2,
+    invalidation,
+    riskStatus: chartContext.riskStatus,
+  });
+  const raidLabel = direction === 'LONG' ? 'sell-side raid + bullish 5M MSS' : 'buy-side raid + bearish 5M MSS';
+
+  return {
+    setupType: SetupType.HtfDrawContinuationAfterRaid,
+    scenarioLabel: 'HTF Draw Continuation After Raid/Reclaim',
+    candidateState,
+    pathway: 'htf_liquidity_draw_mss',
+    htfLiquidityDrawState: {
+      ...state,
+      boundary: 'candidate_creation_only_not_execution_authority',
+      createsTradingPlanCandidate: true,
+      approvesExecution: false,
+    },
+    direction,
+    detectedStatus: candidateState === 'EXECUTABLE' ? SetupCandidateStatus.Detected : SetupCandidateStatus.Conditional,
+    confidence: confidence >= 82 ? 'High' : 'Medium',
+    priority: 96,
+    entry,
+    stop,
+    target1,
+    target2,
+    riskPoints: risk,
+    invalidation,
+    entryClarity: entry !== null ? 0.85 : 0.25,
+    stopClarity: stop !== null ? 0.85 : 0.25,
+    targetClarity: target2 !== null ? 0.85 : 0.35,
+    proximityScore: 0.82,
+    levelContextScore: 18,
+    levelContextSummary: `HTF liquidity draw pathway aligned: ${raidLabel}; external target: ${targetLabel}.`,
+    evidence: Array.from(new Set([
+      'HTF liquidity draw detected',
+      `15M raid/reclaim support status: ${fifteenMinute?.status || 'unknown'}`,
+      '5M MSS trigger confirmed',
+      '5M swing break/reclaim confirmed with displacement',
+      `External liquidity target exists: ${targetLabel}`,
+      `Pathway state: ${candidateState}`,
+      ...(fiveMinute.evidence || []),
+    ])),
+    missingEvidence: Array.from(new Set([
+      ...(entry === null ? ['Clean retest or defined reclaim entry'] : []),
+      ...(stop === null ? ['Structure stop tied to raid/reclaim extreme'] : []),
+      ...(target2 === null ? ['External liquidity target price / valid target room'] : []),
+      ...(riskTooWide ? ['RiskTooWide remains a hard execution block'] : []),
+    ])),
+    executionStatus: candidateState === 'EXECUTABLE' ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
+    blockReason: riskTooWide ? NoTradeReason.RiskTooWide : null,
+    requiredTrigger: direction === 'LONG'
+      ? 'Long only after sell-side raid, reclaim, confirmed bullish 5M MSS with displacement, then clean retest or defined reclaim trigger.'
+      : 'Short only after buy-side raid, reclaim, confirmed bearish 5M MSS with displacement, then clean retest or defined reclaim trigger.',
+    nextAction: riskTooWide
+      ? 'HTF/MSS reversal-delivery candidate is present, but RiskTooWide blocks execution. Wait for a cleaner retest with protected structure inside max risk.'
+      : 'Executable model candidate: use only if the app-owned entry, stop, target, risk, invalidation, session, and canExecute gates remain confirmed.',
+    reducedRiskPlan: riskTooWide
+      ? {
+          direction,
+          entry: null,
+          stop: null,
+          target1: null,
+          target2: null,
+          requiredTrigger: 'Clean retest after confirmed 5M MSS that tightens risk inside the allowed limit.',
+          invalidation: 'Reduced-risk plan must define a protected structure stop beyond the raid/reclaim extreme.',
+          reasoning: 'HTF/MSS pathway is valid, but current entry-to-stop distance is too wide.',
+        }
+      : null,
+  };
+}
+
 export function rankSetupCandidate(candidate: SetupCandidate): number {
   const executionScore =
     candidate.executionStatus === ExecutionStatus.Executable ? 100 :
@@ -2038,6 +2283,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.evidence.includes('Breaker + FVG overlap confluence')
       ? 3
       : 0;
+  const htfReversalDeliveryBonus = candidate.pathway === 'htf_liquidity_draw_mss' ? 24 : 0;
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
     ? -60
     : 0;
@@ -2050,6 +2296,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     (candidate.levelContextScore || 0) +
     (candidate.proximityScore || 0) * 10 +
     confluenceBonus +
+    htfReversalDeliveryBonus +
     countertrendPenalty;
   candidate.rankScore = score;
   return score;
@@ -2057,8 +2304,17 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
 
 export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const text = buildSearchText(input);
-  const candidates = getPrimarySetupRegistry(input.sessionType)
-    .map((entry) => candidateForEntry(entry, input, text))
+  const htfCandidate = buildHtfLiquidityDrawCandidate(input);
+  const candidates = [
+    ...getPrimarySetupRegistry(input.sessionType)
+      .map((entry) =>
+        entry.setupType === SetupType.HtfDrawContinuationAfterRaid && htfCandidate
+          ? htfCandidate
+          : entry.setupType === SetupType.HtfDrawContinuationAfterRaid
+          ? notDetectedHtfDrawCandidate(entry)
+          : candidateForEntry(entry, input, text)
+      ),
+  ]
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 
   const bestExecutableCandidate = candidates.find((candidate) => candidate.executionStatus === ExecutionStatus.Executable) || null;

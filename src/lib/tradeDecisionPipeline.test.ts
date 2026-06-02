@@ -328,6 +328,163 @@ function withStructuredBias(context: Partial<ChartContext>, alignedDirection: 'L
   };
 }
 
+function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  const bullish = direction === 'LONG';
+  return structuredContext({
+    chartTimestamp: '2026-06-01T10:35:00-04:00',
+    keyLevels: {
+      currentPrice: bullish ? 7604 : 7600,
+      activeSwingLow: bullish ? 7580 : 7596,
+      activeSwingHigh: bullish ? 7606 : 7624,
+      priorDayHigh: bullish ? 7624 : null,
+      priorDayLow: bullish ? null : 7580,
+      overnightHigh: bullish ? 7632.75 : null,
+      overnightLow: bullish ? null : 7576,
+    },
+    marketStructure: {
+      trend: bullish ? 'bullish' : 'bearish',
+      higherHigh: bullish,
+      higherLow: bullish,
+      lowerHigh: !bullish,
+      lowerLow: !bullish,
+      marketStructureShift: false,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: false,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: bullish ? 'bullish' : 'bearish',
+      expansionCandlePresent: false,
+      rejectionWickPresent: false,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: false,
+      pullbackPresent: false,
+      closeAboveKeyLevel: bullish,
+      closeBelowKeyLevel: !bullish,
+    },
+    setupEvidence: {},
+    fvgZones: [],
+    liquidityEvents: [],
+    liquiditySweeps: [],
+    reclaimEvents: [],
+    failedBreakEvents: [],
+    displacementCandles: [],
+    setupReadyFacts: {
+      sweepThenReclaim: false,
+      breakOfStructure: false,
+      pullbackIntoFvg: false,
+      fvgReclaimed: false,
+    },
+    proposedEntry: bullish ? 7604 : 7600,
+    proposedStop: bullish ? 7600 : 7604,
+    riskPoints: 4,
+    riskStatus: 'WithinLimit',
+    entryConfirmed: true,
+    stopConfirmed: true,
+    targetObjectives: [{
+      label: bullish ? 'Prior RTH high / full ETH high' : 'Prior RTH low / full ETH low',
+      price: bullish ? 7624 : 7580,
+      direction,
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 92,
+      reason: 'External liquidity draw target.',
+    }],
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      fourHour: { trend: bullish ? 'bullish' : 'bearish' },
+      oneHour: { trend: bullish ? 'bullish' : 'bearish' },
+      fifteenMinute: { trend: bullish ? 'bullish' : 'bearish' },
+      fiveMinute: { trend: bullish ? 'bullish' : 'bearish' },
+      alignment: {
+        macroBias: direction,
+        sessionBias: direction,
+        liquidityBias: direction,
+        executionBias: direction,
+        alignedDirection: direction,
+        conflict: false,
+        conflicts: [],
+        notes: [`HTF draw aligned ${direction}.`],
+      },
+    } as unknown as ChartContext['multiTimeframeContext'],
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'context_only_not_execution_authority',
+      macroContext: bullish ? 'bullish' : 'bearish',
+      liquidityRaidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
+      classification: 'MSS_TRIGGER_CONFIRMED',
+      htfDrawContinuationPending: true,
+      confidence: 86,
+      notes: ['HTF draw continuation pipeline fixture.'],
+      blockers: ['Execution still requires deterministic app gates.'],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: bullish ? 'bullish' : 'bearish',
+        status: 'confirmed',
+        lifecycleState: 'confirmed_mss',
+        evidence: [
+          bullish
+            ? 'Confirmed close above prior 5M swing high 7602 with displacement.'
+            : 'Confirmed close below prior 5M swing low 7602 with displacement.',
+        ],
+        confirmationLevel: 7602,
+        invalidationLevel: bullish ? 7580 : 7624,
+        externalLiquidityTarget: bullish ? 'prior RTH high / full ETH high' : 'prior RTH low / full ETH low',
+        confidence: 90,
+      },
+      timeframeStates: [
+        {
+          timeframe: '4H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['4H draw supports the direction.'],
+          externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '1H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['1H structure supports the direction.'],
+          externalLiquidityTarget: bullish ? 'prior RTH high' : 'prior RTH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '15M',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'potential_mss',
+          lifecycleState: 'potential_mss',
+          evidence: ['15M raid/reclaim is potential but aligned.'],
+          externalLiquidityTarget: bullish ? 'prior RTH high' : 'prior RTH low',
+          confidence: 70,
+        },
+        {
+          timeframe: '5M',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: [
+            bullish
+              ? 'Confirmed close above prior 5M swing high 7602 with displacement.'
+              : 'Confirmed close below prior 5M swing low 7602 with displacement.',
+          ],
+          confirmationLevel: 7602,
+          invalidationLevel: bullish ? 7580 : 7624,
+          externalLiquidityTarget: bullish ? 'prior RTH high / full ETH high' : 'prior RTH low / full ETH low',
+          confidence: 90,
+        },
+      ],
+    },
+    ...overrides,
+  });
+}
+
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -340,6 +497,14 @@ function assertSameSequence(input: Partial<TradeDecisionPipelineInput> = {}) {
 
 function stepStatus(result: ReturnType<typeof run>, step: TradeDecisionStep) {
   return result.auditTrail.find((item) => item.step === step)?.status;
+}
+
+function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
+  return (
+    candidate.setupType === SetupType.SweepMssFvgRetrace ||
+    candidate.setupType === SetupType.TurtleSoup ||
+    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
+  );
 }
 
 const tests: Array<[string, () => void]> = [
@@ -601,6 +766,26 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
     assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
     assert.equal(result.finalTradePlan.setupType, SetupType.SweepMssFvgRetrace);
+  }],
+
+  ['15b. Pipeline can approve the HTF draw continuation model when deterministic gates are complete', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'LONG',
+        reasoning: 'HTF bullish draw after sell-side raid and confirmed 5M MSS.',
+        structuredChartContext: htfDrawContinuationContext('LONG') as ChartContext,
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+    assert.equal(result.finalTradePlan.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.finalTradePlan.entry, 7604);
+    assert.equal(result.finalTradePlan.stop, 7600);
+    assert.equal(result.finalTradePlan.target1, 7610);
+    assert.equal(result.finalTradePlan.target2, 7612);
   }],
 
   ['16. Pipeline shows best conditional candidate when no executable candidate exists', () => {
@@ -978,7 +1163,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningFailedHighLiquidityRejection);
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1018,7 +1203,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1059,7 +1244,7 @@ const tests: Array<[string, () => void]> = [
 
     const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
     assert.equal(longCandidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1118,7 +1303,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(stepStatus(result, TradeDecisionStep.DetermineBias), 'fail');
     assert.equal(longCandidate, undefined);
     assert.equal(shortCandidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1185,7 +1370,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedLowReversal);
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1252,7 +1437,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.LunchFailedHighReversal);
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1320,7 +1505,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(staleEntries.length, 0);
     const longCandidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
     assert.equal(longCandidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1471,7 +1656,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningReclaimLong);
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1529,7 +1714,7 @@ const tests: Array<[string, () => void]> = [
 
     const candidate = result.setupCandidates?.find((item) => item.setupType === SetupType.MorningOpeningRangeContinuation && item.direction === 'LONG');
     assert.equal(candidate, undefined);
-    assert.ok(result.setupCandidates?.every((item) => item.setupType === SetupType.SweepMssFvgRetrace || item.setupType === SetupType.TurtleSoup));
+    assert.ok(result.setupCandidates?.every((item) => isPrimarySetupCandidate(item)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
@@ -1612,7 +1797,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(imbalance, undefined);
     const selected = selectBestTwoScenarios(result.setupCandidates || []);
     assert.ok(!selected.some((candidate) => candidate.setupType === SetupType.FvgImbalancePullback));
-    assert.ok(selected.every((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace || candidate.setupType === SetupType.TurtleSoup));
+    assert.ok(selected.every((candidate) => isPrimarySetupCandidate(candidate)));
     assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
   }],
 
