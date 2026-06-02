@@ -561,6 +561,9 @@ function targetOutcome(
 
 function targetLabelFromCandidate(candidate: SetupCandidate | null, direction: 'LONG' | 'SHORT' | 'NO TRADE'): string | undefined {
   if (!candidate || direction === 'NO TRADE') return undefined;
+  if (candidate.htfLiquidityDrawState?.externalLiquidityTarget) {
+    return candidate.htfLiquidityDrawState.externalLiquidityTarget;
+  }
   const target = candidate.targetObjectivePlan?.nearestLiquidityTarget ||
     candidate.targetObjectivePlan?.liquidityTarget1 ||
     candidate.targetObjectivePlan?.liquidityTarget2 ||
@@ -571,8 +574,17 @@ function targetLabelFromCandidate(candidate: SetupCandidate | null, direction: '
   return undefined;
 }
 
+function diagnosticTargetCandidate(input: BridgeDiagnosticReplayInput, candidate: SetupCandidate | null): SetupCandidate | null {
+  return candidate ||
+    input.scannerSelectedCandidate ||
+    input.normalizedPlan?.opportunitySelection?.bestConditionalCandidate ||
+    input.normalizedPlan?.opportunitySelection?.bestExecutableCandidate ||
+    candidatePool(input)[0] ||
+    null;
+}
+
 function buildHtfMssDiagnostics(input: BridgeDiagnosticReplayInput, direction: 'LONG' | 'SHORT' | 'NO TRADE', candidate: SetupCandidate | null): BridgeDiagnosticReplayReport['htfMssDiagnostics'] {
-  const targetLabel = targetLabelFromCandidate(candidate, direction);
+  const targetLabel = targetLabelFromCandidate(diagnosticTargetCandidate(input, candidate), direction);
   const sorted5m = sortedBars(input.bars5m);
   const state = buildHtfLiquidityDrawState({
     bars4H: sortedBars(input.bars240m),

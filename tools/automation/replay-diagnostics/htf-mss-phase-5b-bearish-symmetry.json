@@ -1,0 +1,304 @@
+{
+  "reportType": "htf_mss_phase_5b_bearish_symmetry",
+  "instrument": "MES",
+  "tradeDate": "2026-06-02",
+  "replayWindow": {
+    "from": "13:25",
+    "to": "14:10",
+    "timezone": "America/New_York"
+  },
+  "replayDataSource": "new_focused_fixture",
+  "boundary": "diagnostic_replay_only_not_execution_authority",
+  "htfLiquidityDrawState": {
+    "classification": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
+    "planDirection": "SHORT",
+    "drawDirection": "sell_side",
+    "macroContext": "bearish",
+    "raidState": "buy_side_raid",
+    "reclaimStatus": "confirmed",
+    "fiveMinuteMssTriggerConfirmed": true,
+    "fiveMinuteMssConfirmationType": "swing_break_with_displacement",
+    "fifteenMinuteConfirmationStatus": "potential_mss",
+    "postShiftState": "post_mss_digestion",
+    "externalLiquidityTarget": "prior RTH low / London low / full ETH low 7580.00, 7576.00",
+    "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
+    "confidence": 100,
+    "blockers": [
+      "HTF/MSS state population does not approve execution by itself.",
+      "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
+    ],
+    "timeframeStack": [
+      {
+        "timeframe": "4H",
+        "direction": "bearish",
+        "status": "potential_mss",
+        "lifecycleState": "potential_mss",
+        "confidence": 62
+      },
+      {
+        "timeframe": "1H",
+        "direction": "bearish",
+        "status": "potential_mss",
+        "lifecycleState": "potential_mss",
+        "confidence": 62
+      },
+      {
+        "timeframe": "15M",
+        "direction": "bearish",
+        "status": "potential_mss",
+        "lifecycleState": "potential_mss",
+        "confidence": 62
+      },
+      {
+        "timeframe": "5M",
+        "direction": "bearish",
+        "status": "confirmed",
+        "lifecycleState": "post_mss_digestion",
+        "confidence": 86
+      }
+    ],
+    "createsTradingPlanCandidate": false,
+    "approvesExecution": false
+  },
+  "setupDetection": {
+    "candidateDetected": true,
+    "setupType": "HtfDrawContinuationAfterRaid",
+    "label": "HTF Draw Continuation After Raid/Reclaim",
+    "direction": "SHORT",
+    "candidate": {
+      "setupType": "HtfDrawContinuationAfterRaid",
+      "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+      "pathway": "htf_liquidity_draw_mss",
+      "direction": "SHORT",
+      "candidateState": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
+      "detectedStatus": "Conditional",
+      "executionStatus": "Conditional",
+      "blockReason": null,
+      "entry": null,
+      "stop": null,
+      "target1": null,
+      "target2": null,
+      "riskPoints": null,
+      "requiredTrigger": "Short only after buy-side raid, reclaim, confirmed bearish 5M MSS with displacement, then clean retest or defined reclaim trigger.",
+      "nextAction": "HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.",
+      "evidence": [
+        "HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+        "15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.",
+        "Post-MSS digestion. Consolidation after displacement is not an opposite MSS unless post-displacement structure breaks with clear displacement.",
+        "HTF liquidity draw detected",
+        "15M raid/reclaim support status: potential_mss",
+        "5M MSS trigger confirmed",
+        "5M swing break/reclaim confirmed with displacement",
+        "External liquidity target exists: prior RTH low / London low / full ETH low 7580.00, 7576.00",
+        "Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+        "Pathway state: REVERSAL_DELIVERY_PLAN_CANDIDATE",
+        "Buy-side liquidity swept and reclaimed at 7614.",
+        "Confirmed close below prior 5M swing low 7606 with displacement.",
+        "Post-displacement candles are compressing without an opposite structure break.",
+        "5M MSS is execution-timeframe evidence; potential/pending states cannot create a reversal-delivery candidate until a swing break with displacement confirms.",
+        "External liquidity target context: prior RTH low / London low / full ETH low 7580.00, 7576.00."
+      ],
+      "missingEvidence": [
+        "Clean retest or defined reclaim entry",
+        "Structure stop tied to raid/reclaim extreme",
+        "External liquidity target price / valid target room"
+      ]
+    },
+    "notMisclassifiedAsBullishContinuation": true
+  },
+  "finalGateResult": {
+    "candidateOnly": {
+      "status": "NoTrade",
+      "canExecute": false,
+      "noTradeReason": "NoApprovedSetup",
+      "finalPlan": {
+        "direction": "NO TRADE",
+        "setupType": "HtfDrawContinuationAfterRaid",
+        "entry": null,
+        "stop": null,
+        "target1": null,
+        "target2": null,
+        "risk": null
+      },
+      "auditTrail": [
+        {
+          "step": "ConfirmSessionAndInstrument",
+          "status": "pass",
+          "message": "replay_lunch / MES",
+          "noTradeReason": "MissingInstrument"
+        },
+        {
+          "step": "ConfirmScreenshotUsability",
+          "status": "pass",
+          "message": "Phase 5B candidate-only fixture intentionally omits final entry/stop.",
+          "noTradeReason": "InvalidScreenshot"
+        },
+        {
+          "step": "IdentifyMarketContext",
+          "status": "pass",
+          "message": "Phase 5B focused replay: HTF bearish/non-conflicting draw, buy-side raid/rejection, 15M potential support, confirmed 5M bearish MSS, external sell-side liquidity draw.",
+          "noTradeReason": "MissingRequiredContext"
+        },
+        {
+          "step": "IdentifyKeyLevels",
+          "status": "pass",
+          "message": "Key levels reviewed from extracted chart context.",
+          "noTradeReason": "MissingKeyLevels"
+        },
+        {
+          "step": "DetermineBias",
+          "status": "pass",
+          "message": "Bias: Bearish.",
+          "noTradeReason": null
+        },
+        {
+          "step": "CheckApprovedTimeWindow",
+          "status": "pass",
+          "message": "Replay mode uses entered trade date/session.",
+          "noTradeReason": "OutsideTimeWindow"
+        },
+        {
+          "step": "IdentifySetupType",
+          "status": "warning",
+          "message": "Setup scan complete: 2 detected/possible, 0 executable, 2 conditional, 0 blocked.",
+          "noTradeReason": null
+        },
+        {
+          "step": "ValidateEntryTrigger",
+          "status": "fail",
+          "message": "No measurable entry trigger.",
+          "noTradeReason": "EntryTriggerMissing"
+        },
+        {
+          "step": "ValidateStopLocation",
+          "status": "fail",
+          "message": "Stop is not tied to active swing/structure.",
+          "noTradeReason": "InvalidStopLocation"
+        },
+        {
+          "step": "ValidateRiskLimit",
+          "status": "fail",
+          "message": "Risk unavailable because ENTRY or STOP is missing.",
+          "noTradeReason": null
+        },
+        {
+          "step": "DetermineTargetModel",
+          "status": "fail",
+          "message": "Targets use app model: T1 = 1.5R, T2 = 2.0R.",
+          "noTradeReason": "TargetsUnavailable"
+        },
+        {
+          "step": "DefineInvalidation",
+          "status": "fail",
+          "message": "Invalidation is required.",
+          "noTradeReason": "InvalidStopLocation"
+        },
+        {
+          "step": "DecideTradeOrNoTrade",
+          "status": "fail",
+          "message": "NoTrade returned only after no executable or conditional setup was available.",
+          "noTradeReason": "NoApprovedSetup"
+        },
+        {
+          "step": "GenerateFinalTradePlan",
+          "status": "warning",
+          "message": "Final plan generated by deterministic app pipeline.",
+          "noTradeReason": "NoApprovedSetup"
+        },
+        {
+          "step": "SaveJournalReadyRecord",
+          "status": "pass",
+          "message": "Journal-ready payload can be saved after analysis/outcome.",
+          "noTradeReason": null
+        }
+      ],
+      "bestExecutableCandidate": null,
+      "bestConditionalCandidate": null,
+      "blockedCandidates": []
+    }
+  },
+  "diagnosticReplay": {
+    "finalClassification": "D_NO_VALID_SETUP",
+    "htfMssDiagnostics": {
+      "source": "ninjatrader_ohlc",
+      "authority": "ohlc_facts_only",
+      "boundary": "context_only_not_execution_authority",
+      "classification": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
+      "timeframeStack": [
+        {
+          "timeframe": "4H",
+          "direction": "bearish",
+          "status": "potential_mss",
+          "lifecycleState": "potential_mss",
+          "confidence": 62
+        },
+        {
+          "timeframe": "1H",
+          "direction": "bearish",
+          "status": "potential_mss",
+          "lifecycleState": "potential_mss",
+          "confidence": 62
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "potential_mss",
+          "lifecycleState": "potential_mss",
+          "confidence": 62
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed",
+          "lifecycleState": "post_mss_digestion",
+          "confidence": 86
+        }
+      ],
+      "raidState": "buy_side_raid",
+      "reclaimStatus": "confirmed",
+      "fiveMinuteMssTriggerConfirmed": true,
+      "fiveMinuteMssConfirmationType": "swing_break_with_displacement",
+      "postShiftState": "post_mss_digestion",
+      "externalLiquidityTarget": "prior RTH low / London low / full ETH low 7580.00, 7576.00",
+      "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
+      "createsTradingPlanCandidate": false,
+      "approvesExecution": false,
+      "blockers": [
+        "HTF/MSS state population does not approve execution by itself.",
+        "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
+      ],
+      "chartReportPath": null
+    },
+    "tradePlanFeasibility": {
+      "applicable": false,
+      "candidateEntryTrigger": null,
+      "candidateStop": null,
+      "stopDistanceRisk": null,
+      "t1": null,
+      "t2": null,
+      "higherTimeframeTargetRoom": "conflicted",
+      "freshEntryExisted": false,
+      "alreadyTriggered": false,
+      "summary": "Not applicable. Advisory-only or no-setup classifications do not create entry, stop, risk, T1, or T2."
+    },
+    "approvalBoundary": {
+      "diagnosticApprovesTrade": false,
+      "diagnosticChangesRules": false,
+      "diagnosticCreatesEntry": false,
+      "diagnosticCreatesTargets": false,
+      "diagnosticOverridesScanner": false,
+      "diagnosticPromotesModel": false,
+      "diagnosticBuildsNewPlan": false
+    }
+  },
+  "wordingGuard": {
+    "safeNonExecutableTerms": [
+      "candidate",
+      "pending",
+      "conditional",
+      "blocked",
+      "no executable trade"
+    ],
+    "restrictedActiveCommandWordingOmitted": true
+  }
+}
