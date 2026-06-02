@@ -20,6 +20,9 @@ assert.equal(report.htfLiquidityDrawState.fiveMinuteMssConfirmationType, 'swing_
 assert.equal(report.htfLiquidityDrawState.fifteenMinuteConfirmationStatus, 'potential_mss');
 assert.equal(report.htfLiquidityDrawState.postShiftState, 'post_mss_digestion');
 assert.equal(report.htfLiquidityDrawState.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
+assert.equal(report.htfLiquidityDrawState.htfContextSufficiency.overallStatus, 'sufficient');
+assert.equal(report.htfLiquidityDrawState.classificationReliability, 'structural');
+assert.equal(report.htfLiquidityDrawState.htfContextDataLimited, false);
 assert.ok(report.htfLiquidityDrawState.externalLiquidityTarget?.includes('full ETH high'));
 assert.ok(report.htfLiquidityDrawState.timeframeStack.some((item) => item.timeframe === '4H'));
 assert.ok(report.htfLiquidityDrawState.timeframeStack.some((item) => item.timeframe === '1H'));
@@ -77,6 +80,13 @@ const artifactMarkdown = readFileSync(artifacts.markdownPath, 'utf8');
 
 assert.equal(artifactJson.reportType, 'htf_mss_june_1_regression');
 assert.ok(artifactMarkdown.includes('# HTF/MSS June 1 Regression Replay'));
+assert.ok(artifactMarkdown.includes('## HTF Context Sufficiency'));
+assert.ok(artifactMarkdown.includes('Status: sufficient'));
+assert.ok(artifactMarkdown.includes('Reliability: structural'));
+assert.ok(artifactMarkdown.includes('HTF Usage: structural confirmation allowed'));
+assert.ok(artifactMarkdown.includes('Candidate Promotion: allowed only when approved pathway conditions and deterministic gates are satisfied'));
+assert.ok(artifactMarkdown.includes('Data-Limited Blockers'));
+assert.ok(artifactMarkdown.includes('- none'));
 assert.ok(artifactMarkdown.includes('htfMssDiagnostics Present: Yes'));
 assert.ok(artifactMarkdown.includes('Candidate-only canExecute: false'));
 assert.ok(artifactMarkdown.includes('Full Deterministic Gates Status: NoTrade'));

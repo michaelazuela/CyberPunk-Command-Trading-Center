@@ -12,6 +12,7 @@ import {
 import { buildOutcomeComponents } from './discord-outcome-buttons';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import { evaluateScannerHealth } from '../../src/agents/scannerHealthAgent';
+import type { HtfLiquidityDrawState } from '../../src/lib/htfLiquidityDrawEngine';
 
 const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
@@ -70,6 +71,56 @@ function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
     decisionQualityScorecard: [
       { label: 'Trigger clarity', score: 20, max: 20, status: 'strong', note: 'Do not print this full scorecard.' },
     ],
+  };
+}
+
+function htfStateFixture(dataLimited = false): Pick<HtfLiquidityDrawState, 'htfContextSufficiency' | 'classificationReliability'> {
+  return {
+    htfContextSufficiency: {
+      overallStatus: dataLimited ? 'data_limited' : 'sufficient',
+      dataLimited,
+      blockers: dataLimited ? ['4H context below minimum'] : [],
+      notes: [],
+      timeframeCoverage: [
+        {
+          timeframe: '4H',
+          barsLoaded: dataLimited ? 4 : 22,
+          rangeStart: '2026-05-25T00:00:00-04:00',
+          rangeEnd: '2026-06-01T14:00:00-04:00',
+          minimumExpectedDescription: 'At least 7 completed trading days, preferably 20+ completed 4H candles when available.',
+          minimumSatisfied: !dataLimited,
+          status: dataLimited ? 'data_limited' : 'sufficient',
+        },
+        {
+          timeframe: '1H',
+          barsLoaded: dataLimited ? 8 : 62,
+          rangeStart: '2026-05-25T00:00:00-04:00',
+          rangeEnd: '2026-06-01T14:00:00-04:00',
+          minimumExpectedDescription: 'At least 4 completed trading days of structured 1H context.',
+          minimumSatisfied: !dataLimited,
+          status: dataLimited ? 'data_limited' : 'sufficient',
+        },
+        {
+          timeframe: '15M',
+          barsLoaded: dataLimited ? 16 : 86,
+          rangeStart: '2026-05-30T00:00:00-04:00',
+          rangeEnd: '2026-06-01T14:00:00-04:00',
+          minimumExpectedDescription: 'At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.',
+          minimumSatisfied: !dataLimited,
+          status: dataLimited ? 'data_limited' : 'sufficient',
+        },
+        {
+          timeframe: '5M',
+          barsLoaded: 43,
+          rangeStart: '2026-06-01T12:00:00-04:00',
+          rangeEnd: '2026-06-01T15:30:00-04:00',
+          minimumExpectedDescription: 'Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.',
+          minimumSatisfied: true,
+          status: 'sufficient',
+        },
+      ],
+    },
+    classificationReliability: dataLimited ? 'data_limited' : 'structural',
   };
 }
 
@@ -187,6 +238,7 @@ scannerReadyCandidate.evidence = [
   'HTF Draw Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
 ];
 scannerReadyCandidate.nextAction = 'Execution still requires final app-owned gates.';
+scannerReadyCandidate.htfLiquidityDrawState = htfStateFixture(false) as HtfLiquidityDrawState;
 const scannerReadyPayload = compactDiscordSummary({
   session: 'morning',
   tradeDate: '2026-06-01',
@@ -208,8 +260,42 @@ validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.
 const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
 assert.ok(scannerReadyText.includes('QUALIFIED CONDITIONAL'));
 assert.ok(scannerReadyText.includes('WAIT - trigger not confirmed'));
+assert.ok(scannerReadyText.includes('HTF Context:'));
+assert.ok(scannerReadyText.includes('Status: sufficient | Reliability: structural'));
+assert.ok(scannerReadyText.includes('Usage: structural confirmation allowed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
+
+const dataLimitedScannerCandidate = sampleCandidate('LONG');
+dataLimitedScannerCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
+dataLimitedScannerCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
+dataLimitedScannerCandidate.executionStatus = ExecutionStatus.Conditional;
+dataLimitedScannerCandidate.htfLiquidityDrawState = htfStateFixture(true) as HtfLiquidityDrawState;
+dataLimitedScannerCandidate.requiredTrigger = 'Wait for sufficient HTF context and completed 5M trigger.';
+const dataLimitedScannerPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-01',
+  instrument: 'MES',
+  planVersionId: 'HTF-DATA-LIMITED',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [dataLimitedScannerCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+validateDiscordPayload(dataLimitedScannerPayload, ['chart-plan.png', 'price-level-map.png']);
+const dataLimitedScannerText = flattenDiscordPayloadText(dataLimitedScannerPayload);
+assert.ok(dataLimitedScannerText.includes('HTF Context:'));
+assert.ok(dataLimitedScannerText.includes('Status: partial | Reliability: data_limited'));
+assert.ok(dataLimitedScannerText.includes('Usage: context only; not structural confirmation'));
+assert.ok(dataLimitedScannerText.includes('Candidate Promotion: blocked by data-limited HTF context'));
+assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready|structural confirmation allowed/i.test(dataLimitedScannerText), false);
+assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(dataLimitedScannerText), false);
 
 const rawConditionalCanExecutePayload = compactDiscordSummary({
   session: 'morning',

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar, type NinjaBridgeTimeframe } from '../../src/lib/ninjaTraderBridge';
+import { formatHtfContextSufficiencyMarkdownLines } from '../../src/lib/htfLiquidityDrawEngine';
 import { runBridgeDiagnosticReplay } from '../../src/agents/bridgeDiagnosticReplayAgent';
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import { runTradeDecisionPipeline } from '../../src/lib/tradeDecisionPipeline';
@@ -624,19 +625,13 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     `- Bars: 5M=${report.barCounts['5m']}, 15M=${report.barCounts['15m']}, 60M=${report.barCounts['60m']}, 240M=${report.barCounts['240m']}`,
     `- Ranges: 5M=${report.timeframeRanges['5m'].from || 'N/A'} to ${report.timeframeRanges['5m'].to || 'N/A'}; 15M=${report.timeframeRanges['15m'].from || 'N/A'} to ${report.timeframeRanges['15m'].to || 'N/A'}; 60M=${report.timeframeRanges['60m'].from || 'N/A'} to ${report.timeframeRanges['60m'].to || 'N/A'}; 240M=${report.timeframeRanges['240m'].from || 'N/A'} to ${report.timeframeRanges['240m'].to || 'N/A'}`,
     '',
-    '## HTF Context Sufficiency',
-    `- Overall Status: ${report.htfContextSufficiency.overallStatus}`,
-    `- Classification Reliability: ${report.classificationReliability}`,
+    ...formatHtfContextSufficiencyMarkdownLines({
+      htfContextSufficiency: report.htfContextSufficiency,
+      classificationReliability: report.classificationReliability,
+    }),
+    '',
     `- Classification Reason: ${report.classificationReason}`,
     `- Data Limited: ${report.htfContextDataLimited}`,
-    '| Timeframe | Bars Loaded | Range | Minimum Expected | Status |',
-    '|---|---:|---|---|---|',
-    ...report.timeframeCoverage.map((item) => `| ${item.timeframe} | ${item.barsLoaded} | ${item.rangeStart || 'N/A'} to ${item.rangeEnd || 'N/A'} | ${item.minimumExpectedDescription} | ${item.status} |`),
-    ...(report.htfContextSufficiency.blockers.length ? [
-      '',
-      '### Data-Limited Blockers',
-      ...report.htfContextSufficiency.blockers.map((item) => `- ${item}`),
-    ] : []),
     ...(report.insufficientLookback.length ? [
       '',
       '## Lookback Warnings',

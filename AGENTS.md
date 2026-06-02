@@ -181,6 +181,12 @@ Execution boundary:
 - 5M confirmed MSS remains mandatory.
 - Entry, stop, target, risk, session, model, and canExecute gates remain deterministic.
 
+HTF Context Sufficiency Visibility Rule:
+
+- Any output that references HTF/MSS structure must explicitly state whether HTF context is sufficient, partial, or insufficient.
+- If reliability is `data_limited`, the output must state that HTF is context only, not structural confirmation, and cannot be used as candidate-promotion evidence.
+- Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
+
 ## RAG And Persistence
 
 Every completed analysis and replay outcome should have a durable Supabase record and a RAG learning record when possible.

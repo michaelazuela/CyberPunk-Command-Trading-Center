@@ -141,9 +141,13 @@ assert.ok(artifactMarkdown.includes('# HTF/MSS June 1 Actual OHLC Replay'));
 assert.ok(artifactMarkdown.includes('Candidate status does not equal executable approval.'));
 assert.ok(artifactMarkdown.includes('Ranges: 5M='));
 assert.ok(artifactMarkdown.includes('## HTF Context Sufficiency'));
-assert.ok(artifactMarkdown.includes('Classification Reliability: data_limited'));
+assert.ok(artifactMarkdown.includes('Status: partial'));
+assert.ok(artifactMarkdown.includes('Reliability: data_limited'));
+assert.ok(artifactMarkdown.includes('HTF Usage: context only; not structural confirmation'));
+assert.ok(artifactMarkdown.includes('Candidate Promotion: blocked by data-limited HTF context'));
 assert.ok(artifactMarkdown.includes('Minimum Expected'));
 assert.ok(artifactMarkdown.includes('Data-Limited Blockers'));
+assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready/i.test(artifactMarkdown), false);
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(artifactMarkdown), false);
 
 const readinessArtifacts = writeActualOhlcReplayArtifacts(readiness, tempDir);

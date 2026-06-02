@@ -1,7 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildHtfLiquidityDrawState, type HtfLiquidityDrawState } from '../../src/lib/htfLiquidityDrawEngine';
+import {
+  buildHtfLiquidityDrawState,
+  formatHtfContextSufficiencyMarkdownLines,
+  type HtfLiquidityDrawState,
+} from '../../src/lib/htfLiquidityDrawEngine';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { runBridgeDiagnosticReplay } from '../../src/agents/bridgeDiagnosticReplayAgent';
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
@@ -338,6 +342,11 @@ export function buildJuneOneRegressionReport() {
       activeScanWindow: state.activeScanWindow,
       confidence: state.confidence,
       blockers: state.blockers,
+      htfContextSufficiency: state.htfContextSufficiency,
+      htfContextDataLimited: state.htfContextDataLimited,
+      timeframeCoverage: state.timeframeCoverage,
+      classificationReliability: state.classificationReliability,
+      classificationReason: state.classificationReason,
       timeframeStack: state.timeframeStack.map((item) => ({
         timeframe: item.timeframe,
         direction: item.direction,
@@ -425,6 +434,13 @@ function renderMarkdown(report: ReturnType<typeof buildJuneOneRegressionReport>)
     `- Window: ${report.replayWindow.from}-${report.replayWindow.to} ${report.replayWindow.timezone}`,
     `- Data source: ${report.replayDataSource}`,
     `- Active Scan Window: ${diag.activeScanWindow}`,
+    '',
+    ...formatHtfContextSufficiencyMarkdownLines({
+      htfContextSufficiency: diag.htfContextSufficiency,
+      classificationReliability: diag.classificationReliability,
+    }),
+    '',
+    `- Classification Reason: ${diag.classificationReason}`,
     '',
     '## HTF/MSS Classification',
     `- Classification: ${diag.classification}`,

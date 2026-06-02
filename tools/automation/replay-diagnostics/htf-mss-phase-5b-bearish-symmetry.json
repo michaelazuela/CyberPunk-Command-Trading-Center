@@ -27,20 +27,107 @@
       "HTF/MSS state population does not approve execution by itself.",
       "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
     ],
-    "timeframeStack": [
+    "htfContextSufficiency": {
+      "overallStatus": "sufficient",
+      "timeframeCoverage": [
+        {
+          "timeframe": "4H",
+          "barsLoaded": 20,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T14:00:00-04:00",
+          "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "1H",
+          "barsLoaded": 24,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T13:00:00-04:00",
+          "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "15M",
+          "barsLoaded": 40,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T13:15:00-04:00",
+          "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "5M",
+          "barsLoaded": 10,
+          "rangeStart": "2026-06-02T13:25:00-04:00",
+          "rangeEnd": "2026-06-02T14:10:00-04:00",
+          "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        }
+      ],
+      "dataLimited": false,
+      "blockers": [],
+      "notes": [
+        "HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met."
+      ]
+    },
+    "htfContextDataLimited": false,
+    "timeframeCoverage": [
       {
         "timeframe": "4H",
-        "direction": "bearish",
-        "status": "potential_mss",
-        "lifecycleState": "potential_mss",
-        "confidence": 62
+        "barsLoaded": 20,
+        "rangeStart": "2026-05-25T04:00:00.000Z",
+        "rangeEnd": "2026-06-02T14:00:00-04:00",
+        "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
       },
       {
         "timeframe": "1H",
-        "direction": "bearish",
-        "status": "potential_mss",
-        "lifecycleState": "potential_mss",
-        "confidence": 62
+        "barsLoaded": 24,
+        "rangeStart": "2026-05-25T04:00:00.000Z",
+        "rangeEnd": "2026-06-02T13:00:00-04:00",
+        "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "15M",
+        "barsLoaded": 40,
+        "rangeStart": "2026-05-25T04:00:00.000Z",
+        "rangeEnd": "2026-06-02T13:15:00-04:00",
+        "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "5M",
+        "barsLoaded": 10,
+        "rangeStart": "2026-06-02T13:25:00-04:00",
+        "rangeEnd": "2026-06-02T14:10:00-04:00",
+        "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      }
+    ],
+    "classificationReliability": "structural",
+    "classificationReason": "Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.",
+    "timeframeStack": [
+      {
+        "timeframe": "4H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "1H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
       },
       {
         "timeframe": "15M",
@@ -227,17 +314,17 @@
       "timeframeStack": [
         {
           "timeframe": "4H",
-          "direction": "bearish",
-          "status": "potential_mss",
-          "lifecycleState": "potential_mss",
-          "confidence": 62
+          "direction": "neutral",
+          "status": "conflicting",
+          "lifecycleState": "conflicting_mss",
+          "confidence": 35
         },
         {
           "timeframe": "1H",
-          "direction": "bearish",
-          "status": "potential_mss",
-          "lifecycleState": "potential_mss",
-          "confidence": 62
+          "direction": "neutral",
+          "status": "conflicting",
+          "lifecycleState": "conflicting_mss",
+          "confidence": 35
         },
         {
           "timeframe": "15M",
@@ -261,6 +348,93 @@
       "postShiftState": "post_mss_digestion",
       "externalLiquidityTarget": "prior RTH low / London low / full ETH low 7580.00, 7576.00",
       "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
+      "htfContextSufficiency": {
+        "overallStatus": "sufficient",
+        "timeframeCoverage": [
+          {
+            "timeframe": "4H",
+            "barsLoaded": 20,
+            "rangeStart": "2026-05-25T04:00:00.000Z",
+            "rangeEnd": "2026-06-02T14:00:00-04:00",
+            "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "1H",
+            "barsLoaded": 24,
+            "rangeStart": "2026-05-25T04:00:00.000Z",
+            "rangeEnd": "2026-06-02T13:00:00-04:00",
+            "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "15M",
+            "barsLoaded": 40,
+            "rangeStart": "2026-05-25T04:00:00.000Z",
+            "rangeEnd": "2026-06-02T13:15:00-04:00",
+            "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "5M",
+            "barsLoaded": 10,
+            "rangeStart": "2026-06-02T13:25:00-04:00",
+            "rangeEnd": "2026-06-02T14:10:00-04:00",
+            "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          }
+        ],
+        "dataLimited": false,
+        "blockers": [],
+        "notes": [
+          "HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met."
+        ]
+      },
+      "htfContextDataLimited": false,
+      "timeframeCoverage": [
+        {
+          "timeframe": "4H",
+          "barsLoaded": 20,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T14:00:00-04:00",
+          "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "1H",
+          "barsLoaded": 24,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T13:00:00-04:00",
+          "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "15M",
+          "barsLoaded": 40,
+          "rangeStart": "2026-05-25T04:00:00.000Z",
+          "rangeEnd": "2026-06-02T13:15:00-04:00",
+          "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "5M",
+          "barsLoaded": 10,
+          "rangeStart": "2026-06-02T13:25:00-04:00",
+          "rangeEnd": "2026-06-02T14:10:00-04:00",
+          "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        }
+      ],
+      "classificationReliability": "structural",
+      "classificationReason": "Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.",
       "createsTradingPlanCandidate": false,
       "approvesExecution": false,
       "blockers": [

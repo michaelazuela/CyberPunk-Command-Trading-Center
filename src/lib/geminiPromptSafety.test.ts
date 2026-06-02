@@ -18,6 +18,11 @@ assert.ok(htfRule.includes('5M potential MSS may produce pending/developing stat
 assert.ok(htfRule.includes('Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution'));
 assert.ok(htfRule.includes('Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET'));
 assert.ok(htfRule.includes('Do not use legacy pre-noon, lunch-only, or split-window cutoffs'));
+assert.ok(htfRule.includes('HTF Context Sufficiency Visibility Rule'));
+assert.ok(htfRule.includes('sufficient, partial, or insufficient'));
+assert.ok(htfRule.includes('HTF is context only, not structural confirmation'));
+assert.ok(htfRule.includes('cannot be used as candidate-promotion evidence'));
+assert.ok(htfRule.includes('must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready'));
 assert.equal(/current.*9:30-11:15 ET|current.*10:00-11:15 ET|current.*10:00-11:50 ET|current.*11:50-13:00 ET|current.*11:50-15:30 ET/i.test(htfRule), false);
 
 console.log('Gemini HTF draw prompt safety verified.');

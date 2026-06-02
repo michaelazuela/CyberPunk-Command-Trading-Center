@@ -162,6 +162,8 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     Data-limited context cannot create or approve a candidate by itself. HTF context can create or promote a candidate only when approved pathway conditions are met, 5M confirmed MSS is present, and deterministic entry, stop, target, risk, session, model, and canExecute gates remain intact.
 
+    HTF Context Sufficiency Visibility Rule: any output that references HTF/MSS structure must explicitly state whether HTF context is sufficient, partial, or insufficient. If reliability is data_limited, the output must state that HTF is context only, not structural confirmation, and cannot be used as candidate-promotion evidence. Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
+
     Approved live setup scanning windows are two continuous blocks: Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
 
     Narrative fallback may provide notes only. Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution.

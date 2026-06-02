@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import {
   buildHtfLiquidityDrawState,
   buildHtfLiquidityDrawStateFromChartContext,
+  buildHtfContextSufficiencyDisplay,
   classifyTimeframeMssState,
   describeHtfLiquidityDrawStateForDisplay,
   describeTimeframeMssStateForDisplay,
+  formatCompactHtfContextSufficiencyLines,
+  formatHtfContextSufficiencyMarkdownLines,
   type HtfMssTimeframe,
 } from './htfLiquidityDrawEngine';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -420,5 +423,54 @@ const bearishDigestion = classifyTimeframeMssState({
 assert.equal(bearishDigestion.direction, 'bearish');
 assert.equal(bearishDigestion.status, 'confirmed');
 assert.equal(bearishDigestion.lifecycleState, 'post_mss_digestion');
+
+const sufficientDisplay = buildHtfContextSufficiencyDisplay({
+  htfContextSufficiency: confirmedCandidateEligible.htfContextSufficiency,
+  classificationReliability: confirmedCandidateEligible.classificationReliability,
+});
+assert.equal(sufficientDisplay.status, 'sufficient');
+assert.equal(sufficientDisplay.reliability, 'structural');
+assert.equal(sufficientDisplay.htfUsage, 'structural confirmation allowed');
+assert.equal(
+  sufficientDisplay.candidatePromotion,
+  'allowed only when approved pathway conditions and deterministic gates are satisfied'
+);
+assert.equal(sufficientDisplay.coverageRows.length, 4);
+
+const dataLimitedDisplay = buildHtfContextSufficiencyDisplay({
+  htfContextSufficiency: dataLimitedHtfWithConfirmed5m.htfContextSufficiency,
+  classificationReliability: dataLimitedHtfWithConfirmed5m.classificationReliability,
+});
+assert.equal(dataLimitedDisplay.status, 'partial');
+assert.equal(dataLimitedDisplay.reliability, 'data_limited');
+assert.equal(dataLimitedDisplay.htfUsage, 'context only; not structural confirmation');
+assert.equal(dataLimitedDisplay.candidatePromotion, 'blocked by data-limited HTF context');
+assert.ok(dataLimitedDisplay.blockers.some((line) => line.includes('insufficient HTF context')));
+
+const missingDisplay = buildHtfContextSufficiencyDisplay({
+  htfContextSufficiency: missingHtfContext.htfContextSufficiency,
+  classificationReliability: missingHtfContext.classificationReliability,
+});
+assert.equal(missingDisplay.status, 'insufficient');
+assert.equal(missingDisplay.reliability, 'data_limited');
+
+const dataLimitedMarkdown = formatHtfContextSufficiencyMarkdownLines({
+  htfContextSufficiency: dataLimitedHtfWithConfirmed5m.htfContextSufficiency,
+  classificationReliability: dataLimitedHtfWithConfirmed5m.classificationReliability,
+}).join('\n');
+assert.ok(dataLimitedMarkdown.includes('Status: partial'));
+assert.ok(dataLimitedMarkdown.includes('Reliability: data_limited'));
+assert.ok(dataLimitedMarkdown.includes('HTF Usage: context only; not structural confirmation'));
+assert.ok(dataLimitedMarkdown.includes('Candidate Promotion: blocked by data-limited HTF context'));
+assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready/i.test(dataLimitedMarkdown), false);
+
+const compactDataLimited = formatCompactHtfContextSufficiencyLines({
+  htfContextSufficiency: dataLimitedHtfWithConfirmed5m.htfContextSufficiency,
+  classificationReliability: dataLimitedHtfWithConfirmed5m.classificationReliability,
+}).join('\n');
+assert.ok(compactDataLimited.includes('HTF Context:'));
+assert.ok(compactDataLimited.includes('Status: partial | Reliability: data_limited'));
+assert.ok(compactDataLimited.includes('Usage: context only; not structural confirmation'));
+assert.equal(/structural confirmation allowed|Candidate ready/i.test(compactDataLimited), false);
 
 console.log('HTF liquidity draw MSS engine verified.');

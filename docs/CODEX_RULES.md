@@ -145,6 +145,14 @@ A failed HTF read caused by limited history must not block the desk as if struct
 
 Data sufficiency cannot approve execution. It may only improve classification quality, blockers, and diagnostics. The 5M confirmed MSS, deterministic entry, stop, target, risk, session, model, and `canExecute` gates remain mandatory.
 
+### HTF Context Sufficiency Visibility Rule
+
+Any output that references HTF/MSS structure must explicitly state whether HTF context is sufficient, partial, or insufficient.
+
+If reliability is `data_limited`, the output must state that HTF is context only, not structural confirmation, and cannot be used as candidate-promotion evidence.
+
+Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
+
 ---
 
 ## Before Editing Code

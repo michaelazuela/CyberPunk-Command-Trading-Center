@@ -12,6 +12,7 @@ import {
   scoreConditionalCandidateRiskForDisplay,
   type ConditionalCandidateRiskScore,
 } from '../../src/agents/conditionalCandidateRiskAgent';
+import { formatCompactHtfContextSufficiencyLines } from '../../src/lib/htfLiquidityDrawEngine';
 import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
@@ -255,6 +256,15 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
   ];
 }
 
+function compactHtfSufficiencyLines(candidate: SetupCandidate | null): string[] {
+  const state = candidate?.htfLiquidityDrawState;
+  if (!state?.htfContextSufficiency || !state.classificationReliability) return [];
+  return formatCompactHtfContextSufficiencyLines({
+    htfContextSufficiency: state.htfContextSufficiency,
+    classificationReliability: state.classificationReliability,
+  });
+}
+
 function compactKeyLevelLines(candidate: SetupCandidate | null): string[] {
   const targetPlan = candidate?.targetObjectivePlan;
   const resistance =
@@ -350,6 +360,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   });
   assertDiscordReportDesignerIsAdvisoryOnly(designerRecommendation as unknown as Record<string, unknown>);
   const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
+  const htfLines = compactHtfSufficiencyLines(bestCandidate);
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
@@ -360,6 +371,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         '',
         ...riskLines,
         ...(riskLines.length ? [''] : []),
+        ...htfLines,
+        ...(htfLines.length ? [''] : []),
         'Invalidation:',
         bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.',
         '',

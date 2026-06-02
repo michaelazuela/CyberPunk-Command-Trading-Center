@@ -15,16 +15,22 @@ This report uses historical OHLC replay data only. It does not post to Discord, 
 - Ranges: 5M=2026-06-01T12:00:00.0000000 to 2026-06-01T15:30:00.0000000; 15M=2026-05-31T18:15:00.0000000 to 2026-06-01T15:30:00.0000000; 60M=2026-05-28T00:00:00.0000000 to 2026-06-01T15:00:00.0000000; 240M=2026-05-25T02:00:00.0000000 to 2026-06-01T14:00:00.0000000
 
 ## HTF Context Sufficiency
-- Overall Status: sufficient
-- Classification Reliability: structural
-- Classification Reason: Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.
-- Data Limited: false
+- Status: sufficient
+- Reliability: structural
+- HTF Usage: structural confirmation allowed
+- Candidate Promotion: allowed only when approved pathway conditions and deterministic gates are satisfied
 | Timeframe | Bars Loaded | Range | Minimum Expected | Status |
 |---|---:|---|---|---|
 | 4H | 33 | 2026-05-25T02:00:00.0000000 to 2026-06-01T14:00:00.0000000 | At least 7 completed trading days, preferably 20+ completed 4H candles when available. | sufficient |
 | 1H | 62 | 2026-05-28T00:00:00.0000000 to 2026-06-01T15:00:00.0000000 | At least 4 completed trading days of structured 1H context. | sufficient |
 | 15M | 86 | 2026-05-31T18:15:00.0000000 to 2026-06-01T15:30:00.0000000 | At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity. | sufficient |
 | 5M | 42 | 2026-06-01T12:00:00.0000000 to 2026-06-01T15:25:00.0000000 | Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars. | sufficient |
+
+### Data-Limited Blockers
+- none
+
+- Classification Reason: Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.
+- Data Limited: false
 
 ## HTF/MSS Classification
 - Classification: REVERSAL_DELIVERY_PLAN_CANDIDATE

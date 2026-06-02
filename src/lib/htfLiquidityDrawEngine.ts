@@ -34,6 +34,8 @@ export type LiquidityRaidState =
 
 export type HtfContextSufficiencyStatus = 'sufficient' | 'data_limited' | 'missing' | 'unknown';
 export type HtfClassificationReliability = 'structural' | 'data_limited' | 'estimated' | 'unknown';
+export type HtfContextDisplayStatus = 'sufficient' | 'partial' | 'insufficient';
+export type HtfReliabilityDisplayStatus = 'structural' | 'contextual' | 'data_limited';
 
 export interface TimeframeContextCoverage {
   timeframe: HtfMssTimeframe;
@@ -120,6 +122,21 @@ export interface HtfLiquidityDrawInput {
   externalBuySideLiquidityTarget?: string;
   externalSellSideLiquidityTarget?: string;
   chartTimestamp?: string | null;
+}
+
+export interface HtfContextSufficiencyDisplay {
+  status: HtfContextDisplayStatus;
+  reliability: HtfReliabilityDisplayStatus;
+  htfUsage: string;
+  candidatePromotion: string;
+  coverageRows: Array<{
+    timeframe: HtfMssTimeframe;
+    barsLoaded: number;
+    range: string;
+    minimumExpected: string;
+    status: HtfContextDisplayStatus;
+  }>;
+  blockers: string[];
 }
 
 interface RaidEvent {
@@ -257,6 +274,83 @@ export function assessHtfContextSufficiency(input: HtfLiquidityDrawInput): HtfCo
     blockers,
     notes,
   };
+}
+
+export function displayHtfContextStatus(status: HtfContextSufficiencyStatus): HtfContextDisplayStatus {
+  if (status === 'sufficient') return 'sufficient';
+  if (status === 'missing') return 'insufficient';
+  return 'partial';
+}
+
+export function displayHtfReliabilityStatus(reliability: HtfClassificationReliability): HtfReliabilityDisplayStatus {
+  if (reliability === 'structural') return 'structural';
+  if (reliability === 'data_limited') return 'data_limited';
+  return 'contextual';
+}
+
+export function buildHtfContextSufficiencyDisplay(input: {
+  htfContextSufficiency: HtfContextSufficiency;
+  classificationReliability: HtfClassificationReliability;
+}): HtfContextSufficiencyDisplay {
+  const status = displayHtfContextStatus(input.htfContextSufficiency.overallStatus);
+  const reliability = displayHtfReliabilityStatus(input.classificationReliability);
+  const dataLimited = input.htfContextSufficiency.dataLimited || reliability === 'data_limited';
+  return {
+    status,
+    reliability,
+    htfUsage: dataLimited
+      ? 'context only; not structural confirmation'
+      : 'structural confirmation allowed',
+    candidatePromotion: dataLimited
+      ? 'blocked by data-limited HTF context'
+      : 'allowed only when approved pathway conditions and deterministic gates are satisfied',
+    coverageRows: input.htfContextSufficiency.timeframeCoverage.map((coverage) => ({
+      timeframe: coverage.timeframe,
+      barsLoaded: coverage.barsLoaded,
+      range: `${coverage.rangeStart || 'N/A'} to ${coverage.rangeEnd || 'N/A'}`,
+      minimumExpected: coverage.minimumExpectedDescription,
+      status: displayHtfContextStatus(coverage.status),
+    })),
+    blockers: input.htfContextSufficiency.blockers,
+  };
+}
+
+export function formatHtfContextSufficiencyMarkdownLines(input: {
+  htfContextSufficiency: HtfContextSufficiency;
+  classificationReliability: HtfClassificationReliability;
+  includeHeading?: boolean;
+}): string[] {
+  const display = buildHtfContextSufficiencyDisplay(input);
+  return [
+    ...(input.includeHeading === false ? [] : ['## HTF Context Sufficiency']),
+    `- Status: ${display.status}`,
+    `- Reliability: ${display.reliability}`,
+    `- HTF Usage: ${display.htfUsage}`,
+    `- Candidate Promotion: ${display.candidatePromotion}`,
+    '| Timeframe | Bars Loaded | Range | Minimum Expected | Status |',
+    '|---|---:|---|---|---|',
+    ...display.coverageRows.map((item) => `| ${item.timeframe} | ${item.barsLoaded} | ${item.range} | ${item.minimumExpected} | ${item.status} |`),
+    '',
+    '### Data-Limited Blockers',
+    ...(display.blockers.length ? display.blockers.map((item) => `- ${item}`) : ['- none']),
+  ];
+}
+
+export function formatCompactHtfContextSufficiencyLines(input: {
+  htfContextSufficiency: HtfContextSufficiency;
+  classificationReliability: HtfClassificationReliability;
+}): string[] {
+  const display = buildHtfContextSufficiencyDisplay(input);
+  const barLine = display.coverageRows
+    .map((item) => `${item.timeframe} ${item.barsLoaded}`)
+    .join(', ');
+  return [
+    'HTF Context:',
+    `Status: ${display.status} | Reliability: ${display.reliability}`,
+    `Bars: ${barLine}`,
+    `Usage: ${display.htfUsage}`,
+    `Candidate Promotion: ${display.candidatePromotion}`,
+  ];
 }
 
 function range(bar: NinjaBridgeBar): number {
