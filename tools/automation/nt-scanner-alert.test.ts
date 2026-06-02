@@ -5,6 +5,7 @@ import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
+  barsCoverRequestedLookback,
   buildScannerHistoryPreloadPlan,
   createPendingScannerAlertDeliveryRecord,
   findMissedExecutableScannerDeliveries,
@@ -61,6 +62,47 @@ for (const timeframe of ['5m', '15m', '60m', '240m'] as const) {
 const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
 assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
 assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T15:30:00-04:00');
+
+const ethSessionCoverageBars = Array.from({ length: 6000 }, (_, index) => {
+  const first = Date.parse('2026-05-03T18:05:00-04:00');
+  const last = Date.parse('2026-06-02T12:00:00-04:00');
+  const time = new Date(first + ((last - first) * index) / 5999).toISOString();
+  return { time, open: 1, high: 2, low: 0.5, close: 1.5, volume: 1000 };
+});
+assert.equal(
+  barsCoverRequestedLookback(
+    ethSessionCoverageBars,
+    '2026-05-03T00:00:00-04:00',
+    '2026-06-02T12:00:00-04:00',
+    '5m',
+  ),
+  true,
+);
+const fourHourCoverageBars = Array.from({ length: 1129 }, (_, index) => {
+  const first = Date.parse('2026-05-03T18:05:00-04:00');
+  const last = Date.parse('2026-06-02T10:00:00-04:00');
+  const time = new Date(first + ((last - first) * index) / 1128).toISOString();
+  return { time, open: 1, high: 2, low: 0.5, close: 1.5, volume: 1000 };
+});
+assert.equal(
+  barsCoverRequestedLookback(
+    fourHourCoverageBars,
+    '2026-05-03T00:00:00-04:00',
+    '2026-06-02T12:00:00-04:00',
+    '240m',
+  ),
+  true,
+);
+assert.equal(
+  barsCoverRequestedLookback(
+    fourHourCoverageBars.slice(-20),
+    '2026-05-03T00:00:00-04:00',
+    '2026-06-02T12:00:00-04:00',
+    '240m',
+  ),
+  false,
+);
+
 const selfHealedSummary = summarizeScannerHistoryCoverage({
   timeframe: '240m',
   requiredLookbackDays: 30,

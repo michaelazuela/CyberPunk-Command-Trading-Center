@@ -155,6 +155,12 @@ const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
+const SCANNER_HISTORY_MIN_BARS: Record<MarketBarTimeframe, number> = {
+  '5m': 500,
+  '15m': 500,
+  '60m': 120,
+  '240m': 40,
+};
 const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
 
 type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
@@ -604,7 +610,12 @@ function barTimeMs(value?: string | null): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-function barsCoverRequestedLookback(bars: NinjaBridgeBar[], requestedFrom: string, requestedTo: string): boolean {
+export function barsCoverRequestedLookback(
+  bars: NinjaBridgeBar[],
+  requestedFrom: string,
+  requestedTo: string,
+  timeframe: MarketBarTimeframe = '5m',
+): boolean {
   if (!bars.length) return false;
   const sorted = mergeBars([], bars);
   const first = barTimeMs(sorted[0]?.time);
@@ -612,8 +623,14 @@ function barsCoverRequestedLookback(bars: NinjaBridgeBar[], requestedFrom: strin
   const from = barTimeMs(requestedFrom);
   const to = barTimeMs(requestedTo);
   if (first === null || last === null || from === null || to === null) return false;
-  const oneBarToleranceMs = 30 * 60_000;
-  return first <= from + oneBarToleranceMs && last >= to - oneBarToleranceMs;
+  const loadedSpanDays = (last - first) / (24 * 60 * 60 * 1000);
+  const requiredSpanDays = Math.max(0, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
+  const latestCompletedToleranceMs = (timeframeMinutes(timeframe) + 30) * 60_000;
+  return (
+    sorted.length >= SCANNER_HISTORY_MIN_BARS[timeframe] &&
+    loadedSpanDays >= requiredSpanDays &&
+    last >= to - latestCompletedToleranceMs
+  );
 }
 
 export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRecord): string {
@@ -836,7 +853,7 @@ async function fetchScannerHistoryFrame(args: {
   }
 
   let repaired: NinjaBridgeBar[] = [];
-  const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to);
+  const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
   if (!cacheSufficient) {
     try {
       const historical = await getNinjaHistoricalBars({
@@ -870,7 +887,7 @@ async function fetchScannerHistoryFrame(args: {
 
   const bars = mergeBars(repaired, cached);
   const sorted = mergeBars([], bars);
-  const sufficient = barsCoverRequestedLookback(sorted, args.from, args.to);
+  const sufficient = barsCoverRequestedLookback(sorted, args.from, args.to, args.timeframe);
   const source: ScannerHistoryCoverageSource =
     cached.length && repaired.length ? 'market_bars_bridge_repair' :
     cached.length ? 'market_bars' :
