@@ -48,7 +48,8 @@
     "guard:legacy-rules": "node scripts/no-legacy-rules-check.js",
     "guard:architecture": "node scripts/architecture-guard.js",
     "guard:schema": "node scripts/schema-guard.js",
-    "guard": "npm run guard:no-firebase && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema",
+    "guard:active-windows": "node scripts/active-window-timestamp-guard.js",
+    "guard": "npm run guard:no-firebase && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema && npm run guard:active-windows",
     "lint": "npm run guard && tsc --noEmit"
   },
   "dependencies": {

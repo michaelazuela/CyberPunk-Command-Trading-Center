@@ -229,7 +229,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     priority: 90,
     allowedSessions: BOTH_SESSIONS,
     detectionKeywords: ['algo kill zone', 'kill zone', 'macro window', 'time window'],
-    possibleKeywords: ['9:50', '10:10', '11:50', '12:10', 'time-based'],
+    possibleKeywords: ['active setup scan', 'execution window', 'time-based'],
     requiredEvidence: ['Active execution window', 'Sweep or structure shift inside window', 'Directional trigger'],
     defaultRequiredTrigger: 'Sweep plus structure shift inside the active time window.',
     defaultNextAction: 'Confirm that price action, not time alone, gives the trigger.',
