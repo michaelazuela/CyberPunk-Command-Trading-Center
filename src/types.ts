@@ -751,19 +751,33 @@ export interface HtfLiquidityDrawCandidateState {
   source: 'ninjatrader_ohlc';
   authority: 'ohlc_facts_only';
   boundary: 'context_only_not_execution_authority' | 'candidate_creation_only_not_execution_authority';
+  drawDirection?: 'buy_side' | 'sell_side' | 'none' | 'unknown';
+  planDirection?: 'LONG' | 'SHORT' | 'NONE';
   macroContext: 'bullish' | 'bearish' | 'neutral' | 'unknown' | 'conflicting';
+  raidState?: 'sell_side_raid' | 'buy_side_raid' | 'none' | 'unknown';
   liquidityRaidState: 'sell_side_raid' | 'buy_side_raid' | 'none' | 'unknown';
+  reclaimStatus?: 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown';
+  externalLiquidityTarget?: string;
   classification:
     | 'HTF_DRAW_DETECTED'
     | 'RAID_RECLAIM_DEVELOPING'
     | 'MSS_TRIGGER_PENDING'
     | 'MSS_TRIGGER_CONFIRMED'
+    | 'REVERSAL_DELIVERY_PLAN_CANDIDATE'
+    | 'QUALIFIED_CONDITIONAL'
+    | 'EXECUTABLE'
     | 'NO_QUALIFIED_STATE'
     | 'FAILED_MSS'
     | 'POST_MSS_DIGESTION'
     | 'CONFLICTING_MSS';
   timeframeStates: TimeframeMssCandidateState[];
+  timeframeStack?: TimeframeMssCandidateState[];
   fiveMinuteState: TimeframeMssCandidateState;
+  fiveMinuteMssTriggerConfirmed?: boolean;
+  fiveMinuteMssConfirmationType?: 'swing_break_with_displacement' | 'reclaim_then_break' | 'unknown';
+  postShiftState?: 'post_mss_digestion' | 'retest_pending' | 'continuation_pending' | 'opposite_mss_confirmed' | 'unknown';
+  fifteenMinuteConfirmationStatus?: 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown';
+  activeScanWindow?: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
   htfDrawContinuationPending: boolean;
   confidence: number;
   notes: string[];

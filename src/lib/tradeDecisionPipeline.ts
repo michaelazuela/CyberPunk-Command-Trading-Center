@@ -27,6 +27,7 @@ import { rankSetupCandidate, scanSetupCandidates } from './setupScanner';
 import { buildConditionalPlans } from './conditionalPlanBuilder';
 import { applyTargetObjectivesToCandidates } from './targetObjectiveEngine';
 import { applyLevelSanity } from './levelSanityEngine';
+import { buildHtfLiquidityDrawStateFromChartContext } from './htfLiquidityDrawEngine';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -182,7 +183,7 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
       : structured.screenshotQuality === 'Low'
         ? 'warning'
         : structured.screenshotUsability;
-  return {
+  const chartContext: ChartContext = {
     sessionType: input.sessionType,
     instrument: input.instrument || 'MES',
     tradeDate: input.tradeDate || new Date().toISOString().split('T')[0],
@@ -233,6 +234,13 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     extractionWarnings: structured.extractionWarnings,
     marketContext: structured.marketContext || input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
     ocrText: structured.ocrText || input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
+  };
+  return {
+    ...chartContext,
+    htfLiquidityDrawState:
+      chartContext.htfLiquidityDrawState ||
+      buildHtfLiquidityDrawStateFromChartContext(chartContext) ||
+      undefined,
   };
 }
 

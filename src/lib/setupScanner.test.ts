@@ -1473,6 +1473,22 @@ const tests: Array<[string, () => void]> = [
     assert.equal(primaryModel?.detectedStatus, SetupCandidateStatus.NotDetected);
   }],
 
+  ['Phase 1B narrative HTF draw language cannot create the HTF draw continuation model without structured state', () => {
+    const context = structuredContext();
+    context.htfLiquidityDrawState = undefined;
+    const result = scanSetupCandidates({
+      sessionType: 'morning',
+      chartContext: context,
+      result: resultWithText('HTF draw continuation after sell-side raid and bullish 5M MSS toward external liquidity.'),
+    });
+    const htfModel = result.candidates.find((candidate) => candidate.setupType === SetupType.HtfDrawContinuationAfterRaid);
+
+    assert.ok(htfModel);
+    assert.equal(htfModel.detectedStatus, SetupCandidateStatus.NotDetected);
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate?.pathway === 'htf_liquidity_draw_mss', false);
+  }],
+
   ['Phase 3 bearish HTF draw pathway creates trading-plan candidate after buy-side raid and confirmed bearish 5M MSS', () => {
     const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('SHORT'), result: null });
     const htfCandidate = htfPathwayCandidate(result);

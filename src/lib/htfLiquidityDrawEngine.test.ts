@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildHtfLiquidityDrawState,
+  buildHtfLiquidityDrawStateFromChartContext,
   classifyTimeframeMssState,
   type HtfMssTimeframe,
 } from './htfLiquidityDrawEngine';
@@ -15,6 +16,19 @@ function bar(index: number, open: number, high: number, low: number, close: numb
     close,
     volume: 1000,
   };
+}
+
+function candleFacts(bars: NinjaBridgeBar[]) {
+  return bars.map((item, index) => ({
+    index,
+    timestamp: item.time,
+    open: item.open,
+    high: item.high,
+    low: item.low,
+    close: item.close,
+    direction: item.close > item.open ? 'bullish' : item.close < item.open ? 'bearish' : 'doji',
+    confidence: 'High',
+  }));
 }
 
 function bullishPendingBars(): NinjaBridgeBar[] {
@@ -127,10 +141,83 @@ const pendingState = buildHtfLiquidityDrawState({
 });
 assert.equal(pendingState.classification, 'MSS_TRIGGER_PENDING');
 assert.equal(pendingState.fiveMinuteState.lifecycleState, 'mss_trigger_pending');
+assert.equal(pendingState.planDirection, 'LONG');
+assert.equal(pendingState.drawDirection, 'buy_side');
+assert.equal(pendingState.fiveMinuteMssTriggerConfirmed, false);
+assert.equal(pendingState.fifteenMinuteConfirmationStatus, 'potential_mss');
 assert.equal(pendingState.createsTradingPlanCandidate, false);
 assert.equal(pendingState.approvesExecution, false);
 assert.equal(JSON.stringify(pendingState).includes('REVERSAL_DELIVERY_PLAN_CANDIDATE'), false);
 assert.equal(JSON.stringify(pendingState).includes('"canExecute"'), false);
+
+const confirmedCandidateEligible = buildHtfLiquidityDrawState({
+  bars4H: bullishPendingBars(),
+  bars1H: bullishPendingBars(),
+  bars15M: bullishPendingBars(),
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'London high / prior RTH high',
+  chartTimestamp: '2026-06-01T10:35:00',
+});
+assert.equal(confirmedCandidateEligible.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+assert.equal(confirmedCandidateEligible.planDirection, 'LONG');
+assert.equal(confirmedCandidateEligible.raidState, 'sell_side_raid');
+assert.equal(confirmedCandidateEligible.fiveMinuteMssTriggerConfirmed, true);
+assert.equal(confirmedCandidateEligible.fiveMinuteMssConfirmationType, 'swing_break_with_displacement');
+assert.equal(confirmedCandidateEligible.activeScanWindow, 'MORNING_SETUP_SCAN');
+assert.ok(confirmedCandidateEligible.confidence >= 75);
+assert.equal(confirmedCandidateEligible.createsTradingPlanCandidate, false);
+assert.equal(confirmedCandidateEligible.approvesExecution, false);
+
+const bearishCandidateEligible = buildHtfLiquidityDrawState({
+  bars4H: bearishPendingBars(),
+  bars1H: bearishPendingBars(),
+  bars15M: bearishPendingBars(),
+  bars5M: bearishConfirmedBars(),
+  externalSellSideLiquidityTarget: 'London low / prior RTH low',
+  chartTimestamp: '2026-06-01T14:10:00',
+});
+assert.equal(bearishCandidateEligible.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+assert.equal(bearishCandidateEligible.planDirection, 'SHORT');
+assert.equal(bearishCandidateEligible.drawDirection, 'sell_side');
+assert.equal(bearishCandidateEligible.raidState, 'buy_side_raid');
+assert.equal(bearishCandidateEligible.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
+
+const missingTimeframes = buildHtfLiquidityDrawState({
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'prior RTH high',
+});
+assert.equal(missingTimeframes.classification, 'NO_QUALIFIED_STATE');
+assert.ok(missingTimeframes.timeframeStack.some((state) => state.timeframe === '4H' && state.status === 'unknown'));
+assert.ok(missingTimeframes.blockers.some((line) => line.includes('Missing one or more required 4H/1H/15M/5M')));
+
+const derivedFromChartContext = buildHtfLiquidityDrawStateFromChartContext({
+  chartTimestamp: '2026-06-01T10:45:00',
+  keyLevels: { activeSwingHigh: 104, activeSwingLow: 95 },
+  targetObjectives: [],
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fourHour: { candles: candleFacts(bullishPendingBars()) },
+    oneHour: { candles: candleFacts(bullishPendingBars()) },
+    fifteenMinute: { candles: candleFacts(bullishPendingBars()) },
+    fiveMinute: { candles: candleFacts(bullishConfirmedBars()) },
+    targetMap: {
+      nearestUpsideLiquidity: { label: 'prior RTH high', price: 104 },
+      levelsToWatch: [],
+    },
+  } as any,
+});
+assert.ok(derivedFromChartContext);
+assert.equal(derivedFromChartContext.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+assert.equal(derivedFromChartContext.externalLiquidityTarget, 'prior RTH high 104');
+
+const noStructuredFallback = buildHtfLiquidityDrawStateFromChartContext({
+  chartTimestamp: '2026-06-01T10:45:00',
+  keyLevels: {},
+  targetObjectives: [],
+  multiTimeframeContext: undefined,
+});
+assert.equal(noStructuredFallback, null);
 
 const failedBullish = classifyTimeframeMssState({
   timeframe: '5M',

@@ -15,6 +15,7 @@ import type {
 import { buildStructuralLevels } from './sessionStructure';
 import { buildSessionLevelContext } from './sessionLevelContextEngine';
 import { buildSessionStory } from './sessionStoryEngine';
+import { buildHtfLiquidityDrawState } from './htfLiquidityDrawEngine';
 
 export type NinjaBridgeTimeframe = '1m' | '5m' | '15m' | '60m' | '240m' | '1h' | '4h';
 
@@ -668,6 +669,11 @@ function buildTargetMap(levels: StructuralLevel[], currentPrice: number | null):
   };
 }
 
+function structuralTargetLabel(level: StructuralLevel | null | undefined): string | undefined {
+  if (!level || !isPrice(level.price)) return undefined;
+  return `${level.label} ${level.price}`;
+}
+
 function buildMultiTimeframeContext({
   bars5m,
   bars15m,
@@ -788,6 +794,19 @@ export function buildNinjaChartContext({
     structuralLevels: enrichedStructuralLevels,
     currentPrice: last.close,
   });
+  const htfLiquidityDrawState = buildHtfLiquidityDrawState({
+    bars4H: bars240m,
+    bars1H: bars60m,
+    bars15M: bars15m,
+    bars5M: executionBars,
+    externalBuySideLiquidityTarget:
+      structuralTargetLabel(multiTimeframeContext.targetMap.nearestUpsideLiquidity) ||
+      structuralTargetLabel(multiTimeframeContext.targetMap.majorUpsideLiquidity),
+    externalSellSideLiquidityTarget:
+      structuralTargetLabel(multiTimeframeContext.targetMap.nearestDownsideLiquidity) ||
+      structuralTargetLabel(multiTimeframeContext.targetMap.majorDownsideLiquidity),
+    chartTimestamp: last.time,
+  });
 
   return {
     sessionType,
@@ -868,6 +887,7 @@ export function buildNinjaChartContext({
     sessionLevelContext,
     sessionStory,
     multiTimeframeContext,
+    htfLiquidityDrawState,
     targetObjectives: enrichedStructuralLevels.map(level => ({
       label: level.label,
       price: level.price,

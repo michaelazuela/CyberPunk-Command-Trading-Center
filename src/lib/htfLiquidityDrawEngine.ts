@@ -1,4 +1,5 @@
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
+import type { ChartCandleFact, ChartContext, StructuralLevel, TimeframeFactSet } from '../types';
 
 export type HtfMssTimeframe = '4H' | '1H' | '15M' | '5M';
 
@@ -47,6 +48,9 @@ export type HtfLiquidityDrawClassification =
   | 'RAID_RECLAIM_DEVELOPING'
   | 'MSS_TRIGGER_PENDING'
   | 'MSS_TRIGGER_CONFIRMED'
+  | 'REVERSAL_DELIVERY_PLAN_CANDIDATE'
+  | 'QUALIFIED_CONDITIONAL'
+  | 'EXECUTABLE'
   | 'NO_QUALIFIED_STATE'
   | 'FAILED_MSS'
   | 'POST_MSS_DIGESTION'
@@ -56,11 +60,22 @@ export interface HtfLiquidityDrawState {
   source: 'ninjatrader_ohlc';
   authority: 'ohlc_facts_only';
   boundary: 'context_only_not_execution_authority';
+  drawDirection: 'buy_side' | 'sell_side' | 'none' | 'unknown';
+  planDirection: 'LONG' | 'SHORT' | 'NONE';
   macroContext: MssDirection | 'conflicting';
+  raidState: LiquidityRaidState;
   liquidityRaidState: LiquidityRaidState;
+  reclaimStatus: Extract<MssStatus, 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown'>;
+  externalLiquidityTarget?: string;
   classification: HtfLiquidityDrawClassification;
   timeframeStates: TimeframeMssState[];
+  timeframeStack: TimeframeMssState[];
   fiveMinuteState: TimeframeMssState;
+  fiveMinuteMssTriggerConfirmed: boolean;
+  fiveMinuteMssConfirmationType: 'swing_break_with_displacement' | 'reclaim_then_break' | 'unknown';
+  postShiftState: 'post_mss_digestion' | 'retest_pending' | 'continuation_pending' | 'opposite_mss_confirmed' | 'unknown';
+  fifteenMinuteConfirmationStatus: Extract<MssStatus, 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown'>;
+  activeScanWindow: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
   htfDrawContinuationPending: boolean;
   confidence: number;
   notes: string[];
@@ -76,6 +91,7 @@ export interface HtfLiquidityDrawInput {
   bars5M?: NinjaBridgeBar[];
   externalBuySideLiquidityTarget?: string;
   externalSellSideLiquidityTarget?: string;
+  chartTimestamp?: string | null;
 }
 
 interface RaidEvent {
@@ -130,6 +146,27 @@ function body(bar: NinjaBridgeBar): number {
 
 function average(values: number[]): number {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function minutesFromTimestamp(value?: string | null): number | null {
+  if (!value) return null;
+  const match = value.match(/T(\d{2}):(\d{2})/);
+  if (match) return Number(match[1]) * 60 + Number(match[2]);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function activeScanWindowFromTimestamp(value?: string | null): HtfLiquidityDrawState['activeScanWindow'] {
+  const minutes = minutesFromTimestamp(value);
+  if (minutes === null) return 'OUTSIDE_SETUP_SCAN';
+  if (minutes >= 10 * 60 && minutes < 12 * 60) return 'MORNING_SETUP_SCAN';
+  if (minutes >= 12 * 60 && minutes <= 15 * 60 + 30) return 'LUNCH_PM_SETUP_SCAN';
+  return 'OUTSIDE_SETUP_SCAN';
 }
 
 function averageRangeBefore(bars: NinjaBridgeBar[], index: number): number {
@@ -472,12 +509,148 @@ function macroContextFromStates(states: TimeframeMssState[]): HtfLiquidityDrawSt
   return 'neutral';
 }
 
-function classificationFromFiveMinute(state: TimeframeMssState, macroContext: HtfLiquidityDrawState['macroContext']): HtfLiquidityDrawClassification {
-  if (state.lifecycleState === 'failed_mss') return 'FAILED_MSS';
-  if (state.lifecycleState === 'opposite_mss_confirmed' || state.lifecycleState === 'conflicting_mss') return 'CONFLICTING_MSS';
-  if (state.lifecycleState === 'post_mss_digestion') return 'POST_MSS_DIGESTION';
-  if (state.lifecycleState === 'confirmed_mss') return 'MSS_TRIGGER_CONFIRMED';
-  if (state.lifecycleState === 'mss_trigger_pending') return 'MSS_TRIGGER_PENDING';
+function directionalPlanFromState(state: TimeframeMssState): HtfLiquidityDrawState['planDirection'] {
+  if (state.direction === 'bullish') return 'LONG';
+  if (state.direction === 'bearish') return 'SHORT';
+  return 'NONE';
+}
+
+function drawDirectionFromPlan(planDirection: HtfLiquidityDrawState['planDirection']): HtfLiquidityDrawState['drawDirection'] {
+  if (planDirection === 'LONG') return 'buy_side';
+  if (planDirection === 'SHORT') return 'sell_side';
+  return 'unknown';
+}
+
+function safeReclaimStatus(state: TimeframeMssState): HtfLiquidityDrawState['reclaimStatus'] {
+  if (state.status === 'failed' || state.status === 'conflicting') return 'not_confirmed';
+  return state.status;
+}
+
+function safeFifteenMinuteStatus(state: TimeframeMssState | undefined): HtfLiquidityDrawState['fifteenMinuteConfirmationStatus'] {
+  if (!state || state.status === 'failed' || state.status === 'conflicting') return 'not_confirmed';
+  return state.status;
+}
+
+function fiveMinuteConfirmationType(state: TimeframeMssState): HtfLiquidityDrawState['fiveMinuteMssConfirmationType'] {
+  const text = state.evidence.join(' ').toLowerCase();
+  if (
+    state.status === 'confirmed' &&
+    text.includes('confirmed close') &&
+    (text.includes('swing high') || text.includes('swing low')) &&
+    text.includes('displacement')
+  ) {
+    return 'swing_break_with_displacement';
+  }
+  if (state.status === 'confirmed' && text.includes('reclaim') && text.includes('break')) {
+    return 'reclaim_then_break';
+  }
+  return 'unknown';
+}
+
+function postShiftStateFromFiveMinute(state: TimeframeMssState): HtfLiquidityDrawState['postShiftState'] {
+  if (state.lifecycleState === 'post_mss_digestion') return 'post_mss_digestion';
+  if (state.lifecycleState === 'opposite_mss_confirmed') return 'opposite_mss_confirmed';
+  if (state.lifecycleState === 'mss_trigger_pending') return 'retest_pending';
+  if (state.lifecycleState === 'confirmed_mss') return 'continuation_pending';
+  return 'unknown';
+}
+
+function externalTargetForPlan(args: {
+  planDirection: HtfLiquidityDrawState['planDirection'];
+  states: TimeframeMssState[];
+  externalBuySideLiquidityTarget?: string;
+  externalSellSideLiquidityTarget?: string;
+}): string | undefined {
+  if (args.planDirection === 'LONG') {
+    return args.externalBuySideLiquidityTarget ||
+      args.states.find((state) => state.direction === 'bullish' && state.externalLiquidityTarget)?.externalLiquidityTarget;
+  }
+  if (args.planDirection === 'SHORT') {
+    return args.externalSellSideLiquidityTarget ||
+      args.states.find((state) => state.direction === 'bearish' && state.externalLiquidityTarget)?.externalLiquidityTarget;
+  }
+  return undefined;
+}
+
+function hasMissingRequiredTimeframe(states: TimeframeMssState[]): boolean {
+  return states.some((state) => state.status === 'unknown' || state.lifecycleState === 'unknown');
+}
+
+function htfNonConflict(states: TimeframeMssState[], planDirection: HtfLiquidityDrawState['planDirection']): boolean {
+  if (planDirection === 'NONE') return false;
+  const expected = planDirection === 'LONG' ? 'bullish' : 'bearish';
+  const htfStates = states.filter((state) => state.timeframe === '4H' || state.timeframe === '1H');
+  return htfStates.every((state) =>
+    state.direction === expected ||
+    state.direction === 'neutral' ||
+    state.direction === 'unknown' ||
+    state.status === 'not_confirmed'
+  );
+}
+
+function fifteenMinuteSupportsPlan(state: TimeframeMssState | undefined, planDirection: HtfLiquidityDrawState['planDirection']): boolean {
+  if (!state || planDirection === 'NONE') return false;
+  const expected = planDirection === 'LONG' ? 'bullish' : 'bearish';
+  return (
+    state.direction === expected &&
+    (state.status === 'confirmed' || state.status === 'potential_mss' || state.status === 'pending_confirm')
+  );
+}
+
+function candidateConfidence(args: {
+  states: TimeframeMssState[];
+  fiveMinute: TimeframeMssState;
+  fifteenMinute?: TimeframeMssState;
+  planDirection: HtfLiquidityDrawState['planDirection'];
+  externalTarget?: string;
+  missingRequired: boolean;
+  macroContext: HtfLiquidityDrawState['macroContext'];
+}): number {
+  if (args.missingRequired) {
+    return clampScore(average(args.states.map((state) => state.confidence)) - 20);
+  }
+
+  let score = 20;
+  if (args.planDirection !== 'NONE') score += 8;
+  if (htfNonConflict(args.states, args.planDirection)) score += 16;
+  if (args.macroContext === 'conflicting') score -= 22;
+  if (fifteenMinuteSupportsPlan(args.fifteenMinute, args.planDirection)) score += 16;
+  if (args.fiveMinute.status === 'confirmed') score += 26;
+  else if (args.fiveMinute.status === 'pending_confirm' || args.fiveMinute.status === 'potential_mss') score += 10;
+  if (fiveMinuteConfirmationType(args.fiveMinute) !== 'unknown') score += 8;
+  if (args.externalTarget) score += 10;
+  if (args.fiveMinute.lifecycleState === 'post_mss_digestion') score += 3;
+  return clampScore(score);
+}
+
+function classificationFromState(args: {
+  states: TimeframeMssState[];
+  fiveMinute: TimeframeMssState;
+  fifteenMinute?: TimeframeMssState;
+  macroContext: HtfLiquidityDrawState['macroContext'];
+  planDirection: HtfLiquidityDrawState['planDirection'];
+  confidence: number;
+  externalTarget?: string;
+  missingRequired: boolean;
+}): HtfLiquidityDrawClassification {
+  const { fiveMinute, macroContext } = args;
+  if (args.missingRequired) return 'NO_QUALIFIED_STATE';
+  if (fiveMinute.lifecycleState === 'failed_mss') return 'FAILED_MSS';
+  if (fiveMinute.lifecycleState === 'opposite_mss_confirmed' || fiveMinute.lifecycleState === 'conflicting_mss') return 'CONFLICTING_MSS';
+  if (fiveMinute.lifecycleState === 'confirmed_mss' || fiveMinute.lifecycleState === 'post_mss_digestion') {
+    if (
+      args.planDirection !== 'NONE' &&
+      args.externalTarget &&
+      args.confidence >= 75 &&
+      htfNonConflict(args.states, args.planDirection) &&
+      fifteenMinuteSupportsPlan(args.fifteenMinute, args.planDirection)
+    ) {
+      return 'REVERSAL_DELIVERY_PLAN_CANDIDATE';
+    }
+    return 'MSS_TRIGGER_CONFIRMED';
+  }
+  if (fiveMinute.lifecycleState === 'mss_trigger_pending') return 'MSS_TRIGGER_PENDING';
+  if (fiveMinute.lifecycleState === 'potential_mss') return 'RAID_RECLAIM_DEVELOPING';
   if (macroContext === 'bullish' || macroContext === 'bearish') return 'HTF_DRAW_DETECTED';
   return 'NO_QUALIFIED_STATE';
 }
@@ -510,11 +683,43 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
     }),
   ];
   const fiveMinuteState = timeframeStates.find((state) => state.timeframe === '5M') as TimeframeMssState;
+  const fifteenMinuteState = timeframeStates.find((state) => state.timeframe === '15M');
   const macroContext = macroContextFromStates(timeframeStates);
-  const classification = classificationFromFiveMinute(fiveMinuteState, macroContext);
-  const confidence = Math.round(average(timeframeStates.map((state) => state.confidence)));
+  const missingRequired = hasMissingRequiredTimeframe(timeframeStates);
+  const planDirection = directionalPlanFromState(fiveMinuteState);
+  const externalLiquidityTarget = externalTargetForPlan({
+    planDirection,
+    states: timeframeStates,
+    externalBuySideLiquidityTarget: input.externalBuySideLiquidityTarget,
+    externalSellSideLiquidityTarget: input.externalSellSideLiquidityTarget,
+  });
+  const confidence = candidateConfidence({
+    states: timeframeStates,
+    fiveMinute: fiveMinuteState,
+    fifteenMinute: fifteenMinuteState,
+    planDirection,
+    externalTarget: externalLiquidityTarget,
+    missingRequired,
+    macroContext,
+  });
+  const classification = classificationFromState({
+    states: timeframeStates,
+    fiveMinute: fiveMinuteState,
+    fifteenMinute: fifteenMinuteState,
+    macroContext,
+    planDirection,
+    confidence,
+    externalTarget: externalLiquidityTarget,
+    missingRequired,
+  });
+  const raidState = raidStateFromFiveMinute(fiveMinuteState);
   const blockers = [
-    'Phase 1 is context-only and does not create a trading-plan candidate.',
+    ...(missingRequired ? ['Missing one or more required 4H/1H/15M/5M OHLC timeframes; HTF/MSS state is not candidate-qualified.'] : []),
+    ...(classification === 'MSS_TRIGGER_PENDING' || classification === 'RAID_RECLAIM_DEVELOPING'
+      ? ['5M MSS is developing or pending; confirmed 5M swing break with displacement is still required.']
+      : []),
+    ...(classification === 'NO_QUALIFIED_STATE' && !missingRequired ? ['No qualifying HTF draw + raid/reclaim + 5M MSS state was derived from structured OHLC.'] : []),
+    'HTF/MSS state population does not approve execution by itself.',
     '5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval.',
   ];
 
@@ -522,19 +727,89 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
     source: 'ninjatrader_ohlc',
     authority: 'ohlc_facts_only',
     boundary: 'context_only_not_execution_authority',
+    drawDirection: drawDirectionFromPlan(planDirection),
+    planDirection,
     macroContext,
-    liquidityRaidState: raidStateFromFiveMinute(fiveMinuteState),
+    raidState,
+    liquidityRaidState: raidState,
+    reclaimStatus: safeReclaimStatus(fiveMinuteState),
+    externalLiquidityTarget,
     classification,
     timeframeStates,
+    timeframeStack: timeframeStates,
     fiveMinuteState,
-    htfDrawContinuationPending: classification === 'MSS_TRIGGER_PENDING' || classification === 'MSS_TRIGGER_CONFIRMED',
+    fiveMinuteMssTriggerConfirmed: fiveMinuteState.status === 'confirmed' &&
+      (fiveMinuteState.lifecycleState === 'confirmed_mss' || fiveMinuteState.lifecycleState === 'post_mss_digestion'),
+    fiveMinuteMssConfirmationType: fiveMinuteConfirmationType(fiveMinuteState),
+    postShiftState: postShiftStateFromFiveMinute(fiveMinuteState),
+    fifteenMinuteConfirmationStatus: safeFifteenMinuteStatus(fifteenMinuteState),
+    activeScanWindow: activeScanWindowFromTimestamp(input.chartTimestamp),
+    htfDrawContinuationPending:
+      classification === 'MSS_TRIGGER_PENDING' ||
+      classification === 'MSS_TRIGGER_CONFIRMED' ||
+      classification === 'REVERSAL_DELIVERY_PLAN_CANDIDATE',
     confidence,
     notes: [
-      'Higher timeframe MSS states are market-map context only.',
-      '5M confirmed MSS is evidence only in Phase 1 and does not approve a live trade.',
+      'Structured HTF/MSS state was derived from NinjaTrader OHLC facts, not narrative fallback.',
+      '4H and 1H define draw/session context; 15M defines liquidity-map support; 5M remains trigger authority.',
+      '5M confirmed MSS can make the state candidate-eligible, but app-owned entry/stop/target/risk/session/canExecute gates still decide execution.',
     ],
     blockers,
     createsTradingPlanCandidate: false,
     approvesExecution: false,
   };
+}
+
+function candleFactsToBars(candles: ChartCandleFact[] | undefined): NinjaBridgeBar[] {
+  return (candles || [])
+    .filter((candle) =>
+      typeof candle.open === 'number' &&
+      typeof candle.high === 'number' &&
+      typeof candle.low === 'number' &&
+      typeof candle.close === 'number'
+    )
+    .map((candle, index) => ({
+      time: candle.timestamp || `1970-01-01T00:${String(index).padStart(2, '0')}:00`,
+      open: candle.open as number,
+      high: candle.high as number,
+      low: candle.low as number,
+      close: candle.close as number,
+      volume: 0,
+    }));
+}
+
+function factSetToBars(factSet: TimeframeFactSet | undefined): NinjaBridgeBar[] {
+  return candleFactsToBars(factSet?.candles);
+}
+
+function structuralTargetLabel(level: StructuralLevel | null | undefined): string | undefined {
+  if (!level || !isFiniteNumber(level.price)) return undefined;
+  return `${level.label} ${level.price}`;
+}
+
+export function buildHtfLiquidityDrawStateFromChartContext(
+  chartContext: Pick<ChartContext, 'multiTimeframeContext' | 'chartTimestamp' | 'targetObjectives' | 'keyLevels'>
+): HtfLiquidityDrawState | null {
+  const mtf = chartContext.multiTimeframeContext;
+  if (!mtf) return null;
+  const upsideTarget =
+    structuralTargetLabel(mtf.targetMap?.nearestUpsideLiquidity) ||
+    structuralTargetLabel(mtf.targetMap?.majorUpsideLiquidity) ||
+    chartContext.targetObjectives?.find((target) => target.direction === 'LONG')?.label ||
+    (chartContext.keyLevels?.activeSwingHigh ? `active swing high ${chartContext.keyLevels.activeSwingHigh}` : undefined);
+  const downsideTarget =
+    structuralTargetLabel(mtf.targetMap?.nearestDownsideLiquidity) ||
+    structuralTargetLabel(mtf.targetMap?.majorDownsideLiquidity) ||
+    chartContext.targetObjectives?.find((target) => target.direction === 'SHORT')?.label ||
+    (chartContext.keyLevels?.activeSwingLow ? `active swing low ${chartContext.keyLevels.activeSwingLow}` : undefined);
+
+  return buildHtfLiquidityDrawState({
+    bars4H: factSetToBars(mtf.fourHour),
+    bars1H: factSetToBars(mtf.oneHour),
+    bars15M: factSetToBars(mtf.fifteenMinute),
+    bars5M: factSetToBars(mtf.fiveMinute),
+    externalBuySideLiquidityTarget: upsideTarget,
+    externalSellSideLiquidityTarget: downsideTarget,
+    chartTimestamp: chartContext.chartTimestamp,
+  });
 }
