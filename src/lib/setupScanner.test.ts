@@ -1778,13 +1778,13 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(turtle);
     assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
-    assert.ok(turtle.evidence.includes('High-quality morning time window'));
+    assert.ok(turtle.evidence.includes('Active window: Morning setup scan, 10:00-12:00 ET'));
     assert.ok(turtle.evidence.includes('Draw on opposing liquidity identified'));
     assert.ok(turtle.evidence.includes('Sweep-first sequence confirmed'));
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 
-  ['Late lunch context stays supportive only and requires cleaner no-chase structure', () => {
+  ['Continuous Lunch/PM setup scan context stays supportive through 12:45 ET', () => {
     const context = bullishTurtleSoupContext();
     context.sessionType = 'replay_lunch';
     context.chartTimestamp = '2026-05-08T12:45:00';
@@ -1793,8 +1793,8 @@ const tests: Array<[string, () => void]> = [
     const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
 
     assert.ok(turtle);
-    assert.ok(turtle.evidence.includes('Approved lunch time window'));
-    assert.ok(turtle.missingEvidence.includes('Late-window setup requires cleaner structure and no chase entry'));
+    assert.ok(turtle.evidence.includes('Active window: Lunch/PM setup scan, 12:00-15:30 ET'));
+    assert.equal(turtle.missingEvidence.includes('Fragmented lunch cutoff requires extra confirmation'), false);
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],
 

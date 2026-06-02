@@ -182,6 +182,16 @@ assert.equal(bearishCandidateEligible.drawDirection, 'sell_side');
 assert.equal(bearishCandidateEligible.raidState, 'buy_side_raid');
 assert.equal(bearishCandidateEligible.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
 
+const fifteenThirtyOutside = buildHtfLiquidityDrawState({
+  bars4H: bearishPendingBars(),
+  bars1H: bearishPendingBars(),
+  bars15M: bearishPendingBars(),
+  bars5M: bearishConfirmedBars(),
+  externalSellSideLiquidityTarget: 'London low / prior RTH low',
+  chartTimestamp: '2026-06-01T15:30:00',
+});
+assert.equal(fifteenThirtyOutside.activeScanWindow, 'OUTSIDE_SETUP_SCAN');
+
 const missingTimeframes = buildHtfLiquidityDrawState({
   bars5M: bullishConfirmedBars(),
   externalBuySideLiquidityTarget: 'prior RTH high',

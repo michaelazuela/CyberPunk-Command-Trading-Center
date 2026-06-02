@@ -51,8 +51,10 @@ assert.equal(byName.three_day_eth.high, 130);
 assert.equal(byName.three_day_eth.low, 95);
 assert.equal(byName.asian.high, 139);
 assert.equal(byName.asian.low, 132);
+assert.equal(byName.rth_morning.label, 'Morning Setup Scan Window');
 assert.equal(byName.rth_morning.high, 140);
 assert.equal(byName.rth_morning.low, 120);
+assert.equal(byName.lunch.label, 'Lunch/PM Setup Scan Window');
 assert.equal(byName.lunch.high, 142);
 assert.equal(byName.lunch.low, 136);
 

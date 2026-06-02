@@ -1,5 +1,6 @@
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 import type { ChartCandleFact, ChartContext, StructuralLevel, TimeframeFactSet } from '../types';
+import { classifyActiveSetupScanWindowByEtMinutes } from '../config/timeWindows';
 
 export type HtfMssTimeframe = '4H' | '1H' | '15M' | '5M';
 
@@ -164,9 +165,7 @@ function minutesFromTimestamp(value?: string | null): number | null {
 function activeScanWindowFromTimestamp(value?: string | null): HtfLiquidityDrawState['activeScanWindow'] {
   const minutes = minutesFromTimestamp(value);
   if (minutes === null) return 'OUTSIDE_SETUP_SCAN';
-  if (minutes >= 10 * 60 && minutes < 12 * 60) return 'MORNING_SETUP_SCAN';
-  if (minutes >= 12 * 60 && minutes <= 15 * 60 + 30) return 'LUNCH_PM_SETUP_SCAN';
-  return 'OUTSIDE_SETUP_SCAN';
+  return classifyActiveSetupScanWindowByEtMinutes(minutes);
 }
 
 function averageRangeBefore(bars: NinjaBridgeBar[], index: number): number {

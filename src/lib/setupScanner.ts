@@ -381,29 +381,18 @@ function timeWindowQualityContext(chartContext?: ChartContext | null): Candidate
         forceConditional: false,
       };
     }
-    if (minutes >= 10 * 60 && minutes <= 10 * 60 + 30) {
-      return { evidence: ['High-quality morning time window'], missingEvidence: [], score: 8, forceConditional: false };
-    }
-    if (minutes > 10 * 60 + 30 && minutes <= 11 * 60 + 15) {
-      return { evidence: ['Approved morning time window'], missingEvidence: [], score: 4, forceConditional: false };
+    if (minutes >= 10 * 60 && minutes < 12 * 60) {
+      return { evidence: ['Active window: Morning setup scan, 10:00-12:00 ET'], missingEvidence: [], score: 8, forceConditional: false };
     }
   }
 
   if (sessionType === 'lunch' || sessionType === 'replay_lunch') {
-    if (minutes >= 11 * 60 + 50 && minutes <= 12 * 60 + 20) {
-      return { evidence: ['High-quality lunch time window'], missingEvidence: [], score: 6, forceConditional: false };
-    }
-    if (minutes > 12 * 60 + 20 && minutes <= 13 * 60) {
-      return {
-        evidence: ['Approved lunch time window'],
-        missingEvidence: ['Late-window setup requires cleaner structure and no chase entry'],
-        score: 2,
-        forceConditional: false,
-      };
+    if (minutes >= 12 * 60 && minutes < 15 * 60 + 30) {
+      return { evidence: ['Active window: Lunch/PM setup scan, 12:00-15:30 ET'], missingEvidence: [], score: 6, forceConditional: false };
     }
   }
 
-  return { evidence: [], missingEvidence: ['Outside approved session'], score: -20, forceConditional: false };
+  return { evidence: [], missingEvidence: ['Outside active setup scan window'], score: -20, forceConditional: false };
 }
 
 function liquidityDrawContext(chartContext: ChartContext | null | undefined, direction: Direction): CandidateQualityContext {

@@ -138,6 +138,10 @@ export function segmentTradingSession(bars: NinjaBridgeBar[]): SessionSegment[] 
   const byRange = (start: number, end: number) => valid.filter(bar =>
     dateKeyFromIso(bar.time) === currentDate && inMinuteRange(minutesFromIso(bar.time), start, end)
   );
+  const byHalfOpenRange = (start: number, end: number) => valid.filter(bar => {
+    const minutes = minutesFromIso(bar.time);
+    return dateKeyFromIso(bar.time) === currentDate && minutes !== null && minutes >= start && minutes < end;
+  });
   const byEthRange = (start: number, end: number) => valid.filter(bar =>
     ethSessionDateKey(bar) === currentDate && inMinuteRange(minutesFromIso(bar.time), start, end)
   );
@@ -163,8 +167,8 @@ export function segmentTradingSession(bars: NinjaBridgeBar[]): SessionSegment[] 
     buildSegment('asian', 'Asian Session', byEthRange(20 * 60, 2 * 60)),
     buildSegment('london', 'London Session', byEthRange(3 * 60, 8 * 60 + 29)),
     buildSegment('ny_premarket', 'New York Premarket', byRange(8 * 60 + 30, 9 * 60 + 29)),
-    buildSegment('rth_morning', 'RTH Morning Window', byRange(9 * 60 + 30, 11 * 60 + 15)),
-    buildSegment('lunch', 'Lunch Review Window', byRange(11 * 60 + 50, 13 * 60)),
+    buildSegment('rth_morning', 'Morning Setup Scan Window', byHalfOpenRange(10 * 60, 12 * 60)),
+    buildSegment('lunch', 'Lunch/PM Setup Scan Window', byHalfOpenRange(12 * 60, 15 * 60 + 30)),
     buildSegment('current_window', 'Current Imported Window', valid.slice(-16)),
   ];
 }
