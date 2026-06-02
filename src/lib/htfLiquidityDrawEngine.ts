@@ -358,8 +358,68 @@ function analyzeDirection(bars: NinjaBridgeBar[], direction: Exclude<MssDirectio
 function timeframeRoleEvidence(timeframe: HtfMssTimeframe): string {
   if (timeframe === '4H') return '4H MSS is macro draw context only and cannot create a candidate.';
   if (timeframe === '1H') return '1H MSS is session structure context only and cannot create a candidate.';
-  if (timeframe === '15M') return '15M MSS is liquidity-map context only and cannot approve execution.';
-  return '5M MSS is execution-timeframe evidence only; Phase 1 does not create trade candidates.';
+  if (timeframe === '15M') return '15M potential/pending MSS is liquidity-map support only; it cannot approve execution, 5M confirmation controls plan creation, and execution still requires final gates.';
+  return '5M MSS is execution-timeframe evidence; potential/pending states cannot create a reversal-delivery candidate until a swing break with displacement confirms.';
+}
+
+export function describeTimeframeMssStateForDisplay(state: TimeframeMssState): string {
+  if (state.timeframe === '4H' || state.timeframe === '1H') {
+    if (state.status === 'potential_mss' || state.status === 'pending_confirm') {
+      return 'Potential MSS forming on HTF/session structure. Context only. Waiting for lower-timeframe confirmation.';
+    }
+    return `${state.timeframe} structure context only. It cannot approve execution.`;
+  }
+
+  if (state.timeframe === '15M') {
+    if (state.status === 'potential_mss' || state.status === 'pending_confirm') {
+      return '15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.';
+    }
+    if (state.status === 'confirmed') {
+      return '15M MSS confirmation supports the liquidity map only; execution still requires 5M trigger and final gates.';
+    }
+    return '15M liquidity-map support is not confirmed.';
+  }
+
+  if (state.status === 'failed' || state.lifecycleState === 'failed_mss') {
+    return 'Potential MSS failed. Structure did not confirm and price invalidated the reclaim/rejection area.';
+  }
+  if (state.lifecycleState === 'mss_trigger_pending' || state.status === 'potential_mss' || state.status === 'pending_confirm') {
+    return '5M potential MSS forming. Waiting for confirmed swing break with displacement before creating a reversal-delivery candidate.';
+  }
+  if (state.lifecycleState === 'post_mss_digestion') {
+    return 'Post-MSS digestion. Consolidation after displacement is not an opposite MSS unless post-displacement structure breaks with clear displacement.';
+  }
+  if (state.status === 'confirmed') {
+    return '5M MSS trigger confirmed by swing break with displacement. Building candidate from HTF draw + raid/reclaim context.';
+  }
+  return '5M MSS trigger is not confirmed. No executable trade.';
+}
+
+export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidityDrawState, 'classification'>): string {
+  switch (state.classification) {
+    case 'HTF_DRAW_DETECTED':
+      return 'HTF draw detected. No 5M MSS trigger yet. Context only. No executable trade.';
+    case 'RAID_RECLAIM_DEVELOPING':
+      return 'Liquidity raid/reclaim developing. Waiting for 5M MSS trigger.';
+    case 'MSS_TRIGGER_PENDING':
+      return '5M MSS trigger pending. Potential MSS is forming, but no confirmed swing break with displacement yet.';
+    case 'MSS_TRIGGER_CONFIRMED':
+      return '5M MSS trigger confirmed by swing break with displacement. Building candidate from HTF draw + raid/reclaim context.';
+    case 'REVERSAL_DELIVERY_PLAN_CANDIDATE':
+      return 'HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.';
+    case 'QUALIFIED_CONDITIONAL':
+      return 'Qualified conditional. Directional structure supports the model, but execution still needs the listed trigger, retest, risk, or validation requirement.';
+    case 'FAILED_MSS':
+      return 'Potential MSS failed. Structure did not confirm and price invalidated the reclaim/rejection area.';
+    case 'POST_MSS_DIGESTION':
+      return 'Post-MSS digestion. Consolidation after displacement is not an opposite MSS unless post-displacement structure breaks with clear displacement.';
+    case 'CONFLICTING_MSS':
+      return 'Conflicting MSS state. No executable trade until directional structure resolves.';
+    case 'EXECUTABLE':
+      return 'Scanner candidate fields are complete. Final trade wording belongs only to the app-owned pipeline after all gates pass.';
+    default:
+      return 'No qualified HTF Draw Continuation After Raid/Reclaim state. Context only. No executable trade.';
+  }
 }
 
 function chooseDirection(bullish: DirectionalAnalysis, bearish: DirectionalAnalysis): Exclude<MssDirection, 'unknown'> {

@@ -36,7 +36,7 @@ function inferNoTradeBlockers(plan: NormalizedTradePlan): string[] {
     blockers.push('Historical/RAG context conflicts or is insufficient');
   }
   if (text.includes('structure') || text.includes('clean') || text.includes('no valid')) {
-    blockers.push('No clean executable market structure');
+    blockers.push('No clean final-gate market structure');
   }
   if (plan.entry === null || plan.stop === null) {
     blockers.push('ENTRY and STOP are not both defined by the app-owned rule engine');
@@ -136,6 +136,16 @@ function formatBlockReason(reason: NoTradeReason | null): string {
   return String(reason).replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
+function formatCandidateExecutionStatus(candidate: SetupCandidate, finalCanExecute = false): string {
+  if (candidate.executionStatus === ExecutionStatus.Executable) {
+    return finalCanExecute ? 'Executable by app' : 'Scanner-ready; final gates pending';
+  }
+  if (candidate.executionStatus === ExecutionStatus.Conditional) return 'Qualified conditional';
+  if (candidate.executionStatus === ExecutionStatus.Blocked) return 'Blocked';
+  if (candidate.executionStatus === ExecutionStatus.NotDetected) return 'Not detected';
+  return String(candidate.executionStatus);
+}
+
 function candidateReason(candidate: SetupCandidate): string {
   if (candidate.blockReason === NoTradeReason.RiskTooWide) {
     return 'RiskTooWide - setup remains detected, but execution is blocked until risk is reduced.';
@@ -193,7 +203,7 @@ function MissingLevelsList({ candidate }: { candidate: SetupCandidate }) {
 
   return (
     <div className="mt-2 border border-[var(--orange)]/25 bg-[var(--bg)] p-2">
-      <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--orange)]">Needs Before Executable</div>
+      <div className="mb-1 text-[9px] uppercase tracking-[0.16em] text-[var(--orange)]">Needs Before Final Gates</div>
       <div className="grid gap-1">
         {missingLevels.map((level, index) => (
           <div key={`${level.key}-${level.requiredFor}-${index}`} className="flex flex-col gap-0.5 border border-[var(--b1)] bg-[var(--s1)] px-2 py-1 md:flex-row md:items-center md:justify-between">
@@ -447,9 +457,12 @@ function EarlyMoveReviewPanel({ plan }: { plan: NormalizedTradePlan }) {
 function bestOpportunityLabel(plan: NormalizedTradePlan): string {
   const executable = plan.opportunitySelection?.bestExecutableCandidate;
   const conditional = plan.opportunitySelection?.bestConditionalCandidate;
-  if (executable) return `Executable ${formatSetupType(executable.setupType)} ${formatDirection(executable.direction)}`;
+  if (executable) {
+    const prefix = plan.canExecute ? 'Executable by app' : 'Scanner-ready';
+    return `${prefix} ${formatSetupType(executable.setupType)} ${formatDirection(executable.direction)}`;
+  }
   if (conditional) return `Conditional ${formatSetupType(conditional.setupType)} ${formatDirection(conditional.direction)}`;
-  return 'No executable or conditional opportunity';
+  return 'No scanner-ready or conditional opportunity';
 }
 
 function selectedPlanCandidate(plan: NormalizedTradePlan): SetupCandidate | null {
@@ -501,7 +514,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="qd-badge text-[var(--green)] border-[var(--green)]/30">Executable {executableCount}</span>
+          <span className="qd-badge text-[var(--green)] border-[var(--green)]/30">{plan.canExecute ? 'Executable' : 'Scanner-ready'} {executableCount}</span>
           <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Conditional {conditionalCount}</span>
           <span className="qd-badge text-[var(--red)] border-[var(--red)]/30">Blocked {blockedCount}</span>
           <span className="qd-badge opacity-70">Detected {detectedCount}/{candidates.length}</span>
@@ -535,7 +548,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                   <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.detectedStatus}</span>
                   <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
                   <span className="qd-badge opacity-80">Confidence: {candidate.confidence}</span>
-                  <span className={cn('qd-badge', statusTone(candidate))}>Execution: {candidate.executionStatus}</span>
+                  <span className={cn('qd-badge', statusTone(candidate))}>Execution: {formatCandidateExecutionStatus(candidate, plan.canExecute)}</span>
                 </div>
               </div>
               {(candidate.entry || candidate.stop || candidate.riskPoints) && (

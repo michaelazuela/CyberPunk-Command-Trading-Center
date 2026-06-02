@@ -1471,6 +1471,12 @@ const tests: Array<[string, () => void]> = [
     assert.equal(htfCandidate.htfLiquidityDrawState?.boundary, 'candidate_creation_only_not_execution_authority');
     assert.ok(htfCandidate.evidence.includes('5M MSS trigger confirmed'));
     assert.ok(htfCandidate.evidence.includes('External liquidity target exists: full ETH high'));
+    assert.ok(htfCandidate.evidence.some((line) => line.includes('Execution still requires deterministic entry, stop, target, risk, and final pipeline gates')));
+    assert.ok(htfCandidate.evidence.some((line) => line.includes('5M MSS trigger confirmed by swing break with displacement')));
+    assert.ok(htfCandidate.evidence.some((line) => line.includes('15M potential MSS / pending confirm')));
+    assert.ok(htfCandidate.evidence.some((line) => line.includes('Pathway state: scanner candidate fields complete; final deterministic pipeline gates still required')));
+    assert.ok(htfCandidate.nextAction.includes('Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.'));
+    assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(`${htfCandidate.evidence.join(' ')} ${htfCandidate.nextAction}`), false);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
     assert.equal(primaryModel?.detectedStatus, SetupCandidateStatus.NotDetected);
   }],

@@ -148,6 +148,18 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - Treat WAIT and NO TRADE as professional outcomes.
     - Never approve trades from authority, confidence, or narrative. The app-owned pipeline decides.
 
+    ## HTF Draw Continuation After Raid/Reclaim Rule
+
+    HTF Liquidity Draw + Multi-Timeframe MSS is an approved trading-plan pathway through SetupType.HtfDrawContinuationAfterRaid, labeled HTF Draw Continuation After Raid/Reclaim. It may create or promote a candidate only after structured HTF/MSS state confirms the required pathway and 5M MSS trigger confirmation is present. It may not bypass deterministic entry, stop, target, risk, session, screenshot-quality, final-pipeline, or canExecute gates.
+
+    Potential MSS must be tracked on 4H, 1H, 15M, and 5M. Potential MSS is not execution approval. 4H/1H potential MSS may affect context and confidence only. 15M potential MSS may support a candidate only when 5M MSS is confirmed. 5M potential MSS may produce pending/developing states only and must not create a reversal-delivery candidate until confirmed by swing break with displacement.
+
+    A 5M MSS trigger requires a meaningful sweep/reclaim or rejection/reclaim followed by a short-term swing break with displacement. Consolidation after a confirmed displacement leg must be treated as post-MSS digestion, retest-pending, or continuation-pending unless price later confirms the opposite MSS with a structure break and displacement.
+
+    Approved live setup scanning windows are two continuous blocks: Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
+
+    Narrative fallback may provide notes only. Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution.
+
     ## Research Review P/L Interpretation Rule
 
     When reviewing research samples, Discord human inputs, agent assessments, chart/report evidence, or model-candidate ledger results, treat estimated P/L as research-only estimated gross contract P/L.

@@ -179,6 +179,38 @@ const scanner = compactDiscordSummary({
 assertCompactPayload(scanner, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(scanner.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
 
+const scannerReadyCandidate = sampleCandidate('LONG');
+scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
+scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
+scannerReadyCandidate.executionStatus = ExecutionStatus.Executable;
+scannerReadyCandidate.evidence = [
+  'HTF Draw Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
+];
+scannerReadyCandidate.nextAction = 'Execution still requires final app-owned gates.';
+const scannerReadyPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-01',
+  instrument: 'MES',
+  planVersionId: 'HTF-SCANNER-READY',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [scannerReadyCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  statusOverride: 'Executable',
+});
+validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.png']);
+const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
+assert.ok(scannerReadyText.includes('QUALIFIED CONDITIONAL'));
+assert.ok(scannerReadyText.includes('WAIT - trigger not confirmed'));
+assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
+assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
+
 const riskTooWideCandidate = sampleCandidate('LONG');
 riskTooWideCandidate.setupType = SetupType.TurtleSoup;
 riskTooWideCandidate.scenarioLabel = 'Turtle Soup LONG';

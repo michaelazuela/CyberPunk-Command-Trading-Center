@@ -14,6 +14,7 @@ import {
   SetupRegistryEntry,
   SetupSession,
 } from '../config/setupRegistry';
+import { describeHtfLiquidityDrawStateForDisplay, describeTimeframeMssStateForDisplay } from './htfLiquidityDrawEngine';
 
 type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
@@ -2184,6 +2185,9 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
     riskStatus: chartContext.riskStatus,
   });
   const raidLabel = direction === 'LONG' ? 'sell-side raid + bullish 5M MSS' : 'buy-side raid + bearish 5M MSS';
+  const scannerPathwayState = candidateState === 'EXECUTABLE'
+    ? 'scanner candidate fields complete; final deterministic pipeline gates still required'
+    : candidateState;
 
   return {
     setupType: SetupType.HtfDrawContinuationAfterRaid,
@@ -2213,12 +2217,16 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
     levelContextScore: 18,
     levelContextSummary: `HTF liquidity draw pathway aligned: ${raidLabel}; external target: ${targetLabel}.`,
     evidence: Array.from(new Set([
+      describeHtfLiquidityDrawStateForDisplay(state),
+      describeTimeframeMssStateForDisplay(fifteenMinute || state.fiveMinuteState),
+      describeTimeframeMssStateForDisplay(fiveMinute),
       'HTF liquidity draw detected',
       `15M raid/reclaim support status: ${fifteenMinute?.status || 'unknown'}`,
       '5M MSS trigger confirmed',
       '5M swing break/reclaim confirmed with displacement',
       `External liquidity target exists: ${targetLabel}`,
-      `Pathway state: ${candidateState}`,
+      'Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
+      `Pathway state: ${scannerPathwayState}`,
       ...(fiveMinute.evidence || []),
     ])),
     missingEvidence: Array.from(new Set([
@@ -2234,7 +2242,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
       : 'Short only after buy-side raid, reclaim, confirmed bearish 5M MSS with displacement, then clean retest or defined reclaim trigger.',
     nextAction: riskTooWide
       ? 'HTF/MSS reversal-delivery candidate is present, but RiskTooWide blocks execution. Wait for a cleaner retest with protected structure inside max risk.'
-      : 'Executable model candidate: use only if the app-owned entry, stop, target, risk, invalidation, session, and canExecute gates remain confirmed.',
+      : 'HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.',
     reducedRiskPlan: riskTooWide
       ? {
           direction,

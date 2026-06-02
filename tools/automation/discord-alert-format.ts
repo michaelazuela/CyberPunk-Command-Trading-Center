@@ -178,8 +178,9 @@ function candidateLevels(candidate: SetupCandidate): { stop: number | null; targ
 
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
   if (override) return override;
-  if (candidate?.executionStatus) return candidate.executionStatus;
   if (normalized.canExecute) return 'Executable';
+  if (candidate?.executionStatus === 'Executable') return 'Qualified conditional';
+  if (candidate?.executionStatus) return candidate.executionStatus;
   if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'Blocked';
   return 'Conditional';
 }
@@ -190,9 +191,10 @@ function compactTradeDirection(candidate: SetupCandidate | null, normalized: Com
 }
 
 function reportStatus(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): DiscordDecisionStatus {
+  if (normalized.canExecute) return 'EXECUTABLE';
   const status = compactSessionDecisionLabel(candidate, normalized, override).toLowerCase();
   if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
-  if (status.includes('approved') || status.includes('executable')) return 'EXECUTABLE';
+  if (status.includes('approved') || status.includes('executable')) return normalized.canExecute ? 'EXECUTABLE' : 'CONDITIONAL';
   if (status.includes('blocked') || status.includes('no trade') || status.includes('notrade')) return 'NO TRADE';
   if (status.includes('conditional')) return 'CONDITIONAL';
   return 'WAIT';
@@ -303,7 +305,10 @@ export function compactAttachmentLine(attachments: CompactDiscordAttachmentState
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const bestCandidate = args.candidates[0] || null;
-  const finalStatus = args.statusOverride || args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
+  const requestedStatus = args.statusOverride || args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
+  const finalStatus = !args.normalized.canExecute && (requestedStatus === TradeDecisionStatus.ApprovedTrade || requestedStatus === 'Approved' || requestedStatus === 'Executable')
+    ? TradeDecisionStatus.Wait
+    : requestedStatus;
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
   const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);

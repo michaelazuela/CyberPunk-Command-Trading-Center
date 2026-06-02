@@ -3,6 +3,8 @@ import {
   buildHtfLiquidityDrawState,
   buildHtfLiquidityDrawStateFromChartContext,
   classifyTimeframeMssState,
+  describeHtfLiquidityDrawStateForDisplay,
+  describeTimeframeMssStateForDisplay,
   type HtfMssTimeframe,
 } from './htfLiquidityDrawEngine';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -149,6 +151,11 @@ assert.equal(pendingState.createsTradingPlanCandidate, false);
 assert.equal(pendingState.approvesExecution, false);
 assert.equal(JSON.stringify(pendingState).includes('REVERSAL_DELIVERY_PLAN_CANDIDATE'), false);
 assert.equal(JSON.stringify(pendingState).includes('"canExecute"'), false);
+assert.ok(describeHtfLiquidityDrawStateForDisplay(pendingState).includes('5M MSS trigger pending'));
+assert.ok(describeHtfLiquidityDrawStateForDisplay(pendingState).includes('no confirmed swing break with displacement'));
+assert.ok(describeTimeframeMssStateForDisplay(pendingState.fiveMinuteState).includes('5M potential MSS forming'));
+assert.ok(describeTimeframeMssStateForDisplay(pendingState.fiveMinuteState).includes('before creating a reversal-delivery candidate'));
+assert.ok(describeTimeframeMssStateForDisplay(pendingState.timeframeStates.find((state) => state.timeframe === '15M')!).includes('5M confirmation controls plan creation'));
 
 const confirmedCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: bullishPendingBars(),
@@ -167,6 +174,8 @@ assert.equal(confirmedCandidateEligible.activeScanWindow, 'MORNING_SETUP_SCAN');
 assert.ok(confirmedCandidateEligible.confidence >= 75);
 assert.equal(confirmedCandidateEligible.createsTradingPlanCandidate, false);
 assert.equal(confirmedCandidateEligible.approvesExecution, false);
+assert.ok(describeHtfLiquidityDrawStateForDisplay(confirmedCandidateEligible).includes('Execution still requires deterministic entry, stop, target, risk, and final pipeline gates'));
+assert.ok(describeTimeframeMssStateForDisplay(confirmedCandidateEligible.fiveMinuteState).includes('Building candidate from HTF draw + raid/reclaim context'));
 
 const bearishCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: bearishPendingBars(),
@@ -264,6 +273,7 @@ assert.equal(digestion.direction, 'bullish');
 assert.equal(digestion.status, 'confirmed');
 assert.equal(digestion.lifecycleState, 'post_mss_digestion');
 assert.ok(digestion.evidence.some((line) => line.includes('Post-displacement candles are compressing')));
+assert.ok(describeTimeframeMssStateForDisplay(digestion).includes('Consolidation after displacement is not an opposite MSS'));
 
 const notBearishFromDigestion = classifyTimeframeMssState({
   timeframe: '5M',
