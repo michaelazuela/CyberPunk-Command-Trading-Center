@@ -107,4 +107,12 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   );
 }
 
+const htfEntry = getPrimarySetupRegistry('morning').find((entry) => entry.setupType === SetupType.HtfDrawContinuationAfterRaid);
+assert(htfEntry, 'HTF draw continuation entry must remain a primary model');
+assert(
+  !/Execute only|take the trade|enter now|buy now|sell now|trade approved/i.test(htfEntry.defaultNextAction),
+  'HTF registry action wording must not imply execution before final gates',
+);
+assert(htfEntry.defaultNextAction.includes('canExecute gates'), 'HTF registry action must preserve canExecute gate wording');
+
 console.log('setupRegistry role accessors verified');

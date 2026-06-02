@@ -147,7 +147,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
       'App-owned entry, stop, target, risk, and invalidation gates',
     ],
     defaultRequiredTrigger: 'Confirmed 5M MSS after raid/reclaim, followed by the app-owned entry trigger and protected structure stop.',
-    defaultNextAction: 'Execute only if the app-owned entry, stop, target, risk, invalidation, session, and canExecute gates remain confirmed.',
+    defaultNextAction: 'Final action only after the app-owned entry, stop, target, risk, invalidation, session, and canExecute gates remain confirmed.',
   },
   {
     setupType: SetupType.OpeningOrderBlock,

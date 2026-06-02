@@ -56,7 +56,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
     executionStatus: ExecutionStatus.Executable,
     blockReason: null,
     requiredTrigger: 'Completed 5M reclaim from FVG.',
-    nextAction: 'Execute only if trigger remains confirmed.',
+    nextAction: 'Final action only after trigger remains confirmed.',
     reducedRiskPlan: null,
     ...overrides,
   };
@@ -86,6 +86,14 @@ const approvedNoAlert = runBridgeDiagnosticReplay(input({
 assert.equal(approvedNoAlert.finalClassification, 'A_VALID_APPROVED_NO_ALERT');
 assert.equal(approvedNoAlert.tradePlanFeasibility.applicable, true);
 assert.equal(approvedNoAlert.targetOutcomeReview.applicable, true);
+assert.equal(approvedNoAlert.htfMssDiagnostics.authority, 'ohlc_facts_only');
+assert.equal(approvedNoAlert.htfMssDiagnostics.boundary, 'context_only_not_execution_authority');
+assert.equal(approvedNoAlert.htfMssDiagnostics.approvesExecution, false);
+assert.equal(approvedNoAlert.htfMssDiagnostics.createsTradingPlanCandidate, false);
+assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '4H'));
+assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '1H'));
+assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '15M'));
+assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '5M'));
 assert.equal(approvedNoAlert.newPlanRecommendation.recommendationType, 'scanner_bug_fix');
 assert.equal(approvedNoAlert.scannerAuditContext.scannerAuditStatus, 'missing');
 
@@ -236,6 +244,7 @@ assert.deepEqual(immutableReport.approvalBoundary, {
   diagnosticPromotesModel: false,
   diagnosticBuildsNewPlan: false,
 });
+assert.equal(JSON.stringify(immutableReport).includes('"canExecute":true'), false);
 
 const parsed = parseDiagnosticReplayArgs([
   '--date', '2026-05-28',

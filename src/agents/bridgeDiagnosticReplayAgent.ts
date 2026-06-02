@@ -1,6 +1,7 @@
 import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 import { isValidPrice } from '../lib/tradePlan';
+import { buildHtfLiquidityDrawState, type HtfLiquidityDrawState } from '../lib/htfLiquidityDrawEngine';
 import { ExecutionStatus, SetupCandidate, SetupType, TradeDecisionStatus } from '../types';
 
 export type BridgeDiagnosticClassification =
@@ -147,6 +148,30 @@ export interface BridgeDiagnosticReplayReport {
     maximumAdverseExcursion: number | null;
     finalReplayOutcome: 'stopped before T1' | 'T1 hit only' | 'T1 and T2 hit' | 'no target hit' | 'already extended before valid fresh entry' | 'not applicable';
     authorityNote: string;
+  };
+  htfMssDiagnostics: {
+    source: HtfLiquidityDrawState['source'];
+    authority: HtfLiquidityDrawState['authority'];
+    boundary: HtfLiquidityDrawState['boundary'];
+    classification: HtfLiquidityDrawState['classification'];
+    timeframeStack: Array<{
+      timeframe: string;
+      direction: string;
+      status: string;
+      lifecycleState: string;
+      confidence: number;
+    }>;
+    raidState: HtfLiquidityDrawState['raidState'];
+    reclaimStatus: HtfLiquidityDrawState['reclaimStatus'];
+    fiveMinuteMssTriggerConfirmed: boolean;
+    fiveMinuteMssConfirmationType: HtfLiquidityDrawState['fiveMinuteMssConfirmationType'];
+    postShiftState: HtfLiquidityDrawState['postShiftState'];
+    externalLiquidityTarget: string | null;
+    activeScanWindow: HtfLiquidityDrawState['activeScanWindow'];
+    createsTradingPlanCandidate: false;
+    approvesExecution: false;
+    blockers: string[];
+    chartReportPath: null;
   };
   filesOrFunctionsImpacted: string[];
   smallestSafeCodeChangeRecommendation: string;
@@ -534,6 +559,57 @@ function targetOutcome(
   };
 }
 
+function targetLabelFromCandidate(candidate: SetupCandidate | null, direction: 'LONG' | 'SHORT' | 'NO TRADE'): string | undefined {
+  if (!candidate || direction === 'NO TRADE') return undefined;
+  const target = candidate.targetObjectivePlan?.nearestLiquidityTarget ||
+    candidate.targetObjectivePlan?.liquidityTarget1 ||
+    candidate.targetObjectivePlan?.liquidityTarget2 ||
+    candidate.targetObjectivePlan?.liquidityRunnerTarget;
+  if (target?.label && isValidPrice(target.price)) return `${target.label} ${target.price}`;
+  if (isValidPrice(candidate.target2)) return `App T2 context ${candidate.target2}`;
+  if (isValidPrice(candidate.target1)) return `App T1 context ${candidate.target1}`;
+  return undefined;
+}
+
+function buildHtfMssDiagnostics(input: BridgeDiagnosticReplayInput, direction: 'LONG' | 'SHORT' | 'NO TRADE', candidate: SetupCandidate | null): BridgeDiagnosticReplayReport['htfMssDiagnostics'] {
+  const targetLabel = targetLabelFromCandidate(candidate, direction);
+  const sorted5m = sortedBars(input.bars5m);
+  const state = buildHtfLiquidityDrawState({
+    bars4H: sortedBars(input.bars240m),
+    bars1H: sortedBars(input.bars60m),
+    bars15M: sortedBars(input.bars15m),
+    bars5M: sorted5m,
+    externalBuySideLiquidityTarget: direction === 'LONG' ? targetLabel : undefined,
+    externalSellSideLiquidityTarget: direction === 'SHORT' ? targetLabel : undefined,
+    chartTimestamp: sorted5m.at(-1)?.time || null,
+  });
+
+  return {
+    source: state.source,
+    authority: state.authority,
+    boundary: state.boundary,
+    classification: state.classification,
+    timeframeStack: state.timeframeStack.map((item) => ({
+      timeframe: item.timeframe,
+      direction: item.direction,
+      status: item.status,
+      lifecycleState: item.lifecycleState,
+      confidence: item.confidence,
+    })),
+    raidState: state.raidState,
+    reclaimStatus: state.reclaimStatus,
+    fiveMinuteMssTriggerConfirmed: state.fiveMinuteMssTriggerConfirmed,
+    fiveMinuteMssConfirmationType: state.fiveMinuteMssConfirmationType,
+    postShiftState: state.postShiftState,
+    externalLiquidityTarget: state.externalLiquidityTarget || null,
+    activeScanWindow: state.activeScanWindow,
+    createsTradingPlanCandidate: false,
+    approvesExecution: false,
+    blockers: state.blockers,
+    chartReportPath: null,
+  };
+}
+
 function newPlanRecommendation(classification: BridgeDiagnosticClassification) {
   if (classification === 'A_VALID_APPROVED_NO_ALERT') {
     return {
@@ -631,6 +707,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   });
   const gateReview = buildGateReview(input, htf);
   const targetReview = targetOutcome(finalClassification, approvedCandidate, bars5m);
+  const htfMssDiagnostics = buildHtfMssDiagnostics(input, direction, approvedCandidate);
   const planApplicable = finalClassification === 'A_VALID_APPROVED_NO_ALERT' || finalClassification === 'B_APPROVED_ALREADY_TRIGGERED';
   const recommendation = newPlanRecommendation(finalClassification);
   const auditEvents = matchingAuditEvents(input);
@@ -692,6 +769,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
         : 'Not applicable. Advisory-only or no-setup classifications do not create entry, stop, risk, T1, or T2.',
     },
     targetOutcomeReview: targetReview,
+    htfMssDiagnostics,
     filesOrFunctionsImpacted: [
       'src/lib/ninjaTraderBridge.ts::buildNinjaChartContext',
       'src/lib/setupScanner.ts::scanSetupCandidates',

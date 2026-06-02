@@ -209,6 +209,23 @@ assert.equal(missingTimeframes.classification, 'NO_QUALIFIED_STATE');
 assert.ok(missingTimeframes.timeframeStack.some((state) => state.timeframe === '4H' && state.status === 'unknown'));
 assert.ok(missingTimeframes.blockers.some((line) => line.includes('Missing one or more required 4H/1H/15M/5M')));
 
+const malformedBars = buildHtfLiquidityDrawState({
+  bars4H: bullishPendingBars(),
+  bars1H: bullishPendingBars(),
+  bars15M: bullishPendingBars(),
+  bars5M: [
+    { time: '2026-06-01T10:00:00', open: 100, high: 99, low: 101, close: 100, volume: 1000 },
+    { time: '2026-06-01T10:05:00', open: Number.NaN, high: 102, low: 99, close: 101, volume: 1000 },
+  ],
+  externalBuySideLiquidityTarget: 'prior RTH high',
+});
+assert.equal(malformedBars.classification, 'NO_QUALIFIED_STATE');
+assert.equal(malformedBars.fiveMinuteState.status, 'unknown');
+assert.equal(malformedBars.fiveMinuteMssTriggerConfirmed, false);
+assert.equal(malformedBars.createsTradingPlanCandidate, false);
+assert.equal(malformedBars.approvesExecution, false);
+assert.ok(malformedBars.blockers.some((line) => line.includes('Missing one or more required 4H/1H/15M/5M')));
+
 const derivedFromChartContext = buildHtfLiquidityDrawStateFromChartContext({
   chartTimestamp: '2026-06-01T10:45:00',
   keyLevels: { activeSwingHigh: 104, activeSwingLow: 95 },

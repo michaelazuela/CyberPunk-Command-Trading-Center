@@ -34,7 +34,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
     executionStatus: ExecutionStatus.Executable,
     blockReason: null,
     requiredTrigger: '5M trigger.',
-    nextAction: 'Execute only if trigger remains confirmed.',
+    nextAction: 'Final action only after trigger remains confirmed.',
     reducedRiskPlan: null,
     ...overrides,
   };
