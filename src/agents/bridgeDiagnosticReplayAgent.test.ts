@@ -241,8 +241,8 @@ const parsed = parseDiagnosticReplayArgs([
   '--date', '2026-05-28',
   '--instrument', 'MES',
   '--bridge-instrument', 'MES 06-26',
-  '--from', '09:30',
-  '--to', '11:15',
+  '--from', '10:00',
+  '--to', '12:00',
   '--direction', 'LONG',
   '--bridge-url', 'http://127.0.0.1:8765',
   '--bar-timestamp-mode', 'close',
@@ -252,8 +252,8 @@ const parsed = parseDiagnosticReplayArgs([
 assert.equal(parsed.date, '2026-05-28');
 assert.equal(parsed.instrument, 'MES');
 assert.equal(parsed.bridgeInstrument, 'MES 06-26');
-assert.equal(parsed.from, '09:30');
-assert.equal(parsed.to, '11:15');
+assert.equal(parsed.from, '10:00');
+assert.equal(parsed.to, '12:00');
 assert.equal(parsed.direction, 'LONG');
 assert.equal(parsed.pretty, true);
 

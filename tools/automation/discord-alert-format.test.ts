@@ -122,7 +122,7 @@ const morning = compactDiscordSummary({
   candidates: [morningCandidate],
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Morning',
-  windowLabel: '09:30-11:15 ET',
+  windowLabel: '10:00-12:00 ET',
   components: buildOutcomeComponents({
     planVersionId: 'MORNING-TEST',
     sessionType: 'morning',
@@ -148,7 +148,7 @@ const lunch = compactDiscordSummary({
   candidates: [sampleCandidate('SHORT')],
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Lunch',
-  windowLabel: '11:50-13:00 ET',
+  windowLabel: '12:00-15:30 ET',
   components: buildOutcomeComponents({
     planVersionId: 'LUNCH-TEST',
     sessionType: 'lunch',

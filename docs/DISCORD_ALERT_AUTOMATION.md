@@ -78,8 +78,8 @@ tools\automation\start-discord-alerts.ps1 -DryRun -Once premarket
 ## Default Schedule
 
 - Premarket ETH rundown: 9:15 AM ET
-- Morning plan alert: 10:10 AM ET
-- Lunch plan alert: 1:00 PM ET
+- Morning plan alert: 12:00 PM ET
+- Lunch/PM plan alert: 3:30 PM ET
 
 Each job sends once per ET trading date. Local send state is stored in `tools/automation/.discord-alert-state.json`, which is ignored by git.
 
@@ -88,12 +88,13 @@ Each job sends once per ET trading date. Local send state is stored in `tools/au
 Morning:
 
 - 15M ETH context: prior 6:00 PM ET through 10:00 AM ET.
-- 5M execution: 9:30 AM ET through 10:10 AM ET.
+- Opening observation: 9:30 AM ET through 10:00 AM ET.
+- 5M setup scan: 10:00 AM ET through 12:00 PM ET.
 
 Lunch:
 
-- 15M ETH context: prior 6:00 PM ET through 1:00 PM ET.
-- 5M execution: 11:50 AM ET through 1:00 PM ET.
+- 15M ETH context: prior 6:00 PM ET through 3:30 PM ET.
+- 5M setup scan: 12:00 PM ET through 3:30 PM ET.
 
 ## Guardrails
 

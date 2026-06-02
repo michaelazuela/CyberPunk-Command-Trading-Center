@@ -31,16 +31,16 @@ export const TRADE_RULES = {
       enabled: true,
     },
     morningExecution: {
-      label: 'Morning Execution Window',
+      label: 'Morning Setup Scan',
       startET: '10:00',
-      endET: '11:15',
+      endET: '12:00',
       quality: 'approved',
       enabled: true,
     },
     middayTrapReversal: {
-      label: 'Midday Trap / Reversal Window',
-      startET: '11:50',
-      endET: '13:00',
+      label: 'Lunch/PM Setup Scan',
+      startET: '12:00',
+      endET: '15:30',
       quality: 'strict',
       enabled: true,
     },
@@ -65,8 +65,8 @@ export const TRADE_RULES = {
   },
   sessions: {
     morning: {
-      label: 'Morning Analysis',
-      requiredScreenshotRange: '9:30 AM through the 10:10 AM candle',
+      label: 'Morning Setup Scan',
+      requiredScreenshotRange: '10:00 AM through 12:00 PM ET',
       allowedSetups: [
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,
@@ -82,8 +82,8 @@ export const TRADE_RULES = {
       ],
     },
     lunch: {
-      label: 'Lunch Review',
-      requiredScreenshotRange: '11:50 AM through 1:00 PM ET',
+      label: 'Lunch/PM Setup Scan',
+      requiredScreenshotRange: '12:00 PM through 3:30 PM ET',
       allowedSetups: [
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,

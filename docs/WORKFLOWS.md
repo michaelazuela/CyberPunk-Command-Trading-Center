@@ -27,7 +27,8 @@ Required context:
 
 - Instrument, usually MES.
 - Midnight Open price, manually entered or OCR-assisted.
-- 5-minute RTH chart from 9:30 AM through the 10:10 AM candle.
+- 5-minute RTH setup-scan chart from 10:00 AM through 12:00 PM ET.
+- Opening observation context from 9:30 AM through 10:00 AM ET when available.
 - Optional 15-minute ETH context.
 
 Expected flow:
@@ -46,7 +47,7 @@ Expected flow:
 
 Required context:
 
-- 5-minute chart covering 11:50 AM-1:00 PM ET.
+- 5-minute setup-scan chart covering 12:00 PM-3:30 PM ET.
 - Morning high/low and trap/reclaim behavior.
 - Pull-forward Morning, ETH, Midnight Open, and RAG context where available.
 

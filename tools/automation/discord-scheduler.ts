@@ -64,14 +64,14 @@ const DEFAULT_CONFIG: SchedulerConfig = {
   pollSeconds: 30,
   jobs: {
     premarket: { enabled: true, timeEt: '09:15' },
-    morning: { enabled: true, timeEt: '10:10' },
-    lunch: { enabled: true, timeEt: '13:00' },
+    morning: { enabled: true, timeEt: '12:00' },
+    lunch: { enabled: true, timeEt: '15:30' },
     weekly: { enabled: true, timeEt: '08:00' },
     weeklyNewsletter: { enabled: true, timeEt: process.env.WEEKLY_NEWSLETTER_TIME_ET || '16:05' },
   },
 };
 
-const MORNING_EXECUTION_START_ET = '09:30';
+const MORNING_EXECUTION_START_ET = TRADE_RULES.executionWindows.morningExecution.startET;
 const MORNING_EXECUTION_END_ET = TRADE_RULES.executionWindows.morningExecution.endET;
 const LUNCH_EXECUTION_START_ET = TRADE_RULES.executionWindows.middayTrapReversal.startET;
 const LUNCH_EXECUTION_END_ET = TRADE_RULES.executionWindows.middayTrapReversal.endET;
@@ -992,8 +992,8 @@ async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartCont
             name: '8️⃣ 🕒 Execution Windows',
             value: discordValue([
               '👀 9:30-10:00 AM ET: Opening observation only.',
-              '🔎 10:00-11:15 AM ET: Morning setup scanning after the opening range forms.',
-              '🍽️ 11:50 AM-1:00 PM ET: Lunch setup scanning.',
+              '🔎 10:00 AM-12:00 PM ET: Morning setup scanning.',
+              '🍽️ 12:00-3:30 PM ET: Lunch/PM setup scanning.',
               '🗺️ Outside those windows: Market Mapping only. No trade approval.',
               `🧱 Structured levels loaded: ${levels.length}.`,
             ].join('\n')),

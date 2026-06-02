@@ -108,11 +108,11 @@ GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=1m&limit=100
 Historical bars for Replay Lab:
 
 ```text
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T09:30:00-04:00&to=2026-05-15T10:10:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T10:00:00-04:00&to=2026-05-15T12:00:00-04:00
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=15m&from=2026-05-15T00:00:00-04:00&to=2026-05-15T10:00:00-04:00
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=60m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T10:00:00-04:00
 GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=240m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T10:00:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T11:50:00-04:00&to=2026-05-15T13:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T12:00:00-04:00&to=2026-05-15T15:30:00-04:00
 ```
 
 Positions:
@@ -272,8 +272,8 @@ Phase 3: use bridge candles as structured input:
 - level sanity from real OHLC
 - screenshot becomes optional proof/context, not primary extraction
 - Replay Lab can import historical NinjaTrader bars by trading date/window so RAG learns from factual OHLC, not only screenshots.
-- Morning Replay imports broader 4h/1h/15m context from prior day 6:00 PM ET through 10:00 AM ET, while keeping the 5m execution window at 9:30-10:10.
-- Lunch Replay imports broader 4h/1h/15m context through 1:00 PM ET plus the 5m lunch execution window at 11:50-1:00.
+- Morning Replay imports broader 4h/1h/15m context from prior day 6:00 PM ET through 10:00 AM ET, while keeping the 5m setup-scan window at 10:00-12:00.
+- Lunch/PM Replay imports broader 4h/1h/15m context through 3:30 PM ET plus the 5m setup-scan window at 12:00-3:30.
 - The app segments imported bars into ETH, Asian, London, NY premarket, RTH morning, lunch, and current-window structure.
 - The Target Objective Engine annotates conditional/executable plans with structural target context from those segments. Executable T1/T2 remain the app-owned fixed 1.5R / 2.0R levels.
 

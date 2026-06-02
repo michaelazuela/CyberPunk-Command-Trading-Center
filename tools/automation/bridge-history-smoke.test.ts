@@ -10,8 +10,8 @@ const parsed = parseBridgeHistorySmokeArgs([
   '--instrument', 'MES',
   '--bridge-instrument', 'MES 06-26',
   '--date', '2026-05-28',
-  '--from', '09:30',
-  '--to', '11:15',
+  '--from', '10:00',
+  '--to', '12:00',
   '--timeframes', '5m,15m,60m,240m',
   '--pretty',
 ]);
@@ -93,7 +93,7 @@ globalThis.fetch = (async (input: RequestInfo | URL) => {
   if (path === 'historical-bars') {
     return Response.json({
       ok: true,
-      bars: [{ time: '2026-06-01T09:30:00', open: 10, high: 12, low: 9, close: 11, volume: 1 }],
+      bars: [{ time: '2099-06-01T10:00:00', open: 10, high: 12, low: 9, close: 11, volume: 1 }],
     });
   }
   return Response.json({ ok: false }, { status: 404 });

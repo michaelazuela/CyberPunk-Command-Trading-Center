@@ -134,10 +134,10 @@ Replay sessions must reuse the live rule engine for the matching live session wh
 
 All trading windows must come from `src/config/timeWindows.ts`.
 
-- Morning Analysis: 9:30 AM-11:15 AM ET.
-- Required Morning screenshot range: 9:30 AM through the 10:10 AM candle.
-- Lunch Review: 11:50 AM-1:00 PM ET.
-- Required Lunch screenshot range: 11:50 AM-1:00 PM ET.
+- Opening Observation Window: 9:30 AM-10:00 AM ET. Observation only; no setup scan approval.
+- Morning Setup Scan: 10:00 AM-12:00 PM ET.
+- Lunch/PM Setup Scan: 12:00 PM-3:30 PM ET.
+- Required live/replay 5M setup-scan chart ranges must match those two continuous blocks.
 - Midnight Open is a core RAG feature, not temporary UI state.
 
 Do not hardcode competing time strings in prompts, docs, UI text, or logic.

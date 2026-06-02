@@ -1,32 +1,32 @@
 export const TIME_WINDOWS = {
   morning: {
-    label: "Morning Analysis",
-    openHour: 9, openMinute: 30,
-    closeHour: 11, closeMinute: 15,
+    label: "Morning Setup Scan",
+    openHour: 10, openMinute: 0,
+    closeHour: 12, closeMinute: 0,
     timezone: "America/New_York",
-    screenshotEndHour: 10, screenshotEndMinute: 10,
-    bestChart: "5-min MES/MNQ from 9:30 AM open through close of 10:10 AM candle",
+    screenshotEndHour: 12, screenshotEndMinute: 0,
+    bestChart: "5-min MES/MNQ from 10:00 AM through 12:00 PM ET",
     chartMustInclude: [
       "Midnight Open horizontal line (12:00 AM ET price)",
-      "9:30 AM opening candle",
-      "10:10 AM candle close",
-      "Initial Balance range (9:30–10:00 high/low)",
+      "10:00 AM setup-scan start",
+      "12:00 PM setup-scan handoff to Lunch/PM",
+      "Opening range / Initial Balance context from 9:30–10:00 when available",
     ],
-    sessionNote: "Initial Balance 9:30–10:00. Valid entries through 11:15.",
+    sessionNote: "Opening observation 9:30–10:00. Morning setup scanning is 10:00–12:00 ET.",
   },
   lunch: {
-    label: "Lunch Review",
-    openHour: 11, openMinute: 50,
-    closeHour: 13, closeMinute: 0,
+    label: "Lunch/PM Setup Scan",
+    openHour: 12, openMinute: 0,
+    closeHour: 15, closeMinute: 30,
     timezone: "America/New_York",
-    screenshotEndHour: 13, screenshotEndMinute: 0,
-    bestChart: "5-min MES/MNQ from 11:50 AM through 1:00 PM",
+    screenshotEndHour: 15, screenshotEndMinute: 30,
+    bestChart: "5-min MES/MNQ from 12:00 PM through 3:30 PM ET",
     chartMustInclude: [
-      "11:50 AM to 1:00 PM ET required screenshot range",
+      "12:00 PM to 3:30 PM ET setup-scan range",
       "Morning high and low extremes",
       "Reclaim behavior after trap"
     ],
-    sessionNote: "11:50 AM ET → 1:00 PM ET. Noon lunch trap. Watch for false breakout + reclaim.",
+    sessionNote: "12:00 PM ET → 3:30 PM ET. Lunch/PM setup scan covers midday reversal, PM continuation, PM reversal, raid/reclaim/MSS.",
   },
   midnightOpen: {
     label: "Midnight Open",
@@ -42,6 +42,12 @@ export const TIME_WINDOWS = {
 } as const;
 
 export type WindowKey = "morning" | "lunch";
+export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
+
+const MORNING_SETUP_SCAN_START = 10 * 60;
+const MORNING_SETUP_SCAN_END = 12 * 60;
+const LUNCH_PM_SETUP_SCAN_START = 12 * 60;
+const LUNCH_PM_SETUP_SCAN_END = 15 * 60 + 30;
 
 /** Get NY time details */
 function getNYTime() {
@@ -74,8 +80,22 @@ export function getWindowStatus(key: WindowKey): "active" | "too_early" | "too_l
   const closeTime = win.closeHour * 60 + win.closeMinute;
 
   if (currentTime < openTime) return "too_early";
-  if (currentTime > closeTime) return "too_late";
+  if (currentTime >= closeTime) return "too_late";
   return "active";
+}
+
+export function classifyActiveSetupScanWindowByEtMinutes(minutes: number): ActiveSetupScanWindow {
+  if (minutes >= MORNING_SETUP_SCAN_START && minutes < MORNING_SETUP_SCAN_END) return 'MORNING_SETUP_SCAN';
+  if (minutes >= LUNCH_PM_SETUP_SCAN_START && minutes < LUNCH_PM_SETUP_SCAN_END) return 'LUNCH_PM_SETUP_SCAN';
+  return 'OUTSIDE_SETUP_SCAN';
+}
+
+export function getActiveSetupScanWindow(date = new Date()): ActiveSetupScanWindow {
+  const nyStr = date.toLocaleString("en-US", { timeZone: "America/New_York", hour12: false });
+  const match = nyStr.match(/(\d+)\/(\d+)\/(\d+),\s+(\d+):(\d+):(\d+)/);
+  const hour = match ? parseInt(match[4], 10) : date.getUTCHours();
+  const minute = match ? parseInt(match[5], 10) : date.getUTCMinutes();
+  return classifyActiveSetupScanWindowByEtMinutes(hour * 60 + minute);
 }
 
 export function minutesUntilOpen(key: WindowKey): number {

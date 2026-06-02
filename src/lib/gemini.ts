@@ -137,7 +137,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     Morning Reclaim Long is a LONG conditional path after price reclaims and holds back above a key resistance/round-number/high zone, with stop based on the pullback low or active swing low.
     Gemini extracts the key levels and evidence only. The app-owned conditional plan builder creates the if/then plans, computes risk, and computes T1/T2.
     
-    ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 10:10 AM ET on the selected Trading Date. Use current Morning Analysis rules only. Do NOT use future data.' : ''}
+    ${routeName === 'morning_replay' ? '[HISTORICAL REPLAY MODE: MORNING]\nAnalyze the historical day as if current replay time is 12:00 PM ET on the selected Trading Date. Use current Morning Setup Scan rules only. Do NOT use future data.' : ''}
     ${routeName === 'lunch_replay' ? '[HISTORICAL REPLAY MODE: LUNCH]\nAnalyze the historical day as if current replay time is inside the Lunch Review window. Use current Lunch Review rules only. Do NOT use future data.' : ''}
 
     [STRICTURES: ZERO_PROSE | ROBOTIC_PRECISION | COLD_LOGIC | MASTER_TRADING_DESK | 5M_TIMEFRAME]
@@ -261,7 +261,8 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.
     - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
     - Only output NO TRADE when there is no measurable trigger candle, no valid structure-stop context, invalid structure, or the setup violates a kill switch.
-    - MORNING DECISION WINDOW LOCK: For 9:30-10:10 Morning Analysis, classify the 9:30-10:10 structure first. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible 9:30-10:10 levels. Do not require future confirmation before producing ENTRY/STOP/T1/T2.
+    - SETUP SCAN WINDOW LOCK: Live setup scanning is allowed only in two continuous ET blocks: Morning Setup Scan from 10:00 to before 12:00, and Lunch/PM Setup Scan from 12:00 to before 15:30. Before 10:00 and at/after 15:30 are outside setup scan authority.
+    - MORNING DECISION WINDOW LOCK: For 10:00-12:00 Morning Setup Scan, classify the 10:00-12:00 structure first. The 09:30-10:00 opening range is context only. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible completed 10:00-12:00 levels. Do not require future confirmation before producing ENTRY/STOP facts.
     - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: STALE_CHASE_RISK. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ mark impulse-continuation context only.

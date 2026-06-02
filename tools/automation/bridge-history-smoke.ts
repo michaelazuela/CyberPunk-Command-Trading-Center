@@ -595,8 +595,8 @@ export async function runBridgeHistorySmoke(options: BridgeHistorySmokeCliOption
     fallback.push(await runHistoricalAttempt({
       options,
       timeframe: '5m',
-      from: buildIsoWithEasternOffset(today, '09:30'),
-      to: buildIsoWithEasternOffset(today, '11:15'),
+      from: buildIsoWithEasternOffset(today, '10:00'),
+      to: buildIsoWithEasternOffset(today, '12:00'),
       label: 'today_current_session_with_et_offset',
     }));
   }

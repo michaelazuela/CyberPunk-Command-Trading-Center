@@ -410,8 +410,8 @@ export default function SessionLab({
   const buildBridgeAnalysisContext = (sessionType: 'morning' | 'lunch') => {
     if (!bridge.connected || !bridge.bars5m.length) return { structuredContext: null, summary: 'NinjaTrader bridge not connected.' };
     const executionWindow = sessionType === 'morning'
-      ? { from: etDateTime(tradeDate, '09:30'), to: etDateTime(tradeDate, '11:15') }
-      : { from: etDateTime(tradeDate, '11:50'), to: etDateTime(tradeDate, '13:00') };
+      ? { from: etDateTime(tradeDate, '10:00'), to: etDateTime(tradeDate, '12:00') }
+      : { from: etDateTime(tradeDate, '12:00'), to: etDateTime(tradeDate, '15:30') };
     const executionBars5m = filterBarsByEtWindow(bridge.bars5m, executionWindow.from, executionWindow.to);
     const structuredContext = buildNinjaChartContext({
       bars5m: executionBars5m.length ? executionBars5m : bridge.bars5m,
@@ -460,9 +460,9 @@ export default function SessionLab({
       if (!bridgeInstrument && health.defaultInstrument) setBridgeInstrument(health.defaultInstrument);
       const priorDate = previousCalendarDate(tradeDate);
       const contextFrom = etDateTime(priorDate, '18:00');
-      const contextTo = etDateTime(tradeDate, '13:00');
-      const executionFrom = etDateTime(tradeDate, '09:30');
-      const executionTo = etDateTime(tradeDate, '13:00');
+      const contextTo = etDateTime(tradeDate, '15:30');
+      const executionFrom = etDateTime(tradeDate, '10:00');
+      const executionTo = etDateTime(tradeDate, '15:30');
       const fetchBars = async (timeframe: MarketBarTimeframe, from: string, to: string, liveLimit: number) => {
         const cached = await fetchMarketBarsFromCache({ bridgeInstrument: nextInstrument, timeframe, from, to });
         if (cached.bars.length) return { bars: cached.bars, source: 'market_bars' as const, error: cached.error };

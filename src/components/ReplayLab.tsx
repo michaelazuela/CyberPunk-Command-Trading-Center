@@ -985,9 +985,9 @@ export default function ReplayLab({
           fetchReplayBars({
             timeframe: '5m',
             fromDate: tradeDate,
-            fromTime: '09:30',
+            fromTime: '10:00',
             toDate: tradeDate,
-            toTime: '10:10',
+            toTime: '12:00',
             timezone: morningReviewTimezone,
           }),
         ]);
@@ -1011,7 +1011,7 @@ export default function ReplayLab({
             fromDate: priorDate,
             fromTime: '18:00',
             toDate: tradeDate,
-            toTime: '13:00',
+            toTime: '15:30',
             timezone: lunchReviewTimezone,
           }),
           fetchReplayBars({
@@ -1019,7 +1019,7 @@ export default function ReplayLab({
             fromDate: priorDate,
             fromTime: '18:00',
             toDate: tradeDate,
-            toTime: '13:00',
+            toTime: '15:30',
             timezone: lunchReviewTimezone,
           }),
           fetchReplayBars({
@@ -1027,15 +1027,15 @@ export default function ReplayLab({
             fromDate: priorDate,
             fromTime: '18:00',
             toDate: tradeDate,
-            toTime: '13:00',
+            toTime: '15:30',
             timezone: lunchReviewTimezone,
           }),
           fetchReplayBars({
             timeframe: '5m',
             fromDate: tradeDate,
-            fromTime: '11:50',
+            fromTime: '12:00',
             toDate: tradeDate,
-            toTime: '13:00',
+            toTime: '15:30',
             timezone: lunchReviewTimezone,
           }),
         ]);
@@ -1051,7 +1051,7 @@ export default function ReplayLab({
         if (!historicalMorning60mBars.length && bars60m.bars?.length) setHistoricalMorning60mBars(bars60m.bars || []);
         if (!historicalMorning15mBars.length && bars15m.bars?.length) setHistoricalMorning15mBars(bars15m.bars || []);
         if (!lunchExecImg) setLunchExecImg({ dataUrl: HISTORICAL_DATA_IMAGE });
-        setHistoricalFetchStatus(`Imported Lunch OHLC through market_bars first (${bars5m.source || 'unknown'} 5M): ${bars5m.bars.length} x 5M lunch bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars through 1:00 PM. Bridge fallback repairs cache when needed.`);
+        setHistoricalFetchStatus(`Imported Lunch/PM OHLC through market_bars first (${bars5m.source || 'unknown'} 5M): ${bars5m.bars.length} x 5M Lunch/PM bars, ${(bars15m.bars || []).length} x 15M, ${(bars60m.bars || []).length} x 1H, ${(bars240m.bars || []).length} x 4H context bars through 3:30 PM. Bridge fallback repairs cache when needed.`);
       }
     } catch (error) {
       setHistoricalFetchError(error instanceof Error ? error.message : String(error));
@@ -1228,8 +1228,8 @@ export default function ReplayLab({
          context_timeframe: morningEthImg ? '15m' : undefined,
          context_session: morningEthImg ? 'ETH' : undefined,
          eth_context_available: Boolean(morningEthImg || result.ethContextReview),
-         window_start: sessionType === 'lunch' ? "11:50" : undefined,
-         window_end: sessionType === 'lunch' ? "13:00" : undefined,
+         window_start: sessionType === 'lunch' ? "12:00" : undefined,
+         window_end: sessionType === 'lunch' ? "15:30" : undefined,
          window_timezone: "America/New_York",
          required_screenshot_range: requiredScreenshotRange,
          planVersionId: result.planVersionId || null,
@@ -1437,7 +1437,7 @@ export default function ReplayLab({
             className="border border-[var(--b2)] bg-[var(--s1)] p-3 text-left transition-colors hover:border-[var(--orange)]/50 disabled:opacity-50"
           >
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Morning Historical Data</div>
-            <div className="mt-1 text-[9px] text-[var(--txt3)]">15M: midnight to 10:00 · 5M: 9:30 to 10:10</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">15M: overnight into 10:00 · 5M: 10:00 to 12:00</div>
             <div className="mt-2 text-[10px] text-[var(--green)]">
               {historicalMorning5mBars.length ? `${historicalMorning5mBars.length} 5M · ${historicalMorning15mBars.length} 15M · ${historicalMorning60mBars.length} 1H · ${historicalMorning240mBars.length} 4H bars imported` : 'Not imported yet'}
             </div>
@@ -1449,7 +1449,7 @@ export default function ReplayLab({
             className="border border-[var(--b2)] bg-[var(--s1)] p-3 text-left transition-colors hover:border-[var(--orange)]/50 disabled:opacity-50"
           >
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--txt)]">Fetch Lunch Historical Data</div>
-            <div className="mt-1 text-[9px] text-[var(--txt3)]">5M: 11:50 to 1:00 · morning context used when imported</div>
+            <div className="mt-1 text-[9px] text-[var(--txt3)]">5M: 12:00 to 3:30 · morning context used when imported</div>
             <div className="mt-2 text-[10px] text-[var(--green)]">
               {historicalLunch5mBars.length ? `${historicalLunch5mBars.length} lunch 5M · ${historicalLunch60mBars.length} 1H · ${historicalLunch240mBars.length} 4H bars imported` : 'Not imported yet'}
             </div>

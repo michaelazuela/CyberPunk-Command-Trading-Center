@@ -539,7 +539,7 @@ async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string, sessi
   const marketConfig = loadMarketDataConfig();
   const priorDate = previousCalendarDate(tradeDate);
   const marketStructureStartDate = previousMonthStartDate(tradeDate);
-  const contextTo = etDateTime(tradeDate, session === 'morning' ? '11:15' : '13:00');
+  const contextTo = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const from = timeframe === '5m'
       ? etDateTime(priorDate, '18:00')
