@@ -156,6 +156,12 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     A 5M MSS trigger requires a meaningful sweep/reclaim or rejection/reclaim followed by a short-term swing break with displacement. Consolidation after a confirmed displacement leg must be treated as post-MSS digestion, retest-pending, or continuation-pending unless price later confirms the opposite MSS with a structure break and displacement.
 
+    HTF Context Sufficiency Rule: before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, the desk must have enough structured OHLC context to make the higher-timeframe story reliable. Minimum structured lookback is 5M active execution context plus enough trigger-sequence bars, 15M at least 2 completed trading days or equivalent ETH/London/NY premarket/current RTH/prior-session coverage, 1H at least 4 completed trading days, and 4H at least 7 completed trading days, preferably 20+ completed 4H candles when available.
+
+    If minimum HTF context is missing, mark the read as data-limited. Do not treat a failed HTF read caused by limited history as proof that structure truly failed. Prefer "insufficient HTF context" over bullish/bearish conflict when the engine cannot see enough history. Report bars loaded, date/time range loaded, minimum expected context, sufficiency status, and data-limited blockers. Narrative fallback must not fill missing HTF context.
+
+    Data-limited context cannot create or approve a candidate by itself. HTF context can create or promote a candidate only when approved pathway conditions are met, 5M confirmed MSS is present, and deterministic entry, stop, target, risk, session, model, and canExecute gates remain intact.
+
     Approved live setup scanning windows are two continuous blocks: Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
 
     Narrative fallback may provide notes only. Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution.

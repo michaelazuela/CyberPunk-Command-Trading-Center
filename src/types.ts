@@ -747,6 +747,28 @@ export interface TimeframeMssCandidateState {
   confidence: number;
 }
 
+export type HtfContextSufficiencyStatus = 'sufficient' | 'data_limited' | 'missing' | 'unknown';
+export type HtfClassificationReliability = 'structural' | 'data_limited' | 'estimated' | 'unknown';
+
+export interface TimeframeContextCoverage {
+  timeframe: '4H' | '1H' | '15M' | '5M';
+  barsLoaded: number;
+  rangeStart?: string;
+  rangeEnd?: string;
+  minimumExpectedDescription: string;
+  minimumSatisfied: boolean;
+  status: HtfContextSufficiencyStatus;
+  blocker?: string;
+}
+
+export interface HtfContextSufficiency {
+  overallStatus: HtfContextSufficiencyStatus;
+  timeframeCoverage: TimeframeContextCoverage[];
+  dataLimited: boolean;
+  blockers: string[];
+  notes: string[];
+}
+
 export interface HtfLiquidityDrawCandidateState {
   source: 'ninjatrader_ohlc';
   authority: 'ohlc_facts_only';
@@ -779,6 +801,11 @@ export interface HtfLiquidityDrawCandidateState {
   fifteenMinuteConfirmationStatus?: 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown';
   activeScanWindow?: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
   htfDrawContinuationPending: boolean;
+  htfContextSufficiency?: HtfContextSufficiency;
+  htfContextDataLimited?: boolean;
+  timeframeCoverage?: TimeframeContextCoverage[];
+  classificationReliability?: HtfClassificationReliability;
+  classificationReason?: string;
   confidence: number;
   notes: string[];
   blockers: string[];

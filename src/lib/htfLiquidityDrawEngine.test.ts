@@ -111,6 +111,40 @@ function bearishDigestionBars(): NinjaBridgeBar[] {
   ];
 }
 
+function sufficientHtfContext(seed: NinjaBridgeBar[], count = 40): NinjaBridgeBar[] {
+  const fillerCount = Math.max(0, count - seed.length);
+  const filler = Array.from({ length: fillerCount }, (_, index) =>
+    bar(index, 100, 101, 99, index % 2 === 0 ? 100.25 : 99.75)
+  );
+  return [
+    ...filler,
+    ...seed.map((item, index) => ({
+      ...item,
+      time: bar(fillerCount + index, item.open, item.high, item.low, item.close).time,
+    })),
+  ];
+}
+
+function fifteenMinuteBroadConflictBars(): NinjaBridgeBar[] {
+  return [
+    bar(0, 100, 101, 99, 100),
+    bar(1, 100, 102, 99, 101),
+    bar(2, 101, 103, 100, 102),
+    bar(3, 102, 104, 101, 103),
+    bar(4, 103, 105, 102, 103),
+    bar(5, 103, 104, 101, 102),
+    bar(6, 102, 103, 98, 100),
+    bar(7, 100, 102, 99, 101),
+  ];
+}
+
+function fifteenMinuteBullishReclaimFailedBars(): NinjaBridgeBar[] {
+  return [
+    ...fifteenMinuteBroadConflictBars(),
+    bar(8, 100, 101, 97, 97.5),
+  ];
+}
+
 function assertContextOnlyState(timeframe: HtfMssTimeframe): void {
   const state = classifyTimeframeMssState({
     timeframe,
@@ -135,9 +169,9 @@ assert.equal(fifteenMinute.lifecycleState, 'potential_mss');
 assert.ok(fifteenMinute.evidence.some((line) => line.includes('cannot approve execution')));
 
 const pendingState = buildHtfLiquidityDrawState({
-  bars4H: bullishPendingBars(),
-  bars1H: bullishPendingBars(),
-  bars15M: bullishPendingBars(),
+  bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars1H: sufficientHtfContext(bullishPendingBars()),
+  bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: bullishPendingBars(),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
 });
@@ -158,9 +192,9 @@ assert.ok(describeTimeframeMssStateForDisplay(pendingState.fiveMinuteState).incl
 assert.ok(describeTimeframeMssStateForDisplay(pendingState.timeframeStates.find((state) => state.timeframe === '15M')!).includes('5M confirmation controls plan creation'));
 
 const confirmedCandidateEligible = buildHtfLiquidityDrawState({
-  bars4H: bullishPendingBars(),
-  bars1H: bullishPendingBars(),
-  bars15M: bullishPendingBars(),
+  bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars1H: sufficientHtfContext(bullishPendingBars()),
+  bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: bullishConfirmedBars(),
   externalBuySideLiquidityTarget: 'London high / prior RTH high',
   chartTimestamp: '2026-06-01T10:35:00',
@@ -177,10 +211,40 @@ assert.equal(confirmedCandidateEligible.approvesExecution, false);
 assert.ok(describeHtfLiquidityDrawStateForDisplay(confirmedCandidateEligible).includes('Execution still requires deterministic entry, stop, target, risk, and final pipeline gates'));
 assert.ok(describeTimeframeMssStateForDisplay(confirmedCandidateEligible.fiveMinuteState).includes('Building candidate from HTF draw + raid/reclaim context'));
 
+const broad15mConflict = classifyTimeframeMssState({
+  timeframe: '15M',
+  bars: fifteenMinuteBroadConflictBars(),
+});
+assert.equal(broad15mConflict.status, 'conflicting');
+assert.equal(broad15mConflict.lifecycleState, 'conflicting_mss');
+
+const refined15mSupport = buildHtfLiquidityDrawState({
+  bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars1H: sufficientHtfContext(bullishPendingBars()),
+  bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'London high / prior RTH high',
+  chartTimestamp: '2026-06-01T14:05:00',
+});
+assert.equal(refined15mSupport.fifteenMinuteConfirmationStatus, 'potential_mss');
+assert.equal(refined15mSupport.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+assert.ok(refined15mSupport.timeframeStack.find((state) => state.timeframe === '15M')?.evidence.some((line) => line.includes('broad-context conflict/opposite state refined')));
+
+const failed15mReclaimStaysBlocked = buildHtfLiquidityDrawState({
+  bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars1H: sufficientHtfContext(bullishPendingBars()),
+  bars15M: sufficientHtfContext(fifteenMinuteBullishReclaimFailedBars()),
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'London high / prior RTH high',
+  chartTimestamp: '2026-06-01T14:05:00',
+});
+assert.notEqual(failed15mReclaimStaysBlocked.fifteenMinuteConfirmationStatus, 'potential_mss');
+assert.notEqual(failed15mReclaimStaysBlocked.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+
 const bearishCandidateEligible = buildHtfLiquidityDrawState({
-  bars4H: bearishPendingBars(),
-  bars1H: bearishPendingBars(),
-  bars15M: bearishPendingBars(),
+  bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars1H: sufficientHtfContext(bearishPendingBars()),
+  bars15M: sufficientHtfContext(bearishPendingBars()),
   bars5M: bearishConfirmedBars(),
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T14:10:00',
@@ -191,10 +255,22 @@ assert.equal(bearishCandidateEligible.drawDirection, 'sell_side');
 assert.equal(bearishCandidateEligible.raidState, 'buy_side_raid');
 assert.equal(bearishCandidateEligible.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
 
+const refined15mBearishSupport = buildHtfLiquidityDrawState({
+  bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars1H: sufficientHtfContext(bearishPendingBars()),
+  bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
+  bars5M: bearishConfirmedBars(),
+  externalSellSideLiquidityTarget: 'London low / prior RTH low',
+  chartTimestamp: '2026-06-01T14:10:00',
+});
+assert.equal(refined15mBearishSupport.planDirection, 'SHORT');
+assert.equal(refined15mBearishSupport.fifteenMinuteConfirmationStatus, 'potential_mss');
+assert.equal(refined15mBearishSupport.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+
 const fifteenThirtyOutside = buildHtfLiquidityDrawState({
-  bars4H: bearishPendingBars(),
-  bars1H: bearishPendingBars(),
-  bars15M: bearishPendingBars(),
+  bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars1H: sufficientHtfContext(bearishPendingBars()),
+  bars15M: sufficientHtfContext(bearishPendingBars()),
   bars5M: bearishConfirmedBars(),
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T15:30:00',
@@ -205,14 +281,16 @@ const missingTimeframes = buildHtfLiquidityDrawState({
   bars5M: bullishConfirmedBars(),
   externalBuySideLiquidityTarget: 'prior RTH high',
 });
-assert.equal(missingTimeframes.classification, 'NO_QUALIFIED_STATE');
+assert.equal(missingTimeframes.classification, 'MSS_TRIGGER_CONFIRMED');
+assert.equal(missingTimeframes.htfContextDataLimited, true);
+assert.equal(missingTimeframes.classificationReliability, 'data_limited');
 assert.ok(missingTimeframes.timeframeStack.some((state) => state.timeframe === '4H' && state.status === 'unknown'));
-assert.ok(missingTimeframes.blockers.some((line) => line.includes('Missing one or more required 4H/1H/15M/5M')));
+assert.ok(missingTimeframes.blockers.some((line) => line.includes('4H: missing structured OHLC context')));
 
 const malformedBars = buildHtfLiquidityDrawState({
-  bars4H: bullishPendingBars(),
-  bars1H: bullishPendingBars(),
-  bars15M: bullishPendingBars(),
+  bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars1H: sufficientHtfContext(bullishPendingBars()),
+  bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: [
     { time: '2026-06-01T10:00:00', open: 100, high: 99, low: 101, close: 100, volume: 1000 },
     { time: '2026-06-01T10:05:00', open: Number.NaN, high: 102, low: 99, close: 101, volume: 1000 },
@@ -233,9 +311,9 @@ const derivedFromChartContext = buildHtfLiquidityDrawStateFromChartContext({
   multiTimeframeContext: {
     source: 'ninjatrader_bridge',
     authority: 'ohlc_facts_only',
-    fourHour: { candles: candleFacts(bullishPendingBars()) },
-    oneHour: { candles: candleFacts(bullishPendingBars()) },
-    fifteenMinute: { candles: candleFacts(bullishPendingBars()) },
+    fourHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
+    oneHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
+    fifteenMinute: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     fiveMinute: { candles: candleFacts(bullishConfirmedBars()) },
     targetMap: {
       nearestUpsideLiquidity: { label: 'prior RTH high', price: 104 },
@@ -254,6 +332,34 @@ const noStructuredFallback = buildHtfLiquidityDrawStateFromChartContext({
   multiTimeframeContext: undefined,
 });
 assert.equal(noStructuredFallback, null);
+
+const dataLimitedHtfWithConfirmed5m = buildHtfLiquidityDrawState({
+  bars4H: bullishPendingBars().slice(0, 4),
+  bars1H: bullishPendingBars().slice(0, 4),
+  bars15M: bullishPendingBars().slice(0, 4),
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'prior RTH high',
+  chartTimestamp: '2026-06-01T14:05:00',
+});
+assert.equal(dataLimitedHtfWithConfirmed5m.htfContextDataLimited, true);
+assert.equal(dataLimitedHtfWithConfirmed5m.htfContextSufficiency.overallStatus, 'data_limited');
+assert.equal(dataLimitedHtfWithConfirmed5m.classificationReliability, 'data_limited');
+assert.equal(dataLimitedHtfWithConfirmed5m.fiveMinuteMssTriggerConfirmed, true);
+assert.equal(dataLimitedHtfWithConfirmed5m.classification, 'MSS_TRIGGER_CONFIRMED');
+assert.notEqual(dataLimitedHtfWithConfirmed5m.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+assert.ok(dataLimitedHtfWithConfirmed5m.blockers.some((line) => line.includes('insufficient HTF context: 4H loaded 4 bars')));
+assert.ok(dataLimitedHtfWithConfirmed5m.classificationReason.includes('5M bullish MSS confirmed, but HTF context is data-limited'));
+assert.equal(dataLimitedHtfWithConfirmed5m.createsTradingPlanCandidate, false);
+assert.equal(dataLimitedHtfWithConfirmed5m.approvesExecution, false);
+
+const missingHtfContext = buildHtfLiquidityDrawState({
+  bars5M: bullishConfirmedBars(),
+  externalBuySideLiquidityTarget: 'prior RTH high',
+});
+assert.equal(missingHtfContext.htfContextSufficiency.overallStatus, 'missing');
+assert.equal(missingHtfContext.classificationReliability, 'data_limited');
+assert.ok(missingHtfContext.timeframeCoverage.find((coverage) => coverage.timeframe === '4H')?.status === 'missing');
+assert.ok(missingHtfContext.blockers.some((line) => line.includes('4H: missing structured OHLC context')));
 
 const failedBullish = classifyTimeframeMssState({
   timeframe: '5M',
@@ -303,9 +409,9 @@ const oppositeAfterBullish = classifyTimeframeMssState({
   timeframe: '5M',
   bars: bullishOppositeMssBars(),
 });
-assert.equal(oppositeAfterBullish.direction, 'bullish');
+assert.equal(oppositeAfterBullish.direction, 'neutral');
 assert.equal(oppositeAfterBullish.status, 'conflicting');
-assert.equal(oppositeAfterBullish.lifecycleState, 'opposite_mss_confirmed');
+assert.equal(oppositeAfterBullish.lifecycleState, 'conflicting_mss');
 
 const bearishDigestion = classifyTimeframeMssState({
   timeframe: '5M',

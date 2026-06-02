@@ -168,6 +168,11 @@ export interface BridgeDiagnosticReplayReport {
     postShiftState: HtfLiquidityDrawState['postShiftState'];
     externalLiquidityTarget: string | null;
     activeScanWindow: HtfLiquidityDrawState['activeScanWindow'];
+    htfContextSufficiency: HtfLiquidityDrawState['htfContextSufficiency'];
+    htfContextDataLimited: boolean;
+    timeframeCoverage: HtfLiquidityDrawState['timeframeCoverage'];
+    classificationReliability: HtfLiquidityDrawState['classificationReliability'];
+    classificationReason: string;
     createsTradingPlanCandidate: false;
     approvesExecution: false;
     blockers: string[];
@@ -615,6 +620,11 @@ function buildHtfMssDiagnostics(input: BridgeDiagnosticReplayInput, direction: '
     postShiftState: state.postShiftState,
     externalLiquidityTarget: state.externalLiquidityTarget || null,
     activeScanWindow: state.activeScanWindow,
+    htfContextSufficiency: state.htfContextSufficiency,
+    htfContextDataLimited: state.htfContextDataLimited,
+    timeframeCoverage: state.timeframeCoverage,
+    classificationReliability: state.classificationReliability,
+    classificationReason: state.classificationReason,
     createsTradingPlanCandidate: false,
     approvesExecution: false,
     blockers: state.blockers,
@@ -720,6 +730,9 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   const gateReview = buildGateReview(input, htf);
   const targetReview = targetOutcome(finalClassification, approvedCandidate, bars5m);
   const htfMssDiagnostics = buildHtfMssDiagnostics(input, direction, approvedCandidate);
+  const htfContextSummary = htfMssDiagnostics.htfContextDataLimited
+    ? `${htfMssDiagnostics.classificationReason} ${htfMssDiagnostics.htfContextSufficiency.blockers.join(' ')}`
+    : `HTF context sufficient. Classification reliability=${htfMssDiagnostics.classificationReliability}.`;
   const planApplicable = finalClassification === 'A_VALID_APPROVED_NO_ALERT' || finalClassification === 'B_APPROVED_ALREADY_TRIGGERED';
   const recommendation = newPlanRecommendation(finalClassification);
   const auditEvents = matchingAuditEvents(input);
@@ -733,6 +746,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
     largerTimeframeContextSummary: [
       `HTF confirmation=${htf}.`,
       `30M bars=${input.bars30m?.length || 0}, 60M bars=${input.bars60m?.length || 0}, 4H bars=${input.bars240m?.length || 0}, Daily bars=${input.barsDaily?.length || 0}.`,
+      htfContextSummary,
       htf === 'conflicted' ? 'Larger timeframe context conflicted with the suspected move.' : 'Larger timeframe context was treated as reporting context only.',
     ].join(' '),
     higherTimeframeConfirmation: htf,

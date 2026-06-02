@@ -80,4 +80,46 @@ describe('FinalTradePlanCard HTF draw model display', () => {
     expect(screen.getByText(/Execution stays disabled until the required trigger and risk fields are satisfied/i)).toBeTruthy();
     expect(screen.queryByText(/Trade now/i)).toBeNull();
   });
+
+  it('does not display executable wording for ConditionalTrade with raw canExecute true', () => {
+    const plan = {
+      decision: 'LONG',
+      decisionLabel: 'WAIT / CONDITIONAL',
+      executionDecision: 'NO EXECUTABLE TRADE',
+      planningDecision: 'CONDITIONAL PLANS AVAILABLE',
+      entry: 7625.5,
+      stop: 7622.5,
+      t1: 7630,
+      t2: 7631.5,
+      riskPoints: 3,
+      riskRewardT1: '1.5R',
+      riskRewardT2: '2.0R',
+      finalConfidence: 'High',
+      whyThisPlan: 'Conditional levels are present but the final pipeline has not approved execution.',
+      invalidation: 'Invalid below protected structure.',
+      source: 'app_rule_engine',
+      canExecute: true,
+      setupName: 'HTF Draw Continuation After Raid/Reclaim',
+      decisionStatus: TradeDecisionStatus.ConditionalTrade,
+      noTradeReason: null,
+      hasConditionalPlans: true,
+      setupCandidates: [],
+      opportunitySelection: {
+        bestExecutableCandidate: null,
+        bestConditionalCandidate: null,
+        blockedCandidates: [],
+        finalDecision: TradeDecisionStatus.ConditionalTrade,
+        noTradeReason: null,
+      },
+      decisionAuditTrail: [],
+      rejectedAlternatives: [],
+    } as unknown as NormalizedTradePlan;
+
+    render(<FinalTradePlanCard plan={plan} />);
+
+    expect(screen.getByText(/NO EXECUTABLE TRADE/i)).toBeTruthy();
+    expect(screen.getByText(/Execution stays disabled until the required trigger and risk fields are satisfied/i)).toBeTruthy();
+    expect(screen.queryByText(/^Executable$/i)).toBeNull();
+    expect(screen.queryByText(/Executable by app/i)).toBeNull();
+  });
 });

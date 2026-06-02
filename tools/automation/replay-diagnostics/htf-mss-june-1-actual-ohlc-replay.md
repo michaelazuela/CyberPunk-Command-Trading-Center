@@ -11,10 +11,23 @@ This report uses historical OHLC replay data only. It does not post to Discord, 
 - Source Path: N/A
 - Timezone: America/New_York
 - Timezone Assumption: Historical replay classifies scan windows using America/New_York wall-clock time. Timestamps with offsets are preserved; offset-free timestamps are treated as ET with warnings.
-- Bars: 5M=43, 15M=63, 60M=16, 240M=4
+- Bars: 5M=43, 15M=86, 60M=62, 240M=33
+- Ranges: 5M=2026-06-01T12:00:00.0000000 to 2026-06-01T15:30:00.0000000; 15M=2026-05-31T18:15:00.0000000 to 2026-06-01T15:30:00.0000000; 60M=2026-05-28T00:00:00.0000000 to 2026-06-01T15:00:00.0000000; 240M=2026-05-25T02:00:00.0000000 to 2026-06-01T14:00:00.0000000
+
+## HTF Context Sufficiency
+- Overall Status: sufficient
+- Classification Reliability: structural
+- Classification Reason: Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.
+- Data Limited: false
+| Timeframe | Bars Loaded | Range | Minimum Expected | Status |
+|---|---:|---|---|---|
+| 4H | 33 | 2026-05-25T02:00:00.0000000 to 2026-06-01T14:00:00.0000000 | At least 7 completed trading days, preferably 20+ completed 4H candles when available. | sufficient |
+| 1H | 62 | 2026-05-28T00:00:00.0000000 to 2026-06-01T15:00:00.0000000 | At least 4 completed trading days of structured 1H context. | sufficient |
+| 15M | 86 | 2026-05-31T18:15:00.0000000 to 2026-06-01T15:30:00.0000000 | At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity. | sufficient |
+| 5M | 42 | 2026-06-01T12:00:00.0000000 to 2026-06-01T15:25:00.0000000 | Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars. | sufficient |
 
 ## HTF/MSS Classification
-- Classification: NO_QUALIFIED_STATE
+- Classification: REVERSAL_DELIVERY_PLAN_CANDIDATE
 - Plan Direction: LONG
 - Raid State: sell_side_raid
 - 5M Confirmed: true
@@ -25,15 +38,15 @@ This report uses historical OHLC replay data only. It does not post to Discord, 
 ## Timeframe Stack
 | Timeframe | Direction | Status | Lifecycle | Confidence |
 |---|---|---|---|---:|
-| 4H | unknown | unknown | unknown | 0 |
-| 1H | bearish | failed | failed_mss | 24 |
-| 15M | bearish | failed | failed_mss | 24 |
+| 4H | neutral | conflicting | conflicting_mss | 35 |
+| 1H | neutral | conflicting | conflicting_mss | 35 |
+| 15M | bullish | potential_mss | potential_mss | 62 |
 | 5M | bullish | confirmed | confirmed_mss | 92 |
 
 ## Candidate And Final Gates
-- Candidate Detected: No
+- Candidate Detected: Yes
 - Setup Type: HtfDrawContinuationAfterRaid
-- Direction: NO TRADE
+- Direction: LONG
 - Final Gate Status: ConditionalTrade
 - canExecute: false
 - Entry: 7625.5

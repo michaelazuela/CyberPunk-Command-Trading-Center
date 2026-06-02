@@ -63,6 +63,8 @@ assert.equal(loaded.barCounts['5m'], bars5m.length);
 assert.equal(loaded.duplicateTimestamps['5m'].length, 1);
 assert.equal(loaded.bars.bars5m[0].time, '2026-06-01T13:25:00-04:00');
 assert.equal(loaded.timezone, 'America/New_York');
+assert.equal(loaded.timeframeRanges['240m'].from, '2026-06-01T00:00:00-04:00');
+assert.ok(loaded.insufficientLookback.some((item) => item.includes('240m')));
 
 const actualReport = buildActualOhlcReplayReport(loaded);
 assert.equal(actualReport.reportType, 'htf_mss_june_1_actual_ohlc_replay');
@@ -74,6 +76,20 @@ assert.equal(actualReport.safeWording.externalLiquidityIsContextOnly, true);
 assert.equal(actualReport.safeWording.t1T2AreAppComputedRTargets, true);
 assert.equal(actualReport.finalGateResult.canExecute, false);
 assert.equal(actualReport.finalGateResult.approvedTradeOnlyAfterDeterministicGates, true);
+assert.ok('timeframeRanges' in actualReport);
+assert.ok('insufficientLookback' in actualReport);
+assert.ok('htfContextSufficiency' in actualReport);
+assert.ok('classificationReliability' in actualReport);
+assert.equal(actualReport.htfContextSufficiency.overallStatus, 'data_limited');
+assert.equal(actualReport.htfContextDataLimited, true);
+assert.equal(actualReport.classificationReliability, 'data_limited');
+assert.ok(actualReport.timeframeCoverage.some((coverage) => coverage.timeframe === '4H' && coverage.status === 'data_limited'));
+assert.ok(actualReport.classificationReason.includes('HTF context is data-limited') || actualReport.classificationReason.includes('5M bullish MSS confirmed'));
+assert.ok(actualReport.htfLiquidityDrawState.htfContextDataLimited);
+assert.equal(actualReport.htfLiquidityDrawState.classificationReliability, 'data_limited');
+assert.ok(actualReport.htfLiquidityDrawState.timeframeCoverage.every((coverage) => coverage.minimumExpectedDescription.length > 0));
+assert.ok(actualReport.diagnosticReplay.htfMssDiagnostics.htfContextDataLimited);
+assert.equal(actualReport.diagnosticReplay.htfMssDiagnostics.classificationReliability, 'data_limited');
 
 const invalidValidation = validateHistoricalBars({
   bars5m: [bar('2026-06-01T12:00:00-04:00', 10, 9, 11, 10)],
@@ -92,6 +108,7 @@ const missingTimeframe = validateHistoricalBars({
 });
 assert.equal(missingTimeframe.ok, false);
 assert.ok(missingTimeframe.blockers.some((item) => item.includes('15m: no valid bars loaded')));
+assert.ok(missingTimeframe.insufficientLookback.some((item) => item.includes('240m')));
 
 const noOffsetPath = join(tempDir, 'no-offset-bars.json');
 writeFileSync(noOffsetPath, JSON.stringify({
@@ -122,6 +139,11 @@ const artifacts = writeActualOhlcReplayArtifacts(actualReport, tempDir);
 const artifactMarkdown = readFileSync(artifacts.markdownPath, 'utf8');
 assert.ok(artifactMarkdown.includes('# HTF/MSS June 1 Actual OHLC Replay'));
 assert.ok(artifactMarkdown.includes('Candidate status does not equal executable approval.'));
+assert.ok(artifactMarkdown.includes('Ranges: 5M='));
+assert.ok(artifactMarkdown.includes('## HTF Context Sufficiency'));
+assert.ok(artifactMarkdown.includes('Classification Reliability: data_limited'));
+assert.ok(artifactMarkdown.includes('Minimum Expected'));
+assert.ok(artifactMarkdown.includes('Data-Limited Blockers'));
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(artifactMarkdown), false);
 
 const readinessArtifacts = writeActualOhlcReplayArtifacts(readiness, tempDir);

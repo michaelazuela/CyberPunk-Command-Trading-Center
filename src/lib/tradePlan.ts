@@ -2,6 +2,7 @@ import { AnalysisResult, EarlyMoveReview, FinalOpportunitySelection, NoTradeReas
 import { SYSTEM_RULES } from '../constants';
 import { targetsFromEntryStop } from '../config/tradeRules';
 import { getWindowStatus } from '../config/timeWindows';
+import { getEffectiveCanExecute } from './effectiveExecution';
 import { normalizeIctModelLabel } from './ictModelLabels';
 import { PipelineSessionType, runTradeDecisionPipeline, TradeDecisionStepResult } from './tradeDecisionPipeline';
 
@@ -514,15 +515,16 @@ export function normalizeTradePlan(
   const stop = executableCandidate.stop;
   const targets = calculateTargets(decision, entry, stop, instrument);
   const riskPoints = (isValidPrice(entry) && isValidPrice(stop)) ? calculateRisk(entry, stop) : null;
-  const pipelineAllowsExecution =
-    pipeline.status === TradeDecisionStatus.ApprovedTrade ||
-    pipeline.status === TradeDecisionStatus.ConditionalTrade;
-  const canExecute = pipelineAllowsExecution &&
+  const rawCanExecute =
     (decision === "LONG" || decision === "SHORT") &&
     isValidPrice(entry) &&
     isValidPrice(stop) &&
     isValidPrice(targets.t1) &&
     isValidPrice(targets.t2);
+  const canExecute = getEffectiveCanExecute({
+    decisionStatus: pipeline.status,
+    canExecute: rawCanExecute,
+  });
   const consistencyWarnings: string[] = [];
   if (advisoryCandidates.length > 0) {
     consistencyWarnings.push("Advisory candidate fields were ignored for execution. The executable plan was selected by the app-owned rule engine.");

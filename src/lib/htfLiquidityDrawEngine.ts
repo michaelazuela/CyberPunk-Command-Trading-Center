@@ -32,6 +32,28 @@ export type LiquidityRaidState =
   | 'none'
   | 'unknown';
 
+export type HtfContextSufficiencyStatus = 'sufficient' | 'data_limited' | 'missing' | 'unknown';
+export type HtfClassificationReliability = 'structural' | 'data_limited' | 'estimated' | 'unknown';
+
+export interface TimeframeContextCoverage {
+  timeframe: HtfMssTimeframe;
+  barsLoaded: number;
+  rangeStart?: string;
+  rangeEnd?: string;
+  minimumExpectedDescription: string;
+  minimumSatisfied: boolean;
+  status: HtfContextSufficiencyStatus;
+  blocker?: string;
+}
+
+export interface HtfContextSufficiency {
+  overallStatus: HtfContextSufficiencyStatus;
+  timeframeCoverage: TimeframeContextCoverage[];
+  dataLimited: boolean;
+  blockers: string[];
+  notes: string[];
+}
+
 export interface TimeframeMssState {
   timeframe: HtfMssTimeframe;
   direction: MssDirection;
@@ -78,6 +100,11 @@ export interface HtfLiquidityDrawState {
   fifteenMinuteConfirmationStatus: Extract<MssStatus, 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown'>;
   activeScanWindow: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
   htfDrawContinuationPending: boolean;
+  htfContextSufficiency: HtfContextSufficiency;
+  htfContextDataLimited: boolean;
+  timeframeCoverage: TimeframeContextCoverage[];
+  classificationReliability: HtfClassificationReliability;
+  classificationReason: string;
   confidence: number;
   notes: string[];
   blockers: string[];
@@ -117,6 +144,25 @@ interface DirectionalAnalysis {
 }
 
 const MIN_BARS_FOR_STRUCTURE = 5;
+const MINIMUM_CONTEXT_DESCRIPTIONS: Record<HtfMssTimeframe, string> = {
+  '5M': 'Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.',
+  '15M': 'At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.',
+  '1H': 'At least 4 completed trading days of structured 1H context.',
+  '4H': 'At least 7 completed trading days, preferably 20+ completed 4H candles when available.',
+};
+
+const MINIMUM_CONTEXT_BARS: Record<HtfMssTimeframe, number> = {
+  '5M': 5,
+  '15M': 40,
+  '1H': 24,
+  '4H': 20,
+};
+
+const MINIMUM_CONTEXT_DAYS: Partial<Record<HtfMssTimeframe, number>> = {
+  '15M': 2,
+  '1H': 4,
+  '4H': 7,
+};
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -135,6 +181,82 @@ function validBars(bars: NinjaBridgeBar[] | undefined): NinjaBridgeBar[] {
     )
     .slice()
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+}
+
+function timestampMs(value?: string | null): number | null {
+  if (!value) return null;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function rangeDays(start?: string, end?: string): number | null {
+  const startMs = timestampMs(start);
+  const endMs = timestampMs(end);
+  if (startMs === null || endMs === null || endMs < startMs) return null;
+  return (endMs - startMs) / (24 * 60 * 60 * 1000);
+}
+
+function contextSatisfied(timeframe: HtfMssTimeframe, bars: NinjaBridgeBar[]): boolean {
+  const countSatisfied = bars.length >= MINIMUM_CONTEXT_BARS[timeframe];
+  const daysRequired = MINIMUM_CONTEXT_DAYS[timeframe];
+  if (!daysRequired) return countSatisfied;
+  const daysLoaded = rangeDays(bars[0]?.time, bars[bars.length - 1]?.time);
+  const rangeSatisfied = daysLoaded !== null && daysLoaded >= daysRequired;
+  return countSatisfied || rangeSatisfied;
+}
+
+function coverageFor(timeframe: HtfMssTimeframe, rawBars?: NinjaBridgeBar[]): TimeframeContextCoverage {
+  const bars = validBars(rawBars);
+  const rangeStart = bars[0]?.time;
+  const rangeEnd = bars[bars.length - 1]?.time;
+  const minimumSatisfied = contextSatisfied(timeframe, bars);
+  const status: HtfContextSufficiencyStatus =
+    bars.length === 0 ? 'missing' : minimumSatisfied ? 'sufficient' : 'data_limited';
+  const blocker = status === 'sufficient'
+    ? undefined
+    : status === 'missing'
+      ? `${timeframe}: missing structured OHLC context; minimum expected: ${MINIMUM_CONTEXT_DESCRIPTIONS[timeframe]}`
+      : `insufficient HTF context: ${timeframe} loaded ${bars.length} bars from ${rangeStart || 'unknown'} to ${rangeEnd || 'unknown'}; minimum expected: ${MINIMUM_CONTEXT_DESCRIPTIONS[timeframe]}`;
+  return {
+    timeframe,
+    barsLoaded: bars.length,
+    rangeStart,
+    rangeEnd,
+    minimumExpectedDescription: MINIMUM_CONTEXT_DESCRIPTIONS[timeframe],
+    minimumSatisfied,
+    status,
+    blocker,
+  };
+}
+
+export function assessHtfContextSufficiency(input: HtfLiquidityDrawInput): HtfContextSufficiency {
+  const timeframeCoverage = [
+    coverageFor('4H', input.bars4H),
+    coverageFor('1H', input.bars1H),
+    coverageFor('15M', input.bars15M),
+    coverageFor('5M', input.bars5M),
+  ];
+  const blockers = timeframeCoverage.flatMap((coverage) => coverage.blocker ? [coverage.blocker] : []);
+  const hasMissing = timeframeCoverage.some((coverage) => coverage.status === 'missing');
+  const hasDataLimited = timeframeCoverage.some((coverage) => coverage.status === 'data_limited');
+  const overallStatus: HtfContextSufficiencyStatus = hasMissing
+    ? 'missing'
+    : hasDataLimited
+      ? 'data_limited'
+      : 'sufficient';
+  const notes = overallStatus === 'sufficient'
+    ? ['HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met.']
+    : [
+      'HTF context data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.',
+      'Data sufficiency cannot approve execution; it only controls classification reliability and diagnostics.',
+    ];
+  return {
+    overallStatus,
+    timeframeCoverage,
+    dataLimited: overallStatus !== 'sufficient',
+    blockers,
+    notes,
+  };
 }
 
 function range(bar: NinjaBridgeBar): number {
@@ -201,28 +323,30 @@ function priorHighLevel(bars: NinjaBridgeBar[], index: number): number | null {
   return Math.max(...prior.map((bar) => bar.high));
 }
 
-function findSellSideRaid(bars: NinjaBridgeBar[]): RaidEvent | null {
+function findSellSideRaids(bars: NinjaBridgeBar[]): RaidEvent[] {
+  const raids: RaidEvent[] = [];
   for (let index = 2; index < bars.length; index += 1) {
     const level = priorLowLevel(bars, index);
     const bar = bars[index];
     if (level === null) continue;
     if (bar.low < level && bar.close > level) {
-      return { type: 'sell_side_raid', index, sweptLevel: level, raidExtreme: bar.low };
+      raids.push({ type: 'sell_side_raid', index, sweptLevel: level, raidExtreme: bar.low });
     }
   }
-  return null;
+  return raids;
 }
 
-function findBuySideRaid(bars: NinjaBridgeBar[]): RaidEvent | null {
+function findBuySideRaids(bars: NinjaBridgeBar[]): RaidEvent[] {
+  const raids: RaidEvent[] = [];
   for (let index = 2; index < bars.length; index += 1) {
     const level = priorHighLevel(bars, index);
     const bar = bars[index];
     if (level === null) continue;
     if (bar.high > level && bar.close < level) {
-      return { type: 'buy_side_raid', index, sweptLevel: level, raidExtreme: bar.high };
+      raids.push({ type: 'buy_side_raid', index, sweptLevel: level, raidExtreme: bar.high });
     }
   }
-  return null;
+  return raids;
 }
 
 function confirmationLevelForRaid(bars: NinjaBridgeBar[], raid: RaidEvent, direction: Exclude<MssDirection, 'neutral' | 'unknown'>): number | null {
@@ -304,28 +428,39 @@ function oppositeMssAfterBreak(
 }
 
 function analyzeDirection(bars: NinjaBridgeBar[], direction: Exclude<MssDirection, 'neutral' | 'unknown'>): DirectionalAnalysis {
-  const raid = direction === 'bullish' ? findSellSideRaid(bars) : findBuySideRaid(bars);
-  const evidence: string[] = [];
-  if (!raid) {
+  const raids = direction === 'bullish' ? findSellSideRaids(bars) : findBuySideRaids(bars);
+  if (!raids.length) {
     return {
       raid: null,
       breakEvent: null,
       failed: false,
       postMssDigestion: false,
       oppositeMssConfirmed: false,
-      evidence,
+      evidence: [],
     };
   }
 
-  evidence.push(direction === 'bullish'
-    ? `Sell-side liquidity swept and reclaimed at ${raid.sweptLevel}.`
-    : `Buy-side liquidity swept and reclaimed at ${raid.sweptLevel}.`);
-
-  const confirmationLevel = confirmationLevelForRaid(bars, raid, direction);
-  const breakEvent = findBreakAfterRaid(bars, raid, direction, confirmationLevel);
-  const failed = failedAfterRaid(bars, raid, direction, breakEvent?.index ?? null);
-  const digestion = postShiftDigestion(bars, breakEvent, direction);
-  const oppositeConfirmed = oppositeMssAfterBreak(bars, breakEvent, direction);
+  const analyzed = raids.map((raid) => {
+    const confirmationLevel = confirmationLevelForRaid(bars, raid, direction);
+    const breakEvent = findBreakAfterRaid(bars, raid, direction, confirmationLevel);
+    const failed = failedAfterRaid(bars, raid, direction, breakEvent?.index ?? null);
+    const digestion = postShiftDigestion(bars, breakEvent, direction);
+    const oppositeConfirmed = oppositeMssAfterBreak(bars, breakEvent, direction);
+    const score =
+      (breakEvent && !failed ? 1000 : 0) +
+      (!breakEvent && !failed ? 700 : 0) +
+      (breakEvent && failed ? 500 : 0) +
+      (oppositeConfirmed ? 100 : 0) +
+      raid.index;
+    return { raid, confirmationLevel, breakEvent, failed, digestion, oppositeConfirmed, score };
+  });
+  const selected = analyzed.sort((a, b) => b.score - a.score)[0];
+  const { raid, confirmationLevel, breakEvent, failed, digestion, oppositeConfirmed } = selected;
+  const evidence: string[] = [
+    direction === 'bullish'
+      ? `Sell-side liquidity swept and reclaimed at ${raid.sweptLevel}.`
+      : `Buy-side liquidity swept and reclaimed at ${raid.sweptLevel}.`,
+  ];
 
   if (breakEvent) {
     evidence.push(direction === 'bullish'
@@ -395,7 +530,10 @@ export function describeTimeframeMssStateForDisplay(state: TimeframeMssState): s
   return '5M MSS trigger is not confirmed. No executable trade.';
 }
 
-export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidityDrawState, 'classification'>): string {
+export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidityDrawState, 'classification'> & Partial<Pick<HtfLiquidityDrawState, 'htfContextDataLimited' | 'classificationReason'>>): string {
+  if (state.htfContextDataLimited) {
+    return state.classificationReason || 'HTF context is data-limited. Do not treat missing HTF draw as structural conflict. No executable trade.';
+  }
   switch (state.classification) {
     case 'HTF_DRAW_DETECTED':
       return 'HTF draw detected. No 5M MSS trigger yet. Context only. No executable trade.';
@@ -631,8 +769,55 @@ function externalTargetForPlan(args: {
   return undefined;
 }
 
+function refineFifteenMinuteWithConfirmedFiveMinute(args: {
+  fifteenMinute: TimeframeMssState | undefined;
+  fiveMinute: TimeframeMssState;
+  bars15M?: NinjaBridgeBar[];
+  externalBuySideLiquidityTarget?: string;
+  externalSellSideLiquidityTarget?: string;
+}): TimeframeMssState | undefined {
+  if (!args.fifteenMinute) return args.fifteenMinute;
+  if (
+    args.fiveMinute.status !== 'confirmed' ||
+    (args.fiveMinute.lifecycleState !== 'confirmed_mss' && args.fiveMinute.lifecycleState !== 'post_mss_digestion') ||
+    (args.fiveMinute.direction !== 'bullish' && args.fiveMinute.direction !== 'bearish') ||
+    args.fifteenMinute.timeframe !== '15M' ||
+    (
+      args.fifteenMinute.status !== 'conflicting' &&
+      args.fifteenMinute.status !== 'failed' &&
+      !(args.fifteenMinute.status === 'confirmed' && args.fifteenMinute.direction !== args.fiveMinute.direction)
+    )
+  ) {
+    return args.fifteenMinute;
+  }
+
+  const expectedDirection = args.fiveMinute.direction;
+  const analysis = analyzeDirection(validBars(args.bars15M), expectedDirection);
+  if (!analysis.raid || analysis.failed) return args.fifteenMinute;
+
+  const refined = buildStateForDirection({
+    timeframe: '15M',
+    direction: expectedDirection,
+    analysis,
+    target: expectedDirection === 'bullish'
+      ? args.externalBuySideLiquidityTarget
+      : args.externalSellSideLiquidityTarget,
+  });
+  return {
+    ...refined,
+    evidence: [
+      ...refined.evidence,
+      expectedDirection === 'bullish'
+        ? '15M broad-context conflict/opposite state refined: sell-side raid/reclaim remains valid after confirmed bullish 5M MSS; do not treat the pre-reclaim selloff as bearish continuation.'
+        : '15M broad-context conflict/opposite state refined: buy-side raid/rejection remains valid after confirmed bearish 5M MSS; do not treat the pre-rejection rally as bullish continuation.',
+    ],
+    confidence: Math.max(refined.confidence, 62),
+  };
+}
+
 function hasMissingRequiredTimeframe(states: TimeframeMssState[]): boolean {
-  return states.some((state) => state.status === 'unknown' || state.lifecycleState === 'unknown');
+  const fiveMinute = states.find((state) => state.timeframe === '5M');
+  return !fiveMinute || fiveMinute.status === 'unknown' || fiveMinute.lifecycleState === 'unknown';
 }
 
 function htfNonConflict(states: TimeframeMssState[], planDirection: HtfLiquidityDrawState['planDirection']): boolean {
@@ -663,9 +848,10 @@ function candidateConfidence(args: {
   planDirection: HtfLiquidityDrawState['planDirection'];
   externalTarget?: string;
   missingRequired: boolean;
+  htfContextDataLimited: boolean;
   macroContext: HtfLiquidityDrawState['macroContext'];
 }): number {
-  if (args.missingRequired) {
+  if (args.missingRequired || args.htfContextDataLimited) {
     return clampScore(average(args.states.map((state) => state.confidence)) - 20);
   }
 
@@ -691,12 +877,14 @@ function classificationFromState(args: {
   confidence: number;
   externalTarget?: string;
   missingRequired: boolean;
+  htfContextDataLimited: boolean;
 }): HtfLiquidityDrawClassification {
   const { fiveMinute, macroContext } = args;
   if (args.missingRequired) return 'NO_QUALIFIED_STATE';
   if (fiveMinute.lifecycleState === 'failed_mss') return 'FAILED_MSS';
   if (fiveMinute.lifecycleState === 'opposite_mss_confirmed' || fiveMinute.lifecycleState === 'conflicting_mss') return 'CONFLICTING_MSS';
   if (fiveMinute.lifecycleState === 'confirmed_mss' || fiveMinute.lifecycleState === 'post_mss_digestion') {
+    if (args.htfContextDataLimited) return 'MSS_TRIGGER_CONFIRMED';
     if (
       args.planDirection !== 'NONE' &&
       args.externalTarget &&
@@ -714,8 +902,37 @@ function classificationFromState(args: {
   return 'NO_QUALIFIED_STATE';
 }
 
+function classificationReliabilityFor(sufficiency: HtfContextSufficiency, classification: HtfLiquidityDrawClassification): HtfClassificationReliability {
+  if (sufficiency.overallStatus === 'unknown') return 'unknown';
+  if (sufficiency.dataLimited) return 'data_limited';
+  if (classification === 'NO_QUALIFIED_STATE') return 'unknown';
+  return 'structural';
+}
+
+function classificationReasonFor(args: {
+  classification: HtfLiquidityDrawClassification;
+  sufficiency: HtfContextSufficiency;
+  fiveMinute: TimeframeMssState;
+  planDirection: HtfLiquidityDrawState['planDirection'];
+}): string {
+  if (args.sufficiency.dataLimited) {
+    if (args.fiveMinute.status === 'confirmed') {
+      return `5M ${args.planDirection === 'SHORT' ? 'bearish' : 'bullish'} MSS confirmed, but HTF context is data-limited. Candidate cannot be promoted until HTF context is sufficient or non-conflicting structure is proven.`;
+    }
+    return 'HTF context is data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.';
+  }
+  if (args.classification === 'CONFLICTING_MSS') {
+    return `HTF structural conflict: sufficient context loaded and structure conflicts with the proposed ${args.planDirection} direction.`;
+  }
+  if (args.classification === 'REVERSAL_DELIVERY_PLAN_CANDIDATE') {
+    return `Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.`;
+  }
+  return 'Classification is based on structured OHLC context. Execution remains controlled by app-owned final gates.';
+}
+
 export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiquidityDrawState {
-  const timeframeStates = [
+  const htfContextSufficiency = assessHtfContextSufficiency(input);
+  const initialTimeframeStates = [
     classifyTimeframeMssState({
       timeframe: '4H',
       bars: input.bars4H,
@@ -741,6 +958,17 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
       externalSellSideLiquidityTarget: input.externalSellSideLiquidityTarget,
     }),
   ];
+  const initialFiveMinuteState = initialTimeframeStates.find((state) => state.timeframe === '5M') as TimeframeMssState;
+  const refinedFifteenMinute = refineFifteenMinuteWithConfirmedFiveMinute({
+    fifteenMinute: initialTimeframeStates.find((state) => state.timeframe === '15M'),
+    fiveMinute: initialFiveMinuteState,
+    bars15M: input.bars15M,
+    externalBuySideLiquidityTarget: input.externalBuySideLiquidityTarget,
+    externalSellSideLiquidityTarget: input.externalSellSideLiquidityTarget,
+  });
+  const timeframeStates = initialTimeframeStates.map((state) =>
+    state.timeframe === '15M' && refinedFifteenMinute ? refinedFifteenMinute : state
+  );
   const fiveMinuteState = timeframeStates.find((state) => state.timeframe === '5M') as TimeframeMssState;
   const fifteenMinuteState = timeframeStates.find((state) => state.timeframe === '15M');
   const macroContext = macroContextFromStates(timeframeStates);
@@ -759,6 +987,7 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
     planDirection,
     externalTarget: externalLiquidityTarget,
     missingRequired,
+    htfContextDataLimited: htfContextSufficiency.dataLimited,
     macroContext,
   });
   const classification = classificationFromState({
@@ -770,10 +999,19 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
     confidence,
     externalTarget: externalLiquidityTarget,
     missingRequired,
+    htfContextDataLimited: htfContextSufficiency.dataLimited,
+  });
+  const classificationReliability = classificationReliabilityFor(htfContextSufficiency, classification);
+  const classificationReason = classificationReasonFor({
+    classification,
+    sufficiency: htfContextSufficiency,
+    fiveMinute: fiveMinuteState,
+    planDirection,
   });
   const raidState = raidStateFromFiveMinute(fiveMinuteState);
   const blockers = [
     ...(missingRequired ? ['Missing one or more required 4H/1H/15M/5M OHLC timeframes; HTF/MSS state is not candidate-qualified.'] : []),
+    ...htfContextSufficiency.blockers,
     ...(classification === 'MSS_TRIGGER_PENDING' || classification === 'RAID_RECLAIM_DEVELOPING'
       ? ['5M MSS is developing or pending; confirmed 5M swing break with displacement is still required.']
       : []),
@@ -807,11 +1045,17 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
       classification === 'MSS_TRIGGER_PENDING' ||
       classification === 'MSS_TRIGGER_CONFIRMED' ||
       classification === 'REVERSAL_DELIVERY_PLAN_CANDIDATE',
+    htfContextSufficiency,
+    htfContextDataLimited: htfContextSufficiency.dataLimited,
+    timeframeCoverage: htfContextSufficiency.timeframeCoverage,
+    classificationReliability,
+    classificationReason,
     confidence,
     notes: [
       'Structured HTF/MSS state was derived from NinjaTrader OHLC facts, not narrative fallback.',
       '4H and 1H define draw/session context; 15M defines liquidity-map support; 5M remains trigger authority.',
       '5M confirmed MSS can make the state candidate-eligible, but app-owned entry/stop/target/risk/session/canExecute gates still decide execution.',
+      ...htfContextSufficiency.notes,
     ],
     blockers,
     createsTradingPlanCandidate: false,

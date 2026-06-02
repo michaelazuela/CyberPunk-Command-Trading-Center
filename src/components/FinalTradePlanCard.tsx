@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, CircleX, Route,
 import { NormalizedTradePlan } from '../lib/tradePlan';
 import { cn } from '../lib/utils';
 import { buildConfidenceBreakdown } from '../lib/planMetadata';
+import { getEffectiveCanExecute } from '../lib/effectiveExecution';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType, TradeDecisionStatus } from '../types';
 import { candidateComputedLevels, scenarioScore, selectBestTwoScenarios } from '../lib/scenarioSelection';
 import { TRADE_RULES } from '../config/tradeRules';
@@ -458,7 +459,7 @@ function bestOpportunityLabel(plan: NormalizedTradePlan): string {
   const executable = plan.opportunitySelection?.bestExecutableCandidate;
   const conditional = plan.opportunitySelection?.bestConditionalCandidate;
   if (executable) {
-    const prefix = plan.canExecute ? 'Executable by app' : 'Scanner-ready';
+    const prefix = getEffectiveCanExecute(plan) ? 'Executable by app' : 'Scanner-ready';
     return `${prefix} ${formatSetupType(executable.setupType)} ${formatDirection(executable.direction)}`;
   }
   if (conditional) return `Conditional ${formatSetupType(conditional.setupType)} ${formatDirection(conditional.direction)}`;
@@ -479,6 +480,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
   const [isOpen, setIsOpen] = useState(false);
   const candidates = plan.setupCandidates || [];
   if (candidates.length === 0) return null;
+  const effectiveCanExecute = getEffectiveCanExecute(plan);
   const hasLunchSubtype = candidates.some(candidate =>
     candidate.setupType === SetupType.LunchFailedHighReversal ||
     candidate.setupType === SetupType.LunchFailedLowReversal ||
@@ -514,7 +516,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="qd-badge text-[var(--green)] border-[var(--green)]/30">{plan.canExecute ? 'Executable' : 'Scanner-ready'} {executableCount}</span>
+          <span className="qd-badge text-[var(--green)] border-[var(--green)]/30">{effectiveCanExecute ? 'Executable' : 'Scanner-ready'} {executableCount}</span>
           <span className="qd-badge text-[var(--orange)] border-[var(--orange)]/30">Conditional {conditionalCount}</span>
           <span className="qd-badge text-[var(--red)] border-[var(--red)]/30">Blocked {blockedCount}</span>
           <span className="qd-badge opacity-70">Detected {detectedCount}/{candidates.length}</span>
@@ -548,7 +550,7 @@ function SetupScanResults({ plan }: { plan: NormalizedTradePlan }) {
                   <span className={cn('qd-badge', statusTone(candidate))}>Status: {candidate.detectedStatus}</span>
                   <span className="qd-badge opacity-80">Direction: {formatDirection(candidate.direction)}</span>
                   <span className="qd-badge opacity-80">Confidence: {candidate.confidence}</span>
-                  <span className={cn('qd-badge', statusTone(candidate))}>Execution: {formatCandidateExecutionStatus(candidate, plan.canExecute)}</span>
+                  <span className={cn('qd-badge', statusTone(candidate))}>Execution: {formatCandidateExecutionStatus(candidate, effectiveCanExecute)}</span>
                 </div>
               </div>
               {(candidate.entry || candidate.stop || candidate.riskPoints) && (
@@ -790,6 +792,7 @@ export default function FinalTradePlanCard({
     { label: 'Time', value: confidenceBreakdown.timeWindow },
   ];
   const decisionStatusLabel = formatDecisionStatus(plan.decisionStatus);
+  const effectiveCanExecute = getEffectiveCanExecute(plan);
   const activePlanCandidate = selectedPlanCandidate(plan);
 
   return (
@@ -817,9 +820,9 @@ export default function FinalTradePlanCard({
       <SessionLevelContextPanel plan={plan} />
       <SetupScanResults plan={plan} />
       <EarlyMoveReviewPanel plan={plan} />
-      {!plan.canExecute && <ConditionalPlansPanel plan={plan} />}
+      {!effectiveCanExecute && <ConditionalPlansPanel plan={plan} />}
 
-      {!plan.canExecute ? (
+      {!effectiveCanExecute ? (
         <div className="mb-4 border border-dashed border-[var(--orange)]/40 bg-[var(--orange)]/5 p-4">
           <div className="flex items-center gap-2 text-[var(--orange)] font-mono uppercase tracking-[0.14em] text-[12px] font-bold">
             <AlertTriangle className="w-4 h-4" />

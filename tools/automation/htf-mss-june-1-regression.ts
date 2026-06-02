@@ -25,6 +25,19 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
   return { time, open, high, low, close, volume: 1000 };
 }
 
+function padContextBars(seed: NinjaBridgeBar[], timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+  const targetCount = timeframe === '15m' ? 40 : timeframe === '60m' ? 24 : 20;
+  const stepMinutes = timeframe === '15m' ? 15 : timeframe === '60m' ? 60 : 240;
+  const fillerCount = Math.max(0, targetCount - seed.length);
+  const start = new Date('2026-05-25T00:00:00-04:00').getTime();
+  const filler = Array.from({ length: fillerCount }, (_, index) => {
+    const time = new Date(start + index * stepMinutes * 60 * 1000).toISOString();
+    const base = 7600 + (index % 4) * 0.25;
+    return bar(time, base, base + 1, base - 1, index % 2 === 0 ? base + 0.25 : base - 0.25);
+  });
+  return [...filler, ...seed];
+}
+
 export function juneOneBullishFiveMinuteBars(): NinjaBridgeBar[] {
   return [
     bar('2026-06-01T13:25:00-04:00', 7604.00, 7605.25, 7601.75, 7602.25),
@@ -48,14 +61,14 @@ function bullishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar
       : timeframe === '60m'
         ? ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']
         : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
-  return [
+  return padContextBars([
     bar(`2026-06-01T${prefix[0]}:00-04:00`, 7600, 7601, 7599, 7600),
     bar(`2026-06-01T${prefix[1]}:00-04:00`, 7600, 7601, 7598, 7599),
     bar(`2026-06-01T${prefix[2]}:00-04:00`, 7599, 7600, 7597, 7598),
     bar(`2026-06-01T${prefix[3]}:00-04:00`, 7598, 7599, 7596, 7597),
     bar(`2026-06-01T${prefix[4]}:00-04:00`, 7597, 7599, 7595, 7598),
     bar(`2026-06-01T${prefix[5]}:00-04:00`, 7598, 7600, 7596, 7599),
-  ];
+  ], timeframe);
 }
 
 function buildHtfState(): HtfLiquidityDrawState {

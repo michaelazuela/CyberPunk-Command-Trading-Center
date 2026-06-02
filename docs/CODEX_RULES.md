@@ -119,6 +119,34 @@ If a change affects bar-close handling, Codex must call that out clearly.
 
 ---
 
+## HTF Context Sufficiency
+
+Before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, Codex and the desk engines must load enough structured OHLC context to make the higher-timeframe story reliable.
+
+Minimum structured lookback:
+
+* 5M: active execution window only, plus enough bars for the current trigger sequence.
+* 15M: at least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.
+* 1H: at least 4 completed trading days.
+* 4H: at least 7 completed trading days, preferably 20+ completed 4H candles when available.
+
+If minimum context is missing:
+
+* Do not treat failed HTF classification as proof no setup exists.
+* Mark the HTF read as data-limited.
+* Report exact bars loaded per timeframe.
+* Report exact date/time range loaded per timeframe.
+* Report exact minimum expected context per timeframe.
+* Prefer insufficient HTF context over bullish/bearish conflict when the engine cannot see enough history.
+* Do not use narrative fallback to fill missing HTF context.
+* Do not force a candidate when required structured context is missing.
+
+A failed HTF read caused by limited history must not block the desk as if structure truly failed. It should become a data-quality/blocker state.
+
+Data sufficiency cannot approve execution. It may only improve classification quality, blockers, and diagnostics. The 5M confirmed MSS, deterministic entry, stop, target, risk, session, model, and `canExecute` gates remain mandatory.
+
+---
+
 ## Before Editing Code
 
 Before making changes, Codex must provide a short plan that includes:

@@ -211,6 +211,29 @@ assert.ok(scannerReadyText.includes('WAIT - trigger not confirmed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
+const rawConditionalCanExecutePayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-01',
+  instrument: 'MES',
+  planVersionId: 'RAW-CONDITIONAL-CANEXECUTE',
+  normalized: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [scannerReadyCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  statusOverride: 'Executable',
+});
+validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
+const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
+assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
+assert.ok(rawConditionalText.includes('WAIT - trigger not confirmed'));
+assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
+
 const riskTooWideCandidate = sampleCandidate('LONG');
 riskTooWideCandidate.setupType = SetupType.TurtleSoup;
 riskTooWideCandidate.scenarioLabel = 'Turtle Soup LONG';

@@ -13,15 +13,33 @@
   "timezoneAssumption": "Historical replay classifies scan windows using America/New_York wall-clock time. Timestamps with offsets are preserved; offset-free timestamps are treated as ET with warnings.",
   "barCounts": {
     "5m": 43,
-    "15m": 63,
-    "60m": 16,
-    "240m": 4
+    "15m": 86,
+    "60m": 62,
+    "240m": 33
+  },
+  "timeframeRanges": {
+    "5m": {
+      "from": "2026-06-01T12:00:00.0000000",
+      "to": "2026-06-01T15:30:00.0000000"
+    },
+    "15m": {
+      "from": "2026-05-31T18:15:00.0000000",
+      "to": "2026-06-01T15:30:00.0000000"
+    },
+    "60m": {
+      "from": "2026-05-28T00:00:00.0000000",
+      "to": "2026-06-01T15:00:00.0000000"
+    },
+    "240m": {
+      "from": "2026-05-25T02:00:00.0000000",
+      "to": "2026-06-01T14:00:00.0000000"
+    }
   },
   "replayBarCountsUsed": {
     "5m": 42,
-    "15m": 63,
-    "60m": 16,
-    "240m": 4
+    "15m": 86,
+    "60m": 62,
+    "240m": 33
   },
   "validationWarnings": [
     "5m: 2026-06-01T12:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
@@ -67,6 +85,29 @@
     "5m: 2026-06-01T15:20:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "5m: 2026-06-01T15:25:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "5m: 2026-06-01T15:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T18:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T18:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T18:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T19:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T19:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T19:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T19:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T20:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T20:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T20:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T20:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T21:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T21:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T21:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T21:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T22:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T22:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T22:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T23:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T23:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T23:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "15m: 2026-05-31T23:45:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "15m: 2026-06-01T00:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "15m: 2026-06-01T00:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "15m: 2026-06-01T00:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
@@ -130,6 +171,52 @@
     "15m: 2026-06-01T15:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "15m: 2026-06-01T15:15:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "15m: 2026-06-01T15:30:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T00:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T01:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T03:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T04:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T05:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T07:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T08:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T09:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T11:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T12:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T13:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T15:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T16:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T19:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T20:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T21:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-28T23:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T00:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T01:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T03:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T04:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T05:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T07:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T08:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T09:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T11:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T12:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T13:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T15:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T16:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-29T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-31T19:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-31T20:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-31T21:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-31T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "60m: 2026-05-31T23:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "60m: 2026-06-01T00:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "60m: 2026-06-01T01:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "60m: 2026-06-01T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
@@ -146,58 +233,261 @@
     "60m: 2026-06-01T13:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "60m: 2026-06-01T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "60m: 2026-06-01T15:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-25T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-25T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-25T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-25T13:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-25T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-26T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-27T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-28T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-29T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-29T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-29T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-29T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-29T17:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
+    "240m: 2026-05-31T22:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "240m: 2026-06-01T02:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "240m: 2026-06-01T06:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "240m: 2026-06-01T10:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time.",
     "240m: 2026-06-01T14:00:00.0000000 has no UTC offset; treated as America/New_York wall-clock time."
   ],
+  "insufficientLookback": [],
   "duplicateTimestamps": {
     "5m": [],
     "15m": [],
     "60m": [],
     "240m": []
   },
+  "htfContextSufficiency": {
+    "overallStatus": "sufficient",
+    "timeframeCoverage": [
+      {
+        "timeframe": "4H",
+        "barsLoaded": 33,
+        "rangeStart": "2026-05-25T02:00:00.0000000",
+        "rangeEnd": "2026-06-01T14:00:00.0000000",
+        "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "1H",
+        "barsLoaded": 62,
+        "rangeStart": "2026-05-28T00:00:00.0000000",
+        "rangeEnd": "2026-06-01T15:00:00.0000000",
+        "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "15M",
+        "barsLoaded": 86,
+        "rangeStart": "2026-05-31T18:15:00.0000000",
+        "rangeEnd": "2026-06-01T15:30:00.0000000",
+        "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "5M",
+        "barsLoaded": 42,
+        "rangeStart": "2026-06-01T12:00:00.0000000",
+        "rangeEnd": "2026-06-01T15:25:00.0000000",
+        "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      }
+    ],
+    "dataLimited": false,
+    "blockers": [],
+    "notes": [
+      "HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met."
+    ]
+  },
+  "htfContextDataLimited": false,
+  "timeframeCoverage": [
+    {
+      "timeframe": "4H",
+      "barsLoaded": 33,
+      "rangeStart": "2026-05-25T02:00:00.0000000",
+      "rangeEnd": "2026-06-01T14:00:00.0000000",
+      "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+      "minimumSatisfied": true,
+      "status": "sufficient"
+    },
+    {
+      "timeframe": "1H",
+      "barsLoaded": 62,
+      "rangeStart": "2026-05-28T00:00:00.0000000",
+      "rangeEnd": "2026-06-01T15:00:00.0000000",
+      "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+      "minimumSatisfied": true,
+      "status": "sufficient"
+    },
+    {
+      "timeframe": "15M",
+      "barsLoaded": 86,
+      "rangeStart": "2026-05-31T18:15:00.0000000",
+      "rangeEnd": "2026-06-01T15:30:00.0000000",
+      "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+      "minimumSatisfied": true,
+      "status": "sufficient"
+    },
+    {
+      "timeframe": "5M",
+      "barsLoaded": 42,
+      "rangeStart": "2026-06-01T12:00:00.0000000",
+      "rangeEnd": "2026-06-01T15:25:00.0000000",
+      "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+      "minimumSatisfied": true,
+      "status": "sufficient"
+    }
+  ],
+  "classificationReliability": "structural",
+  "classificationReason": "Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.",
   "boundary": "actual_ohlc_replay_only_not_execution_authority",
   "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
   "htfLiquidityDrawState": {
-    "classification": "NO_QUALIFIED_STATE",
+    "classification": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
     "planDirection": "LONG",
     "drawDirection": "buy_side",
-    "macroContext": "neutral",
+    "macroContext": "bullish",
     "raidState": "sell_side_raid",
     "reclaimStatus": "confirmed",
     "fiveMinuteMssTriggerConfirmed": true,
     "fiveMinuteMssConfirmationType": "swing_break_with_displacement",
-    "fifteenMinuteConfirmationStatus": "not_confirmed",
+    "fifteenMinuteConfirmationStatus": "potential_mss",
     "postShiftState": "continuation_pending",
     "externalLiquidityTarget": "Current Imported Window High 7628.25",
-    "confidence": 15,
+    "confidence": 100,
     "blockers": [
-      "Missing one or more required 4H/1H/15M/5M OHLC timeframes; HTF/MSS state is not candidate-qualified.",
       "HTF/MSS state population does not approve execution by itself.",
       "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
     ],
-    "timeframeStack": [
+    "htfContextSufficiency": {
+      "overallStatus": "sufficient",
+      "timeframeCoverage": [
+        {
+          "timeframe": "4H",
+          "barsLoaded": 33,
+          "rangeStart": "2026-05-25T02:00:00.0000000",
+          "rangeEnd": "2026-06-01T14:00:00.0000000",
+          "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "1H",
+          "barsLoaded": 62,
+          "rangeStart": "2026-05-28T00:00:00.0000000",
+          "rangeEnd": "2026-06-01T15:00:00.0000000",
+          "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "15M",
+          "barsLoaded": 86,
+          "rangeStart": "2026-05-31T18:15:00.0000000",
+          "rangeEnd": "2026-06-01T15:30:00.0000000",
+          "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "5M",
+          "barsLoaded": 42,
+          "rangeStart": "2026-06-01T12:00:00.0000000",
+          "rangeEnd": "2026-06-01T15:25:00.0000000",
+          "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        }
+      ],
+      "dataLimited": false,
+      "blockers": [],
+      "notes": [
+        "HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met."
+      ]
+    },
+    "htfContextDataLimited": false,
+    "timeframeCoverage": [
       {
         "timeframe": "4H",
-        "direction": "unknown",
-        "status": "unknown",
-        "lifecycleState": "unknown",
-        "confidence": 0
+        "barsLoaded": 33,
+        "rangeStart": "2026-05-25T02:00:00.0000000",
+        "rangeEnd": "2026-06-01T14:00:00.0000000",
+        "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
       },
       {
         "timeframe": "1H",
-        "direction": "bearish",
-        "status": "failed",
-        "lifecycleState": "failed_mss",
-        "confidence": 24
+        "barsLoaded": 62,
+        "rangeStart": "2026-05-28T00:00:00.0000000",
+        "rangeEnd": "2026-06-01T15:00:00.0000000",
+        "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
       },
       {
         "timeframe": "15M",
-        "direction": "bearish",
-        "status": "failed",
-        "lifecycleState": "failed_mss",
-        "confidence": 24
+        "barsLoaded": 86,
+        "rangeStart": "2026-05-31T18:15:00.0000000",
+        "rangeEnd": "2026-06-01T15:30:00.0000000",
+        "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "5M",
+        "barsLoaded": 42,
+        "rangeStart": "2026-06-01T12:00:00.0000000",
+        "rangeEnd": "2026-06-01T15:25:00.0000000",
+        "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      }
+    ],
+    "classificationReliability": "structural",
+    "classificationReason": "Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.",
+    "timeframeStack": [
+      {
+        "timeframe": "4H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "1H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "15M",
+        "direction": "bullish",
+        "status": "potential_mss",
+        "lifecycleState": "potential_mss",
+        "confidence": 62
       },
       {
         "timeframe": "5M",
@@ -211,47 +501,58 @@
     "approvesExecution": false
   },
   "setupDetection": {
-    "candidateDetected": false,
+    "candidateDetected": true,
     "setupType": "HtfDrawContinuationAfterRaid",
     "label": "HTF Draw Continuation After Raid/Reclaim",
-    "direction": "NO TRADE",
+    "direction": "LONG",
     "candidate": {
       "setupType": "HtfDrawContinuationAfterRaid",
       "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
       "pathway": "htf_liquidity_draw_mss",
-      "direction": "NO TRADE",
-      "candidateState": "NO_QUALIFIED_STATE",
-      "detectedStatus": "NotDetected",
-      "executionStatus": "NotDetected",
+      "direction": "LONG",
+      "candidateState": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
+      "detectedStatus": "Conditional",
+      "executionStatus": "Conditional",
       "blockReason": null,
       "entry": null,
       "stop": null,
       "target1": null,
       "target2": null,
       "riskPoints": null,
-      "requiredTrigger": null,
-      "nextAction": "No HTF draw continuation candidate. Wait for structured HTF draw, raid/reclaim, confirmed 5M MSS, and deterministic app gates.",
-      "evidence": [],
+      "requiredTrigger": "Long only after sell-side raid, reclaim, confirmed bullish 5M MSS with displacement, then clean retest or defined reclaim trigger.",
+      "nextAction": "HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.",
+      "evidence": [
+        "HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+        "15M potential MSS / pending confirm. Liquidity map supports the idea, but 5M confirmation controls plan creation.",
+        "5M MSS trigger confirmed by swing break with displacement. Building candidate from HTF draw + raid/reclaim context.",
+        "HTF liquidity draw detected",
+        "15M raid/reclaim support status: potential_mss",
+        "5M MSS trigger confirmed",
+        "5M swing break/reclaim confirmed with displacement",
+        "External liquidity target exists: Current Imported Window High 7628.25",
+        "Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.",
+        "Pathway state: REVERSAL_DELIVERY_PLAN_CANDIDATE",
+        "Sell-side liquidity swept and reclaimed at 7591.25.",
+        "Confirmed close above prior 5M swing high 7600.5 with displacement.",
+        "5M MSS is execution-timeframe evidence; potential/pending states cannot create a reversal-delivery candidate until a swing break with displacement confirms.",
+        "External liquidity target context: Current Imported Window High 7628.25."
+      ],
       "missingEvidence": [
-        "4H/1H draw supports or does not materially conflict",
-        "15M raid/reclaim confirmed, potential, or pending",
-        "Confirmed 5M MSS with displacement",
-        "External liquidity target",
-        "App-owned entry, stop, target, risk, and invalidation gates"
+        "Clean retest or defined reclaim entry",
+        "Structure stop tied to raid/reclaim extreme",
+        "External liquidity target price / valid target room"
       ]
     },
     "blockers": [
-      "4H/1H draw supports or does not materially conflict",
-      "15M raid/reclaim confirmed, potential, or pending",
-      "Confirmed 5M MSS with displacement",
-      "External liquidity target",
-      "App-owned entry, stop, target, risk, and invalidation gates"
+      "Clean retest or defined reclaim entry",
+      "Structure stop tied to raid/reclaim extreme",
+      "External liquidity target price / valid target room"
     ]
   },
   "finalGateResult": {
     "status": "ConditionalTrade",
     "canExecute": false,
-    "normalizedCanExecuteRaw": true,
+    "normalizedCanExecuteRaw": false,
     "finalPlanEntry": 7625.5,
     "finalPlanStop": 7622.5,
     "target1": 7632.75,
@@ -293,35 +594,35 @@
       "source": "ninjatrader_ohlc",
       "authority": "ohlc_facts_only",
       "boundary": "context_only_not_execution_authority",
-      "classification": "NO_QUALIFIED_STATE",
+      "classification": "REVERSAL_DELIVERY_PLAN_CANDIDATE",
       "timeframeStack": [
         {
           "timeframe": "4H",
-          "direction": "unknown",
-          "status": "unknown",
-          "lifecycleState": "unknown",
-          "confidence": 0
+          "direction": "neutral",
+          "status": "conflicting",
+          "lifecycleState": "conflicting_mss",
+          "confidence": 35
         },
         {
           "timeframe": "1H",
-          "direction": "bearish",
-          "status": "failed",
-          "lifecycleState": "failed_mss",
-          "confidence": 20
+          "direction": "neutral",
+          "status": "conflicting",
+          "lifecycleState": "conflicting_mss",
+          "confidence": 35
         },
         {
           "timeframe": "15M",
-          "direction": "bearish",
-          "status": "failed",
-          "lifecycleState": "failed_mss",
-          "confidence": 20
+          "direction": "bullish",
+          "status": "potential_mss",
+          "lifecycleState": "potential_mss",
+          "confidence": 62
         },
         {
           "timeframe": "5M",
           "direction": "bullish",
           "status": "confirmed",
           "lifecycleState": "confirmed_mss",
-          "confidence": 88
+          "confidence": 92
         }
       ],
       "raidState": "sell_side_raid",
@@ -329,12 +630,98 @@
       "fiveMinuteMssTriggerConfirmed": true,
       "fiveMinuteMssConfirmationType": "swing_break_with_displacement",
       "postShiftState": "continuation_pending",
-      "externalLiquidityTarget": null,
+      "externalLiquidityTarget": "Current Imported Window High 7628.25",
       "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
+      "htfContextSufficiency": {
+        "overallStatus": "sufficient",
+        "timeframeCoverage": [
+          {
+            "timeframe": "4H",
+            "barsLoaded": 33,
+            "rangeStart": "2026-05-25T02:00:00.0000000",
+            "rangeEnd": "2026-06-01T14:00:00.0000000",
+            "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "1H",
+            "barsLoaded": 62,
+            "rangeStart": "2026-05-28T00:00:00.0000000",
+            "rangeEnd": "2026-06-01T15:00:00.0000000",
+            "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "15M",
+            "barsLoaded": 86,
+            "rangeStart": "2026-05-31T18:15:00.0000000",
+            "rangeEnd": "2026-06-01T15:30:00.0000000",
+            "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          },
+          {
+            "timeframe": "5M",
+            "barsLoaded": 42,
+            "rangeStart": "2026-06-01T12:00:00.0000000",
+            "rangeEnd": "2026-06-01T15:25:00.0000000",
+            "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+            "minimumSatisfied": true,
+            "status": "sufficient"
+          }
+        ],
+        "dataLimited": false,
+        "blockers": [],
+        "notes": [
+          "HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met."
+        ]
+      },
+      "htfContextDataLimited": false,
+      "timeframeCoverage": [
+        {
+          "timeframe": "4H",
+          "barsLoaded": 33,
+          "rangeStart": "2026-05-25T02:00:00.0000000",
+          "rangeEnd": "2026-06-01T14:00:00.0000000",
+          "minimumExpectedDescription": "At least 7 completed trading days, preferably 20+ completed 4H candles when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "1H",
+          "barsLoaded": 62,
+          "rangeStart": "2026-05-28T00:00:00.0000000",
+          "rangeEnd": "2026-06-01T15:00:00.0000000",
+          "minimumExpectedDescription": "At least 4 completed trading days of structured 1H context.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "15M",
+          "barsLoaded": 86,
+          "rangeStart": "2026-05-31T18:15:00.0000000",
+          "rangeEnd": "2026-06-01T15:30:00.0000000",
+          "minimumExpectedDescription": "At least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "5M",
+          "barsLoaded": 42,
+          "rangeStart": "2026-06-01T12:00:00.0000000",
+          "rangeEnd": "2026-06-01T15:25:00.0000000",
+          "minimumExpectedDescription": "Active execution window plus enough bars for the current trigger sequence; minimum 12 valid completed 5M bars.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        }
+      ],
+      "classificationReliability": "structural",
+      "classificationReason": "Sell-side/buy-side raid/reclaim and 5M MSS detected with sufficient HTF context. Candidate status still depends on deterministic gates.",
       "createsTradingPlanCandidate": false,
       "approvesExecution": false,
       "blockers": [
-        "Missing one or more required 4H/1H/15M/5M OHLC timeframes; HTF/MSS state is not candidate-qualified.",
         "HTF/MSS state population does not approve execution by itself.",
         "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
       ],

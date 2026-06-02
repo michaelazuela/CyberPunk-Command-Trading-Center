@@ -152,6 +152,35 @@ It must not approve a trade by itself, generate final entry/stop/T1/T2 by itself
 
 The 5M chart remains the execution chart for entry trigger, active swing, stop placement, risk check, and final trade approval.
 
+## HTF Context Sufficiency Rule
+
+Before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, the desk must load enough structured OHLC context to make the higher-timeframe story reliable.
+
+Minimum structured lookback:
+
+- 5M: active execution window only, plus enough bars for the current trigger sequence.
+- 15M: at least 2 completed trading days, or enough bars to include ETH, London, NY premarket, current RTH, and prior session liquidity.
+- 1H: at least 4 completed trading days.
+- 4H: at least 7 completed trading days, preferably 20+ completed 4H candles when available.
+
+If minimum context is missing:
+
+- Do not treat failed HTF classification as proof no setup exists.
+- Mark the HTF read as data-limited.
+- Report exact bars loaded per timeframe.
+- Report exact date/time range loaded per timeframe.
+- Report exact minimum expected context per timeframe.
+- Prefer insufficient HTF context over bullish/bearish conflict when the engine cannot see enough history.
+- Do not use Gemini narrative fallback to fill missing HTF context.
+
+A failed HTF read caused by limited history must not block the desk as if structure truly failed. It should become a data-quality/blocker state.
+
+Execution boundary:
+
+- HTF context can create or promote a candidate only when approved pathway conditions are met.
+- 5M confirmed MSS remains mandatory.
+- Entry, stop, target, risk, session, model, and canExecute gates remain deterministic.
+
 ## RAG And Persistence
 
 Every completed analysis and replay outcome should have a durable Supabase record and a RAG learning record when possible.

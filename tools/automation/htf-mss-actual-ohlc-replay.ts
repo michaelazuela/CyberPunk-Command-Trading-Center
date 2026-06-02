@@ -6,6 +6,7 @@ import { runBridgeDiagnosticReplay } from '../../src/agents/bridgeDiagnosticRepl
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import { runTradeDecisionPipeline } from '../../src/lib/tradeDecisionPipeline';
 import { normalizeTradePlan } from '../../src/lib/tradePlan';
+import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { classifyActiveSetupScanWindowByEtMinutes } from '../../src/config/timeWindows';
 import { SetupType, TradeDecisionStatus, type AnalysisResult, type ChartContext, type SetupCandidate } from '../../src/types';
 
@@ -31,6 +32,8 @@ export interface HistoricalOhlcValidation {
   warnings: string[];
   duplicateTimestamps: Record<HtfMssHistoricalTimeframe, string[]>;
   barCounts: Record<HtfMssHistoricalTimeframe, number>;
+  timeframeRanges: Record<HtfMssHistoricalTimeframe, { from: string | null; to: string | null }>;
+  insufficientLookback: string[];
   timezone: HistoricalOhlcTimezone;
   timezoneAssumption: string;
 }
@@ -51,12 +54,44 @@ interface CliOptions {
   bridgeUrl: string;
   from: string;
   to: string;
-  contextFrom: string;
+  contextFrom: string | null;
+  contextDays: number | null;
   jsonPath: string | null;
   pretty: boolean;
 }
 
 const TIMEFRAMES: HtfMssHistoricalTimeframe[] = ['5m', '15m', '60m', '240m'];
+const MIN_REPLAY_LOOKBACK_COUNTS: Record<HtfMssHistoricalTimeframe, number> = {
+  '5m': 12,
+  '15m': 40,
+  '60m': 24,
+  '240m': 20,
+};
+const DEFAULT_CONTEXT_DAYS_BY_TIMEFRAME: Record<Exclude<HtfMssHistoricalTimeframe, '5m'>, number> = {
+  '15m': 2,
+  '60m': 4,
+  '240m': 7,
+};
+
+function offsetFromTimestamp(value: string): string {
+  return value.match(/([+-]\d{2}:\d{2}|Z)$/)?.[1] || '-04:00';
+}
+
+function shiftEtDate(date: string, daysBack: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day - daysBack));
+  return [
+    shifted.getUTCFullYear(),
+    String(shifted.getUTCMonth() + 1).padStart(2, '0'),
+    String(shifted.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function contextFromFor(options: Pick<CliOptions, 'date' | 'from' | 'contextFrom' | 'contextDays'>, timeframe: Exclude<HtfMssHistoricalTimeframe, '5m'>): string {
+  if (options.contextFrom) return options.contextFrom;
+  const contextDays = options.contextDays ?? DEFAULT_CONTEXT_DAYS_BY_TIMEFRAME[timeframe];
+  return `${shiftEtDate(options.date, contextDays)}T00:00:00${offsetFromTimestamp(options.from)}`;
+}
 
 function parseArgs(argv = process.argv.slice(2)): CliOptions {
   const options: CliOptions = {
@@ -66,7 +101,8 @@ function parseArgs(argv = process.argv.slice(2)): CliOptions {
     bridgeUrl: 'http://127.0.0.1:8765',
     from: '2026-06-01T12:00:00-04:00',
     to: '2026-06-01T15:30:00-04:00',
-    contextFrom: '2026-06-01T00:00:00-04:00',
+    contextFrom: null,
+    contextDays: null,
     jsonPath: null,
     pretty: false,
   };
@@ -80,6 +116,11 @@ function parseArgs(argv = process.argv.slice(2)): CliOptions {
     else if (arg === '--from' && next) { options.from = next; index += 1; }
     else if (arg === '--to' && next) { options.to = next; index += 1; }
     else if (arg === '--context-from' && next) { options.contextFrom = next; index += 1; }
+    else if (arg === '--context-days' && next) {
+      const parsed = Number(next);
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 10) options.contextDays = parsed;
+      index += 1;
+    }
     else if (arg === '--json' && next) { options.jsonPath = next; index += 1; }
     else if (arg === '--pretty') options.pretty = true;
   }
@@ -156,6 +197,28 @@ function normalizeBars(rawBars: unknown, timeframe: HtfMssHistoricalTimeframe): 
   };
 }
 
+function timeframeRangesFromBars(bars: HtfMssHistoricalBarsByTimeframe): Record<HtfMssHistoricalTimeframe, { from: string | null; to: string | null }> {
+  const source: Record<HtfMssHistoricalTimeframe, NinjaBridgeBar[]> = {
+    '5m': bars.bars5m,
+    '15m': bars.bars15m,
+    '60m': bars.bars60m,
+    '240m': bars.bars240m,
+  };
+  return Object.fromEntries(TIMEFRAMES.map((timeframe) => {
+    const items = source[timeframe];
+    return [timeframe, {
+      from: items[0]?.time || null,
+      to: items[items.length - 1]?.time || null,
+    }];
+  })) as Record<HtfMssHistoricalTimeframe, { from: string | null; to: string | null }>;
+}
+
+function insufficientLookbackWarnings(counts: Record<HtfMssHistoricalTimeframe, number>): string[] {
+  return TIMEFRAMES
+    .filter((timeframe) => counts[timeframe] > 0 && counts[timeframe] < MIN_REPLAY_LOOKBACK_COUNTS[timeframe])
+    .map((timeframe) => `${timeframe}: insufficient bounded lookback for reliable replay context (${counts[timeframe]} bars loaded, preferred ${MIN_REPLAY_LOOKBACK_COUNTS[timeframe]}+).`);
+}
+
 function rawBarsFor(data: Record<string, unknown>, timeframe: HtfMssHistoricalTimeframe): unknown {
   const aliases: Record<HtfMssHistoricalTimeframe, string[]> = {
     '5m': ['bars5m', '5m', 'fiveMinute', 'bars_5m'],
@@ -203,6 +266,13 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
       '60m': resolvedBars.bars60m.length,
       '240m': resolvedBars.bars240m.length,
     },
+    timeframeRanges: timeframeRangesFromBars(resolvedBars),
+    insufficientLookback: insufficientLookbackWarnings({
+      '5m': resolvedBars.bars5m.length,
+      '15m': resolvedBars.bars15m.length,
+      '60m': resolvedBars.bars60m.length,
+      '240m': resolvedBars.bars240m.length,
+    }),
     timezone: 'America/New_York',
     timezoneAssumption: 'JSON timestamps must include an explicit offset or are treated as America/New_York wall-clock time with a warning.',
     bars: resolvedBars,
@@ -215,10 +285,11 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
 
 async function fetchHistoricalTimeframe(options: CliOptions, timeframe: HtfMssHistoricalTimeframe): Promise<NinjaBridgeBar[]> {
   const isExecution = timeframe === '5m';
+  const contextFrom = isExecution ? options.from : contextFromFor(options, timeframe);
   const response = await getNinjaHistoricalBars({
     instrument: options.bridgeInstrument,
     timeframe: timeframe as NinjaBridgeTimeframe,
-    from: isExecution ? options.from : options.contextFrom,
+    from: isExecution ? options.from : contextFrom,
     to: options.to,
     limit: 2000,
     baseUrl: options.bridgeUrl,
@@ -275,6 +346,13 @@ export function validateHistoricalBars(raw: HtfMssHistoricalBarsByTimeframe): Hi
     warnings,
     duplicateTimestamps,
     barCounts: counts,
+    timeframeRanges: timeframeRangesFromBars({
+      bars5m: normalizeBars(raw.bars5m, '5m').bars,
+      bars15m: normalizeBars(raw.bars15m, '15m').bars,
+      bars60m: normalizeBars(raw.bars60m, '60m').bars,
+      bars240m: normalizeBars(raw.bars240m, '240m').bars,
+    }),
+    insufficientLookback: insufficientLookbackWarnings(counts),
     timezone: 'America/New_York',
     timezoneAssumption: 'Historical replay classifies scan windows using America/New_York wall-clock time. Timestamps with offsets are preserved; offset-free timestamps are treated as ET with warnings.',
   };
@@ -368,7 +446,10 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     tradeDate: load.date,
   });
   const normalized = normalizeTradePlan(analysis, load.instrument === 'MNQ' ? 'MNQ' : 'MES', 'replay_lunch');
-  const effectiveCanExecute = pipeline.status === TradeDecisionStatus.ApprovedTrade && normalized.canExecute === true;
+  const effectiveCanExecute = getEffectiveCanExecute({
+    decisionStatus: pipeline.status,
+    canExecute: normalized.canExecute,
+  });
   const diagnostic = runBridgeDiagnosticReplay({
     tradeDate: load.date,
     instrument: load.instrument,
@@ -397,6 +478,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     bridgeUrl: load.bridgeUrl || null,
     timezoneAssumption: load.timezoneAssumption,
     barCounts: load.barCounts,
+    timeframeRanges: load.timeframeRanges,
     replayBarCountsUsed: {
       '5m': replayBars5m.length,
       '15m': load.bars.bars15m.length,
@@ -404,7 +486,13 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
       '240m': load.bars.bars240m.length,
     },
     validationWarnings: load.warnings,
+    insufficientLookback: load.insufficientLookback,
     duplicateTimestamps: load.duplicateTimestamps,
+    htfContextSufficiency: context.htfLiquidityDrawState.htfContextSufficiency,
+    htfContextDataLimited: context.htfLiquidityDrawState.htfContextDataLimited,
+    timeframeCoverage: context.htfLiquidityDrawState.timeframeCoverage,
+    classificationReliability: context.htfLiquidityDrawState.classificationReliability,
+    classificationReason: context.htfLiquidityDrawState.classificationReason,
     boundary: 'actual_ohlc_replay_only_not_execution_authority' as const,
     activeScanWindow: state.activeScanWindow || classifyActiveSetupScanWindowByEtMinutes(latestMinutes),
     htfLiquidityDrawState: {
@@ -421,6 +509,11 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
       externalLiquidityTarget: state.externalLiquidityTarget || null,
       confidence: state.confidence,
       blockers: state.blockers,
+      htfContextSufficiency: state.htfContextSufficiency,
+      htfContextDataLimited: state.htfContextDataLimited,
+      timeframeCoverage: state.timeframeCoverage,
+      classificationReliability: state.classificationReliability,
+      classificationReason: state.classificationReason,
       timeframeStack: state.timeframeStack.map((item) => ({
         timeframe: item.timeframe,
         direction: item.direction,
@@ -529,6 +622,26 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     `- Timezone: ${report.replayTimeRange.timezone}`,
     `- Timezone Assumption: ${report.timezoneAssumption}`,
     `- Bars: 5M=${report.barCounts['5m']}, 15M=${report.barCounts['15m']}, 60M=${report.barCounts['60m']}, 240M=${report.barCounts['240m']}`,
+    `- Ranges: 5M=${report.timeframeRanges['5m'].from || 'N/A'} to ${report.timeframeRanges['5m'].to || 'N/A'}; 15M=${report.timeframeRanges['15m'].from || 'N/A'} to ${report.timeframeRanges['15m'].to || 'N/A'}; 60M=${report.timeframeRanges['60m'].from || 'N/A'} to ${report.timeframeRanges['60m'].to || 'N/A'}; 240M=${report.timeframeRanges['240m'].from || 'N/A'} to ${report.timeframeRanges['240m'].to || 'N/A'}`,
+    '',
+    '## HTF Context Sufficiency',
+    `- Overall Status: ${report.htfContextSufficiency.overallStatus}`,
+    `- Classification Reliability: ${report.classificationReliability}`,
+    `- Classification Reason: ${report.classificationReason}`,
+    `- Data Limited: ${report.htfContextDataLimited}`,
+    '| Timeframe | Bars Loaded | Range | Minimum Expected | Status |',
+    '|---|---:|---|---|---|',
+    ...report.timeframeCoverage.map((item) => `| ${item.timeframe} | ${item.barsLoaded} | ${item.rangeStart || 'N/A'} to ${item.rangeEnd || 'N/A'} | ${item.minimumExpectedDescription} | ${item.status} |`),
+    ...(report.htfContextSufficiency.blockers.length ? [
+      '',
+      '### Data-Limited Blockers',
+      ...report.htfContextSufficiency.blockers.map((item) => `- ${item}`),
+    ] : []),
+    ...(report.insufficientLookback.length ? [
+      '',
+      '## Lookback Warnings',
+      ...report.insufficientLookback.map((item) => `- ${item}`),
+    ] : []),
     '',
     '## HTF/MSS Classification',
     `- Classification: ${state.classification}`,
@@ -626,6 +739,13 @@ export async function runActualOhlcReplayCli(argv = process.argv.slice(2)) {
       date: options.date,
       duplicateTimestamps: { '5m': [], '15m': [], '60m': [], '240m': [] },
       barCounts: { '5m': 0, '15m': 0, '60m': 0, '240m': 0 },
+      timeframeRanges: {
+        '5m': { from: null, to: null },
+        '15m': { from: null, to: null },
+        '60m': { from: null, to: null },
+        '240m': { from: null, to: null },
+      },
+      insufficientLookback: [],
       timezone: 'America/New_York',
       timezoneAssumption: 'Bridge replay expects America/New_York scan-window classification.',
     } as HistoricalOhlcLoadResult;
