@@ -2,6 +2,7 @@ import type { BridgeDiagnosticClassification, BridgeDiagnosticReplayReport } fro
 import type { HistoricalResearchBackfillReport } from './historicalResearchBackfillAgent';
 import type { WatchlistMemoryRecord, WatchlistPerformanceRecord } from './morningContinuationWatchlistAgent';
 import type { ScannerHealthStatus } from './scannerHealthAgent';
+import { cloneDeskBoundary, WEEKLY_TRADING_REPORT_APPROVAL_BOUNDARY } from './deskAgentBoundaries';
 
 export interface WeeklyScannerAuditEventSummary {
   alertType: 'trade' | 'watchlist' | 'health' | 'diagnostic' | 'unknown';
@@ -447,15 +448,7 @@ export function buildWeeklyTradingAnalysisReport(input: WeeklyTradingAnalysisInp
       humanRuleReview: false,
       automaticRuleChangesRecommended: false as const,
     },
-    approvalBoundary: {
-      weeklyReportApprovesTrade: false,
-      weeklyReportChangesRules: false,
-      weeklyReportCreatesEntry: false,
-      weeklyReportCreatesTargets: false,
-      weeklyReportRunsDiagnostics: false,
-      weeklyReportPromotesModel: false,
-      weeklyReportWritesRag: false,
-    },
+    approvalBoundary: cloneDeskBoundary(WEEKLY_TRADING_REPORT_APPROVAL_BOUNDARY),
   };
 
   const discordMessage = compactDiscordMessage(partial);

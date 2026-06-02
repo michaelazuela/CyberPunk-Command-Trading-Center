@@ -5,6 +5,7 @@ import type {
   ScannerWindowState,
 } from '../lib/localScannerEngine';
 import type { NinjaBridgeBar, NinjaBridgeHealth } from '../lib/ninjaTraderBridge';
+import { cloneDeskBoundary, SCANNER_HEALTH_APPROVAL_BOUNDARY } from './deskAgentBoundaries';
 
 export type ScannerHealthStatus = 'READY' | 'DEGRADED' | 'BLOCKED';
 export type ScannerHealthCheckStatus = 'pass' | 'warn' | 'fail';
@@ -95,15 +96,6 @@ export interface ScannerHealthReport {
   recommendedAction: string;
   approvalBoundary: ScannerHealthApprovalBoundary;
 }
-
-const APPROVAL_BOUNDARY: ScannerHealthApprovalBoundary = {
-  healthApprovesTrade: false,
-  healthChangesRules: false,
-  healthCreatesEntry: false,
-  healthCreatesTargets: false,
-  healthOverridesScanner: false,
-  healthOverridesRisk: false,
-};
 
 function check(
   key: string,
@@ -408,7 +400,7 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
     warnings,
     summary: `${status}: ${passCount} passed, ${warnCount} warning(s), ${failCount} failure(s).`,
     recommendedAction: recommendedActionFor(status),
-    approvalBoundary: { ...APPROVAL_BOUNDARY },
+    approvalBoundary: cloneDeskBoundary(SCANNER_HEALTH_APPROVAL_BOUNDARY),
   };
 }
 

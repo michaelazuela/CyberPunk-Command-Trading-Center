@@ -1,5 +1,6 @@
 import { TRADE_RULES } from '../config/tradeRules';
 import { ExecutionStatus, NoTradeReason, type SetupCandidate } from '../types';
+import { cloneDeskBoundary, CONDITIONAL_RISK_APPROVAL_BOUNDARY } from './deskAgentBoundaries';
 
 export type ConditionalRiskLabel =
   | 'Clean risk'
@@ -204,12 +205,6 @@ export function scoreConditionalCandidateRisk(
     decisionAuthority: 'advisory_only',
     reasons,
     advisoryNotes,
-    approvalBoundary: {
-      riskScoreApprovesTrade: false,
-      riskScoreChangesRules: false,
-      riskScoreOverridesRisk: false,
-      riskScoreCreatesEntry: false,
-      riskScoreCreatesTargets: false,
-    },
+    approvalBoundary: cloneDeskBoundary(CONDITIONAL_RISK_APPROVAL_BOUNDARY),
   };
 }

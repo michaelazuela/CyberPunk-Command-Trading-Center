@@ -3,6 +3,12 @@ import type { NormalizedTradePlan } from '../lib/tradePlan';
 import { isValidPrice } from '../lib/tradePlan';
 import type { ScannerState, ScannerWindowState } from '../lib/localScannerEngine';
 import { ExecutionStatus, type SetupCandidate } from '../types';
+import {
+  cloneDeskBoundary,
+  DESK_AUTHORITY_MESSAGES,
+  MORNING_WATCHLIST_APPROVAL_BOUNDARY,
+  WATCHLIST_PERFORMANCE_REVIEW_APPROVAL_BOUNDARY,
+} from './deskAgentBoundaries';
 
 type WatchlistDirection = 'LONG' | 'SHORT' | 'NO TRADE';
 
@@ -171,13 +177,7 @@ function baseResult(overrides: Partial<MorningContinuationWatchlistResult> = {})
     evidence: [],
     missingEvidence: [],
     auditWarnings: [],
-    approvalBoundary: {
-      watchlistApprovesTrade: false,
-      watchlistChangesRules: false,
-      watchlistCreatesEntry: false,
-      watchlistCreatesTargets: false,
-      watchlistOverridesScanner: false,
-    },
+    approvalBoundary: cloneDeskBoundary(MORNING_WATCHLIST_APPROVAL_BOUNDARY),
     ...overrides,
   };
 }
@@ -388,7 +388,7 @@ export function buildWatchlistMemoryRecord(input: WatchlistMemoryInput): Watchli
     reviewNotes: null,
     notes: [
       'Watchlist saved for future context only.',
-      'This does not change trade rules or future approval gates.',
+      DESK_AUTHORITY_MESSAGES.outcomeFutureContextOnly,
       'Watchlist history may inform caution/context, not execution authority.',
     ],
     approvalBoundary: {
@@ -417,7 +417,7 @@ export function buildWatchlistEmbeddingText(record: WatchlistMemoryRecord): stri
     `Evidence: ${record.evidence.join(' | ') || 'none'}`,
     `Missing evidence: ${record.missingEvidence.join(' | ') || 'none'}`,
     'Action at time: Do not chase. Wait for existing current rules to confirm.',
-    'Authority note: This record cannot approve trades, change rules, create entries, create targets, or override scanner gates.',
+    `Authority note: ${DESK_AUTHORITY_MESSAGES.watchlistRecordNoAuthority}`,
   ].join('\n');
 }
 
@@ -499,13 +499,6 @@ export function reviewWatchlistPerformance(records: WatchlistPerformanceRecord[]
     recommendation: sampleSizeMet
       ? 'Descriptive watchlist review only. Patterns may be queued for human review, but this report does not recommend automatic rule changes or executable model promotion.'
       : 'Insufficient sample size. Continue tracking until at least 20-30 watchlist events are available. Do not infer performance quality or recommend rule changes.',
-    approvalBoundary: {
-      reviewApprovesTrade: false,
-      reviewChangesRules: false,
-      reviewPromotesModel: false,
-      reviewCreatesEntry: false,
-      reviewCreatesTargets: false,
-      reviewOverridesScanner: false,
-    },
+    approvalBoundary: cloneDeskBoundary(WATCHLIST_PERFORMANCE_REVIEW_APPROVAL_BOUNDARY),
   };
 }

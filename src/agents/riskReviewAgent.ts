@@ -2,6 +2,7 @@ import type { AnalysisResult } from '../types';
 import { buildAppTradePlan, type AppPlanContext } from '../lib/planEngine';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 import type { MemoryAdvisory } from './memoryAgent';
+import { riskReviewAuthorityNote } from './deskAgentBoundaries';
 
 export interface RiskReviewResult {
   plan: NormalizedTradePlan;
@@ -22,10 +23,6 @@ export function reviewRiskWithAppAuthority(
     plan,
     memoryAdvisory,
     ruleReviewRecommendation,
-    authorityNote: [
-      `App-owned trade decision authority: ${context.sessionType}`,
-      'Risk review may surface warnings and rule-review notes only.',
-      'Executable entry, stop, T1, T2, risk, invalidation, and approval remain owned by tradeDecisionPipeline, setupScanner, conditionalPlanBuilder, and tradeRules.',
-    ].join(' '),
+    authorityNote: riskReviewAuthorityNote(context.sessionType),
   };
 }

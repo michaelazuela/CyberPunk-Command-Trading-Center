@@ -4,6 +4,7 @@ import { reviewRiskWithAppAuthority, type RiskReviewResult } from './riskReviewA
 import { mergeOhlcFactsIntoAnalysis, type ChartFactMergeInput } from './chartFactAgent';
 import { buildProofLearningContext, type ProofLearningInput } from './proofLearningAgent';
 import type { MemoryAdvisory } from './memoryAgent';
+import { DESK_AGENT_AUTHORITY, workflowAuthorityNoteText } from './deskAgentBoundaries';
 
 export type WorkflowStage = 'screenshot_staged' | 'analyze' | 'decision' | 'outcome_proof' | 'journal_rag';
 
@@ -18,10 +19,10 @@ export interface WorkflowOrchestrationSnapshot {
 export function workflowAuthoritySnapshot(stage: WorkflowStage): WorkflowOrchestrationSnapshot {
   return {
     stage,
-    decisionAuthority: 'app_owned_pipeline',
-    memoryAuthority: 'advisory_only',
-    chartFactAuthority: 'facts_only',
-    proofAuthority: 'journal_rag_learning_only',
+    decisionAuthority: DESK_AGENT_AUTHORITY.decisionAuthority,
+    memoryAuthority: DESK_AGENT_AUTHORITY.memoryAuthority,
+    chartFactAuthority: DESK_AGENT_AUTHORITY.chartFactAuthority,
+    proofAuthority: DESK_AGENT_AUTHORITY.proofAuthority,
   };
 }
 
@@ -42,9 +43,5 @@ export function buildWorkflowRagContext(input: ProofLearningInput): RAGSaveConte
 }
 
 export function workflowAuthorityNote(): string {
-  return [
-    'Workflow orchestration may stage screenshots, request chart facts, retrieve memory, review risk, and save proof learning.',
-    'It must not change trading rules, setup definitions, target formulas, time windows, or final executable approval.',
-    'The app-owned trade decision pipeline remains the final execution authority.',
-  ].join(' ');
+  return workflowAuthorityNoteText();
 }

@@ -1,4 +1,9 @@
 import type { RAGSaveContext } from '../types';
+import {
+  cloneDeskBoundary,
+  DESK_AUTHORITY_MESSAGES,
+  PROOF_LEARNING_APPROVAL_BOUNDARY,
+} from './deskAgentBoundaries';
 
 export type DiscordOutcomeClosure = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 export type ProofReviewVerdict = 'CONFIRMED' | 'DISPUTED' | 'UNCLEAR' | 'SKIPPED' | string;
@@ -71,7 +76,7 @@ function normalizedNotes(input: OutcomeClosureInput): string | null {
   const authority = [
     'Proof supports the recorded outcome when present.',
     'RAG updated for future context only.',
-    'This does not change trade rules or future approval gates.',
+    DESK_AUTHORITY_MESSAGES.outcomeFutureContextOnly,
   ].join(' ');
   return [base, authority].filter(Boolean).join('\n') || null;
 }
@@ -105,11 +110,7 @@ export function buildOutcomeClosureRecord(input: OutcomeClosureInput): OutcomeCl
     notes: normalizedNotes(input),
     proofPrompt: expectedTradeTaken ? DISCORD_PROOF_PROMPT : null,
     memorySummary: 'Outcome saved for journal/RAG learning only. It does not approve trades, place orders, or alter future rule gates.',
-    approvalBoundary: {
-      proofSubmissionApprovesTrade: false,
-      tradeConfirmationOverridesRiskRules: false,
-      ragSaveApprovesTradeRetroactively: false,
-    },
+    approvalBoundary: cloneDeskBoundary(PROOF_LEARNING_APPROVAL_BOUNDARY),
   };
 }
 
@@ -126,5 +127,5 @@ export function buildProofLearningContext(input: ProofLearningInput): RAGSaveCon
 }
 
 export function proofLearningAuthorityNote(): string {
-  return 'Proof and outcome learning updates journal/RAG records only. It does not approve trades, place orders, or override deterministic risk rules.';
+  return DESK_AUTHORITY_MESSAGES.proofLearningOnly;
 }
