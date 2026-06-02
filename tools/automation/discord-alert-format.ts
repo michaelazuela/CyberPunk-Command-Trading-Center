@@ -55,6 +55,8 @@ export interface CompactNormalizedPlan {
   decision?: string;
   noTradeReason?: string | null;
   invalidation?: string | null;
+  t1?: number | null;
+  t2?: number | null;
 }
 
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
@@ -178,6 +180,16 @@ function candidateLevels(candidate: SetupCandidate): { stop: number | null; targ
   };
 }
 
+function appTargetLevels(candidate: SetupCandidate, normalized: CompactNormalizedPlan): { stop: number | null; target1: number | null; target2: number | null } {
+  const stop = typeof candidate.stop === 'number' && Number.isFinite(candidate.stop) ? candidate.stop : null;
+  const computed = targetsFromEntryStop(candidate.direction, candidate.entry, stop);
+  return {
+    stop,
+    target1: typeof normalized.t1 === 'number' && Number.isFinite(normalized.t1) ? normalized.t1 : computed.target1,
+    target2: typeof normalized.t2 === 'number' && Number.isFinite(normalized.t2) ? normalized.t2 : computed.target2,
+  };
+}
+
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
   if (override) return override;
   if (getEffectiveCanExecute(normalized)) return 'Executable';
@@ -218,15 +230,30 @@ function compactActionText(candidate: SetupCandidate | null, normalized: Compact
   return candidate.requiredTrigger || candidate.nextAction || 'Wait for completed 5M trigger. No early entry.';
 }
 
-function compactPlanLines(candidate: SetupCandidate): string[] {
-  const levels = candidateLevels(candidate);
+function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
+  const levels = appTargetLevels(candidate, normalized);
   return [
     'Plan:',
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
-    `T1: ${priceLine(levels.target1)}`,
-    `T2: ${priceLine(levels.target2)}`,
+    `App T1 (1.5R): ${priceLine(levels.target1)}`,
+    `App T2 (2.0R): ${priceLine(levels.target2)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
+  ];
+}
+
+function compactLiquidityObjectiveLines(candidate: SetupCandidate): string[] {
+  const targetPlan = candidate.targetObjectivePlan;
+  if (!targetPlan) return [];
+  const lq1 = targetPlan.liquidityTarget1 || targetPlan.nearestLiquidityTarget || null;
+  const lq2 = targetPlan.liquidityTarget2 || null;
+  const runner = targetPlan.liquidityRunnerTarget || targetPlan.runnerTarget || null;
+  if (!lq1 && !lq2 && !runner) return [];
+  return [
+    'Liquidity / Runner Objectives:',
+    `LQ1: ${lq1 ? `${lq1.label} ${priceLine(lq1.price)}` : 'N/A'}`,
+    `LQ2: ${lq2 ? `${lq2.label} ${priceLine(lq2.price)}` : 'N/A'}`,
+    `Runner: ${runner ? `${runner.label} ${priceLine(runner.price)}` : 'N/A'}`,
   ];
 }
 
@@ -331,7 +358,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const headlineDirection = designerStatus === 'NO TRADE' ? 'NO TRADE' : direction;
   const headlineStatus = designerStatus === 'NO TRADE' ? '' : ` ${decision.toUpperCase()}`;
   const headline = `[${sessionLabel} ${reportKind}] ${args.instrument} - ${headlineDirection}${headlineStatus}`;
-  const levels = bestCandidate ? candidateLevels(bestCandidate) : { stop: null, target1: null, target2: null };
+  const levels = bestCandidate ? appTargetLevels(bestCandidate, args.normalized) : { stop: null, target1: null, target2: null };
   const action = compactActionText(bestCandidate, args.normalized, designerStatus);
   const designerRecommendation = designDiscordVisualReport({
     reportType: 'discord_alert',
@@ -362,13 +389,16 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
   const htfLines = compactHtfSufficiencyLines(bestCandidate);
 
+  const liquidityObjectiveLines = bestCandidate ? compactLiquidityObjectiveLines(bestCandidate) : [];
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
         designerRecommendation.headlineRecommendation,
         `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
         '',
-        ...compactPlanLines(bestCandidate),
+        ...compactPlanLines(bestCandidate, args.normalized),
         '',
+        ...liquidityObjectiveLines,
+        ...(liquidityObjectiveLines.length ? [''] : []),
         ...riskLines,
         ...(riskLines.length ? [''] : []),
         ...htfLines,

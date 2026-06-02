@@ -32,6 +32,12 @@ import {
   PROFESSIONAL_MODEL_TWO_LABEL,
   professionalizeReportText,
 } from './professional-report-language';
+import {
+  evaluateSchedulerReplayProvenance,
+  loadExecutableScannerAuditFromFile,
+  provenanceLines,
+  type SchedulerReplayProvenanceResult,
+} from './discord-scheduler-provenance';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -109,6 +115,8 @@ function printHelp() {
     '  --session weekly|weeklyNewsletter|premarket|morning|lunch Alias for --once, for replay/manual tests.',
     '  --date YYYY-MM-DD                 Trade date for --once/--session.',
     '  --as-of HH:MM                    End the replay/manual analysis at this ET time.',
+    '  --allow-post-facto-summary       Allow a clearly labeled replay summary even if live scanner audit disagrees.',
+    '  --repost-scanner-audit PATH      Repost/correct from an exact live scanner audit JSON record.',
     '  --dry-run                       Build the message without posting to Discord.',
     '  --instrument MES|MNQ             Defaults to MES.',
     '  --bridge-instrument "MES 06-26" Defaults to MES 06-26.',
@@ -934,6 +942,7 @@ async function writeDiscordAuditLog(args: {
   candidates: SetupCandidate[];
   chartMarkup: string | null;
   levelMap: string | null;
+  provenance: SchedulerReplayProvenanceResult;
 }): Promise<string> {
   await fs.mkdir(DISCORD_AUDIT_DIR, { recursive: true });
   const file = path.join(DISCORD_AUDIT_DIR, `${args.job}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
@@ -947,6 +956,22 @@ async function writeDiscordAuditLog(args: {
     candidates: args.candidates,
     structuredChartContext: args.analysis.structuredChartContext || null,
     sessionLog: args.analysis.sessionLog || null,
+    provenance: {
+      mode: args.provenance.mode,
+      status: args.provenance.status,
+      note: args.provenance.note,
+      liveExecutableAudits: args.provenance.liveExecutableAudits.map((audit) => ({
+        auditFile: audit.auditFile,
+        createdAt: audit.createdAt,
+        planVersionId: audit.planVersionId,
+        direction: audit.direction,
+        entry: audit.entry,
+        stop: audit.stop,
+        t1: audit.t1,
+        t2: audit.t2,
+        riskPoints: audit.riskPoints,
+      })),
+    },
     attachments: {
       chartMarkup: args.chartMarkup,
       priceLevelMap: args.levelMap,
@@ -1175,7 +1200,76 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
   }
 }
 
-async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string): Promise<void> {
+function applyProvenanceToPayload(
+  payload: DiscordWebhookPayload,
+  provenance: SchedulerReplayProvenanceResult,
+  heading = 'Post-Facto Replay Provenance',
+): DiscordWebhookPayload {
+  const note = provenanceLines(provenance).join('\n');
+  return {
+    ...payload,
+    content: provenance.mode === 'live_scanner_audit'
+      ? `🟢 CORRECTION / LIVE SCANNER AUDIT\n${payload.content || ''}`
+      : `🧾 POST-FACTO REPLAY SUMMARY\n${payload.content || ''}`,
+    embeds: payload.embeds.map((embed, index) => index === 0
+      ? {
+          ...embed,
+          title: provenance.mode === 'live_scanner_audit'
+            ? 'Correction From Live Scanner Audit'
+            : `Post-Facto ${embed.title}`,
+          description: professionalizeReportText([
+            embed.description || '',
+            '',
+            `${heading}:`,
+            note,
+          ].join('\n')),
+          footer: {
+            text: provenance.mode === 'live_scanner_audit'
+              ? 'Quant Desk • Live Scanner Audit Source of Truth • No automated orders'
+              : 'Quant Desk • Post-Facto Replay Summary • Live scanner audits remain source of truth',
+          },
+        }
+      : embed),
+  };
+}
+
+async function runRepostScannerAudit(auditFile: string, dryRun: boolean): Promise<void> {
+  const audit = await loadExecutableScannerAuditFromFile(auditFile);
+  if (audit.session !== 'morning' && audit.session !== 'lunch') {
+    throw new Error('Scanner audit repost blocked: audit session must be morning or lunch.');
+  }
+  if (audit.instrument !== 'MES' && audit.instrument !== 'MNQ') {
+    throw new Error('Scanner audit repost blocked: audit instrument must be MES or MNQ.');
+  }
+  if (!audit.tradeDate || !audit.planVersionId || !audit.candidate || !audit.normalizedPlan) {
+    throw new Error('Scanner audit repost blocked: audit is missing required plan fields.');
+  }
+  const files = [audit.attachments.chartMarkup, audit.attachments.priceLevelMap].filter((file): file is string => Boolean(file));
+  const payload = await formatPlanPayload({
+    job: audit.session,
+    tradeDate: audit.tradeDate,
+    planVersionId: audit.planVersionId,
+    instrument: audit.instrument,
+    normalized: audit.normalizedPlan as unknown as NormalizedAppTradePlan,
+    candidates: [audit.candidate],
+    attachments: {
+      chartPlan: Boolean(audit.attachments.chartMarkup),
+      priceLevelMap: Boolean(audit.attachments.priceLevelMap),
+      auditLogPath: audit.auditFile,
+    },
+  });
+  const provenance: SchedulerReplayProvenanceResult = {
+    mode: 'live_scanner_audit',
+    status: 'clear',
+    note: 'Correction/repost from the exact live scanner audit record. This record is the historical source of truth for the alert.',
+    liveExecutableAudits: [audit],
+  };
+  const correctedPayload = applyProvenanceToPayload(payload, provenance, 'Correction Provenance');
+  validateDiscordPayload(correctedPayload, files);
+  await postDiscord(correctedPayload, dryRun, files);
+}
+
+async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string, allowPostFactoSummary = false): Promise<void> {
   if (job === 'weeklyNewsletter') {
     const result = await publishWeeklyTradingNewsletter({
       weekEnding: tradeDate,
@@ -1203,6 +1297,17 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   const planVersionId = createPlanVersionId(job, tradeDate);
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument: config.instrument, windowStatusOverride: 'active' });
   const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
+  const provenance = await evaluateSchedulerReplayProvenance({
+    auditDir: DISCORD_AUDIT_DIR,
+    tradeDate,
+    instrument: config.instrument,
+    session: job,
+    normalizedPlan: normalized,
+    allowPostFactoSummary,
+  });
+  if (provenance.status === 'blocked_contradicts_live_executable') {
+    throw new Error(`${provenance.note} Matching live audit(s): ${provenance.liveExecutableAudits.map((audit) => audit.planVersionId || audit.auditFile).join(', ')}`);
+  }
   try {
     await upsertDiscordAlertRagRecord({ planVersionId, job, tradeDate, instrument: config.instrument, analysis, normalized, candidates });
   } catch (error) {
@@ -1237,8 +1342,9 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
     candidates,
     chartMarkup,
     levelMap,
+    provenance,
   });
-  const payload = await formatPlanPayload({
+  const payload = applyProvenanceToPayload(await formatPlanPayload({
     job,
     tradeDate,
     planVersionId,
@@ -1250,7 +1356,7 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
       priceLevelMap: Boolean(levelMap),
       auditLogPath,
     },
-  });
+  }), provenance);
   validateDiscordPayload(payload, files);
   const receipt = await postDiscord(payload, dryRun, files);
   await attachDiscordMessageReceiptToRagRecord({
@@ -1302,12 +1408,19 @@ async function main() {
   const once = (argValue('once') || argValue('session')) as AlertJob | null;
   const tradeDate = argValue('date') || getEtTradeDate();
   const asOfEt = argValue('as-of') ? normalizeEtClock(argValue('as-of') as string) : undefined;
+  const allowPostFactoSummary = hasArg('allow-post-facto-summary');
+  const repostScannerAudit = argValue('repost-scanner-audit');
+
+  if (repostScannerAudit) {
+    await runRepostScannerAudit(repostScannerAudit, dryRun);
+    return;
+  }
 
   if (once) {
     if (!['weekly', 'weeklyNewsletter', 'premarket', 'morning', 'lunch'].includes(once)) {
       throw new Error('--once must be weekly, weeklyNewsletter, premarket, morning, or lunch.');
     }
-    await runJob(once, config, dryRun, tradeDate, asOfEt);
+    await runJob(once, config, dryRun, tradeDate, asOfEt, allowPostFactoSummary);
     return;
   }
 

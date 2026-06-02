@@ -187,6 +187,11 @@ assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatte
 assertNoExecutablePayloadKeys(morning);
 assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
+assert.ok(flattenDiscordPayloadText(morning).includes('App T1 (1.5R):'));
+assert.ok(flattenDiscordPayloadText(morning).includes('App T2 (2.0R):'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Liquidity / Runner Objectives:'));
+assert.equal(/^T1:/m.test(flattenDiscordPayloadText(morning)), false);
+assert.equal(/^T2:/m.test(flattenDiscordPayloadText(morning)), false);
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
