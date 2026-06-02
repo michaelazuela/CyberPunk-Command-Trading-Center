@@ -10,6 +10,8 @@ import {
   SetupType,
 } from '../types';
 import { computeZoneOverlap, getScannedSetupTypes, scanSetupCandidates } from './setupScanner';
+import { normalizeCandidateIctModelLabel, normalizeIctModelLabel } from './ictModelLabels';
+import { buildTradeJournalRecord } from './tradeJournal';
 
 function resultWithText(
   text: string,
@@ -1531,6 +1533,22 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
   }],
 
+  ['Phase 3B 15M confirmed state supports candidate creation after 5M MSS confirms', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '15M'
+        ? { ...state, status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['15M raid/reclaim confirmed and aligned.'] }
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'confirmed');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+  }],
+
   ['Phase 3 no HTF draw pathway candidate is created when the 5M MSS trigger is missing', () => {
     const context = htfMssContext('LONG');
     context.htfLiquidityDrawState!.fiveMinuteState = {
@@ -1566,7 +1584,182 @@ const tests: Array<[string, () => void]> = [
 
     assert.equal(htfPathwayCandidate(result), null);
     assert.ok(result.candidates.every((candidate) => candidate.candidateState !== 'REVERSAL_DELIVERY_PLAN_CANDIDATE'));
+    assert.ok(result.candidates.every((candidate) => candidate.candidateState !== 'QUALIFIED_CONDITIONAL'));
     assert.ok(result.candidates.every((candidate) => candidate.executionStatus !== ExecutionStatus.Executable));
+  }],
+
+  ['Phase 3B 5M failed MSS blocks the HTF draw continuation setup', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'FAILED_MSS';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'failed',
+      lifecycleState: 'failed_mss',
+      evidence: ['Bullish potential MSS failed by trading below the raid low.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B 5M conflicting MSS blocks the HTF draw continuation setup', () => {
+    const context = htfMssContext('SHORT');
+    context.htfLiquidityDrawState!.classification = 'CONFLICTING_MSS';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'conflicting',
+      lifecycleState: 'conflicting_mss',
+      evidence: ['Opposite MSS confirmed after displacement digestion.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B 15M potential alone cannot create a candidate without confirmed 5M MSS', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'MSS_TRIGGER_PENDING';
+    context.htfLiquidityDrawState!.fiveMinuteState = {
+      ...context.htfLiquidityDrawState!.fiveMinuteState,
+      status: 'pending_confirm',
+      lifecycleState: 'mss_trigger_pending',
+      evidence: ['5M reclaim is pending; no confirmed close through the swing with displacement.'],
+    };
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '5M' ? context.htfLiquidityDrawState!.fiveMinuteState : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(context.htfLiquidityDrawState.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'potential_mss');
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.ok(result.candidates.every((candidate) => candidate.executionStatus !== ExecutionStatus.Executable));
+  }],
+
+  ['Phase 3B missing timeframe state remains safe and does not create HTF setup candidate', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.classification = 'NO_QUALIFIED_STATE';
+    context.htfLiquidityDrawState!.confidence = 40;
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '15M'
+        ? { ...state, status: 'unknown', lifecycleState: 'unknown', direction: 'unknown', confidence: 0, evidence: ['15M OHLC is missing.'] }
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const htfModel = result.candidates.find((candidate) => candidate.setupType === SetupType.HtfDrawContinuationAfterRaid);
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(htfModel?.detectedStatus, SetupCandidateStatus.NotDetected);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B material 4H/1H conflict blocks the HTF draw continuation setup', () => {
+    const context = htfMssContext('LONG');
+    context.htfLiquidityDrawState!.macroContext = 'conflicting';
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) =>
+      state.timeframe === '4H' || state.timeframe === '1H'
+        ? { ...state, direction: 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: [`${state.timeframe} conflicts with the long draw.`] }
+        : state
+    );
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(result), null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B external liquidity target is required and does not replace app-computed R targets', () => {
+    const valid = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(valid);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.target1, 7610);
+    assert.equal(htfCandidate.target2, 7612);
+    assert.ok(htfCandidate.evidence.includes('External liquidity target exists: full ETH high'));
+
+    const context = htfMssContext('LONG', {
+      keyLevels: {
+        currentPrice: 7604,
+        activeSwingLow: null,
+        activeSwingHigh: null,
+        previousDayHigh: null,
+        priorDayHigh: null,
+        overnightHigh: null,
+        londonHigh: null,
+      },
+      targetObjectives: [],
+    });
+    context.htfLiquidityDrawState!.externalLiquidityTarget = undefined;
+    context.htfLiquidityDrawState!.timeframeStates = context.htfLiquidityDrawState!.timeframeStates.map((state) => ({
+      ...state,
+      externalLiquidityTarget: undefined,
+    }));
+
+    const noTarget = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+
+    assert.equal(htfPathwayCandidate(noTarget), null);
+    assert.equal(noTarget.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B missing app-owned entry or stop keeps HTF setup non-executable', () => {
+    const context = htfMssContext('LONG', {
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.candidateState, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(htfCandidate.entry, null);
+    assert.equal(htfCandidate.stop, null);
+    assert.equal(htfCandidate.target1, null);
+    assert.equal(htfCandidate.target2, null);
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['Phase 3B active setup scan windows allow HTF setup through old cutoffs and block 15:30 ET', () => {
+    const allowed = [
+      { sessionType: 'morning' as const, chartTimestamp: '2026-06-01T11:15:00-04:00' },
+      { sessionType: 'morning' as const, chartTimestamp: '2026-06-01T11:50:00-04:00' },
+      { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T13:00:00-04:00' },
+      { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T15:29:00-04:00' },
+    ];
+
+    for (const fixture of allowed) {
+      const result = scanSetupCandidates({
+        sessionType: fixture.sessionType,
+        chartContext: htfMssContext('LONG', fixture),
+        result: null,
+      });
+      assert.ok(htfPathwayCandidate(result), `${fixture.chartTimestamp} should allow HTF setup detection`);
+    }
+
+    const outside = scanSetupCandidates({
+      sessionType: 'lunch',
+      chartContext: htfMssContext('LONG', {
+        sessionType: 'lunch',
+        chartTimestamp: '2026-06-01T15:30:00-04:00',
+      }),
+      result: null,
+    });
+
+    assert.equal(htfPathwayCandidate(outside), null);
+    assert.equal(outside.bestExecutableCandidate, null);
   }],
 
   ['Phase 3 4H potential MSS updates macro context but does not create a candidate by itself', () => {
@@ -1674,6 +1867,30 @@ const tests: Array<[string, () => void]> = [
     assert.equal(htfCandidate.setupType, SetupType.HtfDrawContinuationAfterRaid);
     assert.equal(legacyDetected.length, 0);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
+  ['Phase 3B HTF setup label and journal record use the approved model name', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
+    const htfCandidate = htfPathwayCandidate(result);
+
+    assert.ok(htfCandidate);
+    assert.equal(htfCandidate.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(htfCandidate.scenarioLabel, 'HTF Draw Continuation After Raid/Reclaim');
+    assert.equal(normalizeIctModelLabel(htfCandidate.setupType), 'HTF Draw Continuation After Raid/Reclaim');
+    assert.equal(normalizeCandidateIctModelLabel(htfCandidate), 'HTF Draw Continuation After Raid/Reclaim');
+
+    const journal = buildTradeJournalRecord({
+      dateTime: '2026-06-01T10:35:00-04:00',
+      instrument: 'MES',
+      session: 'morning',
+      candidate: htfCandidate,
+    });
+
+    assert.equal(journal.modelType, 'HTF Draw Continuation After Raid/Reclaim');
+    assert.ok(journal.setupTags.includes('sweep'));
+    assert.ok(journal.setupTags.includes('reclaim'));
+    assert.ok(journal.setupTags.includes('displacement'));
+    assert.ok(journal.setupTags.includes('MSS'));
   }],
 
   ['Phase F bullish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {

@@ -16,6 +16,7 @@ import {
   TradeDecisionStep,
 } from '../types';
 import { runTradeDecisionPipeline, TradeDecisionPipelineInput } from './tradeDecisionPipeline';
+import { normalizeTradePlan } from './tradePlan';
 import { buildChartContextConsensus } from './chartContextConsensus';
 import { buildTargetObjectivePlan } from './targetObjectiveEngine';
 import { selectBestTwoScenarios } from './scenarioSelection';
@@ -786,6 +787,96 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.stop, 7600);
     assert.equal(result.finalTradePlan.target1, 7610);
     assert.equal(result.finalTradePlan.target2, 7612);
+  }],
+
+  ['15c. HTF draw continuation keeps app-computed targets and model-specific scorecard wording', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'LONG',
+        reasoning: 'HTF bullish draw after sell-side raid and confirmed 5M MSS toward full ETH high.',
+        structuredChartContext: htfDrawContinuationContext('LONG') as ChartContext,
+      }),
+    });
+    const htfCandidate = result.opportunitySelection?.bestExecutableCandidate;
+
+    assert.equal(htfCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(htfCandidate?.target1, 7610);
+    assert.equal(htfCandidate?.target2, 7612);
+    assert.notEqual(htfCandidate?.target1, 7624);
+    assert.notEqual(htfCandidate?.target2, 7624);
+    assert.ok(htfCandidate?.levelContextSummary?.includes('external target'));
+    assert.ok(htfCandidate?.decisionQualityScorecard?.some((item) =>
+      item.note === 'HTF draw continuation after raid/reclaim sequence quality.'
+    ));
+  }],
+
+  ['15d. HTF draw continuation cannot approve when app-owned entry is missing', () => {
+    const analysis = baseResult({
+      dayType: 'LONG',
+      reasoning: 'HTF bullish draw exists, but no clean retest entry is defined.',
+      structuredChartContext: htfDrawContinuationContext('LONG', {
+        proposedEntry: null,
+        proposedStop: 7600,
+        riskPoints: null,
+      }) as ChartContext,
+    });
+    const result = assertSameSequence({
+      result: analysis,
+    });
+    const plan = normalizeTradePlan(analysis, 'MES', 'replay_morning');
+
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.finalTradePlan.entry, null);
+    assert.equal(plan.canExecute, false);
+  }],
+
+  ['15e. HTF draw continuation cannot approve when RiskTooWide blocks', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'LONG',
+        reasoning: 'HTF bullish draw exists, but the protected structure stop is too wide.',
+        structuredChartContext: htfDrawContinuationContext('LONG', {
+          proposedEntry: 7604,
+          proposedStop: 7588,
+          riskPoints: 16,
+          riskStatus: 'RiskTooWide',
+        }) as ChartContext,
+      }),
+    });
+
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
+    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'warning');
+  }],
+
+  ['15f. HTF draw continuation cannot approve when screenshot or chart quality is low', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'LONG',
+        reasoning: 'HTF bullish draw exists, but chart confidence is too low for execution.',
+        structuredChartContext: htfDrawContinuationContext('LONG', {
+          screenshotQuality: 'Low',
+          levelReadConfidence: 'Low',
+          entryStopConfidence: 'Low',
+          extractionWarnings: {
+            screenshotUnclear: false,
+            priceLabelsUnreadable: true,
+            timeframeUnverified: false,
+            levelsUnclear: true,
+            manualEntryStopRequired: true,
+            messages: ['HTF chart quality is low.'],
+          },
+        }) as ChartContext,
+      }),
+    });
+
+    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.finalTradePlan.entry, null);
   }],
 
   ['16. Pipeline shows best conditional candidate when no executable candidate exists', () => {

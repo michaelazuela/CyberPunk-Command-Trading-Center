@@ -334,6 +334,7 @@ function confidenceScore(confidence: Confidence): number {
 function setupScore(setupType: SetupType): number {
   switch (setupType) {
     case SetupType.SweepMssFvgRetrace: return 100;
+    case SetupType.HtfDrawContinuationAfterRaid: return 99;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
   }
@@ -549,7 +550,12 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
       score: modelScore,
       max: 25,
       status: qualityStatus(modelScore, 25),
-      note: candidate.setupType === SetupType.TurtleSoup ? 'Turtle Soup reversal sequence quality.' : 'Sweep -> MSS -> FVG retrace sequence quality.',
+      note:
+        candidate.setupType === SetupType.TurtleSoup
+          ? 'Turtle Soup reversal sequence quality.'
+          : candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
+            ? 'HTF draw continuation after raid/reclaim sequence quality.'
+            : 'Sweep -> MSS -> FVG retrace sequence quality.',
     },
     {
       label: '5M execution quality',
