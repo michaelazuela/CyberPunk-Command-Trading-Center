@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
-import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
+import {
+  buildOutcomeComponents,
+  discordOutcomeSecretKeyId,
+  discordWebhookUrlForPayload,
+  normalizeDiscordOutcomeSecret,
+} from './discord-outcome-buttons';
 
 const previousBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousSecret = process.env.DISCORD_OUTCOME_SECRET;
@@ -37,6 +42,9 @@ try {
   assert.ok(urls(longComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
   assert.ok(urls(longComponents).every((url) => !/5320|5316|entry|stop|target|riskPoints|canExecute/i.test(url)));
   const longPayloads = urls(longComponents).map(decodeOutcomePayload);
+  assert.equal(normalizeDiscordOutcomeSecret('  "test-secret"  '), 'test-secret');
+  assert.equal(longPayloads[0].kid, discordOutcomeSecretKeyId('test-secret'));
+  assert.equal(discordOutcomeSecretKeyId('  "test-secret"  '), discordOutcomeSecretKeyId('test-secret'));
   assert.equal(longPayloads[0].dir, 'LONG');
   assert.equal(longPayloads[0].tt, true);
   assert.equal(longPayloads[0].pp, true);

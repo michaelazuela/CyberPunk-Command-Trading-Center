@@ -46,8 +46,18 @@ function base64Url(input: string): string {
   return Buffer.from(input, 'utf8').toString('base64url');
 }
 
+export function normalizeDiscordOutcomeSecret(secret: string | undefined | null): string {
+  return String(secret || '').trim().replace(/^["']|["']$/g, '').trim();
+}
+
+export function discordOutcomeSecretKeyId(secret: string | undefined | null): string | null {
+  const normalized = normalizeDiscordOutcomeSecret(secret);
+  if (!normalized) return null;
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 12);
+}
+
 function signOutcomePayload(encodedPayload: string): string | null {
-  const secret = process.env.DISCORD_OUTCOME_SECRET || '';
+  const secret = normalizeDiscordOutcomeSecret(process.env.DISCORD_OUTCOME_SECRET);
   if (!secret) return null;
   return crypto.createHmac('sha256', secret).update(encodedPayload).digest('hex');
 }
@@ -75,6 +85,7 @@ function buildOutcomeUrl(args: Omit<OutcomeButtonArgs, 'direction'> & {
     dir: args.direction,
     hit: args.targetHit,
     pp: args.tradeTaken,
+    kid: discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET),
   };
   const encodedPayload = base64Url(JSON.stringify(payload));
   const signature = signOutcomePayload(encodedPayload);

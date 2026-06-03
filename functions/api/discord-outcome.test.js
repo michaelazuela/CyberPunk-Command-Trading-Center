@@ -7,7 +7,13 @@ function base64Url(input) {
 }
 
 function sign(encodedPayload, secret) {
-  return crypto.createHmac('sha256', secret).update(encodedPayload).digest('hex');
+  const normalized = String(secret || '').trim().replace(/^["']|["']$/g, '').trim();
+  return crypto.createHmac('sha256', normalized).update(encodedPayload).digest('hex');
+}
+
+function keyId(secret) {
+  const normalized = String(secret || '').trim().replace(/^["']|["']$/g, '').trim();
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 12);
 }
 
 function buildToken(payload, secret) {
@@ -30,6 +36,7 @@ const payload = {
   dir: 'LONG',
   hit: 'T2',
   pp: true,
+  kid: keyId(secret),
 };
 
 const calls = [];
@@ -86,6 +93,47 @@ try {
   assert.ok(buttons.every((button) => button.disabled === true), 'locked buttons must be disabled');
   assert.ok(buttons.some((button) => button.label === 'LONG T2 saved'));
   assert.ok(JSON.stringify(body).includes('No automated orders'));
+
+  const previousSecretToken = buildToken({ ...payload, pid: 'PLAN-PREVIOUS-SECRET', kid: keyId('old-secret') }, 'old-secret');
+  const previousSecretResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(previousSecretToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: 'new-secret',
+      DISCORD_OUTCOME_SECRET_PREVIOUS: 'old-secret',
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(previousSecretResponse.status, 200);
+
+  const quotedSecretToken = buildToken({ ...payload, pid: 'PLAN-QUOTED-SECRET', kid: keyId('endpoint-test-secret') }, 'endpoint-test-secret');
+  const quotedSecretResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(quotedSecretToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: '  "endpoint-test-secret"  ',
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(quotedSecretResponse.status, 200);
+
+  const invalidSecretResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(token)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: 'different-secret',
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+    },
+  });
+  assert.equal(invalidSecretResponse.status, 400);
+  const invalidHtml = await invalidSecretResponse.text();
+  assert.ok(invalidHtml.includes('signed with a different outcome secret'));
+  assert.ok(invalidHtml.includes(payload.kid));
 
   console.log('Discord outcome endpoint lock verified.');
 } finally {

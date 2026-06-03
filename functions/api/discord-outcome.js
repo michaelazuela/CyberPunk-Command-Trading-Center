@@ -40,6 +40,17 @@ function getEnv(context, name) {
   return context.env?.[name] || '';
 }
 
+function normalizeOutcomeSecret(secret) {
+  return String(secret || '').trim().replace(/^["']|["']$/g, '').trim();
+}
+
+async function secretKeyId(secret) {
+  const normalized = normalizeOutcomeSecret(secret);
+  if (!normalized) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
+  return bytesToHex(digest).slice(0, 12);
+}
+
 function base64UrlToBytes(value) {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4);
   const binary = atob(padded);
@@ -60,9 +71,10 @@ function timingSafeEqualHex(a, b) {
 }
 
 async function sign(encodedPayload, secret) {
+  const normalizedSecret = normalizeOutcomeSecret(secret);
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(secret),
+    new TextEncoder().encode(normalizedSecret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -71,12 +83,28 @@ async function sign(encodedPayload, secret) {
   return bytesToHex(signature);
 }
 
-async function verifyToken(token, secret) {
+function outcomeSecrets(context) {
+  const active = normalizeOutcomeSecret(getEnv(context, 'DISCORD_OUTCOME_SECRET'));
+  const previous = String(getEnv(context, 'DISCORD_OUTCOME_SECRET_PREVIOUS') || '')
+    .split(',')
+    .map(normalizeOutcomeSecret)
+    .filter(Boolean);
+  return [active, ...previous].filter(Boolean);
+}
+
+async function verifyToken(token, secrets) {
   const [encodedPayload, signature] = String(token || '').split('.');
   if (!encodedPayload || !signature) throw new Error('Missing or malformed outcome token.');
-  const expected = await sign(encodedPayload, secret);
-  if (!timingSafeEqualHex(expected, signature)) throw new Error('Outcome token signature is invalid.');
   const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(encodedPayload)));
+  for (const secret of secrets) {
+    const expected = await sign(encodedPayload, secret);
+    if (timingSafeEqualHex(expected, signature)) return validateOutcomePayload(payload);
+  }
+  const tokenKid = payload?.kid ? ` Token key id: ${payload.kid}.` : '';
+  throw new Error(`Outcome token signature is invalid.${tokenKid} The Discord button was signed with a different outcome secret than this deployed endpoint accepts.`);
+}
+
+function validateOutcomePayload(payload) {
   if (payload.v !== 1) throw new Error('Unsupported outcome token version.');
   if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) {
     throw new Error('Outcome token expired.');
@@ -289,11 +317,11 @@ export async function onRequestGet(context) {
   try {
     const url = new URL(context.request.url);
     const token = url.searchParams.get('t');
-    const secret = getEnv(context, 'DISCORD_OUTCOME_SECRET');
-    if (!secret) {
+    const secrets = outcomeSecrets(context);
+    if (!secrets.length) {
       return html('Missing DISCORD_OUTCOME_SECRET in Cloudflare environment.', 500);
     }
-    const payload = await verifyToken(token, secret);
+    const payload = await verifyToken(token, secrets);
     const result = await persistOutcome(context, payload);
     const lock = await lockDiscordOutcomeMessage(context, payload, result.discordMessage);
     const lockText = lock.edited
