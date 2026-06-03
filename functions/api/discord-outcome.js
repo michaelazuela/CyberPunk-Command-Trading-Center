@@ -51,6 +51,33 @@ async function secretKeyId(secret) {
   return bytesToHex(digest).slice(0, 12);
 }
 
+async function keyCheckResponse(context) {
+  const activeSecret = normalizeOutcomeSecret(getEnv(context, 'DISCORD_OUTCOME_SECRET'));
+  const previousSecrets = String(getEnv(context, 'DISCORD_OUTCOME_SECRET_PREVIOUS') || '')
+    .split(',')
+    .map(normalizeOutcomeSecret)
+    .filter(Boolean);
+  const activeKeyId = await secretKeyId(activeSecret);
+  const previousKeyIds = [];
+  for (const previousSecret of previousSecrets) {
+    const previousKeyId = await secretKeyId(previousSecret);
+    if (previousKeyId) previousKeyIds.push(previousKeyId);
+  }
+  return new Response(JSON.stringify({
+    ok: Boolean(activeKeyId),
+    configured: Boolean(activeKeyId),
+    activeKeyId,
+    acceptedKeyIds: [activeKeyId, ...previousKeyIds].filter(Boolean),
+    boundary: 'decision_support_only_no_automated_orders',
+  }), {
+    status: activeKeyId ? 200 : 500,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
 function base64UrlToBytes(value) {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4);
   const binary = atob(padded);
@@ -318,6 +345,9 @@ async function persistOutcome(context, payload) {
 export async function onRequestGet(context) {
   try {
     const url = new URL(context.request.url);
+    if (url.searchParams.get('keycheck') === '1') {
+      return keyCheckResponse(context);
+    }
     const token = url.searchParams.get('t');
     const secrets = outcomeSecrets(context);
     if (!secrets.length) {

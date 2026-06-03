@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
+  assertDiscordOutcomeEndpointSecretReady,
   buildOutcomeComponents,
+  checkDiscordOutcomeEndpointSecret,
   discordOutcomeSecretKeyId,
   discordWebhookUrlForPayload,
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal,
   normalizeDiscordOutcomeSecret,
 } from './discord-outcome-buttons';
 
@@ -79,6 +85,43 @@ try {
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook', longComponents), 'https://discord.example/webhook?with_components=true&wait=true');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook?wait=true', longComponents), 'https://discord.example/webhook?wait=true&with_components=true');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook', undefined), 'https://discord.example/webhook');
+
+  const matchingFetch = (async (url: string | URL | Request) => {
+    assert.equal(String(url), 'https://quant-desk.example/api/discord-outcome?keycheck=1');
+    return new Response(JSON.stringify({
+      ok: true,
+      configured: true,
+      activeKeyId: discordOutcomeSecretKeyId('test-secret'),
+      acceptedKeyIds: [discordOutcomeSecretKeyId('test-secret')],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  const matchingCheck = await checkDiscordOutcomeEndpointSecret(matchingFetch);
+  assert.equal(matchingCheck.ok, true);
+  assert.equal(matchingCheck.localKeyId, discordOutcomeSecretKeyId('test-secret'));
+  await assertDiscordOutcomeEndpointSecretReady(longComponents, matchingFetch);
+
+  const mismatchedFetch = (async () => new Response(JSON.stringify({
+    ok: true,
+    configured: true,
+    activeKeyId: discordOutcomeSecretKeyId('different-secret'),
+    acceptedKeyIds: [discordOutcomeSecretKeyId('different-secret')],
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
+  await assert.rejects(
+    () => assertDiscordOutcomeEndpointSecretReady(longComponents, mismatchedFetch),
+    /blocked before posting.*does not match deployed active key id/i,
+  );
+  await assert.doesNotReject(() => assertDiscordOutcomeEndpointSecretReady(undefined, mismatchedFetch));
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'discord-outcome-secret-'));
+  fs.writeFileSync(path.join(tempDir, '.env.local'), 'DISCORD_OUTCOME_SECRET=\"canonical-test-secret\"\n');
+  process.env.DISCORD_OUTCOME_SECRET = 'stale-shell-secret';
+  const canonical = loadCanonicalDiscordOutcomeSecretFromEnvLocal(tempDir);
+  assert.equal(canonical.loaded, true);
+  assert.equal(canonical.source, '.env.local');
+  assert.equal(canonical.previousKeyId, discordOutcomeSecretKeyId('stale-shell-secret'));
+  assert.equal(canonical.keyId, discordOutcomeSecretKeyId('canonical-test-secret'));
+  assert.equal(discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET), discordOutcomeSecretKeyId('canonical-test-secret'));
+  process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
   delete process.env.DISCORD_OUTCOME_SECRET;
   assert.equal(buildOutcomeComponents({ ...baseArgs, direction: 'LONG' }), undefined);

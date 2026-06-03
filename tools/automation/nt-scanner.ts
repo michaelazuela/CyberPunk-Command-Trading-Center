@@ -66,7 +66,12 @@ import {
   type CompactDiscordAttachmentState,
   type DiscordWebhookPayload,
 } from './discord-alert-format';
-import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
+import {
+  assertDiscordOutcomeEndpointSecretReady,
+  buildOutcomeComponents,
+  discordWebhookUrlForPayload,
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal,
+} from './discord-outcome-buttons';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -76,6 +81,7 @@ import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
+loadCanonicalDiscordOutcomeSecretFromEnvLocal();
 
 type Instrument = 'MES' | 'MNQ';
 type LiveSession = 'morning' | 'lunch';
@@ -1465,6 +1471,7 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
   if (webhook.usingGenericFallback) {
     console.warn('[scanner-discord] Using legacy DISCORD_WEBHOOK_URL. Prefer QUANT_DESK_SCANNER_WEBHOOK_URL for scanner-specific Discord separation.');
   }
+  await assertDiscordOutcomeEndpointSecretReady(payload.components);
   const url = discordWebhookUrlForPayload(webhook.url, payload.components);
   const validFiles = files.filter(Boolean);
   const response = validFiles.length

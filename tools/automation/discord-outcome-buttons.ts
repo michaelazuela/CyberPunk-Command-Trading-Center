@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 type SessionType = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
 type TradeDirection = 'LONG' | 'SHORT';
@@ -24,6 +26,15 @@ export interface OutcomeButtonArgs {
   tradeDate: string;
   instrument: Instrument;
   direction: TradeDirection | 'NO TRADE' | null | undefined;
+}
+
+export interface DiscordOutcomeEndpointSecretCheck {
+  ok: boolean;
+  configured: boolean;
+  activeKeyId: string | null;
+  acceptedKeyIds: string[];
+  localKeyId: string | null;
+  endpointUrl: string;
 }
 
 function getDayOfWeek(tradeDate: string): string {
@@ -54,6 +65,89 @@ export function discordOutcomeSecretKeyId(secret: string | undefined | null): st
   const normalized = normalizeDiscordOutcomeSecret(secret);
   if (!normalized) return null;
   return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 12);
+}
+
+export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(cwd = process.cwd()): {
+  loaded: boolean;
+  keyId: string | null;
+  previousKeyId: string | null;
+  source: '.env.local' | 'process.env';
+} {
+  const previousKeyId = discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET);
+  const envLocalPath = path.join(cwd, '.env.local');
+  if (!fs.existsSync(envLocalPath)) {
+    return { loaded: false, keyId: previousKeyId, previousKeyId, source: 'process.env' };
+  }
+  const line = fs.readFileSync(envLocalPath, 'utf8')
+    .split(/\r?\n/)
+    .find((entry) => entry.trim().startsWith('DISCORD_OUTCOME_SECRET='));
+  const value = normalizeDiscordOutcomeSecret(line?.slice('DISCORD_OUTCOME_SECRET='.length));
+  if (!value) {
+    return { loaded: false, keyId: previousKeyId, previousKeyId, source: 'process.env' };
+  }
+  process.env.DISCORD_OUTCOME_SECRET = value;
+  const keyId = discordOutcomeSecretKeyId(value);
+  if (previousKeyId && previousKeyId !== keyId) {
+    console.warn(`[discord-outcome] DISCORD_OUTCOME_SECRET from .env.local is overriding a different process environment key id (${previousKeyId} -> ${keyId}).`);
+  }
+  return { loaded: true, keyId, previousKeyId, source: '.env.local' };
+}
+
+export async function checkDiscordOutcomeEndpointSecret(
+  fetchImpl: typeof fetch = fetch,
+): Promise<DiscordOutcomeEndpointSecretCheck> {
+  const baseUrl = getOutcomeBaseUrl();
+  const localKeyId = discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET);
+  if (!baseUrl) {
+    throw new Error('Discord outcome buttons blocked: DISCORD_OUTCOME_BASE_URL is not configured.');
+  }
+  if (!localKeyId) {
+    throw new Error('Discord outcome buttons blocked: DISCORD_OUTCOME_SECRET is not configured.');
+  }
+  const endpointUrl = `${baseUrl}/api/discord-outcome?keycheck=1`;
+  const response = await fetchImpl(endpointUrl, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+  const bodyText = await response.text();
+  let body: any = {};
+  try {
+    body = bodyText ? JSON.parse(bodyText) : {};
+  } catch {
+    throw new Error(`Discord outcome buttons blocked: endpoint key check returned non-JSON from ${endpointUrl}.`);
+  }
+  const activeKeyId = typeof body?.activeKeyId === 'string' ? body.activeKeyId : null;
+  const acceptedKeyIds = Array.isArray(body?.acceptedKeyIds)
+    ? body.acceptedKeyIds.filter((value: unknown): value is string => typeof value === 'string')
+    : [];
+  if (!response.ok || !body?.configured || !activeKeyId) {
+    throw new Error(`Discord outcome buttons blocked: deployed endpoint at ${baseUrl} has no active DISCORD_OUTCOME_SECRET.`);
+  }
+  return {
+    ok: activeKeyId === localKeyId,
+    configured: true,
+    activeKeyId,
+    acceptedKeyIds,
+    localKeyId,
+    endpointUrl,
+  };
+}
+
+export async function assertDiscordOutcomeEndpointSecretReady(
+  components?: unknown[],
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (!components?.length) return;
+  const check = await checkDiscordOutcomeEndpointSecret(fetchImpl);
+  if (!check.ok) {
+    throw new Error([
+      'Discord outcome buttons blocked before posting.',
+      `Local DISCORD_OUTCOME_SECRET key id ${check.localKeyId} does not match deployed active key id ${check.activeKeyId}.`,
+      `Endpoint: ${check.endpointUrl}`,
+      'Upload the exact local DISCORD_OUTCOME_SECRET to the Cloudflare Pages production secret and redeploy before posting RAG buttons.',
+      'No Discord card was sent. No automated orders were placed.',
+    ].join(' '));
+  }
 }
 
 function signOutcomePayload(encodedPayload: string): string | null {

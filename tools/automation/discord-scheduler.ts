@@ -27,7 +27,12 @@ import {
   type DiscordWebhookPayload,
 } from './discord-alert-format';
 import { publishWeeklyTradingNewsletter } from './weekly-trading-report';
-import { buildOutcomeComponents, discordWebhookUrlForPayload } from './discord-outcome-buttons';
+import {
+  assertDiscordOutcomeEndpointSecretReady,
+  buildOutcomeComponents,
+  discordWebhookUrlForPayload,
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal,
+} from './discord-outcome-buttons';
 import {
   PROFESSIONAL_MODEL_ONE_LABEL,
   PROFESSIONAL_MODEL_TWO_LABEL,
@@ -43,6 +48,7 @@ import {
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
+loadCanonicalDiscordOutcomeSecretFromEnvLocal();
 
 type AlertJob = 'weekly' | 'weeklyNewsletter' | 'premarket' | 'morning' | 'lunch';
 type SessionAlertJob = 'morning' | 'lunch';
@@ -1161,6 +1167,7 @@ async function postDiscord(payload: DiscordWebhookPayload, dryRun: boolean, file
   if (!webhookUrl) {
     throw new Error('DISCORD_WEBHOOK_URL is required unless --dry-run is used. Add it once to .env.local as DISCORD_WEBHOOK_URL=your_discord_webhook_url.');
   }
+  await assertDiscordOutcomeEndpointSecretReady(payload.components);
   const url = discordWebhookUrlForPayload(webhookUrl, payload.components);
   const validFiles = files.filter(Boolean);
   const payloadWithImage = validFiles[0] && payload.embeds[0]

@@ -68,6 +68,29 @@ globalThis.fetch = async (url, init = {}) => {
 };
 
 try {
+  const keyCheckResponse = await onRequestGet({
+    request: new Request('https://quant-desk.example/api/discord-outcome?keycheck=1'),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      DISCORD_OUTCOME_SECRET_PREVIOUS: 'old-secret',
+    },
+  });
+  assert.equal(keyCheckResponse.status, 200);
+  const keyCheck = await keyCheckResponse.json();
+  assert.equal(keyCheck.configured, true);
+  assert.equal(keyCheck.activeKeyId, keyId(secret));
+  assert.deepEqual(keyCheck.acceptedKeyIds, [keyId(secret), keyId('old-secret')]);
+  assert.equal(keyCheck.boundary, 'decision_support_only_no_automated_orders');
+  assert.equal(JSON.stringify(keyCheck).includes(secret), false);
+
+  const missingKeyCheckResponse = await onRequestGet({
+    request: new Request('https://quant-desk.example/api/discord-outcome?keycheck=1'),
+    env: {},
+  });
+  assert.equal(missingKeyCheckResponse.status, 500);
+  const missingKeyCheck = await missingKeyCheckResponse.json();
+  assert.equal(missingKeyCheck.configured, false);
+
   const token = buildToken(payload, secret);
   const response = await onRequestGet({
     request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(token)}`),
