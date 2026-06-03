@@ -18,6 +18,7 @@ import {
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   summarizeScannerHistoryCoverage,
+  writeScannerDecisionTapeAuditLog,
 } from './nt-scanner';
 import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
@@ -101,6 +102,70 @@ assert.equal(
   ),
   true,
 );
+
+const decisionTapePath = await writeScannerDecisionTapeAuditLog({
+  session: 'morning',
+  tradeDate: '2026-06-03',
+  instrument: 'MES',
+  completed5m: { time: '2026-06-03T10:15:00.0000000', open: 7590, high: 7597, low: 7587, close: 7593, volume: 1000 },
+  currentPrice: 7593,
+  chartContext: {
+    displacementCandles: [{ direction: 'SHORT', time: '2026-06-03T09:45:00.0000000' }],
+    liquiditySweeps: [{ direction: 'LONG', level: 7575 }],
+    reclaimEvents: [{ direction: 'LONG', level: 7585 }],
+    marketStructure: { marketStructureShift: false },
+  },
+  candidate: null,
+  normalized: {
+    decision: 'NO TRADE',
+    decisionLabel: 'NO TRADE',
+    executionDecision: 'NO TRADE',
+    planningDecision: 'WAIT',
+    hasConditionalPlans: false,
+    entry: null,
+    stop: null,
+    t1: null,
+    t2: null,
+    riskPoints: null,
+    riskRewardT1: null,
+    riskRewardT2: null,
+    finalConfidence: 'Low',
+    whyThisPlan: 'No valid candidate existed first.',
+    invalidation: 'N/A',
+    source: 'app_rule_engine',
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    setupCandidates: [],
+    earlyMoveReview: { status: 'already_triggered_no_fresh_entry', action: 'Context only.' } as any,
+  },
+  state: 'TriggerPending',
+  confidence: {
+    score: 0,
+    qualifiedReasons: [],
+    missingReasons: ['no ICT candidate/reference level'],
+    hardBlocker: 'no ICT candidate/reference level',
+    recommendation: 'No trade.',
+    scorecard: [],
+  },
+  staleReason: null,
+  scannerReviewStatus: 'early_move_review_no_valid_candidate',
+  scannerAuditWarnings: ['Early-move review is context only.'],
+  alertDecision: { shouldSend: false, reason: 'TriggerPending is logged locally as developing context.' },
+  planVersionId: 'MORNING-20260603-101500-TAPE',
+  dryRun: true,
+  historyCoverage: [],
+  auditDir,
+});
+const decisionTape = JSON.parse(await fs.readFile(decisionTapePath, 'utf8'));
+assert.equal(decisionTape.reportType, 'scanner_decision_event_tape');
+assert.equal(decisionTape.eventCount, 1);
+const tapeEvent = decisionTape.events['2026-06-03T10:15:00.0000000'];
+assert.equal(tapeEvent.scannerState, 'TriggerPending');
+assert.equal(tapeEvent.reviewStatus, 'early_move_review_no_valid_candidate');
+assert.equal(tapeEvent.classification.missed, false);
+assert.equal(tapeEvent.classification.advisory, true);
+assert.equal(tapeEvent.discord.shouldSend, false);
+assert.equal(tapeEvent.authority.decisionTapeCanExecute, false);
 const fourHourCoverageBars = Array.from({ length: 1129 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');
   const last = Date.parse('2026-06-02T10:00:00-04:00');

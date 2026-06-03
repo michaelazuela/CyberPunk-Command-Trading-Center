@@ -793,6 +793,232 @@ async function writeScannerWatchlistAuditLog(args: {
   return file;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function stringField(record: Record<string, unknown> | null, keys: string[]): string | null {
+  if (!record) return null;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}
+
+function boolField(record: Record<string, unknown> | null, keys: string[]): boolean | null {
+  if (!record) return null;
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'boolean') return value;
+  }
+  return null;
+}
+
+function latestFactSummary(facts: unknown[]): { count: number; latest: Record<string, unknown> | null } {
+  const records = facts.map(asRecord).filter((record): record is Record<string, unknown> => Boolean(record));
+  return {
+    count: records.length,
+    latest: records.length ? records[records.length - 1] : null,
+  };
+}
+
+function summarizeScannerEventTapeFacts(chartContext: unknown, completed5m: NinjaBridgeBar | null) {
+  const context = asRecord(chartContext);
+  const displacement = latestFactSummary(asArray(context?.displacementCandles));
+  const sweeps = latestFactSummary([
+    ...asArray(context?.liquiditySweeps),
+    ...asArray(context?.liquidityEvents),
+  ]);
+  const reclaims = latestFactSummary(asArray(context?.reclaimEvents));
+  const marketStructure = asRecord(context?.marketStructure);
+  const setupReadyFacts = asRecord(context?.setupReadyFacts);
+  const htfState = asRecord(context?.htfLiquidityDrawState);
+  const latestDisplacement = displacement.latest;
+  const fallbackBodyDirection =
+    completed5m && completed5m.close > completed5m.open
+      ? 'bullish'
+      : completed5m && completed5m.close < completed5m.open
+        ? 'bearish'
+        : null;
+
+  return {
+    displacement: {
+      direction:
+        stringField(latestDisplacement, ['direction', 'bias']) ||
+        stringField(asRecord(latestDisplacement?.candle), ['direction']) ||
+        fallbackBodyDirection,
+      count: displacement.count,
+      latest: latestDisplacement,
+    },
+    sweepReclaim: {
+      sweepCount: sweeps.count,
+      reclaimCount: reclaims.count,
+      latestSweep: sweeps.latest,
+      latestReclaim: reclaims.latest,
+      sweepReclaimPresent: sweeps.count > 0 || reclaims.count > 0,
+    },
+    mss: {
+      breakOfStructure:
+        boolField(marketStructure, ['breakOfStructure', 'marketStructureShift']) ??
+        boolField(setupReadyFacts, ['breakOfStructure']),
+      mssStatus:
+        stringField(htfState, ['fiveMinuteMssStatus', 'postShiftState', 'state']) ||
+        stringField(marketStructure, ['mssStatus', 'structureStatus']) ||
+        null,
+      htfState,
+    },
+  };
+}
+
+function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, normalized: ReturnType<typeof buildAppTradePlan>) {
+  const candidates = normalized.setupCandidates || [];
+  return {
+    selected: candidate
+      ? {
+          setupType: candidate.setupType,
+          scenarioLabel: candidate.scenarioLabel,
+          direction: candidate.direction,
+          detectedStatus: candidate.detectedStatus,
+          executionStatus: candidate.executionStatus,
+          entry: candidate.entry,
+          stop: candidate.stop,
+          target1: candidate.target1,
+          target2: candidate.target2,
+          riskPoints: candidate.riskPoints,
+          blockReason: candidate.blockReason,
+          requiredTrigger: candidate.requiredTrigger,
+          nextAction: candidate.nextAction,
+        }
+      : null,
+    counts: {
+      total: candidates.length,
+      executable: candidates.filter((item) => item.executionStatus === 'Executable').length,
+      conditional: candidates.filter((item) => item.executionStatus === 'Conditional').length,
+      blocked: candidates.filter((item) => item.executionStatus === 'Blocked').length,
+    },
+    statuses: candidates.slice(0, 8).map((item) => ({
+      setupType: item.setupType,
+      direction: item.direction,
+      detectedStatus: item.detectedStatus,
+      executionStatus: item.executionStatus,
+      entry: item.entry,
+      stop: item.stop,
+      target1: item.target1,
+      target2: item.target2,
+      riskPoints: item.riskPoints,
+      blockReason: item.blockReason,
+    })),
+  };
+}
+
+export async function writeScannerDecisionTapeAuditLog(args: {
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  chartContext: unknown;
+  candidate: SetupCandidate | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  state: ScannerState;
+  confidence: ReturnType<typeof scoreScannerCandidate>;
+  staleReason: string | null;
+  scannerReviewStatus?: string | null;
+  scannerAuditWarnings?: string[];
+  alertDecision: { shouldSend: boolean; reason: string };
+  planVersionId: string;
+  dryRun: boolean;
+  historyCoverage?: ScannerHistoryCoverageRecord[];
+  auditDir?: string;
+}): Promise<string> {
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  await fs.mkdir(auditDir, { recursive: true });
+  const file = path.join(auditDir, `scanner-decision-tape-${args.tradeDate}-${args.instrument}-${args.session}.json`);
+  const eventKey = args.completed5m?.time || args.planVersionId;
+  let existing: Record<string, unknown> | null = null;
+  try {
+    existing = JSON.parse(await fs.readFile(file, 'utf8')) as Record<string, unknown>;
+  } catch {
+    existing = null;
+  }
+  const events = asRecord(existing?.events) || {};
+  const event = {
+    recordedAt: new Date().toISOString(),
+    mode: args.dryRun ? 'dry_run' : 'live',
+    time: args.completed5m?.time || null,
+    completed5m: args.completed5m,
+    currentPrice: args.currentPrice,
+    facts: summarizeScannerEventTapeFacts(args.chartContext, args.completed5m),
+    setupCandidateStatus: summarizeScannerCandidateForTape(args.candidate, args.normalized),
+    plan: {
+      planVersionId: args.planVersionId,
+      decision: args.normalized.decision,
+      decisionStatus: args.normalized.decisionStatus || null,
+      noTradeReason: args.normalized.noTradeReason || null,
+      entry: args.normalized.entry,
+      stop: args.normalized.stop,
+      t1: args.normalized.t1,
+      t2: args.normalized.t2,
+      riskPoints: args.normalized.riskPoints,
+      canExecute: args.normalized.canExecute,
+      earlyMoveReview: args.normalized.earlyMoveReview || null,
+    },
+    riskResult: {
+      candidateRiskPoints: args.candidate?.riskPoints ?? null,
+      blockReason: args.candidate?.blockReason ?? args.normalized.noTradeReason ?? null,
+    },
+    scannerState: args.state,
+    reviewStatus: args.scannerReviewStatus || null,
+    staleReason: args.staleReason,
+    confidence: args.confidence,
+    discord: {
+      shouldSend: args.alertDecision.shouldSend,
+      sendOrSuppressReason: args.alertDecision.reason,
+      suppressed: !args.alertDecision.shouldSend,
+    },
+    classification: {
+      live: !args.dryRun,
+      replay: false,
+      missed: args.state === 'Missed',
+      stale: Boolean(args.staleReason),
+      advisory: args.state === 'Watching' || args.state === 'TriggerPending',
+    },
+    auditWarnings: args.scannerAuditWarnings || [],
+    historyCoverage: args.historyCoverage || [],
+    historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
+    authority: {
+      decisionTapeApprovesTrade: false,
+      decisionTapeChangesRules: false,
+      decisionTapeChangesEntry: false,
+      decisionTapeChangesStop: false,
+      decisionTapeChangesTargets: false,
+      decisionTapeChangesRisk: false,
+      decisionTapeCanExecute: false,
+    },
+  };
+  events[eventKey] = event;
+  await fs.writeFile(file, JSON.stringify({
+    reportType: 'scanner_decision_event_tape',
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    boundary: 'decision_support_only_no_automated_orders',
+    note: 'Chronological scanner event tape. Used for audit/reconstruction only; it does not approve trades or change execution gates.',
+    eventCount: Object.keys(events).length,
+    events,
+  }, null, 2));
+  return file;
+}
+
 function mappingSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession {
   if (window.session === 'lunch') return 'lunch';
   if (window.nextWindowLabel?.toLowerCase().includes('midday')) return 'lunch';
@@ -2019,8 +2245,28 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     duplicate: Boolean(existing),
     stateImproved: false,
   });
+  const planVersionId = createPlanVersionId(session, tradeDate);
+  const decisionTapePath = await writeScannerDecisionTapeAuditLog({
+    session,
+    tradeDate,
+    instrument: config.instrument,
+    completed5m,
+    currentPrice,
+    chartContext: analysis.structuredChartContext || null,
+    candidate,
+    normalized,
+    state: stateForAlert,
+    confidence,
+    staleReason: stale.reason,
+    scannerReviewStatus: selection.reviewStatus,
+    scannerAuditWarnings: [...selection.auditWarnings, ...historyWarnings],
+    alertDecision,
+    planVersionId,
+    dryRun: config.dryRun,
+    historyCoverage,
+  });
 
-  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason}`);
+  console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
 
   const previousDelivery = state.alertDeliveries[alertKey];
@@ -2036,7 +2282,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
 
   if (alertDecision.shouldSend) {
-    const planVersionId = createPlanVersionId(session, tradeDate);
     const alertArtifacts = await prepareLiveScannerDiscordAlertArtifacts({
       session,
       tradeDate,

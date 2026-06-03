@@ -338,6 +338,22 @@ assert.equal(staleSelection.stale.stale, true);
 assert.ok(staleSelection.auditWarnings.some((warning) => warning.includes('already_triggered_no_fresh_entry')));
 assert.equal(JSON.stringify(staleNormalizedPlan), stalePlanBefore);
 
+const contextOnlyEarlyMoveSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [],
+    earlyMoveReview: { status: 'already_triggered_no_fresh_entry', action: 'No fresh entry without candidate proof.' },
+  } as any,
+  currentPrice: 109,
+});
+assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'TriggerPending');
+assert.equal(contextOnlyEarlyMoveSelection.candidate, null);
+assert.equal(contextOnlyEarlyMoveSelection.reviewStatus, 'early_move_review_no_valid_candidate');
+assert.equal(contextOnlyEarlyMoveSelection.stale.stale, false);
+assert.ok(contextOnlyEarlyMoveSelection.auditWarnings.some((warning) => warning.includes('context only')));
+
 const blockedPlanCandidate = candidate({
   executionStatus: ExecutionStatus.Blocked,
   blockReason: NoTradeReason.InvalidStopLocation,
@@ -474,8 +490,9 @@ const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'Missed');
+assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
 assert.equal(tenFifteenSelection.candidate, null);
+assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 
 const cascade = buildTargetCascade({
   candidate: strongCandidate,

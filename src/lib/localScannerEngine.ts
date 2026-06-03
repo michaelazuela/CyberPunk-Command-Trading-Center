@@ -1006,6 +1006,9 @@ export function shouldSendScannerAlert(args: {
   if (args.state === 'Watching' || args.state === 'MapReady' || args.state === 'MarketMapping' || args.state === 'NoData') {
     return { shouldSend: false, reason: `${args.state} is logged locally but not sent to Discord by default.` };
   }
+  if (args.state === 'TriggerPending') {
+    return { shouldSend: false, reason: 'TriggerPending is logged locally as developing context; no executable alert is published until the app-owned candidate gates pass.' };
+  }
   if (args.state === 'Missed') {
     return args.confidence >= thresholds.educationalBlocked
       ? { shouldSend: true, reason: 'Missed preferred retest qualifies for RAG/journal learning alert.' }

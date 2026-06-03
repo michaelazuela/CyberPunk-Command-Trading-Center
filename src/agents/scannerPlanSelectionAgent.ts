@@ -15,7 +15,10 @@ export interface ScannerPlanSelection {
   stale: StaleChaseResult;
   state: ScannerState;
   stateForAlert: ScannerState;
-  reviewStatus: 'already_triggered_no_fresh_entry' | null;
+  reviewStatus:
+    | 'already_triggered_no_fresh_entry'
+    | 'early_move_review_no_valid_candidate'
+    | null;
   auditWarnings: string[];
 }
 
@@ -78,6 +81,23 @@ function missedReviewState(normalized: NormalizedTradePlan, stale: StaleChaseRes
     reviewStatus: 'already_triggered_no_fresh_entry',
     auditWarnings: [
       'Selected app-owned plan was classified as already_triggered_no_fresh_entry. Scanner will not publish it as executable.',
+    ],
+  };
+}
+
+function earlyMoveContextOnlyState(normalized: NormalizedTradePlan): ScannerPlanSelection {
+  return {
+    candidate: null,
+    stale: {
+      state: 'TriggerPending',
+      stale: false,
+      reason: normalized.earlyMoveReview?.action || 'Early move context was detected, but no valid app-owned candidate existed first.',
+    },
+    state: 'TriggerPending',
+    stateForAlert: 'TriggerPending',
+    reviewStatus: 'early_move_review_no_valid_candidate',
+    auditWarnings: [
+      'Early-move review is context only because no valid app-owned executable/conditional candidate existed first. Scanner will not classify this as a missed trade.',
     ],
   };
 }
@@ -156,7 +176,13 @@ export function selectScannerPlan(args: {
   }
 
   if (args.normalized.earlyMoveReview?.status === 'already_triggered_no_fresh_entry') {
-    return missedReviewState(args.normalized, { state: 'Missed', stale: true, reason: args.normalized.earlyMoveReview.action });
+    const proofCandidate = candidateFromFallbackPool(args.normalized);
+    if (!proofCandidate) return earlyMoveContextOnlyState(args.normalized);
+    return missedReviewState(args.normalized, {
+      state: 'Missed',
+      stale: true,
+      reason: args.normalized.earlyMoveReview.action,
+    });
   }
 
   const fallback = candidateFromFallbackPool(args.normalized);
