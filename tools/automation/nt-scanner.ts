@@ -1289,6 +1289,34 @@ function scannerWatchlistAlertKey(args: {
   return `${args.tradeDate}:${args.instrument}:${args.session}:${args.direction}:${args.watchlistType}`;
 }
 
+function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
+  const parsed = parseBridgeTime(bar.time, mode);
+  if (!parsed) return null;
+  return parsed.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+export function barsForMorningContinuationWatchlist(args: {
+  bars5m: NinjaBridgeBar[];
+  tradeDate: string;
+  barTimeZone: BridgeTimeZoneMode;
+  currentEtMinutes: number;
+}): NinjaBridgeBar[] {
+  const endMinutes = Math.max(args.currentEtMinutes, 10 * 60);
+  return args.bars5m
+    .filter((bar) => {
+      if (bridgeBarEtDate(bar, args.barTimeZone) !== args.tradeDate) return false;
+      const parsed = parseBridgeTime(bar.time, args.barTimeZone);
+      if (!parsed) return false;
+      const minutes = toEtMinutes(parsed);
+      return minutes >= 9 * 60 + 30 && minutes <= endMinutes;
+    })
+    .sort((a, b) => {
+      const aTime = parseBridgeTime(a.time, args.barTimeZone)?.getTime() || 0;
+      const bTime = parseBridgeTime(b.time, args.barTimeZone)?.getTime() || 0;
+      return aTime - bTime;
+    });
+}
+
 export async function prepareLiveScannerWatchlistAlertArtifacts(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -1917,11 +1945,17 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (selection.auditWarnings.length) {
     console.warn(`[scanner] selection audit: ${selection.auditWarnings.join(' | ')}`);
   }
+  const watchlistBars5m = barsForMorningContinuationWatchlist({
+    bars5m: bars['5m'],
+    tradeDate,
+    barTimeZone: config.barTimeZone,
+    currentEtMinutes,
+  });
   const watchlist = detectMorningContinuationWatchlist({
     tradeDate,
     instrument: config.instrument,
     window,
-    bars5m: bars['5m'],
+    bars5m: watchlistBars5m,
     currentPrice,
     higherTimeframeAlignment:
       analysis.structuredChartContext?.multiTimeframeContext?.alignment?.alignedDirection === 'LONG' ||
@@ -1956,7 +1990,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         selectedCandidate: candidate,
         normalized,
         scannerState: stateForAlert,
-        bars5m: bars['5m'],
+        bars5m: watchlistBars5m,
       });
       try {
         const receipt = await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);

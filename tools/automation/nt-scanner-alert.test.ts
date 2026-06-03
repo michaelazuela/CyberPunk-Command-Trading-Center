@@ -6,6 +6,7 @@ import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, 
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   barsCoverRequestedLookback,
+  barsForMorningContinuationWatchlist,
   buildScannerHistoryPreloadPlan,
   createPendingScannerAlertDeliveryRecord,
   findMissedExecutableScannerDeliveries,
@@ -41,6 +42,28 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
   source: 'SCANNER_DISCORD_WEBHOOK_URL',
   usingGenericFallback: false,
 });
+
+const watchlistScopedBars = barsForMorningContinuationWatchlist({
+  tradeDate: '2026-06-03',
+  barTimeZone: 'eastern',
+  currentEtMinutes: 10 * 60,
+  bars5m: [
+    { time: '2026-05-18T15:05:00.0000000', open: 7265, high: 7270, low: 7225.25, close: 7269.5, volume: 1000 },
+    { time: '2026-06-03T09:30:00.0000000', open: 7611.75, high: 7622.25, low: 7608, close: 7614, volume: 1000 },
+    { time: '2026-06-03T09:35:00.0000000', open: 7614, high: 7618, low: 7590, close: 7595, volume: 1000 },
+    { time: '2026-06-03T09:40:00.0000000', open: 7595, high: 7598, low: 7574, close: 7581, volume: 1000 },
+    { time: '2026-06-03T10:00:00.0000000', open: 7585, high: 7590, low: 7584.25, close: 7586.25, volume: 1000 },
+    { time: '2026-06-03T10:05:00.0000000', open: 7586.25, high: 7594, low: 7585, close: 7592, volume: 1000 },
+  ],
+});
+assert.deepEqual(watchlistScopedBars.map((bar) => bar.time), [
+  '2026-06-03T09:30:00.0000000',
+  '2026-06-03T09:35:00.0000000',
+  '2026-06-03T09:40:00.0000000',
+  '2026-06-03T10:00:00.0000000',
+]);
+assert.equal(Math.max(...watchlistScopedBars.slice(0, 6).map((bar) => bar.high)), 7622.25);
+assert.equal(Math.min(...watchlistScopedBars.slice(0, 6).map((bar) => bar.low)), 7574);
 assert.deepEqual(resolveScannerDiscordWebhookUrl({
   DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
   SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',
