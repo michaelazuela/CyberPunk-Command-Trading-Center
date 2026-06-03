@@ -56,6 +56,7 @@ import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
+import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract';
 import {
   compactDiscordSummary,
   morningWatchlistDiscordSummary,
@@ -731,6 +732,7 @@ async function writeScannerDiscordAuditLog(args: {
     attachments: {
       chartMarkup: args.chartMarkup,
       priceLevelMap: args.levelMap,
+      ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
   }, null, 2));
   return file;

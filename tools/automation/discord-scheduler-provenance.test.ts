@@ -8,7 +8,9 @@ import {
   loadExecutableScannerAuditFromFile,
   loadExecutableScannerAuditSummaries,
   provenanceLines,
+  validateExecutableScannerAuditVisualsForRepost,
 } from './discord-scheduler-provenance';
+import { DISCORD_TRADE_PLAN_VISUAL_CONTRACT } from './discord-visual-contract';
 
 const auditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'discord-scheduler-provenance-'));
 const liveAuditPath = path.join(auditDir, 'scanner-morning-2026-06-02-MES-MORNING-20260602-140348.json');
@@ -48,6 +50,50 @@ await fs.writeFile(liveAuditPath, `${JSON.stringify({
   attachments: {
     chartMarkup: 'chart.png',
     priceLevelMap: 'level-map.png',
+    renderContract: DISCORD_TRADE_PLAN_VISUAL_CONTRACT,
+    generatedBy: 'chart-markup-renderer',
+    generatedAt: '2026-06-02T14:03:48.573Z',
+    planVersionId: 'MORNING-20260602-140348',
+  },
+}, null, 2)}\n`, 'utf8');
+
+const staleAuditPath = path.join(auditDir, 'legacy-stale-live-scanner-audit.json');
+await fs.writeFile(staleAuditPath, `${JSON.stringify({
+  createdAt: '2026-06-02T14:03:48.573Z',
+  source: 'live-scanner',
+  session: 'morning',
+  tradeDate: '2026-06-02',
+  instrument: 'MES',
+  planVersionId: 'MORNING-20260602-140348-STALE',
+  candidate: {
+    setupType: 'TurtleSoup',
+    direction: 'LONG',
+    entry: 7603.25,
+    stop: 7599,
+    target1: 7611.75,
+    target2: 7620,
+    riskPoints: 4.25,
+    evidence: [],
+    missingEvidence: [],
+    executionStatus: 'Executable',
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'Verify completed 5M trigger.',
+    reducedRiskPlan: null,
+  },
+  normalizedPlan: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'LONG',
+    entry: 7603.25,
+    stop: 7599,
+    t1: 7609.75,
+    t2: 7611.75,
+    riskPoints: 4.25,
+  },
+  attachments: {
+    chartMarkup: 'old-chart.png',
+    priceLevelMap: 'old-level-map.png',
   },
 }, null, 2)}\n`, 'utf8');
 
@@ -75,10 +121,18 @@ assert.equal(summaries[0].planVersionId, 'MORNING-20260602-140348');
 assert.equal(summaries[0].entry, 7603.25);
 assert.equal(summaries[0].t1, 7609.75);
 assert.equal(summaries[0].attachments.chartMarkup, 'chart.png');
+assert.equal(summaries[0].attachments.renderContract, DISCORD_TRADE_PLAN_VISUAL_CONTRACT);
 
 const liveAudit = await loadExecutableScannerAuditFromFile(liveAuditPath);
 assert.equal(liveAudit.planVersionId, 'MORNING-20260602-140348');
 assert.equal(liveAudit.normalizedPlan?.canExecute, true);
+assert.deepEqual(validateExecutableScannerAuditVisualsForRepost(liveAudit), ['chart.png', 'level-map.png']);
+
+const staleAudit = await loadExecutableScannerAuditFromFile(staleAuditPath);
+assert.throws(
+  () => validateExecutableScannerAuditVisualsForRepost(staleAudit),
+  /missing the current visual render contract/,
+);
 
 const blocked = await evaluateSchedulerReplayProvenance({
   auditDir,

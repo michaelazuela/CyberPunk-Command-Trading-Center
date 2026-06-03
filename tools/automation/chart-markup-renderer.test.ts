@@ -209,12 +209,13 @@ try {
   assert.ok(chartHtml.includes('Action: wait for 5M trigger'));
   assert.ok(chartHtml.includes('Risk: <tspan fill="#f8fafc">5.00 pts</tspan>'));
   assert.ok(chartHtml.includes('Contracts: <tspan fill="#f8fafc">N/A</tspan>'));
-  assert.ok(chartHtml.includes('T1: <tspan fill="#facc15">1.3R</tspan>'));
-  assert.ok(chartHtml.includes('T2: <tspan fill="#facc15">2.4R</tspan>'));
+  assert.ok(chartHtml.includes('T1: <tspan fill="#facc15">1.5R</tspan>'));
+  assert.ok(chartHtml.includes('T2: <tspan fill="#facc15">2.0R</tspan>'));
   assert.ok(chartHtml.includes('LONG ENTRY ZONE'));
   assert.ok(chartHtml.includes('7080.25'));
   assert.ok(chartHtml.includes('7075.25'));
-  assert.ok(chartHtml.includes('7086.50'));
+  assert.ok(chartHtml.includes('7087.75'));
+  assert.ok(chartHtml.includes('7090.25'));
   assert.ok(chartHtml.includes('7092.25'));
   assert.ok(!chartHtml.includes('canExecute'));
   assert.ok(!chartHtml.includes('noTradeReason'));
@@ -273,15 +274,13 @@ try {
   assert.ok(levelMapHtml.includes('STOP'));
   assert.ok(levelMapHtml.includes('T1 1.5R'));
   assert.ok(levelMapHtml.includes('T2 2.0R'));
-  assert.ok(levelMapHtml.includes('LQ1'));
-  assert.ok(levelMapHtml.includes('LQ2'));
-  assert.ok(levelMapHtml.includes('OBSTACLE'));
   assert.ok(levelMapHtml.includes('RUNNER'));
+  assert.ok(levelMapHtml.includes('STRETCH'));
+  assert.ok(levelMapHtml.includes('OBSTACLE'));
   assert.ok(levelMapHtml.includes('Risk 5.00 pts | Dollars N/A | Contracts N/A'));
   assert.ok(levelMapHtml.includes('Obstacle 7084.75'));
-  assert.ok(levelMapHtml.includes('LQ1 7095.25'));
-  assert.ok(levelMapHtml.includes('LQ2 7098.50'));
-  assert.ok(levelMapHtml.includes('Runner 7101.25'));
+  assert.ok(levelMapHtml.includes('Runner 7092.25'));
+  assert.ok(levelMapHtml.includes('Stretch 7101.25'));
   assert.ok(!levelMapHtml.includes('canExecute'));
   assert.ok(!levelMapHtml.includes('noTradeReason'));
 
@@ -335,7 +334,8 @@ try {
   assert.ok(missingLevelsHtml.includes('Entry Zone: <tspan fill="#4ade80">N/A - N/A</tspan>'));
   assert.ok(missingLevelsHtml.includes('Stop: <tspan fill="#ef4444">N/A</tspan>'));
   assert.ok(missingLevelsHtml.includes('Risk: <tspan fill="#f97316">N/A</tspan>'));
-  assert.ok(!missingLevelsHtml.includes('0.00'));
+  assert.ok(!missingLevelsHtml.includes('>0.00<'));
+  assert.ok(!missingLevelsHtml.includes('0.00</tspan>'));
 
   const output = await renderChartMarkup({
     chartContext,

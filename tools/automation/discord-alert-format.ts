@@ -190,6 +190,46 @@ function appTargetLevels(candidate: SetupCandidate, normalized: CompactNormalize
   };
 }
 
+function isMeaningfulExtension(direction: SetupCandidate['direction'], price: number | null | undefined, base: number | null | undefined): price is number {
+  if (typeof price !== 'number' || !Number.isFinite(price) || typeof base !== 'number' || !Number.isFinite(base)) return false;
+  return direction === 'SHORT' ? price < base - 0.01 : price > base + 0.01;
+}
+
+function firstMeaningfulExtension(
+  direction: SetupCandidate['direction'],
+  base: number | null | undefined,
+  prices: Array<number | null | undefined>,
+): number | null {
+  for (const price of prices) {
+    if (isMeaningfulExtension(direction, price, base)) return price;
+  }
+  return null;
+}
+
+function compactTargetLadderLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
+  const appTargets = appTargetLevels(candidate, normalized);
+  const targetPlan = candidate.targetObjectivePlan;
+  const runner = firstMeaningfulExtension(candidate.direction, appTargets.target2, [
+    candidate.target2,
+    targetPlan?.liquidityTarget1?.price,
+    targetPlan?.nearestLiquidityTarget?.price,
+    targetPlan?.liquidityTarget2?.price,
+    targetPlan?.liquidityRunnerTarget?.price,
+    targetPlan?.runnerTarget?.price,
+  ]);
+  const stretch = firstMeaningfulExtension(candidate.direction, runner || appTargets.target2, [
+    targetPlan?.liquidityRunnerTarget?.price,
+    targetPlan?.runnerTarget?.price,
+  ]);
+  return [
+    'Targets:',
+    `T1: ${priceLine(appTargets.target1)} - scale/secure`,
+    `T2: ${priceLine(appTargets.target2)} - base exit`,
+    ...(runner ? [`Runner: ${priceLine(runner)} - extension if T2 clears`] : []),
+    ...(stretch ? [`Stretch: ${priceLine(stretch)} - trail only if structure keeps delivering`] : []),
+  ];
+}
+
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
   if (override) return override;
   if (getEffectiveCanExecute(normalized)) return 'Executable';
@@ -236,24 +276,9 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     'Plan:',
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
-    `App T1 1.5R: ${priceLine(levels.target1)}`,
-    `App T2 2.0R: ${priceLine(levels.target2)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
-  ];
-}
-
-function compactLiquidityObjectiveLines(candidate: SetupCandidate): string[] {
-  const targetPlan = candidate.targetObjectivePlan;
-  if (!targetPlan) return [];
-  const lq1 = targetPlan.liquidityTarget1 || targetPlan.nearestLiquidityTarget || null;
-  const lq2 = targetPlan.liquidityTarget2 || null;
-  const runner = targetPlan.liquidityRunnerTarget || targetPlan.runnerTarget || null;
-  if (!lq1 && !lq2 && !runner) return [];
-  return [
-    'LQ / Runner Objectives:',
-    `LQ1: ${lq1 ? `${lq1.label} ${priceLine(lq1.price)}` : 'N/A'}`,
-    `LQ2: ${lq2 ? `${lq2.label} ${priceLine(lq2.price)}` : 'N/A'}`,
-    `Runner: ${runner ? `${runner.label} ${priceLine(runner.price)}` : 'N/A'}`,
+    '',
+    ...compactTargetLadderLines(candidate, normalized),
   ];
 }
 
@@ -388,7 +413,6 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
   const htfLines = compactHtfSufficiencyLines(bestCandidate);
 
-  const liquidityObjectiveLines = bestCandidate ? compactLiquidityObjectiveLines(bestCandidate) : [];
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
         designerRecommendation.headlineRecommendation,
@@ -396,8 +420,6 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         '',
         ...compactPlanLines(bestCandidate, args.normalized),
         '',
-        ...liquidityObjectiveLines,
-        ...(liquidityObjectiveLines.length ? [''] : []),
         ...riskLines,
         ...(riskLines.length ? [''] : []),
         ...htfLines,

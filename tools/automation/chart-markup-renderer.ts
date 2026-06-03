@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetsFromEntryStop } from '../../src/config/tradeRules';
 import type { ChartCandleFact, ChartContext, DecisionQualityScoreItem, DisplacementCandleFact, FvgZoneFact, LiquidityEventFact, ReclaimEventFact, SetupCandidate } from '../../src/types';
 import { professionalCandidateModelLabel } from './professional-report-language';
 import { renderHtmlToApprovedPng, validatePngFile } from './render-html-to-png';
@@ -139,12 +140,14 @@ interface PlanRenderModel {
   stop: number | null;
   t1: number | null;
   t2: number | null;
-  liquidity: number | null;
+  runner: number | null;
+  stretch: number | null;
   sweep: number | null;
   risk: number | null;
   r1: number | null;
   r2: number | null;
-  liquidityR: number | null;
+  runnerR: number | null;
+  stretchR: number | null;
   sweepEvent: LiquidityEventFact | null;
   reclaimEvent: ReclaimEventFact | null;
   displacementEvent: DisplacementCandleFact | null;
@@ -167,6 +170,22 @@ function rMultiple(direction: 'LONG' | 'SHORT', entry: number | null, stop: numb
   if (risk <= 0) return null;
   const reward = direction === 'LONG' ? target - entry : entry - target;
   return reward / risk;
+}
+
+function isMeaningfulExtension(direction: 'LONG' | 'SHORT', price: number | null | undefined, base: number | null | undefined): price is number {
+  if (!isPrice(price) || !isPrice(base)) return false;
+  return direction === 'SHORT' ? price < base - 0.01 : price > base + 0.01;
+}
+
+function firstMeaningfulExtension(
+  direction: 'LONG' | 'SHORT',
+  base: number | null | undefined,
+  prices: Array<number | null | undefined>,
+): number | null {
+  for (const price of prices) {
+    if (isMeaningfulExtension(direction, price, base)) return price;
+  }
+  return null;
 }
 
 function targetLooksStale(price: number | null, candles: PlanRenderModel['candles'], risk: number | null): boolean {
@@ -195,12 +214,26 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const displacementEvent = matchingDisplacement(input.chartContext, candidate);
   const entry = isPrice(candidate.entry) ? candidate.entry : null;
   const stop = isPrice(candidate.stop) ? candidate.stop : null;
-  const t1 = isPrice(candidate.target1) ? candidate.target1 : null;
-  const t2 = isPrice(candidate.target2) ? candidate.target2 : null;
-  const liquidity = candidate.targetObjectivePlan?.liquidityTarget1?.price ||
-    candidate.targetObjectivePlan?.nearestLiquidityTarget?.price ||
-    candidate.targetObjectivePlan?.liquidityRunnerTarget?.price ||
-    null;
+  const appTargets = targetsFromEntryStop(direction, entry, stop);
+  const t1 = appTargets.target1;
+  const t2 = appTargets.target2;
+  const appTargetsValid = isPrice(entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
+  const runner = appTargetsValid
+    ? firstMeaningfulExtension(direction, t2, [
+        candidate.target2,
+        candidate.targetObjectivePlan?.liquidityTarget1?.price,
+        candidate.targetObjectivePlan?.nearestLiquidityTarget?.price,
+        candidate.targetObjectivePlan?.liquidityTarget2?.price,
+        candidate.targetObjectivePlan?.liquidityRunnerTarget?.price,
+        candidate.targetObjectivePlan?.runnerTarget?.price,
+      ])
+    : null;
+  const stretch = appTargetsValid
+    ? firstMeaningfulExtension(direction, runner || t2, [
+        candidate.targetObjectivePlan?.liquidityRunnerTarget?.price,
+        candidate.targetObjectivePlan?.runnerTarget?.price,
+      ])
+    : null;
   const risk = isPrice(entry) && isPrice(stop) ? Math.abs(entry - stop) : null;
   const entryLow = fvg && isPrice(fvg.lower) ? fvg.lower : isPrice(entry) && isPrice(risk) ? entry - risk * 0.25 : entry;
   const entryHigh = fvg && isPrice(fvg.upper) ? fvg.upper : isPrice(entry) && isPrice(risk) ? entry + risk * 0.25 : entry;
@@ -214,7 +247,7 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   if (!isPrice(stop)) messages.push('Review Required — Stop missing.');
   if (!isPrice(t1) || !isPrice(t2)) messages.push('Review Required — Target data missing.');
   if (nearlyEqual(t1, t2)) messages.push('Review Required — T1 and T2 are identical.');
-  if (targetLooksStale(t1, candles, risk) || targetLooksStale(t2, candles, risk) || targetLooksStale(liquidity, candles, risk)) {
+  if (targetLooksStale(t1, candles, risk) || targetLooksStale(t2, candles, risk) || targetLooksStale(runner, candles, risk) || targetLooksStale(stretch, candles, risk)) {
     messages.push('Target Data Error — Target appears stale or invalid.');
   }
   if (isPrice(entry) && isPrice(stop)) {
@@ -237,7 +270,7 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     entryHigh,
     stop,
     sweep,
-    ...(messages.some((message) => message.includes('Target Data Error')) ? [] : [t1, t2, liquidity]),
+    ...(messages.some((message) => message.includes('Target Data Error')) ? [] : [t1, t2, runner, stretch]),
   ].filter(isPrice);
 
   return {
@@ -253,12 +286,14 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     stop,
     t1,
     t2,
-    liquidity: isPrice(liquidity) ? liquidity : null,
+    runner,
+    stretch,
     sweep,
     risk,
     r1: rMultiple(direction, entry, stop, t1),
     r2: rMultiple(direction, entry, stop, t2),
-    liquidityR: rMultiple(direction, entry, stop, isPrice(liquidity) ? liquidity : null),
+    runnerR: rMultiple(direction, entry, stop, runner),
+    stretchR: rMultiple(direction, entry, stop, stretch),
     sweepEvent,
     reclaimEvent,
     displacementEvent,
@@ -472,7 +507,7 @@ function renderRiskSummary(model: PlanRenderModel): string {
     <text x="46" y="382" class="small">Risk: <tspan fill="${model.validationSeverity === 'ok' ? '#f8fafc' : '#f97316'}">${model.risk ? `~${model.risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
     <text x="46" y="414" class="small">T1: <tspan fill="${targetDataError ? '#ef4444' : '#facc15'}">${money(model.t1)}${targetDataError ? ' requires review' : isPrice(model.r1) ? ` (${model.r1.toFixed(1)}R)` : ''}</tspan></text>
     <text x="46" y="442" class="small">T2: <tspan fill="${targetDataError ? '#ef4444' : '#facc15'}">${money(model.t2)}${targetDataError ? ' requires review' : isPrice(model.r2) ? ` (${model.r2.toFixed(1)}R)` : ''}</tspan></text>
-    <text x="46" y="462" class="small">Liquidity: <tspan fill="${targetDataError ? '#ef4444' : '#2f8cff'}">${money(model.liquidity)}${targetDataError ? ' requires review' : isPrice(model.liquidityR) ? ` (${model.liquidityR.toFixed(1)}R)` : ''}</tspan></text>
+    <text x="46" y="462" class="small">Runner: <tspan fill="${targetDataError ? '#ef4444' : '#38bdf8'}">${money(model.runner)}${targetDataError ? ' requires review' : isPrice(model.runnerR) ? ` (${model.runnerR.toFixed(1)}R)` : ''}</tspan></text>
   `;
 }
 
@@ -785,7 +820,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     stop,
     t1,
     t2,
-    liquidity,
+    runner,
+    stretch,
     sweep,
     safeChartPrices,
     contextBias,
@@ -820,6 +856,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       : '';
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
   const managedLines = renderManagedLines([
+    ...(targetsValidForChart && isPrice(stretch) ? [{ label: 'Stretch', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
+    ...(targetsValidForChart && isPrice(runner) ? [{ label: 'Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
     { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
     { label: 'Stop', price: stop, color: '#ef4444', width: 3 },
     targetsValidForChart && sameT1T2
@@ -934,9 +972,8 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const current = latestClose(plan);
   const targetPlan = plan.candidate.targetObjectivePlan;
   const levelRowSource: Array<{ key: string; label: string; price: number | null | undefined; color: string; dash?: string }> = [
-    { key: 'runner', label: 'RUNNER', price: validTargets ? targetPlan?.liquidityRunnerTarget?.price || targetPlan?.runnerTarget?.price : null, color: '#38bdf8', dash: '10 8' },
-    { key: 'lq2', label: 'LQ2', price: validTargets ? targetPlan?.liquidityTarget2?.price : null, color: '#2f8cff', dash: '8 7' },
-    { key: 'lq1', label: 'LQ1', price: validTargets ? targetPlan?.liquidityTarget1?.price || targetPlan?.nearestLiquidityTarget?.price : null, color: '#2f8cff' },
+    { key: 'stretch', label: 'STRETCH', price: validTargets ? plan.stretch : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'runner', label: 'RUNNER', price: validTargets ? plan.runner : null, color: '#38bdf8', dash: '10 8' },
     { key: 't2', label: nearlyEqual(plan.t1, plan.t2) ? 'T1/T2' : 'T2 2.0R', price: validTargets ? plan.t2 : null, color: '#facc15', dash: '8 7' },
     { key: 't1', label: 'T1 1.5R', price: validTargets && !nearlyEqual(plan.t1, plan.t2) ? plan.t1 : null, color: '#facc15', dash: '8 7' },
     { key: 'obstacle', label: 'OBSTACLE', price: validTargets ? targetPlan?.obstacleTarget1?.price || targetPlan?.nearestObstacleTarget?.price : null, color: '#f97316', dash: '6 6' },
@@ -961,7 +998,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const entryTopY = isPrice(plan.entryHigh) ? y(plan.entryHigh) : isPrice(plan.entry) ? y(plan.entry) : null;
   const entryBottomY = isPrice(plan.entryLow) ? y(plan.entryLow) : isPrice(plan.entry) ? y(plan.entry) : null;
   const stopY = isPrice(plan.stop) ? y(plan.stop) : null;
-  const rewardEnd = validTargets && isPrice(plan.liquidity) ? y(plan.liquidity) : validTargets && isPrice(plan.t2) ? y(plan.t2) : null;
+  const rewardEnd = validTargets && isPrice(plan.stretch) ? y(plan.stretch) : validTargets && isPrice(plan.runner) ? y(plan.runner) : validTargets && isPrice(plan.t2) ? y(plan.t2) : null;
   const entryMid = isPrice(entryTopY) && isPrice(entryBottomY) ? (entryTopY + entryBottomY) / 2 : null;
   const riskZone = isPrice(entryMid) && isPrice(stopY)
     ? `<rect x="${map.left}" y="${Math.min(entryMid, stopY)}" width="${map.right - map.left}" height="${Math.max(8, Math.abs(stopY - entryMid))}" fill="#ef4444" opacity=".13" />`
@@ -1014,9 +1051,8 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
     : 'Targets require validation before execution.';
   const contextNote = [
     targetPlan?.obstacleTarget1 ? `Obstacle ${money(targetPlan.obstacleTarget1.price)}` : null,
-    targetPlan?.liquidityTarget1 ? `LQ1 ${money(targetPlan.liquidityTarget1.price)}` : null,
-    targetPlan?.liquidityTarget2 ? `LQ2 ${money(targetPlan.liquidityTarget2.price)}` : null,
-    targetPlan?.liquidityRunnerTarget || targetPlan?.runnerTarget ? `Runner ${money((targetPlan.liquidityRunnerTarget || targetPlan.runnerTarget)?.price)}` : null,
+    isPrice(plan.runner) ? `Runner ${money(plan.runner)}` : null,
+    isPrice(plan.stretch) ? `Stretch ${money(plan.stretch)}` : null,
   ].filter(Boolean).join(' | ') || 'No extra liquidity/obstacle context provided.';
   const invalidationNote = compact(plan.candidate.invalidation || 'Invalidation follows protected structure stop.', 96);
 

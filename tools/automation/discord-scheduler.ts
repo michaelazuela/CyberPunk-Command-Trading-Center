@@ -19,6 +19,7 @@ import {
   type MacroCalendarEvent,
 } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
+import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract';
 import {
   compactDiscordSummary,
   validateDiscordPayload,
@@ -36,6 +37,7 @@ import {
   evaluateSchedulerReplayProvenance,
   loadExecutableScannerAuditFromFile,
   provenanceLines,
+  validateExecutableScannerAuditVisualsForRepost,
   type SchedulerReplayProvenanceResult,
 } from './discord-scheduler-provenance';
 
@@ -975,6 +977,7 @@ async function writeDiscordAuditLog(args: {
     attachments: {
       chartMarkup: args.chartMarkup,
       priceLevelMap: args.levelMap,
+      ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
   }, null, 2));
   return file;
@@ -1244,7 +1247,7 @@ async function runRepostScannerAudit(auditFile: string, dryRun: boolean): Promis
   if (!audit.tradeDate || !audit.planVersionId || !audit.candidate || !audit.normalizedPlan) {
     throw new Error('Scanner audit repost blocked: audit is missing required plan fields.');
   }
-  const files = [audit.attachments.chartMarkup, audit.attachments.priceLevelMap].filter((file): file is string => Boolean(file));
+  const files = validateExecutableScannerAuditVisualsForRepost(audit);
   const payload = await formatPlanPayload({
     job: audit.session,
     tradeDate: audit.tradeDate,

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { DISCORD_TRADE_PLAN_VISUAL_CONTRACT } from './discord-visual-contract';
 
 export type SchedulerReplayProvenanceMode = 'live_scanner_audit' | 'post_facto_scheduler_replay';
 export type SchedulerReplayProvenanceStatus = 'clear' | 'blocked_contradicts_live_executable' | 'allowed_post_facto';
@@ -23,6 +24,10 @@ export interface ExecutableScannerAuditSummary {
   attachments: {
     chartMarkup: string | null;
     priceLevelMap: string | null;
+    renderContract: string | null;
+    generatedBy: string | null;
+    generatedAt: string | null;
+    planVersionId: string | null;
   };
 }
 
@@ -72,8 +77,29 @@ function scannerAuditSummary(auditFile: string, audit: any): ExecutableScannerAu
     attachments: {
       chartMarkup: readString(audit?.attachments?.chartMarkup),
       priceLevelMap: readString(audit?.attachments?.priceLevelMap),
+      renderContract: readString(audit?.attachments?.renderContract),
+      generatedBy: readString(audit?.attachments?.generatedBy),
+      generatedAt: readString(audit?.attachments?.generatedAt),
+      planVersionId: readString(audit?.attachments?.planVersionId),
     },
   };
+}
+
+export function validateExecutableScannerAuditVisualsForRepost(audit: ExecutableScannerAuditSummary): string[] {
+  const files = [audit.attachments.chartMarkup, audit.attachments.priceLevelMap].filter((file): file is string => Boolean(file));
+  if (files.length !== 2) {
+    throw new Error('Scanner audit repost blocked: executable trade-plan reposts require both current chart markup and price level map attachments.');
+  }
+  if (audit.attachments.renderContract !== DISCORD_TRADE_PLAN_VISUAL_CONTRACT) {
+    throw new Error(`Scanner audit repost blocked: chart attachments are missing the current visual render contract (${DISCORD_TRADE_PLAN_VISUAL_CONTRACT}). Regenerate the chart attachments before reposting.`);
+  }
+  if (audit.attachments.generatedBy !== 'chart-markup-renderer') {
+    throw new Error('Scanner audit repost blocked: chart attachments are missing chart-markup-renderer provenance.');
+  }
+  if (audit.attachments.planVersionId !== audit.planVersionId) {
+    throw new Error('Scanner audit repost blocked: chart attachment provenance does not match the live scanner audit planVersionId.');
+  }
+  return files;
 }
 
 export async function loadExecutableScannerAuditSummaries(args: {

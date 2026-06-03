@@ -187,11 +187,10 @@ assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatte
 assertNoExecutablePayloadKeys(morning);
 assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
-assert.ok(flattenDiscordPayloadText(morning).includes('App T1 1.5R:'));
-assert.ok(flattenDiscordPayloadText(morning).includes('App T2 2.0R:'));
-assert.ok(flattenDiscordPayloadText(morning).includes('LQ / Runner Objectives:'));
-assert.equal(/^T1:/m.test(flattenDiscordPayloadText(morning)), false);
-assert.equal(/^T2:/m.test(flattenDiscordPayloadText(morning)), false);
+assert.ok(flattenDiscordPayloadText(morning).includes('Targets:'));
+assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secure'));
+assert.ok(flattenDiscordPayloadText(morning).includes('T2: 5328.00 - base exit'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extension if T2 clears'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
@@ -217,6 +216,46 @@ assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(lunch.content?.includes('[PM PLAN] MES - SHORT CONDITIONAL'));
 assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
+
+const extensionCandidate = sampleCandidate('LONG');
+extensionCandidate.entry = 7603.25;
+extensionCandidate.stop = 7599;
+extensionCandidate.riskPoints = 4.25;
+extensionCandidate.target1 = 7611.75;
+extensionCandidate.target2 = 7620;
+extensionCandidate.targetObjectivePlan = {
+  ...extensionCandidate.targetObjectivePlan!,
+  liquidityTarget1: { ...extensionCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Lunch/PM high', price: 7604.75 },
+  liquidityTarget2: { ...extensionCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'London high', price: 7610.5 },
+  liquidityRunnerTarget: { ...extensionCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Full ETH high', price: 7632.75 },
+};
+const extensionPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-02',
+  instrument: 'MES',
+  planVersionId: 'TARGET-LADDER-TEST',
+  normalized: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+    t1: 7609.75,
+    t2: 7611.75,
+  },
+  candidates: [extensionCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+validateDiscordPayload(extensionPayload, ['chart-plan.png', 'price-level-map.png']);
+const extensionText = flattenDiscordPayloadText(extensionPayload);
+assert.ok(extensionText.includes('T1: 7609.75 - scale/secure'));
+assert.ok(extensionText.includes('T2: 7611.75 - base exit'));
+assert.ok(extensionText.includes('Runner: 7620.00 - extension if T2 clears'));
+assert.ok(extensionText.includes('Stretch: 7632.75 - trail only if structure keeps delivering'));
+assert.equal(extensionText.includes('LQ / Runner Objectives:'), false);
+assert.equal(extensionText.includes('App T1'), false);
+assert.equal(extensionText.includes('App T2'), false);
 
 const scanner = compactDiscordSummary({
   session: 'morning',
