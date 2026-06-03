@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { cn, getImageFromClipboard } from '../lib/utils';
 import { reviewTradeProof } from '../lib/gemini';
 import { uploadTradeProof } from '../lib/cloudStorage';
+import { getModelForRoute } from '../lib/modelRouter';
 import { supabase } from '../lib/supabase';
 import { Trade } from '../types';
 import { NormalizedTradePlan } from '../lib/tradePlan';
@@ -106,9 +107,7 @@ export default function TradeProofPanel({ manualOutcome, executionQuantity, onSa
     setIsReviewing(true);
     setReviewError(null);
     try {
-      // Use dynamic import or existing getModelForRoute logic, wait, we have modelConfig
       // The instruction specifies using the model router with 'trade_confirmation' or 'proof_review' alias
-      const { getModelForRoute } = await import('../lib/modelRouter');
       const modelToUse = getModelForRoute('proof_review' as any, modelConfig);
       
       const claimedResultStr = manualOutcome === 'SUCCESS' ? 'SUCCESSFUL' : 'FAILED';

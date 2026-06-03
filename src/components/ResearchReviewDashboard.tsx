@@ -9,7 +9,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { resolveDashboardReviewPackSource } from '../lib/reviewPackDashboardSource';
+import {
+  resolveDashboardReviewPackSource,
+  resolveDashboardReviewPackSourceAsync,
+  type DashboardReviewPackSource,
+} from '../lib/reviewPackDashboardSource';
 import {
   adaptReviewAgentOutputToVisualization,
   type ReviewVisualizationRow,
@@ -21,6 +25,7 @@ interface ResearchReviewDashboardProps {
   sourceLabel?: string;
   manifest?: unknown;
   packModules?: Record<string, unknown>;
+  packModuleLoaders?: Record<string, () => Promise<unknown>>;
   manifestModules?: Record<string, unknown>;
 }
 
@@ -35,11 +40,12 @@ export default function ResearchReviewDashboard({
   sourceLabel,
   manifest,
   packModules,
+  packModuleLoaders,
   manifestModules,
 }: ResearchReviewDashboardProps) {
-  const source = useMemo(() => (
+  const providedSource = useMemo<DashboardReviewPackSource | null>(() => (
     reviewData === undefined
-      ? resolveDashboardReviewPackSource({ manifest, packModules, manifestModules })
+      ? null
       : {
         reviewData,
         sourceLabel: sourceLabel || 'Provided review data',
@@ -51,16 +57,51 @@ export default function ResearchReviewDashboard({
         reviewPackId: null,
         warnings: [],
       }
-  ), [manifest, manifestModules, packModules, reviewData, sourceLabel]);
+  ), [reviewData, sourceLabel]);
+  const [resolvedSource, setResolvedSource] = React.useState<DashboardReviewPackSource>(
+    () => providedSource || resolveDashboardReviewPackSource({ manifest, packModules, manifestModules }),
+  );
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (providedSource) {
+      setResolvedSource(providedSource);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    resolveDashboardReviewPackSourceAsync({ manifest, packModules, packModuleLoaders, manifestModules })
+      .then((source) => {
+        if (!cancelled) setResolvedSource(source);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const fallback = resolveDashboardReviewPackSource({ manifest, packModules, manifestModules });
+          setResolvedSource({
+            ...fallback,
+            warnings: [
+              ...fallback.warnings,
+              `Review pack dashboard load failed: ${error instanceof Error ? error.message : String(error)}`,
+            ],
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [manifest, manifestModules, packModuleLoaders, packModules, providedSource]);
   const data = useMemo(
     () => {
-      const visualization = adaptReviewAgentOutputToVisualization(source.reviewData, source.sourceLabel);
+      const visualization = adaptReviewAgentOutputToVisualization(resolvedSource.reviewData, resolvedSource.sourceLabel);
       return {
         ...visualization,
-        warnings: [...source.warnings, ...visualization.warnings],
+        warnings: [...resolvedSource.warnings, ...visualization.warnings],
       };
     },
-    [source],
+    [resolvedSource],
   );
   const hasResearchQualityScores = data.researchQualityScoreBySample.some((row) => row.researchQualityScore !== null);
 
@@ -83,11 +124,11 @@ export default function ResearchReviewDashboard({
           </p>
         </div>
         <div className="grid gap-1 text-right text-[10px] font-mono text-[var(--txt3)]">
-          <span>Instrument: {source.instrument || data.instrument}</span>
-          <span className="max-w-[520px] truncate" title={source.selectedPackLabel}>Pack: {source.selectedPackLabel}</span>
-          <span>Generated: {source.generatedAt || data.generatedAt ? new Date(source.generatedAt || data.generatedAt || '').toLocaleString() : 'unavailable'}</span>
-          <span>Samples: {source.sampleCount ?? data.summary.totalReviewedSamples}</span>
-          <span>Source: {source.sourceAgent || 'review-agent output'}</span>
+          <span>Instrument: {resolvedSource.instrument || data.instrument}</span>
+          <span className="max-w-[520px] truncate" title={resolvedSource.selectedPackLabel}>Pack: {resolvedSource.selectedPackLabel}</span>
+          <span>Generated: {resolvedSource.generatedAt || data.generatedAt ? new Date(resolvedSource.generatedAt || data.generatedAt || '').toLocaleString() : 'unavailable'}</span>
+          <span>Samples: {resolvedSource.sampleCount ?? data.summary.totalReviewedSamples}</span>
+          <span>Source: {resolvedSource.sourceAgent || 'review-agent output'}</span>
         </div>
       </div>
 
@@ -124,7 +165,7 @@ export default function ResearchReviewDashboard({
         </div>
       )}
 
-      {!source.reviewData && (
+      {!resolvedSource.reviewData && (
         <div className="mt-3 border border-[var(--red)]/25 bg-[var(--red)]/5 p-3 text-[11px] font-mono text-[var(--red)]">
           No latest review pack is available for the dashboard. Generate a research sample review pack or update the latest-review-pack manifest.
         </div>

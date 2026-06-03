@@ -36,7 +36,7 @@ try {
   };
 
   const longComponents = buildOutcomeComponents({ ...baseArgs, direction: 'LONG' });
-  assert.deepEqual(labels(longComponents), ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
+  assert.deepEqual(labels(longComponents), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
   assert.ok(!labels(longComponents).includes('Short T1 Hit'));
   assert.ok(!labels(longComponents).includes('Short T2 Hit'));
   assert.ok(urls(longComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
@@ -50,21 +50,29 @@ try {
   assert.equal(longPayloads[0].pp, true);
   assert.equal(longPayloads[0].hit, 'T1');
   assert.equal(longPayloads[1].hit, 'T2');
-  assert.equal(longPayloads[2].hit, 'STOP');
+  assert.equal(longPayloads[2].hit, 'RUNNER');
+  assert.equal(longPayloads[2].o, 'long_runner_hit');
+  assert.equal(longPayloads[3].hit, 'STRETCH');
+  assert.equal(longPayloads[3].o, 'long_stretch_hit');
+  assert.equal(longPayloads[4].hit, 'STOP');
   assert.equal('pm' in longPayloads[0], false);
-  assert.equal(longPayloads[5].tr, 'missed_trade');
-  assert.equal(longPayloads[5].tt, false);
-  assert.equal(longPayloads[5].pp, false);
-  assert.equal(longPayloads[4].tr, 'no_trade');
-  assert.equal(longPayloads[4].dir, 'NONE');
-  assert.equal(longPayloads[4].pp, false);
-  assert.equal('pm' in longPayloads[4], false);
+  assert.equal(longPayloads[7].tr, 'missed_trade');
+  assert.equal(longPayloads[7].tt, false);
+  assert.equal(longPayloads[7].pp, false);
+  assert.equal(longPayloads[6].tr, 'no_trade');
+  assert.equal(longPayloads[6].dir, 'NONE');
+  assert.equal(longPayloads[6].pp, false);
+  assert.equal('pm' in longPayloads[6], false);
   assert.ok(urls(longComponents).every((url) => url.length <= 512), 'Discord link button URLs must stay within Discord limits.');
 
   const shortComponents = buildOutcomeComponents({ ...baseArgs, direction: 'SHORT' });
-  assert.deepEqual(labels(shortComponents), ['Short T1 Hit', 'Short T2 Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
+  assert.deepEqual(labels(shortComponents), ['Short T1 Hit', 'Short T2 Hit', 'Short Runner Hit', 'Short Stretch Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
   assert.ok(!labels(shortComponents).includes('Long T1 Hit'));
   assert.ok(!labels(shortComponents).includes('Long T2 Hit'));
+  const shortPayloads = urls(shortComponents).map(decodeOutcomePayload);
+  assert.equal(shortPayloads[2].dir, 'SHORT');
+  assert.equal(shortPayloads[2].hit, 'RUNNER');
+  assert.equal(shortPayloads[3].hit, 'STRETCH');
   assert.ok(urls(shortComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
 
   assert.equal(buildOutcomeComponents({ ...baseArgs, direction: null }), undefined);

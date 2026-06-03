@@ -140,6 +140,60 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, '/');
+
+            if (normalizedId.includes('/node_modules/')) {
+              if (normalizedId.includes('/react/') || normalizedId.includes('/react-dom/')) {
+                return 'vendor-react';
+              }
+              if (normalizedId.includes('/@supabase/')) {
+                return 'vendor-supabase';
+              }
+              if (normalizedId.includes('/lucide-react/')) {
+                return 'vendor-icons';
+              }
+              if (normalizedId.includes('/motion/')) {
+                return 'vendor-motion';
+              }
+              return undefined;
+            }
+
+            if (normalizedId.includes('/src/components/AdminDashboard')) {
+              return 'admin-dashboard';
+            }
+            if (normalizedId.includes('/src/components/DataHealthPanel')) {
+              return 'admin-data-tools';
+            }
+            if (
+              normalizedId.includes('/src/components/ResearchReviewDashboard') ||
+              normalizedId.includes('/src/lib/reviewPackDashboardSource') ||
+              normalizedId.includes('/src/lib/reviewResultsVisualization')
+            ) {
+              return 'admin-data-tools';
+            }
+            if (
+              normalizedId.includes('/src/components/SessionLab') ||
+              normalizedId.includes('/src/components/ReplayLab')
+            ) {
+              return 'workflow-labs';
+            }
+            if (
+              normalizedId.includes('/src/lib/gemini') ||
+              normalizedId.includes('/src/lib/rag')
+            ) {
+              return 'admin-data-tools';
+            }
+
+            return undefined;
+          },
+        },
+      },
+      chunkSizeWarningLimit: 600,
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

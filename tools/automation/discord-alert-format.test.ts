@@ -192,7 +192,7 @@ assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secur
 assert.ok(flattenDiscordPayloadText(morning).includes('T2: 5328.00 - base exit'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extension if T2 clears'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
-assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
+assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -214,7 +214,7 @@ const lunch = compactDiscordSummary({
 });
 assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(lunch.content?.includes('[PM PLAN] MES - SHORT CONDITIONAL'));
-assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
+assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Runner Hit', 'Short Stretch Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
 
 const extensionCandidate = sampleCandidate('LONG');

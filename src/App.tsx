@@ -8,6 +8,7 @@ import TradeLog from './components/TradeLog';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
 import SessionLab from './components/SessionLab';
+import { embedPendingRecords } from './lib/rag';
 
 import { subscribeToTrades, addTrade as addSupabaseTrade, testSupabaseConnection } from './lib/supabaseTradeService';
 
@@ -136,7 +137,7 @@ export default function App() {
       });
 
       // Run RAG pending embeddings in background
-      import('./lib/rag').then(m => m.embedPendingRecords()).catch(e => console.error("RAG background err:", e));
+      embedPendingRecords().catch(e => console.error("RAG background err:", e));
 
       return () => unsubscribe();
     } else {

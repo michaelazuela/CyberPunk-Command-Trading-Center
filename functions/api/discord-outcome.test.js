@@ -94,6 +94,44 @@ try {
   assert.ok(buttons.some((button) => button.label === 'LONG T2 saved'));
   assert.ok(JSON.stringify(body).includes('No automated orders'));
 
+  const runnerToken = buildToken({ ...payload, pid: 'PLAN-RUNNER-TEST', o: 'long_runner_hit', hit: 'RUNNER', kid: keyId(secret) }, secret);
+  const runnerResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(runnerToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(runnerResponse.status, 200);
+  assert.ok((await runnerResponse.text()).includes('LONG trade marked WIN (RUNNER).'));
+  assert.ok(calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcome?.targetHit === 'RUNNER';
+  }), 'expected Supabase RAG patch to preserve RUNNER targetHit');
+
+  const stretchToken = buildToken({ ...payload, pid: 'PLAN-STRETCH-TEST', o: 'long_stretch_hit', hit: 'STRETCH', kid: keyId(secret) }, secret);
+  const stretchResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(stretchToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(stretchResponse.status, 200);
+  assert.ok((await stretchResponse.text()).includes('LONG trade marked WIN (STRETCH).'));
+  assert.ok(calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcome?.targetHit === 'STRETCH';
+  }), 'expected Supabase RAG patch to preserve STRETCH targetHit');
+
   const previousSecretToken = buildToken({ ...payload, pid: 'PLAN-PREVIOUS-SECRET', kid: keyId('old-secret') }, 'old-secret');
   const previousSecretResponse = await onRequestGet({
     request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(previousSecretToken)}`),

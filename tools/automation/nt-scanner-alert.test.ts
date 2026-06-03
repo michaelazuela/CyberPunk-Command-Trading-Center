@@ -485,7 +485,7 @@ try {
   assert.ok(text.includes('Details: Chart Plan + Price Level Map attached.'));
   assert.ok(!/Memory:[\s\S]*approve/i.test(text));
   const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
-  assert.deepEqual(componentLabels, ['Long T1 Hit', 'Long T2 Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
+  assert.deepEqual(componentLabels, ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
   assert.ok(!componentLabels.includes('Short Win'));
   assert.ok(!componentLabels.includes('Short Loss'));
   for (const marker of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {

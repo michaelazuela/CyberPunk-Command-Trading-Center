@@ -3,7 +3,7 @@ type SessionType = 'morning' | 'lunch';
 type Instrument = 'MES' | 'MNQ';
 type TradeDirection = 'LONG' | 'SHORT';
 type TradeResult = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
-type TargetHit = 'T1' | 'T2' | 'NEAREST_LIQUIDITY' | 'STOP' | 'NONE';
+type TargetHit = 'T1' | 'T2' | 'RUNNER' | 'STRETCH' | 'NEAREST_LIQUIDITY' | 'STOP' | 'NONE';
 
 export interface DiscordLinkButton {
   type: 2;
@@ -116,12 +116,14 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
 
   const t1Hit = makeUrl(`${args.direction.toLowerCase()}_t1_hit`, 'win', true, args.direction, 'T1');
   const t2Hit = makeUrl(`${args.direction.toLowerCase()}_t2_hit`, 'win', true, args.direction, 'T2');
+  const runnerHit = makeUrl(`${args.direction.toLowerCase()}_runner_hit`, 'win', true, args.direction, 'RUNNER');
+  const stretchHit = makeUrl(`${args.direction.toLowerCase()}_stretch_hit`, 'win', true, args.direction, 'STRETCH');
   const loss = makeUrl(`${args.direction.toLowerCase()}_loss`, 'loss', true, args.direction, 'STOP');
   const scratch = makeUrl('scratch', 'scratch', true, args.direction, 'NONE');
   const missed = makeUrl('missed_trade', 'missed_trade', false, args.direction, 'NONE');
   const noTrade = makeUrl('not_taken', 'no_trade', false, 'NONE', 'NONE');
 
-  if (!t1Hit || !t2Hit || !loss || !scratch || !missed || !noTrade) {
+  if (!t1Hit || !t2Hit || !runnerHit || !stretchHit || !loss || !scratch || !missed || !noTrade) {
     console.warn('Outcome buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
     return undefined;
   }
@@ -135,14 +137,16 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
       components: [
         outcomeButton(`${directionLabel} T1 Hit`, winEmoji, t1Hit),
         outcomeButton(`${directionLabel} T2 Hit`, winEmoji, t2Hit),
+        outcomeButton(`${directionLabel} Runner Hit`, winEmoji, runnerHit),
+        outcomeButton(`${directionLabel} Stretch Hit`, winEmoji, stretchHit),
         outcomeButton(`${directionLabel} Stopped`, '🛑', loss),
-        outcomeButton('Scratch', '⚪', scratch),
-        outcomeButton('No Trade', '🚫', noTrade),
       ],
     },
     {
       type: 1,
       components: [
+        outcomeButton('Scratch', '⚪', scratch),
+        outcomeButton('No Trade', '🚫', noTrade),
         outcomeButton('Missed', '⏭️', missed),
       ],
     },

@@ -10,6 +10,7 @@ import { TimezoneToggle } from './TimezoneToggle';
 import { buildAppTradePlan } from '../lib/planEngine';
 import FinalTradePlanCard from './FinalTradePlanCard';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
+import { saveToRAG, updateRAGWithTradeResult } from '../lib/rag';
 import ScreenshotUploadPanel, { type UploadedWorkflowImage } from './workflow/ScreenshotUploadPanel';
 import TradeConfirmationPanel, { type WorkflowOutcomeOption } from './workflow/TradeConfirmationPanel';
 import WorkflowResetButton from './workflow/WorkflowResetButton';
@@ -1167,7 +1168,6 @@ export default function ReplayLab({
         }
       }
 
-      const { saveToRAG } = await import('../lib/rag');
       const chartTimezone = sessionType === 'morning' ? morningReviewTimezone : lunchReviewTimezone;
       const requiredScreenshotRange = formatReplayRange(sessionType === 'morning' ? 'morning_5m_execution' : 'lunch_5m_execution', chartTimezone);
       const ragSaveResult = await saveToRAG({
@@ -1325,7 +1325,6 @@ export default function ReplayLab({
       }).eq('id', setupId);
 
       // Re-embed to capture PNL and trade outcome
-      const { updateRAGWithTradeResult } = await import('../lib/rag');
       // The manual outcome from ProofCapture is 'SUCCESS' or 'FAILED' or 'SCRATCH'
       // We need to infer the original RAG status based on what was passed to proof:
       const outcomeFromButton = proofFlow.outcome === 'SUCCESS' ? 'win' : proofFlow.outcome === 'FAILED' ? 'loss' : 'scratch';

@@ -1,4 +1,5 @@
 import type { AgentLearningSummary, RAGQuery, SimilarSetup } from '../types';
+import { retrieveSimilarSetups } from '../lib/rag';
 
 export type HistoricalSupport = 'SUPPORTS' | 'CONFLICTS' | 'NEUTRAL' | 'INSUFFICIENT_DATA';
 export type MemoryConfidenceAdjustment = 'increase' | 'decrease' | 'neutral';
@@ -109,7 +110,6 @@ export function advisoryFromSimilarSetups(similarSetups: SimilarSetup[]): Memory
 
 export async function retrieveMemoryAdvisory(query: RAGQuery): Promise<MemoryAdvisory> {
   try {
-    const { retrieveSimilarSetups } = await import('../lib/rag');
     const similarSetups = await retrieveSimilarSetups(query);
     return advisoryFromSimilarSetups(similarSetups);
   } catch (error) {

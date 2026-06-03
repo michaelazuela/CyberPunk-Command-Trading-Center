@@ -4,7 +4,8 @@
  */
 
 import { AISettings, ChartContext, Trade } from "../types";
-import { retrieveSimilarSetups, formatRAGContextForGemini } from "./rag";
+import { compressImage } from "./cloudStorage";
+import { retrieveSimilarSetups, formatRAGContextForGemini, buildAgentLearningSummary } from "./rag";
 import { NormalizedTradePlan } from "./tradePlan";
 import { loadModelConfig } from "./modelRouter";
 import { buildChartContextConsensus } from "./chartContextConsensus";
@@ -873,7 +874,6 @@ export async function analyzeChart(imageData: ChartImagePayload, settings?: AISe
     let agentLearningSummary: any = null;
     let ragContextStr = "";
     try {
-      const { retrieveSimilarSetups, buildAgentLearningSummary } = await import('./rag');
       similarSetups = await retrieveSimilarSetups(ragQuery);
       console.log(`[RAG] Retrieved ${similarSetups.length} similar setups for ${ragQuery.sessionType} analysis`);
       
@@ -1235,9 +1235,8 @@ Target/stop field rules:
 
   let imgToSend = image;
   try {
-    const cloudStorage = await import('./cloudStorage');
     if (import.meta.env.DEV) console.log(`[PROOF REVIEW] Image size before compression: ${Math.round(image.length / 1024)} KB`);
-    imgToSend = await cloudStorage.compressImage(image, 1600, 0.6); // Compress aggressively
+    imgToSend = await compressImage(image, 1600, 0.6); // Compress aggressively
     if (import.meta.env.DEV) console.log(`[PROOF REVIEW] Image size after compression: ${Math.round(imgToSend.length / 1024)} KB`);
   } catch(e) {
     console.warn("Failed to compress proof image for review, using original");

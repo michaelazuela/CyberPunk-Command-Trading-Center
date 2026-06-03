@@ -17,6 +17,7 @@ import SessionContextChips, { type SessionContextChip } from './workflow/Session
 import WorkflowStatusStrip, { type WorkflowStep } from './workflow/WorkflowStatusStrip';
 import { buildSaveReceipt, createPlanVersionId, createSetupSignature } from '../lib/planMetadata';
 import { applyWorkflowSpeedMode, loadModelConfig, saveModelConfig, type ModelConfig } from '../lib/modelRouter';
+import { saveToRAG, updateRAGWithTradeResult } from '../lib/rag';
 import { computeRiskSizing, formatDollars } from '../lib/riskSizing';
 import { candidateHasConcretePlan, selectBestTwoScenarios } from '../lib/scenarioSelection';
 import {
@@ -733,7 +734,6 @@ export default function SessionLab({
     const { data: setupRow, error: setupError } = await supabase.from('setups').insert([setupData]).select('id').single();
     if (setupError || !setupRow?.id) throw new Error(`Supabase setup save failed: ${setupError?.message || 'No setup ID returned.'}`);
 
-    const { saveToRAG } = await import('../lib/rag');
     const ragResult = await saveToRAG(buildWorkflowRagContext({
       context: {
       sessionType,
@@ -994,7 +994,6 @@ export default function SessionLab({
           instrument,
         });
         await supabase.from('setups').update({ outcome, replay_status: 'verified', contracts }).eq('id', setupId);
-        const { saveToRAG } = await import('../lib/rag');
         await saveToRAG(buildWorkflowRagContext({
           context: {
             setupId,
@@ -1084,7 +1083,6 @@ export default function SessionLab({
         pnl_dollars: proofData.pnlDollars,
         proof_screenshot_url: proofData.proof_screenshot_url,
       }).eq('id', setupId);
-      const { updateRAGWithTradeResult } = await import('../lib/rag');
       await updateRAGWithTradeResult(
         setupId,
         proofFlow.outcome === 'FAILED' ? 'loss' : 'win',

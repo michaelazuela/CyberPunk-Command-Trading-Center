@@ -136,6 +136,8 @@ function outcomeSummary(payload) {
 function outcomeLockLabel(payload) {
   if (payload.hit === 'T1') return `${payload.dir || ''} T1 saved`.trim();
   if (payload.hit === 'T2') return `${payload.dir || ''} T2 saved`.trim();
+  if (payload.hit === 'RUNNER') return `${payload.dir || ''} runner saved`.trim();
+  if (payload.hit === 'STRETCH') return `${payload.dir || ''} stretch saved`.trim();
   if (payload.hit === 'STOP') return `${payload.dir || ''} stopped saved`.trim();
   if (payload.tr === 'scratch') return 'Scratch saved';
   if (payload.tr === 'missed_trade') return 'Missed saved';
