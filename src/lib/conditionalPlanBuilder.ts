@@ -775,9 +775,6 @@ function missingLevel(
 
 function executionFor(entry: number | null, stop: number | null, hasTrigger: boolean, hasInvalidation: boolean) {
   const risk = riskPoints(entry, stop);
-  if (risk !== null && risk > TRADE_RULES.maxRiskPoints) {
-    return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.RiskTooWide };
-  }
   if (!isPrice(entry)) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending };
   if (!isPrice(stop) || risk === null || !hasInvalidation) {
     return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.InvalidStopLocation };
@@ -812,6 +809,14 @@ function makeCandidate(input: {
   const target2 = input.target2Override ?? computedTargets.target2;
   const execution = executionFor(input.entry, structureStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
   const levelContext = levelContextForDirection(input.chartContext, input.direction);
+  const riskAdvisoryStatus =
+    risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
+    risk > TRADE_RULES.maxRiskPoints * 2 ? 'RISK_EXTENDED_STRUCTURAL' :
+    risk > TRADE_RULES.maxRiskPoints ? 'RISK_ABOVE_STANDARD_LIMIT' :
+    'RISK_WITHIN_STANDARD_LIMIT';
+  const riskAdvisoryNote = riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' || riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL'
+    ? 'Risk exceeds standard limit. Human final decision required.'
+    : null;
 
   return {
     setupType: input.setupType,
@@ -825,6 +830,8 @@ function makeCandidate(input: {
     target1,
     target2,
     riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
     invalidation: input.invalidation,
     entryClarity: isPrice(input.entry) ? 0.8 : 0.35,
     stopClarity: isPrice(input.stop) ? 0.8 : 0.35,
@@ -832,25 +839,14 @@ function makeCandidate(input: {
     proximityScore: 0.7,
     levelContextScore: levelContext.score,
     levelContextSummary: levelContext.summary,
-    evidence: input.evidence,
+    evidence: riskAdvisoryNote ? Array.from(new Set([...input.evidence, riskAdvisoryNote])) : input.evidence,
     missingEvidence: input.missingEvidence || [],
     missingLevels: input.missingLevels || [],
     executionStatus: execution.executionStatus,
     blockReason: execution.blockReason,
     requiredTrigger: input.requiredTrigger,
-    nextAction: input.nextAction,
-    reducedRiskPlan: execution.blockReason === NoTradeReason.RiskTooWide
-      ? {
-          direction: input.direction,
-          entry: null,
-          stop: null,
-          target1: null,
-          target2: null,
-          requiredTrigger: input.requiredTrigger,
-          invalidation: input.invalidation,
-          reasoning: 'Original conditional plan has too much entry-to-stop risk. Wait for a tighter pullback, reclaim, or failed retest.',
-        }
-      : null,
+    nextAction: riskAdvisoryNote ? `${input.nextAction} ${riskAdvisoryNote}` : input.nextAction,
+    reducedRiskPlan: null,
   };
 }
 

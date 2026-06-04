@@ -84,7 +84,7 @@ export const DESK_AGENT_ROLE_CONTRACTS: DeskAgentRoleContract[] = [
     authority: 'advisory_risk_context_only',
     consumes: ['setup candidate', 'configured max risk', 'higher-timeframe alignment context'],
     produces: ['advisory risk score', 'risk-quality label', 'human-readable caution notes'],
-    mustNot: [...COMMON_MUST_NOT, 'turn RiskTooWide into executable approval'],
+    mustNot: [...COMMON_MUST_NOT, 'treat advisory risk as app-approved or broker-approved risk'],
   },
   {
     key: 'morningContinuationWatchlistAgent',

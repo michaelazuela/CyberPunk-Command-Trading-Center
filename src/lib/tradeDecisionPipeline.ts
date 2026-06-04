@@ -335,6 +335,7 @@ function setupScore(setupType: SetupType): number {
   switch (setupType) {
     case SetupType.SweepMssFvgRetrace: return 100;
     case SetupType.HtfDrawContinuationAfterRaid: return 99;
+    case SetupType.HtfDisplacementMssContinuation: return 99;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
   }
@@ -367,7 +368,6 @@ function candidateBlocker(candidate: CandidateInput, sessionType: PipelineSessio
   if (!stopTiedToStructure(candidate)) return NoTradeReason.InvalidStopLocation;
   const risk = riskPoints(candidate.entry, candidate.stop);
   if (risk === null || risk <= 0) return NoTradeReason.InvalidStopLocation;
-  if (risk > TRADE_RULES.maxRiskPoints) return NoTradeReason.RiskTooWide;
   const computedTargets = targets(candidate.direction, candidate.entry, candidate.stop);
   if (!isValidPrice(computedTargets.target1) || !isValidPrice(computedTargets.target2)) return NoTradeReason.TargetsUnavailable;
   if (typeof candidate.invalidation !== 'string' || candidate.invalidation.trim().length < 3) return NoTradeReason.InvalidStopLocation;
@@ -390,21 +390,30 @@ function makeRiskAssessment(candidate: CandidateInput | null): RiskAssessment {
   const entry = candidate?.entry ?? null;
   const stop = candidate?.stop ?? null;
   const risk = riskPoints(entry, stop);
+  const advisoryStatus =
+    risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
+    risk > TRADE_RULES.maxRiskPoints * 2 ? 'RISK_EXTENDED_STRUCTURAL' :
+    risk > TRADE_RULES.maxRiskPoints ? 'RISK_ABOVE_STANDARD_LIMIT' :
+    'RISK_WITHIN_STANDARD_LIMIT';
   const status =
     risk === null ? RiskStatus.Unknown :
-    risk > TRADE_RULES.maxRiskPoints ? RiskStatus.Blocked :
+    risk > TRADE_RULES.maxRiskPoints ? RiskStatus.Warning :
     risk > TRADE_RULES.preferredRiskPoints ? RiskStatus.Warning :
     RiskStatus.Approved;
 
   return {
     status,
+    advisoryStatus,
+    riskPolicy: advisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
     entry,
     stop,
     riskPoints: risk,
     maxRiskPoints: TRADE_RULES.maxRiskPoints,
     reasoning: risk === null
       ? 'Risk unavailable because ENTRY or STOP is missing.'
-      : `Risk is ${risk.toFixed(2)} points against max ${TRADE_RULES.maxRiskPoints}.`,
+      : risk > TRADE_RULES.maxRiskPoints
+        ? `Risk advisory: above standard limit. Human final decision required. Risk is ${risk.toFixed(2)} points against standard ${TRADE_RULES.maxRiskPoints}.`
+        : `Risk is ${risk.toFixed(2)} points against standard ${TRADE_RULES.maxRiskPoints}.`,
   };
 }
 
@@ -412,21 +421,30 @@ function makeRiskAssessmentFromSetup(candidate: SetupCandidate | null): RiskAsse
   const entry = candidate?.entry ?? null;
   const stop = candidate?.stop ?? null;
   const risk = riskPoints(entry, stop);
+  const advisoryStatus = candidate?.riskAdvisoryStatus ||
+    (risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
+    risk > TRADE_RULES.maxRiskPoints * 2 ? 'RISK_EXTENDED_STRUCTURAL' :
+    risk > TRADE_RULES.maxRiskPoints ? 'RISK_ABOVE_STANDARD_LIMIT' :
+    'RISK_WITHIN_STANDARD_LIMIT');
   const status =
     risk === null ? RiskStatus.Unknown :
-    risk > TRADE_RULES.maxRiskPoints ? RiskStatus.Blocked :
+    risk > TRADE_RULES.maxRiskPoints ? RiskStatus.Warning :
     risk > TRADE_RULES.preferredRiskPoints ? RiskStatus.Warning :
     RiskStatus.Approved;
 
   return {
     status,
+    advisoryStatus,
+    riskPolicy: candidate?.riskPolicy || (advisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED'),
     entry,
     stop,
     riskPoints: risk,
     maxRiskPoints: TRADE_RULES.maxRiskPoints,
     reasoning: risk === null
       ? 'Risk unavailable because ENTRY or STOP is missing.'
-      : `Risk is ${risk.toFixed(2)} points against max ${TRADE_RULES.maxRiskPoints}.`,
+      : risk > TRADE_RULES.maxRiskPoints
+        ? `Risk advisory: above standard limit. Human final decision required. Risk is ${risk.toFixed(2)} points against standard ${TRADE_RULES.maxRiskPoints}.`
+        : `Risk is ${risk.toFixed(2)} points against standard ${TRADE_RULES.maxRiskPoints}.`,
   };
 }
 
@@ -468,9 +486,9 @@ function qualityStatus(score: number, max: number): DecisionQualityScoreItem['st
 function qualityRecommendation(candidate: SetupCandidate, score: number, hardBlocker: string | null): string {
   if (hardBlocker) return `No trade: ${hardBlocker}`;
   if (candidate.executionStatus !== ExecutionStatus.Executable && score >= 80) {
-    return 'High-quality map, but execution remains conditional until the missing 5M/risk gate confirms.';
+    return 'High-quality map, but execution remains conditional until the missing 5M or structural gate confirms.';
   }
-  if (score >= 80) return 'Qualified only if the 5M trigger, protected stop, actual risk, and target room remain confirmed.';
+  if (score >= 80) return 'Qualified only if the 5M trigger, protected stop, visible actual risk, and target room remain confirmed.';
   if (score >= 65) return 'Conditional: good map, but wait for the missing confirmation before execution.';
   if (score >= 45) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
   return 'No trade: score is below the desk threshold or required evidence is missing.';
@@ -535,7 +553,7 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
     (isValidPrice(candidate.stop) ? 5 : 0) +
     (isValidPrice(candidate.target1) ? 5 : 0) +
     (isValidPrice(candidate.target2) ? 5 : 0) +
-    (riskAssessment.status !== RiskStatus.Blocked && !candidate.blockReason ? 5 : 0),
+    (riskAssessment.status !== RiskStatus.Unknown && !candidate.blockReason ? 5 : 0),
     20
   );
   const sessionScore = clampQualityScore(
@@ -555,6 +573,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
           ? 'Turtle Soup reversal sequence quality.'
           : candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
             ? 'HTF draw continuation after raid/reclaim sequence quality.'
+            : candidate.setupType === SetupType.HtfDisplacementMssContinuation
+              ? 'HTF displacement + 5M MSS continuation sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',
     },
     {
@@ -964,11 +984,9 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
       selectedIsExecutable
         ? riskAssessment.status === RiskStatus.Warning ? 'warning' : 'pass'
         : selectedIsConditional ? 'warning' : 'fail',
-      selectedCandidate?.blockReason === NoTradeReason.RiskTooWide
-        ? 'RiskTooWide blocks execution only; setup remains available as a wait/conditional candidate until a structure stop can fit the allowed risk.'
-        : riskAssessment.reasoning,
+      riskAssessment.reasoning,
       true,
-      selectedCandidate?.blockReason === NoTradeReason.RiskTooWide ? NoTradeReason.RiskTooWide : undefined
+      undefined
     ),
     makeStep(
       TradeDecisionStep.DetermineTargetModel,

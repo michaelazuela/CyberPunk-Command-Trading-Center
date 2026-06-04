@@ -504,7 +504,8 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
   return (
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
     candidate.setupType === SetupType.TurtleSoup ||
-    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
+    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
+    candidate.setupType === SetupType.HtfDisplacementMssContinuation
   );
 }
 
@@ -599,7 +600,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.noTradeReason, NoTradeReason.EntryTriggerMissing);
   }],
 
-  ['6. Wider structure stop is blocked by actual risk', () => {
+  ['6. Wider structure stop is advisory and still visible', () => {
     const result = assertSameSequence({
       result: baseResult({
         structuredChartContext: turtleSoupContext(),
@@ -613,12 +614,13 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.riskAssessment.status, RiskStatus.Blocked);
+    assert.equal(result.riskAssessment.status, RiskStatus.Warning);
+    assert.equal(result.riskAssessment.advisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
     assert.equal(result.riskAssessment.riskPoints, 6.5);
     assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'warning');
   }],
 
-  ['7. Alternate setup also blocks when actual structure risk is too wide', () => {
+  ['7. Alternate setup keeps plan visible when actual structure risk is too wide', () => {
     const result = assertSameSequence({
       result: baseResult({
         structuredChartContext: turtleSoupContext({ proposedStop: 7391.75, riskPoints: 8.25 }),
@@ -632,7 +634,8 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.riskAssessment.status, RiskStatus.Warning);
     assert.equal(result.riskAssessment.riskPoints, 8.25);
   }],
 
@@ -702,7 +705,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.target2, null);
   }],
 
-  ['12. Screenshot context trade is rejected when actual structure risk is too wide', () => {
+  ['12. Screenshot context wide risk is advisory and not the no-trade reason', () => {
     const result = assertSameSequence({
       result: baseResult({
         confidence: 0.99,
@@ -728,8 +731,9 @@ const tests: Array<[string, () => void]> = [
         },
       }),
     });
-    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
     assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup)?.riskPoints, 12);
+    assert.equal(result.setupCandidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup)?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(result.biasAssessment.confidence, 'High');
   }],
 
@@ -832,7 +836,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(plan.canExecute, false);
   }],
 
-  ['15e. HTF draw continuation cannot approve when RiskTooWide blocks', () => {
+  ['15e. HTF draw continuation remains structurally complete when risk is advisory', () => {
     const result = assertSameSequence({
       result: baseResult({
         dayType: 'LONG',
@@ -846,10 +850,10 @@ const tests: Array<[string, () => void]> = [
       }),
     });
 
-    assert.notEqual(result.status, TradeDecisionStatus.ApprovedTrade);
-    assert.equal(result.noTradeReason, NoTradeReason.RiskTooWide);
-    assert.equal(result.opportunitySelection?.bestExecutableCandidate, null);
-    assert.equal(result.opportunitySelection?.bestConditionalCandidate?.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.notEqual(result.noTradeReason, NoTradeReason.RiskTooWide);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(stepStatus(result, TradeDecisionStep.ValidateRiskLimit), 'warning');
   }],
 
@@ -966,7 +970,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.entry, null);
   }],
 
-  ['19. High-priority wide structure stop remains visible but blocked', () => {
+  ['19. High-priority wide structure stop remains visible as advisory', () => {
     const result = assertSameSequence({
       result: baseResult({
         structuredChartContext: turtleSoupContext({ proposedStop: 7388, riskPoints: 12 }),
@@ -983,7 +987,8 @@ const tests: Array<[string, () => void]> = [
     const liquidity = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
 
     assert.ok(liquidity);
-    assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(liquidity.blockReason, null);
+    assert.equal(liquidity.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(liquidity.riskPoints, 12);
     assert.notEqual(result.finalTradePlan.setupType, SetupType.NoSetup);
   }],

@@ -71,6 +71,7 @@ export const TRADE_RULES = {
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,
         SetupType.HtfDrawContinuationAfterRaid,
+        SetupType.HtfDisplacementMssContinuation,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,
@@ -89,6 +90,7 @@ export const TRADE_RULES = {
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,
         SetupType.HtfDrawContinuationAfterRaid,
+        SetupType.HtfDisplacementMssContinuation,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,
@@ -112,7 +114,7 @@ export const TRADE_RULES = {
     [NoTradeReason.EntryTriggerMissing]: 'hard',
     [NoTradeReason.EntryTriggerPending]: 'wait',
     [NoTradeReason.InvalidStopLocation]: 'hard',
-    [NoTradeReason.RiskTooWide]: 'hard',
+    [NoTradeReason.RiskTooWide]: 'warning',
     [NoTradeReason.TargetsUnavailable]: 'hard',
     [NoTradeReason.KillSwitchActive]: 'hard',
     [NoTradeReason.ConflictingStructure]: 'hard',

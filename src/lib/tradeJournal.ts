@@ -12,6 +12,7 @@ export type TradeJournalModelType =
   | 'Sweep -> MSS -> FVG Retrace'
   | 'Turtle Soup Reversal'
   | 'HTF Draw Continuation After Raid/Reclaim'
+  | 'HTF Displacement + 5M MSS Continuation'
   | 'ICT setup';
 
 export type TradeJournalDirection = 'LONG' | 'SHORT' | 'NO TRADE';

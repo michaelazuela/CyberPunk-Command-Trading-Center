@@ -1,4 +1,4 @@
-import { targetsFromEntryStop } from '../../src/config/tradeRules';
+import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import {
@@ -272,11 +272,24 @@ function compactActionText(candidate: SetupCandidate | null, normalized: Compact
 
 function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const levels = appTargetLevels(candidate, normalized);
+  const modelConfidenceScore =
+    typeof candidate.modelConfidenceScore === 'number' && Number.isFinite(candidate.modelConfidenceScore)
+      ? Math.round(candidate.modelConfidenceScore)
+      : null;
+  const riskAboveStandard =
+    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
+    (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   return [
     'Plan:',
+    ...(modelConfidenceScore !== null ? [`Confidence: ${modelConfidenceScore}/100`] : []),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
+    ...(riskAboveStandard ? [
+      'Risk Advisory: Above standard',
+      'Risk exceeds standard limit. Human final decision required.',
+    ] : []),
     '',
     ...compactTargetLadderLines(candidate, normalized),
   ];
@@ -284,25 +297,31 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
 
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
-    ? `Risk remains blocked by ${riskScore.blockReason}.`
+    ? riskScore.blockReason === NoTradeReason.RiskTooWide
+      ? 'Risk is advisory above the standard limit.'
+      : `Risk remains blocked by ${riskScore.blockReason}.`
     : 'This score is advisory only.';
   const mainReason = riskScore.reasons[0] || hardBlock;
   return `${mainReason} ${hardBlock}`.trim();
 }
 
 function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
-  if (candidate.blockReason !== NoTradeReason.RiskTooWide && normalized.noTradeReason !== NoTradeReason.RiskTooWide) {
+  const riskAboveStandard =
+    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
+    (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
+  if (!riskAboveStandard && candidate.blockReason !== NoTradeReason.RiskTooWide && normalized.noTradeReason !== NoTradeReason.RiskTooWide) {
     return [];
   }
   const score = scoreConditionalCandidateRiskForDisplay(candidate);
   return [
-    'Conditional Risk:',
-    `Decision: WAIT | App executable: NO | canExecute: false`,
-    `Block: ${normalized.noTradeReason || candidate.blockReason || 'manual review required'}`,
+    'Risk Advisory:',
+    `Decision: ${getEffectiveCanExecute(normalized) ? 'STRUCTURALLY COMPLETE' : 'WAIT'} | App plan review: ${getEffectiveCanExecute(normalized) ? 'YES' : 'NO'} | canExecute: ${getEffectiveCanExecute(normalized) ? 'true' : 'false'}`,
+    `Risk State: ${candidate.riskAdvisoryStatus || 'RISK_ABOVE_STANDARD_LIMIT'}`,
     `Max risk: ${numberLine(score.maxAllowedRiskPoints)} pts`,
     `Risk Score: ${score.score}/100 - ${score.label}`,
     `Reason: ${compactRiskScoreReason(score)}`,
-    'Manual: Not app-approved executable. Manual decision required.',
+    'Manual: Risk exceeds standard limit. Human final decision required.',
     'Watch: Fresh completed 5M trigger/retest only. Do not chase.',
   ];
 }
@@ -450,7 +469,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         'Decision support only. No automated orders.',
       ];
 
-  const includeComponents = Boolean(args.components && !riskLines.length);
+  const includeComponents = Boolean(args.components);
   return {
     username: 'Quant Desk',
     content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,

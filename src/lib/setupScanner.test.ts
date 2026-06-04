@@ -882,11 +882,172 @@ function htfPathwayCandidate(result: ReturnType<typeof scanSetupCandidates>) {
   ) || null;
 }
 
+function htfDisplacementContinuationContext(
+  direction: 'LONG' | 'SHORT',
+  overrides: Partial<ChartContext> = {}
+): ChartContext {
+  const bullish = direction === 'LONG';
+  const entry = bullish ? 7603.25 : 7582.75;
+  const stop = bullish ? 7599 : 7590;
+  const target = bullish ? 7620 : 7574.75;
+  const context = structuredContext();
+  const displacement = {
+    direction,
+    candleIndex: 0,
+    timestamp: bullish ? '2026-06-02T10:00:00-04:00' : '2026-06-03T09:45:00-04:00',
+    open: bullish ? 7590 : 7608.5,
+    high: bullish ? 7605 : 7614.75,
+    low: bullish ? 7588 : 7591.75,
+    close: bullish ? 7604 : 7592.75,
+    bodyPoints: bullish ? 14 : 15.75,
+    rangePoints: bullish ? 17 : 23,
+    bodyToRange: bullish ? 0.82 : 0.68,
+    closeLocation: bullish ? 'top_quarter' as const : 'bottom_quarter' as const,
+    displacementScore: 88,
+    quality: 'high_quality' as const,
+    leavesImbalance: true,
+    breaksStructure: true,
+    confidence: 'High' as const,
+    evidence: bullish ? '15M bullish displacement after sell-side raid.' : '15M bearish displacement after failed buy-side hold.',
+  };
+  const fiveMinuteDisplacement = {
+    ...displacement,
+    candleIndex: 1,
+    timestamp: bullish ? '2026-06-02T10:00:00-04:00' : '2026-06-03T11:25:00-04:00',
+    open: bullish ? 7600 : 7588,
+    high: bullish ? 7605 : 7589.25,
+    low: bullish ? 7599 : 7580.5,
+    close: entry,
+    bodyPoints: bullish ? 3.25 : 5.25,
+    rangePoints: bullish ? 6 : 8.75,
+    evidence: bullish ? '5M bullish MSS close-through with displacement.' : '5M bearish MSS close-through with displacement.',
+  };
+
+  return {
+    ...context,
+    sessionType: 'morning',
+    chartTimestamp: bullish ? '2026-06-02T10:05:00-04:00' : '2026-06-03T11:25:00-04:00',
+    marketContext: 'HTF displacement + 5M MSS continuation fixture.',
+    keyLevels: {
+      ...context.keyLevels,
+      currentPrice: entry,
+      activeSwingLow: bullish ? 7599 : 7574.75,
+      activeSwingHigh: bullish ? 7620 : 7590,
+      overnightHigh: bullish ? 7632.75 : 7614.75,
+      overnightLow: bullish ? 7590 : 7574,
+      nearestSupport: bullish ? 7599 : 7574.75,
+      nearestResistance: bullish ? 7620 : 7590,
+    },
+    marketStructure: {
+      trend: bullish ? 'bullish' : 'bearish',
+      higherHigh: bullish,
+      higherLow: bullish,
+      lowerHigh: !bullish,
+      lowerLow: !bullish,
+      marketStructureShift: true,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: true,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: bullish ? 'bullish' : 'bearish',
+      expansionCandlePresent: true,
+      rejectionWickPresent: false,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: false,
+      pullbackPresent: false,
+      closeAboveKeyLevel: bullish,
+      closeBelowKeyLevel: !bullish,
+    },
+    setupReadyFacts: {
+      sweepThenReclaim: true,
+      breakOfStructure: true,
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+    },
+    structureQualityContext: {
+      direction,
+      structureEvent: 'major_bos',
+      structureTimeframe: '5m',
+      executionTimeframeConfirmed: true,
+      inducementSwept: true,
+      validPullbackConfirmed: true,
+      structureBreakConfirmedByClose: true,
+      wickOnlyBreak: false,
+      oldInducementStale: false,
+      newInducementRequired: false,
+      noChaseRequired: false,
+      reasons: ['5M MSS confirmed by completed candle close.'],
+      missingReasons: [],
+    },
+    fvgZones: [{
+      direction,
+      upper: bullish ? 7603.5 : 7589,
+      lower: bullish ? 7600.5 : 7584,
+      impulseQualified: true,
+      confidence: 'High',
+    }],
+    displacementCandles: [fiveMinuteDisplacement],
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      authority: 'ohlc_facts_only',
+      fourHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      oneHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      fifteenMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [displacement], confidence: 'High', notes: [] },
+      fiveMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [fiveMinuteDisplacement], confidence: 'High', notes: [] },
+      alignment: {
+        macroBias: direction,
+        sessionBias: direction,
+        liquidityBias: direction,
+        executionBias: direction,
+        alignedDirection: direction,
+        conflicts: [],
+        notes: [`HTF displacement continuation aligned ${direction}.`],
+      },
+      targetMap: { levelsToWatch: [] },
+      rules: {
+        higherTimeframesApproveTrades: false,
+        fiveMinuteExecutionRequired: true,
+        aiMayOverwriteOhlcFacts: false,
+      },
+      notes: [],
+    } as ChartContext['multiTimeframeContext'],
+    higherTimeframeThesis: {
+      direction,
+      confidence: 'High',
+      sourceTimeframes: ['15M', '5M'],
+      reason: bullish ? 'Bullish delivery toward external buy-side liquidity.' : 'Bearish delivery toward external sell-side liquidity.',
+      drawOnLiquidity: target,
+      drawOnLiquidityLabel: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+    },
+    targetObjectives: [{
+      label: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+      price: target,
+      direction,
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 95,
+      reason: 'Primary external liquidity objective.',
+    }],
+    proposedEntry: entry,
+    proposedStop: stop,
+    riskPoints: Math.abs(entry - stop),
+    riskStatus: Math.abs(entry - stop) > 4 ? 'RiskTooWide' : 'WithinLimit',
+    entryConfirmed: true,
+    stopConfirmed: true,
+    requiresManualConfirmation: false,
+    riskReadConfidence: 'High',
+    ...overrides,
+  };
+}
+
 function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
   return (
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
     candidate.setupType === SetupType.TurtleSoup ||
-    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
+    candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
+    candidate.setupType === SetupType.HtfDisplacementMssContinuation
   );
 }
 
@@ -1119,7 +1280,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(best.riskPoints, 4);
   }],
 
-  ['high-priority wide raw stop remains visible and blocked by risk', () => {
+  ['high-priority wide raw stop remains visible as risk advisory', () => {
     const result = scanSetupCandidates({
       sessionType: 'replay_morning',
       result: resultWithText('Liquidity sweep long reclaimed after a stop hunt.', 7400, 7388),
@@ -1128,7 +1289,8 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(liquidity);
     assert.equal(liquidity.detectedStatus, SetupCandidateStatus.Possible);
-    assert.equal(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.notEqual(liquidity.blockReason, NoTradeReason.RiskTooWide);
+    assert.equal(liquidity.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
     assert.equal(liquidity.riskPoints, 12);
     assert.notEqual(liquidity.setupType, SetupType.NoSetup);
   }],
@@ -1475,7 +1637,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(htfCandidate.evidence.some((line) => line.includes('5M MSS trigger confirmed by swing break with displacement')));
     assert.ok(htfCandidate.evidence.some((line) => line.includes('15M potential MSS / pending confirm')));
     assert.ok(htfCandidate.evidence.some((line) => line.includes('Pathway state: scanner candidate fields complete; final deterministic pipeline gates still required')));
-    assert.ok(htfCandidate.nextAction.includes('Execution still requires final app-owned entry, stop, target, risk, invalidation, session, screenshot-quality, and canExecute gates.'));
+    assert.ok(htfCandidate.nextAction.includes('Execution still requires final app-owned entry, stop, target, risk visibility, invalidation, session, screenshot-quality, and canExecute gates.'));
     assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(`${htfCandidate.evidence.join(' ')} ${htfCandidate.nextAction}`), false);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
     assert.equal(primaryModel?.detectedStatus, SetupCandidateStatus.NotDetected);
@@ -1845,7 +2007,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
   }],
 
-  ['Phase 3 RiskTooWide remains blocking for HTF/MSS pathway candidates', () => {
+  ['RiskTooWide remains visible as advisory for HTF/MSS pathway candidates', () => {
     const context = htfMssContext('LONG', {
       proposedEntry: 7604,
       proposedStop: 7588,
@@ -1857,11 +2019,12 @@ const tests: Array<[string, () => void]> = [
     const htfCandidate = htfPathwayCandidate(result);
 
     assert.ok(htfCandidate);
-    assert.equal(htfCandidate.candidateState, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
-    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(htfCandidate.blockReason, NoTradeReason.RiskTooWide);
-    assert.ok(htfCandidate.missingEvidence.includes('RiskTooWide remains a hard execution block'));
-    assert.equal(result.bestExecutableCandidate, null);
+    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(htfCandidate.blockReason, null);
+    assert.equal(htfCandidate.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
+    assert.ok(htfCandidate.evidence.includes('Risk exceeds standard limit. Human final decision required.'));
+    assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
   }],
 
   ['Phase 3 HTF/MSS pathway can create a candidate when the legacy scanner identifies no setup', () => {
@@ -1873,6 +2036,109 @@ const tests: Array<[string, () => void]> = [
     assert.equal(htfCandidate.setupType, SetupType.HtfDrawContinuationAfterRaid);
     assert.equal(legacyDetected.length, 0);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
+  }],
+
+  ['HTF displacement MSS continuation creates a long executable candidate with app targets and confidence score', () => {
+    const context = htfDisplacementContinuationContext('LONG');
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_mss_continuation');
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7603.25);
+    assert.equal(candidate.stop, 7599);
+    assert.equal(candidate.target1, 7609.75);
+    assert.equal(candidate.target2, 7611.75);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_WITHIN_STANDARD_LIMIT');
+    assert.equal(candidate.riskPolicy, 'STANDARD_RISK');
+    assert.ok((candidate.modelConfidenceScore ?? 0) >= 88);
+    assert.ok(candidate.evidence.some((item) => item.includes('Confidence score')));
+    assert.ok(candidate.evidence.some((item) => item.includes('canExecute means structurally complete')));
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
+  ['HTF displacement MSS continuation creates a short executable candidate with advisory structural risk', () => {
+    const context = htfDisplacementContinuationContext('SHORT');
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_mss_continuation');
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7582.75);
+    assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.target1, 7572);
+    assert.equal(candidate.target2, 7568.25);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.equal(candidate.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
+    assert.ok(candidate.evidence.some((item) => item.includes('Risk exceeds standard limit. Human final decision required.')));
+    assert.equal(candidate.blockReason, null);
+  }],
+
+  ['HTF displacement MSS continuation is not created when 5M MSS confirmation is missing', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      setupReadyFacts: {
+        sweepThenReclaim: true,
+        breakOfStructure: false,
+        pullbackIntoFvg: true,
+        fvgReclaimed: true,
+      },
+      marketStructure: {
+        trend: 'bearish',
+        higherHigh: false,
+        higherLow: false,
+        lowerHigh: true,
+        lowerLow: true,
+        marketStructureShift: false,
+        chopRangeCondition: false,
+        compressionCondition: false,
+        expansionCondition: true,
+      },
+      structureQualityContext: {
+        direction: 'SHORT',
+        structureEvent: 'major_bos',
+        structureTimeframe: '5m',
+        executionTimeframeConfirmed: true,
+        inducementSwept: true,
+        validPullbackConfirmed: true,
+        structureBreakConfirmedByClose: false,
+        wickOnlyBreak: false,
+        oldInducementStale: false,
+        newInducementRequired: false,
+        noChaseRequired: false,
+        reasons: [],
+        missingReasons: ['5M MSS is not confirmed by close.'],
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.detectedStatus, SetupCandidateStatus.NotDetected);
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
+  ['HTF displacement MSS continuation becomes conditional when less than 60 percent of liquidity path remains', () => {
+    const staleContext = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      keyLevels: {
+        ...staleContext.keyLevels,
+        currentPrice: 7576,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
+    assert.ok(candidate.missingEvidence.includes('At least 60% of the path to primary liquidity remains'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 
   ['Phase 3B HTF setup label and journal record use the approved model name', () => {
@@ -2793,7 +3059,12 @@ const tests: Array<[string, () => void]> = [
 
     assert.deepEqual(
       new Set(result.candidates.map((candidate) => candidate.setupType)),
-      new Set([SetupType.SweepMssFvgRetrace, SetupType.TurtleSoup, SetupType.HtfDrawContinuationAfterRaid])
+      new Set([
+        SetupType.SweepMssFvgRetrace,
+        SetupType.TurtleSoup,
+        SetupType.HtfDrawContinuationAfterRaid,
+        SetupType.HtfDisplacementMssContinuation,
+      ])
     );
     assert.ok(result.candidates.every((candidate) => candidate.scenarioLabel !== 'BreakerBlock'));
   }],

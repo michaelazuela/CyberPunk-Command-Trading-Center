@@ -185,7 +185,7 @@ export function scoreConditionalCandidateRisk(
 
   if (isRiskTooWide(candidate)) {
     score = Math.min(score, input.priceExtended ? 49 : 64);
-    advisoryNotes.push('RiskTooWide remains a hard execution block under current app rules.');
+    advisoryNotes.push('Risk exceeds standard limit. Human final decision required; this advisory score does not approve risk.');
   }
 
   if (candidate.executionStatus !== ExecutionStatus.Executable) {

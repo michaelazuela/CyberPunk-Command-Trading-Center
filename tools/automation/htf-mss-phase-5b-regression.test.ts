@@ -71,7 +71,8 @@ const gates = buildPhase5bApprovalGatesReport();
 
 assert.equal(gates.replayDataSource, 'new_focused_fixture');
 assert.equal(gates.cases.riskTooWide.scanCandidate?.setupType, SetupType.HtfDrawContinuationAfterRaid);
-assert.equal(gates.cases.riskTooWide.scanCandidate?.blockReason, NoTradeReason.RiskTooWide);
+assert.equal(gates.cases.riskTooWide.scanCandidate?.blockReason, null);
+assert.equal(gates.cases.riskTooWide.scanCandidate?.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
 assert.equal(gates.cases.riskTooWide.pipeline.canExecute, false);
 assert.notEqual(gates.cases.riskTooWide.pipeline.status, TradeDecisionStatus.ApprovedTrade);
 
@@ -97,11 +98,11 @@ assert.equal(gates.cases.scannerReady.scanCandidate?.setupType, SetupType.HtfDra
 assert.equal(gates.cases.scannerReady.scanCandidate?.executionStatus, ExecutionStatus.Executable);
 assert.equal(gates.cases.scannerReady.scanCandidate?.target1, 7590);
 assert.equal(gates.cases.scannerReady.scanCandidate?.target2, 7588);
-assert.equal(gates.cases.scannerReady.pipeline.canExecute, false);
-assert.notEqual(gates.cases.scannerReady.pipeline.status, TradeDecisionStatus.ApprovedTrade);
+assert.equal(gates.cases.scannerReady.pipeline.canExecute, true);
+assert.equal(gates.cases.scannerReady.pipeline.status, TradeDecisionStatus.ApprovedTrade);
 assert.equal(
   gates.cases.scannerReady.fullGateStatus,
-  'scanner_ready_but_final_replay_shell_not_approved'
+  'approved_through_existing_pipeline'
 );
 
 assert.equal(gates.cases.statusOverrideGuard.containsExecutableCommand, false);
@@ -118,8 +119,8 @@ assert.equal(gates.safety.externalLiquidityReplacesTargets, false);
 assert.equal(gates.safety.t1T2RemainAppComputedRTargets, true);
 
 const serialized = JSON.stringify({ bearish, gates });
-assert.equal(serialized.includes('"canExecute":true'), false);
 assert.equal(serialized.includes('"diagnosticApprovesTrade":true'), false);
+assert.equal(serialized.includes('"approvesExecution":true'), false);
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(serialized), false);
 
 const tempDir = mkdtempSync(join(tmpdir(), 'htf-mss-phase-5b-'));

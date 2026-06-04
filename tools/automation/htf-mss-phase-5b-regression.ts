@@ -236,6 +236,8 @@ function candidateSummary(candidate: SetupCandidate | null) {
     target1: candidate.target1,
     target2: candidate.target2,
     riskPoints: candidate.riskPoints,
+    riskAdvisoryStatus: candidate.riskAdvisoryStatus,
+    riskPolicy: candidate.riskPolicy,
     requiredTrigger: candidate.requiredTrigger,
     nextAction: candidate.nextAction,
     evidence: candidate.evidence,

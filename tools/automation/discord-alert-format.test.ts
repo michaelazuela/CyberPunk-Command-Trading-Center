@@ -223,6 +223,7 @@ extensionCandidate.stop = 7599;
 extensionCandidate.riskPoints = 4.25;
 extensionCandidate.target1 = 7611.75;
 extensionCandidate.target2 = 7620;
+extensionCandidate.modelConfidenceScore = 98;
 extensionCandidate.targetObjectivePlan = {
   ...extensionCandidate.targetObjectivePlan!,
   liquidityTarget1: { ...extensionCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Lunch/PM high', price: 7604.75 },
@@ -249,6 +250,7 @@ const extensionPayload = compactDiscordSummary({
 });
 validateDiscordPayload(extensionPayload, ['chart-plan.png', 'price-level-map.png']);
 const extensionText = flattenDiscordPayloadText(extensionPayload);
+assert.ok(extensionText.includes('Confidence: 98/100'));
 assert.ok(extensionText.includes('T1: 7609.75 - scale/secure'));
 assert.ok(extensionText.includes('T2: 7611.75 - base exit'));
 assert.ok(extensionText.includes('Runner: 7620.00 - extension if T2 clears'));
@@ -413,15 +415,19 @@ const riskTooWidePayload = compactDiscordSummary({
 validateDiscordPayload(riskTooWidePayload, ['chart-plan.png', 'price-level-map.png']);
 assert.equal(JSON.stringify(riskTooWideCandidate), riskTooWideBefore, 'risk advisory formatter must not mutate the candidate');
 const riskTooWideText = flattenDiscordPayloadText(riskTooWidePayload);
-assert.ok(riskTooWideText.includes('Conditional Risk:'));
-assert.ok(riskTooWideText.includes('Decision: WAIT | App executable: NO | canExecute: false'));
-assert.ok(riskTooWideText.includes('Block: RiskTooWide'));
+assert.ok(riskTooWideText.includes('Risk Advisory:'));
+assert.ok(riskTooWideText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
+assert.ok(riskTooWideText.includes('Risk State: RISK_ABOVE_STANDARD_LIMIT'));
 assert.ok(riskTooWideText.includes('Risk Score:'));
-assert.ok(riskTooWideText.includes('Manual decision required'));
-assert.ok(riskTooWideText.includes('Not app-approved executable.'));
+assert.ok(riskTooWideText.includes('Risk exceeds standard limit. Human final decision required.'));
+assert.equal(riskTooWideText.includes('Not app-approved executable.'), false);
 assert.ok(riskTooWideText.includes('Do not chase'));
 assert.ok(!/ApprovedTrade|Trade now|Entry confirmed/i.test(riskTooWideText));
-assert.equal(riskTooWidePayload.components, undefined);
+assert.ok(riskTooWidePayload.components);
+assert.deepEqual(
+  (riskTooWidePayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
+  ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
+);
 
 const noTrade = compactDiscordSummary({
   session: 'morning',

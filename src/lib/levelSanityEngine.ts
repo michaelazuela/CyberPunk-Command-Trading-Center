@@ -1,6 +1,6 @@
 import { ChartContext, StructuredSetupEvidence, StructuredSetupEvidenceMap } from '../types';
 
-const MAX_EXECUTION_LEVEL_DISTANCE = 8;
+const MAX_EXECUTION_LEVEL_DISTANCE = 30;
 
 function isPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;

@@ -33,6 +33,7 @@ export enum SetupType {
   FvgImbalancePullback = 'FvgImbalancePullback',
   MarketStructureShift = 'MarketStructureShift',
   HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
+  HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
   InitialBalanceExtension = 'InitialBalanceExtension',
@@ -80,6 +81,14 @@ export enum RiskStatus {
   Blocked = 'Blocked',
   Unknown = 'Unknown',
 }
+
+export type RiskAdvisoryStatus =
+  | 'RISK_WITHIN_STANDARD_LIMIT'
+  | 'RISK_ABOVE_STANDARD_LIMIT'
+  | 'RISK_EXTENDED_STRUCTURAL'
+  | 'RISK_INVALID_OR_UNDEFINED';
+
+export type RiskPolicy = 'STANDARD_RISK' | 'STRUCTURAL_RISK_ACKNOWLEDGED';
 
 export type ExtractedRiskStatus = 'WithinLimit' | 'Warning' | 'RiskTooWide' | 'Unknown';
 
@@ -843,6 +852,8 @@ export interface DecisionQualityScoreItem {
 
 export interface RiskAssessment {
   status: RiskStatus;
+  advisoryStatus?: RiskAdvisoryStatus;
+  riskPolicy?: RiskPolicy;
   entry: number | null;
   stop: number | null;
   riskPoints: number | null;
@@ -900,7 +911,7 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation';
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;
@@ -914,6 +925,9 @@ export interface SetupCandidate {
   target2Reason?: string | null;
   targetObjectivePlan?: TargetObjectivePlan | null;
   riskPoints?: number | null;
+  riskAdvisoryStatus?: RiskAdvisoryStatus;
+  riskPolicy?: RiskPolicy;
+  modelConfidenceScore?: number | null;
   invalidation?: string | null;
   entryClarity?: number;
   stopClarity?: number;

@@ -31,6 +31,7 @@ const primaryExpected = [
   SetupType.SweepMssFvgRetrace,
   SetupType.TurtleSoup,
   SetupType.HtfDrawContinuationAfterRaid,
+  SetupType.HtfDisplacementMssContinuation,
 ];
 const supportingExpected = [
   SetupType.LiquiditySweep,

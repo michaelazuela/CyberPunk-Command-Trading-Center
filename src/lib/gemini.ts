@@ -151,7 +151,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     ## HTF Draw Continuation After Raid/Reclaim Rule
 
-    HTF Liquidity Draw + Multi-Timeframe MSS is an approved trading-plan pathway through SetupType.HtfDrawContinuationAfterRaid, labeled HTF Draw Continuation After Raid/Reclaim. It may create or promote a candidate only after structured HTF/MSS state confirms the required pathway and 5M MSS trigger confirmation is present. It may not bypass deterministic entry, stop, target, risk, session, screenshot-quality, final-pipeline, or canExecute gates.
+    HTF Liquidity Draw + Multi-Timeframe MSS is an approved trading-plan pathway through SetupType.HtfDrawContinuationAfterRaid, labeled HTF Draw Continuation After Raid/Reclaim. HTF Displacement + 5M MSS Continuation is an approved symmetric pathway through SetupType.HtfDisplacementMssContinuation. It may create or promote a candidate only after structured 15M displacement and confirmed 5M MSS state are present, with app-owned entry, protected stop, targets, invalidation, and session gates. Risk above the standard cap is advisory only and must be displayed with "Risk exceeds standard limit. Human final decision required." It may not bypass deterministic entry, stop, target, session, screenshot-quality, final-pipeline, or canExecute gates.
 
     Potential MSS must be tracked on 4H, 1H, 15M, and 5M. Potential MSS is not execution approval. 4H/1H potential MSS may affect context and confidence only. 15M potential MSS may support a candidate only when 5M MSS is confirmed. 5M potential MSS may produce pending/developing states only and must not create a reversal-delivery candidate until confirmed by swing break with displacement.
 

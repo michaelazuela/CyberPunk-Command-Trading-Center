@@ -662,9 +662,13 @@ try {
   assert.equal(riskAudit.conditionalRiskScore.canExecute, false);
   assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
   assert.equal(riskAudit.conditionalRiskScore.score, 49);
-  assert.equal(riskResult.payload.components, undefined);
-  assert.ok(riskText.includes('Decision: WAIT | App executable: NO | canExecute: false'));
-  assert.ok(riskText.includes('Manual decision required'));
+    assert.ok(riskResult.payload.components);
+    assert.deepEqual(
+      (riskResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
+      ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
+    );
+    assert.ok(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
+    assert.ok(riskText.includes('Risk exceeds standard limit. Human final decision required.'));
   assert.ok(riskText.includes('Do not chase'));
 
   console.log(`live scanner fixture alert verified: mainText=${text.length}, files=${result.files.length}, audit=${result.auditLogPath}`);

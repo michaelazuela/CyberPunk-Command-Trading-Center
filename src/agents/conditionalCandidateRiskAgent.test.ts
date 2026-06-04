@@ -53,7 +53,7 @@ assert.ok(wideScore.estimatedRiskReward && wideScore.estimatedRiskReward > 2);
 assert.ok(wideScore.score <= 64, 'RiskTooWide candidates must stay capped below approved/clean range');
 assert.ok(wideScore.reasons.some((reason) => reason.includes('more than 50% above')));
 assert.ok(wideScore.reasons.some((reason) => reason.includes('Higher-timeframe stack is aligned')));
-assert.ok(wideScore.advisoryNotes.some((note) => note.includes('RiskTooWide remains a hard execution block')));
+assert.ok(wideScore.advisoryNotes.some((note) => note.includes('Risk exceeds standard limit. Human final decision required')));
 assert.deepEqual(wideScore.approvalBoundary, {
   riskScoreApprovesTrade: false,
   riskScoreChangesRules: false,

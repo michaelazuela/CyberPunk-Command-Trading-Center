@@ -101,7 +101,7 @@ const advisoryRisk = scoreConditionalCandidateRiskForDisplay(candidate({
 }));
 assert.equal(advisoryRisk.canExecute, false);
 assert.equal(advisoryRisk.approvalBoundary.riskScoreApprovesTrade, false);
-assert.ok(advisoryRisk.advisoryNotes.some((note) => note.includes('RiskTooWide remains a hard execution block')));
+assert.ok(advisoryRisk.advisoryNotes.some((note) => note.includes('Risk exceeds standard limit. Human final decision required')));
 
 const watchlist = detectMorningContinuationWatchlist({
   tradeDate: '2026-06-02',

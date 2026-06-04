@@ -53,11 +53,10 @@ assert.equal(report.finalGateResult.fullDeterministicGatesPass.scannerCandidate?
 assert.equal(report.finalGateResult.fullDeterministicGatesPass.scannerCandidate?.executionStatus, 'Executable');
 assert.equal(report.finalGateResult.fullDeterministicGatesPass.scannerCandidate?.target1, 7614);
 assert.equal(report.finalGateResult.fullDeterministicGatesPass.scannerCandidate?.target2, 7616);
-assert.notEqual(report.finalGateResult.fullDeterministicGatesPass.status, TradeDecisionStatus.ApprovedTrade);
-assert.equal(report.finalGateResult.fullDeterministicGatesPass.canExecute, false);
+assert.equal(report.finalGateResult.fullDeterministicGatesPass.status, TradeDecisionStatus.ApprovedTrade);
+assert.equal(report.finalGateResult.fullDeterministicGatesPass.canExecute, true);
 
-assert.equal(report.finalGateResult.riskTooWideCheck.status, TradeDecisionStatus.NoTrade);
-assert.equal(report.finalGateResult.riskTooWideCheck.noTradeReason, 'RiskTooWide');
+assert.notEqual(report.finalGateResult.riskTooWideCheck.noTradeReason, 'RiskTooWide');
 
 assert.ok(report.diagnosticReplay.htfMssDiagnostics);
 assert.equal(report.diagnosticReplay.htfMssDiagnostics.fiveMinuteMssTriggerConfirmed, true);
@@ -69,8 +68,8 @@ assert.equal(report.diagnosticReplay.approvalBoundary.diagnosticChangesRules, fa
 assert.equal(report.diagnosticReplay.approvalBoundary.diagnosticOverridesScanner, false);
 
 const serialized = JSON.stringify(report);
-assert.equal(serialized.includes('"canExecute":true'), false);
 assert.equal(serialized.includes('"diagnosticApprovesTrade":true'), false);
+assert.equal(serialized.includes('"approvesExecution":true'), false);
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(serialized), false);
 
 const tempDir = mkdtempSync(join(tmpdir(), 'htf-mss-june-1-'));
@@ -89,7 +88,7 @@ assert.ok(artifactMarkdown.includes('Data-Limited Blockers'));
 assert.ok(artifactMarkdown.includes('- none'));
 assert.ok(artifactMarkdown.includes('htfMssDiagnostics Present: Yes'));
 assert.ok(artifactMarkdown.includes('Candidate-only canExecute: false'));
-assert.ok(artifactMarkdown.includes('Full Deterministic Gates Status: NoTrade'));
+assert.ok(artifactMarkdown.includes('Full Deterministic Gates Status: ApprovedTrade'));
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(artifactMarkdown), false);
 
 console.log('HTF/MSS June 1 regression replay verified.');
