@@ -1047,7 +1047,8 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
     candidate.setupType === SetupType.TurtleSoup ||
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
-    candidate.setupType === SetupType.HtfDisplacementMssContinuation
+    candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
+    candidate.setupType === SetupType.HtfDisplacementFvgContinuation
   );
 }
 
@@ -2141,6 +2142,185 @@ const tests: Array<[string, () => void]> = [
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 
+  ['HTF displacement FVG continuation creates the June 3 short candidate without requiring MSS', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const noMssFiveMinute = (base.multiTimeframeContext?.fiveMinute.displacementCandles || []).map((candle) => ({
+      ...candle,
+      breaksStructure: false,
+      evidence: '5M bearish displacement/FVG continuation without confirmed MSS.',
+    }));
+    const context = htfDisplacementContinuationContext('SHORT', {
+      setupReadyFacts: {
+        sweepThenReclaim: false,
+        breakOfStructure: false,
+        pullbackIntoFvg: true,
+        fvgReclaimed: true,
+      },
+      marketStructure: {
+        ...base.marketStructure!,
+        marketStructureShift: false,
+      },
+      structureQualityContext: {
+        ...base.structureQualityContext!,
+        structureBreakConfirmedByClose: false,
+        reasons: [],
+        missingReasons: ['5M MSS not confirmed; FVG continuation still under review.'],
+      },
+      displacementCandles: noMssFiveMinute,
+      multiTimeframeContext: {
+        ...base.multiTimeframeContext!,
+        fiveMinute: {
+          ...base.multiTimeframeContext!.fiveMinute,
+          displacementCandles: noMssFiveMinute,
+        },
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7582.75);
+    assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.target1, 7572);
+    assert.equal(candidate.target2, 7568.25);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+    assert.ok(candidate.evidence.some((item) => item.includes('Risk exceeds standard limit. Human final decision required.')));
+    assert.ok((candidate.modelConfidenceScore ?? 0) >= 80);
+  }],
+
+  ['HTF displacement FVG continuation creates a symmetric long candidate', () => {
+    const base = htfDisplacementContinuationContext('LONG');
+    const noMssFiveMinute = (base.multiTimeframeContext?.fiveMinute.displacementCandles || []).map((candle) => ({
+      ...candle,
+      breaksStructure: false,
+      evidence: '5M bullish displacement/FVG continuation without confirmed MSS.',
+    }));
+    const context = htfDisplacementContinuationContext('LONG', {
+      setupReadyFacts: {
+        sweepThenReclaim: false,
+        breakOfStructure: false,
+        pullbackIntoFvg: true,
+        fvgReclaimed: true,
+      },
+      marketStructure: {
+        ...base.marketStructure!,
+        marketStructureShift: false,
+      },
+      structureQualityContext: {
+        ...base.structureQualityContext!,
+        structureBreakConfirmedByClose: false,
+        reasons: [],
+        missingReasons: ['5M MSS not confirmed; FVG continuation still under review.'],
+      },
+      displacementCandles: noMssFiveMinute,
+      multiTimeframeContext: {
+        ...base.multiTimeframeContext!,
+        fiveMinute: {
+          ...base.multiTimeframeContext!.fiveMinute,
+          displacementCandles: noMssFiveMinute,
+        },
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.entry, 7603.25);
+    assert.equal(candidate.stop, 7599);
+    assert.equal(candidate.target1, 7609.75);
+    assert.equal(candidate.target2, 7611.75);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_WITHIN_STANDARD_LIMIT');
+    assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+  }],
+
+  ['HTF displacement FVG continuation records confirmed MSS as confidence support only', () => {
+    const context = htfDisplacementContinuationContext('SHORT');
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.ok(candidate.evidence.some((item) => item.includes('5M MSS confirmed by structured OHLC; confidence support only')));
+    assert.ok((candidate.modelConfidenceScore ?? 0) > 92);
+  }],
+
+  ['HTF displacement FVG continuation is conditional when less than 60 percent path remains', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      keyLevels: {
+        ...base.keyLevels,
+        currentPrice: 7576,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
+    assert.ok(candidate.missingEvidence.includes('At least 60% of the path to primary liquidity remains'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+  }],
+
+  ['HTF displacement FVG continuation does not become executable without protected stop', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      proposedStop: null,
+      riskPoints: null,
+      riskStatus: 'Unknown',
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.riskAdvisoryStatus, 'RISK_INVALID_OR_UNDEFINED');
+    assert.ok(candidate.missingEvidence.includes('Protected 5M structure stop'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+  }],
+
+  ['HTF displacement FVG continuation does not become executable without external liquidity target', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      targetObjectives: [],
+      keyLevels: {
+        ...base.keyLevels,
+        previousDayLow: null,
+        priorDayLow: null,
+        overnightLow: null,
+        londonLow: null,
+        activeSwingLow: null,
+      },
+      multiTimeframeContext: {
+        ...base.multiTimeframeContext!,
+        targetMap: { levelsToWatch: [] },
+      },
+      higherTimeframeThesis: {
+        ...base.higherTimeframeThesis!,
+        drawOnLiquidity: null,
+        drawOnLiquidityLabel: null,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(candidate.missingEvidence.includes('External liquidity target'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+  }],
+
   ['Phase 3B HTF setup label and journal record use the approved model name', () => {
     const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
     const htfCandidate = htfPathwayCandidate(result);
@@ -2163,6 +2343,27 @@ const tests: Array<[string, () => void]> = [
     assert.ok(journal.setupTags.includes('reclaim'));
     assert.ok(journal.setupTags.includes('displacement'));
     assert.ok(journal.setupTags.includes('MSS'));
+  }],
+
+  ['HTF displacement FVG continuation label and journal record use the approved model name', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfDisplacementContinuationContext('SHORT'), result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.scenarioLabel, 'HTF Displacement + FVG Continuation');
+    assert.equal(normalizeIctModelLabel(candidate.setupType), 'HTF Displacement + FVG Continuation');
+    assert.equal(normalizeCandidateIctModelLabel(candidate), 'HTF Displacement + FVG Continuation');
+
+    const journal = buildTradeJournalRecord({
+      dateTime: '2026-06-03T11:25:00-04:00',
+      instrument: 'MES',
+      session: 'morning',
+      candidate,
+    });
+
+    assert.equal(journal.modelType, 'HTF Displacement + FVG Continuation');
+    assert.ok(journal.setupTags.includes('FVG'));
+    assert.ok(journal.setupTags.includes('displacement'));
   }],
 
   ['Phase F bullish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
@@ -3064,6 +3265,7 @@ const tests: Array<[string, () => void]> = [
         SetupType.TurtleSoup,
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
+        SetupType.HtfDisplacementFvgContinuation,
       ])
     );
     assert.ok(result.candidates.every((candidate) => candidate.scenarioLabel !== 'BreakerBlock'));

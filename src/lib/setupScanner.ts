@@ -2178,6 +2178,30 @@ function htfDisplacementConfidenceScore(args: {
   );
 }
 
+function htfDisplacementFvgConfidenceScore(args: {
+  fifteenDisplacement: boolean;
+  fiveDisplacement: boolean;
+  hasFvg: boolean;
+  hasMss: boolean;
+  hasTarget: boolean;
+  enoughRoom: boolean;
+  inWindow: boolean;
+  htfAligned: boolean;
+  hasEntryStopTargets: boolean;
+}): number {
+  return Math.min(100,
+    (args.fifteenDisplacement ? 22 : 0) +
+    (args.fiveDisplacement ? 18 : 0) +
+    (args.hasFvg ? 18 : 0) +
+    (args.hasMss ? 8 : 0) +
+    (args.hasTarget ? 10 : 0) +
+    (args.enoughRoom ? 10 : 0) +
+    (args.inWindow ? 5 : 0) +
+    (args.htfAligned ? 4 : 0) +
+    (args.hasEntryStopTargets ? 5 : 0)
+  );
+}
+
 function notDetectedHtfDisplacementMssCandidate(entry: SetupRegistryEntry): SetupCandidate {
   return {
     setupType: entry.setupType,
@@ -2209,6 +2233,41 @@ function notDetectedHtfDisplacementMssCandidate(entry: SetupRegistryEntry): Setu
     blockReason: null,
     requiredTrigger: null,
     nextAction: 'Wait for 15M displacement, confirmed 5M MSS close-through, a protected structure stop, and an external liquidity target with sufficient room.',
+    reducedRiskPlan: null,
+  };
+}
+
+function notDetectedHtfDisplacementFvgCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'htf_displacement_fvg_continuation',
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'HTF displacement + FVG continuation requires 15M displacement, 5M displacement/FVG support, and a defined 5M plan.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'Wait for 15M displacement, 5M displacement/FVG confirmation, a protected structure stop, and an external liquidity target with sufficient room.',
     reducedRiskPlan: null,
   };
 }
@@ -2327,6 +2386,124 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     nextAction: structurallyComplete
       ? `Structurally complete ${dirLabel} HTF displacement + 5M MSS continuation plan. Human final decision required.${riskLabel}`
       : 'Do not chase. Wait for a clean 5M MSS close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.',
+    reducedRiskPlan: null,
+  };
+}
+
+function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  if (!chartContext) return null;
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+  if (!registry) return null;
+  const direction = htfDisplacementDirection(chartContext);
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+
+  const inWindow = isInsideApprovedSetupScanWindow(chartContext);
+  const fifteenDisplacement = displacementCandleFor(chartContext, direction, '15m');
+  const fiveDisplacement = displacementCandleFor(chartContext, direction, '5m');
+  const hasFvg = fvgOrImbalanceSupportsDirection(chartContext, direction);
+  const hasMss = confirmedFiveMinuteMss(chartContext, direction);
+  const htfAligned = chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
+    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'NEUTRAL' ||
+    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
+    chartContext.higherTimeframeThesis?.direction === direction;
+
+  if (!inWindow || !fifteenDisplacement || !fiveDisplacement || !hasFvg) return null;
+
+  const triggerClose = parsePrice(fiveDisplacement.close) ?? parsePrice(chartContext.proposedEntry);
+  const entry = parsePrice(chartContext.proposedEntry) ?? triggerClose;
+  const stop = parsePrice(chartContext.proposedStop);
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
+  const target = liquidityTargetForContinuation(chartContext, direction, entry);
+  const roomRatio = remainingPathRatio(direction, triggerClose, currentPrice, target?.price ?? null);
+  const enoughRoom = roomRatio === null ? false : roomRatio >= 0.6;
+  const freshEntry = triggerClose !== null && currentPrice !== null
+    ? direction === 'SHORT'
+      ? entry !== null && entry <= triggerClose && currentPrice <= triggerClose
+      : entry !== null && entry >= triggerClose && currentPrice >= triggerClose
+    : false;
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const targets = computedTargets(direction, entry, stop);
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the protected 5M displacement/FVG structure stop near ${stop}.`
+      : `Invalid if price trades above the protected 5M displacement/FVG structure stop near ${stop}.`
+    : null;
+  const hasEntryStopTargets = entry !== null && stop !== null && targets.target1 !== null && targets.target2 !== null && invalidation !== null;
+  const score = htfDisplacementFvgConfidenceScore({
+    fifteenDisplacement: true,
+    fiveDisplacement: true,
+    hasFvg,
+    hasMss,
+    hasTarget: Boolean(target),
+    enoughRoom,
+    inWindow,
+    htfAligned,
+    hasEntryStopTargets,
+  });
+  const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
+  const riskNote = riskAdvisoryNote(risk);
+  const missingEvidence = [
+    ...(!htfAligned ? ['4H/1H context support or non-conflict'] : []),
+    ...(!target ? ['External liquidity target'] : []),
+    ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
+    ...(!freshEntry ? ['Entry at or beyond the 5M displacement close-through/retest trigger without chasing'] : []),
+    ...(entry === null ? ['Defined 5M entry'] : []),
+    ...(stop === null ? ['Protected 5M structure stop'] : []),
+    ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
+  ];
+  const threshold = 70;
+  const structurallyComplete = score >= threshold && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
+  const candidateState: TradingPlanCandidateState = structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
+  const riskLabel = riskNote ? ` ${riskNote}` : '';
+  const dirLabel = directionLabel(direction);
+  const continuationTrigger = hasMss ? 'confirmed 5M MSS continuation close' : '5M displacement/FVG continuation trigger';
+
+  return {
+    setupType: SetupType.HtfDisplacementFvgContinuation,
+    scenarioLabel: registry.label,
+    candidateState,
+    pathway: 'htf_displacement_fvg_continuation',
+    direction,
+    detectedStatus: structurallyComplete ? SetupCandidateStatus.Detected : SetupCandidateStatus.Conditional,
+    confidence: score >= 82 ? 'High' : score >= threshold ? 'Medium' : 'Low',
+    priority: registry.priority,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: score,
+    invalidation,
+    entryClarity: entry !== null ? 0.9 : 0.2,
+    stopClarity: stop !== null ? 0.9 : 0.2,
+    targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.9 : 0.3,
+    proximityScore: enoughRoom ? 0.8 : 0.3,
+    levelContextScore: score / 5,
+    levelContextSummary: `HTF displacement + FVG continuation: ${dirLabel} 15M displacement, 5M FVG/imbalance, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
+    evidence: Array.from(new Set([
+      `${dirLabel} 15M displacement confirmed`,
+      `${dirLabel} 5M displacement confirmed`,
+      '5M FVG / imbalance supports continuation',
+      ...(hasMss ? ['5M MSS confirmed by structured OHLC; confidence support only for this model'] : ['5M MSS not confirmed; not invented or required for this model']),
+      ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
+      ...(enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
+      `Confidence score: ${score}/100`,
+      'canExecute means structurally complete and ready for human review, not broker execution approval.',
+      ...(riskNote ? [riskNote] : []),
+    ])),
+    missingEvidence: Array.from(new Set(missingEvidence)),
+    executionStatus: structurallyComplete ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
+    blockReason: structurallyComplete ? null : (!enoughRoom ? NoTradeReason.ChasingExtendedMove : NoTradeReason.EntryTriggerPending),
+    requiredTrigger: direction === 'SHORT'
+      ? `Short entry at or below the ${continuationTrigger} while at least 60% of the path to primary sell-side liquidity remains.`
+      : `Long entry at or above the ${continuationTrigger} while at least 60% of the path to primary buy-side liquidity remains.`,
+    nextAction: structurallyComplete
+      ? `Structurally complete ${dirLabel} HTF displacement + FVG continuation plan. Human final decision required.${riskLabel}`
+      : 'Do not chase. Wait for a clean 5M displacement/FVG continuation trigger with protected stop, app targets, and enough remaining path to real liquidity.',
     reducedRiskPlan: null,
   };
 }
@@ -2585,6 +2762,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
   const htfReversalDeliveryBonus =
     candidate.pathway === 'htf_liquidity_draw_mss' ? 24 :
     candidate.pathway === 'htf_displacement_mss_continuation' ? 22 :
+    candidate.pathway === 'htf_displacement_fvg_continuation' ? 20 :
     0;
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
     ? -60
@@ -2608,6 +2786,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const text = buildSearchText(input);
   const htfCandidate = buildHtfLiquidityDrawCandidate(input);
   const htfDisplacementCandidate = buildHtfDisplacementMssContinuationCandidate(input);
+  const htfDisplacementFvgCandidate = buildHtfDisplacementFvgContinuationCandidate(input);
   const candidates = [
     ...getPrimarySetupRegistry(input.sessionType)
       .map((entry) =>
@@ -2615,10 +2794,14 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? htfCandidate
           : entry.setupType === SetupType.HtfDisplacementMssContinuation && htfDisplacementCandidate
           ? htfDisplacementCandidate
+          : entry.setupType === SetupType.HtfDisplacementFvgContinuation && htfDisplacementFvgCandidate
+          ? htfDisplacementFvgCandidate
           : entry.setupType === SetupType.HtfDrawContinuationAfterRaid
           ? notDetectedHtfDrawCandidate(entry)
           : entry.setupType === SetupType.HtfDisplacementMssContinuation
           ? notDetectedHtfDisplacementMssCandidate(entry)
+          : entry.setupType === SetupType.HtfDisplacementFvgContinuation
+          ? notDetectedHtfDisplacementFvgCandidate(entry)
           : candidateForEntry(entry, input, text)
       ),
   ]

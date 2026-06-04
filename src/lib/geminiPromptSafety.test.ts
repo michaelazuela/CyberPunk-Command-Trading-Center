@@ -11,7 +11,10 @@ const htfRule = source.slice(htfRuleStart, htfRuleEnd);
 
 assert.ok(htfRule.includes('SetupType.HtfDrawContinuationAfterRaid'));
 assert.ok(htfRule.includes('SetupType.HtfDisplacementMssContinuation'));
+assert.ok(htfRule.includes('SetupType.HtfDisplacementFvgContinuation'));
 assert.ok(htfRule.includes('HTF Draw Continuation After Raid/Reclaim'));
+assert.ok(htfRule.includes('HTF Displacement + FVG Continuation'));
+assert.ok(htfRule.includes('5M MSS may raise confidence for this FVG continuation pathway, but must not be invented'));
 assert.ok(htfRule.includes('may not bypass deterministic entry, stop, target, session, screenshot-quality, final-pipeline, or canExecute gates'));
 assert.ok(htfRule.includes('Risk exceeds standard limit. Human final decision required.'));
 assert.ok(htfRule.includes('Potential MSS is not execution approval'));

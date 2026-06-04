@@ -486,6 +486,137 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
   });
 }
 
+function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SHORT', overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  const bullish = direction === 'LONG';
+  const entry = bullish ? 7603.25 : 7582.75;
+  const stop = bullish ? 7599 : 7590;
+  const target = bullish ? 7620 : 7574.75;
+  const displacement = {
+    direction,
+    candleIndex: 1,
+    timestamp: bullish ? '2026-06-02T10:00:00-04:00' : '2026-06-03T09:45:00-04:00',
+    open: bullish ? 7590 : 7608.5,
+    high: bullish ? 7605 : 7614.75,
+    low: bullish ? 7588 : 7591.75,
+    close: bullish ? 7604 : 7592.75,
+    bodyPoints: bullish ? 14 : 15.75,
+    rangePoints: bullish ? 17 : 23,
+    bodyToRange: bullish ? 0.82 : 0.68,
+    closeLocation: bullish ? 'top_quarter' as const : 'bottom_quarter' as const,
+    displacementScore: 88,
+    quality: 'high_quality' as const,
+    leavesImbalance: true,
+    breaksStructure: false,
+    confidence: 'High' as const,
+    evidence: bullish ? '15M bullish displacement.' : '15M bearish displacement.',
+  };
+  const fiveMinute = {
+    ...displacement,
+    candleIndex: 2,
+    timestamp: bullish ? '2026-06-02T10:05:00-04:00' : '2026-06-03T11:25:00-04:00',
+    open: bullish ? 7600 : 7588,
+    high: bullish ? 7605 : 7589.25,
+    low: bullish ? 7599 : 7580.5,
+    close: entry,
+    bodyPoints: bullish ? 3.25 : 5.25,
+    rangePoints: bullish ? 6 : 8.75,
+    evidence: bullish ? '5M bullish displacement/FVG continuation.' : '5M bearish displacement/FVG continuation.',
+  };
+  return structuredContext({
+    chartTimestamp: bullish ? '2026-06-02T10:05:00-04:00' : '2026-06-03T11:25:00-04:00',
+    keyLevels: {
+      currentPrice: entry,
+      activeSwingLow: bullish ? 7599 : 7574.75,
+      activeSwingHigh: bullish ? 7620 : 7590,
+      overnightHigh: bullish ? 7632.75 : 7614.75,
+      overnightLow: bullish ? 7590 : 7574,
+    },
+    marketStructure: {
+      trend: bullish ? 'bullish' : 'bearish',
+      higherHigh: bullish,
+      higherLow: bullish,
+      lowerHigh: !bullish,
+      lowerLow: !bullish,
+      marketStructureShift: false,
+      chopRangeCondition: false,
+      compressionCondition: false,
+      expansionCondition: true,
+    },
+    candleFacts: {
+      lastClosedCandleDirection: bullish ? 'bullish' : 'bearish',
+      expansionCandlePresent: true,
+      rejectionWickPresent: false,
+      breatherCandlePresent: false,
+      reclaimCandlePresent: false,
+      pullbackPresent: false,
+      closeAboveKeyLevel: bullish,
+      closeBelowKeyLevel: !bullish,
+    },
+    setupReadyFacts: {
+      sweepThenReclaim: false,
+      breakOfStructure: false,
+      pullbackIntoFvg: true,
+      fvgReclaimed: true,
+    },
+    setupEvidence: {},
+    proposedEntry: entry,
+    proposedStop: stop,
+    riskPoints: Math.abs(entry - stop),
+    riskStatus: Math.abs(entry - stop) > 4 ? 'RiskTooWide' : 'WithinLimit',
+    fvgZones: [{
+      direction,
+      lower: bullish ? 7600.5 : 7584,
+      upper: bullish ? 7603.5 : 7589,
+      impulseQualified: true,
+      confidence: 'High',
+    }],
+    displacementCandles: [fiveMinute],
+    targetObjectives: [{
+      label: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+      price: target,
+      direction,
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 95,
+      reason: 'Primary external liquidity objective.',
+    }],
+    multiTimeframeContext: {
+      source: 'ninjatrader_bridge',
+      authority: 'ohlc_facts_only',
+      fourHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      oneHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      fifteenMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [displacement], confidence: 'High', notes: [] },
+      fiveMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [fiveMinute], confidence: 'High', notes: [] },
+      alignment: {
+        macroBias: direction,
+        sessionBias: direction,
+        liquidityBias: direction,
+        executionBias: direction,
+        alignedDirection: direction,
+        conflicts: [],
+        notes: [`HTF displacement FVG continuation aligned ${direction}.`],
+      },
+      targetMap: { levelsToWatch: [] },
+      rules: {
+        higherTimeframesApproveTrades: false,
+        fiveMinuteExecutionRequired: true,
+        aiMayOverwriteOhlcFacts: false,
+      },
+      notes: [],
+    } as unknown as ChartContext['multiTimeframeContext'],
+    higherTimeframeThesis: {
+      direction,
+      confidence: 'High',
+      sourceTimeframes: ['15M', '5M'],
+      reason: bullish ? 'Bullish displacement delivery toward external buy-side liquidity.' : 'Bearish displacement delivery toward external sell-side liquidity.',
+      drawOnLiquidity: target,
+      drawOnLiquidityLabel: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+    },
+    ...overrides,
+  });
+}
+
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -505,7 +636,8 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
     candidate.setupType === SetupType.TurtleSoup ||
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
-    candidate.setupType === SetupType.HtfDisplacementMssContinuation
+    candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
+    candidate.setupType === SetupType.HtfDisplacementFvgContinuation
   );
 }
 
@@ -791,6 +923,40 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.stop, 7600);
     assert.equal(result.finalTradePlan.target1, 7610);
     assert.equal(result.finalTradePlan.target2, 7612);
+  }],
+
+  ['15b2. Pipeline can approve the HTF displacement FVG continuation model when deterministic gates are complete', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'SHORT',
+        reasoning: '15M bearish displacement, 5M bearish FVG continuation, protected stop, and sell-side liquidity objective.',
+        current_rule_analysis: {
+          summary: '15M bearish displacement and 5M bearish FVG continuation into sell-side liquidity.',
+          setup_detected: 'HTF Displacement + FVG Continuation',
+          rule_category: 'Continuation',
+          entry: 7582.75,
+          stop: 7590,
+          target_1: 7572,
+          target_2: 7568.25,
+          trigger_state: 'TRIGGERED',
+          entry_trigger: '5M displacement/FVG continuation trigger.',
+          no_trade_reason: null,
+          base_confidence: 'High',
+        },
+        structuredChartContext: htfDisplacementFvgContinuationContext('SHORT') as ChartContext,
+      }),
+    });
+
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.executionStatus, ExecutionStatus.Executable);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.riskAdvisoryStatus, 'RISK_ABOVE_STANDARD_LIMIT');
+    assert.equal(result.finalTradePlan.setupType, SetupType.HtfDisplacementFvgContinuation);
+    assert.equal(result.finalTradePlan.entry, 7582.75);
+    assert.equal(result.finalTradePlan.stop, 7590);
+    assert.equal(result.finalTradePlan.target1, 7572);
+    assert.equal(result.finalTradePlan.target2, 7568.25);
   }],
 
   ['15c. HTF draw continuation keeps app-computed targets and model-specific scorecard wording', () => {

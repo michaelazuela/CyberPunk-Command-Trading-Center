@@ -5,6 +5,7 @@ export type IctModelLabel =
   | 'Turtle Soup Reversal'
   | 'HTF Draw Continuation After Raid/Reclaim'
   | 'HTF Displacement + 5M MSS Continuation'
+  | 'HTF Displacement + FVG Continuation'
   | 'ICT setup';
 
 export function normalizeIctModelLabel(setupType?: SetupType | string | null): IctModelLabel {
@@ -12,6 +13,7 @@ export function normalizeIctModelLabel(setupType?: SetupType | string | null): I
   if (setupType === SetupType.TurtleSoup) return 'Turtle Soup Reversal';
   if (setupType === SetupType.HtfDrawContinuationAfterRaid) return 'HTF Draw Continuation After Raid/Reclaim';
   if (setupType === SetupType.HtfDisplacementMssContinuation) return 'HTF Displacement + 5M MSS Continuation';
+  if (setupType === SetupType.HtfDisplacementFvgContinuation) return 'HTF Displacement + FVG Continuation';
   return 'ICT setup';
 }
 

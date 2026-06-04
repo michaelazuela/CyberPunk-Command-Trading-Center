@@ -138,6 +138,16 @@ function inferBias(result: AnalysisResult | null | undefined): BiasDirection {
 function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
+  if (
+    text.includes('HTF DISPLACEMENT + FVG CONTINUATION') ||
+    text.includes('HTF DISPLACEMENT FVG CONTINUATION') ||
+    text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
+  ) return SetupType.HtfDisplacementFvgContinuation;
+  if (
+    text.includes('HTF DISPLACEMENT + MSS CONTINUATION') ||
+    text.includes('HTF DISPLACEMENT MSS CONTINUATION') ||
+    text.includes('HTF_DISPLACEMENT_MSS_CONTINUATION')
+  ) return SetupType.HtfDisplacementMssContinuation;
   if (text.includes('TURTLE SOUP') || text.includes('FAILED BREAKOUT REVERSAL') || text.includes('FAILED BREAKDOWN REVERSAL')) return SetupType.TurtleSoup;
   const hasSweepOrReclaim = text.includes('LIQUIDITY') || text.includes('SWEEP') || text.includes('RECLAIM') || text.includes('FAILED BREAKOUT') || text.includes('FAILED BREAKDOWN');
   const hasStructureOrImbalance = text.includes('MSS') || text.includes('STRUCTURE SHIFT') || text.includes('FVG') || text.includes('FAIR VALUE') || text.includes('IMBALANCE') || text.includes('DISPLACEMENT');
@@ -336,6 +346,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.SweepMssFvgRetrace: return 100;
     case SetupType.HtfDrawContinuationAfterRaid: return 99;
     case SetupType.HtfDisplacementMssContinuation: return 99;
+    case SetupType.HtfDisplacementFvgContinuation: return 97;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
   }
@@ -573,8 +584,10 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
           ? 'Turtle Soup reversal sequence quality.'
           : candidate.setupType === SetupType.HtfDrawContinuationAfterRaid
             ? 'HTF draw continuation after raid/reclaim sequence quality.'
-            : candidate.setupType === SetupType.HtfDisplacementMssContinuation
+          : candidate.setupType === SetupType.HtfDisplacementMssContinuation
               ? 'HTF displacement + 5M MSS continuation sequence quality.'
+          : candidate.setupType === SetupType.HtfDisplacementFvgContinuation
+              ? 'HTF displacement + FVG continuation sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',
     },
     {

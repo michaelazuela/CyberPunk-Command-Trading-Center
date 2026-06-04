@@ -34,6 +34,7 @@ export enum SetupType {
   MarketStructureShift = 'MarketStructureShift',
   HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
   HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
+  HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
   InitialBalanceExtension = 'InitialBalanceExtension',
@@ -911,7 +912,7 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation';
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;

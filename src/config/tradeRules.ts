@@ -72,6 +72,7 @@ export const TRADE_RULES = {
         SetupType.TurtleSoup,
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
+        SetupType.HtfDisplacementFvgContinuation,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,
@@ -91,6 +92,7 @@ export const TRADE_RULES = {
         SetupType.TurtleSoup,
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
+        SetupType.HtfDisplacementFvgContinuation,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,
