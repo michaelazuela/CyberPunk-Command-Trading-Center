@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { SupervisorStatusPayload } from './status';
 
 export type SupervisorNotificationKind =
+  | 'supervisor_ready'
   | 'scanner_down'
   | 'scanner_recovered'
   | 'recorder_down'
@@ -33,6 +34,30 @@ export interface SupervisorNotificationOptions {
   webhookUrl?: string | null;
   dryRun?: boolean;
   staleCooldownMs?: number;
+}
+
+interface DiscordEmbedField {
+  name: string;
+  value: string;
+  inline?: boolean;
+}
+
+interface ScannerHistoryLine {
+  timeframe: string;
+  status: string;
+  bars: string;
+  from: string;
+  to: string;
+  source: string;
+}
+
+interface OperationalReportSummary {
+  scannerHealth: string | null;
+  scannerHistory: ScannerHistoryLine[];
+  latestCompleted5m: string | null;
+  marketMap: string | null;
+  recorderCycle: string | null;
+  recorderBars: string[];
 }
 
 const WEBHOOK_ENV_KEYS = [
@@ -81,6 +106,27 @@ function stale5mBlockers(status: SupervisorStatusPayload): string[] {
   return (status.delivery?.staleDataBlockers || []).filter((blocker) => blocker.toLowerCase().includes('5m'));
 }
 
+function isReadyStatus(status: SupervisorStatusPayload): boolean {
+  const monitoredServices = status.childServices.filter((service) => service.id === 'scanner' || service.id === 'candle-recorder');
+  const externalDuplicates = monitoredServices.some((service) => service.externalPids.length > 0);
+  return status.supervisor.status === 'ready' &&
+    status.health?.status === 'ok' &&
+    serviceStatus(status, 'scanner') === 'running' &&
+    serviceStatus(status, 'candle-recorder') === 'running' &&
+    healthCheckStatus(status, 'bridge') === 'ok' &&
+    !externalDuplicates;
+}
+
+function hasLoadedOperationalReports(status: SupervisorStatusPayload): boolean {
+  const summary = buildOperationalReportSummary(status);
+  const requiredHistory = new Set(['5m', '15m', '60m', '240m']);
+  const loadedHistory = summary.scannerHistory.filter((item) => requiredHistory.has(item.timeframe));
+  return Boolean(summary.scannerHealth) &&
+    Boolean(summary.latestCompleted5m) &&
+    Boolean(summary.recorderCycle) &&
+    loadedHistory.length === requiredHistory.size;
+}
+
 function shouldSendCooldown(state: SupervisorNotificationState, key: string, now: Date, cooldownMs: number): boolean {
   const lastSentAt = state.lastSentAtByKey[key];
   if (!lastSentAt) return true;
@@ -122,6 +168,28 @@ export function buildSupervisorNotifications(
     lastStatuses: { ...previous.lastStatuses },
     lastSentAtByKey: { ...previous.lastSentAtByKey },
   };
+
+  if (
+    isReadyStatus(status) &&
+    hasLoadedOperationalReports(status) &&
+    previous.lastStatuses[`supervisor_ready:${status.supervisor.pid}`] !== 'sent'
+  ) {
+    notifications.push(notification({
+      kind: 'supervisor_ready',
+      title: 'Quant Desk Supervisor Ready',
+      description: [
+        `Supervisor is ready and responding on ${status.config.host}.`,
+        'Scanner is running under supervisor ownership.',
+        'Recorder is running under supervisor ownership.',
+        'Bridge health is reachable.',
+        'No external duplicate scanner or recorder processes are reported.',
+      ].join('\n'),
+      severity: 'ok',
+      dedupeKey: `supervisor_ready:${status.supervisor.pid}`,
+      now,
+    }));
+    nextState.lastStatuses[`supervisor_ready:${status.supervisor.pid}`] = 'sent';
+  }
 
   for (const serviceId of ['scanner', 'candle-recorder'] as const) {
     const current = serviceStatus(status, serviceId);
@@ -214,7 +282,129 @@ function colorFor(severity: SupervisorNotification['severity']): number {
   return 0xff4d4d;
 }
 
-export function buildSupervisorDiscordPayload(notification: SupervisorNotification): Record<string, unknown> {
+function readTailLines(filePath: string | null | undefined, maxBytes = 64_000): string[] {
+  if (!filePath) return [];
+  try {
+    const stat = fs.statSync(filePath);
+    const start = Math.max(0, stat.size - maxBytes);
+    const fd = fs.openSync(filePath, 'r');
+    try {
+      const buffer = Buffer.alloc(stat.size - start);
+      fs.readSync(fd, buffer, 0, buffer.length, start);
+      return buffer.toString('utf8').split(/\r?\n/).filter(Boolean);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return [];
+  }
+}
+
+function cleanLogLine(line: string): string {
+  return line.replace(/\u001b\[[0-9;]*m/g, '').trim();
+}
+
+function lastMatching(lines: string[], pattern: RegExp): string | null {
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const cleaned = cleanLogLine(lines[index]);
+    if (pattern.test(cleaned)) return cleaned;
+  }
+  return null;
+}
+
+function parseScannerHistory(lines: string[]): ScannerHistoryLine[] {
+  const historyByTimeframe = new Map<string, ScannerHistoryLine>();
+  const pattern = /^\[scanner-history\]\s+(\S+):\s+([^,]+),\s+(\d+)\s+bars,\s+(.+?)\s+to\s+(.+?),\s+source=([^,]+)/;
+  for (const line of lines.map(cleanLogLine)) {
+    const match = line.match(pattern);
+    if (!match) continue;
+    historyByTimeframe.set(match[1], {
+      timeframe: match[1],
+      status: match[2],
+      bars: match[3],
+      from: match[4],
+      to: match[5],
+      source: match[6],
+    });
+  }
+  return ['5m', '15m', '60m', '240m']
+    .map((timeframe) => historyByTimeframe.get(timeframe))
+    .filter((line): line is ScannerHistoryLine => Boolean(line));
+}
+
+function buildOperationalReportSummary(status: SupervisorStatusPayload): OperationalReportSummary {
+  const scannerLog = status.childServices.find((service) => service.id === 'scanner')?.stdoutLog;
+  const recorderLog = status.childServices.find((service) => service.id === 'candle-recorder')?.stdoutLog;
+  const scannerLines = readTailLines(scannerLog);
+  const recorderLines = readTailLines(recorderLog);
+  const marketMap = lastMatching(scannerLines, /^\[scanner\]\s+Market Mapping Mode:/);
+
+  return {
+    scannerHealth: lastMatching(scannerLines, /^\[scanner-health\]/),
+    scannerHistory: parseScannerHistory(scannerLines),
+    latestCompleted5m: marketMap?.match(/completed 5M ([^|]+)/)?.[1]?.trim() || null,
+    marketMap,
+    recorderCycle: lastMatching(recorderLines, /^\[market-cache\]\s+cycle complete:/),
+    recorderBars: recorderLines
+      .map(cleanLogLine)
+      .filter((line) => /^\[market-cache\]\s+\S+:\s+upserted\s+\d+\s+bars\./.test(line))
+      .slice(-4),
+  };
+}
+
+function truncateField(value: string, limit = 1024): string {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit - 3)}...`;
+}
+
+function buildOperationalReportFields(status?: SupervisorStatusPayload): DiscordEmbedField[] {
+  if (!status) return [];
+  const summary = buildOperationalReportSummary(status);
+  const fields: DiscordEmbedField[] = [];
+  const serviceLines = [
+    `Health: ${status.health?.status || 'unknown'}`,
+    `Scanner: ${serviceStatus(status, 'scanner')}`,
+    `Recorder: ${serviceStatus(status, 'candle-recorder')}`,
+    `Bridge: ${healthCheckStatus(status, 'bridge')}`,
+    `Latest completed 5M: ${summary.latestCompleted5m || 'not reported yet'}`,
+  ];
+  fields.push({ name: 'Supervisor Status', value: serviceLines.join('\n'), inline: false });
+
+  const historyLines = summary.scannerHistory.map((item) =>
+    `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}`
+  );
+  fields.push({
+    name: 'Loaded History Reports',
+    value: historyLines.length
+      ? truncateField(historyLines.join('\n'))
+      : 'Scanner history report has not appeared in the supervisor log yet.',
+    inline: false,
+  });
+
+  const recorderLines = [
+    ...summary.recorderBars,
+    summary.recorderCycle || 'Recorder cache cycle has not completed in the supervisor log yet.',
+  ];
+  fields.push({ name: 'Market Cache Recorder', value: truncateField(recorderLines.join('\n')), inline: false });
+
+  if (summary.scannerHealth || summary.marketMap) {
+    fields.push({
+      name: 'Scanner Report',
+      value: truncateField([
+        summary.scannerHealth,
+        summary.marketMap?.replace(/\s+\|\s+positions .+$/, ''),
+      ].filter(Boolean).join('\n')),
+      inline: false,
+    });
+  }
+
+  return fields;
+}
+
+export function buildSupervisorDiscordPayload(
+  notification: SupervisorNotification,
+  status?: SupervisorStatusPayload,
+): Record<string, unknown> {
   return {
     username: 'Quant Desk',
     content: `[SUPERVISOR] ${notification.title}`,
@@ -223,7 +413,7 @@ export function buildSupervisorDiscordPayload(notification: SupervisorNotificati
         title: notification.title,
         description: notification.description,
         color: colorFor(notification.severity),
-        fields: [],
+        fields: buildOperationalReportFields(status),
         footer: { text: 'Quant Desk • Supervisor health • Operational status only' },
         timestamp: notification.timestamp,
       },
@@ -251,7 +441,7 @@ export async function sendSupervisorNotifications(
     const response = await fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildSupervisorDiscordPayload(item)),
+      body: JSON.stringify(buildSupervisorDiscordPayload(item, status)),
       signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new Error(`Supervisor Discord notification failed (${response.status}).`);

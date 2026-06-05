@@ -3,17 +3,17 @@
 ## Latest Change
 
 Date: 2026-06-05
-Task: Add Quant Desk Local Supervisor operational Discord notifications.
-Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/index.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
-Reason: Notify Discord for operational health events only: scanner/recorder down or recovered, bridge unreachable or recovered, stale 5M bars with cooldown, owned child restarts, and tray supervisor self-heal events. Suppress routine healthy pings and preserve trade-alert boundaries.
-Tests run: PowerShell tray syntax parse; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check; live supervisor reload.
-Result: Passed. Supervisor monitor sends transition-based operational Discord notifications when a health webhook is configured. Live reload sent one stale-5M operational notification and wrote cooldown state to logs/supervisor/supervisor-notifications-state.json. Tray self-heal can fire an explicit supervisor self-heal notification command.
+Task: Make Quant Desk Supervisor desktop launch stealth and enrich operational Discord reports.
+Files changed: Launch-QuantDeskSupervisorTray.vbs, docs/PROJECT_STATUS.md, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
+Reason: Avoid visible Windows Terminal/PowerShell windows from desktop launch and include the supervisor's loaded scanner-history and recorder-cache reports in operational Discord health messages.
+Tests run: Desktop shortcut smoke; visible-window check; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Desktop shortcut now targets wscript.exe and launches Launch-QuantDeskSupervisorTray.vbs. Operational supervisor-ready Discord payloads now include service status, latest completed 5M, 5M/15M/60M/240M loaded-history reports, recorder cache cycle details, and scanner report text. Live smoke reported zero visible Quant Desk/PowerShell windows while supervisor, recorder, and scanner remained running.
 Trading logic changed: No.
 Bridge impact: None. Bridge scripts and bridge behavior were not modified.
 Journal/RAG impact: None.
 Supabase impact: None.
-Known risks: Notifications depend on a configured health/scanner webhook. Stale 5M alerts are cooldown-limited, not market-session-aware beyond the status payload. Manual duplicate processes are still reported, not adopted.
-Next recommended action: Leave Discord notifications on for operational alerts and confirm away-from-home pings are useful without becoming noisy.
+Known risks: Windows tray icon may still appear in the overflow area by design; no console/application window should appear from desktop launch. Discord report fields depend on the scanner/recorder writing their existing log lines.
+Next recommended action: Restart the tray/supervisor from the desktop shortcut when you want a fresh green supervisor-ready Discord message with loaded-bar reports.
 
 ## Previous Change
 

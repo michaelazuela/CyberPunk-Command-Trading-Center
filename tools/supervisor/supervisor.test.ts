@@ -8,6 +8,7 @@ import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
 import { createSupervisorLogger } from './logger';
 import {
+  buildSupervisorDiscordPayload,
   buildSupervisorNotifications,
   sendSupervisorSelfHealNotification,
   type SupervisorNotificationState,
@@ -87,6 +88,8 @@ assert.equal('scanSetupCandidates' in statusSource, false);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const trayScriptPath = path.join(repoRoot, 'QuantDeskSupervisorTray.ps1');
 const trayScript = fs.readFileSync(trayScriptPath, 'utf8');
+const trayLauncherPath = path.join(repoRoot, 'Launch-QuantDeskSupervisorTray.vbs');
+const trayLauncher = fs.readFileSync(trayLauncherPath, 'utf8');
 assert.ok(trayScript.includes('System.Windows.Forms.NotifyIcon'));
 assert.ok(trayScript.includes('Open Logs'));
 assert.ok(trayScript.includes('Stop All'));
@@ -99,6 +102,12 @@ assert.equal(trayScript.includes('Add_Opening'), false);
 assert.equal(trayScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(trayScript.includes('scanSetupCandidates'), false);
 assert.equal(trayScript.includes('canExecute'), false);
+assert.ok(trayLauncher.includes('shell.Run command, 0, False'));
+assert.ok(trayLauncher.includes('-WindowStyle Hidden'));
+assert.ok(trayLauncher.includes('QuantDeskSupervisorTray.ps1'));
+assert.equal(trayLauncher.includes('runTradeDecisionPipeline'), false);
+assert.equal(trayLauncher.includes('scanSetupCandidates'), false);
+assert.equal(trayLauncher.includes('canExecute'), false);
 
 const supervisorDir = path.dirname(fileURLToPath(import.meta.url));
 const protectedImportPatterns = [
@@ -250,6 +259,113 @@ const notificationState: SupervisorNotificationState = {
   },
   lastSentAtByKey: {},
 };
+const scannerReportLog = path.join(tempLogsDir, 'scanner-report.log');
+const recorderReportLog = path.join(tempLogsDir, 'recorder-report.log');
+fs.writeFileSync(scannerReportLog, [
+  '[scanner-health] READY: 10 passed, 0 warning(s), 0 failure(s). Scanner dependencies are ready. Alerts can be trusted for this cycle.',
+  '[scanner-history] 5m: sufficient, 6000 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner-history] 15m: sufficient, 3057 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner-history] 60m: sufficient, 1515 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner-history] 240m: sufficient, 1134 bars, 2026-05-05T00:00:00 to 2026-06-04T10:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner] Market Mapping Mode: MarketMapping, context updated only | current 7563.75 | completed 5M 2026-06-04T22:40:00.0000000 | positions flat / none returned | market map refreshed (morning; history sufficient).',
+].join('\n'), 'utf8');
+fs.writeFileSync(recorderReportLog, [
+  '[market-cache] 5m: upserted 120 bars.',
+  '[market-cache] 15m: upserted 120 bars.',
+  '[market-cache] 60m: upserted 120 bars.',
+  '[market-cache] 240m: upserted 120 bars.',
+  '[market-cache] cycle complete: 480 bars processed at 2026-06-05T02:42:09.783Z.',
+].join('\n'), 'utf8');
+const readyStatus = buildSupervisorStatus(defaultConfig, {
+  supervisorPid: 12345,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'ready-state.json'),
+  services: [
+    {
+      id: 'scanner',
+      pid: 1111,
+      startedAt: fixedNow.toISOString(),
+      stdoutLog: scannerReportLog,
+      stderrLog: '',
+      status: 'running',
+      error: null,
+      restartCount: 0,
+      lastRestartAt: null,
+      lastRestartReason: null,
+      externalPids: [],
+    },
+    {
+      id: 'candle-recorder',
+      pid: 2222,
+      startedAt: fixedNow.toISOString(),
+      stdoutLog: recorderReportLog,
+      stderrLog: '',
+      status: 'running',
+      error: null,
+      restartCount: 0,
+      lastRestartAt: null,
+      lastRestartReason: null,
+      externalPids: [],
+    },
+  ],
+}, {
+  status: 'ok',
+  generatedAt: fixedNow.toISOString(),
+  checks: [
+    { id: 'bridge', label: 'NinjaTrader bridge', status: 'ok', message: 'Bridge health endpoint is reachable.' },
+  ],
+}, null, fixedNow);
+const readyNotifications = buildSupervisorNotifications(readyStatus, { lastStatuses: {}, lastSentAtByKey: {} }, fixedNow);
+const readyNotification = readyNotifications.notifications.find((item) => item.kind === 'supervisor_ready');
+assert.ok(readyNotification);
+const readyPayload = buildSupervisorDiscordPayload(readyNotification, readyStatus);
+const readyPayloadText = JSON.stringify(readyPayload);
+assert.ok(readyPayloadText.includes('Loaded History Reports'));
+assert.ok(readyPayloadText.includes('5m: sufficient, 6000 bars'));
+assert.ok(readyPayloadText.includes('240m: sufficient, 1134 bars'));
+assert.ok(readyPayloadText.includes('Market Cache Recorder'));
+assert.ok(readyPayloadText.includes('cycle complete: 480 bars processed'));
+assert.ok(readyPayloadText.includes('Latest completed 5M: 2026-06-04T22:40:00.0000000'));
+assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyPayloadText), false);
+const readyWithoutReports = buildSupervisorStatus(defaultConfig, {
+  supervisorPid: 12346,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'ready-state-without-reports.json'),
+  services: [
+    {
+      id: 'scanner',
+      pid: 1111,
+      startedAt: fixedNow.toISOString(),
+      stdoutLog: path.join(tempLogsDir, 'missing-scanner-report.log'),
+      stderrLog: '',
+      status: 'running',
+      error: null,
+      restartCount: 0,
+      lastRestartAt: null,
+      lastRestartReason: null,
+      externalPids: [],
+    },
+    {
+      id: 'candle-recorder',
+      pid: 2222,
+      startedAt: fixedNow.toISOString(),
+      stdoutLog: path.join(tempLogsDir, 'missing-recorder-report.log'),
+      stderrLog: '',
+      status: 'running',
+      error: null,
+      restartCount: 0,
+      lastRestartAt: null,
+      lastRestartReason: null,
+      externalPids: [],
+    },
+  ],
+}, readyStatus.health, null, fixedNow);
+assert.equal(
+  buildSupervisorNotifications(readyWithoutReports, { lastStatuses: {}, lastSentAtByKey: {} }, fixedNow)
+    .notifications.some((item) => item.kind === 'supervisor_ready'),
+  false,
+);
+
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,
   startedAt: fixedNow.toISOString(),
