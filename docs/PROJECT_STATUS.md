@@ -2,6 +2,21 @@
 
 ## Latest Change
 
+Date: 2026-06-05
+Task: Add Phase 2 Quant Desk Local Supervisor hidden process launcher.
+Files changed: .gitignore, docs/PROJECT_STATUS.md, package.json, Start-QuantDesk-Supervisor.ps1, Stop-QuantDesk-Supervisor.ps1, Status-QuantDesk.ps1, tools/supervisor/config.ts, tools/supervisor/index.ts, tools/supervisor/logger.ts, tools/supervisor/processManager.ts, tools/supervisor/status.ts, tools/supervisor/supervisor.test.ts, tools/supervisor/test-child.ts.
+Reason: Let the local supervisor start existing recorder/scanner npm commands as hidden background child processes, redirect logs to local files, expose status, and stop owned processes without changing the scripts themselves.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npm run supervisor:check; PowerShell wrapper smoke with SUPERVISOR_SERVICES=none; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Supervisor status reports Phase 2, child service enabled/disabled state, PIDs, log paths, and explicit no-restart/no-trading-change boundaries. The wrapper smoke started and stopped the supervisor without launching real recorder/scanner services.
+Trading logic changed: No.
+Bridge impact: None. Bridge scripts and bridge behavior were not modified. Companion proxy remains disabled by default.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Phase 2 has no health checks or auto-restart. It starts/stops owned child processes only; manually launched duplicate services are not reconciled beyond status visibility.
+Next recommended action: Phase 3 should add bridge/recorder/scanner/Discord health checks and restart only failed owned child processes, never market-condition-based restarts.
+
+## Previous Change
+
 Date: 2026-06-03
 Task: Add scanner decision event tape and make missed-trade classification proof-based.
 Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts/tests, src/lib/localScannerEngine.ts/tests, tools/automation/nt-scanner.ts/tests.
