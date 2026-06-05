@@ -1,0 +1,276 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+export type ScannerDeliveryStatus = 'sent' | 'failed' | 'pending' | 'skipped' | 'unknown';
+
+export interface ScannerDeliveryRecord {
+  alertKey: string;
+  planVersionId: string | null;
+  instrument: string | null;
+  tradeDate: string | null;
+  session: string | null;
+  state: string | null;
+  confidence: number | null;
+  deliveryStatus: ScannerDeliveryStatus;
+  webhookSource: string | null;
+  httpStatus: number | null;
+  discordMessageId: string | null;
+  error: string | null;
+  attemptedAt: string | null;
+  sentAt: string | null;
+  auditLogPath: string | null;
+  stale: boolean | null;
+  retryEligible: boolean | null;
+}
+
+export interface ScannerSentRecord {
+  alertKey: string;
+  state: string | null;
+  confidence: number | null;
+  sentAt: string | null;
+}
+
+export interface WatchlistRecord {
+  key: string;
+  direction: string | null;
+  sentAt: string | null;
+}
+
+export interface AuditFileSummary {
+  filePath: string;
+  fileName: string;
+  kind: 'scanner_audit' | 'decision_tape' | 'watchlist' | 'other';
+  modifiedAt: string;
+  ageMs: number;
+  sizeBytes: number;
+}
+
+export interface DeliveryVisibilityReport {
+  status: 'ok' | 'warn';
+  generatedAt: string;
+  scannerStatePath: string;
+  auditDir: string;
+  stateReadable: boolean;
+  stateError: string | null;
+  lastAlert: ScannerSentRecord | null;
+  lastDelivery: ScannerDeliveryRecord | null;
+  lastDiscordSend: ScannerDeliveryRecord | null;
+  failedDeliveries: ScannerDeliveryRecord[];
+  pendingDeliveries: ScannerDeliveryRecord[];
+  skippedDeliveries: ScannerDeliveryRecord[];
+  lastWatchlist: WatchlistRecord | null;
+  recentAuditFiles: AuditFileSummary[];
+  recentDecisionTapes: AuditFileSummary[];
+  staleDataBlockers: string[];
+  boundaries: {
+    readOnly: true;
+    postsDiscord: false;
+    changesScannerState: false;
+    changesTradingLogic: false;
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {};
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function boolOrNull(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function parseDateMs(value: string | null): number {
+  if (!value) return 0;
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function deliveryStatus(value: unknown): ScannerDeliveryStatus {
+  if (value === 'sent' || value === 'failed' || value === 'pending' || value === 'skipped') return value;
+  return 'unknown';
+}
+
+function sortByRecentDate<T>(items: T[], getDate: (item: T) => string | null): T[] {
+  return [...items].sort((a, b) => parseDateMs(getDate(b)) - parseDateMs(getDate(a)));
+}
+
+function toDelivery(alertKey: string, raw: unknown): ScannerDeliveryRecord {
+  const record = asRecord(raw);
+  const candidate = asRecord(record.candidate);
+  return {
+    alertKey,
+    planVersionId: stringOrNull(record.planVersionId),
+    instrument: stringOrNull(record.instrument),
+    tradeDate: stringOrNull(record.tradeDate),
+    session: stringOrNull(record.session),
+    state: stringOrNull(record.state),
+    confidence: numberOrNull(record.confidence),
+    deliveryStatus: deliveryStatus(record.deliveryStatus),
+    webhookSource: stringOrNull(record.webhookSource),
+    httpStatus: numberOrNull(record.httpStatus),
+    discordMessageId: stringOrNull(record.discordMessageId),
+    error: stringOrNull(record.error),
+    attemptedAt: stringOrNull(record.attemptedAt),
+    sentAt: stringOrNull(record.sentAt),
+    auditLogPath: stringOrNull(record.auditLogPath),
+    stale: boolOrNull(record.stale),
+    retryEligible: boolOrNull(record.retryEligible),
+    // Touch candidate fields only to preserve visibility in future expansion without exposing executable claims.
+    ...(Object.keys(candidate).length ? {} : {}),
+  };
+}
+
+function toSent(alertKey: string, raw: unknown): ScannerSentRecord {
+  const record = asRecord(raw);
+  return {
+    alertKey,
+    state: stringOrNull(record.state),
+    confidence: numberOrNull(record.confidence),
+    sentAt: stringOrNull(record.sentAt),
+  };
+}
+
+function toWatchlist(key: string, raw: unknown): WatchlistRecord {
+  const record = asRecord(raw);
+  return {
+    key,
+    direction: stringOrNull(record.direction),
+    sentAt: stringOrNull(record.sentAt),
+  };
+}
+
+function auditKind(fileName: string): AuditFileSummary['kind'] {
+  if (/scanner-decision-tape/i.test(fileName)) return 'decision_tape';
+  if (/watchlist/i.test(fileName)) return 'watchlist';
+  if (/scanner-/i.test(fileName)) return 'scanner_audit';
+  return 'other';
+}
+
+function recentAuditFiles(auditDir: string, now: Date, limit: number): AuditFileSummary[] {
+  if (!fs.existsSync(auditDir)) return [];
+  return fs.readdirSync(auditDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.json'))
+    .map((entry) => {
+      const filePath = path.join(auditDir, entry.name);
+      const stat = fs.statSync(filePath);
+      return {
+        filePath,
+        fileName: entry.name,
+        kind: auditKind(entry.name),
+        modifiedAt: stat.mtime.toISOString(),
+        ageMs: Math.max(0, Math.round(now.getTime() - stat.mtimeMs)),
+        sizeBytes: stat.size,
+      };
+    })
+    .sort((a, b) => parseDateMs(b.modifiedAt) - parseDateMs(a.modifiedAt))
+    .slice(0, limit);
+}
+
+function latestEntry(entries: Array<{ key: string; value: string | null }>): { key: string; value: string | null } | null {
+  return entries
+    .filter((entry) => entry.value)
+    .sort((a, b) => parseDateMs(b.value) - parseDateMs(a.value))[0] || null;
+}
+
+function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: number): string[] {
+  const blockers: string[] = [];
+  const lastHealthStatus = stringOrNull(state.lastHealthStatus);
+  if (lastHealthStatus && lastHealthStatus !== 'READY') {
+    blockers.push(`Scanner health status is ${lastHealthStatus}.`);
+  }
+
+  const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
+    .map(([key, value]) => ({ key, value: stringOrNull(value) }))
+    .filter((entry) => entry.value);
+  const latestCompleted = latestEntry(lastCompleted);
+  if (latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) > staleAfterMs) {
+    blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
+  }
+
+  const lastRefresh = Object.entries(asRecord(state.lastMarketMapRefreshBySession))
+    .map(([key, value]) => ({ key, value: stringOrNull(value) }))
+    .filter((entry) => entry.value);
+  const latestRefresh = latestEntry(lastRefresh);
+  if (latestRefresh && now.getTime() - parseDateMs(latestRefresh.value) > staleAfterMs) {
+    blockers.push(`Latest market-map refresh is stale: ${latestRefresh.key}.`);
+  }
+
+  return blockers;
+}
+
+export function buildDeliveryVisibilityReport(args: {
+  cwd?: string;
+  scannerStatePath?: string;
+  auditDir?: string;
+  now?: Date;
+  staleAfterMs?: number;
+  recentAuditLimit?: number;
+} = {}): DeliveryVisibilityReport {
+  const cwd = args.cwd || process.cwd();
+  const now = args.now || new Date();
+  const staleAfterMs = args.staleAfterMs ?? 180_000;
+  const scannerStatePath = args.scannerStatePath || path.resolve(cwd, 'tools', 'automation', '.nt-scanner-state.json');
+  const auditDir = args.auditDir || path.resolve(cwd, 'tools', 'automation', 'discord-audit');
+  const recentFiles = recentAuditFiles(auditDir, now, args.recentAuditLimit ?? 8);
+
+  let stateReadable = false;
+  let stateError: string | null = null;
+  let state: Record<string, unknown> = {};
+
+  try {
+    state = JSON.parse(fs.readFileSync(scannerStatePath, 'utf8')) as Record<string, unknown>;
+    stateReadable = true;
+  } catch (error) {
+    stateError = error instanceof Error ? error.message : String(error);
+  }
+
+  const sent = sortByRecentDate(
+    Object.entries(asRecord(state.sent)).map(([key, value]) => toSent(key, value)),
+    (item) => item.sentAt,
+  );
+  const deliveries = sortByRecentDate(
+    Object.entries(asRecord(state.alertDeliveries)).map(([key, value]) => toDelivery(key, value)),
+    (item) => item.sentAt || item.attemptedAt,
+  );
+  const watchlists = sortByRecentDate(
+    Object.entries(asRecord(state.watchlistSent)).map(([key, value]) => toWatchlist(key, value)),
+    (item) => item.sentAt,
+  );
+
+  const failedDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
+  const pendingDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
+  const skippedDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
+  const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs) : ['Scanner state file is not readable.'];
+
+  return {
+    status: !stateReadable || failedDeliveries.length || pendingDeliveries.length || blockers.length ? 'warn' : 'ok',
+    generatedAt: now.toISOString(),
+    scannerStatePath,
+    auditDir,
+    stateReadable,
+    stateError,
+    lastAlert: sent[0] || null,
+    lastDelivery: deliveries[0] || null,
+    lastDiscordSend: deliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
+    failedDeliveries,
+    pendingDeliveries,
+    skippedDeliveries,
+    lastWatchlist: watchlists[0] || null,
+    recentAuditFiles: recentFiles,
+    recentDecisionTapes: recentFiles.filter((file) => file.kind === 'decision_tape'),
+    staleDataBlockers: blockers,
+    boundaries: {
+      readOnly: true,
+      postsDiscord: false,
+      changesScannerState: false,
+      changesTradingLogic: false,
+    },
+  };
+}

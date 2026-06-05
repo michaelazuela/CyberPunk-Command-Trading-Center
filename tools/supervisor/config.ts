@@ -10,12 +10,22 @@ export interface SupervisorChildService {
   enabled: boolean;
 }
 
+export interface SupervisorHealthConfig {
+  bridgeUrl: string;
+  monitorIntervalMs: number;
+  logStaleAfterMs: number;
+  restartEnabled: boolean;
+  restartCooldownMs: number;
+  maxRestartAttempts: number;
+}
+
 export interface SupervisorConfig {
   host: string;
   port: number;
   statusPath: string;
   logsDir: string;
   childServices: SupervisorChildService[];
+  health: SupervisorHealthConfig;
 }
 
 export interface SupervisorConfigResult {
@@ -46,17 +56,17 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const enabledServices = env.SUPERVISOR_SERVICES;
 
   return [
-  {
-    id: 'companion-proxy',
-    label: 'NinjaTrader companion proxy',
-    npmScript: 'nt:companion',
+    {
+      id: 'companion-proxy',
+      label: 'NinjaTrader companion proxy',
+      npmScript: 'nt:companion',
       args: [],
       enabled: csvIncludes(enabledServices, 'companion-proxy', false),
-  },
-  {
-    id: 'candle-recorder',
-    label: 'Market candle recorder',
-    npmScript: 'nt:candle-recorder',
+    },
+    {
+      id: 'candle-recorder',
+      label: 'Market candle recorder',
+      npmScript: 'nt:candle-recorder',
       args: [
         '--instrument', instrument,
         '--bridge-instrument', bridgeInstrument,
@@ -65,11 +75,11 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bar-time-zone', barTimeZone,
       ],
       enabled: csvIncludes(enabledServices, 'candle-recorder', true),
-  },
-  {
-    id: 'scanner',
-    label: 'Local setup scanner',
-    npmScript: 'nt:scanner',
+    },
+    {
+      id: 'scanner',
+      label: 'Local setup scanner',
+      npmScript: 'nt:scanner',
       args: [
         '--instrument', instrument,
         '--bridge-instrument', bridgeInstrument,
@@ -78,15 +88,30 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bar-time-zone', barTimeZone,
       ],
       enabled: csvIncludes(enabledServices, 'scanner', true),
-  },
-  {
-    id: 'discord-alerts',
-    label: 'Discord alert scheduler',
-    npmScript: 'nt:discord-alerts',
+    },
+    {
+      id: 'discord-alerts',
+      label: 'Discord alert scheduler',
+      npmScript: 'nt:discord-alerts',
       args: [],
       enabled: csvIncludes(enabledServices, 'discord-alerts', false),
-  },
+    },
   ];
+}
+
+function numberEnv(raw: string | undefined, fallback: number, name: string, errors: string[]): number {
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    errors.push(`${name} must be a positive number.`);
+    return fallback;
+  }
+  return value;
+}
+
+function boolEnv(raw: string | undefined, fallback: boolean): boolean {
+  if (!raw) return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
 }
 
 function parsePort(raw: string | undefined): { port: number; error: string | null } {
@@ -114,7 +139,7 @@ export function loadSupervisorConfig(
   const errors: string[] = [];
   const host = env.SUPERVISOR_HOST?.trim() || DEFAULT_HOST;
   if (host !== '127.0.0.1' && host !== 'localhost') {
-    errors.push('SUPERVISOR_HOST must be 127.0.0.1 or localhost for Phase 2.');
+    errors.push('SUPERVISOR_HOST must be 127.0.0.1 or localhost for Phase 3.');
   }
 
   const parsedPort = parsePort(env.SUPERVISOR_PORT);
@@ -126,6 +151,7 @@ export function loadSupervisorConfig(
   const logsDir = env.SUPERVISOR_LOGS_DIR?.trim()
     ? path.resolve(cwd, env.SUPERVISOR_LOGS_DIR.trim())
     : path.resolve(cwd, 'logs', 'supervisor');
+  const bridgeUrl = env.NINJATRADER_BRIDGE_URL?.trim() || env.SUPERVISOR_BRIDGE_URL?.trim() || 'http://127.0.0.1:8765';
 
   return {
     config: {
@@ -134,6 +160,14 @@ export function loadSupervisorConfig(
       statusPath: parsedStatusPath.statusPath,
       logsDir,
       childServices: buildDefaultChildServices(env),
+      health: {
+        bridgeUrl,
+        monitorIntervalMs: numberEnv(env.SUPERVISOR_MONITOR_INTERVAL_MS, 15_000, 'SUPERVISOR_MONITOR_INTERVAL_MS', errors),
+        logStaleAfterMs: numberEnv(env.SUPERVISOR_LOG_STALE_AFTER_MS, 180_000, 'SUPERVISOR_LOG_STALE_AFTER_MS', errors),
+        restartEnabled: boolEnv(env.SUPERVISOR_RESTART_ENABLED, true),
+        restartCooldownMs: numberEnv(env.SUPERVISOR_RESTART_COOLDOWN_MS, 60_000, 'SUPERVISOR_RESTART_COOLDOWN_MS', errors),
+        maxRestartAttempts: numberEnv(env.SUPERVISOR_MAX_RESTART_ATTEMPTS, 3, 'SUPERVISOR_MAX_RESTART_ATTEMPTS', errors),
+      },
     },
     status: errors.length ? 'invalid' : 'valid',
     errors,
