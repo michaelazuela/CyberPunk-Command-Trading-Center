@@ -3,17 +3,17 @@
 ## Latest Change
 
 Date: 2026-06-05
-Task: Add Quant Desk Local Supervisor operational self-healing.
-Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/supervisor.test.ts.
-Reason: Let the tray recover the local supervisor when the status endpoint becomes unreachable, while preserving intentional Stop All behavior and keeping child-process recovery inside the existing supervisor-owned restart policy. Keep tray menu actions non-blocking and avoid status refresh on menu open so the tray remains responsive.
-Tests run: PowerShell tray syntax parse; PowerShell tray no-auto-start process smoke; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
-Result: Passed. Tray includes a Self-Heal Enabled toggle, logs self-heal attempts, auto-starts the supervisor after repeated endpoint misses, pauses self-healing after a user-initiated Stop All until Start/Restart or the self-heal toggle is used, and runs start/stop/restart actions asynchronously.
+Task: Add Quant Desk Local Supervisor operational Discord notifications.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/index.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
+Reason: Notify Discord for operational health events only: scanner/recorder down or recovered, bridge unreachable or recovered, stale 5M bars with cooldown, owned child restarts, and tray supervisor self-heal events. Suppress routine healthy pings and preserve trade-alert boundaries.
+Tests run: PowerShell tray syntax parse; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check; live supervisor reload.
+Result: Passed. Supervisor monitor sends transition-based operational Discord notifications when a health webhook is configured. Live reload sent one stale-5M operational notification and wrote cooldown state to logs/supervisor/supervisor-notifications-state.json. Tray self-heal can fire an explicit supervisor self-heal notification command.
 Trading logic changed: No.
 Bridge impact: None. Bridge scripts and bridge behavior were not modified.
 Journal/RAG impact: None.
 Supabase impact: None.
-Known risks: Self-heal is operational only. It does not heal bridge outages, Discord outages, stale market data, or market/session conditions. Manual duplicate processes are still reported, not adopted.
-Next recommended action: Observe the tray through a live session and confirm any self-heal entries in logs/supervisor/tray.log are explainable.
+Known risks: Notifications depend on a configured health/scanner webhook. Stale 5M alerts are cooldown-limited, not market-session-aware beyond the status payload. Manual duplicate processes are still reported, not adopted.
+Next recommended action: Leave Discord notifications on for operational alerts and confirm away-from-home pings are useful without becoming noisy.
 
 ## Previous Change
 

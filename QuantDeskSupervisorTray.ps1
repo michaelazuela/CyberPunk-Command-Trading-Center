@@ -24,6 +24,7 @@ $LogsDir = Join-Path $Root 'logs\supervisor'
 $IconPath = Join-Path $Root 'assets\launcher\quant-desk-supervisor-launcher.ico'
 $StartScript = Join-Path $Root 'Start-QuantDesk-Supervisor.ps1'
 $StopScript = Join-Path $Root 'Stop-QuantDesk-Supervisor.ps1'
+$SelfHealNotifyScript = 'npm run supervisor:notify-self-heal'
 $TrayLogPath = Join-Path $LogsDir 'tray.log'
 $SelfHealEnabled = $true
 $SelfHealPausedByStop = $false
@@ -77,6 +78,21 @@ Start-Sleep -Milliseconds 750
   Write-TrayLog -Message 'Tray restart sequence requested.' -Details @{ stopScript = $StopScript; startScript = $StartScript }
   return Start-Process -FilePath 'powershell.exe' `
     -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $command) `
+    -WorkingDirectory $Root `
+    -WindowStyle Hidden `
+    -PassThru
+}
+
+function Start-NpmCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Command,
+    [string]$Label = 'npm-command'
+  )
+
+  Write-TrayLog -Message 'Tray npm command requested.' -Details @{ label = $Label; command = $Command }
+  return Start-Process -FilePath 'cmd.exe' `
+    -ArgumentList @('/d', '/c', $Command) `
     -WorkingDirectory $Root `
     -WindowStyle Hidden `
     -PassThru
@@ -230,6 +246,7 @@ function Invoke-SelfHealIfNeeded {
   }
   $script:SelfHealInProgress = $true
   Start-LocalScript -ScriptPath $StartScript -Label 'self-heal-start' | Out-Null
+  Start-NpmCommand -Command $SelfHealNotifyScript -Label 'self-heal-notify' | Out-Null
   $script:EndpointMissCount = 0
 }
 

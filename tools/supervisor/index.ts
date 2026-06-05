@@ -4,6 +4,7 @@ import { loadSupervisorConfig } from './config';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
 import { createSupervisorLogger } from './logger';
+import { sendSupervisorNotifications, sendSupervisorSelfHealNotification } from './notifications';
 import {
   getSupervisorState,
   launchEnabledServices,
@@ -54,8 +55,14 @@ export function startSupervisor(): http.Server {
   const monitor = async () => {
     supervisorState = restartFailedOwnedServices(configResult.config, logger);
     lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
+    const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
+    const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
+    const notificationResult = await sendSupervisorNotifications(status);
     logger.log(lastHealthReport.status === 'fail' ? 'warn' : 'info', 'Supervisor health checked.', {
       status: lastHealthReport.status,
+      notificationsSent: notificationResult.sent,
+      notificationsSkipped: notificationResult.skipped,
+      notificationKinds: notificationResult.notifications.map((item) => item.kind),
     });
   };
   const monitorTimer = setInterval(() => {
@@ -114,7 +121,11 @@ if (command === 'check') {
   await runSupervisorCheck();
 } else if (command === 'stop') {
   await runSupervisorStop();
+} else if (command === 'notify-self-heal') {
+  const configResult = loadSupervisorConfig();
+  const result = await sendSupervisorSelfHealNotification(configResult.config.logsDir);
+  printJson(result);
 } else {
-  process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop]\n');
+  process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|notify-self-heal]\n');
   process.exitCode = 1;
 }

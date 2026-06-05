@@ -8,6 +8,11 @@ import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
 import { createSupervisorLogger } from './logger';
 import {
+  buildSupervisorNotifications,
+  sendSupervisorSelfHealNotification,
+  type SupervisorNotificationState,
+} from './notifications';
+import {
   findExternalServiceProcesses,
   isProcessRunning,
   launchEnabledServices,
@@ -89,6 +94,7 @@ assert.ok(trayScript.includes('Restart Supervisor Services'));
 assert.ok(trayScript.includes('Self-Heal Enabled'));
 assert.ok(trayScript.includes('Invoke-SelfHealIfNeeded'));
 assert.ok(trayScript.includes('SelfHealPausedByStop'));
+assert.ok(trayScript.includes('supervisor:notify-self-heal'));
 assert.equal(trayScript.includes('Add_Opening'), false);
 assert.equal(trayScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(trayScript.includes('scanSetupCandidates'), false);
@@ -235,6 +241,47 @@ assert.equal(deliveryReport.boundaries.readOnly, true);
 assert.equal(deliveryReport.boundaries.postsDiscord, false);
 assert.equal(deliveryReport.boundaries.changesScannerState, false);
 assert.equal(JSON.stringify(deliveryReport).includes('"canExecute":true'), false);
+
+const notificationState: SupervisorNotificationState = {
+  lastStatuses: {
+    'service:scanner': 'running',
+    'service:candle-recorder': 'running',
+    bridge: 'ok',
+  },
+  lastSentAtByKey: {},
+};
+const downStatus = buildSupervisorStatus(defaultConfig, {
+  supervisorPid: 1,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'state.json'),
+  services: [
+    {
+      id: 'scanner',
+      pid: null,
+      startedAt: null,
+      stdoutLog: '',
+      stderrLog: '',
+      status: 'stopped',
+      error: null,
+      restartCount: 0,
+      lastRestartAt: null,
+      lastRestartReason: null,
+      externalPids: [],
+    },
+  ],
+}, null, null, fixedNow);
+const downNotifications = buildSupervisorNotifications(downStatus, notificationState, fixedNow);
+assert.ok(downNotifications.notifications.some((item) => item.kind === 'scanner_down'));
+assert.equal(JSON.stringify(downNotifications.notifications).includes('entry'), false);
+assert.equal(JSON.stringify(downNotifications.notifications).includes('target'), false);
+const selfHealDryRun = await sendSupervisorSelfHealNotification(tempLogsDir, {
+  dryRun: true,
+  webhookUrl: 'https://discord.example/webhook',
+  now: fixedNow,
+});
+assert.equal(selfHealDryRun.sent, 0);
+assert.equal(selfHealDryRun.skipped, 1);
+assert.equal(selfHealDryRun.notification.kind, 'supervisor_self_heal');
 
 const stoppedState = stopOwnedServices(processConfig, logger);
 const stoppedChild = stoppedState.services[0];
