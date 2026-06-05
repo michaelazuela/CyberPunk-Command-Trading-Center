@@ -67,6 +67,10 @@ export function discordOutcomeSecretKeyId(secret: string | undefined | null): st
   return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 12);
 }
 
+function isTestProcess(): boolean {
+  return process.argv.some((arg) => /\.test\.[cm]?[tj]sx?$/.test(arg));
+}
+
 export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(cwd = process.cwd()): {
   loaded: boolean;
   keyId: string | null;
@@ -87,7 +91,7 @@ export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(cwd = process.cwd(
   }
   process.env.DISCORD_OUTCOME_SECRET = value;
   const keyId = discordOutcomeSecretKeyId(value);
-  if (previousKeyId && previousKeyId !== keyId) {
+  if (previousKeyId && previousKeyId !== keyId && !isTestProcess()) {
     console.warn(`[discord-outcome] DISCORD_OUTCOME_SECRET from .env.local is overriding a different process environment key id (${previousKeyId} -> ${keyId}).`);
   }
   return { loaded: true, keyId, previousKeyId, source: '.env.local' };
@@ -218,7 +222,9 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
   const noTrade = makeUrl('not_taken', 'no_trade', false, 'NONE', 'NONE');
 
   if (!t1Hit || !t2Hit || !runnerHit || !stretchHit || !loss || !scratch || !missed || !noTrade) {
-    console.warn('Outcome buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
+    if (!isTestProcess()) {
+      console.warn('Outcome buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
+    }
     return undefined;
   }
 

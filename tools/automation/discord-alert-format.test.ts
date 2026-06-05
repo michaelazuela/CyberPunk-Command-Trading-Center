@@ -138,7 +138,7 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
   assert.ok(text.includes('History: Neutral'));
   assert.ok(text.includes('Warning: none'));
   assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: Chart Plan + Price Level Map attached.'));
+  assert.ok(text.includes('Details: Chart + Level Map attached.'));
   assert.ok(!/Memory:[\s\S]*approve/i.test(text), 'memory display must not imply approval');
 }
 
@@ -185,7 +185,7 @@ const morning = compactDiscordSummary({
 assertCompactPayload(morning, ['chart-plan.png', 'price-level-map.png']);
 assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatter must not mutate the original candidate');
 assertNoExecutablePayloadKeys(morning);
-assert.ok(morning.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+assert.ok(morning.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Targets:'));
 assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secure'));
@@ -213,7 +213,7 @@ const lunch = compactDiscordSummary({
   }),
 });
 assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
-assert.ok(lunch.content?.includes('[PM PLAN] MES - SHORT CONDITIONAL'));
+assert.ok(lunch.content?.includes('[PM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
 assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Runner Hit', 'Short Stretch Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
 
@@ -274,12 +274,13 @@ const scanner = compactDiscordSummary({
   statusOverride: 'Conditional',
 });
 assertCompactPayload(scanner, ['chart-plan.png', 'price-level-map.png']);
-assert.ok(scanner.content?.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+assert.ok(scanner.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
 
 const scannerReadyCandidate = sampleCandidate('LONG');
 scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
 scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
 scannerReadyCandidate.executionStatus = ExecutionStatus.Executable;
+scannerReadyCandidate.candidateState = 'MSS_HOLD_CONFIRMED';
 scannerReadyCandidate.evidence = [
   'HTF Draw Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
 ];
@@ -304,13 +305,15 @@ const scannerReadyPayload = compactDiscordSummary({
 });
 validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
-assert.ok(scannerReadyText.includes('QUALIFIED CONDITIONAL'));
-assert.ok(scannerReadyText.includes('WAIT - trigger not confirmed'));
+assert.ok(scannerReadyText.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(scannerReadyText.includes('WAIT - normalized plan not executable; fresh completed 5M required'));
+assert.ok(scannerReadyText.includes('Trigger State: MSS_HOLD_CONFIRMED'));
 assert.ok(scannerReadyText.includes('HTF Context:'));
 assert.ok(scannerReadyText.includes('Status: sufficient | Reliability: structural'));
 assert.ok(scannerReadyText.includes('Minimum: 30 calendar days when available'));
 assert.ok(scannerReadyText.includes('Usage: structural confirmation allowed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
+assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
 const dataLimitedScannerCandidate = sampleCandidate('LONG');
@@ -365,7 +368,7 @@ const rawConditionalCanExecutePayload = compactDiscordSummary({
 validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
 const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
 assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
-assert.ok(rawConditionalText.includes('WAIT - trigger not confirmed'));
+assert.ok(rawConditionalText.includes('WAIT - normalized plan not executable; fresh completed 5M required'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
 
 const riskTooWideCandidate = sampleCandidate('LONG');

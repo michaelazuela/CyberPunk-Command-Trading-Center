@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
+import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { TRADE_RULES } from '../../src/config/tradeRules';
@@ -689,6 +690,7 @@ async function writeScannerDiscordAuditLog(args: {
   state: ScannerState;
   confidence: ReturnType<typeof scoreScannerCandidate>;
   candidate: SetupCandidate | null;
+  displayCandidate?: SetupCandidate | null;
   normalized: ReturnType<typeof buildAppTradePlan>;
   currentPrice: number | null;
   completed5m: NinjaBridgeBar | null;
@@ -708,8 +710,9 @@ async function writeScannerDiscordAuditLog(args: {
   const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
   await fs.mkdir(auditDir, { recursive: true });
   const file = path.join(auditDir, `scanner-${args.session}-${args.tradeDate}-${args.instrument}-${args.planVersionId}.json`);
-  const conditionalRiskScore = args.candidate
-    ? scoreConditionalCandidateRiskForDisplay(args.candidate)
+  const auditCandidate = args.displayCandidate ?? args.candidate;
+  const conditionalRiskScore = auditCandidate
+    ? scoreConditionalCandidateRiskForDisplay(auditCandidate)
     : null;
   await fs.writeFile(file, JSON.stringify({
     createdAt: new Date().toISOString(),
@@ -720,7 +723,9 @@ async function writeScannerDiscordAuditLog(args: {
     planVersionId: args.planVersionId,
     state: args.state,
     confidence: args.confidence,
-    candidate: args.candidate,
+    candidate: auditCandidate,
+    sourceCandidate: args.displayCandidate ? args.candidate : undefined,
+    visualAuthority: args.displayCandidate ? 'normalized_plan' : undefined,
     conditionalRiskScore,
     normalizedPlan: args.normalized,
     currentPrice: args.currentPrice,
@@ -1362,6 +1367,25 @@ function buildDiscordPayload(args: {
   });
 }
 
+export function candidateForNormalizedVisualAuthority(
+  candidate: SetupCandidate | null,
+  normalized: ReturnType<typeof buildAppTradePlan>,
+): SetupCandidate | null {
+  if (!candidate) return null;
+  if (getEffectiveCanExecute(normalized)) return candidate;
+  return {
+    ...candidate,
+    detectedStatus: 'Conditional' as SetupCandidate['detectedStatus'],
+    executionStatus: 'Conditional' as SetupCandidate['executionStatus'],
+    scenarioLabel: `${candidate.scenarioLabel || candidate.setupType} - normalized plan not executable`,
+    nextAction: [
+      normalized.whyThisPlan,
+      'Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.',
+    ].filter(Boolean).join(' '),
+    decisionQualityRecommendation: 'Conditional review only: normalized app-owned plan is not executable.',
+  };
+}
+
 async function upsertScannerDiscordAlertRagRecord(args: {
   planVersionId: string;
   session: LiveSession;
@@ -1628,10 +1652,11 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   levelMap: string | null;
   auditLogPath: string;
 }> {
-  const renderInput = args.candidate
+  const visualCandidate = candidateForNormalizedVisualAuthority(args.candidate, args.normalized);
+  const renderInput = visualCandidate
     ? {
         chartContext: args.chartContext || null,
-        candidate: args.candidate,
+        candidate: visualCandidate,
         instrument: args.config.instrument,
         tradeDate: args.tradeDate,
         sessionLabel: args.session,
@@ -1650,6 +1675,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     state: args.state,
     confidence: args.confidence,
     candidate: args.candidate,
+    displayCandidate: visualCandidate,
     normalized: args.normalized,
     currentPrice: args.currentPrice,
     completed5m: args.completed5m,
@@ -1672,7 +1698,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     config: args.config,
     state: args.state,
     confidence: args.confidence,
-    candidate: args.candidate,
+    candidate: visualCandidate,
     normalized: args.normalized,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,

@@ -73,6 +73,8 @@ export type HtfLiquidityDrawClassification =
   | 'RAID_RECLAIM_DEVELOPING'
   | 'MSS_TRIGGER_PENDING'
   | 'MSS_TRIGGER_CONFIRMED'
+  | 'MSS_HOLD_TRIGGER_PENDING'
+  | 'MSS_HOLD_CONFIRMED'
   | 'REVERSAL_DELIVERY_PLAN_CANDIDATE'
   | 'QUALIFIED_CONDITIONAL'
   | 'EXECUTABLE'
@@ -639,6 +641,10 @@ export function describeHtfLiquidityDrawStateForDisplay(state: Pick<HtfLiquidity
       return '5M MSS trigger pending. Potential MSS is forming, but no confirmed swing break with displacement yet.';
     case 'MSS_TRIGGER_CONFIRMED':
       return '5M MSS trigger confirmed by swing break with displacement. Building candidate from HTF draw + raid/reclaim context.';
+    case 'MSS_HOLD_TRIGGER_PENDING':
+      return 'MSS hold trigger pending. Wait for completed 5M close confirmation and a clean retest/defined reclaim trigger. No fresh entry yet.';
+    case 'MSS_HOLD_CONFIRMED':
+      return 'MSS hold confirmed by completed 5M close. Scanner candidate fields may be reviewed, but final app-owned gates still control canExecute.';
     case 'REVERSAL_DELIVERY_PLAN_CANDIDATE':
       return 'HTF Draw Continuation After Raid/Reclaim candidate detected. HTF draw, liquidity raid/reclaim, and confirmed 5M MSS align. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.';
     case 'QUALIFIED_CONDITIONAL':

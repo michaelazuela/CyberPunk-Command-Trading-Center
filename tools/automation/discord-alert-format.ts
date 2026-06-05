@@ -231,8 +231,8 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
 }
 
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
-  if (override) return override;
   if (getEffectiveCanExecute(normalized)) return 'Executable';
+  if (override && !/approved|executable/i.test(override)) return override;
   if (candidate?.executionStatus === 'Executable') return 'Qualified conditional';
   if (candidate?.executionStatus) return candidate.executionStatus;
   if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'Blocked';
@@ -247,6 +247,7 @@ function compactTradeDirection(candidate: SetupCandidate | null, normalized: Com
 function reportStatus(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): DiscordDecisionStatus {
   const effectiveCanExecute = getEffectiveCanExecute(normalized);
   if (effectiveCanExecute) return 'EXECUTABLE';
+  if (normalized.decision === 'NO TRADE' && !candidate) return 'NO TRADE';
   const status = compactSessionDecisionLabel(candidate, normalized, override).toLowerCase();
   if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
   if (status.includes('approved') || status.includes('executable')) return effectiveCanExecute ? 'EXECUTABLE' : 'CONDITIONAL';
@@ -257,7 +258,7 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
-  if (status === 'CONDITIONAL') return 'WAIT - trigger not confirmed';
+  if (status === 'CONDITIONAL') return 'WAIT - normalized plan not executable; fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
   return 'WAIT - app-owned pipeline has not approved execution';
 }
@@ -283,6 +284,9 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
   return [
     'Plan:',
     ...(modelConfidenceScore !== null ? [`Confidence: ${modelConfidenceScore}/100`] : []),
+    ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' || candidate.candidateState === 'MSS_HOLD_CONFIRMED'
+      ? [`Trigger State: ${candidate.candidateState}`]
+      : []),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
@@ -302,6 +306,7 @@ function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): strin
       : `Risk remains blocked by ${riskScore.blockReason}.`
     : 'This score is advisory only.';
   const mainReason = riskScore.reasons[0] || hardBlock;
+  if (mainReason === hardBlock) return mainReason;
   return `${mainReason} ${hardBlock}`.trim();
 }
 
@@ -322,7 +327,7 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
     `Risk Score: ${score.score}/100 - ${score.label}`,
     `Reason: ${compactRiskScoreReason(score)}`,
     'Manual: Risk exceeds standard limit. Human final decision required.',
-    'Watch: Fresh completed 5M trigger/retest only. Do not chase.',
+    'Watch: Fresh 5M trigger/retest only. Do not chase.',
   ];
 }
 
@@ -379,7 +384,7 @@ function noTradeReason(candidate: SetupCandidate | null, normalized: CompactNorm
 
 export function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
   if (!hasCandidate) return 'Details: Visual attachments not generated because no active plan candidate was available.';
-  if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: Chart Plan + Price Level Map attached.';
+  if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: Chart + Level Map attached.';
   if (attachments.chartPlan) return 'Details: Chart Plan attached. Price Level Map unavailable.';
   if (attachments.priceLevelMap) return 'Details: Price Level Map attached. Chart Plan unavailable.';
   return 'Details: Visual attachments unavailable — review local logs before action.';
@@ -396,10 +401,15 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
   const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);
   const model = bestCandidate ? professionalCandidateModelLabel(bestCandidate) : 'No approved model candidate';
-  const reportKind = designerStatus === 'NO TRADE' ? 'REVIEW' : 'PLAN';
+  const reportKind = designerStatus === 'EXECUTABLE' ? 'PLAN' : 'REVIEW';
   const sessionLabel = sessionShortLabel(args.session);
   const headlineDirection = designerStatus === 'NO TRADE' ? 'NO TRADE' : direction;
-  const headlineStatus = designerStatus === 'NO TRADE' ? '' : ` ${decision.toUpperCase()}`;
+  const safeDecision = designerStatus === 'EXECUTABLE'
+    ? decision.toUpperCase()
+    : designerStatus === 'CONDITIONAL'
+      ? 'CONDITIONAL / NO FRESH ENTRY'
+      : designerStatus;
+  const headlineStatus = designerStatus === 'NO TRADE' ? '' : ` ${safeDecision}`;
   const headline = `[${sessionLabel} ${reportKind}] ${args.instrument} - ${headlineDirection}${headlineStatus}`;
   const levels = bestCandidate ? appTargetLevels(bestCandidate, args.normalized) : { stop: null, target1: null, target2: null };
   const action = compactActionText(bestCandidate, args.normalized, designerStatus);
@@ -472,14 +482,14 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const includeComponents = Boolean(args.components);
   return {
     username: 'Quant Desk',
-    content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate}\nPlan ID: \`${args.planVersionId}\``,
+    content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate} | ID: \`${args.planVersionId}\``,
     embeds: [
       {
         title: 'Compact Trade Plan Summary',
         description: professionalizeReportText(lines.join('\n')),
         color: statusColor(finalStatus),
         fields: [],
-        footer: { text: 'Quant Desk • App-Owned Trade Pipeline • Chart Plan + Price Level Map when available' },
+        footer: { text: 'Quant Desk • Decision support' },
         timestamp: new Date().toISOString(),
       },
     ],

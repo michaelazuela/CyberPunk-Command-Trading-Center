@@ -2088,6 +2088,36 @@ function confirmedFiveMinuteMss(chartContext: ChartContext, direction: Direction
   );
 }
 
+function completedFiveMinuteMssCloseConfirmed(chartContext: ChartContext, direction: Direction): boolean {
+  if (!confirmedFiveMinuteMss(chartContext, direction)) return false;
+  const structure = chartContext.structureQualityContext;
+  if (structure?.direction === direction) {
+    return Boolean(structure.executionTimeframeConfirmed && structure.structureBreakConfirmedByClose && !structure.wickOnlyBreak);
+  }
+  return Boolean(
+    chartContext.setupReadyFacts?.breakOfStructure &&
+    chartContext.marketStructure?.marketStructureShift &&
+    !chartContext.structureQualityContext?.wickOnlyBreak &&
+    (
+      (direction === 'LONG' && chartContext.candleFacts?.closeAboveKeyLevel) ||
+      (direction === 'SHORT' && chartContext.candleFacts?.closeBelowKeyLevel) ||
+      Boolean(displacementCandleFor(chartContext, direction, '5m')?.breaksStructure)
+    )
+  );
+}
+
+function mssHoldCandidateState(structurallyComplete: boolean): TradingPlanCandidateState {
+  return structurallyComplete ? 'MSS_HOLD_CONFIRMED' : 'MSS_HOLD_TRIGGER_PENDING';
+}
+
+function isMssHoldConfirmed(candidateState: TradingPlanCandidateState): boolean {
+  return candidateState === 'MSS_HOLD_CONFIRMED';
+}
+
+function mssHoldNoFreshEntryMissingEvidence(): string {
+  return 'NO FRESH ENTRY: price is extended past the MSS hold trigger without a clean retest';
+}
+
 function fvgOrImbalanceSupportsDirection(chartContext: ChartContext, direction: Direction): boolean {
   if (direction !== 'LONG' && direction !== 'SHORT') return false;
   return Boolean(
@@ -2284,13 +2314,14 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
   const fifteenDisplacement = displacementCandleFor(chartContext, direction, '15m');
   const fiveDisplacement = displacementCandleFor(chartContext, direction, '5m');
   const hasMss = confirmedFiveMinuteMss(chartContext, direction);
+  const hasCompletedMssClose = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
   const hasFvg = fvgOrImbalanceSupportsDirection(chartContext, direction);
   const htfAligned = chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
     chartContext.multiTimeframeContext?.alignment.alignedDirection === 'NEUTRAL' ||
     chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
     chartContext.higherTimeframeThesis?.direction === direction;
 
-  if (!inWindow || !fifteenDisplacement || !hasMss) return null;
+  if (!inWindow || !fifteenDisplacement || !hasMss || !hasCompletedMssClose) return null;
 
   const mssClose = parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
   const entry = parsePrice(chartContext.proposedEntry) ?? mssClose;
@@ -2332,13 +2363,13 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ...(!htfAligned ? ['4H/1H context support or non-conflict'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
-    ...(!freshEntry ? ['Entry at or beyond the 5M MSS close-through trigger without chasing'] : []),
+    ...(!freshEntry ? [mssHoldNoFreshEntryMissingEvidence()] : []),
     ...(entry === null ? ['Defined 5M entry'] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
   const structurallyComplete = score >= HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
-  const candidateState: TradingPlanCandidateState = structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
+  const candidateState = mssHoldCandidateState(structurallyComplete);
   const riskLabel = riskNote ? ` ${riskNote}` : '';
   const dirLabel = directionLabel(direction);
 
@@ -2370,7 +2401,8 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
       `${dirLabel} 15M displacement confirmed`,
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       ...(hasFvg ? ['5M FVG / imbalance supports continuation'] : []),
-      '5M MSS confirmed by completed candle close',
+      'MSS_HOLD_CONFIRMED: completed 5M close confirmed; not a live-wick trigger.',
+      'MSS hold trigger uses completed 5M close, not live wick.',
       ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
       ...(enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
       `Confidence score: ${score}/100`,
@@ -2381,11 +2413,11 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     executionStatus: structurallyComplete ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
     blockReason: structurallyComplete ? null : (!enoughRoom ? NoTradeReason.ChasingExtendedMove : NoTradeReason.EntryTriggerPending),
     requiredTrigger: direction === 'SHORT'
-      ? 'Short entry at or below the confirmed 5M MSS close-through trigger while at least 60% of the path to primary sell-side liquidity remains.'
-      : 'Long entry at or above the confirmed 5M MSS close-through trigger while at least 60% of the path to primary buy-side liquidity remains.',
+      ? 'MSS_HOLD_CONFIRMED requires a completed 5M close through the short MSS/reclaim level, then short entry at or below that close while at least 60% of the path to primary sell-side liquidity remains.'
+      : 'MSS_HOLD_CONFIRMED requires a completed 5M close through the long MSS/reclaim level, then long entry at or above that close while at least 60% of the path to primary buy-side liquidity remains.',
     nextAction: structurallyComplete
       ? `Structurally complete ${dirLabel} HTF displacement + 5M MSS continuation plan. Human final decision required.${riskLabel}`
-      : 'Do not chase. Wait for a clean 5M MSS close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.',
+      : 'MSS_HOLD_TRIGGER_PENDING / NO FRESH ENTRY. Do not chase. Wait for a fresh completed 5M close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.',
     reducedRiskPlan: null,
   };
 }
@@ -2403,6 +2435,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
   const fiveDisplacement = displacementCandleFor(chartContext, direction, '5m');
   const hasFvg = fvgOrImbalanceSupportsDirection(chartContext, direction);
   const hasMss = confirmedFiveMinuteMss(chartContext, direction);
+  const hasCompletedMssClose = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
   const htfAligned = chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
     chartContext.multiTimeframeContext?.alignment.alignedDirection === 'NEUTRAL' ||
     chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
@@ -2448,14 +2481,16 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     ...(!htfAligned ? ['4H/1H context support or non-conflict'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
-    ...(!freshEntry ? ['Entry at or beyond the 5M displacement close-through/retest trigger without chasing'] : []),
+    ...(!freshEntry ? [hasCompletedMssClose ? mssHoldNoFreshEntryMissingEvidence() : 'Entry at or beyond the 5M displacement close-through/retest trigger without chasing'] : []),
     ...(entry === null ? ['Defined 5M entry'] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
   const threshold = 70;
   const structurallyComplete = score >= threshold && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
-  const candidateState: TradingPlanCandidateState = structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
+  const candidateState: TradingPlanCandidateState = hasCompletedMssClose
+    ? mssHoldCandidateState(structurallyComplete)
+    : structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
   const riskLabel = riskNote ? ` ${riskNote}` : '';
   const dirLabel = directionLabel(direction);
   const continuationTrigger = hasMss ? 'confirmed 5M MSS continuation close' : '5M displacement/FVG continuation trigger';
@@ -2488,7 +2523,11 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
       `${dirLabel} 15M displacement confirmed`,
       `${dirLabel} 5M displacement confirmed`,
       '5M FVG / imbalance supports continuation',
-      ...(hasMss ? ['5M MSS confirmed by structured OHLC; confidence support only for this model'] : ['5M MSS not confirmed; not invented or required for this model']),
+      ...(hasCompletedMssClose
+        ? ['MSS_HOLD_CONFIRMED: completed 5M close confirmed; MSS is confidence support only for this FVG model']
+        : hasMss
+        ? ['5M MSS signal present, but completed-close confirmation was not promoted for this FVG model']
+        : ['5M MSS not confirmed; not invented or required for this model']),
       ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
       ...(enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
       `Confidence score: ${score}/100`,
@@ -2499,10 +2538,12 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     executionStatus: structurallyComplete ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
     blockReason: structurallyComplete ? null : (!enoughRoom ? NoTradeReason.ChasingExtendedMove : NoTradeReason.EntryTriggerPending),
     requiredTrigger: direction === 'SHORT'
-      ? `Short entry at or below the ${continuationTrigger} while at least 60% of the path to primary sell-side liquidity remains.`
-      : `Long entry at or above the ${continuationTrigger} while at least 60% of the path to primary buy-side liquidity remains.`,
+      ? `${hasCompletedMssClose ? 'MSS_HOLD_CONFIRMED requires completed 5M close; ' : ''}Short entry at or below the ${continuationTrigger} while at least 60% of the path to primary sell-side liquidity remains.`
+      : `${hasCompletedMssClose ? 'MSS_HOLD_CONFIRMED requires completed 5M close; ' : ''}Long entry at or above the ${continuationTrigger} while at least 60% of the path to primary buy-side liquidity remains.`,
     nextAction: structurallyComplete
       ? `Structurally complete ${dirLabel} HTF displacement + FVG continuation plan. Human final decision required.${riskLabel}`
+      : hasCompletedMssClose
+      ? 'MSS_HOLD_TRIGGER_PENDING / NO FRESH ENTRY. Do not chase. Wait for a fresh completed 5M close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.'
       : 'Do not chase. Wait for a clean 5M displacement/FVG continuation trigger with protected stop, app targets, and enough remaining path to real liquidity.',
     reducedRiskPlan: null,
   };
@@ -2615,7 +2656,7 @@ function candidateStateForHtfCandidate(args: {
   riskStatus?: ChartContext['riskStatus'];
 }): TradingPlanCandidateState {
   if (args.entry !== null && args.stop !== null && args.target1 !== null && args.target2 !== null && args.invalidation) {
-    return 'EXECUTABLE';
+    return 'MSS_HOLD_CONFIRMED';
   }
   return 'REVERSAL_DELIVERY_PLAN_CANDIDATE';
 }
@@ -2672,9 +2713,10 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
     riskStatus: chartContext.riskStatus,
   });
   const raidLabel = direction === 'LONG' ? 'sell-side raid + bullish 5M MSS' : 'buy-side raid + bearish 5M MSS';
-  const scannerPathwayState = candidateState === 'EXECUTABLE'
-    ? 'scanner candidate fields complete; final deterministic pipeline gates still required'
+  const scannerPathwayState = isMssHoldConfirmed(candidateState)
+    ? 'MSS_HOLD_CONFIRMED: completed 5M close confirmed; scanner candidate fields complete; final deterministic pipeline gates still required'
     : candidateState;
+  const candidateExecutableByScannerFields = isMssHoldConfirmed(candidateState) || candidateState === 'EXECUTABLE';
 
   return {
     setupType: SetupType.HtfDrawContinuationAfterRaid,
@@ -2688,7 +2730,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
       approvesExecution: false,
     },
     direction,
-    detectedStatus: candidateState === 'EXECUTABLE' ? SetupCandidateStatus.Detected : SetupCandidateStatus.Conditional,
+    detectedStatus: candidateExecutableByScannerFields ? SetupCandidateStatus.Detected : SetupCandidateStatus.Conditional,
     confidence: confidence >= 82 ? 'High' : 'Medium',
     priority: 96,
     entry,
@@ -2714,6 +2756,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
       '5M MSS trigger confirmed',
       '5M swing break/reclaim confirmed with displacement',
       `External liquidity target exists: ${targetLabel}`,
+      'MSS_HOLD_CONFIRMED requires completed 5M close, not live wick.',
       'Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
       `Pathway state: ${scannerPathwayState}`,
       ...(riskNote ? [riskNote] : []),
@@ -2725,11 +2768,11 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
       ...(target2 === null ? ['External liquidity target price / valid target room'] : []),
       ...(riskTooWide ? ['Risk advisory: above standard limit. Human final decision required.'] : []),
     ])),
-    executionStatus: candidateState === 'EXECUTABLE' ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
+    executionStatus: candidateExecutableByScannerFields ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
     blockReason: null,
     requiredTrigger: direction === 'LONG'
-      ? 'Long only after sell-side raid, reclaim, confirmed bullish 5M MSS with displacement, then clean retest or defined reclaim trigger.'
-      : 'Short only after buy-side raid, reclaim, confirmed bearish 5M MSS with displacement, then clean retest or defined reclaim trigger.',
+      ? 'MSS_HOLD_CONFIRMED: long only after sell-side raid, reclaim, completed bullish 5M MSS close with displacement, then clean retest or defined reclaim trigger.'
+      : 'MSS_HOLD_CONFIRMED: short only after buy-side raid, reclaim, completed bearish 5M MSS close with displacement, then clean retest or defined reclaim trigger.',
     nextAction: riskTooWide
       ? 'HTF/MSS reversal-delivery candidate is structurally complete. Risk advisory: above standard limit. Human final decision required.'
       : 'HTF/MSS candidate has scanner levels and direction. Execution still requires final app-owned entry, stop, target, risk visibility, invalidation, session, screenshot-quality, and canExecute gates.',

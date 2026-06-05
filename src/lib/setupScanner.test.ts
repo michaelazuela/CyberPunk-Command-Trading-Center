@@ -1626,7 +1626,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(htfCandidate);
     assert.equal(htfCandidate.direction, 'LONG');
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(htfCandidate.blockReason, null);
     assert.equal(htfCandidate.htfLiquidityDrawState?.createsTradingPlanCandidate, true);
@@ -1637,7 +1637,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(htfCandidate.evidence.some((line) => line.includes('Execution still requires deterministic entry, stop, target, risk, and final pipeline gates')));
     assert.ok(htfCandidate.evidence.some((line) => line.includes('5M MSS trigger confirmed by swing break with displacement')));
     assert.ok(htfCandidate.evidence.some((line) => line.includes('15M potential MSS / pending confirm')));
-    assert.ok(htfCandidate.evidence.some((line) => line.includes('Pathway state: scanner candidate fields complete; final deterministic pipeline gates still required')));
+    assert.ok(htfCandidate.evidence.some((line) => line.includes('Pathway state: MSS_HOLD_CONFIRMED')));
     assert.ok(htfCandidate.nextAction.includes('Execution still requires final app-owned entry, stop, target, risk visibility, invalidation, session, screenshot-quality, and canExecute gates.'));
     assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(`${htfCandidate.evidence.join(' ')} ${htfCandidate.nextAction}`), false);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
@@ -1666,7 +1666,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(htfCandidate);
     assert.equal(htfCandidate.direction, 'SHORT');
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(htfCandidate.blockReason, null);
     assert.ok(htfCandidate.requiredTrigger?.includes('buy-side raid'));
@@ -1681,7 +1681,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(htfCandidate);
     assert.equal(htfCandidate.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'potential_mss');
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
   }],
 
@@ -1698,7 +1698,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(htfCandidate);
     assert.equal(htfCandidate.htfLiquidityDrawState?.timeframeStates.find((state) => state.timeframe === '15M')?.status, 'pending_confirm');
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
   }],
 
@@ -2003,7 +2003,7 @@ const tests: Array<[string, () => void]> = [
     const htfCandidate = htfPathwayCandidate(result);
 
     assert.ok(htfCandidate);
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(result.bestExecutableCandidate?.pathway, 'htf_liquidity_draw_mss');
   }],
@@ -2020,7 +2020,7 @@ const tests: Array<[string, () => void]> = [
     const htfCandidate = htfPathwayCandidate(result);
 
     assert.ok(htfCandidate);
-    assert.equal(htfCandidate.candidateState, 'EXECUTABLE');
+    assert.equal(htfCandidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(htfCandidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(htfCandidate.blockReason, null);
     assert.equal(htfCandidate.riskAdvisoryStatus, 'RISK_EXTENDED_STRUCTURAL');
@@ -2047,6 +2047,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.pathway, 'htf_displacement_mss_continuation');
     assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(candidate.entry, 7603.25);
     assert.equal(candidate.stop, 7599);
@@ -2057,6 +2058,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok((candidate.modelConfidenceScore ?? 0) >= 88);
     assert.ok(candidate.evidence.some((item) => item.includes('Confidence score')));
     assert.ok(candidate.evidence.some((item) => item.includes('canExecute means structurally complete')));
+    assert.ok(candidate.evidence.some((item) => item.includes('completed 5M close confirmed')));
     assert.equal(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 
@@ -2068,6 +2070,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate);
     assert.equal(candidate.pathway, 'htf_displacement_mss_continuation');
     assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
     assert.equal(candidate.entry, 7582.75);
     assert.equal(candidate.stop, 7590);
@@ -2136,9 +2139,11 @@ const tests: Array<[string, () => void]> = [
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
 
     assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'MSS_HOLD_TRIGGER_PENDING');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
     assert.ok(candidate.missingEvidence.includes('At least 60% of the path to primary liquidity remains'));
+    assert.ok(candidate.nextAction.includes('NO FRESH ENTRY'));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 
@@ -2248,8 +2253,9 @@ const tests: Array<[string, () => void]> = [
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
 
     assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
     assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
-    assert.ok(candidate.evidence.some((item) => item.includes('5M MSS confirmed by structured OHLC; confidence support only')));
+    assert.ok(candidate.evidence.some((item) => item.includes('MSS_HOLD_CONFIRMED: completed 5M close confirmed')));
     assert.ok((candidate.modelConfidenceScore ?? 0) > 92);
   }],
 
@@ -2266,9 +2272,11 @@ const tests: Array<[string, () => void]> = [
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
 
     assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'MSS_HOLD_TRIGGER_PENDING');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
     assert.ok(candidate.missingEvidence.includes('At least 60% of the path to primary liquidity remains'));
+    assert.ok(candidate.nextAction.includes('NO FRESH ENTRY'));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
   }],
 

@@ -13,6 +13,7 @@ import {
   markScannerAlertDeliveryFailed,
   markScannerAlertDeliverySent,
   markScannerAlertDeliverySkipped,
+  candidateForNormalizedVisualAuthority,
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
@@ -20,7 +21,7 @@ import {
   summarizeScannerHistoryCoverage,
   writeScannerDecisionTapeAuditLog,
 } from './nt-scanner';
-import { verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
+import { buildChartMarkupHtmlForTest, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
 const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-${Date.now()}`);
 const auditDir = path.join(outputDir, 'discord-audit');
@@ -562,15 +563,15 @@ try {
   assert.ok(text.length < 1200, `expected live scanner compact text under 1200 chars, got ${text.length}`);
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('Compact Trade Plan Summary'));
-  assert.ok(text.includes('[AM PLAN] MES - LONG CONDITIONAL'));
-  assert.ok(text.includes('Status: WAIT - trigger not confirmed'));
+  assert.ok(text.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+  assert.ok(text.includes('Status: WAIT - normalized plan not executable; fresh completed 5M required'));
   assert.ok(text.includes('Plan:'));
   assert.ok(text.includes('Risk: 5.00 pts / N/A'));
   assert.ok(text.includes('Invalidation:'));
   assert.ok(text.includes('Memory:'));
   assert.ok(text.includes('History: Neutral'));
   assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: Chart Plan + Price Level Map attached.'));
+  assert.ok(text.includes('Details: Chart + Level Map attached.'));
   assert.ok(!/Memory:[\s\S]*approve/i.test(text));
   const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
   assert.deepEqual(componentLabels, ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
@@ -590,6 +591,31 @@ try {
   assert.ok(auditText.includes('Fixture target cascade remains audit-only.'));
   assert.ok(!text.includes('Fixture target cascade remains audit-only.'));
   assert.ok(result.auditLogPath.startsWith(auditDir));
+
+  const executableLookingCandidate = {
+    ...candidate,
+    executionStatus: ExecutionStatus.Executable,
+    detectedStatus: SetupCandidateStatus.Detected,
+  };
+  const demotedVisualCandidate = candidateForNormalizedVisualAuthority(executableLookingCandidate, {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: null,
+    invalidation: candidate.invalidation,
+    whyThisPlan: 'Candidate idea detected, but normalized plan is not executable.',
+  } as any);
+  assert.equal(demotedVisualCandidate?.executionStatus, ExecutionStatus.Conditional);
+  assert.equal(demotedVisualCandidate?.detectedStatus, SetupCandidateStatus.Conditional);
+  const demotedChartHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext as ChartContext,
+    candidate: demotedVisualCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-26',
+    sessionLabel: 'morning',
+  });
+  assert.ok(demotedChartHtml.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+  assert.equal(/LONG EXECUTABLE|>EXECUTABLE</i.test(demotedChartHtml), false);
 
   const riskTooWideCandidate: SetupCandidate = {
     ...candidate,
@@ -661,7 +687,10 @@ try {
   assert.equal(displayedScore[2], riskAudit.conditionalRiskScore.label);
   assert.equal(riskAudit.conditionalRiskScore.canExecute, false);
   assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
-  assert.equal(riskAudit.conditionalRiskScore.score, 49);
+  assert.equal(riskAudit.conditionalRiskScore.score, 64);
+  assert.equal(riskAudit.visualAuthority, 'normalized_plan');
+  assert.ok(riskAudit.sourceCandidate);
+  assert.equal(riskAudit.candidate.executionStatus, ExecutionStatus.Conditional);
     assert.ok(riskResult.payload.components);
     assert.deepEqual(
       (riskResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
