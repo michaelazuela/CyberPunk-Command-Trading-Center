@@ -92,6 +92,42 @@ function parseDateMs(value: string | null): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
+function parseTradeDateMs(value: string | null): number {
+  if (!value) return 0;
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? parseDateMs(`${match[1]}T00:00:00.000Z`) : parseDateMs(value);
+}
+
+function tradeDateFromKey(key: string): string | null {
+  return key.match(/^(\d{4}-\d{2}-\d{2})[:|]/)?.[1] || null;
+}
+
+function latestTradeDate(state: Record<string, unknown>, now: Date): string | null {
+  const dates = new Set<string>();
+  for (const key of Object.keys(asRecord(state.lastCompleted5mBySession))) {
+    const date = tradeDateFromKey(key);
+    if (date) dates.add(date);
+  }
+  for (const key of Object.keys(asRecord(state.lastMarketMapRefreshBySession))) {
+    const date = tradeDateFromKey(key);
+    if (date) dates.add(date);
+  }
+  for (const key of Object.keys(asRecord(state.sent))) {
+    const date = key.match(/^(\d{4}-\d{2}-\d{2})\|/)?.[1];
+    if (date) dates.add(date);
+  }
+  const sorted = [...dates].sort((a, b) => parseTradeDateMs(b) - parseTradeDateMs(a));
+  if (!sorted.length) return null;
+
+  const nowDate = now.toISOString().slice(0, 10);
+  const latest = sorted[0];
+  const nowMs = parseTradeDateMs(nowDate);
+  const latestMs = parseTradeDateMs(latest);
+  const olderThanToday = latestMs < nowMs;
+  const beforeRth = now.getUTCHours() < 14;
+  return olderThanToday && beforeRth ? null : latest;
+}
+
 function deliveryStatus(value: unknown): ScannerDeliveryStatus {
   if (value === 'sent' || value === 'failed' || value === 'pending' || value === 'skipped') return value;
   return 'unknown';
@@ -186,20 +222,25 @@ function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: 
     blockers.push(`Scanner health status is ${lastHealthStatus}.`);
   }
 
-  const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
-    .map(([key, value]) => ({ key, value: stringOrNull(value) }))
-    .filter((entry) => entry.value);
-  const latestCompleted = latestEntry(lastCompleted);
-  if (latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) > staleAfterMs) {
-    blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
+  const activeTradeDate = latestTradeDate(state, now);
+  if (activeTradeDate) {
+    const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
+      .map(([key, value]) => ({ key, value: stringOrNull(value) }))
+      .filter((entry) => entry.value && tradeDateFromKey(entry.key) === activeTradeDate);
+    const latestCompleted = latestEntry(lastCompleted);
+    if (latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) > staleAfterMs) {
+      blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
+    }
   }
 
-  const lastRefresh = Object.entries(asRecord(state.lastMarketMapRefreshBySession))
-    .map(([key, value]) => ({ key, value: stringOrNull(value) }))
-    .filter((entry) => entry.value);
-  const latestRefresh = latestEntry(lastRefresh);
-  if (latestRefresh && now.getTime() - parseDateMs(latestRefresh.value) > staleAfterMs) {
-    blockers.push(`Latest market-map refresh is stale: ${latestRefresh.key}.`);
+  if (activeTradeDate) {
+    const lastRefresh = Object.entries(asRecord(state.lastMarketMapRefreshBySession))
+      .map(([key, value]) => ({ key, value: stringOrNull(value) }))
+      .filter((entry) => entry.value && tradeDateFromKey(entry.key) === activeTradeDate);
+    const latestRefresh = latestEntry(lastRefresh);
+    if (latestRefresh && now.getTime() - parseDateMs(latestRefresh.value) > staleAfterMs) {
+      blockers.push(`Latest market-map refresh is stale: ${latestRefresh.key}.`);
+    }
   }
 
   return blockers;

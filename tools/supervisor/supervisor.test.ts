@@ -251,6 +251,25 @@ assert.equal(deliveryReport.boundaries.postsDiscord, false);
 assert.equal(deliveryReport.boundaries.changesScannerState, false);
 assert.equal(JSON.stringify(deliveryReport).includes('"canExecute":true'), false);
 
+const stalePreviousSessionStatePath = path.join(deliveryFixtureDir, '.nt-scanner-previous-session-state.json');
+fs.writeFileSync(stalePreviousSessionStatePath, JSON.stringify({
+  lastCompleted5mBySession: {
+    '2026-06-04:lunch': '2026-06-04T15:25:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-04:morning': '2026-06-05T02:50:37.016Z',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const previousSessionDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: stalePreviousSessionStatePath,
+  auditDir,
+  now: new Date('2026-06-05T02:51:09.681Z'),
+  staleAfterMs: 180_000,
+});
+assert.deepEqual(previousSessionDeliveryReport.staleDataBlockers, []);
+assert.equal(previousSessionDeliveryReport.status, 'ok');
+
 const notificationState: SupervisorNotificationState = {
   lastStatuses: {
     'service:scanner': 'running',
@@ -360,11 +379,19 @@ const readyWithoutReports = buildSupervisorStatus(defaultConfig, {
     },
   ],
 }, readyStatus.health, null, fixedNow);
-assert.equal(
-  buildSupervisorNotifications(readyWithoutReports, { lastStatuses: {}, lastSentAtByKey: {} }, fixedNow)
-    .notifications.some((item) => item.kind === 'supervisor_ready'),
-  false,
+const readyWithoutReportNotifications = buildSupervisorNotifications(
+  readyWithoutReports,
+  { lastStatuses: {}, lastSentAtByKey: {} },
+  fixedNow,
 );
+const readyWithoutReportNotification = readyWithoutReportNotifications.notifications.find((item) => item.kind === 'supervisor_ready');
+assert.ok(readyWithoutReportNotification);
+const readyWithoutReportPayloadText = JSON.stringify(buildSupervisorDiscordPayload(readyWithoutReportNotification, readyWithoutReports));
+assert.ok(readyWithoutReportPayloadText.includes('Pending report lines: 5m, 15m, 60m, 240m.'));
+assert.ok(readyWithoutReportPayloadText.includes('Scanner history report has not appeared in the supervisor log yet.'));
+assert.ok(readyWithoutReportPayloadText.includes('Recorder cache cycle has not completed in the supervisor log yet.'));
+assert.ok(readyWithoutReportPayloadText.includes('Scanner health and market-map report lines have not appeared in the supervisor log yet.'));
+assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyWithoutReportPayloadText), false);
 
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,

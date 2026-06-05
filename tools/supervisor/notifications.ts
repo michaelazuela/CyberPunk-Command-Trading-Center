@@ -117,16 +117,6 @@ function isReadyStatus(status: SupervisorStatusPayload): boolean {
     !externalDuplicates;
 }
 
-function hasLoadedOperationalReports(status: SupervisorStatusPayload): boolean {
-  const summary = buildOperationalReportSummary(status);
-  const requiredHistory = new Set(['5m', '15m', '60m', '240m']);
-  const loadedHistory = summary.scannerHistory.filter((item) => requiredHistory.has(item.timeframe));
-  return Boolean(summary.scannerHealth) &&
-    Boolean(summary.latestCompleted5m) &&
-    Boolean(summary.recorderCycle) &&
-    loadedHistory.length === requiredHistory.size;
-}
-
 function shouldSendCooldown(state: SupervisorNotificationState, key: string, now: Date, cooldownMs: number): boolean {
   const lastSentAt = state.lastSentAtByKey[key];
   if (!lastSentAt) return true;
@@ -171,7 +161,6 @@ export function buildSupervisorNotifications(
 
   if (
     isReadyStatus(status) &&
-    hasLoadedOperationalReports(status) &&
     previous.lastStatuses[`supervisor_ready:${status.supervisor.pid}`] !== 'sent'
   ) {
     notifications.push(notification({
@@ -373,11 +362,17 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
   const historyLines = summary.scannerHistory.map((item) =>
     `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}`
   );
+  const requiredHistory = new Set(['5m', '15m', '60m', '240m']);
+  const missingHistory = [...requiredHistory].filter((timeframe) =>
+    !summary.scannerHistory.some((item) => item.timeframe === timeframe)
+  );
   fields.push({
     name: 'Loaded History Reports',
-    value: historyLines.length
-      ? truncateField(historyLines.join('\n'))
-      : 'Scanner history report has not appeared in the supervisor log yet.',
+    value: truncateField([
+      ...historyLines,
+      ...(missingHistory.length ? [`Pending report lines: ${missingHistory.join(', ')}.`] : []),
+      ...(!historyLines.length ? ['Scanner history report has not appeared in the supervisor log yet.'] : []),
+    ].join('\n')),
     inline: false,
   });
 
@@ -394,6 +389,12 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
         summary.scannerHealth,
         summary.marketMap?.replace(/\s+\|\s+positions .+$/, ''),
       ].filter(Boolean).join('\n')),
+      inline: false,
+    });
+  } else {
+    fields.push({
+      name: 'Scanner Report',
+      value: 'Scanner health and market-map report lines have not appeared in the supervisor log yet.',
       inline: false,
     });
   }
