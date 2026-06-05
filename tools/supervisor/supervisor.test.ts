@@ -79,6 +79,17 @@ const statusSource = await import('./status');
 assert.equal('runTradeDecisionPipeline' in statusSource, false);
 assert.equal('scanSetupCandidates' in statusSource, false);
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const trayScriptPath = path.join(repoRoot, 'QuantDeskSupervisorTray.ps1');
+const trayScript = fs.readFileSync(trayScriptPath, 'utf8');
+assert.ok(trayScript.includes('System.Windows.Forms.NotifyIcon'));
+assert.ok(trayScript.includes('Open Logs'));
+assert.ok(trayScript.includes('Stop All'));
+assert.ok(trayScript.includes('Restart Supervisor Services'));
+assert.equal(trayScript.includes('runTradeDecisionPipeline'), false);
+assert.equal(trayScript.includes('scanSetupCandidates'), false);
+assert.equal(trayScript.includes('canExecute'), false);
+
 const supervisorDir = path.dirname(fileURLToPath(import.meta.url));
 const protectedImportPatterns = [
   'setupScanner',

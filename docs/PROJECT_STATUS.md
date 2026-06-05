@@ -3,17 +3,17 @@
 ## Latest Change
 
 Date: 2026-06-05
-Task: Add Phase 4 Quant Desk Local Supervisor event and delivery visibility.
-Files changed: docs/PROJECT_STATUS.md, tools/supervisor/config.ts, tools/supervisor/deliveryVisibility.ts, tools/supervisor/health.ts, tools/supervisor/index.ts, tools/supervisor/processManager.ts, tools/supervisor/status.ts, tools/supervisor/supervisor.test.ts.
-Reason: Add read-only missed-alert diagnostics on top of the supervisor health layer: last alert, last Discord send, failed/pending/skipped deliveries, latest watchlist, recent audit files, decision tapes, stale-data blockers, duplicate manual process visibility, and controlled restart of failed supervisor-owned child processes only.
-Tests run: npx tsx tools/supervisor/supervisor.test.ts; npm run supervisor:check; PowerShell wrapper smoke with SUPERVISOR_SERVICES=none; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
-Result: Passed. Supervisor reports Phase 4 delivery visibility plus Phase 3 health, restart metadata, external/manual recorder-scanner process warnings, and explicit read-only/no-trading-change boundaries. The wrapper smoke started/stopped the supervisor without launching real recorder/scanner services.
+Task: Add Phase 5 Quant Desk Local Supervisor tiny tray wrapper.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/supervisor.test.ts.
+Reason: Wrap the existing headless supervisor in a lightweight Windows tray launcher with green/yellow/red status, start/restart/stop actions, status endpoint access, and log-folder access without adding charts, trading controls, AI, scanner logic, bridge logic, or Discord posting logic.
+Tests run: PowerShell tray syntax parse; PowerShell tray no-auto-start process smoke; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Desktop shortcut now launches the tray wrapper, which can auto-start the supervisor, refresh local status, open logs/status, restart the supervisor services, stop all owned supervisor services, or exit the tray.
 Trading logic changed: No.
-Bridge impact: None. Bridge scripts and bridge behavior were not modified. Supervisor reads bridge /health only.
+Bridge impact: None. Bridge scripts and bridge behavior were not modified.
 Journal/RAG impact: None.
 Supabase impact: None.
-Known risks: Delivery visibility is only as current as scanner state and audit files. It does not parse deep Discord failure causes or chart/render artifacts yet. Restart behavior has been verified with a supervisor-only fixture, not by killing live recorder/scanner processes. Manual/external duplicate processes are reported but not adopted or stopped.
-Next recommended action: Phase 5 can add the optional tiny tray UI that consumes the status payload without adding chart UI, trading controls, AI involvement, or rule changes.
+Known risks: Tray restart restarts the supervisor-owned services through the existing supervisor scripts; it does not adopt manually launched duplicate processes. Status color depends on the local supervisor status payload being reachable.
+Next recommended action: Use the desktop shortcut during the next live session and confirm the tray color/status matches the status endpoint and logs.
 
 ## Previous Change
 

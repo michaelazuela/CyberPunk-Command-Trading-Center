@@ -16,6 +16,7 @@
     "supervisor:check": "tsx tools/supervisor/index.ts check",
     "supervisor:status": "tsx tools/supervisor/index.ts status",
     "supervisor:stop": "tsx tools/supervisor/index.ts stop",
+    "supervisor:tray": "powershell -NoProfile -ExecutionPolicy Bypass -STA -File ./QuantDeskSupervisorTray.ps1",
     "supervisor:test-child": "tsx tools/supervisor/test-child.ts",
     "diagnostic:replay": "tsx tools/automation/diagnostic-replay.ts",
     "diagnostic:htf-mss-actual-ohlc": "tsx tools/automation/htf-mss-actual-ohlc-replay.ts",
