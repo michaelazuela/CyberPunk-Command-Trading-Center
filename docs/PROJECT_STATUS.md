@@ -3,17 +3,17 @@
 ## Latest Change
 
 Date: 2026-06-05
-Task: Add Phase 5 Quant Desk Local Supervisor tiny tray wrapper.
-Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/index.ts, tools/supervisor/processManager.ts, tools/supervisor/supervisor.test.ts.
-Reason: Wrap the existing headless supervisor in a lightweight Windows tray launcher with green/yellow/red status, start/restart/stop actions, status endpoint access, and log-folder access without adding charts, trading controls, AI, scanner logic, bridge logic, or Discord posting logic. Keep the status endpoint responsive by serving cached monitor health, and treat descendants of supervisor-owned child PIDs as owned rather than manual duplicates.
+Task: Add Quant Desk Local Supervisor operational self-healing.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/supervisor.test.ts.
+Reason: Let the tray recover the local supervisor when the status endpoint becomes unreachable, while preserving intentional Stop All behavior and keeping child-process recovery inside the existing supervisor-owned restart policy. Keep tray menu actions non-blocking and avoid status refresh on menu open so the tray remains responsive.
 Tests run: PowerShell tray syntax parse; PowerShell tray no-auto-start process smoke; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
-Result: Passed. Desktop shortcut now launches the tray wrapper, which can auto-start the supervisor, refresh local status, open logs/status, restart the supervisor services, stop all owned supervisor services, or exit the tray. Live smoke showed /status responding and recorder/scanner reporting as running with no external duplicate PIDs.
+Result: Passed. Tray includes a Self-Heal Enabled toggle, logs self-heal attempts, auto-starts the supervisor after repeated endpoint misses, pauses self-healing after a user-initiated Stop All until Start/Restart or the self-heal toggle is used, and runs start/stop/restart actions asynchronously.
 Trading logic changed: No.
 Bridge impact: None. Bridge scripts and bridge behavior were not modified.
 Journal/RAG impact: None.
 Supabase impact: None.
-Known risks: Tray restart restarts the supervisor-owned services through the existing supervisor scripts; it does not adopt manually launched duplicate processes. Status color depends on the local supervisor status payload being reachable.
-Next recommended action: Use the desktop shortcut during the next live session and confirm the tray color/status matches the status endpoint and logs.
+Known risks: Self-heal is operational only. It does not heal bridge outages, Discord outages, stale market data, or market/session conditions. Manual duplicate processes are still reported, not adopted.
+Next recommended action: Observe the tray through a live session and confirm any self-heal entries in logs/supervisor/tray.log are explainable.
 
 ## Previous Change
 

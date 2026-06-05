@@ -24,23 +24,62 @@ $LogsDir = Join-Path $Root 'logs\supervisor'
 $IconPath = Join-Path $Root 'assets\launcher\quant-desk-supervisor-launcher.ico'
 $StartScript = Join-Path $Root 'Start-QuantDesk-Supervisor.ps1'
 $StopScript = Join-Path $Root 'Stop-QuantDesk-Supervisor.ps1'
+$TrayLogPath = Join-Path $LogsDir 'tray.log'
+$SelfHealEnabled = $true
+$SelfHealPausedByStop = $false
+$SelfHealInProgress = $false
+$EndpointMissCount = 0
+$SelfHealThreshold = 2
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-function Invoke-LocalScript {
+function Write-TrayLog {
   param(
     [Parameter(Mandatory = $true)]
-    [string]$ScriptPath
+    [string]$Message,
+    [hashtable]$Details = @{}
   )
 
-  Start-Process -FilePath 'powershell.exe' `
+  New-Item -ItemType Directory -Force -Path $LogsDir | Out-Null
+  $entry = [ordered]@{
+    timestamp = (Get-Date).ToUniversalTime().ToString('o')
+    message = $Message
+    details = $Details
+  }
+  Add-Content -Path $TrayLogPath -Value ($entry | ConvertTo-Json -Compress -Depth 4)
+}
+
+function Start-LocalScript {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ScriptPath,
+    [string]$Label = 'script'
+  )
+
+  Write-TrayLog -Message 'Tray action requested.' -Details @{ label = $Label; script = $ScriptPath }
+  return Start-Process -FilePath 'powershell.exe' `
     -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$ScriptPath`"") `
     -WorkingDirectory $Root `
     -WindowStyle Hidden `
-    -Wait | Out-Null
+    -PassThru
+}
+
+function Start-RestartSequence {
+  $command = @"
+Set-Location '$($Root.Replace("'", "''"))'
+& '$($StopScript.Replace("'", "''"))'
+Start-Sleep -Milliseconds 750
+& '$($StartScript.Replace("'", "''"))'
+"@
+  Write-TrayLog -Message 'Tray restart sequence requested.' -Details @{ stopScript = $StopScript; startScript = $StartScript }
+  return Start-Process -FilePath 'powershell.exe' `
+    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $command) `
+    -WorkingDirectory $Root `
+    -WindowStyle Hidden `
+    -PassThru
 }
 
 function Get-SupervisorPayload {
@@ -57,13 +96,13 @@ function Get-TrayState {
     return [pscustomobject]@{
       Level = 'red'
       Label = 'Stopped'
-      Detail = 'Supervisor status endpoint is not reachable.'
+      Detail = if ($SelfHealPausedByStop) { 'Stopped by user; self-heal paused.' } else { 'Supervisor status endpoint is not reachable.' }
       Payload = $null
     }
   }
 
   $healthStatus = if ($payload.health -and $payload.health.status) { [string]$payload.health.status } else { 'warn' }
-  $deliveryBlockers = if ($payload.delivery -and $payload.delivery.staleDataBlockers) { @($payload.delivery.staleDataBlockers).Count } else { 0 }
+  $deliveryStatus = if ($payload.delivery -and $payload.delivery.status) { [string]$payload.delivery.status } else { 'unknown' }
 
   if ($payload.supervisor.status -ne 'ready' -or $healthStatus -eq 'fail') {
     return [pscustomobject]@{
@@ -74,11 +113,11 @@ function Get-TrayState {
     }
   }
 
-  if ($healthStatus -eq 'warn' -or $deliveryBlockers -gt 0) {
+  if ($healthStatus -eq 'warn') {
     return [pscustomobject]@{
       Level = 'yellow'
       Label = 'Warning'
-      Detail = "Health=$healthStatus; stale blockers=$deliveryBlockers"
+      Detail = "Health=$healthStatus; delivery=$deliveryStatus"
       Payload = $payload
     }
   }
@@ -86,7 +125,7 @@ function Get-TrayState {
   return [pscustomobject]@{
     Level = 'green'
     Label = 'Healthy'
-    Detail = 'Supervisor is running.'
+    Detail = "Supervisor is running; delivery=$deliveryStatus"
     Payload = $payload
   }
 }
@@ -159,13 +198,48 @@ $menu.Items.Add('-') | Out-Null
 $openStatusItem = $menu.Items.Add('Open Status')
 $openLogsItem = $menu.Items.Add('Open Logs')
 $refreshItem = $menu.Items.Add('Refresh')
+$selfHealItem = $menu.Items.Add('Self-Heal Enabled')
+$selfHealItem.Checked = $true
 $menu.Items.Add('-') | Out-Null
 $exitItem = $menu.Items.Add('Exit Tray')
 $notifyIcon.ContextMenuStrip = $menu
 
+function Invoke-SelfHealIfNeeded {
+  param(
+    [AllowNull()]
+    $Payload
+  )
+
+  if ($Payload) {
+    $script:EndpointMissCount = 0
+    $script:SelfHealInProgress = $false
+    return
+  }
+  if (-not $script:SelfHealEnabled -or $script:SelfHealPausedByStop -or $script:SelfHealInProgress -or $NoAutoStart) {
+    return
+  }
+
+  $script:EndpointMissCount += 1
+  if ($script:EndpointMissCount -lt $SelfHealThreshold) {
+    return
+  }
+
+  Write-TrayLog -Message 'Supervisor endpoint unreachable; self-heal start requested.' -Details @{
+    misses = $script:EndpointMissCount
+    threshold = $SelfHealThreshold
+  }
+  $script:SelfHealInProgress = $true
+  Start-LocalScript -ScriptPath $StartScript -Label 'self-heal-start' | Out-Null
+  $script:EndpointMissCount = 0
+}
+
 function Update-Tray {
   try {
     $state = Get-TrayState
+    Invoke-SelfHealIfNeeded -Payload $state.Payload
+    if (-not $state.Payload -and -not $SelfHealPausedByStop -and $SelfHealEnabled -and -not $NoAutoStart) {
+      $state = Get-TrayState
+    }
     $notifyIcon.Icon = $icons[$state.Level]
     $notifyIcon.Text = "Quant Desk Supervisor - $($state.Label)"
     $statusItem.Text = "Status: $($state.Label) - $($state.Detail)"
@@ -176,6 +250,7 @@ function Update-Tray {
     $stopItem.Enabled = $isRunning
     $openStatusItem.Enabled = $isRunning
     $openLogsItem.Enabled = $true
+    $selfHealItem.Checked = $SelfHealEnabled
   } catch {
     $notifyIcon.Icon = $icons.red
     $notifyIcon.Text = 'Quant Desk Supervisor - Error'
@@ -188,27 +263,30 @@ function Update-Tray {
   }
 }
 
-$menu.Add_Opening({
-  Update-Tray
-})
-
 $startItem.Add_Click({
-  Invoke-LocalScript -ScriptPath $StartScript
-  Start-Sleep -Milliseconds 750
+  $script:SelfHealPausedByStop = $false
+  $script:SelfHealInProgress = $false
+  $script:EndpointMissCount = 0
+  $statusItem.Text = 'Status: Start requested...'
+  Start-LocalScript -ScriptPath $StartScript -Label 'start' | Out-Null
   Update-Tray
 })
 
 $restartItem.Add_Click({
-  Invoke-LocalScript -ScriptPath $StopScript
-  Start-Sleep -Milliseconds 500
-  Invoke-LocalScript -ScriptPath $StartScript
-  Start-Sleep -Milliseconds 750
+  $script:SelfHealPausedByStop = $false
+  $script:SelfHealInProgress = $true
+  $script:EndpointMissCount = 0
+  $statusItem.Text = 'Status: Restart requested...'
+  Start-RestartSequence | Out-Null
   Update-Tray
 })
 
 $stopItem.Add_Click({
-  Invoke-LocalScript -ScriptPath $StopScript
-  Start-Sleep -Milliseconds 750
+  $script:SelfHealPausedByStop = $true
+  $script:SelfHealInProgress = $false
+  $script:EndpointMissCount = 0
+  $statusItem.Text = 'Status: Stop requested...'
+  Start-LocalScript -ScriptPath $StopScript -Label 'stop' | Out-Null
   Update-Tray
 })
 
@@ -225,21 +303,33 @@ $refreshItem.Add_Click({
   Update-Tray
 })
 
+$selfHealItem.Add_Click({
+  $script:SelfHealEnabled = -not $script:SelfHealEnabled
+  $selfHealItem.Checked = $script:SelfHealEnabled
+  Write-TrayLog -Message 'Tray self-heal setting changed.' -Details @{ enabled = $script:SelfHealEnabled }
+  if ($script:SelfHealEnabled) {
+    $script:SelfHealPausedByStop = $false
+    $script:SelfHealInProgress = $false
+  }
+  Update-Tray
+})
+
 $exitItem.Add_Click({
   $notifyIcon.Visible = $false
   [System.Windows.Forms.Application]::Exit()
 })
 
 $timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 15000
+$timer.Interval = 30000
 $timer.Add_Tick({
   Update-Tray
 })
 $timer.Start()
 
 if (-not $NoAutoStart -and -not (Get-SupervisorPayload)) {
-  Invoke-LocalScript -ScriptPath $StartScript
-  Start-Sleep -Milliseconds 1000
+  Write-TrayLog -Message 'Supervisor endpoint unavailable on tray startup; initial start requested.'
+  $script:SelfHealInProgress = $true
+  Start-LocalScript -ScriptPath $StartScript -Label 'initial-start' | Out-Null
 }
 
 Update-Tray
