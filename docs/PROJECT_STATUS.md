@@ -4,10 +4,10 @@
 
 Date: 2026-06-05
 Task: Add Phase 5 Quant Desk Local Supervisor tiny tray wrapper.
-Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/supervisor.test.ts.
-Reason: Wrap the existing headless supervisor in a lightweight Windows tray launcher with green/yellow/red status, start/restart/stop actions, status endpoint access, and log-folder access without adding charts, trading controls, AI, scanner logic, bridge logic, or Discord posting logic.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, package.json, tools/supervisor/index.ts, tools/supervisor/processManager.ts, tools/supervisor/supervisor.test.ts.
+Reason: Wrap the existing headless supervisor in a lightweight Windows tray launcher with green/yellow/red status, start/restart/stop actions, status endpoint access, and log-folder access without adding charts, trading controls, AI, scanner logic, bridge logic, or Discord posting logic. Keep the status endpoint responsive by serving cached monitor health, and treat descendants of supervisor-owned child PIDs as owned rather than manual duplicates.
 Tests run: PowerShell tray syntax parse; PowerShell tray no-auto-start process smoke; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:legacy-rules; npm run guard:architecture; npm run guard:schema; git diff --check.
-Result: Passed. Desktop shortcut now launches the tray wrapper, which can auto-start the supervisor, refresh local status, open logs/status, restart the supervisor services, stop all owned supervisor services, or exit the tray.
+Result: Passed. Desktop shortcut now launches the tray wrapper, which can auto-start the supervisor, refresh local status, open logs/status, restart the supervisor services, stop all owned supervisor services, or exit the tray. Live smoke showed /status responding and recorder/scanner reporting as running with no external duplicate PIDs.
 Trading logic changed: No.
 Bridge impact: None. Bridge scripts and bridge behavior were not modified.
 Journal/RAG impact: None.

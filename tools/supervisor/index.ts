@@ -67,7 +67,6 @@ export function startSupervisor(): http.Server {
     const url = new URL(request.url || '/', `http://${configResult.config.host}:${configResult.config.port}`);
     if (request.method === 'GET' && url.pathname === configResult.config.statusPath) {
       supervisorState = getSupervisorState(configResult.config);
-      lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
       const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
       const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
       logger.log('info', 'Status requested.', { path: url.pathname, configStatus: status.config.status });

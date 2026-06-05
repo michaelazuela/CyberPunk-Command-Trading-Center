@@ -124,6 +124,7 @@ function refreshState(config: SupervisorConfig, state: SupervisorState): Supervi
 
 export interface SupervisorProcessInfo {
   pid: number;
+  parentPid?: number | null;
   commandLine: string;
 }
 
@@ -143,24 +144,42 @@ function listNodeProcesses(): SupervisorProcessInfo[] {
         '-ExecutionPolicy',
         'Bypass',
         '-Command',
-        "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'node|npm|cmd' } | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress",
+        "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'node|npm|cmd' } | Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress",
       ],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
     ).trim();
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as { ProcessId: number; CommandLine?: string } | Array<{ ProcessId: number; CommandLine?: string }>;
+    const parsed = JSON.parse(raw) as { ProcessId: number; ParentProcessId?: number; CommandLine?: string } | Array<{ ProcessId: number; ParentProcessId?: number; CommandLine?: string }>;
     const rows = Array.isArray(parsed) ? parsed : [parsed];
     return rows
       .filter((row) => row.CommandLine)
-      .map((row) => ({ pid: Number(row.ProcessId), commandLine: String(row.CommandLine) }));
+      .map((row) => ({ pid: Number(row.ProcessId), parentPid: row.ParentProcessId ?? null, commandLine: String(row.CommandLine) }));
   } catch {
     return [];
   }
 }
 
+function expandOwnedProcessTree(ownedPids: Set<number>, processes: SupervisorProcessInfo[]): Set<number> {
+  const allOwnedPids = new Set(ownedPids);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const processInfo of processes) {
+      if (processInfo.parentPid && allOwnedPids.has(processInfo.parentPid) && !allOwnedPids.has(processInfo.pid)) {
+        allOwnedPids.add(processInfo.pid);
+        changed = true;
+      }
+    }
+  }
+  return allOwnedPids;
+}
+
 export function findExternalServiceProcesses(config: SupervisorConfig, processes = listNodeProcesses()): Map<string, number[]> {
   const state = readSupervisorState(config.logsDir);
-  const ownedPids = new Set((state?.services || []).map((service) => service.pid).filter((pid): pid is number => Boolean(pid)));
+  const ownedPids = expandOwnedProcessTree(
+    new Set((state?.services || []).map((service) => service.pid).filter((pid): pid is number => Boolean(pid))),
+    processes,
+  );
   const external = new Map<string, number[]>();
 
   for (const service of config.childServices) {

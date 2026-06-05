@@ -154,6 +154,7 @@ assert.ok(health.checks.some((check) => check.id === 'discord_config' && check.s
 const external = findExternalServiceProcesses(processConfig, [
   { pid: 111, commandLine: 'cmd.exe /c npm.cmd run supervisor:test-child' },
   { pid: launchedChild.pid, commandLine: 'cmd.exe /c npm.cmd run supervisor:test-child' },
+  { pid: 222, parentPid: launchedChild.pid, commandLine: 'node tsx tools/supervisor/test-child.ts' },
 ]);
 assert.deepEqual(external.get('test-child'), [111]);
 

@@ -164,18 +164,33 @@ $exitItem = $menu.Items.Add('Exit Tray')
 $notifyIcon.ContextMenuStrip = $menu
 
 function Update-Tray {
-  $state = Get-TrayState
-  $notifyIcon.Icon = $icons[$state.Level]
-  $notifyIcon.Text = "Quant Desk Supervisor - $($state.Label)"
-  $statusItem.Text = "Status: $($state.Label) - $($state.Detail)"
+  try {
+    $state = Get-TrayState
+    $notifyIcon.Icon = $icons[$state.Level]
+    $notifyIcon.Text = "Quant Desk Supervisor - $($state.Label)"
+    $statusItem.Text = "Status: $($state.Label) - $($state.Detail)"
 
-  $isRunning = $null -ne $state.Payload
-  $startItem.Enabled = -not $isRunning
-  $restartItem.Enabled = $true
-  $stopItem.Enabled = $isRunning
-  $openStatusItem.Enabled = $isRunning
-  $openLogsItem.Enabled = $true
+    $isRunning = $null -ne $state.Payload
+    $startItem.Enabled = -not $isRunning
+    $restartItem.Enabled = $true
+    $stopItem.Enabled = $isRunning
+    $openStatusItem.Enabled = $isRunning
+    $openLogsItem.Enabled = $true
+  } catch {
+    $notifyIcon.Icon = $icons.red
+    $notifyIcon.Text = 'Quant Desk Supervisor - Error'
+    $statusItem.Text = "Status: Error - $($_.Exception.Message)"
+    $startItem.Enabled = $true
+    $restartItem.Enabled = $true
+    $stopItem.Enabled = $true
+    $openStatusItem.Enabled = $false
+    $openLogsItem.Enabled = $true
+  }
 }
+
+$menu.Add_Opening({
+  Update-Tray
+})
 
 $startItem.Add_Click({
   Invoke-LocalScript -ScriptPath $StartScript
