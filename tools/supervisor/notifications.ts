@@ -61,6 +61,8 @@ interface OperationalReportSummary {
   recorderBars: string[];
 }
 
+const REQUIRED_HISTORY_TIMEFRAMES = ['5m', '15m', '60m', '120m', '240m'] as const;
+
 const WEBHOOK_ENV_KEYS = [
   'SUPERVISOR_DISCORD_WEBHOOK_URL',
   'QUANT_DESK_HEALTH_WEBHOOK_URL',
@@ -348,6 +350,39 @@ function truncateField(value: string, limit = 1024): string {
   return `${value.slice(0, limit - 3)}...`;
 }
 
+function missingRequiredHistory(scannerHistory: ScannerHistoryLine[]): string[] {
+  return REQUIRED_HISTORY_TIMEFRAMES.filter((timeframe) =>
+    !scannerHistory.some((item) => item.timeframe === timeframe)
+  );
+}
+
+function buildPreMarketDataReadinessGate(summary: OperationalReportSummary): string {
+  const missingHistory = missingRequiredHistory(summary.scannerHistory);
+  const insufficientHistory = summary.scannerHistory.filter((item) => item.status !== 'sufficient');
+  const status = missingHistory.length ? 'PENDING' : insufficientHistory.length ? 'BLOCKED' : 'READY';
+  const htfPromotion = status === 'READY'
+    ? 'Allowed only as structural context when normal scanner gates pass.'
+    : 'Blocked/data-limited until real 5M/15M/1H/2H/4H bars are available.';
+  const coverage = REQUIRED_HISTORY_TIMEFRAMES
+    .map((timeframe) => {
+      const report = summary.scannerHistory.find((item) => item.timeframe === timeframe);
+      if (!report) return `${timeframe}: pending`;
+      return `${timeframe}: ${report.status} (${report.bars} bars)`;
+    })
+    .join(' | ');
+
+  return truncateField([
+    `Status: ${status}`,
+    `HTF Promotion: ${htfPromotion}`,
+    `Coverage: ${coverage}`,
+    ...(missingHistory.length ? [`Pending report lines: ${missingHistory.join(', ')}.`] : []),
+    ...(insufficientHistory.length
+      ? [`Data-limited blockers: ${insufficientHistory.map((item) => item.timeframe).join(', ')}.`]
+      : []),
+    'Boundary: Operational data-quality gate only. Does not approve trades, entries, or execution.',
+  ].join('\n'));
+}
+
 function buildOperationalReportFields(status?: SupervisorStatusPayload): DiscordEmbedField[] {
   if (!status) return [];
   const summary = buildOperationalReportSummary(status);
@@ -364,10 +399,7 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
   const historyLines = summary.scannerHistory.map((item) =>
     `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}${item.dataLimit ? ` | ${item.dataLimit}` : ''}`
   );
-  const requiredHistory = new Set(['5m', '15m', '60m', '120m', '240m']);
-  const missingHistory = [...requiredHistory].filter((timeframe) =>
-    !summary.scannerHistory.some((item) => item.timeframe === timeframe)
-  );
+  const missingHistory = missingRequiredHistory(summary.scannerHistory);
   fields.push({
     name: 'Loaded History Reports',
     value: truncateField([
@@ -375,6 +407,12 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
       ...(missingHistory.length ? [`Pending report lines: ${missingHistory.join(', ')}.`] : []),
       ...(!historyLines.length ? ['Scanner history report has not appeared in the supervisor log yet.'] : []),
     ].join('\n')),
+    inline: false,
+  });
+
+  fields.push({
+    name: 'Pre-Market Data Readiness Gate',
+    value: buildPreMarketDataReadinessGate(summary),
     inline: false,
   });
 
