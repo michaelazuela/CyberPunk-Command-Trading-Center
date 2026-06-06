@@ -35,6 +35,8 @@ assert.equal(defaultConfig.config.childServices.find((service) => service.id ===
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'discord-alerts')?.enabled, false);
 assert.equal(defaultConfig.config.htfPreload.enabled, true);
 assert.equal(defaultConfig.config.htfPreload.days, 30);
+assert.equal(defaultConfig.config.htfPreload.maxAttempts, 3);
+assert.equal(defaultConfig.config.htfPreload.retryDelayMs, 15_000);
 const preloadCommand = buildHtfPreloadCommand(defaultConfig.config);
 assert.deepEqual(preloadCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
 assert.ok(preloadCommand.args.includes('--days'));
@@ -159,6 +161,8 @@ const processConfig = {
     days: 30,
     delayMs: 50,
     timeoutMs: 180_000,
+    maxAttempts: 3,
+    retryDelayMs: 1,
   },
   childServices: [
     {
@@ -175,24 +179,34 @@ const preloadCalls: Array<{ command: string; args: string[]; timeout: number }> 
 const preloadResult = runHtfPreloadStartup(processConfig, logger, (command, args, options) => {
   preloadCalls.push({ command, args, timeout: options.timeout });
   fs.mkdirSync(path.dirname(options.stdoutLog), { recursive: true });
-  fs.writeFileSync(options.stdoutLog, [
-    '[backfill] 2026-06-05 5m: upserted 300.',
-    '[backfill] 2026-06-05 15m: upserted 100.',
-    '[backfill] 2026-06-05 60m: upserted 25.',
-    '[backfill] 2026-06-05 120m: upserted 13.',
-    '[backfill] 2026-06-05 240m: upserted 7.',
-    '[backfill] complete: 445 bars processed.',
-  ].join('\n'), 'utf8');
+  const attempt = preloadCalls.length;
+  fs.writeFileSync(options.stdoutLog, attempt === 1
+    ? [
+      '[backfill] 2026-06-05 5m: upserted 300.',
+      '[backfill] 2026-06-05 15m: upserted 100.',
+      '[backfill] 2026-06-05 60m: upserted 25.',
+      '[backfill] 2026-06-05 240m: upserted 7.',
+      '[backfill] complete: 432 bars processed.',
+    ].join('\n')
+    : [
+      '[backfill] 2026-06-05 5m: upserted 300.',
+      '[backfill] 2026-06-05 15m: upserted 100.',
+      '[backfill] 2026-06-05 60m: upserted 25.',
+      '[backfill] 2026-06-05 120m: upserted 13.',
+      '[backfill] 2026-06-05 240m: upserted 7.',
+      '[backfill] complete: 445 bars processed.',
+    ].join('\n'), 'utf8');
   fs.writeFileSync(options.stderrLog, '', 'utf8');
   return { status: 0 };
 });
 assert.equal(preloadResult.ok, true);
 assert.equal(preloadResult.attempted, true);
+assert.equal(preloadResult.attempts, 2);
 assert.equal(preloadResult.assurance.ok, true);
 assert.deepEqual(preloadResult.assurance.missingTimeframes, []);
 assert.deepEqual(preloadResult.assurance.noBarsTimeframes, []);
 assert.deepEqual(preloadResult.assurance.operatorActions, []);
-assert.equal(preloadCalls.length, 1);
+assert.equal(preloadCalls.length, 2);
 assert.ok(preloadCalls[0].args.includes('nt:backfill'));
 assert.ok(preloadCalls[0].args.includes('--days'));
 assert.ok(preloadCalls[0].args.includes('30'));

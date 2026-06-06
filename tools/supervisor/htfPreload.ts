@@ -10,6 +10,7 @@ type RequiredHtfPreloadTimeframe = typeof REQUIRED_HTF_PRELOAD_TIMEFRAMES[number
 export interface HtfPreloadResult {
   enabled: boolean;
   attempted: boolean;
+  attempts: number;
   ok: boolean;
   assurance: HtfPreloadAssurance;
   command: string[];
@@ -34,6 +35,11 @@ export type HtfPreloadRunner = (
   args: string[],
   options: { cwd: string; timeout: number; stdoutLog: string; stderrLog: string },
 ) => { status: number | null; error?: Error | null };
+
+function sleepSync(ms: number): void {
+  if (ms <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
 
 function npmCommand(): string {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -158,8 +164,8 @@ export function runHtfPreloadStartup(
   logger: SupervisorLogger,
   runner: HtfPreloadRunner = defaultHtfPreloadRunner,
 ): HtfPreloadResult {
-  const stdoutLog = path.join(config.logsDir, 'htf-preload.stdout.log');
-  const stderrLog = path.join(config.logsDir, 'htf-preload.stderr.log');
+  const defaultStdoutLog = path.join(config.logsDir, 'htf-preload.stdout.log');
+  const defaultStderrLog = path.join(config.logsDir, 'htf-preload.stderr.log');
   const command = buildHtfPreloadCommand(config);
   const disabledAssurance: HtfPreloadAssurance = {
     requiredTimeframes: [...REQUIRED_HTF_PRELOAD_TIMEFRAMES],
@@ -175,11 +181,12 @@ export function runHtfPreloadStartup(
     return {
       enabled: false,
       attempted: false,
+      attempts: 0,
       ok: true,
       assurance: disabledAssurance,
       command: [command.command, ...command.args],
-      stdoutLog,
-      stderrLog,
+      stdoutLog: defaultStdoutLog,
+      stderrLog: defaultStderrLog,
       reason: 'HTF preload disabled by SUPERVISOR_HTF_PRELOAD_ON_START.',
     };
   }
@@ -189,23 +196,56 @@ export function runHtfPreloadStartup(
     days: config.htfPreload.days,
     delayMs: config.htfPreload.delayMs,
     timeoutMs: config.htfPreload.timeoutMs,
+    maxAttempts: config.htfPreload.maxAttempts,
+    retryDelayMs: config.htfPreload.retryDelayMs,
   });
 
-  const result = runner(command.command, command.args, {
-    cwd: process.cwd(),
-    timeout: config.htfPreload.timeoutMs,
-    stdoutLog,
-    stderrLog,
-  });
-  const assurance = parseHtfPreloadAssurance(readLog(stdoutLog), readLog(stderrLog));
-  const ok = result.status === 0 && assurance.ok;
+  let finalResult: { status: number | null; error?: Error | null } = { status: null };
+  let assurance = disabledAssurance;
+  let stdoutLog = defaultStdoutLog;
+  let stderrLog = defaultStderrLog;
+  let attempts = 0;
+  let ok = false;
+
+  for (let attempt = 1; attempt <= config.htfPreload.maxAttempts; attempt += 1) {
+    attempts = attempt;
+    stdoutLog = config.htfPreload.maxAttempts === 1
+      ? defaultStdoutLog
+      : path.join(config.logsDir, `htf-preload.attempt-${attempt}.stdout.log`);
+    stderrLog = config.htfPreload.maxAttempts === 1
+      ? defaultStderrLog
+      : path.join(config.logsDir, `htf-preload.attempt-${attempt}.stderr.log`);
+    fs.writeFileSync(stdoutLog, '', 'utf8');
+    fs.writeFileSync(stderrLog, '', 'utf8');
+    logger.log('info', 'HTF preload attempt started.', { attempt, maxAttempts: config.htfPreload.maxAttempts, stdoutLog, stderrLog });
+    finalResult = runner(command.command, command.args, {
+      cwd: process.cwd(),
+      timeout: config.htfPreload.timeoutMs,
+      stdoutLog,
+      stderrLog,
+    });
+    assurance = parseHtfPreloadAssurance(readLog(stdoutLog), readLog(stderrLog));
+    ok = finalResult.status === 0 && assurance.ok;
+    logger.log(ok ? 'info' : 'warn', ok ? 'HTF preload attempt passed assurance.' : 'HTF preload attempt did not pass assurance.', {
+      attempt,
+      maxAttempts: config.htfPreload.maxAttempts,
+      exitStatus: finalResult.status,
+      stdoutLog,
+      stderrLog,
+      assurance,
+    });
+    if (ok) break;
+    if (attempt < config.htfPreload.maxAttempts) sleepSync(config.htfPreload.retryDelayMs);
+  }
+
   const reason = ok
-    ? `HTF preload completed before supervised services launched. ${assurance.reason}`
-    : `HTF preload assurance did not pass (${result.error?.message || `exit ${result.status ?? 'unknown'}`}; ${assurance.reason})`;
-  logger.log(ok ? 'info' : 'warn', reason, { stdoutLog, stderrLog, assurance });
+    ? `HTF preload completed before supervised services launched after ${attempts} attempt(s). ${assurance.reason}`
+    : `HTF preload assurance did not pass after ${attempts} attempt(s) (${finalResult.error?.message || `exit ${finalResult.status ?? 'unknown'}`}; ${assurance.reason})`;
+  logger.log(ok ? 'info' : 'warn', reason, { attempts, stdoutLog, stderrLog, assurance });
   return {
     enabled: true,
     attempted: true,
+    attempts,
     ok,
     assurance,
     command: [command.command, ...command.args],

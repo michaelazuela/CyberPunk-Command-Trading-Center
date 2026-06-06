@@ -24,6 +24,8 @@ export interface SupervisorHtfPreloadConfig {
   days: number;
   delayMs: number;
   timeoutMs: number;
+  maxAttempts: number;
+  retryDelayMs: number;
 }
 
 export interface SupervisorConfig {
@@ -181,6 +183,8 @@ export function loadSupervisorConfig(
         days: numberEnv(env.SUPERVISOR_HTF_PRELOAD_DAYS, 30, 'SUPERVISOR_HTF_PRELOAD_DAYS', errors),
         delayMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_DELAY_MS, 50, 'SUPERVISOR_HTF_PRELOAD_DELAY_MS', errors),
         timeoutMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS, 180_000, 'SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS', errors),
+        maxAttempts: Math.max(1, Math.floor(numberEnv(env.SUPERVISOR_HTF_PRELOAD_MAX_ATTEMPTS, 3, 'SUPERVISOR_HTF_PRELOAD_MAX_ATTEMPTS', errors))),
+        retryDelayMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_RETRY_DELAY_MS, 15_000, 'SUPERVISOR_HTF_PRELOAD_RETRY_DELAY_MS', errors),
       },
     },
     status: errors.length ? 'invalid' : 'valid',
