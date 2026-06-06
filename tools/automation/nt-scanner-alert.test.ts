@@ -8,6 +8,8 @@ import {
   barsCoverRequestedLookback,
   barsForMorningContinuationWatchlist,
   buildScannerHistoryPreloadPlan,
+  attachFailedPlanReversalContextFromScannerState,
+  appOwnedFailedPlanEventsFromScannerAudits,
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
   findMissedExecutableScannerDeliveries,
@@ -20,6 +22,7 @@ import {
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   summarizeScannerHistoryCoverage,
+  twoHourCoverageDiagnostic,
   writeScannerDecisionTapeAuditLog,
 } from './nt-scanner';
 import { buildChartMarkupHtmlForTest, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
@@ -239,6 +242,32 @@ const selfHealedSummary = summarizeScannerHistoryCoverage({
 assert.ok(selfHealedSummary.includes('240m: sufficient'));
 assert.ok(selfHealedSummary.includes('source=market_bars_bridge_repair'));
 assert.ok(selfHealedSummary.includes('self-healed from bridge'));
+assert.deepEqual(twoHourCoverageDiagnostic([]), {
+  timeframe: '120m',
+  available: false,
+  sufficient: false,
+  barsLoaded: 0,
+  source: 'not_requested',
+  rangeStart: null,
+  rangeEnd: null,
+  warning: '120M / 2H scanner history was not requested or not reported.',
+  candidatePromotionBoundary: 'two_hour_context_required_for_full_confirmation',
+});
+assert.equal(twoHourCoverageDiagnostic([{
+  timeframe: '120m',
+  requiredLookbackDays: 30,
+  requestedFrom: '2026-05-03T00:00:00-04:00',
+  requestedTo: '2026-06-02T12:00:00-04:00',
+  barsLoaded: 80,
+  rangeStart: '2026-05-03T00:00:00',
+  rangeEnd: '2026-06-02T12:00:00',
+  source: 'market_bars_bridge_repair',
+  cacheBars: 40,
+  bridgeRepairBars: 40,
+  selfHealed: true,
+  sufficient: true,
+  warning: null,
+}]).sufficient, true);
 
 const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
   state: {
@@ -290,6 +319,98 @@ assert.equal(failedPlanEvents[0].failedLevel, 7518);
 assert.ok(failedPlanEvents[0].levelLabel?.includes('app-owned failed plan'));
 assert.ok(failedPlanEvents[0].evidence?.includes('App-owned LONG plan'));
 assert.ok(failedPlanEvents[0].evidence?.includes('generic failed-break events remain ignored'));
+
+const bearishTimeframe = (timeframe: '5m' | '15m' | '1h' | '2h' | '4h', role: 'execution' | 'liquidity_map' | 'session_structure' | 'macro_context') => ({
+  timeframe,
+  role,
+  barCount: 100,
+  high: 7614.75,
+  low: 7574,
+  open: 7608.5,
+  close: 7582.75,
+  midpoint: 7594.375,
+  rangePoints: 40.75,
+  trend: 'bearish' as const,
+  candles: [],
+  fvgZones: [],
+  liquiditySweeps: [],
+  reclaimEvents: [],
+  failedBreakEvents: [],
+  displacementCandles: [{
+    direction: 'SHORT' as const,
+    candleIndex: 1,
+    timestamp: '2026-06-05T10:05:00.0000000',
+    open: 7521,
+    high: 7522,
+    low: 7512.5,
+    close: 7517.25,
+    bodyPoints: 3.75,
+    rangePoints: 9.5,
+    breaksStructure: true,
+    quality: 'confirmed' as const,
+    confidence: 'High' as const,
+  }],
+  structuralLevels: [],
+  confidence: 'High' as const,
+  notes: [`${timeframe} bearish MSS/displacement confirms the opposite side.`],
+});
+const failedPlanChartContext = {
+  sessionType: 'morning',
+  instrument: 'MES',
+  tradeDate: '2026-06-05',
+  timeframe: '5m',
+  failedBreakEvents: [],
+  setupReadyFacts: { notes: [] },
+  structureQualityContext: {
+    direction: 'SHORT',
+    executionTimeframeConfirmed: true,
+    structureBreakConfirmedByClose: true,
+    wickOnlyBreak: false,
+    oldInducementStale: false,
+    noChaseRequired: false,
+  },
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fourHour: bearishTimeframe('4h', 'macro_context'),
+    twoHour: bearishTimeframe('2h', 'macro_context'),
+    oneHour: bearishTimeframe('1h', 'session_structure'),
+    fifteenMinute: bearishTimeframe('15m', 'liquidity_map'),
+    fiveMinute: bearishTimeframe('5m', 'execution'),
+    alignment: {
+      macroBias: 'SHORT',
+      sessionBias: 'SHORT',
+      liquidityBias: 'SHORT',
+      executionBias: 'SHORT',
+      alignedDirection: 'SHORT',
+      conflicts: [],
+      notes: ['Opposite-side bearish stack is aligned.'],
+    },
+    targetMap: { levelsToWatch: [] },
+    rules: {
+      higherTimeframesApproveTrades: false,
+      fiveMinuteExecutionRequired: true,
+      aiMayOverwriteOhlcFacts: false,
+    },
+    notes: [],
+  },
+} as ChartContext;
+const failedPlanIntegration = attachFailedPlanReversalContextFromScannerState({
+  chartContext: failedPlanChartContext,
+  failedPlanEvents,
+});
+assert.equal(failedPlanIntegration.eventCount, 1);
+assert.equal(failedPlanIntegration.chartContext?.failedBreakEvents?.length, 1);
+assert.ok(failedPlanIntegration.chartContext?.setupReadyFacts?.notes?.some((note) => note.includes('app-owned failed decision/reclaim level')));
+assert.equal(failedPlanIntegration.failedPlanReversal?.originalPlanDirection, 'LONG');
+assert.equal(failedPlanIntegration.failedPlanReversal?.oppositeDirection, 'SHORT');
+assert.equal(failedPlanIntegration.failedPlanReversal?.failedDecisionLevel, 7518);
+assert.equal(failedPlanIntegration.failedPlanReversal?.htfStackStatus, 'full_confirmation');
+assert.equal(failedPlanIntegration.failedPlanReversal?.fiveMinuteTriggerStatus, 'confirmed');
+assert.equal(failedPlanIntegration.failedPlanReversal?.decisionState, 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED');
+assert.equal(failedPlanIntegration.failedPlanReversal?.createsCandidate, true);
+assert.equal(failedPlanIntegration.failedPlanReversal?.approvesExecution, false);
+assert.equal(failedPlanIntegration.chartContext?.failedPlanReversal?.approvesExecution, false);
 
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;
@@ -478,6 +599,24 @@ try {
   assert.equal(missed.length, 1);
   assert.equal(missed[0].deliveryStatus, 'missing');
   assert.equal(missed[0].candidate.entry, 7603.25);
+  const recoveredFailedPlanEvents = await appOwnedFailedPlanEventsFromScannerAudits({
+    auditDir,
+    tradeDate: '2026-06-02',
+    session: 'morning',
+    instrument: 'MES',
+    completed5m: {
+      time: '2026-06-02T10:20:00.0000000',
+      open: 7601,
+      high: 7602,
+      low: 7596,
+      close: 7598.75,
+      volume: 1000,
+    },
+  });
+  assert.equal(recoveredFailedPlanEvents.length, 1);
+  assert.equal(recoveredFailedPlanEvents[0].direction, 'SHORT');
+  assert.equal(recoveredFailedPlanEvents[0].failedLevel, 7603.25);
+  assert.ok(recoveredFailedPlanEvents[0].evidence?.includes('durable live scanner audit'));
   deliveryState.sent[missed[0].alertKey] = { state: 'Approved', confidence: 96, sentAt: '2026-06-02T14:03:49.000Z' };
   const noMissed = await findMissedExecutableScannerDeliveries({
     auditDir,

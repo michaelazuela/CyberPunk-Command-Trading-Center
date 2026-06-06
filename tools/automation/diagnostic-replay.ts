@@ -199,7 +199,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Scanner: ${report.scannerAlertReview.reason}`,
     `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,
-    `Data boundary: Review requests ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days of structured context for 15M/1H/4H and is bounded to currently available completed bars.`,
+    `Data boundary: Review requests ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days of structured context for 15M/1H/2H/4H and is bounded to currently available completed bars.`,
     `Authority: diagnostic only; no rules changed; no trade approval created.`,
   ];
   return lines.join('\n');

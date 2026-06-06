@@ -1,0 +1,104 @@
+{
+  "reportType": "failed_plan_reversal_phase8_audit",
+  "generatedAt": "2026-06-06T02:07:53.580Z",
+  "instrument": "MES",
+  "dates": [
+    "2026-06-02",
+    "2026-06-03",
+    "2026-06-05"
+  ],
+  "auditDir": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\discord-audit",
+  "boundary": "diagnostic_replay_only_not_execution_authority",
+  "summaries": [
+    {
+      "date": "2026-06-02",
+      "scannerAuditCount": 3,
+      "approvedExecutableAuditCount": 3,
+      "decisionTapeCount": 0,
+      "decisionTapeEventCount": 0,
+      "failedPlanReversalEventCount": 0,
+      "twoHourCoverage": [],
+      "warnings": [
+        "2026-06-02: no scanner decision tape files found for MES."
+      ],
+      "regenerationRequired": true,
+      "regenerationReason": "missing decision tape",
+      "recommendedReplayCommand": "npm run diagnostic:failed-plan-reversal-phase8 -- --instrument MES --dates 2026-06-02 --pretty",
+      "freshTwoHourValidation": {
+        "attempted": true,
+        "available": true,
+        "sufficient": true,
+        "barsLoaded": 2000,
+        "rangeStart": "2026-05-22T05:55:00.0000000",
+        "rangeEnd": "2026-06-02T15:30:00.0000000",
+        "source": "bridge_historical_120m_refresh",
+        "warning": null
+      }
+    },
+    {
+      "date": "2026-06-03",
+      "scannerAuditCount": 0,
+      "approvedExecutableAuditCount": 0,
+      "decisionTapeCount": 1,
+      "decisionTapeEventCount": 1,
+      "failedPlanReversalEventCount": 0,
+      "twoHourCoverage": [],
+      "warnings": [
+        "2026-06-03: no live scanner audit files found for MES."
+      ],
+      "regenerationRequired": true,
+      "regenerationReason": "missing live scanner audit",
+      "recommendedReplayCommand": "npm run diagnostic:failed-plan-reversal-phase8 -- --instrument MES --dates 2026-06-03 --pretty",
+      "freshTwoHourValidation": {
+        "attempted": true,
+        "available": true,
+        "sufficient": true,
+        "barsLoaded": 2000,
+        "rangeStart": "2026-05-25T05:55:00.0000000",
+        "rangeEnd": "2026-06-03T15:30:00.0000000",
+        "source": "bridge_historical_120m_refresh",
+        "warning": null
+      }
+    },
+    {
+      "date": "2026-06-05",
+      "scannerAuditCount": 1,
+      "approvedExecutableAuditCount": 0,
+      "decisionTapeCount": 2,
+      "decisionTapeEventCount": 66,
+      "failedPlanReversalEventCount": 0,
+      "twoHourCoverage": [],
+      "warnings": [],
+      "regenerationRequired": false,
+      "regenerationReason": null,
+      "recommendedReplayCommand": "npm run diagnostic:failed-plan-reversal-phase8 -- --instrument MES --dates 2026-06-05 --pretty",
+      "freshTwoHourValidation": {
+        "attempted": true,
+        "available": true,
+        "sufficient": true,
+        "barsLoaded": 2000,
+        "rangeStart": "2026-05-27T09:55:00.0000000",
+        "rangeEnd": "2026-06-05T15:30:00.0000000",
+        "source": "bridge_historical_120m_refresh",
+        "warning": null
+      }
+    }
+  ],
+  "totals": {
+    "scannerAuditCount": 4,
+    "approvedExecutableAuditCount": 3,
+    "decisionTapeCount": 3,
+    "decisionTapeEventCount": 67,
+    "failedPlanReversalEventCount": 0,
+    "datesWithTwoHourCoverage": 0,
+    "datesMissingTwoHourCoverage": 3,
+    "datesRequiringRegeneration": 2,
+    "datesWithFreshTwoHourValidation": 3
+  },
+  "authority": {
+    "changesTradingRules": false,
+    "changesScannerBehavior": false,
+    "createsTrade": false,
+    "approvesExecution": false
+  }
+}

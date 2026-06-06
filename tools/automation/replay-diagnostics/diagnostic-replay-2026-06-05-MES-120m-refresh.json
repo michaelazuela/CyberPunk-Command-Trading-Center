@@ -1,0 +1,2098 @@
+{
+  "finalClassification": "C_UNAPPROVED_ICT_FVG_WATCHLIST",
+  "classificationLabel": "ICT-style displacement/FVG pullback watchlist condition, not approved executable setup",
+  "tradeDate": "2026-06-05",
+  "instrument": "MES",
+  "replayWindow": {
+    "from": "09:30",
+    "to": "12:00"
+  },
+  "largerTimeframeContextSummary": "HTF confirmation=mixed. 30M bars=0, 60M bars=515, 120M bars=2000, 4H bars=134, Daily bars=0. HTF context is data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof. 2H: missing structured OHLC context; minimum expected: 30 calendar days when available. insufficient HTF context: 5M loaded 31 bars from 2026-06-05T09:30:00.0000000 to 2026-06-05T12:00:00.0000000; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority. Larger timeframe context was treated as reporting context only.",
+  "higherTimeframeConfirmation": "mixed",
+  "fifteenMinuteConfirmation": "rejected",
+  "fiveMinuteReview": {
+    "direction": "SHORT",
+    "displacementPresent": true,
+    "displacementTime": "2026-06-05T09:40:00.0000000",
+    "displacementRangePoints": 14.25,
+    "fvgPullbackPresent": true,
+    "confirmationBarTime": "2026-06-05T10:25:00.0000000",
+    "summary": "Completed 5M bars show SHORT displacement with an FVG candidate."
+  },
+  "fvgBounds": [
+    {
+      "direction": "SHORT",
+      "lower": 7531,
+      "upper": 7536.25,
+      "midpoint": 7533.625,
+      "formedAt": "2026-06-05T09:50:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7525.75,
+      "upper": 7526.75,
+      "midpoint": 7526.25,
+      "formedAt": "2026-06-05T09:55:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T09:50:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7522,
+      "upper": 7524.75,
+      "midpoint": 7523.375,
+      "formedAt": "2026-06-05T10:30:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T10:25:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7522.25,
+      "upper": 7524.75,
+      "midpoint": 7523.5,
+      "formedAt": "2026-06-05T10:50:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T10:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7511.75,
+      "upper": 7512.25,
+      "midpoint": 7512,
+      "formedAt": "2026-06-05T11:20:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T11:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7495,
+      "upper": 7500.75,
+      "midpoint": 7497.875,
+      "formedAt": "2026-06-05T11:45:00.0000000",
+      "sourceTimeframe": "5m",
+      "displacementTime": "2026-06-05T11:40:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7388,
+      "upper": 7389.75,
+      "midpoint": 7388.875,
+      "formedAt": "2026-05-06T17:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-06T16:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7383.75,
+      "upper": 7387,
+      "midpoint": 7385.375,
+      "formedAt": "2026-05-06T18:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-06T17:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7382.75,
+      "upper": 7384.5,
+      "midpoint": 7383.625,
+      "formedAt": "2026-05-06T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-06T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7388.25,
+      "upper": 7388.5,
+      "midpoint": 7388.375,
+      "formedAt": "2026-05-06T22:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-06T22:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7400,
+      "upper": 7400.25,
+      "midpoint": 7400.125,
+      "formedAt": "2026-05-07T04:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T04:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7394.75,
+      "upper": 7395,
+      "midpoint": 7394.875,
+      "formedAt": "2026-05-07T06:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T06:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7393,
+      "upper": 7397.25,
+      "midpoint": 7395.125,
+      "formedAt": "2026-05-07T10:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7388.75,
+      "upper": 7396.75,
+      "midpoint": 7392.75,
+      "formedAt": "2026-05-07T12:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T12:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7382.25,
+      "upper": 7386,
+      "midpoint": 7384.125,
+      "formedAt": "2026-05-07T12:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T12:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7361.75,
+      "upper": 7366.25,
+      "midpoint": 7364,
+      "formedAt": "2026-05-07T17:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-07T16:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7396.75,
+      "upper": 7398.25,
+      "midpoint": 7397.5,
+      "formedAt": "2026-05-08T06:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-08T05:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7416.5,
+      "upper": 7416.75,
+      "midpoint": 7416.625,
+      "formedAt": "2026-05-08T11:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-08T11:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7419.5,
+      "upper": 7423.25,
+      "midpoint": 7421.375,
+      "formedAt": "2026-05-08T15:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-08T14:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7417.25,
+      "upper": 7419,
+      "midpoint": 7418.125,
+      "formedAt": "2026-05-08T15:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-08T15:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7409.75,
+      "upper": 7419.5,
+      "midpoint": 7414.625,
+      "formedAt": "2026-05-10T18:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-08T17:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7400.5,
+      "upper": 7419.5,
+      "midpoint": 7410,
+      "formedAt": "2026-05-10T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-10T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7405.5,
+      "upper": 7410.25,
+      "midpoint": 7407.875,
+      "formedAt": "2026-05-10T21:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-10T21:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7411.5,
+      "upper": 7412,
+      "midpoint": 7411.75,
+      "formedAt": "2026-05-11T00:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T00:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7445.25,
+      "upper": 7445.5,
+      "midpoint": 7445.375,
+      "formedAt": "2026-05-11T13:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T12:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7444,
+      "upper": 7446.75,
+      "midpoint": 7445.375,
+      "formedAt": "2026-05-11T15:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T14:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7438,
+      "upper": 7442.25,
+      "midpoint": 7440.125,
+      "formedAt": "2026-05-11T15:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T15:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7438.75,
+      "upper": 7439.5,
+      "midpoint": 7439.125,
+      "formedAt": "2026-05-11T20:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T20:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7434.5,
+      "upper": 7436.5,
+      "midpoint": 7435.5,
+      "formedAt": "2026-05-11T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7425.5,
+      "upper": 7428.75,
+      "midpoint": 7427.125,
+      "formedAt": "2026-05-11T21:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T21:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7421.75,
+      "upper": 7423.5,
+      "midpoint": 7422.625,
+      "formedAt": "2026-05-11T22:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-11T21:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7423.75,
+      "upper": 7425.25,
+      "midpoint": 7424.5,
+      "formedAt": "2026-05-12T01:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T01:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7416.75,
+      "upper": 7417.75,
+      "midpoint": 7417.25,
+      "formedAt": "2026-05-12T02:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T02:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7410.5,
+      "upper": 7412,
+      "midpoint": 7411.25,
+      "formedAt": "2026-05-12T03:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T03:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7411.5,
+      "upper": 7413.25,
+      "midpoint": 7412.375,
+      "formedAt": "2026-05-12T04:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T04:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7406.5,
+      "upper": 7407,
+      "midpoint": 7406.75,
+      "formedAt": "2026-05-12T07:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T07:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7377.5,
+      "upper": 7381.5,
+      "midpoint": 7379.5,
+      "formedAt": "2026-05-12T11:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T11:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7422,
+      "upper": 7422.5,
+      "midpoint": 7422.25,
+      "formedAt": "2026-05-12T16:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T16:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7423.25,
+      "upper": 7424.25,
+      "midpoint": 7423.75,
+      "formedAt": "2026-05-12T19:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T19:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7416.5,
+      "upper": 7418.5,
+      "midpoint": 7417.5,
+      "formedAt": "2026-05-12T20:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-12T19:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7438,
+      "upper": 7438.25,
+      "midpoint": 7438.125,
+      "formedAt": "2026-05-13T03:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T02:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7447.75,
+      "upper": 7451.5,
+      "midpoint": 7449.625,
+      "formedAt": "2026-05-13T05:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T05:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7443.75,
+      "upper": 7446,
+      "midpoint": 7444.875,
+      "formedAt": "2026-05-13T05:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T05:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7439.75,
+      "upper": 7440.5,
+      "midpoint": 7440.125,
+      "formedAt": "2026-05-13T08:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T08:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7424.5,
+      "upper": 7432.5,
+      "midpoint": 7428.5,
+      "formedAt": "2026-05-13T09:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T08:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7417,
+      "upper": 7428.5,
+      "midpoint": 7422.75,
+      "formedAt": "2026-05-13T10:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7473.75,
+      "upper": 7475,
+      "midpoint": 7474.375,
+      "formedAt": "2026-05-13T16:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T16:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7476,
+      "upper": 7477.25,
+      "midpoint": 7476.625,
+      "formedAt": "2026-05-14T00:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-13T23:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7492.75,
+      "upper": 7493.75,
+      "midpoint": 7493.25,
+      "formedAt": "2026-05-14T09:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T08:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7489.5,
+      "upper": 7492.25,
+      "midpoint": 7490.875,
+      "formedAt": "2026-05-14T09:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T09:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7527.75,
+      "upper": 7533.5,
+      "midpoint": 7530.625,
+      "formedAt": "2026-05-14T12:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T12:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7521.75,
+      "upper": 7525.75,
+      "midpoint": 7523.75,
+      "formedAt": "2026-05-14T16:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T16:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7522.75,
+      "upper": 7526.25,
+      "midpoint": 7524.5,
+      "formedAt": "2026-05-14T20:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T20:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7519.5,
+      "upper": 7522.25,
+      "midpoint": 7520.875,
+      "formedAt": "2026-05-14T21:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T20:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7508.25,
+      "upper": 7513,
+      "midpoint": 7510.625,
+      "formedAt": "2026-05-14T21:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-14T21:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7498.75,
+      "upper": 7499.5,
+      "midpoint": 7499.125,
+      "formedAt": "2026-05-15T01:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T00:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7494,
+      "upper": 7496.75,
+      "midpoint": 7495.375,
+      "formedAt": "2026-05-15T01:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T01:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7490.75,
+      "upper": 7492,
+      "midpoint": 7491.375,
+      "formedAt": "2026-05-15T01:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T01:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7478,
+      "upper": 7486,
+      "midpoint": 7482,
+      "formedAt": "2026-05-15T02:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T01:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7475.75,
+      "upper": 7481.5,
+      "midpoint": 7478.625,
+      "formedAt": "2026-05-15T04:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T03:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7461.25,
+      "upper": 7472.25,
+      "midpoint": 7466.75,
+      "formedAt": "2026-05-15T04:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T04:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7457.25,
+      "upper": 7460,
+      "midpoint": 7458.625,
+      "formedAt": "2026-05-15T04:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T04:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7447,
+      "upper": 7449.5,
+      "midpoint": 7448.25,
+      "formedAt": "2026-05-15T08:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T08:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7445.25,
+      "upper": 7446.25,
+      "midpoint": 7445.75,
+      "formedAt": "2026-05-15T08:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T08:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7444.75,
+      "upper": 7447.75,
+      "midpoint": 7446.25,
+      "formedAt": "2026-05-15T12:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T11:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7459.25,
+      "upper": 7469.75,
+      "midpoint": 7464.5,
+      "formedAt": "2026-05-15T14:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T14:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7448.5,
+      "upper": 7449.75,
+      "midpoint": 7449.125,
+      "formedAt": "2026-05-15T15:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T15:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7433,
+      "upper": 7440.5,
+      "midpoint": 7436.75,
+      "formedAt": "2026-05-15T16:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T16:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7422.75,
+      "upper": 7427,
+      "midpoint": 7424.875,
+      "formedAt": "2026-05-15T16:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-15T16:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7422.25,
+      "upper": 7424,
+      "midpoint": 7423.125,
+      "formedAt": "2026-05-17T19:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-17T19:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7418.5,
+      "upper": 7420,
+      "midpoint": 7419.25,
+      "formedAt": "2026-05-17T19:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-17T19:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7402.5,
+      "upper": 7407.25,
+      "midpoint": 7404.875,
+      "formedAt": "2026-05-17T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-17T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7387.25,
+      "upper": 7387.5,
+      "midpoint": 7387.375,
+      "formedAt": "2026-05-17T23:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-17T22:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7404.75,
+      "upper": 7406.25,
+      "midpoint": 7405.5,
+      "formedAt": "2026-05-18T06:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-18T06:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7428,
+      "upper": 7432.25,
+      "midpoint": 7430.125,
+      "formedAt": "2026-05-18T11:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-18T10:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7391.25,
+      "upper": 7403.25,
+      "midpoint": 7397.25,
+      "formedAt": "2026-05-18T14:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-18T14:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7426.75,
+      "upper": 7427,
+      "midpoint": 7426.875,
+      "formedAt": "2026-05-18T21:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-18T21:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7414.25,
+      "upper": 7416.25,
+      "midpoint": 7415.25,
+      "formedAt": "2026-05-18T22:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-18T22:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7412.75,
+      "upper": 7417,
+      "midpoint": 7414.875,
+      "formedAt": "2026-05-19T00:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T00:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7407,
+      "upper": 7411.5,
+      "midpoint": 7409.25,
+      "formedAt": "2026-05-19T00:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T00:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7420.5,
+      "upper": 7423.75,
+      "midpoint": 7422.125,
+      "formedAt": "2026-05-19T04:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T04:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7407.25,
+      "upper": 7412.5,
+      "midpoint": 7409.875,
+      "formedAt": "2026-05-19T05:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T05:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7398.75,
+      "upper": 7406.25,
+      "midpoint": 7402.5,
+      "formedAt": "2026-05-19T05:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T05:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7395,
+      "upper": 7399,
+      "midpoint": 7397,
+      "formedAt": "2026-05-19T09:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T09:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7402.25,
+      "upper": 7404.75,
+      "midpoint": 7403.5,
+      "formedAt": "2026-05-19T14:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T14:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7381.5,
+      "upper": 7383.75,
+      "midpoint": 7382.625,
+      "formedAt": "2026-05-19T20:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T20:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7371,
+      "upper": 7381.25,
+      "midpoint": 7376.125,
+      "formedAt": "2026-05-19T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7376.75,
+      "upper": 7378.5,
+      "midpoint": 7377.625,
+      "formedAt": "2026-05-19T22:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T22:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7368,
+      "upper": 7376.75,
+      "midpoint": 7372.375,
+      "formedAt": "2026-05-19T23:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-19T22:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7367.25,
+      "upper": 7368.5,
+      "midpoint": 7367.875,
+      "formedAt": "2026-05-20T01:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T00:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7397,
+      "upper": 7397.25,
+      "midpoint": 7397.125,
+      "formedAt": "2026-05-20T05:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T05:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7404.25,
+      "upper": 7404.5,
+      "midpoint": 7404.375,
+      "formedAt": "2026-05-20T07:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T07:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7404,
+      "upper": 7407.75,
+      "midpoint": 7405.875,
+      "formedAt": "2026-05-20T09:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T09:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7433.25,
+      "upper": 7436,
+      "midpoint": 7434.625,
+      "formedAt": "2026-05-20T18:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T17:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7418,
+      "upper": 7431.25,
+      "midpoint": 7424.625,
+      "formedAt": "2026-05-20T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-20T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7451,
+      "upper": 7452.25,
+      "midpoint": 7451.625,
+      "formedAt": "2026-05-21T01:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T01:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7448.25,
+      "upper": 7450.25,
+      "midpoint": 7449.25,
+      "formedAt": "2026-05-21T02:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T01:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7439.25,
+      "upper": 7441.75,
+      "midpoint": 7440.5,
+      "formedAt": "2026-05-21T03:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T02:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7434.5,
+      "upper": 7451,
+      "midpoint": 7442.75,
+      "formedAt": "2026-05-21T06:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T06:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7426.25,
+      "upper": 7427.5,
+      "midpoint": 7426.875,
+      "formedAt": "2026-05-21T07:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T06:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7429,
+      "upper": 7429.5,
+      "midpoint": 7429.25,
+      "formedAt": "2026-05-21T12:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T12:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7463.25,
+      "upper": 7466.5,
+      "midpoint": 7464.875,
+      "formedAt": "2026-05-21T15:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-21T15:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7480.5,
+      "upper": 7484.75,
+      "midpoint": 7482.625,
+      "formedAt": "2026-05-22T05:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T05:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7479.75,
+      "upper": 7480.5,
+      "midpoint": 7480.125,
+      "formedAt": "2026-05-22T06:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T06:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7474.5,
+      "upper": 7478,
+      "midpoint": 7476.25,
+      "formedAt": "2026-05-22T06:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T06:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7495,
+      "upper": 7500.5,
+      "midpoint": 7497.75,
+      "formedAt": "2026-05-22T10:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T10:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7511.25,
+      "upper": 7512.25,
+      "midpoint": 7511.75,
+      "formedAt": "2026-05-22T14:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T14:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7498.75,
+      "upper": 7503.5,
+      "midpoint": 7501.125,
+      "formedAt": "2026-05-22T15:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T15:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7487.5,
+      "upper": 7491,
+      "midpoint": 7489.25,
+      "formedAt": "2026-05-22T17:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-22T16:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7558.25,
+      "upper": 7558.5,
+      "midpoint": 7558.375,
+      "formedAt": "2026-05-25T03:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T03:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7558,
+      "upper": 7558.75,
+      "midpoint": 7558.375,
+      "formedAt": "2026-05-25T04:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T04:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7560,
+      "upper": 7561,
+      "midpoint": 7560.5,
+      "formedAt": "2026-05-25T09:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T09:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7561.5,
+      "upper": 7561.75,
+      "midpoint": 7561.625,
+      "formedAt": "2026-05-25T10:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T10:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7559.5,
+      "upper": 7560.25,
+      "midpoint": 7559.875,
+      "formedAt": "2026-05-25T10:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T10:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7558.25,
+      "upper": 7558.75,
+      "midpoint": 7558.5,
+      "formedAt": "2026-05-25T11:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T10:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7553.75,
+      "upper": 7554.25,
+      "midpoint": 7554,
+      "formedAt": "2026-05-25T19:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T18:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7542.5,
+      "upper": 7547,
+      "midpoint": 7544.75,
+      "formedAt": "2026-05-25T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-25T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7533.5,
+      "upper": 7538.75,
+      "midpoint": 7536.125,
+      "formedAt": "2026-05-26T03:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T03:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7539.5,
+      "upper": 7545.75,
+      "midpoint": 7542.625,
+      "formedAt": "2026-05-26T11:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T11:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7533.75,
+      "upper": 7537.25,
+      "midpoint": 7535.5,
+      "formedAt": "2026-05-26T11:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T11:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7528,
+      "upper": 7530.75,
+      "midpoint": 7529.375,
+      "formedAt": "2026-05-26T12:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T11:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7545,
+      "upper": 7545.25,
+      "midpoint": 7545.125,
+      "formedAt": "2026-05-26T22:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T22:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7543.25,
+      "upper": 7543.5,
+      "midpoint": 7543.375,
+      "formedAt": "2026-05-26T23:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-26T23:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7541.75,
+      "upper": 7542,
+      "midpoint": 7541.875,
+      "formedAt": "2026-05-27T02:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T02:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7557,
+      "upper": 7559.75,
+      "midpoint": 7558.375,
+      "formedAt": "2026-05-27T08:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T07:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7551.5,
+      "upper": 7556,
+      "midpoint": 7553.75,
+      "formedAt": "2026-05-27T08:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T08:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7553.75,
+      "upper": 7558,
+      "midpoint": 7555.875,
+      "formedAt": "2026-05-27T09:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T09:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7548.5,
+      "upper": 7551.5,
+      "midpoint": 7550,
+      "formedAt": "2026-05-27T09:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T09:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7538.5,
+      "upper": 7541.75,
+      "midpoint": 7540.125,
+      "formedAt": "2026-05-27T10:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7528.25,
+      "upper": 7529.25,
+      "midpoint": 7528.75,
+      "formedAt": "2026-05-27T13:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T13:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7547.5,
+      "upper": 7548.75,
+      "midpoint": 7548.125,
+      "formedAt": "2026-05-27T18:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T18:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7543.75,
+      "upper": 7544,
+      "midpoint": 7543.875,
+      "formedAt": "2026-05-27T19:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T19:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7538,
+      "upper": 7540.5,
+      "midpoint": 7539.25,
+      "formedAt": "2026-05-27T20:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T19:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7539.5,
+      "upper": 7542.5,
+      "midpoint": 7541,
+      "formedAt": "2026-05-27T22:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T22:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7527.25,
+      "upper": 7527.75,
+      "midpoint": 7527.5,
+      "formedAt": "2026-05-27T23:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T23:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7518.25,
+      "upper": 7526.75,
+      "midpoint": 7522.5,
+      "formedAt": "2026-05-28T00:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-27T23:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7587,
+      "upper": 7587.75,
+      "midpoint": 7587.375,
+      "formedAt": "2026-05-28T20:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-28T19:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7585.25,
+      "upper": 7586.75,
+      "midpoint": 7586,
+      "formedAt": "2026-05-28T20:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-28T20:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7579,
+      "upper": 7582.75,
+      "midpoint": 7580.875,
+      "formedAt": "2026-05-28T21:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-28T20:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7586.25,
+      "upper": 7589.5,
+      "midpoint": 7587.875,
+      "formedAt": "2026-05-29T03:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-29T03:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7600.25,
+      "upper": 7602.5,
+      "midpoint": 7601.375,
+      "formedAt": "2026-05-29T10:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-29T10:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7615.75,
+      "upper": 7616.25,
+      "midpoint": 7616,
+      "formedAt": "2026-05-31T23:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-05-31T22:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7614.75,
+      "upper": 7616.5,
+      "midpoint": 7615.625,
+      "formedAt": "2026-06-01T03:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T03:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7614.25,
+      "upper": 7615.25,
+      "midpoint": 7614.75,
+      "formedAt": "2026-06-01T08:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T08:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7611.5,
+      "upper": 7613.75,
+      "midpoint": 7612.625,
+      "formedAt": "2026-06-01T08:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T08:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7596.75,
+      "upper": 7608,
+      "midpoint": 7602.375,
+      "formedAt": "2026-06-01T09:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T09:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7620,
+      "upper": 7622.75,
+      "midpoint": 7621.375,
+      "formedAt": "2026-06-01T16:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T15:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7616.25,
+      "upper": 7617.75,
+      "midpoint": 7617,
+      "formedAt": "2026-06-01T16:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T16:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7600.25,
+      "upper": 7606.5,
+      "midpoint": 7603.375,
+      "formedAt": "2026-06-01T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7591.25,
+      "upper": 7592,
+      "midpoint": 7591.625,
+      "formedAt": "2026-06-01T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-01T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7604.25,
+      "upper": 7604.75,
+      "midpoint": 7604.5,
+      "formedAt": "2026-06-02T05:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T05:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7621.25,
+      "upper": 7623.75,
+      "midpoint": 7622.5,
+      "formedAt": "2026-06-02T13:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T13:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7626,
+      "upper": 7627.25,
+      "midpoint": 7626.625,
+      "formedAt": "2026-06-02T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7622,
+      "upper": 7624.5,
+      "midpoint": 7623.25,
+      "formedAt": "2026-06-02T19:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T19:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7616.25,
+      "upper": 7620.5,
+      "midpoint": 7618.375,
+      "formedAt": "2026-06-02T19:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T19:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7622,
+      "upper": 7624.75,
+      "midpoint": 7623.375,
+      "formedAt": "2026-06-02T21:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-02T21:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7620,
+      "upper": 7621.5,
+      "midpoint": 7620.75,
+      "formedAt": "2026-06-03T02:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T01:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7615.75,
+      "upper": 7616.5,
+      "midpoint": 7616.125,
+      "formedAt": "2026-06-03T06:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T05:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7611.5,
+      "upper": 7616,
+      "midpoint": 7613.75,
+      "formedAt": "2026-06-03T08:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T08:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7610,
+      "upper": 7611.25,
+      "midpoint": 7610.625,
+      "formedAt": "2026-06-03T09:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T08:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7594.5,
+      "upper": 7605.25,
+      "midpoint": 7599.875,
+      "formedAt": "2026-06-03T10:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7573.5,
+      "upper": 7576.25,
+      "midpoint": 7574.875,
+      "formedAt": "2026-06-03T12:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T12:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7581.75,
+      "upper": 7582.25,
+      "midpoint": 7582,
+      "formedAt": "2026-06-03T15:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T15:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7568.25,
+      "upper": 7568.5,
+      "midpoint": 7568.375,
+      "formedAt": "2026-06-03T16:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T16:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7559.25,
+      "upper": 7566,
+      "midpoint": 7562.625,
+      "formedAt": "2026-06-03T16:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T16:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7549,
+      "upper": 7551,
+      "midpoint": 7550,
+      "formedAt": "2026-06-03T17:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T16:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7540.5,
+      "upper": 7541.75,
+      "midpoint": 7541.125,
+      "formedAt": "2026-06-03T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7541.5,
+      "upper": 7543.25,
+      "midpoint": 7542.375,
+      "formedAt": "2026-06-03T22:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-03T22:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7544,
+      "upper": 7544.5,
+      "midpoint": 7544.25,
+      "formedAt": "2026-06-04T01:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T01:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7546.25,
+      "upper": 7552.25,
+      "midpoint": 7549.25,
+      "formedAt": "2026-06-04T04:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T04:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7540.75,
+      "upper": 7541.5,
+      "midpoint": 7541.125,
+      "formedAt": "2026-06-04T05:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T05:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7543.5,
+      "upper": 7544,
+      "midpoint": 7543.75,
+      "formedAt": "2026-06-04T06:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T06:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7540.5,
+      "upper": 7541.5,
+      "midpoint": 7541,
+      "formedAt": "2026-06-04T06:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T06:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7536.5,
+      "upper": 7537.25,
+      "midpoint": 7536.875,
+      "formedAt": "2026-06-04T07:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T06:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7602,
+      "upper": 7606,
+      "midpoint": 7604,
+      "formedAt": "2026-06-04T16:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T16:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7595,
+      "upper": 7598.25,
+      "midpoint": 7596.625,
+      "formedAt": "2026-06-04T16:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T16:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7591,
+      "upper": 7593,
+      "midpoint": 7592,
+      "formedAt": "2026-06-04T16:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T16:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7586.25,
+      "upper": 7587.25,
+      "midpoint": 7586.75,
+      "formedAt": "2026-06-04T18:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T18:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7581.25,
+      "upper": 7581.75,
+      "midpoint": 7581.5,
+      "formedAt": "2026-06-04T19:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T19:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7579.75,
+      "upper": 7580.25,
+      "midpoint": 7580,
+      "formedAt": "2026-06-04T19:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T19:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7573.5,
+      "upper": 7576,
+      "midpoint": 7574.75,
+      "formedAt": "2026-06-04T20:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T20:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7567,
+      "upper": 7573.25,
+      "midpoint": 7570.125,
+      "formedAt": "2026-06-04T20:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T20:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7560.25,
+      "upper": 7560.75,
+      "midpoint": 7560.5,
+      "formedAt": "2026-06-04T21:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-04T21:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7556.75,
+      "upper": 7557.75,
+      "midpoint": 7557.25,
+      "formedAt": "2026-06-05T02:45:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T02:30:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7570,
+      "upper": 7570.5,
+      "midpoint": 7570.25,
+      "formedAt": "2026-06-05T07:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T07:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7563.25,
+      "upper": 7566.5,
+      "midpoint": 7564.875,
+      "formedAt": "2026-06-05T08:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T08:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7531,
+      "upper": 7542.25,
+      "midpoint": 7536.625,
+      "formedAt": "2026-06-05T10:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T09:45:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7526.5,
+      "upper": 7526.75,
+      "midpoint": 7526.625,
+      "formedAt": "2026-06-05T10:15:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T10:00:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7512.25,
+      "upper": 7515,
+      "midpoint": 7513.625,
+      "formedAt": "2026-06-05T11:30:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T11:15:00.0000000"
+    },
+    {
+      "direction": "SHORT",
+      "lower": 7494,
+      "upper": 7499.75,
+      "midpoint": 7496.875,
+      "formedAt": "2026-06-05T12:00:00.0000000",
+      "sourceTimeframe": "15m",
+      "displacementTime": "2026-06-05T11:45:00.0000000"
+    }
+  ],
+  "pullbackReview": {
+    "pullbackBarTime": "2026-06-05T10:20:00.0000000",
+    "status": "respected",
+    "summary": "Pullback touched the bearish FVG and held below its upper bound."
+  },
+  "approvedSetupGateReview": [
+    {
+      "model": "Model 1 Sweep -> MSS -> FVG Retrace",
+      "passedGates": [],
+      "failedGates": [],
+      "missingRequiredConditions": [
+        "Liquidity sweep/raid",
+        "Reclaim after sweep",
+        "Displacement",
+        "Market structure shift",
+        "FVG retrace",
+        "Valid risk and minimum target room"
+      ],
+      "higherTimeframeConfirmation": "mixed",
+      "executableUnderCurrentRules": false
+    },
+    {
+      "model": "Turtle Soup Reversal",
+      "passedGates": [],
+      "failedGates": [],
+      "missingRequiredConditions": [
+        "Swept swing/session level",
+        "Reclaim back inside level",
+        "Stop beyond sweep wick",
+        "Opposing liquidity target with at least 2.0R"
+      ],
+      "higherTimeframeConfirmation": "mixed",
+      "executableUnderCurrentRules": false
+    }
+  ],
+  "scannerAlertReview": {
+    "candidateCreated": false,
+    "candidateStatus": null,
+    "selectedCandidateSetupType": null,
+    "selectedCandidateDirection": null,
+    "alertState": null,
+    "alertSent": false,
+    "reason": "scannerAuditStatus: present. Events found: trade=1, watchlist=0, health=0. Audit context is supporting evidence only."
+  },
+  "scannerAuditContext": {
+    "scannerAuditStatus": "present",
+    "matchingEvents": [
+      {
+        "alertTimestamp": "2026-06-05T14:01:03.190Z",
+        "tradeDate": "2026-06-05",
+        "instrument": "MES",
+        "session": "morning",
+        "alertType": "unknown",
+        "candidateSetupType": null,
+        "direction": null,
+        "scannerState": null,
+        "selectedCandidateDirection": null,
+        "selectedCandidateStatus": null,
+        "healthStatus": null,
+        "watchlistType": null,
+        "watchlistStatus": null,
+        "suppressionOrBlockReason": null,
+        "auditWarnings": [],
+        "discordAlertSent": null,
+        "attachmentsGenerated": false,
+        "outcomeButtonsIncluded": false,
+        "ragOrSupabaseWriteAttempted": false,
+        "originalFilePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\discord-audit\\scanner-decision-tape-2026-06-05-MES-morning.json"
+      },
+      {
+        "alertTimestamp": "2026-06-05T14:03:10.251Z",
+        "tradeDate": "2026-06-05",
+        "instrument": "MES",
+        "session": "morning",
+        "alertType": "trade",
+        "candidateSetupType": "TurtleSoup",
+        "direction": "LONG",
+        "scannerState": "Approved",
+        "selectedCandidateDirection": "LONG",
+        "selectedCandidateStatus": "Executable",
+        "healthStatus": null,
+        "watchlistType": null,
+        "watchlistStatus": null,
+        "suppressionOrBlockReason": null,
+        "auditWarnings": [],
+        "discordAlertSent": null,
+        "attachmentsGenerated": true,
+        "outcomeButtonsIncluded": false,
+        "ragOrSupabaseWriteAttempted": false,
+        "originalFilePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\discord-audit\\scanner-morning-2026-06-05-MES-MORNING-20260605-140309.json"
+      },
+      {
+        "alertTimestamp": "2026-06-05T15:37:00.527Z",
+        "tradeDate": "2026-06-05",
+        "instrument": "MES",
+        "session": null,
+        "alertType": "unknown",
+        "candidateSetupType": null,
+        "direction": null,
+        "scannerState": null,
+        "selectedCandidateDirection": null,
+        "selectedCandidateStatus": null,
+        "healthStatus": null,
+        "watchlistType": null,
+        "watchlistStatus": null,
+        "suppressionOrBlockReason": null,
+        "auditWarnings": [],
+        "discordAlertSent": null,
+        "attachmentsGenerated": false,
+        "outcomeButtonsIncluded": false,
+        "ragOrSupabaseWriteAttempted": true,
+        "originalFilePath": "C:\\Users\\Mike\\Documents\\New project\\tools\\automation\\discord-audit\\watchlist-2026-06-05-MES-morning-SHORT-morning_continuation_watchlist.json"
+      }
+    ],
+    "summary": "scannerAuditStatus: present. Events found: trade=1, watchlist=0, health=0. Audit context is supporting evidence only.",
+    "warnings": []
+  },
+  "tradePlanFeasibility": {
+    "applicable": false,
+    "candidateEntryTrigger": null,
+    "candidateStop": null,
+    "stopDistanceRisk": null,
+    "t1": null,
+    "t2": null,
+    "higherTimeframeTargetRoom": "mixed",
+    "freshEntryExisted": false,
+    "alreadyTriggered": false,
+    "summary": "Not applicable. Advisory-only or no-setup classifications do not create entry, stop, risk, T1, or T2."
+  },
+  "targetOutcomeReview": {
+    "applicable": false,
+    "entry": null,
+    "stop": null,
+    "t1": null,
+    "t2": null,
+    "firstCompletedBarAfterTrigger": null,
+    "t1Hit": null,
+    "t1HitTime": null,
+    "t2Hit": null,
+    "t2HitTime": null,
+    "stopHitBeforeTargets": null,
+    "stopHitTime": null,
+    "maximumFavorableExcursion": null,
+    "maximumAdverseExcursion": null,
+    "finalReplayOutcome": "not applicable",
+    "authorityNote": "Post-trigger target replay is diagnostic only and cannot retroactively approve invalid setup gates."
+  },
+  "htfMssDiagnostics": {
+    "source": "ninjatrader_ohlc",
+    "authority": "ohlc_facts_only",
+    "boundary": "context_only_not_execution_authority",
+    "classification": "FAILED_MSS",
+    "timeframeStack": [
+      {
+        "timeframe": "4H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "2H",
+        "direction": "unknown",
+        "status": "unknown",
+        "lifecycleState": "unknown",
+        "confidence": 0
+      },
+      {
+        "timeframe": "1H",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "15M",
+        "direction": "neutral",
+        "status": "conflicting",
+        "lifecycleState": "conflicting_mss",
+        "confidence": 35
+      },
+      {
+        "timeframe": "5M",
+        "direction": "bullish",
+        "status": "failed",
+        "lifecycleState": "failed_mss",
+        "confidence": 20
+      }
+    ],
+    "raidState": "sell_side_raid",
+    "reclaimStatus": "not_confirmed",
+    "fiveMinuteMssTriggerConfirmed": false,
+    "fiveMinuteMssConfirmationType": "unknown",
+    "postShiftState": "unknown",
+    "externalLiquidityTarget": null,
+    "activeScanWindow": "LUNCH_PM_SETUP_SCAN",
+    "htfContextSufficiency": {
+      "overallStatus": "missing",
+      "timeframeCoverage": [
+        {
+          "timeframe": "4H",
+          "barsLoaded": 134,
+          "rangeStart": "2026-05-06T02:00:00.0000000",
+          "rangeEnd": "2026-06-05T10:00:00.0000000",
+          "minimumExpectedDescription": "30 calendar days when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "2H",
+          "barsLoaded": 0,
+          "minimumExpectedDescription": "30 calendar days when available.",
+          "minimumSatisfied": false,
+          "status": "missing",
+          "blocker": "2H: missing structured OHLC context; minimum expected: 30 calendar days when available."
+        },
+        {
+          "timeframe": "1H",
+          "barsLoaded": 515,
+          "rangeStart": "2026-05-06T00:00:00.0000000",
+          "rangeEnd": "2026-06-05T12:00:00.0000000",
+          "minimumExpectedDescription": "30 calendar days when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "15M",
+          "barsLoaded": 2000,
+          "rangeStart": "2026-05-06T14:15:00.0000000",
+          "rangeEnd": "2026-06-05T12:00:00.0000000",
+          "minimumExpectedDescription": "30 calendar days when available.",
+          "minimumSatisfied": true,
+          "status": "sufficient"
+        },
+        {
+          "timeframe": "5M",
+          "barsLoaded": 31,
+          "rangeStart": "2026-06-05T09:30:00.0000000",
+          "rangeEnd": "2026-06-05T12:00:00.0000000",
+          "minimumExpectedDescription": "30 calendar days when available; active setup-scan window remains the execution trigger authority.",
+          "minimumSatisfied": false,
+          "status": "data_limited",
+          "blocker": "insufficient HTF context: 5M loaded 31 bars from 2026-06-05T09:30:00.0000000 to 2026-06-05T12:00:00.0000000; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority."
+        }
+      ],
+      "dataLimited": true,
+      "blockers": [
+        "2H: missing structured OHLC context; minimum expected: 30 calendar days when available.",
+        "insufficient HTF context: 5M loaded 31 bars from 2026-06-05T09:30:00.0000000 to 2026-06-05T12:00:00.0000000; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority."
+      ],
+      "notes": [
+        "HTF context data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.",
+        "Data sufficiency cannot approve execution; it only controls classification reliability and diagnostics."
+      ]
+    },
+    "htfContextDataLimited": true,
+    "timeframeCoverage": [
+      {
+        "timeframe": "4H",
+        "barsLoaded": 134,
+        "rangeStart": "2026-05-06T02:00:00.0000000",
+        "rangeEnd": "2026-06-05T10:00:00.0000000",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "2H",
+        "barsLoaded": 0,
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": false,
+        "status": "missing",
+        "blocker": "2H: missing structured OHLC context; minimum expected: 30 calendar days when available."
+      },
+      {
+        "timeframe": "1H",
+        "barsLoaded": 515,
+        "rangeStart": "2026-05-06T00:00:00.0000000",
+        "rangeEnd": "2026-06-05T12:00:00.0000000",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "15M",
+        "barsLoaded": 2000,
+        "rangeStart": "2026-05-06T14:15:00.0000000",
+        "rangeEnd": "2026-06-05T12:00:00.0000000",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "5M",
+        "barsLoaded": 31,
+        "rangeStart": "2026-06-05T09:30:00.0000000",
+        "rangeEnd": "2026-06-05T12:00:00.0000000",
+        "minimumExpectedDescription": "30 calendar days when available; active setup-scan window remains the execution trigger authority.",
+        "minimumSatisfied": false,
+        "status": "data_limited",
+        "blocker": "insufficient HTF context: 5M loaded 31 bars from 2026-06-05T09:30:00.0000000 to 2026-06-05T12:00:00.0000000; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority."
+      }
+    ],
+    "classificationReliability": "data_limited",
+    "classificationReason": "HTF context is data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.",
+    "createsTradingPlanCandidate": false,
+    "approvesExecution": false,
+    "blockers": [
+      "2H: missing structured OHLC context; minimum expected: 30 calendar days when available.",
+      "insufficient HTF context: 5M loaded 31 bars from 2026-06-05T09:30:00.0000000 to 2026-06-05T12:00:00.0000000; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority.",
+      "HTF/MSS state population does not approve execution by itself.",
+      "5M entry trigger, stop, risk, invalidation, and session gates remain required elsewhere before execution approval."
+    ],
+    "chartReportPath": null
+  },
+  "filesOrFunctionsImpacted": [
+    "src/lib/ninjaTraderBridge.ts::buildNinjaChartContext",
+    "src/lib/setupScanner.ts::scanSetupCandidates",
+    "src/lib/tradeDecisionPipeline.ts::runTradeDecisionPipeline",
+    "src/lib/tradePlan.ts::normalizeTradePlan",
+    "src/agents/scannerPlanSelectionAgent.ts::selectScannerPlan",
+    "tools/automation/nt-scanner.ts::shouldSendScannerAlert path"
+  ],
+  "smallestSafeCodeChangeRecommendation": "No scanner bug fix is recommended by this diagnostic classification.",
+  "advisoryOnlyDetectorRecommendation": {
+    "recommended": true,
+    "name": "15M + 5M ICT-Style Displacement/FVG Pullback Watchlist",
+    "behavior": [
+      "canExecute: false",
+      "no entry",
+      "no stop",
+      "no T1/T2",
+      "no risk calculation as executable plan",
+      "no outcome buttons",
+      "Discord text only"
+    ],
+    "suggestedText": "ICT-style FVG pullback forming. Watch only - wait for current approved rules and higher-timeframe confirmation.",
+    "purpose": "Collect 20-30 examples before deciding whether a human-approved rule review is warranted."
+  },
+  "newPlanRecommendation": {
+    "recommendBuild": true,
+    "recommendationType": "advisory_watchlist",
+    "recommendedName": "15M + 5M ICT-Style Displacement/FVG Pullback Watchlist",
+    "reason": "The move showed displacement plus FVG pullback behavior, but current approved executable gates were not satisfied.",
+    "minimumSampleSizeBeforeRuleReview": 30,
+    "mustRemainAdvisory": true,
+    "requiresSeparateApproval": true
+  },
+  "testsToAdd": [
+    "Approved executable setup with no scanner alert classifies as A.",
+    "Approved stale/already-triggered setup classifies as B.",
+    "Displacement/FVG pullback lacking approved gates classifies as C.",
+    "Weak/no setup classifies as D.",
+    "Advisory classifications never create entry/stop/T1/T2."
+  ],
+  "approvalBoundary": {
+    "diagnosticApprovesTrade": false,
+    "diagnosticChangesRules": false,
+    "diagnosticCreatesEntry": false,
+    "diagnosticCreatesTargets": false,
+    "diagnosticOverridesScanner": false,
+    "diagnosticPromotesModel": false,
+    "diagnosticBuildsNewPlan": false
+  }
+}

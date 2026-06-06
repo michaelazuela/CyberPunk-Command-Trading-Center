@@ -6,6 +6,7 @@ import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
+import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { TRADE_RULES } from '../../src/config/tradeRules';
 import {
   buildNinjaChartContext,
@@ -53,7 +54,14 @@ import {
   type ScannerHealthStatus,
   type ScannerStateFileHealth,
 } from '../../src/agents/scannerHealthAgent';
-import { type AnalysisResult, type FailedBreakEventFact, type SetupCandidate, type TargetObjective } from '../../src/types';
+import {
+  type AnalysisResult,
+  type ChartContext,
+  type FailedBreakEventFact,
+  type FailedPlanReversalContext,
+  type SetupCandidate,
+  type TargetObjective,
+} from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
@@ -196,6 +204,18 @@ export interface ScannerHistoryCoverageRecord {
   selfHealed: boolean;
   sufficient: boolean;
   warning: string | null;
+}
+
+export interface ScannerTwoHourCoverageDiagnostic {
+  timeframe: '120m';
+  available: boolean;
+  sufficient: boolean;
+  barsLoaded: number;
+  source: ScannerHistoryCoverageSource | 'not_requested';
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  warning: string | null;
+  candidatePromotionBoundary: 'two_hour_context_required_for_full_confirmation';
 }
 
 export interface ScannerWebhookResolution {
@@ -679,6 +699,52 @@ export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRe
   return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}`;
 }
 
+export function twoHourCoverageDiagnostic(
+  coverage: ScannerHistoryCoverageRecord[] | undefined,
+): ScannerTwoHourCoverageDiagnostic {
+  const record = (coverage || []).find((item) => item.timeframe === '120m');
+  return {
+    timeframe: '120m',
+    available: Boolean(record && record.barsLoaded > 0),
+    sufficient: Boolean(record?.sufficient),
+    barsLoaded: record?.barsLoaded || 0,
+    source: record?.source || 'not_requested',
+    rangeStart: record?.rangeStart || null,
+    rangeEnd: record?.rangeEnd || null,
+    warning: record?.warning || (record ? null : '120M / 2H scanner history was not requested or not reported.'),
+    candidatePromotionBoundary: 'two_hour_context_required_for_full_confirmation',
+  };
+}
+
+function twoHourCurrentRunWarning(coverage: ScannerHistoryCoverageRecord[] | undefined): string | null {
+  const diagnostic = twoHourCoverageDiagnostic(coverage);
+  if (diagnostic.sufficient) return null;
+  const detail = diagnostic.available
+    ? `loaded ${diagnostic.barsLoaded} bars from ${diagnostic.rangeStart || 'N/A'} to ${diagnostic.rangeEnd || 'N/A'}`
+    : 'no 120M / 2H bars were loaded';
+  return `Operational data-quality defect: 120M / 2H scanner context is not sufficient for full HTF confirmation (${detail}). Candidate promotion requiring full 2H confirmation must treat this as data-limited context, not structural proof.`;
+}
+
+async function verifyScannerAuditWrite(args: {
+  file: string;
+  expectedSource: string;
+  expectedPlanVersionId?: string;
+  expectedReportType?: string;
+}): Promise<void> {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(await fs.readFile(args.file, 'utf8')) as Record<string, unknown>;
+  } catch (error) {
+    throw new Error(`Scanner audit write verification failed for ${args.file}: ${formatError(error)}`);
+  }
+  if (parsed.source !== args.expectedSource && parsed.reportType !== args.expectedReportType) {
+    throw new Error(`Scanner audit write verification failed for ${args.file}: expected ${args.expectedSource}, found ${String(parsed.source || parsed.reportType || 'unknown')}.`);
+  }
+  if (args.expectedPlanVersionId && parsed.planVersionId !== args.expectedPlanVersionId) {
+    throw new Error(`Scanner audit write verification failed for ${args.file}: expected plan ${args.expectedPlanVersionId}, found ${String(parsed.planVersionId || 'missing')}.`);
+  }
+}
+
 function clip(value: string, max = 1024): string {
   const text = professionalizeReportText(value).trim() || 'N/A';
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
@@ -740,6 +806,7 @@ async function writeScannerDiscordAuditLog(args: {
     scannerAuditWarnings: args.scannerAuditWarnings || [],
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
+    twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     attachments: {
@@ -748,6 +815,11 @@ async function writeScannerDiscordAuditLog(args: {
       ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
   }, null, 2));
+  await verifyScannerAuditWrite({
+    file,
+    expectedSource: 'live-scanner',
+    expectedPlanVersionId: args.planVersionId,
+  });
   return file;
 }
 
@@ -797,6 +869,10 @@ async function writeScannerWatchlistAuditLog(args: {
       reason: 'Existing RAG persistence is trade/setup-oriented; Phase 7C stores watchlist context in audit JSON only to avoid trade-memory contamination.',
     },
   }, null, 2));
+  await verifyScannerAuditWrite({
+    file,
+    expectedSource: 'live-scanner-watchlist',
+  });
   return file;
 }
 
@@ -1032,6 +1108,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     auditWarnings: args.scannerAuditWarnings || [],
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
+    twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
     authority: {
       decisionTapeApprovesTrade: false,
       decisionTapeChangesRules: false,
@@ -1055,6 +1132,11 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     eventCount: Object.keys(events).length,
     events,
   }, null, 2));
+  await verifyScannerAuditWrite({
+    file,
+    expectedSource: 'scanner_decision_event_tape',
+    expectedReportType: 'scanner_decision_event_tape',
+  });
   return file;
 }
 
@@ -1312,6 +1394,120 @@ export function appOwnedFailedPlanEventsFromScannerState(args: {
     .filter((record) => record.state === 'Approved' || record.state === 'Executable')
     .map((record) => appOwnedFailedDecisionEventFromDelivery(record, args.completed5m))
     .filter((event): event is FailedBreakEventFact => Boolean(event));
+}
+
+export async function appOwnedFailedPlanEventsFromScannerAudits(args: {
+  auditDir?: string;
+  tradeDate: string;
+  session: LiveSession;
+  instrument: Instrument;
+  completed5m: NinjaBridgeBar;
+}): Promise<FailedBreakEventFact[]> {
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(auditDir);
+  } catch {
+    return [];
+  }
+
+  const events: FailedBreakEventFact[] = [];
+  for (const name of entries) {
+    if (!name.endsWith('.json') || !name.startsWith(`scanner-${args.session}-${args.tradeDate}-${args.instrument}-`)) continue;
+    let audit: any;
+    try {
+      audit = JSON.parse(await fs.readFile(path.join(auditDir, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    if (audit?.source !== 'live-scanner') continue;
+    if (audit.tradeDate !== args.tradeDate || audit.session !== args.session || audit.instrument !== args.instrument) continue;
+    if (audit.state !== 'Approved' && audit.state !== 'Executable') continue;
+    const candidate = candidateFromAudit(audit);
+    if (!candidate) continue;
+    const record: ScannerAlertDeliveryRecord = {
+      alertKey: scannerAlertKey({
+        tradeDate: audit.tradeDate,
+        instrument: audit.instrument,
+        session: audit.session,
+        candidate,
+        state: audit.state,
+      }),
+      planVersionId: typeof audit.planVersionId === 'string' ? audit.planVersionId : path.basename(name, '.json'),
+      instrument: args.instrument,
+      tradeDate: args.tradeDate,
+      session: args.session,
+      state: audit.state,
+      confidence: typeof audit.confidence?.score === 'number' ? audit.confidence.score : 0,
+      candidate: candidateDeliverySnapshot(candidate),
+      deliveryStatus: 'sent',
+      webhookSource: null,
+      httpStatus: null,
+      discordMessageId: null,
+      error: null,
+      attemptedAt: typeof audit.createdAt === 'string' ? audit.createdAt : new Date(0).toISOString(),
+      sentAt: typeof audit.createdAt === 'string' ? audit.createdAt : null,
+      auditLogPath: path.join(auditDir, name),
+      stale: false,
+      retryEligible: false,
+    };
+    const event = appOwnedFailedDecisionEventFromDelivery(record, args.completed5m);
+    if (event) events.push({
+      ...event,
+      evidence: `${event.evidence} Source recovered from durable live scanner audit ${name}.`,
+    });
+  }
+  return events;
+}
+
+function dedupeFailedPlanEvents(events: FailedBreakEventFact[]): FailedBreakEventFact[] {
+  const byKey = new Map<string, FailedBreakEventFact>();
+  for (const event of events) {
+    byKey.set(`${event.direction}:${event.failedLevel ?? 'unknown'}:${event.levelLabel || ''}`, event);
+  }
+  return [...byKey.values()];
+}
+
+export function attachFailedPlanReversalContextFromScannerState(args: {
+  chartContext: Partial<ChartContext> | null | undefined;
+  failedPlanEvents: FailedBreakEventFact[];
+}): {
+  chartContext: Partial<ChartContext> | null | undefined;
+  eventCount: number;
+  failedPlanReversal: FailedPlanReversalContext | null;
+} {
+  if (!args.chartContext || !args.failedPlanEvents.length) {
+    return {
+      chartContext: args.chartContext,
+      eventCount: 0,
+      failedPlanReversal: args.chartContext?.failedPlanReversal || null,
+    };
+  }
+
+  const notes = [
+    ...(args.chartContext.setupReadyFacts?.notes || []),
+    `Scanner added ${args.failedPlanEvents.length} app-owned failed decision/reclaim level event(s) from prior alert delivery state.`,
+  ];
+  const chartContext: Partial<ChartContext> = {
+    ...args.chartContext,
+    failedBreakEvents: [
+      ...(args.chartContext.failedBreakEvents || []),
+      ...args.failedPlanEvents,
+    ],
+    setupReadyFacts: {
+      ...(args.chartContext.setupReadyFacts || {}),
+      notes,
+    },
+  };
+  const failedPlanReversal =
+    chartContext.failedPlanReversal ||
+    buildFailedPlanReversalContextFromChartContext(chartContext as ChartContext);
+
+  return {
+    chartContext: failedPlanReversal ? { ...chartContext, failedPlanReversal } : chartContext,
+    eventCount: args.failedPlanEvents.length,
+    failedPlanReversal,
+  };
 }
 
 async function analysisFromBars(args: {
@@ -2228,7 +2424,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     return null;
   });
   const historyCoverage = lookLeft?.coverage || [];
-  const historyWarnings = historyCoverage.flatMap((item) => item.warning ? [item.warning] : []);
+  const twoHourWarning = twoHourCurrentRunWarning(historyCoverage);
+  if (twoHourWarning) console.warn(`[scanner-history] ${twoHourWarning}`);
+  const historyWarnings = [
+    ...historyCoverage.flatMap((item) => item.warning ? [item.warning] : []),
+    ...(twoHourWarning ? [twoHourWarning] : []),
+  ];
   const bars = lookLeft
     ? {
         '5m': mergeBars(liveBars['5m'], lookLeft.bars['5m']),
@@ -2240,25 +2441,38 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
   const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
-  const appOwnedFailedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
+  const appOwnedFailedPlanEventsFromState = appOwnedFailedPlanEventsFromScannerState({
     state,
     tradeDate,
     session,
     instrument: config.instrument,
     completed5m,
   });
-  if (analysis.structuredChartContext && appOwnedFailedPlanEvents.length) {
-    analysis.structuredChartContext.failedBreakEvents = [
-      ...(analysis.structuredChartContext.failedBreakEvents || []),
-      ...appOwnedFailedPlanEvents,
-    ];
-    analysis.structuredChartContext.setupReadyFacts = {
-      ...(analysis.structuredChartContext.setupReadyFacts || {}),
-      notes: [
-        ...(analysis.structuredChartContext.setupReadyFacts?.notes || []),
-        `Scanner added ${appOwnedFailedPlanEvents.length} app-owned failed decision/reclaim level event(s) from prior alert delivery state.`,
-      ],
-    };
+  const appOwnedFailedPlanEventsFromAudits = await appOwnedFailedPlanEventsFromScannerAudits({
+    tradeDate,
+    session,
+    instrument: config.instrument,
+    completed5m,
+  });
+  const appOwnedFailedPlanEvents = dedupeFailedPlanEvents([
+    ...appOwnedFailedPlanEventsFromState,
+    ...appOwnedFailedPlanEventsFromAudits,
+  ]);
+  if (appOwnedFailedPlanEventsFromAudits.length && !appOwnedFailedPlanEventsFromState.length) {
+    console.warn(
+      `[scanner-failed-plan-reversal] Recovered ${appOwnedFailedPlanEventsFromAudits.length} app-owned failed-plan event(s) from durable scanner audits because delivery state had none.`,
+    );
+  }
+  const failedPlanReversalIntegration = attachFailedPlanReversalContextFromScannerState({
+    chartContext: analysis.structuredChartContext,
+    failedPlanEvents: appOwnedFailedPlanEvents,
+  });
+  analysis.structuredChartContext = failedPlanReversalIntegration.chartContext || undefined;
+  if (failedPlanReversalIntegration.failedPlanReversal) {
+    const context = failedPlanReversalIntegration.failedPlanReversal;
+    console.log(
+      `[scanner-failed-plan-reversal] ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
+    );
   }
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
