@@ -308,7 +308,9 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
   return [
     'Plan:',
     ...(modelConfidenceScore !== null ? [`Confidence: ${modelConfidenceScore}/100`] : []),
-    ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' || candidate.candidateState === 'MSS_HOLD_CONFIRMED'
+    ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' ||
+      candidate.candidateState === 'MSS_HOLD_CONFIRMED' ||
+      candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING'
       ? [`Trigger State: ${candidate.candidateState}`]
       : []),
     ...failedPlanReversalLines(candidate),

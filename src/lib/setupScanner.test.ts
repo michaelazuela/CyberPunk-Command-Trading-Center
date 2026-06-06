@@ -2131,6 +2131,71 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.blockReason, null);
   }],
 
+  ['HTF displacement MSS continuation follows fresh bearish displacement over stale long structure context', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const freshShortFifteen = {
+      ...base.multiTimeframeContext!.fifteenMinute.displacementCandles[0],
+      timestamp: '2026-06-05T10:00:00-04:00',
+      evidence: 'Current 15M bearish displacement after failed long context.',
+    };
+    const freshShortFive = {
+      ...base.multiTimeframeContext!.fiveMinute.displacementCandles[0],
+      timestamp: '2026-06-05T10:00:00-04:00',
+      evidence: 'Current 5M bearish MSS close-through with displacement.',
+    };
+    const staleLongDisplacement = {
+      ...freshShortFifteen,
+      direction: 'LONG' as const,
+      timestamp: '2026-06-05T09:35:00-04:00',
+      open: 7518,
+      high: 7533,
+      low: 7517,
+      close: 7532,
+      evidence: 'Older bullish displacement from failed long context.',
+    };
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:05:00-04:00',
+      structureQualityContext: {
+        ...base.structureQualityContext!,
+        direction: 'LONG',
+        reasons: ['Stale long structure context from failed earlier plan.'],
+      },
+      multiTimeframeContext: {
+        ...base.multiTimeframeContext!,
+        fifteenMinute: {
+          ...base.multiTimeframeContext!.fifteenMinute,
+          displacementCandles: [
+            staleLongDisplacement,
+            freshShortFifteen,
+          ],
+        },
+        fiveMinute: {
+          ...base.multiTimeframeContext!.fiveMinute,
+          displacementCandles: [
+            {
+              ...staleLongDisplacement,
+              timestamp: '2026-06-05T09:40:00-04:00',
+              close: 7530,
+            },
+            freshShortFive,
+          ],
+        },
+      },
+      displacementCandles: [freshShortFive],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.candidateState, 'MSS_HOLD_CONFIRMED');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.blockReason, null);
+    assert.ok(candidate.evidence.some((item) => item.includes('bearish 15M displacement confirmed')));
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
   ['HTF displacement MSS continuation is not created when 5M MSS confirmation is missing', () => {
     const context = htfDisplacementContinuationContext('SHORT', {
       setupReadyFacts: {
@@ -2188,11 +2253,33 @@ const tests: Array<[string, () => void]> = [
     const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
 
     assert.ok(candidate);
-    assert.equal(candidate.candidateState, 'MSS_HOLD_TRIGGER_PENDING');
+    assert.equal(candidate.candidateState, 'NO_FRESH_ENTRY');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
     assert.ok(candidate.missingEvidence.includes('At least 60% of the path to primary liquidity remains'));
-    assert.ok(candidate.nextAction.includes('NO FRESH ENTRY'));
+    assert.ok(candidate.nextAction.includes('NO_FRESH_ENTRY'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
+  ['HTF displacement MSS continuation marks extended structure as retest pending while target path remains', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      keyLevels: {
+        ...base.keyLevels,
+        currentPrice: 7586,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(candidate.missingEvidence.includes('Fresh entry requires completed 5M retest/rejection below the decision level or a new completed 5M continuation close'));
+    assert.ok(candidate.nextAction.includes('MSS_CONTINUATION_RETEST_PENDING'));
+    assert.ok(candidate.nextAction.includes('completed 5M retest/rejection below the decision level'));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 

@@ -2034,12 +2034,29 @@ function directionLabel(direction: Direction): 'bullish' | 'bearish' | 'directio
 }
 
 function htfDisplacementDirection(chartContext: ChartContext): Direction {
-  const structureDirection = chartContext.structureQualityContext?.direction;
-  if (structureDirection === 'LONG' || structureDirection === 'SHORT') return structureDirection;
-  const fiveMinuteDisplacement = [
+  const timeframeDisplacements = [
+    ...(chartContext.multiTimeframeContext?.fifteenMinute.displacementCandles || []),
     ...(chartContext.multiTimeframeContext?.fiveMinute.displacementCandles || []),
     ...(chartContext.displacementCandles || []),
-  ].find((candle) => candle.direction === 'LONG' || candle.direction === 'SHORT');
+  ].filter((candle) => candle.direction === 'LONG' || candle.direction === 'SHORT');
+  const confirmedDisplacements = timeframeDisplacements.filter((candle) =>
+    isReadableConfidence(candle.confidence) &&
+    (
+      candle.quality === 'confirmed' ||
+      candle.quality === 'high_quality' ||
+      candle.breaksStructure ||
+      (typeof candle.bodyToRange === 'number' && candle.bodyToRange >= 0.6)
+    )
+  );
+  const latestConfirmedDisplacement = [...confirmedDisplacements]
+    .sort((a, b) => Date.parse(String(b.timestamp || '')) - Date.parse(String(a.timestamp || '')))[0];
+  if (latestConfirmedDisplacement?.direction === 'LONG' || latestConfirmedDisplacement?.direction === 'SHORT') {
+    return latestConfirmedDisplacement.direction;
+  }
+
+  const structureDirection = chartContext.structureQualityContext?.direction;
+  if (structureDirection === 'LONG' || structureDirection === 'SHORT') return structureDirection;
+  const fiveMinuteDisplacement = timeframeDisplacements.find((candle) => candle.direction === 'LONG' || candle.direction === 'SHORT');
   if (fiveMinuteDisplacement?.direction === 'LONG' || fiveMinuteDisplacement?.direction === 'SHORT') return fiveMinuteDisplacement.direction;
   if (chartContext.candleFacts?.closeBelowKeyLevel || chartContext.candleFacts?.lastClosedCandleDirection === 'bearish') return 'SHORT';
   if (chartContext.candleFacts?.closeAboveKeyLevel || chartContext.candleFacts?.lastClosedCandleDirection === 'bullish') return 'LONG';
@@ -2110,12 +2127,43 @@ function mssHoldCandidateState(structurallyComplete: boolean): TradingPlanCandid
   return structurallyComplete ? 'MSS_HOLD_CONFIRMED' : 'MSS_HOLD_TRIGGER_PENDING';
 }
 
+function htfDisplacementMssCandidateState(args: {
+  structurallyComplete: boolean;
+  enoughRoom: boolean;
+  freshEntry: boolean;
+}): TradingPlanCandidateState {
+  if (args.structurallyComplete) return 'MSS_HOLD_CONFIRMED';
+  if (!args.enoughRoom) return 'NO_FRESH_ENTRY';
+  if (!args.freshEntry) return 'MSS_CONTINUATION_RETEST_PENDING';
+  return 'MSS_HOLD_TRIGGER_PENDING';
+}
+
 function isMssHoldConfirmed(candidateState: TradingPlanCandidateState): boolean {
   return candidateState === 'MSS_HOLD_CONFIRMED';
 }
 
 function mssHoldNoFreshEntryMissingEvidence(): string {
-  return 'NO FRESH ENTRY: price is extended past the MSS hold trigger without a clean retest';
+  return 'Fresh entry requires completed 5M retest/rejection below the decision level or a new completed 5M continuation close';
+}
+
+function mssContinuationRetestPendingAction(direction: Direction): string {
+  if (direction === 'SHORT') {
+    return 'MSS_CONTINUATION_RETEST_PENDING. Wait for completed 5M retest/rejection below the decision level, or a new completed 5M bearish continuation close, with at least 60% of the path to sell-side liquidity remaining.';
+  }
+  if (direction === 'LONG') {
+    return 'MSS_CONTINUATION_RETEST_PENDING. Wait for completed 5M retest/rejection above the decision level, or a new completed 5M bullish continuation close, with at least 60% of the path to buy-side liquidity remaining.';
+  }
+  return 'MSS_CONTINUATION_RETEST_PENDING. Wait for completed 5M retest/rejection or a new completed 5M continuation close with enough remaining path to real liquidity.';
+}
+
+function mssContinuationNoFreshEntryAction(direction: Direction): string {
+  if (direction === 'SHORT') {
+    return 'NO_FRESH_ENTRY. Do not chase. No clean retest is confirmed or less than 60% of the path to sell-side liquidity remains.';
+  }
+  if (direction === 'LONG') {
+    return 'NO_FRESH_ENTRY. Do not chase. No clean retest is confirmed or less than 60% of the path to buy-side liquidity remains.';
+  }
+  return 'NO_FRESH_ENTRY. Do not chase. No clean retest is confirmed or target path is exhausted.';
 }
 
 function failedPlanReversalStateFor(context: NonNullable<ChartContext['failedPlanReversal']>, structurallyComplete: boolean): TradingPlanCandidateState {
@@ -2572,7 +2620,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
   const structurallyComplete = score >= HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
-  const candidateState = mssHoldCandidateState(structurallyComplete);
+  const candidateState = htfDisplacementMssCandidateState({ structurallyComplete, enoughRoom, freshEntry });
   const riskLabel = riskNote ? ` ${riskNote}` : '';
   const dirLabel = directionLabel(direction);
 
@@ -2614,13 +2662,21 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ])),
     missingEvidence: Array.from(new Set(missingEvidence)),
     executionStatus: structurallyComplete ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
-    blockReason: structurallyComplete ? null : (!enoughRoom ? NoTradeReason.ChasingExtendedMove : NoTradeReason.EntryTriggerPending),
+    blockReason: structurallyComplete
+      ? null
+      : candidateState === 'NO_FRESH_ENTRY'
+      ? NoTradeReason.ChasingExtendedMove
+      : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'SHORT'
       ? 'MSS_HOLD_CONFIRMED requires a completed 5M close through the short MSS/reclaim level, then short entry at or below that close while at least 60% of the path to primary sell-side liquidity remains.'
       : 'MSS_HOLD_CONFIRMED requires a completed 5M close through the long MSS/reclaim level, then long entry at or above that close while at least 60% of the path to primary buy-side liquidity remains.',
     nextAction: structurallyComplete
       ? `Structurally complete ${dirLabel} HTF displacement + 5M MSS continuation plan. Human final decision required.${riskLabel}`
-      : 'MSS_HOLD_TRIGGER_PENDING / NO FRESH ENTRY. Do not chase. Wait for a fresh completed 5M close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.',
+      : candidateState === 'MSS_CONTINUATION_RETEST_PENDING'
+      ? mssContinuationRetestPendingAction(direction)
+      : candidateState === 'NO_FRESH_ENTRY'
+      ? mssContinuationNoFreshEntryAction(direction)
+      : 'MSS_HOLD_TRIGGER_PENDING. Wait for a completed 5M close-through/retest plan with protected stop, app targets, and enough remaining path to real liquidity.',
     reducedRiskPlan: null,
   };
 }

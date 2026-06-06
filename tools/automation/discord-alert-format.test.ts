@@ -316,6 +316,35 @@ assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false mus
 assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
+const scannerRetestPendingCandidate = sampleCandidate('SHORT');
+scannerRetestPendingCandidate.setupType = SetupType.HtfDisplacementMssContinuation;
+scannerRetestPendingCandidate.scenarioLabel = 'HTF Displacement + 5M MSS Continuation';
+scannerRetestPendingCandidate.executionStatus = ExecutionStatus.Conditional;
+scannerRetestPendingCandidate.candidateState = 'MSS_CONTINUATION_RETEST_PENDING';
+scannerRetestPendingCandidate.requiredTrigger = 'Fresh short requires completed 5M retest/rejection below the decision level, or a new completed 5M bearish continuation close.';
+scannerRetestPendingCandidate.nextAction = 'MSS_CONTINUATION_RETEST_PENDING. Wait for completed 5M retest/rejection below the decision level.';
+const scannerRetestPendingPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-05',
+  instrument: 'MES',
+  planVersionId: 'HTF-MSS-RETEST-PENDING',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [scannerRetestPendingCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+validateDiscordPayload(scannerRetestPendingPayload, ['chart-plan.png', 'price-level-map.png']);
+const scannerRetestPendingText = flattenDiscordPayloadText(scannerRetestPendingPayload);
+assert.ok(scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
+assert.ok(scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
+assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
+
 const dataLimitedScannerCandidate = sampleCandidate('LONG');
 dataLimitedScannerCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
 dataLimitedScannerCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
