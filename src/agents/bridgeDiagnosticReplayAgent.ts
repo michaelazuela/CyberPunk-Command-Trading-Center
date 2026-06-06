@@ -64,6 +64,7 @@ export interface BridgeDiagnosticReplayInput {
   bars15m: NinjaBridgeBar[];
   bars30m?: NinjaBridgeBar[];
   bars60m?: NinjaBridgeBar[];
+  bars120m?: NinjaBridgeBar[];
   bars240m?: NinjaBridgeBar[];
   barsDaily?: NinjaBridgeBar[];
   normalizedPlan?: NormalizedTradePlan | null;
@@ -334,7 +335,7 @@ function confirmationAfterPullback(bars: NinjaBridgeBar[], pullbackTime: string 
 
 function higherTimeframeConfirmation(input: BridgeDiagnosticReplayInput, direction: 'LONG' | 'SHORT' | 'NO TRADE'): DiagnosticConfirmation {
   if (direction === 'NO TRADE') return 'missing';
-  const frames = [input.bars30m, input.bars60m, input.bars240m, input.barsDaily].map(sortedBars).filter((bars) => bars.length >= 2);
+  const frames = [input.bars30m, input.bars60m, input.bars120m, input.bars240m, input.barsDaily].map(sortedBars).filter((bars) => bars.length >= 2);
   if (!frames.length) return 'missing';
   const trends = frames.map(trendDirection).filter((trend) => trend !== 'MISSING');
   const supports = trends.filter((trend) => trend === direction).length;
@@ -745,7 +746,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
     replayWindow: { ...input.replayWindow },
     largerTimeframeContextSummary: [
       `HTF confirmation=${htf}.`,
-      `30M bars=${input.bars30m?.length || 0}, 60M bars=${input.bars60m?.length || 0}, 4H bars=${input.bars240m?.length || 0}, Daily bars=${input.barsDaily?.length || 0}.`,
+      `30M bars=${input.bars30m?.length || 0}, 60M bars=${input.bars60m?.length || 0}, 120M bars=${input.bars120m?.length || 0}, 4H bars=${input.bars240m?.length || 0}, Daily bars=${input.barsDaily?.length || 0}.`,
       htfContextSummary,
       htf === 'conflicted' ? 'Larger timeframe context conflicted with the suspected move.' : 'Larger timeframe context was treated as reporting context only.',
     ].join(' '),

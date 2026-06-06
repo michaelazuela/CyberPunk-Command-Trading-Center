@@ -348,6 +348,66 @@ assert.ok(dataLimitedScannerText.includes('Candidate Promotion: blocked by data-
 assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready|structural confirmation allowed/i.test(dataLimitedScannerText), false);
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(dataLimitedScannerText), false);
 
+const failedPlanReversalCandidate = sampleCandidate('SHORT');
+failedPlanReversalCandidate.setupType = SetupType.FailedPlanReversal;
+failedPlanReversalCandidate.scenarioLabel = 'Failed Plan Reversal';
+failedPlanReversalCandidate.pathway = 'failed_plan_reversal';
+failedPlanReversalCandidate.candidateState = 'OPPOSITE_SIDE_TRIGGER_CONFIRMED';
+failedPlanReversalCandidate.executionStatus = ExecutionStatus.Executable;
+failedPlanReversalCandidate.entry = 7517.75;
+failedPlanReversalCandidate.stop = 7520.75;
+failedPlanReversalCandidate.target1 = 7513.25;
+failedPlanReversalCandidate.target2 = 7511.75;
+failedPlanReversalCandidate.riskPoints = 3;
+failedPlanReversalCandidate.riskAdvisoryStatus = 'RISK_WITHIN_STANDARD_LIMIT';
+failedPlanReversalCandidate.failedPlanReversal = {
+  source: 'ninjatrader_ohlc',
+  boundary: 'opposite_side_review_only_not_execution_authority',
+  originalPlanDirection: 'LONG',
+  oppositeDirection: 'SHORT',
+  failedDecisionLevel: 7518,
+  failedDecisionLevelRole: 'short_side_resistance',
+  failedPlanEvidence: ['Long plan failed below 7518.'],
+  htfStackStatus: 'supported_confirmation',
+  timeframeConfirmations: [
+    { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
+    { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
+  ],
+  fiveMinuteTriggerStatus: 'confirmed',
+  decisionState: 'OPPOSITE_SIDE_TRIGGER_CONFIRMED',
+  freshTriggerRequired: true,
+  staleOrNoFreshEntry: false,
+  reasons: ['Fresh 5M retest confirmed.'],
+  blockers: [],
+  createsCandidate: true,
+  approvesExecution: false,
+};
+const failedPlanPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-05',
+  instrument: 'MES',
+  planVersionId: 'FAILED-PLAN-REVERSAL',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if price reclaims above failed decision level.',
+  },
+  candidates: [failedPlanReversalCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  statusOverride: 'Executable',
+});
+validateDiscordPayload(failedPlanPayload, ['chart-plan.png', 'price-level-map.png']);
+const failedPlanText = flattenDiscordPayloadText(failedPlanPayload);
+assert.ok(failedPlanPayload.content?.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(failedPlanText.includes('Failed Plan Reversal:'));
+assert.ok(failedPlanText.includes('State: OPPOSITE_SIDE_TRIGGER_CONFIRMED | Level: 7518.00'));
+assert.ok(failedPlanText.includes('LONG -> SHORT | HTF: supported_confirmation | 5M: confirmed'));
+assert.ok(failedPlanText.includes('Boundary: decision support only; not execution approval.'));
+assert.equal(/EXECUTABLE -|Trade now|Take the trade|Trade approved/i.test(failedPlanText), false);
+
 const rawConditionalCanExecutePayload = compactDiscordSummary({
   session: 'morning',
   tradeDate: '2026-06-01',

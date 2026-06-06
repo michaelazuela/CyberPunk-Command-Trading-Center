@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 
-export type MarketBarTimeframe = '5m' | '15m' | '60m' | '240m';
+export type MarketBarTimeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 
 export interface MarketDataConfig {
   userId: string;

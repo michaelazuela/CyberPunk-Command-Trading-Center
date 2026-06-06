@@ -33,6 +33,7 @@ const primaryExpected = [
   SetupType.HtfDrawContinuationAfterRaid,
   SetupType.HtfDisplacementMssContinuation,
   SetupType.HtfDisplacementFvgContinuation,
+  SetupType.FailedPlanReversal,
 ];
 const supportingExpected = [
   SetupType.LiquiditySweep,

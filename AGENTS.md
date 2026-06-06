@@ -39,7 +39,7 @@ The app should use those facts to build conditional paths such as Morning Failed
 Real-time or historical OHLC imported from the NinjaTrader bridge is the highest-authority chart data path.
 
 - Treat NinjaTrader OHLC open, high, low, close, volume, timestamp, session highs/lows, candles, swings, FVG/imbalance facts, liquidity events, displacement candles, session story, and structural levels as factual.
-- Store NinjaTrader OHLC into the durable `market_bars` candle cache when the local recorder/backfill tools are running. The cache is compact OHLCV only for `5m`, `15m`, `60m`, and `240m`; do not store tick data unless explicitly approved.
+- Store NinjaTrader OHLC into the durable `market_bars` candle cache when the local recorder/backfill tools are running. The cache is compact OHLCV only for `5m`, `15m`, `60m`, `120m`, and `240m`; do not store tick data unless explicitly approved.
 - Discord/session automation should read `market_bars` first, then repair gaps from the NinjaTrader bridge when possible.
 - AI screenshot extraction may fill gaps only when the OHLC field is missing.
 - AI must not overwrite, contradict, or replace an existing OHLC-derived field.
@@ -60,13 +60,14 @@ Do not move setup approval, ranking, risk acceptance, or executable trade decisi
 Use higher timeframe OHLC as a map, not as an execution trigger:
 
 - 4H defines macro context: multi-day swing highs/lows, large displacement legs, broad liquidity pools, and major range boundaries.
+- 2H defines intermediate session structure between 1H and 4H, especially failed-plan reversal confirmation and broader continuation/reversal context.
 - 1H defines session structure: overnight trend, prior-day interaction, larger FVG/imbalance zones, and whether RTH is returning into or expanding away from ETH structure.
 - 15M defines the primary session map: Asian/London/NY premarket highs/lows, ETH high/low, swing/equal-high/equal-low liquidity, displacement/FVG reaction zones, LQ1/LQ2/Runner objectives, and obstacles before tactical risk-based targets.
 - 5M remains the only execution authority for entry trigger, active swing, stop placement, risk, invalidation, and final trade approval.
 
-NinjaTrader bridge fetches should prefer 4H + 1H + 15M + 5M OHLC when available. The app may use higher timeframe levels to improve setup ranking and target management, but the deterministic pipeline must still require a valid 5M trigger, stop, risk, invalidation, and time-window gate.
+NinjaTrader bridge fetches should prefer 4H + 2H + 1H + 15M + 5M OHLC when available. The app may use higher timeframe levels to improve setup ranking and target management, but the deterministic pipeline must still require a valid 5M trigger, stop, risk, invalidation, and time-window gate.
 
-All bridge timeframes must be made machine-readable before app-owned engines consume them. Do not use Gemini narrative text, Discord text, or human-readable summaries as the glue between timeframes. The bridge should produce structured OHLC-derived facts for 4H, 1H, 15M, and 5M first; then the setup scanner, ranking engine, target engine, and trade decision pipeline may consume those facts according to their authority boundaries.
+All bridge timeframes must be made machine-readable before app-owned engines consume them. Do not use Gemini narrative text, Discord text, or human-readable summaries as the glue between timeframes. The bridge should produce structured OHLC-derived facts for 4H, 2H, 1H, 15M, and 5M first; then the setup scanner, ranking engine, target engine, and trade decision pipeline may consume those facts according to their authority boundaries.
 
 ## Market Map And Target Context
 
@@ -187,6 +188,7 @@ Minimum structured scanner preload:
 - 5M: 30 calendar days when available, with the active execution window used as the execution trigger authority.
 - 15M: 30 calendar days when available.
 - 1H: 30 calendar days when available.
+- 2H / 120M: 30 calendar days when available.
 - 4H: 30 calendar days when available.
 
 The scanner must read durable `market_bars` first and attempt NinjaTrader bridge repair/backfill when the 30-day preload is incomplete. If the 30-day preload still cannot be loaded, report it as an operational data-quality defect for HTF structural classification rather than a normal market-structure conclusion.
@@ -243,7 +245,7 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 
 The local scanner runs all day and overnight. Outside Morning/Lunch execution windows, it is in `MarketMapping` state, not trade-planning mode.
 
-- Market Mapping Mode may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/240M liquidity, and target cascade context.
+- Market Mapping Mode may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, and target cascade context.
 - Market Mapping Mode must not produce actionable trade plans, Discord trade alerts, entries, stops, or approvals.
 - Keep `Opening Observation Window` as the specific 9:30-10:00 AM ET RTH phase. Do not use that label for overnight or all-day context building.
 - Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.

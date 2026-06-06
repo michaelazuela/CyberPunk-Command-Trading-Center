@@ -73,6 +73,7 @@ export const TRADE_RULES = {
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
+        SetupType.FailedPlanReversal,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,
@@ -93,6 +94,7 @@ export const TRADE_RULES = {
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
+        SetupType.FailedPlanReversal,
       ],
       supportingEvidence: [
         SetupType.LiquiditySweep,

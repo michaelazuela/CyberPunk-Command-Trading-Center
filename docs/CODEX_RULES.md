@@ -128,6 +128,7 @@ Minimum structured scanner preload:
 * 5M: 30 calendar days when available, with the active execution window used as the execution trigger authority.
 * 15M: 30 calendar days when available.
 * 1H: 30 calendar days when available.
+* 2H / 120M: 30 calendar days when available.
 * 4H: 30 calendar days when available.
 
 The scanner must read durable `market_bars` first and attempt NinjaTrader bridge repair/backfill when the 30-day preload is incomplete. If the 30-day preload still cannot be loaded, report it as an operational data-quality defect for HTF structural classification rather than a normal market-structure conclusion.

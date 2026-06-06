@@ -2118,6 +2118,30 @@ function mssHoldNoFreshEntryMissingEvidence(): string {
   return 'NO FRESH ENTRY: price is extended past the MSS hold trigger without a clean retest';
 }
 
+function failedPlanReversalStateFor(context: NonNullable<ChartContext['failedPlanReversal']>, structurallyComplete: boolean): TradingPlanCandidateState {
+  if (context.staleOrNoFreshEntry || context.fiveMinuteTriggerStatus === 'stale' || context.fiveMinuteTriggerStatus === 'no_fresh_entry') {
+    return 'NO_FRESH_ENTRY';
+  }
+  if (structurallyComplete) return 'OPPOSITE_SIDE_TRIGGER_CONFIRMED';
+  if (context.fiveMinuteTriggerStatus === 'confirmed') {
+    return context.originalPlanDirection === 'LONG'
+      ? 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
+      : 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED';
+  }
+  if (context.fiveMinuteTriggerStatus === 'pending_retest') return 'OPPOSITE_SIDE_RETEST_PENDING';
+  return context.originalPlanDirection === 'LONG'
+    ? 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
+    : 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING';
+}
+
+function failedPlanReversalHtfEligible(context: NonNullable<ChartContext['failedPlanReversal']>): boolean {
+  return context.htfStackStatus === 'full_confirmation' || context.htfStackStatus === 'supported_confirmation';
+}
+
+function failedPlanReversalFreshTriggerConfirmed(context: NonNullable<ChartContext['failedPlanReversal']>): boolean {
+  return context.fiveMinuteTriggerStatus === 'confirmed' && !context.staleOrNoFreshEntry;
+}
+
 function fvgOrImbalanceSupportsDirection(chartContext: ChartContext, direction: Direction): boolean {
   if (direction !== 'LONG' && direction !== 'SHORT') return false;
   return Boolean(
@@ -2140,8 +2164,8 @@ function liquidityTargetForContinuation(chartContext: ChartContext, direction: D
   if (objectives[0]) return objectives[0];
 
   const mtfTarget = direction === 'LONG'
-    ? chartContext.multiTimeframeContext?.targetMap.nearestUpsideLiquidity || chartContext.multiTimeframeContext?.targetMap.majorUpsideLiquidity
-    : chartContext.multiTimeframeContext?.targetMap.nearestDownsideLiquidity || chartContext.multiTimeframeContext?.targetMap.majorDownsideLiquidity;
+    ? chartContext.multiTimeframeContext?.targetMap?.nearestUpsideLiquidity || chartContext.multiTimeframeContext?.targetMap?.majorUpsideLiquidity
+    : chartContext.multiTimeframeContext?.targetMap?.nearestDownsideLiquidity || chartContext.multiTimeframeContext?.targetMap?.majorDownsideLiquidity;
   if (mtfTarget?.price && (direction === 'LONG' ? mtfTarget.price > entry : mtfTarget.price < entry)) {
     return {
       label: mtfTarget.label,
@@ -2298,6 +2322,184 @@ function notDetectedHtfDisplacementFvgCandidate(entry: SetupRegistryEntry): Setu
     blockReason: null,
     requiredTrigger: null,
     nextAction: 'Wait for 15M displacement, 5M displacement/FVG confirmation, a protected structure stop, and an external liquidity target with sufficient room.',
+    reducedRiskPlan: null,
+  };
+}
+
+function notDetectedFailedPlanReversalCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'failed_plan_reversal',
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'Failed plan reversal requires a failed app-owned plan level, 15M/1H opposite confirmation, and a fresh completed 5M opposite-side trigger.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'No failed-plan reversal state. Wait for a failed decision/reclaim level, opposite HTF confirmation, and a fresh completed 5M trigger/retest.',
+    reducedRiskPlan: null,
+  };
+}
+
+function failedPlanReversalConfidenceScore(args: {
+  htfEligible: boolean;
+  triggerConfirmed: boolean;
+  hasEntryStopTargets: boolean;
+  hasTarget: boolean;
+  staleOrNoFreshEntry: boolean;
+  blockerCount: number;
+}): number {
+  return Math.max(0, Math.min(100,
+    (args.htfEligible ? 35 : 0) +
+    (args.triggerConfirmed ? 30 : 0) +
+    (args.hasEntryStopTargets ? 20 : 0) +
+    (args.hasTarget ? 10 : 0) +
+    (!args.staleOrNoFreshEntry ? 5 : 0) -
+    args.blockerCount * 8
+  ));
+}
+
+function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  const context = chartContext?.failedPlanReversal;
+  if (!chartContext || !context) return null;
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+  if (!registry) return null;
+  const direction = context.oppositeDirection;
+  const htfEligible = failedPlanReversalHtfEligible(context);
+  const triggerConfirmed = failedPlanReversalFreshTriggerConfirmed(context);
+  const entry = parsePrice(chartContext.proposedEntry);
+  const stop = parsePrice(chartContext.proposedStop);
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
+  const target = liquidityTargetForContinuation(chartContext, direction, entry);
+  const targets = computedTargets(direction, entry, stop);
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the failed-short reversal structure stop near ${stop}.`
+      : `Invalid if price trades above the failed-long reversal structure stop near ${stop}.`
+    : null;
+  const hasEntryStopTargets = entry !== null && stop !== null && targets.target1 !== null && targets.target2 !== null && invalidation !== null;
+  const roomRatio = remainingPathRatio(direction, entry, currentPrice, target?.price ?? null);
+  const enoughRoom = roomRatio === null ? Boolean(target) : roomRatio >= 0.6;
+  const structurallyComplete =
+    context.createsCandidate &&
+    htfEligible &&
+    triggerConfirmed &&
+    hasEntryStopTargets &&
+    Boolean(target) &&
+    enoughRoom;
+  const candidateState = failedPlanReversalStateFor(context, structurallyComplete);
+  const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
+  const riskNote = riskAdvisoryNote(risk);
+  const missingEvidence = Array.from(new Set([
+    ...(!context.createsCandidate ? ['Failed-plan reversal state is watch-only'] : []),
+    ...(!htfEligible ? [`Opposite HTF stack is ${context.htfStackStatus}; requires full or supported confirmation`] : []),
+    ...(!triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest is not confirmed'] : []),
+    ...(context.staleOrNoFreshEntry ? ['NO FRESH ENTRY: reversal trigger is stale or price already left the decision level'] : []),
+    ...(entry === null ? ['Defined opposite-side 5M entry'] : []),
+    ...(stop === null ? ['Protected opposite-side 5M structure stop'] : []),
+    ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
+    ...(!target ? ['External liquidity target in the opposite direction'] : []),
+    ...(!enoughRoom ? ['At least 60% of the path to primary opposite-side liquidity remains'] : []),
+    ...context.blockers,
+  ]));
+  const score = failedPlanReversalConfidenceScore({
+    htfEligible,
+    triggerConfirmed,
+    hasEntryStopTargets,
+    hasTarget: Boolean(target),
+    staleOrNoFreshEntry: context.staleOrNoFreshEntry,
+    blockerCount: context.blockers.length,
+  });
+  const directionText = directionLabel(direction);
+  const failedLevel = context.failedDecisionLevel !== null ? `${context.failedDecisionLevel}` : 'unavailable';
+
+  return {
+    setupType: SetupType.FailedPlanReversal,
+    scenarioLabel: registry.label,
+    candidateState,
+    pathway: 'failed_plan_reversal',
+    failedPlanReversal: {
+      ...context,
+      decisionState: candidateState === 'NO_FRESH_ENTRY'
+        ? 'NO_FRESH_ENTRY'
+        : candidateState === 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
+        ? 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
+        : context.decisionState,
+      createsCandidate: structurallyComplete,
+      approvesExecution: false,
+    },
+    direction,
+    detectedStatus: structurallyComplete ? SetupCandidateStatus.Detected : SetupCandidateStatus.Conditional,
+    confidence: score >= 82 ? 'High' : score >= 60 ? 'Medium' : 'Low',
+    priority: registry.priority,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: score,
+    invalidation,
+    entryClarity: entry !== null ? 0.86 : 0.2,
+    stopClarity: stop !== null ? 0.86 : 0.2,
+    targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.86 : 0.25,
+    proximityScore: enoughRoom ? 0.75 : 0.2,
+    levelContextScore: score / 5,
+    levelContextSummary: `Failed Plan Reversal: failed ${context.originalPlanDirection} level ${failedLevel} converted to ${directionText} decision review; HTF stack ${context.htfStackStatus}.`,
+    evidence: Array.from(new Set([
+      `Failed original plan: ${context.originalPlanDirection}`,
+      `Failed decision level: ${failedLevel} (${context.failedDecisionLevelRole})`,
+      `Opposite HTF MSS evidence: ${context.htfStackStatus}`,
+      ...context.timeframeConfirmations.map((item) => `${item.timeframe}: ${item.direction} ${item.status}`),
+      `5M trigger status: ${context.fiveMinuteTriggerStatus}`,
+      ...(triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest confirmed'] : []),
+      ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
+      ...(enoughRoom ? ['At least 60% of the path to primary opposite-side liquidity remains'] : []),
+      `Confidence score: ${score}/100`,
+      'Failed Plan Reversal does not approve execution; app-owned deterministic gates still control canExecute.',
+      ...(riskNote ? [riskNote] : []),
+      ...context.failedPlanEvidence,
+      ...context.reasons,
+    ])),
+    missingEvidence,
+    executionStatus: structurallyComplete ? ExecutionStatus.Executable : ExecutionStatus.Conditional,
+    blockReason: structurallyComplete
+      ? null
+      : context.staleOrNoFreshEntry
+      ? NoTradeReason.ChasingExtendedMove
+      : NoTradeReason.EntryTriggerPending,
+    requiredTrigger: direction === 'SHORT'
+      ? 'Failed Plan Reversal short requires failed long decision level, 15M/1H bearish confirmation, non-conflicting 2H/4H, and fresh completed 5M bearish trigger/retest.'
+      : 'Failed Plan Reversal long requires failed short decision level, 15M/1H bullish confirmation, non-conflicting 2H/4H, and fresh completed 5M bullish trigger/retest.',
+    nextAction: structurallyComplete
+      ? `Structurally complete Failed Plan Reversal ${directionText} plan. Human final decision required.${riskNote ? ` ${riskNote}` : ''}`
+      : context.staleOrNoFreshEntry
+      ? 'NO FRESH ENTRY. Do not chase. Wait for a new completed 5M opposite-side trigger/retest around the failed decision level.'
+      : 'Failed Plan Reversal pending. Wait for fresh completed 5M opposite-side trigger/retest and normal app-owned gates.',
     reducedRiskPlan: null,
   };
 }
@@ -2806,6 +3008,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.pathway === 'htf_liquidity_draw_mss' ? 24 :
     candidate.pathway === 'htf_displacement_mss_continuation' ? 22 :
     candidate.pathway === 'htf_displacement_fvg_continuation' ? 20 :
+    candidate.pathway === 'failed_plan_reversal' ? 21 :
     0;
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
     ? -60
@@ -2830,6 +3033,7 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const htfCandidate = buildHtfLiquidityDrawCandidate(input);
   const htfDisplacementCandidate = buildHtfDisplacementMssContinuationCandidate(input);
   const htfDisplacementFvgCandidate = buildHtfDisplacementFvgContinuationCandidate(input);
+  const failedPlanReversalCandidate = buildFailedPlanReversalCandidate(input);
   const candidates = [
     ...getPrimarySetupRegistry(input.sessionType)
       .map((entry) =>
@@ -2839,12 +3043,16 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? htfDisplacementCandidate
           : entry.setupType === SetupType.HtfDisplacementFvgContinuation && htfDisplacementFvgCandidate
           ? htfDisplacementFvgCandidate
+          : entry.setupType === SetupType.FailedPlanReversal && failedPlanReversalCandidate
+          ? failedPlanReversalCandidate
           : entry.setupType === SetupType.HtfDrawContinuationAfterRaid
           ? notDetectedHtfDrawCandidate(entry)
           : entry.setupType === SetupType.HtfDisplacementMssContinuation
           ? notDetectedHtfDisplacementMssCandidate(entry)
           : entry.setupType === SetupType.HtfDisplacementFvgContinuation
           ? notDetectedHtfDisplacementFvgCandidate(entry)
+          : entry.setupType === SetupType.FailedPlanReversal
+          ? notDetectedFailedPlanReversalCandidate(entry)
           : candidateForEntry(entry, input, text)
       ),
   ]

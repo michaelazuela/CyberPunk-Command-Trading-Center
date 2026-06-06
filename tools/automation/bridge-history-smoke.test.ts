@@ -12,14 +12,14 @@ const parsed = parseBridgeHistorySmokeArgs([
   '--date', '2026-05-28',
   '--from', '10:00',
   '--to', '12:00',
-  '--timeframes', '5m,15m,60m,240m',
+  '--timeframes', '5m,15m,60m,120m,240m',
   '--pretty',
 ]);
 
 assert.equal(parsed.instrument, 'MES');
 assert.equal(parsed.bridgeInstrument, 'MES 06-26');
 assert.equal(parsed.date, '2026-05-28');
-assert.deepEqual(parsed.timeframes, ['5m', '15m', '60m', '240m']);
+assert.deepEqual(parsed.timeframes, ['5m', '15m', '60m', '120m', '240m']);
 assert.equal(parsed.pretty, true);
 
 const filterDiagnostics = diagnoseCompletedBars([
@@ -77,7 +77,7 @@ assert.equal(zeroReport.liveRecentBarsAvailable, true);
 assert.equal(zeroReport.historicalBarsAvailable, false);
 assert.equal(zeroReport.completedBarsAvailable, false);
 assert.equal(zeroReport.likelyCause, 'ninjatrader_history_not_loaded');
-assert.equal(zeroReport.timeframeResults.length, 4);
+assert.equal(zeroReport.timeframeResults.length, 5);
 assert.ok(zeroReport.timeframeResults.every((result) => result.aliasAttempts.length > 0));
 assert.ok(requests.some((url) => url.includes('historical-bars')));
 assert.ok(requests.some((url) => url.includes('timeframe=5M')));

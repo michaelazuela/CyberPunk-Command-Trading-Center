@@ -8,6 +8,7 @@ import {
   barsCoverRequestedLookback,
   barsForMorningContinuationWatchlist,
   buildScannerHistoryPreloadPlan,
+  appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
   findMissedExecutableScannerDeliveries,
   markScannerAlertDeliveryFailed,
@@ -78,8 +79,8 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
 
 assert.equal(SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS, 30);
 const morningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning');
-assert.deepEqual(Object.keys(morningHistoryPlan).sort(), ['15m', '240m', '5m', '60m']);
-for (const timeframe of ['5m', '15m', '60m', '240m'] as const) {
+assert.deepEqual(Object.keys(morningHistoryPlan).sort(), ['120m', '15m', '240m', '5m', '60m']);
+for (const timeframe of ['5m', '15m', '60m', '120m', '240m'] as const) {
   assert.equal(morningHistoryPlan[timeframe].requiredLookbackDays, 30);
   assert.equal(morningHistoryPlan[timeframe].from, '2026-05-03T00:00:00-04:00');
   assert.equal(morningHistoryPlan[timeframe].to, '2026-06-02T12:00:00-04:00');
@@ -115,6 +116,28 @@ const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     liquiditySweeps: [{ direction: 'LONG', level: 7575 }],
     reclaimEvents: [{ direction: 'LONG', level: 7585 }],
     marketStructure: { marketStructureShift: false },
+    failedPlanReversal: {
+      source: 'ninjatrader_ohlc',
+      boundary: 'opposite_side_review_only_not_execution_authority',
+      originalPlanDirection: 'LONG',
+      oppositeDirection: 'SHORT',
+      failedDecisionLevel: 7518,
+      failedDecisionLevelRole: 'short_side_resistance',
+      failedPlanEvidence: ['Prior long failed below 7518.'],
+      htfStackStatus: 'supported_confirmation',
+      timeframeConfirmations: [
+        { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
+        { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
+      ],
+      fiveMinuteTriggerStatus: 'pending_retest',
+      decisionState: 'OPPOSITE_SIDE_RETEST_PENDING',
+      freshTriggerRequired: true,
+      staleOrNoFreshEntry: false,
+      reasons: ['Waiting for clean 5M retest.'],
+      blockers: [],
+      createsCandidate: false,
+      approvesExecution: false,
+    },
   },
   candidate: null,
   normalized: {
@@ -166,6 +189,12 @@ assert.equal(tapeEvent.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tapeEvent.classification.missed, false);
 assert.equal(tapeEvent.classification.advisory, true);
 assert.equal(tapeEvent.discord.shouldSend, false);
+assert.equal(tapeEvent.failedPlanReversal.present, true);
+assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
+assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'supported_confirmation');
+assert.equal(tapeEvent.failedPlanReversal.fiveMinuteTriggerStatus, 'pending_retest');
+assert.equal(tapeEvent.failedPlanReversal.createsCandidate, false);
+assert.equal(tapeEvent.failedPlanReversal.approvesExecution, false);
 assert.equal(tapeEvent.authority.decisionTapeCanExecute, false);
 const fourHourCoverageBars = Array.from({ length: 1129 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');
@@ -210,6 +239,57 @@ const selfHealedSummary = summarizeScannerHistoryCoverage({
 assert.ok(selfHealedSummary.includes('240m: sufficient'));
 assert.ok(selfHealedSummary.includes('source=market_bars_bridge_repair'));
 assert.ok(selfHealedSummary.includes('self-healed from bridge'));
+
+const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
+  state: {
+    sent: {},
+    alertDeliveries: {
+      'prior-long': {
+        alertKey: 'prior-long',
+        planVersionId: 'MORNING-PRIOR-LONG',
+        instrument: 'MES',
+        tradeDate: '2026-06-05',
+        session: 'morning',
+        state: 'Executable',
+        confidence: 94,
+        candidate: {
+          setupType: 'FailedBreakoutReversal',
+          direction: 'LONG',
+          entry: 7518,
+          stop: 7511,
+          target1: 7528.5,
+          target2: 7532,
+        },
+        deliveryStatus: 'sent',
+        webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+        httpStatus: 200,
+        discordMessageId: 'discord-1',
+        error: null,
+        attemptedAt: '2026-06-05T14:00:00.000Z',
+        sentAt: '2026-06-05T14:00:01.000Z',
+        auditLogPath: null,
+        stale: false,
+        retryEligible: false,
+      },
+    },
+    watchlistSent: {},
+    windowStartSent: {},
+    lastCompleted5mBySession: {},
+    lastMarketMapRefreshBySession: {},
+    lastHealthStatus: null,
+    lastHealthAlertSentAt: null,
+  },
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  instrument: 'MES',
+  completed5m: { time: '2026-06-05T10:05:00.0000000', open: 7521, high: 7522, low: 7512.5, close: 7517.25, volume: 1000 },
+});
+assert.equal(failedPlanEvents.length, 1);
+assert.equal(failedPlanEvents[0].direction, 'SHORT');
+assert.equal(failedPlanEvents[0].failedLevel, 7518);
+assert.ok(failedPlanEvents[0].levelLabel?.includes('app-owned failed plan'));
+assert.ok(failedPlanEvents[0].evidence?.includes('App-owned LONG plan'));
+assert.ok(failedPlanEvents[0].evidence?.includes('generic failed-break events remain ignored'));
 
 const candles = Array.from({ length: 48 }, (_, index) => {
   const base = index < 16 ? 5328 - index * 0.35 : 5322 + (index - 16) * 0.42;

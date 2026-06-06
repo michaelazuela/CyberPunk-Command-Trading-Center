@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
-export type MarketBarTimeframe = '5m' | '15m' | '60m' | '240m';
+export type MarketBarTimeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 export type MarketBarsSource = 'market_bars' | 'empty' | 'error';
 
 interface MarketBarRow {
@@ -123,4 +123,3 @@ export async function upsertMarketBarsToCache({
 
   return { saved: error ? 0 : rows.length, error: error?.message };
 }
-

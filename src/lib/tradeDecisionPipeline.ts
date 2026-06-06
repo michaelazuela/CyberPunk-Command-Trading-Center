@@ -28,6 +28,7 @@ import { buildConditionalPlans } from './conditionalPlanBuilder';
 import { applyTargetObjectivesToCandidates } from './targetObjectiveEngine';
 import { applyLevelSanity } from './levelSanityEngine';
 import { buildHtfLiquidityDrawStateFromChartContext } from './htfLiquidityDrawEngine';
+import { buildFailedPlanReversalContextFromChartContext } from './failedPlanReversalEngine';
 
 export type PipelineSessionType = ChartContext['sessionType'];
 type Direction = 'LONG' | 'SHORT' | 'NO TRADE';
@@ -139,6 +140,12 @@ function setupFromText(...parts: Array<unknown>): SetupType {
   const text = parts.filter(Boolean).join(' ').toUpperCase();
   if (!text || text.includes('NO TRADE')) return SetupType.NoSetup;
   if (
+    text.includes('FAILED PLAN REVERSAL') ||
+    text.includes('FAILED_PLAN_REVERSAL') ||
+    text.includes('OPPOSITE-SIDE DECISION LEVEL') ||
+    text.includes('OPPOSITE SIDE DECISION LEVEL')
+  ) return SetupType.FailedPlanReversal;
+  if (
     text.includes('HTF DISPLACEMENT + FVG CONTINUATION') ||
     text.includes('HTF DISPLACEMENT FVG CONTINUATION') ||
     text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
@@ -245,11 +252,18 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     marketContext: structured.marketContext || input.result?.reasoning || input.result?.current_rule_analysis?.summary || 'No market context extracted.',
     ocrText: structured.ocrText || input.result?.agentReports?.map((report) => report.findings).join('\n') || null,
   };
-  return {
+  const withHtfDraw: ChartContext = {
     ...chartContext,
     htfLiquidityDrawState:
       chartContext.htfLiquidityDrawState ||
       buildHtfLiquidityDrawStateFromChartContext(chartContext) ||
+      undefined,
+  };
+  return {
+    ...withHtfDraw,
+    failedPlanReversal:
+      withHtfDraw.failedPlanReversal ||
+      buildFailedPlanReversalContextFromChartContext(withHtfDraw) ||
       undefined,
   };
 }
@@ -347,6 +361,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.HtfDrawContinuationAfterRaid: return 99;
     case SetupType.HtfDisplacementMssContinuation: return 99;
     case SetupType.HtfDisplacementFvgContinuation: return 97;
+    case SetupType.FailedPlanReversal: return 98;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
   }
@@ -588,6 +603,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
               ? 'HTF displacement + 5M MSS continuation sequence quality.'
           : candidate.setupType === SetupType.HtfDisplacementFvgContinuation
               ? 'HTF displacement + FVG continuation sequence quality.'
+          : candidate.setupType === SetupType.FailedPlanReversal
+              ? 'Failed plan reversal sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',
     },
     {

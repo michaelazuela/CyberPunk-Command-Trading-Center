@@ -53,7 +53,7 @@ import {
   type ScannerHealthStatus,
   type ScannerStateFileHealth,
 } from '../../src/agents/scannerHealthAgent';
-import { type AnalysisResult, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { type AnalysisResult, type FailedBreakEventFact, type SetupCandidate, type TargetObjective } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
@@ -162,13 +162,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
-const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
+const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
 const SCANNER_HISTORY_MIN_BARS: Record<MarketBarTimeframe, number> = {
   '5m': 500,
   '15m': 500,
   '60m': 120,
+  '120m': 80,
   '240m': 40,
 };
 const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
@@ -613,6 +614,7 @@ function money(value: number | null | undefined): string {
 
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {
   if (timeframe === '60m') return 60;
+  if (timeframe === '120m') return 120;
   if (timeframe === '240m') return 240;
   return Number(timeframe.replace('m', '')) || 5;
 }
@@ -900,6 +902,8 @@ function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, norm
           blockReason: candidate.blockReason,
           requiredTrigger: candidate.requiredTrigger,
           nextAction: candidate.nextAction,
+          candidateState: candidate.candidateState || null,
+          failedPlanReversal: candidate.failedPlanReversal || null,
         }
       : null,
     counts: {
@@ -919,7 +923,36 @@ function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, norm
       target2: item.target2,
       riskPoints: item.riskPoints,
       blockReason: item.blockReason,
+      candidateState: item.candidateState || null,
+      failedPlanReversal: item.failedPlanReversal || null,
     })),
+  };
+}
+
+function summarizeFailedPlanReversalForTape(chartContext: unknown, candidate: SetupCandidate | null) {
+  const context = candidate?.failedPlanReversal || asRecord(chartContext)?.failedPlanReversal || null;
+  if (!context) {
+    return {
+      present: false,
+      state: null,
+      status: 'not_present',
+      createsCandidate: false,
+      approvesExecution: false,
+    };
+  }
+  const record = asRecord(context);
+  return {
+    present: true,
+    state: stringField(record, ['decisionState']) || candidate?.candidateState || null,
+    originalPlanDirection: stringField(record, ['originalPlanDirection']) || null,
+    oppositeDirection: stringField(record, ['oppositeDirection']) || candidate?.direction || null,
+    failedDecisionLevel: record?.failedDecisionLevel ?? null,
+    htfStackStatus: stringField(record, ['htfStackStatus']) || null,
+    fiveMinuteTriggerStatus: stringField(record, ['fiveMinuteTriggerStatus']) || null,
+    staleOrNoFreshEntry: Boolean(record?.staleOrNoFreshEntry),
+    blockers: asArray(record?.blockers),
+    createsCandidate: Boolean(record?.createsCandidate),
+    approvesExecution: false,
   };
 }
 
@@ -961,6 +994,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     completed5m: args.completed5m,
     currentPrice: args.currentPrice,
     facts: summarizeScannerEventTapeFacts(args.chartContext, args.completed5m),
+    failedPlanReversal: summarizeFailedPlanReversalForTape(args.chartContext, args.candidate),
     setupCandidateStatus: summarizeScannerCandidateForTape(args.candidate, args.normalized),
     plan: {
       planVersionId: args.planVersionId,
@@ -1226,6 +1260,60 @@ function mergeBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): Ninja
   return [...byTime.values()].sort((a, b) => String(a.time).localeCompare(String(b.time)));
 }
 
+function scannerStateMatchesSession(record: ScannerAlertDeliveryRecord, args: {
+  tradeDate: string;
+  session: LiveSession;
+  instrument: Instrument;
+}): boolean {
+  return record.tradeDate === args.tradeDate &&
+    record.session === args.session &&
+    record.instrument === args.instrument;
+}
+
+function appOwnedFailedDecisionEventFromDelivery(
+  record: ScannerAlertDeliveryRecord,
+  completed5m: NinjaBridgeBar,
+): FailedBreakEventFact | null {
+  const originalDirection = record.candidate.direction === 'LONG' || record.candidate.direction === 'SHORT'
+    ? record.candidate.direction
+    : null;
+  const decisionLevel = record.candidate.entry;
+  if (!originalDirection || typeof decisionLevel !== 'number' || !Number.isFinite(decisionLevel)) return null;
+  const failedLong = originalDirection === 'LONG' && completed5m.close < decisionLevel;
+  const failedShort = originalDirection === 'SHORT' && completed5m.close > decisionLevel;
+  if (!failedLong && !failedShort) return null;
+  const oppositeDirection = originalDirection === 'LONG' ? 'SHORT' : 'LONG';
+  const crossedText = originalDirection === 'LONG' ? 'below' : 'above';
+  return {
+    direction: oppositeDirection,
+    failedLevel: decisionLevel,
+    levelLabel: `app-owned failed plan decision/reclaim level (${record.planVersionId})`,
+    sweptExtreme: oppositeDirection === 'SHORT' ? completed5m.low : completed5m.high,
+    timestamp: completed5m.time,
+    candleIndex: null,
+    confidence: 'High',
+    evidence: [
+      `App-owned ${originalDirection} plan ${record.planVersionId} failed its decision/reclaim level.`,
+      `Completed 5M close ${completed5m.close} crossed ${crossedText} ${decisionLevel}.`,
+      'Failed-plan reversal review only; generic failed-break events remain ignored unless app-owned provenance is present.',
+    ].join(' '),
+  };
+}
+
+export function appOwnedFailedPlanEventsFromScannerState(args: {
+  state: ScannerStateFile;
+  tradeDate: string;
+  session: LiveSession;
+  instrument: Instrument;
+  completed5m: NinjaBridgeBar;
+}): FailedBreakEventFact[] {
+  return Object.values(args.state.alertDeliveries || {})
+    .filter((record) => scannerStateMatchesSession(record, args))
+    .filter((record) => record.state === 'Approved' || record.state === 'Executable')
+    .map((record) => appOwnedFailedDecisionEventFromDelivery(record, args.completed5m))
+    .filter((event): event is FailedBreakEventFact => Boolean(event));
+}
+
 async function analysisFromBars(args: {
   config: ScannerConfig;
   session: LiveSession;
@@ -1237,6 +1325,7 @@ async function analysisFromBars(args: {
     bars5m: args.bars['5m'],
     bars15m: args.bars['15m'],
     bars60m: args.bars['60m'],
+    bars120m: args.bars['120m'],
     bars240m: args.bars['240m'],
     sessionType: args.session,
     instrument: args.config.instrument,
@@ -1321,6 +1410,7 @@ async function refreshMarketMapContext(args: {
       '5m': mergeBars(args.liveBars['5m'], lookLeft.bars['5m']),
       '15m': mergeBars(args.liveBars['15m'], lookLeft.bars['15m']),
       '60m': mergeBars(args.liveBars['60m'], lookLeft.bars['60m']),
+      '120m': mergeBars(args.liveBars['120m'], lookLeft.bars['120m']),
       '240m': mergeBars(args.liveBars['240m'], lookLeft.bars['240m']),
     };
     const analysis = await analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
@@ -2144,11 +2234,32 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         '5m': mergeBars(liveBars['5m'], lookLeft.bars['5m']),
         '15m': mergeBars(liveBars['15m'], lookLeft.bars['15m']),
         '60m': mergeBars(liveBars['60m'], lookLeft.bars['60m']),
+        '120m': mergeBars(liveBars['120m'], lookLeft.bars['120m']),
         '240m': mergeBars(liveBars['240m'], lookLeft.bars['240m']),
       }
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
   const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
+  const appOwnedFailedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
+    state,
+    tradeDate,
+    session,
+    instrument: config.instrument,
+    completed5m,
+  });
+  if (analysis.structuredChartContext && appOwnedFailedPlanEvents.length) {
+    analysis.structuredChartContext.failedBreakEvents = [
+      ...(analysis.structuredChartContext.failedBreakEvents || []),
+      ...appOwnedFailedPlanEvents,
+    ];
+    analysis.structuredChartContext.setupReadyFacts = {
+      ...(analysis.structuredChartContext.setupReadyFacts || {}),
+      notes: [
+        ...(analysis.structuredChartContext.setupReadyFacts?.notes || []),
+        `Scanner added ${appOwnedFailedPlanEvents.length} app-owned failed decision/reclaim level event(s) from prior alert delivery state.`,
+      ],
+    };
+  }
   const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
   const scoringTimestampSource =

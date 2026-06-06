@@ -17,13 +17,14 @@ export const ACTUAL_OHLC_REPLAY_MD = join(REPORT_DIR, 'htf-mss-june-1-actual-ohl
 export const ACTUAL_OHLC_READINESS_JSON = join(REPORT_DIR, 'htf-mss-june-1-actual-ohlc-readiness.json');
 export const ACTUAL_OHLC_READINESS_MD = join(REPORT_DIR, 'htf-mss-june-1-actual-ohlc-readiness.md');
 
-export type HtfMssHistoricalTimeframe = '5m' | '15m' | '60m' | '240m';
+export type HtfMssHistoricalTimeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 export type HistoricalOhlcTimezone = 'America/New_York';
 
 export interface HtfMssHistoricalBarsByTimeframe {
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
   bars60m: NinjaBridgeBar[];
+  bars120m: NinjaBridgeBar[];
   bars240m: NinjaBridgeBar[];
 }
 
@@ -61,16 +62,18 @@ interface CliOptions {
   pretty: boolean;
 }
 
-const TIMEFRAMES: HtfMssHistoricalTimeframe[] = ['5m', '15m', '60m', '240m'];
+const TIMEFRAMES: HtfMssHistoricalTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MIN_REPLAY_LOOKBACK_COUNTS: Record<HtfMssHistoricalTimeframe, number> = {
   '5m': 12,
   '15m': 40,
   '60m': 24,
+  '120m': 20,
   '240m': 20,
 };
 const DEFAULT_CONTEXT_DAYS_BY_TIMEFRAME: Record<Exclude<HtfMssHistoricalTimeframe, '5m'>, number> = {
   '15m': 2,
   '60m': 4,
+  '120m': 5,
   '240m': 7,
 };
 
@@ -203,6 +206,7 @@ function timeframeRangesFromBars(bars: HtfMssHistoricalBarsByTimeframe): Record<
     '5m': bars.bars5m,
     '15m': bars.bars15m,
     '60m': bars.bars60m,
+    '120m': bars.bars120m,
     '240m': bars.bars240m,
   };
   return Object.fromEntries(TIMEFRAMES.map((timeframe) => {
@@ -225,6 +229,7 @@ function rawBarsFor(data: Record<string, unknown>, timeframe: HtfMssHistoricalTi
     '5m': ['bars5m', '5m', 'fiveMinute', 'bars_5m'],
     '15m': ['bars15m', '15m', 'fifteenMinute', 'bars_15m'],
     '60m': ['bars60m', '60m', 'oneHour', 'bars_60m'],
+    '120m': ['bars120m', '120m', 'twoHour', 'bars_120m'],
     '240m': ['bars240m', '240m', 'fourHour', 'bars_240m'],
   };
   return aliases[timeframe].map((key) => data[key]).find((value) => Array.isArray(value));
@@ -249,6 +254,7 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
     bars5m: bars.bars5m || [],
     bars15m: bars.bars15m || [],
     bars60m: bars.bars60m || [],
+    bars120m: bars.bars120m || [],
     bars240m: bars.bars240m || [],
   };
   for (const timeframe of TIMEFRAMES) {
@@ -265,6 +271,7 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
       '5m': resolvedBars.bars5m.length,
       '15m': resolvedBars.bars15m.length,
       '60m': resolvedBars.bars60m.length,
+      '120m': resolvedBars.bars120m.length,
       '240m': resolvedBars.bars240m.length,
     },
     timeframeRanges: timeframeRangesFromBars(resolvedBars),
@@ -272,6 +279,7 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
       '5m': resolvedBars.bars5m.length,
       '15m': resolvedBars.bars15m.length,
       '60m': resolvedBars.bars60m.length,
+      '120m': resolvedBars.bars120m.length,
       '240m': resolvedBars.bars240m.length,
     }),
     timezone: 'America/New_York',
@@ -299,13 +307,14 @@ async function fetchHistoricalTimeframe(options: CliOptions, timeframe: HtfMssHi
 }
 
 export async function loadHistoricalOhlcFromBridge(options: CliOptions): Promise<HistoricalOhlcLoadResult> {
-  const [bars5m, bars15m, bars60m, bars240m] = await Promise.all([
+  const [bars5m, bars15m, bars60m, bars120m, bars240m] = await Promise.all([
     fetchHistoricalTimeframe(options, '5m'),
     fetchHistoricalTimeframe(options, '15m'),
     fetchHistoricalTimeframe(options, '60m'),
+    fetchHistoricalTimeframe(options, '120m'),
     fetchHistoricalTimeframe(options, '240m'),
   ]);
-  const payload = { bars5m, bars15m, bars60m, bars240m };
+  const payload = { bars5m, bars15m, bars60m, bars120m, bars240m };
   const tempValidation = validateHistoricalBars(payload);
   return {
     ...tempValidation,
@@ -313,6 +322,7 @@ export async function loadHistoricalOhlcFromBridge(options: CliOptions): Promise
       bars5m: normalizeBars(bars5m, '5m').bars,
       bars15m: normalizeBars(bars15m, '15m').bars,
       bars60m: normalizeBars(bars60m, '60m').bars,
+      bars120m: normalizeBars(bars120m, '120m').bars,
       bars240m: normalizeBars(bars240m, '240m').bars,
     },
     source: 'ninjatrader_historical_bars',
@@ -331,6 +341,7 @@ export function validateHistoricalBars(raw: HtfMssHistoricalBarsByTimeframe): Hi
     '5m': raw.bars5m,
     '15m': raw.bars15m,
     '60m': raw.bars60m,
+    '120m': raw.bars120m,
     '240m': raw.bars240m,
   };
   for (const timeframe of TIMEFRAMES) {
@@ -351,6 +362,7 @@ export function validateHistoricalBars(raw: HtfMssHistoricalBarsByTimeframe): Hi
       bars5m: normalizeBars(raw.bars5m, '5m').bars,
       bars15m: normalizeBars(raw.bars15m, '15m').bars,
       bars60m: normalizeBars(raw.bars60m, '60m').bars,
+      bars120m: normalizeBars(raw.bars120m, '120m').bars,
       bars240m: normalizeBars(raw.bars240m, '240m').bars,
     }),
     insufficientLookback: insufficientLookbackWarnings(counts),
@@ -423,6 +435,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     bars5m: replayBars5m,
     bars15m: load.bars.bars15m,
     bars60m: load.bars.bars60m,
+    bars120m: load.bars.bars120m,
     bars240m: load.bars.bars240m,
     sessionType: 'replay_lunch',
     instrument: load.instrument === 'MNQ' ? 'MNQ' : 'MES',
@@ -458,6 +471,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     bars5m: replayBars5m,
     bars15m: load.bars.bars15m,
     bars60m: load.bars.bars60m,
+    bars120m: load.bars.bars120m,
     bars240m: load.bars.bars240m,
     replayWindow: { from: '12:00', to: '15:30' },
     suspectedMoveDirection: 'LONG',
@@ -484,6 +498,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
       '5m': replayBars5m.length,
       '15m': load.bars.bars15m.length,
       '60m': load.bars.bars60m.length,
+      '120m': load.bars.bars120m.length,
       '240m': load.bars.bars240m.length,
     },
     validationWarnings: load.warnings,
@@ -582,9 +597,9 @@ export function buildReadinessReport(load?: Partial<HistoricalOhlcLoadResult>) {
     requiredStatement: 'Actual June 1 historical OHLC bars were not available. Phase 6 added/verified the loader/readiness path but did not claim actual-data replay success.',
     searchedLocations,
     expectedFileFormats: [
-      'JSON object with bars5m, bars15m, bars60m, bars240m arrays.',
+      'JSON object with bars5m, bars15m, bars60m, bars120m, bars240m arrays.',
       'Each bar: time, open, high, low, close, optional volume.',
-      'NinjaTrader bridge /historical-bars responses for 5m, 15m, 60m, and 240m.',
+      'NinjaTrader bridge /historical-bars responses for 5m, 15m, 60m, 120m, and 240m.',
     ],
     missingDataRequirements: [
       '5M completed OHLC bars for 2026-06-01 12:00-15:30 ET.',
@@ -594,10 +609,10 @@ export function buildReadinessReport(load?: Partial<HistoricalOhlcLoadResult>) {
     ],
     blockers: load?.blockers || ['No actual June 1 multi-timeframe OHLC data source was provided or reachable.'],
     warnings: load?.warnings || [],
-    barCounts: load?.barCounts || { '5m': 0, '15m': 0, '60m': 0, '240m': 0 },
+    barCounts: load?.barCounts || { '5m': 0, '15m': 0, '60m': 0, '120m': 0, '240m': 0 },
     timezoneAssumption: load?.timezoneAssumption || 'Replay readiness expects America/New_York scan-window classification.',
     rerun: [
-      'Place a JSON OHLC file with bars5m/bars15m/bars60m/bars240m and run:',
+      'Place a JSON OHLC file with bars5m/bars15m/bars60m/bars120m/bars240m and run:',
       'npx tsx tools/automation/htf-mss-actual-ohlc-replay.ts --json <path> --pretty',
       'Or run against the local NinjaTrader bridge:',
       'npx tsx tools/automation/htf-mss-actual-ohlc-replay.ts --bridge-instrument "MES 06-26" --pretty',
@@ -622,8 +637,8 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     `- Source Path: ${report.sourcePath || 'N/A'}`,
     `- Timezone: ${report.replayTimeRange.timezone}`,
     `- Timezone Assumption: ${report.timezoneAssumption}`,
-    `- Bars: 5M=${report.barCounts['5m']}, 15M=${report.barCounts['15m']}, 60M=${report.barCounts['60m']}, 240M=${report.barCounts['240m']}`,
-    `- Ranges: 5M=${report.timeframeRanges['5m'].from || 'N/A'} to ${report.timeframeRanges['5m'].to || 'N/A'}; 15M=${report.timeframeRanges['15m'].from || 'N/A'} to ${report.timeframeRanges['15m'].to || 'N/A'}; 60M=${report.timeframeRanges['60m'].from || 'N/A'} to ${report.timeframeRanges['60m'].to || 'N/A'}; 240M=${report.timeframeRanges['240m'].from || 'N/A'} to ${report.timeframeRanges['240m'].to || 'N/A'}`,
+    `- Bars: 5M=${report.barCounts['5m']}, 15M=${report.barCounts['15m']}, 60M=${report.barCounts['60m']}, 120M=${report.barCounts['120m']}, 240M=${report.barCounts['240m']}`,
+    `- Ranges: 5M=${report.timeframeRanges['5m'].from || 'N/A'} to ${report.timeframeRanges['5m'].to || 'N/A'}; 15M=${report.timeframeRanges['15m'].from || 'N/A'} to ${report.timeframeRanges['15m'].to || 'N/A'}; 60M=${report.timeframeRanges['60m'].from || 'N/A'} to ${report.timeframeRanges['60m'].to || 'N/A'}; 120M=${report.timeframeRanges['120m'].from || 'N/A'} to ${report.timeframeRanges['120m'].to || 'N/A'}; 240M=${report.timeframeRanges['240m'].from || 'N/A'} to ${report.timeframeRanges['240m'].to || 'N/A'}`,
     '',
     ...formatHtfContextSufficiencyMarkdownLines({
       htfContextSufficiency: report.htfContextSufficiency,
@@ -728,16 +743,17 @@ export async function runActualOhlcReplayCli(argv = process.argv.slice(2)) {
         blockers: [error instanceof Error ? error.message : String(error)],
       }),
       ok: false,
-      bars: { bars5m: [], bars15m: [], bars60m: [], bars240m: [] },
+      bars: { bars5m: [], bars15m: [], bars60m: [], bars120m: [], bars240m: [] },
       source: 'ninjatrader_historical_bars',
       instrument: options.instrument,
       date: options.date,
-      duplicateTimestamps: { '5m': [], '15m': [], '60m': [], '240m': [] },
-      barCounts: { '5m': 0, '15m': 0, '60m': 0, '240m': 0 },
+      duplicateTimestamps: { '5m': [], '15m': [], '60m': [], '120m': [], '240m': [] },
+      barCounts: { '5m': 0, '15m': 0, '60m': 0, '120m': 0, '240m': 0 },
       timeframeRanges: {
         '5m': { from: null, to: null },
         '15m': { from: null, to: null },
         '60m': { from: null, to: null },
+        '120m': { from: null, to: null },
         '240m': { from: null, to: null },
       },
       insufficientLookback: [],

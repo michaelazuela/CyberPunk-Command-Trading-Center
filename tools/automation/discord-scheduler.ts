@@ -266,8 +266,9 @@ async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe,
 
 async function buildPremarketContext(config: SchedulerConfig, tradeDate: string) {
   const contextStartDate = previousMonthStartDate(tradeDate);
-  const [bars240m, bars60m, bars15m] = await Promise.all([
+  const [bars240m, bars120m, bars60m, bars15m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
+    fetchBars(config, '120m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
     fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
     fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), etDateTime(tradeDate, '09:15')),
   ]);
@@ -275,6 +276,7 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
     bars5m: bars15m.map((bar) => ({ ...bar })),
     bars15m,
     bars60m,
+    bars120m,
     bars240m,
     sessionType: 'morning',
     instrument: config.instrument,
@@ -286,8 +288,9 @@ async function buildPremarketContext(config: SchedulerConfig, tradeDate: string)
 async function buildWeeklyContext(config: SchedulerConfig, tradeDate: string) {
   const contextStartDate = previousMonthStartDate(tradeDate);
   const contextEnd = etDateTime(tradeDate, '08:00');
-  const [bars240m, bars60m, bars15m] = await Promise.all([
+  const [bars240m, bars120m, bars60m, bars15m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextEnd),
+    fetchBars(config, '120m', etDateTime(contextStartDate, '18:00'), contextEnd),
     fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), contextEnd),
     fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), contextEnd),
   ]);
@@ -295,6 +298,7 @@ async function buildWeeklyContext(config: SchedulerConfig, tradeDate: string) {
     bars5m: bars15m.map((bar) => ({ ...bar })),
     bars15m,
     bars60m,
+    bars120m,
     bars240m,
     sessionType: 'morning',
     instrument: config.instrument,
@@ -308,8 +312,9 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
   const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
   const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
   const contextTo = etDateTime(tradeDate, executionEnd);
-  const [bars240m, bars60m, bars15m, bars5m] = await Promise.all([
+  const [bars240m, bars120m, bars60m, bars15m, bars5m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextTo),
+    fetchBars(config, '120m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(
@@ -323,6 +328,7 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
     bars5m,
     bars15m,
     bars60m,
+    bars120m,
     bars240m,
     sessionType: job,
     instrument: config.instrument,

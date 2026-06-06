@@ -17,7 +17,7 @@ import { buildSessionLevelContext } from './sessionLevelContextEngine';
 import { buildSessionStory } from './sessionStoryEngine';
 import { buildHtfLiquidityDrawState } from './htfLiquidityDrawEngine';
 
-export type NinjaBridgeTimeframe = '1m' | '5m' | '15m' | '60m' | '240m' | '1h' | '4h';
+export type NinjaBridgeTimeframe = '1m' | '5m' | '15m' | '60m' | '120m' | '240m' | '1h' | '2h' | '4h';
 
 export interface NinjaBridgeBar {
   time: string;
@@ -80,6 +80,7 @@ export interface NinjaBridgeLiveContext {
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
   bars60m: NinjaBridgeBar[];
+  bars120m: NinjaBridgeBar[];
   bars240m: NinjaBridgeBar[];
   positions: NinjaBridgePosition[];
   selectedAccount: string;
@@ -551,6 +552,8 @@ function summarizeBars(bars: NinjaBridgeBar[]): Pick<TimeframeFactSet, 'high' | 
 function levelsForTimeframe(levels: StructuralLevel[], timeframe: TimeframeFactSet['timeframe']): StructuralLevel[] {
   const tag = timeframe === '4h'
     ? '4h_macro_context'
+    : timeframe === '2h'
+      ? '2h_intermediate_context'
     : timeframe === '1h'
       ? '1h_session_context'
       : timeframe === '15m'
@@ -602,20 +605,23 @@ function buildTimeframeFactSet({
 
 function buildMultiTimeframeAlignment({
   fourHour,
+  twoHour,
   oneHour,
   fifteenMinute,
   fiveMinute,
 }: {
   fourHour: TimeframeFactSet;
+  twoHour?: TimeframeFactSet;
   oneHour: TimeframeFactSet;
   fifteenMinute: TimeframeFactSet;
   fiveMinute: TimeframeFactSet;
 }): MultiTimeframeAlignment {
   const macroBias = trendToBias(fourHour.trend);
+  const twoHourBias = twoHour ? trendToBias(twoHour.trend) : 'UNKNOWN';
   const sessionBias = trendToBias(oneHour.trend);
   const liquidityBias = trendToBias(fifteenMinute.trend);
   const executionBias = trendToBias(fiveMinute.trend);
-  const directional = [macroBias, sessionBias, liquidityBias, executionBias].filter((bias): bias is 'LONG' | 'SHORT' => bias === 'LONG' || bias === 'SHORT');
+  const directional = [macroBias, twoHourBias, sessionBias, liquidityBias, executionBias].filter((bias): bias is 'LONG' | 'SHORT' => bias === 'LONG' || bias === 'SHORT');
   const longCount = directional.filter(bias => bias === 'LONG').length;
   const shortCount = directional.filter(bias => bias === 'SHORT').length;
   const conflicts: string[] = [];
@@ -624,6 +630,9 @@ function buildMultiTimeframeAlignment({
   }
   if (sessionBias !== 'UNKNOWN' && liquidityBias !== 'UNKNOWN' && sessionBias !== 'NEUTRAL' && liquidityBias !== 'NEUTRAL' && sessionBias !== liquidityBias) {
     conflicts.push(`1H session bias ${sessionBias} conflicts with 15M liquidity-map bias ${liquidityBias}.`);
+  }
+  if (twoHourBias !== 'UNKNOWN' && sessionBias !== 'UNKNOWN' && twoHourBias !== 'NEUTRAL' && sessionBias !== 'NEUTRAL' && twoHourBias !== sessionBias) {
+    conflicts.push(`2H intermediate bias ${twoHourBias} conflicts with 1H session bias ${sessionBias}.`);
   }
   const alignedDirection = longCount >= 3
     ? 'LONG'
@@ -643,7 +652,7 @@ function buildMultiTimeframeAlignment({
     alignedDirection,
     conflicts,
     notes: [
-      `4H=${macroBias}, 1H=${sessionBias}, 15M=${liquidityBias}, 5M=${executionBias}.`,
+      `4H=${macroBias}, 2H=${twoHourBias}, 1H=${sessionBias}, 15M=${liquidityBias}, 5M=${executionBias}.`,
       alignedDirection === 'CONFLICTED'
         ? 'Timeframes conflict; reduce certainty and require cleaner 5M confirmation.'
         : `Timeframe stack alignment: ${alignedDirection}.`,
@@ -678,6 +687,7 @@ function buildMultiTimeframeContext({
   bars5m,
   bars15m,
   bars60m,
+  bars120m,
   bars240m,
   structuralLevels,
   currentPrice,
@@ -685,19 +695,22 @@ function buildMultiTimeframeContext({
   bars5m: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
   bars60m: NinjaBridgeBar[];
+  bars120m?: NinjaBridgeBar[];
   bars240m: NinjaBridgeBar[];
   structuralLevels: StructuralLevel[];
   currentPrice: number | null;
 }): MultiTimeframeContext {
   const fourHour = buildTimeframeFactSet({ timeframe: '4h', role: 'macro_context', bars: bars240m, structuralLevels });
+  const twoHour = buildTimeframeFactSet({ timeframe: '2h', role: 'session_structure', bars: bars120m || [], structuralLevels });
   const oneHour = buildTimeframeFactSet({ timeframe: '1h', role: 'session_structure', bars: bars60m, structuralLevels });
   const fifteenMinute = buildTimeframeFactSet({ timeframe: '15m', role: 'liquidity_map', bars: bars15m, structuralLevels });
   const fiveMinute = buildTimeframeFactSet({ timeframe: '5m', role: 'execution', bars: bars5m, structuralLevels });
-  const alignment = buildMultiTimeframeAlignment({ fourHour, oneHour, fifteenMinute, fiveMinute });
+  const alignment = buildMultiTimeframeAlignment({ fourHour, twoHour, oneHour, fifteenMinute, fiveMinute });
   return {
     source: 'ninjatrader_bridge',
     authority: 'ohlc_facts_only',
     fourHour,
+    twoHour,
     oneHour,
     fifteenMinute,
     fiveMinute,
@@ -709,7 +722,7 @@ function buildMultiTimeframeContext({
       aiMayOverwriteOhlcFacts: false,
     },
     notes: [
-      'Machine-compatible bridge facts are built from 4H, 1H, 15M, and 5M NinjaTrader OHLC.',
+      'Machine-compatible bridge facts are built from 4H, 2H, 1H, 15M, and 5M NinjaTrader OHLC when available.',
       'Higher timeframes improve context, targets, and ranking; 5M remains execution authority.',
       'Gemini narrative is not the glue. Structured OHLC facts feed the app-owned engines.',
     ],
@@ -720,6 +733,7 @@ export function buildNinjaChartContext({
   bars5m,
   bars15m = [],
   bars60m = [],
+  bars120m = [],
   bars240m = [],
   sessionType,
   instrument,
@@ -729,6 +743,7 @@ export function buildNinjaChartContext({
   bars5m: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
   bars60m?: NinjaBridgeBar[];
+  bars120m?: NinjaBridgeBar[];
   bars240m?: NinjaBridgeBar[];
   sessionType: ChartContext['sessionType'];
   instrument: ChartContext['instrument'];
@@ -744,7 +759,7 @@ export function buildNinjaChartContext({
   const first = executionBars[0];
   const recent = executionBars.slice(-8);
   const macroContextBars = [...bars240m, ...bars60m].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
-  const allContextBars = [...macroContextBars, ...bars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
+  const allContextBars = [...macroContextBars, ...bars120m, ...bars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
   const activeSwingHigh = recent.length ? Math.max(...recent.map(bar => bar.high)) : null;
   const activeSwingLow = recent.length ? Math.min(...recent.map(bar => bar.low)) : null;
   const contextHigh = allContextBars.length ? Math.max(...allContextBars.map(bar => bar.high)) : activeSwingHigh;
@@ -768,6 +783,7 @@ export function buildNinjaChartContext({
     bars5m: executionBars,
     bars15m,
     bars60m,
+    bars120m,
     bars240m,
     midnightOpen,
     rthOpen: first.open,
@@ -796,6 +812,7 @@ export function buildNinjaChartContext({
   });
   const htfLiquidityDrawState = buildHtfLiquidityDrawState({
     bars4H: bars240m,
+    bars2H: bars120m,
     bars1H: bars60m,
     bars15M: bars15m,
     bars5M: executionBars,
@@ -900,7 +917,7 @@ export function buildNinjaChartContext({
       rMultiple: null,
       reason: `${level.label} from ${level.source} is available as target context. Strength=${level.strengthLabel || 'Low'} (${level.strengthScore || 0}).`,
     })),
-    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. RTH/ETH hierarchy includes prior day, prior 3 sessions, prior week, and prior month when cached bars are available. ETH spans the full futures session, including RTH; RTH is also tracked separately for precision. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
-    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. RTH/ETH hierarchy=prior day/3-day/week/month. Structural levels=${enrichedStructuralLevels.length}.`,
+    marketContext: `NinjaTrader live ${sessionType} ${instrument} machine-compatible OHLC context. 4H=${multiTimeframeContext.alignment.macroBias}, 2H=${multiTimeframeContext.twoHour ? trendToBias(multiTimeframeContext.twoHour.trend) : 'UNKNOWN'}, 1H=${multiTimeframeContext.alignment.sessionBias}, 15M=${multiTimeframeContext.alignment.liquidityBias}, 5M=${multiTimeframeContext.alignment.executionBias}. RTH/ETH hierarchy includes prior day, prior 3 sessions, prior week, and prior month when cached bars are available. ETH spans the full futures session, including RTH; RTH is also tracked separately for precision. 5M remains execution authority. Latest close ${last.close}. Active swing ${activeSwingLow}-${activeSwingHigh}. Structural levels=${enrichedStructuralLevels.length}.`,
+    ocrText: `NinjaTrader Bridge OHLC facts: 5m=${executionBars.length}, 15m=${bars15m.length}, 1h=${bars60m.length}, 2h=${bars120m.length}, 4h=${bars240m.length}. Multi-timeframe context=${multiTimeframeContext.alignment.alignedDirection}. RTH/ETH hierarchy=prior day/3-day/week/month. Structural levels=${enrichedStructuralLevels.length}.`,
   };
 }

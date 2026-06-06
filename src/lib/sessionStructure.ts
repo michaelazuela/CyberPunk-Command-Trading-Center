@@ -192,6 +192,7 @@ export function buildStructuralLevels({
   bars5m,
   bars15m = [],
   bars60m = [],
+  bars120m = [],
   bars240m = [],
   midnightOpen,
   rthOpen,
@@ -199,11 +200,12 @@ export function buildStructuralLevels({
   bars5m: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
   bars60m?: NinjaBridgeBar[];
+  bars120m?: NinjaBridgeBar[];
   bars240m?: NinjaBridgeBar[];
   midnightOpen?: number | null;
   rthOpen?: number | null;
 }): StructuralLevel[] {
-  const contextBars = [...bars240m, ...bars60m, ...bars15m, ...bars5m].filter(bar => isPrice(bar.high) && isPrice(bar.low));
+  const contextBars = [...bars240m, ...bars120m, ...bars60m, ...bars15m, ...bars5m].filter(bar => isPrice(bar.high) && isPrice(bar.low));
   const segments = segmentTradingSession(contextBars);
   const levels: StructuralLevel[] = [];
 
@@ -266,6 +268,7 @@ export function buildStructuralLevels({
   };
 
   pushHigherTimeframeContext(bars240m, '4H Macro Context');
+  pushHigherTimeframeContext(bars120m, '2H Intermediate Context');
   pushHigherTimeframeContext(bars60m, '1H Session Context');
 
   if (isPrice(midnightOpen)) {

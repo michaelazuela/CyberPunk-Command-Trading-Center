@@ -9,7 +9,7 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 type Instrument = 'MES' | 'MNQ';
 
-const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
+const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -46,6 +46,7 @@ function numberArg(name: string, fallback: number): number {
 
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {
   if (timeframe === '60m') return 60;
+  if (timeframe === '120m') return 120;
   if (timeframe === '240m') return 240;
   return Number(timeframe.replace('m', '')) || 5;
 }

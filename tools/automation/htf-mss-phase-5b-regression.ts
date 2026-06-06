@@ -32,7 +32,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
   return { time, open, high, low, close, volume: 1000 };
 }
 
-function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '120m' | '240m'): NinjaBridgeBar[] {
   const targetCount = timeframe === '240m' ? 180 : 520;
   const stepMinutes = timeframe === '240m' ? 240 : 90;
   const fillerCount = Math.max(0, targetCount - seed.length);
@@ -60,13 +60,15 @@ export function phase5bBearishFiveMinuteBars(): NinjaBridgeBar[] {
   ];
 }
 
-function bearishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+function bearishPotentialBars(timeframe: '15m' | '60m' | '120m' | '240m'): NinjaBridgeBar[] {
   const prefix =
     timeframe === '15m'
       ? ['12:00', '12:15', '12:30', '12:45', '13:00', '13:15']
       : timeframe === '60m'
         ? ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']
-        : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
+        : timeframe === '120m'
+          ? ['02:00', '04:00', '06:00', '08:00', '10:00', '12:00']
+          : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
   return padContextBars([
     bar(`2026-06-02T${prefix[0]}:00-04:00`, 7610, 7611, 7609, 7610),
     bar(`2026-06-02T${prefix[1]}:00-04:00`, 7610, 7612, 7609, 7611),
@@ -80,6 +82,7 @@ function bearishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar
 function buildBearishHtfState(chartTimestamp = '2026-06-02T14:10:00-04:00'): HtfLiquidityDrawState {
   return buildHtfLiquidityDrawState({
     bars4H: bearishPotentialBars('240m'),
+    bars2H: bearishPotentialBars('120m'),
     bars1H: bearishPotentialBars('60m'),
     bars15M: bearishPotentialBars('15m'),
     bars5M: padContextBars(phase5bBearishFiveMinuteBars(), '5m'),
@@ -392,6 +395,7 @@ export function buildPhase5bApprovalGatesReport() {
     targetObjectives: [],
     htfLiquidityDrawState: buildHtfLiquidityDrawState({
       bars4H: bearishPotentialBars('240m'),
+      bars2H: bearishPotentialBars('120m'),
       bars1H: bearishPotentialBars('60m'),
       bars15M: bearishPotentialBars('15m'),
       bars5M: phase5bBearishFiveMinuteBars(),

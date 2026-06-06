@@ -177,6 +177,7 @@ assert.ok(fifteenMinute.evidence.some((line) => line.includes('cannot approve ex
 
 const pendingState = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars2H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: sufficientHtfContext(bullishPendingBars()),
@@ -200,6 +201,7 @@ assert.ok(describeTimeframeMssStateForDisplay(pendingState.timeframeStates.find(
 
 const confirmedCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars2H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: sufficientHtfContext(bullishConfirmedBars()),
@@ -227,6 +229,7 @@ assert.equal(broad15mConflict.lifecycleState, 'conflicting_mss');
 
 const refined15mSupport = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars2H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
   bars5M: sufficientHtfContext(bullishConfirmedBars()),
@@ -239,6 +242,7 @@ assert.ok(refined15mSupport.timeframeStack.find((state) => state.timeframe === '
 
 const failed15mReclaimStaysBlocked = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars2H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBullishReclaimFailedBars()),
   bars5M: sufficientHtfContext(bullishConfirmedBars()),
@@ -250,6 +254,7 @@ assert.notEqual(failed15mReclaimStaysBlocked.classification, 'REVERSAL_DELIVERY_
 
 const bearishCandidateEligible = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars2H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(bearishPendingBars()),
   bars5M: sufficientHtfContext(bearishConfirmedBars()),
@@ -264,6 +269,7 @@ assert.equal(bearishCandidateEligible.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
 
 const refined15mBearishSupport = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars2H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(fifteenMinuteBroadConflictBars()),
   bars5M: sufficientHtfContext(bearishConfirmedBars()),
@@ -276,6 +282,7 @@ assert.equal(refined15mBearishSupport.classification, 'REVERSAL_DELIVERY_PLAN_CA
 
 const fifteenThirtyOutside = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars2H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
   bars15M: sufficientHtfContext(bearishPendingBars()),
   bars5M: sufficientHtfContext(bearishConfirmedBars()),
@@ -296,6 +303,7 @@ assert.ok(missingTimeframes.blockers.some((line) => line.includes('4H: missing s
 
 const malformedBars = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bullishPendingBars()),
+  bars2H: sufficientHtfContext(bullishPendingBars()),
   bars1H: sufficientHtfContext(bullishPendingBars()),
   bars15M: sufficientHtfContext(bullishPendingBars()),
   bars5M: [
@@ -319,6 +327,7 @@ const derivedFromChartContext = buildHtfLiquidityDrawStateFromChartContext({
     source: 'ninjatrader_bridge',
     authority: 'ohlc_facts_only',
     fourHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
+    twoHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     oneHour: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     fifteenMinute: { candles: candleFacts(sufficientHtfContext(bullishPendingBars())) },
     fiveMinute: { candles: candleFacts(sufficientHtfContext(bullishConfirmedBars())) },
@@ -342,6 +351,7 @@ assert.equal(noStructuredFallback, null);
 
 const dataLimitedHtfWithConfirmed5m = buildHtfLiquidityDrawState({
   bars4H: bullishPendingBars().slice(0, 4),
+  bars2H: bullishPendingBars().slice(0, 4),
   bars1H: bullishPendingBars().slice(0, 4),
   bars15M: bullishPendingBars().slice(0, 4),
   bars5M: bullishConfirmedBars(),
@@ -439,7 +449,8 @@ assert.equal(
   sufficientDisplay.candidatePromotion,
   'allowed only when approved pathway conditions and deterministic gates are satisfied'
 );
-assert.equal(sufficientDisplay.coverageRows.length, 4);
+assert.equal(sufficientDisplay.coverageRows.length, 5);
+assert.ok(sufficientDisplay.coverageRows.some((row) => row.timeframe === '2H'));
 
 const dataLimitedDisplay = buildHtfContextSufficiencyDisplay({
   htfContextSufficiency: dataLimitedHtfWithConfirmed5m.htfContextSufficiency,

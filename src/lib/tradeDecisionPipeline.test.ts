@@ -637,7 +637,8 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.TurtleSoup ||
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
-    candidate.setupType === SetupType.HtfDisplacementFvgContinuation
+    candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
+    candidate.setupType === SetupType.FailedPlanReversal
   );
 }
 

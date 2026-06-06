@@ -100,6 +100,7 @@ function main() {
   requireTerms(sql, 'NinjaTrader market candle cache schema', [
     'market_bars',
     'candle_time_et',
+    "'120m'",
     'market_bars_unique_candle',
     'alter table market_bars enable row level security',
   ]);

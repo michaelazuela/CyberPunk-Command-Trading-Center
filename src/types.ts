@@ -35,6 +35,7 @@ export enum SetupType {
   HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
   HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
   HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
+  FailedPlanReversal = 'FailedPlanReversal',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
   InitialBalanceExtension = 'InitialBalanceExtension',
@@ -430,7 +431,7 @@ export interface SetupReadyFacts {
 }
 
 export interface TimeframeFactSet {
-  timeframe: '4h' | '1h' | '15m' | '5m';
+  timeframe: '4h' | '2h' | '1h' | '15m' | '5m';
   role: 'macro_context' | 'session_structure' | 'liquidity_map' | 'execution';
   barCount: number;
   high: number | null;
@@ -465,6 +466,7 @@ export interface MultiTimeframeContext {
   source: 'ninjatrader_bridge';
   authority: 'ohlc_facts_only';
   fourHour: TimeframeFactSet;
+  twoHour?: TimeframeFactSet;
   oneHour: TimeframeFactSet;
   fifteenMinute: TimeframeFactSet;
   fiveMinute: TimeframeFactSet;
@@ -704,6 +706,7 @@ export interface ChartContext {
   proposedStop?: number | null;
   riskPoints?: number | null;
   riskStatus?: ExtractedRiskStatus;
+  failedPlanReversal?: FailedPlanReversalContext;
   entryConfirmed?: boolean;
   stopConfirmed?: boolean;
   requiresManualConfirmation?: boolean;
@@ -726,13 +729,72 @@ export type TradingPlanCandidateState =
   | 'MSS_TRIGGER_CONFIRMED'
   | 'MSS_HOLD_TRIGGER_PENDING'
   | 'MSS_HOLD_CONFIRMED'
+  | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
+  | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
+  | 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING'
+  | 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED'
+  | 'OPPOSITE_SIDE_RETEST_PENDING'
+  | 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
+  | 'NO_FRESH_ENTRY'
   | 'REVERSAL_DELIVERY_PLAN_CANDIDATE'
   | 'QUALIFIED_CONDITIONAL'
   | 'EXECUTABLE'
   | 'NO_QUALIFIED_STATE';
 
+export type FailedPlanReversalDecisionState =
+  | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
+  | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
+  | 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING'
+  | 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED'
+  | 'OPPOSITE_SIDE_RETEST_PENDING'
+  | 'OPPOSITE_SIDE_TRIGGER_CONFIRMED'
+  | 'NO_FRESH_ENTRY';
+
+export type FailedPlanReversalHtfStackStatus =
+  | 'full_confirmation'
+  | 'supported_confirmation'
+  | 'mixed'
+  | 'conflict'
+  | 'data_limited';
+
+export type FailedPlanReversalFiveMinuteTriggerStatus =
+  | 'confirmed'
+  | 'pending_retest'
+  | 'pending_mss'
+  | 'stale'
+  | 'no_fresh_entry'
+  | 'not_confirmed'
+  | 'unknown';
+
+export interface FailedPlanReversalTimeframeConfirmation {
+  timeframe: '5M' | '15M' | '1H' | '2H' | '4H';
+  direction: 'LONG' | 'SHORT' | 'NEUTRAL' | 'UNKNOWN';
+  status: 'aligned' | 'confirmed' | 'neutral' | 'conflicting' | 'data_limited' | 'unknown';
+  evidence: string[];
+}
+
+export interface FailedPlanReversalContext {
+  source: 'app_owned_failed_plan_state' | 'manual_or_replay_context' | 'ninjatrader_ohlc';
+  boundary: 'opposite_side_review_only_not_execution_authority';
+  originalPlanDirection: 'LONG' | 'SHORT';
+  oppositeDirection: 'LONG' | 'SHORT';
+  failedDecisionLevel: number | null;
+  failedDecisionLevelRole: 'short_side_resistance' | 'long_side_support' | 'unknown';
+  failedPlanEvidence: string[];
+  htfStackStatus: FailedPlanReversalHtfStackStatus;
+  timeframeConfirmations: FailedPlanReversalTimeframeConfirmation[];
+  fiveMinuteTriggerStatus: FailedPlanReversalFiveMinuteTriggerStatus;
+  decisionState: FailedPlanReversalDecisionState;
+  freshTriggerRequired: boolean;
+  staleOrNoFreshEntry: boolean;
+  reasons: string[];
+  blockers: string[];
+  createsCandidate: boolean;
+  approvesExecution: false;
+}
+
 export interface TimeframeMssCandidateState {
-  timeframe: '4H' | '1H' | '15M' | '5M';
+  timeframe: '4H' | '2H' | '1H' | '15M' | '5M';
   direction: 'bullish' | 'bearish' | 'neutral' | 'unknown';
   status:
     | 'potential_mss'
@@ -763,7 +825,7 @@ export type HtfContextSufficiencyStatus = 'sufficient' | 'data_limited' | 'missi
 export type HtfClassificationReliability = 'structural' | 'data_limited' | 'estimated' | 'unknown';
 
 export interface TimeframeContextCoverage {
-  timeframe: '4H' | '1H' | '15M' | '5M';
+  timeframe: '4H' | '2H' | '1H' | '15M' | '5M';
   barsLoaded: number;
   rangeStart?: string;
   rangeEnd?: string;
@@ -916,8 +978,9 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'failed_plan_reversal';
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
+  failedPlanReversal?: FailedPlanReversalContext;
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;
   confidence: 'High' | 'Medium' | 'Low';

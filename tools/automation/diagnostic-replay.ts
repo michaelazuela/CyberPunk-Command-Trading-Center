@@ -104,6 +104,7 @@ function timeframeMinutes(timeframe: NinjaBridgeTimeframe): number {
   if (timeframe === '5m') return 5;
   if (timeframe === '15m') return 15;
   if (timeframe === '60m' || timeframe === '1h') return 60;
+  if (timeframe === '120m' || timeframe === '2h') return 120;
   if (timeframe === '240m' || timeframe === '4h') return 240;
   return 5;
 }
@@ -161,6 +162,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
   const bars5m = await fetchBars(options, '5m', from, to);
   const bars15m = await fetchBars(options, '15m', contextFrom, to);
   const bars60m = await fetchBars(options, '60m', contextFrom, to);
+  const bars120m = await fetchBars(options, '120m', contextFrom, to);
   const bars240m = await fetchBars(options, '240m', contextFrom, to);
   const auditHistory = await loadScannerAuditHistory(options.auditDir);
 
@@ -172,6 +174,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
     bars15m,
     bars30m: [],
     bars60m,
+    bars120m,
     bars240m,
     barsDaily: [],
     replayWindow: { from: options.from, to: options.to },

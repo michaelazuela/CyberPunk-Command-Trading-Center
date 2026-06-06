@@ -28,13 +28,15 @@ const bars5m = [
   bar('2026-06-01T14:10:00-04:00', 7625.25, 7627.25, 7623.75, 7625.75),
 ];
 
-function potentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+function potentialBars(timeframe: '15m' | '60m' | '120m' | '240m'): NinjaBridgeBar[] {
   const times =
     timeframe === '15m'
       ? ['12:00', '12:15', '12:30', '12:45', '13:00', '13:15']
       : timeframe === '60m'
         ? ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']
-        : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
+        : timeframe === '120m'
+          ? ['02:00', '04:00', '06:00', '08:00', '10:00', '12:00']
+          : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
   return [
     bar(`2026-06-01T${times[0]}:00-04:00`, 7600, 7601, 7599, 7600),
     bar(`2026-06-01T${times[1]}:00-04:00`, 7600, 7601, 7598, 7599),
@@ -53,6 +55,7 @@ writeFileSync(fixturePath, JSON.stringify({
   bars5m: [bars5m[1], bars5m[0], bars5m[1], ...bars5m.slice(2)],
   bars15m: potentialBars('15m'),
   bars60m: potentialBars('60m'),
+  bars120m: potentialBars('120m'),
   bars240m: potentialBars('240m'),
 }, null, 2));
 
@@ -69,7 +72,7 @@ assert.ok(loaded.insufficientLookback.some((item) => item.includes('240m')));
 const actualReport = buildActualOhlcReplayReport(loaded);
 assert.equal(actualReport.reportType, 'htf_mss_june_1_actual_ohlc_replay');
 assert.equal(actualReport.boundary, 'actual_ohlc_replay_only_not_execution_authority');
-assert.equal(actualReport.htfLiquidityDrawState.timeframeStack.length, 4);
+assert.equal(actualReport.htfLiquidityDrawState.timeframeStack.length, 5);
 assert.equal(actualReport.diagnosticReplay.htfMssDiagnostics.approvesExecution, false);
 assert.equal(actualReport.safeWording.noBrokerExecution, true);
 assert.equal(actualReport.safeWording.externalLiquidityIsContextOnly, true);
@@ -95,6 +98,7 @@ const invalidValidation = validateHistoricalBars({
   bars5m: [bar('2026-06-01T12:00:00-04:00', 10, 9, 11, 10)],
   bars15m: potentialBars('15m'),
   bars60m: potentialBars('60m'),
+  bars120m: potentialBars('120m'),
   bars240m: potentialBars('240m'),
 });
 assert.equal(invalidValidation.ok, false);
@@ -104,6 +108,7 @@ const missingTimeframe = validateHistoricalBars({
   bars5m,
   bars15m: [],
   bars60m: potentialBars('60m'),
+  bars120m: potentialBars('120m'),
   bars240m: potentialBars('240m'),
 });
 assert.equal(missingTimeframe.ok, false);
@@ -115,6 +120,7 @@ writeFileSync(noOffsetPath, JSON.stringify({
   bars5m: [bar('2026-06-01T12:00:00', 10, 11, 9, 10.5)],
   bars15m: potentialBars('15m'),
   bars60m: potentialBars('60m'),
+  bars120m: potentialBars('120m'),
   bars240m: potentialBars('240m'),
 }, null, 2));
 const noOffset = loadHistoricalOhlcFromJson(noOffsetPath);
@@ -125,7 +131,7 @@ const readiness = buildActualOhlcReplayReport({
   ...loaded,
   ok: false,
   blockers: ['5m: no valid bars loaded.'],
-  barCounts: { '5m': 0, '15m': 0, '60m': 0, '240m': 0 },
+  barCounts: { '5m': 0, '15m': 0, '60m': 0, '120m': 0, '240m': 0 },
 });
 assert.equal(readiness.reportType, 'htf_mss_june_1_actual_ohlc_readiness');
 assert.equal(readiness.replayClaimMade, false);

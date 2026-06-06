@@ -145,7 +145,7 @@ function assertDate(value: string | null, flag: string): string {
 }
 
 function splitTimeframes(value: string | null): string[] {
-  return (value || '5m,15m,60m,240m')
+  return (value || '5m,15m,60m,120m,240m')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
@@ -178,16 +178,18 @@ export function parseBridgeHistorySmokeArgs(args = process.argv.slice(2)): Bridg
 function timeframeMinutes(timeframe: string): number {
   const raw = timeframe.toLowerCase();
   if (raw === '1h' || raw === 'hour1') return 60;
+  if (raw === '2h' || raw === 'hour2') return 120;
   if (raw === '4h' || raw === 'hour4') return 240;
   if (raw.includes('15')) return 15;
   if (raw.includes('60')) return 60;
+  if (raw.includes('120')) return 120;
   if (raw.includes('240')) return 240;
   if (raw.includes('1') && !raw.includes('15')) return 1;
   return 5;
 }
 
 function isSupportedHelperTimeframe(timeframe: string): timeframe is NinjaBridgeTimeframe {
-  return ['1m', '5m', '15m', '60m', '240m', '1h', '4h'].includes(timeframe);
+  return ['1m', '5m', '15m', '60m', '120m', '240m', '1h', '2h', '4h'].includes(timeframe);
 }
 
 function requestShape(args: {

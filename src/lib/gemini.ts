@@ -151,13 +151,13 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     ## HTF Draw Continuation After Raid/Reclaim Rule
 
-    HTF Liquidity Draw + Multi-Timeframe MSS is an approved trading-plan pathway through SetupType.HtfDrawContinuationAfterRaid, labeled HTF Draw Continuation After Raid/Reclaim. HTF Displacement + 5M MSS Continuation is an approved symmetric pathway through SetupType.HtfDisplacementMssContinuation. It may create or promote a candidate only after structured 15M displacement and confirmed 5M MSS state are present, with app-owned entry, protected stop, targets, invalidation, and session gates. HTF Displacement + FVG Continuation is a separate approved symmetric pathway through SetupType.HtfDisplacementFvgContinuation. It is displacement-led and may create or promote a candidate only after structured 15M displacement, 5M displacement, 5M FVG/imbalance support, app-owned entry, protected stop, targets, invalidation, session gates, and an external liquidity objective are present. 5M MSS may raise confidence for this FVG continuation pathway, but must not be invented when structured OHLC does not confirm it. Risk above the standard cap is advisory only and must be displayed with "Risk exceeds standard limit. Human final decision required." It may not bypass deterministic entry, stop, target, session, screenshot-quality, final-pipeline, or canExecute gates.
+    HTF Liquidity Draw + Multi-Timeframe MSS is an approved trading-plan pathway through SetupType.HtfDrawContinuationAfterRaid, labeled HTF Draw Continuation After Raid/Reclaim. HTF Displacement + 5M MSS Continuation is an approved symmetric pathway through SetupType.HtfDisplacementMssContinuation. It may create or promote a candidate only after structured 15M displacement and confirmed 5M MSS state are present, with app-owned entry, protected stop, targets, invalidation, and session gates. HTF Displacement + FVG Continuation is a separate approved symmetric pathway through SetupType.HtfDisplacementFvgContinuation. It is displacement-led and may create or promote a candidate only after structured 15M displacement, 5M displacement, 5M FVG/imbalance support, app-owned entry, protected stop, targets, invalidation, session gates, and an external liquidity objective are present. Failed Plan Reversal is an approved symmetric pathway through SetupType.FailedPlanReversal. It may create or promote a candidate only after an app-owned plan fails its decision/reclaim level, 15M and 1H confirm opposite MSS/displacement, 2H/4H do not materially conflict, and a fresh completed 5M opposite-side trigger/retest is present. 5M MSS may raise confidence for this FVG continuation pathway, but must not be invented when structured OHLC does not confirm it. Risk above the standard cap is advisory only and must be displayed with "Risk exceeds standard limit. Human final decision required." It may not bypass deterministic entry, stop, target, session, screenshot-quality, final-pipeline, or canExecute gates.
 
     Potential MSS must be tracked on 4H, 1H, 15M, and 5M. Potential MSS is not execution approval. 4H/1H potential MSS may affect context and confidence only. 15M potential MSS may support a candidate only when 5M MSS is confirmed. 5M potential MSS may produce pending/developing states only and must not create a reversal-delivery candidate until confirmed by swing break with displacement.
 
     A 5M MSS trigger requires a meaningful sweep/reclaim or rejection/reclaim followed by a short-term swing break with displacement. Consolidation after a confirmed displacement leg must be treated as post-MSS digestion, retest-pending, or continuation-pending unless price later confirms the opposite MSS with a structure break and displacement.
 
-    HTF Context Sufficiency Rule: before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, the desk must have enough structured OHLC context to make the higher-timeframe story reliable. The scanner standard is a 30-calendar-day structured preload for 5M, 15M, 1H, and 4H when available. The active 5M setup-scan window remains the execution trigger authority, but the higher-timeframe story must be built from the deeper structured preload.
+    HTF Context Sufficiency Rule: before classifying an HTF liquidity draw, raid/reclaim, MSS, or reversal-delivery candidate, the desk must have enough structured OHLC context to make the higher-timeframe story reliable. The scanner standard is a 30-calendar-day structured preload for 5M, 15M, 1H, 2H/120M, and 4H when available. The active 5M setup-scan window remains the execution trigger authority, but the higher-timeframe story must be built from the deeper structured preload.
 
     If the 30-day preload is incomplete, the scanner must read durable market_bars first and attempt NinjaTrader bridge repair/backfill. If minimum HTF context is still missing, mark the read as data-limited and report it as an operational data-quality defect for HTF structural classification. Do not treat a failed HTF read caused by limited history as proof that structure truly failed. Prefer "insufficient HTF context" over bullish/bearish conflict when the engine cannot see enough history. Report bars loaded, date/time range loaded, minimum expected context, sufficiency status, and data-limited blockers. Narrative fallback must not fill missing HTF context.
 
@@ -168,6 +168,65 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     Approved live setup scanning windows are two continuous blocks: Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
 
     Narrative fallback may provide notes only. Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution.
+
+    ## Failed Plan Reversal Rule
+
+    When an app-owned plan fails its decision/reclaim level, the desk must re-evaluate 5M, 15M, 1H, 2H, and 4H structure for opposite-side confirmation.
+
+    If 15M and 1H confirm opposite MSS/displacement, and 2H/4H do not materially conflict, convert the failed plan level into an opposite-side decision level.
+
+    The desk must explain:
+    - failed original plan
+    - failed decision level
+    - opposite HTF MSS evidence
+    - whether 5M has confirmed a fresh trigger
+    - whether the trade is pending, confirmed, stale, or no fresh entry
+
+    This does not approve execution. The opposite-side plan still requires completed 5M trigger, app-owned entry, protected stop, targets, session, stale/no-chase checks, and deterministic app-owned plan validation.
+
+    ## HTF Stack Confirmation Rule
+
+    When evaluating a failed-plan reversal or opposite-side continuation, classify the HTF stack:
+    - Full confirmation: 15M + 1H + either 2H or 4H align.
+    - Supported confirmation: 15M + 1H align, while 2H/4H are neutral or data-limited.
+    - Mixed: 15M aligns, but 1H/2H/4H are unclear.
+    - Conflict: 15M aligns, but 1H/2H/4H materially oppose the move.
+    - Data-limited: required timeframe history is missing.
+
+    5M remains execution authority. HTF stack can promote bias/state only.
+
+    ## Failed Decision Level Role-Flip Rule
+
+    When a prior app-owned long fails, its decision/reclaim/entry level may become short-side resistance only after completed candle acceptance below that level.
+
+    When a prior app-owned short fails, its decision/reclaim/entry level may become long-side support only after completed candle acceptance above that level.
+
+    Do not role-flip from wick-only movement. Do not create a trade from the role flip alone. Require fresh 5M trigger confirmation.
+
+    ## No-Chase Reversal Protection
+
+    If price has already expanded away from the failed decision level before a clean retest or fresh 5M trigger, classify the state as no_fresh_entry or stale.
+
+    The desk may explain the missed opportunity, but must not create a late executable-style plan.
+
+    ## Failed Plan Reversal Output Format
+
+    When a failed-plan reversal condition is active, the desk must state:
+    - Original plan:
+    - Failed level:
+    - Opposite-side HTF confirmation:
+    - 5M trigger status:
+    - Decision state:
+    - Next valid trigger:
+    - Invalidation:
+    - Risk note:
+    - Execution boundary:
+
+    ## Failed Plan Boundary Rule
+
+    A failed long is not automatically a short. A failed short is not automatically a long.
+
+    A failed plan only opens an opposite-side review state. The opposite-side trade requires independent confirmation from HTF structure and 5M execution.
 
     ## Research Review P/L Interpretation Rule
 

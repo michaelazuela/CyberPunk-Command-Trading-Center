@@ -29,7 +29,7 @@ function bar(time: string, open: number, high: number, low: number, close: numbe
   return { time, open, high, low, close, volume: 1000 };
 }
 
-function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+function padContextBars(seed: NinjaBridgeBar[], timeframe: '5m' | '15m' | '60m' | '120m' | '240m'): NinjaBridgeBar[] {
   const targetCount = timeframe === '240m' ? 180 : 520;
   const stepMinutes = timeframe === '240m' ? 240 : timeframe === '60m' ? 90 : timeframe === '15m' ? 90 : 90;
   const fillerCount = Math.max(0, targetCount - seed.length);
@@ -58,13 +58,15 @@ export function juneOneBullishFiveMinuteBars(): NinjaBridgeBar[] {
   ];
 }
 
-function bullishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar[] {
+function bullishPotentialBars(timeframe: '15m' | '60m' | '120m' | '240m'): NinjaBridgeBar[] {
   const prefix =
     timeframe === '15m'
       ? ['12:00', '12:15', '12:30', '12:45', '13:00', '13:15']
       : timeframe === '60m'
         ? ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00']
-        : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
+        : timeframe === '120m'
+          ? ['02:00', '04:00', '06:00', '08:00', '10:00', '12:00']
+          : ['00:00', '04:00', '08:00', '12:00', '13:00', '14:00'];
   return padContextBars([
     bar(`2026-06-01T${prefix[0]}:00-04:00`, 7600, 7601, 7599, 7600),
     bar(`2026-06-01T${prefix[1]}:00-04:00`, 7600, 7601, 7598, 7599),
@@ -78,6 +80,7 @@ function bullishPotentialBars(timeframe: '15m' | '60m' | '240m'): NinjaBridgeBar
 function buildHtfState(): HtfLiquidityDrawState {
   return buildHtfLiquidityDrawState({
     bars4H: bullishPotentialBars('240m'),
+    bars2H: bullishPotentialBars('120m'),
     bars1H: bullishPotentialBars('60m'),
     bars15M: bullishPotentialBars('15m'),
     bars5M: padContextBars(juneOneBullishFiveMinuteBars(), '5m'),

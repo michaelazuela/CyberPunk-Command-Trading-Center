@@ -316,7 +316,7 @@ function parseScannerHistory(lines: string[]): ScannerHistoryLine[] {
       source: match[6],
     });
   }
-  return ['5m', '15m', '60m', '240m']
+  return ['5m', '15m', '60m', '120m', '240m']
     .map((timeframe) => historyByTimeframe.get(timeframe))
     .filter((line): line is ScannerHistoryLine => Boolean(line));
 }
@@ -337,7 +337,7 @@ function buildOperationalReportSummary(status: SupervisorStatusPayload): Operati
     recorderBars: recorderLines
       .map(cleanLogLine)
       .filter((line) => /^\[market-cache\]\s+\S+:\s+upserted\s+\d+\s+bars\./.test(line))
-      .slice(-4),
+      .slice(-5),
   };
 }
 
@@ -362,7 +362,7 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
   const historyLines = summary.scannerHistory.map((item) =>
     `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}`
   );
-  const requiredHistory = new Set(['5m', '15m', '60m', '240m']);
+  const requiredHistory = new Set(['5m', '15m', '60m', '120m', '240m']);
   const missingHistory = [...requiredHistory].filter((timeframe) =>
     !summary.scannerHistory.some((item) => item.timeframe === timeframe)
   );

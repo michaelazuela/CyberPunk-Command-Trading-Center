@@ -285,6 +285,7 @@ fs.writeFileSync(scannerReportLog, [
   '[scanner-history] 5m: sufficient, 6000 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner-history] 15m: sufficient, 3057 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner-history] 60m: sufficient, 1515 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner-history] 120m: sufficient, 758 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner-history] 240m: sufficient, 1134 bars, 2026-05-05T00:00:00 to 2026-06-04T10:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner] Market Mapping Mode: MarketMapping, context updated only | current 7563.75 | completed 5M 2026-06-04T22:40:00.0000000 | positions flat / none returned | market map refreshed (morning; history sufficient).',
 ].join('\n'), 'utf8');
@@ -292,8 +293,9 @@ fs.writeFileSync(recorderReportLog, [
   '[market-cache] 5m: upserted 120 bars.',
   '[market-cache] 15m: upserted 120 bars.',
   '[market-cache] 60m: upserted 120 bars.',
+  '[market-cache] 120m: upserted 120 bars.',
   '[market-cache] 240m: upserted 120 bars.',
-  '[market-cache] cycle complete: 480 bars processed at 2026-06-05T02:42:09.783Z.',
+  '[market-cache] cycle complete: 600 bars processed at 2026-06-05T02:42:09.783Z.',
 ].join('\n'), 'utf8');
 const readyStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 12345,
@@ -341,9 +343,10 @@ const readyPayload = buildSupervisorDiscordPayload(readyNotification, readyStatu
 const readyPayloadText = JSON.stringify(readyPayload);
 assert.ok(readyPayloadText.includes('Loaded History Reports'));
 assert.ok(readyPayloadText.includes('5m: sufficient, 6000 bars'));
+assert.ok(readyPayloadText.includes('120m: sufficient, 758 bars'));
 assert.ok(readyPayloadText.includes('240m: sufficient, 1134 bars'));
 assert.ok(readyPayloadText.includes('Market Cache Recorder'));
-assert.ok(readyPayloadText.includes('cycle complete: 480 bars processed'));
+assert.ok(readyPayloadText.includes('cycle complete: 600 bars processed'));
 assert.ok(readyPayloadText.includes('Latest completed 5M: 2026-06-04T22:40:00.0000000'));
 assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyPayloadText), false);
 const readyWithoutReports = buildSupervisorStatus(defaultConfig, {
@@ -387,7 +390,7 @@ const readyWithoutReportNotifications = buildSupervisorNotifications(
 const readyWithoutReportNotification = readyWithoutReportNotifications.notifications.find((item) => item.kind === 'supervisor_ready');
 assert.ok(readyWithoutReportNotification);
 const readyWithoutReportPayloadText = JSON.stringify(buildSupervisorDiscordPayload(readyWithoutReportNotification, readyWithoutReports));
-assert.ok(readyWithoutReportPayloadText.includes('Pending report lines: 5m, 15m, 60m, 240m.'));
+assert.ok(readyWithoutReportPayloadText.includes('Pending report lines: 5m, 15m, 60m, 120m, 240m.'));
 assert.ok(readyWithoutReportPayloadText.includes('Scanner history report has not appeared in the supervisor log yet.'));
 assert.ok(readyWithoutReportPayloadText.includes('Recorder cache cycle has not completed in the supervisor log yet.'));
 assert.ok(readyWithoutReportPayloadText.includes('Scanner health and market-map report lines have not appeared in the supervisor log yet.'));

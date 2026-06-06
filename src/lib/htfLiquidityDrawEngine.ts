@@ -2,7 +2,7 @@ import type { NinjaBridgeBar } from './ninjaTraderBridge';
 import type { ChartCandleFact, ChartContext, StructuralLevel, TimeframeFactSet } from '../types';
 import { classifyActiveSetupScanWindowByEtMinutes } from '../config/timeWindows';
 
-export type HtfMssTimeframe = '4H' | '1H' | '15M' | '5M';
+export type HtfMssTimeframe = '4H' | '2H' | '1H' | '15M' | '5M';
 
 export type MssDirection = 'bullish' | 'bearish' | 'neutral' | 'unknown';
 
@@ -118,6 +118,7 @@ export interface HtfLiquidityDrawState {
 
 export interface HtfLiquidityDrawInput {
   bars4H?: NinjaBridgeBar[];
+  bars2H?: NinjaBridgeBar[];
   bars1H?: NinjaBridgeBar[];
   bars15M?: NinjaBridgeBar[];
   bars5M?: NinjaBridgeBar[];
@@ -167,6 +168,7 @@ const MINIMUM_CONTEXT_DESCRIPTIONS: Record<HtfMssTimeframe, string> = {
   '5M': '30 calendar days when available; active setup-scan window remains the execution trigger authority.',
   '15M': '30 calendar days when available.',
   '1H': '30 calendar days when available.',
+  '2H': '30 calendar days when available.',
   '4H': '30 calendar days when available.',
 };
 
@@ -174,6 +176,7 @@ const MINIMUM_CONTEXT_BARS: Record<HtfMssTimeframe, number> = {
   '5M': 500,
   '15M': 500,
   '1H': 120,
+  '2H': 80,
   '4H': 40,
 };
 
@@ -181,6 +184,7 @@ const MINIMUM_CONTEXT_DAYS: Record<HtfMssTimeframe, number> = {
   '5M': 30,
   '15M': 30,
   '1H': 30,
+  '2H': 30,
   '4H': 30,
 };
 
@@ -252,6 +256,7 @@ function coverageFor(timeframe: HtfMssTimeframe, rawBars?: NinjaBridgeBar[]): Ti
 export function assessHtfContextSufficiency(input: HtfLiquidityDrawInput): HtfContextSufficiency {
   const timeframeCoverage = [
     coverageFor('4H', input.bars4H),
+    coverageFor('2H', input.bars2H),
     coverageFor('1H', input.bars1H),
     coverageFor('15M', input.bars15M),
     coverageFor('5M', input.bars5M),
@@ -265,7 +270,7 @@ export function assessHtfContextSufficiency(input: HtfLiquidityDrawInput): HtfCo
       ? 'data_limited'
       : 'sufficient';
   const notes = overallStatus === 'sufficient'
-    ? ['HTF context sufficient: 4H/1H/15M/5M minimum structured lookback met.']
+    ? ['HTF context sufficient: 4H/2H/1H/15M/5M minimum structured lookback met.']
     : [
       'HTF context data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.',
       'Data sufficiency cannot approve execution; it only controls classification reliability and diagnostics.',
@@ -799,7 +804,7 @@ function raidStateFromFiveMinute(state: TimeframeMssState): LiquidityRaidState {
 }
 
 function macroContextFromStates(states: TimeframeMssState[]): HtfLiquidityDrawState['macroContext'] {
-  const contextStates = states.filter((state) => state.timeframe === '4H' || state.timeframe === '1H' || state.timeframe === '15M');
+  const contextStates = states.filter((state) => state.timeframe === '4H' || state.timeframe === '2H' || state.timeframe === '1H' || state.timeframe === '15M');
   const bullish = contextStates.filter((state) => state.direction === 'bullish' && state.status !== 'failed').length;
   const bearish = contextStates.filter((state) => state.direction === 'bearish' && state.status !== 'failed').length;
   if (bullish > bearish) return 'bullish';
@@ -925,7 +930,7 @@ function hasMissingRequiredTimeframe(states: TimeframeMssState[]): boolean {
 function htfNonConflict(states: TimeframeMssState[], planDirection: HtfLiquidityDrawState['planDirection']): boolean {
   if (planDirection === 'NONE') return false;
   const expected = planDirection === 'LONG' ? 'bullish' : 'bearish';
-  const htfStates = states.filter((state) => state.timeframe === '4H' || state.timeframe === '1H');
+  const htfStates = states.filter((state) => state.timeframe === '4H' || state.timeframe === '2H' || state.timeframe === '1H');
   return htfStates.every((state) =>
     state.direction === expected ||
     state.direction === 'neutral' ||
@@ -1038,6 +1043,12 @@ export function buildHtfLiquidityDrawState(input: HtfLiquidityDrawInput): HtfLiq
     classifyTimeframeMssState({
       timeframe: '4H',
       bars: input.bars4H,
+      externalBuySideLiquidityTarget: input.externalBuySideLiquidityTarget,
+      externalSellSideLiquidityTarget: input.externalSellSideLiquidityTarget,
+    }),
+    classifyTimeframeMssState({
+      timeframe: '2H',
+      bars: input.bars2H,
       externalBuySideLiquidityTarget: input.externalBuySideLiquidityTarget,
       externalSellSideLiquidityTarget: input.externalSellSideLiquidityTarget,
     }),
@@ -1210,6 +1221,7 @@ export function buildHtfLiquidityDrawStateFromChartContext(
 
   return buildHtfLiquidityDrawState({
     bars4H: factSetToBars(mtf.fourHour),
+    bars2H: mtf.twoHour ? factSetToBars(mtf.twoHour) : undefined,
     bars1H: factSetToBars(mtf.oneHour),
     bars15M: factSetToBars(mtf.fifteenMinute),
     bars5M: factSetToBars(mtf.fiveMinute),

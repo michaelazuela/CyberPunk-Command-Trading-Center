@@ -266,9 +266,23 @@ function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | n
 function compactActionText(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
   if (status === 'NO TRADE') return 'Stand down. Recheck at next scheduled scan.';
   if (!candidate) return 'Stand down. No active plan candidate.';
+  if (candidate.failedPlanReversal?.staleOrNoFreshEntry || candidate.candidateState === 'NO_FRESH_ENTRY') {
+    return 'Failed-plan reversal is stale. Do not chase. Wait for a new completed 5M trigger/retest.';
+  }
   if (status === 'EXECUTABLE') return 'Verify completed 5M trigger, protected stop, target room, and invalidation before trader action.';
   if (candidate.executionStatus === 'Blocked') return `Stand down. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
   return candidate.requiredTrigger || candidate.nextAction || 'Wait for completed 5M trigger. No early entry.';
+}
+
+function failedPlanReversalLines(candidate: SetupCandidate): string[] {
+  const state = candidate.failedPlanReversal;
+  if (!state && candidate.pathway !== 'failed_plan_reversal') return [];
+  return [
+    'Failed Plan Reversal:',
+    `State: ${candidate.candidateState || state?.decisionState || 'pending'} | Level: ${priceLine(state?.failedDecisionLevel ?? null)}`,
+    `${state ? `${state.originalPlanDirection} -> ${state.oppositeDirection}` : 'N/A'} | HTF: ${state?.htfStackStatus || 'unknown'} | 5M: ${state?.fiveMinuteTriggerStatus || 'unknown'}`,
+    'Boundary: decision support only; not execution approval.',
+  ];
 }
 
 function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
@@ -287,6 +301,7 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' || candidate.candidateState === 'MSS_HOLD_CONFIRMED'
       ? [`Trigger State: ${candidate.candidateState}`]
       : []),
+    ...failedPlanReversalLines(candidate),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,

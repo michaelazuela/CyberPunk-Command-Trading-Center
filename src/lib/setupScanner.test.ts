@@ -1042,13 +1042,62 @@ function htfDisplacementContinuationContext(
   };
 }
 
+function failedPlanReversalContext(
+  direction: 'LONG' | 'SHORT' = 'SHORT',
+  overrides: Partial<ChartContext> = {}
+): ChartContext {
+  const base = htfDisplacementContinuationContext(direction);
+  const originalPlanDirection = direction === 'SHORT' ? 'LONG' : 'SHORT';
+  const failedDecisionLevel = direction === 'SHORT' ? 7518 : 7604.75;
+  return {
+    ...base,
+    setupReadyFacts: {
+      ...base.setupReadyFacts!,
+      breakOfStructure: true,
+    },
+    failedPlanReversal: {
+      source: 'ninjatrader_ohlc',
+      boundary: 'opposite_side_review_only_not_execution_authority',
+      originalPlanDirection,
+      oppositeDirection: direction,
+      failedDecisionLevel,
+      failedDecisionLevelRole: direction === 'SHORT' ? 'short_side_resistance' : 'long_side_support',
+      failedPlanEvidence: [
+        `App-owned ${originalPlanDirection} plan failed decision level ${failedDecisionLevel}.`,
+      ],
+      htfStackStatus: 'supported_confirmation',
+      timeframeConfirmations: [
+        { timeframe: '5M', direction, status: 'confirmed', evidence: ['Fresh 5M opposite-side MSS confirmed by completed close.'] },
+        { timeframe: '15M', direction, status: 'confirmed', evidence: ['15M opposite displacement/MSS confirmed.'] },
+        { timeframe: '1H', direction, status: 'confirmed', evidence: ['1H opposite structure confirms.'] },
+        { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H does not materially conflict.'] },
+        { timeframe: '4H', direction: 'NEUTRAL', status: 'neutral', evidence: ['4H does not materially conflict.'] },
+      ],
+      fiveMinuteTriggerStatus: 'confirmed',
+      decisionState: direction === 'SHORT'
+        ? 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
+        : 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED',
+      freshTriggerRequired: true,
+      staleOrNoFreshEntry: false,
+      reasons: [
+        '15M and 1H confirm the opposite side after the original app-owned plan failed.',
+      ],
+      blockers: [],
+      createsCandidate: true,
+      approvesExecution: false,
+    },
+    ...overrides,
+  };
+}
+
 function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
   return (
     candidate.setupType === SetupType.SweepMssFvgRetrace ||
     candidate.setupType === SetupType.TurtleSoup ||
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
-    candidate.setupType === SetupType.HtfDisplacementFvgContinuation
+    candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
+    candidate.setupType === SetupType.FailedPlanReversal
   );
 }
 
@@ -2329,6 +2378,95 @@ const tests: Array<[string, () => void]> = [
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
   }],
 
+  ['Failed Plan Reversal creates a short candidate only after fresh 5M trigger and normal levels', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: failedPlanReversalContext('SHORT'), result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'failed_plan_reversal');
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.candidateState, 'OPPOSITE_SIDE_TRIGGER_CONFIRMED');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.failedPlanReversal?.approvesExecution, false);
+    assert.equal(candidate.failedPlanReversal?.originalPlanDirection, 'LONG');
+    assert.ok(candidate.evidence.some((item) => item.includes('5M trigger status: confirmed')));
+    assert.ok(candidate.evidence.some((item) => item.includes('Failed Plan Reversal does not approve execution')));
+  }],
+
+  ['Failed Plan Reversal supports long and short symmetry', () => {
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: failedPlanReversalContext('LONG'), result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.candidateState, 'OPPOSITE_SIDE_TRIGGER_CONFIRMED');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.equal(candidate.failedPlanReversal?.originalPlanDirection, 'SHORT');
+    assert.ok(candidate.requiredTrigger?.includes('failed short decision level'));
+  }],
+
+  ['Failed Plan Reversal remains conditional when 5M trigger is pending', () => {
+    const base = failedPlanReversalContext('SHORT');
+    const context = failedPlanReversalContext('SHORT', {
+      failedPlanReversal: {
+        ...base.failedPlanReversal!,
+        fiveMinuteTriggerStatus: 'pending_retest',
+        decisionState: 'OPPOSITE_SIDE_RETEST_PENDING',
+        createsCandidate: false,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'OPPOSITE_SIDE_RETEST_PENDING');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(candidate.missingEvidence.includes('Fresh completed 5M opposite-side trigger/retest is not confirmed'));
+  }],
+
+  ['Failed Plan Reversal cannot become executable when stale or no fresh entry', () => {
+    const base = failedPlanReversalContext('SHORT');
+    const context = failedPlanReversalContext('SHORT', {
+      failedPlanReversal: {
+        ...base.failedPlanReversal!,
+        fiveMinuteTriggerStatus: 'no_fresh_entry',
+        decisionState: 'NO_FRESH_ENTRY',
+        staleOrNoFreshEntry: true,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'NO_FRESH_ENTRY');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.ChasingExtendedMove);
+    assert.ok(candidate.nextAction.includes('NO FRESH ENTRY'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
+  }],
+
+  ['Failed Plan Reversal HTF conflict blocks executable candidate creation', () => {
+    const base = failedPlanReversalContext('SHORT');
+    const context = failedPlanReversalContext('SHORT', {
+      failedPlanReversal: {
+        ...base.failedPlanReversal!,
+        htfStackStatus: 'conflict',
+        blockers: ['2H/4H materially conflict with the opposite-side move.'],
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(candidate.missingEvidence.includes('Opposite HTF stack is conflict; requires full or supported confirmation'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
+  }],
+
   ['Phase 3B HTF setup label and journal record use the approved model name', () => {
     const result = scanSetupCandidates({ sessionType: 'morning', chartContext: htfMssContext('LONG'), result: null });
     const htfCandidate = htfPathwayCandidate(result);
@@ -3274,6 +3412,7 @@ const tests: Array<[string, () => void]> = [
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
+        SetupType.FailedPlanReversal,
       ])
     );
     assert.ok(result.candidates.every((candidate) => candidate.scenarioLabel !== 'BreakerBlock'));

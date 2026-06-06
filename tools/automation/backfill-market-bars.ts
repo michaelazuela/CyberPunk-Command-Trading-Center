@@ -7,7 +7,7 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 type Instrument = 'MES' | 'MNQ';
 
-const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '240m'];
+const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
