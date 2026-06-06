@@ -191,6 +191,7 @@ assert.equal(preloadResult.attempted, true);
 assert.equal(preloadResult.assurance.ok, true);
 assert.deepEqual(preloadResult.assurance.missingTimeframes, []);
 assert.deepEqual(preloadResult.assurance.noBarsTimeframes, []);
+assert.deepEqual(preloadResult.assurance.operatorActions, []);
 assert.equal(preloadCalls.length, 1);
 assert.ok(preloadCalls[0].args.includes('nt:backfill'));
 assert.ok(preloadCalls[0].args.includes('--days'));
@@ -203,6 +204,9 @@ const missingPreloadAssurance = parseHtfPreloadAssurance([
 ].join('\n'));
 assert.equal(missingPreloadAssurance.ok, false);
 assert.deepEqual(missingPreloadAssurance.missingTimeframes, ['120m']);
+assert.match(missingPreloadAssurance.reason, /Operator action:/);
+assert.ok(missingPreloadAssurance.operatorActions.some((action) => action.includes('NinjaTrader')));
+assert.ok(missingPreloadAssurance.operatorActions.some((action) => action.includes('30 calendar days of 120m history')));
 const noBarsPreloadAssurance = parseHtfPreloadAssurance([
   '[backfill] 2026-06-05 5m: upserted 300.',
   '[backfill] 2026-06-05 15m: upserted 100.',
@@ -213,6 +217,7 @@ const noBarsPreloadAssurance = parseHtfPreloadAssurance([
 assert.equal(noBarsPreloadAssurance.ok, false);
 assert.deepEqual(noBarsPreloadAssurance.noBarsTimeframes, ['120m']);
 assert.equal(noBarsPreloadAssurance.stderrWarning, true);
+assert.ok(noBarsPreloadAssurance.operatorActions.some((action) => action.includes('data-limited')));
 const launchedState = launchEnabledServices(processConfig, logger);
 const launchedChild = launchedState.services[0];
 assert.equal(launchedChild.status, 'running');

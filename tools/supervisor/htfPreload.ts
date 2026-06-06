@@ -26,6 +26,7 @@ export interface HtfPreloadAssurance {
   stderrWarning: boolean;
   ok: boolean;
   reason: string;
+  operatorActions: string[];
 }
 
 export type HtfPreloadRunner = (
@@ -81,6 +82,21 @@ function uniqueTimeframes(matches: Iterable<RequiredHtfPreloadTimeframe>): Requi
   return REQUIRED_HTF_PRELOAD_TIMEFRAMES.filter((timeframe) => found.has(timeframe));
 }
 
+function buildOperatorActions(input: {
+  missingTimeframes: RequiredHtfPreloadTimeframe[];
+  noBarsTimeframes: RequiredHtfPreloadTimeframe[];
+  stderrWarning: boolean;
+}): string[] {
+  if (!input.missingTimeframes.length && !input.noBarsTimeframes.length && !input.stderrWarning) return [];
+  const affected = uniqueTimeframes([...input.missingTimeframes, ...input.noBarsTimeframes]);
+  return [
+    'Confirm NinjaTrader is connected to the live/historical data provider and the active futures contract is selected.',
+    `Load or refresh at least 30 calendar days of ${affected.length ? affected.join(', ') : '5m, 15m, 60m, 120m, and 240m'} history for the active bridge contract in NinjaTrader.`,
+    'Run the supervisor HTF preload/backfill again, or restart Quant Desk Supervisor so it reruns the startup preload.',
+    'If the provider still returns no bars, treat HTF structure as data-limited and do not promote HTF/MSS candidates until real bars are available.',
+  ];
+}
+
 export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): HtfPreloadAssurance {
   const combinedText = `${stdoutText}\n${stderrText}`;
   const reportedTimeframes = uniqueTimeframes(
@@ -98,6 +114,7 @@ export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): H
   const missingTimeframes = REQUIRED_HTF_PRELOAD_TIMEFRAMES.filter((timeframe) => !reportedTimeframes.includes(timeframe));
   const stderrWarning = stderrText.trim().length > 0;
   const ok = missingTimeframes.length === 0 && noBarsTimeframes.length === 0 && !stderrWarning;
+  const operatorActions = buildOperatorActions({ missingTimeframes, noBarsTimeframes, stderrWarning });
   const reason = ok
     ? 'HTF preload assurance saw backfill reports for 5m, 15m, 60m, 120m, and 240m with no no-bars warnings.'
     : [
@@ -105,6 +122,7 @@ export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): H
       noBarsTimeframes.length ? `No bars returned for: ${noBarsTimeframes.join(', ')}.` : null,
       stderrWarning ? 'Backfill wrote warnings/errors to stderr.' : null,
       'Scanner will still block HTF promotion if coverage remains incomplete.',
+      `Operator action: ${operatorActions.join(' ')}`,
     ].filter(Boolean).join(' ');
 
   return {
@@ -115,6 +133,7 @@ export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): H
     stderrWarning,
     ok,
     reason,
+    operatorActions,
   };
 }
 
@@ -150,6 +169,7 @@ export function runHtfPreloadStartup(
     stderrWarning: false,
     ok: true,
     reason: 'HTF preload assurance not run because startup preload is disabled.',
+    operatorActions: [],
   };
   if (!config.htfPreload.enabled) {
     return {
