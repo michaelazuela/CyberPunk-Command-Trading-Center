@@ -4,13 +4,27 @@ import path from 'node:path';
 import type { SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
 
+const REQUIRED_HTF_PRELOAD_TIMEFRAMES = ['5m', '15m', '60m', '120m', '240m'] as const;
+type RequiredHtfPreloadTimeframe = typeof REQUIRED_HTF_PRELOAD_TIMEFRAMES[number];
+
 export interface HtfPreloadResult {
   enabled: boolean;
   attempted: boolean;
   ok: boolean;
+  assurance: HtfPreloadAssurance;
   command: string[];
   stdoutLog: string;
   stderrLog: string;
+  reason: string;
+}
+
+export interface HtfPreloadAssurance {
+  requiredTimeframes: RequiredHtfPreloadTimeframe[];
+  reportedTimeframes: RequiredHtfPreloadTimeframe[];
+  missingTimeframes: RequiredHtfPreloadTimeframe[];
+  noBarsTimeframes: RequiredHtfPreloadTimeframe[];
+  stderrWarning: boolean;
+  ok: boolean;
   reason: string;
 }
 
@@ -54,6 +68,56 @@ export function buildHtfPreloadCommand(config: SupervisorConfig): { command: str
   };
 }
 
+function readLog(pathname: string): string {
+  try {
+    return fs.existsSync(pathname) ? fs.readFileSync(pathname, 'utf8') : '';
+  } catch {
+    return '';
+  }
+}
+
+function uniqueTimeframes(matches: Iterable<RequiredHtfPreloadTimeframe>): RequiredHtfPreloadTimeframe[] {
+  const found = new Set(matches);
+  return REQUIRED_HTF_PRELOAD_TIMEFRAMES.filter((timeframe) => found.has(timeframe));
+}
+
+export function parseHtfPreloadAssurance(stdoutText: string, stderrText = ''): HtfPreloadAssurance {
+  const combinedText = `${stdoutText}\n${stderrText}`;
+  const reportedTimeframes = uniqueTimeframes(
+    Array.from(
+      combinedText.matchAll(/\[backfill\]\s+\d{4}-\d{2}-\d{2}\s+(5m|15m|60m|120m|240m):/g),
+      (match) => match[1] as RequiredHtfPreloadTimeframe,
+    ),
+  );
+  const noBarsTimeframes = uniqueTimeframes(
+    Array.from(
+      combinedText.matchAll(/\[backfill\]\s+\d{4}-\d{2}-\d{2}\s+(5m|15m|60m|120m|240m):\s+no bars returned\./g),
+      (match) => match[1] as RequiredHtfPreloadTimeframe,
+    ),
+  );
+  const missingTimeframes = REQUIRED_HTF_PRELOAD_TIMEFRAMES.filter((timeframe) => !reportedTimeframes.includes(timeframe));
+  const stderrWarning = stderrText.trim().length > 0;
+  const ok = missingTimeframes.length === 0 && noBarsTimeframes.length === 0 && !stderrWarning;
+  const reason = ok
+    ? 'HTF preload assurance saw backfill reports for 5m, 15m, 60m, 120m, and 240m with no no-bars warnings.'
+    : [
+      missingTimeframes.length ? `Missing timeframe report(s): ${missingTimeframes.join(', ')}.` : null,
+      noBarsTimeframes.length ? `No bars returned for: ${noBarsTimeframes.join(', ')}.` : null,
+      stderrWarning ? 'Backfill wrote warnings/errors to stderr.' : null,
+      'Scanner will still block HTF promotion if coverage remains incomplete.',
+    ].filter(Boolean).join(' ');
+
+  return {
+    requiredTimeframes: [...REQUIRED_HTF_PRELOAD_TIMEFRAMES],
+    reportedTimeframes,
+    missingTimeframes,
+    noBarsTimeframes,
+    stderrWarning,
+    ok,
+    reason,
+  };
+}
+
 export const defaultHtfPreloadRunner: HtfPreloadRunner = (command, args, options) => {
   const stdout = fs.openSync(options.stdoutLog, 'a');
   const stderr = fs.openSync(options.stderrLog, 'a');
@@ -78,11 +142,21 @@ export function runHtfPreloadStartup(
   const stdoutLog = path.join(config.logsDir, 'htf-preload.stdout.log');
   const stderrLog = path.join(config.logsDir, 'htf-preload.stderr.log');
   const command = buildHtfPreloadCommand(config);
+  const disabledAssurance: HtfPreloadAssurance = {
+    requiredTimeframes: [...REQUIRED_HTF_PRELOAD_TIMEFRAMES],
+    reportedTimeframes: [],
+    missingTimeframes: [],
+    noBarsTimeframes: [],
+    stderrWarning: false,
+    ok: true,
+    reason: 'HTF preload assurance not run because startup preload is disabled.',
+  };
   if (!config.htfPreload.enabled) {
     return {
       enabled: false,
       attempted: false,
       ok: true,
+      assurance: disabledAssurance,
       command: [command.command, ...command.args],
       stdoutLog,
       stderrLog,
@@ -103,15 +177,17 @@ export function runHtfPreloadStartup(
     stdoutLog,
     stderrLog,
   });
-  const ok = result.status === 0;
+  const assurance = parseHtfPreloadAssurance(readLog(stdoutLog), readLog(stderrLog));
+  const ok = result.status === 0 && assurance.ok;
   const reason = ok
-    ? 'HTF preload completed before supervised services launched.'
-    : `HTF preload did not complete cleanly (${result.error?.message || `exit ${result.status ?? 'unknown'}`}). Scanner will still block HTF promotion if coverage remains incomplete.`;
-  logger.log(ok ? 'info' : 'warn', reason, { stdoutLog, stderrLog });
+    ? `HTF preload completed before supervised services launched. ${assurance.reason}`
+    : `HTF preload assurance did not pass (${result.error?.message || `exit ${result.status ?? 'unknown'}`}; ${assurance.reason})`;
+  logger.log(ok ? 'info' : 'warn', reason, { stdoutLog, stderrLog, assurance });
   return {
     enabled: true,
     attempted: true,
     ok,
+    assurance,
     command: [command.command, ...command.args],
     stdoutLog,
     stderrLog,

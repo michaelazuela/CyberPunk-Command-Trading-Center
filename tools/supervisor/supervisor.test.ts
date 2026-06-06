@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { loadSupervisorConfig } from './config';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
-import { buildHtfPreloadCommand, runHtfPreloadStartup } from './htfPreload';
+import { buildHtfPreloadCommand, parseHtfPreloadAssurance, runHtfPreloadStartup } from './htfPreload';
 import { createSupervisorLogger } from './logger';
 import {
   buildSupervisorDiscordPayload,
@@ -175,16 +175,44 @@ const preloadCalls: Array<{ command: string; args: string[]; timeout: number }> 
 const preloadResult = runHtfPreloadStartup(processConfig, logger, (command, args, options) => {
   preloadCalls.push({ command, args, timeout: options.timeout });
   fs.mkdirSync(path.dirname(options.stdoutLog), { recursive: true });
-  fs.writeFileSync(options.stdoutLog, '[backfill] complete: 0 bars processed.\n', 'utf8');
+  fs.writeFileSync(options.stdoutLog, [
+    '[backfill] 2026-06-05 5m: upserted 300.',
+    '[backfill] 2026-06-05 15m: upserted 100.',
+    '[backfill] 2026-06-05 60m: upserted 25.',
+    '[backfill] 2026-06-05 120m: upserted 13.',
+    '[backfill] 2026-06-05 240m: upserted 7.',
+    '[backfill] complete: 445 bars processed.',
+  ].join('\n'), 'utf8');
   fs.writeFileSync(options.stderrLog, '', 'utf8');
   return { status: 0 };
 });
 assert.equal(preloadResult.ok, true);
 assert.equal(preloadResult.attempted, true);
+assert.equal(preloadResult.assurance.ok, true);
+assert.deepEqual(preloadResult.assurance.missingTimeframes, []);
+assert.deepEqual(preloadResult.assurance.noBarsTimeframes, []);
 assert.equal(preloadCalls.length, 1);
 assert.ok(preloadCalls[0].args.includes('nt:backfill'));
 assert.ok(preloadCalls[0].args.includes('--days'));
 assert.ok(preloadCalls[0].args.includes('30'));
+const missingPreloadAssurance = parseHtfPreloadAssurance([
+  '[backfill] 2026-06-05 5m: upserted 300.',
+  '[backfill] 2026-06-05 15m: upserted 100.',
+  '[backfill] 2026-06-05 60m: upserted 25.',
+  '[backfill] 2026-06-05 240m: upserted 7.',
+].join('\n'));
+assert.equal(missingPreloadAssurance.ok, false);
+assert.deepEqual(missingPreloadAssurance.missingTimeframes, ['120m']);
+const noBarsPreloadAssurance = parseHtfPreloadAssurance([
+  '[backfill] 2026-06-05 5m: upserted 300.',
+  '[backfill] 2026-06-05 15m: upserted 100.',
+  '[backfill] 2026-06-05 60m: upserted 25.',
+  '[backfill] 2026-06-05 120m: upserted 13.',
+  '[backfill] 2026-06-05 240m: upserted 7.',
+].join('\n'), '[backfill] 2026-06-05 120m: no bars returned.\n');
+assert.equal(noBarsPreloadAssurance.ok, false);
+assert.deepEqual(noBarsPreloadAssurance.noBarsTimeframes, ['120m']);
+assert.equal(noBarsPreloadAssurance.stderrWarning, true);
 const launchedState = launchEnabledServices(processConfig, logger);
 const launchedChild = launchedState.services[0];
 assert.equal(launchedChild.status, 'running');
