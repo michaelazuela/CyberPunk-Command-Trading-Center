@@ -8,6 +8,7 @@ import {
   barsCoverRequestedLookback,
   barsForMorningContinuationWatchlist,
   buildScannerHistoryPreloadPlan,
+  buildSegmentedHistoryRepairWindows,
   attachFailedPlanReversalContextFromScannerState,
   appOwnedFailedDecisionEventFromCandidate,
   appOwnedFailedPlanEventsFromScannerAudits,
@@ -71,6 +72,16 @@ assert.deepEqual(watchlistScopedBars.map((bar) => bar.time), [
 ]);
 assert.equal(Math.max(...watchlistScopedBars.slice(0, 6).map((bar) => bar.high)), 7622.25);
 assert.equal(Math.min(...watchlistScopedBars.slice(0, 6).map((bar) => bar.low)), 7574);
+assert.deepEqual(buildSegmentedHistoryRepairWindows(
+  '2026-05-06T00:00:00-04:00',
+  '2026-06-05T12:00:00-04:00',
+  10,
+), [
+  { from: '2026-05-06T00:00:00-04:00', to: '2026-05-15T23:59:00-04:00' },
+  { from: '2026-05-16T00:00:00-04:00', to: '2026-05-25T23:59:00-04:00' },
+  { from: '2026-05-26T00:00:00-04:00', to: '2026-06-04T23:59:00-04:00' },
+  { from: '2026-06-05T00:00:00-04:00', to: '2026-06-05T12:00:00-04:00' },
+]);
 assert.deepEqual(resolveScannerDiscordWebhookUrl({
   DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
   SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',

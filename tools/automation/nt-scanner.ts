@@ -618,6 +618,10 @@ function etDateTime(tradeDate: string, time: string): string {
   return `${tradeDate}T${time}:00-04:00`;
 }
 
+function ymdInEt(value: string): string {
+  return String(value || '').slice(0, 10);
+}
+
 function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -648,6 +652,30 @@ function recentHistoricalWindow(timeframe: MarketBarTimeframe, limit: number): {
       : Math.max(90, minutes * Math.max(limit, 40) * 1.25);
   const from = new Date(to.getTime() - lookbackMinutes * 60_000);
   return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export function buildSegmentedHistoryRepairWindows(from: string, to: string, chunkDays = 5): Array<{ from: string; to: string }> {
+  const fromDate = new Date(`${ymdInEt(from)}T12:00:00Z`);
+  const toDate = new Date(`${ymdInEt(to)}T12:00:00Z`);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) || fromDate > toDate) {
+    return [{ from, to }];
+  }
+
+  const windows: Array<{ from: string; to: string }> = [];
+  const cursor = new Date(fromDate);
+  while (cursor <= toDate) {
+    const chunkStart = cursor.toISOString().slice(0, 10);
+    const chunkEndDate = new Date(cursor);
+    chunkEndDate.setUTCDate(chunkEndDate.getUTCDate() + Math.max(1, chunkDays) - 1);
+    if (chunkEndDate > toDate) chunkEndDate.setTime(toDate.getTime());
+    const chunkEnd = chunkEndDate.toISOString().slice(0, 10);
+    windows.push({
+      from: chunkStart === ymdInEt(from) ? from : etDateTime(chunkStart, '00:00'),
+      to: chunkEnd === ymdInEt(to) ? to : etDateTime(chunkEnd, '23:59'),
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + Math.max(1, chunkDays));
+  }
+  return windows;
 }
 
 export function buildScannerHistoryPreloadPlan(tradeDate: string, session: LiveSession): Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }> {
@@ -1224,6 +1252,38 @@ async function fetchFreshBridgeBars(config: ScannerConfig, timeframe: MarketBarT
   return historical.bars;
 }
 
+export async function fetchSegmentedBridgeHistoryRepair(args: {
+  config: ScannerConfig;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  limit: number;
+  chunkDays?: number;
+}): Promise<NinjaBridgeBar[]> {
+  const windows = buildSegmentedHistoryRepairWindows(args.from, args.to, args.chunkDays ?? 5);
+  const bars: NinjaBridgeBar[] = [];
+  for (const window of windows) {
+    try {
+      const historical = await getNinjaHistoricalBars({
+        instrument: args.config.bridgeInstrument,
+        timeframe: args.timeframe,
+        from: window.from,
+        to: window.to,
+        limit: args.limit,
+        baseUrl: args.config.bridgeUrl,
+      });
+      if (historical.ok && historical.bars?.length) {
+        bars.push(...historical.bars);
+      } else {
+        console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair returned no bars for ${window.from} to ${window.to}: ${historical.error || 'unknown error'}`);
+      }
+    } catch (error) {
+      console.warn(`[scanner-history] ${args.timeframe}: segmented bridge repair failed for ${window.from} to ${window.to}: ${formatError(error)}`);
+    }
+  }
+  return mergeBars([], bars);
+}
+
 async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const bars = await fetchFreshBridgeBars(config, timeframe, 220);
@@ -1304,7 +1364,33 @@ async function fetchScannerHistoryFrame(args: {
     }
   }
 
-  const bars = mergeBars(repaired, cached);
+  let bars = mergeBars(repaired, cached);
+  if (!barsCoverRequestedLookback(bars, args.from, args.to, args.timeframe)) {
+    const segmented = await fetchSegmentedBridgeHistoryRepair({
+      config: args.config,
+      timeframe: args.timeframe,
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+    });
+    if (segmented.length) {
+      repaired = mergeBars(segmented, repaired);
+      bars = mergeBars(repaired, cached);
+      if (marketConfig) {
+        try {
+          await upsertMarketBars({
+            bars: segmented,
+            instrument: args.config.instrument,
+            bridgeInstrument: args.config.bridgeInstrument,
+            timeframe: args.timeframe,
+            config: marketConfig,
+          });
+        } catch (error) {
+          console.warn(`[scanner-history] ${args.timeframe}: segmented self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+        }
+      }
+    }
+  }
   const sorted = mergeBars([], bars);
   const sufficient = barsCoverRequestedLookback(sorted, args.from, args.to, args.timeframe);
   const source: ScannerHistoryCoverageSource =
