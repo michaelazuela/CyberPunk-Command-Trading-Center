@@ -49,6 +49,7 @@ interface ScannerHistoryLine {
   from: string;
   to: string;
   source: string;
+  dataLimit: string | null;
 }
 
 interface OperationalReportSummary {
@@ -314,6 +315,7 @@ function parseScannerHistory(lines: string[]): ScannerHistoryLine[] {
       from: match[4],
       to: match[5],
       source: match[6],
+      dataLimit: line.match(/data-limit=(.+)$/)?.[1] || null,
     });
   }
   return ['5m', '15m', '60m', '120m', '240m']
@@ -360,7 +362,7 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
   fields.push({ name: 'Supervisor Status', value: serviceLines.join('\n'), inline: false });
 
   const historyLines = summary.scannerHistory.map((item) =>
-    `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}`
+    `${item.timeframe}: ${item.status}, ${item.bars} bars, ${item.from} to ${item.to}${item.dataLimit ? ` | ${item.dataLimit}` : ''}`
   );
   const requiredHistory = new Set(['5m', '15m', '60m', '120m', '240m']);
   const missingHistory = [...requiredHistory].filter((timeframe) =>

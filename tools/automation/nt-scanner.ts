@@ -210,6 +210,7 @@ export interface ScannerHistoryCoverageRecord {
     retryPolicy: 'cache_then_single_bridge_then_segmented_bridge';
     canInventMissingBars: false;
     htfPromotionAllowed: boolean;
+    operatorAction?: string;
   };
 }
 
@@ -821,6 +822,7 @@ function attachScannerHistoryCoverage(
       source: record.source,
       sufficient: record.sufficient,
       warning: record.warning,
+      dataLimitation: record.dataLimitation,
     })),
   };
 }
@@ -1475,6 +1477,9 @@ async function fetchScannerHistoryFrame(args: {
       retryPolicy: 'cache_then_single_bridge_then_segmented_bridge',
       canInventMissingBars: false,
       htfPromotionAllowed: sufficient,
+      operatorAction: sufficient
+        ? undefined
+        : `Load the requested ${args.config.bridgeInstrument} ${args.timeframe} history in NinjaTrader or run npm run nt:backfill for the missing date range, then rerun the scanner/diagnostic.`,
     },
   };
   return { bars: sorted, coverage };

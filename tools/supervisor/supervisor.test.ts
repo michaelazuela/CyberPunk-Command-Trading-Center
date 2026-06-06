@@ -286,6 +286,7 @@ fs.writeFileSync(scannerReportLog, [
   '[scanner-history] 15m: sufficient, 3057 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner-history] 60m: sufficient, 1515 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner-history] 120m: sufficient, 758 bars, 2026-05-05T00:00:00 to 2026-06-04T12:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
+  '[scanner-history] 120m: insufficient, 20 bars, 2026-06-04T00:00:00 to 2026-06-05T12:00:00.0000000, source=bridge_repair, self-healed from bridge, data-limit=Requested 120m bars remain incomplete after cache preload, single bridge repair, and segmented bridge repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.',
   '[scanner-history] 240m: sufficient, 1134 bars, 2026-05-05T00:00:00 to 2026-06-04T10:00:00.0000000, source=market_bars_bridge_repair, self-healed from bridge',
   '[scanner] Market Mapping Mode: MarketMapping, context updated only | current 7563.75 | completed 5M 2026-06-04T22:40:00.0000000 | positions flat / none returned | market map refreshed (morning; history sufficient).',
 ].join('\n'), 'utf8');
@@ -343,7 +344,9 @@ const readyPayload = buildSupervisorDiscordPayload(readyNotification, readyStatu
 const readyPayloadText = JSON.stringify(readyPayload);
 assert.ok(readyPayloadText.includes('Loaded History Reports'));
 assert.ok(readyPayloadText.includes('5m: sufficient, 6000 bars'));
-assert.ok(readyPayloadText.includes('120m: sufficient, 758 bars'));
+assert.ok(readyPayloadText.includes('120m: insufficient, 20 bars'));
+assert.ok(readyPayloadText.includes('cannot invent missing NinjaTrader bars'));
+assert.ok(readyPayloadText.includes('HTF promotion is blocked'));
 assert.ok(readyPayloadText.includes('240m: sufficient, 1134 bars'));
 assert.ok(readyPayloadText.includes('Market Cache Recorder'));
 assert.ok(readyPayloadText.includes('cycle complete: 600 bars processed'));

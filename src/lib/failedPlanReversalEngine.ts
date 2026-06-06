@@ -62,6 +62,9 @@ function timeframeConfirmation(
       evidence: [
         `${timeframe} scanner history coverage is insufficient;${range}.`,
         `Required ${coverage.requiredLookbackDays} calendar days from ${coverage.requestedFrom} to ${coverage.requestedTo}.`,
+        ...(coverage.dataLimitation?.message ? [coverage.dataLimitation.message] : []),
+        ...(coverage.dataLimitation?.retryPolicy ? [`Retry policy used: ${coverage.dataLimitation.retryPolicy}.`] : []),
+        ...(coverage.dataLimitation?.operatorAction ? [`Operator action: ${coverage.dataLimitation.operatorAction}`] : []),
         ...(coverage.warning ? [coverage.warning] : []),
       ],
     };

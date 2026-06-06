@@ -229,6 +229,14 @@ const tests: Array<[string, () => void]> = [
           source: 'bridge_repair',
           sufficient: false,
           warning: 'HTF history preload insufficient for 120m.',
+          dataLimitation: {
+            status: 'bridge_or_cache_incomplete',
+            message: 'Requested 120m bars remain incomplete after cache preload, single bridge repair, and segmented bridge repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.',
+            retryPolicy: 'cache_then_single_bridge_then_segmented_bridge',
+            canInventMissingBars: false,
+            htfPromotionAllowed: false,
+            operatorAction: 'Load the requested MES 06-26 120m history in NinjaTrader or run npm run nt:backfill for the missing date range, then rerun the scanner/diagnostic.',
+          },
         },
         {
           timeframe: '240m',
@@ -250,6 +258,8 @@ const tests: Array<[string, () => void]> = [
     assert.equal(context.createsCandidate, false);
     assert.equal(context.timeframeConfirmations.find((item) => item.timeframe === '2H')?.status, 'data_limited');
     assert.equal(context.timeframeConfirmations.find((item) => item.timeframe === '4H')?.status, 'data_limited');
+    assert.match(context.timeframeConfirmations.find((item) => item.timeframe === '2H')?.evidence.join(' ') || '', /cannot invent missing NinjaTrader bars/);
+    assert.match(context.timeframeConfirmations.find((item) => item.timeframe === '2H')?.evidence.join(' ') || '', /Operator action: Load the requested MES 06-26 120m history/);
     assert.match(context.blockers.join(' '), /2H structured OHLC is data-limited or unavailable/);
     assert.match(context.blockers.join(' '), /4H structured OHLC is data-limited or unavailable/);
   }],

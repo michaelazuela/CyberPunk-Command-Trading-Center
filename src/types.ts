@@ -805,6 +805,14 @@ export interface ScannerHistoryCoverageFact {
   source: string;
   sufficient: boolean;
   warning: string | null;
+  dataLimitation?: {
+    status: 'none' | 'bridge_or_cache_incomplete';
+    message: string | null;
+    retryPolicy: 'cache_then_single_bridge_then_segmented_bridge';
+    canInventMissingBars: false;
+    htfPromotionAllowed: boolean;
+    operatorAction?: string;
+  };
 }
 
 export interface TimeframeMssCandidateState {
