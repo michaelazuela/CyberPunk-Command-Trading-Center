@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { loadSupervisorConfig } from './config';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
+import { runHtfPreloadStartup } from './htfPreload';
 import { createSupervisorLogger } from './logger';
 import { sendSupervisorNotifications, sendSupervisorSelfHealNotification } from './notifications';
 import {
@@ -48,6 +49,15 @@ export function startSupervisor(): http.Server {
     startsChildProcesses: true,
     autoRestartsChildProcesses: configResult.config.health.restartEnabled,
     restartPolicy: 'owned_failed_child_process_only',
+  });
+  const preloadResult = runHtfPreloadStartup(configResult.config, logger);
+  logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
+    enabled: preloadResult.enabled,
+    attempted: preloadResult.attempted,
+    ok: preloadResult.ok,
+    reason: preloadResult.reason,
+    stdoutLog: preloadResult.stdoutLog,
+    stderrLog: preloadResult.stderrLog,
   });
   let supervisorState = launchEnabledServices(configResult.config, logger);
   let lastHealthReport = null as Awaited<ReturnType<typeof buildHealthReport>> | null;

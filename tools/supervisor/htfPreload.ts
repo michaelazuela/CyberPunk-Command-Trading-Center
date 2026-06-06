@@ -1,0 +1,120 @@
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { SupervisorConfig } from './config';
+import type { SupervisorLogger } from './logger';
+
+export interface HtfPreloadResult {
+  enabled: boolean;
+  attempted: boolean;
+  ok: boolean;
+  command: string[];
+  stdoutLog: string;
+  stderrLog: string;
+  reason: string;
+}
+
+export type HtfPreloadRunner = (
+  command: string,
+  args: string[],
+  options: { cwd: string; timeout: number; stdoutLog: string; stderrLog: string },
+) => { status: number | null; error?: Error | null };
+
+function npmCommand(): string {
+  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+
+function scannerArg(config: SupervisorConfig, name: string, fallback: string): string {
+  const scanner = config.childServices.find((service) => service.id === 'scanner');
+  const index = scanner?.args.indexOf(name) ?? -1;
+  return index >= 0 && scanner?.args[index + 1] ? scanner.args[index + 1] : fallback;
+}
+
+export function buildHtfPreloadCommand(config: SupervisorConfig): { command: string; args: string[] } {
+  const instrument = scannerArg(config, '--instrument', 'MES');
+  const bridgeInstrument = scannerArg(config, '--bridge-instrument', instrument);
+  const bridgeUrl = scannerArg(config, '--bridge-url', config.health.bridgeUrl);
+  return {
+    command: npmCommand(),
+    args: [
+      'run',
+      'nt:backfill',
+      '--',
+      '--instrument',
+      instrument,
+      '--bridge-instrument',
+      bridgeInstrument,
+      '--bridge-url',
+      bridgeUrl,
+      '--days',
+      String(config.htfPreload.days),
+      '--delay-ms',
+      String(config.htfPreload.delayMs),
+    ],
+  };
+}
+
+export const defaultHtfPreloadRunner: HtfPreloadRunner = (command, args, options) => {
+  const stdout = fs.openSync(options.stdoutLog, 'a');
+  const stderr = fs.openSync(options.stderrLog, 'a');
+  try {
+    return spawnSync(command, args, {
+      cwd: options.cwd,
+      timeout: options.timeout,
+      windowsHide: true,
+      stdio: ['ignore', stdout, stderr],
+    });
+  } finally {
+    fs.closeSync(stdout);
+    fs.closeSync(stderr);
+  }
+};
+
+export function runHtfPreloadStartup(
+  config: SupervisorConfig,
+  logger: SupervisorLogger,
+  runner: HtfPreloadRunner = defaultHtfPreloadRunner,
+): HtfPreloadResult {
+  const stdoutLog = path.join(config.logsDir, 'htf-preload.stdout.log');
+  const stderrLog = path.join(config.logsDir, 'htf-preload.stderr.log');
+  const command = buildHtfPreloadCommand(config);
+  if (!config.htfPreload.enabled) {
+    return {
+      enabled: false,
+      attempted: false,
+      ok: true,
+      command: [command.command, ...command.args],
+      stdoutLog,
+      stderrLog,
+      reason: 'HTF preload disabled by SUPERVISOR_HTF_PRELOAD_ON_START.',
+    };
+  }
+
+  fs.mkdirSync(config.logsDir, { recursive: true });
+  logger.log('info', 'HTF preload startup backfill requested.', {
+    days: config.htfPreload.days,
+    delayMs: config.htfPreload.delayMs,
+    timeoutMs: config.htfPreload.timeoutMs,
+  });
+
+  const result = runner(command.command, command.args, {
+    cwd: process.cwd(),
+    timeout: config.htfPreload.timeoutMs,
+    stdoutLog,
+    stderrLog,
+  });
+  const ok = result.status === 0;
+  const reason = ok
+    ? 'HTF preload completed before supervised services launched.'
+    : `HTF preload did not complete cleanly (${result.error?.message || `exit ${result.status ?? 'unknown'}`}). Scanner will still block HTF promotion if coverage remains incomplete.`;
+  logger.log(ok ? 'info' : 'warn', reason, { stdoutLog, stderrLog });
+  return {
+    enabled: true,
+    attempted: true,
+    ok,
+    command: [command.command, ...command.args],
+    stdoutLog,
+    stderrLog,
+    reason,
+  };
+}

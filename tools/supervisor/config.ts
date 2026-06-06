@@ -19,6 +19,13 @@ export interface SupervisorHealthConfig {
   maxRestartAttempts: number;
 }
 
+export interface SupervisorHtfPreloadConfig {
+  enabled: boolean;
+  days: number;
+  delayMs: number;
+  timeoutMs: number;
+}
+
 export interface SupervisorConfig {
   host: string;
   port: number;
@@ -26,6 +33,7 @@ export interface SupervisorConfig {
   logsDir: string;
   childServices: SupervisorChildService[];
   health: SupervisorHealthConfig;
+  htfPreload: SupervisorHtfPreloadConfig;
 }
 
 export interface SupervisorConfigResult {
@@ -167,6 +175,12 @@ export function loadSupervisorConfig(
         restartEnabled: boolEnv(env.SUPERVISOR_RESTART_ENABLED, true),
         restartCooldownMs: numberEnv(env.SUPERVISOR_RESTART_COOLDOWN_MS, 60_000, 'SUPERVISOR_RESTART_COOLDOWN_MS', errors),
         maxRestartAttempts: numberEnv(env.SUPERVISOR_MAX_RESTART_ATTEMPTS, 3, 'SUPERVISOR_MAX_RESTART_ATTEMPTS', errors),
+      },
+      htfPreload: {
+        enabled: boolEnv(env.SUPERVISOR_HTF_PRELOAD_ON_START, true),
+        days: numberEnv(env.SUPERVISOR_HTF_PRELOAD_DAYS, 30, 'SUPERVISOR_HTF_PRELOAD_DAYS', errors),
+        delayMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_DELAY_MS, 50, 'SUPERVISOR_HTF_PRELOAD_DELAY_MS', errors),
+        timeoutMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS, 180_000, 'SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS', errors),
       },
     },
     status: errors.length ? 'invalid' : 'valid',

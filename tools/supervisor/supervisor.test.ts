@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { loadSupervisorConfig } from './config';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
 import { buildHealthReport } from './health';
+import { buildHtfPreloadCommand, runHtfPreloadStartup } from './htfPreload';
 import { createSupervisorLogger } from './logger';
 import {
   buildSupervisorDiscordPayload,
@@ -32,6 +33,13 @@ assert.equal(defaultConfig.config.childServices.find((service) => service.id ===
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'scanner')?.enabled, true);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'companion-proxy')?.enabled, false);
 assert.equal(defaultConfig.config.childServices.find((service) => service.id === 'discord-alerts')?.enabled, false);
+assert.equal(defaultConfig.config.htfPreload.enabled, true);
+assert.equal(defaultConfig.config.htfPreload.days, 30);
+const preloadCommand = buildHtfPreloadCommand(defaultConfig.config);
+assert.deepEqual(preloadCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
+assert.ok(preloadCommand.args.includes('--days'));
+assert.ok(preloadCommand.args.includes('30'));
+assert.ok(preloadCommand.args.includes('--delay-ms'));
 
 const fixedNow = new Date('2026-06-05T12:00:00.000Z');
 const status = buildSupervisorStatus(defaultConfig, null, null, null, fixedNow);
@@ -146,6 +154,12 @@ const processConfig = {
     restartCooldownMs: 1,
     maxRestartAttempts: 2,
   },
+  htfPreload: {
+    enabled: true,
+    days: 30,
+    delayMs: 50,
+    timeoutMs: 180_000,
+  },
   childServices: [
     {
       id: 'test-child',
@@ -157,6 +171,20 @@ const processConfig = {
   ],
 };
 const logger = createSupervisorLogger(tempLogsDir);
+const preloadCalls: Array<{ command: string; args: string[]; timeout: number }> = [];
+const preloadResult = runHtfPreloadStartup(processConfig, logger, (command, args, options) => {
+  preloadCalls.push({ command, args, timeout: options.timeout });
+  fs.mkdirSync(path.dirname(options.stdoutLog), { recursive: true });
+  fs.writeFileSync(options.stdoutLog, '[backfill] complete: 0 bars processed.\n', 'utf8');
+  fs.writeFileSync(options.stderrLog, '', 'utf8');
+  return { status: 0 };
+});
+assert.equal(preloadResult.ok, true);
+assert.equal(preloadResult.attempted, true);
+assert.equal(preloadCalls.length, 1);
+assert.ok(preloadCalls[0].args.includes('nt:backfill'));
+assert.ok(preloadCalls[0].args.includes('--days'));
+assert.ok(preloadCalls[0].args.includes('30'));
 const launchedState = launchEnabledServices(processConfig, logger);
 const launchedChild = launchedState.services[0];
 assert.equal(launchedChild.status, 'running');
