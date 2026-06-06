@@ -204,6 +204,13 @@ export interface ScannerHistoryCoverageRecord {
   selfHealed: boolean;
   sufficient: boolean;
   warning: string | null;
+  dataLimitation?: {
+    status: 'none' | 'bridge_or_cache_incomplete';
+    message: string | null;
+    retryPolicy: 'cache_then_single_bridge_then_segmented_bridge';
+    canInventMissingBars: false;
+    htfPromotionAllowed: boolean;
+  };
 }
 
 export interface ScannerTwoHourCoverageDiagnostic {
@@ -732,7 +739,8 @@ export function barsCoverRequestedLookback(
 export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRecord): string {
   const status = record.sufficient ? 'sufficient' : 'insufficient';
   const healed = record.selfHealed ? ', self-healed from bridge' : '';
-  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}`;
+  const limitation = record.dataLimitation?.message ? `, data-limit=${record.dataLimitation.message}` : '';
+  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}${limitation}`;
 }
 
 export function twoHourCoverageDiagnostic(
@@ -790,7 +798,7 @@ export function htfHistoryCoverageReadiness(
     status: 'data_limited',
     requiredTimeframes: required,
     insufficientTimeframes: insufficient,
-    summary: `HTF history is data-limited for ${insufficient.join(', ')}; failed-plan reversal and HTF promotion must treat this as context only, not structural confirmation.`,
+    summary: `HTF history is data-limited for ${insufficient.join(', ')} after cache, bridge, and segmented bridge repair; failed-plan reversal and HTF promotion must treat this as context only, not structural confirmation. The scanner cannot invent missing NinjaTrader bars.`,
     candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
   };
 }
@@ -1442,6 +1450,9 @@ async function fetchScannerHistoryFrame(args: {
     cached.length ? 'market_bars' :
     repaired.length ? 'bridge_repair' :
     'missing';
+  const dataLimitationMessage = sufficient
+    ? null
+    : `Requested ${args.timeframe} bars remain incomplete after cache preload, single bridge repair, and segmented bridge repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.`;
   const coverage: ScannerHistoryCoverageRecord = {
     timeframe: args.timeframe,
     requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
@@ -1458,6 +1469,13 @@ async function fetchScannerHistoryFrame(args: {
     warning: sufficient
       ? null
       : `HTF history preload insufficient for ${args.timeframe}: required ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days from ${args.from} to ${args.to}; loaded ${sorted.length} bars from ${sorted[0]?.time || 'N/A'} to ${sorted[sorted.length - 1]?.time || 'N/A'}.`,
+    dataLimitation: {
+      status: sufficient ? 'none' : 'bridge_or_cache_incomplete',
+      message: dataLimitationMessage,
+      retryPolicy: 'cache_then_single_bridge_then_segmented_bridge',
+      canInventMissingBars: false,
+      htfPromotionAllowed: sufficient,
+    },
   };
   return { bars: sorted, coverage };
 }

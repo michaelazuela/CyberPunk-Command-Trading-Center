@@ -308,6 +308,31 @@ const selfHealedSummary = summarizeScannerHistoryCoverage({
 assert.ok(selfHealedSummary.includes('240m: sufficient'));
 assert.ok(selfHealedSummary.includes('source=market_bars_bridge_repair'));
 assert.ok(selfHealedSummary.includes('self-healed from bridge'));
+const incompleteRepairSummary = summarizeScannerHistoryCoverage({
+  timeframe: '120m',
+  requiredLookbackDays: 30,
+  requestedFrom: '2026-05-03T00:00:00-04:00',
+  requestedTo: '2026-06-02T12:00:00-04:00',
+  barsLoaded: 20,
+  rangeStart: '2026-06-01T00:00:00',
+  rangeEnd: '2026-06-02T12:00:00',
+  source: 'bridge_repair',
+  cacheBars: 0,
+  bridgeRepairBars: 20,
+  selfHealed: true,
+  sufficient: false,
+  warning: 'insufficient 120m',
+  dataLimitation: {
+    status: 'bridge_or_cache_incomplete',
+    message: 'Requested 120m bars remain incomplete after cache preload, single bridge repair, and segmented bridge repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.',
+    retryPolicy: 'cache_then_single_bridge_then_segmented_bridge',
+    canInventMissingBars: false,
+    htfPromotionAllowed: false,
+  },
+});
+assert.ok(incompleteRepairSummary.includes('120m: insufficient'));
+assert.ok(incompleteRepairSummary.includes('cannot invent missing NinjaTrader bars'));
+assert.ok(incompleteRepairSummary.includes('HTF promotion is blocked'));
 assert.deepEqual(twoHourCoverageDiagnostic([]), {
   timeframe: '120m',
   available: false,
@@ -350,6 +375,8 @@ const dataLimitedHtfCoverage = htfHistoryCoverageReadiness([
 assert.equal(dataLimitedHtfCoverage.status, 'data_limited');
 assert.deepEqual(dataLimitedHtfCoverage.insufficientTimeframes, ['120m', '240m']);
 assert.ok(dataLimitedHtfCoverage.summary.includes('context only'));
+assert.ok(dataLimitedHtfCoverage.summary.includes('segmented bridge repair'));
+assert.ok(dataLimitedHtfCoverage.summary.includes('cannot invent missing NinjaTrader bars'));
 
 const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
   state: {
