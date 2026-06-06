@@ -277,10 +277,16 @@ function compactActionText(candidate: SetupCandidate | null, normalized: Compact
 function failedPlanReversalLines(candidate: SetupCandidate): string[] {
   const state = candidate.failedPlanReversal;
   if (!state && candidate.pathway !== 'failed_plan_reversal') return [];
+  const timeframeLine = state?.timeframeConfirmations?.length
+    ? `TF: ${state.timeframeConfirmations
+      .map((item) => `${item.timeframe} ${item.direction} ${item.status}`)
+      .join(' | ')}`
+    : null;
   return [
     'Failed Plan Reversal:',
     `State: ${candidate.candidateState || state?.decisionState || 'pending'} | Level: ${priceLine(state?.failedDecisionLevel ?? null)}`,
     `${state ? `${state.originalPlanDirection} -> ${state.oppositeDirection}` : 'N/A'} | HTF: ${state?.htfStackStatus || 'unknown'} | 5M: ${state?.fiveMinuteTriggerStatus || 'unknown'}`,
+    ...(timeframeLine ? [timeframeLine] : []),
     'Boundary: decision support only; not execution approval.',
   ];
 }

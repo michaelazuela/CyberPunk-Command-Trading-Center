@@ -71,7 +71,10 @@ function isTestProcess(): boolean {
   return process.argv.some((arg) => /\.test\.[cm]?[tj]sx?$/.test(arg));
 }
 
-export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(cwd = process.cwd()): {
+export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(
+  cwd = process.cwd(),
+  options: { warnOnOverride?: boolean } = {},
+): {
   loaded: boolean;
   keyId: string | null;
   previousKeyId: string | null;
@@ -91,7 +94,7 @@ export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(cwd = process.cwd(
   }
   process.env.DISCORD_OUTCOME_SECRET = value;
   const keyId = discordOutcomeSecretKeyId(value);
-  if (previousKeyId && previousKeyId !== keyId && !isTestProcess()) {
+  if (options.warnOnOverride && previousKeyId && previousKeyId !== keyId && !isTestProcess()) {
     console.warn(`[discord-outcome] DISCORD_OUTCOME_SECRET from .env.local is overriding a different process environment key id (${previousKeyId} -> ${keyId}).`);
   }
   return { loaded: true, keyId, previousKeyId, source: '.env.local' };

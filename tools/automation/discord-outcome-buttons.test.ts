@@ -115,12 +115,23 @@ try {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'discord-outcome-secret-'));
   fs.writeFileSync(path.join(tempDir, '.env.local'), 'DISCORD_OUTCOME_SECRET=\"canonical-test-secret\"\n');
   process.env.DISCORD_OUTCOME_SECRET = 'stale-shell-secret';
-  const canonical = loadCanonicalDiscordOutcomeSecretFromEnvLocal(tempDir);
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown, ...rest: unknown[]) => {
+    warnings.push([message, ...rest].map(String).join(' '));
+  };
+  let canonical: ReturnType<typeof loadCanonicalDiscordOutcomeSecretFromEnvLocal>;
+  try {
+    canonical = loadCanonicalDiscordOutcomeSecretFromEnvLocal(tempDir);
+  } finally {
+    console.warn = originalWarn;
+  }
   assert.equal(canonical.loaded, true);
   assert.equal(canonical.source, '.env.local');
   assert.equal(canonical.previousKeyId, discordOutcomeSecretKeyId('stale-shell-secret'));
   assert.equal(canonical.keyId, discordOutcomeSecretKeyId('canonical-test-secret'));
   assert.equal(discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET), discordOutcomeSecretKeyId('canonical-test-secret'));
+  assert.deepEqual(warnings, []);
   process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
   delete process.env.DISCORD_OUTCOME_SECRET;

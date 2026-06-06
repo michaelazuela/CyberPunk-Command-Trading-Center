@@ -131,6 +131,9 @@ const decisionTapePath = await writeScannerDecisionTapeAuditLog({
       timeframeConfirmations: [
         { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
         { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
+        { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H does not materially conflict.'] },
+        { timeframe: '4H', direction: 'UNKNOWN', status: 'data_limited', evidence: ['4H unavailable in this fixture.'] },
+        { timeframe: '5M', direction: 'SHORT', status: 'aligned', evidence: ['5M pending retest.'] },
       ],
       fiveMinuteTriggerStatus: 'pending_retest',
       decisionState: 'OPPOSITE_SIDE_RETEST_PENDING',
@@ -196,6 +199,10 @@ assert.equal(tapeEvent.failedPlanReversal.present, true);
 assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
 assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'supported_confirmation');
 assert.equal(tapeEvent.failedPlanReversal.fiveMinuteTriggerStatus, 'pending_retest');
+assert.deepEqual(
+  tapeEvent.failedPlanReversal.timeframeConfirmations.map((item: any) => `${item.timeframe}:${item.direction}:${item.status}`),
+  ['15M:SHORT:confirmed', '1H:SHORT:confirmed', '2H:NEUTRAL:neutral', '4H:UNKNOWN:data_limited', '5M:SHORT:aligned'],
+);
 assert.equal(tapeEvent.failedPlanReversal.createsCandidate, false);
 assert.equal(tapeEvent.failedPlanReversal.approvesExecution, false);
 assert.equal(tapeEvent.authority.decisionTapeCanExecute, false);

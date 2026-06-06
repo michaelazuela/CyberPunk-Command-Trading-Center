@@ -1017,6 +1017,17 @@ function summarizeFailedPlanReversalForTape(chartContext: unknown, candidate: Se
     };
   }
   const record = asRecord(context);
+  const timeframeConfirmations = asArray(record?.timeframeConfirmations)
+    .map((item) => {
+      const value = asRecord(item);
+      return {
+        timeframe: stringField(value, ['timeframe']) || null,
+        direction: stringField(value, ['direction']) || null,
+        status: stringField(value, ['status']) || null,
+        evidence: asArray(value?.evidence).filter((entry): entry is string => typeof entry === 'string'),
+      };
+    })
+    .filter((item) => item.timeframe || item.direction || item.status || item.evidence.length);
   return {
     present: true,
     state: stringField(record, ['decisionState']) || candidate?.candidateState || null,
@@ -1024,6 +1035,7 @@ function summarizeFailedPlanReversalForTape(chartContext: unknown, candidate: Se
     oppositeDirection: stringField(record, ['oppositeDirection']) || candidate?.direction || null,
     failedDecisionLevel: record?.failedDecisionLevel ?? null,
     htfStackStatus: stringField(record, ['htfStackStatus']) || null,
+    timeframeConfirmations,
     fiveMinuteTriggerStatus: stringField(record, ['fiveMinuteTriggerStatus']) || null,
     staleOrNoFreshEntry: Boolean(record?.staleOrNoFreshEntry),
     blockers: asArray(record?.blockers),
