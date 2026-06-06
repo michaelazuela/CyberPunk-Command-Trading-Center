@@ -218,6 +218,14 @@ export interface ScannerTwoHourCoverageDiagnostic {
   candidatePromotionBoundary: 'two_hour_context_required_for_full_confirmation';
 }
 
+export interface ScannerHtfHistoryCoverageReadiness {
+  status: 'sufficient' | 'data_limited' | 'not_evaluated';
+  requiredTimeframes: Array<'15m' | '60m' | '120m' | '240m'>;
+  insufficientTimeframes: Array<'15m' | '60m' | '120m' | '240m'>;
+  summary: string;
+  candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal';
+}
+
 export interface ScannerWebhookResolution {
   url: string | null;
   source: ScannerWebhookEnvKey | null;
@@ -753,6 +761,40 @@ function twoHourCurrentRunWarning(coverage: ScannerHistoryCoverageRecord[] | und
   return `Operational data-quality defect: 120M / 2H scanner context is not sufficient for full HTF confirmation (${detail}). Candidate promotion requiring full 2H confirmation must treat this as data-limited context, not structural proof.`;
 }
 
+export function htfHistoryCoverageReadiness(
+  coverage: ScannerHistoryCoverageRecord[] | undefined,
+): ScannerHtfHistoryCoverageReadiness {
+  const required: ScannerHtfHistoryCoverageReadiness['requiredTimeframes'] = ['15m', '60m', '120m', '240m'];
+  if (!coverage?.length) {
+    return {
+      status: 'not_evaluated',
+      requiredTimeframes: required,
+      insufficientTimeframes: required,
+      summary: 'HTF history coverage was not evaluated for this cycle; HTF structure cannot be treated as confirmed.',
+      candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+    };
+  }
+
+  const insufficient = required.filter((timeframe) => !coverage.find((item) => item.timeframe === timeframe && item.sufficient));
+  if (!insufficient.length) {
+    return {
+      status: 'sufficient',
+      requiredTimeframes: required,
+      insufficientTimeframes: [],
+      summary: '15M, 1H, 2H, and 4H scanner history coverage is sufficient for HTF structural classification.',
+      candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+    };
+  }
+
+  return {
+    status: 'data_limited',
+    requiredTimeframes: required,
+    insufficientTimeframes: insufficient,
+    summary: `HTF history is data-limited for ${insufficient.join(', ')}; failed-plan reversal and HTF promotion must treat this as context only, not structural confirmation.`,
+    candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
+  };
+}
+
 function attachScannerHistoryCoverage(
   chartContext: Partial<ChartContext> | undefined,
   coverage: ScannerHistoryCoverageRecord[],
@@ -857,6 +899,7 @@ async function writeScannerDiscordAuditLog(args: {
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
+    htfHistoryCoverage: htfHistoryCoverageReadiness(args.historyCoverage),
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
     attachments: {
@@ -1171,6 +1214,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
+    htfHistoryCoverage: htfHistoryCoverageReadiness(args.historyCoverage),
     authority: {
       decisionTapeApprovesTrade: false,
       decisionTapeChangesRules: false,
@@ -1763,8 +1807,9 @@ async function refreshMarketMapContext(args: {
     };
     const analysis = await analysisFromBars({ config: args.config, session, tradeDate: args.tradeDate, bars });
     const objectives = analysis.structuredChartContext?.targetObjectives?.length || 0;
+    const htfCoverage = htfHistoryCoverageReadiness(lookLeft.coverage);
     args.state.lastMarketMapRefreshBySession[key] = new Date().toISOString();
-    return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives; history ${lookLeft.coverage.map(summarizeScannerHistoryCoverage).join(' | ')}).`;
+    return `market map refreshed (${session}; ${MARKET_MAPPING_COVERAGE.join(', ')}; ${objectives} target objectives; HTF coverage ${htfCoverage.status}; ${htfCoverage.summary}; history ${lookLeft.coverage.map(summarizeScannerHistoryCoverage).join(' | ')}).`;
   } catch (error) {
     return `market map refresh skipped: ${formatError(error)}`;
   }
@@ -2577,10 +2622,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   });
   const historyCoverage = lookLeft?.coverage || [];
   const twoHourWarning = twoHourCurrentRunWarning(historyCoverage);
+  const htfCoverage = htfHistoryCoverageReadiness(historyCoverage);
   if (twoHourWarning) console.warn(`[scanner-history] ${twoHourWarning}`);
+  if (htfCoverage.status !== 'sufficient') console.warn(`[scanner-history] ${htfCoverage.summary}`);
   const historyWarnings = [
     ...historyCoverage.flatMap((item) => item.warning ? [item.warning] : []),
     ...(twoHourWarning ? [twoHourWarning] : []),
+    ...(htfCoverage.status !== 'sufficient' ? [htfCoverage.summary] : []),
   ];
   const bars = lookLeft
     ? {

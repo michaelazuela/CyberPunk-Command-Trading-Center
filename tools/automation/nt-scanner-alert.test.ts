@@ -15,6 +15,7 @@ import {
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
   findMissedExecutableScannerDeliveries,
+  htfHistoryCoverageReadiness,
   markScannerAlertDeliveryFailed,
   markScannerAlertDeliverySent,
   markScannerAlertDeliverySkipped,
@@ -333,6 +334,22 @@ assert.equal(twoHourCoverageDiagnostic([{
   sufficient: true,
   warning: null,
 }]).sufficient, true);
+const sufficientHtfCoverage = htfHistoryCoverageReadiness([
+  { timeframe: '15m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 1000, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars', cacheBars: 1000, bridgeRepairBars: 0, selfHealed: false, sufficient: true, warning: null },
+  { timeframe: '60m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 500, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars', cacheBars: 500, bridgeRepairBars: 0, selfHealed: false, sufficient: true, warning: null },
+  { timeframe: '120m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 250, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars_bridge_repair', cacheBars: 100, bridgeRepairBars: 150, selfHealed: true, sufficient: true, warning: null },
+  { timeframe: '240m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 180, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars_bridge_repair', cacheBars: 100, bridgeRepairBars: 80, selfHealed: true, sufficient: true, warning: null },
+]);
+assert.equal(sufficientHtfCoverage.status, 'sufficient');
+assert.deepEqual(sufficientHtfCoverage.insufficientTimeframes, []);
+const dataLimitedHtfCoverage = htfHistoryCoverageReadiness([
+  { timeframe: '15m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 1000, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars', cacheBars: 1000, bridgeRepairBars: 0, selfHealed: false, sufficient: true, warning: null },
+  { timeframe: '60m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 500, rangeStart: '2026-05-03T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'market_bars', cacheBars: 500, bridgeRepairBars: 0, selfHealed: false, sufficient: true, warning: null },
+  { timeframe: '120m', requiredLookbackDays: 30, requestedFrom: '2026-05-03T00:00:00-04:00', requestedTo: '2026-06-02T12:00:00-04:00', barsLoaded: 20, rangeStart: '2026-06-01T00:00:00', rangeEnd: '2026-06-02T12:00:00', source: 'bridge_repair', cacheBars: 0, bridgeRepairBars: 20, selfHealed: true, sufficient: false, warning: 'insufficient 120m' },
+]);
+assert.equal(dataLimitedHtfCoverage.status, 'data_limited');
+assert.deepEqual(dataLimitedHtfCoverage.insufficientTimeframes, ['120m', '240m']);
+assert.ok(dataLimitedHtfCoverage.summary.includes('context only'));
 
 const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
   state: {
