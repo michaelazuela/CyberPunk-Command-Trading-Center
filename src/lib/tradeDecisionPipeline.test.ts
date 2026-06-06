@@ -617,6 +617,49 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
   });
 }
 
+function failedPlanReversalContext(direction: 'LONG' | 'SHORT' = 'SHORT', overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
+  const base = htfDisplacementFvgContinuationContext(direction);
+  const originalPlanDirection = direction === 'SHORT' ? 'LONG' : 'SHORT';
+  const failedDecisionLevel = direction === 'SHORT' ? 7518 : 7604.75;
+  return {
+    ...base,
+    setupReadyFacts: {
+      ...base.setupReadyFacts!,
+      breakOfStructure: true,
+    },
+    failedPlanReversal: {
+      source: 'ninjatrader_ohlc',
+      boundary: 'opposite_side_review_only_not_execution_authority',
+      originalPlanDirection,
+      oppositeDirection: direction,
+      failedDecisionLevel,
+      failedDecisionLevelRole: direction === 'SHORT' ? 'short_side_resistance' : 'long_side_support',
+      failedPlanEvidence: [
+        `App-owned ${originalPlanDirection} plan failed decision level ${failedDecisionLevel}.`,
+      ],
+      htfStackStatus: 'full_confirmation',
+      timeframeConfirmations: [
+        { timeframe: '5M', direction, status: 'confirmed', evidence: ['Fresh 5M opposite-side MSS confirmed by completed close.'] },
+        { timeframe: '15M', direction, status: 'confirmed', evidence: ['15M opposite displacement/MSS confirmed.'] },
+        { timeframe: '1H', direction, status: 'confirmed', evidence: ['1H opposite structure confirms.'] },
+        { timeframe: '2H', direction, status: 'confirmed', evidence: ['2H opposite structure confirms.'] },
+        { timeframe: '4H', direction, status: 'confirmed', evidence: ['4H opposite structure confirms.'] },
+      ],
+      fiveMinuteTriggerStatus: 'confirmed',
+      decisionState: direction === 'SHORT'
+        ? 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
+        : 'FAILED_SHORT_TO_BULLISH_MSS_CONFIRMED',
+      freshTriggerRequired: true,
+      staleOrNoFreshEntry: false,
+      reasons: ['15M, 1H, 2H, and 4H confirm the opposite side after the original app-owned plan failed.'],
+      blockers: [],
+      createsCandidate: true,
+      approvesExecution: false,
+    },
+    ...overrides,
+  };
+}
+
 function bridgeBar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1 };
 }
@@ -958,6 +1001,41 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.finalTradePlan.stop, 7590);
     assert.equal(result.finalTradePlan.target1, 7572);
     assert.equal(result.finalTradePlan.target2, 7568.25);
+  }],
+
+  ['15b3. Complete failed-plan reversal short takes final selection authority instead of staying NO TRADE', () => {
+    const result = assertSameSequence({
+      result: baseResult({
+        dayType: 'SHORT',
+        reasoning: 'Original long plan failed; opposite bearish HTF/MSS stack and fresh 5M trigger are complete.',
+        current_rule_analysis: {
+          summary: 'Failed long decision level converted to bearish decision level after 15M, 1H, 2H, and 4H confirmation.',
+          setup_detected: 'Failed Plan Reversal Short',
+          rule_category: 'Failed Plan Reversal',
+          entry: 7582.75,
+          stop: 7590,
+          target_1: null,
+          target_2: null,
+          trigger_state: 'TRIGGERED',
+          entry_trigger: 'Fresh completed 5M bearish trigger/retest after failed long decision level.',
+          no_trade_reason: null,
+          base_confidence: 'High',
+        },
+        structuredChartContext: failedPlanReversalContext('SHORT') as ChartContext,
+      }),
+    });
+    const reversalCandidate = result.setupCandidates?.find((candidate) => candidate.setupType === SetupType.FailedPlanReversal);
+
+    assert.equal(reversalCandidate?.executionStatus, ExecutionStatus.Executable);
+    assert.equal(reversalCandidate?.failedPlanReversal?.createsCandidate, true);
+    assert.equal(reversalCandidate?.failedPlanReversal?.approvesExecution, false);
+    assert.equal(result.status, TradeDecisionStatus.ApprovedTrade);
+    assert.equal(result.opportunitySelection?.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
+    assert.equal(result.finalTradePlan.setupType, SetupType.FailedPlanReversal);
+    assert.equal(result.finalTradePlan.direction, 'SHORT');
+    assert.equal(result.finalTradePlan.entry, 7582.75);
+    assert.equal(result.finalTradePlan.stop, 7590);
+    assert.notEqual(result.noTradeReason, NoTradeReason.NoApprovedSetup);
   }],
 
   ['15c. HTF draw continuation keeps app-computed targets and model-specific scorecard wording', () => {

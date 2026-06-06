@@ -9,6 +9,7 @@ import {
   barsForMorningContinuationWatchlist,
   buildScannerHistoryPreloadPlan,
   attachFailedPlanReversalContextFromScannerState,
+  appOwnedFailedDecisionEventFromCandidate,
   appOwnedFailedPlanEventsFromScannerAudits,
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
@@ -80,6 +81,47 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
   usingGenericFallback: false,
 });
 
+const juneFiveSameCycleFailedLong = appOwnedFailedDecisionEventFromCandidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  pathway: 'primary_setup_scanner',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Detected,
+  executionStatus: ExecutionStatus.Executable,
+  confidence: 'High',
+  priority: 1,
+  entry: 7518.5,
+  stop: 7505.5,
+  target1: 7550,
+  target2: 7557,
+  riskPoints: 13,
+  riskAdvisoryStatus: 'RISK_EXTENDED_STRUCTURAL',
+  riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+  entryClarity: 0.8,
+  stopClarity: 0.8,
+  targetClarity: 0.8,
+  proximityScore: 0.8,
+  levelContextScore: 10,
+  evidence: [],
+  missingEvidence: [],
+  invalidation: null,
+  blockReason: null,
+  requiredTrigger: null,
+  nextAction: null,
+  reducedRiskPlan: null,
+}, {
+  time: '2026-06-05T10:00:00.0000000',
+  open: 7524.25,
+  high: 7524.75,
+  low: 7510.75,
+  close: 7511.5,
+  volume: 26897,
+});
+assert.ok(juneFiveSameCycleFailedLong);
+assert.equal(juneFiveSameCycleFailedLong.direction, 'SHORT');
+assert.equal(juneFiveSameCycleFailedLong.failedLevel, 7518.5);
+assert.match(juneFiveSameCycleFailedLong.evidence || '', /Completed 5M close 7511\.5 crossed below 7518\.5/);
+
 assert.equal(SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS, 30);
 const morningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning');
 assert.deepEqual(Object.keys(morningHistoryPlan).sort(), ['120m', '15m', '240m', '5m', '60m']);
@@ -127,11 +169,11 @@ const decisionTapePath = await writeScannerDecisionTapeAuditLog({
       failedDecisionLevel: 7518,
       failedDecisionLevelRole: 'short_side_resistance',
       failedPlanEvidence: ['Prior long failed below 7518.'],
-      htfStackStatus: 'supported_confirmation',
+      htfStackStatus: 'data_limited',
       timeframeConfirmations: [
         { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
         { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
-        { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H does not materially conflict.'] },
+        { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H does not confirm opposite structure.'] },
         { timeframe: '4H', direction: 'UNKNOWN', status: 'data_limited', evidence: ['4H unavailable in this fixture.'] },
         { timeframe: '5M', direction: 'SHORT', status: 'aligned', evidence: ['5M pending retest.'] },
       ],
@@ -140,7 +182,10 @@ const decisionTapePath = await writeScannerDecisionTapeAuditLog({
       freshTriggerRequired: true,
       staleOrNoFreshEntry: false,
       reasons: ['Waiting for clean 5M retest.'],
-      blockers: [],
+      blockers: [
+        '2H structure is neutral; failed-plan reversal requires 15M, 1H, 2H, and 4H confirmation.',
+        '4H structured OHLC is data-limited or unavailable; failed-plan reversal cannot create a candidate.',
+      ],
       createsCandidate: false,
       approvesExecution: false,
     },
@@ -197,7 +242,7 @@ assert.equal(tapeEvent.classification.advisory, true);
 assert.equal(tapeEvent.discord.shouldSend, false);
 assert.equal(tapeEvent.failedPlanReversal.present, true);
 assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
-assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'supported_confirmation');
+assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'data_limited');
 assert.equal(tapeEvent.failedPlanReversal.fiveMinuteTriggerStatus, 'pending_retest');
 assert.deepEqual(
   tapeEvent.failedPlanReversal.timeframeConfirmations.map((item: any) => `${item.timeframe}:${item.direction}:${item.status}`),
@@ -205,6 +250,8 @@ assert.deepEqual(
 );
 assert.equal(tapeEvent.failedPlanReversal.createsCandidate, false);
 assert.equal(tapeEvent.failedPlanReversal.approvesExecution, false);
+assert.ok(tapeEvent.failedPlanReversal.blockers.some((item: string) => item.includes('2H structure is neutral')));
+assert.ok(tapeEvent.failedPlanReversal.blockers.some((item: string) => item.includes('4H structured OHLC is data-limited')));
 assert.equal(tapeEvent.authority.decisionTapeCanExecute, false);
 const fourHourCoverageBars = Array.from({ length: 1129 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');

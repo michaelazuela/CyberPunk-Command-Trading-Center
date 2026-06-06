@@ -2135,7 +2135,7 @@ function failedPlanReversalStateFor(context: NonNullable<ChartContext['failedPla
 }
 
 function failedPlanReversalHtfEligible(context: NonNullable<ChartContext['failedPlanReversal']>): boolean {
-  return context.htfStackStatus === 'full_confirmation' || context.htfStackStatus === 'supported_confirmation';
+  return context.htfStackStatus === 'full_confirmation';
 }
 
 function failedPlanReversalFreshTriggerConfirmed(context: NonNullable<ChartContext['failedPlanReversal']>): boolean {
@@ -2350,7 +2350,7 @@ function notDetectedFailedPlanReversalCandidate(entry: SetupRegistryEntry): Setu
     targetClarity: 0,
     proximityScore: 0,
     levelContextScore: 0,
-    levelContextSummary: 'Failed plan reversal requires a failed app-owned plan level, 15M/1H opposite confirmation, and a fresh completed 5M opposite-side trigger.',
+    levelContextSummary: 'Failed plan reversal requires a failed app-owned plan level, 15M, 1H, 2H, and 4H opposite structure confirmation, then a fresh completed 5M opposite-side trigger.',
     evidence: [],
     missingEvidence: entry.requiredEvidence,
     executionStatus: ExecutionStatus.NotDetected,
@@ -2415,7 +2415,7 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
   const riskNote = riskAdvisoryNote(risk);
   const missingEvidence = Array.from(new Set([
     ...(!context.createsCandidate ? ['Failed-plan reversal state is watch-only'] : []),
-    ...(!htfEligible ? [`Opposite HTF stack is ${context.htfStackStatus}; requires full or supported confirmation`] : []),
+    ...(!htfEligible ? [`Opposite HTF stack is ${context.htfStackStatus}; requires 15M, 1H, 2H, and 4H structure confirmation before the 5M execution trigger can create a candidate`] : []),
     ...(!triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest is not confirmed'] : []),
     ...(context.staleOrNoFreshEntry ? ['NO FRESH ENTRY: reversal trigger is stale or price already left the decision level'] : []),
     ...(entry === null ? ['Defined opposite-side 5M entry'] : []),
@@ -2474,6 +2474,7 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
       `Failed original plan: ${context.originalPlanDirection}`,
       `Failed decision level: ${failedLevel} (${context.failedDecisionLevelRole})`,
       `Opposite HTF MSS evidence: ${context.htfStackStatus}`,
+      'Required HTF sequence: 15M structure, 1H structure, 2H structure, 4H structure, then 5M execution trigger.',
       ...context.timeframeConfirmations.map((item) => `${item.timeframe}: ${item.direction} ${item.status}`),
       `5M trigger status: ${context.fiveMinuteTriggerStatus}`,
       ...(triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest confirmed'] : []),
@@ -2493,8 +2494,8 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
       ? NoTradeReason.ChasingExtendedMove
       : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'SHORT'
-      ? 'Failed Plan Reversal short requires failed long decision level, 15M/1H bearish confirmation, non-conflicting 2H/4H, and fresh completed 5M bearish trigger/retest.'
-      : 'Failed Plan Reversal long requires failed short decision level, 15M/1H bullish confirmation, non-conflicting 2H/4H, and fresh completed 5M bullish trigger/retest.',
+      ? 'Failed Plan Reversal short requires failed long decision level, 15M bearish structure, 1H bearish structure, 2H bearish structure, 4H bearish structure, then fresh completed 5M bearish trigger/retest.'
+      : 'Failed Plan Reversal long requires failed short decision level, 15M bullish structure, 1H bullish structure, 2H bullish structure, 4H bullish structure, then fresh completed 5M bullish trigger/retest.',
     nextAction: structurallyComplete
       ? `Structurally complete Failed Plan Reversal ${directionText} plan. Human final decision required.${riskNote ? ` ${riskNote}` : ''}`
       : context.staleOrNoFreshEntry

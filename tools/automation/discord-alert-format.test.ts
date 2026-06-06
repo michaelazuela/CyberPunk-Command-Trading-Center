@@ -368,12 +368,12 @@ failedPlanReversalCandidate.failedPlanReversal = {
   failedDecisionLevel: 7518,
   failedDecisionLevelRole: 'short_side_resistance',
   failedPlanEvidence: ['Long plan failed below 7518.'],
-  htfStackStatus: 'supported_confirmation',
+  htfStackStatus: 'full_confirmation',
   timeframeConfirmations: [
     { timeframe: '15M', direction: 'SHORT', status: 'confirmed', evidence: ['15M bearish MSS.'] },
     { timeframe: '1H', direction: 'SHORT', status: 'confirmed', evidence: ['1H bearish MSS.'] },
-    { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H neutral.'] },
-    { timeframe: '4H', direction: 'UNKNOWN', status: 'data_limited', evidence: ['4H data-limited.'] },
+    { timeframe: '2H', direction: 'SHORT', status: 'confirmed', evidence: ['2H bearish structure.'] },
+    { timeframe: '4H', direction: 'SHORT', status: 'confirmed', evidence: ['4H bearish structure.'] },
     { timeframe: '5M', direction: 'SHORT', status: 'confirmed', evidence: ['5M trigger confirmed.'] },
   ],
   fiveMinuteTriggerStatus: 'confirmed',
@@ -407,8 +407,8 @@ const failedPlanText = flattenDiscordPayloadText(failedPlanPayload);
 assert.ok(failedPlanPayload.content?.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
 assert.ok(failedPlanText.includes('Failed Plan Reversal:'));
 assert.ok(failedPlanText.includes('State: OPPOSITE_SIDE_TRIGGER_CONFIRMED | Level: 7518.00'));
-assert.ok(failedPlanText.includes('LONG -> SHORT | HTF: supported_confirmation | 5M: confirmed'));
-assert.ok(failedPlanText.includes('TF: 15M SHORT confirmed | 1H SHORT confirmed | 2H NEUTRAL neutral | 4H UNKNOWN data_limited | 5M SHORT confirmed'));
+assert.ok(failedPlanText.includes('LONG -> SHORT | HTF: full_confirmation | 5M: confirmed'));
+assert.ok(failedPlanText.includes('TF: 15M SHORT confirmed | 1H SHORT confirmed | 2H SHORT confirmed | 4H SHORT confirmed | 5M SHORT confirmed'));
 assert.ok(failedPlanText.includes('Boundary: decision support only; not execution approval.'));
 assert.equal(/EXECUTABLE -|Trade now|Take the trade|Trade approved/i.test(failedPlanText), false);
 

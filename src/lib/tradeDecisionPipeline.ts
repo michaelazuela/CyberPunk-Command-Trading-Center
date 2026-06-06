@@ -217,6 +217,7 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     sessionStory: structured.sessionStory,
     multiTimeframeContext: structured.multiTimeframeContext,
     htfLiquidityDrawState: structured.htfLiquidityDrawState,
+    failedPlanReversal: structured.failedPlanReversal,
     targetObjectives: structured.targetObjectives,
     extractedLevels: structured.extractedLevels,
     candles: structured.candles,
@@ -661,6 +662,25 @@ function qualitySort(a: SetupCandidate, b: SetupCandidate): number {
   return (b.decisionQualityScore || 0) - (a.decisionQualityScore || 0) || rankSetupCandidate(b) - rankSetupCandidate(a);
 }
 
+function structurallyCompleteFailedPlanReversal(candidate: SetupCandidate): boolean {
+  return (
+    candidate.setupType === SetupType.FailedPlanReversal &&
+    candidate.pathway === 'failed_plan_reversal' &&
+    candidate.executionStatus === ExecutionStatus.Executable &&
+    candidate.failedPlanReversal?.createsCandidate === true &&
+    candidate.failedPlanReversal.approvesExecution === false &&
+    candidate.failedPlanReversal.fiveMinuteTriggerStatus === 'confirmed' &&
+    candidate.failedPlanReversal.staleOrNoFreshEntry === false
+  );
+}
+
+function finalSelectionSort(a: SetupCandidate, b: SetupCandidate): number {
+  const failedPlanPriority =
+    (structurallyCompleteFailedPlanReversal(b) ? 1 : 0) -
+    (structurallyCompleteFailedPlanReversal(a) ? 1 : 0);
+  return failedPlanPriority || qualitySort(a, b);
+}
+
 function chooseDisplayCandidate(candidates: SetupCandidate[]): SetupCandidate | null {
   return candidates
     .filter(hasDetectedOpportunity)
@@ -889,11 +909,12 @@ export function runTradeDecisionPipeline(input: TradeDecisionPipelineInput): Tra
     blockInvalidatedCandidates(mergeSetupCandidates(setupScan.candidates, buildConditionalPlans(chartContext)), chartContext),
     chartContext.structuralLevels || []
   ), chartContext).sort(qualitySort);
-  const selectedExecutable = setupCandidates.find((candidate) =>
+  const finalSelectionCandidates = [...setupCandidates].sort(finalSelectionSort);
+  const selectedExecutable = finalSelectionCandidates.find((candidate) =>
     candidate.executionStatus === ExecutionStatus.Executable &&
     hasActionablePlanLevels(candidate)
   ) || null;
-  const selectedConditional = setupCandidates.find((candidate) =>
+  const selectedConditional = finalSelectionCandidates.find((candidate) =>
     candidate.executionStatus === ExecutionStatus.Conditional &&
     hasActionablePlanLevels(candidate)
   ) || null;

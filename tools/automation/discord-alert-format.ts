@@ -282,11 +282,15 @@ function failedPlanReversalLines(candidate: SetupCandidate): string[] {
       .map((item) => `${item.timeframe} ${item.direction} ${item.status}`)
       .join(' | ')}`
     : null;
+  const blockerLine = state?.blockers?.length
+    ? `Blockers: ${state.blockers.slice(0, 2).join(' | ')}`
+    : null;
   return [
     'Failed Plan Reversal:',
     `State: ${candidate.candidateState || state?.decisionState || 'pending'} | Level: ${priceLine(state?.failedDecisionLevel ?? null)}`,
     `${state ? `${state.originalPlanDirection} -> ${state.oppositeDirection}` : 'N/A'} | HTF: ${state?.htfStackStatus || 'unknown'} | 5M: ${state?.fiveMinuteTriggerStatus || 'unknown'}`,
     ...(timeframeLine ? [timeframeLine] : []),
+    ...(blockerLine ? [blockerLine] : []),
     'Boundary: decision support only; not execution approval.',
   ];
 }

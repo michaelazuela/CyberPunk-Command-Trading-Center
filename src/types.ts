@@ -707,6 +707,7 @@ export interface ChartContext {
   riskPoints?: number | null;
   riskStatus?: ExtractedRiskStatus;
   failedPlanReversal?: FailedPlanReversalContext;
+  scannerHistoryCoverage?: ScannerHistoryCoverageFact[];
   entryConfirmed?: boolean;
   stopConfirmed?: boolean;
   requiresManualConfirmation?: boolean;
@@ -791,6 +792,19 @@ export interface FailedPlanReversalContext {
   blockers: string[];
   createsCandidate: boolean;
   approvesExecution: false;
+}
+
+export interface ScannerHistoryCoverageFact {
+  timeframe: '5m' | '15m' | '60m' | '120m' | '240m';
+  requiredLookbackDays: number;
+  requestedFrom: string;
+  requestedTo: string;
+  barsLoaded: number;
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  source: string;
+  sufficient: boolean;
+  warning: string | null;
 }
 
 export interface TimeframeMssCandidateState {

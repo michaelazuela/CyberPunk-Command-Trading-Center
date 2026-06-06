@@ -7,6 +7,7 @@ import type {
   FailedPlanReversalHtfStackStatus,
   FailedPlanReversalTimeframeConfirmation,
   PriceDirection,
+  ScannerHistoryCoverageFact,
   TimeframeFactSet,
 } from '../types';
 
@@ -48,7 +49,24 @@ function timeframeConfirmation(
   timeframe: FailedPlanReversalTimeframeConfirmation['timeframe'],
   facts: TimeframeFactSet | undefined,
   direction: Direction,
+  coverage?: ScannerHistoryCoverageFact,
 ): FailedPlanReversalTimeframeConfirmation {
+  if (coverage && !coverage.sufficient) {
+    const range = coverage.rangeStart && coverage.rangeEnd
+      ? ` loaded ${coverage.barsLoaded} bars from ${coverage.rangeStart} to ${coverage.rangeEnd}`
+      : ` loaded ${coverage.barsLoaded} bars`;
+    return {
+      timeframe,
+      direction: 'UNKNOWN',
+      status: 'data_limited',
+      evidence: [
+        `${timeframe} scanner history coverage is insufficient;${range}.`,
+        `Required ${coverage.requiredLookbackDays} calendar days from ${coverage.requestedFrom} to ${coverage.requestedTo}.`,
+        ...(coverage.warning ? [coverage.warning] : []),
+      ],
+    };
+  }
+
   if (!facts || facts.barCount <= 0) {
     return {
       timeframe,
@@ -92,29 +110,53 @@ function timeframeConfirmation(
   };
 }
 
+function coverageForTimeframe(
+  coverage: ScannerHistoryCoverageFact[] | undefined,
+  timeframe: FailedPlanReversalTimeframeConfirmation['timeframe'],
+): ScannerHistoryCoverageFact | undefined {
+  const map: Record<FailedPlanReversalTimeframeConfirmation['timeframe'], ScannerHistoryCoverageFact['timeframe']> = {
+    '5M': '5m',
+    '15M': '15m',
+    '1H': '60m',
+    '2H': '120m',
+    '4H': '240m',
+  };
+  return coverage?.find((item) => item.timeframe === map[timeframe]);
+}
+
 function htfStackStatus(confirmations: FailedPlanReversalTimeframeConfirmation[]): FailedPlanReversalHtfStackStatus {
   const byTimeframe = new Map(confirmations.map((item) => [item.timeframe, item]));
   const fifteen = byTimeframe.get('15M');
   const oneHour = byTimeframe.get('1H');
   const twoHour = byTimeframe.get('2H');
   const fourHour = byTimeframe.get('4H');
-  const primaryAligned = [fifteen, oneHour].every((item) => item?.status === 'aligned' || item?.status === 'confirmed');
-  const primaryDataLimited = [fifteen, oneHour].some((item) => item?.status === 'data_limited' || item?.status === 'unknown');
+  const requiredHtf = [fifteen, oneHour, twoHour, fourHour];
+  const allRequiredAligned = requiredHtf.every((item) => item?.status === 'aligned' || item?.status === 'confirmed');
+  const anyRequiredDataLimited = requiredHtf.some((item) => item?.status === 'data_limited' || item?.status === 'unknown');
   const materialConflict = [fifteen, oneHour, twoHour, fourHour].some((item) => item?.status === 'conflicting');
-  const higherAligned = [twoHour, fourHour].some((item) => item?.status === 'aligned' || item?.status === 'confirmed');
-  const higherNeutralOrLimited = [twoHour, fourHour].every((item) =>
-    item?.status === 'aligned' ||
-    item?.status === 'confirmed' ||
-    item?.status === 'neutral' ||
-    item?.status === 'data_limited' ||
-    item?.status === 'unknown'
-  );
 
   if (materialConflict) return 'conflict';
-  if (primaryDataLimited) return 'data_limited';
-  if (primaryAligned && higherAligned) return 'full_confirmation';
-  if (primaryAligned && higherNeutralOrLimited) return 'supported_confirmation';
+  if (anyRequiredDataLimited) return 'data_limited';
+  if (allRequiredAligned) return 'full_confirmation';
   return 'mixed';
+}
+
+function htfConfirmationBlockers(confirmations: FailedPlanReversalTimeframeConfirmation[]): string[] {
+  const required: FailedPlanReversalTimeframeConfirmation['timeframe'][] = ['15M', '1H', '2H', '4H'];
+  return required.flatMap((timeframe) => {
+    const confirmation = confirmations.find((item) => item.timeframe === timeframe);
+    if (!confirmation) {
+      return [`${timeframe} structured OHLC confirmation is missing; failed-plan reversal cannot create a candidate.`];
+    }
+    if (confirmation.status === 'confirmed' || confirmation.status === 'aligned') return [];
+    if (confirmation.status === 'data_limited' || confirmation.status === 'unknown') {
+      return [`${timeframe} structured OHLC is data-limited or unavailable; failed-plan reversal cannot create a candidate.`];
+    }
+    if (confirmation.status === 'conflicting') {
+      return [`${timeframe} structure materially conflicts with the opposite-side failed-plan reversal.`];
+    }
+    return [`${timeframe} structure is ${confirmation.status}; failed-plan reversal requires 15M, 1H, 2H, and 4H confirmation.`];
+  });
 }
 
 function latestFailedBreakEvent(events: FailedBreakEventFact[] | undefined): FailedBreakEventFact | null {
@@ -145,6 +187,17 @@ function fiveMinuteStatus(chartContext: ChartContext, direction: Direction): Fai
     structure.executionTimeframeConfirmed &&
     structure.structureBreakConfirmedByClose &&
     !structure.wickOnlyBreak
+  ) {
+    return 'confirmed';
+  }
+
+  const htfState = chartContext.htfLiquidityDrawState;
+  const originalDirection = oppositeDirection(direction);
+  if (
+    htfState?.planDirection === originalDirection &&
+    htfState.classification === 'FAILED_MSS' &&
+    htfState.fiveMinuteState?.status === 'failed' &&
+    htfState.fiveMinuteState?.lifecycleState === 'failed_mss'
   ) {
     return 'confirmed';
   }
@@ -187,20 +240,23 @@ export function buildFailedPlanReversalContextFromChartContext(
   const opposite = failedEvent.direction;
   const original = oppositeDirection(opposite);
   const mtf = chartContext.multiTimeframeContext;
+  const coverage = chartContext.scannerHistoryCoverage;
   const confirmations: FailedPlanReversalTimeframeConfirmation[] = [
-    timeframeConfirmation('15M', mtf?.fifteenMinute, opposite),
-    timeframeConfirmation('1H', mtf?.oneHour, opposite),
-    timeframeConfirmation('2H', mtf?.twoHour, opposite),
-    timeframeConfirmation('4H', mtf?.fourHour, opposite),
+    timeframeConfirmation('15M', mtf?.fifteenMinute, opposite, coverageForTimeframe(coverage, '15M')),
+    timeframeConfirmation('1H', mtf?.oneHour, opposite, coverageForTimeframe(coverage, '1H')),
+    timeframeConfirmation('2H', mtf?.twoHour, opposite, coverageForTimeframe(coverage, '2H')),
+    timeframeConfirmation('4H', mtf?.fourHour, opposite, coverageForTimeframe(coverage, '4H')),
     timeframeConfirmation('5M', mtf?.fiveMinute, opposite),
   ];
   const stackStatus = htfStackStatus(confirmations);
   const triggerStatus = fiveMinuteStatus(chartContext, opposite);
-  const htfEligible = stackStatus === 'full_confirmation' || stackStatus === 'supported_confirmation';
+  const htfEligible = stackStatus === 'full_confirmation';
   const triggerConfirmed = triggerStatus === 'confirmed';
   const staleOrNoFreshEntry = triggerStatus === 'stale' || triggerStatus === 'no_fresh_entry';
+  const htfBlockers = htfConfirmationBlockers(confirmations);
   const blockers = [
-    ...(!htfEligible ? [`Opposite HTF stack is ${stackStatus}; requires full or supported confirmation.`] : []),
+    ...(!htfEligible ? [`Opposite HTF stack is ${stackStatus}; requires 15M, 1H, 2H, and 4H structure confirmation before the 5M execution trigger can create a candidate.`] : []),
+    ...htfBlockers,
     ...(!triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest is not confirmed.'] : []),
     ...(staleOrNoFreshEntry ? ['No fresh entry: reversal trigger is stale or price already left the decision level.'] : []),
   ];
@@ -227,7 +283,8 @@ export function buildFailedPlanReversalContextFromChartContext(
     staleOrNoFreshEntry,
     reasons: [
       `Failed ${original} plan/decision level is being evaluated as an opposite-side ${opposite} decision level.`,
-      `15M/1H opposite confirmation status: ${stackStatus}.`,
+      `Required HTF sequence: 15M structure, 1H structure, 2H structure, and 4H structure must confirm before 5M execution trigger.`,
+      `15M/1H/2H/4H opposite confirmation status: ${stackStatus}.`,
       `5M trigger status: ${triggerStatus}.`,
     ],
     blockers,

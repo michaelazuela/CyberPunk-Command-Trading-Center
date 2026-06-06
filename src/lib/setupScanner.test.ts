@@ -1065,13 +1065,13 @@ function failedPlanReversalContext(
       failedPlanEvidence: [
         `App-owned ${originalPlanDirection} plan failed decision level ${failedDecisionLevel}.`,
       ],
-      htfStackStatus: 'supported_confirmation',
+      htfStackStatus: 'full_confirmation',
       timeframeConfirmations: [
         { timeframe: '5M', direction, status: 'confirmed', evidence: ['Fresh 5M opposite-side MSS confirmed by completed close.'] },
         { timeframe: '15M', direction, status: 'confirmed', evidence: ['15M opposite displacement/MSS confirmed.'] },
         { timeframe: '1H', direction, status: 'confirmed', evidence: ['1H opposite structure confirms.'] },
-        { timeframe: '2H', direction: 'NEUTRAL', status: 'neutral', evidence: ['2H does not materially conflict.'] },
-        { timeframe: '4H', direction: 'NEUTRAL', status: 'neutral', evidence: ['4H does not materially conflict.'] },
+        { timeframe: '2H', direction, status: 'confirmed', evidence: ['2H opposite structure confirms.'] },
+        { timeframe: '4H', direction, status: 'confirmed', evidence: ['4H opposite structure confirms.'] },
       ],
       fiveMinuteTriggerStatus: 'confirmed',
       decisionState: direction === 'SHORT'
@@ -1080,7 +1080,7 @@ function failedPlanReversalContext(
       freshTriggerRequired: true,
       staleOrNoFreshEntry: false,
       reasons: [
-        '15M and 1H confirm the opposite side after the original app-owned plan failed.',
+        '15M, 1H, 2H, and 4H confirm the opposite side after the original app-owned plan failed.',
       ],
       blockers: [],
       createsCandidate: true,
@@ -2454,7 +2454,7 @@ const tests: Array<[string, () => void]> = [
       failedPlanReversal: {
         ...base.failedPlanReversal!,
         htfStackStatus: 'conflict',
-        blockers: ['2H/4H materially conflict with the opposite-side move.'],
+        blockers: ['One or more required HTF frames materially conflict with the opposite-side move.'],
       },
     });
 
@@ -2463,8 +2463,34 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(candidate);
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.ok(candidate.missingEvidence.includes('Opposite HTF stack is conflict; requires full or supported confirmation'));
+    assert.ok(candidate.missingEvidence.includes('Opposite HTF stack is conflict; requires 15M, 1H, 2H, and 4H structure confirmation before the 5M execution trigger can create a candidate'));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
+  }],
+
+  ['Failed Plan Reversal requires 2H and 4H confirmation before 5M execution trigger can create candidate', () => {
+    const base = failedPlanReversalContext('SHORT');
+    const context = failedPlanReversalContext('SHORT', {
+      failedPlanReversal: {
+        ...base.failedPlanReversal!,
+        htfStackStatus: 'mixed',
+        timeframeConfirmations: base.failedPlanReversal!.timeframeConfirmations.map((item) =>
+          item.timeframe === '2H' || item.timeframe === '4H'
+            ? { ...item, direction: 'NEUTRAL', status: 'neutral', evidence: [`${item.timeframe} does not confirm opposite structure.`] }
+            : item
+        ),
+        blockers: ['15M, 1H, 2H, and 4H structure confirmation is required before the 5M execution trigger can create a candidate.'],
+        createsCandidate: false,
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.FailedPlanReversal);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.failedPlanReversal?.createsCandidate, false);
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.FailedPlanReversal);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('15M, 1H, 2H, and 4H structure confirmation')));
   }],
 
   ['Phase 3B HTF setup label and journal record use the approved model name', () => {

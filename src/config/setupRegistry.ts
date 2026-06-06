@@ -200,12 +200,14 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     possibleKeywords: ['failed reclaim level', 'failed long', 'failed short', 'opposite mss', 'role flip'],
     requiredEvidence: [
       'App-owned plan failed its decision/reclaim level',
-      '15M and 1H confirm opposite MSS/displacement',
-      '2H/4H do not materially conflict',
+      '15M confirms opposite MSS/displacement',
+      '1H confirms opposite MSS/displacement',
+      '2H confirms opposite structure',
+      '4H confirms opposite structure',
       'Fresh completed 5M opposite-side MSS, retest, or defined reclaim trigger',
       'Defined 5M entry, protected structure stop, app targets, invalidation, and session gates',
     ],
-    defaultRequiredTrigger: 'Failed plan level becomes the opposite-side decision level only after 15M/1H opposite confirmation and a fresh completed 5M trigger/retest.',
+    defaultRequiredTrigger: 'Failed plan level becomes the opposite-side decision level only after 15M, 1H, 2H, and 4H opposite structure confirmation, then a fresh completed 5M trigger/retest.',
     defaultNextAction: 'Treat as a new app-owned plan candidate only after fresh 5M trigger, protected stop, app targets, invalidation, and normal deterministic gates are present.',
   },
   {

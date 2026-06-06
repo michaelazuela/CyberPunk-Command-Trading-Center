@@ -725,6 +725,28 @@ function twoHourCurrentRunWarning(coverage: ScannerHistoryCoverageRecord[] | und
   return `Operational data-quality defect: 120M / 2H scanner context is not sufficient for full HTF confirmation (${detail}). Candidate promotion requiring full 2H confirmation must treat this as data-limited context, not structural proof.`;
 }
 
+function attachScannerHistoryCoverage(
+  chartContext: Partial<ChartContext> | undefined,
+  coverage: ScannerHistoryCoverageRecord[],
+): Partial<ChartContext> | undefined {
+  if (!chartContext || !coverage.length) return chartContext;
+  return {
+    ...chartContext,
+    scannerHistoryCoverage: coverage.map((record) => ({
+      timeframe: record.timeframe,
+      requiredLookbackDays: record.requiredLookbackDays,
+      requestedFrom: record.requestedFrom,
+      requestedTo: record.requestedTo,
+      barsLoaded: record.barsLoaded,
+      rangeStart: record.rangeStart,
+      rangeEnd: record.rangeEnd,
+      source: record.source,
+      sufficient: record.sufficient,
+      warning: record.warning,
+    })),
+  };
+}
+
 async function verifyScannerAuditWrite(args: {
   file: string;
   expectedSource: string;
@@ -1390,6 +1412,38 @@ function appOwnedFailedDecisionEventFromDelivery(
       `App-owned ${originalDirection} plan ${record.planVersionId} failed its decision/reclaim level.`,
       `Completed 5M close ${completed5m.close} crossed ${crossedText} ${decisionLevel}.`,
       'Failed-plan reversal review only; generic failed-break events remain ignored unless app-owned provenance is present.',
+    ].join(' '),
+  };
+}
+
+export function appOwnedFailedDecisionEventFromCandidate(
+  candidate: SetupCandidate | null | undefined,
+  completed5m: NinjaBridgeBar,
+): FailedBreakEventFact | null {
+  if (!candidate || candidate.pathway === 'failed_plan_reversal') return null;
+  if (candidate.executionStatus !== 'Executable') return null;
+  const originalDirection = candidate.direction === 'LONG' || candidate.direction === 'SHORT'
+    ? candidate.direction
+    : null;
+  const decisionLevel = candidate.entry;
+  if (!originalDirection || typeof decisionLevel !== 'number' || !Number.isFinite(decisionLevel)) return null;
+  const failedLong = originalDirection === 'LONG' && completed5m.close < decisionLevel;
+  const failedShort = originalDirection === 'SHORT' && completed5m.close > decisionLevel;
+  if (!failedLong && !failedShort) return null;
+  const oppositeDirection = originalDirection === 'LONG' ? 'SHORT' : 'LONG';
+  const crossedText = originalDirection === 'LONG' ? 'below' : 'above';
+  return {
+    direction: oppositeDirection,
+    failedLevel: decisionLevel,
+    levelLabel: `app-owned failed plan decision/reclaim level (current scanner cycle)`,
+    sweptExtreme: oppositeDirection === 'SHORT' ? completed5m.low : completed5m.high,
+    timestamp: completed5m.time,
+    candleIndex: null,
+    confidence: 'High',
+    evidence: [
+      `Current app-owned ${originalDirection} ${candidate.setupType} plan failed its decision/reclaim level before alert selection completed.`,
+      `Completed 5M close ${completed5m.close} crossed ${crossedText} ${decisionLevel}.`,
+      'Same-cycle failed-plan reversal review only; this does not approve execution.',
     ].join(' '),
   };
 }
@@ -2453,6 +2507,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
   const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
+  analysis.structuredChartContext = attachScannerHistoryCoverage(analysis.structuredChartContext, historyCoverage);
   const appOwnedFailedPlanEventsFromState = appOwnedFailedPlanEventsFromScannerState({
     state,
     tradeDate,
@@ -2486,7 +2541,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       `[scanner-failed-plan-reversal] ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
     );
   }
-  const normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
+  let normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
   const scoringTimestampSource =
     analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
@@ -2502,12 +2557,33 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     targetAlreadySweptLookbackCandles: config.targetAlreadySweptLookbackCandles,
     allowRetestOnlyEntries: config.allowRetestOnlyEntries,
   };
-  const initialSelection = selectScannerPlan({
+  let initialSelection = selectScannerPlan({
     normalized,
     currentPrice,
     guards: scannerGuards,
   });
-  const initialCandidate = initialSelection.candidate;
+  let initialCandidate = initialSelection.candidate;
+  const sameCycleFailedPlanEvent = appOwnedFailedDecisionEventFromCandidate(initialCandidate, completed5m);
+  if (sameCycleFailedPlanEvent) {
+    const sameCycleIntegration = attachFailedPlanReversalContextFromScannerState({
+      chartContext: analysis.structuredChartContext,
+      failedPlanEvents: [sameCycleFailedPlanEvent],
+    });
+    analysis.structuredChartContext = sameCycleIntegration.chartContext || undefined;
+    if (sameCycleIntegration.failedPlanReversal) {
+      const context = sameCycleIntegration.failedPlanReversal;
+      console.warn(
+        `[scanner-failed-plan-reversal] Same-cycle failed app-owned plan detected: ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
+      );
+      normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
+      initialSelection = selectScannerPlan({
+        normalized,
+        currentPrice,
+        guards: scannerGuards,
+      });
+      initialCandidate = initialSelection.candidate;
+    }
+  }
   const objectives = (analysis.structuredChartContext?.targetObjectives || initialCandidate?.targetObjectivePlan?.objectives || []) as TargetObjective[];
   const targetCascade = buildTargetCascade({
     candidate: initialCandidate,

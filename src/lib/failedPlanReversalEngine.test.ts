@@ -92,7 +92,7 @@ function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<Cha
     multiTimeframeContext: {
       source: 'ninjatrader_bridge',
       authority: 'ohlc_facts_only',
-      fourHour: timeframe('4h', 'NEUTRAL'),
+      fourHour: timeframe('4h', direction, { displacement: true }),
       twoHour: timeframe('2h', direction, { displacement: true }),
       oneHour: timeframe('1h', direction, { displacement: true }),
       fifteenMinute: timeframe('15m', direction, { displacement: true }),
@@ -169,7 +169,7 @@ function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<Cha
 }
 
 const tests: Array<[string, () => void]> = [
-  ['builds supported failed-long to bearish reversal context from structured OHLC', () => {
+  ['builds fully confirmed failed-long to bearish reversal context from structured OHLC', () => {
     const context = buildFailedPlanReversalContextFromChartContext(baseChartContext('SHORT'));
     assert.ok(context);
     assert.equal(context.originalPlanDirection, 'LONG');
@@ -191,6 +191,69 @@ const tests: Array<[string, () => void]> = [
     assert.equal(context.createsCandidate, true);
   }],
 
+  ['scanner history coverage insufficiency downgrades aligned HTF facts to data-limited', () => {
+    const chart = baseChartContext('SHORT', {
+      scannerHistoryCoverage: [
+        {
+          timeframe: '15m',
+          requiredLookbackDays: 30,
+          requestedFrom: '2026-05-06T00:00:00-04:00',
+          requestedTo: '2026-06-05T12:00:00-04:00',
+          barsLoaded: 500,
+          rangeStart: '2026-05-06T00:00:00-04:00',
+          rangeEnd: '2026-06-05T12:00:00-04:00',
+          source: 'market_bars',
+          sufficient: true,
+          warning: null,
+        },
+        {
+          timeframe: '60m',
+          requiredLookbackDays: 30,
+          requestedFrom: '2026-05-06T00:00:00-04:00',
+          requestedTo: '2026-06-05T12:00:00-04:00',
+          barsLoaded: 240,
+          rangeStart: '2026-05-06T00:00:00-04:00',
+          rangeEnd: '2026-06-05T12:00:00-04:00',
+          source: 'market_bars',
+          sufficient: true,
+          warning: null,
+        },
+        {
+          timeframe: '120m',
+          requiredLookbackDays: 30,
+          requestedFrom: '2026-05-06T00:00:00-04:00',
+          requestedTo: '2026-06-05T12:00:00-04:00',
+          barsLoaded: 12,
+          rangeStart: '2026-06-04T00:00:00-04:00',
+          rangeEnd: '2026-06-05T12:00:00-04:00',
+          source: 'bridge_repair',
+          sufficient: false,
+          warning: 'HTF history preload insufficient for 120m.',
+        },
+        {
+          timeframe: '240m',
+          requiredLookbackDays: 30,
+          requestedFrom: '2026-05-06T00:00:00-04:00',
+          requestedTo: '2026-06-05T12:00:00-04:00',
+          barsLoaded: 6,
+          rangeStart: '2026-06-04T00:00:00-04:00',
+          rangeEnd: '2026-06-05T12:00:00-04:00',
+          source: 'bridge_repair',
+          sufficient: false,
+          warning: 'HTF history preload insufficient for 240m.',
+        },
+      ],
+    });
+    const context = buildFailedPlanReversalContextFromChartContext(chart);
+    assert.ok(context);
+    assert.equal(context.htfStackStatus, 'data_limited');
+    assert.equal(context.createsCandidate, false);
+    assert.equal(context.timeframeConfirmations.find((item) => item.timeframe === '2H')?.status, 'data_limited');
+    assert.equal(context.timeframeConfirmations.find((item) => item.timeframe === '4H')?.status, 'data_limited');
+    assert.match(context.blockers.join(' '), /2H structured OHLC is data-limited or unavailable/);
+    assert.match(context.blockers.join(' '), /4H structured OHLC is data-limited or unavailable/);
+  }],
+
   ['does not create candidate when 1H materially conflicts', () => {
     const chart = baseChartContext('SHORT');
     chart.multiTimeframeContext!.oneHour = timeframe('1h', 'LONG', { displacement: true });
@@ -198,7 +261,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(context);
     assert.equal(context.htfStackStatus, 'conflict');
     assert.equal(context.createsCandidate, false);
-    assert.match(context.blockers.join(' '), /Opposite HTF stack/);
+    assert.match(context.blockers.join(' '), /requires 15M, 1H, 2H, and 4H structure confirmation/);
   }],
 
   ['does not create candidate when 2H materially conflicts', () => {
@@ -208,6 +271,16 @@ const tests: Array<[string, () => void]> = [
     assert.ok(context);
     assert.equal(context.htfStackStatus, 'conflict');
     assert.equal(context.createsCandidate, false);
+  }],
+
+  ['does not create candidate when 4H is neutral even if 15M 1H and 2H confirm', () => {
+    const chart = baseChartContext('SHORT');
+    chart.multiTimeframeContext!.fourHour = timeframe('4h', 'NEUTRAL');
+    const context = buildFailedPlanReversalContextFromChartContext(chart);
+    assert.ok(context);
+    assert.equal(context.htfStackStatus, 'mixed');
+    assert.equal(context.createsCandidate, false);
+    assert.match(context.blockers.join(' '), /requires 15M, 1H, 2H, and 4H structure confirmation/);
   }],
 
   ['requires fresh completed 5M trigger before candidate creation', () => {
@@ -224,6 +297,57 @@ const tests: Array<[string, () => void]> = [
     assert.ok(context);
     assert.notEqual(context.fiveMinuteTriggerStatus, 'confirmed');
     assert.equal(context.createsCandidate, false);
+  }],
+
+  ['treats app-owned failed original 5M MSS as opposite-side trigger confirmation', () => {
+    const chart = baseChartContext('SHORT', {
+      structureQualityContext: {
+        ...baseChartContext('SHORT').structureQualityContext!,
+        executionTimeframeConfirmed: false,
+        structureBreakConfirmedByClose: false,
+      },
+      displacementCandles: [],
+      htfLiquidityDrawState: {
+        source: 'ninjatrader_ohlc',
+        authority: 'ohlc_facts_only',
+        boundary: 'context_only_not_execution_authority',
+        drawDirection: 'buy_side',
+        planDirection: 'LONG',
+        macroContext: 'conflicting',
+        raidState: 'sell_side_raid',
+        liquidityRaidState: 'sell_side_raid',
+        reclaimStatus: 'not_confirmed',
+        classification: 'FAILED_MSS',
+        timeframeStates: [],
+        timeframeStack: [],
+        fiveMinuteState: {
+          timeframe: '5M',
+          direction: 'bullish',
+          status: 'failed',
+          lifecycleState: 'failed_mss',
+          evidence: ['Bullish 5M MSS failed after app-owned long decision level failed.'],
+          confidence: 20,
+        },
+        fiveMinuteMssTriggerConfirmed: false,
+        htfDrawContinuationPending: false,
+        confidence: 20,
+        notes: [],
+        blockers: [],
+        createsTradingPlanCandidate: false,
+        approvesExecution: false,
+      },
+    });
+    chart.multiTimeframeContext!.fiveMinute = timeframe('5m', 'SHORT', { displacement: false });
+
+    const context = buildFailedPlanReversalContextFromChartContext(chart);
+
+    assert.ok(context);
+    assert.equal(context.originalPlanDirection, 'LONG');
+    assert.equal(context.oppositeDirection, 'SHORT');
+    assert.equal(context.fiveMinuteTriggerStatus, 'confirmed');
+    assert.equal(context.decisionState, 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED');
+    assert.equal(context.createsCandidate, true);
+    assert.equal(context.approvesExecution, false);
   }],
 
   ['marks stale/no fresh entry instead of candidate-ready', () => {
