@@ -200,6 +200,54 @@ function hasStructuredChartFacts(chartContext?: ChartContext | null): boolean {
   );
 }
 
+function htfContextGate(chartContext?: ChartContext | null): {
+  sufficient: boolean;
+  evidence: string[];
+  missingEvidence: string[];
+} {
+  const state = chartContext?.htfLiquidityDrawState;
+  if (!state) {
+    return {
+      sufficient: false,
+      evidence: [],
+      missingEvidence: [
+        'Full 30-day HTF context gate is missing: structured 4H/2H/1H/15M/5M OHLC state is required before HTF-dependent models can promote a candidate.',
+      ],
+    };
+  }
+
+  const sufficiency = state.htfContextSufficiency;
+  const sufficient =
+    !state.htfContextDataLimited &&
+    sufficiency?.overallStatus === 'sufficient' &&
+    state.classificationReliability !== 'data_limited';
+
+  if (sufficient) {
+    return {
+      sufficient: true,
+      evidence: ['Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.'],
+      missingEvidence: [],
+    };
+  }
+
+  return {
+    sufficient: false,
+    evidence: [],
+    missingEvidence: Array.from(new Set([
+      'Full 30-day HTF context gate is not satisfied; HTF-dependent models may remain watch/conditional only and cannot promote a structurally complete candidate.',
+      ...(sufficiency?.blockers || state.blockers || []),
+    ])),
+  };
+}
+
+function htfAlignmentSupportsDirection(chartContext: ChartContext, direction: Direction): boolean {
+  if (direction !== 'LONG' && direction !== 'SHORT') return false;
+  return (
+    chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
+    chartContext.higherTimeframeThesis?.direction === direction
+  );
+}
+
 function extractPlanFacts(result: AnalysisResult | null | undefined): ExtractedPlanFacts[] {
   if (!result) return [];
   const facts: ExtractedPlanFacts[] = [];
@@ -1966,6 +2014,13 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
       : executionAfterStructureQuality.blockReason === NoTradeReason.RiskTooWide && detectedStatus === SetupCandidateStatus.Detected
       ? SetupCandidateStatus.Detected
       : detectedStatus;
+  const primaryHtfGate = primaryValidation ? htfContextGate(input.chartContext) : null;
+  const primaryHtfEvidence = primaryHtfGate?.sufficient
+    ? primaryHtfGate.evidence
+    : [];
+  const primaryHtfMissingEvidence = primaryHtfGate && !primaryHtfGate.sufficient
+    ? primaryHtfGate.missingEvidence
+    : [];
 
   return {
     setupType: entry.setupType,
@@ -1992,6 +2047,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     evidence: Array.from(new Set([
       ...(primaryValidation?.evidence?.length ? primaryValidation.evidence : structuredEvidence?.evidence?.length ? structuredEvidence.evidence : detected || possible ? entry.requiredEvidence : []),
       ...(bigPicture.evidence ? [bigPicture.evidence] : []),
+      ...primaryHtfEvidence,
       ...(detected || possible ? qualityContext.evidence : []),
       ...(detected || possible ? supportingEvidenceNotes(input.chartContext) : []),
       ...(riskNote && (detected || possible) ? [riskNote] : []),
@@ -2002,12 +2058,14 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
       ? Array.from(new Set([
           ...(primaryValidation?.missingEvidence || structuredEvidence?.missingEvidence || []),
           ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+          ...primaryHtfMissingEvidence,
           ...qualityContext.missingEvidence,
           'Exact entry/stop levels require manual confirmation.',
         ]))
       : Array.from(new Set([
           ...(primaryValidation?.missingEvidence?.length ? primaryValidation.missingEvidence : structuredEvidence?.missingEvidence?.length ? structuredEvidence.missingEvidence : detected ? [] : entry.requiredEvidence),
           ...(bigPicture.missingEvidence ? [bigPicture.missingEvidence] : []),
+          ...primaryHtfMissingEvidence,
           ...qualityContext.missingEvidence,
         ])),
     executionStatus: executionAfterStructureQuality.executionStatus,
@@ -2544,7 +2602,8 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
   const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.FailedPlanReversal);
   if (!registry) return null;
   const direction = context.oppositeDirection;
-  const htfEligible = failedPlanReversalHtfEligible(context);
+  const htfGate = htfContextGate(chartContext);
+  const htfEligible = htfGate.sufficient && failedPlanReversalHtfEligible(context);
   const triggerConfirmed = failedPlanReversalFreshTriggerConfirmed(context);
   const entry = parsePrice(chartContext.proposedEntry);
   const stop = parsePrice(chartContext.proposedStop);
@@ -2573,6 +2632,7 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
   const riskNote = riskAdvisoryNote(risk);
   const missingEvidence = Array.from(new Set([
     ...(!context.createsCandidate ? ['Failed-plan reversal state is watch-only'] : []),
+    ...htfGate.missingEvidence,
     ...(!htfEligible ? [`Opposite HTF stack is ${context.htfStackStatus}; requires 15M, 1H, 2H, and 4H structure confirmation before the 5M execution trigger can create a candidate`] : []),
     ...(!triggerConfirmed ? ['Fresh completed 5M opposite-side trigger/retest is not confirmed'] : []),
     ...(context.staleOrNoFreshEntry ? ['NO FRESH ENTRY: reversal trigger is stale or price already left the decision level'] : []),
@@ -2632,6 +2692,7 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
       `Failed original plan: ${context.originalPlanDirection}`,
       `Failed decision level: ${failedLevel} (${context.failedDecisionLevelRole})`,
       `Opposite HTF MSS evidence: ${context.htfStackStatus}`,
+      ...htfGate.evidence,
       'Required HTF sequence: 15M structure, 1H structure, 2H structure, 4H structure, then 5M execution trigger.',
       ...context.timeframeConfirmations.map((item) => `${item.timeframe}: ${item.direction} ${item.status}`),
       `5M trigger status: ${context.fiveMinuteTriggerStatus}`,
@@ -2677,10 +2738,8 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
   const hasMss = confirmedFiveMinuteMss(chartContext, direction);
   const hasCompletedMssClose = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
   const hasFvg = fvgOrImbalanceSupportsDirection(chartContext, direction);
-  const htfAligned = chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
-    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'NEUTRAL' ||
-    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
-    chartContext.higherTimeframeThesis?.direction === direction;
+  const htfGate = htfContextGate(chartContext);
+  const htfAligned = htfGate.sufficient && htfAlignmentSupportsDirection(chartContext, direction);
 
   if (!inWindow || !fifteenDisplacement || !hasMss || !hasCompletedMssClose) return null;
 
@@ -2724,7 +2783,8 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
   const missingEvidence = [
     ...(!fiveDisplacement ? ['5M displacement in the 15M displacement direction'] : []),
     ...(!hasFvg ? ['5M FVG / imbalance support'] : []),
-    ...(!htfAligned ? ['4H/1H context support or non-conflict'] : []),
+    ...htfGate.missingEvidence,
+    ...(!htfAligned ? ['Full HTF context must explicitly align with direction; NEUTRAL/UNKNOWN no longer counts as higher-timeframe support.'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
     ...(!freshEntryEvidence.confirmed ? [freshEntryEvidence.reason] : []),
@@ -2733,7 +2793,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ...(stop === null ? ['Protected 5M structure stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
-  const structurallyComplete = score >= HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
+  const structurallyComplete = htfGate.sufficient && htfAligned && score >= HTF_MSS_CANDIDATE_CONFIDENCE_THRESHOLD && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
   const candidateState = htfDisplacementMssCandidateState({ structurallyComplete, enoughRoom, freshEntry });
   const riskLabel = riskNote ? ` ${riskNote}` : '';
   const dirLabel = directionLabel(direction);
@@ -2764,6 +2824,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     levelContextSummary: `HTF displacement continuation: ${dirLabel} 15M displacement, confirmed 5M MSS, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
     evidence: Array.from(new Set([
       `${dirLabel} 15M displacement confirmed`,
+      ...htfGate.evidence,
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       ...(hasFvg ? ['5M FVG / imbalance supports continuation'] : []),
       'MSS_HOLD_CONFIRMED: completed 5M close confirmed; not a live-wick trigger.',
@@ -2811,10 +2872,8 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
   const hasFvg = fvgOrImbalanceSupportsDirection(chartContext, direction);
   const hasMss = confirmedFiveMinuteMss(chartContext, direction);
   const hasCompletedMssClose = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
-  const htfAligned = chartContext.multiTimeframeContext?.alignment.alignedDirection === direction ||
-    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'NEUTRAL' ||
-    chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
-    chartContext.higherTimeframeThesis?.direction === direction;
+  const htfGate = htfContextGate(chartContext);
+  const htfAligned = htfGate.sufficient && htfAlignmentSupportsDirection(chartContext, direction);
 
   if (!inWindow || !fifteenDisplacement || !hasFvg) return null;
 
@@ -2853,7 +2912,8 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
   const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
   const riskNote = riskAdvisoryNote(risk);
   const missingEvidence = [
-    ...(!htfAligned ? ['4H/1H context support or non-conflict'] : []),
+    ...htfGate.missingEvidence,
+    ...(!htfAligned ? ['Full HTF context must explicitly align with direction; NEUTRAL/UNKNOWN no longer counts as higher-timeframe support.'] : []),
     ...(!target ? ['External liquidity target'] : []),
     ...(!enoughRoom ? ['At least 60% of the path to primary liquidity remains'] : []),
     ...(!freshEntry ? [hasCompletedMssClose ? mssHoldNoFreshEntryMissingEvidence() : 'Entry at or beyond the 5M displacement close-through/retest trigger without chasing'] : []),
@@ -2862,7 +2922,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
   const threshold = 70;
-  const structurallyComplete = score >= threshold && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
+  const structurallyComplete = htfGate.sufficient && htfAligned && score >= threshold && hasEntryStopTargets && Boolean(target) && enoughRoom && freshEntry;
   const candidateState: TradingPlanCandidateState = hasCompletedMssClose
     ? mssHoldCandidateState(structurallyComplete)
     : structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
@@ -2896,6 +2956,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     levelContextSummary: `HTF displacement + FVG continuation: ${dirLabel} 15M displacement, 5M FVG/imbalance, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
     evidence: Array.from(new Set([
       `${dirLabel} 15M displacement confirmed`,
+      ...htfGate.evidence,
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       '5M FVG / imbalance supports continuation',
       ...(hasCompletedMssClose
@@ -3040,6 +3101,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
   const chartContext = input.chartContext;
   const state = chartContext?.htfLiquidityDrawState;
   if (!chartContext || !state) return null;
+  const htfGate = htfContextGate(chartContext);
   const fiveMinute = state.fiveMinuteState;
   const direction = htfDirectionToPlanDirection(fiveMinute.direction);
   const fifteenMinute = htfStateForTimeframe(chartContext, '15M');
@@ -3053,6 +3115,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
 
   if (
     !isInsideApprovedSetupScanWindow(chartContext) ||
+    !htfGate.sufficient ||
     direction === 'NO TRADE' ||
     !fiveMinuteConfirmed ||
     !macroSupported ||
@@ -3124,6 +3187,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
     levelContextSummary: `HTF liquidity draw pathway aligned: ${raidLabel}; external target: ${targetLabel}.`,
     evidence: Array.from(new Set([
       describeHtfLiquidityDrawStateForDisplay(state),
+      ...htfGate.evidence,
       describeTimeframeMssStateForDisplay(fifteenMinute || state.fiveMinuteState),
       describeTimeframeMssStateForDisplay(fiveMinute),
       'HTF liquidity draw detected',
@@ -3139,6 +3203,7 @@ function buildHtfLiquidityDrawCandidate(input: SetupScannerInput): SetupCandidat
     ])),
     missingEvidence: Array.from(new Set([
       ...(entry === null ? ['Clean retest or defined reclaim entry'] : []),
+      ...htfGate.missingEvidence,
       ...(stop === null ? ['Structure stop tied to raid/reclaim extreme'] : []),
       ...(target2 === null ? ['External liquidity target price / valid target room'] : []),
       ...(riskTooWide ? ['Risk advisory: above standard limit. Human final decision required.'] : []),

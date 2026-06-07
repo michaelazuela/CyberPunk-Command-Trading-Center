@@ -1838,10 +1838,12 @@ async function analysisFromBars(args: {
   session: LiveSession;
   tradeDate: string;
   bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
+  htfBars5m?: NinjaBridgeBar[];
   asOf?: Date;
 }): Promise<AnalysisResult> {
   const baseChartContext = buildNinjaChartContext({
     bars5m: args.bars['5m'],
+    htfBars5m: args.htfBars5m,
     bars15m: args.bars['15m'],
     bars60m: args.bars['60m'],
     bars120m: args.bars['120m'],
@@ -3015,17 +3017,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     ...(twoHourWarning ? [twoHourWarning] : []),
     ...(htfCoverage.status !== 'sufficient' ? [htfCoverage.summary] : []),
   ];
+  const htfBars5m = lookLeft
+    ? mergeBars(liveBars['5m'], lookLeft.bars['5m'])
+    : liveBars['5m'];
   const bars = lookLeft
     ? {
-        '5m': mergeBars(liveBars['5m'], lookLeft.bars['5m']),
+        '5m': liveBars['5m']?.length ? liveBars['5m'] : lookLeft.bars['5m'],
         '15m': mergeBars(liveBars['15m'], lookLeft.bars['15m']),
         '60m': mergeBars(liveBars['60m'], lookLeft.bars['60m']),
         '120m': mergeBars(liveBars['120m'], lookLeft.bars['120m']),
         '240m': mergeBars(liveBars['240m'], lookLeft.bars['240m']),
-      }
+    }
     : liveBars;
   const macroAsOf = completed5m ? parseBridgeTime(completed5m.time, config.barTimeZone) || new Date() : new Date();
-  const analysis = await analysisFromBars({ config, session, tradeDate, bars, asOf: macroAsOf });
+  const analysis = await analysisFromBars({ config, session, tradeDate, bars, htfBars5m, asOf: macroAsOf });
   analysis.structuredChartContext = attachScannerHistoryCoverage(analysis.structuredChartContext, historyCoverage);
   const appOwnedFailedPlanEventsFromState = appOwnedFailedPlanEventsFromScannerState({
     state,

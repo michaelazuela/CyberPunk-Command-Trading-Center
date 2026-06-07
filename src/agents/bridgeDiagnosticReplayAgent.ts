@@ -61,6 +61,7 @@ export interface BridgeDiagnosticReplayInput {
   instrument: 'MES' | 'MNQ' | string;
   session: 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
   bars5m: NinjaBridgeBar[];
+  bars5mContext?: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
   bars30m?: NinjaBridgeBar[];
   bars60m?: NinjaBridgeBar[];
@@ -592,11 +593,13 @@ function diagnosticTargetCandidate(input: BridgeDiagnosticReplayInput, candidate
 function buildHtfMssDiagnostics(input: BridgeDiagnosticReplayInput, direction: 'LONG' | 'SHORT' | 'NO TRADE', candidate: SetupCandidate | null): BridgeDiagnosticReplayReport['htfMssDiagnostics'] {
   const targetLabel = targetLabelFromCandidate(diagnosticTargetCandidate(input, candidate), direction);
   const sorted5m = sortedBars(input.bars5m);
+  const sorted5mContext = sortedBars(input.bars5mContext?.length ? input.bars5mContext : input.bars5m);
   const state = buildHtfLiquidityDrawState({
     bars4H: sortedBars(input.bars240m),
+    bars2H: sortedBars(input.bars120m),
     bars1H: sortedBars(input.bars60m),
     bars15M: sortedBars(input.bars15m),
-    bars5M: sorted5m,
+    bars5M: sorted5mContext,
     externalBuySideLiquidityTarget: direction === 'LONG' ? targetLabel : undefined,
     externalSellSideLiquidityTarget: direction === 'SHORT' ? targetLabel : undefined,
     chartTimestamp: sorted5m.at(-1)?.time || null,

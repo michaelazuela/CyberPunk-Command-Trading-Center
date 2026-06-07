@@ -97,6 +97,10 @@ function contextFromFor(options: Pick<CliOptions, 'date' | 'from' | 'contextFrom
   return `${shiftEtDate(options.date, contextDays)}T00:00:00${offsetFromTimestamp(options.from)}`;
 }
 
+function fiveMinuteContextFromFor(options: Pick<CliOptions, 'date' | 'from' | 'contextFrom'>): string {
+  return options.contextFrom || `${shiftEtDate(options.date, 30)}T00:00:00${offsetFromTimestamp(options.from)}`;
+}
+
 function parseArgs(argv = process.argv.slice(2)): CliOptions {
   const options: CliOptions = {
     date: '2026-06-01',
@@ -293,12 +297,11 @@ export function loadHistoricalOhlcFromJson(path: string, args: { instrument?: st
 }
 
 async function fetchHistoricalTimeframe(options: CliOptions, timeframe: HtfMssHistoricalTimeframe): Promise<NinjaBridgeBar[]> {
-  const isExecution = timeframe === '5m';
-  const contextFrom = isExecution ? options.from : contextFromFor(options, timeframe);
+  const contextFrom = timeframe === '5m' ? fiveMinuteContextFromFor(options) : contextFromFor(options, timeframe);
   const response = await getNinjaHistoricalBars({
     instrument: options.bridgeInstrument,
     timeframe: timeframe as NinjaBridgeTimeframe,
-    from: isExecution ? options.from : contextFrom,
+    from: contextFrom,
     to: options.to,
     limit: 2000,
     baseUrl: options.bridgeUrl,
@@ -433,6 +436,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
   });
   const context = buildNinjaChartContext({
     bars5m: replayBars5m,
+    htfBars5m: load.bars.bars5m,
     bars15m: load.bars.bars15m,
     bars60m: load.bars.bars60m,
     bars120m: load.bars.bars120m,
@@ -469,6 +473,7 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     instrument: load.instrument,
     session: 'replay_lunch',
     bars5m: replayBars5m,
+    bars5mContext: load.bars.bars5m,
     bars15m: load.bars.bars15m,
     bars60m: load.bars.bars60m,
     bars120m: load.bars.bars120m,

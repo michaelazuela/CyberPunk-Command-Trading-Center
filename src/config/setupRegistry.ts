@@ -149,6 +149,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     detectionKeywords: ['htf draw continuation', 'raid reclaim mss delivery', 'htf liquidity draw reversal delivery'],
     possibleKeywords: ['htf draw', 'sell-side raid', 'buy-side raid', 'reclaim', '5m mss', 'external liquidity'],
     requiredEvidence: [
+      'Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied',
       '4H/1H draw supports or does not materially conflict',
       '15M raid/reclaim confirmed, potential, or pending',
       'Confirmed 5M MSS with displacement',
@@ -169,6 +170,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     detectionKeywords: ['htf displacement mss continuation', '15m displacement 5m mss', 'displacement mss continuation'],
     possibleKeywords: ['15m displacement', '5m mss', 'bearish displacement', 'bullish displacement', 'external liquidity continuation'],
     requiredEvidence: [
+      'Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied',
       'Directional 15M displacement with acceptable body/close quality',
       '5M displacement or imbalance in the same direction',
       'Confirmed 5M MSS by completed candle close',
@@ -190,6 +192,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     detectionKeywords: ['htf displacement fvg continuation', '15m displacement fvg continuation', 'displacement-led continuation'],
     possibleKeywords: ['15m displacement', '5m fvg', '5m imbalance', 'bearish displacement continuation', 'bullish displacement continuation'],
     requiredEvidence: [
+      'Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied',
       'Directional 15M displacement with acceptable body/close quality',
       '5M FVG / imbalance retest or support',
       'Defined 5M entry from retest, close-through, or MSS continuation close if present',
@@ -211,6 +214,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     possibleKeywords: ['failed reclaim level', 'failed long', 'failed short', 'opposite mss', 'role flip'],
     requiredEvidence: [
       'App-owned plan failed its decision/reclaim level',
+      'Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied',
       '15M confirms opposite MSS/displacement',
       '1H confirms opposite MSS/displacement',
       '2H confirms opposite structure',

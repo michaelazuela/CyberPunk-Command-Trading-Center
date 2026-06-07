@@ -731,6 +731,7 @@ function buildMultiTimeframeContext({
 
 export function buildNinjaChartContext({
   bars5m,
+  htfBars5m,
   bars15m = [],
   bars60m = [],
   bars120m = [],
@@ -741,6 +742,7 @@ export function buildNinjaChartContext({
   midnightOpen,
 }: {
   bars5m: NinjaBridgeBar[];
+  htfBars5m?: NinjaBridgeBar[];
   bars15m?: NinjaBridgeBar[];
   bars60m?: NinjaBridgeBar[];
   bars120m?: NinjaBridgeBar[];
@@ -754,6 +756,9 @@ export function buildNinjaChartContext({
     Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
   );
   if (!executionBars.length) return null;
+  const htfFiveMinuteBars = (htfBars5m?.length ? htfBars5m : executionBars).filter(bar =>
+    Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
+  );
 
   const last = executionBars[executionBars.length - 1];
   const first = executionBars[0];
@@ -806,6 +811,7 @@ export function buildNinjaChartContext({
     bars5m: executionBars,
     bars15m,
     bars60m,
+    bars120m,
     bars240m,
     structuralLevels: enrichedStructuralLevels,
     currentPrice: last.close,
@@ -815,7 +821,7 @@ export function buildNinjaChartContext({
     bars2H: bars120m,
     bars1H: bars60m,
     bars15M: bars15m,
-    bars5M: executionBars,
+    bars5M: htfFiveMinuteBars,
     externalBuySideLiquidityTarget:
       structuralTargetLabel(multiTimeframeContext.targetMap.nearestUpsideLiquidity) ||
       structuralTargetLabel(multiTimeframeContext.targetMap.majorUpsideLiquidity),

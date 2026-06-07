@@ -77,6 +77,10 @@ const chartContext = buildNinjaChartContext({
   bars5m: bars.slice(-2),
   bars15m: bars,
   bars60m: [],
+  bars120m: [
+    bar('2026-05-22T10:00:00-04:00', 140, 145, 130, 132),
+    bar('2026-05-22T12:00:00-04:00', 132, 136, 120, 124),
+  ],
   bars240m: [],
   sessionType: 'lunch',
   instrument: 'MES',
@@ -85,5 +89,8 @@ const chartContext = buildNinjaChartContext({
 
 assert.equal(chartContext?.keyLevels.priorDayHigh, 130);
 assert.equal(chartContext?.keyLevels.priorDayLow, 105);
+assert.equal(chartContext?.multiTimeframeContext?.twoHour.barCount, 2);
+assert.equal(chartContext?.multiTimeframeContext?.twoHour.trend, 'bearish');
+assert.ok(chartContext?.marketContext?.includes('2H=SHORT'));
 assert.ok(chartContext?.marketContext?.includes('ETH spans the full futures session, including RTH'));
 assert.ok(chartContext?.targetObjectives?.some(objective => objective.source === 'three_day_rth'));

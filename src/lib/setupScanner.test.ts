@@ -730,6 +730,63 @@ function withBigPictureStructure(context: ChartContext, alignedDirection: 'LONG'
   };
 }
 
+function sufficientHtfCoverageRows() {
+  return [
+    { timeframe: '4H' as const, barsLoaded: 180, rangeStart: '2026-05-01T00:00:00-04:00', rangeEnd: '2026-06-01T10:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '2H' as const, barsLoaded: 360, rangeStart: '2026-05-01T00:00:00-04:00', rangeEnd: '2026-06-01T10:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '1H' as const, barsLoaded: 720, rangeStart: '2026-05-01T00:00:00-04:00', rangeEnd: '2026-06-01T10:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '15M' as const, barsLoaded: 2880, rangeStart: '2026-05-01T00:00:00-04:00', rangeEnd: '2026-06-01T10:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '5M' as const, barsLoaded: 8640, rangeStart: '2026-05-01T00:00:00-04:00', rangeEnd: '2026-06-01T10:00:00-04:00', minimumExpectedDescription: '30 calendar days when available; active setup-scan window remains the execution trigger authority.', minimumSatisfied: true, status: 'sufficient' as const },
+  ];
+}
+
+function sufficientHtfContextFields() {
+  const timeframeCoverage = sufficientHtfCoverageRows();
+  return {
+    htfContextSufficiency: {
+      overallStatus: 'sufficient' as const,
+      timeframeCoverage,
+      dataLimited: false,
+      blockers: [],
+      notes: ['HTF context sufficient: 4H/2H/1H/15M/5M minimum structured lookback met.'],
+    },
+    htfContextDataLimited: false,
+    timeframeCoverage,
+    classificationReliability: 'structural' as const,
+    classificationReason: 'Fixture full 30-day HTF context is sufficient.',
+  };
+}
+
+function dataLimitedHtfContextFields() {
+  const timeframeCoverage = sufficientHtfCoverageRows().map((coverage) =>
+    coverage.timeframe === '5M'
+      ? {
+          ...coverage,
+          barsLoaded: 24,
+          rangeStart: '2026-06-05T10:00:00-04:00',
+          rangeEnd: '2026-06-05T11:55:00-04:00',
+          minimumSatisfied: false,
+          status: 'data_limited' as const,
+          blocker: 'insufficient HTF context: 5M loaded 24 bars from 2026-06-05T10:00:00-04:00 to 2026-06-05T11:55:00-04:00; minimum expected: 30 calendar days when available; active setup-scan window remains the execution trigger authority.',
+        }
+      : coverage
+  );
+  const blockers = timeframeCoverage.flatMap((coverage) => 'blocker' in coverage && coverage.blocker ? [coverage.blocker] : []);
+  return {
+    htfContextSufficiency: {
+      overallStatus: 'data_limited' as const,
+      timeframeCoverage,
+      dataLimited: true,
+      blockers,
+      notes: ['HTF context data-limited. Do not treat missing HTF draw or thin-history conflict as structural proof.'],
+    },
+    htfContextDataLimited: true,
+    timeframeCoverage,
+    classificationReliability: 'data_limited' as const,
+    classificationReason: 'Fixture HTF context is data-limited.',
+  };
+}
+
 function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartContext> = {}): ChartContext {
   const bullish = direction === 'LONG';
   const context = structuredContext();
@@ -802,8 +859,12 @@ function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartCont
       source: 'ninjatrader_ohlc',
       authority: 'ohlc_facts_only',
       boundary: 'context_only_not_execution_authority',
+      drawDirection: bullish ? 'buy_side' : 'sell_side',
       macroContext: bullish ? 'bullish' : 'bearish',
+      raidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
       liquidityRaidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
+      reclaimStatus: 'confirmed',
+      externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
       classification: 'MSS_TRIGGER_CONFIRMED',
       htfDrawContinuationPending: true,
       confidence: 86,
@@ -811,6 +872,11 @@ function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartCont
       blockers: ['Execution still requires deterministic app gates.'],
       createsTradingPlanCandidate: false,
       approvesExecution: false,
+      fiveMinuteMssTriggerConfirmed: true,
+      fiveMinuteMssConfirmationType: 'swing_break_with_displacement',
+      postShiftState: 'post_mss_digestion',
+      fifteenMinuteConfirmationStatus: 'potential_mss',
+      activeScanWindow: 'MORNING_SETUP_SCAN',
       fiveMinuteState: {
         timeframe: '5M',
         direction: bullish ? 'bullish' : 'bearish',
@@ -833,6 +899,15 @@ function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartCont
           status: 'confirmed',
           lifecycleState: 'confirmed_mss',
           evidence: ['4H draw supports the direction.'],
+          externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '2H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['2H structure supports the direction.'],
           externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
           confidence: 82,
         },
@@ -870,6 +945,8 @@ function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartCont
           confidence: 90,
         },
       ],
+      timeframeStack: [],
+      ...sufficientHtfContextFields(),
     },
     ...overrides,
   };
@@ -1022,6 +1099,7 @@ function htfDisplacementContinuationContext(
       source: 'ninjatrader_bridge',
       authority: 'ohlc_facts_only',
       fourHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      twoHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
       oneHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
       fifteenMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [displacement], confidence: 'High', notes: [] },
       fiveMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [fiveMinuteDisplacement], confidence: 'High', notes: [] },
@@ -1042,6 +1120,50 @@ function htfDisplacementContinuationContext(
       },
       notes: [],
     } as ChartContext['multiTimeframeContext'],
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'context_only_not_execution_authority',
+      drawDirection: bullish ? 'buy_side' : 'sell_side',
+      planDirection: direction,
+      macroContext: bullish ? 'bullish' : 'bearish',
+      raidState: 'none',
+      liquidityRaidState: 'none',
+      reclaimStatus: 'confirmed',
+      externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+      classification: 'MSS_TRIGGER_CONFIRMED',
+      htfDrawContinuationPending: true,
+      confidence: 86,
+      notes: ['HTF displacement continuation fixture.'],
+      blockers: [],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+      fiveMinuteMssTriggerConfirmed: true,
+      fiveMinuteMssConfirmationType: 'swing_break_with_displacement',
+      postShiftState: 'post_mss_digestion',
+      fifteenMinuteConfirmationStatus: 'confirmed',
+      activeScanWindow: 'MORNING_SETUP_SCAN',
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: bullish ? 'bullish' : 'bearish',
+        status: 'confirmed',
+        lifecycleState: 'confirmed_mss',
+        evidence: ['5M MSS confirmed by completed candle close with displacement.'],
+        confirmationLevel: entry,
+        invalidationLevel: stop,
+        externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+        confidence: 88,
+      },
+      timeframeStates: [
+        { timeframe: '4H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['4H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '2H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['2H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '1H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['1H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '15M', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['15M displacement supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 84 },
+        { timeframe: '5M', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['5M MSS confirmed by completed candle close with displacement.'], confirmationLevel: entry, invalidationLevel: stop, externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 88 },
+      ],
+      timeframeStack: [],
+      ...sufficientHtfContextFields(),
+    },
     higherTimeframeThesis: {
       direction,
       confidence: 'High',
@@ -2159,6 +2281,43 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.riskPolicy, 'STRUCTURAL_RISK_ACKNOWLEDGED');
     assert.ok(candidate.evidence.some((item) => item.includes('Risk exceeds standard limit. Human final decision required.')));
     assert.equal(candidate.blockReason, null);
+  }],
+
+  ['HTF displacement MSS continuation cannot promote when the shared 30-day HTF context gate is data-limited', () => {
+    const context = htfDisplacementContinuationContext('SHORT');
+    context.htfLiquidityDrawState = {
+      ...context.htfLiquidityDrawState!,
+      ...dataLimitedHtfContextFields(),
+    };
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('Full 30-day HTF context gate is not satisfied')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
+  ['HTF displacement FVG continuation does not treat NEUTRAL or UNKNOWN as higher-timeframe alignment', () => {
+    const context = htfDisplacementContinuationContext('SHORT');
+    context.higherTimeframeThesis = undefined;
+    context.multiTimeframeContext = {
+      ...context.multiTimeframeContext!,
+      alignment: {
+        ...context.multiTimeframeContext!.alignment,
+        alignedDirection: 'UNKNOWN',
+        conflicts: [],
+        notes: ['Unknown alignment fixture.'],
+      },
+    };
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('NEUTRAL/UNKNOWN no longer counts')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementFvgContinuation);
   }],
 
   ['HTF displacement MSS continuation follows fresh bearish displacement over stale long structure context', () => {

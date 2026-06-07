@@ -329,6 +329,33 @@ function withStructuredBias(context: Partial<ChartContext>, alignedDirection: 'L
   };
 }
 
+function sufficientHtfCoverageRows() {
+  return [
+    { timeframe: '4H' as const, barsLoaded: 180, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '2H' as const, barsLoaded: 360, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '1H' as const, barsLoaded: 720, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '15M' as const, barsLoaded: 2880, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '5M' as const, barsLoaded: 8640, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available; active setup-scan window remains the execution trigger authority.', minimumSatisfied: true, status: 'sufficient' as const },
+  ];
+}
+
+function sufficientHtfContextFields() {
+  const timeframeCoverage = sufficientHtfCoverageRows();
+  return {
+    htfContextSufficiency: {
+      overallStatus: 'sufficient' as const,
+      timeframeCoverage,
+      dataLimited: false,
+      blockers: [],
+      notes: ['HTF context sufficient: 4H/2H/1H/15M/5M minimum structured lookback met.'],
+    },
+    htfContextDataLimited: false,
+    timeframeCoverage,
+    classificationReliability: 'structural' as const,
+    classificationReason: 'Fixture full 30-day HTF context is sufficient.',
+  };
+}
+
 function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
   const bullish = direction === 'LONG';
   return structuredContext({
@@ -395,6 +422,7 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
     multiTimeframeContext: {
       source: 'ninjatrader_bridge',
       fourHour: { trend: bullish ? 'bullish' : 'bearish' },
+      twoHour: { trend: bullish ? 'bullish' : 'bearish' },
       oneHour: { trend: bullish ? 'bullish' : 'bearish' },
       fifteenMinute: { trend: bullish ? 'bullish' : 'bearish' },
       fiveMinute: { trend: bullish ? 'bullish' : 'bearish' },
@@ -413,8 +441,13 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
       source: 'ninjatrader_ohlc',
       authority: 'ohlc_facts_only',
       boundary: 'context_only_not_execution_authority',
+      drawDirection: bullish ? 'buy_side' : 'sell_side',
+      planDirection: direction,
       macroContext: bullish ? 'bullish' : 'bearish',
+      raidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
       liquidityRaidState: bullish ? 'sell_side_raid' : 'buy_side_raid',
+      reclaimStatus: 'confirmed',
+      externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
       classification: 'MSS_TRIGGER_CONFIRMED',
       htfDrawContinuationPending: true,
       confidence: 86,
@@ -422,6 +455,11 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
       blockers: ['Execution still requires deterministic app gates.'],
       createsTradingPlanCandidate: false,
       approvesExecution: false,
+      fiveMinuteMssTriggerConfirmed: true,
+      fiveMinuteMssConfirmationType: 'swing_break_with_displacement',
+      postShiftState: 'post_mss_digestion',
+      fifteenMinuteConfirmationStatus: 'potential_mss',
+      activeScanWindow: 'MORNING_SETUP_SCAN',
       fiveMinuteState: {
         timeframe: '5M',
         direction: bullish ? 'bullish' : 'bearish',
@@ -444,6 +482,15 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
           status: 'confirmed',
           lifecycleState: 'confirmed_mss',
           evidence: ['4H draw supports the direction.'],
+          externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
+          confidence: 82,
+        },
+        {
+          timeframe: '2H',
+          direction: bullish ? 'bullish' : 'bearish',
+          status: 'confirmed',
+          lifecycleState: 'confirmed_mss',
+          evidence: ['2H structure supports the direction.'],
           externalLiquidityTarget: bullish ? 'full ETH high' : 'full ETH low',
           confidence: 82,
         },
@@ -481,6 +528,8 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
           confidence: 90,
         },
       ],
+      timeframeStack: [],
+      ...sufficientHtfContextFields(),
     },
     ...overrides,
   });
@@ -585,6 +634,7 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
       source: 'ninjatrader_bridge',
       authority: 'ohlc_facts_only',
       fourHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
+      twoHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
       oneHour: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [], confidence: 'High', notes: [] },
       fifteenMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [displacement], confidence: 'High', notes: [] },
       fiveMinute: { trend: bullish ? 'bullish' : 'bearish', displacementCandles: [fiveMinute], confidence: 'High', notes: [] },
@@ -605,6 +655,50 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
       },
       notes: [],
     } as unknown as ChartContext['multiTimeframeContext'],
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'context_only_not_execution_authority',
+      drawDirection: bullish ? 'buy_side' : 'sell_side',
+      planDirection: direction,
+      macroContext: bullish ? 'bullish' : 'bearish',
+      raidState: 'none',
+      liquidityRaidState: 'none',
+      reclaimStatus: 'confirmed',
+      externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+      classification: 'MSS_TRIGGER_CONFIRMED',
+      htfDrawContinuationPending: true,
+      confidence: 86,
+      notes: ['HTF displacement FVG continuation pipeline fixture.'],
+      blockers: [],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+      fiveMinuteMssTriggerConfirmed: true,
+      fiveMinuteMssConfirmationType: 'swing_break_with_displacement',
+      postShiftState: 'post_mss_digestion',
+      fifteenMinuteConfirmationStatus: 'confirmed',
+      activeScanWindow: 'MORNING_SETUP_SCAN',
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: bullish ? 'bullish' : 'bearish',
+        status: 'confirmed',
+        lifecycleState: 'confirmed_mss',
+        evidence: ['5M continuation confirmed by completed candle close with displacement.'],
+        confirmationLevel: entry,
+        invalidationLevel: stop,
+        externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
+        confidence: 88,
+      },
+      timeframeStates: [
+        { timeframe: '4H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['4H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '2H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['2H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '1H', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['1H structure supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 82 },
+        { timeframe: '15M', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['15M displacement supports continuation.'], externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 84 },
+        { timeframe: '5M', direction: bullish ? 'bullish' : 'bearish', status: 'confirmed', lifecycleState: 'confirmed_mss', evidence: ['5M continuation confirmed by completed candle close with displacement.'], confirmationLevel: entry, invalidationLevel: stop, externalLiquidityTarget: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity', confidence: 88 },
+      ],
+      timeframeStack: [],
+      ...sufficientHtfContextFields(),
+    },
     higherTimeframeThesis: {
       direction,
       confidence: 'High',

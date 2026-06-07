@@ -64,8 +64,32 @@ function timeframe(
   };
 }
 
+function sufficientHtfContextFields() {
+  const timeframeCoverage = [
+    { timeframe: '4H' as const, barsLoaded: 180, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '2H' as const, barsLoaded: 360, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '1H' as const, barsLoaded: 720, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '15M' as const, barsLoaded: 2880, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available.', minimumSatisfied: true, status: 'sufficient' as const },
+    { timeframe: '5M' as const, barsLoaded: 8640, rangeStart: '2026-05-06T00:00:00-04:00', rangeEnd: '2026-06-05T12:00:00-04:00', minimumExpectedDescription: '30 calendar days when available; active setup-scan window remains the execution trigger authority.', minimumSatisfied: true, status: 'sufficient' as const },
+  ];
+  return {
+    htfContextSufficiency: {
+      overallStatus: 'sufficient' as const,
+      timeframeCoverage,
+      dataLimited: false,
+      blockers: [],
+      notes: ['HTF context sufficient: 4H/2H/1H/15M/5M minimum structured lookback met.'],
+    },
+    htfContextDataLimited: false,
+    timeframeCoverage,
+    classificationReliability: 'structural' as const,
+    classificationReason: 'Fixture full 30-day HTF context is sufficient.',
+  };
+}
+
 function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<ChartContext> = {}): ChartContext {
   const original = direction === 'SHORT' ? 'LONG' : 'SHORT';
+  const bullish = direction === 'LONG';
   return {
     sessionType: 'morning',
     instrument: 'MES',
@@ -117,6 +141,41 @@ function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<Cha
         aiMayOverwriteOhlcFacts: false,
       },
       notes: [],
+    },
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'context_only_not_execution_authority',
+      drawDirection: bullish ? 'buy_side' : 'sell_side',
+      planDirection: direction,
+      macroContext: bullish ? 'bullish' : 'bearish',
+      raidState: 'none',
+      liquidityRaidState: 'none',
+      reclaimStatus: 'confirmed',
+      externalLiquidityTarget: direction === 'SHORT' ? 'External sell-side liquidity' : 'External buy-side liquidity',
+      classification: 'MSS_TRIGGER_CONFIRMED',
+      timeframeStates: [],
+      timeframeStack: [],
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: bullish ? 'bullish' : 'bearish',
+        status: 'confirmed',
+        lifecycleState: 'confirmed_mss',
+        evidence: ['5M opposite-side trigger confirmed.'],
+        confidence: 88,
+      },
+      fiveMinuteMssTriggerConfirmed: true,
+      fiveMinuteMssConfirmationType: 'swing_break_with_displacement',
+      postShiftState: 'post_mss_digestion',
+      fifteenMinuteConfirmationStatus: 'confirmed',
+      activeScanWindow: 'MORNING_SETUP_SCAN',
+      htfDrawContinuationPending: true,
+      confidence: 86,
+      notes: [],
+      blockers: [],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+      ...sufficientHtfContextFields(),
     },
     displacementCandles: [{
       direction,

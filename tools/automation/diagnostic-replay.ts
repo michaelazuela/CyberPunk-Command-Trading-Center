@@ -160,6 +160,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
   const to = buildIso(options.date, options.to);
   const contextFrom = buildIso(calendarDateBefore(options.date, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS), '00:00');
   const bars5m = await fetchBars(options, '5m', from, to);
+  const bars5mContext = await fetchBars(options, '5m', contextFrom, to);
   const bars15m = await fetchBars(options, '15m', contextFrom, to);
   const bars60m = await fetchBars(options, '60m', contextFrom, to);
   const bars120m = await fetchBars(options, '120m', contextFrom, to);
@@ -171,6 +172,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
     instrument: options.instrument,
     session: 'morning',
     bars5m,
+    bars5mContext,
     bars15m,
     bars30m: [],
     bars60m,
