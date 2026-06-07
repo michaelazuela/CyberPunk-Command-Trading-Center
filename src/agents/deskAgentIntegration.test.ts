@@ -64,6 +64,14 @@ const readyHealth = evaluateScannerHealth({
   },
   discordWebhookConfigured: true,
   marketMapStatus: { loaded: true, usableBars: 6000, fallbackBridgeDataAvailable: true },
+  completedFiveMinuteBarAssurance: {
+    status: 'ready',
+    message: 'Completed 5M Bar Assurance Gate ready: latest completed 5M bar is usable.',
+    latestCompletedTime: '2026-06-02T10:05:00-04:00',
+    expectedCompletedTime: '2026-06-02T10:05:00-04:00',
+    sourceSummary: 'live 5M bars=30; history 5M=6000 from market_bars_bridge_repair',
+    recoverySteps: [],
+  },
   scannerStateFileStatus: { status: 'ok' },
   macroCalendarStatus: { enabled: true, loaded: true },
   scannerWindow: {

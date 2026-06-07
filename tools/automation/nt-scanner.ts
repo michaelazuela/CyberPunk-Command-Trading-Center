@@ -50,6 +50,7 @@ import {
 import {
   canSendAlertsFromHealth,
   evaluateScannerHealth,
+  type ScannerCompletedFiveMinuteBarAssuranceStatus,
   type ScannerHealthReport,
   type ScannerHealthStatus,
   type ScannerStateFileHealth,
@@ -115,6 +116,7 @@ export interface ScannerConfig {
   allowRetestOnlyEntries: boolean;
   maxStaleBarMinutes: number;
   marketMapRefreshSeconds: number;
+  preMarketDataGate: boolean;
   macroCalendarEnabled: boolean;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
@@ -232,6 +234,18 @@ export interface ScannerHtfHistoryCoverageReadiness {
   insufficientTimeframes: Array<'15m' | '60m' | '120m' | '240m'>;
   summary: string;
   candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal';
+}
+
+export interface ScannerPreMarketDataReadinessBackfillGateReport {
+  status: 'ready' | 'data_not_ready';
+  requiredTimeframes: MarketBarTimeframe[];
+  insufficientTimeframes: MarketBarTimeframe[];
+  completedFiveMinuteReady: boolean;
+  completedFiveMinuteMessage: string;
+  sourceSummary: string;
+  recoverySteps: string[];
+  canEnterTradePlanningMode: boolean;
+  boundary: 'data_readiness_only_not_trade_approval';
 }
 
 export interface ScannerWebhookResolution {
@@ -430,6 +444,7 @@ function printHelp() {
     '  --afternoon true               Enable optional afternoon window.',
     '  --max-stale-bar-minutes 10     Refuse live scans when latest completed 5M bar is older than this.',
     '  --market-map-refresh-seconds 300 Refresh durable look-left map while outside trade windows.',
+    '  --pre-market-data-gate true    Preload/repair 30-day 5M/15M/1H/2H/4H context before setup scans.',
     '  --macro-calendar false         Disable high-impact macro calendar caution.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
@@ -471,6 +486,7 @@ function loadConfig(): ScannerConfig {
     allowRetestOnlyEntries: boolArg('allow-retest-only', DEFAULT_SCANNER_RISK_GUARDS.allowRetestOnlyEntries),
     maxStaleBarMinutes: numberArg('max-stale-bar-minutes', 10),
     marketMapRefreshSeconds: Math.max(60, numberArg('market-map-refresh-seconds', 300)),
+    preMarketDataGate: boolArg('pre-market-data-gate', true),
     macroCalendarEnabled: boolArg('macro-calendar', true),
     barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
     barTimeZone,
@@ -802,6 +818,94 @@ export function htfHistoryCoverageReadiness(
     summary: `HTF history is data-limited for ${insufficient.join(', ')} after cache, bridge, and segmented bridge repair; failed-plan reversal and HTF promotion must treat this as context only, not structural confirmation. The scanner cannot invent missing NinjaTrader bars.`,
     candidatePromotionBoundary: 'htf_context_required_for_failed_plan_reversal',
   };
+}
+
+export function evaluatePreMarketDataReadinessBackfillGate(args: {
+  coverage: ScannerHistoryCoverageRecord[] | undefined;
+  completedFiveMinuteBarAssurance: ScannerCompletedFiveMinuteBarAssuranceStatus;
+  preloadError?: string | null;
+}): ScannerPreMarketDataReadinessBackfillGateReport {
+  const coverage = args.coverage || [];
+  const insufficientTimeframes = TIMEFRAMES.filter((timeframe) => {
+    const record = coverage.find((item) => item.timeframe === timeframe);
+    return !record?.sufficient;
+  });
+  const completedFiveMinuteReady = args.completedFiveMinuteBarAssurance.status === 'ready';
+  const recoverySteps = [
+    ...(args.completedFiveMinuteBarAssurance.recoverySteps || []),
+    'Keep NinjaTrader connected to the data provider with the active contract loaded.',
+    'Run the candle recorder/backfill so Supabase market_bars has current 5M/15M/1H/2H/4H OHLC.',
+    'If coverage is still incomplete, refresh the NinjaTrader chart/history request and restart the scanner after bars load.',
+  ];
+  const preloadError = args.preloadError ? ` Preload error: ${args.preloadError}.` : '';
+  const coverageSummary = coverage.length
+    ? coverage.map(summarizeScannerHistoryCoverage).join(' | ')
+    : 'history coverage was not evaluated';
+  const ready = completedFiveMinuteReady && insufficientTimeframes.length === 0 && !args.preloadError;
+  const sourceSummary = [
+    args.completedFiveMinuteBarAssurance.sourceSummary || args.completedFiveMinuteBarAssurance.message,
+    coverageSummary,
+  ].filter(Boolean).join(' | ');
+
+  return {
+    status: ready ? 'ready' : 'data_not_ready',
+    requiredTimeframes: [...TIMEFRAMES],
+    insufficientTimeframes,
+    completedFiveMinuteReady,
+    completedFiveMinuteMessage: args.completedFiveMinuteBarAssurance.message,
+    sourceSummary: `${sourceSummary}${preloadError}`,
+    recoverySteps: ready ? [] : [...new Set(recoverySteps)],
+    canEnterTradePlanningMode: ready,
+    boundary: 'data_readiness_only_not_trade_approval',
+  };
+}
+
+function summarizePreMarketDataReadinessBackfillGate(report: ScannerPreMarketDataReadinessBackfillGateReport): string {
+  if (report.status === 'ready') {
+    return `Pre-Market Data Readiness + Backfill Gate ready: completed 5M is current and 30-day 5M/15M/1H/2H/4H context is sufficient. Boundary=${report.boundary}.`;
+  }
+  const missing = report.insufficientTimeframes.length ? report.insufficientTimeframes.join(', ') : 'none';
+  return `Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=${report.completedFiveMinuteReady ? 'ready' : 'blocked'}, insufficient=${missing}. Real cache/bridge backfill was attempted where available; trade-planning mode is blocked until real OHLC is ready. Boundary=${report.boundary}.`;
+}
+
+function shouldRunPreMarketDataReadinessGate(config: ScannerConfig, window: ReturnType<typeof resolveScannerWindow>): boolean {
+  if (!config.preMarketDataGate || !config.scanWindows) return false;
+  return window.allowsTradePlan || window.session === 'premarket';
+}
+
+async function runPreMarketDataReadinessBackfillGate(args: {
+  config: ScannerConfig;
+  tradeDate: string;
+  window: ReturnType<typeof resolveScannerWindow>;
+  completedFiveMinuteBarAssurance: ScannerCompletedFiveMinuteBarAssuranceStatus;
+}): Promise<{
+  report: ScannerPreMarketDataReadinessBackfillGateReport;
+  lookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null;
+}> {
+  let lookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
+  let preloadError: string | null = null;
+  try {
+    lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, mappingSessionForWindow(args.window));
+  } catch (error) {
+    preloadError = formatError(error);
+    console.warn(`[scanner-data] Pre-Market Data Readiness + Backfill Gate preload failed: ${preloadError}`);
+  }
+  const report = evaluatePreMarketDataReadinessBackfillGate({
+    coverage: lookLeft?.coverage || [],
+    completedFiveMinuteBarAssurance: args.completedFiveMinuteBarAssurance,
+    preloadError,
+  });
+  const line = summarizePreMarketDataReadinessBackfillGate(report);
+  if (report.status === 'ready') {
+    console.log(`[scanner-data] ${line}`);
+  } else {
+    console.warn(`[scanner-data] ${line}`);
+    console.warn(`[scanner-data] source: ${report.sourceSummary}`);
+    if (report.recoverySteps.length) {
+      console.warn(`[scanner-data] recovery: ${report.recoverySteps.join(' | ')}`);
+    }
+  }
+  return { report, lookLeft };
 }
 
 function attachScannerHistoryCoverage(
@@ -2450,6 +2554,199 @@ function liveMarketMapStatus(liveBars: Partial<Record<MarketBarTimeframe, NinjaB
   };
 }
 
+function floorToTimeframe(date: Date, timeframeMinutes: number): Date {
+  const intervalMs = timeframeMinutes * 60_000;
+  return new Date(Math.floor(date.getTime() / intervalMs) * intervalMs);
+}
+
+export function evaluateCompletedFiveMinuteBarAssuranceGate(args: {
+  completed5m: NinjaBridgeBar | null;
+  now: Date;
+  barFreshness: ReturnType<typeof assessBridgeBarStaleness>;
+  liveBars5m?: NinjaBridgeBar[] | null;
+  historyCoverage?: ScannerHistoryCoverageRecord[] | null;
+  bridgeInstrument?: string | null;
+  maxStaleBarMinutes: number;
+}): ScannerCompletedFiveMinuteBarAssuranceStatus {
+  const expectedCompletedTime = floorToTimeframe(args.now, 5).toISOString();
+  const liveCount = args.liveBars5m?.length || 0;
+  const coverage5m = (args.historyCoverage || []).find((item) => item.timeframe === '5m') || null;
+  const sourceSummary = [
+    `live 5M bars=${liveCount}`,
+    coverage5m ? `history 5M=${coverage5m.barsLoaded} from ${coverage5m.source}` : 'history 5M=not evaluated',
+    `bridge instrument=${args.bridgeInstrument || 'unknown'}`,
+  ].join('; ');
+  const recoverySteps = [
+    'Confirm NinjaTrader is connected to the data provider and the active contract chart is updating.',
+    'Confirm the chart Data Series has enough days loaded and CME US Index Futures ETH trading hours selected.',
+    'Restart or refresh the NinjaTrader bridge/candle recorder, then wait for the next completed 5M bar.',
+    'Run the market-bars backfill/recorder if Supabase market_bars is missing recent 5M candles.',
+  ];
+
+  if (!args.completed5m) {
+    return {
+      status: 'blocked',
+      message: `Completed 5M Bar Assurance Gate blocked: no completed 5M bar was available. Expected latest completed close near ${expectedCompletedTime}. ${sourceSummary}.`,
+      latestCompletedTime: null,
+      expectedCompletedTime,
+      sourceSummary,
+      recoverySteps,
+    };
+  }
+
+  if (args.barFreshness.stale) {
+    return {
+      status: 'blocked',
+      message: `Completed 5M Bar Assurance Gate blocked: ${args.barFreshness.reason || 'latest completed 5M bar is stale'}. ${sourceSummary}.`,
+      latestCompletedTime: args.completed5m.time,
+      expectedCompletedTime,
+      sourceSummary,
+      recoverySteps,
+    };
+  }
+
+  return {
+    status: 'ready',
+    message: `Completed 5M Bar Assurance Gate ready: latest completed 5M bar ${args.completed5m.time} is usable. ${sourceSummary}.`,
+    latestCompletedTime: args.completed5m.time,
+    expectedCompletedTime,
+    sourceSummary,
+    recoverySteps: [],
+  };
+}
+
+async function resolveCompletedFiveMinuteWithSelfHealing(args: {
+  config: ScannerConfig;
+  now: Date;
+  liveBars5m: NinjaBridgeBar[];
+}): Promise<{
+  bars5m: NinjaBridgeBar[];
+  completed5m: NinjaBridgeBar | null;
+  freshness: ReturnType<typeof assessBridgeBarStaleness>;
+  attempts: string[];
+  selfHealed: boolean;
+}> {
+  const attempts: string[] = [];
+  const liveCompleted = latestCompletedBar(args.liveBars5m, 5, args.now, args.config.barTimestampMode, args.config.barTimeZone);
+  const liveFreshness = assessBridgeBarStaleness({
+    latestBar: liveCompleted,
+    timeframeMinutes: 5,
+    now: args.now,
+    maxStaleBarMinutes: args.config.maxStaleBarMinutes,
+    timestampMode: args.config.barTimestampMode,
+    timeZoneMode: args.config.barTimeZone,
+  });
+  attempts.push(liveFreshness.stale
+    ? `live_bridge=blocked (${liveFreshness.reason || 'stale or missing'})`
+    : `live_bridge=ready (${liveCompleted?.time || 'N/A'})`);
+  if (!liveFreshness.stale) {
+    return {
+      bars5m: args.liveBars5m,
+      completed5m: liveCompleted,
+      freshness: liveFreshness,
+      attempts,
+      selfHealed: false,
+    };
+  }
+
+  const window = recentHistoricalWindow('5m', 600);
+  const marketConfig = loadMarketDataConfig();
+  let cachedBars: NinjaBridgeBar[] = [];
+  if (marketConfig) {
+    try {
+      cachedBars = await fetchCachedMarketBars({
+        instrument: args.config.bridgeInstrument,
+        timeframe: '5m',
+        from: window.from,
+        to: window.to,
+        config: marketConfig,
+        limit: 600,
+      });
+      const cachedCompleted = latestCompletedBar(cachedBars, 5, args.now, args.config.barTimestampMode, args.config.barTimeZone);
+      const cachedFreshness = assessBridgeBarStaleness({
+        latestBar: cachedCompleted,
+        timeframeMinutes: 5,
+        now: args.now,
+        maxStaleBarMinutes: args.config.maxStaleBarMinutes,
+        timestampMode: args.config.barTimestampMode,
+        timeZoneMode: args.config.barTimeZone,
+      });
+      attempts.push(cachedFreshness.stale
+        ? `market_bars=blocked (${cachedFreshness.reason || 'stale or missing'})`
+        : `market_bars=ready (${cachedCompleted?.time || 'N/A'})`);
+      if (!cachedFreshness.stale) {
+        return {
+          bars5m: mergeBars(args.liveBars5m, cachedBars),
+          completed5m: cachedCompleted,
+          freshness: cachedFreshness,
+          attempts,
+          selfHealed: true,
+        };
+      }
+    } catch (error) {
+      attempts.push(`market_bars=error (${formatError(error)})`);
+    }
+  } else {
+    attempts.push('market_bars=skipped (Supabase market_bars config unavailable)');
+  }
+
+  let repairedBars: NinjaBridgeBar[] = [];
+  try {
+    const historical = await getNinjaHistoricalBars({
+      instrument: args.config.bridgeInstrument,
+      timeframe: '5m',
+      from: window.from,
+      to: window.to,
+      limit: 600,
+      baseUrl: args.config.bridgeUrl,
+    });
+    repairedBars = historical.ok ? historical.bars || [] : [];
+    if (!repairedBars.length) {
+      attempts.push(`historical_bridge=blocked (${historical.error || 'no bars returned'})`);
+    } else {
+      attempts.push(`historical_bridge=loaded (${repairedBars.length} bars)`);
+      if (marketConfig) {
+        try {
+          await upsertMarketBars({
+            bars: repairedBars,
+            instrument: args.config.instrument,
+            bridgeInstrument: args.config.bridgeInstrument,
+            timeframe: '5m',
+            config: marketConfig,
+          });
+          attempts.push('market_bars_upsert=ok');
+        } catch (error) {
+          attempts.push(`market_bars_upsert=error (${formatError(error)})`);
+        }
+      }
+    }
+  } catch (error) {
+    attempts.push(`historical_bridge=error (${formatError(error)})`);
+  }
+
+  const healedBars = mergeBars(repairedBars, mergeBars(args.liveBars5m, cachedBars));
+  const healedCompleted = latestCompletedBar(healedBars, 5, args.now, args.config.barTimestampMode, args.config.barTimeZone);
+  const healedFreshness = assessBridgeBarStaleness({
+    latestBar: healedCompleted,
+    timeframeMinutes: 5,
+    now: args.now,
+    maxStaleBarMinutes: args.config.maxStaleBarMinutes,
+    timestampMode: args.config.barTimestampMode,
+    timeZoneMode: args.config.barTimeZone,
+  });
+  attempts.push(healedFreshness.stale
+    ? `self_healing_result=blocked (${healedFreshness.reason || 'stale or missing'})`
+    : `self_healing_result=ready (${healedCompleted?.time || 'N/A'})`);
+
+  return {
+    bars5m: healedBars,
+    completed5m: healedCompleted,
+    freshness: healedFreshness,
+    attempts,
+    selfHealed: !healedFreshness.stale && (cachedBars.length > 0 || repairedBars.length > 0),
+  };
+}
+
 function logScannerHealth(report: ScannerHealthReport): void {
   console.log(`[scanner-health] ${report.summary} ${report.recommendedAction}`);
   if (report.warnings.length) {
@@ -2481,6 +2778,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
 
   if (!healthOk) {
+    const completed5mAssurance = evaluateCompletedFiveMinuteBarAssuranceGate({
+      completed5m: null,
+      now,
+      barFreshness: {
+        stale: true,
+        latestTime: null,
+        ageMinutes: null,
+        maxAllowedMinutes: config.maxStaleBarMinutes,
+        reason: 'Latest completed 5M bar unavailable because bridge health failed.',
+      },
+      liveBars5m: [],
+      bridgeInstrument: config.bridgeInstrument,
+      maxStaleBarMinutes: config.maxStaleBarMinutes,
+    });
     const healthReport = evaluateScannerHealth({
       config: {
         appInstrument: config.instrument,
@@ -2505,6 +2816,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       },
       discordWebhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
       marketMapStatus: { loaded: false, usableBars: 0, fallbackBridgeDataAvailable: false },
+      completedFiveMinuteBarAssurance: completed5mAssurance,
       scannerStateFileStatus: stateRead.health,
       macroCalendarStatus: {
         enabled: config.macroCalendarEnabled,
@@ -2535,13 +2847,22 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
   config = { ...config, bridgeInstrument: instrumentResolution.instrument };
 
-  const [snapshot, positions, liveBars] = await Promise.all([
+  const [snapshot, positions, fetchedLiveBars] = await Promise.all([
     getNinjaBridgeSnapshot(config.bridgeInstrument, config.bridgeUrl).catch(() => null),
     getNinjaBridgePositions(config.account, config.bridgeUrl).catch(() => null),
     fetchLiveBars(config),
   ]);
 
-  const completed5m = latestCompletedBar(liveBars['5m'], 5, now, config.barTimestampMode, config.barTimeZone);
+  const completed5mRecovery = await resolveCompletedFiveMinuteWithSelfHealing({
+    config,
+    now,
+    liveBars5m: fetchedLiveBars['5m'] || [],
+  });
+  const liveBars = {
+    ...fetchedLiveBars,
+    '5m': completed5mRecovery.bars5m,
+  };
+  const completed5m = completed5mRecovery.completed5m;
   let currentPrice = snapshot?.currentPrice ?? snapshot?.last?.close ?? completed5m?.close ?? null;
   const snapshotFreshness = assessBridgeBarStaleness({
     latestBar: snapshot?.last || null,
@@ -2555,14 +2876,21 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     currentPrice = completed5m.close;
   }
   const positionText = positions?.positions?.length ? positions.positions.map((item) => `${item.marketPosition} ${item.quantity}`).join(', ') : 'flat / none returned';
-  const bridgeFreshness = assessBridgeBarStaleness({
-    latestBar: completed5m,
-    timeframeMinutes: 5,
+  const bridgeFreshness = completed5mRecovery.freshness;
+  let completed5mAssurance = evaluateCompletedFiveMinuteBarAssuranceGate({
+    completed5m,
     now,
+    barFreshness: bridgeFreshness,
+    liveBars5m: liveBars['5m'] || [],
+    bridgeInstrument: config.bridgeInstrument,
     maxStaleBarMinutes: config.maxStaleBarMinutes,
-    timestampMode: config.barTimestampMode,
-    timeZoneMode: config.barTimeZone,
   });
+  if (completed5mRecovery.attempts.length) {
+    console.log(`[scanner-data] Completed 5M self-healing attempts: ${completed5mRecovery.attempts.join(' | ')}`);
+  }
+  if (completed5mRecovery.selfHealed) {
+    console.log(`[scanner-data] Completed 5M bar self-healed from cache/repair: ${completed5m?.time || 'N/A'}`);
+  }
 
   const healthReport = evaluateScannerHealth({
     config: {
@@ -2582,6 +2910,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     barStaleness: bridgeFreshness,
     discordWebhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
     marketMapStatus: liveMarketMapStatus(liveBars),
+    completedFiveMinuteBarAssurance: completed5mAssurance,
     scannerStateFileStatus: stateRead.health,
     macroCalendarStatus: {
       enabled: config.macroCalendarEnabled,
@@ -2605,6 +2934,22 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (bridgeFreshness.stale) {
     console.log(`[scanner] NoData: ${bridgeFreshness.reason}`);
     return;
+  }
+
+  let preloadedLookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
+  if (shouldRunPreMarketDataReadinessGate(config, window)) {
+    const gateResult = await runPreMarketDataReadinessBackfillGate({
+      config,
+      tradeDate,
+      window,
+      completedFiveMinuteBarAssurance: completed5mAssurance,
+    });
+    preloadedLookLeft = gateResult.lookLeft;
+    if (!gateResult.report.canEnterTradePlanningMode && window.allowsTradePlan) {
+      console.warn('[scanner-data] Setup scan blocked by Pre-Market Data Readiness + Backfill Gate. This is a data-quality blocker, not a no-setup conclusion.');
+      await writeState(state);
+      return;
+    }
   }
 
   if (!window.allowsTradePlan || !config.scanWindows) {
@@ -2639,11 +2984,28 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
   }
 
-  const lookLeft = await fetchLookLeftContext(config, tradeDate, session).catch((error) => {
+  const lookLeft = preloadedLookLeft || (await fetchLookLeftContext(config, tradeDate, session).catch((error) => {
     console.warn(`[scanner] 30-day scanner history preload unavailable: ${formatError(error)}`);
     return null;
-  });
+  }));
   const historyCoverage = lookLeft?.coverage || [];
+  completed5mAssurance = evaluateCompletedFiveMinuteBarAssuranceGate({
+    completed5m,
+    now,
+    barFreshness: bridgeFreshness,
+    liveBars5m: liveBars['5m'] || [],
+    historyCoverage,
+    bridgeInstrument: config.bridgeInstrument,
+    maxStaleBarMinutes: config.maxStaleBarMinutes,
+  });
+  if (completed5mAssurance.status === 'blocked') {
+    console.warn(`[scanner-data] ${completed5mAssurance.message}`);
+    if (completed5mAssurance.recoverySteps?.length) {
+      console.warn(`[scanner-data] recovery: ${completed5mAssurance.recoverySteps.join(' | ')}`);
+    }
+    await writeState(state);
+    return;
+  }
   const twoHourWarning = twoHourCurrentRunWarning(historyCoverage);
   const htfCoverage = htfHistoryCoverageReadiness(historyCoverage);
   if (twoHourWarning) console.warn(`[scanner-history] ${twoHourWarning}`);

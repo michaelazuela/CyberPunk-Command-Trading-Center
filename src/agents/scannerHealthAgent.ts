@@ -56,6 +56,15 @@ export interface ScannerMacroCalendarHealthStatus {
   message?: string;
 }
 
+export interface ScannerCompletedFiveMinuteBarAssuranceStatus {
+  status: 'ready' | 'blocked';
+  message: string;
+  latestCompletedTime?: string | null;
+  expectedCompletedTime?: string | null;
+  sourceSummary?: string | null;
+  recoverySteps?: string[];
+}
+
 export interface ScannerStateFileHealth {
   status: ScannerStateFileHealthStatus;
   message?: string;
@@ -69,6 +78,7 @@ export interface ScannerHealthInput {
   barStaleness?: BridgeBarStalenessResult | null;
   discordWebhookConfigured?: boolean;
   marketMapStatus?: ScannerMarketMapHealthStatus | null;
+  completedFiveMinuteBarAssurance?: ScannerCompletedFiveMinuteBarAssuranceStatus | null;
   scannerStateFileStatus?: ScannerStateFileHealth | null;
   macroCalendarStatus?: ScannerMacroCalendarHealthStatus | null;
   scannerWindow?: Pick<ScannerWindowState, 'session' | 'label' | 'allowsTradePlan' | 'allowsDiscordAlert'> | null;
@@ -258,6 +268,43 @@ function evaluateMarketMap(status: ScannerMarketMapHealthStatus | null | undefin
   );
 }
 
+function evaluateCompletedFiveMinuteAssurance(status: ScannerCompletedFiveMinuteBarAssuranceStatus | null | undefined): ScannerHealthCheck {
+  if (!status) {
+    return check(
+      'completed_5m_bar_assurance',
+      'Completed 5M bar assurance gate',
+      'warn',
+      'degraded',
+      'Completed 5M bar assurance was not evaluated for this cycle.',
+      null,
+      'ready or blocked with recovery steps',
+    );
+  }
+
+  const recovery = status.recoverySteps?.length ? ` Recovery: ${status.recoverySteps.join(' | ')}` : '';
+  if (status.status === 'ready') {
+    return check(
+      'completed_5m_bar_assurance',
+      'Completed 5M bar assurance gate',
+      'pass',
+      'info',
+      status.message,
+      status.latestCompletedTime || null,
+      status.expectedCompletedTime || 'latest completed 5M bar',
+    );
+  }
+
+  return check(
+    'completed_5m_bar_assurance',
+    'Completed 5M bar assurance gate',
+    'fail',
+    'blocking',
+    `${status.message}${recovery}`,
+    status.latestCompletedTime || status.sourceSummary || null,
+    status.expectedCompletedTime || 'current completed 5M bar with recovery steps',
+  );
+}
+
 function evaluateStateFile(status: ScannerStateFileHealth | null | undefined): ScannerHealthCheck {
   const stateStatus = status?.status || 'ok';
   if (stateStatus === 'ok') {
@@ -360,6 +407,7 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
   }
 
   checks.push(evaluateMarketMap(input.marketMapStatus));
+  checks.push(evaluateCompletedFiveMinuteAssurance(input.completedFiveMinuteBarAssurance));
   checks.push(evaluateStateFile(input.scannerStateFileStatus));
 
   if (!macroEnabled) {

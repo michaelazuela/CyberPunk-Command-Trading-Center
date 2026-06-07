@@ -622,6 +622,14 @@ const healthBase = {
   barStaleness: { stale: false, latestTime: '2026-05-28T10:00:00-04:00', ageMinutes: 2, maxAllowedMinutes: 10, reason: null },
   discordWebhookConfigured: true,
   marketMapStatus: { loaded: true, usableBars: 400, fallbackBridgeDataAvailable: true },
+  completedFiveMinuteBarAssurance: {
+    status: 'ready' as const,
+    message: 'Completed 5M Bar Assurance Gate ready: latest completed 5M bar is usable.',
+    latestCompletedTime: '2026-05-28T10:00:00-04:00',
+    expectedCompletedTime: '2026-05-28T10:00:00-04:00',
+    sourceSummary: 'live 5M bars=30; history 5M=6000 from market_bars_bridge_repair',
+    recoverySteps: [],
+  },
   scannerStateFileStatus: { status: 'ok' as const },
   macroCalendarStatus: { enabled: true, loaded: true },
 };

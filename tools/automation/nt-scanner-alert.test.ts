@@ -14,6 +14,8 @@ import {
   appOwnedFailedPlanEventsFromScannerAudits,
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
+  evaluateCompletedFiveMinuteBarAssuranceGate,
+  evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   htfHistoryCoverageReadiness,
   markScannerAlertDeliveryFailed,
@@ -36,6 +38,131 @@ const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
+
+const completed5mAssuranceReady = evaluateCompletedFiveMinuteBarAssuranceGate({
+  completed5m: { time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  now: new Date('2026-06-05T10:07:00-04:00'),
+  barFreshness: {
+    stale: false,
+    latestTime: '2026-06-05T10:05:00-04:00',
+    ageMinutes: 2,
+    maxAllowedMinutes: 10,
+    reason: null,
+  },
+  liveBars5m: [{ time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 }],
+  historyCoverage: [{
+    timeframe: '5m',
+    requiredLookbackDays: 30,
+    requestedFrom: '2026-05-06T00:00:00-04:00',
+    requestedTo: '2026-06-05T12:00:00-04:00',
+    barsLoaded: 6000,
+    rangeStart: '2026-05-06T00:00:00',
+    rangeEnd: '2026-06-05T12:00:00',
+    source: 'market_bars_bridge_repair',
+    cacheBars: 5000,
+    bridgeRepairBars: 1000,
+    selfHealed: true,
+    sufficient: true,
+    warning: null,
+  }],
+  bridgeInstrument: 'MES 06-26',
+  maxStaleBarMinutes: 10,
+});
+assert.equal(completed5mAssuranceReady.status, 'ready');
+assert.ok(completed5mAssuranceReady.message.includes('Completed 5M Bar Assurance Gate ready'));
+assert.ok(completed5mAssuranceReady.sourceSummary?.includes('history 5M=6000'));
+
+const completed5mAssuranceMissing = evaluateCompletedFiveMinuteBarAssuranceGate({
+  completed5m: null,
+  now: new Date('2026-06-05T10:07:00-04:00'),
+  barFreshness: {
+    stale: true,
+    latestTime: null,
+    ageMinutes: null,
+    maxAllowedMinutes: 10,
+    reason: 'No completed 5M candle returned from NinjaTrader.',
+  },
+  liveBars5m: [],
+  bridgeInstrument: 'MES 06-26',
+  maxStaleBarMinutes: 10,
+});
+assert.equal(completed5mAssuranceMissing.status, 'blocked');
+assert.ok(completed5mAssuranceMissing.message.includes('no completed 5M bar was available'));
+assert.ok(completed5mAssuranceMissing.recoverySteps?.some((step) => step.includes('NinjaTrader')));
+
+const completed5mAssuranceStale = evaluateCompletedFiveMinuteBarAssuranceGate({
+  completed5m: { time: '2026-06-05T09:45:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  now: new Date('2026-06-05T10:07:00-04:00'),
+  barFreshness: {
+    stale: true,
+    latestTime: '2026-06-05T09:45:00-04:00',
+    ageMinutes: 22,
+    maxAllowedMinutes: 10,
+    reason: 'Latest completed 5M candle is stale.',
+  },
+  liveBars5m: [{ time: '2026-06-05T09:45:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 }],
+  bridgeInstrument: 'MES 06-26',
+  maxStaleBarMinutes: 10,
+});
+assert.equal(completed5mAssuranceStale.status, 'blocked');
+assert.ok(completed5mAssuranceStale.message.includes('Latest completed 5M candle is stale'));
+
+const sufficientHistoryCoverage = (['5m', '15m', '60m', '120m', '240m'] as const).map((timeframe) => ({
+  timeframe,
+  requiredLookbackDays: 30,
+  requestedFrom: '2026-05-06T00:00:00-04:00',
+  requestedTo: '2026-06-05T12:00:00-04:00',
+  barsLoaded: timeframe === '5m' ? 6000 : 1000,
+  rangeStart: '2026-05-06T00:00:00',
+  rangeEnd: '2026-06-05T12:00:00',
+  source: 'market_bars_bridge_repair' as const,
+  cacheBars: 800,
+  bridgeRepairBars: 200,
+  selfHealed: true,
+  sufficient: true,
+  warning: null,
+}));
+
+const preMarketDataReady = evaluatePreMarketDataReadinessBackfillGate({
+  coverage: sufficientHistoryCoverage,
+  completedFiveMinuteBarAssurance: completed5mAssuranceReady,
+});
+assert.equal(preMarketDataReady.status, 'ready');
+assert.equal(preMarketDataReady.canEnterTradePlanningMode, true);
+assert.deepEqual(preMarketDataReady.insufficientTimeframes, []);
+assert.equal(preMarketDataReady.boundary, 'data_readiness_only_not_trade_approval');
+
+const preMarketDataMissingHtf = evaluatePreMarketDataReadinessBackfillGate({
+  coverage: sufficientHistoryCoverage.map((item) => item.timeframe === '120m'
+    ? {
+        ...item,
+        barsLoaded: 0,
+        rangeStart: null,
+        rangeEnd: null,
+        source: 'missing' as const,
+        cacheBars: 0,
+        bridgeRepairBars: 0,
+        selfHealed: false,
+        sufficient: false,
+        warning: '120M bars were not returned by cache or bridge.',
+      }
+    : item),
+  completedFiveMinuteBarAssurance: completed5mAssuranceReady,
+});
+assert.equal(preMarketDataMissingHtf.status, 'data_not_ready');
+assert.equal(preMarketDataMissingHtf.canEnterTradePlanningMode, false);
+assert.deepEqual(preMarketDataMissingHtf.insufficientTimeframes, ['120m']);
+assert.ok(preMarketDataMissingHtf.sourceSummary.includes('120m: insufficient'));
+assert.ok(preMarketDataMissingHtf.recoverySteps.some((step) => step.includes('market_bars')));
+
+const preMarketDataMissingCompletedFive = evaluatePreMarketDataReadinessBackfillGate({
+  coverage: sufficientHistoryCoverage,
+  completedFiveMinuteBarAssurance: completed5mAssuranceMissing,
+});
+assert.equal(preMarketDataMissingCompletedFive.status, 'data_not_ready');
+assert.equal(preMarketDataMissingCompletedFive.completedFiveMinuteReady, false);
+assert.equal(preMarketDataMissingCompletedFive.canEnterTradePlanningMode, false);
+assert.ok(preMarketDataMissingCompletedFive.completedFiveMinuteMessage.includes('no completed 5M bar'));
 
 assert.deepEqual(resolveScannerDiscordWebhookUrl({}), { url: null, source: null, usingGenericFallback: false });
 assert.deepEqual(resolveScannerDiscordWebhookUrl({ DISCORD_WEBHOOK_URL: 'https://discord.example/generic' }), {

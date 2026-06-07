@@ -959,6 +959,36 @@ function htfDisplacementContinuationContext(
       closeAboveKeyLevel: bullish,
       closeBelowKeyLevel: !bullish,
     },
+    candles: [
+      {
+        index: 1,
+        timestamp: bullish ? '2026-06-02T10:00:00-04:00' : '2026-06-03T11:25:00-04:00',
+        open: fiveMinuteDisplacement.open,
+        high: fiveMinuteDisplacement.high,
+        low: fiveMinuteDisplacement.low,
+        close: fiveMinuteDisplacement.close,
+        direction: bullish ? 'bullish' : 'bearish',
+        bodyQuality: 'large',
+        upperWickQuality: bullish ? 'small' : 'large',
+        lowerWickQuality: bullish ? 'large' : 'small',
+        isExpansion: true,
+        confidence: 'High',
+      },
+      {
+        index: 2,
+        timestamp: bullish ? '2026-06-02T10:05:00-04:00' : '2026-06-03T11:30:00-04:00',
+        open: entry,
+        high: bullish ? entry + 1.5 : entry + 0.25,
+        low: bullish ? entry - 0.25 : entry - 3,
+        close: bullish ? entry + 1 : entry - 1.5,
+        direction: bullish ? 'bullish' : 'bearish',
+        bodyQuality: 'large',
+        upperWickQuality: bullish ? 'small' : 'large',
+        lowerWickQuality: bullish ? 'large' : 'small',
+        isExpansion: true,
+        confidence: 'High',
+      },
+    ],
     setupReadyFacts: {
       sweepThenReclaim: true,
       breakOfStructure: true,
@@ -2277,9 +2307,25 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
-    assert.ok(candidate.missingEvidence.includes('Fresh entry requires completed 5M retest/rejection below the decision level or a new completed 5M continuation close'));
+    assert.ok(candidate.missingEvidence.includes('Current price is not holding the correct side of the MSS decision level'));
     assert.ok(candidate.nextAction.includes('MSS_CONTINUATION_RETEST_PENDING'));
     assert.ok(candidate.nextAction.includes('completed 5M retest/rejection below the decision level'));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
+  }],
+
+  ['HTF displacement MSS continuation blocks fresh entry when completed 5M candles are missing', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      candles: [],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementMssContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('no completed 5M candles after the MSS trigger')));
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.HtfDisplacementMssContinuation);
   }],
 

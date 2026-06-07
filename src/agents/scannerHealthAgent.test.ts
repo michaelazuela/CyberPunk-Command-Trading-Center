@@ -39,6 +39,14 @@ function baseInput(overrides: Partial<ScannerHealthInput> = {}): ScannerHealthIn
     },
     discordWebhookConfigured: true,
     marketMapStatus: { loaded: true, usableBars: 400, fallbackBridgeDataAvailable: true },
+    completedFiveMinuteBarAssurance: {
+      status: 'ready',
+      message: 'Completed 5M Bar Assurance Gate ready: latest completed 5M bar is usable.',
+      latestCompletedTime: '2026-05-28T10:00:00-04:00',
+      expectedCompletedTime: '2026-05-28T10:00:00-04:00',
+      sourceSummary: 'live 5M bars=30; history 5M=6000 from market_bars_bridge_repair',
+      recoverySteps: [],
+    },
     scannerStateFileStatus: { status: 'ok' },
     macroCalendarStatus: { enabled: true, loaded: true },
     scannerWindow: {
@@ -104,6 +112,21 @@ const staleBar = evaluateScannerHealth(baseInput({
 assert.equal(staleBar.status, 'BLOCKED');
 assert.equal(canSendAlertsFromHealth(staleBar), false);
 assert.ok(staleBar.blockingReasons.some((reason) => reason.includes('stale')));
+
+const assuranceBlocked = evaluateScannerHealth(baseInput({
+  completedFiveMinuteBarAssurance: {
+    status: 'blocked',
+    message: 'Completed 5M Bar Assurance Gate blocked: no completed 5M bar was available.',
+    latestCompletedTime: null,
+    expectedCompletedTime: '2026-05-28T10:05:00.000Z',
+    sourceSummary: 'live 5M bars=0; history 5M=not evaluated',
+    recoverySteps: ['Confirm NinjaTrader chart is updating.', 'Restart the bridge.'],
+  },
+}));
+assert.equal(assuranceBlocked.status, 'BLOCKED');
+assert.equal(canSendAlertsFromHealth(assuranceBlocked), false);
+assert.ok(assuranceBlocked.blockingReasons.some((reason) => reason.includes('Completed 5M Bar Assurance Gate blocked')));
+assert.ok(assuranceBlocked.blockingReasons.some((reason) => reason.includes('Restart the bridge')));
 
 const severeMismatch = evaluateScannerHealth(baseInput({
   config: {
