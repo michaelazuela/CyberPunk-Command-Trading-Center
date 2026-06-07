@@ -2,10 +2,16 @@ import { SetupType } from '../types';
 
 export type SetupSession = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
 export type SetupRole = 'primary_model' | 'supporting_evidence' | 'deprecated';
+export type ParentModelFamily =
+  | 'MODEL_1_SWEEP_MSS_FVG_RETRACE'
+  | 'FAILED_BREAKOUT_REVERSAL'
+  | 'HTF_DISPLACEMENT_CONTINUATION'
+  | 'FAILED_PLAN_REVERSAL';
 
 export interface SetupRegistryEntry {
   setupType: SetupType;
   role: SetupRole;
+  parentModelFamily?: ParentModelFamily;
   label: string;
   aliases: string[];
   priority: number;
@@ -42,6 +48,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.SweepMssFvgRetrace,
     role: 'primary_model',
+    parentModelFamily: 'MODEL_1_SWEEP_MSS_FVG_RETRACE',
     label: 'Sweep -> MSS -> FVG Retrace',
     aliases: ['Sweep Reclaim Imbalance Retrace', 'Sweep MSS FVG', 'Model 1'],
     priority: 98,
@@ -68,6 +75,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.TurtleSoup,
     role: 'primary_model',
+    parentModelFamily: 'FAILED_BREAKOUT_REVERSAL',
     label: 'Turtle Soup Reversal',
     aliases: ['Turtle Soup', 'Failed Breakout Reversal', 'Failed Breakdown Reversal'],
     priority: 95,
@@ -133,6 +141,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.HtfDrawContinuationAfterRaid,
     role: 'primary_model',
+    parentModelFamily: 'HTF_DISPLACEMENT_CONTINUATION',
     label: 'HTF Draw Continuation After Raid/Reclaim',
     aliases: ['HTF Draw Continuation', 'Raid Reclaim MSS Delivery', 'HTF Liquidity Draw Reversal Delivery'],
     priority: 97,
@@ -152,6 +161,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.HtfDisplacementMssContinuation,
     role: 'primary_model',
+    parentModelFamily: 'HTF_DISPLACEMENT_CONTINUATION',
     label: 'HTF Displacement + 5M MSS Continuation',
     aliases: ['HTF Displacement MSS Continuation', '15M Displacement 5M MSS Continuation', 'HTF Displacement Delivery'],
     priority: 96,
@@ -172,6 +182,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.HtfDisplacementFvgContinuation,
     role: 'primary_model',
+    parentModelFamily: 'HTF_DISPLACEMENT_CONTINUATION',
     label: 'HTF Displacement + FVG Continuation',
     aliases: ['HTF Displacement FVG Continuation', '15M Displacement FVG Continuation', 'Displacement-Led Continuation'],
     priority: 94,
@@ -180,8 +191,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     possibleKeywords: ['15m displacement', '5m fvg', '5m imbalance', 'bearish displacement continuation', 'bullish displacement continuation'],
     requiredEvidence: [
       'Directional 15M displacement with acceptable body/close quality',
-      '5M displacement in the same direction',
-      '5M FVG / imbalance support',
+      '5M FVG / imbalance retest or support',
       'Defined 5M entry from retest, close-through, or MSS continuation close if present',
       'Protected structure stop',
       'External liquidity target with at least 60% of the original path remaining',
@@ -192,6 +202,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   {
     setupType: SetupType.FailedPlanReversal,
     role: 'primary_model',
+    parentModelFamily: 'FAILED_PLAN_REVERSAL',
     label: 'Failed Plan Reversal',
     aliases: ['Failed Long Reversal', 'Failed Short Reversal', 'Opposite-Side Decision Level'],
     priority: 95,

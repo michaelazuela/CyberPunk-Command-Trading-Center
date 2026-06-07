@@ -2402,9 +2402,9 @@ function htfDisplacementFvgConfidenceScore(args: {
   hasEntryStopTargets: boolean;
 }): number {
   return Math.min(100,
-    (args.fifteenDisplacement ? 22 : 0) +
-    (args.fiveDisplacement ? 18 : 0) +
-    (args.hasFvg ? 18 : 0) +
+    (args.fifteenDisplacement ? 24 : 0) +
+    (args.fiveDisplacement ? 8 : 0) +
+    (args.hasFvg ? 26 : 0) +
     (args.hasMss ? 8 : 0) +
     (args.hasTarget ? 10 : 0) +
     (args.enoughRoom ? 10 : 0) +
@@ -2816,9 +2816,9 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     chartContext.multiTimeframeContext?.alignment.alignedDirection === 'UNKNOWN' ||
     chartContext.higherTimeframeThesis?.direction === direction;
 
-  if (!inWindow || !fifteenDisplacement || !fiveDisplacement || !hasFvg) return null;
+  if (!inWindow || !fifteenDisplacement || !hasFvg) return null;
 
-  const triggerClose = parsePrice(fiveDisplacement.close) ?? parsePrice(chartContext.proposedEntry);
+  const triggerClose = parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
   const entry = parsePrice(chartContext.proposedEntry) ?? triggerClose;
   const stop = parsePrice(chartContext.proposedStop);
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
@@ -2841,7 +2841,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
   const hasEntryStopTargets = entry !== null && stop !== null && targets.target1 !== null && targets.target2 !== null && invalidation !== null;
   const score = htfDisplacementFvgConfidenceScore({
     fifteenDisplacement: true,
-    fiveDisplacement: true,
+    fiveDisplacement: Boolean(fiveDisplacement),
     hasFvg,
     hasMss,
     hasTarget: Boolean(target),
@@ -2868,7 +2868,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     : structurallyComplete ? 'EXECUTABLE' : 'QUALIFIED_CONDITIONAL';
   const riskLabel = riskNote ? ` ${riskNote}` : '';
   const dirLabel = directionLabel(direction);
-  const continuationTrigger = hasMss ? 'confirmed 5M MSS continuation close' : '5M displacement/FVG continuation trigger';
+  const continuationTrigger = hasMss ? 'confirmed 5M MSS continuation close' : '5M FVG/imbalance continuation trigger';
 
   return {
     setupType: SetupType.HtfDisplacementFvgContinuation,
@@ -2896,7 +2896,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
     levelContextSummary: `HTF displacement + FVG continuation: ${dirLabel} 15M displacement, 5M FVG/imbalance, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
     evidence: Array.from(new Set([
       `${dirLabel} 15M displacement confirmed`,
-      `${dirLabel} 5M displacement confirmed`,
+      ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       '5M FVG / imbalance supports continuation',
       ...(hasCompletedMssClose
         ? ['MSS_HOLD_CONFIRMED: completed 5M close confirmed; MSS is confidence support only for this FVG model']

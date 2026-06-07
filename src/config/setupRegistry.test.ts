@@ -1,8 +1,10 @@
 import {
+  SETUP_REGISTRY,
   getAllowedSetupRegistry,
   getDeprecatedSetupRegistry,
   getPrimarySetupRegistry,
   getSupportingEvidenceRegistry,
+  type ParentModelFamily,
 } from './setupRegistry';
 import { SetupType } from '../types';
 
@@ -65,6 +67,40 @@ const deprecatedExpected = [
 ];
 
 const noisyCatalog = [...supportingExpected, ...deprecatedExpected];
+const parentModelFamilies: ParentModelFamily[] = [
+  'MODEL_1_SWEEP_MSS_FVG_RETRACE',
+  'FAILED_BREAKOUT_REVERSAL',
+  'HTF_DISPLACEMENT_CONTINUATION',
+  'FAILED_PLAN_REVERSAL',
+];
+const expectedFamilyByPrimarySetup = new Map<SetupType, ParentModelFamily>([
+  [SetupType.SweepMssFvgRetrace, 'MODEL_1_SWEEP_MSS_FVG_RETRACE'],
+  [SetupType.TurtleSoup, 'FAILED_BREAKOUT_REVERSAL'],
+  [SetupType.HtfDrawContinuationAfterRaid, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.HtfDisplacementMssContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.HtfDisplacementFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.FailedPlanReversal, 'FAILED_PLAN_REVERSAL'],
+]);
+
+const configuredFamilies = new Set(
+  SETUP_REGISTRY
+    .filter((entry) => entry.parentModelFamily)
+    .map((entry) => entry.parentModelFamily as ParentModelFamily),
+);
+assert(configuredFamilies.size === parentModelFamilies.length, 'registry must keep exactly four parent model families');
+for (const family of parentModelFamilies) {
+  assert(configuredFamilies.has(family), `registry is missing parent model family ${family}`);
+}
+for (const entry of SETUP_REGISTRY) {
+  if (entry.role === 'primary_model') {
+    assert(
+      entry.parentModelFamily === expectedFamilyByPrimarySetup.get(entry.setupType),
+      `${entry.setupType} has unexpected parent model family ${entry.parentModelFamily}`,
+    );
+  } else {
+    assert(!entry.parentModelFamily, `${entry.setupType} must not define a parent model family because it is ${entry.role}`);
+  }
+}
 
 for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch'] as const) {
   const primary = getPrimarySetupRegistry(sessionType);

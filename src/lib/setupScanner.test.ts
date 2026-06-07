@@ -2429,6 +2429,49 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
   }],
 
+  ['HTF displacement FVG continuation does not require a separate 5M displacement candle', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      setupReadyFacts: {
+        sweepThenReclaim: false,
+        breakOfStructure: false,
+        pullbackIntoFvg: true,
+        fvgReclaimed: true,
+      },
+      marketStructure: {
+        ...base.marketStructure!,
+        marketStructureShift: false,
+      },
+      structureQualityContext: {
+        ...base.structureQualityContext!,
+        structureBreakConfirmedByClose: false,
+        reasons: [],
+        missingReasons: ['5M MSS not confirmed; FVG continuation still under review.'],
+      },
+      displacementCandles: [],
+      multiTimeframeContext: {
+        ...base.multiTimeframeContext!,
+        fiveMinute: {
+          ...base.multiTimeframeContext!.fiveMinute,
+          displacementCandles: [],
+        },
+      },
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.HtfDisplacementFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.pathway, 'htf_displacement_fvg_continuation');
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Executable);
+    assert.ok(candidate.evidence.some((item) => item.includes('bearish 15M displacement confirmed')));
+    assert.ok(candidate.evidence.some((item) => item.includes('5M FVG / imbalance supports continuation')));
+    assert.equal(candidate.evidence.some((item) => item === 'bearish 5M displacement confirmed'), false);
+    assert.ok(candidate.evidence.some((item) => item.includes('5M MSS not confirmed; not invented or required')));
+    assert.ok((candidate.modelConfidenceScore ?? 0) >= 70);
+  }],
+
   ['HTF displacement FVG continuation records confirmed MSS as confidence support only', () => {
     const context = htfDisplacementContinuationContext('SHORT');
     const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
