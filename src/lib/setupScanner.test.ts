@@ -1800,6 +1800,92 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate, null);
   }],
 
+  ['global HTF line-in-the-sand rule blocks long execution until completed close above named resistance', () => {
+    const context = structuredContext();
+    context.sessionStory = {
+      segments: [],
+      displacementZones: [],
+      relationships: [],
+      bias: 'BALANCED',
+      summary: 'Test session story includes a higher-timeframe obstacle.',
+      notes: [],
+      targetLevels: [{
+        label: '60M bearish FVG lower boundary',
+        price: 7404,
+        type: 'resistance',
+        source: 'ninjatrader',
+        directionRelevance: 'LONG',
+        confidence: 'High',
+        evidence: 'Nearest higher-timeframe resistance sits in front of the long target path.',
+      }],
+    };
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.applied, true);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.status, 'blocked');
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.appliesToAllModels, true);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.lineInSand, 7404);
+    assert.equal(
+      modelOne.activeRuleset?.htfLineInSand?.requiredClose,
+      'Completed 5M or 15M close above 7404.00 required before long continuation is active.'
+    );
+    assert.ok(modelOne.activeRuleset?.htfLineInSand?.lineReason?.includes('60M bearish FVG lower boundary'));
+    assert.ok(modelOne.missingEvidence.some((item) => item.includes('No chase: wait for a completed 5M or 15M close above 7404.00')));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['global HTF line-in-the-sand rule blocks short execution until completed close below named support', () => {
+    const context = shortModelOneContext();
+    context.sessionStory = {
+      segments: [],
+      displacementZones: [],
+      relationships: [],
+      bias: 'BALANCED',
+      summary: 'Test session story includes a higher-timeframe obstacle.',
+      notes: [],
+      targetLevels: [{
+        label: '120M bullish FVG lower boundary',
+        price: 7395,
+        type: 'support',
+        source: 'ninjatrader',
+        directionRelevance: 'SHORT',
+        confidence: 'High',
+        evidence: 'Nearest higher-timeframe support sits in front of the short target path.',
+      }],
+    };
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.applied, true);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.status, 'blocked');
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.appliesToAllModels, true);
+    assert.equal(modelOne.activeRuleset?.htfLineInSand?.lineInSand, 7395);
+    assert.equal(
+      modelOne.activeRuleset?.htfLineInSand?.requiredClose,
+      'Completed 5M or 15M close below 7395.00 required before short continuation is active.'
+    );
+    assert.ok(modelOne.activeRuleset?.htfLineInSand?.lineReason?.includes('120M bullish FVG lower boundary'));
+    assert.ok(modelOne.missingEvidence.some((item) => item.includes('No chase: wait for a completed 5M or 15M close below 7395.00')));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
   ['Phase E FVG-only continuation does not qualify as Model 1', () => {
     const context = structuredContext();
     context.liquidityEvents = [];

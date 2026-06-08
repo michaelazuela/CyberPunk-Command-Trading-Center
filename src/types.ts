@@ -1078,6 +1078,21 @@ export interface SetupCandidate {
       evidence: string[];
       blockers: string[];
     };
+    htfLineInSand?: {
+      applied: boolean;
+      status: 'passed' | 'blocked' | 'not_applicable' | 'missing_context';
+      required: 'completed_5m_or_15m_close_beyond_htf_line';
+      appliesToAllModels: true;
+      affectsExecution: boolean;
+      direction: 'LONG' | 'SHORT' | 'NO TRADE';
+      lineInSand: number | null;
+      lineReason: string | null;
+      requiredClose: string | null;
+      obstacleType: StructuralLevelType | null;
+      obstacleSource: StructuralLevel['source'] | null;
+      evidence: string[];
+      blockers: string[];
+    };
   };
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;

@@ -3602,6 +3602,226 @@ function appendUnique(values: string[], additions: string[]): string[] {
   return output;
 }
 
+type HtfLineInSandRule = NonNullable<NonNullable<SetupCandidate['activeRuleset']>['htfLineInSand']>;
+
+interface HtfLineInSandSelection {
+  lineInSand: number;
+  lineReason: string;
+  requiredClose: string;
+  obstacleType: HtfLineInSandRule['obstacleType'];
+  obstacleSource: HtfLineInSandRule['obstacleSource'];
+  latestClose: number | null;
+  acceptedBeyondLine: boolean;
+}
+
+function formatLinePrice(price: number): string {
+  return roundToTick(price).toFixed(2);
+}
+
+function latestCompletedClose(chartContext?: ChartContext | null): number | null {
+  const candles = chartContext?.candles || [];
+  return parsePrice(candles[candles.length - 1]?.close);
+}
+
+function htfLineDirectionText(direction: Direction): 'above' | 'below' {
+  return direction === 'LONG' ? 'above' : 'below';
+}
+
+function htfLineLevelReason(label: string, source: string, type: string): string {
+  return `${label} (${source} ${type})`;
+}
+
+function selectHtfLineInSand(candidate: SetupCandidate, chartContext?: ChartContext | null): HtfLineInSandSelection | null {
+  if (!chartContext || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) return null;
+  const latestClose = latestCompletedClose(chartContext);
+  const referencePrice = latestClose ?? parsePrice(chartContext.keyLevels?.currentPrice) ?? parsePrice(candidate.entry);
+  if (referencePrice === null) return null;
+
+  const target1 = parsePrice(candidate.target1);
+  const maxDistanceWithoutTarget = 20;
+  const levels = [
+    ...(chartContext.structuralLevels || []),
+    ...(chartContext.sessionLevelContext?.levels || []),
+    ...(chartContext.sessionStory?.targetLevels || []),
+  ].filter((level) =>
+    isReadableConfidence(level.confidence) &&
+    (level.directionRelevance === candidate.direction || level.directionRelevance === 'BOTH')
+  ).map((level) => ({
+    price: roundToTick(level.price),
+    label: level.label,
+    source: level.source,
+    type: level.type,
+    reason: htfLineLevelReason(level.label, level.source, level.type),
+    strength: level.strengthScore || 0,
+  }));
+
+  const objectives = (chartContext.targetObjectives || [])
+    .filter((target) =>
+      target.direction === candidate.direction &&
+      isReadableConfidence(target.confidence) &&
+      (
+        target.type === 'support' ||
+        target.type === 'resistance' ||
+        target.type === 'imbalance_zone' ||
+        target.type === 'imbalance_midpoint' ||
+        target.type === 'displacement_origin' ||
+        target.type === 'gap' ||
+        target.type === 'round_number'
+      )
+    )
+    .map((target) => ({
+      price: roundToTick(target.price),
+      label: target.label,
+      source: target.source,
+      type: target.type,
+      reason: htfLineLevelReason(target.label, target.source, target.type),
+      strength: target.score || 0,
+    }));
+
+  const candidates = [...levels, ...objectives]
+    .filter((level) => {
+      const distance = candidate.direction === 'LONG'
+        ? level.price - referencePrice
+        : referencePrice - level.price;
+      if (distance < 0) return false;
+      if (target1 !== null) {
+        return candidate.direction === 'LONG'
+          ? level.price <= target1 + TRADE_RULES.targetModel.tickSize
+          : level.price >= target1 - TRADE_RULES.targetModel.tickSize;
+      }
+      return distance <= maxDistanceWithoutTarget;
+    })
+    .sort((a, b) => {
+      const distanceA = Math.abs(a.price - referencePrice);
+      const distanceB = Math.abs(b.price - referencePrice);
+      if (distanceA !== distanceB) return distanceA - distanceB;
+      return b.strength - a.strength;
+    });
+
+  const selected = candidates[0];
+  if (!selected) return null;
+
+  const side = htfLineDirectionText(candidate.direction);
+  const priceText = formatLinePrice(selected.price);
+  const directionText = candidate.direction === 'LONG' ? 'long' : 'short';
+  const requiredClose = `Completed 5M or 15M close ${side} ${priceText} required before ${directionText} continuation is active.`;
+  const acceptedBeyondLine = latestClose !== null && (
+    candidate.direction === 'LONG'
+      ? latestClose > selected.price
+      : latestClose < selected.price
+  );
+  return {
+    lineInSand: selected.price,
+    lineReason: `${priceText} matters because it is the nearest structured HTF/session ${candidate.direction === 'LONG' ? 'resistance or upside objective' : 'support or downside objective'} in the trade path: ${selected.reason}.`,
+    requiredClose,
+    obstacleType: selected.type,
+    obstacleSource: selected.source,
+    latestClose,
+    acceptedBeyondLine,
+  };
+}
+
+function applyHtfLineInSandRuleToCandidate(candidate: SetupCandidate, chartContext?: ChartContext | null): SetupCandidate {
+  if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') {
+    return {
+      ...candidate,
+      activeRuleset: {
+        ...candidate.activeRuleset,
+        htfLineInSand: {
+          applied: false,
+          status: 'not_applicable',
+          required: 'completed_5m_or_15m_close_beyond_htf_line',
+          appliesToAllModels: true,
+          affectsExecution: false,
+          direction: candidate.direction,
+          lineInSand: null,
+          lineReason: null,
+          requiredClose: null,
+          obstacleType: null,
+          obstacleSource: null,
+          evidence: ['HTF line-in-the-sand rule applies only to LONG/SHORT setup candidates.'],
+          blockers: [],
+        },
+      },
+    };
+  }
+
+  const selection = selectHtfLineInSand(candidate, chartContext);
+  if (!selection) {
+    const missingClose = latestCompletedClose(chartContext) === null;
+    return {
+      ...candidate,
+      activeRuleset: {
+        ...candidate.activeRuleset,
+        htfLineInSand: {
+          applied: true,
+          status: missingClose ? 'missing_context' : 'not_applicable',
+          required: 'completed_5m_or_15m_close_beyond_htf_line',
+          appliesToAllModels: true,
+          affectsExecution: false,
+          direction: candidate.direction,
+          lineInSand: null,
+          lineReason: null,
+          requiredClose: null,
+          obstacleType: null,
+          obstacleSource: null,
+          evidence: missingClose
+            ? ['HTF line-in-the-sand rule could not evaluate a completed 5M close from structured candles.']
+            : ['HTF line-in-the-sand rule found no structured HTF/session obstacle in the candidate path.'],
+          blockers: [],
+        },
+      },
+    };
+  }
+
+  const evidence = [
+    `Global HTF line-in-the-sand rule: ${selection.lineReason}`,
+    selection.requiredClose,
+  ];
+  if (selection.latestClose !== null) {
+    evidence.push(`Latest structured completed 5M close: ${formatLinePrice(selection.latestClose)}.`);
+  }
+
+  const side = htfLineDirectionText(candidate.direction);
+  const blocker = `No chase: wait for a completed 5M or 15M close ${side} ${formatLinePrice(selection.lineInSand)} because ${selection.lineReason}`;
+  const blocksExecutable = !selection.acceptedBeyondLine && candidate.executionStatus === ExecutionStatus.Executable;
+  const status: HtfLineInSandRule['status'] = selection.acceptedBeyondLine ? 'passed' : 'blocked';
+
+  return {
+    ...candidate,
+    confidence: blocksExecutable && candidate.confidence === 'High' ? 'Medium' : candidate.confidence,
+    executionStatus: blocksExecutable ? ExecutionStatus.Conditional : candidate.executionStatus,
+    blockReason: blocksExecutable ? NoTradeReason.EntryTriggerPending : candidate.blockReason,
+    levelContextScore: (candidate.levelContextScore || 0) + (selection.acceptedBeyondLine ? 4 : -10),
+    evidence: appendUnique(candidate.evidence, evidence),
+    missingEvidence: appendUnique(candidate.missingEvidence, selection.acceptedBeyondLine ? [] : [blocker]),
+    requiredTrigger: selection.acceptedBeyondLine
+      ? candidate.requiredTrigger
+      : [candidate.requiredTrigger, selection.requiredClose].filter(Boolean).join(' '),
+    nextAction: blocksExecutable
+      ? `No chase. ${selection.requiredClose} ${selection.lineReason}`
+      : candidate.nextAction,
+    activeRuleset: {
+      ...candidate.activeRuleset,
+      htfLineInSand: {
+        applied: true,
+        status,
+        required: 'completed_5m_or_15m_close_beyond_htf_line',
+        appliesToAllModels: true,
+        affectsExecution: blocksExecutable,
+        direction: candidate.direction,
+        lineInSand: selection.lineInSand,
+        lineReason: selection.lineReason,
+        requiredClose: selection.requiredClose,
+        obstacleType: selection.obstacleType,
+        obstacleSource: selection.obstacleSource,
+        evidence,
+        blockers: selection.acceptedBeyondLine ? [] : [blocker],
+      },
+    },
+  };
+}
+
 function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, chartContext?: ChartContext | null): SetupCandidate {
   const layer = chartContext?.timeframeMssEvidence;
   const expectedDirection = mssDirectionForCandidate(candidate.direction);
@@ -3755,7 +3975,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? notDetectedFailedPlanReversalCandidate(entry)
           : candidateForEntry(entry, input, text)
       )
-      .map((candidate) => applyActiveTimeframeMssRulesToCandidate(candidate, input.chartContext)),
+      .map((candidate) => applyActiveTimeframeMssRulesToCandidate(candidate, input.chartContext))
+      .map((candidate) => applyHtfLineInSandRuleToCandidate(candidate, input.chartContext)),
   ]
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 
