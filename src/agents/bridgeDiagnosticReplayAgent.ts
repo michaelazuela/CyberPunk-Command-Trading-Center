@@ -2,7 +2,9 @@ import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 import { isValidPrice } from '../lib/tradePlan';
 import { buildHtfLiquidityDrawState, type HtfLiquidityDrawState } from '../lib/htfLiquidityDrawEngine';
-import { ExecutionStatus, SetupCandidate, SetupType, TradeDecisionStatus } from '../types';
+import { buildMultiTimeframeMssEvidenceLayer } from '../lib/timeframeMssEvidence';
+import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../lib/activeTimeframeMssRulesetAudit';
+import { ExecutionStatus, SetupCandidate, SetupType, TradeDecisionStatus, type MultiTimeframeMssEvidenceLayer } from '../types';
 
 export type BridgeDiagnosticClassification =
   | 'A_VALID_APPROVED_NO_ALERT'
@@ -180,6 +182,29 @@ export interface BridgeDiagnosticReplayReport {
     blockers: string[];
     chartReportPath: null;
   };
+  timeframeMssEvidenceDiagnostics: {
+    source: MultiTimeframeMssEvidenceLayer['source'];
+    authority: MultiTimeframeMssEvidenceLayer['authority'];
+    boundary: MultiTimeframeMssEvidenceLayer['boundary'];
+    timeframes: Array<{
+      timeframe: string;
+      direction: string;
+      status: string;
+      displacementPresent: boolean;
+      displacementScore: number;
+      breaksStructure: boolean;
+      evidenceTimestamp: string | null;
+      completedBarStatus: string;
+      barTimestampMode: string;
+      barTimeZone: string;
+      confidence: number;
+      blockers: string[];
+    }>;
+    notes: string[];
+    approvesExecution: false;
+    changesTradeLogic: false;
+  };
+  activeTimeframeMssRulesetDiagnostics: ActiveTimeframeMssRulesetAudit;
   filesOrFunctionsImpacted: string[];
   smallestSafeCodeChangeRecommendation: string;
   advisoryOnlyDetectorRecommendation: {
@@ -636,6 +661,46 @@ function buildHtfMssDiagnostics(input: BridgeDiagnosticReplayInput, direction: '
   };
 }
 
+function buildTimeframeMssEvidenceDiagnostics(input: BridgeDiagnosticReplayInput): BridgeDiagnosticReplayReport['timeframeMssEvidenceDiagnostics'] {
+  const sorted5m = sortedBars(input.bars5mContext?.length ? input.bars5mContext : input.bars5m);
+  const sortedExecution5m = sortedBars(input.bars5m);
+  const layer = buildMultiTimeframeMssEvidenceLayer({
+    barsByTimeframe: {
+      '5M': sorted5m,
+      '15M': sortedBars(input.bars15m),
+      '60M': sortedBars(input.bars60m),
+      '120M': sortedBars(input.bars120m),
+      '240M': sortedBars(input.bars240m),
+    },
+    asOfTimestamp: sortedExecution5m.at(-1)?.time || sorted5m.at(-1)?.time || null,
+    barTimestampMode: 'close',
+    barTimeZone: 'eastern',
+  });
+
+  return {
+    source: layer.source,
+    authority: layer.authority,
+    boundary: layer.boundary,
+    timeframes: Object.values(layer.timeframes).map((item) => ({
+      timeframe: item.timeframe,
+      direction: item.direction,
+      status: item.status,
+      displacementPresent: item.displacementQuality.present,
+      displacementScore: item.displacementQuality.score,
+      breaksStructure: item.breaksStructure,
+      evidenceTimestamp: item.evidenceTimestamp,
+      completedBarStatus: item.completedBarStatus,
+      barTimestampMode: item.barTimestampMode,
+      barTimeZone: item.barTimeZone,
+      confidence: item.confidence,
+      blockers: item.blockers,
+    })),
+    notes: layer.notes,
+    approvesExecution: false,
+    changesTradeLogic: false,
+  };
+}
+
 function newPlanRecommendation(classification: BridgeDiagnosticClassification) {
   if (classification === 'A_VALID_APPROVED_NO_ALERT') {
     return {
@@ -734,6 +799,8 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   const gateReview = buildGateReview(input, htf);
   const targetReview = targetOutcome(finalClassification, approvedCandidate, bars5m);
   const htfMssDiagnostics = buildHtfMssDiagnostics(input, direction, approvedCandidate);
+  const timeframeMssEvidenceDiagnostics = buildTimeframeMssEvidenceDiagnostics(input);
+  const activeTimeframeMssRulesetDiagnostics = summarizeActiveTimeframeMssRuleset(input.scannerSelectedCandidate || approvedCandidate);
   const htfContextSummary = htfMssDiagnostics.htfContextDataLimited
     ? `${htfMssDiagnostics.classificationReason} ${htfMssDiagnostics.htfContextSufficiency.blockers.join(' ')}`
     : `HTF context sufficient. Classification reliability=${htfMssDiagnostics.classificationReliability}.`;
@@ -800,6 +867,8 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
     },
     targetOutcomeReview: targetReview,
     htfMssDiagnostics,
+    timeframeMssEvidenceDiagnostics,
+    activeTimeframeMssRulesetDiagnostics,
     filesOrFunctionsImpacted: [
       'src/lib/ninjaTraderBridge.ts::buildNinjaChartContext',
       'src/lib/setupScanner.ts::scanSetupCandidates',

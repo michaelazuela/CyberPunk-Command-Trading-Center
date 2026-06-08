@@ -7,6 +7,7 @@ import {
   SetupCandidateStatus,
   SetupType,
   TargetObjective,
+  TimeframeMssEvidence,
   TradingPlanCandidateState,
 } from '../types';
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
@@ -2361,15 +2362,19 @@ function fvgOrImbalanceSupportsDirection(chartContext: ChartContext, direction: 
   );
 }
 
-function liquidityTargetForContinuation(chartContext: ChartContext, direction: Direction, entry: number | null): TargetObjective | null {
+function liquidityTargetForContinuation(chartContext: ChartContext, direction: Direction, entry: number | null, currentPrice?: number | null): TargetObjective | null {
   if ((direction !== 'LONG' && direction !== 'SHORT') || entry === null) return null;
+  const referencePrice = currentPrice !== null && currentPrice !== undefined ? currentPrice : entry;
+  const forwardPrice = direction === 'LONG'
+    ? (price: number) => price > entry && price > referencePrice
+    : (price: number) => price < entry && price < referencePrice;
   const objectives = (chartContext.targetObjectives || [])
     .filter((target) =>
       target.direction === direction &&
       target.type !== 'imbalance_zone' &&
       target.type !== 'gap' &&
       Number.isFinite(target.price) &&
-      (direction === 'LONG' ? target.price > entry : target.price < entry)
+      forwardPrice(target.price)
     )
     .sort((a, b) => direction === 'LONG' ? a.price - b.price : b.price - a.price);
   if (objectives[0]) return objectives[0];
@@ -2377,7 +2382,7 @@ function liquidityTargetForContinuation(chartContext: ChartContext, direction: D
   const mtfTarget = direction === 'LONG'
     ? chartContext.multiTimeframeContext?.targetMap?.nearestUpsideLiquidity || chartContext.multiTimeframeContext?.targetMap?.majorUpsideLiquidity
     : chartContext.multiTimeframeContext?.targetMap?.nearestDownsideLiquidity || chartContext.multiTimeframeContext?.targetMap?.majorDownsideLiquidity;
-  if (mtfTarget?.price && (direction === 'LONG' ? mtfTarget.price > entry : mtfTarget.price < entry)) {
+  if (mtfTarget?.price && forwardPrice(mtfTarget.price)) {
     return {
       label: mtfTarget.label,
       price: mtfTarget.price,
@@ -2394,7 +2399,7 @@ function liquidityTargetForContinuation(chartContext: ChartContext, direction: D
   const fallback = direction === 'LONG'
     ? keyLevels.previousDayHigh ?? keyLevels.priorDayHigh ?? keyLevels.overnightHigh ?? keyLevels.londonHigh ?? keyLevels.activeSwingHigh ?? null
     : keyLevels.previousDayLow ?? keyLevels.priorDayLow ?? keyLevels.overnightLow ?? keyLevels.londonLow ?? keyLevels.activeSwingLow ?? null;
-  if (fallback && (direction === 'LONG' ? fallback > entry : fallback < entry)) {
+  if (fallback && forwardPrice(fallback)) {
     return {
       label: direction === 'LONG' ? 'External buy-side liquidity' : 'External sell-side liquidity',
       price: fallback,
@@ -2472,6 +2477,262 @@ function htfDisplacementFvgConfidenceScore(args: {
   );
 }
 
+function isInsideOpeningDriveArmWindow(chartContext?: ChartContext | null): boolean {
+  if (!chartContext || (chartContext.sessionType !== 'morning' && chartContext.sessionType !== 'replay_morning')) return false;
+  const minutes = latestChartMinutes(chartContext);
+  return minutes !== null && minutes >= 9 * 60 + 30 && minutes < 10 * 60;
+}
+
+function isInsideOpeningDriveReviewWindow(chartContext?: ChartContext | null): boolean {
+  if (!chartContext || (chartContext.sessionType !== 'morning' && chartContext.sessionType !== 'replay_morning')) return false;
+  const minutes = latestChartMinutes(chartContext);
+  return minutes !== null && minutes >= 10 * 60 && minutes < 11 * 60;
+}
+
+function directionalFvgZone(chartContext: ChartContext, direction: Direction) {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  return (chartContext.fvgZones || [])
+    .filter((zone) =>
+      zone.direction === direction &&
+      isReadableConfidence(zone.confidence) &&
+      zone.impulseQualified !== false &&
+      parsePrice(zone.upper) !== null &&
+      parsePrice(zone.lower) !== null
+    )
+    .sort((a, b) => {
+      const aTime = Date.parse(String(a.formedAt || ''));
+      const bTime = Date.parse(String(b.formedAt || ''));
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    })[0] || null;
+}
+
+function fvgRetestEvidence(chartContext: ChartContext, direction: Direction, zone: ReturnType<typeof directionalFvgZone>): {
+  confirmed: boolean;
+  reason: string;
+} {
+  if (!zone) return { confirmed: false, reason: '5M FVG / imbalance zone is not available.' };
+  const upper = parsePrice(zone.upper);
+  const lower = parsePrice(zone.lower);
+  if (upper === null || lower === null) return { confirmed: false, reason: '5M FVG / imbalance zone has incomplete bounds.' };
+
+  const entry = parsePrice(chartContext.proposedEntry);
+  if (priceInsideZone(entry, zone)) {
+    return { confirmed: true, reason: '5M FVG retest/mitigation confirmed: proposed entry is inside the FVG zone.' };
+  }
+
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close);
+  if (priceInsideZone(currentPrice, zone)) {
+    return { confirmed: true, reason: '5M FVG retest/mitigation confirmed: current price is inside the FVG zone.' };
+  }
+
+  if (chartContext.setupReadyFacts?.pullbackIntoFvg || chartContext.setupReadyFacts?.fvgReclaimed) {
+    return { confirmed: true, reason: '5M FVG retest/mitigation confirmed by structured setupReadyFacts.' };
+  }
+
+  if (typeof zone.filledPercent === 'number' && zone.filledPercent > 0) {
+    return { confirmed: true, reason: `5M FVG mitigation confirmed: zone filled ${Math.round(zone.filledPercent)}%.` };
+  }
+
+  const candles = readableCompletedFiveMinuteCandles(chartContext)
+    .filter((candle) => isAfterReferenceCandle(candle, {
+      candleIndex: zone.formedCandleIndex ?? null,
+      timestamp: zone.formedAt ?? null,
+    }));
+  const touch = candles.find((candle) => candleTouchesFvg(candle, zone));
+  if (touch) {
+    return {
+      confirmed: true,
+      reason: `5M FVG retest/mitigation confirmed by completed candle${touch.timestamp ? ` at ${touch.timestamp}` : ''}.`,
+    };
+  }
+
+  return {
+    confirmed: false,
+    reason: direction === 'SHORT'
+      ? '5M FVG retest/mitigation is pending; no completed candle traded back into the bearish FVG zone.'
+      : '5M FVG retest/mitigation is pending; no completed candle traded back into the bullish FVG zone.',
+  };
+}
+
+function openingDriveStructureStop(chartContext: ChartContext, direction: Direction, zone: ReturnType<typeof directionalFvgZone>): number | null {
+  if (!zone || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const upper = parsePrice(zone.upper);
+  const lower = parsePrice(zone.lower);
+  const recent = readableCompletedFiveMinuteCandles(chartContext).slice(-8);
+  if (direction === 'SHORT') {
+    const candidates = [
+      upper,
+      parsePrice(chartContext.keyLevels.activeSwingHigh),
+      ...recent.map((candle) => parsePrice(candle.high)),
+    ].filter((price): price is number => price !== null && Number.isFinite(price));
+    return candidates.length ? Math.max(...candidates) + tick : null;
+  }
+  const candidates = [
+    lower,
+    parsePrice(chartContext.keyLevels.activeSwingLow),
+    ...recent.map((candle) => parsePrice(candle.low)),
+  ].filter((price): price is number => price !== null && Number.isFinite(price));
+  return candidates.length ? Math.min(...candidates) - tick : null;
+}
+
+function openingDriveConfidenceScore(args: {
+  fifteenDisplacement: boolean;
+  fiveStructure: boolean;
+  hasFvg: boolean;
+  retestConfirmed: boolean;
+  hasTarget: boolean;
+  enoughRoom: boolean;
+  reviewWindow: boolean;
+  armWindow: boolean;
+  htfGate: boolean;
+  hasEntryStopTargets: boolean;
+}): number {
+  return Math.min(100,
+    (args.fifteenDisplacement ? 22 : 0) +
+    (args.fiveStructure ? 18 : 0) +
+    (args.hasFvg ? 18 : 0) +
+    (args.retestConfirmed ? 14 : 0) +
+    (args.hasTarget ? 8 : 0) +
+    (args.enoughRoom ? 7 : 0) +
+    (args.reviewWindow ? 6 : args.armWindow ? 3 : 0) +
+    (args.htfGate ? 3 : 0) +
+    (args.hasEntryStopTargets ? 4 : 0)
+  );
+}
+
+function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
+  const chartContext = input.chartContext;
+  if (!chartContext) return null;
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+  if (!registry) return null;
+  const direction = htfDisplacementDirection(chartContext);
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+
+  const armWindow = isInsideOpeningDriveArmWindow(chartContext);
+  const reviewWindow = isInsideOpeningDriveReviewWindow(chartContext);
+  if (!armWindow && !reviewWindow) return null;
+
+  const fifteenDisplacement = displacementCandleFor(chartContext, direction, '15m');
+  const fiveDisplacement = displacementCandleFor(chartContext, direction, '5m');
+  const hasMss = confirmedFiveMinuteMss(chartContext, direction);
+  const hasCompletedMssClose = completedFiveMinuteMssCloseConfirmed(chartContext, direction);
+  const fiveStructure = Boolean(hasCompletedMssClose || fiveDisplacement);
+  const fvg = directionalFvgZone(chartContext, direction);
+  const retest = fvgRetestEvidence(chartContext, direction, fvg);
+  const htfGate = htfContextGate(chartContext);
+
+  if (!fifteenDisplacement || !fiveStructure || !fvg) return null;
+
+  const zoneMidpoint = parsePrice(fvg.midpoint) ?? (
+    parsePrice(fvg.upper) !== null && parsePrice(fvg.lower) !== null
+      ? ((parsePrice(fvg.upper) as number) + (parsePrice(fvg.lower) as number)) / 2
+      : null
+  );
+  const entry = parsePrice(chartContext.proposedEntry) ?? zoneMidpoint;
+  const stop = parsePrice(chartContext.proposedStop) ?? openingDriveStructureStop(chartContext, direction, fvg);
+  const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
+  const roomRatio = remainingPathRatio(direction, entry, currentPrice, target?.price ?? null);
+  const enoughRoom = roomRatio === null ? Boolean(target) : roomRatio >= 0.25;
+  const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
+    (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
+  const targets = computedTargets(direction, entry, stop);
+  const invalidation = stop !== null
+    ? direction === 'LONG'
+      ? `Invalid if price trades below the protected 5M opening-drive/FVG structure stop near ${stop}.`
+      : `Invalid if price trades above the protected 5M opening-drive/FVG structure stop near ${stop}.`
+    : null;
+  const hasEntryStopTargets = entry !== null && stop !== null && targets.target1 !== null && targets.target2 !== null && invalidation !== null;
+  const humanReviewReady = reviewWindow && retest.confirmed && hasEntryStopTargets && Boolean(target) && enoughRoom && htfGate.sufficient;
+  const score = openingDriveConfidenceScore({
+    fifteenDisplacement: true,
+    fiveStructure,
+    hasFvg: true,
+    retestConfirmed: retest.confirmed,
+    hasTarget: Boolean(target),
+    enoughRoom,
+    reviewWindow,
+    armWindow,
+    htfGate: htfGate.sufficient,
+    hasEntryStopTargets,
+  });
+  const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
+  const riskNote = riskAdvisoryNote(risk);
+  const dirLabel = directionLabel(direction);
+  const zoneLabel = `${parsePrice(fvg.lower)}-${parsePrice(fvg.upper)}`;
+  const missingEvidence = Array.from(new Set([
+    ...htfGate.missingEvidence,
+    ...(!reviewWindow ? ['Opening Drive FVG candidate is armed during 9:30-10:00 ET observation; human-review plan waits for 10:00-11:00 ET review window.'] : []),
+    ...(!retest.confirmed ? [retest.reason] : []),
+    ...(entry === null ? ['Defined 5M FVG retest entry or entry zone'] : []),
+    ...(stop === null ? ['Protected 5M structure stop'] : []),
+    ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
+    ...(!target ? ['Forward liquidity/target context in the trade direction'] : []),
+    ...(!enoughRoom ? ['Forward target room remains after the FVG retest'] : []),
+  ]));
+
+  return {
+    setupType: SetupType.OpeningDriveFvgContinuation,
+    scenarioLabel: registry.label,
+    candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : 'OPENING_OBSERVATION_ARMED',
+    pathway: 'opening_drive_fvg_continuation',
+    humanReview: {
+      status: humanReviewReady ? 'HumanReviewReady' : 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: humanReviewReady,
+      reason: humanReviewReady
+        ? 'Opening-drive FVG continuation is structurally qualified for human review. Trader confirmation is required before action.'
+        : 'Opening-drive FVG continuation is armed from observation context only; wait for 10:00-11:00 ET FVG retest/mitigation.',
+    },
+    direction,
+    detectedStatus: humanReviewReady ? SetupCandidateStatus.Conditional : SetupCandidateStatus.Possible,
+    confidence: score >= 82 ? 'High' : score >= 70 ? 'Medium' : 'Low',
+    priority: registry.priority,
+    entry,
+    stop,
+    target1: targets.target1,
+    target2: targets.target2,
+    riskPoints: risk,
+    riskAdvisoryStatus,
+    riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: score,
+    invalidation,
+    entryClarity: entry !== null ? 0.9 : 0.25,
+    stopClarity: stop !== null ? 0.9 : 0.25,
+    targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.85 : 0.3,
+    proximityScore: enoughRoom ? 0.75 : 0.25,
+    levelContextScore: score / 5,
+    levelContextSummary: `Opening drive FVG continuation: ${dirLabel} 15M displacement, ${dirLabel} 5M structure, FVG zone ${zoneLabel}, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
+    evidence: Array.from(new Set([
+      `${dirLabel} 15M opening displacement confirmed`,
+      ...(hasCompletedMssClose ? [`${dirLabel} completed 5M MSS confirmed`] : []),
+      ...(fiveDisplacement ? [`${dirLabel} 5M displacement structure confirmed`] : []),
+      `5M FVG / imbalance zone: ${zoneLabel}`,
+      ...(stop !== null ? [`Protected 5M structure stop derived for human-review plan: ${stop}`] : []),
+      retest.reason,
+      ...htfGate.evidence,
+      ...(target ? [`Forward liquidity/target context: ${target.label} ${target.price}`] : []),
+      `Directional bias: ${direction}; bias supports ${direction} when 15M displacement, 5M structure, and FVG retest align.`,
+      `Confidence score: ${score}/100`,
+      'Human review required. Decision-support plan only. Trader must confirm entry before action.',
+      'OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.',
+      ...(riskNote ? [riskNote] : []),
+    ])),
+    missingEvidence,
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
+    requiredTrigger: direction === 'SHORT'
+      ? 'Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.'
+      : 'Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.',
+    nextAction: humanReviewReady
+      ? `Human Review Ready ${dirLabel} Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required.${riskNote ? ` ${riskNote}` : ''}`
+      : 'Opening Drive FVG candidate armed. Wait for 10:00-11:00 ET 5M FVG retest/mitigation, protected stop, app targets, and forward target room before human-review plan output.',
+    reducedRiskPlan: null,
+  };
+}
+
 function notDetectedHtfDisplacementMssCandidate(entry: SetupRegistryEntry): SetupCandidate {
   return {
     setupType: entry.setupType,
@@ -2542,6 +2803,48 @@ function notDetectedHtfDisplacementFvgCandidate(entry: SetupRegistryEntry): Setu
   };
 }
 
+function notDetectedOpeningDriveFvgCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'opening_drive_fvg_continuation',
+    humanReview: {
+      status: 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: false,
+      reason: 'Opening Drive FVG Continuation is not armed.',
+    },
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.NotDetected,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'Opening Drive FVG Continuation requires 15M opening displacement, aligned 5M MSS/displacement, 5M FVG, and 10:00-11:00 ET FVG retest for human review.',
+    evidence: [],
+    missingEvidence: entry.requiredEvidence,
+    executionStatus: ExecutionStatus.NotDetected,
+    blockReason: null,
+    requiredTrigger: null,
+    nextAction: 'Wait for 15M opening displacement, aligned 5M structure, and a 5M FVG retest/mitigation in the review window. Human confirmation remains required.',
+    reducedRiskPlan: null,
+  };
+}
+
 function notDetectedFailedPlanReversalCandidate(entry: SetupRegistryEntry): SetupCandidate {
   return {
     setupType: entry.setupType,
@@ -2608,7 +2911,7 @@ function buildFailedPlanReversalCandidate(input: SetupScannerInput): SetupCandid
   const entry = parsePrice(chartContext.proposedEntry);
   const stop = parsePrice(chartContext.proposedStop);
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
-  const target = liquidityTargetForContinuation(chartContext, direction, entry);
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const targets = computedTargets(direction, entry, stop);
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
@@ -2747,7 +3050,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
   const entry = parsePrice(chartContext.proposedEntry) ?? mssClose;
   const stop = parsePrice(chartContext.proposedStop);
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
-  const target = liquidityTargetForContinuation(chartContext, direction, entry);
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const roomRatio = remainingPathRatio(direction, mssClose, currentPrice, target?.price ?? null);
   const roomPercent = remainingPathPercentLabel(roomRatio);
   const enoughRoom = roomRatio === null ? false : roomRatio >= 0.6;
@@ -2881,7 +3184,7 @@ function buildHtfDisplacementFvgContinuationCandidate(input: SetupScannerInput):
   const entry = parsePrice(chartContext.proposedEntry) ?? triggerClose;
   const stop = parsePrice(chartContext.proposedStop);
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
-  const target = liquidityTargetForContinuation(chartContext, direction, entry);
+  const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const roomRatio = remainingPathRatio(direction, triggerClose, currentPrice, target?.price ?? null);
   const enoughRoom = roomRatio === null ? false : roomRatio >= 0.6;
   const freshEntry = triggerClose !== null && currentPrice !== null
@@ -3246,6 +3549,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.pathway === 'htf_liquidity_draw_mss' ? 24 :
     candidate.pathway === 'htf_displacement_mss_continuation' ? 22 :
     candidate.pathway === 'htf_displacement_fvg_continuation' ? 20 :
+    candidate.pathway === 'opening_drive_fvg_continuation' ? 23 :
     candidate.pathway === 'failed_plan_reversal' ? 21 :
     0;
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')
@@ -3266,11 +3570,165 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
   return score;
 }
 
+function mssDirectionForCandidate(direction: Direction): Exclude<TimeframeMssEvidence['direction'], 'neutral' | 'unknown'> | null {
+  if (direction === 'LONG') return 'bullish';
+  if (direction === 'SHORT') return 'bearish';
+  return null;
+}
+
+function oppositeMssDirection(direction: Exclude<TimeframeMssEvidence['direction'], 'neutral' | 'unknown'>): Exclude<TimeframeMssEvidence['direction'], 'neutral' | 'unknown'> {
+  return direction === 'bullish' ? 'bearish' : 'bullish';
+}
+
+function describeTimeframeMssEvidence(evidence: TimeframeMssEvidence): string {
+  return `${evidence.timeframe} ${evidence.direction} ${evidence.status} break=${evidence.breaksStructure} completed=${evidence.completedBarStatus}${evidence.evidenceTimestamp ? ` at ${evidence.evidenceTimestamp}` : ''}`;
+}
+
+function isConfirmedMss(evidence: TimeframeMssEvidence | undefined, direction: TimeframeMssEvidence['direction']): boolean {
+  return Boolean(
+    evidence &&
+    evidence.status === 'confirmed_mss' &&
+    evidence.direction === direction &&
+    evidence.breaksStructure &&
+    evidence.completedBarStatus === 'completed'
+  );
+}
+
+function appendUnique(values: string[], additions: string[]): string[] {
+  const output = [...values];
+  for (const addition of additions) {
+    if (!output.includes(addition)) output.push(addition);
+  }
+  return output;
+}
+
+function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, chartContext?: ChartContext | null): SetupCandidate {
+  const layer = chartContext?.timeframeMssEvidence;
+  const expectedDirection = mssDirectionForCandidate(candidate.direction);
+  if (!expectedDirection) {
+    return {
+      ...candidate,
+      activeRuleset: {
+        ...candidate.activeRuleset,
+        timeframeMss: {
+          applied: false,
+          status: 'not_applicable',
+          required: 'aligned_confirmed_5m_mss',
+          appliesToAllModels: true,
+          affectsExecution: false,
+          evidence: ['Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates.'],
+          blockers: [],
+        },
+      },
+    };
+  }
+  if (!layer) {
+    const blocker = 'Active timeframe MSS ruleset requires NinjaTrader OHLC timeframeMssEvidence before executable status.';
+    const blocksExecutable = candidate.executionStatus === ExecutionStatus.Executable;
+    return {
+      ...candidate,
+      confidence: blocksExecutable && candidate.confidence === 'High' ? 'Medium' : candidate.confidence,
+      executionStatus: blocksExecutable ? ExecutionStatus.Conditional : candidate.executionStatus,
+      blockReason: blocksExecutable ? NoTradeReason.MissingRequiredContext : candidate.blockReason,
+      levelContextScore: (candidate.levelContextScore || 0) - 12,
+      evidence: appendUnique(candidate.evidence, [
+        'Active timeframe MSS ruleset applied to all models: NinjaTrader OHLC timeframeMssEvidence is required before executable status.',
+      ]),
+      missingEvidence: appendUnique(candidate.missingEvidence, [blocker]),
+      nextAction: blocksExecutable
+        ? 'Active timeframe MSS ruleset: wait for NinjaTrader OHLC timeframeMssEvidence, then require completed aligned 5M MSS before executable status.'
+        : candidate.nextAction,
+      activeRuleset: {
+        ...candidate.activeRuleset,
+        timeframeMss: {
+          applied: true,
+          status: 'missing_evidence_layer',
+          required: 'aligned_confirmed_5m_mss',
+          appliesToAllModels: true,
+          affectsExecution: blocksExecutable,
+          evidence: ['Active timeframe MSS ruleset applied to all models: NinjaTrader OHLC timeframeMssEvidence is required before executable status.'],
+          blockers: [blocker],
+        },
+      },
+    };
+  }
+
+  const oppositeDirection = oppositeMssDirection(expectedDirection);
+  const fiveMinuteEvidence = layer.timeframes['5M'];
+  const alignedFiveMinuteMss = isConfirmedMss(fiveMinuteEvidence, expectedDirection);
+  const opposingFiveMinuteMss = isConfirmedMss(fiveMinuteEvidence, oppositeDirection);
+  const opposingHigherTimeframeMss = (['15M', '60M', '120M', '240M'] as const)
+    .map((timeframe) => layer.timeframes[timeframe])
+    .filter((item) => isConfirmedMss(item, oppositeDirection));
+  const alignedHigherTimeframeMss = (['15M', '60M', '120M', '240M'] as const)
+    .map((timeframe) => layer.timeframes[timeframe])
+    .filter((item) => isConfirmedMss(item, expectedDirection));
+  const openingDriveHumanReview = candidate.pathway === 'opening_drive_fvg_continuation';
+
+  const evidence = [
+    `Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M ${expectedDirection} MSS before executable status.`,
+  ];
+  if (fiveMinuteEvidence) {
+    evidence.push(`Active timeframe MSS 5M read: ${describeTimeframeMssEvidence(fiveMinuteEvidence)}.`);
+  }
+  if (alignedFiveMinuteMss) {
+    evidence.push(`Active timeframe MSS pass: completed 5M ${expectedDirection} MSS is aligned with candidate direction.`);
+  }
+  if (alignedHigherTimeframeMss.length) {
+    evidence.push(`Active timeframe MSS context aligned on ${alignedHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`);
+  }
+  if (openingDriveHumanReview && opposingHigherTimeframeMss.length) {
+    evidence.push(`Opening Drive FVG HTF caution: opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')} is reported for human review, not used to erase raw evidence or suppress the human-review plan.`);
+  }
+
+  const blockers: string[] = [];
+  if (!alignedFiveMinuteMss) {
+    blockers.push('Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.');
+  }
+  if (opposingFiveMinuteMss) {
+    blockers.push(`Active timeframe MSS ruleset found opposing completed 5M ${oppositeDirection} MSS.`);
+  }
+  if (opposingHigherTimeframeMss.length && !openingDriveHumanReview) {
+    blockers.push(`Active timeframe MSS ruleset found opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`);
+  }
+  const cautionEvidence = openingDriveHumanReview && opposingHigherTimeframeMss.length
+    ? [`HTF caution for human review: opposing completed ${oppositeDirection} MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`]
+    : [];
+
+  const blocksExecutable = blockers.length > 0 && candidate.executionStatus === ExecutionStatus.Executable;
+  const status = blockers.length ? 'blocked' : 'passed';
+  return {
+    ...candidate,
+    confidence: blocksExecutable && candidate.confidence === 'High' ? 'Medium' : candidate.confidence,
+    executionStatus: blocksExecutable ? ExecutionStatus.Conditional : candidate.executionStatus,
+    blockReason: blocksExecutable ? NoTradeReason.EntryTriggerPending : candidate.blockReason,
+    levelContextScore: (candidate.levelContextScore || 0) + (blockers.length ? -12 : 6 + alignedHigherTimeframeMss.length * 2),
+    evidence: appendUnique(candidate.evidence, [...evidence, ...cautionEvidence]),
+    missingEvidence: appendUnique(candidate.missingEvidence, blockers),
+    nextAction: blocksExecutable
+      ? 'Active timeframe MSS ruleset: wait until completed 5M MSS aligns with the candidate and no opposing completed HTF MSS conflict remains.'
+      : candidate.nextAction,
+    activeRuleset: {
+      ...candidate.activeRuleset,
+      timeframeMss: {
+        applied: true,
+        status,
+        required: 'aligned_confirmed_5m_mss',
+        appliesToAllModels: true,
+        affectsExecution: blocksExecutable,
+        evidence,
+        blockers,
+      },
+    },
+  };
+}
+
 export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const text = buildSearchText(input);
   const htfCandidate = buildHtfLiquidityDrawCandidate(input);
   const htfDisplacementCandidate = buildHtfDisplacementMssContinuationCandidate(input);
   const htfDisplacementFvgCandidate = buildHtfDisplacementFvgContinuationCandidate(input);
+  const openingDriveFvgCandidate = buildOpeningDriveFvgContinuationCandidate(input);
   const failedPlanReversalCandidate = buildFailedPlanReversalCandidate(input);
   const candidates = [
     ...getPrimarySetupRegistry(input.sessionType)
@@ -3281,6 +3739,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? htfDisplacementCandidate
           : entry.setupType === SetupType.HtfDisplacementFvgContinuation && htfDisplacementFvgCandidate
           ? htfDisplacementFvgCandidate
+          : entry.setupType === SetupType.OpeningDriveFvgContinuation && openingDriveFvgCandidate
+          ? openingDriveFvgCandidate
           : entry.setupType === SetupType.FailedPlanReversal && failedPlanReversalCandidate
           ? failedPlanReversalCandidate
           : entry.setupType === SetupType.HtfDrawContinuationAfterRaid
@@ -3289,10 +3749,13 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? notDetectedHtfDisplacementMssCandidate(entry)
           : entry.setupType === SetupType.HtfDisplacementFvgContinuation
           ? notDetectedHtfDisplacementFvgCandidate(entry)
+          : entry.setupType === SetupType.OpeningDriveFvgContinuation
+          ? notDetectedOpeningDriveFvgCandidate(entry)
           : entry.setupType === SetupType.FailedPlanReversal
           ? notDetectedFailedPlanReversalCandidate(entry)
           : candidateForEntry(entry, input, text)
-      ),
+      )
+      .map((candidate) => applyActiveTimeframeMssRulesToCandidate(candidate, input.chartContext)),
   ]
     .sort((a, b) => rankSetupCandidate(b) - rankSetupCandidate(a));
 

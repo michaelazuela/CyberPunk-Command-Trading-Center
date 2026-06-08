@@ -11,6 +11,7 @@ import { runBridgeDiagnosticReplay } from '../../src/agents/bridgeDiagnosticRepl
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import { runTradeDecisionPipeline } from '../../src/lib/tradeDecisionPipeline';
 import { normalizeTradePlan } from '../../src/lib/tradePlan';
+import { buildMultiTimeframeMssEvidenceLayer } from '../../src/lib/timeframeMssEvidence';
 import {
   ExecutionStatus,
   NoTradeReason,
@@ -91,6 +92,11 @@ function buildHtfState(): HtfLiquidityDrawState {
 
 function baseChartContext(overrides: Partial<ChartContext> = {}): ChartContext {
   const htfLiquidityDrawState = buildHtfState();
+  const bars5M = padContextBars(juneOneBullishFiveMinuteBars(), '5m');
+  const bars15M = bullishPotentialBars('15m');
+  const bars60M = bullishPotentialBars('60m');
+  const bars120M = bullishPotentialBars('120m');
+  const bars240M = bullishPotentialBars('240m');
   return {
     sessionType: 'replay_lunch',
     instrument: 'MES',
@@ -110,6 +116,18 @@ function baseChartContext(overrides: Partial<ChartContext> = {}): ChartContext {
       nearestResistance: 7632.75,
       nearestSupport: 7588.25,
     },
+    timeframeMssEvidence: buildMultiTimeframeMssEvidenceLayer({
+      barsByTimeframe: {
+        '5M': bars5M,
+        '15M': bars15M,
+        '60M': bars60M,
+        '120M': bars120M,
+        '240M': bars240M,
+      },
+      asOfTimestamp: '2026-06-01T14:10:00-04:00',
+      barTimestampMode: 'close',
+      barTimeZone: 'eastern',
+    }),
     htfLiquidityDrawState,
     targetObjectives: [
       {

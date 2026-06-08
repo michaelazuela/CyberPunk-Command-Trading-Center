@@ -35,6 +35,7 @@ export enum SetupType {
   HtfDrawContinuationAfterRaid = 'HtfDrawContinuationAfterRaid',
   HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
   HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
+  OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
   FailedPlanReversal = 'FailedPlanReversal',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
@@ -486,6 +487,59 @@ export interface MultiTimeframeContext {
   notes: string[];
 }
 
+export type MssEvidenceTimeframe = '5M' | '15M' | '60M' | '120M' | '240M';
+export type MssEvidenceDirection = 'bullish' | 'bearish' | 'neutral' | 'unknown';
+export type MssEvidenceStatus =
+  | 'confirmed_mss'
+  | 'displacement_without_mss'
+  | 'pending_incomplete_bar'
+  | 'no_mss'
+  | 'insufficient_data'
+  | 'unknown';
+export type CompletedBarStatus = 'completed' | 'incomplete' | 'unknown';
+export type BridgeBarTimestampMode = 'open' | 'close';
+export type BridgeBarTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
+
+export interface TimeframeMssEvidence {
+  timeframe: MssEvidenceTimeframe;
+  direction: MssEvidenceDirection;
+  status: MssEvidenceStatus;
+  displacementQuality: {
+    present: boolean;
+    direction: Exclude<MssEvidenceDirection, 'neutral' | 'unknown'> | null;
+    score: number;
+    bodyToRange: number | null;
+    closeLocation: number | null;
+    rangeExpansion: number | null;
+  };
+  breaksStructure: boolean;
+  structureBreak?: {
+    type: 'mss' | 'bos_continuation' | 'none' | 'insufficient_swings';
+    brokenLevel: number | null;
+    brokenSwingTimestamp: string | null;
+    priorStructureDirection: MssEvidenceDirection;
+    closeThroughPoints: number | null;
+    wickOnlyBreak: boolean;
+  };
+  evidenceTimestamp: string | null;
+  completedBarStatus: CompletedBarStatus;
+  barTimestampMode: BridgeBarTimestampMode;
+  barTimeZone: BridgeBarTimeZoneMode;
+  source: 'ninjatrader_ohlc';
+  blockers: string[];
+  confidence: number;
+}
+
+export interface MultiTimeframeMssEvidenceLayer {
+  source: 'ninjatrader_ohlc';
+  authority: 'ohlc_facts_only';
+  boundary: 'evidence_only_not_approval_or_execution_authority';
+  timeframes: Record<MssEvidenceTimeframe, TimeframeMssEvidence>;
+  notes: string[];
+  approvesExecution: false;
+  changesTradeLogic: false;
+}
+
 export interface GapContextFact {
   gapPresent: boolean;
   direction: 'gap_up' | 'gap_down' | 'none' | 'unknown';
@@ -691,6 +745,7 @@ export interface ChartContext {
   sessionLevelContext?: SessionLevelContext;
   sessionStory?: SessionStory;
   multiTimeframeContext?: MultiTimeframeContext;
+  timeframeMssEvidence?: MultiTimeframeMssEvidenceLayer;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   higherTimeframeThesis?: HigherTimeframeThesis;
   structureQualityContext?: StructureQualityContext;
@@ -731,6 +786,8 @@ export type TradingPlanCandidateState =
   | 'MSS_HOLD_TRIGGER_PENDING'
   | 'MSS_HOLD_CONFIRMED'
   | 'MSS_CONTINUATION_RETEST_PENDING'
+  | 'OPENING_OBSERVATION_ARMED'
+  | 'HUMAN_REVIEW_READY'
   | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
   | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
   | 'FAILED_SHORT_TO_BULLISH_DECISION_PENDING'
@@ -1001,9 +1058,27 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'failed_plan_reversal';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'failed_plan_reversal';
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   failedPlanReversal?: FailedPlanReversalContext;
+  humanReview?: {
+    status: 'OpeningObservationArmed' | 'HumanReviewReady';
+    canExecute: false;
+    requiresTraderConfirmation: true;
+    discordTradePlanEligible: boolean;
+    reason: string;
+  };
+  activeRuleset?: {
+    timeframeMss?: {
+      applied: boolean;
+      status: 'passed' | 'blocked' | 'not_applicable' | 'missing_evidence_layer';
+      required: 'aligned_confirmed_5m_mss';
+      appliesToAllModels: true;
+      affectsExecution: boolean;
+      evidence: string[];
+      blockers: string[];
+    };
+  };
   direction: 'LONG' | 'SHORT' | 'NO TRADE';
   detectedStatus: SetupCandidateStatus;
   confidence: 'High' | 'Medium' | 'Low';

@@ -232,6 +232,7 @@ function structuredContext(): ChartContext {
         missingEvidence: [],
       },
     },
+    timeframeMssEvidence: timeframeMssEvidenceLayer('bullish'),
     screenshotQuality: 'High',
     levelReadConfidence: 'High',
     candleReadConfidence: 'High',
@@ -340,6 +341,7 @@ function lunchContext(): ChartContext {
         missingEvidence: [],
       },
     },
+    timeframeMssEvidence: timeframeMssEvidenceLayer('bearish'),
     proposedEntry: 7417.75,
     proposedStop: 7419,
     riskPoints: 1.25,
@@ -486,9 +488,55 @@ function shortModelOneContext(): ChartContext {
       sweepThenReclaim: true,
     },
     setupEvidence: {},
+    timeframeMssEvidence: timeframeMssEvidenceLayer('bearish'),
     proposedEntry: 7400,
     proposedStop: 7404.25,
     riskPoints: 4.25,
+  };
+}
+
+function timeframeMssEvidenceLayer(
+  direction: 'bullish' | 'bearish',
+  overrides: Partial<Record<'5M' | '15M' | '60M' | '120M' | '240M', Partial<NonNullable<ChartContext['timeframeMssEvidence']>['timeframes']['5M']>>> = {}
+): NonNullable<ChartContext['timeframeMssEvidence']> {
+  const buildEvidence = (
+    timeframe: '5M' | '15M' | '60M' | '120M' | '240M'
+  ): NonNullable<ChartContext['timeframeMssEvidence']>['timeframes']['5M'] => ({
+    timeframe,
+    direction,
+    status: 'confirmed_mss',
+    displacementQuality: {
+      present: true,
+      direction,
+      score: 88,
+      bodyToRange: 0.72,
+      closeLocation: 0.83,
+      rangeExpansion: 1.45,
+    },
+    breaksStructure: true,
+    evidenceTimestamp: '2026-05-08T10:00:00-04:00',
+    completedBarStatus: 'completed',
+    barTimestampMode: 'close',
+    barTimeZone: 'eastern',
+    source: 'ninjatrader_ohlc',
+    blockers: [],
+    confidence: 86,
+    ...overrides[timeframe],
+  });
+  return {
+    source: 'ninjatrader_ohlc',
+    authority: 'ohlc_facts_only',
+    boundary: 'evidence_only_not_approval_or_execution_authority',
+    timeframes: {
+      '5M': buildEvidence('5M'),
+      '15M': buildEvidence('15M'),
+      '60M': buildEvidence('60M'),
+      '120M': buildEvidence('120M'),
+      '240M': buildEvidence('240M'),
+    },
+    notes: ['Test fixture active timeframe MSS evidence.'],
+    approvesExecution: false,
+    changesTradeLogic: false,
   };
 }
 
@@ -694,6 +742,7 @@ function bearishTurtleSoupContext(): ChartContext {
       score: 90,
       reason: 'Next sell-side liquidity below reclaim.',
     }],
+    timeframeMssEvidence: timeframeMssEvidenceLayer('bearish'),
     proposedEntry: 7403,
     proposedStop: 7406.25,
     riskPoints: 3.25,
@@ -948,6 +997,7 @@ function htfMssContext(direction: 'LONG' | 'SHORT', overrides: Partial<ChartCont
       timeframeStack: [],
       ...sufficientHtfContextFields(),
     },
+    timeframeMssEvidence: timeframeMssEvidenceLayer(bullish ? 'bullish' : 'bearish'),
     ...overrides,
   };
 }
@@ -1190,6 +1240,7 @@ function htfDisplacementContinuationContext(
     stopConfirmed: true,
     requiresManualConfirmation: false,
     riskReadConfidence: 'High',
+    timeframeMssEvidence: timeframeMssEvidenceLayer(bullish ? 'bullish' : 'bearish'),
     ...overrides,
   };
 }
@@ -1249,6 +1300,7 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
     candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
+    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
     candidate.setupType === SetupType.FailedPlanReversal
   );
 }
@@ -1662,6 +1714,90 @@ const tests: Array<[string, () => void]> = [
     assert.ok(modelOne.evidence.includes('Fair value gap / imbalance entry model'));
     assert.ok(modelOne.evidence.includes('Retrace into FVG confirmed'));
     assert.ok(modelOne.evidence.includes('Minimum 2.0R available'));
+  }],
+
+  ['active timeframe MSS ruleset keeps Model 1 executable only with aligned completed 5M MSS', () => {
+    const context = structuredContext();
+    context.timeframeMssEvidence = timeframeMssEvidenceLayer('bullish');
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.applied, true);
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.status, 'passed');
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.appliesToAllModels, true);
+    assert.equal(result.bestExecutableCandidate?.setupType, SetupType.SweepMssFvgRetrace);
+  }],
+
+  ['active timeframe MSS ruleset demotes Model 1 when completed 5M MSS opposes candidate direction', () => {
+    const context = structuredContext();
+    context.timeframeMssEvidence = timeframeMssEvidenceLayer('bearish');
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.status, 'blocked');
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.affectsExecution, true);
+    assert.ok(modelOne.missingEvidence.includes('Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.'));
+    assert.ok(modelOne.missingEvidence.includes('Active timeframe MSS ruleset found opposing completed 5M bearish MSS.'));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['active timeframe MSS ruleset demotes Model 1 when NinjaTrader evidence layer is missing', () => {
+    const context = structuredContext();
+    delete context.timeframeMssEvidence;
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.blockReason, NoTradeReason.MissingRequiredContext);
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.status, 'missing_evidence_layer');
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.affectsExecution, true);
+    assert.ok(modelOne.missingEvidence.includes('Active timeframe MSS ruleset requires NinjaTrader OHLC timeframeMssEvidence before executable status.'));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
+  ['active timeframe MSS ruleset demotes Model 1 when completed HTF MSS opposes candidate direction', () => {
+    const context = structuredContext();
+    context.timeframeMssEvidence = timeframeMssEvidenceLayer('bullish', {
+      '60M': {
+        direction: 'bearish',
+        status: 'confirmed_mss',
+        breaksStructure: true,
+      },
+    });
+
+    const result = scanSetupCandidates({
+      sessionType: 'replay_morning',
+      chartContext: context,
+      result: null,
+    });
+    const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
+
+    assert.ok(modelOne);
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(modelOne.activeRuleset?.timeframeMss?.status, 'blocked');
+    assert.ok(modelOne.missingEvidence.includes('Active timeframe MSS ruleset found opposing completed HTF MSS on 60M.'));
+    assert.equal(result.bestExecutableCandidate, null);
   }],
 
   ['Phase E FVG-only continuation does not qualify as Model 1', () => {
@@ -2643,6 +2779,200 @@ const tests: Array<[string, () => void]> = [
     assert.ok((candidate.modelConfidenceScore ?? 0) > 92);
   }],
 
+  ['Opening Drive FVG continuation creates a human-review short plan with full levels and canExecute false', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      keyLevels: {
+        ...htfDisplacementContinuationContext('SHORT').keyLevels,
+        currentPrice: 7584,
+      },
+      proposedEntry: 7586.5,
+      proposedStop: 7590,
+      riskPoints: 3.5,
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+      targetObjectives: [{
+        label: 'Forward sell-side liquidity',
+        price: 7574,
+        direction: 'SHORT',
+        source: 'app',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 95,
+        reason: 'Forward target for opening drive short.',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.pathway, 'opening_drive_fvg_continuation');
+    assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, null);
+    assert.equal(candidate.humanReview?.canExecute, false);
+    assert.equal(candidate.humanReview?.requiresTraderConfirmation, true);
+    assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
+    assert.equal(candidate.entry, 7586.5);
+    assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.target1, 7581.25);
+    assert.equal(candidate.target2, 7579.5);
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.OpeningDriveFvgContinuation);
+    assert.equal(result.bestConditionalCandidate?.setupType, SetupType.OpeningDriveFvgContinuation);
+    assert.ok(candidate.evidence.some((item) => item.includes('Human review required')));
+  }],
+
+  ['Opening Drive FVG continuation supports symmetric long human-review plans', () => {
+    const context = htfDisplacementContinuationContext('LONG', {
+      chartTimestamp: '2026-06-05T10:15:00-04:00',
+      proposedEntry: 7602,
+      proposedStop: 7599,
+      riskPoints: 3,
+      fvgZones: [{
+        direction: 'LONG',
+        upper: 7603.5,
+        lower: 7600.5,
+        midpoint: 7602,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 40,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.humanReview?.requiresTraderConfirmation, true);
+    assert.ok(candidate.evidence.some((item) => item.includes('Directional bias: LONG')));
+  }],
+
+  ['Opening Drive FVG continuation arms during observation but does not become human-review ready before 10:00 ET', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T09:50:00-04:00',
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'OPENING_OBSERVATION_ARMED');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(candidate.humanReview?.discordTradePlanEligible, false);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('armed during 9:30-10:00')));
+  }],
+
+  ['Opening Drive FVG continuation reports opposing 60M/120M MSS as human-review caution instead of hard blocker', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      proposedEntry: 7586.5,
+      proposedStop: 7590,
+      riskPoints: 3.5,
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T09:45:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bearish', {
+        '60M': { direction: 'bullish' },
+        '120M': { direction: 'bullish' },
+      }),
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(candidate.activeRuleset?.timeframeMss?.status, 'passed');
+    assert.equal(candidate.missingEvidence.some((item) => item.includes('opposing completed HTF MSS')), false);
+    assert.ok(candidate.evidence.some((item) => item.includes('HTF caution for human review')));
+  }],
+
+  ['Opening Drive FVG continuation skips behind-price short targets and uses the next forward sell-side objective', () => {
+    const context = htfDisplacementContinuationContext('SHORT', {
+      chartTimestamp: '2026-06-05T10:20:00-04:00',
+      keyLevels: {
+        ...htfDisplacementContinuationContext('SHORT').keyLevels,
+        currentPrice: 7513.75,
+      },
+      proposedEntry: 7518,
+      proposedStop: 7522,
+      riskPoints: 4,
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7520,
+        lower: 7516,
+        midpoint: 7518,
+        formedAt: '2026-06-05T10:00:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+      targetObjectives: [
+        {
+          label: 'Behind-price London low',
+          price: 7547,
+          direction: 'SHORT',
+          source: 'app',
+          type: 'liquidity_pool',
+          confidence: 'High',
+          score: 90,
+          reason: 'Behind current price and must be skipped.',
+        },
+        {
+          label: 'Forward sell-side liquidity',
+          price: 7505,
+          direction: 'SHORT',
+          source: 'app',
+          type: 'liquidity_pool',
+          confidence: 'High',
+          score: 80,
+          reason: 'Forward target below current price.',
+        },
+      ],
+    });
+    const result = scanSetupCandidates({ sessionType: 'morning', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
+    assert.ok(candidate.evidence.some((item) => item.includes('Forward sell-side liquidity 7505')));
+    assert.equal(candidate.evidence.some((item) => item.includes('Behind-price London low')), false);
+    assert.equal(candidate.missingEvidence.includes('Forward target room remains after the FVG retest'), false);
+  }],
+
   ['HTF displacement FVG continuation is conditional when less than 60 percent path remains', () => {
     const base = htfDisplacementContinuationContext('SHORT');
     const context = htfDisplacementContinuationContext('SHORT', {
@@ -2893,6 +3223,22 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.evidence.includes('Stop beyond sweep wick'));
     assert.ok(turtle.evidence.includes('Targeting opposing liquidity'));
     assert.ok(turtle.evidence.includes('Minimum 2.0R available'));
+  }],
+
+  ['active timeframe MSS ruleset applies to Turtle Soup execution models', () => {
+    const context = bullishTurtleSoupContext();
+    context.timeframeMssEvidence = timeframeMssEvidenceLayer('bearish');
+
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.detectedStatus, SetupCandidateStatus.Detected);
+    assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(turtle.activeRuleset?.timeframeMss?.applied, true);
+    assert.equal(turtle.activeRuleset?.timeframeMss?.appliesToAllModels, true);
+    assert.equal(turtle.activeRuleset?.timeframeMss?.affectsExecution, true);
+    assert.ok(turtle.missingEvidence.includes('Active timeframe MSS ruleset found opposing completed 5M bearish MSS.'));
   }],
 
   ['Phase F bearish Turtle Soup qualifies with raid reclaim stop target and 2R', () => {
@@ -3773,6 +4119,7 @@ const tests: Array<[string, () => void]> = [
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
+        SetupType.OpeningDriveFvgContinuation,
         SetupType.FailedPlanReversal,
       ])
     );

@@ -7,6 +7,7 @@ import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
+import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { TRADE_RULES } from '../../src/config/tradeRules';
 import {
   buildNinjaChartContext,
@@ -155,6 +156,7 @@ export interface ScannerAlertDeliveryRecord {
     stop: number | null;
     target1: number | null;
     target2: number | null;
+    activeTimeframeMssRuleset: ActiveTimeframeMssRulesetAudit | null;
   };
   deliveryStatus: ScannerAlertDeliveryStatus;
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
@@ -305,6 +307,7 @@ function candidateDeliverySnapshot(candidate: SetupCandidate | null): ScannerAle
     stop: typeof candidate?.stop === 'number' ? candidate.stop : null,
     target1: typeof candidate?.target1 === 'number' ? candidate.target1 : null,
     target2: typeof candidate?.target2 === 'number' ? candidate.target2 : null,
+    activeTimeframeMssRuleset: candidate ? summarizeActiveTimeframeMssRuleset(candidate) : null,
   };
 }
 
@@ -1851,6 +1854,8 @@ async function analysisFromBars(args: {
     sessionType: args.session,
     instrument: args.config.instrument,
     tradeDate: args.tradeDate,
+    barTimestampMode: args.config.barTimestampMode,
+    barTimeZone: args.config.barTimeZone,
   });
   const chartContext = args.config.macroCalendarEnabled
     ? await applyNewsMacroCaution(baseChartContext, args.asOf || new Date(), loadMacroCalendarConfig())

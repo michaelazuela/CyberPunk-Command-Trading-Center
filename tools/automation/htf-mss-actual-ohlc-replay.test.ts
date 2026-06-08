@@ -74,6 +74,17 @@ assert.equal(actualReport.reportType, 'htf_mss_june_1_actual_ohlc_replay');
 assert.equal(actualReport.boundary, 'actual_ohlc_replay_only_not_execution_authority');
 assert.equal(actualReport.htfLiquidityDrawState.timeframeStack.length, 5);
 assert.equal(actualReport.diagnosticReplay.htfMssDiagnostics.approvesExecution, false);
+assert.ok(actualReport.timeframeMssEvidenceDiagnostics);
+assert.equal(actualReport.timeframeMssEvidenceDiagnostics?.boundary, 'evidence_only_not_approval_or_execution_authority');
+assert.equal(actualReport.timeframeMssEvidenceDiagnostics?.approvesExecution, false);
+assert.equal(actualReport.timeframeMssEvidenceDiagnostics?.changesTradeLogic, false);
+assert.ok(actualReport.timeframeMssEvidenceDiagnostics?.timeframes.some((item) => item.timeframe === '120M'));
+assert.ok(actualReport.activeTimeframeMssRulesetDiagnostics);
+assert.equal(actualReport.activeTimeframeMssRulesetDiagnostics.appliesToAllModels, true);
+assert.ok(actualReport.activeTimeframeMssRulesetDiagnostics.summary.includes('Active MSS ruleset'));
+assert.equal(actualReport.diagnosticReplay.timeframeMssEvidenceDiagnostics.approvesExecution, false);
+assert.equal(actualReport.diagnosticReplay.timeframeMssEvidenceDiagnostics.changesTradeLogic, false);
+assert.ok(actualReport.diagnosticReplay.activeTimeframeMssRulesetDiagnostics.summary.includes('Active MSS ruleset'));
 assert.equal(actualReport.safeWording.noBrokerExecution, true);
 assert.equal(actualReport.safeWording.externalLiquidityIsContextOnly, true);
 assert.equal(actualReport.safeWording.t1T2AreAppComputedRTargets, true);
@@ -153,6 +164,8 @@ assert.ok(artifactMarkdown.includes('HTF Usage: context only; not structural con
 assert.ok(artifactMarkdown.includes('Candidate Promotion: blocked by data-limited HTF context'));
 assert.ok(artifactMarkdown.includes('Minimum Expected'));
 assert.ok(artifactMarkdown.includes('Data-Limited Blockers'));
+assert.ok(artifactMarkdown.includes('## Timeframe MSS Evidence'));
+assert.ok(artifactMarkdown.includes('Boundary: evidence_only_not_approval_or_execution_authority. Approves execution: false. Changes trade logic: false.'));
 assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready/i.test(artifactMarkdown), false);
 assert.equal(/take the trade|enter now|buy now|sell now|trade approved/i.test(artifactMarkdown), false);
 

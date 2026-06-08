@@ -6,6 +6,7 @@ export type IctModelLabel =
   | 'HTF Draw Continuation After Raid/Reclaim'
   | 'HTF Displacement + 5M MSS Continuation'
   | 'HTF Displacement + FVG Continuation'
+  | 'Opening Drive FVG Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';
 
@@ -15,6 +16,7 @@ export function normalizeIctModelLabel(setupType?: SetupType | string | null): I
   if (setupType === SetupType.HtfDrawContinuationAfterRaid) return 'HTF Draw Continuation After Raid/Reclaim';
   if (setupType === SetupType.HtfDisplacementMssContinuation) return 'HTF Displacement + 5M MSS Continuation';
   if (setupType === SetupType.HtfDisplacementFvgContinuation) return 'HTF Displacement + FVG Continuation';
+  if (setupType === SetupType.OpeningDriveFvgContinuation) return 'Opening Drive FVG Continuation';
   if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
   return 'ICT setup';
 }

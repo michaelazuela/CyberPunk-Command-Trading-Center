@@ -8,6 +8,7 @@ import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import { runTradeDecisionPipeline } from '../../src/lib/tradeDecisionPipeline';
 import { normalizeTradePlan } from '../../src/lib/tradePlan';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
+import { summarizeActiveTimeframeMssRuleset } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { classifyActiveSetupScanWindowByEtMinutes } from '../../src/config/timeWindows';
 import { SetupType, TradeDecisionStatus, type AnalysisResult, type ChartContext, type SetupCandidate } from '../../src/types';
 
@@ -425,6 +426,34 @@ function candidateSummary(candidate: SetupCandidate | null) {
     nextAction: candidate.nextAction,
     evidence: candidate.evidence,
     missingEvidence: candidate.missingEvidence,
+    activeTimeframeMssRuleset: summarizeActiveTimeframeMssRuleset(candidate),
+  };
+}
+
+function timeframeMssEvidenceSummary(context: ChartContext) {
+  const layer = context.timeframeMssEvidence;
+  if (!layer) return null;
+  return {
+    source: layer.source,
+    authority: layer.authority,
+    boundary: layer.boundary,
+    timeframes: Object.values(layer.timeframes).map((item) => ({
+      timeframe: item.timeframe,
+      direction: item.direction,
+      status: item.status,
+      displacementPresent: item.displacementQuality.present,
+      displacementScore: item.displacementQuality.score,
+      breaksStructure: item.breaksStructure,
+      evidenceTimestamp: item.evidenceTimestamp,
+      completedBarStatus: item.completedBarStatus,
+      barTimestampMode: item.barTimestampMode,
+      barTimeZone: item.barTimeZone,
+      confidence: item.confidence,
+      blockers: item.blockers,
+    })),
+    notes: layer.notes,
+    approvesExecution: layer.approvesExecution,
+    changesTradeLogic: layer.changesTradeLogic,
   };
 }
 
@@ -514,6 +543,10 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     timeframeCoverage: context.htfLiquidityDrawState.timeframeCoverage,
     classificationReliability: context.htfLiquidityDrawState.classificationReliability,
     classificationReason: context.htfLiquidityDrawState.classificationReason,
+    timeframeMssEvidenceDiagnostics: timeframeMssEvidenceSummary(context),
+    activeTimeframeMssRulesetDiagnostics: summarizeActiveTimeframeMssRuleset(
+      htfCandidate || pipeline.opportunitySelection?.bestExecutableCandidate || pipeline.opportunitySelection?.bestConditionalCandidate || null,
+    ),
     boundary: 'actual_ohlc_replay_only_not_execution_authority' as const,
     activeScanWindow: state.activeScanWindow || classifyActiveSetupScanWindowByEtMinutes(latestMinutes),
     htfLiquidityDrawState: {
@@ -569,6 +602,8 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     diagnosticReplay: {
       finalClassification: diagnostic.finalClassification,
       htfMssDiagnostics: diagnostic.htfMssDiagnostics,
+      timeframeMssEvidenceDiagnostics: diagnostic.timeframeMssEvidenceDiagnostics,
+      activeTimeframeMssRulesetDiagnostics: diagnostic.activeTimeframeMssRulesetDiagnostics,
       approvalBoundary: diagnostic.approvalBoundary,
       chartReportPath: null,
     },
@@ -671,6 +706,26 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     '| Timeframe | Direction | Status | Lifecycle | Confidence |',
     '|---|---|---|---|---:|',
     ...state.timeframeStack.map((item) => `| ${item.timeframe} | ${item.direction} | ${item.status} | ${item.lifecycleState} | ${item.confidence} |`),
+    ...(report.timeframeMssEvidenceDiagnostics ? [
+      '',
+      '## Timeframe MSS Evidence',
+      '| Timeframe | Direction | Status | Displacement | Breaks Structure | Evidence Time | Completed | Timestamp Mode | Confidence |',
+      '|---|---|---|---|---|---|---|---|---:|',
+      ...report.timeframeMssEvidenceDiagnostics.timeframes.map((item) => `| ${item.timeframe} | ${item.direction} | ${item.status} | ${item.displacementPresent ? item.displacementScore : 'No'} | ${item.breaksStructure} | ${item.evidenceTimestamp || 'N/A'} | ${item.completedBarStatus} | ${item.barTimeZone}/${item.barTimestampMode} | ${item.confidence} |`),
+      '',
+      `Boundary: ${report.timeframeMssEvidenceDiagnostics.boundary}. Approves execution: ${report.timeframeMssEvidenceDiagnostics.approvesExecution}. Changes trade logic: ${report.timeframeMssEvidenceDiagnostics.changesTradeLogic}.`,
+    ] : []),
+    '',
+    '## Active MSS Ruleset',
+    `- Status: ${report.activeTimeframeMssRulesetDiagnostics.status}`,
+    `- Applies To All Models: ${report.activeTimeframeMssRulesetDiagnostics.appliesToAllModels}`,
+    `- Affects Execution: ${report.activeTimeframeMssRulesetDiagnostics.affectsExecution}`,
+    `- Candidate Execution Status: ${report.activeTimeframeMssRulesetDiagnostics.candidateExecutionStatus || 'N/A'}`,
+    `- Summary: ${report.activeTimeframeMssRulesetDiagnostics.summary}`,
+    ...(report.activeTimeframeMssRulesetDiagnostics.blockers.length ? [
+      '- Blockers:',
+      ...report.activeTimeframeMssRulesetDiagnostics.blockers.map((item) => `  - ${item}`),
+    ] : []),
     '',
     '## Candidate And Final Gates',
     `- Candidate Detected: ${report.setupDetection.candidateDetected ? 'Yes' : 'No'}`,

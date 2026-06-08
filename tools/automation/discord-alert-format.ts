@@ -257,6 +257,7 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 }
 
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
+  if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
   if (status === 'CONDITIONAL') return 'WAIT - normalized plan not executable; fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
@@ -268,6 +269,9 @@ function compactActionText(candidate: SetupCandidate | null, normalized: Compact
   if (!candidate) return 'Stand down. No active plan candidate.';
   if (candidate.failedPlanReversal?.staleOrNoFreshEntry || candidate.candidateState === 'NO_FRESH_ENTRY') {
     return 'Failed-plan reversal is stale. Do not chase. Wait for a new completed 5M trigger/retest.';
+  }
+  if (candidate.humanReview?.status === 'HumanReviewReady') {
+    return 'Human review required. Verify the 5M FVG retest, protected stop, target room, and invalidation before any trader action.';
   }
   if (status === 'EXECUTABLE') return 'Verify completed 5M trigger, protected stop, target room, and invalidation before trader action.';
   if (candidate.executionStatus === 'Blocked') return `Stand down. ${candidate.blockReason || normalized.noTradeReason || 'Required gate failed.'}`;
@@ -310,9 +314,16 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     ...(modelConfidenceScore !== null ? [`Confidence: ${modelConfidenceScore}/100`] : []),
     ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' ||
       candidate.candidateState === 'MSS_HOLD_CONFIRMED' ||
-      candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING'
+      candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING' ||
+      candidate.candidateState === 'OPENING_OBSERVATION_ARMED' ||
+      candidate.candidateState === 'HUMAN_REVIEW_READY'
       ? [`Trigger State: ${candidate.candidateState}`]
       : []),
+    ...(candidate.humanReview ? [
+      `Review: ${candidate.humanReview.status}`,
+      'Human review required. Decision-support plan only.',
+      'Trader must confirm entry before action.',
+    ] : []),
     ...failedPlanReversalLines(candidate),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,

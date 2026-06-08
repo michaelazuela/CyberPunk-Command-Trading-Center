@@ -14,6 +14,7 @@ export type TradeJournalModelType =
   | 'HTF Draw Continuation After Raid/Reclaim'
   | 'HTF Displacement + 5M MSS Continuation'
   | 'HTF Displacement + FVG Continuation'
+  | 'Opening Drive FVG Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';
 

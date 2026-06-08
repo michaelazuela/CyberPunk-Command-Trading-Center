@@ -524,6 +524,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
           stop: 7511,
           target1: 7528.5,
           target2: 7532,
+          activeTimeframeMssRuleset: null,
         },
         deliveryStatus: 'sent',
         webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
@@ -774,6 +775,8 @@ assert.equal(pendingDelivery.candidate.entry, candidate.entry);
 assert.equal(pendingDelivery.candidate.stop, candidate.stop);
 assert.equal(pendingDelivery.candidate.target1, candidate.target1);
 assert.equal(pendingDelivery.candidate.target2, candidate.target2);
+assert.equal(pendingDelivery.candidate.activeTimeframeMssRuleset?.status, 'not_available');
+assert.equal(pendingDelivery.candidate.activeTimeframeMssRuleset?.appliesToAllModels, true);
 const sentDelivery = markScannerAlertDeliverySent(pendingDelivery, { sentAt: '2026-06-02T14:03:49.000Z', httpStatus: 204 });
 assert.equal(sentDelivery.deliveryStatus, 'sent');
 assert.equal(sentDelivery.retryEligible, false);

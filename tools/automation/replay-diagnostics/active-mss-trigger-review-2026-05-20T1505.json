@@ -1,0 +1,1258 @@
+{
+  "reportType": "active_mss_single_trigger_verbose_review",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "triggerTimestamp": "2026-05-20T15:05:00",
+  "sessionType": "replay_lunch",
+  "dataSource": "ninjatrader_historical_bars",
+  "boundary": "replay_review_only_not_execution_authority",
+  "coverage": [
+    {
+      "timeframe": "5m",
+      "bars": 6265,
+      "rangeStart": "2026-04-20T00:00:00",
+      "rangeEnd": "2026-05-20T16:00:00",
+      "failures": []
+    },
+    {
+      "timeframe": "15m",
+      "bars": 2089,
+      "rangeStart": "2026-04-20T00:00:00",
+      "rangeEnd": "2026-05-20T16:00:00",
+      "failures": []
+    },
+    {
+      "timeframe": "60m",
+      "bars": 523,
+      "rangeStart": "2026-04-20T00:00:00",
+      "rangeEnd": "2026-05-20T16:00:00",
+      "failures": []
+    },
+    {
+      "timeframe": "120m",
+      "bars": 273,
+      "rangeStart": "2026-04-20T00:00:00",
+      "rangeEnd": "2026-05-20T16:00:00",
+      "failures": []
+    },
+    {
+      "timeframe": "240m",
+      "bars": 136,
+      "rangeStart": "2026-04-20T02:00:00",
+      "rangeEnd": "2026-05-20T14:00:00",
+      "failures": []
+    }
+  ],
+  "scanner": {
+    "bestExecutableCandidate": {
+      "setupType": "SweepMssFvgRetrace",
+      "direction": "LONG",
+      "detectedStatus": "Detected",
+      "executionStatus": "Executable",
+      "confidence": "High",
+      "priority": 98,
+      "rankScore": 358.5,
+      "entry": 7440.75,
+      "stop": 7437.25,
+      "target1": 7446,
+      "target2": 7450,
+      "riskPoints": 3.5,
+      "riskAdvisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
+      "blockReason": null,
+      "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift.",
+      "nextAction": "Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.",
+      "evidence": [
+        "Liquidity sweep confirmed",
+        "Reclaim after sweep confirmed",
+        "Displacement confirmed",
+        "Market structure shift confirmed",
+        "Fair value gap / imbalance entry model",
+        "Retrace into FVG confirmed",
+        "Entry inside FVG or valid confluence zone",
+        "Stop beyond sweep extreme",
+        "Minimum 2.0R available",
+        "Targeting opposing liquidity",
+        "Big-picture structure is bullish",
+        "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+        "Higher-timeframe thesis is bullish",
+        "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+        "Draw on opposing liquidity identified",
+        "Sweep-first sequence confirmed",
+        "Structure break confirmed by candle close",
+        "Major BOS confirmed after inducement sweep",
+        "Liquidity engineered before structure break",
+        "Structure supports continuation",
+        "Valid pullback confirmed",
+        "Pullback grab occurred",
+        "Closing break confirmed",
+        "Price near dealing range equilibrium; require cleaner confirmation",
+        "No major obstacle before 1R",
+        "Tier B displacement confirmed",
+        "Session narrative: reversal",
+        "Supporting evidence: liquidity sweep fact present.",
+        "Supporting evidence: reclaim after sweep fact present.",
+        "Supporting evidence: imbalance zone fact present.",
+        "Supporting evidence: market structure shift fact present.",
+        "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+        "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+        "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+        "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+      ],
+      "missingEvidence": [],
+      "activeRuleset": {
+        "timeframeMss": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": []
+        }
+      },
+      "activeTimeframeMssRuleset": {
+        "applied": true,
+        "status": "passed",
+        "required": "aligned_confirmed_5m_mss",
+        "appliesToAllModels": true,
+        "affectsExecution": false,
+        "candidateExecutionStatus": "Executable",
+        "candidateBlockReason": null,
+        "evidence": [
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "blockers": [],
+        "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Executable."
+      }
+    },
+    "bestConditionalCandidate": {
+      "setupType": "TurtleSoup",
+      "direction": "LONG",
+      "detectedStatus": "Possible",
+      "executionStatus": "Conditional",
+      "confidence": "Medium",
+      "priority": 95,
+      "rankScore": 273,
+      "entry": null,
+      "stop": 7437.25,
+      "target1": null,
+      "target2": null,
+      "riskPoints": null,
+      "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
+      "blockReason": "EntryTriggerMissing",
+      "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+      "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
+      "evidence": [
+        "Turtle Soup reversal",
+        "Liquidity raid confirmed",
+        "Sweep below sell-side liquidity confirmed",
+        "Established liquidity level confirmed",
+        "Reclaim after sweep confirmed",
+        "Failed continuation confirmed",
+        "Displacement confirmed",
+        "Market structure shift confirmed",
+        "Stop beyond sweep wick",
+        "Big-picture structure is bullish",
+        "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+        "Higher-timeframe thesis is bullish",
+        "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+        "Draw on opposing liquidity identified",
+        "Sweep-first sequence confirmed",
+        "Structure break confirmed by candle close",
+        "Major BOS confirmed after inducement sweep",
+        "Liquidity engineered before structure break",
+        "Structure supports continuation",
+        "Valid pullback confirmed",
+        "Pullback grab occurred",
+        "Closing break confirmed",
+        "Price near dealing range equilibrium; require cleaner confirmation",
+        "Tier B displacement confirmed",
+        "Session narrative: reversal",
+        "Supporting evidence: liquidity sweep fact present.",
+        "Supporting evidence: reclaim after sweep fact present.",
+        "Supporting evidence: imbalance zone fact present.",
+        "Supporting evidence: market structure shift fact present.",
+        "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+        "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+        "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+        "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+      ],
+      "missingEvidence": [
+        "Valid entry after reclaim or retrace",
+        "Targeting opposing liquidity",
+        "Minimum 2.0R unavailable"
+      ],
+      "activeRuleset": {
+        "timeframeMss": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": []
+        }
+      },
+      "activeTimeframeMssRuleset": {
+        "applied": true,
+        "status": "passed",
+        "required": "aligned_confirmed_5m_mss",
+        "appliesToAllModels": true,
+        "affectsExecution": false,
+        "candidateExecutionStatus": "Conditional",
+        "candidateBlockReason": "EntryTriggerMissing",
+        "evidence": [
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "blockers": [],
+        "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Conditional."
+      }
+    },
+    "candidateCount": 6,
+    "candidates": [
+      {
+        "setupType": "SweepMssFvgRetrace",
+        "direction": "LONG",
+        "detectedStatus": "Detected",
+        "executionStatus": "Executable",
+        "confidence": "High",
+        "priority": 98,
+        "rankScore": 358.5,
+        "entry": 7440.75,
+        "stop": 7437.25,
+        "target1": 7446,
+        "target2": 7450,
+        "riskPoints": 3.5,
+        "riskAdvisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
+        "blockReason": null,
+        "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift.",
+        "nextAction": "Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.",
+        "evidence": [
+          "Liquidity sweep confirmed",
+          "Reclaim after sweep confirmed",
+          "Displacement confirmed",
+          "Market structure shift confirmed",
+          "Fair value gap / imbalance entry model",
+          "Retrace into FVG confirmed",
+          "Entry inside FVG or valid confluence zone",
+          "Stop beyond sweep extreme",
+          "Minimum 2.0R available",
+          "Targeting opposing liquidity",
+          "Big-picture structure is bullish",
+          "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+          "Higher-timeframe thesis is bullish",
+          "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+          "Draw on opposing liquidity identified",
+          "Sweep-first sequence confirmed",
+          "Structure break confirmed by candle close",
+          "Major BOS confirmed after inducement sweep",
+          "Liquidity engineered before structure break",
+          "Structure supports continuation",
+          "Valid pullback confirmed",
+          "Pullback grab occurred",
+          "Closing break confirmed",
+          "Price near dealing range equilibrium; require cleaner confirmation",
+          "No major obstacle before 1R",
+          "Tier B displacement confirmed",
+          "Session narrative: reversal",
+          "Supporting evidence: liquidity sweep fact present.",
+          "Supporting evidence: reclaim after sweep fact present.",
+          "Supporting evidence: imbalance zone fact present.",
+          "Supporting evidence: market structure shift fact present.",
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "missingEvidence": [],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": true,
+            "status": "passed",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+              "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+              "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+              "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+            ],
+            "blockers": []
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "Executable",
+          "candidateBlockReason": null,
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": [],
+          "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Executable."
+        }
+      },
+      {
+        "setupType": "TurtleSoup",
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "confidence": "Medium",
+        "priority": 95,
+        "rankScore": 273,
+        "entry": null,
+        "stop": 7437.25,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
+        "blockReason": "EntryTriggerMissing",
+        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick.",
+        "nextAction": "Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.",
+        "evidence": [
+          "Turtle Soup reversal",
+          "Liquidity raid confirmed",
+          "Sweep below sell-side liquidity confirmed",
+          "Established liquidity level confirmed",
+          "Reclaim after sweep confirmed",
+          "Failed continuation confirmed",
+          "Displacement confirmed",
+          "Market structure shift confirmed",
+          "Stop beyond sweep wick",
+          "Big-picture structure is bullish",
+          "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+          "Higher-timeframe thesis is bullish",
+          "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+          "Draw on opposing liquidity identified",
+          "Sweep-first sequence confirmed",
+          "Structure break confirmed by candle close",
+          "Major BOS confirmed after inducement sweep",
+          "Liquidity engineered before structure break",
+          "Structure supports continuation",
+          "Valid pullback confirmed",
+          "Pullback grab occurred",
+          "Closing break confirmed",
+          "Price near dealing range equilibrium; require cleaner confirmation",
+          "Tier B displacement confirmed",
+          "Session narrative: reversal",
+          "Supporting evidence: liquidity sweep fact present.",
+          "Supporting evidence: reclaim after sweep fact present.",
+          "Supporting evidence: imbalance zone fact present.",
+          "Supporting evidence: market structure shift fact present.",
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "missingEvidence": [
+          "Valid entry after reclaim or retrace",
+          "Targeting opposing liquidity",
+          "Minimum 2.0R unavailable"
+        ],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": true,
+            "status": "passed",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+              "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+              "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+              "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+            ],
+            "blockers": []
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "Conditional",
+          "candidateBlockReason": "EntryTriggerMissing",
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": [],
+          "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Conditional."
+        }
+      },
+      {
+        "setupType": "HtfDisplacementFvgContinuation",
+        "scenarioLabel": "HTF Displacement + FVG Continuation",
+        "pathway": "htf_displacement_fvg_continuation",
+        "direction": "SHORT",
+        "detectedStatus": "Conditional",
+        "executionStatus": "Conditional",
+        "candidateState": "QUALIFIED_CONDITIONAL",
+        "confidence": "High",
+        "priority": 94,
+        "rankScore": 230.6,
+        "entry": 7431.75,
+        "stop": null,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
+        "blockReason": "EntryTriggerPending",
+        "requiredTrigger": "Short entry at or below the 5M FVG/imbalance continuation trigger while at least 60% of the path to primary sell-side liquidity remains.",
+        "nextAction": "Do not chase. Wait for a clean 5M displacement/FVG continuation trigger with protected stop, app targets, and enough remaining path to real liquidity.",
+        "evidence": [
+          "bearish 15M displacement confirmed",
+          "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+          "bearish 5M displacement confirmed",
+          "5M FVG / imbalance supports continuation",
+          "5M MSS not confirmed; not invented or required for this model",
+          "External liquidity target: Current Imported Window Low 7431.25",
+          "At least 60% of the path to primary liquidity remains",
+          "Confidence score: 83/100",
+          "canExecute means structurally complete and ready for human review, not broker execution approval.",
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00."
+        ],
+        "missingEvidence": [
+          "Full HTF context must explicitly align with direction; NEUTRAL/UNKNOWN no longer counts as higher-timeframe support.",
+          "Entry at or beyond the 5M displacement close-through/retest trigger without chasing",
+          "Protected 5M structure stop",
+          "App T1/T2 from actual entry/stop risk",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bullish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 60M, 120M, 240M."
+        ],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": true,
+            "status": "blocked",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
+              "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00."
+            ],
+            "blockers": [
+              "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+              "Active timeframe MSS ruleset found opposing completed 5M bullish MSS.",
+              "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 60M, 120M, 240M."
+            ]
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": true,
+          "status": "blocked",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "Conditional",
+          "candidateBlockReason": "EntryTriggerPending",
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bearish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00."
+          ],
+          "blockers": [
+            "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+            "Active timeframe MSS ruleset found opposing completed 5M bullish MSS.",
+            "Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 60M, 120M, 240M."
+          ],
+          "summary": "Active MSS ruleset: blocked. Applies to all models=true. Affects execution=false. Candidate=Conditional. Blockers: Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status. Active timeframe MSS ruleset found opposing completed 5M bullish MSS. Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 60M, 120M, 240M."
+        }
+      },
+      {
+        "setupType": "HtfDrawContinuationAfterRaid",
+        "scenarioLabel": "HTF Draw Continuation After Raid/Reclaim",
+        "pathway": "htf_liquidity_draw_mss",
+        "direction": "NO TRADE",
+        "detectedStatus": "NotDetected",
+        "executionStatus": "NotDetected",
+        "candidateState": "NO_QUALIFIED_STATE",
+        "confidence": "Low",
+        "priority": 97,
+        "rankScore": 121,
+        "entry": null,
+        "stop": null,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "blockReason": null,
+        "requiredTrigger": null,
+        "nextAction": "No HTF draw continuation candidate. Wait for structured HTF draw, raid/reclaim, confirmed 5M MSS, and deterministic app gates.",
+        "evidence": [],
+        "missingEvidence": [
+          "Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied",
+          "4H/1H draw supports or does not materially conflict",
+          "15M raid/reclaim confirmed, potential, or pending",
+          "Confirmed 5M MSS with displacement",
+          "External liquidity target",
+          "App-owned entry, stop, target, risk, and invalidation gates"
+        ],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": false,
+            "status": "not_applicable",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+            ],
+            "blockers": []
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": false,
+          "status": "not_applicable",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "NotDetected",
+          "candidateBlockReason": null,
+          "evidence": [
+            "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+          ],
+          "blockers": [],
+          "summary": "Active MSS ruleset: not_applicable. Applies to all models=true. Affects execution=false. Candidate=NotDetected."
+        }
+      },
+      {
+        "setupType": "HtfDisplacementMssContinuation",
+        "scenarioLabel": "HTF Displacement + 5M MSS Continuation",
+        "pathway": "htf_displacement_mss_continuation",
+        "direction": "NO TRADE",
+        "detectedStatus": "NotDetected",
+        "executionStatus": "NotDetected",
+        "candidateState": "NO_QUALIFIED_STATE",
+        "confidence": "Low",
+        "priority": 96,
+        "rankScore": 118,
+        "entry": null,
+        "stop": null,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
+        "blockReason": null,
+        "requiredTrigger": null,
+        "nextAction": "Wait for 15M displacement, confirmed 5M MSS close-through, a protected structure stop, and an external liquidity target with sufficient room.",
+        "evidence": [],
+        "missingEvidence": [
+          "Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied",
+          "Directional 15M displacement with acceptable body/close quality",
+          "5M displacement or imbalance in the same direction",
+          "Confirmed 5M MSS by completed candle close",
+          "Defined 5M entry at or beyond the MSS close-through trigger",
+          "Protected structure stop",
+          "External liquidity target with at least 60% of the original path remaining"
+        ],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": false,
+            "status": "not_applicable",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+            ],
+            "blockers": []
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": false,
+          "status": "not_applicable",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "NotDetected",
+          "candidateBlockReason": null,
+          "evidence": [
+            "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+          ],
+          "blockers": [],
+          "summary": "Active MSS ruleset: not_applicable. Applies to all models=true. Affects execution=false. Candidate=NotDetected."
+        }
+      },
+      {
+        "setupType": "FailedPlanReversal",
+        "scenarioLabel": "Failed Plan Reversal",
+        "pathway": "failed_plan_reversal",
+        "direction": "NO TRADE",
+        "detectedStatus": "NotDetected",
+        "executionStatus": "NotDetected",
+        "candidateState": "NO_QUALIFIED_STATE",
+        "confidence": "Low",
+        "priority": 95,
+        "rankScore": 116,
+        "entry": null,
+        "stop": null,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "riskAdvisoryStatus": "RISK_INVALID_OR_UNDEFINED",
+        "blockReason": null,
+        "requiredTrigger": null,
+        "nextAction": "No failed-plan reversal state. Wait for a failed decision/reclaim level, opposite HTF confirmation, and a fresh completed 5M trigger/retest.",
+        "evidence": [],
+        "missingEvidence": [
+          "App-owned plan failed its decision/reclaim level",
+          "Full 30-day structured 4H/2H/1H/15M/5M HTF context gate satisfied",
+          "15M confirms opposite MSS/displacement",
+          "1H confirms opposite MSS/displacement",
+          "2H confirms opposite structure",
+          "4H confirms opposite structure",
+          "Fresh completed 5M opposite-side MSS, retest, or defined reclaim trigger",
+          "Defined 5M entry, protected structure stop, app targets, invalidation, and session gates"
+        ],
+        "activeRuleset": {
+          "timeframeMss": {
+            "applied": false,
+            "status": "not_applicable",
+            "required": "aligned_confirmed_5m_mss",
+            "appliesToAllModels": true,
+            "affectsExecution": false,
+            "evidence": [
+              "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+            ],
+            "blockers": []
+          }
+        },
+        "activeTimeframeMssRuleset": {
+          "applied": false,
+          "status": "not_applicable",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "candidateExecutionStatus": "NotDetected",
+          "candidateBlockReason": null,
+          "evidence": [
+            "Active timeframe MSS ruleset applies only to LONG/SHORT setup candidates."
+          ],
+          "blockers": [],
+          "summary": "Active MSS ruleset: not_applicable. Applies to all models=true. Affects execution=false. Candidate=NotDetected."
+        }
+      }
+    ]
+  },
+  "finalGateResult": {
+    "status": "ApprovedTrade",
+    "canExecute": true,
+    "normalizedCanExecuteRaw": true,
+    "finalPlan": {
+      "status": "ApprovedTrade",
+      "direction": "LONG",
+      "setupType": "SweepMssFvgRetrace",
+      "entry": 7440.75,
+      "stop": 7437.25,
+      "target": 7446,
+      "target1": 7446,
+      "target2": 7450,
+      "invalidation": "Invalid if price trades below the sweep low structure stop near 7437.25.",
+      "risk": {
+        "status": "Approved",
+        "advisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
+        "riskPolicy": "STANDARD_RISK",
+        "entry": 7440.75,
+        "stop": 7437.25,
+        "riskPoints": 3.5,
+        "maxRiskPoints": 5,
+        "reasoning": "Risk is 3.50 points against standard 5."
+      },
+      "confidence": "High",
+      "reasoning": "Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.",
+      "noTradeReason": null
+    },
+    "noTradeReason": null,
+    "bestExecutableCandidate": {
+      "setupType": "SweepMssFvgRetrace",
+      "direction": "LONG",
+      "detectedStatus": "Detected",
+      "executionStatus": "Executable",
+      "confidence": "High",
+      "priority": 98,
+      "rankScore": 358.5,
+      "entry": 7440.75,
+      "stop": 7437.25,
+      "target1": 7446,
+      "target2": 7450,
+      "riskPoints": 3.5,
+      "riskAdvisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
+      "blockReason": null,
+      "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift.",
+      "nextAction": "Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.",
+      "evidence": [
+        "Liquidity sweep confirmed",
+        "Reclaim after sweep confirmed",
+        "Displacement confirmed",
+        "Market structure shift confirmed",
+        "Fair value gap / imbalance entry model",
+        "Retrace into FVG confirmed",
+        "Entry inside FVG or valid confluence zone",
+        "Stop beyond sweep extreme",
+        "Minimum 2.0R available",
+        "Targeting opposing liquidity",
+        "Big-picture structure is bullish",
+        "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+        "Higher-timeframe thesis is bullish",
+        "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+        "Draw on opposing liquidity identified",
+        "Sweep-first sequence confirmed",
+        "Structure break confirmed by candle close",
+        "Major BOS confirmed after inducement sweep",
+        "Liquidity engineered before structure break",
+        "Structure supports continuation",
+        "Valid pullback confirmed",
+        "Pullback grab occurred",
+        "Closing break confirmed",
+        "Price near dealing range equilibrium; require cleaner confirmation",
+        "No major obstacle before 1R",
+        "Tier B displacement confirmed",
+        "Session narrative: reversal",
+        "Supporting evidence: liquidity sweep fact present.",
+        "Supporting evidence: reclaim after sweep fact present.",
+        "Supporting evidence: imbalance zone fact present.",
+        "Supporting evidence: market structure shift fact present.",
+        "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+        "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+        "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+        "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+      ],
+      "missingEvidence": [],
+      "activeRuleset": {
+        "timeframeMss": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": []
+        }
+      },
+      "activeTimeframeMssRuleset": {
+        "applied": true,
+        "status": "passed",
+        "required": "aligned_confirmed_5m_mss",
+        "appliesToAllModels": true,
+        "affectsExecution": false,
+        "candidateExecutionStatus": "Executable",
+        "candidateBlockReason": null,
+        "evidence": [
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "blockers": [],
+        "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Executable."
+      }
+    },
+    "bestConditionalCandidate": {
+      "setupType": "TurtleSoup",
+      "scenarioLabel": "Bullish Turtle Soup Reversal",
+      "direction": "LONG",
+      "detectedStatus": "Conditional",
+      "executionStatus": "Conditional",
+      "confidence": "High",
+      "priority": 96,
+      "rankScore": 255,
+      "entry": 7428.25,
+      "stop": 7423.5,
+      "target1": 7440,
+      "target2": 7440.75,
+      "riskPoints": 4.75,
+      "riskAdvisoryStatus": "RISK_WITHIN_STANDARD_LIMIT",
+      "blockReason": "EntryTriggerPending",
+      "requiredTrigger": "Bullish Turtle Soup: sell-side sweep below 7427.5, reclaim back above the swept low, then confirm upward rejection or expansion.",
+      "nextAction": "Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle.",
+      "evidence": [
+        "Turtle Soup reversal",
+        "Liquidity raid confirmed",
+        "Sweep below sell-side liquidity confirmed",
+        "Established liquidity level confirmed",
+        "Reclaim after sweep confirmed",
+        "Failed continuation confirmed",
+        "Displacement confirmed",
+        "Market structure shift confirmed",
+        "Stop beyond sweep wick",
+        "Big-picture structure is bullish",
+        "Full 30-day HTF context gate satisfied: structured 4H/2H/1H/15M/5M OHLC state is sufficient.",
+        "Higher-timeframe thesis is bullish",
+        "Active window: Lunch/PM setup scan, 12:00-15:30 ET",
+        "Draw on opposing liquidity identified",
+        "Sweep-first sequence confirmed",
+        "Structure break confirmed by candle close",
+        "Major BOS confirmed after inducement sweep",
+        "Liquidity engineered before structure break",
+        "Structure supports continuation",
+        "Valid pullback confirmed",
+        "Pullback grab occurred",
+        "Closing break confirmed",
+        "Price near dealing range equilibrium; require cleaner confirmation",
+        "Tier B displacement confirmed",
+        "Session narrative: reversal",
+        "Supporting evidence: liquidity sweep fact present.",
+        "Supporting evidence: reclaim after sweep fact present.",
+        "Supporting evidence: imbalance zone fact present.",
+        "Supporting evidence: market structure shift fact present.",
+        "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+        "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+        "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+        "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M.",
+        "Sell-side liquidity was swept and reclaimed.",
+        "Wick rejection support: lower wick 6.25 is at least 1.5x body, swept sell-side liquidity, and closed back above 7434.75.",
+        "No breaker/FVG overlap confluence; breaker context is optional and cannot trigger by itself.",
+        "Turtle Soup failed breakdown reversal target room passes the minimum 2.0R expected-value filter.",
+        "Bullish expansion confirms the reversal attempt.",
+        "Market structure shift supports the reversal.",
+        "Stop 7431 is beyond the sweep wick; target 7458 is opposing liquidity or a valid 2.0R objective.",
+        "Risk exceeds standard limit. Human final decision required.",
+        "Wick rejection support: lower wick 4.5 is at least 1.5x body, swept sell-side liquidity, and closed back above 7427.5.",
+        "Stop 7423.5 is beyond the sweep wick; target 7440 is opposing liquidity or a valid 2.0R objective."
+      ],
+      "missingEvidence": [
+        "Valid entry after reclaim or retrace",
+        "Targeting opposing liquidity",
+        "Minimum 2.0R unavailable",
+        "Completed Morning context is incomplete; keep this as conditional only."
+      ],
+      "activeRuleset": {
+        "timeframeMss": {
+          "applied": true,
+          "status": "passed",
+          "required": "aligned_confirmed_5m_mss",
+          "appliesToAllModels": true,
+          "affectsExecution": false,
+          "evidence": [
+            "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+            "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+            "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+            "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+          ],
+          "blockers": []
+        }
+      },
+      "activeTimeframeMssRuleset": {
+        "applied": true,
+        "status": "passed",
+        "required": "aligned_confirmed_5m_mss",
+        "appliesToAllModels": true,
+        "affectsExecution": false,
+        "candidateExecutionStatus": "Conditional",
+        "candidateBlockReason": "EntryTriggerPending",
+        "evidence": [
+          "Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M bullish MSS before executable status.",
+          "Active timeframe MSS 5M read: 5M bullish confirmed_mss break=true completed=completed at 2026-05-20T14:35:00.",
+          "Active timeframe MSS pass: completed 5M bullish MSS is aligned with candidate direction.",
+          "Active timeframe MSS context aligned on 15M, 60M, 120M, 240M."
+        ],
+        "blockers": [],
+        "summary": "Active MSS ruleset: passed. Applies to all models=true. Affects execution=false. Candidate=Conditional."
+      }
+    }
+  },
+  "timeframeMssEvidence": {
+    "source": "ninjatrader_ohlc",
+    "authority": "ohlc_facts_only",
+    "boundary": "evidence_only_not_approval_or_execution_authority",
+    "timeframes": {
+      "5M": {
+        "timeframe": "5M",
+        "direction": "bullish",
+        "status": "confirmed_mss",
+        "displacementQuality": {
+          "present": false,
+          "direction": "bullish",
+          "score": 75,
+          "bodyToRange": 0.86,
+          "closeLocation": 0.86,
+          "rangeExpansion": 0.65
+        },
+        "breaksStructure": true,
+        "structureBreak": {
+          "type": "mss",
+          "brokenLevel": 7441.75,
+          "brokenSwingTimestamp": "2026-05-20T14:20:00",
+          "priorStructureDirection": "bearish",
+          "closeThroughPoints": 0.75,
+          "wickOnlyBreak": false
+        },
+        "evidenceTimestamp": "2026-05-20T14:35:00",
+        "completedBarStatus": "completed",
+        "barTimestampMode": "close",
+        "barTimeZone": "eastern",
+        "source": "ninjatrader_ohlc",
+        "blockers": [
+          "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+        ],
+        "confidence": 65
+      },
+      "15M": {
+        "timeframe": "15M",
+        "direction": "bullish",
+        "status": "confirmed_mss",
+        "displacementQuality": {
+          "present": true,
+          "direction": "bullish",
+          "score": 84,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.81,
+          "rangeExpansion": 2.57
+        },
+        "breaksStructure": true,
+        "structureBreak": {
+          "type": "mss",
+          "brokenLevel": 7410.75,
+          "brokenSwingTimestamp": "2026-05-20T10:00:00",
+          "priorStructureDirection": "bearish",
+          "closeThroughPoints": 7,
+          "wickOnlyBreak": false
+        },
+        "evidenceTimestamp": "2026-05-20T10:30:00",
+        "completedBarStatus": "completed",
+        "barTimestampMode": "close",
+        "barTimeZone": "eastern",
+        "source": "ninjatrader_ohlc",
+        "blockers": [],
+        "confidence": 94
+      },
+      "60M": {
+        "timeframe": "60M",
+        "direction": "bullish",
+        "status": "confirmed_mss",
+        "displacementQuality": {
+          "present": false,
+          "direction": "bullish",
+          "score": 64,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.68,
+          "rangeExpansion": 1.07
+        },
+        "breaksStructure": true,
+        "structureBreak": {
+          "type": "mss",
+          "brokenLevel": 7387,
+          "brokenSwingTimestamp": "2026-05-19T23:00:00",
+          "priorStructureDirection": "bearish",
+          "closeThroughPoints": 10.75,
+          "wickOnlyBreak": false
+        },
+        "evidenceTimestamp": "2026-05-20T05:00:00",
+        "completedBarStatus": "completed",
+        "barTimestampMode": "close",
+        "barTimeZone": "eastern",
+        "source": "ninjatrader_ohlc",
+        "blockers": [
+          "60M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+        ],
+        "confidence": 65
+      },
+      "120M": {
+        "timeframe": "120M",
+        "direction": "bullish",
+        "status": "confirmed_mss",
+        "displacementQuality": {
+          "present": false,
+          "direction": "bullish",
+          "score": 72,
+          "bodyToRange": 0.8,
+          "closeLocation": 0.82,
+          "rangeExpansion": 0.72
+        },
+        "breaksStructure": true,
+        "structureBreak": {
+          "type": "mss",
+          "brokenLevel": 7387,
+          "brokenSwingTimestamp": "2026-05-20T00:00:00",
+          "priorStructureDirection": "bearish",
+          "closeThroughPoints": 15,
+          "wickOnlyBreak": false
+        },
+        "evidenceTimestamp": "2026-05-20T06:00:00",
+        "completedBarStatus": "completed",
+        "barTimestampMode": "close",
+        "barTimeZone": "eastern",
+        "source": "ninjatrader_ohlc",
+        "blockers": [
+          "120M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+        ],
+        "confidence": 65
+      },
+      "240M": {
+        "timeframe": "240M",
+        "direction": "bullish",
+        "status": "confirmed_mss",
+        "displacementQuality": {
+          "present": false,
+          "direction": "bullish",
+          "score": 67,
+          "bodyToRange": 0.47,
+          "closeLocation": 0.75,
+          "rangeExpansion": 1.98
+        },
+        "breaksStructure": true,
+        "structureBreak": {
+          "type": "mss",
+          "brokenLevel": 7415.25,
+          "brokenSwingTimestamp": "2026-05-19T14:00:00",
+          "priorStructureDirection": "bearish",
+          "closeThroughPoints": 22.5,
+          "wickOnlyBreak": false
+        },
+        "evidenceTimestamp": "2026-05-20T14:00:00",
+        "completedBarStatus": "completed",
+        "barTimestampMode": "close",
+        "barTimeZone": "eastern",
+        "source": "ninjatrader_ohlc",
+        "blockers": [
+          "240M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+        ],
+        "confidence": 65
+      }
+    },
+    "notes": [
+      "Per-timeframe MSS/displacement evidence is stored separately from htfLiquidityDrawState.",
+      "CONFLICTING_MSS classifications must not erase raw timeframe evidence.",
+      "This layer does not change model approval gates, scanner behavior, bridge behavior, Discord behavior, or canExecute behavior."
+    ],
+    "approvesExecution": false,
+    "changesTradeLogic": false
+  },
+  "htfContextSufficiency": {
+    "overallStatus": "sufficient",
+    "timeframeCoverage": [
+      {
+        "timeframe": "4H",
+        "barsLoaded": 136,
+        "rangeStart": "2026-04-20T02:00:00",
+        "rangeEnd": "2026-05-20T14:00:00",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "2H",
+        "barsLoaded": 272,
+        "rangeStart": "2026-04-20T00:00:00",
+        "rangeEnd": "2026-05-20T14:00:00",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "1H",
+        "barsLoaded": 522,
+        "rangeStart": "2026-04-20T00:00:00",
+        "rangeEnd": "2026-05-20T15:00:00",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "15M",
+        "barsLoaded": 2085,
+        "rangeStart": "2026-04-20T00:00:00",
+        "rangeEnd": "2026-05-20T15:00:00",
+        "minimumExpectedDescription": "30 calendar days when available.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      },
+      {
+        "timeframe": "5M",
+        "barsLoaded": 6254,
+        "rangeStart": "2026-04-20T00:00:00",
+        "rangeEnd": "2026-05-20T15:05:00",
+        "minimumExpectedDescription": "30 calendar days when available; active setup-scan window remains the execution trigger authority.",
+        "minimumSatisfied": true,
+        "status": "sufficient"
+      }
+    ],
+    "dataLimited": false,
+    "blockers": [],
+    "notes": [
+      "HTF context sufficient: 4H/2H/1H/15M/5M minimum structured lookback met."
+    ]
+  },
+  "outcomeReview": {
+    "signalBar": {
+      "time": "2026-05-20T15:05:00",
+      "open": 7440.25,
+      "high": 7446,
+      "low": 7440,
+      "close": 7440.75,
+      "volume": 6491
+    },
+    "reviewWindow": {
+      "fromExclusive": "2026-05-20T15:05:00",
+      "to": "2026-05-20T16:00:00",
+      "bars": 11
+    },
+    "entryTriggeredAt": "2026-05-20T15:10:00",
+    "firstResolved": {
+      "time": "2026-05-20T15:20:00",
+      "hitStop": false,
+      "hitT1": true,
+      "hitT2": false,
+      "open": 7444,
+      "high": 7446.5,
+      "low": 7442.75,
+      "close": 7445.75
+    },
+    "label": "target1_first",
+    "maxFavorablePoints": 13.75,
+    "maxAdversePoints": 2,
+    "maxFavorableR": 3.93,
+    "maxAdverseR": 0.57,
+    "bars": [
+      {
+        "time": "2026-05-20T15:10:00",
+        "open": 7441,
+        "high": 7443,
+        "low": 7439.25,
+        "close": 7440.75,
+        "hitStop": false,
+        "hitT1": false,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:15:00",
+        "open": 7440.5,
+        "high": 7444.25,
+        "low": 7438.75,
+        "close": 7444.25,
+        "hitStop": false,
+        "hitT1": false,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:20:00",
+        "open": 7444,
+        "high": 7446.5,
+        "low": 7442.75,
+        "close": 7445.75,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:25:00",
+        "open": 7445.5,
+        "high": 7448.5,
+        "low": 7444.5,
+        "close": 7446.25,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:30:00",
+        "open": 7446.25,
+        "high": 7447.5,
+        "low": 7445.25,
+        "close": 7447,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:35:00",
+        "open": 7447.25,
+        "high": 7448.5,
+        "low": 7444.25,
+        "close": 7447.5,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": false
+      },
+      {
+        "time": "2026-05-20T15:40:00",
+        "open": 7447.25,
+        "high": 7454.5,
+        "low": 7447.25,
+        "close": 7452.75,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": true
+      },
+      {
+        "time": "2026-05-20T15:45:00",
+        "open": 7452.75,
+        "high": 7453.25,
+        "low": 7450.5,
+        "close": 7451,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": true
+      },
+      {
+        "time": "2026-05-20T15:50:00",
+        "open": 7451,
+        "high": 7453,
+        "low": 7448.5,
+        "close": 7449.75,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": true
+      },
+      {
+        "time": "2026-05-20T15:55:00",
+        "open": 7450,
+        "high": 7453.75,
+        "low": 7444.5,
+        "close": 7448.75,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": true
+      },
+      {
+        "time": "2026-05-20T16:00:00",
+        "open": 7449,
+        "high": 7453,
+        "low": 7446.5,
+        "close": 7451.75,
+        "hitStop": false,
+        "hitT1": true,
+        "hitT2": true
+      }
+    ]
+  },
+  "authority": {
+    "changesTradeLogic": false,
+    "changesScannerBehavior": false,
+    "changesBridgeBehavior": false,
+    "changesDiscordBehavior": false,
+    "approvesExecution": false
+  }
+}

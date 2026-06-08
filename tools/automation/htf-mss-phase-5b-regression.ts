@@ -11,6 +11,7 @@ import { runBridgeDiagnosticReplay } from '../../src/agents/bridgeDiagnosticRepl
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
 import { runTradeDecisionPipeline } from '../../src/lib/tradeDecisionPipeline';
 import { normalizeTradePlan } from '../../src/lib/tradePlan';
+import { buildMultiTimeframeMssEvidenceLayer } from '../../src/lib/timeframeMssEvidence';
 import { compactDiscordSummary, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   ExecutionStatus,
@@ -109,6 +110,10 @@ function candlesFromBars(bars: NinjaBridgeBar[]) {
 function baseBearishChartContext(overrides: Partial<ChartContext> = {}): ChartContext {
   const htfLiquidityDrawState = buildBearishHtfState();
   const bars5m = phase5bBearishFiveMinuteBars();
+  const bars15m = bearishPotentialBars('15m');
+  const bars60m = bearishPotentialBars('60m');
+  const bars120m = bearishPotentialBars('120m');
+  const bars240m = bearishPotentialBars('240m');
   return {
     sessionType: 'replay_lunch',
     instrument: 'MES',
@@ -128,6 +133,18 @@ function baseBearishChartContext(overrides: Partial<ChartContext> = {}): ChartCo
       nearestSupport: 7576,
       nearestResistance: 7622,
     },
+    timeframeMssEvidence: buildMultiTimeframeMssEvidenceLayer({
+      barsByTimeframe: {
+        '5M': padContextBars(bars5m, '5m'),
+        '15M': bars15m,
+        '60M': bars60m,
+        '120M': bars120m,
+        '240M': bars240m,
+      },
+      asOfTimestamp: '2026-06-02T14:10:00-04:00',
+      barTimestampMode: 'close',
+      barTimeZone: 'eastern',
+    }),
     htfLiquidityDrawState,
     targetObjectives: [
       {

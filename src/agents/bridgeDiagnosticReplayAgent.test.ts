@@ -80,7 +80,22 @@ function input(overrides: Partial<BridgeDiagnosticReplayInput> = {}): BridgeDiag
 
 const approvedNoAlert = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate({ riskPoints: 10, target1: 123, target2: 128 })],
-  scannerSelectedCandidate: candidate({ riskPoints: 10, target1: 123, target2: 128 }),
+  scannerSelectedCandidate: candidate({
+    riskPoints: 10,
+    target1: 123,
+    target2: 128,
+    activeRuleset: {
+      timeframeMss: {
+        applied: true,
+        status: 'passed',
+        required: 'aligned_confirmed_5m_mss',
+        appliesToAllModels: true,
+        affectsExecution: false,
+        evidence: ['Aligned completed 5M MSS confirmed.'],
+        blockers: [],
+      },
+    },
+  }),
   scannerState: 'Executable',
 }));
 assert.equal(approvedNoAlert.finalClassification, 'A_VALID_APPROVED_NO_ALERT');
@@ -94,6 +109,18 @@ assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.t
 assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '1H'));
 assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '15M'));
 assert.ok(approvedNoAlert.htfMssDiagnostics.timeframeStack.some((item) => item.timeframe === '5M'));
+assert.equal(approvedNoAlert.timeframeMssEvidenceDiagnostics.authority, 'ohlc_facts_only');
+assert.equal(approvedNoAlert.timeframeMssEvidenceDiagnostics.boundary, 'evidence_only_not_approval_or_execution_authority');
+assert.equal(approvedNoAlert.timeframeMssEvidenceDiagnostics.approvesExecution, false);
+assert.equal(approvedNoAlert.timeframeMssEvidenceDiagnostics.changesTradeLogic, false);
+assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '15M'));
+assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '60M'));
+assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '240M'));
+assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.every((item) => item.barTimestampMode === 'close'));
+assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.status, 'passed');
+assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.appliesToAllModels, true);
+assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.affectsExecution, false);
+assert.ok(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.summary.includes('passed'));
 assert.equal(approvedNoAlert.newPlanRecommendation.recommendationType, 'scanner_bug_fix');
 assert.equal(approvedNoAlert.scannerAuditContext.scannerAuditStatus, 'missing');
 

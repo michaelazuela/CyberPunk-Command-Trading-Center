@@ -316,6 +316,50 @@ assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false mus
 assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
 
+const openingDriveHumanReviewCandidate = sampleCandidate('SHORT');
+openingDriveHumanReviewCandidate.setupType = SetupType.OpeningDriveFvgContinuation;
+openingDriveHumanReviewCandidate.scenarioLabel = 'Opening Drive FVG Continuation';
+openingDriveHumanReviewCandidate.executionStatus = ExecutionStatus.Conditional;
+openingDriveHumanReviewCandidate.candidateState = 'HUMAN_REVIEW_READY';
+openingDriveHumanReviewCandidate.entry = 7518;
+openingDriveHumanReviewCandidate.stop = 7522;
+openingDriveHumanReviewCandidate.target1 = 7512;
+openingDriveHumanReviewCandidate.target2 = 7510;
+openingDriveHumanReviewCandidate.requiredTrigger = 'Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET.';
+openingDriveHumanReviewCandidate.humanReview = {
+  status: 'HumanReviewReady',
+  canExecute: false,
+  requiresTraderConfirmation: true,
+  discordTradePlanEligible: true,
+  reason: 'Opening-drive FVG continuation is structurally qualified for human review.',
+};
+const openingDrivePayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-05',
+  instrument: 'MES',
+  planVersionId: 'OPENING-DRIVE-FVG-HUMAN-REVIEW',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [openingDriveHumanReviewCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  statusOverride: 'Conditional',
+});
+validateDiscordPayload(openingDrivePayload, ['chart-plan.png', 'price-level-map.png']);
+const openingDriveText = flattenDiscordPayloadText(openingDrivePayload);
+assert.ok(openingDriveText.includes('HUMAN REVIEW READY - decision-support plan only; trader confirmation required'));
+assert.ok(openingDriveText.includes('Review: HumanReviewReady'));
+assert.ok(openingDriveText.includes('Human review required. Decision-support plan only.'));
+assert.ok(openingDriveText.includes('Trader must confirm entry before action.'));
+assert.ok(openingDriveText.includes('Entry: 7518.00'));
+assert.ok(openingDriveText.includes('Stop: 7522.00'));
+assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(openingDriveText), false);
+
 const scannerRetestPendingCandidate = sampleCandidate('SHORT');
 scannerRetestPendingCandidate.setupType = SetupType.HtfDisplacementMssContinuation;
 scannerRetestPendingCandidate.scenarioLabel = 'HTF Displacement + 5M MSS Continuation';

@@ -216,6 +216,7 @@ function buildChartContext(input: TradeDecisionPipelineInput): ChartContext {
     sessionLevelContext: structured.sessionLevelContext,
     sessionStory: structured.sessionStory,
     multiTimeframeContext: structured.multiTimeframeContext,
+    timeframeMssEvidence: structured.timeframeMssEvidence,
     htfLiquidityDrawState: structured.htfLiquidityDrawState,
     failedPlanReversal: structured.failedPlanReversal,
     targetObjectives: structured.targetObjectives,
@@ -362,6 +363,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.HtfDrawContinuationAfterRaid: return 99;
     case SetupType.HtfDisplacementMssContinuation: return 99;
     case SetupType.HtfDisplacementFvgContinuation: return 97;
+    case SetupType.OpeningDriveFvgContinuation: return 98;
     case SetupType.FailedPlanReversal: return 98;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
@@ -604,6 +606,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
               ? 'HTF displacement + 5M MSS continuation sequence quality.'
           : candidate.setupType === SetupType.HtfDisplacementFvgContinuation
               ? 'HTF displacement + FVG continuation sequence quality.'
+          : candidate.setupType === SetupType.OpeningDriveFvgContinuation
+              ? 'Opening drive FVG continuation sequence quality.'
           : candidate.setupType === SetupType.FailedPlanReversal
               ? 'Failed plan reversal sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',

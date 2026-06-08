@@ -1,0 +1,3685 @@
+{
+  "reportType": "week_mtf_mss_rth_replay",
+  "createdAt": "2026-06-07T20:07:50.739Z",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "bridgeUrl": "http://127.0.0.1:8765",
+  "window": {
+    "rthFrom": "2026-06-01T09:30:00-04:00",
+    "rthTo": "2026-06-05T16:00:00-04:00",
+    "preloadFrom": "2026-05-02T00:00:00-04:00",
+    "tradeDates": [
+      "2026-06-01",
+      "2026-06-02",
+      "2026-06-03",
+      "2026-06-04",
+      "2026-06-05"
+    ],
+    "rthSession": "09:30-16:00 America/New_York"
+  },
+  "timestampMode": {
+    "barTimestampMode": "close",
+    "timeZone": "eastern"
+  },
+  "boundary": "ohlc_replay_only_not_trade_approval",
+  "sourcePolicy": {
+    "readMarketBarsFirst": true,
+    "repairFromNinjaTraderHistoricalBars": true,
+    "narrativeFallbackUsed": false,
+    "screenshotFallbackUsed": false
+  },
+  "coverage": [
+    {
+      "timeframe": "5M",
+      "source": "market_bars_read_ninjatrader_repair_preferred",
+      "barsLoaded": 6840,
+      "cacheBars": 1000,
+      "bridgeBars": 6840,
+      "bridgeRequests": 35,
+      "rangeStart": "2026-05-03T18:05:00",
+      "rangeEnd": "2026-06-05T16:00:00",
+      "bridgeFailures": []
+    },
+    {
+      "timeframe": "15M",
+      "source": "market_bars_read_ninjatrader_repair_preferred",
+      "barsLoaded": 2280,
+      "cacheBars": 1000,
+      "bridgeBars": 2280,
+      "bridgeRequests": 35,
+      "rangeStart": "2026-05-03T18:15:00",
+      "rangeEnd": "2026-06-05T16:00:00",
+      "bridgeFailures": []
+    },
+    {
+      "timeframe": "60M",
+      "source": "market_bars_read_ninjatrader_repair_preferred",
+      "barsLoaded": 570,
+      "cacheBars": 1000,
+      "bridgeBars": 570,
+      "bridgeRequests": 35,
+      "rangeStart": "2026-05-03T19:00:00",
+      "rangeEnd": "2026-06-05T16:00:00",
+      "bridgeFailures": []
+    },
+    {
+      "timeframe": "120M",
+      "source": "market_bars_read_ninjatrader_repair_preferred",
+      "barsLoaded": 297,
+      "cacheBars": 1000,
+      "bridgeBars": 297,
+      "bridgeRequests": 35,
+      "rangeStart": "2026-05-03T20:00:00",
+      "rangeEnd": "2026-06-05T16:00:00",
+      "bridgeFailures": []
+    },
+    {
+      "timeframe": "240M",
+      "source": "market_bars_read_ninjatrader_repair_preferred",
+      "barsLoaded": 148,
+      "cacheBars": 1000,
+      "bridgeBars": 148,
+      "bridgeRequests": 35,
+      "rangeStart": "2026-05-03T22:00:00",
+      "rangeEnd": "2026-06-05T14:00:00",
+      "bridgeFailures": []
+    }
+  ],
+  "mssEvents": [
+    {
+      "timeframe": "5M",
+      "confirmedMss": [
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T09:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.51,
+          "closeLocation": 0.69,
+          "rangeExpansion": 1.97,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7598.25,
+            "brokenSwingTimestamp": "2026-06-02T09:05:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 4.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.27,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7620.25,
+            "brokenSwingTimestamp": "2026-06-02T14:35:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 1.75,
+            "wickOnlyBreak": false
+          },
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.56,
+          "closeLocation": 1,
+          "rangeExpansion": 0.91,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7620.5,
+            "brokenSwingTimestamp": "2026-06-02T15:30:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 94,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.93,
+          "rangeExpansion": 3.58,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7605.25,
+            "brokenSwingTimestamp": "2026-06-03T09:20:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 12.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.95,
+          "rangeExpansion": 0.51,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7593.75,
+            "brokenSwingTimestamp": "2026-06-03T10:05:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 2.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.67,
+          "closeLocation": 0.79,
+          "rangeExpansion": 1.01,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7590.75,
+            "brokenSwingTimestamp": "2026-06-03T10:40:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 3.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7573.5,
+            "brokenSwingTimestamp": "2026-06-03T12:35:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 4.75,
+            "wickOnlyBreak": false
+          },
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 51,
+          "bodyToRange": 0.5,
+          "closeLocation": 0.55,
+          "rangeExpansion": 0.9,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7570,
+            "brokenSwingTimestamp": "2026-06-04T10:50:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 2.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 66,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.78,
+          "rangeExpansion": 1.12,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7581.25,
+            "brokenSwingTimestamp": "2026-06-04T11:25:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.64,
+          "closeLocation": 0.64,
+          "rangeExpansion": 1.56,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7604.75,
+            "brokenSwingTimestamp": "2026-06-04T14:50:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.72,
+          "closeLocation": 0.72,
+          "rangeExpansion": 2.39,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7544.5,
+            "brokenSwingTimestamp": "2026-06-05T09:20:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 4.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T13:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 53,
+          "bodyToRange": 0.27,
+          "closeLocation": 0.93,
+          "rangeExpansion": 0.8,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7466,
+            "brokenSwingTimestamp": "2026-06-05T13:25:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 0.75,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 91,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.57,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7460.5,
+            "brokenSwingTimestamp": "2026-06-05T13:50:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 2,
+            "wickOnlyBreak": false
+          },
+          "confidence": 100,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": []
+    },
+    {
+      "timeframe": "15M",
+      "confirmedMss": [
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 42,
+          "bodyToRange": 0.44,
+          "closeLocation": 0.44,
+          "rangeExpansion": 0.75,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7620.25,
+            "brokenSwingTimestamp": "2026-06-02T14:45:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 0.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "15M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 45,
+          "bodyToRange": 0.21,
+          "closeLocation": 0.71,
+          "rangeExpansion": 1.12,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7577,
+            "brokenSwingTimestamp": "2026-06-03T14:30:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 1.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "15M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.88,
+          "rangeExpansion": 2.1,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7604,
+            "brokenSwingTimestamp": "2026-06-04T15:30:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 4.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 90,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": []
+    },
+    {
+      "timeframe": "60M",
+      "confirmedMss": [],
+      "displacementWithoutMss": []
+    },
+    {
+      "timeframe": "120M",
+      "confirmedMss": [
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.77,
+          "rangeExpansion": 3.43,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7605.75,
+            "brokenSwingTimestamp": "2026-06-01T06:00:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 20.75,
+            "wickOnlyBreak": false
+          },
+          "confidence": 90,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": []
+    },
+    {
+      "timeframe": "240M",
+      "confirmedMss": [
+        {
+          "timeframe": "240M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.53,
+          "closeLocation": 0.75,
+          "rangeExpansion": 2.57,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7602.5,
+            "brokenSwingTimestamp": "2026-06-02T22:00:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 16.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 80,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": []
+    }
+  ],
+  "legacyHeuristicEvents": [
+    {
+      "timeframe": "5M",
+      "confirmedMss": [
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T11:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.73,
+          "closeLocation": 0.73,
+          "rangeExpansion": 2.48,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T12:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.88,
+          "closeLocation": 0.94,
+          "rangeExpansion": 2.01,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.98,
+          "rangeExpansion": 2.39,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.88,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 81,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.78,
+          "breaksStructure": true,
+          "confidence": 91,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 84,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.96,
+          "breaksStructure": true,
+          "confidence": 94,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T09:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.51,
+          "closeLocation": 0.69,
+          "rangeExpansion": 1.97,
+          "breaksStructure": true,
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T10:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 96,
+          "bodyToRange": 0.97,
+          "closeLocation": 1,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T11:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 1,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T13:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.88,
+          "rangeExpansion": 1.16,
+          "breaksStructure": true,
+          "confidence": 80,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T14:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 85,
+          "bodyToRange": 0.92,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.16,
+          "breaksStructure": true,
+          "confidence": 95,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.27,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 94,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.93,
+          "rangeExpansion": 3.58,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 81,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.83,
+          "rangeExpansion": 3.62,
+          "breaksStructure": true,
+          "confidence": 91,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T11:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.6,
+          "closeLocation": 0.74,
+          "rangeExpansion": 1.73,
+          "breaksStructure": true,
+          "confidence": 80,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T12:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.84,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T15:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.74,
+          "rangeExpansion": 2.25,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T09:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.52,
+          "closeLocation": 0.95,
+          "rangeExpansion": 3.7,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T10:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.89,
+          "closeLocation": 1,
+          "rangeExpansion": 1.18,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.88,
+          "rangeExpansion": 1.95,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 65,
+          "bodyToRange": 0.54,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.25,
+          "breaksStructure": true,
+          "confidence": 75,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 83,
+          "bodyToRange": 0.77,
+          "closeLocation": 0.82,
+          "rangeExpansion": 2.09,
+          "breaksStructure": true,
+          "confidence": 93,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 75,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "confidence": 85,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.8,
+          "closeLocation": 0.8,
+          "rangeExpansion": 1.41,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.45,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.75,
+          "closeLocation": 0.79,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.72,
+          "closeLocation": 0.72,
+          "rangeExpansion": 2.39,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.95,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.65,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.6,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.44,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T11:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.6,
+          "closeLocation": 0.72,
+          "rangeExpansion": 1.55,
+          "breaksStructure": true,
+          "confidence": 78,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T11:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.45,
+          "breaksStructure": true,
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.77,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 91,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.57,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.81,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 96,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.65,
+          "closeLocation": 0.69,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 78,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": [
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T10:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.77,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.16,
+          "breaksStructure": false,
+          "confidence": 68,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T12:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 65,
+          "bodyToRange": 0.65,
+          "closeLocation": 0.7,
+          "rangeExpansion": 1.15,
+          "breaksStructure": false,
+          "confidence": 55,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T13:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.88,
+          "closeLocation": 1,
+          "rangeExpansion": 1.45,
+          "breaksStructure": false,
+          "confidence": 79,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T13:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.57,
+          "closeLocation": 0.87,
+          "rangeExpansion": 1.33,
+          "breaksStructure": false,
+          "confidence": 59,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T13:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.87,
+          "rangeExpansion": 1.7,
+          "breaksStructure": false,
+          "confidence": 66,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T09:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.76,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.23,
+          "breaksStructure": false,
+          "confidence": 70,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T12:20:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.81,
+          "closeLocation": 0.88,
+          "rangeExpansion": 1.21,
+          "breaksStructure": false,
+          "confidence": 69,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T12:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.94,
+          "closeLocation": 1,
+          "rangeExpansion": 1.26,
+          "breaksStructure": false,
+          "confidence": 80,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T13:20:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.84,
+          "rangeExpansion": 2.08,
+          "breaksStructure": false,
+          "confidence": 77,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T13:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 65,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.72,
+          "rangeExpansion": 1.23,
+          "breaksStructure": false,
+          "confidence": 55,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 65,
+          "bodyToRange": 0.62,
+          "closeLocation": 0.69,
+          "rangeExpansion": 1.28,
+          "breaksStructure": false,
+          "confidence": 55,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T15:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 83,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.51,
+          "breaksStructure": false,
+          "confidence": 73,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T11:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.57,
+          "breaksStructure": false,
+          "confidence": 68,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T11:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.79,
+          "rangeExpansion": 1.4,
+          "breaksStructure": false,
+          "confidence": 59,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T13:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 73,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.77,
+          "rangeExpansion": 1.54,
+          "breaksStructure": false,
+          "confidence": 63,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T15:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.85,
+          "closeLocation": 1,
+          "rangeExpansion": 1.24,
+          "breaksStructure": false,
+          "confidence": 76,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T15:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.89,
+          "rangeExpansion": 1.58,
+          "breaksStructure": false,
+          "confidence": 72,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T15:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.8,
+          "closeLocation": 0.91,
+          "rangeExpansion": 1.97,
+          "breaksStructure": false,
+          "confidence": 78,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.64,
+          "breaksStructure": false,
+          "confidence": 76,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T11:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 63,
+          "bodyToRange": 0.52,
+          "closeLocation": 0.76,
+          "rangeExpansion": 1.33,
+          "breaksStructure": false,
+          "confidence": 53,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T14:20:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.5,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.33,
+          "breaksStructure": false,
+          "confidence": 58,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T15:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.92,
+          "closeLocation": 1,
+          "rangeExpansion": 1.33,
+          "breaksStructure": false,
+          "confidence": 80,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T15:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.42,
+          "breaksStructure": false,
+          "confidence": 72,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T15:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 91,
+          "bodyToRange": 0.94,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.55,
+          "breaksStructure": false,
+          "confidence": 81,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T10:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 85,
+          "bodyToRange": 0.87,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.23,
+          "breaksStructure": false,
+          "confidence": 75,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T12:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.91,
+          "rangeExpansion": 1.41,
+          "breaksStructure": false,
+          "confidence": 66,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T13:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 71,
+          "bodyToRange": 0.56,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.37,
+          "breaksStructure": false,
+          "confidence": 61,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T13:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 81,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.96,
+          "breaksStructure": false,
+          "confidence": 71,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.97,
+          "closeLocation": 1,
+          "rangeExpansion": 1.16,
+          "breaksStructure": false,
+          "confidence": 80,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.85,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.38,
+          "breaksStructure": false,
+          "confidence": 72,
+          "blockers": [
+            "5M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "15M",
+      "confirmedMss": [
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T11:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.87,
+          "closeLocation": 0.87,
+          "rangeExpansion": 1.24,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.51,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.6,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.55,
+          "closeLocation": 0.66,
+          "rangeExpansion": 1.91,
+          "breaksStructure": true,
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T10:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.96,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.53,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.85,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 84,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.96,
+          "rangeExpansion": 5.08,
+          "breaksStructure": true,
+          "confidence": 94,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T12:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 71,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.68,
+          "rangeExpansion": 1.66,
+          "breaksStructure": true,
+          "confidence": 81,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 72,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.75,
+          "rangeExpansion": 1.88,
+          "breaksStructure": true,
+          "confidence": 82,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.19,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.84,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.67,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.88,
+          "rangeExpansion": 2.1,
+          "breaksStructure": true,
+          "confidence": 90,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.97,
+          "rangeExpansion": 2.85,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.71,
+          "breaksStructure": true,
+          "confidence": 96,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.82,
+          "rangeExpansion": 1.37,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.95,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.7,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 90,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": [
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T09:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.8,
+          "rangeExpansion": 1.7,
+          "breaksStructure": false,
+          "confidence": 66,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-02T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 64,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.67,
+          "rangeExpansion": 1.41,
+          "breaksStructure": false,
+          "confidence": 54,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T10:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.22,
+          "breaksStructure": false,
+          "confidence": 77,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.19,
+          "breaksStructure": false,
+          "confidence": 77,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T15:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 64,
+          "bodyToRange": 0.54,
+          "closeLocation": 0.78,
+          "rangeExpansion": 1.18,
+          "breaksStructure": false,
+          "confidence": 54,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 72,
+          "bodyToRange": 0.55,
+          "closeLocation": 0.77,
+          "rangeExpansion": 2.05,
+          "breaksStructure": false,
+          "confidence": 62,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-04T15:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.82,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.17,
+          "breaksStructure": false,
+          "confidence": 72,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T10:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.53,
+          "breaksStructure": false,
+          "confidence": 68,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T11:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 84,
+          "bodyToRange": 0.83,
+          "closeLocation": 1,
+          "rangeExpansion": 1.17,
+          "breaksStructure": false,
+          "confidence": 74,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-05T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 75,
+          "bodyToRange": 0.6,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.55,
+          "breaksStructure": false,
+          "confidence": 65,
+          "blockers": [
+            "15M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "60M",
+      "confirmedMss": [
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.74,
+          "rangeExpansion": 4.18,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T11:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.82,
+          "closeLocation": 1,
+          "rangeExpansion": 3.16,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.5,
+          "closeLocation": 0.7,
+          "rangeExpansion": 4.59,
+          "breaksStructure": true,
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.51,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.26,
+          "breaksStructure": true,
+          "confidence": 79,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.98,
+          "rangeExpansion": 3.07,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.91,
+          "rangeExpansion": 2.03,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.87,
+          "closeLocation": 0.88,
+          "rangeExpansion": 2.33,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": [
+        {
+          "timeframe": "60M",
+          "direction": "bullish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 72,
+          "bodyToRange": 0.54,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.59,
+          "breaksStructure": false,
+          "confidence": 62,
+          "blockers": [
+            "60M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 64,
+          "bodyToRange": 0.57,
+          "closeLocation": 0.74,
+          "rangeExpansion": 1.24,
+          "breaksStructure": false,
+          "confidence": 54,
+          "blockers": [
+            "60M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "120M",
+      "confirmedMss": [
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.77,
+          "rangeExpansion": 3.43,
+          "breaksStructure": true,
+          "confidence": 90,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.62,
+          "closeLocation": 0.81,
+          "rangeExpansion": 2.96,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.78,
+          "rangeExpansion": 2.32,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.67,
+          "closeLocation": 0.73,
+          "rangeExpansion": 4.3,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.42,
+          "breaksStructure": true,
+          "confidence": 79,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 75,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.99,
+          "breaksStructure": true,
+          "confidence": 85,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.97,
+          "rangeExpansion": 1.21,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.99,
+          "rangeExpansion": 3.26,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.77,
+          "closeLocation": 0.78,
+          "rangeExpansion": 3.27,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": [
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-03T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 66,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.82,
+          "rangeExpansion": 1.17,
+          "breaksStructure": false,
+          "confidence": 56,
+          "blockers": [
+            "120M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "240M",
+      "confirmedMss": [
+        {
+          "timeframe": "240M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 83,
+          "bodyToRange": 0.75,
+          "closeLocation": 0.83,
+          "rangeExpansion": 2.07,
+          "breaksStructure": true,
+          "confidence": 93,
+          "blockers": []
+        },
+        {
+          "timeframe": "240M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.53,
+          "closeLocation": 0.75,
+          "rangeExpansion": 2.57,
+          "breaksStructure": true,
+          "confidence": 80,
+          "blockers": []
+        },
+        {
+          "timeframe": "240M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.82,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.78,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "240M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 94,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.99,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        }
+      ],
+      "displacementWithoutMss": [
+        {
+          "timeframe": "240M",
+          "direction": "bearish",
+          "status": "displacement_without_mss",
+          "evidenceTimestamp": "2026-06-01T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 72,
+          "bodyToRange": 0.54,
+          "closeLocation": 0.81,
+          "rangeExpansion": 2.23,
+          "breaksStructure": false,
+          "confidence": 62,
+          "blockers": [
+            "240M: legacy heuristic displacement detected, but close did not break recent prior range."
+          ]
+        }
+      ]
+    }
+  ],
+  "legacyHeuristicComparison": [
+    {
+      "timeframe": "5M",
+      "legacyConfirmedMss": 39,
+      "structuralConfirmedMss": 13,
+      "confirmedDelta": -26,
+      "legacyDisplacementWithoutMss": 30,
+      "structuralDisplacementWithoutMss": 0,
+      "displacementDelta": -30,
+      "legacyOnlyConfirmedMss": [
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T11:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.73,
+          "closeLocation": 0.73,
+          "rangeExpansion": 2.48,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T12:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.88,
+          "closeLocation": 0.94,
+          "rangeExpansion": 2.01,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.98,
+          "rangeExpansion": 2.39,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.88,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 81,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.78,
+          "breaksStructure": true,
+          "confidence": 91,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T15:55:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 84,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.96,
+          "breaksStructure": true,
+          "confidence": 94,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T10:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 96,
+          "bodyToRange": 0.97,
+          "closeLocation": 1,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T11:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 1,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T13:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.88,
+          "rangeExpansion": 1.16,
+          "breaksStructure": true,
+          "confidence": 80,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T14:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 85,
+          "bodyToRange": 0.92,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.16,
+          "breaksStructure": true,
+          "confidence": 95,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 81,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.83,
+          "rangeExpansion": 3.62,
+          "breaksStructure": true,
+          "confidence": 91,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T11:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 70,
+          "bodyToRange": 0.6,
+          "closeLocation": 0.74,
+          "rangeExpansion": 1.73,
+          "breaksStructure": true,
+          "confidence": 80,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T12:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.92,
+          "rangeExpansion": 1.84,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T15:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.74,
+          "rangeExpansion": 2.25,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T09:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.52,
+          "closeLocation": 0.95,
+          "rangeExpansion": 3.7,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T10:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.89,
+          "closeLocation": 1,
+          "rangeExpansion": 1.18,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.88,
+          "rangeExpansion": 1.95,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 65,
+          "bodyToRange": 0.54,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.25,
+          "breaksStructure": true,
+          "confidence": 75,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 83,
+          "bodyToRange": 0.77,
+          "closeLocation": 0.82,
+          "rangeExpansion": 2.09,
+          "breaksStructure": true,
+          "confidence": 93,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 75,
+          "bodyToRange": 0.74,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "confidence": 85,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.8,
+          "closeLocation": 0.8,
+          "rangeExpansion": 1.41,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.45,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.69,
+          "closeLocation": 0.81,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.75,
+          "closeLocation": 0.79,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.95,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 78,
+          "bodyToRange": 0.65,
+          "closeLocation": 0.93,
+          "rangeExpansion": 1.6,
+          "breaksStructure": true,
+          "confidence": 88,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.44,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T11:25:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.6,
+          "closeLocation": 0.72,
+          "rangeExpansion": 1.55,
+          "breaksStructure": true,
+          "confidence": 78,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T11:40:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.71,
+          "closeLocation": 0.94,
+          "rangeExpansion": 1.45,
+          "breaksStructure": true,
+          "confidence": 89,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.66,
+          "closeLocation": 0.77,
+          "rangeExpansion": 1.75,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.81,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 96,
+          "blockers": []
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:10:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.65,
+          "closeLocation": 0.69,
+          "rangeExpansion": 1.47,
+          "breaksStructure": true,
+          "confidence": 78,
+          "blockers": []
+        }
+      ],
+      "structuralOnlyConfirmedMss": [
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.56,
+          "closeLocation": 1,
+          "rangeExpansion": 0.91,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7620.5,
+            "brokenSwingTimestamp": "2026-06-02T15:30:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 79,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.95,
+          "rangeExpansion": 0.51,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7593.75,
+            "brokenSwingTimestamp": "2026-06-03T10:05:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 2.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:50:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 68,
+          "bodyToRange": 0.67,
+          "closeLocation": 0.79,
+          "rangeExpansion": 1.01,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7590.75,
+            "brokenSwingTimestamp": "2026-06-03T10:40:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 3.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:05:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 51,
+          "bodyToRange": 0.5,
+          "closeLocation": 0.55,
+          "rangeExpansion": 0.9,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7570,
+            "brokenSwingTimestamp": "2026-06-04T10:50:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 2.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 66,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.78,
+          "rangeExpansion": 1.12,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7581.25,
+            "brokenSwingTimestamp": "2026-06-04T11:25:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.64,
+          "closeLocation": 0.64,
+          "rangeExpansion": 1.56,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7604.75,
+            "brokenSwingTimestamp": "2026-06-04T14:50:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 0.5,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "5M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T13:35:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 53,
+          "bodyToRange": 0.27,
+          "closeLocation": 0.93,
+          "rangeExpansion": 0.8,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7466,
+            "brokenSwingTimestamp": "2026-06-05T13:25:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 0.75,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "5M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "15M",
+      "legacyConfirmedMss": 18,
+      "structuralConfirmedMss": 3,
+      "confirmedDelta": -15,
+      "legacyDisplacementWithoutMss": 10,
+      "structuralDisplacementWithoutMss": 0,
+      "displacementDelta": -10,
+      "legacyOnlyConfirmedMss": [
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T11:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.87,
+          "closeLocation": 0.87,
+          "rangeExpansion": 1.24,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.51,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 88,
+          "bodyToRange": 0.84,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.6,
+          "breaksStructure": true,
+          "confidence": 98,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.55,
+          "closeLocation": 0.66,
+          "rangeExpansion": 1.91,
+          "breaksStructure": true,
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T10:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 93,
+          "bodyToRange": 0.96,
+          "closeLocation": 0.98,
+          "rangeExpansion": 1.53,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T13:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.85,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 84,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.96,
+          "rangeExpansion": 5.08,
+          "breaksStructure": true,
+          "confidence": 94,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T12:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 71,
+          "bodyToRange": 0.68,
+          "closeLocation": 0.68,
+          "rangeExpansion": 1.66,
+          "breaksStructure": true,
+          "confidence": 81,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 72,
+          "bodyToRange": 0.61,
+          "closeLocation": 0.75,
+          "rangeExpansion": 1.88,
+          "breaksStructure": true,
+          "confidence": 82,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.93,
+          "closeLocation": 0.95,
+          "rangeExpansion": 1.19,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 74,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.84,
+          "rangeExpansion": 1.28,
+          "breaksStructure": true,
+          "confidence": 84,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.9,
+          "rangeExpansion": 1.67,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T09:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.79,
+          "closeLocation": 0.97,
+          "rangeExpansion": 2.85,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 86,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.71,
+          "breaksStructure": true,
+          "confidence": 96,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:45:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.82,
+          "rangeExpansion": 1.37,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T14:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.95,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.7,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 80,
+          "bodyToRange": 0.78,
+          "closeLocation": 0.86,
+          "rangeExpansion": 1.49,
+          "breaksStructure": true,
+          "confidence": 90,
+          "blockers": []
+        }
+      ],
+      "structuralOnlyConfirmedMss": [
+        {
+          "timeframe": "15M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T15:15:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 42,
+          "bodyToRange": 0.44,
+          "closeLocation": 0.44,
+          "rangeExpansion": 0.75,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7620.25,
+            "brokenSwingTimestamp": "2026-06-02T14:45:00",
+            "priorStructureDirection": "bearish",
+            "closeThroughPoints": 0.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "15M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        },
+        {
+          "timeframe": "15M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T15:30:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 45,
+          "bodyToRange": 0.21,
+          "closeLocation": 0.71,
+          "rangeExpansion": 1.12,
+          "breaksStructure": true,
+          "structureBreak": {
+            "type": "mss",
+            "brokenLevel": 7577,
+            "brokenSwingTimestamp": "2026-06-03T14:30:00",
+            "priorStructureDirection": "bullish",
+            "closeThroughPoints": 1.25,
+            "wickOnlyBreak": false
+          },
+          "confidence": 65,
+          "blockers": [
+            "15M: confirmed swing-structure MSS does not have qualifying displacement on the break candle."
+          ]
+        }
+      ]
+    },
+    {
+      "timeframe": "60M",
+      "legacyConfirmedMss": 7,
+      "structuralConfirmedMss": 0,
+      "confirmedDelta": -7,
+      "legacyDisplacementWithoutMss": 2,
+      "structuralDisplacementWithoutMss": 0,
+      "displacementDelta": -2,
+      "legacyOnlyConfirmedMss": [
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 77,
+          "bodyToRange": 0.7,
+          "closeLocation": 0.74,
+          "rangeExpansion": 4.18,
+          "breaksStructure": true,
+          "confidence": 87,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T11:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 92,
+          "bodyToRange": 0.82,
+          "closeLocation": 1,
+          "rangeExpansion": 3.16,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 67,
+          "bodyToRange": 0.5,
+          "closeLocation": 0.7,
+          "rangeExpansion": 4.59,
+          "breaksStructure": true,
+          "confidence": 77,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T11:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.51,
+          "closeLocation": 0.96,
+          "rangeExpansion": 1.26,
+          "breaksStructure": true,
+          "confidence": 79,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.91,
+          "closeLocation": 0.98,
+          "rangeExpansion": 3.07,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.83,
+          "closeLocation": 0.91,
+          "rangeExpansion": 2.03,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "60M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T15:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 90,
+          "bodyToRange": 0.87,
+          "closeLocation": 0.88,
+          "rangeExpansion": 2.33,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        }
+      ],
+      "structuralOnlyConfirmedMss": []
+    },
+    {
+      "timeframe": "120M",
+      "legacyConfirmedMss": 9,
+      "structuralConfirmedMss": 1,
+      "confirmedDelta": -8,
+      "legacyDisplacementWithoutMss": 1,
+      "structuralDisplacementWithoutMss": 0,
+      "displacementDelta": -1,
+      "legacyOnlyConfirmedMss": [
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.62,
+          "closeLocation": 0.81,
+          "rangeExpansion": 2.96,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-02T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.63,
+          "closeLocation": 0.78,
+          "rangeExpansion": 2.32,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-03T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 76,
+          "bodyToRange": 0.67,
+          "closeLocation": 0.73,
+          "rangeExpansion": 4.3,
+          "breaksStructure": true,
+          "confidence": 86,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 69,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.42,
+          "breaksStructure": true,
+          "confidence": 79,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T12:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 75,
+          "bodyToRange": 0.58,
+          "closeLocation": 0.83,
+          "rangeExpansion": 1.99,
+          "breaksStructure": true,
+          "confidence": 85,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 87,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.97,
+          "rangeExpansion": 1.21,
+          "breaksStructure": true,
+          "confidence": 97,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 95,
+          "bodyToRange": 0.9,
+          "closeLocation": 0.99,
+          "rangeExpansion": 3.26,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        },
+        {
+          "timeframe": "120M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T16:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 82,
+          "bodyToRange": 0.77,
+          "closeLocation": 0.78,
+          "rangeExpansion": 3.27,
+          "breaksStructure": true,
+          "confidence": 92,
+          "blockers": []
+        }
+      ],
+      "structuralOnlyConfirmedMss": []
+    },
+    {
+      "timeframe": "240M",
+      "legacyConfirmedMss": 4,
+      "structuralConfirmedMss": 1,
+      "confirmedDelta": -3,
+      "legacyDisplacementWithoutMss": 1,
+      "structuralDisplacementWithoutMss": 0,
+      "displacementDelta": -1,
+      "legacyOnlyConfirmedMss": [
+        {
+          "timeframe": "240M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-01T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 83,
+          "bodyToRange": 0.75,
+          "closeLocation": 0.83,
+          "rangeExpansion": 2.07,
+          "breaksStructure": true,
+          "confidence": 93,
+          "blockers": []
+        },
+        {
+          "timeframe": "240M",
+          "direction": "bullish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-04T14:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 89,
+          "bodyToRange": 0.82,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.78,
+          "breaksStructure": true,
+          "confidence": 99,
+          "blockers": []
+        },
+        {
+          "timeframe": "240M",
+          "direction": "bearish",
+          "status": "confirmed_mss",
+          "evidenceTimestamp": "2026-06-05T10:00:00",
+          "completedBarStatus": "completed",
+          "displacementScore": 94,
+          "bodyToRange": 0.89,
+          "closeLocation": 0.99,
+          "rangeExpansion": 1.99,
+          "breaksStructure": true,
+          "confidence": 100,
+          "blockers": []
+        }
+      ],
+      "structuralOnlyConfirmedMss": []
+    }
+  ],
+  "activeRuleAcceptanceReview": {
+    "status": "accepted_for_active_ruleset",
+    "activeRuleImpactAccepted": true,
+    "reviewedAt": "2026-06-07T20:07:50.739Z",
+    "reviewBasis": [
+      "Legacy-only confirmed MSS events are intentional active-rule demotions because they were confirmed by the recent-range displacement heuristic but not by completed close-through of confirmed swing structure with opposite prior swing direction.",
+      "Structural-only confirmed MSS events are accepted only when structureBreak.type is mss, breaksStructure is true, the broken swing level is present, and the prior swing structure direction is opposite the MSS direction.",
+      "Displacement remains quality/supporting evidence. A structural MSS with weak displacement is accepted as MSS evidence with lower confidence, not as standalone trade approval.",
+      "No narrative, screenshots, Gemini text, Discord text, or manual OHLC reconstruction was used."
+    ],
+    "totals": {
+      "legacyOnlyIntentionalDemotions": 68,
+      "structuralOnlyAcceptedPromotions": 9,
+      "structuralOnlyNeedsReview": 0
+    },
+    "timeframeReviews": [
+      {
+        "timeframe": "5M",
+        "legacyOnlyConfirmedMss": 33,
+        "legacyOnlyIntentionalDemotions": 33,
+        "structuralOnlyConfirmedMss": 7,
+        "structuralOnlyAcceptedPromotions": 7,
+        "structuralOnlyNeedsReview": 0,
+        "accepted": true,
+        "rationale": [
+          "legacy_only_demotions_lacked_completed_close_through_confirmed_opposite_swing_structure",
+          "structural_only_promotions_required_structureBreak_type_mss_and_opposite_prior_swing_direction"
+        ],
+        "needsReviewEvents": []
+      },
+      {
+        "timeframe": "15M",
+        "legacyOnlyConfirmedMss": 17,
+        "legacyOnlyIntentionalDemotions": 17,
+        "structuralOnlyConfirmedMss": 2,
+        "structuralOnlyAcceptedPromotions": 2,
+        "structuralOnlyNeedsReview": 0,
+        "accepted": true,
+        "rationale": [
+          "legacy_only_demotions_lacked_completed_close_through_confirmed_opposite_swing_structure",
+          "structural_only_promotions_required_structureBreak_type_mss_and_opposite_prior_swing_direction"
+        ],
+        "needsReviewEvents": []
+      },
+      {
+        "timeframe": "60M",
+        "legacyOnlyConfirmedMss": 7,
+        "legacyOnlyIntentionalDemotions": 7,
+        "structuralOnlyConfirmedMss": 0,
+        "structuralOnlyAcceptedPromotions": 0,
+        "structuralOnlyNeedsReview": 0,
+        "accepted": true,
+        "rationale": [
+          "legacy_only_demotions_lacked_completed_close_through_confirmed_opposite_swing_structure",
+          "structural_only_promotions_required_structureBreak_type_mss_and_opposite_prior_swing_direction"
+        ],
+        "needsReviewEvents": []
+      },
+      {
+        "timeframe": "120M",
+        "legacyOnlyConfirmedMss": 8,
+        "legacyOnlyIntentionalDemotions": 8,
+        "structuralOnlyConfirmedMss": 0,
+        "structuralOnlyAcceptedPromotions": 0,
+        "structuralOnlyNeedsReview": 0,
+        "accepted": true,
+        "rationale": [
+          "legacy_only_demotions_lacked_completed_close_through_confirmed_opposite_swing_structure",
+          "structural_only_promotions_required_structureBreak_type_mss_and_opposite_prior_swing_direction"
+        ],
+        "needsReviewEvents": []
+      },
+      {
+        "timeframe": "240M",
+        "legacyOnlyConfirmedMss": 3,
+        "legacyOnlyIntentionalDemotions": 3,
+        "structuralOnlyConfirmedMss": 0,
+        "structuralOnlyAcceptedPromotions": 0,
+        "structuralOnlyNeedsReview": 0,
+        "accepted": true,
+        "rationale": [
+          "legacy_only_demotions_lacked_completed_close_through_confirmed_opposite_swing_structure",
+          "structural_only_promotions_required_structureBreak_type_mss_and_opposite_prior_swing_direction"
+        ],
+        "needsReviewEvents": []
+      }
+    ]
+  },
+  "totals": {
+    "confirmedMss": 18,
+    "displacementWithoutMss": 0,
+    "legacyConfirmedMss": 77,
+    "legacyDisplacementWithoutMss": 44
+  },
+  "authority": {
+    "changesTradeLogic": false,
+    "approvesExecution": false,
+    "changesScannerBehavior": false,
+    "changesBridgeBehavior": false,
+    "changesDiscordBehavior": false
+  }
+}

@@ -57,6 +57,46 @@ function run(input: Partial<TradeDecisionPipelineInput> = {}) {
   });
 }
 
+function timeframeMssEvidenceLayer(direction: 'LONG' | 'SHORT'): NonNullable<ChartContext['timeframeMssEvidence']> {
+  const mssDirection = direction === 'LONG' ? 'bullish' : 'bearish';
+  const buildEvidence = (timeframeName: '5M' | '15M' | '60M' | '120M' | '240M'): NonNullable<ChartContext['timeframeMssEvidence']>['timeframes']['5M'] => ({
+    timeframe: timeframeName,
+    direction: mssDirection,
+    status: 'confirmed_mss',
+    displacementQuality: {
+      present: true,
+      direction: mssDirection,
+      score: 88,
+      bodyToRange: 0.72,
+      closeLocation: 0.84,
+      rangeExpansion: 1.5,
+    },
+    breaksStructure: true,
+    evidenceTimestamp: '2026-05-08T10:00:00-04:00',
+    completedBarStatus: 'completed',
+    barTimestampMode: 'close',
+    barTimeZone: 'eastern',
+    source: 'ninjatrader_ohlc',
+    blockers: [],
+    confidence: 88,
+  });
+  return {
+    source: 'ninjatrader_ohlc',
+    authority: 'ohlc_facts_only',
+    boundary: 'evidence_only_not_approval_or_execution_authority',
+    timeframes: {
+      '5M': buildEvidence('5M'),
+      '15M': buildEvidence('15M'),
+      '60M': buildEvidence('60M'),
+      '120M': buildEvidence('120M'),
+      '240M': buildEvidence('240M'),
+    },
+    notes: ['Pipeline fixture active timeframe MSS evidence.'],
+    approvesExecution: false,
+    changesTradeLogic: false,
+  };
+}
+
 function structuredContext(overrides: Partial<ChartContext> = {}): Partial<ChartContext> {
   return {
     timeframe: '5m',
@@ -117,6 +157,7 @@ function structuredContext(overrides: Partial<ChartContext> = {}): Partial<Chart
     riskStatus: 'WithinLimit',
     entryConfirmed: true,
     stopConfirmed: true,
+    timeframeMssEvidence: timeframeMssEvidenceLayer('LONG'),
     requiresManualConfirmation: false,
     extractionWarnings: {
       screenshotUnclear: false,
@@ -409,6 +450,7 @@ function htfDrawContinuationContext(direction: 'LONG' | 'SHORT' = 'LONG', overri
     riskStatus: 'WithinLimit',
     entryConfirmed: true,
     stopConfirmed: true,
+    timeframeMssEvidence: timeframeMssEvidenceLayer(direction),
     targetObjectives: [{
       label: bullish ? 'Prior RTH high / full ETH high' : 'Prior RTH low / full ETH low',
       price: bullish ? 7624 : 7580,
@@ -707,6 +749,7 @@ function htfDisplacementFvgContinuationContext(direction: 'LONG' | 'SHORT' = 'SH
       drawOnLiquidity: target,
       drawOnLiquidityLabel: bullish ? 'External buy-side liquidity' : 'External sell-side liquidity',
     },
+    timeframeMssEvidence: timeframeMssEvidenceLayer(direction),
     ...overrides,
   });
 }
@@ -775,6 +818,7 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.HtfDrawContinuationAfterRaid ||
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
     candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
+    candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
     candidate.setupType === SetupType.FailedPlanReversal
   );
 }

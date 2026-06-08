@@ -35,6 +35,7 @@ const primaryExpected = [
   SetupType.HtfDrawContinuationAfterRaid,
   SetupType.HtfDisplacementMssContinuation,
   SetupType.HtfDisplacementFvgContinuation,
+  SetupType.OpeningDriveFvgContinuation,
   SetupType.FailedPlanReversal,
 ];
 const supportingExpected = [
@@ -79,6 +80,7 @@ const expectedFamilyByPrimarySetup = new Map<SetupType, ParentModelFamily>([
   [SetupType.HtfDrawContinuationAfterRaid, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.HtfDisplacementMssContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.HtfDisplacementFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.OpeningDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.FailedPlanReversal, 'FAILED_PLAN_REVERSAL'],
 ]);
 
@@ -119,8 +121,11 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   const supportingTypes = setupTypes(supporting);
   const deprecatedTypes = setupTypes(deprecated);
   const allowedTypes = setupTypes(allowed);
+  const sessionPrimaryExpected = sessionType === 'lunch' || sessionType === 'replay_lunch'
+    ? primaryExpected.filter((setupType) => setupType !== SetupType.OpeningDriveFvgContinuation)
+    : primaryExpected;
 
-  assertExactSet(primaryTypes, primaryExpected, `${sessionType} primary registry`);
+  assertExactSet(primaryTypes, sessionPrimaryExpected, `${sessionType} primary registry`);
   assertExactSet(supportingTypes, supportingExpected, `${sessionType} supporting registry`);
 
   for (const setupType of deprecatedExpected) {
@@ -138,7 +143,7 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   }
 
   assertExactSet(deprecatedTypes, deprecatedExpected.filter((setupType) => allowedTypes.has(setupType)), `${sessionType} deprecated registry`);
-  assertContainsAll(allowedTypes, primaryExpected, `${sessionType} compatibility registry`);
+  assertContainsAll(allowedTypes, sessionPrimaryExpected, `${sessionType} compatibility registry`);
   assertContainsAll(allowedTypes, supportingExpected, `${sessionType} compatibility registry`);
   assert(
     allowed.length === primary.length + supporting.length + deprecated.length,

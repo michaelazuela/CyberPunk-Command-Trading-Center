@@ -16,6 +16,8 @@ import { buildStructuralLevels } from './sessionStructure';
 import { buildSessionLevelContext } from './sessionLevelContextEngine';
 import { buildSessionStory } from './sessionStoryEngine';
 import { buildHtfLiquidityDrawState } from './htfLiquidityDrawEngine';
+import { buildMultiTimeframeMssEvidenceLayer } from './timeframeMssEvidence';
+import type { BridgeBarTimestampMode, BridgeBarTimeZoneMode } from '../types';
 
 export type NinjaBridgeTimeframe = '1m' | '5m' | '15m' | '60m' | '120m' | '240m' | '1h' | '2h' | '4h';
 
@@ -740,6 +742,8 @@ export function buildNinjaChartContext({
   instrument,
   tradeDate,
   midnightOpen,
+  barTimestampMode = 'close',
+  barTimeZone = 'eastern',
 }: {
   bars5m: NinjaBridgeBar[];
   htfBars5m?: NinjaBridgeBar[];
@@ -751,6 +755,8 @@ export function buildNinjaChartContext({
   instrument: ChartContext['instrument'];
   tradeDate: string;
   midnightOpen?: number | null;
+  barTimestampMode?: BridgeBarTimestampMode;
+  barTimeZone?: BridgeBarTimeZoneMode;
 }): Partial<ChartContext> | null {
   const executionBars = bars5m.filter(bar =>
     Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
@@ -829,6 +835,18 @@ export function buildNinjaChartContext({
       structuralTargetLabel(multiTimeframeContext.targetMap.nearestDownsideLiquidity) ||
       structuralTargetLabel(multiTimeframeContext.targetMap.majorDownsideLiquidity),
     chartTimestamp: last.time,
+  });
+  const timeframeMssEvidence = buildMultiTimeframeMssEvidenceLayer({
+    barsByTimeframe: {
+      '5M': htfFiveMinuteBars,
+      '15M': bars15m,
+      '60M': bars60m,
+      '120M': bars120m,
+      '240M': bars240m,
+    },
+    asOfTimestamp: last.time,
+    barTimestampMode,
+    barTimeZone,
   });
 
   return {
@@ -910,6 +928,7 @@ export function buildNinjaChartContext({
     sessionLevelContext,
     sessionStory,
     multiTimeframeContext,
+    timeframeMssEvidence,
     htfLiquidityDrawState,
     targetObjectives: enrichedStructuralLevels.map(level => ({
       label: level.label,

@@ -87,6 +87,46 @@ function sufficientHtfContextFields() {
   };
 }
 
+function timeframeMssEvidenceLayer(direction: Direction): NonNullable<ChartContext['timeframeMssEvidence']> {
+  const mssDirection = direction === 'LONG' ? 'bullish' : 'bearish';
+  const buildEvidence = (timeframeName: '5M' | '15M' | '60M' | '120M' | '240M'): NonNullable<ChartContext['timeframeMssEvidence']>['timeframes']['5M'] => ({
+    timeframe: timeframeName,
+    direction: mssDirection,
+    status: 'confirmed_mss',
+    displacementQuality: {
+      present: true,
+      direction: mssDirection,
+      score: 86,
+      bodyToRange: 0.68,
+      closeLocation: 0.82,
+      rangeExpansion: 1.4,
+    },
+    breaksStructure: true,
+    evidenceTimestamp: '2026-06-05T10:05:00-04:00',
+    completedBarStatus: 'completed',
+    barTimestampMode: 'close',
+    barTimeZone: 'eastern',
+    source: 'ninjatrader_ohlc',
+    blockers: [],
+    confidence: 86,
+  });
+  return {
+    source: 'ninjatrader_ohlc',
+    authority: 'ohlc_facts_only',
+    boundary: 'evidence_only_not_approval_or_execution_authority',
+    timeframes: {
+      '5M': buildEvidence('5M'),
+      '15M': buildEvidence('15M'),
+      '60M': buildEvidence('60M'),
+      '120M': buildEvidence('120M'),
+      '240M': buildEvidence('240M'),
+    },
+    notes: ['Failed-plan reversal fixture active timeframe MSS evidence.'],
+    approvesExecution: false,
+    changesTradeLogic: false,
+  };
+}
+
 function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<ChartContext> = {}): ChartContext {
   const original = direction === 'SHORT' ? 'LONG' : 'SHORT';
   const bullish = direction === 'LONG';
@@ -222,6 +262,7 @@ function baseChartContext(direction: Direction = 'SHORT', overrides: Partial<Cha
     riskStatus: 'WithinLimit',
     entryConfirmed: true,
     stopConfirmed: true,
+    timeframeMssEvidence: timeframeMssEvidenceLayer(direction),
     marketContext: 'Structured OHLC test context.',
     ...overrides,
   };

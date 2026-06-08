@@ -200,6 +200,8 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Pullback: ${report.pullbackReview.status} - ${report.pullbackReview.summary}`,
     `Scanner: ${report.scannerAlertReview.reason}`,
     `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
+    `Timeframe MSS Evidence: ${report.timeframeMssEvidenceDiagnostics.timeframes.map((item) => `${item.timeframe} ${item.status} ${item.direction} break=${item.breaksStructure} completed=${item.completedBarStatus}`).join('; ')}`,
+    `Active MSS Ruleset: ${report.activeTimeframeMssRulesetDiagnostics.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,
     `Data boundary: Review requests ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days of structured context for 15M/1H/2H/4H and is bounded to currently available completed bars.`,
     `Authority: diagnostic only; no rules changed; no trade approval created.`,
