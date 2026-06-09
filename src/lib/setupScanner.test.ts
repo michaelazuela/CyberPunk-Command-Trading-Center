@@ -2162,6 +2162,109 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('not the MSS close')));
   }],
 
+  ['Intraday MSS Micro Continuation promotes bullish MSS close-through retest without requiring a 5M FVG', () => {
+    const context = htfMssContext('LONG', {
+      tradeDate: '2026-06-09',
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:55:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 7346.5,
+        activeSwingLow: 7331,
+        activeSwingHigh: 7361,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-09T13:40:00-04:00',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7342.5,
+            brokenSwingTimestamp: '2026-06-09T13:40:00-04:00',
+            priorStructureDirection: 'bearish',
+            closeThroughPoints: 0,
+            wickOnlyBreak: false,
+          },
+        },
+        '15M': {
+          status: 'displacement_without_mss',
+          direction: 'bullish',
+          breaksStructure: false,
+          evidenceTimestamp: '2026-06-09T13:45:00-04:00',
+          displacementQuality: {
+            present: true,
+            direction: 'bullish',
+            score: 86,
+            bodyToRange: 0.69,
+            closeLocation: 0.84,
+            rangeExpansion: 1.55,
+          },
+        },
+        '60M': { direction: 'bearish', status: 'confirmed_mss', breaksStructure: true },
+        '120M': { direction: 'bearish', status: 'confirmed_mss', breaksStructure: true },
+      }),
+      fvgZones: [],
+      candles: [
+        { index: 0, timestamp: '2026-06-09T13:25:00-04:00', open: 7314, high: 7320, low: 7306, close: 7311, direction: 'bearish', confidence: 'High' },
+        { index: 1, timestamp: '2026-06-09T13:30:00-04:00', open: 7311, high: 7334.5, low: 7300.5, close: 7329, direction: 'bullish', confidence: 'High', isExpansion: true },
+        { index: 2, timestamp: '2026-06-09T13:35:00-04:00', open: 7328.75, high: 7338.75, low: 7323.25, close: 7338.5, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-06-09T13:40:00-04:00', open: 7338.5, high: 7347.25, low: 7331.5, close: 7342.5, direction: 'bullish', confidence: 'High', isExpansion: true },
+        { index: 4, timestamp: '2026-06-09T13:45:00-04:00', open: 7342.75, high: 7361, low: 7340.5, close: 7351, direction: 'bullish', confidence: 'High', isExpansion: true },
+        { index: 5, timestamp: '2026-06-09T13:50:00-04:00', open: 7351.25, high: 7353.75, low: 7331, close: 7333.5, direction: 'bearish', confidence: 'High' },
+        { index: 6, timestamp: '2026-06-09T13:55:00-04:00', open: 7333.5, high: 7353.25, low: 7333.25, close: 7346.5, direction: 'bullish', confidence: 'High', isReclaim: true },
+      ],
+      targetObjectives: [{
+        label: 'Afternoon buy-side liquidity',
+        price: 7384.75,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Buy-side liquidity above the reclaim.',
+      }],
+      structuralLevels: [{
+        label: 'Mixed HTF resistance above',
+        price: 7378,
+        type: 'resistance',
+        source: 'ninjatrader',
+        directionRelevance: 'LONG',
+        confidence: 'High',
+        evidence: 'HTF context is mixed; use as management context only.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(micro.humanReview?.canExecute, false);
+    assert.equal(micro.entry, 7346.5);
+    assert.equal(micro.stop, 7330.75);
+    assert.equal(micro.riskPoints, 15.75);
+    assert.equal(micro.target1, 7370.25);
+    assert.equal(micro.target2, 7378);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 7342.5);
+    assert.equal(
+      micro.activeRuleset?.htfLineInSand?.requiredClose,
+      'Completed 5M close above 7342.50 required before long continuation is active.'
+    );
+    assert.equal(micro.activeRuleset?.timeframeMss?.status, 'passed');
+    assert.equal(micro.activeCampaign?.status, 'active');
+    assert.equal(micro.activeCampaign?.evidenceLayers.some((layer) => layer.layer === '5M_MSS_CLOSE_THROUGH_RETEST_TRIGGER' && layer.status === 'confirmed'), true);
+    assert.ok(micro.activeCampaign?.htfConflictTimeframes.includes('60M'));
+    assert.ok(micro.activeCampaign?.notes.some((item) => item.includes('HTF conflict becomes caution')));
+    assert.ok(micro.evidence.some((item) => item.includes('5M MSS close-through line in the sand: 7342.50')));
+    assert.ok(micro.evidence.some((item) => item.includes('Completed 5M bullish MSS close-through/retest confirmed')));
+    assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7330.75')));
+    assert.ok(micro.evidence.some((item) => item.includes('opposing completed HTF MSS')));
+    assert.equal(result.bestExecutableCandidate, null);
+  }],
+
   ['Intraday MSS Micro Continuation does not fall back to proposed/FVG stop when protected 5M MSS swing stop is unproven', () => {
     const context = htfMssContext('LONG', {
       sessionType: 'lunch',

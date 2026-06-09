@@ -2210,6 +2210,17 @@ type HtfMssFreshEntryEvidence = {
   reason: string;
 };
 
+type IntradayMicroTriggerPlan = {
+  source: 'fvg_retest_rejection' | 'mss_close_through_retest';
+  confirmed: boolean;
+  entry: number | null;
+  stop: number | null;
+  stopBlocker: string | null;
+  decisionLevel: number | null;
+  reason: string;
+  timestamp: string | null;
+};
+
 function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
   return (chartContext.candles || []).filter((candle) =>
     isReadableConfidence(candle.confidence) &&
@@ -2329,6 +2340,41 @@ function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction:
 
 function protectedFiveMinuteMssStop(chartContext: ChartContext, direction: Direction): number | null {
   return protectedFiveMinuteMssStopResult(chartContext, direction).stop;
+}
+
+function protectedFiveMinuteRetestSwingStopResult(
+  direction: Direction,
+  candles: ReturnType<typeof readableCompletedFiveMinuteCandles>,
+  retestIndex: number,
+): ProtectedMssStopResult {
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return { stop: null, reason: 'Protected 5M retest swing stop requires a LONG or SHORT direction.' };
+  }
+  const retest = candles[retestIndex];
+  const left = candles[retestIndex - 1];
+  const right = candles[retestIndex + 1];
+  if (!retest || !left || !right) {
+    return { stop: null, reason: 'Protected 5M retest swing stop blocked: retest candle is not confirmed by completed candles on both sides.' };
+  }
+  const high = parsePrice(retest.high);
+  const low = parsePrice(retest.low);
+  const leftHigh = parsePrice(left.high);
+  const rightHigh = parsePrice(right.high);
+  const leftLow = parsePrice(left.low);
+  const rightLow = parsePrice(right.low);
+  const tick = TRADE_RULES.targetModel.tickSize;
+
+  if (direction === 'LONG') {
+    if (low === null || leftLow === null || rightLow === null || !(low < leftLow && low < rightLow)) {
+      return { stop: null, reason: 'Protected 5M retest swing stop blocked: retest low is not a confirmed protected 5M swing low.' };
+    }
+    return { stop: roundToTick(low - tick), reason: null };
+  }
+
+  if (high === null || leftHigh === null || rightHigh === null || !(high > leftHigh && high > rightHigh)) {
+    return { stop: null, reason: 'Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.' };
+  }
+  return { stop: roundToTick(high + tick), reason: null };
 }
 
 function isAfterReferenceCandle(
@@ -2870,25 +2916,44 @@ function intradayAlignedMssDirection(chartContext: ChartContext): Direction {
   return 'NO TRADE';
 }
 
+function fifteenMinuteMssOrDisplacementSupports(chartContext: ChartContext, direction: Direction): boolean {
+  if (direction !== 'LONG' && direction !== 'SHORT') return false;
+  const expected = direction === 'LONG' ? 'bullish' : 'bearish';
+  const fifteen = chartContext.timeframeMssEvidence?.timeframes['15M'];
+  return Boolean(
+    isConfirmedMss(fifteen, expected) ||
+    (
+      fifteen &&
+      fifteen.completedBarStatus === 'completed' &&
+      fifteen.direction === expected &&
+      fifteen.displacementQuality.present &&
+      fifteen.displacementQuality.direction === expected &&
+      fifteen.status === 'displacement_without_mss'
+    ) ||
+    displacementCandleFor(chartContext, direction, '15m')
+  );
+}
+
+function intradayMssOrDisplacementDirection(chartContext: ChartContext): Direction {
+  const layer = chartContext.timeframeMssEvidence;
+  if (!layer) return 'NO TRADE';
+  if (isConfirmedMss(layer.timeframes['5M'], 'bearish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'SHORT')) return 'SHORT';
+  if (isConfirmedMss(layer.timeframes['5M'], 'bullish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'LONG')) return 'LONG';
+  return 'NO TRADE';
+}
+
 function fvgRetestRejectionPlan(
   chartContext: ChartContext,
   direction: Direction,
   zone: ReturnType<typeof directionalFvgZone>,
-): {
-  confirmed: boolean;
-  entry: number | null;
-  stop: number | null;
-  stopBlocker: string | null;
-  reason: string;
-  timestamp: string | null;
-} {
+): IntradayMicroTriggerPlan {
   if (!zone || (direction !== 'LONG' && direction !== 'SHORT')) {
-    return { confirmed: false, entry: null, stop: null, stopBlocker: null, reason: 'Directional 5M FVG / imbalance zone is not available.', timestamp: null };
+    return { source: 'fvg_retest_rejection', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: 'Directional 5M FVG / imbalance zone is not available.', timestamp: null };
   }
   const upper = parsePrice(zone.upper);
   const lower = parsePrice(zone.lower);
   if (upper === null || lower === null) {
-    return { confirmed: false, entry: null, stop: null, stopBlocker: null, reason: 'Directional 5M FVG / imbalance zone has incomplete bounds.', timestamp: null };
+    return { source: 'fvg_retest_rejection', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: 'Directional 5M FVG / imbalance zone has incomplete bounds.', timestamp: null };
   }
 
   const candles = readableCompletedFiveMinuteCandles(chartContext)
@@ -2905,10 +2970,12 @@ function fvgRetestRejectionPlan(
 
   if (!rejection) {
     return {
+      source: 'fvg_retest_rejection',
       confirmed: false,
       entry: null,
       stop: null,
       stopBlocker: null,
+      decisionLevel: direction === 'SHORT' ? lower : upper,
       reason: direction === 'SHORT'
         ? 'Bearish micro-continuation pending: wait for a completed 5M candle to retest the bearish FVG and close back below the lower boundary.'
         : 'Bullish micro-continuation pending: wait for a completed 5M candle to retest the bullish FVG and close back above the upper boundary.',
@@ -2919,15 +2986,125 @@ function fvgRetestRejectionPlan(
   const entry = parsePrice(rejection.close);
   const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
   return {
+    source: 'fvg_retest_rejection',
     confirmed: true,
     entry: entry !== null ? roundToTick(entry) : null,
     stop: protectedMssStop.stop,
     stopBlocker: protectedMssStop.reason,
+    decisionLevel: direction === 'SHORT' ? lower : upper,
     reason: direction === 'SHORT'
       ? `Completed 5M bearish FVG retest/rejection confirmed${rejection.timestamp ? ` at ${rejection.timestamp}` : ''}: candle traded into ${formatLinePrice(lower)}-${formatLinePrice(upper)} and closed below ${formatLinePrice(lower)}.`
       : `Completed 5M bullish FVG retest/rejection confirmed${rejection.timestamp ? ` at ${rejection.timestamp}` : ''}: candle traded into ${formatLinePrice(lower)}-${formatLinePrice(upper)} and closed above ${formatLinePrice(upper)}.`,
     timestamp: rejection.timestamp || null,
   };
+}
+
+function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, direction: Direction): IntradayMicroTriggerPlan {
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: '5M MSS close-through retest requires a LONG or SHORT direction.', timestamp: null };
+  }
+  const evidence = chartContext.timeframeMssEvidence?.timeframes['5M'];
+  const expected = direction === 'LONG' ? 'bullish' : 'bearish';
+  if (!isConfirmedMss(evidence, expected)) {
+    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: `5M MSS close-through retest pending: completed ${expected} 5M MSS evidence is not confirmed.`, timestamp: null };
+  }
+
+  const candles = readableCompletedFiveMinuteCandles(chartContext);
+  const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence?.evidenceTimestamp, evidence?.barTimestampMode || 'open');
+  const evidenceCandle = evidenceIndex >= 0 ? candles[evidenceIndex] : null;
+  const decisionLevel = roundToTick(parsePrice(evidenceCandle?.close) ?? parsePrice(evidence?.structureBreak?.brokenLevel) ?? 0);
+  if (!evidenceCandle || !decisionLevel) {
+    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: '5M MSS close-through retest pending: the MSS evidence candle or decision close could not be aligned from completed 5M OHLC.', timestamp: null };
+  }
+
+  const afterEvidence = candles.slice(evidenceIndex + 1);
+  if (!afterEvidence.length) {
+    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel, reason: `5M MSS close-through retest pending: wait for a completed 5M retest/hold around ${formatLinePrice(decisionLevel)}.`, timestamp: null };
+  }
+
+  const tolerance = TRADE_RULES.targetModel.tickSize;
+  const isWrongSideRetest = (candle: (typeof candles)[number]) => {
+    const high = parsePrice(candle.high);
+    const low = parsePrice(candle.low);
+    const close = parsePrice(candle.close);
+    if (high === null || low === null || close === null) return false;
+    return direction === 'LONG'
+      ? low <= decisionLevel + tolerance && close < decisionLevel
+      : high >= decisionLevel - tolerance && close > decisionLevel;
+  };
+  const isHoldReclaim = (candle: (typeof candles)[number]) => {
+    const high = parsePrice(candle.high);
+    const low = parsePrice(candle.low);
+    const close = parsePrice(candle.close);
+    if (high === null || low === null || close === null) return false;
+    return direction === 'LONG'
+      ? low <= decisionLevel + tolerance && close >= decisionLevel && (candle.direction === 'bullish' || candle.isReclaim || candle.isRejection || candle.isExpansion)
+      : high >= decisionLevel - tolerance && close <= decisionLevel && (candle.direction === 'bearish' || candle.isReclaim || candle.isRejection || candle.isExpansion);
+  };
+
+  let retestIndex = -1;
+  let reclaimIndex = -1;
+  for (let localIndex = 0; localIndex < afterEvidence.length; localIndex += 1) {
+    if (!isWrongSideRetest(afterEvidence[localIndex])) continue;
+    const absoluteRetestIndex = evidenceIndex + 1 + localIndex;
+    const nextLocalIndex = afterEvidence.findIndex((candle, candidateIndex) => candidateIndex > localIndex && isHoldReclaim(candle));
+    if (nextLocalIndex >= 0) {
+      retestIndex = absoluteRetestIndex;
+      reclaimIndex = evidenceIndex + 1 + nextLocalIndex;
+      break;
+    }
+  }
+
+  if (retestIndex < 0 || reclaimIndex < 0) {
+    const holdLocalIndex = afterEvidence.findIndex(isHoldReclaim);
+    if (holdLocalIndex >= 0) {
+      retestIndex = evidenceIndex + 1 + holdLocalIndex;
+      reclaimIndex = retestIndex;
+    }
+  }
+
+  if (retestIndex < 0 || reclaimIndex < 0) {
+    return {
+      source: 'mss_close_through_retest',
+      confirmed: false,
+      entry: null,
+      stop: null,
+      stopBlocker: null,
+      decisionLevel,
+      reason: direction === 'LONG'
+        ? `Bullish MSS close-through watch: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M reclaim/hold above that line after retest.`
+        : `Bearish MSS close-through watch: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M rejection/hold below that line after retest.`,
+      timestamp: null,
+    };
+  }
+
+  const reclaim = candles[reclaimIndex];
+  const entry = parsePrice(reclaim.close);
+  const protectedRetestStop = protectedFiveMinuteRetestSwingStopResult(direction, candles, retestIndex);
+  return {
+    source: 'mss_close_through_retest',
+    confirmed: true,
+    entry: entry !== null ? roundToTick(entry) : null,
+    stop: protectedRetestStop.stop,
+    stopBlocker: protectedRetestStop.reason,
+    decisionLevel,
+    reason: direction === 'LONG'
+      ? `Completed 5M bullish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: line in the sand ${formatLinePrice(decisionLevel)} was retested and reclaimed/held on a completed 5M close.`
+      : `Completed 5M bearish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: line in the sand ${formatLinePrice(decisionLevel)} was retested and rejected/held on a completed 5M close.`,
+    timestamp: reclaim.timestamp || null,
+  };
+}
+
+function intradayMicroContinuationTriggerPlan(
+  chartContext: ChartContext,
+  direction: Direction,
+  fvg: ReturnType<typeof directionalFvgZone>,
+): IntradayMicroTriggerPlan {
+  const fvgPlan = fvgRetestRejectionPlan(chartContext, direction, fvg);
+  if (fvgPlan.confirmed) return fvgPlan;
+  const closeThroughPlan = fiveMinuteMssCloseThroughRetestPlan(chartContext, direction);
+  if (closeThroughPlan.confirmed) return closeThroughPlan;
+  return fvg ? fvgPlan : closeThroughPlan;
 }
 
 function intradayMicroContinuationConfidenceScore(args: {
@@ -2956,17 +3133,18 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.IntradayMssMicroContinuation);
   if (!registry || !isInsideIntradayMssMicroContinuationWindow(chartContext)) return null;
 
-  const direction = intradayAlignedMssDirection(chartContext);
+  const direction = intradayMssOrDisplacementDirection(chartContext);
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
 
   const fvg = directionalFvgZone(chartContext, direction);
-  if (!fvg) return null;
 
   const htfGate = htfContextGate(chartContext);
-  const retest = fvgRetestRejectionPlan(chartContext, direction, fvg);
-  const entry = parsePrice(chartContext.proposedEntry) ?? retest.entry;
-  const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
-  const stop = protectedMssStop.stop;
+  const retest = intradayMicroContinuationTriggerPlan(chartContext, direction, fvg);
+  const entry = retest.entry;
+  const protectedMssStop = retest.source === 'mss_close_through_retest'
+    ? { stop: retest.stop, reason: retest.stopBlocker }
+    : protectedFiveMinuteMssStopResult(chartContext, direction);
+  const stop = retest.stop ?? protectedMssStop.stop;
   const targets = computedTargets(direction, entry, stop);
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
@@ -2985,7 +3163,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const score = intradayMicroContinuationConfidenceScore({
     htfGate: htfGate.sufficient,
     alignedMss: true,
-    hasFvg: true,
+    hasFvg: Boolean(fvg),
     rejectionConfirmed: retest.confirmed,
     hasEntryStopTargets,
     hasTarget: Boolean(target),
@@ -2995,14 +3173,16 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const riskAdvisoryStatus = riskAdvisoryStatusFor(risk);
   const riskNote = riskAdvisoryNote(risk);
   const dirLabel = directionLabel(direction);
-  const lower = parsePrice(fvg.lower);
-  const upper = parsePrice(fvg.upper);
-  const zoneLabel = lower !== null && upper !== null ? `${formatLinePrice(lower)}-${formatLinePrice(upper)}` : 'unknown';
+  const lower = fvg ? parsePrice(fvg.lower) : null;
+  const upper = fvg ? parsePrice(fvg.upper) : null;
+  const zoneLabel = lower !== null && upper !== null ? `${formatLinePrice(lower)}-${formatLinePrice(upper)}` : 'not required for close-through trigger';
+  const decisionLevelLabel = retest.decisionLevel !== null ? formatLinePrice(retest.decisionLevel) : null;
+  const isCloseThroughTrigger = retest.source === 'mss_close_through_retest';
   const missingEvidence = Array.from(new Set([
     ...htfGate.missingEvidence,
     ...(!retest.confirmed ? [retest.reason] : []),
     ...(protectedMssStop.reason ? [protectedMssStop.reason] : []),
-    ...(entry === null ? ['Defined 5M FVG retest/rejection entry'] : []),
+    ...(entry === null ? ['Defined 5M FVG retest/rejection entry or MSS close-through reclaim entry'] : []),
     ...(stop === null ? ['Protected 5M MSS swing stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ]));
@@ -3039,12 +3219,13 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
     targetClarity: targets.target1 !== null && targets.target2 !== null ? 0.8 : 0.25,
     proximityScore: retest.confirmed ? 0.8 : 0.35,
     levelContextScore: score / 5,
-    levelContextSummary: `Intraday MSS micro-continuation: ${dirLabel} 15M and 5M MSS aligned, 5M FVG zone ${zoneLabel}, ${htfObstaclePresent ? 'HTF obstacle map active' : 'HTF obstacle map limited'}.`,
+    levelContextSummary: `Intraday MSS micro-continuation: ${dirLabel} 15M MSS/displacement and 5M MSS aligned, ${isCloseThroughTrigger ? `5M close-through line ${decisionLevelLabel || 'unknown'}` : `5M FVG zone ${zoneLabel}`}, ${htfObstaclePresent ? 'HTF obstacle map active' : 'HTF obstacle map limited'}.`,
     evidence: Array.from(new Set([
-      `${dirLabel} 15M MSS confirmed from NinjaTrader OHLC timeframe evidence`,
+      `${dirLabel} 15M MSS/displacement context confirmed from NinjaTrader OHLC timeframe evidence`,
       `${dirLabel} 5M MSS confirmed from NinjaTrader OHLC timeframe evidence`,
       intradayMssMicroContinuationWindowEvidence(chartContext),
-      `5M FVG / imbalance zone: ${zoneLabel}`,
+      ...(fvg ? [`5M FVG / imbalance zone: ${zoneLabel}`] : []),
+      ...(isCloseThroughTrigger && decisionLevelLabel ? [`5M MSS close-through line in the sand: ${decisionLevelLabel}`] : []),
       retest.reason,
       ...(protectedMssStop.stop !== null ? [`Protected 5M MSS swing stop: ${formatLinePrice(protectedMssStop.stop)}. Stop is tied to the protected 5M swing, not the MSS close.`] : []),
       ...htfGate.evidence,
@@ -3059,8 +3240,8 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
     executionStatus: ExecutionStatus.Conditional,
     blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'SHORT'
-      ? `Human-review short: completed 15M and 5M bearish MSS, bearish 5M FVG retest/rejection from ${zoneLabel}, or completed close below the named HTF support line.`
-      : `Human-review long: completed 15M and 5M bullish MSS, bullish 5M FVG retest/rejection from ${zoneLabel}, or completed close above the named HTF resistance line.`,
+      ? `Human-review short: completed bearish 5M MSS plus bearish 15M MSS/displacement context, then bearish 5M FVG retest/rejection from ${zoneLabel} or completed close-through/retest below ${decisionLevelLabel || 'the named line in the sand'}.`
+      : `Human-review long: completed bullish 5M MSS plus bullish 15M MSS/displacement context, then bullish 5M FVG retest/rejection from ${zoneLabel} or completed close-through/retest above ${decisionLevelLabel || 'the named line in the sand'}.`,
     nextAction: humanReviewReady
       ? `Human Review Ready ${dirLabel} intraday MSS micro-continuation plan. No chase; trader confirmation required and canExecute remains false.${riskNote ? ` ${riskNote}` : ''}`
       : `Intraday MSS micro-continuation watch. No chase. ${retest.reason}`,
@@ -4023,6 +4204,31 @@ function fvgLineInSandSelection(candidate: SetupCandidate, chartContext?: ChartC
   };
 }
 
+function mssCloseThroughLineInSandSelection(candidate: SetupCandidate, chartContext?: ChartContext | null): HtfLineInSandSelection | null {
+  if (!chartContext || candidate.setupType !== SetupType.IntradayMssMicroContinuation || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) return null;
+  const plan = fiveMinuteMssCloseThroughRetestPlan(chartContext, candidate.direction);
+  if (plan.decisionLevel === null) return null;
+  const lineInSand = roundToTick(plan.decisionLevel);
+  const priceText = formatLinePrice(lineInSand);
+  const side = htfLineDirectionText(candidate.direction);
+  const directionText = candidate.direction === 'LONG' ? 'long' : 'short';
+  const latestClose = latestCompletedClose(chartContext);
+  const acceptedBeyondLine = latestClose !== null && (
+    candidate.direction === 'LONG'
+      ? latestClose > lineInSand
+      : latestClose < lineInSand
+  );
+  return {
+    lineInSand,
+    lineReason: `${priceText} matters because it is the completed 5M MSS close-through/retest decision boundary for the ${directionText} Intraday MSS Micro Continuation watch.`,
+    requiredClose: `Completed 5M close ${side} ${priceText} required before ${directionText} continuation is active.`,
+    obstacleType: 'swing',
+    obstacleSource: 'app',
+    latestClose,
+    acceptedBeyondLine,
+  };
+}
+
 interface HtfFailedAuctionLine {
   price: number;
   label: string;
@@ -4263,6 +4469,12 @@ function htfFailedAuctionEvidenceLayer(
 
 function selectHtfLineInSand(candidate: SetupCandidate, chartContext?: ChartContext | null): HtfLineInSandSelection | null {
   if (!chartContext || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) return null;
+  const mssCloseThroughSelection = candidate.setupType === SetupType.IntradayMssMicroContinuation &&
+    candidate.evidence.some((item) => /MSS close-through line in the sand/i.test(item))
+    ? mssCloseThroughLineInSandSelection(candidate, chartContext)
+    : null;
+  if (mssCloseThroughSelection) return mssCloseThroughSelection;
+
   const latestClose = latestCompletedClose(chartContext);
   const referencePrice = latestClose ?? parsePrice(chartContext.keyLevels?.currentPrice) ?? parsePrice(candidate.entry);
   if (referencePrice === null) return null;
@@ -4329,7 +4541,7 @@ function selectHtfLineInSand(candidate: SetupCandidate, chartContext?: ChartCont
     });
 
   const selected = candidates[0];
-  if (!selected) return fvgLineInSandSelection(candidate, chartContext);
+  if (!selected) return fvgLineInSandSelection(candidate, chartContext) ?? mssCloseThroughLineInSandSelection(candidate, chartContext);
 
   const side = htfLineDirectionText(candidate.direction);
   const priceText = formatLinePrice(selected.price);
@@ -4461,11 +4673,20 @@ function campaignDirectionForMss(direction: TimeframeMssEvidence['direction']): 
 function mssEvidenceLayer(chartContext: ChartContext | null | undefined, direction: Direction): ActiveCampaignEvidenceLayer {
   const fifteen = chartContext?.timeframeMssEvidence?.timeframes['15M'];
   const five = chartContext?.timeframeMssEvidence?.timeframes['5M'];
+  const expected = direction === 'LONG' ? 'bullish' : direction === 'SHORT' ? 'bearish' : null;
+  const fifteenSupports = expected !== null && (
+    isConfirmedMss(fifteen, expected) ||
+    (
+      fifteen?.completedBarStatus === 'completed' &&
+      fifteen.direction === expected &&
+      fifteen.displacementQuality.present &&
+      fifteen.displacementQuality.direction === expected
+    )
+  );
   const confirmed =
     direction !== 'NO TRADE' &&
-    fifteen?.status === 'confirmed_mss' &&
+    fifteenSupports &&
     five?.status === 'confirmed_mss' &&
-    campaignDirectionForMss(fifteen.direction) === direction &&
     campaignDirectionForMss(five.direction) === direction;
   return {
     layer: '15M_5M_MSS_CAMPAIGN',
@@ -4473,11 +4694,11 @@ function mssEvidenceLayer(chartContext: ChartContext | null | undefined, directi
     direction,
     evidence: confirmed
       ? [
-        `${directionLabel(direction)} 15M MSS confirmed from structured OHLC.`,
+        `${directionLabel(direction)} 15M MSS/displacement context confirmed from structured OHLC.`,
         `${directionLabel(direction)} 5M MSS confirmed from structured OHLC.`,
       ]
       : [],
-    blockers: confirmed ? [] : ['15M and 5M completed MSS are not aligned for this campaign direction.'],
+    blockers: confirmed ? [] : ['15M MSS/displacement context and 5M completed MSS are not aligned for this campaign direction.'],
   };
 }
 
@@ -4545,7 +4766,17 @@ function executionTriggerLayer(candidate: SetupCandidate, chartContext: ChartCon
     chartContext?.fvgZones?.some((zone) => zone.direction === candidate.direction && isReadableConfidence(zone.confidence)) ||
     candidate.evidence.some((item) => /FVG|imbalance/i.test(item))
   );
+  const hasMssCloseThrough = candidate.evidence.some((item) => /MSS close-through/i.test(item));
   const hasEntryStop = parsePrice(candidate.entry) !== null && parsePrice(candidate.stop) !== null;
+  if (hasMssCloseThrough) {
+    return {
+      layer: '5M_MSS_CLOSE_THROUGH_RETEST_TRIGGER',
+      status: hasEntryStop ? 'confirmed' : 'pending',
+      direction: candidate.direction,
+      evidence: ['5M MSS close-through/retest execution trigger context is present.'],
+      blockers: hasEntryStop ? [] : ['5M MSS close-through/retest entry or protected stop is not complete.'],
+    };
+  }
   return {
     layer: '5M_FVG_EXECUTION_TRIGGER',
     status: hasFvg && hasEntryStop ? 'confirmed' : hasFvg ? 'pending' : 'missing',
@@ -4736,8 +4967,9 @@ function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, char
   if (alignedHigherTimeframeMss.length) {
     evidence.push(`Active timeframe MSS context aligned on ${alignedHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`);
   }
-  if (openingDriveHumanReview && opposingHigherTimeframeMss.length) {
-    evidence.push(`Opening Drive FVG HTF caution: opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')} is reported for human review, not used to erase raw evidence or suppress the human-review plan.`);
+  const humanReviewHtfCautionOnly = openingDriveHumanReview || candidate.pathway === 'intraday_mss_micro_continuation';
+  if (humanReviewHtfCautionOnly && opposingHigherTimeframeMss.length) {
+    evidence.push(`HTF caution: opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')} is reported for human review, not used to erase raw evidence or suppress the human-review plan.`);
   }
 
   const blockers: string[] = [];
@@ -4747,10 +4979,10 @@ function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, char
   if (opposingFiveMinuteMss) {
     blockers.push(`Active timeframe MSS ruleset found opposing completed 5M ${oppositeDirection} MSS.`);
   }
-  if (opposingHigherTimeframeMss.length && !openingDriveHumanReview) {
+  if (opposingHigherTimeframeMss.length && !humanReviewHtfCautionOnly) {
     blockers.push(`Active timeframe MSS ruleset found opposing completed HTF MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`);
   }
-  const cautionEvidence = openingDriveHumanReview && opposingHigherTimeframeMss.length
+  const cautionEvidence = humanReviewHtfCautionOnly && opposingHigherTimeframeMss.length
     ? [`HTF caution for human review: opposing completed ${oppositeDirection} MSS on ${opposingHigherTimeframeMss.map((item) => item.timeframe).join(', ')}.`]
     : [];
 

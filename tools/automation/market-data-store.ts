@@ -24,6 +24,25 @@ export interface MarketBarRecord {
   metadata: Record<string, unknown>;
 }
 
+export interface MarketDataGapEventRecord {
+  user_id: string;
+  instrument: string;
+  bridge_instrument: string;
+  timeframe: MarketBarTimeframe;
+  requested_from_et: string;
+  requested_to_et: string;
+  range_start_et: string | null;
+  range_end_et: string | null;
+  bars_loaded: number;
+  cache_bars: number;
+  bridge_repair_bars: number;
+  source: string;
+  status: 'open' | 'resolved' | 'ignored';
+  data_limitation_message: string | null;
+  operator_action: string | null;
+  metadata: Record<string, unknown>;
+}
+
 function cleanSupabaseUrl(value: string): string {
   return value.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
 }
@@ -125,6 +144,82 @@ export async function upsertMarketBars({
 
   if (error) throw error;
   return { upserted: records.length };
+}
+
+export function toMarketDataGapEventRecord({
+  userId,
+  instrument,
+  bridgeInstrument,
+  timeframe,
+  requestedFrom,
+  requestedTo,
+  rangeStart,
+  rangeEnd,
+  barsLoaded,
+  cacheBars,
+  bridgeRepairBars,
+  source,
+  dataLimitationMessage,
+  operatorAction,
+  metadata = {},
+}: {
+  userId: string;
+  instrument: string;
+  bridgeInstrument: string;
+  timeframe: MarketBarTimeframe;
+  requestedFrom: string;
+  requestedTo: string;
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  barsLoaded: number;
+  cacheBars: number;
+  bridgeRepairBars: number;
+  source: string;
+  dataLimitationMessage: string | null;
+  operatorAction: string | null;
+  metadata?: Record<string, unknown>;
+}): MarketDataGapEventRecord {
+  return {
+    user_id: userId,
+    instrument,
+    bridge_instrument: bridgeInstrument,
+    timeframe,
+    requested_from_et: normalizeCandleTimeEt(requestedFrom),
+    requested_to_et: normalizeCandleTimeEt(requestedTo),
+    range_start_et: rangeStart ? normalizeCandleTimeEt(rangeStart) : null,
+    range_end_et: rangeEnd ? normalizeCandleTimeEt(rangeEnd) : null,
+    bars_loaded: Math.max(0, Math.trunc(Number(barsLoaded) || 0)),
+    cache_bars: Math.max(0, Math.trunc(Number(cacheBars) || 0)),
+    bridge_repair_bars: Math.max(0, Math.trunc(Number(bridgeRepairBars) || 0)),
+    source,
+    status: 'open',
+    data_limitation_message: dataLimitationMessage,
+    operator_action: operatorAction,
+    metadata,
+  };
+}
+
+export async function upsertMarketDataGapEvent({
+  config,
+  record,
+}: {
+  config: MarketDataConfig;
+  record: MarketDataGapEventRecord;
+}): Promise<{ upserted: number }> {
+  const supabase = createMarketDataClient(config);
+  const { error } = await supabase
+    .from('market_data_gap_events')
+    .upsert({
+      ...record,
+      user_id: config.userId,
+      updated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,bridge_instrument,timeframe,requested_from_et,requested_to_et',
+      ignoreDuplicates: false,
+    });
+
+  if (error) throw error;
+  return { upserted: 1 };
 }
 
 export async function fetchCachedMarketBars({

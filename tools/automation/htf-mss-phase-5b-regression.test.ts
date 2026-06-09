@@ -49,9 +49,26 @@ assert.ok(bearish.setupDetection.candidate?.evidence.some((line) => line.include
 
 assert.equal(bearish.finalGateResult.candidateOnly.canExecute, false);
 assert.notEqual(bearish.finalGateResult.candidateOnly.status, TradeDecisionStatus.ApprovedTrade);
-assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.entry, null);
+assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.entry, 7588);
 assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.stop, null);
+assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.target1, null);
+assert.equal(bearish.finalGateResult.candidateOnly.finalPlan.target2, null);
 assert.equal(bearish.finalGateResult.candidateOnly.bestExecutableCandidate, null);
+assert.equal(
+  bearish.finalGateResult.candidateOnly.bestConditionalCandidate?.setupType,
+  SetupType.IntradayMssMicroContinuation
+);
+assert.equal(bearish.finalGateResult.candidateOnly.bestConditionalCandidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+assert.equal(bearish.finalGateResult.candidateOnly.bestConditionalCandidate?.stop, null);
+assert.equal(
+  bearish.finalGateResult.candidateOnly.bestConditionalCandidate?.evidence.some((line) => line.includes('5M MSS close-through line in the sand')),
+  true
+);
+assert.equal(
+  bearish.finalGateResult.candidateOnly.bestConditionalCandidate?.missingEvidence.some((line) => line.includes('retest high is not a confirmed protected 5M swing high')),
+  true
+);
 assert.equal(
   bearish.setupDetection.candidate?.missingEvidence.includes('Clean retest or defined reclaim entry'),
   true

@@ -64,7 +64,21 @@ import {
   type SetupCandidate,
   type TargetObjective,
 } from '../../src/types';
-import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import {
+  fetchCachedMarketBars,
+  loadMarketDataConfig,
+  toMarketDataGapEventRecord,
+  upsertMarketBars,
+  upsertMarketDataGapEvent,
+  type MarketBarTimeframe,
+} from './market-data-store';
+import {
+  marketDataSourceFromCounts,
+  mergeMarketDataBars,
+  repairMarketDataBarsWithinBaseRange,
+  verifyMarketDataWindow,
+  type MarketDataWindowSource,
+} from './market-data-ingestion';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
 import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
 import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract';
@@ -242,10 +256,7 @@ const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DIS
 type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
 
 export type ScannerHistoryCoverageSource =
-  | 'market_bars'
-  | 'market_bars_bridge_repair'
-  | 'bridge_repair'
-  | 'missing';
+  MarketDataWindowSource;
 
 export interface ScannerHistoryCoverageRecord {
   timeframe: MarketBarTimeframe;
@@ -261,6 +272,8 @@ export interface ScannerHistoryCoverageRecord {
   selfHealed: boolean;
   sufficient: boolean;
   warning: string | null;
+  invalidBars?: number;
+  duplicateTimestamps?: number;
   dataLimitation?: {
     status: 'none' | 'bridge_or_cache_incomplete';
     message: string | null;
@@ -1975,42 +1988,54 @@ async function fetchScannerHistoryFrame(args: {
     }
   }
   const sorted = mergeBars([], bars);
-  const sufficient = barsCoverRequestedLookback(sorted, args.from, args.to, args.timeframe);
-  const source: ScannerHistoryCoverageSource =
-    cached.length && repaired.length ? 'market_bars_bridge_repair' :
-    cached.length ? 'market_bars' :
-    repaired.length ? 'bridge_repair' :
-    'missing';
-  const dataLimitationMessage = sufficient
-    ? null
-    : `Requested ${args.timeframe} bars remain incomplete after cache preload, single bridge repair, and segmented bridge repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.`;
-  const coverage: ScannerHistoryCoverageRecord = {
+  const verification = verifyMarketDataWindow({
+    bars: sorted,
     timeframe: args.timeframe,
-    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
     requestedFrom: args.from,
     requestedTo: args.to,
-    barsLoaded: sorted.length,
-    rangeStart: sorted[0]?.time || null,
-    rangeEnd: sorted[sorted.length - 1]?.time || null,
-    source,
+    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+    minimumBars: SCANNER_HISTORY_MIN_BARS[args.timeframe],
+    source: marketDataSourceFromCounts(cached.length, repaired.length),
     cacheBars: cached.length,
     bridgeRepairBars: repaired.length,
-    selfHealed: repaired.length > 0,
-    sufficient,
-    warning: sufficient
-      ? null
-      : `HTF history preload insufficient for ${args.timeframe}: required ${SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS} calendar days from ${args.from} to ${args.to}; loaded ${sorted.length} bars from ${sorted[0]?.time || 'N/A'} to ${sorted[sorted.length - 1]?.time || 'N/A'}.`,
-    dataLimitation: {
-      status: sufficient ? 'none' : 'bridge_or_cache_incomplete',
-      message: dataLimitationMessage,
-      retryPolicy: 'cache_then_single_bridge_then_segmented_bridge',
-      canInventMissingBars: false,
-      htfPromotionAllowed: sufficient,
-      operatorAction: sufficient
-        ? undefined
-        : `Load the requested ${args.config.bridgeInstrument} ${args.timeframe} history in NinjaTrader or run npm run nt:backfill for the missing date range, then rerun the scanner/diagnostic.`,
-    },
+    bridgeInstrument: args.config.bridgeInstrument,
+  });
+  const coverage: ScannerHistoryCoverageRecord = {
+    ...verification,
+    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   };
+  if (!coverage.sufficient && marketConfig) {
+    try {
+      await upsertMarketDataGapEvent({
+        config: marketConfig,
+        record: toMarketDataGapEventRecord({
+          userId: marketConfig.userId,
+          instrument: args.config.instrument,
+          bridgeInstrument: args.config.bridgeInstrument,
+          timeframe: args.timeframe,
+          requestedFrom: args.from,
+          requestedTo: args.to,
+          rangeStart: coverage.rangeStart,
+          rangeEnd: coverage.rangeEnd,
+          barsLoaded: coverage.barsLoaded,
+          cacheBars: coverage.cacheBars,
+          bridgeRepairBars: coverage.bridgeRepairBars,
+          source: coverage.source,
+          dataLimitationMessage: coverage.dataLimitation?.message || coverage.warning,
+          operatorAction: coverage.dataLimitation?.operatorAction || null,
+          metadata: {
+            source: 'nt_scanner_market_data_ingestion',
+            canInventMissingBars: false,
+            htfPromotionAllowed: false,
+            invalidBars: coverage.invalidBars || 0,
+            duplicateTimestamps: coverage.duplicateTimestamps || 0,
+          },
+        }),
+      });
+    } catch (error) {
+      console.warn(`[scanner-history] ${args.timeframe}: market_data_gap_events upsert failed: ${formatError(error)}`);
+    }
+  }
   return { bars: sorted, coverage };
 }
 
@@ -2052,10 +2077,7 @@ async function fetchLookLeftContext(config: ScannerConfig, tradeDate: string, se
 }
 
 function mergeBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): NinjaBridgeBar[] {
-  const byTime = new Map<string, NinjaBridgeBar>();
-  fallback.forEach((bar) => byTime.set(bar.time, bar));
-  primary.forEach((bar) => byTime.set(bar.time, bar));
-  return [...byTime.values()].sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  return mergeMarketDataBars(primary, fallback);
 }
 
 function scannerStateMatchesSession(record: ScannerAlertDeliveryRecord, args: {
@@ -3444,12 +3466,15 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     ...(twoHourWarning ? [twoHourWarning] : []),
     ...(htfCoverage.status !== 'sufficient' ? [htfCoverage.summary] : []),
   ];
-  const htfBars5m = lookLeft
-    ? mergeBars(liveBars['5m'], lookLeft.bars['5m'])
+  const repairedExecutionBars5m = lookLeft
+    ? repairMarketDataBarsWithinBaseRange(liveBars['5m'], lookLeft.bars['5m'])
     : liveBars['5m'];
+  const htfBars5m = lookLeft
+    ? mergeBars(repairedExecutionBars5m, lookLeft.bars['5m'])
+    : repairedExecutionBars5m;
   const bars = lookLeft
     ? {
-        '5m': liveBars['5m']?.length ? liveBars['5m'] : lookLeft.bars['5m'],
+        '5m': repairedExecutionBars5m.length ? repairedExecutionBars5m : lookLeft.bars['5m'],
         '15m': mergeBars(liveBars['15m'], lookLeft.bars['15m']),
         '60m': mergeBars(liveBars['60m'], lookLeft.bars['60m']),
         '120m': mergeBars(liveBars['120m'], lookLeft.bars['120m']),

@@ -873,7 +873,8 @@ export interface ActiveCampaignEvidenceLayer {
     | 'HTF_MSS_DISPLACEMENT_SUPPORT'
     | 'HTF_FAILED_AUCTION_REJECTION'
     | 'HTF_OBSTACLE_TARGET_MAP'
-    | '5M_FVG_EXECUTION_TRIGGER';
+    | '5M_FVG_EXECUTION_TRIGGER'
+    | '5M_MSS_CLOSE_THROUGH_RETEST_TRIGGER';
   status: 'confirmed' | 'present' | 'pending' | 'caution' | 'conflict' | 'data_limited' | 'missing';
   direction: ActiveCampaignDirection;
   evidence: string[];

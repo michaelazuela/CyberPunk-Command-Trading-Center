@@ -105,6 +105,14 @@ function main() {
     'alter table market_bars enable row level security',
   ]);
 
+  requireTerms(sql, 'NinjaTrader market data gap ledger schema', [
+    'market_data_gap_events',
+    'market_data_gap_events_unique_open_gap',
+    'operator_action',
+    'alter table market_data_gap_events enable row level security',
+    'grant select, insert, update on table market_data_gap_events to authenticated',
+  ]);
+
   requireTerms(sql, 'Scanner ActiveCampaign alert ledger schema', [
     'scanner_active_campaign_alerts',
     'scanner_active_campaign_alerts_unique_campaign',

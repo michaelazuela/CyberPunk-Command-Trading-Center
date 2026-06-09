@@ -3,6 +3,54 @@
 ## Latest Change
 
 Date: 2026-06-09
+Task: Make IntradayMssMicroContinuation recognize 5M MSS close-through retest plans globally.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/types.ts.
+Reason: User identified a June 9 PM long where 15M bullish MSS/displacement context plus a fresh 5M bullish MSS close-through, retest, and reclaim should have produced a human-review plan even without a selected 5M FVG. The active model needed a second execution trigger path: completed 5M MSS close-through/retest with a named line in the sand and protected 5M retest swing stop.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed so far. Full `npm run test` is being rerun after this status update.
+Trading logic changed: Yes. `IntradayMssMicroContinuation` can now become human-review ready from 15M MSS/displacement context + confirmed 5M MSS + completed 5M close-through/retest/reclaim, even when no directional 5M FVG is selected. It still never sets canExecute true, still requires completed structured OHLC, still uses app-owned entry from the completed 5M trigger close, protected 5M swing stop, and deterministic 1.5R/2R targets.
+Bridge impact: None. No bridge fetch, timestamp, recorder, or market_bars behavior changed.
+Discord impact: Indirect. Existing Discord gates can now see the active human-review Intraday MSS Micro Continuation watch/plan with the MSS close-through line in the sand instead of suppressing it for lack of FVG trigger context.
+Journal/RAG impact: ActiveCampaign evidence can now record `5M_MSS_CLOSE_THROUGH_RETEST_TRIGGER` as the execution-trigger evidence layer.
+Supabase impact: No migration added.
+Known risks: This depends on clean completed 5M and 15M/5M timeframeMssEvidence. If the protected retest swing cannot be confirmed by completed candles on both sides, the model stays pending with no stop/targets instead of falling back to an older structure stop or inventing a stop. 5M opposing MSS remains an intentional hard blocker because 5M is execution authority; HTF conflict remains caution/management context only.
+Next recommended action: Observe the next live PM Intraday MSS Micro Continuation and confirm Discord/RAG text names the 5M close-through line, protected 5M swing stop, app T1/T2, HTF caution/management context, and human-review-only status.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Add durable Supabase gap ledger for unresolved NinjaTrader ingestion defects.
+Files changed: docs/PROJECT_STATUS.md, scripts/schema-guard.js, supabase/migrations/20260609190000_market_data_gap_events.sql, tools/automation/market-data-ingestion.test.ts, tools/automation/market-data-store.ts, tools/automation/nt-scanner.ts.
+Reason: User requested fixing the remaining caveat that missing NinjaTrader bars were not invented and no Supabase migration had been added. The correct fix is not to fabricate OHLC, but to persist unresolved gaps as actionable data-quality defects.
+Tests run: npx tsx tools/automation/market-data-ingestion.test.ts; npx tsc --noEmit; npm run guard:schema; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: No. Trade setup definitions, approvals, canExecute, scanner model behavior, and Discord posting rules were not changed. Unresolved market-data gaps are now persisted to a Supabase ledger when cache plus bridge repair still cannot verify the requested window.
+Bridge impact: No bridge API/fetch behavior changed.
+Discord impact: None.
+Journal/RAG impact: No trade journal schema change.
+Supabase impact: Added migration `20260609190000_market_data_gap_events.sql` for `market_data_gap_events` with RLS and grants. Migration has not been applied to production by this local code change.
+Known risks: The scanner still cannot and must not invent missing candles. The new ledger makes gaps durable and actionable, but production persistence requires applying the migration.
+Next recommended action: Apply the Supabase migration, then observe the next scanner-history insufficient window and confirm a `market_data_gap_events` row is written with the requested range and operator action.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Phase 7 NinjaTrader Market Data Ingestion Hardening.
+Files changed: docs/PROJECT_STATUS.md, package.json, tools/automation/market-data-ingestion.ts, tools/automation/market-data-ingestion.test.ts, tools/automation/nt-scanner.ts.
+Reason: User requested a better NinjaTrader ingestion approach and removal of bad/downstream gap-repair code that was no longer needed.
+Tests run: npx tsx tools/automation/market-data-ingestion.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: No. Scanner trade setup definitions, approval gates, canExecute behavior, Discord behavior, bridge API behavior, and model rules were not changed. The data path before ChartContext evaluation is now cleaner: scanner history windows use a named market-data ingestion verifier, live 5M execution bars are repaired from real look-left market_bars/bridge OHLC inside the live base range, and ChartContext no longer owns backfill.
+Bridge impact: No bridge API/fetch behavior changed. Raw NinjaTrader payloads remain unchanged; scanner ingestion normalizes/merges real OHLC before rule evaluation.
+Discord impact: Indirect only. Cleaner ingestion can reduce false data-limited/gap warnings when real repair bars exist, but Discord alert formatting and posting rules were not changed.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: This still depends on real NinjaTrader/market_bars OHLC being available. Missing bars are not synthesized. The ingestion verifier reports insufficient windows and blocks HTF promotion when cache and bridge repair cannot supply enough data.
+Next recommended action: Observe the next live scanner cycle and confirm scanner-history lines report sufficient 5m/15m/60m/120m/240m context from market_bars or market_bars_bridge_repair before relying on HTF structure.
+
+## Previous Change
+
+Date: 2026-06-09
 Task: Harden bridge timestamp normalization for out-of-order, duplicate, and gapped bars.
 Files changed: docs/PROJECT_STATUS.md, src/lib/ninjaTraderBridge.ts, src/lib/localScannerEngine.test.ts.
 Reason: User requested fixing the remaining caveat where badly ordered bars or large missing chunks still depended only on existing data-quality/backfill checks.
