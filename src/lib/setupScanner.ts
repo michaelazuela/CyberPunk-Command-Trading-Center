@@ -4253,11 +4253,11 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
     },
     deDuplication: {
       oneTradePerCampaignRecommended: true,
-      enforced: false,
-      resetPolicy: 'not_yet_active',
+      enforced: true,
+      resetPolicy: 'trade_date_direction_campaign',
     },
     notes: [
-      'ActiveCampaign is context only in this phase; it does not change approvals, scanner ranking, Discord behavior, bridge behavior, or canExecute.',
+      'ActiveCampaign de-duplication is enforced by the scanner alert ledger; it does not change approvals, scanner ranking, bridge behavior, or canExecute.',
       'HTF conflict becomes caution/management context and does not erase raw 15M/5M MSS evidence.',
       '5M remains execution authority for entry, stop, risk, invalidation, and app targets.',
     ],

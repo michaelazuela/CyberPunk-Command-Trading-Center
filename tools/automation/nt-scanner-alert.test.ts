@@ -21,14 +21,19 @@ import {
   markScannerAlertDeliveryFailed,
   markScannerAlertDeliverySent,
   markScannerAlertDeliverySkipped,
+  recordActiveCampaignScannerAlertSent,
+  recordActiveCampaignScannerAlertSuppressed,
   candidateForNormalizedVisualAuthority,
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+  scannerActiveCampaignKey,
+  shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
   twoHourCoverageDiagnostic,
   writeScannerDecisionTapeAuditLog,
+  type ScannerActiveCampaignLedgerRecord,
 } from './nt-scanner';
 import { buildChartMarkupHtmlForTest, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
@@ -219,6 +224,75 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
   source: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
   usingGenericFallback: false,
 });
+
+const campaignCandidate = {
+  setupType: SetupType.IntradayMssMicroContinuation,
+  direction: 'SHORT',
+  entry: 7417,
+  stop: 7424.75,
+  target1: 7405.38,
+  target2: 7401.5,
+  activeCampaign: {
+    id: '2026-06-08:SHORT:15M5M-MSS',
+    source: 'app_owned_structured_ohlc',
+    authority: 'campaign_context_only_not_execution_authority',
+    status: 'active',
+    direction: 'SHORT',
+    primaryTrigger: '15M_5M_MSS',
+    executionTimeframe: '5M',
+    htfRelationship: 'caution',
+    confidenceAdjustment: 0,
+    evidenceLayers: [],
+    htfSupportTimeframes: [],
+    htfConflictTimeframes: ['60M'],
+    obstacleMap: {
+      lineInSand: 7415.5,
+      reason: 'Nearby 120M/240M support line.',
+      role: 'management_obstacle',
+      caution: 'Short remains valid; manage around 7415.50 or require acceptance below for extension.',
+    },
+    deDuplication: {
+      oneTradePerCampaignRecommended: true,
+      enforced: true,
+      resetPolicy: 'trade_date_direction_campaign',
+    },
+    notes: [],
+  },
+} as unknown as SetupCandidate;
+const shiftedCampaignCandidate = {
+  ...campaignCandidate,
+  entry: 7412.75,
+  stop: 7421,
+} as unknown as SetupCandidate;
+const activeCampaignLedger: Record<string, ScannerActiveCampaignLedgerRecord> = {};
+assert.equal(scannerActiveCampaignKey(campaignCandidate), '2026-06-08:SHORT:15M5M-MSS');
+assert.equal(shouldSuppressActiveCampaignScannerAlert({
+  activeCampaignSent: activeCampaignLedger,
+  candidate: campaignCandidate,
+}).shouldSuppress, false);
+recordActiveCampaignScannerAlertSent({
+  activeCampaignSent: activeCampaignLedger,
+  candidate: campaignCandidate,
+  tradeDate: '2026-06-08',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'first-alert-key',
+  sentAt: '2026-06-08T15:35:00.000Z',
+});
+const repeatedCampaignDecision = shouldSuppressActiveCampaignScannerAlert({
+  activeCampaignSent: activeCampaignLedger,
+  candidate: shiftedCampaignCandidate,
+});
+assert.equal(repeatedCampaignDecision.shouldSuppress, true);
+assert.equal(repeatedCampaignDecision.campaignId, '2026-06-08:SHORT:15M5M-MSS');
+assert.match(repeatedCampaignDecision.reason || '', /one trade alert already sent/);
+recordActiveCampaignScannerAlertSuppressed({
+  activeCampaignSent: activeCampaignLedger,
+  campaignId: '2026-06-08:SHORT:15M5M-MSS',
+  seenAt: '2026-06-08T15:40:00.000Z',
+});
+assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].suppressedCount, 1);
+assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].resetPolicy, 'trade_date_direction_campaign');
 
 const juneFiveSameCycleFailedLong = appOwnedFailedDecisionEventFromCandidate({
   setupType: SetupType.TurtleSoup,
@@ -525,6 +599,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
           target1: 7528.5,
           target2: 7532,
           activeTimeframeMssRuleset: null,
+          activeCampaign: null,
         },
         deliveryStatus: 'sent',
         webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
@@ -538,6 +613,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
         retryEligible: false,
       },
     },
+    activeCampaignSent: {},
     watchlistSent: {},
     windowStartSent: {},
     lastCompleted5mBySession: {},

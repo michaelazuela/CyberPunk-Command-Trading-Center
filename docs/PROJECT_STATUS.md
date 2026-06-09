@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-08
+Task: Enforce persistent ActiveCampaign one-trade-per-campaign scanner de-duplication.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/types.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: User requested fixing the remaining risk where ActiveCampaign carried one-trade-per-campaign metadata but the live scanner/Discord sender did not yet persistently suppress repeated alerts for the same campaign across scanner ticks.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The scanner state file now has an activeCampaignSent ledger keyed by activeCampaign.id. Once a Discord trade alert is successfully sent, subsequent candidates with the same campaign key are suppressed and the suppressed count/last seen timestamp are updated. The reset policy is trade_date_direction_campaign, so a new trade date, opposite direction, or new campaign key can alert again.
+Trading logic changed: No. This is an alert-delivery de-duplication change only; setup detection, ranking, entry, stop, targets, risk, invalidation, canExecute, and bridge reads are unchanged.
+Bridge impact: None.
+Discord impact: Yes. Repeated trade-plan alerts for the same ActiveCampaign are suppressed after the first successful Discord send. Failed/skipped/dry-run deliveries do not consume the campaign.
+Journal/RAG impact: Additive alert delivery metadata only; no schema change.
+Supabase impact: No migration added.
+Known risks: The ledger is local to the scanner state file. If `.nt-scanner-state.json` is deleted or the scanner runs from a separate machine/state path, the campaign can alert again until shared persistence is added.
+Next recommended action: Run one live session in dry-run plus Discord-enabled mode to confirm the first campaign alert sends and later same-campaign ticks suppress cleanly.
+
+## Previous Change
+
+Date: 2026-06-08
 Task: Activate late-day Intraday MSS Micro Continuation review window.
 Files changed: docs/PROJECT_STATUS.md, src/config/timeWindows.ts, src/config/timeWindows.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
 Reason: User requested activation of the researched late-afternoon model-specific window for IntradayMssMicroContinuation / ActiveCampaign review: 15:00-16:40 ET, human-review only, canExecute false, HTF as support/caution/management.
@@ -13,8 +29,8 @@ Bridge impact: None.
 Discord impact: No posting behavior changed.
 Journal/RAG impact: Additive candidate evidence only; no schema change.
 Supabase impact: No migration added.
-Known risks: One-trade-per-campaign de-duplication is represented by ActiveCampaign metadata but is not persistently enforced across scanner ticks or Discord alerts yet. That requires a stateful campaign ledger/reset policy.
-Next recommended action: Add the ActiveCampaign behavior rules: HTF support increases confidence, HTF conflict becomes caution/management, HTF lines guide target/extension management, and persistent one-trade-per-campaign de-duplication is enforced after reset rules are approved.
+Known risks: Persistent one-trade-per-campaign de-duplication had not yet been enforced at the time of this change.
+Next recommended action: Add the ActiveCampaign behavior rules: HTF support increases confidence, HTF conflict becomes caution/management, and HTF lines guide target/extension management.
 
 ## Previous Change
 

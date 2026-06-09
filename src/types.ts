@@ -900,8 +900,8 @@ export interface ActiveCampaign {
   };
   deDuplication: {
     oneTradePerCampaignRecommended: true;
-    enforced: false;
-    resetPolicy: 'not_yet_active';
+    enforced: boolean;
+    resetPolicy: 'trade_date_direction_campaign';
   };
   notes: string[];
 }

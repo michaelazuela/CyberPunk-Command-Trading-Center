@@ -1950,8 +1950,9 @@ const tests: Array<[string, () => void]> = [
     assert.equal(micro.activeCampaign?.obstacleMap.lineInSand, 7415.5);
     assert.equal(micro.activeCampaign?.obstacleMap.role, 'management_obstacle');
     assert.equal(micro.activeCampaign?.deDuplication.oneTradePerCampaignRecommended, true);
-    assert.equal(micro.activeCampaign?.deDuplication.enforced, false);
-    assert.ok(micro.activeCampaign?.notes.some((item) => item.includes('does not change approvals')));
+    assert.equal(micro.activeCampaign?.deDuplication.enforced, true);
+    assert.equal(micro.activeCampaign?.deDuplication.resetPolicy, 'trade_date_direction_campaign');
+    assert.ok(micro.activeCampaign?.notes.some((item) => item.includes('scanner alert ledger')));
     assert.equal(
       micro.activeRuleset?.htfLineInSand?.requiredClose,
       'Completed 5M or 15M close below 7415.50 required before short continuation is active.'
@@ -2017,7 +2018,8 @@ const tests: Array<[string, () => void]> = [
     assert.equal(micro.activeCampaign?.direction, 'LONG');
     assert.equal(micro.activeCampaign?.primaryTrigger, '15M_5M_MSS');
     assert.equal(micro.activeCampaign?.obstacleMap.lineInSand, 7420.5);
-    assert.equal(micro.activeCampaign?.deDuplication.enforced, false);
+    assert.equal(micro.activeCampaign?.deDuplication.enforced, true);
+    assert.equal(micro.activeCampaign?.deDuplication.resetPolicy, 'trade_date_direction_campaign');
     assert.equal(
       micro.activeRuleset?.htfLineInSand?.requiredClose,
       'Completed 5M or 15M close above 7420.50 required before long continuation is active.'

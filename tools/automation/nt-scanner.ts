@@ -126,6 +126,7 @@ export interface ScannerConfig {
 interface ScannerStateFile {
   sent: Record<string, { state: ScannerState; confidence: number; sentAt: string }>;
   alertDeliveries: Record<string, ScannerAlertDeliveryRecord>;
+  activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
   windowStartSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
@@ -140,6 +141,21 @@ interface ScannerStateReadResult {
 }
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
+export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
+
+export interface ScannerActiveCampaignLedgerRecord {
+  campaignId: string;
+  tradeDate: string;
+  direction: string;
+  setupType: string | null;
+  state: ScannerState;
+  confidence: number;
+  firstAlertKey: string;
+  firstSentAt: string;
+  lastSeenAt: string;
+  suppressedCount: number;
+  resetPolicy: ScannerActiveCampaignResetPolicy;
+}
 
 export interface ScannerAlertDeliveryRecord {
   alertKey: string;
@@ -157,6 +173,18 @@ export interface ScannerAlertDeliveryRecord {
     target1: number | null;
     target2: number | null;
     activeTimeframeMssRuleset: ActiveTimeframeMssRulesetAudit | null;
+    activeCampaign: {
+      id: string;
+      status: string;
+      direction: string;
+      htfRelationship: string;
+      lineInSand: number | null;
+      deDuplication: {
+        oneTradePerCampaignRecommended: true;
+        enforced: boolean;
+        resetPolicy: string;
+      };
+    } | null;
   };
   deliveryStatus: ScannerAlertDeliveryStatus;
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
@@ -308,6 +336,88 @@ function candidateDeliverySnapshot(candidate: SetupCandidate | null): ScannerAle
     target1: typeof candidate?.target1 === 'number' ? candidate.target1 : null,
     target2: typeof candidate?.target2 === 'number' ? candidate.target2 : null,
     activeTimeframeMssRuleset: candidate ? summarizeActiveTimeframeMssRuleset(candidate) : null,
+    activeCampaign: candidate?.activeCampaign
+      ? {
+          id: candidate.activeCampaign.id,
+          status: candidate.activeCampaign.status,
+          direction: candidate.activeCampaign.direction,
+          htfRelationship: candidate.activeCampaign.htfRelationship,
+          lineInSand: candidate.activeCampaign.obstacleMap.lineInSand,
+          deDuplication: candidate.activeCampaign.deDuplication,
+        }
+      : null,
+  };
+}
+
+export function scannerActiveCampaignKey(candidate: SetupCandidate | null | undefined): string | null {
+  const id = candidate?.activeCampaign?.id;
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
+}
+
+export function shouldSuppressActiveCampaignScannerAlert(args: {
+  activeCampaignSent?: Record<string, ScannerActiveCampaignLedgerRecord>;
+  candidate?: SetupCandidate | null;
+}): {
+  shouldSuppress: boolean;
+  campaignId: string | null;
+  reason: string | null;
+  record: ScannerActiveCampaignLedgerRecord | null;
+} {
+  const campaignId = scannerActiveCampaignKey(args.candidate);
+  if (!campaignId) {
+    return { shouldSuppress: false, campaignId: null, reason: null, record: null };
+  }
+  const record = args.activeCampaignSent?.[campaignId] || null;
+  if (!record) {
+    return { shouldSuppress: false, campaignId, reason: null, record: null };
+  }
+  return {
+    shouldSuppress: true,
+    campaignId,
+    record,
+    reason: `ActiveCampaign duplicate suppressed: one trade alert already sent for ${campaignId}. Reset requires a new trade-date/direction campaign key.`,
+  };
+}
+
+export function recordActiveCampaignScannerAlertSent(args: {
+  activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
+  candidate?: SetupCandidate | null;
+  tradeDate: string;
+  state: ScannerState;
+  confidence: number;
+  alertKey: string;
+  sentAt?: string;
+}): void {
+  const campaignId = scannerActiveCampaignKey(args.candidate);
+  if (!campaignId) return;
+  const sentAt = args.sentAt || new Date().toISOString();
+  const previous = args.activeCampaignSent[campaignId];
+  args.activeCampaignSent[campaignId] = {
+    campaignId,
+    tradeDate: args.tradeDate,
+    direction: args.candidate?.direction || args.candidate?.activeCampaign?.direction || 'NONE',
+    setupType: args.candidate?.setupType || null,
+    state: args.state,
+    confidence: args.confidence,
+    firstAlertKey: previous?.firstAlertKey || args.alertKey,
+    firstSentAt: previous?.firstSentAt || sentAt,
+    lastSeenAt: sentAt,
+    suppressedCount: previous?.suppressedCount || 0,
+    resetPolicy: 'trade_date_direction_campaign',
+  };
+}
+
+export function recordActiveCampaignScannerAlertSuppressed(args: {
+  activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
+  campaignId: string;
+  seenAt?: string;
+}): void {
+  const previous = args.activeCampaignSent[args.campaignId];
+  if (!previous) return;
+  args.activeCampaignSent[args.campaignId] = {
+    ...previous,
+    lastSeenAt: args.seenAt || new Date().toISOString(),
+    suppressedCount: previous.suppressedCount + 1,
   };
 }
 
@@ -504,6 +614,7 @@ function emptyScannerState(): ScannerStateFile {
   return {
     sent: {},
     alertDeliveries: {},
+    activeCampaignSent: {},
     watchlistSent: {},
     windowStartSent: {},
     lastCompleted5mBySession: {},
@@ -520,6 +631,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
       state: {
         sent: parsed.sent || {},
         alertDeliveries: parsed.alertDeliveries || {},
+        activeCampaignSent: parsed.activeCampaignSent || {},
         watchlistSent: parsed.watchlistSent || {},
         windowStartSent: parsed.windowStartSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
@@ -3203,7 +3315,16 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];
-  const alertDecision = shouldSendScannerAlert({
+  const activeCampaignSuppression = shouldSuppressActiveCampaignScannerAlert({
+    activeCampaignSent: state.activeCampaignSent,
+    candidate,
+  });
+  const alertDecision = activeCampaignSuppression.shouldSuppress
+    ? {
+        shouldSend: false,
+        reason: activeCampaignSuppression.reason || 'ActiveCampaign duplicate suppressed.',
+      }
+    : shouldSendScannerAlert({
     state: stateForAlert,
     confidence: confidence.score,
     window,
@@ -3213,6 +3334,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     duplicate: Boolean(existing),
     stateImproved: false,
   });
+  if (activeCampaignSuppression.shouldSuppress && activeCampaignSuppression.campaignId) {
+    recordActiveCampaignScannerAlertSuppressed({
+      activeCampaignSent: state.activeCampaignSent,
+      campaignId: activeCampaignSuppression.campaignId,
+    });
+  }
   const planVersionId = createPlanVersionId(session, tradeDate);
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
@@ -3307,6 +3434,15 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+        recordActiveCampaignScannerAlertSent({
+          activeCampaignSent: state.activeCampaignSent,
+          candidate,
+          tradeDate,
+          state: stateForAlert,
+          confidence: confidence.score,
+          alertKey,
+          sentAt,
+        });
         await attachDiscordMessageReceiptToRagRecord({
           planVersionId,
           discordMessageId: receipt.discordMessageId,
