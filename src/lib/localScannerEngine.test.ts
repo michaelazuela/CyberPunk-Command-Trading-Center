@@ -260,6 +260,66 @@ assert.equal(
   shouldSendScannerAlert({ state: 'Conditional', confidence: 64, window: morningWindow, candidate: strongCandidate }).shouldSend,
   false
 );
+
+const intradayMssWatchCandidate = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+  blockReason: null,
+  entry: null,
+  stop: 7352.75,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  modelConfidenceScore: 58,
+  humanReview: {
+    status: 'OpeningObservationArmed',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: true,
+    reason: 'Intraday MSS watch is active; completed 5M hold/retest still required.',
+  },
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'LONG',
+      lineInSand: 7361,
+      lineReason: '7361.00 matters because it is the nearest structured HTF/session resistance in the trade path.',
+      requiredClose: 'Completed 5M or 15M close above 7361.00 required before long continuation is active.',
+      obstacleType: 'resistance',
+      obstacleSource: 'ninjatrader',
+      evidence: ['Global HTF line-in-the-sand rule: 7361.00 matters.'],
+      blockers: ['No chase: wait for completed close above 7361.00.'],
+    },
+  },
+  evidence: [
+    'Bullish 15M MSS confirmed from NinjaTrader OHLC timeframe evidence',
+    'Bullish 5M MSS confirmed from NinjaTrader OHLC timeframe evidence',
+    '5M FVG / imbalance zone: 7359.25-7361.00',
+    'Market structure shift confirmed',
+    'Fair value gap / imbalance entry model',
+  ],
+  requiredTrigger: 'Long MSS forming. Line is 7359.25-7361.00. Do not chase. A completed 5M hold/retest above that area gives a human-review long plan.',
+});
+const intradayMssWatchScore = scoreScannerCandidate(intradayMssWatchCandidate, morningWindow, 7366, true, 10 * 60 + 5);
+assert.notEqual(intradayMssWatchScore.hardBlocker, 'no ICT candidate/reference level');
+assert.ok(intradayMssWatchScore.scorecard?.some((item) => item.note.includes('Intraday MSS Micro Continuation watch is active')));
+const intradayMssWatchAlert = shouldSendScannerAlert({
+  state: 'Conditional',
+  confidence: 50,
+  window: morningWindow,
+  candidate: intradayMssWatchCandidate,
+});
+assert.equal(intradayMssWatchAlert.shouldSend, true);
+assert.ok(intradayMssWatchAlert.reason.includes('Intraday MSS Micro Continuation watch qualified'));
+
 assert.equal(
   shouldSendScannerAlert({ state: 'Executable', confidence: 80, window: morningWindow, candidate: strongCandidate }).shouldSend,
   true
@@ -398,6 +458,38 @@ assert.equal(directionMismatchSelection.candidate, null);
 assert.equal(directionMismatchSelection.stateForAlert, 'NoTrade');
 assert.ok(directionMismatchSelection.auditWarnings.some((warning) => warning.includes('no matching app-owned candidate')));
 
+const mixedTimestampModeContext = buildNinjaChartContext({
+  bars5m: [
+    bar('2026-06-09T13:30:00-04:00', 7418, 7420, 7415, 7419),
+    bar('2026-06-09T13:10:00-04:00', 7416, 7417, 7414, 7415),
+    bar('2026-06-09T13:15:00-04:00', 7415, 7416, 7411.5, 7413),
+    bar('2026-06-09T13:15:00-04:00', 7415.25, 7416.25, 7411.75, 7413.25),
+    bar('2026-06-09T13:15:00-04:00', 7413, 7417, 7413, 7416.5),
+    bar('2026-06-09T13:25:00-04:00', 7412.5, 7418, 7412, 7418),
+    bar('2026-06-09T13:45:00-04:00', 7419, 7422, 7418, 7421),
+  ],
+  sessionType: 'lunch',
+  instrument: 'MES',
+  tradeDate: '2026-06-09',
+  barTimestampMode: 'close',
+});
+assert.ok(mixedTimestampModeContext);
+assert.deepEqual(
+  mixedTimestampModeContext.candles?.map((candle) => candle.timestamp),
+  [
+    '2026-06-09T13:05:00-04:00',
+    '2026-06-09T13:10:00-04:00',
+    '2026-06-09T13:15:00-04:00',
+    '2026-06-09T13:20:00-04:00',
+    '2026-06-09T13:25:00-04:00',
+    '2026-06-09T13:40:00-04:00',
+  ]
+);
+assert.equal(mixedTimestampModeContext.chartTimestamp, '2026-06-09T13:40:00-04:00');
+assert.equal(mixedTimestampModeContext.timeframeMssEvidence?.timeframes['5M'].barTimestampMode, 'open');
+assert.equal(mixedTimestampModeContext.extractionWarnings?.timeframeUnverified, true);
+assert.ok(mixedTimestampModeContext.extractionWarnings?.messages?.some((message) => message.includes('approximately 2 missing 5M bar(s)')));
+
 const morningMoveBars: NinjaBridgeBar[] = [
   bar('2026-05-28T09:30:00-04:00', 7535.75, 7538.75, 7534.75, 7535.25),
   bar('2026-05-28T09:35:00-04:00', 7535.25, 7537.25, 7527.75, 7530.00),
@@ -483,16 +575,19 @@ const tenOhFiveSelection = selectScannerPlan({
   currentPrice: morningMoveBars[7].close,
 });
 assert.notEqual(tenOhFiveSelection.stateForAlert, 'Approved');
-assert.notEqual(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.candidate?.direction, 'SHORT');
+assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 
 const tenFifteenMovePlan = normalizedFromMorningMoveThrough(9);
 const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
-assert.equal(tenFifteenSelection.candidate, null);
-assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
+assert.equal(tenFifteenSelection.stateForAlert, 'Conditional');
+assert.equal(tenFifteenSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(tenFifteenSelection.reviewStatus, null);
+assert.equal(tenFifteenSelection.stale.stale, false);
 
 const cascade = buildTargetCascade({
   candidate: strongCandidate,

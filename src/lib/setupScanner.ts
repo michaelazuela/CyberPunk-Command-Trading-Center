@@ -2220,6 +2220,117 @@ function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
   );
 }
 
+type FiveMinuteSwing = {
+  type: 'high' | 'low';
+  price: number;
+  timestamp: string | null;
+  index: number;
+};
+
+type ProtectedMssStopResult = {
+  stop: number | null;
+  reason: string | null;
+};
+
+const FIVE_MINUTE_MS = 5 * 60 * 1000;
+
+function confirmedFiveMinuteSwings(chartContext: ChartContext, strength = 1): FiveMinuteSwing[] {
+  const candles = readableCompletedFiveMinuteCandles(chartContext);
+  const swings: FiveMinuteSwing[] = [];
+  if (candles.length < (strength * 2) + 1) return swings;
+
+  for (let index = strength; index < candles.length - strength; index += 1) {
+    const candle = candles[index];
+    const high = parsePrice(candle.high);
+    const low = parsePrice(candle.low);
+    if (high === null || low === null) continue;
+    const left = candles.slice(index - strength, index);
+    const right = candles.slice(index + 1, index + strength + 1);
+    const isHigh = left.every((item) => {
+      const itemHigh = parsePrice(item.high);
+      return itemHigh !== null && high > itemHigh;
+    }) && right.every((item) => {
+      const itemHigh = parsePrice(item.high);
+      return itemHigh !== null && high > itemHigh;
+    });
+    const isLow = left.every((item) => {
+      const itemLow = parsePrice(item.low);
+      return itemLow !== null && low < itemLow;
+    }) && right.every((item) => {
+      const itemLow = parsePrice(item.low);
+      return itemLow !== null && low < itemLow;
+    });
+    if (isHigh) swings.push({ type: 'high', price: high, timestamp: candle.timestamp || null, index });
+    if (isLow) swings.push({ type: 'low', price: low, timestamp: candle.timestamp || null, index });
+  }
+
+  return swings;
+}
+
+function evidenceAlignedFiveMinuteCandleIndex(
+  candles: ReturnType<typeof readableCompletedFiveMinuteCandles>,
+  evidenceTimestamp: string | null | undefined,
+  timestampMode: 'open' | 'close',
+): number {
+  const evidenceTime = Date.parse(String(evidenceTimestamp || ''));
+  if (!Number.isFinite(evidenceTime)) return -1;
+
+  const exactIndex = candles.findIndex((candle) => Date.parse(String(candle.timestamp || '')) === evidenceTime);
+  if (exactIndex >= 0) return exactIndex;
+
+  return candles.findIndex((candle) => {
+    const candleTime = Date.parse(String(candle.timestamp || ''));
+    if (!Number.isFinite(candleTime)) return false;
+    const alternateTimestamp = timestampMode === 'close'
+      ? candleTime + FIVE_MINUTE_MS
+      : candleTime - FIVE_MINUTE_MS;
+    return alternateTimestamp === evidenceTime;
+  });
+}
+
+function protectedFiveMinuteMssStopResult(chartContext: ChartContext, direction: Direction): ProtectedMssStopResult {
+  const directionLabelText = direction === 'LONG' ? 'bullish' : direction === 'SHORT' ? 'bearish' : 'directional';
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return { stop: null, reason: 'Protected 5M MSS swing stop requires a LONG or SHORT direction.' };
+  }
+  const evidence = chartContext.timeframeMssEvidence?.timeframes['5M'];
+  if (!evidence) {
+    return { stop: null, reason: `Protected 5M MSS swing stop blocked: missing ${directionLabelText} 5M MSS evidence.` };
+  }
+  if (evidence.status !== 'confirmed_mss') {
+    return { stop: null, reason: `Protected 5M MSS swing stop blocked: 5M MSS status is ${evidence.status}, not confirmed_mss.` };
+  }
+  if (
+    (direction === 'LONG' && evidence.direction !== 'bullish') ||
+    (direction === 'SHORT' && evidence.direction !== 'bearish')
+  ) {
+    return { stop: null, reason: `Protected 5M MSS swing stop blocked: 5M MSS direction is ${evidence.direction}, not ${directionLabelText}.` };
+  }
+
+  const candles = readableCompletedFiveMinuteCandles(chartContext);
+  if (!Number.isFinite(Date.parse(String(evidence.evidenceTimestamp || '')))) {
+    return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp is missing or invalid.' };
+  }
+  const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence.evidenceTimestamp, evidence.barTimestampMode);
+  if (evidenceIndex < 0) {
+    return { stop: null, reason: 'Protected 5M MSS swing stop blocked: 5M MSS evidence timestamp does not align to a completed 5M candle in open-time or close-time mode.' };
+  }
+  const swingType: FiveMinuteSwing['type'] = direction === 'LONG' ? 'low' : 'high';
+  const protectedSwing = confirmedFiveMinuteSwings(chartContext)
+    .filter((swing) => swing.type === swingType && swing.index < evidenceIndex)
+    .at(-1);
+  if (!protectedSwing) {
+    return { stop: null, reason: `Protected 5M MSS swing stop blocked: no confirmed protected 5M swing ${swingType} exists before the MSS evidence candle.` };
+  }
+
+  const tick = TRADE_RULES.targetModel.tickSize;
+  return { stop: roundToTick(direction === 'LONG' ? protectedSwing.price - tick : protectedSwing.price + tick), reason: null };
+}
+
+function protectedFiveMinuteMssStop(chartContext: ChartContext, direction: Direction): number | null {
+  return protectedFiveMinuteMssStopResult(chartContext, direction).stop;
+}
+
 function isAfterReferenceCandle(
   candle: { index?: number | null; timestamp?: string | null },
   reference: { candleIndex?: number | null; timestamp?: string | null } | null,
@@ -2767,16 +2878,17 @@ function fvgRetestRejectionPlan(
   confirmed: boolean;
   entry: number | null;
   stop: number | null;
+  stopBlocker: string | null;
   reason: string;
   timestamp: string | null;
 } {
   if (!zone || (direction !== 'LONG' && direction !== 'SHORT')) {
-    return { confirmed: false, entry: null, stop: null, reason: 'Directional 5M FVG / imbalance zone is not available.', timestamp: null };
+    return { confirmed: false, entry: null, stop: null, stopBlocker: null, reason: 'Directional 5M FVG / imbalance zone is not available.', timestamp: null };
   }
   const upper = parsePrice(zone.upper);
   const lower = parsePrice(zone.lower);
   if (upper === null || lower === null) {
-    return { confirmed: false, entry: null, stop: null, reason: 'Directional 5M FVG / imbalance zone has incomplete bounds.', timestamp: null };
+    return { confirmed: false, entry: null, stop: null, stopBlocker: null, reason: 'Directional 5M FVG / imbalance zone has incomplete bounds.', timestamp: null };
   }
 
   const candles = readableCompletedFiveMinuteCandles(chartContext)
@@ -2784,7 +2896,6 @@ function fvgRetestRejectionPlan(
       candleIndex: zone.formedCandleIndex ?? null,
       timestamp: zone.formedAt ?? null,
     }));
-  const tick = TRADE_RULES.targetModel.tickSize;
   const rejection = candles.find((candle) => {
     const close = parsePrice(candle.close);
     if (close === null || !candleTouchesFvg(candle, zone)) return false;
@@ -2797,6 +2908,7 @@ function fvgRetestRejectionPlan(
       confirmed: false,
       entry: null,
       stop: null,
+      stopBlocker: null,
       reason: direction === 'SHORT'
         ? 'Bearish micro-continuation pending: wait for a completed 5M candle to retest the bearish FVG and close back below the lower boundary.'
         : 'Bullish micro-continuation pending: wait for a completed 5M candle to retest the bullish FVG and close back above the upper boundary.',
@@ -2805,15 +2917,12 @@ function fvgRetestRejectionPlan(
   }
 
   const entry = parsePrice(rejection.close);
-  const high = parsePrice(rejection.high);
-  const low = parsePrice(rejection.low);
-  const stop = direction === 'SHORT'
-    ? Math.max(...[upper, high, parsePrice(chartContext.keyLevels.activeSwingHigh)].filter((price): price is number => price !== null)) + tick
-    : Math.min(...[lower, low, parsePrice(chartContext.keyLevels.activeSwingLow)].filter((price): price is number => price !== null)) - tick;
+  const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
   return {
     confirmed: true,
     entry: entry !== null ? roundToTick(entry) : null,
-    stop: roundToTick(stop),
+    stop: protectedMssStop.stop,
+    stopBlocker: protectedMssStop.reason,
     reason: direction === 'SHORT'
       ? `Completed 5M bearish FVG retest/rejection confirmed${rejection.timestamp ? ` at ${rejection.timestamp}` : ''}: candle traded into ${formatLinePrice(lower)}-${formatLinePrice(upper)} and closed below ${formatLinePrice(lower)}.`
       : `Completed 5M bullish FVG retest/rejection confirmed${rejection.timestamp ? ` at ${rejection.timestamp}` : ''}: candle traded into ${formatLinePrice(lower)}-${formatLinePrice(upper)} and closed above ${formatLinePrice(upper)}.`,
@@ -2856,7 +2965,8 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const htfGate = htfContextGate(chartContext);
   const retest = fvgRetestRejectionPlan(chartContext, direction, fvg);
   const entry = parsePrice(chartContext.proposedEntry) ?? retest.entry;
-  const stop = parsePrice(chartContext.proposedStop) ?? retest.stop;
+  const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
+  const stop = protectedMssStop.stop;
   const targets = computedTargets(direction, entry, stop);
   const risk = riskPoints(entry, stop) ?? parsePrice(chartContext.riskPoints) ??
     (chartContext.riskStatus === 'RiskTooWide' ? TRADE_RULES.maxRiskPoints + TRADE_RULES.targetModel.tickSize : null);
@@ -2864,8 +2974,8 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const invalidation = stop !== null
     ? direction === 'LONG'
-      ? `Invalid if price reclaims below the protected 5M FVG/retest structure stop near ${formatLinePrice(stop)}.`
-      : `Invalid if price reclaims above the protected 5M FVG/retest structure stop near ${formatLinePrice(stop)}.`
+      ? `Invalid if price reclaims below the protected 5M MSS swing stop near ${formatLinePrice(stop)}.`
+      : `Invalid if price reclaims above the protected 5M MSS swing stop near ${formatLinePrice(stop)}.`
     : null;
   const hasEntryStopTargets = entry !== null && stop !== null && targets.target1 !== null && targets.target2 !== null && invalidation !== null;
   const htfObstaclePresent = Boolean(
@@ -2891,8 +3001,9 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const missingEvidence = Array.from(new Set([
     ...htfGate.missingEvidence,
     ...(!retest.confirmed ? [retest.reason] : []),
+    ...(protectedMssStop.reason ? [protectedMssStop.reason] : []),
     ...(entry === null ? ['Defined 5M FVG retest/rejection entry'] : []),
-    ...(stop === null ? ['Protected 5M FVG/retest structure stop'] : []),
+    ...(stop === null ? ['Protected 5M MSS swing stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ]));
 
@@ -2935,6 +3046,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
       intradayMssMicroContinuationWindowEvidence(chartContext),
       `5M FVG / imbalance zone: ${zoneLabel}`,
       retest.reason,
+      ...(protectedMssStop.stop !== null ? [`Protected 5M MSS swing stop: ${formatLinePrice(protectedMssStop.stop)}. Stop is tied to the protected 5M swing, not the MSS close.`] : []),
       ...htfGate.evidence,
       ...(target ? [`Forward liquidity/target context: ${target.label} ${target.price}`] : []),
       'No chase: the model requires a completed 5M retest/rejection or completed acceptance beyond the HTF line in the sand.',
@@ -3313,7 +3425,8 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
 
   const mssClose = parsePrice(fiveDisplacement?.close) ?? parsePrice(chartContext.proposedEntry);
   const entry = parsePrice(chartContext.proposedEntry) ?? mssClose;
-  const stop = parsePrice(chartContext.proposedStop);
+  const protectedMssStop = protectedFiveMinuteMssStopResult(chartContext, direction);
+  const stop = protectedMssStop.stop;
   const currentPrice = parsePrice(chartContext.keyLevels.currentPrice) ?? parsePrice(chartContext.candles?.[chartContext.candles.length - 1]?.close) ?? entry;
   const target = liquidityTargetForContinuation(chartContext, direction, entry, currentPrice);
   const roomRatio = remainingPathRatio(direction, mssClose, currentPrice, target?.price ?? null);
@@ -3358,6 +3471,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
     ...(!freshEntryEvidence.confirmed ? [freshEntryEvidence.reason] : []),
     ...(freshEntryEvidence.confirmed && !currentOnCorrectSide ? ['Current price is not holding the correct side of the MSS decision level'] : []),
     ...(entry === null ? ['Defined 5M entry'] : []),
+    ...(protectedMssStop.reason ? [protectedMssStop.reason] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
     ...(targets.target1 === null || targets.target2 === null ? ['App T1/T2 from actual entry/stop risk'] : []),
   ];
@@ -3395,6 +3509,7 @@ function buildHtfDisplacementMssContinuationCandidate(input: SetupScannerInput):
       ...htfGate.evidence,
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement confirmed`] : []),
       ...(hasFvg ? ['5M FVG / imbalance supports continuation'] : []),
+      ...(protectedMssStop.stop !== null ? [`Protected 5M MSS swing stop: ${protectedMssStop.stop}. Stop is tied to the protected 5M swing, not the MSS close.`] : []),
       'MSS_HOLD_CONFIRMED: completed 5M close confirmed; not a live-wick trigger.',
       'MSS hold trigger uses completed 5M close, not live wick.',
       ...(target ? [`External liquidity target: ${target.label} ${target.price}`] : []),
@@ -3879,6 +3994,52 @@ interface HtfLineInSandSelection {
   acceptedBeyondLine: boolean;
 }
 
+function fvgLineInSandSelection(candidate: SetupCandidate, chartContext?: ChartContext | null): HtfLineInSandSelection | null {
+  if (!chartContext || candidate.setupType !== SetupType.IntradayMssMicroContinuation || (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT')) return null;
+  const zone = directionalFvgZone(chartContext, candidate.direction);
+  if (!zone) return null;
+  const upper = parsePrice(zone.upper);
+  const lower = parsePrice(zone.lower);
+  if (upper === null || lower === null) return null;
+  const selected = candidate.direction === 'LONG' ? upper : lower;
+  const lineInSand = roundToTick(selected);
+  const priceText = formatLinePrice(lineInSand);
+  const side = htfLineDirectionText(candidate.direction);
+  const directionText = candidate.direction === 'LONG' ? 'long' : 'short';
+  const latestClose = latestCompletedClose(chartContext);
+  const acceptedBeyondLine = latestClose !== null && (
+    candidate.direction === 'LONG'
+      ? latestClose > lineInSand
+      : latestClose < lineInSand
+  );
+  return {
+    lineInSand,
+    lineReason: `${priceText} matters because it is the structured 5M FVG/retest decision boundary for the aligned 15M/5M MSS ${directionText} watch (${formatLinePrice(lower)}-${formatLinePrice(upper)}).`,
+    requiredClose: `Completed 5M or 15M close ${side} ${priceText} required before ${directionText} continuation is active.`,
+    obstacleType: 'imbalance_zone',
+    obstacleSource: 'app',
+    latestClose,
+    acceptedBeyondLine,
+  };
+}
+
+interface HtfFailedAuctionLine {
+  price: number;
+  label: string;
+  source: string;
+  type: string;
+  strength: number;
+}
+
+interface HtfFailedAuctionRejection {
+  direction: Exclude<Direction, 'NO TRADE'>;
+  line: HtfFailedAuctionLine;
+  candleTimestamp: string | null;
+  sweptExtreme: number;
+  close: number;
+  source: 'failed_break_event' | 'completed_ohlc_rejection';
+}
+
 function formatLinePrice(price: number): string {
   return roundToTick(price).toFixed(2);
 }
@@ -3894,6 +4055,210 @@ function htfLineDirectionText(direction: Direction): 'above' | 'below' {
 
 function htfLineLevelReason(label: string, source: string, type: string): string {
   return `${label} (${source} ${type})`;
+}
+
+function htfFailedAuctionSideText(direction: Exclude<Direction, 'NO TRADE'>): 'above' | 'below' {
+  return direction === 'SHORT' ? 'above' : 'below';
+}
+
+function htfFailedAuctionCloseText(direction: Exclude<Direction, 'NO TRADE'>): 'below' | 'above' {
+  return direction === 'SHORT' ? 'below' : 'above';
+}
+
+function isHtfFailedAuctionLevelType(type: string): boolean {
+  return [
+    'high',
+    'low',
+    'support',
+    'resistance',
+    'imbalance_zone',
+    'imbalance_midpoint',
+    'displacement_origin',
+    'midnight_open',
+    'rth_open',
+    'swing',
+    'liquidity_pool',
+    'gap',
+  ].includes(type);
+}
+
+function isStructuredAuctionSource(source: string): boolean {
+  return source !== 'screenshot' && source !== 'manual';
+}
+
+function htfFailedAuctionLevels(chartContext?: ChartContext | null): HtfFailedAuctionLine[] {
+  const structural = [
+    ...(chartContext?.structuralLevels || []),
+    ...(chartContext?.sessionLevelContext?.levels || []),
+    ...(chartContext?.sessionStory?.targetLevels || []),
+  ].filter((level) =>
+    Number.isFinite(level.price) &&
+    isReadableConfidence(level.confidence) &&
+    isStructuredAuctionSource(level.source) &&
+    isHtfFailedAuctionLevelType(level.type)
+  ).map((level) => ({
+    price: roundToTick(level.price),
+    label: level.label,
+    source: level.source,
+    type: level.type,
+    strength: level.strengthScore || 0,
+  }));
+
+  const objectives = (chartContext?.targetObjectives || [])
+    .filter((target) =>
+      Number.isFinite(target.price) &&
+      isReadableConfidence(target.confidence) &&
+      isStructuredAuctionSource(target.source) &&
+      isHtfFailedAuctionLevelType(target.type)
+    )
+    .map((target) => ({
+      price: roundToTick(target.price),
+      label: target.label,
+      source: target.source,
+      type: target.type,
+      strength: target.score || 0,
+    }));
+
+  const byKey = new Map<string, HtfFailedAuctionLine>();
+  for (const level of [...structural, ...objectives]) {
+    const key = `${level.price}:${level.label}:${level.source}:${level.type}`;
+    const existing = byKey.get(key);
+    if (!existing || level.strength > existing.strength) byKey.set(key, level);
+  }
+  return [...byKey.values()];
+}
+
+function findClosestHtfFailedAuctionLine(
+  levels: HtfFailedAuctionLine[],
+  direction: Exclude<Direction, 'NO TRADE'>,
+  failedLevel: number,
+  sweptExtreme: number | null
+): HtfFailedAuctionLine | null {
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const maxDistance = 12;
+  const candidates = levels
+    .filter((level) => {
+      const failedDistance = Math.abs(level.price - failedLevel);
+      if (failedDistance > maxDistance) return false;
+      if (direction === 'SHORT' && sweptExtreme !== null && sweptExtreme < level.price + tick) return false;
+      if (direction === 'LONG' && sweptExtreme !== null && sweptExtreme > level.price - tick) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const distanceA = Math.abs(a.price - failedLevel);
+      const distanceB = Math.abs(b.price - failedLevel);
+      if (distanceA !== distanceB) return distanceA - distanceB;
+      return b.strength - a.strength;
+    });
+  return candidates[0] || null;
+}
+
+function detectHtfFailedAuctionRejection(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction
+): HtfFailedAuctionRejection | null {
+  if (!chartContext || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  const levels = htfFailedAuctionLevels(chartContext);
+  if (!levels.length) return null;
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const failedEvents = (chartContext.failedBreakEvents || [])
+    .filter((event) =>
+      event.direction === direction &&
+      isReadableConfidence(event.confidence) &&
+      parsePrice(event.failedLevel) !== null
+    )
+    .map((event): HtfFailedAuctionRejection | null => {
+      const failedLevel = parsePrice(event.failedLevel) as number;
+      const sweptExtreme = parsePrice(event.sweptExtreme);
+      const line = findClosestHtfFailedAuctionLine(levels, direction, failedLevel, sweptExtreme);
+      if (!line) return null;
+      return {
+        direction,
+        line,
+        candleTimestamp: event.timestamp || null,
+        sweptExtreme: sweptExtreme ?? failedLevel,
+        close: latestCompletedClose(chartContext) ?? failedLevel,
+        source: 'failed_break_event' as const,
+      };
+    })
+    .filter((event): event is HtfFailedAuctionRejection => Boolean(event));
+  if (failedEvents.length) return failedEvents[0];
+
+  const candles = (chartContext.candles || [])
+    .filter((candle) =>
+      isReadableConfidence(candle.confidence) &&
+      parsePrice(candle.high) !== null &&
+      parsePrice(candle.low) !== null &&
+      parsePrice(candle.close) !== null
+    )
+    .slice(-6);
+  const candidates: HtfFailedAuctionRejection[] = [];
+  for (const candle of candles) {
+    const high = parsePrice(candle.high) as number;
+    const low = parsePrice(candle.low) as number;
+    const close = parsePrice(candle.close) as number;
+    for (const line of levels) {
+      if (direction === 'SHORT') {
+        if (high >= line.price + tick && close <= line.price - tick) {
+          candidates.push({
+            direction,
+            line,
+            candleTimestamp: candle.timestamp || null,
+            sweptExtreme: high,
+            close,
+            source: 'completed_ohlc_rejection',
+          });
+        }
+      } else if (low <= line.price - tick && close >= line.price + tick) {
+        candidates.push({
+          direction,
+          line,
+          candleTimestamp: candle.timestamp || null,
+          sweptExtreme: low,
+          close,
+          source: 'completed_ohlc_rejection',
+        });
+      }
+    }
+  }
+  candidates.sort((a, b) => {
+    const extremeDistanceA = Math.abs(a.sweptExtreme - a.line.price);
+    const extremeDistanceB = Math.abs(b.sweptExtreme - b.line.price);
+    if (a.candleTimestamp !== b.candleTimestamp) return String(b.candleTimestamp).localeCompare(String(a.candleTimestamp));
+    if (extremeDistanceA !== extremeDistanceB) return extremeDistanceA - extremeDistanceB;
+    return b.line.strength - a.line.strength;
+  });
+  return candidates[0] || null;
+}
+
+function htfFailedAuctionEvidenceLayer(
+  chartContext: ChartContext | null | undefined,
+  direction: Direction
+): ActiveCampaignEvidenceLayer {
+  const rejection = detectHtfFailedAuctionRejection(chartContext, direction);
+  if (!rejection) {
+    return {
+      layer: 'HTF_FAILED_AUCTION_REJECTION',
+      status: chartContext ? 'missing' : 'data_limited',
+      direction,
+      evidence: [],
+      blockers: chartContext
+        ? ['No completed structured OHLC failed auction through a named HTF/session line is present for this campaign direction.']
+        : ['Structured chart context is missing; failed HTF auction read is data-limited.'],
+    };
+  }
+  const lineText = `${rejection.line.label} ${formatLinePrice(rejection.line.price)}`;
+  return {
+    layer: 'HTF_FAILED_AUCTION_REJECTION',
+    status: 'confirmed',
+    direction,
+    evidence: [
+      `Failed HTF auction supports ${directionLabel(rejection.direction)} campaign context: price swept ${htfFailedAuctionSideText(rejection.direction)} ${lineText} and completed back ${htfFailedAuctionCloseText(rejection.direction)} it.`,
+      `Named line source: ${rejection.line.source} ${rejection.line.type}; swept extreme ${formatLinePrice(rejection.sweptExtreme)}, completed close ${formatLinePrice(rejection.close)}${rejection.candleTimestamp ? ` at ${rejection.candleTimestamp}` : ''}.`,
+      'This is campaign evidence only; 5M execution trigger, protected stop, risk, invalidation, and app targets remain mandatory.',
+    ],
+    blockers: [],
+  };
 }
 
 function selectHtfLineInSand(candidate: SetupCandidate, chartContext?: ChartContext | null): HtfLineInSandSelection | null {
@@ -3964,7 +4329,7 @@ function selectHtfLineInSand(candidate: SetupCandidate, chartContext?: ChartCont
     });
 
   const selected = candidates[0];
-  if (!selected) return null;
+  if (!selected) return fvgLineInSandSelection(candidate, chartContext);
 
   const side = htfLineDirectionText(candidate.direction);
   const priceText = formatLinePrice(selected.price);
@@ -4216,6 +4581,8 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
   if (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') return undefined;
   const mssLayer = mssEvidenceLayer(chartContext, candidate.direction);
   const htf = htfCampaignRelationship(chartContext, candidate.direction);
+  const failedAuctionLayer = htfFailedAuctionEvidenceLayer(chartContext, candidate.direction);
+  const hasFailedAuctionSupport = failedAuctionLayer.status === 'confirmed';
   const triggerLayer = executionTriggerLayer(candidate, chartContext);
   const levelLayer = obstacleLayer(candidate);
   const status: ActiveCampaign['status'] =
@@ -4226,21 +4593,36 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
       : 'watch';
   const line = candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null;
   const lineReason = candidate.activeRuleset?.htfLineInSand?.lineReason ?? null;
+  const htfRelationship: ActiveCampaign['htfRelationship'] =
+    htf.relationship === 'data_limited'
+      ? htf.relationship
+      : hasFailedAuctionSupport
+      ? 'support'
+      : htf.relationship;
+  const confidenceAdjustment = htf.confidenceAdjustment + (hasFailedAuctionSupport ? 6 : 0);
   return {
     id: [
       chartContext?.tradeDate || 'unknown-date',
       candidate.direction,
-      mssLayer.status === 'confirmed' ? '15M5M-MSS' : 'candidate',
+      mssLayer.status === 'confirmed'
+        ? '15M5M-MSS'
+        : hasFailedAuctionSupport
+        ? 'HTF-FAILED-AUCTION'
+        : 'candidate',
     ].join(':'),
     source: 'app_owned_structured_ohlc',
     authority: 'campaign_context_only_not_execution_authority',
     status,
     direction: candidate.direction,
-    primaryTrigger: mssLayer.status === 'confirmed' ? '15M_5M_MSS' : 'NONE',
+    primaryTrigger: mssLayer.status === 'confirmed'
+      ? '15M_5M_MSS'
+      : hasFailedAuctionSupport
+      ? 'HTF_DIRECTIONAL_CAMPAIGN'
+      : 'NONE',
     executionTimeframe: '5M',
-    htfRelationship: htf.relationship,
-    confidenceAdjustment: htf.confidenceAdjustment,
-    evidenceLayers: [mssLayer, htf.layer, levelLayer, triggerLayer],
+    htfRelationship,
+    confidenceAdjustment,
+    evidenceLayers: [mssLayer, htf.layer, failedAuctionLayer, levelLayer, triggerLayer],
     htfSupportTimeframes: htf.support,
     htfConflictTimeframes: htf.conflict,
     obstacleMap: {
@@ -4259,6 +4641,7 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
     notes: [
       'ActiveCampaign de-duplication is enforced by the scanner alert ledger; it does not change approvals, scanner ranking, bridge behavior, or canExecute.',
       'HTF conflict becomes caution/management context and does not erase raw 15M/5M MSS evidence.',
+      'Failed HTF auction at a named line can support or caution the active campaign, but it is not standalone execution authority.',
       '5M remains execution authority for entry, stop, risk, invalidation, and app targets.',
     ],
   };
@@ -4266,7 +4649,16 @@ function buildActiveCampaignForCandidate(candidate: SetupCandidate, chartContext
 
 function attachActiveCampaign(candidate: SetupCandidate, chartContext?: ChartContext | null): SetupCandidate {
   const activeCampaign = buildActiveCampaignForCandidate(candidate, chartContext);
-  return activeCampaign ? { ...candidate, activeCampaign } : candidate;
+  if (!activeCampaign) return candidate;
+  const failedAuctionLayer = activeCampaign.evidenceLayers.find((layer) => layer.layer === 'HTF_FAILED_AUCTION_REJECTION');
+  const failedAuctionEvidence = failedAuctionLayer?.status === 'confirmed'
+    ? failedAuctionLayer.evidence
+    : [];
+  return {
+    ...candidate,
+    evidence: appendUnique(candidate.evidence, failedAuctionEvidence),
+    activeCampaign,
+  };
 }
 
 function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, chartContext?: ChartContext | null): SetupCandidate {

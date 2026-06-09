@@ -1,5 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
-import { ExecutionStatus, NoTradeReason, SetupCandidate, TargetObjective, TradeDecisionStatus } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 export type ScannerState =
@@ -483,6 +483,20 @@ function isIctHardDisqualified(candidate: SetupCandidate): boolean {
   return Boolean(ictHardDisqualifierReason(candidate));
 }
 
+function isIntradayMssMicroContinuationWatch(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate) return false;
+  return (
+    candidate.setupType === SetupType.IntradayMssMicroContinuation &&
+    candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING' &&
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    candidate.humanReview?.canExecute === false &&
+    candidate.humanReview.requiresTraderConfirmation === true &&
+    typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
+    Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand) &&
+    candidate.activeRuleset.htfLineInSand.lineInSand > 0
+  );
+}
+
 function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
   const blockReason = (candidate.blockReason ?? '').toLowerCase();
 
@@ -743,8 +757,9 @@ export function scoreScannerCandidate(
   const modelCompletion = clampScore(
     (signals.hasLiquiditySweep ? 6 : 0) +
     (signals.hasReclaimAfterSweep ? 6 : 0) +
-    (signals.hasTurtleSoupReversal || signals.hasFvgOrImbalanceEntry ? 7 : 0) +
-    (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0),
+    (signals.hasTurtleSoupReversal || signals.hasFvgOrImbalanceEntry || isIntradayMssMicroContinuationWatch(candidate) ? 7 : 0) +
+    (signals.hasDisplacement || signals.hasMarketStructureShift ? 6 : 0) +
+    (isIntradayMssMicroContinuationWatch(candidate) ? 6 : 0),
     25
   );
   const executionQuality = clampScore(
@@ -790,7 +805,13 @@ export function scoreScannerCandidate(
         score: modelCompletion,
         max: 25,
         status: scoreStatus(modelCompletion, 25),
-        note: signals.hasTurtleSoupReversal ? 'Turtle Soup evidence is present.' : signals.hasFvgOrImbalanceEntry ? 'Model 1 FVG/imbalance evidence is present.' : 'Approved model is still missing required evidence.',
+        note: isIntradayMssMicroContinuationWatch(candidate)
+          ? 'Intraday MSS Micro Continuation watch is active from aligned 15M/5M MSS and a named line in the sand.'
+          : signals.hasTurtleSoupReversal
+            ? 'Turtle Soup evidence is present.'
+            : signals.hasFvgOrImbalanceEntry
+              ? 'Model 1 FVG/imbalance evidence is present.'
+              : 'Approved model is still missing required evidence.',
       },
       {
         label: '5M execution quality',
@@ -1024,6 +1045,9 @@ export function shouldSendScannerAlert(args: {
       : { shouldSend: false, reason: 'Blocked setup did not meet educational Discord threshold.' };
   }
   if (args.state === 'Conditional') {
+    if (isIntradayMssMicroContinuationWatch(args.candidate) && (args.candidate?.modelConfidenceScore ?? args.confidence) >= 56) {
+      return { shouldSend: true, reason: 'Intraday MSS Micro Continuation watch qualified for Discord: aligned 15M/5M MSS plus named line in the sand. Human review only; no chase.' };
+    }
     return args.confidence >= thresholds.conditional
       ? { shouldSend: true, reason: `${scannerAlertQualityFromScore(args.confidence).label} qualified for Discord.` }
       : { shouldSend: false, reason: 'Conditional plan below 65 score threshold; trade plan not published.' };

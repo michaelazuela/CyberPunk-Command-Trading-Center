@@ -30,6 +30,12 @@ export interface NinjaBridgeBar {
   volume: number;
 }
 
+type TimestampModeCandidate = {
+  mode: BridgeBarTimestampMode;
+  time: string;
+  ms: number;
+};
+
 export interface NinjaBridgeHealth {
   ok: boolean;
   name?: string;
@@ -213,6 +219,134 @@ function sessionForTimestamp(value?: string | null): DisplacementCandleFact['ses
   if (inMinuteRange(minutes, 11 * 60 + 50, 13 * 60)) return 'lunch';
   if (inMinuteRange(minutes, 18 * 60, 23 * 60 + 59)) return 'prior_eth';
   return 'current_window';
+}
+
+function shiftBridgeTimestamp(value: string, minutes: number): string {
+  const trimmed = String(value || '').trim();
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2}T)(\d{2}):(\d{2})(?::(\d{2}))?(\.\d+)?(Z|[+-]\d\d:\d\d)?$/);
+  if (!match) {
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) return trimmed;
+    return new Date(parsed.getTime() + minutes * 60_000).toISOString();
+  }
+  const [, datePrefix, hour, minute, second, fraction = '', zone = ''] = match;
+  const wallMs = Date.UTC(2000, 0, 1, Number(hour), Number(minute), Number(second || '0'));
+  const shifted = new Date(wallMs + minutes * 60_000);
+  const shiftedHour = String(shifted.getUTCHours()).padStart(2, '0');
+  const shiftedMinute = String(shifted.getUTCMinutes()).padStart(2, '0');
+  const shiftedSecond = second !== undefined ? `:${String(shifted.getUTCSeconds()).padStart(2, '0')}` : '';
+  return `${datePrefix}${shiftedHour}:${shiftedMinute}${shiftedSecond}${fraction}${zone}`;
+}
+
+function timestampCandidate(value: string, mode: BridgeBarTimestampMode, timeframeMinutes: number): TimestampModeCandidate | null {
+  const time = mode === 'close' ? shiftBridgeTimestamp(value, -timeframeMinutes) : value;
+  const ms = Date.parse(time);
+  if (!Number.isFinite(ms)) return null;
+  return { mode, time, ms };
+}
+
+function normalizeBarsToOpenTimestamps(
+  bars: NinjaBridgeBar[],
+  timeframeMinutes: number,
+  preferredMode: BridgeBarTimestampMode,
+): NinjaBridgeBar[] {
+  if (!bars.length) return bars;
+  const timeframeMs = timeframeMinutes * 60_000;
+  const orderedBars = bars
+    .map((bar, inputIndex) => ({ bar, inputIndex, rawMs: Date.parse(String(bar.time || '')) }))
+    .sort((a, b) => {
+      const aMs = Number.isFinite(a.rawMs) ? a.rawMs : Number.MAX_SAFE_INTEGER;
+      const bMs = Number.isFinite(b.rawMs) ? b.rawMs : Number.MAX_SAFE_INTEGER;
+      if (aMs !== bMs) return aMs - bMs;
+      return a.inputIndex - b.inputIndex;
+    })
+    .map((item) => item.bar);
+  const preferredBonus = 3;
+  const continuityBonus = 8;
+  const orderedBonus = 2;
+  const nonIncreasingPenalty = -25;
+  const choices = orderedBars.map((bar) => {
+    const raw = timestampCandidate(bar.time, 'open', timeframeMinutes);
+    const shifted = timestampCandidate(bar.time, 'close', timeframeMinutes);
+    return [raw, shifted].filter((item): item is TimestampModeCandidate => Boolean(item));
+  });
+  if (choices.some((item) => item.length === 0)) return orderedBars;
+
+  const scores: number[][] = choices.map((barChoices, index) =>
+    barChoices.map((choice) => (choice.mode === preferredMode ? preferredBonus : 0) + index * 0.001)
+  );
+  const previousChoiceIndexes: number[][] = choices.map((barChoices) => barChoices.map(() => -1));
+
+  for (let index = 1; index < choices.length; index += 1) {
+    for (let choiceIndex = 0; choiceIndex < choices[index].length; choiceIndex += 1) {
+      const choice = choices[index][choiceIndex];
+      let bestScore = Number.NEGATIVE_INFINITY;
+      let bestPrevious = -1;
+      for (let previousIndex = 0; previousIndex < choices[index - 1].length; previousIndex += 1) {
+        const previous = choices[index - 1][previousIndex];
+        const delta = choice.ms - previous.ms;
+        const transitionScore =
+          delta === timeframeMs
+            ? continuityBonus
+            : delta > 0 && delta % timeframeMs === 0
+            ? orderedBonus
+            : nonIncreasingPenalty;
+        const score = scores[index - 1][previousIndex] + transitionScore +
+          (choice.mode === preferredMode ? preferredBonus : 0);
+        if (score > bestScore) {
+          bestScore = score;
+          bestPrevious = previousIndex;
+        }
+      }
+      scores[index][choiceIndex] = bestScore;
+      previousChoiceIndexes[index][choiceIndex] = bestPrevious;
+    }
+  }
+
+  let selectedIndex = scores[scores.length - 1].reduce((best, score, index, values) =>
+    score > values[best] ? index : best, 0);
+  const selected: TimestampModeCandidate[] = [];
+  for (let index = choices.length - 1; index >= 0; index -= 1) {
+    selected[index] = choices[index][selectedIndex];
+    selectedIndex = previousChoiceIndexes[index][selectedIndex];
+    if (selectedIndex < 0 && index > 0) selectedIndex = 0;
+  }
+
+  const byNormalizedTime = new Map<string, { bar: NinjaBridgeBar; ms: number; index: number }>();
+  orderedBars.forEach((bar, index) => {
+    const choice = selected[index];
+    const normalized = { ...bar, time: choice?.time || bar.time };
+    const ms = choice?.ms ?? Date.parse(String(normalized.time || ''));
+    const key = normalized.time;
+    const existing = byNormalizedTime.get(key);
+    if (!existing || index > existing.index) {
+      byNormalizedTime.set(key, { bar: normalized, ms: Number.isFinite(ms) ? ms : Number.MAX_SAFE_INTEGER, index });
+    }
+  });
+
+  return [...byNormalizedTime.values()]
+    .sort((a, b) => {
+      if (a.ms !== b.ms) return a.ms - b.ms;
+      return a.index - b.index;
+    })
+    .map((item) => item.bar);
+}
+
+function barSequenceGapWarnings(label: string, bars: NinjaBridgeBar[], timeframeMinutes: number): string[] {
+  if (bars.length < 2) return [];
+  const timeframeMs = timeframeMinutes * 60_000;
+  const warnings: string[] = [];
+  for (let index = 1; index < bars.length; index += 1) {
+    const previous = Date.parse(String(bars[index - 1].time || ''));
+    const current = Date.parse(String(bars[index].time || ''));
+    if (!Number.isFinite(previous) || !Number.isFinite(current)) continue;
+    const delta = current - previous;
+    if (delta > timeframeMs) {
+      const missingBars = Math.max(0, Math.round(delta / timeframeMs) - 1);
+      warnings.push(`${label} normalized OHLC gap: ${bars[index - 1].time} to ${bars[index].time}; approximately ${missingBars} missing ${label} bar(s).`);
+    }
+  }
+  return warnings;
 }
 
 function toCandleFacts(bars: NinjaBridgeBar[], limit = 40): ChartCandleFact[] {
@@ -758,19 +892,34 @@ export function buildNinjaChartContext({
   barTimestampMode?: BridgeBarTimestampMode;
   barTimeZone?: BridgeBarTimeZoneMode;
 }): Partial<ChartContext> | null {
-  const executionBars = bars5m.filter(bar =>
+  const normalizedBars5m = normalizeBarsToOpenTimestamps(bars5m, 5, barTimestampMode);
+  const normalizedHtfBars5m = htfBars5m ? normalizeBarsToOpenTimestamps(htfBars5m, 5, barTimestampMode) : undefined;
+  const normalizedBars15m = normalizeBarsToOpenTimestamps(bars15m, 15, barTimestampMode);
+  const normalizedBars60m = normalizeBarsToOpenTimestamps(bars60m, 60, barTimestampMode);
+  const normalizedBars120m = normalizeBarsToOpenTimestamps(bars120m, 120, barTimestampMode);
+  const normalizedBars240m = normalizeBarsToOpenTimestamps(bars240m, 240, barTimestampMode);
+  const normalizationWarnings = [
+    ...barSequenceGapWarnings('5M', normalizedBars5m, 5),
+    ...(normalizedHtfBars5m ? barSequenceGapWarnings('5M context', normalizedHtfBars5m, 5) : []),
+    ...barSequenceGapWarnings('15M', normalizedBars15m, 15),
+    ...barSequenceGapWarnings('60M', normalizedBars60m, 60),
+    ...barSequenceGapWarnings('120M', normalizedBars120m, 120),
+    ...barSequenceGapWarnings('240M', normalizedBars240m, 240),
+  ];
+  const executionBars = normalizedBars5m.filter(bar =>
     Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
   );
   if (!executionBars.length) return null;
-  const htfFiveMinuteBars = (htfBars5m?.length ? htfBars5m : executionBars).filter(bar =>
+  const htfFiveMinuteBars = (normalizedHtfBars5m?.length ? normalizedHtfBars5m : executionBars).filter(bar =>
     Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close)
   );
 
   const last = executionBars[executionBars.length - 1];
   const first = executionBars[0];
+  const asOfCompletedTimestamp = shiftBridgeTimestamp(last.time, 5);
   const recent = executionBars.slice(-8);
-  const macroContextBars = [...bars240m, ...bars60m].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
-  const allContextBars = [...macroContextBars, ...bars120m, ...bars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
+  const macroContextBars = [...normalizedBars240m, ...normalizedBars60m].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
+  const allContextBars = [...macroContextBars, ...normalizedBars120m, ...normalizedBars15m, ...executionBars].filter(bar => Number.isFinite(bar.high) && Number.isFinite(bar.low));
   const activeSwingHigh = recent.length ? Math.max(...recent.map(bar => bar.high)) : null;
   const activeSwingLow = recent.length ? Math.min(...recent.map(bar => bar.low)) : null;
   const contextHigh = allContextBars.length ? Math.max(...allContextBars.map(bar => bar.high)) : activeSwingHigh;
@@ -792,10 +941,10 @@ export function buildNinjaChartContext({
   );
   const baseStructuralLevels = buildStructuralLevels({
     bars5m: executionBars,
-    bars15m,
-    bars60m,
-    bars120m,
-    bars240m,
+    bars15m: normalizedBars15m,
+    bars60m: normalizedBars60m,
+    bars120m: normalizedBars120m,
+    bars240m: normalizedBars240m,
     midnightOpen,
     rthOpen: first.open,
   });
@@ -815,18 +964,18 @@ export function buildNinjaChartContext({
     enrichedStructuralLevels.find(level => level.source === source && level.type === type)?.price ?? null;
   const multiTimeframeContext = buildMultiTimeframeContext({
     bars5m: executionBars,
-    bars15m,
-    bars60m,
-    bars120m,
-    bars240m,
+    bars15m: normalizedBars15m,
+    bars60m: normalizedBars60m,
+    bars120m: normalizedBars120m,
+    bars240m: normalizedBars240m,
     structuralLevels: enrichedStructuralLevels,
     currentPrice: last.close,
   });
   const htfLiquidityDrawState = buildHtfLiquidityDrawState({
-    bars4H: bars240m,
-    bars2H: bars120m,
-    bars1H: bars60m,
-    bars15M: bars15m,
+    bars4H: normalizedBars240m,
+    bars2H: normalizedBars120m,
+    bars1H: normalizedBars60m,
+    bars15M: normalizedBars15m,
     bars5M: htfFiveMinuteBars,
     externalBuySideLiquidityTarget:
       structuralTargetLabel(multiTimeframeContext.targetMap.nearestUpsideLiquidity) ||
@@ -839,13 +988,13 @@ export function buildNinjaChartContext({
   const timeframeMssEvidence = buildMultiTimeframeMssEvidenceLayer({
     barsByTimeframe: {
       '5M': htfFiveMinuteBars,
-      '15M': bars15m,
-      '60M': bars60m,
-      '120M': bars120m,
-      '240M': bars240m,
+      '15M': normalizedBars15m,
+      '60M': normalizedBars60m,
+      '120M': normalizedBars120m,
+      '240M': normalizedBars240m,
     },
-    asOfTimestamp: last.time,
-    barTimestampMode,
+    asOfTimestamp: asOfCompletedTimestamp,
+    barTimestampMode: 'open',
     barTimeZone,
   });
 
@@ -925,6 +1074,12 @@ export function buildNinjaChartContext({
     riskReadConfidence: confidence,
     entryStopConfidence: 'Medium',
     requiresManualConfirmation: false,
+    extractionWarnings: normalizationWarnings.length
+      ? {
+        timeframeUnverified: true,
+        messages: normalizationWarnings,
+      }
+      : undefined,
     sessionLevelContext,
     sessionStory,
     multiTimeframeContext,

@@ -2,6 +2,181 @@
 
 ## Latest Change
 
+Date: 2026-06-09
+Task: Harden bridge timestamp normalization for out-of-order, duplicate, and gapped bars.
+Files changed: docs/PROJECT_STATUS.md, src/lib/ninjaTraderBridge.ts, src/lib/localScannerEngine.test.ts.
+Reason: User requested fixing the remaining caveat where badly ordered bars or large missing chunks still depended only on existing data-quality/backfill checks.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed.
+Trading logic changed: Yes. The bridge-to-ChartContext normalizer now sorts bars by resolved normalized timestamp, repairs mixed open/close timestamp interpretation, collapses duplicate normalized timestamps deterministically, and emits explicit ChartContext extraction warnings for missing timeframe gaps before setup engines consume OHLC facts. It still does not synthesize missing candles.
+Bridge impact: No bridge API/fetch behavior changed. Raw bridge payloads remain unchanged; app-owned ChartContext consumes the repaired internal OHLC stream.
+Discord impact: Indirect. Scanner/Discord context can now surface data-quality gap warnings instead of silently evaluating a broken candle sequence as clean.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Missing bars are reported, not fabricated. If a strategy requires uninterrupted 5M sequence proof, the existing completed-bar, HTF sufficiency, and backfill/repair paths remain responsible for obtaining the missing market_bars history before promotion.
+Next recommended action: On the next live scanner cycle, confirm any timestamp normalization warnings are absent during normal operation; if present, repair/backfill market_bars before relying on HTF structural reads.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Normalize mixed bridge timestamp modes before OHLC engines consume bars.
+Files changed: docs/PROJECT_STATUS.md, src/lib/ninjaTraderBridge.ts, src/lib/localScannerEngine.test.ts.
+Reason: User requested fixing the remaining caveat where a live feed mixing open-time and close-time timestamps within the same candle stream would be better handled upstream than by downstream MSS stop matching.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed.
+Trading logic changed: Yes. `buildNinjaChartContext` now normalizes bridge bars into a canonical open-time internal OHLC stream before building candles, FVGs, displacement, HTF context, session levels, and timeframe MSS evidence. The normalizer is sequence-aware: it favors the configured bridge timestamp mode but can repair isolated mixed open/close bars when 5M/15M/60M/120M/240M spacing proves the alternate interpretation. Timeframe MSS evidence is then built from normalized open-time bars with a completed as-of timestamp.
+Bridge impact: No bridge fetch/recorder API change. Internal app-owned ChartContext consumes normalized bars; raw bridge calls still return the bridge payload unchanged.
+Discord impact: Indirect. Cleaner normalized OHLC can prevent false watch/conditional demotions caused only by mixed timestamp modes.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: This is sequence-based repair, not a substitute for a correct bridge setting. If bars arrive out of chronological order or with large missing chunks, the desk still depends on existing data-quality checks and should repair/backfill from `market_bars`.
+Next recommended action: On the next live scanner cycle, confirm the ChartContext candle timestamps form a clean 5M sequence and the timeframeMssEvidence reports `barTimestampMode=open` internally.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Make protected 5M MSS swing-stop timestamp proof open/close-mode aware.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
+Reason: User requested fixing the remaining caveat where MSS-continuation plans would stay watch/conditional if live bridge evidence timestamps did not exactly equal scanner completed 5M candle timestamps.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed.
+Trading logic changed: Yes. Protected 5M MSS swing-stop proof now matches the evidence timestamp against exact completed candle timestamps and the alternate 5M open/close timestamp interpretation declared by timeframeMssEvidence.barTimestampMode. This lets a close-time MSS evidence timestamp align with an open-time completed 5M scanner candle, and vice versa, while preserving confirmed MSS, completed candle, direction, and protected pre-MSS swing requirements.
+Bridge impact: None. No bridge fetch, recorder, or schema behavior changed.
+Discord impact: Indirect. MSS-continuation candidates that were previously stuck as watch/conditional only due to open/close timestamp-mode mismatch can now show structure stop, app targets, and human-review status when all other proof is clean.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Exact timestamp matches still take precedence. If a live feed mixes open-time and close-time bars in the same candle array, the desk should normalize the bridge timestamp mode upstream; this patch only prevents clean one-bar open/close offset mismatches from blocking protected swing proof.
+Next recommended action: Watch the next live MSS-continuation alert and confirm the 5M MSS evidence timestamp, selected protected swing, and stop align with the chart.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Remove duplicated-evidence dependency for Intraday MSS watch surfacing.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts.
+Reason: User requested fixing the remaining caveat where the watch stayed quiet if upstream code did not attach both aligned 15M/5M MSS evidence text and a named line in the sand, even though the app-owned candidate already had structured MSS/FVG facts.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed.
+Trading logic changed: Yes. IntradayMssMicroContinuation now derives a deterministic line in the sand from the structured 5M FVG/retest boundary when no HTF/session obstacle line is available, and scanner selection trusts the app-owned pending Intraday MSS candidate state instead of requiring duplicated evidence text. It remains canExecute=false and still requires structured 15M/5M MSS plus structured 5M FVG facts before a watch can exist.
+Bridge impact: None. Uses existing structured ChartContext, timeframeMssEvidence, and FVG facts.
+Discord impact: Yes. Pending IntradayMssMicroContinuation watches can surface when the scanner has app-owned structured proof and a derived FVG decision line, instead of being suppressed as missing duplicated evidence/reference text.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: The desk still will not invent a watch. If structured 15M/5M MSS evidence or a directional 5M FVG is missing, the scanner remains quiet and reports the setup as unavailable.
+Next recommended action: Observe the next live aligned 15M/5M MSS watch and confirm Discord names the FVG-derived line, explains why it matters, says no chase, and keeps canExecute false.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Require proven protected 5M MSS swing stops for MSS-continuation models.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
+Reason: User requested fixing the remaining risk where missing 5M MSS evidence, timestamp mismatch, or no confirmed protected swing would fall back to the prior proposed/FVG stop source.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: Yes. IntradayMssMicroContinuation and HtfDisplacementMssContinuation no longer use proposed/FVG fallback stops when the protected 5M MSS swing stop cannot be proven. Missing 5M MSS evidence, non-confirmed status, direction mismatch, invalid/misaligned evidence timestamp, or missing protected pre-MSS swing now blocks stop/targets and keeps the model conditional/watch rather than human-review-ready or executable.
+Bridge impact: None. Uses existing structured 5M candles and timeframeMssEvidence timestamps.
+Discord impact: Indirect. Watch/conditional alerts can now explain the protected 5M MSS swing-stop blocker instead of showing a fallback stop.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: This is stricter. Any live bridge timestamp-mode mismatch or sparse completed 5M candle history will prevent MSS-continuation stop/target promotion until the protected swing can be proven.
+Next recommended action: Observe the next live MSS-continuation watch and confirm the bridge publishes the 5M MSS evidence timestamp on the completed 5M candle used by the scanner.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Promote pending Intraday MSS Micro Continuation to Discord watch when aligned MSS and named line are present.
+Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts.
+Reason: User requested a global fix so IntradayMssMicroContinuation counts as an approved active human-review model when 15M/5M MSS align and a named line in the sand exists, even before the completed 5M retest/hold confirms the full plan.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: Yes. MSS_CONTINUATION_RETEST_PENDING can now surface as a conditional Discord watch alert when it has aligned 15M/5M MSS and a named HTF/session line in the sand. It remains canExecute=false and still requires a completed 5M hold/retest before human-review plan promotion.
+Bridge impact: None. Uses already-built structured candidates and existing OHLC-derived evidence.
+Discord impact: Yes. Pending IntradayMssMicroContinuation watches can publish with line-in-the-sand, no-chase, and completed 5M hold/retest language instead of being suppressed as no candidate/reference.
+Journal/RAG impact: Additive alert visibility only; no schema change.
+Supabase impact: No migration added.
+Known risks: Watch alerts still depend on upstream candidate construction publishing aligned MSS evidence and an activeRuleset HTF line; if either is missing, the scanner remains quiet rather than inventing a watch.
+Next recommended action: Observe the next live aligned 15M/5M MSS watch and confirm Discord says the line, why it matters, no chase, and completed 5M hold/retest required.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Tie active MSS continuation stops to the protected 5M MSS swing.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
+Reason: User approved making 5M MSS stop logic active: shorts stop above the protected 5M swing high plus one tick, and longs stop below the protected 5M swing low minus one tick. The stop must not be tied to the MSS close.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit; npm run test; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed.
+Trading logic changed: Yes. IntradayMssMicroContinuation and HtfDisplacementMssContinuation now prefer the protected 5M MSS swing stop when confirmed directional 5M MSS evidence and a completed 5M swing are available. FVG/retest/proposed stops remain fallback sources when the MSS swing stop cannot be proven.
+Bridge impact: None. Uses existing structured 5M candles and timeframe MSS evidence.
+Discord impact: Additive evidence wording can state the protected 5M MSS swing stop and that it is not tied to the MSS close.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: If 5M MSS evidence is missing, timestamp alignment fails, or no confirmed protected swing is available, the model falls back to the prior stop source.
+Next recommended action: Observe the next live MSS continuation alert and confirm the Discord plan shows the protected 5M MSS swing stop clearly.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Add ActiveCampaign Close-Through v6 research audit for meaningful HTF failed-auction line validation.
+Files changed: tools/automation/active-campaign-close-through-audit.ts, tools/automation/replay-diagnostics/active-campaign-close-through-audit-v6-2026-05-10-to-2026-06-09.json, tools/automation/replay-diagnostics/active-campaign-close-through-audit-v6-2026-05-10-to-2026-06-09.md, tools/automation/replay-diagnostics/active-campaign-close-through-audit-v5-cacheonly-2026-05-10-to-2026-06-09.json, tools/automation/replay-diagnostics/active-campaign-close-through-audit-v5-cacheonly-2026-05-10-to-2026-06-09.md.
+Reason: Test whether failed-auction catalyst credit improves when the swept HTF high/low must be a confirmed HTF swing level instead of merely a recent HTF bar extreme.
+Tests run: npx tsx tools/automation/active-campaign-close-through-audit.ts --mode v6 --instrument MES --bridge-instrument "MES 06-26" --from-date 2026-05-10 --to-date 2026-06-09 --skip-bridge; npx tsx tools/automation/active-campaign-close-through-audit.ts --mode v5 --instrument MES --bridge-instrument "MES 06-26" --from-date 2026-05-10 --to-date 2026-06-09 --skip-bridge; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Cache-only V6 found 9 campaigns, 3 T1, 6 stops, $31.25 gross one-MES P/L. Cache-only coverage was limited to 5M bars through 2026-05-14, so the bridge-repaired full-window run still needs a faster data loading path before treating V6 as a full 30-day result.
+Trading logic changed: No.
+Bridge impact: None. Research runner only; live bridge behavior unchanged.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: Full bridge-repaired V6 audit timed out before writing artifacts. Cache-only artifacts are not a full 30-day proof because market_bars 5M coverage ended at 2026-05-14 in that run.
+Next recommended action: Optimize the research audit loader or pre-backfill the full 30-day 5M/15M/60M/120M/240M cache, then rerun V6 bridge-repaired before considering active scanner promotion.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Add failed HTF auction recognition to ActiveCampaign evidence.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/types.ts.
+Reason: User asked to fix the desk missing a 60M-style reversal where price failed at a named higher-timeframe line, instead of reducing HTF context to only MSS support/conflict.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. ActiveCampaign now includes confirmed failed-auction evidence when structured OHLC/failed-break facts show price sweeping a named HTF/session line and completing back through it. The June 9-style regression proves the failed-auction layer can support a short campaign while still preserving opposing 60M/120M MSS as visible conflict/caution and keeping execution non-executable without the existing gates.
+Trading logic changed: Yes. ActiveCampaign now records a structured `HTF_FAILED_AUCTION_REJECTION` evidence layer when completed structured OHLC or failed-break facts show price swept a named HTF/session line and closed back through it. This can support the active campaign relationship and confidence context, but it does not approve execution or bypass 5M trigger, stop, risk, invalidation, target, session, or canExecute gates.
+Bridge impact: None. Uses existing structured chart context, failed-break events, and OHLC candles already supplied by NinjaTrader/market_bars paths.
+Discord impact: Additive campaign evidence can appear in scanner/Discord plan context when the active candidate is otherwise eligible.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Failed-auction recognition depends on structured HTF/session levels being present and named; if the bridge/market map does not publish the line, the detector will not invent it from narrative.
+Next recommended action: Review the first live June 9-style rejection alert for wording and level selection, especially whether the bridge publishes the same named HTF line the chart trader is watching.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Add Turtle Soup watch surfacing and direction-aware no-chase review.
+Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts.
+Reason: User asked to fix the June 9 short miss where a Turtle Soup short was forming before full promotion, but the scanner either suppressed it as developing context or let an old opposite-direction LONG early-move review muddy the SHORT review.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit.
+Result: Passed. The selector can now surface a cloned, decision-support-only Turtle Soup watch candidate when the raw Turtle Soup candidate has entry, stop, and T1 but is still blocked by `InvalidStopLocation`. The watch states the line in the sand, completed 5M close condition, stop side, and no-chase warning if T1 is already reached. Early-move/no-chase review is now direction-aware, so an old LONG early-move review does not suppress or explain a SHORT candidate.
+Trading logic changed: No executable approval change. This changes scanner alert selection/watch surfacing only; it does not alter setup detection, entry/stop/target/risk math, model approval gates, bridge reads, or canExecute.
+Bridge impact: None.
+Discord impact: Yes. Turtle Soup watch candidates can now be eligible as conditional decision-support alerts before full promotion, and stale review language is kept direction-aware.
+Journal/RAG impact: Additive alert visibility only; no schema change.
+Supabase impact: No migration added.
+Known risks: This is a watch-surfacing layer. A live session should confirm the Discord payload language remains clearly conditional and does not read as executable before completed 5M confirmation.
+Next recommended action: Observe the next Turtle Soup watch cycle and confirm the Discord card says completed 5M close required, no chase, and canExecute remains false.
+
+## Previous Change
+
+Date: 2026-06-09
+Task: Keep human-review-ready scanner plans eligible for Discord when no-chase review is active.
+Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts.
+Reason: User asked why the June 9 morning OpeningDriveFvgContinuation human-review short was not pushed to Discord. Investigation showed `earlyMoveReview.status=already_triggered_no_fresh_entry` caused the scanner selection layer to discard the `HUMAN_REVIEW_READY` candidate and classify the tick as `Missed` with confidence 0, so Discord publishing was suppressed even though the formatter already supports decision-support human-review cards.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The selector now preserves a Discord human-review-eligible fallback candidate as `Conditional` when early-move/no-chase review is active, while keeping the review status as `already_triggered_no_fresh_entry` and preserving `canExecute=false`. Ordinary stale executable plans still become `Missed`, and early moves with no valid app-owned candidate remain context-only.
+Trading logic changed: No. This does not alter setup detection, entry/stop/target/risk math, model approval gates, bridge reads, or canExecute. It only changes Discord alert selection for already-built human-review-ready decision-support candidates.
+Bridge impact: None.
+Discord impact: Yes. Human-review-ready candidates can now be posted as conditional review cards even when no-chase review warns that price is not a fresh chase entry.
+Journal/RAG impact: Additive alert visibility only; no schema change.
+Supabase impact: No migration added.
+Known risks: The live June 9 10:05 opportunity was already stale by the time this patch was applied; the fix is for the next qualifying scanner tick/campaign and does not retroactively force-send stale historical cards.
+Next recommended action: Keep the scanner running through the next completed 5M cycle and confirm any future `HUMAN_REVIEW_READY` candidate produces a conditional Discord card with no execution language.
+
+## Previous Change
+
 Date: 2026-06-08
 Task: Apply and preflight the durable ActiveCampaign Supabase ledger.
 Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/start-discord-alerts.ps1.

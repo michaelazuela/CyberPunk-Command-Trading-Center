@@ -80,6 +80,287 @@ assert.equal(contextOnlyEarlyMoveSelection.reviewStatus, 'early_move_review_no_v
 assert.equal(contextOnlyEarlyMoveSelection.stale.stale, false);
 assert.ok(contextOnlyEarlyMoveSelection.auditWarnings.some((warning) => warning.includes('context only')));
 
+const humanReviewOpeningDrive = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  direction: 'SHORT',
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'HUMAN_REVIEW_READY',
+  entry: 7472.75,
+  stop: 7491.25,
+  target1: 7445,
+  target2: 7435.75,
+  riskPoints: 18.5,
+  humanReview: {
+    status: 'HumanReviewReady',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: true,
+    reason: 'Opening-drive FVG continuation is structurally qualified for human review.',
+  },
+});
+const humanReviewEarlyMoveSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    setupCandidates: [humanReviewOpeningDrive],
+    earlyMoveReview: { status: 'already_triggered_no_fresh_entry', action: 'No fresh chase entry; human review only.' },
+  } as any,
+  currentPrice: 7463.5,
+});
+assert.equal(humanReviewEarlyMoveSelection.stateForAlert, 'Conditional');
+assert.equal(humanReviewEarlyMoveSelection.candidate, humanReviewOpeningDrive);
+assert.equal(humanReviewEarlyMoveSelection.reviewStatus, 'already_triggered_no_fresh_entry');
+assert.equal(humanReviewEarlyMoveSelection.stale.stale, false);
+assert.ok(humanReviewEarlyMoveSelection.auditWarnings.some((warning) => warning.includes('canExecute remains false')));
+assert.equal(
+  shouldSendScannerAlert({
+    state: humanReviewEarlyMoveSelection.stateForAlert,
+    confidence: 100,
+    window: resolveScannerWindow(new Date('2026-06-09T10:05:00-04:00')),
+    candidate: humanReviewEarlyMoveSelection.candidate,
+    stale: humanReviewEarlyMoveSelection.stale.stale,
+  }).shouldSend,
+  true,
+);
+
+const turtleSoupShortWatch = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Turtle Soup SHORT',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Blocked,
+  executionStatus: ExecutionStatus.Blocked,
+  entry: 7451.25,
+  stop: 7456,
+  target1: 7441.5,
+  target2: 7437.25,
+  riskPoints: 4.75,
+  blockReason: NoTradeReason.InvalidStopLocation,
+  requiredTrigger: null,
+  nextAction: 'Waiting for completed 5M confirmation.',
+  evidence: ['Buy-side sweep and reclaim context present.'],
+});
+const turtleSoupWatchSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [turtleSoupShortWatch],
+  } as any,
+  currentPrice: 7462,
+});
+assert.equal(turtleSoupWatchSelection.stateForAlert, 'Conditional');
+assert.notEqual(turtleSoupWatchSelection.candidate, turtleSoupShortWatch);
+assert.equal(turtleSoupWatchSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(turtleSoupWatchSelection.candidate?.direction, 'SHORT');
+assert.equal(turtleSoupWatchSelection.candidate?.executionStatus, ExecutionStatus.Conditional);
+assert.equal(turtleSoupWatchSelection.candidate?.blockReason, null);
+assert.equal(turtleSoupShortWatch.executionStatus, ExecutionStatus.Blocked);
+assert.equal(turtleSoupShortWatch.blockReason, NoTradeReason.InvalidStopLocation);
+assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('Line in the sand is 7451.25'));
+assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('completed 5M close below'));
+assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('stop above 7456'));
+assert.ok(turtleSoupWatchSelection.candidate?.requiredTrigger?.includes('No chase if T1 7441.5 is already reached'));
+assert.equal(turtleSoupWatchSelection.reviewStatus, null);
+assert.equal(turtleSoupWatchSelection.stale.stale, false);
+assert.equal(
+  shouldSendScannerAlert({
+    state: turtleSoupWatchSelection.stateForAlert,
+    confidence: 78,
+    window: resolveScannerWindow(new Date('2026-06-09T10:10:00-04:00')),
+    candidate: turtleSoupWatchSelection.candidate,
+    stale: turtleSoupWatchSelection.stale.stale,
+  }).shouldSend,
+  true,
+);
+
+const turtleSoupWatchWithOppositeEarlyMove = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [turtleSoupShortWatch],
+    earlyMoveReview: {
+      status: 'already_triggered_no_fresh_entry',
+      direction: 'LONG',
+      action: 'Old long move is extended; no fresh long entry.',
+    },
+  } as any,
+  currentPrice: 7462,
+});
+assert.equal(turtleSoupWatchWithOppositeEarlyMove.stateForAlert, 'Conditional');
+assert.equal(turtleSoupWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT');
+assert.equal(turtleSoupWatchWithOppositeEarlyMove.reviewStatus, null);
+assert.ok(turtleSoupWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
+
+const intradayMssLongWatch = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Possible,
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+  entry: null,
+  stop: 7352.75,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  modelConfidenceScore: 58,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  humanReview: {
+    status: 'OpeningObservationArmed',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: false,
+    reason: 'Intraday MSS micro-continuation watch is active; wait for completed 5M hold/retest.',
+  },
+  activeCampaign: {
+    id: '2026-06-09:LONG:15M5M-MSS',
+    source: 'app_owned_structured_ohlc',
+    authority: 'campaign_context_only_not_execution_authority',
+    status: 'watch',
+    direction: 'LONG',
+    primaryTrigger: '15M_5M_MSS',
+    executionTimeframe: '5M',
+    htfRelationship: 'support',
+    confidenceAdjustment: 6,
+    evidenceLayers: [],
+    htfSupportTimeframes: [],
+    htfConflictTimeframes: [],
+    obstacleMap: {
+      lineInSand: 7361,
+      reason: '7361.00 matters because it is the nearest structured HTF/session resistance in the trade path.',
+      role: 'management_obstacle',
+      caution: 'Do not chase; wait for acceptance.',
+    },
+    deDuplication: {
+      oneTradePerCampaignRecommended: true,
+      enforced: true,
+      resetPolicy: 'trade_date_direction_campaign',
+    },
+    notes: ['5M remains execution authority.'],
+  },
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'LONG',
+      lineInSand: 7361,
+      lineReason: '7361.00 matters because it is the nearest structured HTF/session resistance in the trade path.',
+      requiredClose: 'Completed 5M or 15M close above 7361.00 required before long continuation is active.',
+      obstacleType: 'resistance',
+      obstacleSource: 'ninjatrader',
+      evidence: ['Global HTF line-in-the-sand rule: 7361.00 matters.'],
+      blockers: ['No chase: wait for completed close above 7361.00.'],
+    },
+  },
+  evidence: [
+    'Bullish 15M MSS confirmed from NinjaTrader OHLC timeframe evidence',
+    'Bullish 5M MSS confirmed from NinjaTrader OHLC timeframe evidence',
+    '5M FVG / imbalance zone: 7359.25-7361.00',
+    'No chase: the model requires a completed 5M retest/rejection or completed acceptance beyond the HTF line in the sand.',
+  ],
+  missingEvidence: ['Bullish micro-continuation pending: wait for a completed 5M candle to retest the bullish FVG and close back above the upper boundary.'],
+});
+const intradayMssWatchSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [intradayMssLongWatch],
+  } as any,
+  currentPrice: 7366,
+});
+assert.equal(intradayMssWatchSelection.stateForAlert, 'Conditional');
+assert.notEqual(intradayMssWatchSelection.candidate, intradayMssLongWatch);
+assert.equal(intradayMssWatchSelection.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(intradayMssWatchSelection.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+assert.equal(intradayMssWatchSelection.candidate?.blockReason, null);
+assert.equal(intradayMssWatchSelection.candidate?.humanReview?.canExecute, false);
+assert.equal(intradayMssWatchSelection.candidate?.humanReview?.discordTradePlanEligible, true);
+assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Long MSS forming'));
+assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Line is 7359.25-7361.00 / HTF line 7361.00'));
+assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('completed 5M hold/retest above'));
+assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('do not chase'));
+assert.equal(intradayMssWatchSelection.reviewStatus, null);
+assert.equal(intradayMssWatchSelection.stale.stale, false);
+assert.equal(
+  shouldSendScannerAlert({
+    state: intradayMssWatchSelection.stateForAlert,
+    confidence: 50,
+    window: resolveScannerWindow(new Date('2026-06-09T14:45:00-04:00')),
+    candidate: intradayMssWatchSelection.candidate,
+    stale: intradayMssWatchSelection.stale.stale,
+  }).shouldSend,
+  true,
+);
+
+const intradayMssWatchWithoutDuplicatedEvidence = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Possible,
+  executionStatus: ExecutionStatus.Conditional,
+  pathway: 'intraday_mss_micro_continuation',
+  candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+  entry: null,
+  stop: 7352.75,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  modelConfidenceScore: 58,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  humanReview: {
+    status: 'OpeningObservationArmed',
+    canExecute: false,
+    requiresTraderConfirmation: true,
+    discordTradePlanEligible: false,
+    reason: 'Intraday MSS micro-continuation watch is active; wait for completed 5M hold/retest.',
+  },
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'LONG',
+      lineInSand: 7361,
+      lineReason: '7361.00 matters because it is the structured 5M FVG/retest decision boundary.',
+      requiredClose: 'Completed 5M or 15M close above 7361.00 required before long continuation is active.',
+      obstacleType: 'imbalance_zone',
+      obstacleSource: 'app',
+      evidence: ['Global HTF line-in-the-sand rule: 7361.00 matters.'],
+      blockers: ['No chase: wait for completed close above 7361.00.'],
+    },
+  },
+  evidence: ['5M FVG / imbalance zone: 7359.25-7361.00'],
+  missingEvidence: ['Completed 5M hold/retest above the named line still required.'],
+});
+const intradayMssWatchWithoutDuplicatedEvidenceSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [intradayMssWatchWithoutDuplicatedEvidence],
+  } as any,
+  currentPrice: 7366,
+});
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.stateForAlert, 'Conditional');
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.blockReason, null);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.humanReview?.canExecute, false);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.humanReview?.discordTradePlanEligible, true);
+assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('Long MSS forming'));
+assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('Line is 7359.25-7361.00 / HTF line 7361.00'));
+assert.ok(intradayMssWatchWithoutDuplicatedEvidenceSelection.candidate?.requiredTrigger?.includes('completed 5M hold/retest above'));
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.reviewStatus, null);
+assert.equal(intradayMssWatchWithoutDuplicatedEvidenceSelection.stale.stale, false);
+
 const blockedPlanCandidate = candidate({
   executionStatus: ExecutionStatus.Blocked,
   blockReason: NoTradeReason.InvalidStopLocation,
@@ -253,13 +534,16 @@ const tenOhFiveSelection = selectScannerPlan({
   currentPrice: morningMoveBars[7].close,
 });
 assert.notEqual(tenOhFiveSelection.stateForAlert, 'Approved');
-assert.notEqual(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.stateForAlert, 'Executable');
+assert.equal(tenOhFiveSelection.candidate?.direction, 'SHORT');
+assert.ok(tenOhFiveSelection.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 
 const tenFifteenMovePlan = normalizedFromMorningMoveThrough(9);
 const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
-assert.equal(tenFifteenSelection.candidate, null);
-assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
+assert.equal(tenFifteenSelection.stateForAlert, 'Conditional');
+assert.equal(tenFifteenSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(tenFifteenSelection.reviewStatus, null);
+assert.equal(tenFifteenSelection.stale.stale, false);

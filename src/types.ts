@@ -871,6 +871,7 @@ export interface ActiveCampaignEvidenceLayer {
   layer:
     | '15M_5M_MSS_CAMPAIGN'
     | 'HTF_MSS_DISPLACEMENT_SUPPORT'
+    | 'HTF_FAILED_AUCTION_REJECTION'
     | 'HTF_OBSTACLE_TARGET_MAP'
     | '5M_FVG_EXECUTION_TRIGGER';
   status: 'confirmed' | 'present' | 'pending' | 'caution' | 'conflict' | 'data_limited' | 'missing';

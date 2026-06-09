@@ -1,0 +1,608 @@
+{
+  "generatedAt": "2026-06-09T18:34:03.702Z",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "fromDate": "2026-05-10",
+  "toDate": "2026-06-09",
+  "mode": "v6",
+  "dataSources": [
+    {
+      "timeframe": "5m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T08:20:00",
+      "source": "market_bars",
+      "barsLoaded": 1000
+    },
+    {
+      "timeframe": "15m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:15:00",
+      "rangeEnd": "2026-05-25T19:00:00",
+      "source": "market_bars",
+      "barsLoaded": 1000
+    },
+    {
+      "timeframe": "60m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T11:05:00",
+      "source": "market_bars",
+      "barsLoaded": 1000
+    },
+    {
+      "timeframe": "120m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T20:00:00",
+      "rangeEnd": "2026-05-17T19:15:00",
+      "source": "market_bars",
+      "barsLoaded": 1000
+    },
+    {
+      "timeframe": "240m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T11:05:00",
+      "source": "market_bars",
+      "barsLoaded": 1000
+    }
+  ],
+  "summary": {
+    "trades": 9,
+    "longs": 5,
+    "shorts": 4,
+    "t1": 3,
+    "t2": 0,
+    "stop": 6,
+    "none": 0,
+    "ambiguous": 0,
+    "grossMesProfitLossExAmbiguous": 31.25,
+    "excludedByMode": 0
+  },
+  "dailySummary": [
+    {
+      "tradeDate": "2026-05-11",
+      "trades": 4,
+      "t1": 0,
+      "t2": 0,
+      "stop": 4,
+      "none": 0,
+      "ambiguous": 0,
+      "pnl": -235
+    },
+    {
+      "tradeDate": "2026-05-12",
+      "trades": 2,
+      "t1": 1,
+      "t2": 0,
+      "stop": 1,
+      "none": 0,
+      "ambiguous": 0,
+      "pnl": 93.75
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "trades": 3,
+      "t1": 2,
+      "t2": 0,
+      "stop": 1,
+      "none": 0,
+      "ambiguous": 0,
+      "pnl": 172.5
+    }
+  ],
+  "candidates": [
+    {
+      "tradeDate": "2026-05-11",
+      "timestamp": "2026-05-11T10:30:00",
+      "session": "morning",
+      "direction": "SHORT",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7430.5,
+      "lineReason": "Completed 5M close below prior protected swing low.",
+      "htfStory": "15M displacement/close-through supports SHORT. 60M displacement/close-through supports SHORT. 240M displacement/close-through supports SHORT.",
+      "htfSupport": [
+        "15M displacement/close-through supports SHORT.",
+        "60M displacement/close-through supports SHORT.",
+        "240M displacement/close-through supports SHORT."
+      ],
+      "htfCaution": [
+        "120M recent displacement opposes SHORT."
+      ],
+      "managementNotes": [
+        "HTF caution/obstacle context present: do not erase the trade; use the named line and first app target for management.",
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_HIGH_7429.75_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_120M_HIGH_7420.50_USED_AS_T1_MANAGEMENT.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "15M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_HIGH_7429.75_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_120M_HIGH_7420.50_USED_AS_T1_MANAGEMENT"
+      ],
+      "catalystScore": 4,
+      "catalystScoreBreakdown": [
+        "15M displacement +1",
+        "60M displacement +1",
+        "240M displacement +2"
+      ],
+      "entry": 7430.25,
+      "stop": 7437.5,
+      "riskPoints": 7.25,
+      "target1": 7419.5,
+      "target2": 7415.75,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7437.5,
+        "points": -7.25,
+        "mesProfitLossDollars": -36.25,
+        "maxFavorablePoints": 8.75,
+        "maxAdversePoints": 7.75
+      },
+      "structure": {
+        "priorSwingHigh": 7437.25,
+        "priorSwingLow": 7430.5,
+        "stopSwing": 7437.25,
+        "mssClose": 7430.25
+      }
+    },
+    {
+      "tradeDate": "2026-05-11",
+      "timestamp": "2026-05-11T10:55:00",
+      "session": "morning",
+      "direction": "LONG",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7437.25,
+      "lineReason": "Completed 5M close above prior protected swing high.",
+      "htfStory": "60M displacement/close-through supports LONG. 120M displacement/close-through supports LONG. 240M displacement/close-through supports LONG.",
+      "htfSupport": [
+        "60M displacement/close-through supports LONG.",
+        "120M displacement/close-through supports LONG.",
+        "240M displacement/close-through supports LONG."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_HIGH_7436.75_ACCEPTED_THROUGH, HTF_OBSTACLE_60M_HIGH_7437.00_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_HIGH_7437.25_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_HIGH_7437.00_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_HIGH_7436.75_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_60M_HIGH_7437.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_HIGH_7437.25_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_HIGH_7437.00_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 5,
+      "catalystScoreBreakdown": [
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7444.25,
+      "stop": 7421.25,
+      "riskPoints": 23,
+      "target1": 7478.75,
+      "target2": 7490.25,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7421.25,
+        "points": -23,
+        "mesProfitLossDollars": -115,
+        "maxFavorablePoints": 9.75,
+        "maxAdversePoints": 23.5
+      },
+      "structure": {
+        "priorSwingHigh": 7437.25,
+        "priorSwingLow": 7421.5,
+        "stopSwing": 7421.5,
+        "mssClose": 7444.25
+      }
+    },
+    {
+      "tradeDate": "2026-05-11",
+      "timestamp": "2026-05-11T12:45:00",
+      "session": "lunch",
+      "direction": "SHORT",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7445.5,
+      "lineReason": "Completed 5M close below prior protected swing low.",
+      "htfStory": "15M displacement/close-through supports SHORT. 60M displacement/close-through supports SHORT. 240M displacement/close-through supports SHORT.",
+      "htfSupport": [
+        "15M displacement/close-through supports SHORT.",
+        "60M displacement/close-through supports SHORT.",
+        "240M displacement/close-through supports SHORT."
+      ],
+      "htfCaution": [
+        "120M recent displacement opposes SHORT."
+      ],
+      "managementNotes": [
+        "HTF caution/obstacle context present: do not erase the trade; use the named line and first app target for management.",
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_LOW_7446.00_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_HIGH_7437.25_USED_AS_T1_MANAGEMENT.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "15M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_LOW_7446.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_HIGH_7437.25_USED_AS_T1_MANAGEMENT"
+      ],
+      "catalystScore": 4,
+      "catalystScoreBreakdown": [
+        "15M displacement +1",
+        "60M displacement +1",
+        "240M displacement +2"
+      ],
+      "entry": 7443,
+      "stop": 7450,
+      "riskPoints": 7,
+      "target1": 7432.5,
+      "target2": 7429,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7450,
+        "points": -7,
+        "mesProfitLossDollars": -35,
+        "maxFavorablePoints": 8.5,
+        "maxAdversePoints": 7.5
+      },
+      "structure": {
+        "priorSwingHigh": 7449.75,
+        "priorSwingLow": 7445.5,
+        "stopSwing": 7449.75,
+        "mssClose": 7443
+      }
+    },
+    {
+      "tradeDate": "2026-05-11",
+      "timestamp": "2026-05-11T13:30:00",
+      "session": "lunch",
+      "direction": "LONG",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7443,
+      "lineReason": "Completed 5M close above prior protected swing high.",
+      "htfStory": "15M displacement/close-through supports LONG. 60M displacement/close-through supports LONG. 120M displacement/close-through supports LONG. 240M displacement/close-through supports LONG.",
+      "htfSupport": [
+        "15M displacement/close-through supports LONG.",
+        "60M displacement/close-through supports LONG.",
+        "120M displacement/close-through supports LONG.",
+        "240M displacement/close-through supports LONG."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_OPEN_7449.25_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_60M_HIGH_7442.50_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_HIGH_7449.75_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_240M_HIGH_7442.50_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "HTF_FAILED_AUCTION_60M_LOW_7434.50",
+        "HTF_FAILED_AUCTION_240M_LOW_7434.50",
+        "15M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_OPEN_7449.25_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_60M_HIGH_7442.50_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_HIGH_7449.75_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_240M_HIGH_7442.50_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 8.5,
+      "catalystScoreBreakdown": [
+        "60M failed auction +0.5",
+        "240M failed auction +2",
+        "15M displacement +1",
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7444,
+      "stop": 7434.25,
+      "riskPoints": 9.75,
+      "target1": 7458.75,
+      "target2": 7463.5,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7434.25,
+        "points": -9.75,
+        "mesProfitLossDollars": -48.75,
+        "maxFavorablePoints": 10,
+        "maxAdversePoints": 12.75
+      },
+      "structure": {
+        "priorSwingHigh": 7443,
+        "priorSwingLow": 7434.5,
+        "stopSwing": 7434.5,
+        "mssClose": 7444
+      }
+    },
+    {
+      "tradeDate": "2026-05-12",
+      "timestamp": "2026-05-12T12:35:00",
+      "session": "lunch",
+      "direction": "SHORT",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7370.75,
+      "lineReason": "Completed 5M close below prior protected swing low.",
+      "htfStory": "60M displacement/close-through supports SHORT. 120M displacement/close-through supports SHORT. 240M displacement/close-through supports SHORT.",
+      "htfSupport": [
+        "60M displacement/close-through supports SHORT.",
+        "120M displacement/close-through supports SHORT.",
+        "240M displacement/close-through supports SHORT."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_LOW_7368.75_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_60M_LOW_7370.75_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_LOW_7370.75_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_LOW_7370.75_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_LOW_7368.75_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_60M_LOW_7370.75_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_LOW_7370.75_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_LOW_7370.75_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 5,
+      "catalystScoreBreakdown": [
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7370.5,
+      "stop": 7380.25,
+      "riskPoints": 9.75,
+      "target1": 7356,
+      "target2": 7351,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7380.25,
+        "points": -9.75,
+        "mesProfitLossDollars": -48.75,
+        "maxFavorablePoints": 7,
+        "maxAdversePoints": 16
+      },
+      "structure": {
+        "priorSwingHigh": 7380,
+        "priorSwingLow": 7370.75,
+        "stopSwing": 7380,
+        "mssClose": 7370.5
+      }
+    },
+    {
+      "tradeDate": "2026-05-12",
+      "timestamp": "2026-05-12T13:20:00",
+      "session": "lunch",
+      "direction": "LONG",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7379.25,
+      "lineReason": "Completed 5M close above prior protected swing high.",
+      "htfStory": "15M displacement/close-through supports LONG. 60M displacement/close-through supports LONG. 120M displacement/close-through supports LONG. 240M displacement/close-through supports LONG.",
+      "htfSupport": [
+        "15M displacement/close-through supports LONG.",
+        "60M displacement/close-through supports LONG.",
+        "120M displacement/close-through supports LONG.",
+        "240M displacement/close-through supports LONG."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_HIGH_7379.25_ACCEPTED_THROUGH, HTF_OBSTACLE_60M_HIGH_7379.25_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_HIGH_7379.25_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_HIGH_7379.25_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "15M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_HIGH_7379.25_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_60M_HIGH_7379.25_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_HIGH_7379.25_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_HIGH_7379.25_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 6,
+      "catalystScoreBreakdown": [
+        "15M displacement +1",
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7385.75,
+      "stop": 7366.75,
+      "riskPoints": 19,
+      "target1": 7414.25,
+      "target2": 7423.75,
+      "outcome": {
+        "firstHit": "T1",
+        "exitPrice": 7414.25,
+        "points": 28.5,
+        "mesProfitLossDollars": 142.5,
+        "maxFavorablePoints": 32.75,
+        "maxAdversePoints": 0
+      },
+      "structure": {
+        "priorSwingHigh": 7379.25,
+        "priorSwingLow": 7367,
+        "stopSwing": 7367,
+        "mssClose": 7385.75
+      }
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "timestamp": "2026-05-13T10:55:00",
+      "session": "morning",
+      "direction": "LONG",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7431.5,
+      "lineReason": "Completed 5M close above prior protected swing high.",
+      "htfStory": "60M displacement/close-through supports LONG. 120M displacement/close-through supports LONG. 240M displacement/close-through supports LONG.",
+      "htfSupport": [
+        "60M displacement/close-through supports LONG.",
+        "120M displacement/close-through supports LONG.",
+        "240M displacement/close-through supports LONG."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_HIGH_7432.00_ACCEPTED_THROUGH, HTF_OBSTACLE_60M_OPEN_7431.00_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_OPEN_7431.00_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_OPEN_7431.00_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_HIGH_7432.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_60M_OPEN_7431.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_OPEN_7431.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_OPEN_7431.00_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 5,
+      "catalystScoreBreakdown": [
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7433.25,
+      "stop": 7413.75,
+      "riskPoints": 19.5,
+      "target1": 7462.5,
+      "target2": 7472.25,
+      "outcome": {
+        "firstHit": "T1",
+        "exitPrice": 7462.5,
+        "points": 29.25,
+        "mesProfitLossDollars": 146.25,
+        "maxFavorablePoints": 30.5,
+        "maxAdversePoints": 2.5
+      },
+      "structure": {
+        "priorSwingHigh": 7431.5,
+        "priorSwingLow": 7414,
+        "stopSwing": 7414,
+        "mssClose": 7433.25
+      }
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "timestamp": "2026-05-13T12:10:00",
+      "session": "lunch",
+      "direction": "LONG",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7447,
+      "lineReason": "Completed 5M close above prior protected swing high.",
+      "htfStory": "60M displacement/close-through supports LONG. 120M displacement/close-through supports LONG. 240M displacement/close-through supports LONG.",
+      "htfSupport": [
+        "60M displacement/close-through supports LONG.",
+        "120M displacement/close-through supports LONG.",
+        "240M displacement/close-through supports LONG."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_HIGH_7447.00_ACCEPTED_THROUGH, HTF_OBSTACLE_60M_HIGH_7447.00_ACCEPTED_THROUGH, HTF_OBSTACLE_120M_HIGH_7447.00_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_HIGH_7446.50_ACCEPTED_THROUGH.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "HTF_FAILED_AUCTION_240M_LOW_7439.75",
+        "60M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "240M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_HIGH_7447.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_60M_HIGH_7447.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_120M_HIGH_7447.00_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_HIGH_7446.50_ACCEPTED_THROUGH"
+      ],
+      "catalystScore": 7,
+      "catalystScoreBreakdown": [
+        "240M failed auction +2",
+        "60M displacement +1",
+        "120M displacement +2",
+        "240M displacement +2"
+      ],
+      "entry": 7448,
+      "stop": 7439.5,
+      "riskPoints": 8.5,
+      "target1": 7460.75,
+      "target2": 7465,
+      "outcome": {
+        "firstHit": "T1",
+        "exitPrice": 7460.75,
+        "points": 12.75,
+        "mesProfitLossDollars": 63.75,
+        "maxFavorablePoints": 15.75,
+        "maxAdversePoints": 1
+      },
+      "structure": {
+        "priorSwingHigh": 7447,
+        "priorSwingLow": 7439.75,
+        "stopSwing": 7439.75,
+        "mssClose": 7448
+      }
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "timestamp": "2026-05-13T15:00:00",
+      "session": "lunch",
+      "direction": "SHORT",
+      "triggerType": "close_through_mss_line",
+      "lineInSand": 7473,
+      "lineReason": "Completed 5M close below prior protected swing low.",
+      "htfStory": "15M displacement/close-through supports SHORT. 120M displacement/close-through supports SHORT.",
+      "htfSupport": [
+        "15M displacement/close-through supports SHORT.",
+        "120M displacement/close-through supports SHORT."
+      ],
+      "htfCaution": [],
+      "managementNotes": [
+        "HTF obstacle/management evidence: HTF_OBSTACLE_15M_OPEN_7466.25_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_60M_OPEN_7471.00_USED_AS_T1_MANAGEMENT, HTF_OBSTACLE_120M_LOW_7473.25_ACCEPTED_THROUGH, HTF_OBSTACLE_240M_OPEN_7471.00_USED_AS_T1_MANAGEMENT.",
+        "No risk cap applied in research output; trader decides whether risk is acceptable."
+      ],
+      "evidenceTags": [
+        "15M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "120M_DISPLACEMENT_PLUS_5M_CLOSE_THROUGH",
+        "HTF_OBSTACLE_15M_OPEN_7466.25_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_60M_OPEN_7471.00_USED_AS_T1_MANAGEMENT",
+        "HTF_OBSTACLE_120M_LOW_7473.25_ACCEPTED_THROUGH",
+        "HTF_OBSTACLE_240M_OPEN_7471.00_USED_AS_T1_MANAGEMENT"
+      ],
+      "catalystScore": 3,
+      "catalystScoreBreakdown": [
+        "15M displacement +1",
+        "120M displacement +2"
+      ],
+      "entry": 7471.25,
+      "stop": 7478.75,
+      "riskPoints": 7.5,
+      "target1": 7460,
+      "target2": 7456.25,
+      "outcome": {
+        "firstHit": "STOP",
+        "exitPrice": 7478.75,
+        "points": -7.5,
+        "mesProfitLossDollars": -37.5,
+        "maxFavorablePoints": 0,
+        "maxAdversePoints": 7.5
+      },
+      "structure": {
+        "priorSwingHigh": 7478.5,
+        "priorSwingLow": 7473,
+        "stopSwing": 7478.5,
+        "mssClose": 7471.25
+      }
+    }
+  ]
+}
