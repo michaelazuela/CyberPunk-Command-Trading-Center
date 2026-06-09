@@ -18,6 +18,10 @@ import { buildSupervisorStatus } from './status';
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
 
+function withCurrentSupervisorPid<T extends { supervisorPid: number }>(state: T): T {
+  return { ...state, supervisorPid: process.pid };
+}
+
 function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -63,7 +67,7 @@ export function startSupervisor(): http.Server {
   let lastHealthReport = null as Awaited<ReturnType<typeof buildHealthReport>> | null;
 
   const monitor = async () => {
-    supervisorState = restartFailedOwnedServices(configResult.config, logger);
+    supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
     lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
     const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
     const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
@@ -83,7 +87,8 @@ export function startSupervisor(): http.Server {
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${configResult.config.host}:${configResult.config.port}`);
     if (request.method === 'GET' && url.pathname === configResult.config.statusPath) {
-      supervisorState = getSupervisorState(configResult.config);
+      supervisorState = withCurrentSupervisorPid(getSupervisorState(configResult.config));
+      lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
       const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
       const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
       logger.log('info', 'Status requested.', { path: url.pathname, configStatus: status.config.status });
