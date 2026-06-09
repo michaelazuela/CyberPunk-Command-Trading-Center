@@ -7,6 +7,7 @@ export type IctModelLabel =
   | 'HTF Displacement + 5M MSS Continuation'
   | 'HTF Displacement + FVG Continuation'
   | 'Opening Drive FVG Continuation'
+  | 'Intraday MSS Micro Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';
 
@@ -17,6 +18,7 @@ export function normalizeIctModelLabel(setupType?: SetupType | string | null): I
   if (setupType === SetupType.HtfDisplacementMssContinuation) return 'HTF Displacement + 5M MSS Continuation';
   if (setupType === SetupType.HtfDisplacementFvgContinuation) return 'HTF Displacement + FVG Continuation';
   if (setupType === SetupType.OpeningDriveFvgContinuation) return 'Opening Drive FVG Continuation';
+  if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday MSS Micro Continuation';
   if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
   return 'ICT setup';
 }

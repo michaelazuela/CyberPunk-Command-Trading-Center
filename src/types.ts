@@ -36,6 +36,7 @@ export enum SetupType {
   HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
   HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
   OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
+  IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
   FailedPlanReversal = 'FailedPlanReversal',
   OpeningOrderBlock = 'OpeningOrderBlock',
   EqualHighsLows = 'EqualHighsLows',
@@ -852,6 +853,59 @@ export interface FailedPlanReversalContext {
   approvesExecution: false;
 }
 
+export type ActiveCampaignDirection = 'LONG' | 'SHORT' | 'NO TRADE';
+export type ActiveCampaignStatus =
+  | 'active'
+  | 'watch'
+  | 'blocked'
+  | 'data_limited'
+  | 'not_applicable';
+export type ActiveCampaignHtfRelationship =
+  | 'support'
+  | 'caution'
+  | 'conflict'
+  | 'data_limited'
+  | 'none';
+
+export interface ActiveCampaignEvidenceLayer {
+  layer:
+    | '15M_5M_MSS_CAMPAIGN'
+    | 'HTF_MSS_DISPLACEMENT_SUPPORT'
+    | 'HTF_OBSTACLE_TARGET_MAP'
+    | '5M_FVG_EXECUTION_TRIGGER';
+  status: 'confirmed' | 'present' | 'pending' | 'caution' | 'conflict' | 'data_limited' | 'missing';
+  direction: ActiveCampaignDirection;
+  evidence: string[];
+  blockers: string[];
+}
+
+export interface ActiveCampaign {
+  id: string;
+  source: 'app_owned_structured_ohlc';
+  authority: 'campaign_context_only_not_execution_authority';
+  status: ActiveCampaignStatus;
+  direction: ActiveCampaignDirection;
+  primaryTrigger: '15M_5M_MSS' | 'HTF_DIRECTIONAL_CAMPAIGN' | 'NONE';
+  executionTimeframe: '5M';
+  htfRelationship: ActiveCampaignHtfRelationship;
+  confidenceAdjustment: number;
+  evidenceLayers: ActiveCampaignEvidenceLayer[];
+  htfSupportTimeframes: Array<'60M' | '120M' | '240M'>;
+  htfConflictTimeframes: Array<'60M' | '120M' | '240M'>;
+  obstacleMap: {
+    lineInSand: number | null;
+    reason: string | null;
+    role: 'management_obstacle' | 'extension_gate' | 'none';
+    caution: string | null;
+  };
+  deDuplication: {
+    oneTradePerCampaignRecommended: true;
+    enforced: false;
+    resetPolicy: 'not_yet_active';
+  };
+  notes: string[];
+}
+
 export interface ScannerHistoryCoverageFact {
   timeframe: '5m' | '15m' | '60m' | '120m' | '240m';
   requiredLookbackDays: number;
@@ -1058,7 +1112,8 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'failed_plan_reversal';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'failed_plan_reversal';
+  activeCampaign?: ActiveCampaign;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   failedPlanReversal?: FailedPlanReversalContext;
   humanReview?: {

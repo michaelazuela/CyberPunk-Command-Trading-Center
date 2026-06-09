@@ -41,6 +41,19 @@ export const TIME_WINDOWS = {
   },
 } as const;
 
+export const MODEL_SPECIFIC_TIME_WINDOWS = {
+  intradayMssMicroContinuationLateDayReview: {
+    label: "Intraday MSS Micro Continuation Late-Day Review",
+    startHour: 15,
+    startMinute: 0,
+    endHour: 16,
+    endMinute: 40,
+    timezone: "America/New_York",
+    authority: "model_specific_human_review_only",
+    note: "15M/5M MSS plus 5M FVG retest/rejection late-day review. Human review only; canExecute remains false.",
+  },
+} as const;
+
 export type WindowKey = "morning" | "lunch";
 export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
 
@@ -48,6 +61,12 @@ const MORNING_SETUP_SCAN_START = 10 * 60;
 const MORNING_SETUP_SCAN_END = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_START = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_END = 15 * 60 + 30;
+const INTRADAY_MSS_MICRO_LATE_DAY_START =
+  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour * 60 +
+  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startMinute;
+const INTRADAY_MSS_MICRO_LATE_DAY_END =
+  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endHour * 60 +
+  MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endMinute;
 
 /** Get NY time details */
 function getNYTime() {
@@ -88,6 +107,10 @@ export function classifyActiveSetupScanWindowByEtMinutes(minutes: number): Activ
   if (minutes >= MORNING_SETUP_SCAN_START && minutes < MORNING_SETUP_SCAN_END) return 'MORNING_SETUP_SCAN';
   if (minutes >= LUNCH_PM_SETUP_SCAN_START && minutes < LUNCH_PM_SETUP_SCAN_END) return 'LUNCH_PM_SETUP_SCAN';
   return 'OUTSIDE_SETUP_SCAN';
+}
+
+export function isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes: number): boolean {
+  return minutes >= INTRADAY_MSS_MICRO_LATE_DAY_START && minutes <= INTRADAY_MSS_MICRO_LATE_DAY_END;
 }
 
 export function getActiveSetupScanWindow(date = new Date()): ActiveSetupScanWindow {

@@ -151,6 +151,11 @@ function setupFromText(...parts: Array<unknown>): SetupType {
     text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
   ) return SetupType.HtfDisplacementFvgContinuation;
   if (
+    text.includes('INTRADAY MSS MICRO CONTINUATION') ||
+    text.includes('INTRADAY_MSS_MICRO_CONTINUATION') ||
+    text.includes('MICRO CONTINUATION RETEST')
+  ) return SetupType.IntradayMssMicroContinuation;
+  if (
     text.includes('HTF DISPLACEMENT + MSS CONTINUATION') ||
     text.includes('HTF DISPLACEMENT MSS CONTINUATION') ||
     text.includes('HTF_DISPLACEMENT_MSS_CONTINUATION')
@@ -364,6 +369,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.HtfDisplacementMssContinuation: return 99;
     case SetupType.HtfDisplacementFvgContinuation: return 97;
     case SetupType.OpeningDriveFvgContinuation: return 98;
+    case SetupType.IntradayMssMicroContinuation: return 97;
     case SetupType.FailedPlanReversal: return 98;
     case SetupType.TurtleSoup: return 98;
     default: return 0;
@@ -608,6 +614,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
               ? 'HTF displacement + FVG continuation sequence quality.'
           : candidate.setupType === SetupType.OpeningDriveFvgContinuation
               ? 'Opening drive FVG continuation sequence quality.'
+          : candidate.setupType === SetupType.IntradayMssMicroContinuation
+              ? 'Intraday MSS micro-continuation sequence quality.'
           : candidate.setupType === SetupType.FailedPlanReversal
               ? 'Failed plan reversal sequence quality.'
             : 'Sweep -> MSS -> FVG retrace sequence quality.',

@@ -1,0 +1,991 @@
+{
+  "generatedAt": "2026-06-08T22:47:08.442Z",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "fromDate": "2026-05-09",
+  "toDate": "2026-06-08",
+  "window": "15:30-15:45 ET completed 5M bars",
+  "lineInSandSource": "scanner_structured_chart_context_levels",
+  "sources": [
+    {
+      "timeframe": "5m",
+      "cacheBars": 1000,
+      "bridgeBars": 5736,
+      "bridgeRequests": 31,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "market_bars_read_ninjatrader_repair"
+    },
+    {
+      "timeframe": "15m",
+      "cacheBars": 1000,
+      "bridgeBars": 1912,
+      "bridgeRequests": 31,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:15:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "market_bars_read_ninjatrader_repair"
+    },
+    {
+      "timeframe": "60m",
+      "cacheBars": 1000,
+      "bridgeBars": 478,
+      "bridgeRequests": 31,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "market_bars_read_ninjatrader_repair"
+    },
+    {
+      "timeframe": "120m",
+      "cacheBars": 1000,
+      "bridgeBars": 249,
+      "bridgeRequests": 31,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T20:00:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "market_bars_read_ninjatrader_repair"
+    },
+    {
+      "timeframe": "240m",
+      "cacheBars": 1000,
+      "bridgeBars": 124,
+      "bridgeRequests": 31,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-06-08T14:00:00",
+      "source": "market_bars_read_ninjatrader_repair"
+    }
+  ],
+  "dailySummary": [
+    {
+      "tradeDate": "2026-05-11",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-12",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-14",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-15",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 4,
+      "longs": 4,
+      "shorts": 0,
+      "t1": 4,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-19",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 1,
+      "longs": 1,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 1,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-21",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-22",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 3,
+      "candidateCount": 3,
+      "longs": 3,
+      "shorts": 0,
+      "t1": 1,
+      "t2": 0,
+      "stop": 2,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-27",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-28",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-29",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 3,
+      "candidateCount": 2,
+      "longs": 2,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 2,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-03",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-04",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 2,
+      "longs": 0,
+      "shorts": 2,
+      "t1": 0,
+      "t2": 0,
+      "stop": 2,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "lateBarsEvaluated": 4,
+      "alignedMssBars": 4,
+      "candidateCount": 4,
+      "longs": 0,
+      "shorts": 4,
+      "t1": 0,
+      "t2": 0,
+      "stop": 1,
+      "none": 3,
+      "ambiguous": 0
+    }
+  ],
+  "summary": {
+    "lateBarsEvaluated": 80,
+    "alignedMssBars": 30,
+    "candidateCount": 16,
+    "fvgRetestCandidates": 16,
+    "closeThroughCandidates": 0,
+    "shorts": 6,
+    "longs": 10
+  },
+  "candidates": [
+    {
+      "timestamp": "2026-05-18T15:30:00",
+      "tradeDate": "2026-05-18",
+      "direction": "LONG",
+      "latestClose": 7395.25,
+      "fifteenMssTimestamp": "2026-05-18T15:15:00",
+      "fiveMssTimestamp": "2026-05-18T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7392,
+        "upper": 7395,
+        "formedAt": "2026-05-18T03:05:00",
+        "formedIndex": 37
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7398.5,
+        "label": "London Bullish Displacement Imbalance Bottom",
+        "source": "london",
+        "type": "imbalance_zone",
+        "reason": "Asian low is below London low"
+      },
+      "lineCloseThrough": false,
+      "entry": 7395.25,
+      "stop": 7386,
+      "riskPoints": 9.25,
+      "target1": 7409.25,
+      "target2": 7413.75,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 15.5,
+        "maxAdversePoints": 2.5
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7398.5 London Bullish Displacement Imbalance Bottom.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-18T15:35:00",
+      "tradeDate": "2026-05-18",
+      "direction": "LONG",
+      "latestClose": 7401,
+      "fifteenMssTimestamp": "2026-05-18T15:15:00",
+      "fiveMssTimestamp": "2026-05-18T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7381.25,
+        "upper": 7395.5,
+        "formedAt": "2026-05-18T15:10:00",
+        "formedIndex": 182
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7401.5,
+        "label": "Asian Bearish Displacement Imbalance Midpoint",
+        "source": "asian",
+        "type": "imbalance_midpoint",
+        "reason": "Asian low is below London low"
+      },
+      "lineCloseThrough": false,
+      "entry": 7401,
+      "stop": 7381,
+      "riskPoints": 20,
+      "target1": 7431,
+      "target2": 7441,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 31,
+        "maxAdversePoints": 0.5
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7401.5 Asian Bearish Displacement Imbalance Midpoint.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-18T15:40:00",
+      "tradeDate": "2026-05-18",
+      "direction": "LONG",
+      "latestClose": 7410.25,
+      "fifteenMssTimestamp": "2026-05-18T15:15:00",
+      "fiveMssTimestamp": "2026-05-18T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7395.5,
+        "upper": 7403.75,
+        "formedAt": "2026-05-18T13:00:00",
+        "formedIndex": 156
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7420,
+        "label": "Round Number 7420",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "lineCloseThrough": false,
+      "entry": 7410.25,
+      "stop": 7395.25,
+      "riskPoints": 15,
+      "target1": 7432.75,
+      "target2": 7440.25,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 27.25,
+        "maxAdversePoints": 0.25
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7420 Round Number 7420.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-18T15:45:00",
+      "tradeDate": "2026-05-18",
+      "direction": "LONG",
+      "latestClose": 7418.5,
+      "fifteenMssTimestamp": "2026-05-18T15:15:00",
+      "fiveMssTimestamp": "2026-05-18T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7418,
+        "upper": 7418.25,
+        "formedAt": "2026-05-18T08:15:00",
+        "formedIndex": 99
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7420,
+        "label": "Round Number 7420",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "lineCloseThrough": false,
+      "entry": 7418.5,
+      "stop": 7409.75,
+      "riskPoints": 8.75,
+      "target1": 7431.75,
+      "target2": 7436,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 13.5,
+        "maxAdversePoints": 2.75
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7420 Round Number 7420.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-20T15:35:00",
+      "tradeDate": "2026-05-20",
+      "direction": "LONG",
+      "latestClose": 7447.5,
+      "fifteenMssTimestamp": "2026-05-20T10:30:00",
+      "fiveMssTimestamp": "2026-05-20T14:35:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7444.25,
+        "upper": 7444.5,
+        "formedAt": "2026-05-20T15:25:00",
+        "formedIndex": 185
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7448.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7447.5,
+      "stop": 7444,
+      "riskPoints": 3.5,
+      "target1": 7452.75,
+      "target2": 7454.5,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 7,
+        "maxAdversePoints": 0.25
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7448.5 Current Imported Window High.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-26T15:35:00",
+      "tradeDate": "2026-05-26",
+      "direction": "LONG",
+      "latestClose": 7532.75,
+      "fifteenMssTimestamp": "2026-05-26T14:15:00",
+      "fiveMssTimestamp": "2026-05-26T15:35:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7527.75,
+        "upper": 7530,
+        "formedAt": "2026-05-26T14:20:00",
+        "formedIndex": 172
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7533.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7532.75,
+      "stop": 7527.5,
+      "riskPoints": 5.25,
+      "target1": 7540.75,
+      "target2": 7543.25,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 8.25,
+        "maxAdversePoints": 0.5
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7533.75 Current Imported Window High.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-26T15:40:00",
+      "tradeDate": "2026-05-26",
+      "direction": "LONG",
+      "latestClose": 7536,
+      "fifteenMssTimestamp": "2026-05-26T14:15:00",
+      "fiveMssTimestamp": "2026-05-26T15:35:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7530.5,
+        "upper": 7532.25,
+        "formedAt": "2026-05-26T03:50:00",
+        "formedIndex": 46
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7536.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7536,
+      "stop": 7530.25,
+      "riskPoints": 5.75,
+      "target1": 7544.75,
+      "target2": 7547.5,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 6.25,
+        "maxAdversePoints": 5.75
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7536.25 Current Imported Window High.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-05-26T15:45:00",
+      "tradeDate": "2026-05-26",
+      "direction": "LONG",
+      "latestClose": 7538.5,
+      "fifteenMssTimestamp": "2026-05-26T14:15:00",
+      "fiveMssTimestamp": "2026-05-26T15:35:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7534.5,
+        "upper": 7536.75,
+        "formedAt": "2026-05-26T05:35:00",
+        "formedIndex": 67
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7538.5,
+        "label": "Asian Bullish Displacement Imbalance Midpoint",
+        "source": "asian",
+        "type": "imbalance_midpoint",
+        "reason": "Asian high is above London high"
+      },
+      "lineCloseThrough": false,
+      "entry": 7538.5,
+      "stop": 7534.25,
+      "riskPoints": 4.25,
+      "target1": 7545,
+      "target2": 7547,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3.75,
+        "maxAdversePoints": 4.25
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7538.5 Asian Bullish Displacement Imbalance Midpoint.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-02T15:30:00",
+      "tradeDate": "2026-06-02",
+      "direction": "LONG",
+      "latestClose": 7621.5,
+      "fifteenMssTimestamp": "2026-06-02T15:15:00",
+      "fiveMssTimestamp": "2026-06-02T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7620,
+        "upper": 7620.5,
+        "formedAt": "2026-06-02T15:10:00",
+        "formedIndex": 182
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7623.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7621.5,
+      "stop": 7619.75,
+      "riskPoints": 1.75,
+      "target1": 7624.25,
+      "target2": 7625,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.5,
+        "maxAdversePoints": 2
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7623.75 Current Imported Window High.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-02T15:35:00",
+      "tradeDate": "2026-06-02",
+      "direction": "LONG",
+      "latestClose": 7622.5,
+      "fifteenMssTimestamp": "2026-06-02T15:15:00",
+      "fiveMssTimestamp": "2026-06-02T15:05:00",
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7621,
+        "upper": 7621.5,
+        "formedAt": "2026-06-02T11:00:00",
+        "formedIndex": 132
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7623.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7622.5,
+      "stop": 7620.75,
+      "riskPoints": 1.75,
+      "target1": 7625.25,
+      "target2": 7626,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.5,
+        "maxAdversePoints": 2.5
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7623.75 Current Imported Window High.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-05T15:35:00",
+      "tradeDate": "2026-06-05",
+      "direction": "SHORT",
+      "latestClose": 7404,
+      "fifteenMssTimestamp": "2026-06-04T16:00:00",
+      "fiveMssTimestamp": "2026-06-05T14:05:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7405.25,
+        "upper": 7407,
+        "formedAt": "2026-06-05T15:15:00",
+        "formedIndex": 183
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7403.75,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "lineCloseThrough": false,
+      "entry": 7404,
+      "stop": 7410,
+      "riskPoints": 6,
+      "target1": 7395,
+      "target2": 7392,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.75,
+        "maxAdversePoints": 9
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7403.75 RTH Open.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-05T15:45:00",
+      "tradeDate": "2026-06-05",
+      "direction": "SHORT",
+      "latestClose": 7402.75,
+      "fifteenMssTimestamp": "2026-06-04T16:00:00",
+      "fiveMssTimestamp": "2026-06-05T14:05:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7405.25,
+        "upper": 7407,
+        "formedAt": "2026-06-05T15:15:00",
+        "formedIndex": 183
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "lineCloseThrough": false,
+      "entry": 7402.75,
+      "stop": 7412.75,
+      "riskPoints": 10,
+      "target1": 7387.75,
+      "target2": 7382.75,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.75,
+        "maxAdversePoints": 12
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7400 Round Number 7400.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-08T15:30:00",
+      "tradeDate": "2026-06-08",
+      "direction": "SHORT",
+      "latestClose": 7414.5,
+      "fifteenMssTimestamp": "2026-06-08T09:45:00",
+      "fiveMssTimestamp": "2026-06-08T14:40:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7414.75,
+        "upper": 7415.25,
+        "formedAt": "2026-06-08T00:10:00",
+        "formedIndex": 2
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7410,
+        "label": "Round Number 7410",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "lineCloseThrough": false,
+      "entry": 7414.5,
+      "stop": 7415.5,
+      "riskPoints": 1,
+      "target1": 7413,
+      "target2": 7412.5,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1,
+        "maxAdversePoints": 9.75
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7410 Round Number 7410.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-08T15:35:00",
+      "tradeDate": "2026-06-08",
+      "direction": "SHORT",
+      "latestClose": 7417,
+      "fifteenMssTimestamp": "2026-06-08T09:45:00",
+      "fiveMssTimestamp": "2026-06-08T14:40:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7417,
+      "stop": 7424.5,
+      "riskPoints": 7.5,
+      "target1": 7405.75,
+      "target2": 7402,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 6.5,
+        "maxAdversePoints": 5.25
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-08T15:40:00",
+      "tradeDate": "2026-06-08",
+      "direction": "SHORT",
+      "latestClose": 7416.25,
+      "fifteenMssTimestamp": "2026-06-08T09:45:00",
+      "fiveMssTimestamp": "2026-06-08T14:40:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7416.25,
+      "stop": 7424.5,
+      "riskPoints": 8.25,
+      "target1": 7404,
+      "target2": 7399.75,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 5.75,
+        "maxAdversePoints": 6
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low.",
+        "Human review only. No chase."
+      ]
+    },
+    {
+      "timestamp": "2026-06-08T15:45:00",
+      "tradeDate": "2026-06-08",
+      "direction": "SHORT",
+      "latestClose": 7416,
+      "fifteenMssTimestamp": "2026-06-08T09:45:00",
+      "fiveMssTimestamp": "2026-06-08T14:40:00",
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "triggerType": "fvg_retest_rejection",
+      "lineInSand": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "lineCloseThrough": false,
+      "entry": 7416,
+      "stop": 7424.5,
+      "riskPoints": 8.5,
+      "target1": 7403.25,
+      "target2": 7399,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 5.5,
+        "maxAdversePoints": 6.25
+      },
+      "notes": [
+        "Late-day micro-continuation review only.",
+        "15M and 5M MSS aligned from structured OHLC.",
+        "Completed 5M FVG retest/rejection detected.",
+        "Named HTF line from scanner structured map: 7415.5 Morning Setup Scan Window Low.",
+        "Human review only. No chase."
+      ]
+    }
+  ],
+  "authority": "research_only_not_window_change_not_execution_approval"
+}

@@ -819,6 +819,7 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
     candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
     candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
+    candidate.setupType === SetupType.IntradayMssMicroContinuation ||
     candidate.setupType === SetupType.FailedPlanReversal
   );
 }

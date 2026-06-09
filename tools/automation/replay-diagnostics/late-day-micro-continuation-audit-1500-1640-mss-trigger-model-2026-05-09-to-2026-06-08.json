@@ -1,0 +1,2963 @@
+{
+  "generatedAt": "2026-06-09T01:01:16.034Z",
+  "sourceArtifact": "tools/automation/replay-diagnostics/late-day-micro-continuation-audit-1500-1640-htf-survivors-2026-05-09-to-2026-06-08.json",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "fromDate": "2026-05-09",
+  "toDate": "2026-06-08",
+  "window": "15:00-16:40 ET completed 5M bars",
+  "interpretation": "MSS trigger model: completed MSS close-through qualifies; HTF line is obstacle/management context, not disqualifier.",
+  "sources": [
+    {
+      "timeframe": "5m",
+      "cacheBars": 0,
+      "bridgeBars": 5000,
+      "bridgeRequests": 1,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-13T10:05:00",
+      "rangeEnd": "2026-06-08T16:40:00",
+      "source": "ninjatrader_historical_bars"
+    },
+    {
+      "timeframe": "15m",
+      "cacheBars": 0,
+      "bridgeBars": 1914,
+      "bridgeRequests": 1,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:15:00",
+      "rangeEnd": "2026-06-08T16:30:00",
+      "source": "ninjatrader_historical_bars"
+    },
+    {
+      "timeframe": "60m",
+      "cacheBars": 0,
+      "bridgeBars": 478,
+      "bridgeRequests": 1,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T19:00:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "ninjatrader_historical_bars"
+    },
+    {
+      "timeframe": "120m",
+      "cacheBars": 0,
+      "bridgeBars": 249,
+      "bridgeRequests": 1,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T20:00:00",
+      "rangeEnd": "2026-06-08T16:00:00",
+      "source": "ninjatrader_historical_bars"
+    },
+    {
+      "timeframe": "240m",
+      "cacheBars": 0,
+      "bridgeBars": 124,
+      "bridgeRequests": 1,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T22:00:00",
+      "rangeEnd": "2026-06-08T14:00:00",
+      "source": "ninjatrader_historical_bars"
+    }
+  ],
+  "summary": {
+    "qualifyingTrades": 69,
+    "longs": 43,
+    "shorts": 26,
+    "outcomeCounts": {
+      "NONE": 9,
+      "STOP": 35,
+      "AMBIGUOUS": 2,
+      "T1": 16,
+      "T2": 7
+    },
+    "nonAmbiguousTrades": 67,
+    "ambiguousTrades": 2,
+    "winners": 31,
+    "losers": 36,
+    "breakeven": 0,
+    "winRateExcludingAmbiguous": 46.27,
+    "grossMesProfitLossDollarsExcludingAmbiguous": 492.5
+  },
+  "dailySummary": [
+    {
+      "tradeDate": "2026-05-18",
+      "trades": 15,
+      "longs": 15,
+      "shorts": 0,
+      "t1": 7,
+      "t2": 1,
+      "stop": 5,
+      "none": 1,
+      "ambiguous": 1,
+      "grossMesProfitLossDollarsExcludingAmbiguous": 401.25
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "trades": 10,
+      "longs": 10,
+      "shorts": 0,
+      "t1": 1,
+      "t2": 2,
+      "stop": 7,
+      "none": 0,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": -186.25
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "trades": 11,
+      "longs": 11,
+      "shorts": 0,
+      "t1": 1,
+      "t2": 0,
+      "stop": 10,
+      "none": 0,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": -138.75
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "trades": 10,
+      "longs": 0,
+      "shorts": 10,
+      "t1": 3,
+      "t2": 1,
+      "stop": 6,
+      "none": 0,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": -7.5
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "trades": 7,
+      "longs": 7,
+      "shorts": 0,
+      "t1": 2,
+      "t2": 1,
+      "stop": 4,
+      "none": 0,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": 32.5
+    },
+    {
+      "tradeDate": "2026-06-04",
+      "trades": 1,
+      "longs": 0,
+      "shorts": 1,
+      "t1": 0,
+      "t2": 1,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": 50
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "trades": 5,
+      "longs": 0,
+      "shorts": 5,
+      "t1": 2,
+      "t2": 0,
+      "stop": 2,
+      "none": 1,
+      "ambiguous": 0,
+      "grossMesProfitLossDollarsExcludingAmbiguous": 173.75
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "trades": 10,
+      "longs": 0,
+      "shorts": 10,
+      "t1": 0,
+      "t2": 1,
+      "stop": 1,
+      "none": 7,
+      "ambiguous": 1,
+      "grossMesProfitLossDollarsExcludingAmbiguous": 167.5
+    }
+  ],
+  "trades": [
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:05:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7404.5,
+      "stop": 7375.5,
+      "riskPoints": 29,
+      "target1": 7448,
+      "target2": 7462.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7395.5,
+        "upper": 7403.75,
+        "formedAt": "2026-05-18T13:00:00",
+        "formedIndex": 156
+      },
+      "htfObstacle": {
+        "price": 7410,
+        "label": "Round Number 7410",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 36.25,
+        "maxAdversePoints": 18.25,
+        "exitPrice": 7414.25,
+        "points": 9.75,
+        "mesProfitLossDollars": 48.75
+      },
+      "oneMesProfitLossDollars": 48.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7410 Round Number 7410."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:10:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7403,
+      "stop": 7395.25,
+      "riskPoints": 7.75,
+      "target1": 7414.75,
+      "target2": 7418.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7401.5,
+        "upper": 7402.5,
+        "formedAt": "2026-05-18T07:40:00",
+        "formedIndex": 92
+      },
+      "htfObstacle": {
+        "price": 7410,
+        "label": "Round Number 7410",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 4.25,
+        "maxAdversePoints": 11.25,
+        "exitPrice": 7395.25,
+        "points": -7.75,
+        "mesProfitLossDollars": -38.75
+      },
+      "oneMesProfitLossDollars": -38.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7410 Round Number 7410."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:15:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7400.75,
+      "stop": 7398.75,
+      "riskPoints": 2,
+      "target1": 7403.75,
+      "target2": 7404.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7399.5,
+        "upper": 7399.75,
+        "formedAt": "2026-05-18T07:25:00",
+        "formedIndex": 89
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "AMBIGUOUS",
+        "maxFavorablePoints": 4.5,
+        "maxAdversePoints": 5.25,
+        "exitPrice": null,
+        "points": null,
+        "mesProfitLossDollars": null
+      },
+      "oneMesProfitLossDollars": null,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:20:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7397.25,
+      "stop": 7381,
+      "riskPoints": 16.25,
+      "target1": 7421.75,
+      "target2": 7429.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7381.25,
+        "upper": 7395.5,
+        "formedAt": "2026-05-18T15:10:00",
+        "formedIndex": 182
+      },
+      "htfObstacle": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 28,
+        "maxAdversePoints": 11,
+        "exitPrice": 7421.75,
+        "points": 24.5,
+        "mesProfitLossDollars": 122.5
+      },
+      "oneMesProfitLossDollars": 122.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7400 Round Number 7400."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:30:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7395.25,
+      "stop": 7386,
+      "riskPoints": 9.25,
+      "target1": 7409.25,
+      "target2": 7413.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7392,
+        "upper": 7395,
+        "formedAt": "2026-05-18T03:05:00",
+        "formedIndex": 37
+      },
+      "htfObstacle": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 15.5,
+        "maxAdversePoints": 2.5,
+        "exitPrice": 7409.25,
+        "points": 14,
+        "mesProfitLossDollars": 70
+      },
+      "oneMesProfitLossDollars": 70,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7400 Round Number 7400."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7401,
+      "stop": 7381,
+      "riskPoints": 20,
+      "target1": 7431,
+      "target2": 7441,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7381.25,
+        "upper": 7395.5,
+        "formedAt": "2026-05-18T15:10:00",
+        "formedIndex": 182
+      },
+      "htfObstacle": {
+        "price": 7410,
+        "label": "Round Number 7410",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 31,
+        "maxAdversePoints": 0.5,
+        "exitPrice": 7431,
+        "points": 30,
+        "mesProfitLossDollars": 150
+      },
+      "oneMesProfitLossDollars": 150,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7410 Round Number 7410."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:40:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7410.25,
+      "stop": 7395.25,
+      "riskPoints": 15,
+      "target1": 7432.75,
+      "target2": 7440.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7395.5,
+        "upper": 7403.75,
+        "formedAt": "2026-05-18T13:00:00",
+        "formedIndex": 156
+      },
+      "htfObstacle": {
+        "price": 7413.25,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 27.25,
+        "maxAdversePoints": 0.25,
+        "exitPrice": 7432.75,
+        "points": 22.5,
+        "mesProfitLossDollars": 112.5
+      },
+      "oneMesProfitLossDollars": 112.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7413.25 RTH Open."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:45:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7418.5,
+      "stop": 7409.75,
+      "riskPoints": 8.75,
+      "target1": 7431.75,
+      "target2": 7436,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7418,
+        "upper": 7418.25,
+        "formedAt": "2026-05-18T08:15:00",
+        "formedIndex": 99
+      },
+      "htfObstacle": {
+        "price": 7420,
+        "label": "Round Number 7420",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 13.5,
+        "maxAdversePoints": 2.75,
+        "exitPrice": 7431.75,
+        "points": 13.25,
+        "mesProfitLossDollars": 66.25
+      },
+      "oneMesProfitLossDollars": 66.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7420 Round Number 7420."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:50:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7423.5,
+      "stop": 7415.5,
+      "riskPoints": 8,
+      "target1": 7435.5,
+      "target2": 7439.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7418,
+        "upper": 7418.25,
+        "formedAt": "2026-05-18T08:15:00",
+        "formedIndex": 99
+      },
+      "htfObstacle": {
+        "price": 7425.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 14,
+        "maxAdversePoints": 6.5,
+        "exitPrice": 7435.5,
+        "points": 12,
+        "mesProfitLossDollars": 60
+      },
+      "oneMesProfitLossDollars": 60,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7425.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T15:55:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7425,
+      "stop": 7408,
+      "riskPoints": 17,
+      "target1": 7450.5,
+      "target2": 7459,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7408.25,
+        "upper": 7419.75,
+        "formedAt": "2026-05-18T07:45:00",
+        "formedIndex": 93
+      },
+      "htfObstacle": {
+        "price": 7428,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 15.75,
+        "maxAdversePoints": 21.5,
+        "exitPrice": 7408,
+        "points": -17,
+        "mesProfitLossDollars": -85
+      },
+      "oneMesProfitLossDollars": -85,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7428 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T16:00:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7426.5,
+      "stop": 7408,
+      "riskPoints": 18.5,
+      "target1": 7454.25,
+      "target2": 7463.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7408.25,
+        "upper": 7419.75,
+        "formedAt": "2026-05-18T07:45:00",
+        "formedIndex": 93
+      },
+      "htfObstacle": {
+        "price": 7428,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 14.25,
+        "maxAdversePoints": 23,
+        "exitPrice": 7408,
+        "points": -18.5,
+        "mesProfitLossDollars": -92.5
+      },
+      "oneMesProfitLossDollars": -92.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7428 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T16:10:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7420.5,
+      "stop": 7416.75,
+      "riskPoints": 3.75,
+      "target1": 7426.25,
+      "target2": 7428,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7418,
+        "upper": 7418.25,
+        "formedAt": "2026-05-18T08:15:00",
+        "formedIndex": 99
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 8.5,
+        "maxAdversePoints": 1.5,
+        "exitPrice": 7428,
+        "points": 7.5,
+        "mesProfitLossDollars": 37.5
+      },
+      "oneMesProfitLossDollars": 37.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T16:15:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7421.75,
+      "stop": 7408,
+      "riskPoints": 13.75,
+      "target1": 7442.5,
+      "target2": 7449.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7408.25,
+        "upper": 7419.75,
+        "formedAt": "2026-05-18T07:45:00",
+        "formedIndex": 93
+      },
+      "htfObstacle": {
+        "price": 7428.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 19,
+        "maxAdversePoints": 18.25,
+        "exitPrice": 7408,
+        "points": -13.75,
+        "mesProfitLossDollars": -68.75
+      },
+      "oneMesProfitLossDollars": -68.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7428.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T16:25:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7422.75,
+      "stop": 7408,
+      "riskPoints": 14.75,
+      "target1": 7445,
+      "target2": 7452.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7408.25,
+        "upper": 7419.75,
+        "formedAt": "2026-05-18T07:45:00",
+        "formedIndex": 93
+      },
+      "htfObstacle": {
+        "price": 7428.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 18,
+        "maxAdversePoints": 19.25,
+        "exitPrice": 7408,
+        "points": -14.75,
+        "mesProfitLossDollars": -73.75
+      },
+      "oneMesProfitLossDollars": -73.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7428.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-18",
+      "timestamp": "2026-05-18T16:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7420.25,
+      "stop": 7408,
+      "riskPoints": 12.25,
+      "target1": 7438.75,
+      "target2": 7444.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7408.25,
+        "upper": 7419.75,
+        "formedAt": "2026-05-18T07:45:00",
+        "formedIndex": 93
+      },
+      "htfObstacle": {
+        "price": 7428.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 18.5,
+        "maxAdversePoints": 0.5,
+        "exitPrice": 7438.75,
+        "points": 18.5,
+        "mesProfitLossDollars": 92.5
+      },
+      "oneMesProfitLossDollars": 92.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7428.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T15:15:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7444.25,
+      "stop": 7438.5,
+      "riskPoints": 5.75,
+      "target1": 7453,
+      "target2": 7455.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7440,
+        "upper": 7441.5,
+        "formedAt": "2026-05-20T14:40:00",
+        "formedIndex": 176
+      },
+      "htfObstacle": {
+        "price": 7447.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 10.25,
+        "maxAdversePoints": 1.5,
+        "exitPrice": 7453,
+        "points": 8.75,
+        "mesProfitLossDollars": 43.75
+      },
+      "oneMesProfitLossDollars": 43.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7447.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T15:20:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7445.75,
+      "stop": 7442.5,
+      "riskPoints": 3.25,
+      "target1": 7450.75,
+      "target2": 7452.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7443.25,
+        "upper": 7443.5,
+        "formedAt": "2026-05-20T11:55:00",
+        "formedIndex": 143
+      },
+      "htfObstacle": {
+        "price": 7447.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 8.75,
+        "maxAdversePoints": 1.5,
+        "exitPrice": 7452.25,
+        "points": 6.5,
+        "mesProfitLossDollars": 32.5
+      },
+      "oneMesProfitLossDollars": 32.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7447.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T15:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7447.5,
+      "stop": 7444,
+      "riskPoints": 3.5,
+      "target1": 7452.75,
+      "target2": 7454.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7444.25,
+        "upper": 7444.5,
+        "formedAt": "2026-05-20T15:25:00",
+        "formedIndex": 185
+      },
+      "htfObstacle": {
+        "price": 7448.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 7,
+        "maxAdversePoints": 0.25,
+        "exitPrice": 7454.5,
+        "points": 7,
+        "mesProfitLossDollars": 35
+      },
+      "oneMesProfitLossDollars": 35,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7448.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T15:55:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7448.75,
+      "stop": 7444,
+      "riskPoints": 4.75,
+      "target1": 7456,
+      "target2": 7458.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7444.25,
+        "upper": 7444.5,
+        "formedAt": "2026-05-20T15:25:00",
+        "formedIndex": 185
+      },
+      "htfObstacle": {
+        "price": 7450,
+        "label": "Round Number 7450",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 4.25,
+        "maxAdversePoints": 7.75,
+        "exitPrice": 7444,
+        "points": -4.75,
+        "mesProfitLossDollars": -23.75
+      },
+      "oneMesProfitLossDollars": -23.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7450 Round Number 7450."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:00:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7451.75,
+      "stop": 7446.25,
+      "riskPoints": 5.5,
+      "target1": 7460,
+      "target2": 7462.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7448.5,
+        "upper": 7450.5,
+        "formedAt": "2026-05-20T15:45:00",
+        "formedIndex": 189
+      },
+      "htfObstacle": {
+        "price": 7454.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.25,
+        "maxAdversePoints": 6.25,
+        "exitPrice": 7446.25,
+        "points": -5.5,
+        "mesProfitLossDollars": -27.5
+      },
+      "oneMesProfitLossDollars": -27.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7454.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:15:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7448,
+      "stop": 7444,
+      "riskPoints": 4,
+      "target1": 7454,
+      "target2": 7456,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7444.25,
+        "upper": 7444.5,
+        "formedAt": "2026-05-20T15:25:00",
+        "formedIndex": 185
+      },
+      "htfObstacle": {
+        "price": 7450,
+        "label": "Round Number 7450",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1,
+        "maxAdversePoints": 7,
+        "exitPrice": 7444,
+        "points": -4,
+        "mesProfitLossDollars": -20
+      },
+      "oneMesProfitLossDollars": -20,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7450 Round Number 7450."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:20:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7447.5,
+      "stop": 7440.75,
+      "riskPoints": 6.75,
+      "target1": 7457.75,
+      "target2": 7461,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7444.25,
+        "upper": 7444.5,
+        "formedAt": "2026-05-20T15:25:00",
+        "formedIndex": 185
+      },
+      "htfObstacle": {
+        "price": 7450,
+        "label": "Round Number 7450",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 2,
+        "maxAdversePoints": 18.25,
+        "exitPrice": 7440.75,
+        "points": -6.75,
+        "mesProfitLossDollars": -33.75
+      },
+      "oneMesProfitLossDollars": -33.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7450 Round Number 7450."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:25:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7443,
+      "stop": 7429,
+      "riskPoints": 14,
+      "target1": 7464,
+      "target2": 7471,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7440,
+        "upper": 7441.5,
+        "formedAt": "2026-05-20T14:40:00",
+        "formedIndex": 176
+      },
+      "htfObstacle": {
+        "price": 7450,
+        "label": "Round Number 7450",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 10.75,
+        "maxAdversePoints": 20.75,
+        "exitPrice": 7429,
+        "points": -14,
+        "mesProfitLossDollars": -70
+      },
+      "oneMesProfitLossDollars": -70,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7450 Round Number 7450."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:30:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7452.5,
+      "stop": 7438.75,
+      "riskPoints": 13.75,
+      "target1": 7473.25,
+      "target2": 7480,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7448.5,
+        "upper": 7450.5,
+        "formedAt": "2026-05-20T15:45:00",
+        "formedIndex": 189
+      },
+      "htfObstacle": {
+        "price": 7454.5,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.25,
+        "maxAdversePoints": 16.5,
+        "exitPrice": 7438.75,
+        "points": -13.75,
+        "mesProfitLossDollars": -68.75
+      },
+      "oneMesProfitLossDollars": -68.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7454.5 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-20",
+      "timestamp": "2026-05-20T16:40:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7438.75,
+      "stop": 7428,
+      "riskPoints": 10.75,
+      "target1": 7455,
+      "target2": 7460.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7428.25,
+        "upper": 7438.5,
+        "formedAt": "2026-05-20T11:25:00",
+        "formedIndex": 137
+      },
+      "htfObstacle": {
+        "price": 7440,
+        "label": "Round Number 7440",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3.25,
+        "maxAdversePoints": 16.5,
+        "exitPrice": 7428,
+        "points": -10.75,
+        "mesProfitLossDollars": -53.75
+      },
+      "oneMesProfitLossDollars": -53.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7440 Round Number 7440."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T15:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7532.75,
+      "stop": 7527.5,
+      "riskPoints": 5.25,
+      "target1": 7540.75,
+      "target2": 7543.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7527.75,
+        "upper": 7530,
+        "formedAt": "2026-05-26T14:20:00",
+        "formedIndex": 172
+      },
+      "htfObstacle": {
+        "price": 7533.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 8.25,
+        "maxAdversePoints": 0.5,
+        "exitPrice": 7540.75,
+        "points": 8,
+        "mesProfitLossDollars": 40
+      },
+      "oneMesProfitLossDollars": 40,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7533.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T15:40:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7536,
+      "stop": 7530.25,
+      "riskPoints": 5.75,
+      "target1": 7544.75,
+      "target2": 7547.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7530.5,
+        "upper": 7532.25,
+        "formedAt": "2026-05-26T03:50:00",
+        "formedIndex": 46
+      },
+      "htfObstacle": {
+        "price": 7536.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 6.25,
+        "maxAdversePoints": 5.75,
+        "exitPrice": 7530.25,
+        "points": -5.75,
+        "mesProfitLossDollars": -28.75
+      },
+      "oneMesProfitLossDollars": -28.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7536.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T15:45:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7538.5,
+      "stop": 7534.25,
+      "riskPoints": 4.25,
+      "target1": 7545,
+      "target2": 7547,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7534.5,
+        "upper": 7536.75,
+        "formedAt": "2026-05-26T05:35:00",
+        "formedIndex": 67
+      },
+      "htfObstacle": {
+        "price": 7539,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3.75,
+        "maxAdversePoints": 4.25,
+        "exitPrice": 7534.25,
+        "points": -4.25,
+        "mesProfitLossDollars": -21.25
+      },
+      "oneMesProfitLossDollars": -21.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7539 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T15:50:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7539.25,
+      "stop": 7536.75,
+      "riskPoints": 2.5,
+      "target1": 7543,
+      "target2": 7544.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7538.75,
+        "upper": 7539,
+        "formedAt": "2026-05-26T06:15:00",
+        "formedIndex": 75
+      },
+      "htfObstacle": {
+        "price": 7540,
+        "label": "Round Number 7540",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3,
+        "maxAdversePoints": 5,
+        "exitPrice": 7536.75,
+        "points": -2.5,
+        "mesProfitLossDollars": -12.5
+      },
+      "oneMesProfitLossDollars": -12.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7540 Round Number 7540."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T15:55:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7540.25,
+      "stop": 7533.5,
+      "riskPoints": 6.75,
+      "target1": 7550.5,
+      "target2": 7553.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7533.75,
+        "upper": 7540,
+        "formedAt": "2026-05-26T09:50:00",
+        "formedIndex": 118
+      },
+      "htfObstacle": {
+        "price": 7542.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.5,
+        "maxAdversePoints": 7.5,
+        "exitPrice": 7533.5,
+        "points": -6.75,
+        "mesProfitLossDollars": -33.75
+      },
+      "oneMesProfitLossDollars": -33.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7542.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:00:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7539.25,
+      "stop": 7534,
+      "riskPoints": 5.25,
+      "target1": 7547.25,
+      "target2": 7549.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7536.25,
+        "upper": 7537,
+        "formedAt": "2026-05-26T15:50:00",
+        "formedIndex": 190
+      },
+      "htfObstacle": {
+        "price": 7540,
+        "label": "Round Number 7540",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.5,
+        "maxAdversePoints": 6.5,
+        "exitPrice": 7534,
+        "points": -5.25,
+        "mesProfitLossDollars": -26.25
+      },
+      "oneMesProfitLossDollars": -26.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7540 Round Number 7540."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:05:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7537.25,
+      "stop": 7536,
+      "riskPoints": 1.25,
+      "target1": 7539.25,
+      "target2": 7539.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7536.25,
+        "upper": 7537,
+        "formedAt": "2026-05-26T15:50:00",
+        "formedIndex": 190
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.75,
+        "maxAdversePoints": 1.25,
+        "exitPrice": 7536,
+        "points": -1.25,
+        "mesProfitLossDollars": -6.25
+      },
+      "oneMesProfitLossDollars": -6.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:10:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7537.25,
+      "stop": 7536,
+      "riskPoints": 1.25,
+      "target1": 7539.25,
+      "target2": 7539.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7536.25,
+        "upper": 7537,
+        "formedAt": "2026-05-26T15:50:00",
+        "formedIndex": 190
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.5,
+        "maxAdversePoints": 1.25,
+        "exitPrice": 7536,
+        "points": -1.25,
+        "mesProfitLossDollars": -6.25
+      },
+      "oneMesProfitLossDollars": -6.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:20:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7537.75,
+      "stop": 7535.25,
+      "riskPoints": 2.5,
+      "target1": 7541.5,
+      "target2": 7542.75,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7536.25,
+        "upper": 7537,
+        "formedAt": "2026-05-26T15:50:00",
+        "formedIndex": 190
+      },
+      "htfObstacle": {
+        "price": 7540,
+        "label": "Round Number 7540",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.75,
+        "maxAdversePoints": 3,
+        "exitPrice": 7535.25,
+        "points": -2.5,
+        "mesProfitLossDollars": -12.5
+      },
+      "oneMesProfitLossDollars": -12.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7540 Round Number 7540."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7536.5,
+      "stop": 7533,
+      "riskPoints": 3.5,
+      "target1": 7541.75,
+      "target2": 7543.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7533.25,
+        "upper": 7535.25,
+        "formedAt": "2026-05-26T15:45:00",
+        "formedIndex": 189
+      },
+      "htfObstacle": {
+        "price": 7540,
+        "label": "Round Number 7540",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.25,
+        "maxAdversePoints": 3.75,
+        "exitPrice": 7533,
+        "points": -3.5,
+        "mesProfitLossDollars": -17.5
+      },
+      "oneMesProfitLossDollars": -17.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7540 Round Number 7540."
+      ]
+    },
+    {
+      "tradeDate": "2026-05-26",
+      "timestamp": "2026-05-26T16:40:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7537,
+      "stop": 7534.25,
+      "riskPoints": 2.75,
+      "target1": 7541.25,
+      "target2": 7542.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7534.5,
+        "upper": 7536.75,
+        "formedAt": "2026-05-26T05:35:00",
+        "formedIndex": 67
+      },
+      "htfObstacle": {
+        "price": 7540,
+        "label": "Round Number 7540",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.75,
+        "maxAdversePoints": 4.25,
+        "exitPrice": 7534.25,
+        "points": -2.75,
+        "mesProfitLossDollars": -13.75
+      },
+      "oneMesProfitLossDollars": -13.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7540 Round Number 7540."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T15:50:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7615.5,
+      "stop": 7620.25,
+      "riskPoints": 4.75,
+      "target1": 7608.5,
+      "target2": 7606,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7616.25,
+        "upper": 7616.5,
+        "formedAt": "2026-06-01T02:30:00",
+        "formedIndex": 30
+      },
+      "htfObstacle": {
+        "price": 7615,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 8,
+        "maxAdversePoints": 2.75,
+        "exitPrice": 7608.5,
+        "points": 7,
+        "mesProfitLossDollars": 35
+      },
+      "oneMesProfitLossDollars": 35,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7615 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T15:55:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7611.5,
+      "stop": 7617.25,
+      "riskPoints": 5.75,
+      "target1": 7603,
+      "target2": 7600,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7614.25,
+        "upper": 7614.5,
+        "formedAt": "2026-06-01T08:05:00",
+        "formedIndex": 97
+      },
+      "htfObstacle": {
+        "price": 7611,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1,
+        "maxAdversePoints": 6.75,
+        "exitPrice": 7617.25,
+        "points": -5.75,
+        "mesProfitLossDollars": -28.75
+      },
+      "oneMesProfitLossDollars": -28.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7611 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:00:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7613.75,
+      "stop": 7614.75,
+      "riskPoints": 1,
+      "target1": 7612.25,
+      "target2": 7611.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7614.25,
+        "upper": 7614.5,
+        "formedAt": "2026-06-01T08:05:00",
+        "formedIndex": 97
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.5,
+        "maxAdversePoints": 1.75,
+        "exitPrice": 7614.75,
+        "points": -1,
+        "mesProfitLossDollars": -5
+      },
+      "oneMesProfitLossDollars": -5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:05:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7614.75,
+      "stop": 7617.5,
+      "riskPoints": 2.75,
+      "target1": 7610.75,
+      "target2": 7609.25,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7615.5,
+        "upper": 7617.25,
+        "formedAt": "2026-06-01T08:00:00",
+        "formedIndex": 96
+      },
+      "htfObstacle": {
+        "price": 7610.5,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 4,
+        "maxAdversePoints": 1.5,
+        "exitPrice": 7610.75,
+        "points": 4,
+        "mesProfitLossDollars": 20
+      },
+      "oneMesProfitLossDollars": 20,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7610.5 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:10:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7614.25,
+      "stop": 7617.5,
+      "riskPoints": 3.25,
+      "target1": 7609.5,
+      "target2": 7607.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7615.5,
+        "upper": 7617.25,
+        "formedAt": "2026-06-01T08:00:00",
+        "formedIndex": 96
+      },
+      "htfObstacle": {
+        "price": 7610.5,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3.75,
+        "maxAdversePoints": 4,
+        "exitPrice": 7617.5,
+        "points": -3.25,
+        "mesProfitLossDollars": -16.25
+      },
+      "oneMesProfitLossDollars": -16.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7610.5 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:15:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7615.75,
+      "stop": 7616.75,
+      "riskPoints": 1,
+      "target1": 7614.25,
+      "target2": 7613.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7616.25,
+        "upper": 7616.5,
+        "formedAt": "2026-06-01T02:30:00",
+        "formedIndex": 30
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 2.5,
+        "maxAdversePoints": 0,
+        "exitPrice": 7613.75,
+        "points": 2,
+        "mesProfitLossDollars": 10
+      },
+      "oneMesProfitLossDollars": 10,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:20:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7614.25,
+      "stop": 7617.5,
+      "riskPoints": 3.25,
+      "target1": 7609.5,
+      "target2": 7607.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7615.5,
+        "upper": 7617.25,
+        "formedAt": "2026-06-01T08:00:00",
+        "formedIndex": 96
+      },
+      "htfObstacle": {
+        "price": 7610.5,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 3.75,
+        "maxAdversePoints": 4,
+        "exitPrice": 7617.5,
+        "points": -3.25,
+        "mesProfitLossDollars": -16.25
+      },
+      "oneMesProfitLossDollars": -16.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7610.5 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:25:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7613.5,
+      "stop": 7615.25,
+      "riskPoints": 1.75,
+      "target1": 7611,
+      "target2": 7610,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7614.25,
+        "upper": 7615,
+        "formedAt": "2026-06-01T16:00:00",
+        "formedIndex": 192
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 2.75,
+        "maxAdversePoints": 0,
+        "exitPrice": 7611,
+        "points": 2.5,
+        "mesProfitLossDollars": 12.5
+      },
+      "oneMesProfitLossDollars": 12.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:35:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7613.75,
+      "stop": 7615.25,
+      "riskPoints": 1.5,
+      "target1": 7611.5,
+      "target2": 7610.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7614.25,
+        "upper": 7615,
+        "formedAt": "2026-06-01T16:00:00",
+        "formedIndex": 192
+      },
+      "htfObstacle": null,
+      "htfObstacleRole": "no_structured_obstacle_in_path",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.5,
+        "maxAdversePoints": 4.5,
+        "exitPrice": 7615.25,
+        "points": -1.5,
+        "mesProfitLossDollars": -7.5
+      },
+      "oneMesProfitLossDollars": -7.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "No structured obstacle selected in path."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-01",
+      "timestamp": "2026-06-01T16:40:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7613,
+      "stop": 7615.25,
+      "riskPoints": 2.25,
+      "target1": 7609.75,
+      "target2": 7608.5,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7614.25,
+        "upper": 7615,
+        "formedAt": "2026-06-01T16:00:00",
+        "formedIndex": 192
+      },
+      "htfObstacle": {
+        "price": 7610.5,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.75,
+        "maxAdversePoints": 5.25,
+        "exitPrice": 7615.25,
+        "points": -2.25,
+        "mesProfitLossDollars": -11.25
+      },
+      "oneMesProfitLossDollars": -11.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7610.5 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:05:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7622,
+      "stop": 7618.5,
+      "riskPoints": 3.5,
+      "target1": 7627.25,
+      "target2": 7629,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7621,
+        "upper": 7621.5,
+        "formedAt": "2026-06-02T11:00:00",
+        "formedIndex": 132
+      },
+      "htfObstacle": {
+        "price": 7622.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 5.5,
+        "maxAdversePoints": 2.5,
+        "exitPrice": 7627.25,
+        "points": 5.25,
+        "mesProfitLossDollars": 26.25
+      },
+      "oneMesProfitLossDollars": 26.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7622.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:10:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7622,
+      "stop": 7620.25,
+      "riskPoints": 1.75,
+      "target1": 7624.75,
+      "target2": 7625.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7621,
+        "upper": 7621.5,
+        "formedAt": "2026-06-02T11:00:00",
+        "formedIndex": 132
+      },
+      "htfObstacle": {
+        "price": 7622.25,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.75,
+        "maxAdversePoints": 2,
+        "exitPrice": 7620.25,
+        "points": -1.75,
+        "mesProfitLossDollars": -8.75
+      },
+      "oneMesProfitLossDollars": -8.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7622.25 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:15:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7620.5,
+      "stop": 7617,
+      "riskPoints": 3.5,
+      "target1": 7625.75,
+      "target2": 7627.5,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7617.25,
+        "upper": 7620,
+        "formedAt": "2026-06-02T10:55:00",
+        "formedIndex": 131
+      },
+      "htfObstacle": {
+        "price": 7622.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 7,
+        "maxAdversePoints": 1,
+        "exitPrice": 7627.5,
+        "points": 7,
+        "mesProfitLossDollars": 35
+      },
+      "oneMesProfitLossDollars": 35,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7622.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:20:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7621.25,
+      "stop": 7619.75,
+      "riskPoints": 1.5,
+      "target1": 7623.5,
+      "target2": 7624.25,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7620,
+        "upper": 7620.5,
+        "formedAt": "2026-06-02T15:10:00",
+        "formedIndex": 182
+      },
+      "htfObstacle": {
+        "price": 7622.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 2.5,
+        "maxAdversePoints": 0.25,
+        "exitPrice": 7623.5,
+        "points": 2.25,
+        "mesProfitLossDollars": 11.25
+      },
+      "oneMesProfitLossDollars": 11.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7622.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:25:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7623.5,
+      "stop": 7620.75,
+      "riskPoints": 2.75,
+      "target1": 7627.75,
+      "target2": 7629,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7621,
+        "upper": 7621.5,
+        "formedAt": "2026-06-02T11:00:00",
+        "formedIndex": 132
+      },
+      "htfObstacle": {
+        "price": 7623.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.25,
+        "maxAdversePoints": 3,
+        "exitPrice": 7620.75,
+        "points": -2.75,
+        "mesProfitLossDollars": -13.75
+      },
+      "oneMesProfitLossDollars": -13.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7623.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:30:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7621.5,
+      "stop": 7619.75,
+      "riskPoints": 1.75,
+      "target1": 7624.25,
+      "target2": 7625,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7620,
+        "upper": 7620.5,
+        "formedAt": "2026-06-02T15:10:00",
+        "formedIndex": 182
+      },
+      "htfObstacle": {
+        "price": 7623.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.5,
+        "maxAdversePoints": 2,
+        "exitPrice": 7619.75,
+        "points": -1.75,
+        "mesProfitLossDollars": -8.75
+      },
+      "oneMesProfitLossDollars": -8.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7623.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-02",
+      "timestamp": "2026-06-02T15:35:00",
+      "direction": "LONG",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7622.5,
+      "stop": 7620.75,
+      "riskPoints": 1.75,
+      "target1": 7625.25,
+      "target2": 7626,
+      "fvg": {
+        "direction": "LONG",
+        "lower": 7621,
+        "upper": 7621.5,
+        "formedAt": "2026-06-02T11:00:00",
+        "formedIndex": 132
+      },
+      "htfObstacle": {
+        "price": 7623.75,
+        "label": "Current Imported Window High",
+        "source": "current_window",
+        "type": "high",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 0.5,
+        "maxAdversePoints": 2.5,
+        "exitPrice": 7620.75,
+        "points": -1.75,
+        "mesProfitLossDollars": -8.75
+      },
+      "oneMesProfitLossDollars": -8.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7623.75 Current Imported Window High."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-04",
+      "timestamp": "2026-06-04T15:55:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7604.25,
+      "stop": 7609.25,
+      "riskPoints": 5,
+      "target1": 7596.75,
+      "target2": 7594.25,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7607.5,
+        "upper": 7609,
+        "formedAt": "2026-06-04T15:50:00",
+        "formedIndex": 190
+      },
+      "htfObstacle": {
+        "price": 7602.25,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 10,
+        "maxAdversePoints": 0,
+        "exitPrice": 7594.25,
+        "points": 10,
+        "mesProfitLossDollars": 50
+      },
+      "oneMesProfitLossDollars": 50,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7602.25 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "timestamp": "2026-06-05T15:00:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7416.5,
+      "stop": 7426.5,
+      "riskPoints": 10,
+      "target1": 7401.5,
+      "target2": 7396.5,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7424.75,
+        "upper": 7425.5,
+        "formedAt": "2026-06-05T14:50:00",
+        "formedIndex": 178
+      },
+      "htfObstacle": {
+        "price": 7413.25,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 17,
+        "maxAdversePoints": 1.75,
+        "exitPrice": 7401.5,
+        "points": 15,
+        "mesProfitLossDollars": 75
+      },
+      "oneMesProfitLossDollars": 75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7413.25 RTH Open."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "timestamp": "2026-06-05T15:35:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7404,
+      "stop": 7410,
+      "riskPoints": 6,
+      "target1": 7395,
+      "target2": 7392,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7405.25,
+        "upper": 7407,
+        "formedAt": "2026-06-05T15:15:00",
+        "formedIndex": 183
+      },
+      "htfObstacle": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.75,
+        "maxAdversePoints": 9,
+        "exitPrice": 7410,
+        "points": -6,
+        "mesProfitLossDollars": -30
+      },
+      "oneMesProfitLossDollars": -30,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7400 Round Number 7400."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "timestamp": "2026-06-05T15:45:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7402.75,
+      "stop": 7412.75,
+      "riskPoints": 10,
+      "target1": 7387.75,
+      "target2": 7382.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7405.25,
+        "upper": 7407,
+        "formedAt": "2026-06-05T15:15:00",
+        "formedIndex": 183
+      },
+      "htfObstacle": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1.75,
+        "maxAdversePoints": 12,
+        "exitPrice": 7412.75,
+        "points": -10,
+        "mesProfitLossDollars": -50
+      },
+      "oneMesProfitLossDollars": -50,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7400 Round Number 7400."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "timestamp": "2026-06-05T16:00:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7400,
+      "stop": 7417,
+      "riskPoints": 17,
+      "target1": 7374.5,
+      "target2": 7366,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7405.25,
+        "upper": 7407,
+        "formedAt": "2026-06-05T15:15:00",
+        "formedIndex": 183
+      },
+      "htfObstacle": {
+        "price": 7400,
+        "label": "Round Number 7400",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T1",
+        "maxFavorablePoints": 26,
+        "maxAdversePoints": 1.5,
+        "exitPrice": 7374.5,
+        "points": 25.5,
+        "mesProfitLossDollars": 127.5
+      },
+      "oneMesProfitLossDollars": 127.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7400 Round Number 7400."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-05",
+      "timestamp": "2026-06-05T16:05:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7378.25,
+      "stop": 7401.75,
+      "riskPoints": 23.5,
+      "target1": 7343,
+      "target2": 7331.25,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7396.75,
+        "upper": 7399.5,
+        "formedAt": "2026-06-05T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7374,
+        "label": "Current Imported Window Low",
+        "source": "current_window",
+        "type": "low",
+        "reason": "16 bars reviewed for Current Imported Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 19.25,
+        "maxAdversePoints": 0.75,
+        "exitPrice": 7368,
+        "points": 10.25,
+        "mesProfitLossDollars": 51.25
+      },
+      "oneMesProfitLossDollars": 51.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7374 Current Imported Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:00:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7431.75,
+      "stop": 7440.25,
+      "riskPoints": 8.5,
+      "target1": 7419,
+      "target2": 7414.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7436,
+        "upper": 7440,
+        "formedAt": "2026-06-08T14:45:00",
+        "formedIndex": 177
+      },
+      "htfObstacle": {
+        "price": 7430,
+        "label": "Round Number 7430",
+        "source": "app",
+        "type": "round_number",
+        "reason": "Whole/round-number magnet inside imported context range."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "T2",
+        "maxFavorablePoints": 17,
+        "maxAdversePoints": 2.5,
+        "exitPrice": 7414.75,
+        "points": 17,
+        "mesProfitLossDollars": 85
+      },
+      "oneMesProfitLossDollars": 85,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7430 Round Number 7430."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:15:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7414.75,
+      "stop": 7424.75,
+      "riskPoints": 10,
+      "target1": 7399.75,
+      "target2": 7394.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7420.75,
+        "upper": 7423.75,
+        "formedAt": "2026-06-08T06:25:00",
+        "formedIndex": 77
+      },
+      "htfObstacle": {
+        "price": 7414.75,
+        "label": "Lunch/PM Setup Scan Window Low",
+        "source": "lunch",
+        "type": "low",
+        "reason": "61 bars reviewed for Lunch/PM Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 11,
+        "maxAdversePoints": 9.5,
+        "exitPrice": 7412,
+        "points": 2.75,
+        "mesProfitLossDollars": 13.75
+      },
+      "oneMesProfitLossDollars": 13.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7414.75 Lunch/PM Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:20:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7414.5,
+      "stop": 7418.75,
+      "riskPoints": 4.25,
+      "target1": 7408.25,
+      "target2": 7406,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7414.75,
+        "upper": 7415.25,
+        "formedAt": "2026-06-08T00:10:00",
+        "formedIndex": 2
+      },
+      "htfObstacle": {
+        "price": 7413.25,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "AMBIGUOUS",
+        "maxFavorablePoints": 8.25,
+        "maxAdversePoints": 4.75,
+        "exitPrice": null,
+        "points": null,
+        "mesProfitLossDollars": null
+      },
+      "oneMesProfitLossDollars": null,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7413.25 RTH Open."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:25:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7407.25,
+      "stop": 7424.5,
+      "riskPoints": 17.25,
+      "target1": 7381.5,
+      "target2": 7372.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7406.25,
+        "label": "Lunch/PM Setup Scan Window Low",
+        "source": "lunch",
+        "type": "low",
+        "reason": "63 bars reviewed for Lunch/PM Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 3.5,
+        "maxAdversePoints": 17,
+        "exitPrice": 7412,
+        "points": -4.75,
+        "mesProfitLossDollars": -23.75
+      },
+      "oneMesProfitLossDollars": -23.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7406.25 Lunch/PM Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:30:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7414.5,
+      "stop": 7415.5,
+      "riskPoints": 1,
+      "target1": 7413,
+      "target2": 7412.5,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7414.75,
+        "upper": 7415.25,
+        "formedAt": "2026-06-08T00:10:00",
+        "formedIndex": 2
+      },
+      "htfObstacle": {
+        "price": 7413.25,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "STOP",
+        "maxFavorablePoints": 1,
+        "maxAdversePoints": 9.75,
+        "exitPrice": 7415.5,
+        "points": -1,
+        "mesProfitLossDollars": -5
+      },
+      "oneMesProfitLossDollars": -5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7413.25 RTH Open."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:35:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7417,
+      "stop": 7424.5,
+      "riskPoints": 7.5,
+      "target1": 7405.75,
+      "target2": 7402,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 9.75,
+        "maxAdversePoints": 5.25,
+        "exitPrice": 7412,
+        "points": 5,
+        "mesProfitLossDollars": 25
+      },
+      "oneMesProfitLossDollars": 25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7415.5 Morning Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:40:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7416.25,
+      "stop": 7424.5,
+      "riskPoints": 8.25,
+      "target1": 7404,
+      "target2": 7399.75,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 9,
+        "maxAdversePoints": 6,
+        "exitPrice": 7412,
+        "points": 4.25,
+        "mesProfitLossDollars": 21.25
+      },
+      "oneMesProfitLossDollars": 21.25,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7415.5 Morning Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:45:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7416,
+      "stop": 7424.5,
+      "riskPoints": 8.5,
+      "target1": 7403.25,
+      "target2": 7399,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 8.75,
+        "maxAdversePoints": 6.25,
+        "exitPrice": 7412,
+        "points": 4,
+        "mesProfitLossDollars": 20
+      },
+      "oneMesProfitLossDollars": 20,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7415.5 Morning Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:50:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7415.5,
+      "stop": 7424.5,
+      "riskPoints": 9,
+      "target1": 7402,
+      "target2": 7397.5,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7415.5,
+        "label": "Morning Setup Scan Window Low",
+        "source": "rth_morning",
+        "type": "low",
+        "reason": "36 bars reviewed for Morning Setup Scan Window."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 8.25,
+        "maxAdversePoints": 6.75,
+        "exitPrice": 7412,
+        "points": 3.5,
+        "mesProfitLossDollars": 17.5
+      },
+      "oneMesProfitLossDollars": 17.5,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7415.5 Morning Setup Scan Window Low."
+      ]
+    },
+    {
+      "tradeDate": "2026-06-08",
+      "timestamp": "2026-06-08T15:55:00",
+      "direction": "SHORT",
+      "mssTriggerStatus": "qualified_after_completed_15m_5m_mss_and_5m_fvg_retest_rejection",
+      "entry": 7414.75,
+      "stop": 7424.5,
+      "riskPoints": 9.75,
+      "target1": 7400.25,
+      "target2": 7395.25,
+      "fvg": {
+        "direction": "SHORT",
+        "lower": 7418.5,
+        "upper": 7424.25,
+        "formedAt": "2026-06-08T15:20:00",
+        "formedIndex": 184
+      },
+      "htfObstacle": {
+        "price": 7413.25,
+        "label": "RTH Open",
+        "source": "rth_morning",
+        "type": "rth_open",
+        "reason": "First imported 5M RTH bar open."
+      },
+      "htfObstacleRole": "obstacle_ahead_management_line",
+      "lineCloseThrough": false,
+      "outcomeToClose": {
+        "firstHit": "NONE",
+        "maxFavorablePoints": 7.5,
+        "maxAdversePoints": 4.25,
+        "exitPrice": 7412,
+        "points": 2.75,
+        "mesProfitLossDollars": 13.75
+      },
+      "oneMesProfitLossDollars": 13.75,
+      "notes": [
+        "Corrected model: purple-line MSS close-through is the setup trigger.",
+        "HTF line is obstacle/management context, not a setup disqualifier.",
+        "Obstacle/management line: 7413.25 RTH Open."
+      ]
+    }
+  ],
+  "authority": "research_only_not_window_change_not_execution_approval"
+}

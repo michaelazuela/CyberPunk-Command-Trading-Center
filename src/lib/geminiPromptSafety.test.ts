@@ -13,6 +13,7 @@ assert.ok(htfRule.includes('SetupType.HtfDrawContinuationAfterRaid'));
 assert.ok(htfRule.includes('SetupType.HtfDisplacementMssContinuation'));
 assert.ok(htfRule.includes('SetupType.HtfDisplacementFvgContinuation'));
 assert.ok(htfRule.includes('SetupType.OpeningDriveFvgContinuation'));
+assert.ok(htfRule.includes('SetupType.IntradayMssMicroContinuation'));
 assert.ok(htfRule.includes('SetupType.FailedPlanReversal'));
 assert.ok(htfRule.includes('HTF Draw Continuation After Raid/Reclaim'));
 assert.ok(htfRule.includes('HTF Displacement + FVG Continuation'));

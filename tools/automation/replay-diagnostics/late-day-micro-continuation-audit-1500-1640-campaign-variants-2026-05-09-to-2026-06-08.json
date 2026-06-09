@@ -1,0 +1,1276 @@
+{
+  "generatedAt": "2026-06-09T01:09:11.447Z",
+  "sourceArtifact": "tools/automation/replay-diagnostics/late-day-micro-continuation-audit-1500-1640-mss-trigger-model-2026-05-09-to-2026-06-08.json",
+  "interpretation": "One trade per MSS campaign. Campaigns grouped by trade date and direction; no re-entry within same campaign.",
+  "maxRiskPoints": 5,
+  "campaigns": [
+    {
+      "id": "2026-05-18-LONG",
+      "tradeDate": "2026-05-18",
+      "direction": "LONG",
+      "candidateCount": 15,
+      "firstTimestamp": "2026-05-18T15:05:00",
+      "lastTimestamp": "2026-05-18T16:35:00"
+    },
+    {
+      "id": "2026-05-20-LONG",
+      "tradeDate": "2026-05-20",
+      "direction": "LONG",
+      "candidateCount": 10,
+      "firstTimestamp": "2026-05-20T15:15:00",
+      "lastTimestamp": "2026-05-20T16:40:00"
+    },
+    {
+      "id": "2026-05-26-LONG",
+      "tradeDate": "2026-05-26",
+      "direction": "LONG",
+      "candidateCount": 11,
+      "firstTimestamp": "2026-05-26T15:35:00",
+      "lastTimestamp": "2026-05-26T16:40:00"
+    },
+    {
+      "id": "2026-06-01-SHORT",
+      "tradeDate": "2026-06-01",
+      "direction": "SHORT",
+      "candidateCount": 10,
+      "firstTimestamp": "2026-06-01T15:50:00",
+      "lastTimestamp": "2026-06-01T16:40:00"
+    },
+    {
+      "id": "2026-06-02-LONG",
+      "tradeDate": "2026-06-02",
+      "direction": "LONG",
+      "candidateCount": 7,
+      "firstTimestamp": "2026-06-02T15:05:00",
+      "lastTimestamp": "2026-06-02T15:35:00"
+    },
+    {
+      "id": "2026-06-04-SHORT",
+      "tradeDate": "2026-06-04",
+      "direction": "SHORT",
+      "candidateCount": 1,
+      "firstTimestamp": "2026-06-04T15:55:00",
+      "lastTimestamp": "2026-06-04T15:55:00"
+    },
+    {
+      "id": "2026-06-05-SHORT",
+      "tradeDate": "2026-06-05",
+      "direction": "SHORT",
+      "candidateCount": 5,
+      "firstTimestamp": "2026-06-05T15:00:00",
+      "lastTimestamp": "2026-06-05T16:05:00"
+    },
+    {
+      "id": "2026-06-08-SHORT",
+      "tradeDate": "2026-06-08",
+      "direction": "SHORT",
+      "candidateCount": 10,
+      "firstTimestamp": "2026-06-08T15:00:00",
+      "lastTimestamp": "2026-06-08T15:55:00"
+    }
+  ],
+  "summaries": {
+    "A_first_qualifying_signal": {
+      "campaigns": 8,
+      "tradesTaken": 8,
+      "noTradeCampaigns": 0,
+      "scoredTrades": 8,
+      "ambiguousTrades": 0,
+      "wins": 8,
+      "losses": 0,
+      "winRate": 100,
+      "grossMesProfitLossDollars": 403.75,
+      "outcomes": {
+        "NONE": 1,
+        "T1": 5,
+        "T2": 2
+      }
+    },
+    "B_first_signal_max_5pt_risk": {
+      "campaigns": 8,
+      "tradesTaken": 7,
+      "noTradeCampaigns": 1,
+      "scoredTrades": 5,
+      "ambiguousTrades": 2,
+      "wins": 4,
+      "losses": 1,
+      "winRate": 80,
+      "grossMesProfitLossDollars": 122.5,
+      "outcomes": {
+        "AMBIGUOUS": 2,
+        "T2": 2,
+        "STOP": 1,
+        "T1": 2
+      }
+    },
+    "C_first_clean_fvg_retest_rejection": {
+      "campaigns": 8,
+      "tradesTaken": 8,
+      "noTradeCampaigns": 0,
+      "scoredTrades": 8,
+      "ambiguousTrades": 0,
+      "wins": 8,
+      "losses": 0,
+      "winRate": 100,
+      "grossMesProfitLossDollars": 403.75,
+      "outcomes": {
+        "NONE": 1,
+        "T1": 5,
+        "T2": 2
+      }
+    },
+    "D_hindsight_best_candidate_reference_only": {
+      "campaigns": 8,
+      "tradesTaken": 8,
+      "noTradeCampaigns": 0,
+      "scoredTrades": 8,
+      "ambiguousTrades": 0,
+      "wins": 8,
+      "losses": 0,
+      "winRate": 100,
+      "grossMesProfitLossDollars": 566.25,
+      "outcomes": {
+        "T1": 5,
+        "T2": 3
+      }
+    }
+  },
+  "variants": {
+    "A_first_qualifying_signal": [
+      {
+        "campaignId": "2026-05-18-LONG",
+        "tradeDate": "2026-05-18",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-05-18T15:05:00",
+        "entry": 7404.5,
+        "stop": 7375.5,
+        "riskPoints": 29,
+        "target1": 7448,
+        "target2": 7462.5,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7395.5,
+          "upper": 7403.75,
+          "formedAt": "2026-05-18T13:00:00",
+          "formedIndex": 156
+        },
+        "htfObstacle": {
+          "price": 7410,
+          "label": "Round Number 7410",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "NONE",
+          "maxFavorablePoints": 36.25,
+          "maxAdversePoints": 18.25,
+          "exitPrice": 7414.25,
+          "points": 9.75,
+          "mesProfitLossDollars": 48.75
+        },
+        "oneMesProfitLossDollars": 48.75
+      },
+      {
+        "campaignId": "2026-05-20-LONG",
+        "tradeDate": "2026-05-20",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-05-20T15:15:00",
+        "entry": 7444.25,
+        "stop": 7438.5,
+        "riskPoints": 5.75,
+        "target1": 7453,
+        "target2": 7455.75,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7440,
+          "upper": 7441.5,
+          "formedAt": "2026-05-20T14:40:00",
+          "formedIndex": 176
+        },
+        "htfObstacle": {
+          "price": 7447.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 10.25,
+          "maxAdversePoints": 1.5,
+          "exitPrice": 7453,
+          "points": 8.75,
+          "mesProfitLossDollars": 43.75
+        },
+        "oneMesProfitLossDollars": 43.75
+      },
+      {
+        "campaignId": "2026-05-26-LONG",
+        "tradeDate": "2026-05-26",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-05-26T15:35:00",
+        "entry": 7532.75,
+        "stop": 7527.5,
+        "riskPoints": 5.25,
+        "target1": 7540.75,
+        "target2": 7543.25,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7527.75,
+          "upper": 7530,
+          "formedAt": "2026-05-26T14:20:00",
+          "formedIndex": 172
+        },
+        "htfObstacle": {
+          "price": 7533.75,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8.25,
+          "maxAdversePoints": 0.5,
+          "exitPrice": 7540.75,
+          "points": 8,
+          "mesProfitLossDollars": 40
+        },
+        "oneMesProfitLossDollars": 40
+      },
+      {
+        "campaignId": "2026-06-01-SHORT",
+        "tradeDate": "2026-06-01",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-06-01T15:50:00",
+        "entry": 7615.5,
+        "stop": 7620.25,
+        "riskPoints": 4.75,
+        "target1": 7608.5,
+        "target2": 7606,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7616.25,
+          "upper": 7616.5,
+          "formedAt": "2026-06-01T02:30:00",
+          "formedIndex": 30
+        },
+        "htfObstacle": {
+          "price": 7615,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8,
+          "maxAdversePoints": 2.75,
+          "exitPrice": 7608.5,
+          "points": 7,
+          "mesProfitLossDollars": 35
+        },
+        "oneMesProfitLossDollars": 35
+      },
+      {
+        "campaignId": "2026-06-02-LONG",
+        "tradeDate": "2026-06-02",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-06-02T15:05:00",
+        "entry": 7622,
+        "stop": 7618.5,
+        "riskPoints": 3.5,
+        "target1": 7627.25,
+        "target2": 7629,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7621,
+          "upper": 7621.5,
+          "formedAt": "2026-06-02T11:00:00",
+          "formedIndex": 132
+        },
+        "htfObstacle": {
+          "price": 7622.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 5.5,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7627.25,
+          "points": 5.25,
+          "mesProfitLossDollars": 26.25
+        },
+        "oneMesProfitLossDollars": 26.25
+      },
+      {
+        "campaignId": "2026-06-04-SHORT",
+        "tradeDate": "2026-06-04",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-06-04T15:55:00",
+        "entry": 7604.25,
+        "stop": 7609.25,
+        "riskPoints": 5,
+        "target1": 7596.75,
+        "target2": 7594.25,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7607.5,
+          "upper": 7609,
+          "formedAt": "2026-06-04T15:50:00",
+          "formedIndex": 190
+        },
+        "htfObstacle": {
+          "price": 7602.25,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 10,
+          "maxAdversePoints": 0,
+          "exitPrice": 7594.25,
+          "points": 10,
+          "mesProfitLossDollars": 50
+        },
+        "oneMesProfitLossDollars": 50
+      },
+      {
+        "campaignId": "2026-06-05-SHORT",
+        "tradeDate": "2026-06-05",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-06-05T15:00:00",
+        "entry": 7416.5,
+        "stop": 7426.5,
+        "riskPoints": 10,
+        "target1": 7401.5,
+        "target2": 7396.5,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7424.75,
+          "upper": 7425.5,
+          "formedAt": "2026-06-05T14:50:00",
+          "formedIndex": 178
+        },
+        "htfObstacle": {
+          "price": 7413.25,
+          "label": "RTH Open",
+          "source": "rth_morning",
+          "type": "rth_open",
+          "reason": "First imported 5M RTH bar open."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 17,
+          "maxAdversePoints": 1.75,
+          "exitPrice": 7401.5,
+          "points": 15,
+          "mesProfitLossDollars": 75
+        },
+        "oneMesProfitLossDollars": 75
+      },
+      {
+        "campaignId": "2026-06-08-SHORT",
+        "tradeDate": "2026-06-08",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M MSS/FVG qualifying signal in campaign.",
+        "timestamp": "2026-06-08T15:00:00",
+        "entry": 7431.75,
+        "stop": 7440.25,
+        "riskPoints": 8.5,
+        "target1": 7419,
+        "target2": 7414.75,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7436,
+          "upper": 7440,
+          "formedAt": "2026-06-08T14:45:00",
+          "formedIndex": 177
+        },
+        "htfObstacle": {
+          "price": 7430,
+          "label": "Round Number 7430",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 17,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7414.75,
+          "points": 17,
+          "mesProfitLossDollars": 85
+        },
+        "oneMesProfitLossDollars": 85
+      }
+    ],
+    "B_first_signal_max_5pt_risk": [
+      {
+        "campaignId": "2026-05-18-LONG",
+        "tradeDate": "2026-05-18",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-05-18T15:15:00",
+        "entry": 7400.75,
+        "stop": 7398.75,
+        "riskPoints": 2,
+        "target1": 7403.75,
+        "target2": 7404.75,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7399.5,
+          "upper": 7399.75,
+          "formedAt": "2026-05-18T07:25:00",
+          "formedIndex": 89
+        },
+        "htfObstacle": null,
+        "outcomeToClose": {
+          "firstHit": "AMBIGUOUS",
+          "maxFavorablePoints": 4.5,
+          "maxAdversePoints": 5.25,
+          "exitPrice": null,
+          "points": null,
+          "mesProfitLossDollars": null
+        },
+        "oneMesProfitLossDollars": null
+      },
+      {
+        "campaignId": "2026-05-20-LONG",
+        "tradeDate": "2026-05-20",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-05-20T15:20:00",
+        "entry": 7445.75,
+        "stop": 7442.5,
+        "riskPoints": 3.25,
+        "target1": 7450.75,
+        "target2": 7452.25,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7443.25,
+          "upper": 7443.5,
+          "formedAt": "2026-05-20T11:55:00",
+          "formedIndex": 143
+        },
+        "htfObstacle": {
+          "price": 7447.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 8.75,
+          "maxAdversePoints": 1.5,
+          "exitPrice": 7452.25,
+          "points": 6.5,
+          "mesProfitLossDollars": 32.5
+        },
+        "oneMesProfitLossDollars": 32.5
+      },
+      {
+        "campaignId": "2026-05-26-LONG",
+        "tradeDate": "2026-05-26",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-05-26T15:45:00",
+        "entry": 7538.5,
+        "stop": 7534.25,
+        "riskPoints": 4.25,
+        "target1": 7545,
+        "target2": 7547,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7534.5,
+          "upper": 7536.75,
+          "formedAt": "2026-05-26T05:35:00",
+          "formedIndex": 67
+        },
+        "htfObstacle": {
+          "price": 7539,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "STOP",
+          "maxFavorablePoints": 3.75,
+          "maxAdversePoints": 4.25,
+          "exitPrice": 7534.25,
+          "points": -4.25,
+          "mesProfitLossDollars": -21.25
+        },
+        "oneMesProfitLossDollars": -21.25
+      },
+      {
+        "campaignId": "2026-06-01-SHORT",
+        "tradeDate": "2026-06-01",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-06-01T15:50:00",
+        "entry": 7615.5,
+        "stop": 7620.25,
+        "riskPoints": 4.75,
+        "target1": 7608.5,
+        "target2": 7606,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7616.25,
+          "upper": 7616.5,
+          "formedAt": "2026-06-01T02:30:00",
+          "formedIndex": 30
+        },
+        "htfObstacle": {
+          "price": 7615,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8,
+          "maxAdversePoints": 2.75,
+          "exitPrice": 7608.5,
+          "points": 7,
+          "mesProfitLossDollars": 35
+        },
+        "oneMesProfitLossDollars": 35
+      },
+      {
+        "campaignId": "2026-06-02-LONG",
+        "tradeDate": "2026-06-02",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-06-02T15:05:00",
+        "entry": 7622,
+        "stop": 7618.5,
+        "riskPoints": 3.5,
+        "target1": 7627.25,
+        "target2": 7629,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7621,
+          "upper": 7621.5,
+          "formedAt": "2026-06-02T11:00:00",
+          "formedIndex": 132
+        },
+        "htfObstacle": {
+          "price": 7622.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 5.5,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7627.25,
+          "points": 5.25,
+          "mesProfitLossDollars": 26.25
+        },
+        "oneMesProfitLossDollars": 26.25
+      },
+      {
+        "campaignId": "2026-06-04-SHORT",
+        "tradeDate": "2026-06-04",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-06-04T15:55:00",
+        "entry": 7604.25,
+        "stop": 7609.25,
+        "riskPoints": 5,
+        "target1": 7596.75,
+        "target2": 7594.25,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7607.5,
+          "upper": 7609,
+          "formedAt": "2026-06-04T15:50:00",
+          "formedIndex": 190
+        },
+        "htfObstacle": {
+          "price": 7602.25,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 10,
+          "maxAdversePoints": 0,
+          "exitPrice": 7594.25,
+          "points": 10,
+          "mesProfitLossDollars": 50
+        },
+        "oneMesProfitLossDollars": 50
+      },
+      {
+        "campaignId": "2026-06-05-SHORT",
+        "tradeDate": "2026-06-05",
+        "direction": "SHORT",
+        "selected": false,
+        "reason": "No campaign signal had risk <= 5 points.",
+        "timestamp": null,
+        "entry": null,
+        "stop": null,
+        "riskPoints": null,
+        "target1": null,
+        "target2": null,
+        "fvg": null,
+        "htfObstacle": null,
+        "outcomeToClose": null,
+        "oneMesProfitLossDollars": null
+      },
+      {
+        "campaignId": "2026-06-08-SHORT",
+        "tradeDate": "2026-06-08",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First campaign signal with risk <= 5 points.",
+        "timestamp": "2026-06-08T15:20:00",
+        "entry": 7414.5,
+        "stop": 7418.75,
+        "riskPoints": 4.25,
+        "target1": 7408.25,
+        "target2": 7406,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7414.75,
+          "upper": 7415.25,
+          "formedAt": "2026-06-08T00:10:00",
+          "formedIndex": 2
+        },
+        "htfObstacle": {
+          "price": 7413.25,
+          "label": "RTH Open",
+          "source": "rth_morning",
+          "type": "rth_open",
+          "reason": "First imported 5M RTH bar open."
+        },
+        "outcomeToClose": {
+          "firstHit": "AMBIGUOUS",
+          "maxFavorablePoints": 8.25,
+          "maxAdversePoints": 4.75,
+          "exitPrice": null,
+          "points": null,
+          "mesProfitLossDollars": null
+        },
+        "oneMesProfitLossDollars": null
+      }
+    ],
+    "C_first_clean_fvg_retest_rejection": [
+      {
+        "campaignId": "2026-05-18-LONG",
+        "tradeDate": "2026-05-18",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-05-18T15:05:00",
+        "entry": 7404.5,
+        "stop": 7375.5,
+        "riskPoints": 29,
+        "target1": 7448,
+        "target2": 7462.5,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7395.5,
+          "upper": 7403.75,
+          "formedAt": "2026-05-18T13:00:00",
+          "formedIndex": 156
+        },
+        "htfObstacle": {
+          "price": 7410,
+          "label": "Round Number 7410",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "NONE",
+          "maxFavorablePoints": 36.25,
+          "maxAdversePoints": 18.25,
+          "exitPrice": 7414.25,
+          "points": 9.75,
+          "mesProfitLossDollars": 48.75
+        },
+        "oneMesProfitLossDollars": 48.75
+      },
+      {
+        "campaignId": "2026-05-20-LONG",
+        "tradeDate": "2026-05-20",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-05-20T15:15:00",
+        "entry": 7444.25,
+        "stop": 7438.5,
+        "riskPoints": 5.75,
+        "target1": 7453,
+        "target2": 7455.75,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7440,
+          "upper": 7441.5,
+          "formedAt": "2026-05-20T14:40:00",
+          "formedIndex": 176
+        },
+        "htfObstacle": {
+          "price": 7447.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 10.25,
+          "maxAdversePoints": 1.5,
+          "exitPrice": 7453,
+          "points": 8.75,
+          "mesProfitLossDollars": 43.75
+        },
+        "oneMesProfitLossDollars": 43.75
+      },
+      {
+        "campaignId": "2026-05-26-LONG",
+        "tradeDate": "2026-05-26",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-05-26T15:35:00",
+        "entry": 7532.75,
+        "stop": 7527.5,
+        "riskPoints": 5.25,
+        "target1": 7540.75,
+        "target2": 7543.25,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7527.75,
+          "upper": 7530,
+          "formedAt": "2026-05-26T14:20:00",
+          "formedIndex": 172
+        },
+        "htfObstacle": {
+          "price": 7533.75,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8.25,
+          "maxAdversePoints": 0.5,
+          "exitPrice": 7540.75,
+          "points": 8,
+          "mesProfitLossDollars": 40
+        },
+        "oneMesProfitLossDollars": 40
+      },
+      {
+        "campaignId": "2026-06-01-SHORT",
+        "tradeDate": "2026-06-01",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-06-01T15:50:00",
+        "entry": 7615.5,
+        "stop": 7620.25,
+        "riskPoints": 4.75,
+        "target1": 7608.5,
+        "target2": 7606,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7616.25,
+          "upper": 7616.5,
+          "formedAt": "2026-06-01T02:30:00",
+          "formedIndex": 30
+        },
+        "htfObstacle": {
+          "price": 7615,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8,
+          "maxAdversePoints": 2.75,
+          "exitPrice": 7608.5,
+          "points": 7,
+          "mesProfitLossDollars": 35
+        },
+        "oneMesProfitLossDollars": 35
+      },
+      {
+        "campaignId": "2026-06-02-LONG",
+        "tradeDate": "2026-06-02",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-06-02T15:05:00",
+        "entry": 7622,
+        "stop": 7618.5,
+        "riskPoints": 3.5,
+        "target1": 7627.25,
+        "target2": 7629,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7621,
+          "upper": 7621.5,
+          "formedAt": "2026-06-02T11:00:00",
+          "formedIndex": 132
+        },
+        "htfObstacle": {
+          "price": 7622.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 5.5,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7627.25,
+          "points": 5.25,
+          "mesProfitLossDollars": 26.25
+        },
+        "oneMesProfitLossDollars": 26.25
+      },
+      {
+        "campaignId": "2026-06-04-SHORT",
+        "tradeDate": "2026-06-04",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-06-04T15:55:00",
+        "entry": 7604.25,
+        "stop": 7609.25,
+        "riskPoints": 5,
+        "target1": 7596.75,
+        "target2": 7594.25,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7607.5,
+          "upper": 7609,
+          "formedAt": "2026-06-04T15:50:00",
+          "formedIndex": 190
+        },
+        "htfObstacle": {
+          "price": 7602.25,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 10,
+          "maxAdversePoints": 0,
+          "exitPrice": 7594.25,
+          "points": 10,
+          "mesProfitLossDollars": 50
+        },
+        "oneMesProfitLossDollars": 50
+      },
+      {
+        "campaignId": "2026-06-05-SHORT",
+        "tradeDate": "2026-06-05",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-06-05T15:00:00",
+        "entry": 7416.5,
+        "stop": 7426.5,
+        "riskPoints": 10,
+        "target1": 7401.5,
+        "target2": 7396.5,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7424.75,
+          "upper": 7425.5,
+          "formedAt": "2026-06-05T14:50:00",
+          "formedIndex": 178
+        },
+        "htfObstacle": {
+          "price": 7413.25,
+          "label": "RTH Open",
+          "source": "rth_morning",
+          "type": "rth_open",
+          "reason": "First imported 5M RTH bar open."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 17,
+          "maxAdversePoints": 1.75,
+          "exitPrice": 7401.5,
+          "points": 15,
+          "mesProfitLossDollars": 75
+        },
+        "oneMesProfitLossDollars": 75
+      },
+      {
+        "campaignId": "2026-06-08-SHORT",
+        "tradeDate": "2026-06-08",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "First completed 5M FVG retest/rejection in campaign. All source candidates already satisfy this condition, so C equals A here.",
+        "timestamp": "2026-06-08T15:00:00",
+        "entry": 7431.75,
+        "stop": 7440.25,
+        "riskPoints": 8.5,
+        "target1": 7419,
+        "target2": 7414.75,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7436,
+          "upper": 7440,
+          "formedAt": "2026-06-08T14:45:00",
+          "formedIndex": 177
+        },
+        "htfObstacle": {
+          "price": 7430,
+          "label": "Round Number 7430",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 17,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7414.75,
+          "points": 17,
+          "mesProfitLossDollars": 85
+        },
+        "oneMesProfitLossDollars": 85
+      }
+    ],
+    "D_hindsight_best_candidate_reference_only": [
+      {
+        "campaignId": "2026-05-18-LONG",
+        "tradeDate": "2026-05-18",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-05-18T15:35:00",
+        "entry": 7401,
+        "stop": 7381,
+        "riskPoints": 20,
+        "target1": 7431,
+        "target2": 7441,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7381.25,
+          "upper": 7395.5,
+          "formedAt": "2026-05-18T15:10:00",
+          "formedIndex": 182
+        },
+        "htfObstacle": {
+          "price": 7410,
+          "label": "Round Number 7410",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 31,
+          "maxAdversePoints": 0.5,
+          "exitPrice": 7431,
+          "points": 30,
+          "mesProfitLossDollars": 150
+        },
+        "oneMesProfitLossDollars": 150
+      },
+      {
+        "campaignId": "2026-05-20-LONG",
+        "tradeDate": "2026-05-20",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-05-20T15:15:00",
+        "entry": 7444.25,
+        "stop": 7438.5,
+        "riskPoints": 5.75,
+        "target1": 7453,
+        "target2": 7455.75,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7440,
+          "upper": 7441.5,
+          "formedAt": "2026-05-20T14:40:00",
+          "formedIndex": 176
+        },
+        "htfObstacle": {
+          "price": 7447.25,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 10.25,
+          "maxAdversePoints": 1.5,
+          "exitPrice": 7453,
+          "points": 8.75,
+          "mesProfitLossDollars": 43.75
+        },
+        "oneMesProfitLossDollars": 43.75
+      },
+      {
+        "campaignId": "2026-05-26-LONG",
+        "tradeDate": "2026-05-26",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-05-26T15:35:00",
+        "entry": 7532.75,
+        "stop": 7527.5,
+        "riskPoints": 5.25,
+        "target1": 7540.75,
+        "target2": 7543.25,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7527.75,
+          "upper": 7530,
+          "formedAt": "2026-05-26T14:20:00",
+          "formedIndex": 172
+        },
+        "htfObstacle": {
+          "price": 7533.75,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8.25,
+          "maxAdversePoints": 0.5,
+          "exitPrice": 7540.75,
+          "points": 8,
+          "mesProfitLossDollars": 40
+        },
+        "oneMesProfitLossDollars": 40
+      },
+      {
+        "campaignId": "2026-06-01-SHORT",
+        "tradeDate": "2026-06-01",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-06-01T15:50:00",
+        "entry": 7615.5,
+        "stop": 7620.25,
+        "riskPoints": 4.75,
+        "target1": 7608.5,
+        "target2": 7606,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7616.25,
+          "upper": 7616.5,
+          "formedAt": "2026-06-01T02:30:00",
+          "formedIndex": 30
+        },
+        "htfObstacle": {
+          "price": 7615,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 8,
+          "maxAdversePoints": 2.75,
+          "exitPrice": 7608.5,
+          "points": 7,
+          "mesProfitLossDollars": 35
+        },
+        "oneMesProfitLossDollars": 35
+      },
+      {
+        "campaignId": "2026-06-02-LONG",
+        "tradeDate": "2026-06-02",
+        "direction": "LONG",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-06-02T15:15:00",
+        "entry": 7620.5,
+        "stop": 7617,
+        "riskPoints": 3.5,
+        "target1": 7625.75,
+        "target2": 7627.5,
+        "fvg": {
+          "direction": "LONG",
+          "lower": 7617.25,
+          "upper": 7620,
+          "formedAt": "2026-06-02T10:55:00",
+          "formedIndex": 131
+        },
+        "htfObstacle": {
+          "price": 7622.75,
+          "label": "Current Imported Window High",
+          "source": "current_window",
+          "type": "high",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 7,
+          "maxAdversePoints": 1,
+          "exitPrice": 7627.5,
+          "points": 7,
+          "mesProfitLossDollars": 35
+        },
+        "oneMesProfitLossDollars": 35
+      },
+      {
+        "campaignId": "2026-06-04-SHORT",
+        "tradeDate": "2026-06-04",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-06-04T15:55:00",
+        "entry": 7604.25,
+        "stop": 7609.25,
+        "riskPoints": 5,
+        "target1": 7596.75,
+        "target2": 7594.25,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7607.5,
+          "upper": 7609,
+          "formedAt": "2026-06-04T15:50:00",
+          "formedIndex": 190
+        },
+        "htfObstacle": {
+          "price": 7602.25,
+          "label": "Current Imported Window Low",
+          "source": "current_window",
+          "type": "low",
+          "reason": "16 bars reviewed for Current Imported Window."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 10,
+          "maxAdversePoints": 0,
+          "exitPrice": 7594.25,
+          "points": 10,
+          "mesProfitLossDollars": 50
+        },
+        "oneMesProfitLossDollars": 50
+      },
+      {
+        "campaignId": "2026-06-05-SHORT",
+        "tradeDate": "2026-06-05",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-06-05T16:00:00",
+        "entry": 7400,
+        "stop": 7417,
+        "riskPoints": 17,
+        "target1": 7374.5,
+        "target2": 7366,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7405.25,
+          "upper": 7407,
+          "formedAt": "2026-06-05T15:15:00",
+          "formedIndex": 183
+        },
+        "htfObstacle": {
+          "price": 7400,
+          "label": "Round Number 7400",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "T1",
+          "maxFavorablePoints": 26,
+          "maxAdversePoints": 1.5,
+          "exitPrice": 7374.5,
+          "points": 25.5,
+          "mesProfitLossDollars": 127.5
+        },
+        "oneMesProfitLossDollars": 127.5
+      },
+      {
+        "campaignId": "2026-06-08-SHORT",
+        "tradeDate": "2026-06-08",
+        "direction": "SHORT",
+        "selected": true,
+        "reason": "Hindsight-only best P/L candidate inside campaign. Not tradable as a live rule.",
+        "timestamp": "2026-06-08T15:00:00",
+        "entry": 7431.75,
+        "stop": 7440.25,
+        "riskPoints": 8.5,
+        "target1": 7419,
+        "target2": 7414.75,
+        "fvg": {
+          "direction": "SHORT",
+          "lower": 7436,
+          "upper": 7440,
+          "formedAt": "2026-06-08T14:45:00",
+          "formedIndex": 177
+        },
+        "htfObstacle": {
+          "price": 7430,
+          "label": "Round Number 7430",
+          "source": "app",
+          "type": "round_number",
+          "reason": "Whole/round-number magnet inside imported context range."
+        },
+        "outcomeToClose": {
+          "firstHit": "T2",
+          "maxFavorablePoints": 17,
+          "maxAdversePoints": 2.5,
+          "exitPrice": 7414.75,
+          "points": 17,
+          "mesProfitLossDollars": 85
+        },
+        "oneMesProfitLossDollars": 85
+      }
+    ]
+  },
+  "authority": "research_only_not_window_change_not_execution_approval"
+}

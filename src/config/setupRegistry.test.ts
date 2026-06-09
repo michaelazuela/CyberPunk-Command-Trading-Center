@@ -36,6 +36,7 @@ const primaryExpected = [
   SetupType.HtfDisplacementMssContinuation,
   SetupType.HtfDisplacementFvgContinuation,
   SetupType.OpeningDriveFvgContinuation,
+  SetupType.IntradayMssMicroContinuation,
   SetupType.FailedPlanReversal,
 ];
 const supportingExpected = [
@@ -81,6 +82,7 @@ const expectedFamilyByPrimarySetup = new Map<SetupType, ParentModelFamily>([
   [SetupType.HtfDisplacementMssContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.HtfDisplacementFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.OpeningDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.IntradayMssMicroContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.FailedPlanReversal, 'FAILED_PLAN_REVERSAL'],
 ]);
 

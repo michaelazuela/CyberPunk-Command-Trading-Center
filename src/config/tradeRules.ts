@@ -74,6 +74,7 @@ export const TRADE_RULES = {
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
         SetupType.OpeningDriveFvgContinuation,
+        SetupType.IntradayMssMicroContinuation,
         SetupType.FailedPlanReversal,
       ],
       supportingEvidence: [
@@ -96,6 +97,7 @@ export const TRADE_RULES = {
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
         SetupType.OpeningDriveFvgContinuation,
+        SetupType.IntradayMssMicroContinuation,
         SetupType.FailedPlanReversal,
       ],
       supportingEvidence: [

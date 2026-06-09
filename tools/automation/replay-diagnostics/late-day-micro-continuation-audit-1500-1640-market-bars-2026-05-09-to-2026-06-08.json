@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-06-08T23:27:42.184Z",
+  "instrument": "MES",
+  "bridgeInstrument": "MES 06-26",
+  "fromDate": "2026-05-09",
+  "toDate": "2026-06-08",
+  "window": "15:00-16:40 ET completed 5M bars",
+  "lineInSandSource": "scanner_structured_chart_context_levels",
+  "sources": [
+    {
+      "timeframe": "5m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T08:20:00",
+      "source": "market_bars"
+    },
+    {
+      "timeframe": "15m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:15:00",
+      "rangeEnd": "2026-05-25T19:00:00",
+      "source": "market_bars"
+    },
+    {
+      "timeframe": "60m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T11:05:00",
+      "source": "market_bars"
+    },
+    {
+      "timeframe": "120m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T20:00:00",
+      "rangeEnd": "2026-05-17T19:15:00",
+      "source": "market_bars"
+    },
+    {
+      "timeframe": "240m",
+      "cacheBars": 1000,
+      "bridgeBars": 0,
+      "bridgeRequests": 0,
+      "bridgeFailures": [],
+      "rangeStart": "2026-05-10T18:05:00",
+      "rangeEnd": "2026-05-14T11:05:00",
+      "source": "market_bars"
+    }
+  ],
+  "dailySummary": [
+    {
+      "tradeDate": "2026-05-11",
+      "lateBarsEvaluated": 21,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-12",
+      "lateBarsEvaluated": 21,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    },
+    {
+      "tradeDate": "2026-05-13",
+      "lateBarsEvaluated": 21,
+      "alignedMssBars": 0,
+      "candidateCount": 0,
+      "longs": 0,
+      "shorts": 0,
+      "t1": 0,
+      "t2": 0,
+      "stop": 0,
+      "none": 0,
+      "ambiguous": 0
+    }
+  ],
+  "summary": {
+    "lateBarsEvaluated": 63,
+    "alignedMssBars": 0,
+    "candidateCount": 0,
+    "fvgRetestCandidates": 0,
+    "closeThroughCandidates": 0,
+    "shorts": 0,
+    "longs": 0
+  },
+  "candidates": [],
+  "authority": "research_only_not_window_change_not_execution_approval"
+}
