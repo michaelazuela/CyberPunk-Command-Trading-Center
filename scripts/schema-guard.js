@@ -105,6 +105,13 @@ function main() {
     'alter table market_bars enable row level security',
   ]);
 
+  requireTerms(sql, 'Scanner ActiveCampaign alert ledger schema', [
+    'scanner_active_campaign_alerts',
+    'scanner_active_campaign_alerts_unique_campaign',
+    'alter table scanner_active_campaign_alerts enable row level security',
+    'grant select, insert, update on table scanner_active_campaign_alerts to authenticated',
+  ]);
+
   if (hasError) {
     console.error('\n🚨 ERROR: Supabase schema guard failed.');
     process.exit(1);

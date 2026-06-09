@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-08
+Task: Move ActiveCampaign one-trade-per-campaign de-duplication to durable Supabase persistence.
+Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, scripts/schema-guard.js, supabase/migrations/20260609021436_scanner_active_campaign_ledger.sql, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: User requested fixing the remaining risk where the campaign ledger was local to `.nt-scanner-state.json`, so deleting that file or running another scanner instance with a different state path could repeat the same campaign alert.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The scanner now claims `activeCampaign.id` in Supabase `scanner_active_campaign_alerts` before posting a Discord trade-plan alert. A duplicate sent/pending campaign suppresses later alerts across scanner instances. Failed or skipped Discord delivery releases the claim so the next valid scanner tick can retry. Local `.nt-scanner-state.json` remains only as a safe fallback when Supabase ledger config is missing or temporarily unavailable.
+Trading logic changed: No. This is alert-delivery persistence only; setup detection, ranking, entry, stop, targets, risk, invalidation, bridge reads, and canExecute are unchanged.
+Bridge impact: None.
+Discord impact: Yes. ActiveCampaign duplicate suppression now uses shared Supabase persistence before falling back to local state.
+Journal/RAG impact: Additive scanner alert ledger only; it does not alter trade_embeddings RAG semantics.
+Supabase impact: Added migration `scanner_active_campaign_alerts` with RLS and explicit authenticated/service_role grants. Migration has not been applied to production by this local code change.
+Known risks: Supabase ledger requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `DISCORD_RAG_USER_ID` in the scanner environment. If unavailable, the scanner falls back to local state for continuity and logs the degraded de-dup mode.
+Next recommended action: Apply the new Supabase migration, then run one Discord-enabled scanner cycle and verify the first campaign row is marked `sent` and repeated same-campaign ticks are suppressed.
+
+## Previous Change
+
+Date: 2026-06-08
 Task: Enforce persistent ActiveCampaign one-trade-per-campaign scanner de-duplication.
 Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/types.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: User requested fixing the remaining risk where ActiveCampaign carried one-trade-per-campaign metadata but the live scanner/Discord sender did not yet persistently suppress repeated alerts for the same campaign across scanner ticks.

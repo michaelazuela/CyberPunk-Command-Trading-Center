@@ -157,6 +157,25 @@ export interface ScannerActiveCampaignLedgerRecord {
   resetPolicy: ScannerActiveCampaignResetPolicy;
 }
 
+export interface ScannerActiveCampaignDurableLedgerConfig {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  userId: string;
+}
+
+export type ScannerActiveCampaignClaimSource = 'none' | 'supabase' | 'local';
+
+export interface ScannerActiveCampaignClaimResult {
+  source: ScannerActiveCampaignClaimSource;
+  claimed: boolean;
+  shouldSuppress: boolean;
+  campaignId: string | null;
+  reason: string | null;
+  durableAvailable: boolean;
+}
+
+type FetchLike = typeof fetch;
+
 export interface ScannerAlertDeliveryRecord {
   alertKey: string;
   planVersionId: string;
@@ -327,6 +346,14 @@ function supabaseRagHeaders(serviceRoleKey: string): Record<string, string> {
   };
 }
 
+export function loadScannerActiveCampaignLedgerConfig(env: NodeJS.ProcessEnv = process.env): ScannerActiveCampaignDurableLedgerConfig | null {
+  const supabaseUrl = (env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const userId = env.DISCORD_RAG_USER_ID || '';
+  if (!supabaseUrl || !serviceRoleKey || !userId) return null;
+  return { supabaseUrl, serviceRoleKey, userId };
+}
+
 function candidateDeliverySnapshot(candidate: SetupCandidate | null): ScannerAlertDeliveryRecord['candidate'] {
   return {
     setupType: candidate?.setupType || null,
@@ -419,6 +446,244 @@ export function recordActiveCampaignScannerAlertSuppressed(args: {
     lastSeenAt: args.seenAt || new Date().toISOString(),
     suppressedCount: previous.suppressedCount + 1,
   };
+}
+
+function scannerActiveCampaignLedgerHeaders(serviceRoleKey: string): Record<string, string> {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+}
+
+function scannerActiveCampaignLedgerUrl(config: ScannerActiveCampaignDurableLedgerConfig, query = ''): string {
+  return `${config.supabaseUrl}/rest/v1/scanner_active_campaign_alerts${query}`;
+}
+
+function scannerActiveCampaignRow(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig;
+  campaignId: string;
+  candidate?: SetupCandidate | null;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  state: ScannerState;
+  confidence: number;
+  alertKey: string;
+  planVersionId?: string | null;
+  deliveryStatus?: 'pending' | 'sent' | 'failed' | 'skipped' | 'released';
+}): Record<string, unknown> {
+  return {
+    user_id: args.config.userId,
+    campaign_id: args.campaignId,
+    trade_date: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    direction: args.candidate?.direction || args.candidate?.activeCampaign?.direction || 'NONE',
+    setup_type: args.candidate?.setupType || null,
+    state: args.state,
+    confidence: args.confidence,
+    alert_key: args.alertKey,
+    plan_version_id: args.planVersionId || null,
+    delivery_status: args.deliveryStatus || 'pending',
+    last_seen_at: new Date().toISOString(),
+    reset_policy: 'trade_date_direction_campaign',
+    metadata: {
+      source: 'nt_scanner_active_campaign_dedup',
+      authority: args.candidate?.activeCampaign?.authority || null,
+      htfRelationship: args.candidate?.activeCampaign?.htfRelationship || null,
+      lineInSand: args.candidate?.activeCampaign?.obstacleMap?.lineInSand ?? null,
+    },
+  };
+}
+
+async function fetchScannerActiveCampaignRows(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig;
+  campaignId: string;
+  fetchImpl?: FetchLike;
+}): Promise<any[]> {
+  const fetchImpl = args.fetchImpl || fetch;
+  const headers = scannerActiveCampaignLedgerHeaders(args.config.serviceRoleKey);
+  const query = `?user_id=eq.${encodeURIComponent(args.config.userId)}&campaign_id=eq.${encodeURIComponent(args.campaignId)}&select=*`;
+  const response = await fetchImpl(scannerActiveCampaignLedgerUrl(args.config, query), { headers });
+  if (!response.ok) {
+    throw new Error(`ActiveCampaign ledger lookup failed (${response.status}): ${await response.text()}`);
+  }
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function patchScannerActiveCampaignLedger(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig;
+  campaignId: string;
+  patch: Record<string, unknown>;
+  fetchImpl?: FetchLike;
+}): Promise<void> {
+  const fetchImpl = args.fetchImpl || fetch;
+  const headers = scannerActiveCampaignLedgerHeaders(args.config.serviceRoleKey);
+  const query = `?user_id=eq.${encodeURIComponent(args.config.userId)}&campaign_id=eq.${encodeURIComponent(args.campaignId)}`;
+  const response = await fetchImpl(scannerActiveCampaignLedgerUrl(args.config, query), {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ ...args.patch, updated_at: new Date().toISOString() }),
+  });
+  if (!response.ok) {
+    throw new Error(`ActiveCampaign ledger update failed (${response.status}): ${await response.text()}`);
+  }
+}
+
+export async function claimDurableActiveCampaignScannerAlert(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig | null;
+  candidate?: SetupCandidate | null;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  state: ScannerState;
+  confidence: number;
+  alertKey: string;
+  planVersionId: string;
+  fetchImpl?: FetchLike;
+}): Promise<ScannerActiveCampaignClaimResult> {
+  const campaignId = scannerActiveCampaignKey(args.candidate);
+  if (!campaignId) {
+    return { source: 'none', claimed: true, shouldSuppress: false, campaignId: null, reason: null, durableAvailable: false };
+  }
+  if (!args.config) {
+    return {
+      source: 'local',
+      claimed: false,
+      shouldSuppress: false,
+      campaignId,
+      reason: 'Supabase ActiveCampaign ledger unavailable; local scanner state fallback is required.',
+      durableAvailable: false,
+    };
+  }
+
+  const fetchImpl = args.fetchImpl || fetch;
+  const headers = scannerActiveCampaignLedgerHeaders(args.config.serviceRoleKey);
+  const row = scannerActiveCampaignRow({
+    config: args.config,
+    campaignId,
+    candidate: args.candidate,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    state: args.state,
+    confidence: args.confidence,
+    alertKey: args.alertKey,
+    planVersionId: args.planVersionId,
+    deliveryStatus: 'pending',
+  });
+  const insert = await fetchImpl(scannerActiveCampaignLedgerUrl(args.config), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(row),
+  });
+  if (insert.ok) {
+    return {
+      source: 'supabase',
+      claimed: true,
+      shouldSuppress: false,
+      campaignId,
+      reason: `ActiveCampaign durable ledger claimed ${campaignId}.`,
+      durableAvailable: true,
+    };
+  }
+  if (insert.status !== 409) {
+    throw new Error(`ActiveCampaign ledger claim failed (${insert.status}): ${await insert.text()}`);
+  }
+
+  const existing = (await fetchScannerActiveCampaignRows({ config: args.config, campaignId, fetchImpl }))[0] || null;
+  const status = typeof existing?.delivery_status === 'string' ? existing.delivery_status : 'pending';
+  if (status === 'failed' || status === 'skipped' || status === 'released') {
+    await patchScannerActiveCampaignLedger({
+      config: args.config,
+      campaignId,
+      fetchImpl,
+      patch: {
+        ...row,
+        delivery_status: 'pending',
+        first_claimed_at: new Date().toISOString(),
+      },
+    });
+    return {
+      source: 'supabase',
+      claimed: true,
+      shouldSuppress: false,
+      campaignId,
+      reason: `ActiveCampaign durable ledger reclaimed ${campaignId} after prior ${status} delivery.`,
+      durableAvailable: true,
+    };
+  }
+
+  const suppressedCount = Number.isFinite(Number(existing?.suppressed_count)) ? Number(existing.suppressed_count) + 1 : 1;
+  await patchScannerActiveCampaignLedger({
+    config: args.config,
+    campaignId,
+    fetchImpl,
+    patch: {
+      last_seen_at: new Date().toISOString(),
+      suppressed_count: suppressedCount,
+      metadata: {
+        ...(existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {}),
+        lastSuppressedAlertKey: args.alertKey,
+        lastSuppressedPlanVersionId: args.planVersionId,
+      },
+    },
+  });
+  return {
+    source: 'supabase',
+    claimed: false,
+    shouldSuppress: true,
+    campaignId,
+    reason: `ActiveCampaign duplicate suppressed by durable Supabase ledger: one trade alert already ${status} for ${campaignId}.`,
+    durableAvailable: true,
+  };
+}
+
+export async function markDurableActiveCampaignScannerAlertSent(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig | null;
+  campaignId: string | null;
+  fetchImpl?: FetchLike;
+}): Promise<void> {
+  if (!args.config || !args.campaignId) return;
+  await patchScannerActiveCampaignLedger({
+    config: args.config,
+    campaignId: args.campaignId,
+    fetchImpl: args.fetchImpl,
+    patch: {
+      delivery_status: 'sent',
+      first_sent_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+    },
+  });
+}
+
+export async function releaseDurableActiveCampaignScannerAlertClaim(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig | null;
+  campaignId: string | null;
+  deliveryStatus: 'failed' | 'skipped' | 'released';
+  reason: string;
+  fetchImpl?: FetchLike;
+}): Promise<void> {
+  if (!args.config || !args.campaignId) return;
+  const rows = await fetchScannerActiveCampaignRows({ config: args.config, campaignId: args.campaignId, fetchImpl: args.fetchImpl });
+  const existing = rows[0] || {};
+  await patchScannerActiveCampaignLedger({
+    config: args.config,
+    campaignId: args.campaignId,
+    fetchImpl: args.fetchImpl,
+    patch: {
+      delivery_status: args.deliveryStatus,
+      last_seen_at: new Date().toISOString(),
+      metadata: {
+        ...(existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {}),
+        releaseReason: args.reason,
+        releasedAt: new Date().toISOString(),
+      },
+    },
+  });
 }
 
 export function createPendingScannerAlertDeliveryRecord(args: {
@@ -3315,16 +3580,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];
-  const activeCampaignSuppression = shouldSuppressActiveCampaignScannerAlert({
-    activeCampaignSent: state.activeCampaignSent,
-    candidate,
-  });
-  const alertDecision = activeCampaignSuppression.shouldSuppress
-    ? {
-        shouldSend: false,
-        reason: activeCampaignSuppression.reason || 'ActiveCampaign duplicate suppressed.',
-      }
-    : shouldSendScannerAlert({
+  const planVersionId = createPlanVersionId(session, tradeDate);
+  let alertDecision = shouldSendScannerAlert({
     state: stateForAlert,
     confidence: confidence.score,
     window,
@@ -3334,13 +3591,63 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     duplicate: Boolean(existing),
     stateImproved: false,
   });
-  if (activeCampaignSuppression.shouldSuppress && activeCampaignSuppression.campaignId) {
-    recordActiveCampaignScannerAlertSuppressed({
-      activeCampaignSent: state.activeCampaignSent,
-      campaignId: activeCampaignSuppression.campaignId,
-    });
+  const durableLedgerConfig = loadScannerActiveCampaignLedgerConfig();
+  let activeCampaignClaim: ScannerActiveCampaignClaimResult = {
+    source: 'none',
+    claimed: true,
+    shouldSuppress: false,
+    campaignId: null,
+    reason: null,
+    durableAvailable: Boolean(durableLedgerConfig),
+  };
+  if (alertDecision.shouldSend && scannerActiveCampaignKey(candidate)) {
+    try {
+      activeCampaignClaim = await claimDurableActiveCampaignScannerAlert({
+        config: durableLedgerConfig,
+        candidate,
+        tradeDate,
+        instrument: config.instrument,
+        session,
+        state: stateForAlert,
+        confidence: confidence.score,
+        alertKey,
+        planVersionId,
+      });
+    } catch (error) {
+      activeCampaignClaim = {
+        source: 'local',
+        claimed: false,
+        shouldSuppress: false,
+        campaignId: scannerActiveCampaignKey(candidate),
+        reason: `Supabase ActiveCampaign ledger unavailable (${sanitizedError(error)}); using local scanner state fallback.`,
+        durableAvailable: false,
+      };
+      console.warn(`[scanner] ${activeCampaignClaim.reason}`);
+    }
+    if (activeCampaignClaim.shouldSuppress) {
+      alertDecision = {
+        shouldSend: false,
+        reason: activeCampaignClaim.reason || 'ActiveCampaign duplicate suppressed by durable ledger.',
+      };
+    } else if (activeCampaignClaim.source === 'local') {
+      const activeCampaignSuppression = shouldSuppressActiveCampaignScannerAlert({
+        activeCampaignSent: state.activeCampaignSent,
+        candidate,
+      });
+      if (activeCampaignSuppression.shouldSuppress) {
+        alertDecision = {
+          shouldSend: false,
+          reason: activeCampaignSuppression.reason || 'ActiveCampaign duplicate suppressed by local fallback ledger.',
+        };
+        if (activeCampaignSuppression.campaignId) {
+          recordActiveCampaignScannerAlertSuppressed({
+            activeCampaignSent: state.activeCampaignSent,
+            campaignId: activeCampaignSuppression.campaignId,
+          });
+        }
+      }
+    }
   }
-  const planVersionId = createPlanVersionId(session, tradeDate);
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
     tradeDate,
@@ -3443,6 +3750,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           alertKey,
           sentAt,
         });
+        await markDurableActiveCampaignScannerAlertSent({
+          config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
+          campaignId: activeCampaignClaim.campaignId,
+        }).catch((ledgerError) => {
+          console.warn(`[scanner-delivery] ActiveCampaign durable sent marker failed safely after Discord send: ${sanitizedError(ledgerError)}`);
+        });
         await attachDiscordMessageReceiptToRagRecord({
           planVersionId,
           discordMessageId: receipt.discordMessageId,
@@ -3459,6 +3772,14 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
           webhookSource: receipt.webhookSource === 'discord_disabled' ? 'discord_disabled' : 'dry_run',
         });
+        await releaseDurableActiveCampaignScannerAlertClaim({
+          config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
+          campaignId: activeCampaignClaim.campaignId,
+          deliveryStatus: 'skipped',
+          reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
+        }).catch((ledgerError) => {
+          console.warn(`[scanner-delivery] ActiveCampaign durable skipped release failed safely: ${sanitizedError(ledgerError)}`);
+        });
       }
     } catch (error) {
       const httpStatus = error instanceof ScannerDiscordPostError ? error.httpStatus : null;
@@ -3468,6 +3789,14 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         httpStatus,
         webhookSource,
         stale: stale.stale,
+      });
+      await releaseDurableActiveCampaignScannerAlertClaim({
+        config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
+        campaignId: activeCampaignClaim.campaignId,
+        deliveryStatus: 'failed',
+        reason: sanitizedError(error),
+      }).catch((releaseError) => {
+        console.warn(`[scanner-delivery] ActiveCampaign durable claim release failed safely: ${sanitizedError(releaseError)}`);
       });
       console.warn(`[scanner-delivery] Executable alert delivery failed safely; scanner remains active and may retry while the setup remains fresh: ${sanitizedError(error)}`);
     }

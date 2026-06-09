@@ -18,11 +18,15 @@ import {
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   htfHistoryCoverageReadiness,
+  claimDurableActiveCampaignScannerAlert,
+  loadScannerActiveCampaignLedgerConfig,
   markScannerAlertDeliveryFailed,
   markScannerAlertDeliverySent,
   markScannerAlertDeliverySkipped,
+  markDurableActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSuppressed,
+  releaseDurableActiveCampaignScannerAlertClaim,
   candidateForNormalizedVisualAuthority,
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
@@ -33,6 +37,7 @@ import {
   summarizeScannerHistoryCoverage,
   twoHourCoverageDiagnostic,
   writeScannerDecisionTapeAuditLog,
+  type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
 } from './nt-scanner';
 import { buildChartMarkupHtmlForTest, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
@@ -293,6 +298,136 @@ recordActiveCampaignScannerAlertSuppressed({
 });
 assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].suppressedCount, 1);
 assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].resetPolicy, 'trade_date_direction_campaign');
+assert.deepEqual(loadScannerActiveCampaignLedgerConfig({
+  SUPABASE_URL: 'https://project.supabase.co/rest/v1',
+  SUPABASE_SERVICE_ROLE_KEY: 'service-role-test',
+  DISCORD_RAG_USER_ID: '00000000-0000-0000-0000-000000000001',
+} as NodeJS.ProcessEnv), {
+  supabaseUrl: 'https://project.supabase.co',
+  serviceRoleKey: 'service-role-test',
+  userId: '00000000-0000-0000-0000-000000000001',
+});
+const durableLedgerConfig: ScannerActiveCampaignDurableLedgerConfig = {
+  supabaseUrl: 'https://project.supabase.co',
+  serviceRoleKey: 'service-role-test',
+  userId: '00000000-0000-0000-0000-000000000001',
+};
+const durableFetchCalls: Array<{ method: string; url: string; body: any }> = [];
+const durableClaimFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  durableFetchCalls.push({
+    method: init?.method || 'GET',
+    url: String(input),
+    body: init?.body ? JSON.parse(String(init.body)) : null,
+  });
+  if ((init?.method || 'GET') === 'POST') {
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 201, headers: { 'Content-Type': 'application/json' } });
+  }
+  return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+};
+const durableClaim = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: campaignCandidate,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'first-alert-key',
+  planVersionId: 'LUNCH-20260608',
+  fetchImpl: durableClaimFetch,
+});
+assert.equal(durableClaim.claimed, true);
+assert.equal(durableClaim.shouldSuppress, false);
+assert.equal(durableFetchCalls[0].method, 'POST');
+assert.equal(durableFetchCalls[0].body.campaign_id, '2026-06-08:SHORT:15M5M-MSS');
+assert.equal(durableFetchCalls[0].body.delivery_status, 'pending');
+
+const durableDuplicateFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const method = init?.method || 'GET';
+  if (method === 'POST') return new Response('duplicate', { status: 409 });
+  if (method === 'GET') {
+    return new Response(JSON.stringify([{
+      delivery_status: 'sent',
+      suppressed_count: 2,
+      metadata: { existing: true },
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (method === 'PATCH') return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  return new Response('', { status: 500 });
+};
+const durableDuplicate = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: shiftedCampaignCandidate,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'shifted-alert-key',
+  planVersionId: 'LUNCH-20260608-B',
+  fetchImpl: durableDuplicateFetch,
+});
+assert.equal(durableDuplicate.claimed, false);
+assert.equal(durableDuplicate.shouldSuppress, true);
+assert.match(durableDuplicate.reason || '', /durable Supabase ledger/);
+
+let reclaimPatchedToPending = false;
+const durableReclaimFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const method = init?.method || 'GET';
+  if (method === 'POST') return new Response('duplicate', { status: 409 });
+  if (method === 'GET') {
+    return new Response(JSON.stringify([{ delivery_status: 'skipped', suppressed_count: 0, metadata: {} }]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  if (method === 'PATCH') {
+    reclaimPatchedToPending = JSON.parse(String(init?.body || '{}')).delivery_status === 'pending';
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  }
+  return new Response('', { status: 500 });
+};
+const durableReclaim = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: campaignCandidate,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'retry-alert-key',
+  planVersionId: 'LUNCH-20260608-C',
+  fetchImpl: durableReclaimFetch,
+});
+assert.equal(durableReclaim.claimed, true);
+assert.equal(durableReclaim.shouldSuppress, false);
+assert.equal(reclaimPatchedToPending, true);
+
+let markedSent = false;
+await markDurableActiveCampaignScannerAlertSent({
+  config: durableLedgerConfig,
+  campaignId: '2026-06-08:SHORT:15M5M-MSS',
+  fetchImpl: async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    markedSent = JSON.parse(String(init?.body || '{}')).delivery_status === 'sent';
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  },
+});
+assert.equal(markedSent, true);
+
+let releasedFailed = false;
+await releaseDurableActiveCampaignScannerAlertClaim({
+  config: durableLedgerConfig,
+  campaignId: '2026-06-08:SHORT:15M5M-MSS',
+  deliveryStatus: 'failed',
+  reason: 'webhook unavailable',
+  fetchImpl: async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const method = init?.method || 'GET';
+    if (method === 'GET') return new Response(JSON.stringify([{ metadata: { existing: true } }]), { status: 200 });
+    releasedFailed = JSON.parse(String(init?.body || '{}')).delivery_status === 'failed';
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  },
+});
+assert.equal(releasedFailed, true);
 
 const juneFiveSameCycleFailedLong = appOwnedFailedDecisionEventFromCandidate({
   setupType: SetupType.TurtleSoup,

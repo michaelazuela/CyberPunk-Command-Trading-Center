@@ -170,6 +170,28 @@ Backfill uses prior-day 6:00 PM ET through trade-date 5:00 PM ET to cover ETH, p
 
 The Discord scheduler reads Supabase `market_bars` first. If the requested window is missing, it falls back to NinjaTrader `/historical-bars` and repairs the cache with any returned bars.
 
+## Durable Scanner Campaign Ledger
+
+The local scanner also writes ActiveCampaign alert claims to Supabase `scanner_active_campaign_alerts`.
+
+Purpose:
+
+- prevent repeated Discord trade-plan alerts for the same `activeCampaign.id`
+- survive scanner restarts and deleted `.nt-scanner-state.json`
+- coordinate multiple scanner instances that share the same Supabase project and `DISCORD_RAG_USER_ID`
+
+This ledger is alert-delivery state only. It does not approve trades, place orders, change `canExecute`, or replace the app-owned trade decision pipeline.
+
+Required local secrets are the same server-only values used by the candle cache:
+
+```bash
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="server-only-secret-key"
+DISCORD_RAG_USER_ID="your-supabase-auth-user-id"
+```
+
+If those values are missing or Supabase is temporarily unavailable, the scanner logs the issue and falls back to local `.nt-scanner-state.json` de-duplication for that cycle.
+
 The PowerShell launcher starts the candle recorder automatically unless `-NoRecorder` is supplied:
 
 ```powershell
