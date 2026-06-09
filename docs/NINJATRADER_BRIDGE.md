@@ -190,7 +190,15 @@ SUPABASE_SERVICE_ROLE_KEY="server-only-secret-key"
 DISCORD_RAG_USER_ID="your-supabase-auth-user-id"
 ```
 
-If those values are missing or Supabase is temporarily unavailable, the scanner logs the issue and falls back to local `.nt-scanner-state.json` de-duplication for that cycle.
+If those values are missing or Supabase is temporarily unavailable, ActiveCampaign trade-plan alerts are held instead of being sent with local-only de-duplication. The local `.nt-scanner-state.json` file remains a cache/diagnostic record, not the authority for campaign de-duplication.
+
+Check ledger readiness:
+
+```bash
+npm run nt:scanner -- --preflight-active-campaign-ledger
+```
+
+The live PowerShell launcher runs this preflight before starting Discord posting mode.
 
 The PowerShell launcher starts the candle recorder automatically unless `-NoRecorder` is supplied:
 

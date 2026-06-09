@@ -36,6 +36,7 @@ import {
   shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
   twoHourCoverageDiagnostic,
+  verifyScannerActiveCampaignLedgerReady,
   writeScannerDecisionTapeAuditLog,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
@@ -341,6 +342,36 @@ assert.equal(durableClaim.shouldSuppress, false);
 assert.equal(durableFetchCalls[0].method, 'POST');
 assert.equal(durableFetchCalls[0].body.campaign_id, '2026-06-08:SHORT:15M5M-MSS');
 assert.equal(durableFetchCalls[0].body.delivery_status, 'pending');
+const missingDurableLedger = await claimDurableActiveCampaignScannerAlert({
+  config: null,
+  candidate: campaignCandidate,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  state: 'Conditional',
+  confidence: 82,
+  alertKey: 'missing-ledger-alert-key',
+  planVersionId: 'LUNCH-20260608-MISSING-LEDGER',
+});
+assert.equal(missingDurableLedger.source, 'blocked');
+assert.equal(missingDurableLedger.claimed, false);
+assert.equal(missingDurableLedger.shouldSuppress, true);
+assert.match(missingDurableLedger.reason || '', /durable Supabase ledger is required/);
+const missingLedgerReadiness = await verifyScannerActiveCampaignLedgerReady({ config: null });
+assert.equal(missingLedgerReadiness.ready, false);
+assert.equal(missingLedgerReadiness.source, 'missing_config');
+const okLedgerReadiness = await verifyScannerActiveCampaignLedgerReady({
+  config: durableLedgerConfig,
+  fetchImpl: async (): Promise<Response> => new Response(JSON.stringify([]), { status: 200 }),
+});
+assert.equal(okLedgerReadiness.ready, true);
+assert.equal(okLedgerReadiness.source, 'supabase');
+const failedLedgerReadiness = await verifyScannerActiveCampaignLedgerReady({
+  config: durableLedgerConfig,
+  fetchImpl: async (): Promise<Response> => new Response('missing table', { status: 404 }),
+});
+assert.equal(failedLedgerReadiness.ready, false);
+assert.equal(failedLedgerReadiness.source, 'error');
 
 const durableDuplicateFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const method = init?.method || 'GET';

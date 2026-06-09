@@ -163,7 +163,7 @@ export interface ScannerActiveCampaignDurableLedgerConfig {
   userId: string;
 }
 
-export type ScannerActiveCampaignClaimSource = 'none' | 'supabase' | 'local';
+export type ScannerActiveCampaignClaimSource = 'none' | 'supabase' | 'blocked';
 
 export interface ScannerActiveCampaignClaimResult {
   source: ScannerActiveCampaignClaimSource;
@@ -172,6 +172,12 @@ export interface ScannerActiveCampaignClaimResult {
   campaignId: string | null;
   reason: string | null;
   durableAvailable: boolean;
+}
+
+export interface ScannerActiveCampaignLedgerReadiness {
+  ready: boolean;
+  source: 'supabase' | 'missing_config' | 'error';
+  message: string;
 }
 
 type FetchLike = typeof fetch;
@@ -551,11 +557,11 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
   }
   if (!args.config) {
     return {
-      source: 'local',
+      source: 'blocked',
       claimed: false,
-      shouldSuppress: false,
+      shouldSuppress: true,
       campaignId,
-      reason: 'Supabase ActiveCampaign ledger unavailable; local scanner state fallback is required.',
+      reason: 'ActiveCampaign alert blocked: durable Supabase ledger is required for one-trade-per-campaign de-duplication. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID.',
       durableAvailable: false,
     };
   }
@@ -684,6 +690,44 @@ export async function releaseDurableActiveCampaignScannerAlertClaim(args: {
       },
     },
   });
+}
+
+export async function verifyScannerActiveCampaignLedgerReady(args: {
+  config: ScannerActiveCampaignDurableLedgerConfig | null;
+  fetchImpl?: FetchLike;
+}): Promise<ScannerActiveCampaignLedgerReadiness> {
+  if (!args.config) {
+    return {
+      ready: false,
+      source: 'missing_config',
+      message: 'ActiveCampaign ledger is not configured. Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID.',
+    };
+  }
+  const fetchImpl = args.fetchImpl || fetch;
+  try {
+    const response = await fetchImpl(
+      scannerActiveCampaignLedgerUrl(args.config, '?select=id&limit=1'),
+      { headers: scannerActiveCampaignLedgerHeaders(args.config.serviceRoleKey) },
+    );
+    if (!response.ok) {
+      return {
+        ready: false,
+        source: 'error',
+        message: `ActiveCampaign ledger check failed (${response.status}): ${await response.text()}`,
+      };
+    }
+    return {
+      ready: true,
+      source: 'supabase',
+      message: 'ActiveCampaign durable Supabase ledger is ready.',
+    };
+  } catch (error) {
+    return {
+      ready: false,
+      source: 'error',
+      message: `ActiveCampaign ledger check failed: ${formatError(error)}`,
+    };
+  }
 }
 
 export function createPendingScannerAlertDeliveryRecord(args: {
@@ -826,6 +870,7 @@ function printHelp() {
     '  --macro-calendar false         Disable high-impact macro calendar caution.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
+    '  --preflight-active-campaign-ledger  Verify Supabase campaign ledger env/table and exit.',
     '',
     'Discord webhook precedence:',
     '  QUANT_DESK_SCANNER_WEBHOOK_URL, then SCANNER_DISCORD_WEBHOOK_URL, then legacy DISCORD_WEBHOOK_URL.',
@@ -3615,11 +3660,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       });
     } catch (error) {
       activeCampaignClaim = {
-        source: 'local',
+        source: 'blocked',
         claimed: false,
-        shouldSuppress: false,
+        shouldSuppress: true,
         campaignId: scannerActiveCampaignKey(candidate),
-        reason: `Supabase ActiveCampaign ledger unavailable (${sanitizedError(error)}); using local scanner state fallback.`,
+        reason: `ActiveCampaign alert blocked: durable Supabase ledger is unavailable (${sanitizedError(error)}). No local-only campaign de-dup fallback is allowed.`,
         durableAvailable: false,
       };
       console.warn(`[scanner] ${activeCampaignClaim.reason}`);
@@ -3629,23 +3674,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         shouldSend: false,
         reason: activeCampaignClaim.reason || 'ActiveCampaign duplicate suppressed by durable ledger.',
       };
-    } else if (activeCampaignClaim.source === 'local') {
-      const activeCampaignSuppression = shouldSuppressActiveCampaignScannerAlert({
-        activeCampaignSent: state.activeCampaignSent,
-        candidate,
-      });
-      if (activeCampaignSuppression.shouldSuppress) {
-        alertDecision = {
-          shouldSend: false,
-          reason: activeCampaignSuppression.reason || 'ActiveCampaign duplicate suppressed by local fallback ledger.',
-        };
-        if (activeCampaignSuppression.campaignId) {
-          recordActiveCampaignScannerAlertSuppressed({
-            activeCampaignSent: state.activeCampaignSent,
-            campaignId: activeCampaignSuppression.campaignId,
-          });
-        }
-      }
     }
   }
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
@@ -3813,6 +3841,23 @@ async function main() {
   }
 
   const config = loadConfig();
+  if (hasArg('preflight-active-campaign-ledger')) {
+    const readiness = await verifyScannerActiveCampaignLedgerReady({
+      config: loadScannerActiveCampaignLedgerConfig(),
+    });
+    console.log(`[scanner-preflight] ${readiness.message}`);
+    if (!readiness.ready) process.exitCode = 1;
+    return;
+  }
+  if (config.discordEnabled && !config.dryRun && config.scanWindows) {
+    const readiness = await verifyScannerActiveCampaignLedgerReady({
+      config: loadScannerActiveCampaignLedgerConfig(),
+    });
+    if (!readiness.ready) {
+      throw new Error(`${readiness.message} ActiveCampaign trade-plan alerts require durable one-trade-per-campaign de-duplication before Discord posting mode can start.`);
+    }
+    console.log(`[scanner-preflight] ${readiness.message}`);
+  }
   console.log('Quant Desk local deterministic scanner started.');
   console.log(`Bridge: ${config.bridgeUrl} | Instrument: ${config.bridgeInstrument} | Poll: ${config.pollSeconds}s | Bar time: ${config.barTimeZone}/${config.barTimestampMode} | Discord: ${config.discordEnabled && !config.dryRun ? 'enabled' : 'dry-run/log only'}`);
 

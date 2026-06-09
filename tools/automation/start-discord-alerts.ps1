@@ -65,6 +65,19 @@ if (-not $NoRecorder) {
   }
 }
 
+if (-not $DryRun) {
+  Write-Host "Checking durable ActiveCampaign Supabase ledger..." -ForegroundColor Cyan
+  & npm run nt:scanner -- --preflight-active-campaign-ledger
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "ActiveCampaign ledger preflight failed. Discord scanner was not started." -ForegroundColor Red
+    Write-Host "Confirm SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DISCORD_RAG_USER_ID, and the scanner_active_campaign_alerts migration." -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to close"
+    exit 1
+  }
+}
+
 $argsList = @(
   "run",
   "nt:scanner",
