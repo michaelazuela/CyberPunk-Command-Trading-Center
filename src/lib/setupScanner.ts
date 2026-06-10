@@ -20,6 +20,8 @@ import {
   SetupSession,
 } from '../config/setupRegistry';
 import { describeHtfLiquidityDrawStateForDisplay, describeTimeframeMssStateForDisplay } from './htfLiquidityDrawEngine';
+import type { NinjaBridgeBar } from './ninjaTraderBridge';
+import { buildTimeframeMssEvidence } from './timeframeMssEvidence';
 
 type Direction = SetupCandidate['direction'];
 type Confidence = SetupCandidate['confidence'];
@@ -2230,6 +2232,13 @@ type RetestSwingSelection = {
   timestamp: string | null;
 };
 
+type IntradayMssEvidenceResolution = {
+  five: TimeframeMssEvidence | undefined;
+  fifteen: TimeframeMssEvidence | undefined;
+  source: 'timeframeMssEvidence' | 'completed_5m_ohlc_fallback';
+  fallbackNotes: string[];
+};
+
 function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
   return (chartContext.candles || []).filter((candle) =>
     isReadableConfidence(candle.confidence) &&
@@ -2238,6 +2247,104 @@ function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
     Number.isFinite(parsePrice(candle.low)) &&
     Number.isFinite(parsePrice(candle.close))
   );
+}
+
+function chartCandleToBridgeBar(candle: ReturnType<typeof readableCompletedFiveMinuteCandles>[number]): NinjaBridgeBar | null {
+  const open = parsePrice(candle.open);
+  const high = parsePrice(candle.high);
+  const low = parsePrice(candle.low);
+  const close = parsePrice(candle.close);
+  if (!candle.timestamp || open === null || high === null || low === null || close === null) return null;
+  return {
+    time: candle.timestamp,
+    open,
+    high,
+    low,
+    close,
+    volume: Number.isFinite(Number((candle as { volume?: unknown }).volume)) ? Number((candle as { volume?: unknown }).volume) : 0,
+  };
+}
+
+function floorToFifteenMinuteBucket(timestamp: string): number | null {
+  const ms = Date.parse(timestamp);
+  if (!Number.isFinite(ms)) return null;
+  return Math.floor(ms / (15 * 60 * 1000)) * 15 * 60 * 1000;
+}
+
+function aggregateFiveMinuteBarsToFifteenMinuteBars(bars: NinjaBridgeBar[]): NinjaBridgeBar[] {
+  const buckets = new Map<number, NinjaBridgeBar[]>();
+  for (const bar of bars) {
+    const bucket = floorToFifteenMinuteBucket(bar.time);
+    if (bucket === null) continue;
+    buckets.set(bucket, [...(buckets.get(bucket) || []), bar]);
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .filter(([, bucketBars]) => bucketBars.length >= 3)
+    .map(([bucket, bucketBars]) => {
+      const sorted = [...bucketBars].sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
+      return {
+        time: new Date(bucket).toISOString(),
+        open: sorted[0].open,
+        high: Math.max(...sorted.map((bar) => bar.high)),
+        low: Math.min(...sorted.map((bar) => bar.low)),
+        close: sorted[sorted.length - 1].close,
+        volume: sorted.reduce((sum, bar) => sum + (Number.isFinite(bar.volume) ? bar.volume : 0), 0),
+      };
+    });
+}
+
+function buildIntradayMssFallbackEvidence(chartContext: ChartContext): IntradayMssEvidenceResolution | null {
+  const fiveMinuteBars = readableCompletedFiveMinuteCandles(chartContext)
+    .map(chartCandleToBridgeBar)
+    .filter((bar): bar is NinjaBridgeBar => Boolean(bar));
+  if (fiveMinuteBars.length < 7) return null;
+  const asOfTimestamp = chartContext.chartTimestamp || chartContext.screenshotTimestamp || fiveMinuteBars[fiveMinuteBars.length - 1]?.time || null;
+  const five = buildTimeframeMssEvidence({
+    timeframe: '5M',
+    bars: fiveMinuteBars,
+    asOfTimestamp,
+    barTimestampMode: 'open',
+    barTimeZone: 'eastern',
+  });
+  const fifteenMinuteBars = aggregateFiveMinuteBarsToFifteenMinuteBars(fiveMinuteBars);
+  const fifteen = fifteenMinuteBars.length >= 7
+    ? buildTimeframeMssEvidence({
+      timeframe: '15M',
+      bars: fifteenMinuteBars,
+      asOfTimestamp,
+      barTimestampMode: 'open',
+      barTimeZone: 'eastern',
+    })
+    : undefined;
+  return {
+    five,
+    fifteen,
+    source: 'completed_5m_ohlc_fallback',
+    fallbackNotes: [
+      'Intraday MSS fallback built from completed 5M OHLC because timeframeMssEvidence was missing or incomplete.',
+      'Fallback may name a watch line only; protected stop and targets still require completed 5M candle/swing proof.',
+    ],
+  };
+}
+
+function resolveIntradayMssEvidence(chartContext: ChartContext): IntradayMssEvidenceResolution {
+  const existing = chartContext.timeframeMssEvidence;
+  const five = existing?.timeframes['5M'];
+  const fifteen = existing?.timeframes['15M'];
+  const fiveHasBreakLevel = parsePrice(five?.structureBreak?.brokenLevel) !== null;
+  const existingUsable = Boolean(existing && five && fifteen && (isConfirmedMss(five, 'bullish') || isConfirmedMss(five, 'bearish')) && fiveHasBreakLevel);
+  if (existingUsable) {
+    return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [] };
+  }
+  const fallback = buildIntradayMssFallbackEvidence(chartContext);
+  if (!fallback) return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [] };
+  return {
+    five: fiveHasBreakLevel ? five : fallback.five,
+    fifteen: fifteen ?? fallback.fifteen,
+    source: 'completed_5m_ohlc_fallback',
+    fallbackNotes: fallback.fallbackNotes,
+  };
 }
 
 type FiveMinuteSwing = {
@@ -2971,17 +3078,16 @@ function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): Se
 }
 
 function intradayAlignedMssDirection(chartContext: ChartContext): Direction {
-  const layer = chartContext.timeframeMssEvidence;
-  if (!layer) return 'NO TRADE';
-  if (isConfirmedMss(layer.timeframes['15M'], 'bearish') && isConfirmedMss(layer.timeframes['5M'], 'bearish')) return 'SHORT';
-  if (isConfirmedMss(layer.timeframes['15M'], 'bullish') && isConfirmedMss(layer.timeframes['5M'], 'bullish')) return 'LONG';
+  const evidence = resolveIntradayMssEvidence(chartContext);
+  if (isConfirmedMss(evidence.fifteen, 'bearish') && isConfirmedMss(evidence.five, 'bearish')) return 'SHORT';
+  if (isConfirmedMss(evidence.fifteen, 'bullish') && isConfirmedMss(evidence.five, 'bullish')) return 'LONG';
   return 'NO TRADE';
 }
 
 function fifteenMinuteMssOrDisplacementSupports(chartContext: ChartContext, direction: Direction): boolean {
   if (direction !== 'LONG' && direction !== 'SHORT') return false;
   const expected = direction === 'LONG' ? 'bullish' : 'bearish';
-  const fifteen = chartContext.timeframeMssEvidence?.timeframes['15M'];
+  const fifteen = resolveIntradayMssEvidence(chartContext).fifteen;
   return Boolean(
     isConfirmedMss(fifteen, expected) ||
     (
@@ -2997,10 +3103,9 @@ function fifteenMinuteMssOrDisplacementSupports(chartContext: ChartContext, dire
 }
 
 function intradayMssOrDisplacementDirection(chartContext: ChartContext): Direction {
-  const layer = chartContext.timeframeMssEvidence;
-  if (!layer) return 'NO TRADE';
-  if (isConfirmedMss(layer.timeframes['5M'], 'bearish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'SHORT')) return 'SHORT';
-  if (isConfirmedMss(layer.timeframes['5M'], 'bullish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'LONG')) return 'LONG';
+  const evidence = resolveIntradayMssEvidence(chartContext);
+  if (isConfirmedMss(evidence.five, 'bearish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'SHORT')) return 'SHORT';
+  if (isConfirmedMss(evidence.five, 'bullish') && fifteenMinuteMssOrDisplacementSupports(chartContext, 'LONG')) return 'LONG';
   return 'NO TRADE';
 }
 
@@ -3065,7 +3170,8 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
   if (direction !== 'LONG' && direction !== 'SHORT') {
     return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: '5M MSS close-through retest requires a LONG or SHORT direction.', timestamp: null };
   }
-  const evidence = chartContext.timeframeMssEvidence?.timeframes['5M'];
+  const resolution = resolveIntradayMssEvidence(chartContext);
+  const evidence = resolution.five;
   const expected = direction === 'LONG' ? 'bullish' : 'bearish';
   if (!isConfirmedMss(evidence, expected)) {
     return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: `5M MSS close-through retest pending: completed ${expected} 5M MSS evidence is not confirmed.`, timestamp: null };
@@ -3087,7 +3193,7 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
         : 'Protected 5M retest swing stop blocked: completed 5M evidence candle alignment is required before a protected swing high can be used.',
       decisionLevel: decisionLevel || null,
       reason: decisionLevel
-        ? `5M MSS close-through campaign watch active from structured NinjaTrader OHLC evidence at ${formatLinePrice(decisionLevel)}; completed 5M candle alignment is still required before entry, protected stop, and app targets can be promoted.`
+        ? `5M MSS close-through campaign watch active from structured NinjaTrader OHLC evidence at ${formatLinePrice(decisionLevel)}${resolution.source === 'completed_5m_ohlc_fallback' ? ' using completed 5M OHLC fallback' : ''}; completed 5M candle alignment is still required before entry, protected stop, and app targets can be promoted.`
         : '5M MSS close-through retest pending: the MSS evidence candle or decision close could not be aligned from completed 5M OHLC.',
       timestamp: evidence?.evidenceTimestamp || null,
     };
@@ -3234,6 +3340,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
 
   const direction = intradayMssOrDisplacementDirection(chartContext);
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const mssResolution = resolveIntradayMssEvidence(chartContext);
 
   const fvg = directionalFvgZone(chartContext, direction);
 
@@ -3322,6 +3429,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
     evidence: Array.from(new Set([
       `${dirLabel} 15M MSS/displacement context confirmed from NinjaTrader OHLC timeframe evidence`,
       `${dirLabel} 5M MSS confirmed from NinjaTrader OHLC timeframe evidence`,
+      ...mssResolution.fallbackNotes,
       intradayMssMicroContinuationWindowEvidence(chartContext),
       ...(fvg ? [`5M FVG / imbalance zone: ${zoneLabel}`] : []),
       ...(isCloseThroughTrigger && decisionLevelLabel ? [`5M MSS close-through line in the sand: ${decisionLevelLabel}`] : []),
@@ -4771,8 +4879,9 @@ function campaignDirectionForMss(direction: TimeframeMssEvidence['direction']): 
 }
 
 function mssEvidenceLayer(chartContext: ChartContext | null | undefined, direction: Direction): ActiveCampaignEvidenceLayer {
-  const fifteen = chartContext?.timeframeMssEvidence?.timeframes['15M'];
-  const five = chartContext?.timeframeMssEvidence?.timeframes['5M'];
+  const resolved = chartContext ? resolveIntradayMssEvidence(chartContext) : null;
+  const fifteen = resolved?.fifteen;
+  const five = resolved?.five;
   const expected = direction === 'LONG' ? 'bullish' : direction === 'SHORT' ? 'bearish' : null;
   const fifteenSupports = expected !== null && (
     isConfirmedMss(fifteen, expected) ||
@@ -4796,9 +4905,14 @@ function mssEvidenceLayer(chartContext: ChartContext | null | undefined, directi
       ? [
         `${directionLabel(direction)} 15M MSS/displacement context confirmed from structured OHLC.`,
         `${directionLabel(direction)} 5M MSS confirmed from structured OHLC.`,
+        ...(resolved?.fallbackNotes || []),
       ]
       : [],
-    blockers: confirmed ? [] : ['15M MSS/displacement context and 5M completed MSS are not aligned for this campaign direction.'],
+    blockers: confirmed
+      ? []
+      : chartContext
+        ? ['15M MSS/displacement context and 5M completed MSS are not aligned for this campaign direction from timeframe evidence or completed-OHLC fallback.']
+        : ['Structured chart context is missing; 15M/5M MSS campaign read is data-limited.'],
   };
 }
 

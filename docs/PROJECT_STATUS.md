@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Harden Intraday MSS watch when timeframeMssEvidence is missing or missing 5M brokenLevel.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
+Reason: User asked to fix the remaining quiet path where Intraday MSS stayed silent if structured timeframeMssEvidence was missing or lacked a 5M structureBreak.brokenLevel. The scanner now derives a watch-only 5M/15M MSS context from completed NinjaTrader OHLC candles using the deterministic timeframe MSS engine.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed. IntradayMssMicroContinuation can now recover a named watch line from completed OHLC fallback when timeframeMssEvidence is missing or incomplete, while still keeping entry/stop/T1/T2 gated by completed 5M candle/swing proof.
+Trading logic changed: Yes, watch-only hardening. The Intraday MSS model can surface a conditional watch from deterministic completed-OHLC fallback evidence. It does not approve execution, does not set canExecute, and does not invent protected stops or app targets.
+Bridge impact: None. No bridge contract or ingestion behavior changed.
+Discord impact: Indirect. Discord selection can receive a conditional Intraday MSS watch instead of silence when the scanner can derive the line from completed OHLC fallback.
+Journal/RAG impact: No schema change. Candidate evidence now records that completed 5M OHLC fallback supplied the watch context.
+Supabase impact: No migration added.
+Known risks: If completed 5M candles are missing, malformed, too few to derive 15M context, or do not produce deterministic MSS/displacement support, the scanner still stays quiet rather than guessing. That is intentional.
+Next recommended action: Restart scanner services after deploy if the running process predates this commit.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Let Intraday MSS watch line survive missing 5M evidence-candle alignment.
 Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
 Reason: User asked to remove the remaining caveat that the watch stayed quiet if the scanner did not build an Intraday MSS candidate. The safe fix is to let the app-owned setup scanner create a watch-only line from structured NinjaTrader OHLC timeframeMssEvidence when 15M/5M MSS is aligned and the 5M structureBreak.brokenLevel is present, even if the exact completed candle array cannot yet align the evidence candle.

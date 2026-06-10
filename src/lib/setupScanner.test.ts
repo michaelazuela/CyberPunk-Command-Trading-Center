@@ -540,6 +540,30 @@ function timeframeMssEvidenceLayer(
   };
 }
 
+function intradayMssFallbackCandles(): NonNullable<ChartContext['candles']> {
+  const values = [
+    [100, 101, 96, 98], [98, 105, 97, 100], [100, 101, 98, 99],
+    [99, 100, 92, 94], [94, 99, 90, 92], [92, 95, 91, 93],
+    [93, 96, 91, 94], [94, 102, 93, 96], [96, 98, 94, 95],
+    [95, 97, 90, 92], [92, 96, 88, 91], [91, 94, 89, 90],
+    [90, 94, 89, 91], [91, 97, 90, 94], [94, 96, 92, 93],
+    [93, 99, 92, 96], [96, 106, 95, 104], [104, 105, 101, 103],
+    [103, 107, 102, 105], [105, 106, 103, 104], [104, 105, 102, 103],
+  ];
+  const start = Date.parse('2026-06-09T12:00:00-04:00');
+  return values.map(([open, high, low, close], index) => ({
+    index,
+    timestamp: new Date(start + index * 5 * 60_000).toISOString(),
+    open,
+    high,
+    low,
+    close,
+    direction: close > open ? 'bullish' : close < open ? 'bearish' : 'doji',
+    confidence: 'High',
+    isExpansion: index === 16,
+  }));
+}
+
 function bullishTurtleSoupContext(): ChartContext {
   const context = structuredContext();
   return {
@@ -2388,6 +2412,93 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('5M MSS close-through line in the sand: 7342.50')));
     assert.ok(micro.evidence.some((item) => item.includes('structured NinjaTrader OHLC evidence at 7342.50')));
     assert.ok(micro.missingEvidence.some((item) => item.includes('completed 5M evidence candle alignment is required')));
+  }],
+
+  ['Intraday MSS Micro Continuation derives watch from completed OHLC when timeframeMssEvidence is missing', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:45:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 103,
+        activeSwingLow: 88,
+        activeSwingHigh: 107,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: undefined,
+      fvgZones: [],
+      candles: intradayMssFallbackCandles(),
+      targetObjectives: [{
+        label: 'Fallback buy-side liquidity',
+        price: 107,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Buy-side liquidity above the fallback close-through.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(micro.humanReview?.canExecute, false);
+    assert.equal(micro.entry, 103);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 97);
+    assert.equal(micro.activeCampaign?.primaryTrigger, '15M_5M_MSS');
+    assert.ok(micro.evidence.some((item) => item.includes('completed 5M OHLC because timeframeMssEvidence was missing or incomplete')));
+    assert.ok(micro.evidence.some((item) => item.includes('5M MSS close-through line in the sand: 97.00')));
+    assert.ok(micro.missingEvidence.some((item) => item.includes('Protected 5M retest swing stop')));
+  }],
+
+  ['Intraday MSS Micro Continuation repairs missing 5M brokenLevel from completed OHLC fallback', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:45:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 103,
+        activeSwingLow: 88,
+        activeSwingHigh: 107,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-09T13:20:00-04:00',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: null,
+            brokenSwingTimestamp: null,
+            priorStructureDirection: 'bearish',
+            closeThroughPoints: null,
+            wickOnlyBreak: false,
+          },
+        },
+      }),
+      fvgZones: [],
+      candles: intradayMssFallbackCandles(),
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 97);
+    assert.ok(micro.evidence.some((item) => item.includes('5M MSS close-through line in the sand: 97.00')));
+    assert.ok(micro.evidence.some((item) => item.includes('completed 5M OHLC because timeframeMssEvidence was missing or incomplete')));
   }],
 
   ['Intraday MSS Micro Continuation short uses latest protected 5M retest swing after close-through campaign activation', () => {
