@@ -116,6 +116,12 @@ function numberLine(value: number | null | undefined, digits = 2): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
 }
 
+function compactLine(value: string | null | undefined, maxLength = 180): string {
+  const text = professionalizeReportText(String(value || '').trim()).replace(/\s+/g, ' ');
+  if (!text) return 'N/A';
+  return text.length <= maxLength ? text : `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
 function sessionDisplayName(session: CompactDiscordSession): string {
   return session === 'morning' ? 'Morning' : 'Lunch';
 }
@@ -208,6 +214,9 @@ function firstMeaningfulExtension(
 
 function compactTargetLadderLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const appTargets = appTargetLevels(candidate, normalized);
+  if (appTargets.target1 == null && appTargets.target2 == null) {
+    return ['Targets:', 'Unavailable until entry and protected stop are proven.'];
+  }
   const targetPlan = candidate.targetObjectivePlan;
   const runner = firstMeaningfulExtension(candidate.direction, appTargets.target2, [
     candidate.target2,
@@ -244,14 +253,23 @@ function compactTradeDirection(candidate: SetupCandidate | null, normalized: Com
   return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'WAIT';
 }
 
+function isExplicitReviewCandidate(candidate: SetupCandidate | null): boolean {
+  return Boolean(
+    candidate &&
+    candidate.executionStatus === 'Conditional' &&
+    (candidate.humanReview || candidate.activeRuleset?.htfLineInSand?.lineInSand)
+  );
+}
+
 function reportStatus(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): DiscordDecisionStatus {
   const effectiveCanExecute = getEffectiveCanExecute(normalized);
   if (effectiveCanExecute) return 'EXECUTABLE';
   if (normalized.decision === 'NO TRADE' && !candidate) return 'NO TRADE';
   const status = compactSessionDecisionLabel(candidate, normalized, override).toLowerCase();
-  if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
   if (status.includes('approved') || status.includes('executable')) return effectiveCanExecute ? 'EXECUTABLE' : 'CONDITIONAL';
   if (status.includes('blocked') || status.includes('no trade') || status.includes('notrade')) return 'NO TRADE';
+  if (isExplicitReviewCandidate(candidate) && status.includes('conditional')) return 'CONDITIONAL';
+  if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
   if (status.includes('conditional')) return 'CONDITIONAL';
   return 'WAIT';
 }
@@ -267,8 +285,11 @@ function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | n
 function compactActionText(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
   if (status === 'NO TRADE') return 'Stand down. Recheck at next scheduled scan.';
   if (!candidate) return 'Stand down. No active plan candidate.';
-  if (candidate.failedPlanReversal?.staleOrNoFreshEntry || candidate.candidateState === 'NO_FRESH_ENTRY') {
+  if (candidate.failedPlanReversal?.staleOrNoFreshEntry) {
     return 'Failed-plan reversal is stale. Do not chase. Wait for a new completed 5M trigger/retest.';
+  }
+  if (candidate.candidateState === 'NO_FRESH_ENTRY') {
+    return 'Conditional review only. Do not chase. Wait for a fresh completed 5M trigger/retest with protected structure.';
   }
   if (candidate.humanReview?.status === 'HumanReviewReady') {
     return 'Human review required. Verify the 5M FVG retest, protected stop, target room, and invalidation before any trader action.';
@@ -299,6 +320,32 @@ function failedPlanReversalLines(candidate: SetupCandidate): string[] {
   ];
 }
 
+function lineInSandLines(candidate: SetupCandidate): string[] {
+  const htfLine = candidate.activeRuleset?.htfLineInSand;
+  if (!htfLine?.lineInSand) return [];
+  return [
+    'Line in the Sand:',
+    `${priceLine(htfLine.lineInSand)} - ${compactLine(htfLine.lineReason || 'Required structure line.', 90)}`,
+    ...(htfLine.requiredClose ? [`Close Condition: ${compactLine(htfLine.requiredClose, 100)}`] : []),
+  ];
+}
+
+function missingProofLines(candidate: SetupCandidate): string[] {
+  const missing: string[] = [];
+  if (candidate.entry == null) missing.push('Entry not confirmed by the app-owned pipeline.');
+  if (candidate.stop == null) missing.push('Protected 5M structure stop not confirmed.');
+  if (candidate.target1 == null || candidate.target2 == null) missing.push('App T1/T2 unavailable until entry and protected stop are proven.');
+  if (!missing.length) return [];
+  for (const item of candidate.missingEvidence || []) {
+    if (missing.length >= 5) break;
+    if (item && !missing.includes(item)) missing.push(item);
+  }
+  return [
+    'Missing Proof:',
+    ...missing.slice(0, 3).map((item) => `- ${compactLine(item, 90)}`),
+  ];
+}
+
 function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const levels = appTargetLevels(candidate, normalized);
   const modelConfidenceScore =
@@ -325,6 +372,7 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
       'Trader must confirm entry before action.',
     ] : []),
     ...failedPlanReversalLines(candidate),
+    ...lineInSandLines(candidate),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
@@ -334,6 +382,15 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     ] : []),
     '',
     ...compactTargetLadderLines(candidate, normalized),
+    '',
+    ...missingProofLines(candidate),
+    ...(candidate.requiredTrigger || candidate.nextAction ? [
+      '',
+      'Trigger / Next Step:',
+      compactLine(candidate.requiredTrigger || candidate.nextAction, 120),
+      ...(candidate.nextAction && candidate.nextAction !== candidate.requiredTrigger ? [compactLine(candidate.nextAction, 120)] : []),
+      'No chase. Wait for completed 5M proof and protected structure.',
+    ] : []),
   ];
 }
 
@@ -434,6 +491,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const requestedStatus = args.statusOverride || args.normalized.decisionStatus || (effectiveCanExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
   const finalStatus = !effectiveCanExecute && (requestedStatus === TradeDecisionStatus.ApprovedTrade || requestedStatus === 'Approved' || requestedStatus === 'Executable')
     ? TradeDecisionStatus.Wait
+    : isExplicitReviewCandidate(bestCandidate) && requestedStatus === TradeDecisionStatus.NoTrade
+      ? TradeDecisionStatus.ConditionalTrade
     : requestedStatus;
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
@@ -479,6 +538,14 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   assertDiscordReportDesignerIsAdvisoryOnly(designerRecommendation as unknown as Record<string, unknown>);
   const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
   const htfLines = compactHtfSufficiencyLines(bestCandidate);
+  const bestLevels = bestCandidate ? appTargetLevels(bestCandidate, args.normalized) : null;
+  const bestCandidateHasFullPlan = Boolean(
+    bestCandidate?.entry != null &&
+    bestLevels?.stop != null &&
+    bestLevels?.target1 != null &&
+    bestLevels?.target2 != null
+  );
+  const includeMemory = designerStatus === 'EXECUTABLE' || bestCandidateHasFullPlan;
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
@@ -492,12 +559,11 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         ...htfLines,
         ...(htfLines.length ? [''] : []),
         'Invalidation:',
-        bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.',
+        compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 160),
         '',
-        ...memoryLines(),
-        '',
+        ...(includeMemory ? [...memoryLines(), ''] : []),
         'Action:',
-        designerRecommendation.actionLine,
+        compactLine(designerRecommendation.actionLine, 120),
         '',
         compactAttachmentLine(args.attachments, true),
         'Decision support only. No automated orders.',

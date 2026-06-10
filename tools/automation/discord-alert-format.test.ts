@@ -594,6 +594,63 @@ assert.ok(noTradeText.includes('Action:'));
 assert.ok(noTradeText.includes('Stand down. Recheck at next scheduled scan.'));
 assert.ok(!noTradeText.includes('Plan:'));
 
+const conditionalReplayCandidate = sampleCandidate('SHORT');
+conditionalReplayCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+conditionalReplayCandidate.scenarioLabel = 'Intraday MSS Micro Continuation';
+conditionalReplayCandidate.entry = 7362.5;
+conditionalReplayCandidate.stop = null;
+conditionalReplayCandidate.target1 = null;
+conditionalReplayCandidate.target2 = null;
+conditionalReplayCandidate.riskPoints = null;
+conditionalReplayCandidate.requiredTrigger = 'Human-review short: completed bearish 5M MSS plus bearish 15M MSS/displacement context, then completed close-through/retest below 7384.00.';
+conditionalReplayCandidate.nextAction = 'Intraday MSS micro-continuation watch. No chase. Completed 5M bearish MSS close-through/retest confirmed; protected stop still required.';
+conditionalReplayCandidate.missingEvidence = ['Protected 5M retest swing stop is not confirmed.'];
+conditionalReplayCandidate.activeRuleset = {
+  htfLineInSand: {
+    applied: true,
+    status: 'passed',
+    required: 'completed_5m_or_15m_close_beyond_htf_line',
+    appliesToAllModels: true,
+    affectsExecution: false,
+    direction: 'SHORT',
+    lineInSand: 7384,
+    lineReason: 'Completed 5M close-through/retest below bearish MSS line.',
+    requiredClose: 'Short needs a completed 5M close/retest hold below 7384.00.',
+    obstacleType: 'swing',
+    obstacleSource: 'ninjatrader',
+    evidence: ['Line in the sand came from OHLC-derived 5M structure.'],
+    blockers: [],
+  },
+};
+const conditionalReplayPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-09',
+  instrument: 'MES',
+  planVersionId: 'CONDITIONAL-REPLAY-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.NoTrade,
+    decision: 'NO TRADE',
+    noTradeReason: null,
+    invalidation: 'Do not execute until entry and protected stop are defined.',
+  },
+  candidates: [conditionalReplayCandidate],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Morning',
+});
+validateDiscordPayload(conditionalReplayPayload, []);
+const conditionalReplayText = flattenDiscordPayloadText(conditionalReplayPayload);
+assert.ok(conditionalReplayText.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(conditionalReplayText.includes('Line in the Sand:'));
+assert.ok(conditionalReplayText.includes('7384.00'));
+assert.ok(conditionalReplayText.includes('Missing Proof:'));
+assert.ok(conditionalReplayText.includes('Protected 5M structure stop not confirmed.'));
+assert.ok(conditionalReplayText.includes('Protected 5M retest swing stop is not confirmed.'));
+assert.ok(conditionalReplayText.includes('No chase. Wait for completed 5M proof and protected structure.'));
+assert.ok(!conditionalReplayText.includes('No active plan candidate available.'));
+assert.ok(!conditionalReplayText.includes('Stand down. Recheck at next scheduled scan.'));
+assert.ok(!/EXECUTABLE -|Trade now|Entry confirmed/i.test(conditionalReplayText));
+
 const watchlist = morningWatchlistDiscordSummary({
   tradeDate: '2026-05-28',
   instrument: 'MES',

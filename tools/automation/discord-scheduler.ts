@@ -9,7 +9,7 @@ import { selectBestTwoScenarios } from '../../src/lib/scenarioSelection';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
-import { type AnalysisResult, type ChartContext, type SetupCandidate, type StructuralLevel } from '../../src/types';
+import { ExecutionStatus, SetupType, type AnalysisResult, type ChartContext, type SetupCandidate, type StructuralLevel } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import {
   applyNewsMacroCaution,
@@ -125,6 +125,7 @@ function printHelp() {
     '  --as-of HH:MM                    End the replay/manual analysis at this ET time.',
     '  --allow-post-facto-summary       Allow a clearly labeled replay summary even if live scanner audit disagrees.',
     '  --repost-scanner-audit PATH      Repost/correct from an exact live scanner audit JSON record.',
+    '  --repost-rag-record ID           Repost/correct from an exact durable RAG trade_embeddings record.',
     '  --dry-run                       Build the message without posting to Discord.',
     '  --instrument MES|MNQ             Defaults to MES.',
     '  --bridge-instrument "MES 06-26" Defaults to MES 06-26.',
@@ -312,11 +313,12 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
   const executionStart = job === 'morning' ? MORNING_EXECUTION_START_ET : LUNCH_EXECUTION_START_ET;
   const executionEnd = normalizeEtClock(asOfEt || (job === 'morning' ? MORNING_EXECUTION_END_ET : LUNCH_EXECUTION_END_ET));
   const contextTo = etDateTime(tradeDate, executionEnd);
-  const [bars240m, bars120m, bars60m, bars15m, bars5m] = await Promise.all([
+  const [bars240m, bars120m, bars60m, bars15m, bars5mContext, bars5m] = await Promise.all([
     fetchBars(config, '240m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(config, '120m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(config, '60m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(config, '15m', etDateTime(contextStartDate, '18:00'), contextTo),
+    fetchBars(config, '5m', etDateTime(contextStartDate, '18:00'), contextTo),
     fetchBars(
       config,
       '5m',
@@ -326,6 +328,7 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
   ]);
   const baseChartContext = buildNinjaChartContext({
     bars5m,
+    htfBars5m: bars5mContext,
     bars15m,
     bars60m,
     bars120m,
@@ -379,6 +382,179 @@ function discordValue(value: string, maxLength = 1024): string {
 function supabaseRestUrl(): string | null {
   const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
   return raw ? raw.replace(/\/$/, '') : null;
+}
+
+interface RagTradeRecord {
+  id: string;
+  created_at: string | null;
+  trade_date: string | null;
+  session_type: string | null;
+  instrument: string | null;
+  trade_result: string | null;
+  source: string | null;
+  plan_source: string | null;
+  plan_version_id: string | null;
+  trade_plan_json: {
+    source?: string | null;
+    outcome?: Record<string, unknown> | null;
+    discordOutcome?: Record<string, unknown> | null;
+    normalizedPlan?: Record<string, unknown> | null;
+    approvalBoundary?: Record<string, unknown> | null;
+    instrumentContract?: string | null;
+    planVersionId?: string | null;
+  } | null;
+}
+
+function supabaseServiceHeaders(): HeadersInit {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!key) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required to repost a durable RAG trade record.');
+  }
+  return {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+function readRagText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readRagNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readRagBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function formatRagPrice(value: unknown): string {
+  const numeric = readRagNumber(value);
+  return numeric !== null ? numeric.toFixed(2) : 'N/A';
+}
+
+async function loadRagTradeRecordById(recordId: string): Promise<RagTradeRecord> {
+  const supabaseUrl = supabaseRestUrl();
+  if (!supabaseUrl) {
+    throw new Error('SUPABASE_URL is required to repost a durable RAG trade record.');
+  }
+  const params = new URLSearchParams({
+    select: 'id,created_at,trade_date,session_type,instrument,trade_result,source,plan_source,plan_version_id,trade_plan_json',
+    id: `eq.${recordId}`,
+    limit: '1',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?${params}`, {
+    headers: supabaseServiceHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`RAG record lookup failed (${response.status}): ${await response.text()}`);
+  }
+  const rows = await response.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row?.id) {
+    throw new Error(`RAG record ${recordId} was not found.`);
+  }
+  return row as RagTradeRecord;
+}
+
+function isTraderConfirmedRagRecord(record: RagTradeRecord): boolean {
+  const plan = record.trade_plan_json;
+  const outcome = plan?.discordOutcome || plan?.outcome || {};
+  return Boolean(
+    record.trade_result && record.trade_result !== 'pending' ||
+    readRagText(record.plan_source)?.includes('trader_confirmed') ||
+    readRagText(plan?.source)?.includes('trader_confirmed') ||
+    readRagBoolean(outcome.tradeTaken) === true
+  );
+}
+
+async function loadTraderConfirmedRagRecordsForSession(args: {
+  tradeDate: string;
+  session: SessionAlertJob;
+  instrument: Instrument;
+}): Promise<RagTradeRecord[]> {
+  const supabaseUrl = supabaseRestUrl();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!supabaseUrl || !serviceRoleKey) return [];
+  const params = new URLSearchParams({
+    select: 'id,created_at,trade_date,session_type,instrument,trade_result,source,plan_source,plan_version_id,trade_plan_json',
+    trade_date: `eq.${args.tradeDate}`,
+    session_type: `eq.${args.session}`,
+    instrument: `eq.${args.instrument}`,
+    order: 'created_at.asc',
+    limit: '25',
+  });
+  const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?${params}`, {
+    headers: supabaseServiceHeaders(),
+  });
+  if (!response.ok) {
+    console.warn(`Trader-confirmed RAG replay guard skipped (${response.status}).`);
+    return [];
+  }
+  const rows = await response.json().catch(() => []);
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => row as RagTradeRecord)
+    .filter(isTraderConfirmedRagRecord);
+}
+
+function formatRagTradeRecordPayload(record: RagTradeRecord): DiscordWebhookPayload {
+  const plan = record.trade_plan_json?.normalizedPlan || {};
+  const savedOutcome = record.trade_plan_json?.outcome || {};
+  const buttonOutcome = record.trade_plan_json?.discordOutcome || {};
+  const direction = readRagText(plan.decision) || readRagText(buttonOutcome.direction) || readRagText(savedOutcome.direction) || 'WAIT';
+  const planVersionId = readRagText(record.plan_version_id) || readRagText(record.trade_plan_json?.planVersionId) || record.id;
+  const session = record.session_type === 'lunch' ? 'PM' : 'AM';
+  const tradeDate = record.trade_date || 'unknown-date';
+  const instrument = record.instrument || 'MES';
+  const tradeTaken = readRagBoolean(buttonOutcome.tradeTaken) ?? readRagBoolean(savedOutcome.tradeTaken);
+  const targetHit = readRagText(buttonOutcome.targetHit) || readRagText(savedOutcome.targetHit) || readRagText(buttonOutcome.outcomeCode) || readRagText(record.trade_result) || 'recorded';
+  const pnlDollars = readRagNumber(savedOutcome.pnlDollars) ?? readRagNumber(buttonOutcome.pnlDollars);
+  const pnlTicks = readRagNumber(savedOutcome.pnlTicks) ?? readRagNumber(buttonOutcome.pnlTicks);
+  const lineInTheSand = readRagNumber(plan.lineInTheSand);
+  const lineReason = readRagText(plan.lineInTheSandReason);
+  const triggerCondition = readRagText(plan.triggerCondition);
+  const authority = readRagText(plan.authority) || 'decision_support_human_review_only';
+  const description = [
+    `[${session} REVIEW] ${instrument} - ${direction} RECORDED TRADE PLAN`,
+    'Status: RECORDED TRADER-CONFIRMED OUTCOME - not a fresh replay candidate',
+    '',
+    'Plan:',
+    `Setup: ${compactSentence(readRagText(plan.setupName), 140) || 'Recorded manual/RAG trade plan'}`,
+    `Line in the Sand: ${lineInTheSand !== null ? lineInTheSand.toFixed(2) : 'N/A'}`,
+    ...(lineReason ? [`Why It Matters: ${compactSentence(lineReason, 220)}`] : []),
+    ...(triggerCondition ? [`Trigger: ${compactSentence(triggerCondition, 220)}`] : []),
+    `Entry: ${formatRagPrice(plan.entry)}`,
+    `Stop: ${formatRagPrice(plan.stop)}`,
+    `Risk: ${formatRagPrice(plan.riskPoints)} pts`,
+    `T1: ${formatRagPrice(plan.t1)}`,
+    `T2: ${formatRagPrice(plan.t2)}`,
+    '',
+    'Outcome:',
+    `Trade Taken: ${tradeTaken === null ? 'recorded' : tradeTaken ? 'yes' : 'no'}`,
+    `Result: ${targetHit}`,
+    ...(pnlTicks !== null || pnlDollars !== null
+      ? [`P/L: ${pnlTicks !== null ? `${pnlTicks} ticks` : 'N/A'} / ${pnlDollars !== null ? `$${pnlDollars.toFixed(2)}` : 'N/A'}`]
+      : []),
+    '',
+    'Authority:',
+    `Source: ${record.plan_source || record.source || record.trade_plan_json?.source || 'durable RAG record'}`,
+    `Boundary: ${authority}. RAG/outcome buttons do not approve trades or place orders.`,
+  ].join('\n');
+  return {
+    username: 'Quant Desk',
+    content: `📌 RECORDED RAG TRADE PLAN\n🟡 [${session} REVIEW] ${instrument} - ${direction} RECORDED | ${tradeDate} | ID: \`${planVersionId}\``,
+    embeds: [
+      {
+        title: 'Recorded Trade Plan From Durable RAG',
+        description: professionalizeReportText(description),
+        color: 0xffa000,
+        fields: [],
+        footer: { text: `Quant Desk • Durable RAG Record ${record.id} • Decision support only` },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
 }
 
 async function upsertDiscordAlertRagRecord(args: {
@@ -541,7 +717,22 @@ function topConditionalCandidates(candidates: SetupCandidate[] | undefined, curr
     currentPrice,
     guards: DEFAULT_SCANNER_RISK_GUARDS,
   }).stale);
-  return selectBestTwoScenarios(freshCandidates);
+  const freshSelection = selectBestTwoScenarios(freshCandidates);
+  if (freshSelection.length) return freshSelection;
+
+  const reviewOnlyCandidates = (candidates || []).filter((candidate) =>
+    (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    candidate.setupType === SetupType.IntradayMssMicroContinuation
+  );
+  const lineInSandReviewCandidates = reviewOnlyCandidates.filter((candidate) =>
+    candidate.pathway === 'intraday_mss_micro_continuation' &&
+    Boolean(candidate.activeRuleset?.htfLineInSand?.lineInSand) &&
+    Boolean(candidate.requiredTrigger || candidate.nextAction)
+  );
+  if (lineInSandReviewCandidates.length) return selectBestTwoScenarios(lineInSandReviewCandidates);
+
+  return [];
 }
 
 function compactSentence(value?: string | null, maxLength = 150): string | null {
@@ -1005,6 +1196,12 @@ async function formatPlanPayload(args: {
   attachments: CompactDiscordAttachmentState;
 }): Promise<DiscordWebhookPayload> {
   const selectedCandidate = args.candidates[0] || null;
+  const selectedCandidateHasFullPlan = Boolean(
+    selectedCandidate?.entry != null &&
+    selectedCandidate?.stop != null &&
+    selectedCandidate?.target1 != null &&
+    selectedCandidate?.target2 != null
+  );
   return compactDiscordSummary({
     session: args.job,
     tradeDate: args.tradeDate,
@@ -1022,7 +1219,7 @@ async function formatPlanPayload(args: {
       sessionType: args.job,
       tradeDate: args.tradeDate,
       instrument: args.instrument,
-      direction: selectedCandidate?.direction,
+      direction: selectedCandidateHasFullPlan ? selectedCandidate?.direction : undefined,
     }),
   });
 }
@@ -1285,6 +1482,13 @@ async function runRepostScannerAudit(auditFile: string, dryRun: boolean): Promis
   await postDiscord(correctedPayload, dryRun, files);
 }
 
+async function runRepostRagRecord(recordId: string, dryRun: boolean): Promise<void> {
+  const record = await loadRagTradeRecordById(recordId);
+  const payload = formatRagTradeRecordPayload(record);
+  validateDiscordPayload(payload, []);
+  await postDiscord(payload, dryRun);
+}
+
 async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, tradeDate = getEtTradeDate(), asOfEt?: string, allowPostFactoSummary = false): Promise<void> {
   if (job === 'weeklyNewsletter') {
     const result = await publishWeeklyTradingNewsletter({
@@ -1321,13 +1525,32 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
     normalizedPlan: normalized,
     allowPostFactoSummary,
   });
+  const traderConfirmedRagRecords = await loadTraderConfirmedRagRecordsForSession({
+    tradeDate,
+    session: job,
+    instrument: config.instrument,
+  });
+  if (traderConfirmedRagRecords.length && !allowPostFactoSummary) {
+    const latest = traderConfirmedRagRecords[traderConfirmedRagRecords.length - 1];
+    throw new Error(
+      [
+        'Manual scheduler replay blocked: a trader-confirmed durable RAG record exists for this session.',
+        `Use --repost-rag-record ${latest.id} to repost the exact recorded trade plan.`,
+        'Use --allow-post-facto-summary only when you intentionally want a clearly labeled late snapshot that may differ from the recorded trade.',
+      ].join(' '),
+    );
+  }
   if (provenance.status === 'blocked_contradicts_live_executable') {
     throw new Error(`${provenance.note} Matching live audit(s): ${provenance.liveExecutableAudits.map((audit) => audit.planVersionId || audit.auditFile).join(', ')}`);
   }
-  try {
-    await upsertDiscordAlertRagRecord({ planVersionId, job, tradeDate, instrument: config.instrument, analysis, normalized, candidates });
-  } catch (error) {
-    console.warn('Discord alert RAG pending save failed:', error instanceof Error ? error.message : String(error));
+  if (dryRun) {
+    console.log('Discord alert RAG pending save skipped: --dry-run is read-only and does not write Supabase/RAG.');
+  } else {
+    try {
+      await upsertDiscordAlertRagRecord({ planVersionId, job, tradeDate, instrument: config.instrument, analysis, normalized, candidates });
+    } catch (error) {
+      console.warn('Discord alert RAG pending save failed:', error instanceof Error ? error.message : String(error));
+    }
   }
   const renderInput = candidates[0]
     ? {
@@ -1375,11 +1598,13 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   }), provenance);
   validateDiscordPayload(payload, files);
   const receipt = await postDiscord(payload, dryRun, files);
-  await attachDiscordMessageReceiptToRagRecord({
-    planVersionId,
-    discordMessageId: receipt.discordMessageId,
-    webhookSource: dryRun ? 'dry_run' : 'DISCORD_WEBHOOK_URL',
-  });
+  if (!dryRun) {
+    await attachDiscordMessageReceiptToRagRecord({
+      planVersionId,
+      discordMessageId: receipt.discordMessageId,
+      webhookSource: 'DISCORD_WEBHOOK_URL',
+    });
+  }
 }
 
 async function schedulerLoop(config: SchedulerConfig, dryRun: boolean): Promise<void> {
@@ -1426,9 +1651,14 @@ async function main() {
   const asOfEt = argValue('as-of') ? normalizeEtClock(argValue('as-of') as string) : undefined;
   const allowPostFactoSummary = hasArg('allow-post-facto-summary');
   const repostScannerAudit = argValue('repost-scanner-audit');
+  const repostRagRecord = argValue('repost-rag-record');
 
   if (repostScannerAudit) {
     await runRepostScannerAudit(repostScannerAudit, dryRun);
+    return;
+  }
+  if (repostRagRecord) {
+    await runRepostRagRecord(repostRagRecord, dryRun);
     return;
   }
 
