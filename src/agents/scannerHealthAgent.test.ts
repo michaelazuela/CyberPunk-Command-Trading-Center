@@ -73,6 +73,11 @@ assert.equal(ready.canTrustAlerts, true);
 assert.equal(canSendAlertsFromHealth(ready), true);
 assert.equal(healthBlocksAlerts(ready), false);
 assert.equal(ready.blockingReasons.length, 0);
+const geminiIndependence = ready.checks.find((item) => item.key === 'gemini_independence');
+assert.ok(geminiIndependence);
+assert.equal(geminiIndependence.status, 'pass');
+assert.equal(geminiIndependence.severity, 'info');
+assert.equal(geminiIndependence.message, 'Gemini unavailable: scanner unaffected.');
 
 const bridgeBlocked = evaluateScannerHealth(baseInput({
   bridgeReachable: false,

@@ -67,6 +67,7 @@ import {
 import {
   fetchCachedMarketBars,
   loadMarketDataConfig,
+  normalizeCandleTimeEt,
   toMarketDataGapEventRecord,
   upsertMarketBars,
   upsertMarketDataGapEvent,
@@ -103,6 +104,8 @@ import {
   professionalizeReportText,
 } from './professional-report-language';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { etDateTime } from './et-time';
+import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -133,6 +136,7 @@ export interface ScannerConfig {
   marketMapRefreshSeconds: number;
   preMarketDataGate: boolean;
   macroCalendarEnabled: boolean;
+  geminiAdvisoryFallbackEnabled: boolean;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
 }
@@ -924,6 +928,7 @@ function loadConfig(): ScannerConfig {
     marketMapRefreshSeconds: Math.max(60, numberArg('market-map-refresh-seconds', 300)),
     preMarketDataGate: boolArg('pre-market-data-gate', true),
     macroCalendarEnabled: boolArg('macro-calendar', true),
+    geminiAdvisoryFallbackEnabled: isGeminiAdvisoryFallbackEnabled(),
     barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
     barTimeZone,
   };
@@ -1084,10 +1089,6 @@ function calendarDateBefore(tradeDate: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function etDateTime(tradeDate: string, time: string): string {
-  return `${tradeDate}T${time}:00-04:00`;
-}
-
 function ymdInEt(value: string): string {
   return String(value || '').slice(0, 10);
 }
@@ -1164,7 +1165,7 @@ export function buildScannerHistoryPreloadPlan(tradeDate: string, session: LiveS
 
 function barTimeMs(value?: string | null): number | null {
   if (!value) return null;
-  const parsed = new Date(value).getTime();
+  const parsed = new Date(normalizeCandleTimeEt(value)).getTime();
   return Number.isNaN(parsed) ? null : parsed;
 }
 
@@ -1184,8 +1185,10 @@ export function barsCoverRequestedLookback(
   const loadedSpanDays = (last - first) / (24 * 60 * 60 * 1000);
   const requiredSpanDays = Math.max(0, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
   const latestCompletedToleranceMs = (timeframeMinutes(timeframe) + 30) * 60_000;
+  const startCoverageToleranceMs = 24 * 60 * 60_000;
   return (
     sorted.length >= SCANNER_HISTORY_MIN_BARS[timeframe] &&
+    first <= from + startCoverageToleranceMs &&
     loadedSpanDays >= requiredSpanDays &&
     last >= to - latestCompletedToleranceMs
   );
@@ -2525,7 +2528,7 @@ async function upsertScannerDiscordAlertRagRecord(args: {
   };
 
   const headers = supabaseRagHeaders(serviceRoleKey);
-  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
+  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(payload),
@@ -2554,11 +2557,12 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   if (!args.discordMessageId) return;
   const supabaseUrl = supabaseRestUrl();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  if (!supabaseUrl || !serviceRoleKey) return;
+  const userId = process.env.DISCORD_RAG_USER_ID || '';
+  if (!supabaseUrl || !serviceRoleKey || !userId) return;
 
   const headers = supabaseRagHeaders(serviceRoleKey);
   const lookup = await fetch(
-    `${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
+    `${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
     { headers },
   );
   if (!lookup.ok) {
@@ -2580,7 +2584,7 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
       },
     },
   };
-  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(row.id)}`, {
+  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&id=eq.${encodeURIComponent(row.id)}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(patch),
@@ -3253,6 +3257,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         discordEnabled: config.discordEnabled,
         dryRun: config.dryRun,
         macroCalendarEnabled: config.macroCalendarEnabled,
+        geminiAdvisoryFallbackEnabled: config.geminiAdvisoryFallbackEnabled,
         maxStaleBarMinutes: config.maxStaleBarMinutes,
       },
       bridgeHealth,
@@ -3353,6 +3358,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       discordEnabled: config.discordEnabled,
       dryRun: config.dryRun,
       macroCalendarEnabled: config.macroCalendarEnabled,
+      geminiAdvisoryFallbackEnabled: config.geminiAdvisoryFallbackEnabled,
       maxStaleBarMinutes: config.maxStaleBarMinutes,
     },
     bridgeHealth,

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
+import { normalizeEtWallClock } from './et-time';
 
 export type MarketBarTimeframe = '5m' | '15m' | '60m' | '120m' | '240m';
 
@@ -65,16 +66,17 @@ export function createMarketDataClient(config: MarketDataConfig) {
   });
 }
 
-function normalizeCandleTimeEt(value: string): string {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return trimmed;
-  const withoutFraction = trimmed.replace(/\.\d+/, '');
-  const withoutOffset = withoutFraction.replace(/(?:Z|[+-]\d{2}:\d{2})$/, '');
-  return withoutOffset.slice(0, 19);
-}
+export const normalizeCandleTimeEt = normalizeEtWallClock;
 
 function isFinitePrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasValidOhlcShape(bar: NinjaBridgeBar): boolean {
+  if (!isFinitePrice(bar.open) || !isFinitePrice(bar.high) || !isFinitePrice(bar.low) || !isFinitePrice(bar.close)) {
+    return false;
+  }
+  return bar.high >= Math.max(bar.open, bar.close, bar.low) && bar.low <= Math.min(bar.open, bar.close, bar.high);
 }
 
 export function toMarketBarRecords({
@@ -91,7 +93,7 @@ export function toMarketBarRecords({
   timeframe: MarketBarTimeframe;
 }): MarketBarRecord[] {
   return bars
-    .filter((bar) => isFinitePrice(bar.open) && isFinitePrice(bar.high) && isFinitePrice(bar.low) && isFinitePrice(bar.close))
+    .filter(hasValidOhlcShape)
     .map((bar) => ({
       user_id: userId,
       instrument,

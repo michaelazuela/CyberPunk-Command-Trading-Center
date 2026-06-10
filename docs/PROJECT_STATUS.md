@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-10
+Task: Make scanner, Discord, and RAG persistence Gemini-independent.
+Files changed: docs/ARCHITECTURE.md, docs/DATA_GUARDRAILS.md, docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/agents/scannerHealthAgent.ts, src/agents/scannerHealthAgent.test.ts, src/config/geminiFallback.ts, src/lib/embeddings.ts, src/lib/embeddings.test.ts, src/lib/gemini.ts, src/lib/rag.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts.
+Reason: User asked to remove any operational dependency where Gemini narrative or availability is required to produce scanner/Discord/RAG trade-plan output, while keeping Gemini available only as an optional lower-authority screenshot/advisory fallback.
+Tests run: npx tsc --noEmit; npx tsx src/agents/scannerHealthAgent.test.ts; npx tsx src/lib/embeddings.test.ts; npm run guard:architecture; npm run guard:no-firebase; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed.
+Trading logic changed: No. Setup definitions, model approvals, entry/stop/target rules, canExecute, time windows, and bridge market-data behavior were not changed. Gemini screenshot/advisory calls are now gated behind `VITE_GEMINI_ADVISORY_FALLBACK_ENABLED=true`, scanner health includes "Gemini unavailable: scanner unaffected.", and RAG save/update/retrieval vector generation continues through an app-owned deterministic embedding fallback even when Gemini embeddings are disabled or unavailable.
+Bridge impact: None. NinjaTrader OHLC remains the highest-authority market data path.
+Discord impact: Health summaries now display the Gemini independence check. Trade-alert formatting behavior is otherwise unchanged by this task.
+Journal/RAG impact: RAG records no longer require Gemini embeddings. App-owned deterministic embeddings keep vector save/query paths populated by default, while Gemini-derived visual facts are stored only as lower-authority advisory context rather than primary selected setup/chart context.
+Supabase impact: No migration added for this task.
+Known risks: The default deterministic embedding is stable and Gemini-independent, but less semantically rich than managed model embeddings. It preserves RAG vector continuity without making Gemini operationally required.
+Next recommended action: If screenshot/advisory fallback is intentionally needed, enable `VITE_GEMINI_ADVISORY_FALLBACK_ENABLED=true`. If managed Gemini RAG embeddings are intentionally desired, separately enable `VITE_GEMINI_RAG_EMBEDDINGS_ENABLED=true`; otherwise leave both disabled so scanner/Discord/RAG operation remains OHLC/app-owned.
+
+## Previous Change
+
 Date: 2026-06-09
 Task: Make IntradayMssMicroContinuation recognize 5M MSS close-through retest plans globally.
 Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/types.ts.

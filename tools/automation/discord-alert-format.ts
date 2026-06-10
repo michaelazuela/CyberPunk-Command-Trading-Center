@@ -315,7 +315,7 @@ function failedPlanReversalLines(candidate: SetupCandidate): string[] {
     `State: ${candidate.candidateState || state?.decisionState || 'pending'} | Level: ${priceLine(state?.failedDecisionLevel ?? null)}`,
     `${state ? `${state.originalPlanDirection} -> ${state.oppositeDirection}` : 'N/A'} | HTF: ${state?.htfStackStatus || 'unknown'} | 5M: ${state?.fiveMinuteTriggerStatus || 'unknown'}`,
     ...(timeframeLine ? [timeframeLine] : []),
-    ...(blockerLine ? [blockerLine] : []),
+    ...(blockerLine ? [compactLine(blockerLine, 120)] : []),
     'Boundary: decision support only; not execution approval.',
   ];
 }
@@ -326,7 +326,7 @@ function lineInSandLines(candidate: SetupCandidate): string[] {
   return [
     'Line in the Sand:',
     `${priceLine(htfLine.lineInSand)} - ${compactLine(htfLine.lineReason || 'Required structure line.', 90)}`,
-    ...(htfLine.requiredClose ? [`Close Condition: ${compactLine(htfLine.requiredClose, 100)}`] : []),
+    ...(htfLine.requiredClose ? [`Close: ${compactLine(htfLine.requiredClose, 90)}`] : []),
   ];
 }
 
@@ -377,7 +377,6 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
     ...(riskAboveStandard ? [
-      'Risk Advisory: Above standard',
       'Risk exceeds standard limit. Human final decision required.',
     ] : []),
     '',
@@ -386,9 +385,9 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     ...missingProofLines(candidate),
     ...(candidate.requiredTrigger || candidate.nextAction ? [
       '',
-      'Trigger / Next Step:',
-      compactLine(candidate.requiredTrigger || candidate.nextAction, 120),
-      ...(candidate.nextAction && candidate.nextAction !== candidate.requiredTrigger ? [compactLine(candidate.nextAction, 120)] : []),
+      'Trigger:',
+      compactLine(candidate.requiredTrigger || candidate.nextAction, 100),
+      ...(candidate.nextAction && candidate.nextAction !== candidate.requiredTrigger ? [compactLine(candidate.nextAction, 100)] : []),
       'No chase. Wait for completed 5M proof and protected structure.',
     ] : []),
   ];
@@ -418,11 +417,9 @@ function conditionalRiskLines(candidate: SetupCandidate, normalized: CompactNorm
     'Risk Advisory:',
     `Decision: ${getEffectiveCanExecute(normalized) ? 'STRUCTURALLY COMPLETE' : 'WAIT'} | App plan review: ${getEffectiveCanExecute(normalized) ? 'YES' : 'NO'} | canExecute: ${getEffectiveCanExecute(normalized) ? 'true' : 'false'}`,
     `Risk State: ${candidate.riskAdvisoryStatus || 'RISK_ABOVE_STANDARD_LIMIT'}`,
-    `Max risk: ${numberLine(score.maxAllowedRiskPoints)} pts`,
     `Risk Score: ${score.score}/100 - ${score.label}`,
-    `Reason: ${compactRiskScoreReason(score)}`,
-    'Manual: Risk exceeds standard limit. Human final decision required.',
-    'Watch: Fresh 5M trigger/retest only. Do not chase.',
+    `Reason: ${compactLine(compactRiskScoreReason(score), 85)}`,
+    'Human final decision. Do not chase.',
   ];
 }
 
@@ -463,7 +460,6 @@ function compactKeyLevelLines(candidate: SetupCandidate | null): string[] {
 function memoryLines(): string[] {
   return [
     'Memory:',
-    'Similar: 0',
     'History: Neutral',
     'Warning: none',
   ];
@@ -549,7 +545,6 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
-        designerRecommendation.headlineRecommendation,
         `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
         '',
         ...compactPlanLines(bestCandidate, args.normalized),
@@ -566,10 +561,9 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         compactLine(designerRecommendation.actionLine, 120),
         '',
         compactAttachmentLine(args.attachments, true),
-        'Decision support only. No automated orders.',
+        'Decision support only.',
       ]
     : [
-        designerRecommendation.headlineRecommendation,
         `Reason: ${noTradeReason(bestCandidate, args.normalized)}`,
         '',
         ...compactKeyLevelLines(bestCandidate),
@@ -580,20 +574,20 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         designerRecommendation.actionLine,
         '',
         compactAttachmentLine(args.attachments, Boolean(bestCandidate)),
-        'Decision support only. No automated orders.',
+        'Decision support only.',
       ];
 
   const includeComponents = Boolean(args.components);
   return {
     username: 'Quant Desk',
-    content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation} | ${args.tradeDate} | ID: \`${args.planVersionId}\``,
+    content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation}`,
     embeds: [
       {
         title: 'Compact Trade Plan Summary',
         description: professionalizeReportText(lines.join('\n')),
         color: statusColor(finalStatus),
         fields: [],
-        footer: { text: 'Quant Desk • Decision support' },
+        footer: { text: '' },
         timestamp: new Date().toISOString(),
       },
     ],
@@ -663,6 +657,7 @@ export function scannerHealthDiscordSummary(args: ScannerHealthDiscordArgs): Dis
       : [
           `Bridge: ${healthCheckMessage(report, 'bridge_reachable', 'OK')}`,
           `Latest 5M: ${healthCheckMessage(report, 'latest_5m_bar_current', 'Current')}`,
+          `Gemini: ${healthCheckMessage(report, 'gemini_independence', 'Gemini unavailable: scanner unaffected.')}`,
           `Instrument: ${args.instrument} / ${args.bridgeInstrument}`,
           `Mode: ${mode}`,
         ];
@@ -738,6 +733,9 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
   const validFiles = files.filter(Boolean);
   if (validFiles.length > 0 && validFiles.length < 2) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
+  }
+  if (validFiles.length > 0 && mainText.length > 1600) {
+    throw new Error(`Discord payload blocked: trade-plan compact alert text is ${mainText.length} characters; keep image-backed trade alerts under 1600.`);
   }
   if (mainText.length > 1200) {
     console.warn(`Discord payload warning: compact alert text is ${mainText.length} characters; preferred normal output is under 1200.`);

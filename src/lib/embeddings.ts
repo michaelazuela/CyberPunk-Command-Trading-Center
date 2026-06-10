@@ -14,7 +14,7 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
   
   const mismatchWarning = ocrTicker !== "unknown" && ocrTicker !== context.instrument ? "yes" : "no";
 
-  const appPlan = context.trade_plan_json?.normalized_plan || context.geminiAnalysisJson?.normalized_plan;
+  const appPlan = context.trade_plan_json?.normalized_plan || context.finalTradePlan || null;
   const direction = appPlan?.decision || "UNKNOWN";
   const selectedAppCandidate =
     context.finalTradePlan?.opportunitySelection?.bestExecutableCandidate ||
@@ -38,7 +38,7 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
         `Target path warning: ${targetContext.targetPathWarning || 'none'}`,
       ].join('\n')
     : 'No liquidity-aware target context was attached to the selected plan.';
-  const chartContext = context.chartContext || context.geminiAnalysisJson?.structuredChartContext || {};
+  const chartContext = context.chartContext || {};
   const sessionStory = chartContext?.sessionStory;
   const sessionStorySummary = sessionStory
     ? [
@@ -52,19 +52,16 @@ export function buildEmbeddingText(context: RAGSaveContext): string {
           : 'none'}`,
       ].join('\n')
     : 'No session story context was attached.';
-  const bestPlan = context.geminiAnalysisJson?.best_trade_plan;
-  const candidatePlans = Array.isArray(context.geminiAnalysisJson?.candidate_trade_plans)
-    ? context.geminiAnalysisJson.candidate_trade_plans
-    : [];
+  const candidatePlans = Array.isArray(context.setupCandidates) ? context.setupCandidates : [];
   const candidateSummary = candidatePlans.length
     ? candidatePlans.slice(0, 5).map((candidate: any) => {
-        const status = candidate.selected ? "SELECTED" : "REJECTED";
+        const status = candidate.selected || candidate.executionStatus === 'Executable' || candidate.executionStatus === 'Conditional' ? "SELECTED" : "REJECTED";
         const reason = candidate.selected
           ? candidate.why_this_plan
-          : candidate.rejection_reason || "Lower priority than selected setup.";
-        return `- ${status}: ${candidate.setup_name || "Unnamed setup"} | ${candidate.direction || "NO TRADE"} | confidence ${candidate.confidence || "unknown"} | ${reason}`;
+          : candidate.rejection_reason || candidate.blockedReason || "Lower priority than selected setup.";
+        return `- ${status}: ${candidate.setup_name || candidate.scenarioLabel || candidate.setupType || "Unnamed setup"} | ${candidate.direction || "NO TRADE"} | confidence ${candidate.confidence || "unknown"} | ${reason}`;
       }).join('\n')
-    : "- No candidate plan committee data available.";
+    : "- No app-owned setup candidate data available.";
   const managementPlan = context.geminiAnalysisJson?.trade_management_plan;
   const workflowMode = context.workflowMode || (context.analysis_mode === 'historical_replay' || context.source === 'replay_lab' ? 'replay' : context.sessionType);
   const proofSubmitted = context.proofSubmitted ?? Boolean(context.proofScreenshotUrl);
@@ -97,8 +94,8 @@ Risk Points: ${context.riskPoints ?? 'unknown'}
 Plan Source: ${context.planSource ?? 'unknown'}
 App Plan Engine:
 - Winner: ${appSetupSubtype}
-- Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || bestPlan?.why_it_won || 'unknown'}
-- RAG support: ${bestPlan?.rag_support || context.geminiAnalysisJson?.rag_learning_context?.historical_support_rating || 'unknown'}
+- Why it won: ${context.whyThisPlan || appPlan?.whyThisPlan || 'unknown'}
+- RAG support: stored app/RAG context only; Gemini advisory support is not used as plan authority.
 Target Context:
 ${targetContextSummary}
 Session Story:
@@ -139,7 +136,67 @@ Initial Balance: High ${context.ibHigh ?? 'unknown'} / Low ${context.ibLow ?? 'u
 IB Position: ${context.ibPosition ?? 'unknown'}`;
 }
 
-async function callEmbeddingsProxy(text: string, taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY"): Promise<number[]> {
+type EmbeddingTaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
+
+function runtimeEnv(): Record<string, unknown> {
+  const metaEnv = typeof import.meta !== 'undefined' ? ((import.meta as unknown as { env?: Record<string, unknown> }).env || {}) : {};
+  const processEnv = (globalThis as unknown as { process?: { env?: Record<string, unknown> } }).process?.env || {};
+  return { ...processEnv, ...metaEnv };
+}
+
+function envFlag(name: string): boolean {
+  const value = runtimeEnv()[name];
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') return ['1', 'true', 'yes', 'on', 'enabled'].includes(value.trim().toLowerCase());
+  return false;
+}
+
+function fnv1a(value: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+function tokenizeEmbeddingText(text: string): string[] {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_./:-]+/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 2);
+}
+
+export function generateDeterministicEmbedding(text: string, taskType: EmbeddingTaskType = 'RETRIEVAL_DOCUMENT'): number[] {
+  const dimensions = 768;
+  const vector = new Array(dimensions).fill(0);
+  const tokens = tokenizeEmbeddingText(text);
+  const weightedTokens: Array<[string, number]> = [];
+
+  for (const token of tokens) weightedTokens.push([token, 1]);
+  for (let i = 0; i < tokens.length - 1; i += 1) weightedTokens.push([`${tokens[i]} ${tokens[i + 1]}`, 0.7]);
+  weightedTokens.push([`task:${taskType.toLowerCase()}`, 0.25]);
+
+  for (const [token, weight] of weightedTokens) {
+    const hash = fnv1a(token);
+    const index = hash % dimensions;
+    const sign = (hash & 0x80000000) === 0 ? 1 : -1;
+    vector[index] += sign * weight;
+  }
+
+  const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (!magnitude) return vector;
+  return vector.map((value) => Number((value / magnitude).toFixed(8)));
+}
+
+function shouldUseGeminiEmbeddingProxy(): boolean {
+  return envFlag('VITE_GEMINI_RAG_EMBEDDINGS_ENABLED') || envFlag('GEMINI_RAG_EMBEDDINGS_ENABLED');
+}
+
+async function callGeminiEmbeddingsProxy(text: string, taskType: EmbeddingTaskType): Promise<number[]> {
+
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const response = await fetch('/api/gemini', {
@@ -189,9 +246,21 @@ async function callEmbeddingsProxy(text: string, taskType: "RETRIEVAL_DOCUMENT" 
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  return await callEmbeddingsProxy(text, "RETRIEVAL_DOCUMENT");
+  if (!shouldUseGeminiEmbeddingProxy()) return generateDeterministicEmbedding(text, "RETRIEVAL_DOCUMENT");
+  try {
+    return await callGeminiEmbeddingsProxy(text, "RETRIEVAL_DOCUMENT");
+  } catch (error) {
+    console.warn('[RAG] Gemini embedding proxy unavailable; using deterministic app-owned embedding fallback:', error);
+    return generateDeterministicEmbedding(text, "RETRIEVAL_DOCUMENT");
+  }
 }
 
 export async function generateQueryEmbedding(text: string): Promise<number[]> {
-  return await callEmbeddingsProxy(text, "RETRIEVAL_QUERY");
+  if (!shouldUseGeminiEmbeddingProxy()) return generateDeterministicEmbedding(text, "RETRIEVAL_QUERY");
+  try {
+    return await callGeminiEmbeddingsProxy(text, "RETRIEVAL_QUERY");
+  } catch (error) {
+    console.warn('[RAG] Gemini query embedding proxy unavailable; using deterministic app-owned embedding fallback:', error);
+    return generateDeterministicEmbedding(text, "RETRIEVAL_QUERY");
+  }
 }

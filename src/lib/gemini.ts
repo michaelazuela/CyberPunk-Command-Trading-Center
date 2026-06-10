@@ -9,6 +9,7 @@ import { retrieveSimilarSetups, formatRAGContextForGemini, buildAgentLearningSum
 import { NormalizedTradePlan } from "./tradePlan";
 import { loadModelConfig } from "./modelRouter";
 import { buildChartContextConsensus } from "./chartContextConsensus";
+import { assertGeminiAdvisoryFallbackEnabled } from "../config/geminiFallback";
 
 function coerceGeminiText(value: unknown): string {
   if (typeof value === 'string') return value;
@@ -35,6 +36,8 @@ async function readJsonResponse(response: Response): Promise<any> {
 }
 
 async function callGeminiAPI(params: any) {
+  assertGeminiAdvisoryFallbackEnabled('Gemini screenshot/advisory analysis');
+
   const payload: any = {
     model: params.model,
     contents: Array.isArray(params.contents) ? params.contents : [params.contents],

@@ -6,14 +6,14 @@
 - Hosting: Cloudflare Pages.
 - Server boundary: Cloudflare Pages Function at `functions/api/gemini.js`.
 - Database/Auth/Storage: Supabase.
-- AI calls: Gemini through `/api/gemini` only by default. Optional OpenAI validation, when enabled, must use its Cloudflare function boundary and may only validate extracted chart facts.
+- AI calls: Gemini is optional visual/advisory fallback only and must go through `/api/gemini` when explicitly enabled with `VITE_GEMINI_ADVISORY_FALLBACK_ENABLED=true`. Scanner, Discord, and RAG persistence must remain Gemini-independent. RAG vector embeddings use an app-owned deterministic 768-dimension fallback by default; optional Gemini RAG embeddings require `VITE_GEMINI_RAG_EMBEDDINGS_ENABLED=true` or `GEMINI_RAG_EMBEDDINGS_ENABLED=true`. Optional OpenAI validation, when enabled, must use its Cloudflare function boundary and may only validate extracted chart facts.
 
 ## Primary Data Flow
 
-1. User uploads or pastes a chart screenshot.
-2. Frontend prepares the image and session context.
-3. Frontend calls the approved Cloudflare API boundary.
-4. AI/OHLC extraction returns structured chart facts: candles, swings, levels, FVG zones, liquidity events, session context, and confidence flags.
+1. NinjaTrader OHLC and durable `market_bars` provide the primary market facts for scanner, Discord, and RAG workflows.
+2. User-uploaded screenshots may provide optional visual/advisory context only when the Gemini fallback flag is enabled.
+3. Frontend prepares the image and session context for the approved Cloudflare API boundary only in that optional fallback mode.
+4. AI/OHLC extraction returns structured chart facts: candles, swings, levels, FVG zones, liquidity events, session context, and confidence flags. AI facts are lower authority than NinjaTrader OHLC and cannot overwrite OHLC-derived fields.
 5. The setup scanner applies approved setup definitions to those facts.
 6. The ranking layer scores executable and conditional opportunities.
 7. The app-owned trade decision pipeline approves, waits, rejects, or marks conditional.
@@ -69,6 +69,7 @@ AI/OHLC extraction owns:
 - Chart observation and OCR-style extraction.
 - Structured candle, level, swing, FVG, liquidity, and session context facts.
 - Advisory summaries for display only.
+- Gemini unavailability must not block scanner, Discord, RAG persistence, or RAG vector generation.
 - Proof screenshot review when explicitly requested.
 
 The app owns:

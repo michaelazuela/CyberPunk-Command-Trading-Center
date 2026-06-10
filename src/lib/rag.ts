@@ -96,9 +96,16 @@ function buildWorkflowPersistenceRecord(context: RAGSaveContext, tradeResult: st
       eth15mContext: context.eth_15m_context_screenshot_url || context.eth_15m_context_storage_path || null,
       proof: context.proofScreenshotUrl || null,
     },
-    chartContext: context.chartContext || analysis.structuredChartContext || null,
-    setupCandidates: context.setupCandidates || analysis.structuredChartContext?.setupCandidates || analysis.candidate_trade_plans || [],
-    selectedSetup: context.selectedSetup || selectedAppCandidate || analysis.best_trade_plan || normalizedPlan || null,
+    chartContext: context.chartContext || null,
+    setupCandidates: context.setupCandidates || [],
+    selectedSetup: context.selectedSetup || selectedAppCandidate || normalizedPlan || null,
+    advisoryVisualContext: context.geminiAnalysisJson ? {
+      source: 'gemini_optional_visual_advisory',
+      lowerAuthorityThanOhlc: true,
+      structuredChartContext: analysis.structuredChartContext || null,
+      candidateTradePlans: analysis.candidate_trade_plans || [],
+      bestTradePlan: analysis.best_trade_plan || null,
+    } : null,
     setupSubtype,
     finalTradePlan: normalizedPlan,
     riskProfile: {
@@ -671,7 +678,12 @@ export async function updateRAGWithTradeResult(
     };
 
     const newEmbeddingText = buildEmbeddingText(context);
-    const newEmbedding = await generateEmbedding(newEmbeddingText);
+    let newEmbedding: number[] | null = null;
+    try {
+      newEmbedding = await generateEmbedding(newEmbeddingText);
+    } catch (embeddingError) {
+      console.warn("[RAG] Outcome update embedding skipped; record update will continue:", embeddingError);
+    }
     const existingTradePlanJson = record.trade_plan_json && typeof record.trade_plan_json === 'object'
       ? record.trade_plan_json
       : {};
@@ -692,7 +704,7 @@ export async function updateRAGWithTradeResult(
       },
     };
 
-    await supabase.from('trade_embeddings').update({
+    const updatePayload: Record<string, any> = {
       trade_result: tradeResult,
       pnl_ticks: context.pnlTicks,
       pnl_dollars: context.pnlDollars,
@@ -702,12 +714,14 @@ export async function updateRAGWithTradeResult(
       proof_screenshot_url: proofScreenshotUrl !== undefined ? proofScreenshotUrl : record.proof_screenshot_url,
       setup_quality_score: setupQualityScore,
       embedding_text: newEmbeddingText,
-      embedding: newEmbedding,
       trade_plan_json: {
         ...existingTradePlanJson,
         workflow_persistence: updatedWorkflowPersistence,
       },
-    }).eq('id', record.id);
+    };
+    if (newEmbedding) updatePayload.embedding = newEmbedding;
+
+    await supabase.from('trade_embeddings').update(updatePayload).eq('id', record.id);
 
     console.log(`[RAG] Midnight Open learning updated for setup ${setupId}`);
   } catch (error) {

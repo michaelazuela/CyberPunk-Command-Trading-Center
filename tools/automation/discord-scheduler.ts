@@ -11,6 +11,8 @@ import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar } f
 import { applyStaleChaseGuard, DEFAULT_SCANNER_RISK_GUARDS } from '../../src/lib/localScannerEngine';
 import { ExecutionStatus, SetupType, type AnalysisResult, type ChartContext, type SetupCandidate, type StructuralLevel } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { marketDataSourceFromCounts, verifyMarketDataWindow } from './market-data-ingestion';
+import { etDateTime } from './et-time';
 import {
   applyNewsMacroCaution,
   fetchMacroCalendarEvents,
@@ -202,12 +204,6 @@ function normalizeEtClock(value: string): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-function etDateTime(tradeDate: string, time: string): string {
-  // The trading app currently uses ET wall-clock strings with the active US market offset.
-  // This local scheduler is meant for RTH alerting; adjust here if replaying non-DST dates.
-  return `${tradeDate}T${time}:00-04:00`;
-}
-
 async function readState(): Promise<AlertState> {
   try {
     return JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as AlertState;
@@ -263,6 +259,37 @@ async function fetchBars(config: SchedulerConfig, timeframe: MarketBarTimeframe,
     }
   }
   return response.bars;
+}
+
+function schedulerMinimumBars(timeframe: MarketBarTimeframe): number {
+  if (timeframe === '5m') return 8000;
+  if (timeframe === '15m') return 2500;
+  if (timeframe === '60m') return 650;
+  if (timeframe === '120m') return 320;
+  return 160;
+}
+
+function attachSchedulerHistoryCoverage(
+  chartContext: Partial<ChartContext> | null,
+  coverage: ReturnType<typeof verifyMarketDataWindow>[],
+): Partial<ChartContext> | null {
+  if (!chartContext || !coverage.length) return chartContext;
+  return {
+    ...chartContext,
+    scannerHistoryCoverage: coverage.map((record) => ({
+      timeframe: record.timeframe,
+      requiredLookbackDays: 30,
+      requestedFrom: record.requestedFrom,
+      requestedTo: record.requestedTo,
+      barsLoaded: record.barsLoaded,
+      rangeStart: record.rangeStart,
+      rangeEnd: record.rangeEnd,
+      source: record.source,
+      sufficient: record.sufficient,
+      warning: record.warning,
+      dataLimitation: record.dataLimitation,
+    })),
+  };
 }
 
 async function buildPremarketContext(config: SchedulerConfig, tradeDate: string) {
@@ -326,6 +353,25 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
       etDateTime(tradeDate, executionEnd)
     ),
   ]);
+  const contextFrom = etDateTime(contextStartDate, '18:00');
+  const schedulerCoverage = ([
+    ['240m', bars240m],
+    ['120m', bars120m],
+    ['60m', bars60m],
+    ['15m', bars15m],
+    ['5m', bars5mContext],
+  ] as Array<[MarketBarTimeframe, NinjaBridgeBar[]]>).map(([timeframe, bars]) => verifyMarketDataWindow({
+    bars,
+    timeframe,
+    requestedFrom: contextFrom,
+    requestedTo: contextTo,
+    requiredLookbackDays: 30,
+    minimumBars: schedulerMinimumBars(timeframe),
+    source: marketDataSourceFromCounts(bars.length, 0),
+    cacheBars: bars.length,
+    bridgeRepairBars: 0,
+    bridgeInstrument: config.bridgeInstrument,
+  }));
   const baseChartContext = buildNinjaChartContext({
     bars5m,
     htfBars5m: bars5mContext,
@@ -338,7 +384,7 @@ async function buildSessionAnalysis(config: SchedulerConfig, job: SessionAlertJo
     tradeDate,
   });
   const chartContext = await applyNewsMacroCaution(
-    baseChartContext,
+    attachSchedulerHistoryCoverage(baseChartContext, schedulerCoverage),
     new Date(etDateTime(tradeDate, executionEnd)),
     loadMacroCalendarConfig(),
   );
@@ -473,22 +519,31 @@ async function loadTraderConfirmedRagRecordsForSession(args: {
   tradeDate: string;
   session: SessionAlertJob;
   instrument: Instrument;
+  requireAvailable?: boolean;
 }): Promise<RagTradeRecord[]> {
   const supabaseUrl = supabaseRestUrl();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  if (!supabaseUrl || !serviceRoleKey) return [];
+  if (!supabaseUrl || !serviceRoleKey) {
+    if (args.requireAvailable) {
+      throw new Error('Manual scheduler replay blocked: Supabase RAG guard could not be checked. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or use --dry-run.');
+    }
+    return [];
+  }
   const params = new URLSearchParams({
     select: 'id,created_at,trade_date,session_type,instrument,trade_result,source,plan_source,plan_version_id,trade_plan_json',
     trade_date: `eq.${args.tradeDate}`,
     session_type: `eq.${args.session}`,
     instrument: `eq.${args.instrument}`,
     order: 'created_at.asc',
-    limit: '25',
+    limit: '1000',
   });
   const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?${params}`, {
     headers: supabaseServiceHeaders(),
   });
   if (!response.ok) {
+    if (args.requireAvailable) {
+      throw new Error(`Manual scheduler replay blocked: trader-confirmed RAG guard failed (${response.status}): ${await response.text()}`);
+    }
     console.warn(`Trader-confirmed RAG replay guard skipped (${response.status}).`);
     return [];
   }
@@ -635,7 +690,7 @@ async function upsertDiscordAlertRagRecord(args: {
     'Content-Type': 'application/json',
     Prefer: 'return=representation',
   };
-  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
+  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify(payload),
@@ -664,7 +719,8 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   if (!args.discordMessageId) return;
   const supabaseUrl = supabaseRestUrl();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  if (!supabaseUrl || !serviceRoleKey) return;
+  const userId = process.env.DISCORD_RAG_USER_ID || '';
+  if (!supabaseUrl || !serviceRoleKey || !userId) return;
   const headers = {
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
@@ -672,7 +728,7 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
     Prefer: 'return=representation',
   };
   const lookup = await fetch(
-    `${supabaseUrl}/rest/v1/trade_embeddings?plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
+    `${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
     { headers },
   );
   if (!lookup.ok) {
@@ -683,7 +739,7 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
   if (!row?.id) return;
   const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object' ? row.trade_plan_json : {};
-  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(row.id)}`, {
+  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&id=eq.${encodeURIComponent(row.id)}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({
@@ -1529,6 +1585,7 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
     tradeDate,
     session: job,
     instrument: config.instrument,
+    requireAvailable: !dryRun,
   });
   if (traderConfirmedRagRecords.length && !allowPostFactoSummary) {
     const latest = traderConfirmedRagRecords[traderConfirmedRagRecords.length - 1];

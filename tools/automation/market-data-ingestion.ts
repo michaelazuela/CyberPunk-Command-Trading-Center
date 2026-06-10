@@ -1,5 +1,5 @@
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
-import type { MarketBarTimeframe } from './market-data-store';
+import { normalizeCandleTimeEt, type MarketBarTimeframe } from './market-data-store';
 
 export type MarketDataWindowSource =
   | 'market_bars'
@@ -40,20 +40,32 @@ function timeframeMinutes(timeframe: MarketBarTimeframe): number {
 }
 
 function normalizedTimestamp(value: string | null | undefined): string {
-  return String(value || '')
-    .trim()
-    .replace(/\.\d+/, '')
-    .replace(/(?:Z|[+-]\d{2}:\d{2})$/, '')
-    .slice(0, 19);
+  return normalizeCandleTimeEt(String(value || ''));
 }
 
 function timestampMs(value: string | null | undefined): number | null {
-  const parsed = Date.parse(String(value || ''));
+  const parsed = Date.parse(normalizedTimestamp(value));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 function hasValidOhlc(bar: NinjaBridgeBar): boolean {
-  return [bar.open, bar.high, bar.low, bar.close].every((value) => typeof value === 'number' && Number.isFinite(value));
+  if (![bar.open, bar.high, bar.low, bar.close].every((value) => typeof value === 'number' && Number.isFinite(value))) {
+    return false;
+  }
+  return bar.high >= Math.max(bar.open, bar.close, bar.low) && bar.low <= Math.min(bar.open, bar.close, bar.high);
+}
+
+function countInternalGaps(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
+  const expectedMs = timeframeMinutes(timeframe) * 60_000;
+  const toleranceMs = 60_000;
+  let gaps = 0;
+  for (let index = 1; index < bars.length; index += 1) {
+    const previous = timestampMs(bars[index - 1]?.time);
+    const current = timestampMs(bars[index]?.time);
+    if (previous === null || current === null) continue;
+    if (current - previous > expectedMs + toleranceMs) gaps += 1;
+  }
+  return gaps;
 }
 
 export function mergeMarketDataBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): NinjaBridgeBar[] {
@@ -115,14 +127,22 @@ export function verifyMarketDataWindow(args: {
   const last = sorted[sorted.length - 1]?.time || null;
   const firstMs = timestampMs(first);
   const lastMs = timestampMs(last);
+  const fromMs = timestampMs(args.requestedFrom);
   const toMs = timestampMs(args.requestedTo);
   const loadedSpanDays = firstMs !== null && lastMs !== null ? (lastMs - firstMs) / (24 * 60 * 60 * 1000) : 0;
   const requiredSpanDays = Math.max(0, args.requiredLookbackDays - 1);
   const latestCompletedToleranceMs = (timeframeMinutes(args.timeframe) + 30) * 60_000;
+  const startCoverageToleranceMs = (args.requiredLookbackDays > 1 ? 24 * 60 : timeframeMinutes(args.timeframe)) * 60_000;
+  const internalGaps = args.requiredLookbackDays <= 1 ? countInternalGaps(sorted, args.timeframe) : 0;
   const sufficient = (
     sorted.length >= args.minimumBars &&
     invalidBars === 0 &&
+    duplicateTimestamps === 0 &&
+    internalGaps === 0 &&
     loadedSpanDays >= requiredSpanDays &&
+    fromMs !== null &&
+    firstMs !== null &&
+    firstMs <= fromMs + startCoverageToleranceMs &&
     toMs !== null &&
     lastMs !== null &&
     lastMs >= toMs - latestCompletedToleranceMs
@@ -132,7 +152,7 @@ export function verifyMarketDataWindow(args: {
     : `Requested ${args.timeframe} bars remain incomplete after market_bars preload and NinjaTrader repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.`;
   const warning = sufficient
     ? null
-    : `Market-data ingestion insufficient for ${args.timeframe}: required ${args.requiredLookbackDays} calendar days from ${args.requestedFrom} to ${args.requestedTo}; loaded ${sorted.length} valid bars from ${first || 'N/A'} to ${last || 'N/A'}; invalid=${invalidBars}; duplicates=${duplicateTimestamps}.`;
+    : `Market-data ingestion insufficient for ${args.timeframe}: required ${args.requiredLookbackDays} calendar days from ${args.requestedFrom} to ${args.requestedTo}; loaded ${sorted.length} valid bars from ${first || 'N/A'} to ${last || 'N/A'}; invalid=${invalidBars}; duplicates=${duplicateTimestamps}; internalGaps=${internalGaps}.`;
 
   return {
     timeframe: args.timeframe,

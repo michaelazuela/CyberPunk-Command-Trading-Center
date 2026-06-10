@@ -5,6 +5,7 @@ import type {
   ScannerWindowState,
 } from '../lib/localScannerEngine';
 import type { NinjaBridgeBar, NinjaBridgeHealth } from '../lib/ninjaTraderBridge';
+import { GEMINI_SCANNER_UNAFFECTED_HEALTH_MESSAGE } from '../config/geminiFallback';
 import { cloneDeskBoundary, SCANNER_HEALTH_APPROVAL_BOUNDARY } from './deskAgentBoundaries';
 
 export type ScannerHealthStatus = 'READY' | 'DEGRADED' | 'BLOCKED';
@@ -30,6 +31,7 @@ export interface ScannerHealthConfigSnapshot {
   discordEnabled?: boolean;
   dryRun?: boolean;
   macroCalendarEnabled?: boolean;
+  geminiAdvisoryFallbackEnabled?: boolean;
   maxStaleBarMinutes?: number | null;
 }
 
@@ -409,6 +411,18 @@ export function evaluateScannerHealth(input: ScannerHealthInput): ScannerHealthR
   checks.push(evaluateMarketMap(input.marketMapStatus));
   checks.push(evaluateCompletedFiveMinuteAssurance(input.completedFiveMinuteBarAssurance));
   checks.push(evaluateStateFile(input.scannerStateFileStatus));
+
+  checks.push(check(
+    'gemini_independence',
+    'Gemini fallback independence',
+    'pass',
+    'info',
+    config.geminiAdvisoryFallbackEnabled
+      ? 'Gemini advisory fallback is enabled for optional visual context; scanner alerts remain OHLC/app-owned.'
+      : GEMINI_SCANNER_UNAFFECTED_HEALTH_MESSAGE,
+    Boolean(config.geminiAdvisoryFallbackEnabled),
+    'optional only',
+  ));
 
   if (!macroEnabled) {
     checks.push(check('macro_calendar', 'Macro calendar status', 'pass', 'info', 'Macro calendar is disabled intentionally.', false, 'disabled or loaded'));

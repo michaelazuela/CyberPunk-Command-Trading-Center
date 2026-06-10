@@ -347,7 +347,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             int limit;
             if (!int.TryParse(limitText, out limit))
                 limit = 2000;
-            limit = Math.Max(1, Math.Min(5000, limit));
+            limit = Math.Max(1, Math.Min(25000, limit));
 
             DateTime fromLocal;
             DateTime toLocal;

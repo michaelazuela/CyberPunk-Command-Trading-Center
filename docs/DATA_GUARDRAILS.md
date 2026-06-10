@@ -17,6 +17,7 @@ NinjaTrader real-time and historical OHLC is the highest-authority market data p
 - Treat imported OHLC bars and OHLC-derived facts as factual: candles, swings, FVG/imbalance zones, liquidity sweeps, reclaims, failed breaks, displacement candles, session highs/lows, structural levels, target context, and session story.
 - AI screenshot extraction may fill a missing field, but it must not overwrite an existing OHLC-derived field.
 - If AI visual extraction conflicts with OHLC, trust OHLC and downgrade or ignore the visual extraction for that field.
+- Gemini screenshot extraction is optional visual/advisory fallback only. If Gemini is unavailable or disabled, scanner, Discord, RAG persistence, and RAG vector generation must continue from NinjaTrader OHLC and app-owned facts.
 - OHLC facts are still inputs only. They do not approve a setup or trade by themselves; the setup scanner, ranking engine, and trade decision pipeline remain required.
 
 ## Multi-Timeframe OHLC Rule

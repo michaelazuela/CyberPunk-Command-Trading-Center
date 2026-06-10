@@ -5,7 +5,7 @@ import {
   repairMarketDataBarsWithinBaseRange,
   verifyMarketDataWindow,
 } from './market-data-ingestion';
-import { toMarketDataGapEventRecord } from './market-data-store';
+import { normalizeCandleTimeEt, toMarketBarRecords, toMarketDataGapEventRecord } from './market-data-store';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 
 function bar(time: string, open = 7410, high = 7412, low = 7408, close = 7411): NinjaBridgeBar {
@@ -112,5 +112,46 @@ assert.equal(gapRecord.requested_to_et, '2026-06-09T13:45:00');
 assert.equal(gapRecord.status, 'open');
 assert.equal(gapRecord.metadata.canInventMissingBars, false);
 assert.equal(gapRecord.metadata.htfPromotionAllowed, false);
+
+assert.equal(normalizeCandleTimeEt('2026-06-09T17:10:00Z'), '2026-06-09T13:10:00');
+assert.equal(normalizeCandleTimeEt('2026-01-15T09:30:00-05:00'), '2026-01-15T09:30:00');
+assert.equal(normalizeCandleTimeEt('2026-06-09T13:10:00.0000000'), '2026-06-09T13:10:00');
+
+const persistedBars = toMarketBarRecords({
+  bars: [
+    bar('2026-06-09T17:10:00Z'),
+    bar('2026-06-09T17:15:00Z', 10, 9, 8, 10.5),
+  ],
+  userId: '00000000-0000-0000-0000-000000000001',
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  timeframe: '5m',
+});
+assert.equal(persistedBars.length, 1);
+assert.equal(persistedBars[0].candle_time_et, '2026-06-09T13:10:00');
+assert.equal(persistedBars[0].metadata.rawTime, '2026-06-09T17:10:00Z');
+
+const shiftedWindow = verifyMarketDataWindow({
+  bars: [
+    bar('2026-06-09T13:15:00-04:00'),
+    bar('2026-06-09T13:20:00-04:00'),
+    bar('2026-06-09T13:25:00-04:00'),
+    bar('2026-06-09T13:30:00-04:00'),
+    bar('2026-06-09T13:35:00-04:00'),
+    bar('2026-06-09T13:40:00-04:00'),
+    bar('2026-06-09T13:45:00-04:00'),
+  ],
+  timeframe: '5m',
+  requestedFrom: '2026-06-09T13:00:00-04:00',
+  requestedTo: '2026-06-09T13:45:00-04:00',
+  requiredLookbackDays: 1,
+  minimumBars: 6,
+  source: 'bridge_repair',
+  cacheBars: 0,
+  bridgeRepairBars: 7,
+  bridgeInstrument: 'MES 06-26',
+});
+assert.equal(shiftedWindow.sufficient, false);
+assert.match(shiftedWindow.warning || '', /Market-data ingestion insufficient/);
 
 console.log('Market data ingestion hardening verified.');

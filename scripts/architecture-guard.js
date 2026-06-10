@@ -106,7 +106,6 @@ function checkCloudflareOpenAIBoundary() {
 function checkGeminiProxyUsage() {
   const expectedClients = [
     path.join(ROOT, 'src', 'lib', 'gemini.ts'),
-    path.join(ROOT, 'src', 'lib', 'embeddings.ts'),
   ];
 
   for (const clientPath of expectedClients) {
@@ -132,6 +131,26 @@ function checkTradePlanUiBoundary() {
   }
 }
 
+function checkAutomationGeminiIndependence() {
+  const automationClients = [
+    path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts'),
+    path.join(ROOT, 'tools', 'automation', 'discord-scheduler.ts'),
+    path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts'),
+  ];
+
+  for (const clientPath of automationClients) {
+    if (!fs.existsSync(clientPath)) continue;
+    const content = readFileSafe(clientPath);
+    const relative = path.relative(ROOT, clientPath);
+    if (/from\s+['"].*src\/lib\/gemini['"]/.test(content) || /from\s+['"].*lib\/gemini['"]/.test(content)) {
+      fail(`${relative} must not import Gemini clients. Scanner/Discord automation must stay app-owned and OHLC-driven.`);
+    }
+    if (content.includes('/api/gemini') || content.includes('GEMINI_API_KEY') || content.includes('generativelanguage.googleapis.com')) {
+      fail(`${relative} must not call Gemini. Gemini is optional visual/advisory fallback only.`);
+    }
+  }
+}
+
 function checkCanonicalTimeWindowUsage() {
   const timeWindowsPath = path.join(ROOT, 'src', 'config', 'timeWindows.ts');
   if (!fs.existsSync(timeWindowsPath)) {
@@ -153,6 +172,7 @@ checkCloudflareGeminiBoundary();
 checkCloudflareOpenAIBoundary();
 checkGeminiProxyUsage();
 checkTradePlanUiBoundary();
+checkAutomationGeminiIndependence();
 checkCanonicalTimeWindowUsage();
 
 if (hasError) {
