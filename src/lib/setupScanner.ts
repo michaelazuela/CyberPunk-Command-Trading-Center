@@ -3074,9 +3074,23 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
   const candles = readableCompletedFiveMinuteCandles(chartContext);
   const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence?.evidenceTimestamp, evidence?.barTimestampMode || 'open');
   const evidenceCandle = evidenceIndex >= 0 ? candles[evidenceIndex] : null;
-  const decisionLevel = roundToTick(parsePrice(evidence?.structureBreak?.brokenLevel) ?? parsePrice(evidenceCandle?.close) ?? 0);
+  const structuredBreakLevel = parsePrice(evidence?.structureBreak?.brokenLevel);
+  const decisionLevel = roundToTick(structuredBreakLevel ?? parsePrice(evidenceCandle?.close) ?? 0);
   if (!evidenceCandle || !decisionLevel) {
-    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: '5M MSS close-through retest pending: the MSS evidence candle or decision close could not be aligned from completed 5M OHLC.', timestamp: null };
+    return {
+      source: 'mss_close_through_retest',
+      confirmed: false,
+      entry: null,
+      stop: null,
+      stopBlocker: direction === 'LONG'
+        ? 'Protected 5M retest swing stop blocked: completed 5M evidence candle alignment is required before a protected swing low can be used.'
+        : 'Protected 5M retest swing stop blocked: completed 5M evidence candle alignment is required before a protected swing high can be used.',
+      decisionLevel: decisionLevel || null,
+      reason: decisionLevel
+        ? `5M MSS close-through campaign watch active from structured NinjaTrader OHLC evidence at ${formatLinePrice(decisionLevel)}; completed 5M candle alignment is still required before entry, protected stop, and app targets can be promoted.`
+        : '5M MSS close-through retest pending: the MSS evidence candle or decision close could not be aligned from completed 5M OHLC.',
+      timestamp: evidence?.evidenceTimestamp || null,
+    };
   }
 
   const afterEvidence = candles.slice(evidenceIndex + 1);

@@ -10,6 +10,11 @@ import {
 import type { NormalizedTradePlan } from '../lib/tradePlan';
 import { isValidPrice } from '../lib/tradePlan';
 
+const INTRADAY_MSS_AUTHORITY_NOTE =
+  'NinjaTrader OHLC and the app-owned setup scanner own this IntradayMssMicroContinuation campaign; Gemini/advisory agents may summarize it only.';
+const INTRADAY_MSS_LIFECYCLE_NOTE =
+  'First completed 5M close-through activates the campaign; the scanner keeps it alive until retest confirms, the line fails, target is already reached before alert, or the session window expires.';
+
 export interface ScannerPlanSelection {
   candidate: SetupCandidate | null;
   stale: StaleChaseResult;
@@ -306,7 +311,7 @@ function intradayMssRetestPendingWatchCandidateFromPool(
   const extendedText = extendedFromLine
     ? ` Price is extended from ${lineText}; do not chase.`
     : ' Do not chase.';
-  const watchTrigger = `${directionText} MSS forming. Line is ${lineLabel}. ${lineReason} A completed 5M hold/retest ${side} that area gives a human-review ${candidate.direction.toLowerCase()} plan.${extendedText}`;
+  const watchTrigger = `${directionText} MSS forming. Campaign active from app-owned completed 5M close-through. Line is ${lineLabel}. ${lineReason} A completed 5M hold/retest ${side} that area gives a human-review ${candidate.direction.toLowerCase()} plan.${extendedText}`;
 
   return {
     ...candidate,
@@ -324,6 +329,8 @@ function intradayMssRetestPendingWatchCandidateFromPool(
     nextAction: watchTrigger,
     evidence: [
       ...(candidate.evidence || []),
+      INTRADAY_MSS_AUTHORITY_NOTE,
+      INTRADAY_MSS_LIFECYCLE_NOTE,
       `Intraday MSS watch: aligned 15M/5M MSS with named line in the sand ${lineText}.`,
       `No chase: wait for a completed 5M hold/retest ${side} ${lineText} before human-review plan promotion.`,
       ...(extendedFromLine ? [`Price is extended from the line in the sand ${lineText}; alert is watch-only, not a chase entry.`] : []),
@@ -421,8 +428,8 @@ function intradayMssWatchState(candidate: SetupCandidate, earlyMoveIgnored = fal
     reviewStatus: null,
     auditWarnings: [
       earlyMoveIgnored
-        ? 'Opposite-direction early-move review ignored for IntradayMssMicroContinuation watch. Watch remains human-review only and canExecute remains false.'
-        : 'IntradayMssMicroContinuation watch surfaced from aligned 15M/5M MSS plus named line in the sand. Completed 5M hold/retest is required and canExecute remains false.',
+        ? `Opposite-direction early-move review ignored for IntradayMssMicroContinuation watch. ${INTRADAY_MSS_AUTHORITY_NOTE} Watch remains human-review only and canExecute remains false.`
+        : `IntradayMssMicroContinuation watch surfaced from aligned 15M/5M MSS plus named line in the sand. ${INTRADAY_MSS_LIFECYCLE_NOTE} Completed 5M hold/retest is required and canExecute remains false.`,
     ],
   };
 }
@@ -568,11 +575,11 @@ export function selectScannerPlan(args: {
     }, proofCandidate);
   }
 
+  const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
   const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards));
   if (!fallback) {
     const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized);
     if (turtleSoupWatchCandidate) return turtleSoupWatchState(turtleSoupWatchCandidate);
-    const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
     if (intradayMssWatchCandidate) return intradayMssWatchState(intradayMssWatchCandidate);
   }
   const stale = applyStaleChaseGuard({
@@ -581,6 +588,16 @@ export function selectScannerPlan(args: {
     guards: args.guards,
   });
   if (stale.stale) {
+    if (intradayMssWatchCandidate) {
+      const selection = intradayMssWatchState(intradayMssWatchCandidate);
+      return {
+        ...selection,
+        auditWarnings: [
+          ...selection.auditWarnings,
+          'Stale/chasing fallback candidate did not suppress the OHLC-built IntradayMssMicroContinuation watch.',
+        ],
+      };
+    }
     const selection = missedReviewState(args.normalized, stale, fallback);
     return {
       ...selection,

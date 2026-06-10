@@ -2325,6 +2325,71 @@ const tests: Array<[string, () => void]> = [
     assert.ok(!micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7411.25')));
   }],
 
+  ['Intraday MSS Micro Continuation emits OHLC-owned watch line when 5M evidence candle alignment is missing', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:45:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 7351,
+        activeSwingLow: 7331,
+        activeSwingHigh: 7361,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-09T13:40:00-04:00',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7342.5,
+            brokenSwingTimestamp: '2026-06-09T13:35:00-04:00',
+            priorStructureDirection: 'bearish',
+            closeThroughPoints: 8.5,
+            wickOnlyBreak: false,
+          },
+        },
+        '15M': {
+          status: 'confirmed_mss',
+          direction: 'bullish',
+          breaksStructure: true,
+          evidenceTimestamp: '2026-06-09T13:45:00-04:00',
+        },
+      }),
+      fvgZones: [],
+      candles: [],
+      targetObjectives: [{
+        label: 'Afternoon buy-side liquidity',
+        price: 7384.75,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Buy-side liquidity above the reclaim.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+    assert.equal(micro.humanReview?.canExecute, false);
+    assert.equal(micro.entry, null);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.equal(micro.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 7342.5);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.obstacleSource, 'app');
+    assert.ok(micro.evidence.some((item) => item.includes('5M MSS close-through line in the sand: 7342.50')));
+    assert.ok(micro.evidence.some((item) => item.includes('structured NinjaTrader OHLC evidence at 7342.50')));
+    assert.ok(micro.missingEvidence.some((item) => item.includes('completed 5M evidence candle alignment is required')));
+  }],
+
   ['Intraday MSS Micro Continuation short uses latest protected 5M retest swing after close-through campaign activation', () => {
     const context = htfMssContext('SHORT', {
       sessionType: 'lunch',

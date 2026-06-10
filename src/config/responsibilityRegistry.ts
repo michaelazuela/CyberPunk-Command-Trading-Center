@@ -37,6 +37,15 @@ export const RESPONSIBILITY_REGISTRY: ResponsibilityOwner[] = [
     protects: 'Prevents scanner, replay, Discord, or advisory agents from inventing setup approval.',
   },
   {
+    key: 'intraday_mss_campaign_lifecycle',
+    authority: 'setup_scanner_authority',
+    owner: 'src/lib/setupScanner.ts',
+    sharedEntryPoint: 'src/agents/scannerPlanSelectionAgent.ts',
+    consumers: ['scanner automation', 'Discord alert selection', 'replay diagnostics'],
+    mustNotReimplementIn: ['src/lib/gemini.ts', 'src/agents/*', 'tools/automation/discord-scheduler.ts'],
+    protects: 'Keeps Intraday MSS campaigns sourced from NinjaTrader OHLC and app-owned setup candidates; advisory/Gemini paths may only summarize the watch.',
+  },
+  {
     key: 'trade_decision_pipeline',
     authority: 'trade_decision_authority',
     owner: 'src/lib/tradeDecisionPipeline.ts',
@@ -73,4 +82,3 @@ export const RESPONSIBILITY_REGISTRY: ResponsibilityOwner[] = [
     protects: 'Keeps Gemini optional and lower-authority than NinjaTrader OHLC and app-owned plans.',
   },
 ];
-

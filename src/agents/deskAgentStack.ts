@@ -74,9 +74,9 @@ export const DESK_AGENT_ROLE_CONTRACTS: DeskAgentRoleContract[] = [
     key: 'scannerPlanSelectionAgent',
     displayName: 'Scanner Plan Selection Agent',
     authority: 'app_owned_candidate_selection',
-    consumes: ['normalized app-owned trade plan', 'current price', 'stale/chase guards', 'target cascade context'],
-    produces: ['selected app-owned candidate', 'scanner alert state', 'stale/no-fresh-entry audit warnings'],
-    mustNot: ['invent candidates', 'bypass stale/chase guards', 'override deterministic plan output'],
+    consumes: ['normalized app-owned trade plan', 'NinjaTrader-OHLC setup candidates', 'current price', 'stale/chase guards', 'target cascade context'],
+    produces: ['selected app-owned candidate', 'scanner alert state', 'Intraday MSS watch lifecycle status', 'stale/no-fresh-entry audit warnings'],
+    mustNot: ['invent candidates', 'let Gemini/advisory context create Intraday MSS watches', 'bypass stale/chase guards', 'override deterministic plan output'],
   },
   {
     key: 'conditionalCandidateRiskAgent',

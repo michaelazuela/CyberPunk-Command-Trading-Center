@@ -184,6 +184,10 @@ assert.deepEqual(
 );
 assert.ok(handoff.roles.every((role) => role.mustNot.some((item) => item.includes('approve live execution') || item.includes('override'))));
 assert.ok(handoff.safetyNotes.some((note) => note.includes('final execution authority')));
+const scannerPlanRole = handoff.roles.find((role) => role.key === 'scannerPlanSelectionAgent');
+assert.ok(scannerPlanRole?.consumes.some((item) => item.includes('NinjaTrader-OHLC setup candidates')));
+assert.ok(scannerPlanRole?.produces.some((item) => item.includes('Intraday MSS watch lifecycle status')));
+assert.ok(scannerPlanRole?.mustNot.some((item) => item.includes('Gemini/advisory context create Intraday MSS watches')));
 
 const safetyAudit = auditDeskStackSafety({
   readyHealth,

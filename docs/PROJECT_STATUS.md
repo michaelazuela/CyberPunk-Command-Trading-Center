@@ -3,6 +3,38 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Let Intraday MSS watch line survive missing 5M evidence-candle alignment.
+Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
+Reason: User asked to remove the remaining caveat that the watch stayed quiet if the scanner did not build an Intraday MSS candidate. The safe fix is to let the app-owned setup scanner create a watch-only line from structured NinjaTrader OHLC timeframeMssEvidence when 15M/5M MSS is aligned and the 5M structureBreak.brokenLevel is present, even if the exact completed candle array cannot yet align the evidence candle.
+Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed. IntradayMssMicroContinuation can now emit an OHLC-owned retest-pending watch line from structured 5M MSS brokenLevel while keeping entry, stop, T1, and T2 empty until completed candle alignment and protected 5M swing proof are clean.
+Trading logic changed: Yes, narrowly. It changes watch-only candidate construction for IntradayMssMicroContinuation when structured OHLC MSS evidence exists but candle alignment is incomplete. It does not approve execution, does not set canExecute, and does not invent entry/stop/targets.
+Bridge impact: None. No bridge contract or ingestion behavior changed.
+Discord impact: Indirect. Discord selection can now receive a conditional Intraday MSS watch with a named line instead of no watch when structured OHLC has the MSS broken level but candle alignment proof is incomplete.
+Journal/RAG impact: No schema change. Existing RAG records may capture the watch-only line and blocker reason.
+Supabase impact: No migration added.
+Known risks: If timeframeMssEvidence itself is missing or lacks a 5M brokenLevel, the scanner still stays quiet rather than inventing a line. That is intentional.
+Next recommended action: Restart scanner services so the live supervisor uses the patched setup scanner and selection agent.
+
+## Previous Change
+
+Date: 2026-06-10
+Task: Correct agent responsibility and selection behavior for OHLC-owned Intraday MSS campaign watches.
+Files changed: docs/PROJECT_STATUS.md, src/agents/deskAgentIntegration.test.ts, src/agents/deskAgentStack.ts, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts.
+Reason: User clarified that Gemini/advisory agents must not notice Intraday MSS first. NinjaTrader OHLC and the app-owned scanner should catch the first completed 5M close-through, then keep the campaign alive until retest confirms, the line fails, target is already reached before alert, or the session window expires.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/config/responsibilityRegistry.test.ts; npx tsx src/agents/deskAgentIntegration.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed. ScannerPlanSelectionAgent now carries explicit OHLC/setupScanner authority language for IntradayMssMicroContinuation watches and prevents stale/chasing fallback candidates from suppressing an OHLC-built retest-pending watch.
+Trading logic changed: No executable approval change. Setup definitions, entry/stop/target formulas, canExecute, risk gates, and bridge data behavior are unchanged. Scanner alert selection changed only to keep the existing app-owned conditional watch visible.
+Bridge impact: None. NinjaTrader OHLC remains the factual source and no bridge contract changed.
+Discord impact: Indirect. Discord alert selection can now receive the conditional Intraday MSS watch instead of a stale/no-fresh-entry fallback when both exist.
+Journal/RAG impact: No schema change. Existing RAG/Discord persistence can retain the selected OHLC-owned watch context.
+Supabase impact: No migration added.
+Known risks: The watch still depends on structured setup candidates from completed NinjaTrader OHLC. If the scanner does not build the Intraday MSS candidate, advisory/Gemini paths still cannot invent it.
+Next recommended action: Restart scanner services so the updated selection agent and responsibility contracts are used by the live supervisor.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Fix live morning scanner wiring for 10:00 ET session scoring, live history preload, and missed/no-fresh-entry review output.
 Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Live NinjaTrader dry-run showed a valid morning failed-low/reclaim context was first hard-blocked as "outside approved ICT execution session" at 10:00 ET, then the live data gate requested future 12:00 ET bars, and finally stale/no-chase selection dropped the candidate snapshot. The desk needs the setup surfaced as missed/no-fresh-entry review with line/entry/stop/targets instead of flattening to no candidate.

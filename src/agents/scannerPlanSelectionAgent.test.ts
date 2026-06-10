@@ -340,9 +340,13 @@ assert.equal(intradayMssWatchSelection.candidate?.blockReason, null);
 assert.equal(intradayMssWatchSelection.candidate?.humanReview?.canExecute, false);
 assert.equal(intradayMssWatchSelection.candidate?.humanReview?.discordTradePlanEligible, true);
 assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Long MSS forming'));
+assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Campaign active from app-owned completed 5M close-through'));
 assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('Line is 7359.25-7361.00 / HTF line 7361.00'));
 assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('completed 5M hold/retest above'));
 assert.ok(intradayMssWatchSelection.candidate?.requiredTrigger?.includes('do not chase'));
+assert.ok(intradayMssWatchSelection.candidate?.evidence?.some((item) => item.includes('NinjaTrader OHLC') && item.includes('Gemini/advisory agents may summarize')));
+assert.ok(intradayMssWatchSelection.candidate?.evidence?.some((item) => item.includes('First completed 5M close-through activates the campaign')));
+assert.ok(intradayMssWatchSelection.auditWarnings.some((warning) => warning.includes('First completed 5M close-through activates the campaign')));
 assert.equal(intradayMssWatchSelection.reviewStatus, null);
 assert.equal(intradayMssWatchSelection.stale.stale, false);
 assert.equal(
@@ -355,6 +359,37 @@ assert.equal(
   }).shouldSend,
   true,
 );
+
+const staleFallbackShouldNotSuppressIntradayMssWatch = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [
+      candidate({
+        setupType: SetupType.LiquiditySweep,
+        scenarioLabel: 'Stale generic fallback candidate',
+        direction: 'LONG',
+        executionStatus: ExecutionStatus.Executable,
+        entry: 100,
+        stop: 96,
+        target1: 106,
+        target2: 108,
+        riskPoints: 4,
+        priority: 1000,
+        rankScore: 1000,
+      }),
+      intradayMssLongWatch,
+    ],
+  } as any,
+  currentPrice: 108,
+});
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.stateForAlert, 'Conditional');
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.candidate?.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.candidate?.candidateState, 'MSS_CONTINUATION_RETEST_PENDING');
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.reviewStatus, null);
+assert.equal(staleFallbackShouldNotSuppressIntradayMssWatch.stale.stale, false);
+assert.ok(staleFallbackShouldNotSuppressIntradayMssWatch.auditWarnings.some((warning) => warning.includes('Stale/chasing fallback candidate did not suppress')));
 
 const intradayMssWatchWithoutDuplicatedEvidence = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
