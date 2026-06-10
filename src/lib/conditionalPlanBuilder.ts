@@ -805,8 +805,19 @@ function makeCandidate(input: {
   const structureStop = isPrice(input.stop) ? roundToTick(input.stop) : null;
   const risk = riskPoints(input.entry, structureStop);
   const computedTargets = targets(input.direction, input.entry, structureStop);
-  const target1 = input.target1Override ?? computedTargets.target1;
-  const target2 = input.target2Override ?? computedTargets.target2;
+  let target1 = input.target1Override ?? computedTargets.target1;
+  let target2 = input.target2Override ?? computedTargets.target2;
+  if (
+    isPrice(target1) &&
+    isPrice(target2) &&
+    Math.abs(target1 - target2) < TRADE_RULES.targetModel.tickSize &&
+    computedTargets.target1 !== null &&
+    computedTargets.target2 !== null &&
+    Math.abs(computedTargets.target1 - computedTargets.target2) >= TRADE_RULES.targetModel.tickSize
+  ) {
+    target1 = computedTargets.target1;
+    target2 = computedTargets.target2;
+  }
   const execution = executionFor(input.entry, structureStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
   const levelContext = levelContextForDirection(input.chartContext, input.direction);
   const riskAdvisoryStatus =

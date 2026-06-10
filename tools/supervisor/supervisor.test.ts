@@ -326,6 +326,69 @@ assert.equal(deliveryReport.boundaries.postsDiscord, false);
 assert.equal(deliveryReport.boundaries.changesScannerState, false);
 assert.equal(JSON.stringify(deliveryReport).includes('"canExecute":true'), false);
 
+const dryRunStatePath = path.join(deliveryFixtureDir, '.nt-scanner-dry-run-state.json');
+fs.writeFileSync(dryRunStatePath, JSON.stringify({
+  sent: {
+    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
+      state: 'Approved',
+      confidence: 96,
+      sentAt: '2026-06-04T14:05:05.019Z',
+    },
+  },
+  alertDeliveries: {
+    '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved': {
+      alertKey: '2026-06-04|MES|morning|LONG|TurtleSoup|7556.5|Approved',
+      planVersionId: 'MORNING-1',
+      instrument: 'MES',
+      tradeDate: '2026-06-04',
+      session: 'morning',
+      state: 'Approved',
+      confidence: 96,
+      deliveryStatus: 'sent',
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+      httpStatus: 200,
+      discordMessageId: 'discord-1',
+      attemptedAt: '2026-06-04T14:05:03.840Z',
+      sentAt: '2026-06-04T14:05:05.019Z',
+      auditLogPath: sentAuditPath,
+      stale: false,
+      retryEligible: false,
+    },
+    '2026-06-04|MES|morning|LONG|TurtleSoup|dry-run|Missed': {
+      alertKey: '2026-06-04|MES|morning|LONG|TurtleSoup|dry-run|Missed',
+      planVersionId: 'MORNING-DRY-RUN',
+      instrument: 'MES',
+      tradeDate: '2026-06-04',
+      session: 'morning',
+      state: 'Missed',
+      confidence: 78,
+      deliveryStatus: 'skipped',
+      webhookSource: 'dry_run',
+      error: 'Discord delivery skipped: dry_run.',
+      attemptedAt: '2026-06-04T14:12:00.000Z',
+      stale: true,
+      retryEligible: false,
+    },
+  },
+  lastCompleted5mBySession: {
+    '2026-06-04:morning': '2026-06-04T11:55:00.000Z',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-04:morning': '2026-06-04T13:55:00.000Z',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const dryRunDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: dryRunStatePath,
+  auditDir,
+  now: new Date('2026-06-04T14:13:00.000Z'),
+  staleAfterMs: 4 * 60 * 60 * 1000,
+});
+assert.equal(dryRunDeliveryReport.status, 'ok');
+assert.equal(dryRunDeliveryReport.lastDelivery?.webhookSource, 'QUANT_DESK_SCANNER_WEBHOOK_URL');
+assert.equal(dryRunDeliveryReport.lastDelivery?.deliveryStatus, 'sent');
+assert.equal(dryRunDeliveryReport.skippedDeliveries.length, 0);
+
 const stalePreviousSessionStatePath = path.join(deliveryFixtureDir, '.nt-scanner-previous-session-state.json');
 fs.writeFileSync(stalePreviousSessionStatePath, JSON.stringify({
   lastCompleted5mBySession: {

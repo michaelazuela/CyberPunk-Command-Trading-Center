@@ -47,6 +47,8 @@
 - `src/lib/cloudStorage.ts`: Supabase Storage and setup persistence.
 - `src/lib/supabaseTradeService.ts`: Supabase trade persistence.
 - `src/config/timeWindows.ts`: canonical time windows.
+- `src/config/responsibilityRegistry.ts`: machine-readable source-of-truth map for protected responsibilities.
+- `tools/automation/discord-rag-persistence.ts`: shared scanner/scheduler owner for Discord alert RAG upserts and message receipts.
 - `functions/api/gemini.js`: Cloudflare Gemini proxy.
 - `supabase/migrations`: database schema history.
 
@@ -63,6 +65,19 @@ Removed legacy UI shells are not part of the active architecture: old standalone
 - Chart rendering uses OHLC-driven annotation anchors. Label boxes may shift for readability, but numbered marker anchors stay tied to real event price/time coordinates.
 
 ## Ownership Boundaries
+
+Drift prevention rule: one protected responsibility gets one owner. Automation, replay, Discord, RAG, and advisory agents may consume the owner, but they must not rebuild the same decision or persistence behavior locally.
+
+Machine-readable ownership lives in `src/config/responsibilityRegistry.ts` and is checked by `npm run guard:architecture`.
+
+Protected source-of-truth owners:
+
+- Canonical time windows: `src/config/timeWindows.ts`.
+- Setup detection and ranking: `src/lib/setupScanner.ts`.
+- Trade decision pipeline: `src/lib/tradeDecisionPipeline.ts`.
+- Discord alert formatting: `tools/automation/discord-alert-format.ts`.
+- Discord alert RAG persistence and receipt patching: `tools/automation/discord-rag-persistence.ts`.
+- Gemini advisory fallback flag: `src/config/geminiFallback.ts`.
 
 AI/OHLC extraction owns:
 

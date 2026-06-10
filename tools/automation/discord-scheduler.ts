@@ -47,6 +47,11 @@ import {
   validateExecutableScannerAuditVisualsForRepost,
   type SchedulerReplayProvenanceResult,
 } from './discord-scheduler-provenance';
+import {
+  attachDiscordMessageReceiptToRagPayload,
+  resolveDiscordRagPersistenceConfig,
+  upsertDiscordAlertRagPayload,
+} from './discord-rag-persistence';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -621,11 +626,9 @@ async function upsertDiscordAlertRagRecord(args: {
   normalized: ReturnType<typeof buildAppTradePlan>;
   candidates: SetupCandidate[];
 }): Promise<void> {
-  const supabaseUrl = supabaseRestUrl();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const userId = process.env.DISCORD_RAG_USER_ID || '';
-  if (!supabaseUrl || !serviceRoleKey || !userId) {
-    console.warn('Discord alert RAG pending save skipped. Set SUPABASE_URL/VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID to let Discord buttons update RAG.');
+  const { config, missing } = resolveDiscordRagPersistenceConfig();
+  if (!config) {
+    console.warn(`Discord alert RAG pending save skipped. Set ${missing.join(', ')} to let Discord buttons update RAG.`);
     return;
   }
 
@@ -644,7 +647,6 @@ async function upsertDiscordAlertRagRecord(args: {
     notes: 'Discord alert created. Awaiting trader outcome button.',
   });
   const payload = {
-    user_id: userId,
     session_type: args.job,
     trade_date: args.tradeDate,
     day_of_week: getDayOfWeek(args.tradeDate),
@@ -654,7 +656,6 @@ async function upsertDiscordAlertRagRecord(args: {
     source: 'discord_alert',
     analysis_mode: 'live',
     setup_quality_score: 0.5,
-    plan_version_id: args.planVersionId,
     entry_price: args.normalized.entry ?? selectedCandidate?.entry ?? null,
     stop_price: args.normalized.stop ?? selectedCandidate?.stop ?? null,
     target_1_price: args.normalized.t1 ?? selectedCandidate?.target1 ?? null,
@@ -684,31 +685,12 @@ async function upsertDiscordAlertRagRecord(args: {
     notes: 'Discord alert created. Awaiting trader outcome button.',
   };
 
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json',
-    Prefer: 'return=representation',
-  };
-  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(payload),
+  await upsertDiscordAlertRagPayload({
+    config,
+    planVersionId: args.planVersionId,
+    payload,
+    errorLabel: 'Discord alert RAG',
   });
-  if (!updateResponse.ok) {
-    throw new Error(`Discord alert RAG update failed (${updateResponse.status}): ${await updateResponse.text()}`);
-  }
-  const updatedRows = await updateResponse.json().catch(() => []);
-  if (Array.isArray(updatedRows) && updatedRows.length > 0) return;
-
-  const insertResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-  if (!insertResponse.ok) {
-    throw new Error(`Discord alert RAG insert failed (${insertResponse.status}): ${await insertResponse.text()}`);
-  }
 }
 
 async function attachDiscordMessageReceiptToRagRecord(args: {
@@ -717,46 +699,15 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   webhookSource: string | null;
 }): Promise<void> {
   if (!args.discordMessageId) return;
-  const supabaseUrl = supabaseRestUrl();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const userId = process.env.DISCORD_RAG_USER_ID || '';
-  if (!supabaseUrl || !serviceRoleKey || !userId) return;
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json',
-    Prefer: 'return=representation',
-  };
-  const lookup = await fetch(
-    `${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
-    { headers },
-  );
-  if (!lookup.ok) {
-    console.warn(`Discord alert message receipt lookup skipped (${lookup.status}).`);
-    return;
-  }
-  const rows = await lookup.json().catch(() => []);
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
-  if (!row?.id) return;
-  const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object' ? row.trade_plan_json : {};
-  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&id=eq.${encodeURIComponent(row.id)}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({
-      trade_plan_json: {
-        ...existingPlanJson,
-        discordMessage: {
-          messageId: args.discordMessageId,
-          webhookSource: args.webhookSource,
-          editAfterOutcome: true,
-          storedAt: new Date().toISOString(),
-        },
-      },
-    }),
+  const { config } = resolveDiscordRagPersistenceConfig();
+  if (!config) return;
+  await attachDiscordMessageReceiptToRagPayload({
+    config,
+    planVersionId: args.planVersionId,
+    discordMessageId: args.discordMessageId,
+    webhookSource: args.webhookSource,
+    warningLabel: 'Discord alert message receipt',
   });
-  if (!update.ok) {
-    console.warn(`Discord alert message receipt update skipped (${update.status}).`);
-  }
 }
 
 function currentPriceFromAnalysis(analysis: AnalysisResult): number | null {

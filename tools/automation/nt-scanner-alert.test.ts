@@ -513,6 +513,13 @@ const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
 assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
 assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T15:30:00-04:00');
 
+const liveMorningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T10:05:00.0000000');
+assert.equal(liveMorningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(liveMorningHistoryPlan['5m'].to, '2026-06-02T10:05:00-04:00');
+
+const afterMorningCloseHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T12:30:00.0000000');
+assert.equal(afterMorningCloseHistoryPlan['5m'].to, '2026-06-02T12:00:00-04:00');
+
 const ethSessionCoverageBars = Array.from({ length: 6000 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');
   const last = Date.parse('2026-06-02T12:00:00-04:00');
@@ -528,6 +535,31 @@ assert.equal(
   ),
   true,
 );
+
+await fs.mkdir(auditDir, { recursive: true });
+const existingDecisionTapePath = path.join(auditDir, 'scanner-decision-tape-2026-06-03-MES-morning.json');
+await fs.writeFile(existingDecisionTapePath, JSON.stringify({
+  reportType: 'scanner_decision_event_tape',
+  createdAt: '2026-06-03T14:10:00.000Z',
+  updatedAt: '2026-06-03T14:10:00.000Z',
+  tradeDate: '2026-06-03',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-03T10:10:00.0000000': {
+      setupCandidateStatus: {
+        statuses: [{
+          setupType: 'TurtleSoup',
+          direction: 'SHORT',
+          entry: 7338.25,
+          stop: 7360.5,
+          target1: 7247,
+          target2: 7247,
+        }],
+      },
+    },
+  },
+}, null, 2));
 
 const decisionTapePath = await writeScannerDecisionTapeAuditLog({
   session: 'morning',
@@ -612,7 +644,12 @@ const decisionTapePath = await writeScannerDecisionTapeAuditLog({
 });
 const decisionTape = JSON.parse(await fs.readFile(decisionTapePath, 'utf8'));
 assert.equal(decisionTape.reportType, 'scanner_decision_event_tape');
-assert.equal(decisionTape.eventCount, 1);
+assert.equal(decisionTape.eventCount, 2);
+const repairedHistoricalTapeEvent = decisionTape.events['2026-06-03T10:10:00.0000000'];
+assert.equal(repairedHistoricalTapeEvent.setupCandidateStatus.statuses[0].target1, 7305);
+assert.equal(repairedHistoricalTapeEvent.setupCandidateStatus.statuses[0].target2, 7293.75);
+assert.equal(repairedHistoricalTapeEvent.setupCandidateStatus.statuses[0].targetRepair.source, 'app_entry_stop_r_targets');
+assert.equal(repairedHistoricalTapeEvent.setupCandidateStatus.statuses[0].targetRepair.previousTarget1, 7247);
 const tapeEvent = decisionTape.events['2026-06-03T10:15:00.0000000'];
 assert.equal(tapeEvent.scannerState, 'TriggerPending');
 assert.equal(tapeEvent.reviewStatus, 'early_move_review_no_valid_candidate');
@@ -1391,13 +1428,20 @@ try {
   assert.equal(riskAudit.visualAuthority, 'normalized_plan');
   assert.ok(riskAudit.sourceCandidate);
   assert.equal(riskAudit.candidate.executionStatus, ExecutionStatus.Conditional);
-    assert.ok(riskResult.payload.components);
-    assert.deepEqual(
-      (riskResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
-      ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
-    );
-    assert.ok(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
-    assert.ok(riskText.includes('Risk exceeds standard limit. Human final decision required.'));
+  assert.equal(riskAudit.candidate.target1, 7609.5);
+  assert.equal(riskAudit.candidate.target2, 7613.5);
+  assert.equal(riskAudit.candidate.targetRepair.source, 'app_entry_stop_r_targets');
+  assert.equal(riskAudit.candidate.targetRepair.previousTarget1, 7620);
+  assert.equal(riskAudit.candidate.targetRepair.previousTarget2, 7620);
+  assert.equal(riskAudit.sourceCandidate.target1, 7609.5);
+  assert.equal(riskAudit.sourceCandidate.target2, 7613.5);
+  assert.ok(riskResult.payload.components);
+  assert.deepEqual(
+    (riskResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
+    ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
+  );
+  assert.ok(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
+  assert.ok(riskText.includes('Risk exceeds standard limit. Human final decision required.'));
   assert.ok(riskText.includes('Do not chase'));
 
   console.log(`live scanner fixture alert verified: mainText=${text.length}, files=${result.files.length}, audit=${result.auditLogPath}`);

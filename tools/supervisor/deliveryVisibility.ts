@@ -163,6 +163,10 @@ function toDelivery(alertKey: string, raw: unknown): ScannerDeliveryRecord {
   };
 }
 
+function isDryRunDelivery(delivery: ScannerDeliveryRecord): boolean {
+  return delivery.webhookSource === 'dry_run';
+}
+
 function toSent(alertKey: string, raw: unknown): ScannerSentRecord {
   const record = asRecord(raw);
   return {
@@ -280,14 +284,15 @@ export function buildDeliveryVisibilityReport(args: {
     Object.entries(asRecord(state.alertDeliveries)).map(([key, value]) => toDelivery(key, value)),
     (item) => item.sentAt || item.attemptedAt,
   );
+  const operationalDeliveries = deliveries.filter((delivery) => !isDryRunDelivery(delivery));
   const watchlists = sortByRecentDate(
     Object.entries(asRecord(state.watchlistSent)).map(([key, value]) => toWatchlist(key, value)),
     (item) => item.sentAt,
   );
 
-  const failedDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
-  const pendingDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
-  const skippedDeliveries = deliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
+  const failedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
+  const pendingDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
+  const skippedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
   const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs) : ['Scanner state file is not readable.'];
 
   return {
@@ -298,8 +303,8 @@ export function buildDeliveryVisibilityReport(args: {
     stateReadable,
     stateError,
     lastAlert: sent[0] || null,
-    lastDelivery: deliveries[0] || null,
-    lastDiscordSend: deliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
+    lastDelivery: operationalDeliveries[0] || null,
+    lastDiscordSend: operationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
     failedDeliveries,
     pendingDeliveries,
     skippedDeliveries,

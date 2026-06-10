@@ -259,6 +259,133 @@ try {
   assert.ok(earlyMorningHtml.includes('class="axis"'), 'Price-axis labels should still render.');
   assert.ok(earlyMorningHtml.includes('<text x="1418"'), 'Price-axis labels should stay in the fixed right-side rail.');
 
+  const june10MorningCandles = [
+    ...Array.from({ length: 22 }, (_, index) => {
+      const totalMinutes = 9 * 60 + index * 5;
+      const hour = Math.floor(totalMinutes / 60);
+      const minute = totalMinutes % 60;
+      const base = index < 8 ? 7350 + index * 0.35 : 7366 + (index - 8) * 1.2;
+      const open = index === 7 ? 7352 : base;
+      const close = index === 7 ? 7338.5 : index === 8 ? 7366.5 : base + (index % 3 === 0 ? -0.5 : 0.75);
+      return {
+        index,
+        timestamp: `2026-06-10T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-04:00`,
+        open,
+        high: Math.max(open, close) + 2,
+        low: index === 7 ? 7335 : Math.min(open, close) - 2,
+        close,
+        direction: close >= open ? 'bullish' as const : 'bearish' as const,
+        confidence: 'High' as const,
+      };
+    }),
+    {
+      index: 999,
+      timestamp: '2026-06-10T23:55:00-04:00',
+      open: 7370,
+      high: 7378,
+      low: 7368,
+      close: 7372.5,
+      direction: 'bullish' as const,
+      confidence: 'High' as const,
+    },
+  ];
+  const june10Candidate: SetupCandidate = {
+    ...candidate,
+    setupType: SetupType.TurtleSoup,
+    scenarioLabel: 'Bullish Turtle Soup Reversal - normalized plan not executable',
+    direction: 'LONG',
+    entry: 7366.5,
+    stop: 7335,
+    target1: 7413.75,
+    target2: 7429.5,
+    riskPoints: 31.5,
+    targetObjectivePlan: {
+      ...candidate.targetObjectivePlan,
+      obstacleTarget1: {
+        label: 'Opening decision line',
+        price: 7367.5,
+        direction: 'LONG',
+        source: 'rth_morning',
+        type: 'imbalance_zone',
+        confidence: 'Medium',
+        score: 64,
+        reason: 'Reaction zone before liquidity.',
+      },
+      liquidityTarget1: {
+        label: 'Runner high',
+        price: 7450,
+        direction: 'LONG',
+        source: 'rth_morning',
+        type: 'high',
+        confidence: 'High',
+        score: 86,
+        reason: 'Runner objective if T2 clears.',
+      },
+      liquidityRunnerTarget: {
+        label: 'Stretch high',
+        price: 7632.75,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'high',
+        confidence: 'Medium',
+        score: 70,
+        reason: 'Stretch objective only; not app target validation.',
+      },
+    },
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: NoTradeReason.EntryTriggerPending,
+  };
+  const june10Context: Partial<ChartContext> = {
+    ...chartContext,
+    candles: june10MorningCandles,
+    fvgZones: [],
+    liquiditySweeps: [{
+      type: 'sweep',
+      direction: 'LONG',
+      level: 7338.25,
+      sweptLevelLabel: 'Sell-side liquidity',
+      reclaimed: true,
+      timestamp: june10MorningCandles[7].timestamp,
+      confidence: 'High',
+    }],
+    reclaimEvents: [{
+      direction: 'LONG',
+      reclaimedLevel: 7338.25,
+      levelLabel: 'Sell-side liquidity',
+      timestamp: june10MorningCandles[8].timestamp,
+      candleIndex: 8,
+      confidence: 'High',
+    }],
+  };
+  const june10Html = buildChartMarkupHtmlForTest({
+    chartContext: june10Context,
+    candidate: june10Candidate,
+    instrument: 'MES',
+    tradeDate: '2026-06-10',
+    sessionLabel: 'morning',
+  });
+  assert.ok(!june10Html.includes('Data Error'), 'A stale optional stretch target must not poison app-owned T1/T2 validation.');
+  assert.ok(june10Html.includes('Review Required — Extension target is outside the current chart window.'));
+  assert.ok(june10Html.includes('7413.75'), 'App-owned 1.5R T1 should remain visible when optional stretch is far away.');
+  assert.ok(june10Html.includes('7429.50'), 'App-owned 2.0R T2 should remain visible when optional stretch is far away.');
+  assert.ok(!june10Html.includes('7632.75'), 'Far stretch target should be kept out of the execution chart scale.');
+  assert.ok(!june10Html.includes('>23:55<'), 'AM chart card must not pull late-session candles into the right edge.');
+  assert.ok(june10Html.includes('>10:45<'), 'AM chart card should keep the latest morning completed candle visible.');
+
+  const june10LevelMapHtml = buildPriceLevelMapHtmlForTest({
+    chartContext: june10Context,
+    candidate: june10Candidate,
+    instrument: 'MES',
+    tradeDate: '2026-06-10',
+    sessionLabel: 'morning',
+  });
+  assert.ok(!june10LevelMapHtml.includes('Data Error'), 'Level map must keep app targets valid when only optional extension context is far away.');
+  assert.ok(june10LevelMapHtml.includes('T1 1.5R'));
+  assert.ok(june10LevelMapHtml.includes('T2 2.0R'));
+  assert.ok(june10LevelMapHtml.includes('7413.75'));
+  assert.ok(june10LevelMapHtml.includes('7429.50'));
+  assert.ok(!june10LevelMapHtml.includes('<text x="256"') || !june10LevelMapHtml.includes('STRETCH'), 'Far stretch should not render as a plotted level row.');
+
   const levelMapHtml = buildPriceLevelMapHtmlForTest({
     chartContext,
     candidate,

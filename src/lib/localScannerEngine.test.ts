@@ -185,7 +185,27 @@ const strongScore = scoreScannerCandidate(strongCandidate, morningWindow, 101, t
 assert.ok(strongScore.score >= 75);
 assert.ok(strongScore.qualifiedReasons.some((reason) => reason.includes('Liquidity sweep confirmed')));
 
+const tenAmWindow = resolveScannerWindow(new Date('2026-05-19T10:00:00-04:00'));
+assert.equal(tenAmWindow.session, 'morning');
+assert.equal(tenAmWindow.allowsTradePlan, true);
+const tenAmWithStaleDiagnosticClockScore = scoreScannerCandidate(strongCandidate, tenAmWindow, 101, true, 14 * 60);
+assert.notEqual(tenAmWithStaleDiagnosticClockScore.hardBlocker, 'outside approved ICT execution session');
+assert.ok(tenAmWithStaleDiagnosticClockScore.score >= 75);
+
 const lunchWindow = resolveScannerWindow(new Date('2026-05-19T12:10:00-04:00'));
+assert.equal(lunchWindow.session, 'lunch');
+assert.equal(lunchWindow.allowsTradePlan, true);
+const lunchWithStaleDiagnosticClockScore = scoreScannerCandidate(strongCandidate, lunchWindow, 101, true, 8 * 60);
+assert.notEqual(lunchWithStaleDiagnosticClockScore.hardBlocker, 'outside approved ICT execution session');
+assert.ok(lunchWithStaleDiagnosticClockScore.score >= 65);
+
+const pmCutoffWindow = resolveScannerWindow(new Date('2026-05-19T15:29:00-04:00'));
+assert.equal(pmCutoffWindow.session, 'lunch');
+assert.equal(pmCutoffWindow.allowsTradePlan, true);
+const pmCutoffWithStaleDiagnosticClockScore = scoreScannerCandidate(strongCandidate, pmCutoffWindow, 101, true, 8 * 60);
+assert.notEqual(pmCutoffWithStaleDiagnosticClockScore.hardBlocker, 'outside approved ICT execution session');
+assert.ok(pmCutoffWithStaleDiagnosticClockScore.score >= 65);
+
 const midStrengthCandidate = candidate({
   scenarioLabel: 'Liquidity Sweep Reversal failed breakdown impulse',
   evidence: ['sweep/reclaim confirmed', 'expansion impulse confirmed'],
@@ -393,7 +413,7 @@ const staleNormalizedPlan: any = {
 const stalePlanBefore = JSON.stringify(staleNormalizedPlan);
 const staleSelection = selectScannerPlan({ normalized: staleNormalizedPlan, currentPrice: 109 });
 assert.equal(staleSelection.stateForAlert, 'Missed');
-assert.equal(staleSelection.candidate, null);
+assert.equal(staleSelection.candidate, staleNormalizedCandidate);
 assert.equal(staleSelection.stale.stale, true);
 assert.ok(staleSelection.auditWarnings.some((warning) => warning.includes('already_triggered_no_fresh_entry')));
 assert.equal(JSON.stringify(staleNormalizedPlan), stalePlanBefore);

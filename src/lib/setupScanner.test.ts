@@ -2325,6 +2325,160 @@ const tests: Array<[string, () => void]> = [
     assert.ok(!micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7411.25')));
   }],
 
+  ['Intraday MSS Micro Continuation short uses latest protected 5M retest swing after close-through campaign activation', () => {
+    const context = htfMssContext('SHORT', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-10T14:20:00-04:00',
+      keyLevels: {
+        ...htfMssContext('SHORT').keyLevels,
+        currentPrice: 7318.5,
+        activeSwingHigh: 7338.5,
+        activeSwingLow: 7276,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bearish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-10T13:10:00-04:00',
+          barTimestampMode: 'open',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7320.25,
+            brokenSwingTimestamp: '2026-06-10T12:50:00-04:00',
+            priorStructureDirection: 'bullish',
+            closeThroughPoints: 3.25,
+            wickOnlyBreak: false,
+          },
+        },
+      }),
+      fvgZones: [],
+      candles: [
+        { index: 0, timestamp: '2026-06-10T12:55:00-04:00', open: 7320, high: 7331, low: 7317.25, close: 7322.75, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-06-10T13:00:00-04:00', open: 7322.75, high: 7326, low: 7315.25, close: 7324, direction: 'bullish', confidence: 'High' },
+        { index: 2, timestamp: '2026-06-10T13:05:00-04:00', open: 7324, high: 7334.5, low: 7320.5, close: 7332, direction: 'bullish', confidence: 'High' },
+        { index: 3, timestamp: '2026-06-10T13:10:00-04:00', open: 7332, high: 7332.5, low: 7315.75, close: 7317, direction: 'bearish', confidence: 'High', isExpansion: true },
+        { index: 4, timestamp: '2026-06-10T13:15:00-04:00', open: 7317, high: 7318, low: 7307.25, close: 7310.75, direction: 'bearish', confidence: 'High' },
+        { index: 5, timestamp: '2026-06-10T13:20:00-04:00', open: 7310.5, high: 7315, low: 7307, close: 7310.5, direction: 'doji', confidence: 'High' },
+        { index: 6, timestamp: '2026-06-10T13:25:00-04:00', open: 7310, high: 7316.25, low: 7308, close: 7315.5, direction: 'bullish', confidence: 'High' },
+        { index: 7, timestamp: '2026-06-10T13:30:00-04:00', open: 7315.25, high: 7319, low: 7311, close: 7317, direction: 'bullish', confidence: 'High' },
+        { index: 8, timestamp: '2026-06-10T13:35:00-04:00', open: 7316.75, high: 7317.5, low: 7303.25, close: 7309, direction: 'bearish', confidence: 'High' },
+        { index: 9, timestamp: '2026-06-10T13:40:00-04:00', open: 7309.5, high: 7309.5, low: 7301, close: 7302.25, direction: 'bearish', confidence: 'High' },
+        { index: 10, timestamp: '2026-06-10T13:45:00-04:00', open: 7302.25, high: 7306.5, low: 7298.75, close: 7300.25, direction: 'bearish', confidence: 'High' },
+        { index: 11, timestamp: '2026-06-10T13:50:00-04:00', open: 7300.5, high: 7327.5, low: 7299, close: 7324, direction: 'bullish', confidence: 'High' },
+        { index: 12, timestamp: '2026-06-10T13:55:00-04:00', open: 7323.75, high: 7326.25, low: 7310, close: 7320.5, direction: 'bearish', confidence: 'High' },
+        { index: 13, timestamp: '2026-06-10T14:00:00-04:00', open: 7320.5, high: 7328.75, low: 7318.5, close: 7327.25, direction: 'bullish', confidence: 'High' },
+        { index: 14, timestamp: '2026-06-10T14:05:00-04:00', open: 7327, high: 7338.5, low: 7325.75, close: 7337.25, direction: 'bullish', confidence: 'High' },
+        { index: 15, timestamp: '2026-06-10T14:10:00-04:00', open: 7337.5, high: 7338.25, low: 7325.25, close: 7325.75, direction: 'bearish', confidence: 'High' },
+        { index: 16, timestamp: '2026-06-10T14:15:00-04:00', open: 7326, high: 7333.25, low: 7324.75, close: 7328.25, direction: 'bullish', confidence: 'High' },
+        { index: 17, timestamp: '2026-06-10T14:20:00-04:00', open: 7328, high: 7333.25, low: 7315, close: 7318.5, direction: 'bearish', confidence: 'High', isRejection: true },
+      ],
+      targetObjectives: [{
+        label: 'Afternoon sell-side liquidity',
+        price: 7276,
+        direction: 'SHORT',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Sell-side liquidity below the close-through.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'SHORT');
+    assert.equal(micro.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(micro.entry, 7318.5);
+    assert.equal(micro.stop, 7338.75);
+    assert.equal(micro.riskPoints, 20.25);
+    assert.equal(micro.target1, 7288.25);
+    assert.equal(micro.target2, 7278);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 7320.25);
+    assert.ok(micro.evidence.some((item) => item.includes('close-through activated the campaign at 7320.25')));
+    assert.ok(micro.evidence.some((item) => item.includes('latest protected 5M retest swing 7338.50')));
+    assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7338.75')));
+  }],
+
+  ['Intraday MSS Micro Continuation long uses latest protected 5M retest swing after close-through campaign activation', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-10T14:20:00-04:00',
+      keyLevels: {
+        ...htfMssContext('LONG').keyLevels,
+        currentPrice: 7322,
+        activeSwingHigh: 7362,
+        activeSwingLow: 7301,
+      },
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: timeframeMssEvidenceLayer('bullish', {
+        '5M': {
+          evidenceTimestamp: '2026-06-10T13:10:00-04:00',
+          barTimestampMode: 'open',
+          structureBreak: {
+            type: 'mss',
+            brokenLevel: 7320.25,
+            brokenSwingTimestamp: '2026-06-10T12:50:00-04:00',
+            priorStructureDirection: 'bearish',
+            closeThroughPoints: 3.25,
+            wickOnlyBreak: false,
+          },
+        },
+      }),
+      fvgZones: [],
+      candles: [
+        { index: 0, timestamp: '2026-06-10T12:55:00-04:00', open: 7320.5, high: 7323, low: 7311, close: 7318, direction: 'bearish', confidence: 'High' },
+        { index: 1, timestamp: '2026-06-10T13:00:00-04:00', open: 7318, high: 7322, low: 7305.75, close: 7310, direction: 'bearish', confidence: 'High' },
+        { index: 2, timestamp: '2026-06-10T13:05:00-04:00', open: 7310, high: 7321, low: 7301.25, close: 7308, direction: 'bearish', confidence: 'High' },
+        { index: 3, timestamp: '2026-06-10T13:10:00-04:00', open: 7308, high: 7325, low: 7307.5, close: 7323.5, direction: 'bullish', confidence: 'High', isExpansion: true },
+        { index: 4, timestamp: '2026-06-10T13:15:00-04:00', open: 7323.5, high: 7331, low: 7322, close: 7329, direction: 'bullish', confidence: 'High' },
+        { index: 5, timestamp: '2026-06-10T13:20:00-04:00', open: 7329, high: 7332, low: 7324, close: 7330, direction: 'bullish', confidence: 'High' },
+        { index: 6, timestamp: '2026-06-10T13:25:00-04:00', open: 7330, high: 7333, low: 7320.75, close: 7321.75, direction: 'bearish', confidence: 'High' },
+        { index: 7, timestamp: '2026-06-10T13:30:00-04:00', open: 7321.75, high: 7329, low: 7320.5, close: 7323, direction: 'bullish', confidence: 'High' },
+        { index: 8, timestamp: '2026-06-10T13:35:00-04:00', open: 7323, high: 7334, low: 7322, close: 7331, direction: 'bullish', confidence: 'High' },
+        { index: 9, timestamp: '2026-06-10T13:40:00-04:00', open: 7331, high: 7336, low: 7328, close: 7335, direction: 'bullish', confidence: 'High' },
+        { index: 10, timestamp: '2026-06-10T13:45:00-04:00', open: 7335, high: 7338, low: 7331, close: 7336, direction: 'bullish', confidence: 'High' },
+        { index: 11, timestamp: '2026-06-10T13:50:00-04:00', open: 7336, high: 7337, low: 7312.75, close: 7318, direction: 'bearish', confidence: 'High' },
+        { index: 12, timestamp: '2026-06-10T13:55:00-04:00', open: 7318, high: 7325, low: 7313.25, close: 7319.75, direction: 'bullish', confidence: 'High' },
+        { index: 13, timestamp: '2026-06-10T14:00:00-04:00', open: 7319.75, high: 7321.5, low: 7311.25, close: 7314, direction: 'bearish', confidence: 'High' },
+        { index: 14, timestamp: '2026-06-10T14:05:00-04:00', open: 7314, high: 7316.5, low: 7301, close: 7304, direction: 'bearish', confidence: 'High' },
+        { index: 15, timestamp: '2026-06-10T14:10:00-04:00', open: 7304, high: 7316, low: 7301.25, close: 7315, direction: 'bullish', confidence: 'High' },
+        { index: 16, timestamp: '2026-06-10T14:15:00-04:00', open: 7315, high: 7319.25, low: 7308, close: 7314.5, direction: 'bearish', confidence: 'High' },
+        { index: 17, timestamp: '2026-06-10T14:20:00-04:00', open: 7314.5, high: 7325, low: 7312.5, close: 7322, direction: 'bullish', confidence: 'High', isReclaim: true },
+      ],
+      targetObjectives: [{
+        label: 'Afternoon buy-side liquidity',
+        price: 7362,
+        direction: 'LONG',
+        source: 'ninjatrader',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 90,
+        reason: 'Buy-side liquidity above the close-through.',
+      }],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'LONG');
+    assert.equal(micro.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(micro.entry, 7322);
+    assert.equal(micro.stop, 7300.75);
+    assert.equal(micro.riskPoints, 21.25);
+    assert.equal(micro.target1, 7354);
+    assert.equal(micro.target2, 7364.5);
+    assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 7320.25);
+    assert.ok(micro.evidence.some((item) => item.includes('close-through activated the campaign at 7320.25')));
+    assert.ok(micro.evidence.some((item) => item.includes('latest protected 5M retest swing 7301.00')));
+    assert.ok(micro.evidence.some((item) => item.includes('Protected 5M MSS swing stop: 7300.75')));
+  }],
+
   ['Intraday MSS Micro Continuation accepts close-time MSS evidence timestamp for an open-time completed 5M candle', () => {
     const context = htfMssContext('LONG', {
       sessionType: 'lunch',
@@ -3883,14 +4037,17 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.entry, 7397);
     assert.equal(turtle.stop, 7393.75);
     assert.ok(turtle.stop! < 7394);
-    assert.equal(turtle.target2, 7404);
+    assert.equal(turtle.target1, 7402);
+    assert.equal(turtle.target2, 7403.5);
+    assert.notEqual(turtle.target1, turtle.target2);
     assert.ok(turtle.evidence.includes('Liquidity raid confirmed'));
     assert.ok(turtle.evidence.includes('Established liquidity level confirmed'));
     assert.ok(turtle.evidence.includes('Sweep below sell-side liquidity confirmed'));
     assert.ok(turtle.evidence.includes('Reclaim after sweep confirmed'));
     assert.ok(turtle.evidence.includes('Failed continuation confirmed'));
     assert.ok(turtle.evidence.includes('Stop beyond sweep wick'));
-    assert.ok(turtle.evidence.includes('Targeting opposing liquidity'));
+    assert.ok(turtle.evidence.includes('Targeting valid app R-based objectives'));
+    assert.ok(turtle.evidence.some((item) => item.includes('Opposing liquidity objective retained for management context: 7404')));
     assert.ok(turtle.evidence.includes('Minimum 2.0R available'));
   }],
 
@@ -3921,9 +4078,36 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.entry, 7403);
     assert.equal(turtle.stop, 7406.25);
     assert.ok(turtle.stop! > 7406);
-    assert.equal(turtle.target2, 7396);
+    assert.equal(turtle.target1, 7398.25);
+    assert.equal(turtle.target2, 7396.5);
+    assert.notEqual(turtle.target1, turtle.target2);
     assert.ok(turtle.evidence.includes('Sweep above buy-side liquidity confirmed'));
     assert.ok(turtle.evidence.includes('Established liquidity level confirmed'));
+  }],
+
+  ['Turtle Soup keeps app T1/T2 distinct when one far liquidity objective exists', () => {
+    const context = bearishTurtleSoupContext();
+    context.targetObjectives = [{
+      label: 'Far sell-side liquidity',
+      price: 7247,
+      direction: 'SHORT',
+      source: 'app',
+      type: 'liquidity_pool',
+      confidence: 'High',
+      score: 90,
+      reason: 'Far external sell-side liquidity objective.',
+    }];
+    const result = scanSetupCandidates({ sessionType: 'replay_morning', chartContext: context, result: null });
+    const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
+
+    assert.ok(turtle);
+    assert.equal(turtle.direction, 'SHORT');
+    assert.equal(turtle.entry, 7403);
+    assert.equal(turtle.stop, 7406.25);
+    assert.equal(turtle.target1, 7398.25);
+    assert.equal(turtle.target2, 7396.5);
+    assert.notEqual(turtle.target1, turtle.target2);
+    assert.ok(turtle.evidence.some((item) => item.includes('Opposing liquidity objective retained for management context: 7247')));
   }],
 
   ['Turtle Soup requires an established prior swing or session liquidity level', () => {
@@ -4491,7 +4675,8 @@ const tests: Array<[string, () => void]> = [
     const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
 
     assert.ok(turtle);
-    assert.equal(turtle.target2, null);
+    assert.equal(turtle.target1, 7402);
+    assert.equal(turtle.target2, 7403.5);
     assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
     assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
   }],
@@ -4726,7 +4911,8 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(turtle);
     assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(turtle.target2, null);
+    assert.equal(turtle.target1, 7402);
+    assert.equal(turtle.target2, 7403.5);
     assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
   }],
 

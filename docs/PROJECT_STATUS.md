@@ -3,6 +3,54 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Fix live morning scanner wiring for 10:00 ET session scoring, live history preload, and missed/no-fresh-entry review output.
+Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Live NinjaTrader dry-run showed a valid morning failed-low/reclaim context was first hard-blocked as "outside approved ICT execution session" at 10:00 ET, then the live data gate requested future 12:00 ET bars, and finally stale/no-chase selection dropped the candidate snapshot. The desk needs the setup surfaced as missed/no-fresh-entry review with line/entry/stop/targets instead of flattening to no candidate.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run nt:scanner -- --instrument MES --bridge-instrument "MES 06-26" --once --dry-run --discord false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed. Normal scanner dry-run now reports data gate ready through the latest completed 5M, scores the morning window correctly, and emits a dry-run LONG missed/no-fresh-entry review with line in the sand, entry, stop, targets, and no-chase language.
+Trading logic changed: No executable approval change. Setup definitions, entry/stop/target formulas, model gates, and canExecute remain unchanged. Scanner alert/review surfacing changed so stale/no-chase candidates keep their snapshot for human-review/RAG output.
+Bridge impact: No bridge API change. Live history preload now caps requested history at the latest completed/as-of candle instead of requiring future session-close bars.
+Discord impact: Yes, review visibility changed. Missed/no-fresh-entry candidates can now qualify for an educational Discord/RAG review with levels instead of being suppressed as no candidate.
+Journal/RAG impact: Missed/no-fresh-entry reviews can retain candidate metadata for learning records. No schema change.
+Supabase impact: No migration added.
+Known risks: The dry-run payload is still above the preferred 1200-character compact target, though below the hard formatter limit. Current HTF read remains mixed/conflicting, so HTF is caution/context rather than clean directional confirmation.
+Next recommended action: Restart scanner services so the supervisor uses the patched code, then watch the next live cycle for delivery status and Discord wording.
+
+## Previous Change
+
+Date: 2026-06-10
+Task: Add source-of-truth responsibility registry and architecture drift guard.
+Files changed: docs/ARCHITECTURE.md, docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts.
+Reason: User asked to fix the root drift problem: multiple paths can describe or decide the same responsibility. The fix creates a machine-readable owner registry and extends the architecture guard so protected responsibilities have one owner instead of quiet local rewrites.
+Tests run: npx tsx src/config/responsibilityRegistry.test.ts; npx tsx tools/automation/discord-rag-persistence.test.ts; npm run guard:architecture; npm run guard:no-firebase; npm run guard:schema; npx tsc --noEmit; npm run lint; npm run build; npm run test; git diff --check.
+Result: Passed.
+Trading logic changed: No. This adds ownership documentation and guardrails only; setup definitions, model gates, entries, stops, targets, canExecute, time windows, scanner selection, bridge behavior, and Discord payload formatting are unchanged.
+Bridge impact: None.
+Discord impact: No payload/content behavior change. The guard now protects the shared Discord alert RAG persistence owner from being reimplemented in scanner or scheduler code.
+Journal/RAG impact: No schema or write behavior change. Existing shared Discord alert RAG persistence remains the owner for scoped `trade_embeddings` alert writes and Discord message receipts.
+Supabase impact: No migration added.
+Known risks: The registry currently protects the highest-risk ownership boundaries and one enforced persistence path. More source-of-truth checks can be added later for market-data preload, ActiveCampaign ledger persistence, and replay/scheduler context loading.
+Next recommended action: Continue Phase 8 by centralizing ActiveCampaign ledger persistence or splitting the large test script into grouped commands.
+
+## Previous Change
+
+Date: 2026-06-10
+Task: Phase 8 operational slop cleanup: shared Discord RAG persistence helper.
+Files changed: docs/PROJECT_STATUS.md, package.json, tools/automation/discord-rag-persistence.ts, tools/automation/discord-rag-persistence.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts.
+Reason: Scanner and scheduler duplicated the same Supabase `trade_embeddings` upsert and Discord message receipt patch logic. The duplication increased risk around user-scoped `plan_version_id` updates and future Discord/RAG fixes.
+Tests run: npx tsc --noEmit; npx tsx tools/automation/discord-rag-persistence.test.ts; npx tsx tools/automation/discord-scheduler-provenance.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts.
+Result: Focused tests passed. Full required checks are being rerun after this status update.
+Trading logic changed: No. Candidate selection, setup definitions, entry/stop/target math, time windows, canExecute, scanner model gates, and Discord alert content are unchanged. Only low-level RAG persistence and receipt patching were extracted.
+Bridge impact: None.
+Discord impact: No intended payload/content behavior change. Discord alert RAG persistence now uses one shared helper for update-first/insert-fallback and receipt patching.
+Journal/RAG impact: Reduced duplicate RAG persistence code. User-scoped upsert by `(user_id, plan_version_id)` remains preserved.
+Supabase impact: No migration added.
+Known risks: Scheduler replay record lookup and ActiveCampaign durable ledger still have their own Supabase helpers because they have different contracts. They can be considered for later cleanup, but were intentionally left alone in this slice.
+Next recommended action: Continue Phase 8 with another narrow slice: split the giant `npm run test` command into grouped scripts, or extract ActiveCampaign ledger persistence into a dedicated helper.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Make scanner, Discord, and RAG persistence Gemini-independent.
 Files changed: docs/ARCHITECTURE.md, docs/DATA_GUARDRAILS.md, docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/agents/scannerHealthAgent.ts, src/agents/scannerHealthAgent.test.ts, src/config/geminiFallback.ts, src/lib/embeddings.ts, src/lib/embeddings.test.ts, src/lib/gemini.ts, src/lib/rag.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts.
 Reason: User asked to remove any operational dependency where Gemini narrative or availability is required to produce scanner/Discord/RAG trade-plan output, while keeping Gemini available only as an optional lower-authority screenshot/advisory fallback.

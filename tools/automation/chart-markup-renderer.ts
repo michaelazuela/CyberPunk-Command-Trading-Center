@@ -76,15 +76,22 @@ function sessionRenderStartMinutes(sessionLabel: string): number | null {
   return null;
 }
 
+function sessionRenderEndMinutes(sessionLabel: string): number | null {
+  if (/lunch|pm/i.test(sessionLabel)) return 16 * 60 + 40;
+  if (/morning|am/i.test(sessionLabel)) return 12 * 60;
+  return null;
+}
+
 function candlesForVisualWindow(
   candles: ReturnType<typeof validCandles>,
   sessionLabel: string,
 ): ReturnType<typeof validCandles> {
   const startMinutes = sessionRenderStartMinutes(sessionLabel);
+  const endMinutes = sessionRenderEndMinutes(sessionLabel);
   if (startMinutes === null) return candles;
   const clipped = candles.filter((candle) => {
     const minutes = minutesFromTimestamp(candle.timestamp);
-    return minutes === null || minutes >= startMinutes;
+    return minutes === null || (minutes >= startMinutes && (endMinutes === null || minutes <= endMinutes));
   });
   return clipped.length >= 12 ? clipped : candles;
 }
@@ -241,14 +248,21 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const contextBias = String(input.chartContext?.multiTimeframeContext?.alignment?.alignedDirection || input.chartContext?.marketStructure?.trend || 'unknown');
   const trendBias = String(input.chartContext?.multiTimeframeContext?.alignment?.executionBias || input.chartContext?.marketStructure?.trend || 'unknown');
   const narrative = compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 34);
+  const staleT1 = targetLooksStale(t1, candles, risk);
+  const staleT2 = targetLooksStale(t2, candles, risk);
+  const staleRunner = targetLooksStale(runner, candles, risk);
+  const staleStretch = targetLooksStale(stretch, candles, risk);
 
   const messages: string[] = [];
   if (!isPrice(entryLow) || !isPrice(entryHigh)) messages.push('Review Required — Entry zone missing.');
   if (!isPrice(stop)) messages.push('Review Required — Stop missing.');
   if (!isPrice(t1) || !isPrice(t2)) messages.push('Review Required — Target data missing.');
   if (nearlyEqual(t1, t2)) messages.push('Review Required — T1 and T2 are identical.');
-  if (targetLooksStale(t1, candles, risk) || targetLooksStale(t2, candles, risk) || targetLooksStale(runner, candles, risk) || targetLooksStale(stretch, candles, risk)) {
+  if (staleT1 || staleT2) {
     messages.push('Target Data Error — Target appears stale or invalid.');
+  }
+  if (staleRunner || staleStretch) {
+    messages.push('Review Required — Extension target is outside the current chart window.');
   }
   if (isPrice(entry) && isPrice(stop)) {
     if (direction === 'LONG' && stop >= entry) messages.push('Review Required — Stop is not below long entry.');
@@ -270,7 +284,12 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     entryHigh,
     stop,
     sweep,
-    ...(messages.some((message) => message.includes('Target Data Error')) ? [] : [t1, t2, runner, stretch]),
+    ...(messages.some((message) => message.includes('Target Data Error')) ? [] : [
+      t1,
+      t2,
+      staleRunner ? null : runner,
+      staleStretch ? null : stretch,
+    ]),
   ].filter(isPrice);
 
   return {
@@ -823,6 +842,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     runner,
     stretch,
     sweep,
+    risk,
     safeChartPrices,
     contextBias,
     trendBias,
@@ -849,6 +869,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
   const pathColor = isLong ? '#4ade80' : '#fb923c';
   const targetsValidForChart = !plan.validationMessages.some((message) => message.includes('Target Data Error'));
+  const runnerValidForChart = targetsValidForChart && !targetLooksStale(runner, candles, risk);
+  const stretchValidForChart = targetsValidForChart && !targetLooksStale(stretch, candles, risk);
   const projectedPath = targetsValidForChart && isLong && isPrice(entryHigh) && isPrice(t2)
       ? `<polyline points="1160,${y(entryHigh)} 1236,${y(t1 || entryHigh)} 1284,${y(entryHigh)} 1326,${y(t2)}" fill="none" stroke="${pathColor}" stroke-width="3" stroke-dasharray="10 9" marker-end="url(#arrow)" />`
     : targetsValidForChart && !isLong && isPrice(entryLow) && isPrice(t2)
@@ -856,8 +878,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       : '';
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
   const managedLines = renderManagedLines([
-    ...(targetsValidForChart && isPrice(stretch) ? [{ label: 'Stretch', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
-    ...(targetsValidForChart && isPrice(runner) ? [{ label: 'Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
+    ...(stretchValidForChart && isPrice(stretch) ? [{ label: 'Stretch', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
+    ...(runnerValidForChart && isPrice(runner) ? [{ label: 'Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
     { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
     { label: 'Stop', price: stop, color: '#ef4444', width: 3 },
     targetsValidForChart && sameT1T2
@@ -967,13 +989,15 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const isLong = plan.isLong;
   const accent = isLong ? '#4ade80' : '#fb923c';
   const validTargets = !plan.validationMessages.some((message) => message.includes('Target Data Error'));
+  const runnerValidForMap = validTargets && !targetLooksStale(plan.runner, plan.candles, plan.risk);
+  const stretchValidForMap = validTargets && !targetLooksStale(plan.stretch, plan.candles, plan.risk);
   const status = planDisplayStatus(plan);
   const prefix = sessionPlanPrefix(input.sessionLabel);
   const current = latestClose(plan);
   const targetPlan = plan.candidate.targetObjectivePlan;
   const levelRowSource: Array<{ key: string; label: string; price: number | null | undefined; color: string; dash?: string }> = [
-    { key: 'stretch', label: 'STRETCH', price: validTargets ? plan.stretch : null, color: '#38bdf8', dash: '10 8' },
-    { key: 'runner', label: 'RUNNER', price: validTargets ? plan.runner : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'stretch', label: 'STRETCH', price: stretchValidForMap ? plan.stretch : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'runner', label: 'RUNNER', price: runnerValidForMap ? plan.runner : null, color: '#38bdf8', dash: '10 8' },
     { key: 't2', label: nearlyEqual(plan.t1, plan.t2) ? 'T1/T2' : 'T2 2.0R', price: validTargets ? plan.t2 : null, color: '#facc15', dash: '8 7' },
     { key: 't1', label: 'T1 1.5R', price: validTargets && !nearlyEqual(plan.t1, plan.t2) ? plan.t1 : null, color: '#facc15', dash: '8 7' },
     { key: 'obstacle', label: 'OBSTACLE', price: validTargets ? targetPlan?.obstacleTarget1?.price || targetPlan?.nearestObstacleTarget?.price : null, color: '#f97316', dash: '6 6' },
@@ -1024,6 +1048,22 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
     if (positionedRows[index + 1].labelY > map.bottom - 32 && positionedRows[index + 1].labelY - positionedRows[index].labelY < 56) {
       positionedRows[index].labelY = positionedRows[index + 1].labelY - 56;
     }
+  }
+  const topLabelLimit = map.top + 36;
+  const bottomLabelLimit = map.bottom - 36;
+  const lastRow = positionedRows[positionedRows.length - 1];
+  if (lastRow && lastRow.labelY > bottomLabelLimit) {
+    const shift = lastRow.labelY - bottomLabelLimit;
+    positionedRows.forEach((row) => {
+      row.labelY -= shift;
+    });
+  }
+  const firstRow = positionedRows[0];
+  if (firstRow && firstRow.labelY < topLabelLimit) {
+    const shift = topLabelLimit - firstRow.labelY;
+    positionedRows.forEach((row) => {
+      row.labelY += shift;
+    });
   }
   const rows = positionedRows.length
     ? positionedRows

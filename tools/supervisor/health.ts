@@ -160,12 +160,15 @@ export async function buildHealthReport(
   now = new Date(),
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<SupervisorHealthReport> {
+  const supervisorRunning = isProcessRunning(state.supervisorPid);
   const checks: SupervisorHealthCheck[] = [
     {
       id: 'supervisor_process',
       label: 'Supervisor process',
-      status: isProcessRunning(state.supervisorPid) ? 'ok' : 'fail',
-      message: isProcessRunning(state.supervisorPid) ? 'Supervisor process is running.' : 'Supervisor process is not running.',
+      status: supervisorRunning ? 'ok' : 'fail',
+      message: supervisorRunning
+        ? 'Supervisor daemon process is running.'
+        : 'Supervisor daemon process is not running; child services may still be alive from a prior supervisor session.',
       details: { pid: state.supervisorPid },
     },
     activeContractCheck(config),

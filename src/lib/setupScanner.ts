@@ -1584,13 +1584,16 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   const liquidityTarget = entry !== null && minimumTarget !== null
     ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
     : null;
-  const target2 = liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2);
   const target1 = rTargets.target1;
+  const target2 = rTargets.target2;
   const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
   const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
-  if (target2 !== null) evidence.push(liquidityTarget !== null ? 'Targeting opposing liquidity' : 'Targeting valid R-based objective');
-  else missingEvidence.push('Targeting opposing liquidity');
-  if (hasTwoR) evidence.push('Minimum 2.0R available');
+  const hasMinimumTargetRoom = hasExplicitTargetMap ? liquidityTarget !== null : hasTwoR;
+  if (target1 !== null && target2 !== null) evidence.push('Targeting valid app R-based objectives');
+  else missingEvidence.push('App T1/T2 from actual entry/stop risk');
+  if (liquidityTarget !== null) evidence.push(`Opposing liquidity objective retained for management context: ${liquidityTarget}`);
+  else if (hasExplicitTargetMap) missingEvidence.push('Forward opposing liquidity objective for management context');
+  if (hasMinimumTargetRoom) evidence.push('Minimum 2.0R available');
   else missingEvidence.push('Minimum 2.0R unavailable');
 
   const bigPicture = bigPictureStructureForDirection(chartContext, direction);
@@ -1605,7 +1608,7 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     entry !== null &&
     stop !== null &&
     target2 !== null &&
-    hasTwoR &&
+    hasMinimumTargetRoom &&
     !bigPicture.countertrend;
   const possible = !fullSequence && hasSweep && establishedLevel.established;
 
@@ -2221,6 +2224,12 @@ type IntradayMicroTriggerPlan = {
   timestamp: string | null;
 };
 
+type RetestSwingSelection = {
+  index: number;
+  price: number;
+  timestamp: string | null;
+};
+
 function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
   return (chartContext.candles || []).filter((candle) =>
     isReadableConfidence(candle.confidence) &&
@@ -2375,6 +2384,59 @@ function protectedFiveMinuteRetestSwingStopResult(
     return { stop: null, reason: 'Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.' };
   }
   return { stop: roundToTick(high + tick), reason: null };
+}
+
+function preferredFiveMinuteRetestSwing(
+  direction: Direction,
+  candles: ReturnType<typeof readableCompletedFiveMinuteCandles>,
+  evidenceIndex: number,
+  confirmationIndex: number,
+  decisionLevel: number,
+): RetestSwingSelection | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const tolerance = TRADE_RULES.targetModel.tickSize;
+  const candidates: RetestSwingSelection[] = [];
+
+  for (let index = evidenceIndex + 1; index < confirmationIndex; index += 1) {
+    const candle = candles[index];
+    const left = candles[index - 1];
+    const right = candles[index + 1];
+    if (!candle || !left || !right) continue;
+
+    const high = parsePrice(candle.high);
+    const low = parsePrice(candle.low);
+    const leftHigh = parsePrice(left.high);
+    const rightHigh = parsePrice(right.high);
+    const leftLow = parsePrice(left.low);
+    const rightLow = parsePrice(right.low);
+
+    if (direction === 'SHORT') {
+      if (
+        high !== null &&
+        leftHigh !== null &&
+        rightHigh !== null &&
+        high >= decisionLevel - tolerance &&
+        high > leftHigh &&
+        high > rightHigh
+      ) {
+        candidates.push({ index, price: high, timestamp: candle.timestamp || null });
+      }
+      continue;
+    }
+
+    if (
+      low !== null &&
+      leftLow !== null &&
+      rightLow !== null &&
+      low <= decisionLevel + tolerance &&
+      low < leftLow &&
+      low < rightLow
+    ) {
+      candidates.push({ index, price: low, timestamp: candle.timestamp || null });
+    }
+  }
+
+  return candidates.at(-1) || null;
 }
 
 function isAfterReferenceCandle(
@@ -3012,14 +3074,26 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
   const candles = readableCompletedFiveMinuteCandles(chartContext);
   const evidenceIndex = evidenceAlignedFiveMinuteCandleIndex(candles, evidence?.evidenceTimestamp, evidence?.barTimestampMode || 'open');
   const evidenceCandle = evidenceIndex >= 0 ? candles[evidenceIndex] : null;
-  const decisionLevel = roundToTick(parsePrice(evidenceCandle?.close) ?? parsePrice(evidence?.structureBreak?.brokenLevel) ?? 0);
+  const decisionLevel = roundToTick(parsePrice(evidence?.structureBreak?.brokenLevel) ?? parsePrice(evidenceCandle?.close) ?? 0);
   if (!evidenceCandle || !decisionLevel) {
     return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel: null, reason: '5M MSS close-through retest pending: the MSS evidence candle or decision close could not be aligned from completed 5M OHLC.', timestamp: null };
   }
 
   const afterEvidence = candles.slice(evidenceIndex + 1);
   if (!afterEvidence.length) {
-    return { source: 'mss_close_through_retest', confirmed: false, entry: null, stop: null, stopBlocker: null, decisionLevel, reason: `5M MSS close-through retest pending: wait for a completed 5M retest/hold around ${formatLinePrice(decisionLevel)}.`, timestamp: null };
+    const activationEntry = parsePrice(evidenceCandle.close);
+    return {
+      source: 'mss_close_through_retest',
+      confirmed: false,
+      entry: activationEntry !== null ? roundToTick(activationEntry) : null,
+      stop: null,
+      stopBlocker: direction === 'LONG'
+        ? 'Protected 5M retest swing stop blocked: retest low is not a confirmed protected 5M swing low.'
+        : 'Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.',
+      decisionLevel,
+      reason: `5M MSS close-through campaign active at ${formatLinePrice(decisionLevel)}; preferred entry/stop pending until a completed 5M retest/hold confirms protected structure.`,
+      timestamp: evidenceCandle.timestamp || null,
+    };
   }
 
   const tolerance = TRADE_RULES.targetModel.tickSize;
@@ -3064,23 +3138,34 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
   }
 
   if (retestIndex < 0 || reclaimIndex < 0) {
+    const continuationClose = afterEvidence.find((candle) => {
+      const close = parsePrice(candle.close);
+      if (close === null) return false;
+      return direction === 'LONG'
+        ? close >= decisionLevel + tolerance
+        : close <= decisionLevel - tolerance;
+    });
+    const activationEntry = parsePrice(continuationClose?.close) ?? parsePrice(evidenceCandle.close);
     return {
       source: 'mss_close_through_retest',
       confirmed: false,
-      entry: null,
+      entry: activationEntry !== null ? roundToTick(activationEntry) : null,
       stop: null,
-      stopBlocker: null,
+      stopBlocker: direction === 'LONG'
+        ? 'Protected 5M retest swing stop blocked: retest low is not a confirmed protected 5M swing low.'
+        : 'Protected 5M retest swing stop blocked: retest high is not a confirmed protected 5M swing high.',
       decisionLevel,
       reason: direction === 'LONG'
-        ? `Bullish MSS close-through watch: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M reclaim/hold above that line after retest.`
-        : `Bearish MSS close-through watch: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M rejection/hold below that line after retest.`,
-      timestamp: null,
+        ? `Bullish MSS close-through campaign active: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M reclaim/hold above that line after retest.`
+        : `Bearish MSS close-through campaign active: line in the sand is ${formatLinePrice(decisionLevel)}. Wait for a completed 5M rejection/hold below that line after retest.`,
+      timestamp: continuationClose?.timestamp || evidenceCandle.timestamp || null,
     };
   }
 
   const reclaim = candles[reclaimIndex];
   const entry = parsePrice(reclaim.close);
-  const protectedRetestStop = protectedFiveMinuteRetestSwingStopResult(direction, candles, retestIndex);
+  const preferredRetestSwing = preferredFiveMinuteRetestSwing(direction, candles, evidenceIndex, reclaimIndex, decisionLevel);
+  const protectedRetestStop = protectedFiveMinuteRetestSwingStopResult(direction, candles, preferredRetestSwing?.index ?? retestIndex);
   return {
     source: 'mss_close_through_retest',
     confirmed: true,
@@ -3089,8 +3174,8 @@ function fiveMinuteMssCloseThroughRetestPlan(chartContext: ChartContext, directi
     stopBlocker: protectedRetestStop.reason,
     decisionLevel,
     reason: direction === 'LONG'
-      ? `Completed 5M bullish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: line in the sand ${formatLinePrice(decisionLevel)} was retested and reclaimed/held on a completed 5M close.`
-      : `Completed 5M bearish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: line in the sand ${formatLinePrice(decisionLevel)} was retested and rejected/held on a completed 5M close.`,
+      ? `Completed 5M bullish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: close-through activated the campaign at ${formatLinePrice(decisionLevel)}, then the latest protected 5M retest swing ${preferredRetestSwing ? formatLinePrice(preferredRetestSwing.price) : 'could not be improved'} set the preferred stop before price reclaimed/held above the line.`
+      : `Completed 5M bearish MSS close-through/retest confirmed${reclaim.timestamp ? ` at ${reclaim.timestamp}` : ''}: close-through activated the campaign at ${formatLinePrice(decisionLevel)}, then the latest protected 5M retest swing ${preferredRetestSwing ? formatLinePrice(preferredRetestSwing.price) : 'could not be improved'} set the preferred stop before price rejected/held below the line.`,
     timestamp: reclaim.timestamp || null,
   };
 }
@@ -4111,6 +4196,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.pathway === 'htf_displacement_mss_continuation' ? 22 :
     candidate.pathway === 'htf_displacement_fvg_continuation' ? 20 :
     candidate.pathway === 'opening_drive_fvg_continuation' ? 23 :
+    candidate.pathway === 'intraday_mss_micro_continuation' ? 24 :
     candidate.pathway === 'failed_plan_reversal' ? 21 :
     0;
   const countertrendPenalty = candidate.missingEvidence.includes('Countertrend setup requires immediate failure confirmation; do not fight big-picture structure')

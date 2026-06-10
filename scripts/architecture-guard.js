@@ -167,6 +167,58 @@ function checkCanonicalTimeWindowUsage() {
   }
 }
 
+function checkResponsibilityRegistry() {
+  const registryPath = path.join(ROOT, 'src', 'config', 'responsibilityRegistry.ts');
+  if (!fs.existsSync(registryPath)) {
+    fail('Missing source-of-truth responsibility registry at src/config/responsibilityRegistry.ts.');
+    return;
+  }
+
+  const content = readFileSafe(registryPath);
+  const requiredResponsibilities = [
+    'canonical_time_windows',
+    'setup_detection_and_ranking',
+    'trade_decision_pipeline',
+    'discord_alert_rag_persistence',
+    'discord_alert_formatting',
+    'gemini_advisory_fallback',
+  ];
+
+  for (const key of requiredResponsibilities) {
+    if (!content.includes(`key: '${key}'`)) {
+      fail(`responsibilityRegistry.ts is missing ${key}.`);
+    }
+  }
+}
+
+function checkDiscordRagPersistenceSourceOfTruth() {
+  const ownerPath = path.join(ROOT, 'tools', 'automation', 'discord-rag-persistence.ts');
+  if (!fs.existsSync(ownerPath)) {
+    fail('Missing shared Discord RAG persistence owner at tools/automation/discord-rag-persistence.ts.');
+    return;
+  }
+
+  const automationClients = [
+    path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts'),
+    path.join(ROOT, 'tools', 'automation', 'discord-scheduler.ts'),
+  ];
+
+  for (const clientPath of automationClients) {
+    if (!fs.existsSync(clientPath)) continue;
+    const content = readFileSafe(clientPath);
+    const relative = path.relative(ROOT, clientPath);
+    if (!content.includes("from './discord-rag-persistence'")) {
+      fail(`${relative} must use the shared Discord RAG persistence helper.`);
+    }
+    if (content.includes('/rest/v1/trade_embeddings?user_id=eq.') && content.includes('plan_version_id=eq.')) {
+      fail(`${relative} reimplements plan_version_id-scoped Discord RAG persistence. Use tools/automation/discord-rag-persistence.ts.`);
+    }
+    if (/function\s+discordRagServiceHeaders|function\s+supabaseRagHeaders|const\s+discordRagServiceHeaders|const\s+supabaseRagHeaders/.test(content)) {
+      fail(`${relative} defines local Discord RAG service headers. Use tools/automation/discord-rag-persistence.ts.`);
+    }
+  }
+}
+
 console.log('Running Architecture Guard Check...');
 checkCloudflareGeminiBoundary();
 checkCloudflareOpenAIBoundary();
@@ -174,6 +226,8 @@ checkGeminiProxyUsage();
 checkTradePlanUiBoundary();
 checkAutomationGeminiIndependence();
 checkCanonicalTimeWindowUsage();
+checkResponsibilityRegistry();
+checkDiscordRagPersistenceSourceOfTruth();
 
 if (hasError) {
   console.error('\n🚨 ERROR: Architecture guard failed.');

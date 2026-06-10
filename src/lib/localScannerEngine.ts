@@ -620,15 +620,10 @@ export function scoreScannerCandidate(
   higherTimeframeAligned: boolean,
   currentEtMinutes: number = toEtMinutes(new Date()),
 ): ScannerConfidenceBreakdown {
+  void currentEtMinutes;
   const qualifiedReasons: string[] = [];
   const missingReasons: string[] = [];
   let score = 0;
-  const windows = TRADE_RULES.executionWindows;
-  const isInsideWindowByEtMinutes =
-    (window.session === 'morning' && isBetween(currentEtMinutes, windows.morningExecution.startET, windows.morningExecution.endET)) ||
-    (window.session === 'lunch' && isBetween(currentEtMinutes, windows.middayTrapReversal.startET, windows.middayTrapReversal.endET)) ||
-    (window.session === 'premarket' && isBetween(currentEtMinutes, windows.openingObservation.startET, windows.openingObservation.endET)) ||
-    (window.session === 'afternoon' && isBetween(currentEtMinutes, windows.afternoonExecution.startET, windows.afternoonExecution.endET));
   const currentPriceAvailable = isValidPrice(currentPrice);
   const sessionWeight = window.session === 'morning'
     ? SESSION_TIME_WEIGHTS.morning
@@ -665,7 +660,7 @@ export function scoreScannerCandidate(
     };
   }
 
-  if (!window.allowsTradePlan || !isInsideWindowByEtMinutes || sessionWeight === 0) {
+  if (!window.allowsTradePlan || sessionWeight === 0) {
     const hardBlocker = 'outside approved ICT execution session';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,

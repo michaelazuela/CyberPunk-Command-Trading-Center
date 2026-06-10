@@ -58,7 +58,7 @@ const staleNormalizedPlan: any = {
 const stalePlanBefore = JSON.stringify(staleNormalizedPlan);
 const staleSelection = selectScannerPlan({ normalized: staleNormalizedPlan, currentPrice: 109 });
 assert.equal(staleSelection.stateForAlert, 'Missed');
-assert.equal(staleSelection.candidate, null);
+assert.equal(staleSelection.candidate, staleNormalizedCandidate);
 assert.equal(staleSelection.reviewStatus, 'already_triggered_no_fresh_entry');
 assert.equal(staleSelection.stale.stale, true);
 assert.ok(staleSelection.auditWarnings.some((warning) => warning.includes('already_triggered_no_fresh_entry')));
@@ -192,6 +192,64 @@ assert.equal(turtleSoupWatchWithOppositeEarlyMove.stateForAlert, 'Conditional');
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT');
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.reviewStatus, null);
 assert.ok(turtleSoupWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
+
+const staleLongReclaimAfterFailedCampaign = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bullish Turtle Soup Reversal',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7366.5,
+  stop: 7335,
+  target1: 7430,
+  target2: 7450,
+  riskPoints: 31.5,
+  priority: 99,
+  rankScore: 99,
+  evidence: ['Failed-low / Turtle Soup long line in the sand: 7366.50.'],
+});
+const juneTenShortFailedLongCampaign = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bearish failed-plan reversal after reclaim failure',
+  direction: 'SHORT',
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7338.25,
+  stop: 7360.5,
+  target1: 7247,
+  target2: 7247,
+  riskPoints: 22.25,
+  priority: 90,
+  rankScore: 90,
+  evidence: [
+    'App-owned LONG decision level 7366.50 failed.',
+    '15M/1H/2H/4H opposite confirmation status: full_confirmation.',
+    '5M trigger status: confirmed.',
+  ],
+});
+const juneTenFailedCampaignSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [staleLongReclaimAfterFailedCampaign, juneTenShortFailedLongCampaign],
+    earlyMoveReview: {
+      status: 'already_triggered_no_fresh_entry',
+      direction: 'LONG',
+      action: 'Old long move is extended; no fresh long entry.',
+    },
+  } as any,
+  currentPrice: 7340.25,
+});
+assert.notEqual(juneTenFailedCampaignSelection.candidate, staleLongReclaimAfterFailedCampaign);
+assert.equal(juneTenFailedCampaignSelection.candidate?.direction, 'SHORT');
+assert.equal(juneTenFailedCampaignSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(juneTenFailedCampaignSelection.candidate?.entry, 7338.25);
+assert.equal(juneTenFailedCampaignSelection.candidate?.stop, 7360.5);
+assert.equal(juneTenFailedCampaignSelection.candidate?.target1, 7247);
+assert.equal(juneTenFailedCampaignSelection.candidate?.activeRuleset?.htfLineInSand?.lineInSand, 7338.25);
+assert.ok(juneTenFailedCampaignSelection.candidate?.activeRuleset?.htfLineInSand?.requiredClose?.includes('below 7338.25'));
+assert.equal(juneTenFailedCampaignSelection.reviewStatus, null);
+assert.notEqual(juneTenFailedCampaignSelection.stateForAlert, 'NoTrade');
+assert.ok(juneTenFailedCampaignSelection.auditWarnings.some((warning) => warning.includes('valid app-owned opposite campaign candidate')));
 
 const intradayMssLongWatch = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
@@ -446,8 +504,62 @@ const staleFallback = selectScannerPlan({
   currentPrice: 108,
 });
 assert.equal(staleFallback.stateForAlert, 'Missed');
-assert.equal(staleFallback.candidate, null);
+assert.equal(staleFallback.candidate, fallbackStaleCandidate);
 assert.equal(staleFallback.reviewStatus, 'already_triggered_no_fresh_entry');
+
+const staleSmallModelOne = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'Sweep MSS FVG smaller failed-low continuation',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7342,
+  stop: 7335,
+  target1: 7360,
+  target2: 7360,
+  riskPoints: 7,
+  priority: 100,
+  rankScore: 100,
+});
+const solidTurtleSoupLong = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bullish Turtle Soup failed-low reclaim',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Executable,
+  entry: 7366.5,
+  stop: 7335,
+  target1: 7430,
+  target2: 7450,
+  riskPoints: 31.5,
+  priority: 90,
+  rankScore: 90,
+  requiredTrigger: 'Completed 5M hold/retest/reclaim above 7366.50.',
+  evidence: [
+    'Failed-low / Turtle Soup long line in the sand: 7366.50.',
+    '9:40 ET candle reclaimed hard after sweeping down to 7335.25 and closed at 7366.50.',
+  ],
+});
+const solidPlanSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [staleSmallModelOne, solidTurtleSoupLong],
+  } as any,
+  currentPrice: 7384,
+});
+assert.equal(solidPlanSelection.stateForAlert, 'Missed');
+assert.notEqual(solidPlanSelection.candidate, solidTurtleSoupLong);
+assert.equal(solidPlanSelection.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(solidPlanSelection.candidate?.entry, 7366.5);
+assert.equal(solidPlanSelection.candidate?.stop, 7335);
+assert.equal(solidPlanSelection.candidate?.target1, 7430);
+assert.equal(solidPlanSelection.candidate?.target2, 7450);
+assert.equal(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.lineInSand, 7366.5);
+assert.ok(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.lineReason?.includes('Turtle Soup sweep/reclaim decision line'));
+assert.ok(solidPlanSelection.candidate?.activeRuleset?.htfLineInSand?.requiredClose?.includes('hold/retest/reclaim above'));
+assert.equal(solidPlanSelection.reviewStatus, 'already_triggered_no_fresh_entry');
+assert.equal(solidPlanSelection.stale.stale, true);
+assert.ok(solidPlanSelection.stale.reason?.includes('Do not chase'));
 
 const morningMoveBars: NinjaBridgeBar[] = [
   bar('2026-05-28T09:30:00-04:00', 7535.75, 7538.75, 7534.75, 7535.25),

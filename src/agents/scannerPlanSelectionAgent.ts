@@ -61,10 +61,84 @@ function findNormalizedPlanCandidate(normalized: NormalizedTradePlan): SetupCand
     .sort(candidatePrioritySort)[0] || null;
 }
 
-function candidateFromFallbackPool(normalized: NormalizedTradePlan): SetupCandidate | null {
-  return (normalized.setupCandidates || [])
+function hasFullPlanLevels(candidate: SetupCandidate): boolean {
+  return (
+    isValidPrice(candidate.entry) &&
+    isValidPrice(candidate.stop) &&
+    isValidPrice(candidate.target1) &&
+    isValidPrice(candidate.target2)
+  );
+}
+
+function staleSeverity(stale: StaleChaseResult): number {
+  if (!stale.stale) return 0;
+  const reason = (stale.reason || '').toLowerCase();
+  if (reason.includes('t1 was already reached')) return 3;
+  if (reason.includes('closer to t1')) return 2;
+  return 1;
+}
+
+function freshCandidateFromFallbackPool(
+  normalized: NormalizedTradePlan,
+  currentPrice: number | null,
+  guards?: Partial<ScannerRiskGuards>,
+): SetupCandidate | null {
+  const candidates = (normalized.setupCandidates || [])
     .filter(candidateCanDriveScannerPlan)
-    .sort(candidatePrioritySort)[0] || null;
+    .sort((a, b) => {
+      const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
+      const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
+      if (aSeverity !== bSeverity) return aSeverity - bSeverity;
+
+      const aFull = hasFullPlanLevels(a);
+      const bFull = hasFullPlanLevels(b);
+      if (aFull !== bFull) return aFull ? -1 : 1;
+
+      return candidatePrioritySort(a, b);
+    });
+
+  return candidates[0] || null;
+}
+
+function earlyMoveReviewOppositeDirectionCandidate(normalized: NormalizedTradePlan, candidate: SetupCandidate | null): boolean {
+  return (
+    normalized.earlyMoveReview?.status === 'already_triggered_no_fresh_entry' &&
+    Boolean(normalized.earlyMoveReview.direction) &&
+    Boolean(candidate) &&
+    candidate?.direction !== normalized.earlyMoveReview.direction &&
+    (candidate?.direction === 'LONG' || candidate?.direction === 'SHORT')
+  );
+}
+
+function freshOppositeEarlyMoveCandidateFromFallbackPool(
+  normalized: NormalizedTradePlan,
+  currentPrice: number | null,
+  guards?: Partial<ScannerRiskGuards>,
+): SetupCandidate | null {
+  const earlyMoveDirection = normalized.earlyMoveReview?.direction;
+  if (
+    normalized.earlyMoveReview?.status !== 'already_triggered_no_fresh_entry' ||
+    (earlyMoveDirection !== 'LONG' && earlyMoveDirection !== 'SHORT')
+  ) {
+    return null;
+  }
+
+  const candidates = (normalized.setupCandidates || [])
+    .filter(candidateCanDriveScannerPlan)
+    .filter((candidate) => candidate.direction !== earlyMoveDirection)
+    .sort((a, b) => {
+      const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
+      const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
+      if (aSeverity !== bSeverity) return aSeverity - bSeverity;
+
+      const aFull = hasFullPlanLevels(a);
+      const bFull = hasFullPlanLevels(b);
+      if (aFull !== bFull) return aFull ? -1 : 1;
+
+      return candidatePrioritySort(a, b);
+    });
+
+  return candidates[0] || null;
 }
 
 function humanReviewCandidateFromFallbackPool(normalized: NormalizedTradePlan): SetupCandidate | null {
@@ -125,7 +199,56 @@ function intradayMssWatchLine(candidate: SetupCandidate): number | null {
 }
 
 function formatWatchPrice(value: number): string {
-  return Number.isInteger(value) ? value.toFixed(2) : String(value);
+  return value.toFixed(2);
+}
+
+function turtleSoupLineReason(candidate: SetupCandidate): string {
+  const evidence = candidate.evidence || [];
+  return evidence.find((item) => /sweep|reclaim|swept|closed/i.test(item) && !/line in the sand/i.test(item)) ||
+    evidence.find((item) => /sweep|reclaim|line in the sand|failed-low|failed-high/i.test(item)) ||
+    candidate.scenarioLabel ||
+    'Turtle Soup sweep/reclaim decision line from structured 5M OHLC.';
+}
+
+function withTurtleSoupLineInSand(candidate: SetupCandidate | null): SetupCandidate | null {
+  if (
+    !candidate ||
+    candidate.setupType !== SetupType.TurtleSoup ||
+    (candidate.direction !== 'LONG' && candidate.direction !== 'SHORT') ||
+    !isValidPrice(candidate.entry)
+  ) {
+    return candidate;
+  }
+
+  const lineText = formatWatchPrice(candidate.entry);
+  const side = candidate.direction === 'LONG' ? 'above' : 'below';
+  const reason = turtleSoupLineReason(candidate);
+  return {
+    ...candidate,
+    activeRuleset: {
+      ...(candidate.activeRuleset || {}),
+      htfLineInSand: candidate.activeRuleset?.htfLineInSand || {
+        applied: true,
+        status: 'passed',
+        required: 'completed_5m_or_15m_close_beyond_htf_line',
+        appliesToAllModels: true,
+        affectsExecution: false,
+        direction: candidate.direction,
+        lineInSand: candidate.entry,
+        lineReason: `${lineText} matters because it is the Turtle Soup sweep/reclaim decision line. ${reason}`,
+        requiredClose: `Completed 5M hold/retest/reclaim ${side} ${lineText} required. No chase after extension.`,
+        obstacleType: null,
+        obstacleSource: null,
+        evidence: [
+          `Turtle Soup line in the sand: ${lineText}.`,
+          reason,
+        ],
+        blockers: [
+          `No chase: wait for completed 5M proof ${side} ${lineText} or a fresh retest.`,
+        ],
+      },
+    },
+  };
 }
 
 function hasAlignedIntradayMssEvidence(candidate: SetupCandidate): boolean {
@@ -212,10 +335,10 @@ function intradayMssRetestPendingWatchCandidateFromPool(
   };
 }
 
-function missedReviewState(normalized: NormalizedTradePlan, stale: StaleChaseResult): ScannerPlanSelection {
+function missedReviewState(normalized: NormalizedTradePlan, stale: StaleChaseResult, candidate: SetupCandidate | null = null): ScannerPlanSelection {
   const reason = stale.reason || normalized.earlyMoveReview?.action || 'The selected plan is no longer a fresh executable entry.';
   return {
-    candidate: null,
+    candidate,
     stale: {
       state: 'Missed',
       stale: true,
@@ -225,7 +348,9 @@ function missedReviewState(normalized: NormalizedTradePlan, stale: StaleChaseRes
     stateForAlert: 'Missed',
     reviewStatus: 'already_triggered_no_fresh_entry',
     auditWarnings: [
-      'Selected app-owned plan was classified as already_triggered_no_fresh_entry. Scanner will not publish it as executable.',
+      candidate
+        ? 'Selected app-owned plan was classified as already_triggered_no_fresh_entry. Scanner may publish it only as missed/no-fresh-entry review; canExecute remains false.'
+        : 'Selected app-owned plan was classified as already_triggered_no_fresh_entry. Scanner will not publish it as executable.',
     ],
   };
 }
@@ -355,7 +480,7 @@ export function selectScannerPlan(args: {
       guards: args.guards,
     });
     if (stale.stale || earlyMoveReviewAppliesToCandidate(args.normalized, appPlanCandidate)) {
-      return missedReviewState(args.normalized, stale);
+      return missedReviewState(args.normalized, stale, appPlanCandidate);
     }
 
     const state = scannerStateFromDecision({
@@ -376,6 +501,31 @@ export function selectScannerPlan(args: {
   }
 
   if (args.normalized.earlyMoveReview?.status === 'already_triggered_no_fresh_entry') {
+    const oppositeProofCandidate = withTurtleSoupLineInSand(
+      freshOppositeEarlyMoveCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards),
+    );
+    if (oppositeProofCandidate && earlyMoveReviewOppositeDirectionCandidate(args.normalized, oppositeProofCandidate)) {
+      const stale = applyStaleChaseGuard({
+        candidate: oppositeProofCandidate,
+        currentPrice: args.currentPrice,
+        guards: args.guards,
+      });
+      const state = scannerStateFromDecision({
+        decisionStatus: args.normalized.decisionStatus || (args.normalized.canExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait),
+        candidate: oppositeProofCandidate,
+        stale,
+        targetCascade: args.targetCascade || null,
+      });
+      return {
+        candidate: oppositeProofCandidate,
+        stale,
+        state,
+        stateForAlert: oppositeProofCandidate.executionStatus === ExecutionStatus.Executable && state === 'Conditional' ? 'Executable' : state,
+        reviewStatus: null,
+        auditWarnings: ['Opposite-direction early-move review ignored because a valid app-owned opposite campaign candidate is present.'],
+      };
+    }
+
     const humanReviewCandidate = humanReviewCandidateFromFallbackPool(args.normalized);
     if (humanReviewCandidate && earlyMoveReviewAppliesToCandidate(args.normalized, humanReviewCandidate)) {
       return humanReviewNoChaseState(args.normalized, humanReviewCandidate);
@@ -388,7 +538,7 @@ export function selectScannerPlan(args: {
     if (intradayMssWatchCandidate) {
       return intradayMssWatchState(intradayMssWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, intradayMssWatchCandidate));
     }
-    const proofCandidate = candidateFromFallbackPool(args.normalized);
+    const proofCandidate = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards));
     if (!proofCandidate) return earlyMoveContextOnlyState(args.normalized);
     if (!earlyMoveReviewAppliesToCandidate(args.normalized, proofCandidate)) {
       const stale = applyStaleChaseGuard({
@@ -415,10 +565,10 @@ export function selectScannerPlan(args: {
       state: 'Missed',
       stale: true,
       reason: args.normalized.earlyMoveReview.action,
-    });
+    }, proofCandidate);
   }
 
-  const fallback = candidateFromFallbackPool(args.normalized);
+  const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards));
   if (!fallback) {
     const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized);
     if (turtleSoupWatchCandidate) return turtleSoupWatchState(turtleSoupWatchCandidate);
@@ -431,13 +581,10 @@ export function selectScannerPlan(args: {
     guards: args.guards,
   });
   if (stale.stale) {
+    const selection = missedReviewState(args.normalized, stale, fallback);
     return {
-      candidate: null,
-      stale,
-      state: 'Missed',
-      stateForAlert: 'Missed',
-      reviewStatus: 'already_triggered_no_fresh_entry',
-      auditWarnings: ['Fallback scanner candidate is stale/chasing. Scanner will not publish it as executable.'],
+      ...selection,
+      auditWarnings: ['Fallback scanner candidate is stale/chasing. Scanner may publish it only as missed/no-fresh-entry review; canExecute remains false.'],
     };
   }
 

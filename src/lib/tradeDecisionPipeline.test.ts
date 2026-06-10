@@ -2511,8 +2511,11 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtleSoup);
     assert.equal(turtleSoup.entry, 97.25);
     assert.equal(turtleSoup.stop, 95.75);
-    assert.equal(turtleSoup.target1, 105);
-    assert.ok((turtleSoup.target1! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 2);
+    assert.equal(turtleSoup.target1, 99.5);
+    assert.equal(turtleSoup.target2, 100.25);
+    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
+    assert.ok((turtleSoup.target1! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 1.5);
+    assert.ok((turtleSoup.target2! - turtleSoup.entry!) / turtleSoup.riskPoints! >= 2);
     assert.ok(turtleSoup.evidence.some((item) => item.includes('Turtle Soup')));
     assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
   }],
@@ -2602,8 +2605,10 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtleSoup);
     assert.equal(turtleSoup.entry, 103.75);
     assert.equal(turtleSoup.stop, 105.5);
-    assert.equal(turtleSoup.target1, 98);
-    assert.ok((turtleSoup.entry! - turtleSoup.target1!) / turtleSoup.riskPoints! >= 2);
+    assert.equal(turtleSoup.target1, 101.25);
+    assert.equal(turtleSoup.target2, 100.25);
+    assert.notEqual(turtleSoup.target1, turtleSoup.target2);
+    assert.ok((turtleSoup.entry! - turtleSoup.target2!) / turtleSoup.riskPoints! >= 2);
     assert.ok(turtleSoup.requiredTrigger?.includes('Bearish Turtle Soup'));
     assert.ok(turtleSoup.evidence.some((item) => item.includes('Wick rejection support')));
   }],

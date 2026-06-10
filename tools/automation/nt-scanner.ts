@@ -106,6 +106,12 @@ import {
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 import { etDateTime } from './et-time';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
+import {
+  attachDiscordMessageReceiptToRagPayload,
+  resolveDiscordRagPersistenceConfig,
+  upsertDiscordAlertRagPayload,
+} from './discord-rag-persistence';
+import { repairDuplicateAuditTargets } from './audit-target-repair';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -353,20 +359,6 @@ function getDayOfWeek(tradeDate: string): string {
     timeZone: 'America/New_York',
     weekday: 'long',
   });
-}
-
-function supabaseRestUrl(): string | null {
-  const raw = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  return raw ? raw.replace(/\/$/, '') : null;
-}
-
-function supabaseRagHeaders(serviceRoleKey: string): Record<string, string> {
-  return {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json',
-    Prefer: 'return=representation',
-  };
 }
 
 export function loadScannerActiveCampaignLedgerConfig(env: NodeJS.ProcessEnv = process.env): ScannerActiveCampaignDurableLedgerConfig | null {
@@ -1149,9 +1141,30 @@ export function buildSegmentedHistoryRepairWindows(from: string, to: string, chu
   return windows;
 }
 
-export function buildScannerHistoryPreloadPlan(tradeDate: string, session: LiveSession): Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }> {
+function scannerHistoryPreloadTo(tradeDate: string, session: LiveSession, asOf?: string | Date | null): string {
+  const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
+  if (!asOf) return sessionClose;
+
+  const rawAsOf = asOf instanceof Date ? asOf.toISOString() : asOf;
+  const normalized = normalizeCandleTimeEt(rawAsOf);
+  const asOfDate = normalized.slice(0, 10);
+  const asOfTime = normalized.slice(11, 16);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) || !/^\d{2}:\d{2}$/.test(asOfTime)) return sessionClose;
+
+  const cappedTo = etDateTime(asOfDate, asOfTime);
+  const sessionCloseMs = barTimeMs(sessionClose);
+  const cappedToMs = barTimeMs(cappedTo);
+  if (sessionCloseMs === null || cappedToMs === null) return sessionClose;
+  return cappedToMs < sessionCloseMs ? cappedTo : sessionClose;
+}
+
+export function buildScannerHistoryPreloadPlan(
+  tradeDate: string,
+  session: LiveSession,
+  asOf?: string | Date | null,
+): Record<MarketBarTimeframe, { from: string; to: string; requiredLookbackDays: number; limit: number }> {
   const fromDate = calendarDateBefore(tradeDate, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS);
-  const to = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
+  const to = scannerHistoryPreloadTo(tradeDate, session, asOf);
   return Object.fromEntries(TIMEFRAMES.map((timeframe) => [
     timeframe,
     {
@@ -1319,6 +1332,7 @@ async function runPreMarketDataReadinessBackfillGate(args: {
   tradeDate: string;
   window: ReturnType<typeof resolveScannerWindow>;
   completedFiveMinuteBarAssurance: ScannerCompletedFiveMinuteBarAssuranceStatus;
+  completed5m?: NinjaBridgeBar | null;
 }): Promise<{
   report: ScannerPreMarketDataReadinessBackfillGateReport;
   lookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null;
@@ -1326,7 +1340,7 @@ async function runPreMarketDataReadinessBackfillGate(args: {
   let lookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
   let preloadError: string | null = null;
   try {
-    lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, mappingSessionForWindow(args.window));
+    lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, mappingSessionForWindow(args.window), args.completed5m?.time || null);
   } catch (error) {
     preloadError = formatError(error);
     console.warn(`[scanner-data] Pre-Market Data Readiness + Backfill Gate preload failed: ${preloadError}`);
@@ -1429,7 +1443,7 @@ async function writeScannerDiscordAuditLog(args: {
   const conditionalRiskScore = auditCandidate
     ? scoreConditionalCandidateRiskForDisplay(auditCandidate)
     : null;
-  await fs.writeFile(file, JSON.stringify({
+  const auditPayload = repairDuplicateAuditTargets({
     createdAt: new Date().toISOString(),
     source: 'live-scanner',
     session: args.session,
@@ -1462,7 +1476,8 @@ async function writeScannerDiscordAuditLog(args: {
       priceLevelMap: args.levelMap,
       ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
-  }, null, 2));
+  }).value;
+  await fs.writeFile(file, JSON.stringify(auditPayload, null, 2));
   await verifyScannerAuditWrite({
     file,
     expectedSource: 'live-scanner',
@@ -1610,7 +1625,7 @@ function summarizeScannerEventTapeFacts(chartContext: unknown, completed5m: Ninj
 
 function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, normalized: ReturnType<typeof buildAppTradePlan>) {
   const candidates = normalized.setupCandidates || [];
-  return {
+  return repairDuplicateAuditTargets({
     selected: candidate
       ? {
           setupType: candidate.setupType,
@@ -1650,7 +1665,7 @@ function summarizeScannerCandidateForTape(candidate: SetupCandidate | null, norm
       candidateState: item.candidateState || null,
       failedPlanReversal: item.failedPlanReversal || null,
     })),
-  };
+  }).value;
 }
 
 function summarizeFailedPlanReversalForTape(chartContext: unknown, candidate: SetupCandidate | null) {
@@ -1781,7 +1796,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     },
   };
   events[eventKey] = event;
-  await fs.writeFile(file, JSON.stringify({
+  const tapePayload = repairDuplicateAuditTargets({
     reportType: 'scanner_decision_event_tape',
     createdAt: existing?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1792,7 +1807,8 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     note: 'Chronological scanner event tape. Used for audit/reconstruction only; it does not approve trades or change execution gates.',
     eventCount: Object.keys(events).length,
     events,
-  }, null, 2));
+  }).value;
+  await fs.writeFile(file, JSON.stringify(tapePayload, null, 2));
   await verifyScannerAuditWrite({
     file,
     expectedSource: 'scanner_decision_event_tape',
@@ -2047,12 +2063,12 @@ export async function fetchLookLeftBars(config: ScannerConfig, tradeDate: string
   return result.bars;
 }
 
-async function fetchLookLeftContext(config: ScannerConfig, tradeDate: string, session: LiveSession): Promise<{
+async function fetchLookLeftContext(config: ScannerConfig, tradeDate: string, session: LiveSession, asOf?: string | Date | null): Promise<{
   bars: Record<MarketBarTimeframe, NinjaBridgeBar[]>;
   coverage: ScannerHistoryCoverageRecord[];
 }> {
   const marketConfig = loadMarketDataConfig();
-  const plan = buildScannerHistoryPreloadPlan(tradeDate, session);
+  const plan = buildScannerHistoryPreloadPlan(tradeDate, session, asOf);
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const frame = plan[timeframe];
     const loaded = await fetchScannerHistoryFrame({
@@ -2378,7 +2394,8 @@ async function refreshMarketMapContext(args: {
   }
 
   try {
-    const lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, session);
+    const completed5m = latestCompletedBar(args.liveBars['5m'] || [], 5, new Date(), args.config.barTimestampMode, args.config.barTimeZone);
+    const lookLeft = await fetchLookLeftContext(args.config, args.tradeDate, session, completed5m?.time || null);
     const bars = {
       '5m': mergeBars(args.liveBars['5m'], lookLeft.bars['5m']),
       '15m': mergeBars(args.liveBars['15m'], lookLeft.bars['15m']),
@@ -2460,11 +2477,9 @@ async function upsertScannerDiscordAlertRagRecord(args: {
   candidate: SetupCandidate | null;
   confidence: number;
 }): Promise<void> {
-  const supabaseUrl = supabaseRestUrl();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const userId = process.env.DISCORD_RAG_USER_ID || '';
-  if (!supabaseUrl || !serviceRoleKey || !userId) {
-    console.warn('Scanner Discord alert RAG pending save skipped. Set SUPABASE_URL/VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID to let Discord buttons update RAG and lock the card after save.');
+  const { config, missing } = resolveDiscordRagPersistenceConfig();
+  if (!config) {
+    console.warn(`Scanner Discord alert RAG pending save skipped. Set ${missing.join(', ')} to let Discord buttons update RAG and lock the card after save.`);
     return;
   }
 
@@ -2482,7 +2497,6 @@ async function upsertScannerDiscordAlertRagRecord(args: {
     notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
   });
   const payload = {
-    user_id: userId,
     session_type: args.session,
     trade_date: args.tradeDate,
     day_of_week: getDayOfWeek(args.tradeDate),
@@ -2492,7 +2506,6 @@ async function upsertScannerDiscordAlertRagRecord(args: {
     source: 'discord_alert',
     analysis_mode: 'live',
     setup_quality_score: 0.5,
-    plan_version_id: args.planVersionId,
     entry_price: args.normalized.entry ?? args.candidate?.entry ?? null,
     stop_price: args.normalized.stop ?? args.candidate?.stop ?? null,
     target_1_price: args.normalized.t1 ?? args.candidate?.target1 ?? null,
@@ -2527,26 +2540,12 @@ async function upsertScannerDiscordAlertRagRecord(args: {
     notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
   };
 
-  const headers = supabaseRagHeaders(serviceRoleKey);
-  const updateResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(payload),
+  await upsertDiscordAlertRagPayload({
+    config,
+    planVersionId: args.planVersionId,
+    payload,
+    errorLabel: 'Scanner Discord alert RAG',
   });
-  if (!updateResponse.ok) {
-    throw new Error(`Scanner Discord alert RAG update failed (${updateResponse.status}): ${await updateResponse.text()}`);
-  }
-  const updatedRows = await updateResponse.json().catch(() => []);
-  if (Array.isArray(updatedRows) && updatedRows.length > 0) return;
-
-  const insertResponse = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-  if (!insertResponse.ok) {
-    throw new Error(`Scanner Discord alert RAG insert failed (${insertResponse.status}): ${await insertResponse.text()}`);
-  }
 }
 
 async function attachDiscordMessageReceiptToRagRecord(args: {
@@ -2555,43 +2554,15 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
 }): Promise<void> {
   if (!args.discordMessageId) return;
-  const supabaseUrl = supabaseRestUrl();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const userId = process.env.DISCORD_RAG_USER_ID || '';
-  if (!supabaseUrl || !serviceRoleKey || !userId) return;
-
-  const headers = supabaseRagHeaders(serviceRoleKey);
-  const lookup = await fetch(
-    `${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&plan_version_id=eq.${encodeURIComponent(args.planVersionId)}&select=id,trade_plan_json`,
-    { headers },
-  );
-  if (!lookup.ok) {
-    console.warn(`Scanner Discord message receipt lookup skipped (${lookup.status}).`);
-    return;
-  }
-  const rows = await lookup.json().catch(() => []);
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
-  if (!row?.id) return;
-  const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object' ? row.trade_plan_json : {};
-  const patch = {
-    trade_plan_json: {
-      ...existingPlanJson,
-      discordMessage: {
-        messageId: args.discordMessageId,
-        webhookSource: args.webhookSource,
-        editAfterOutcome: true,
-        storedAt: new Date().toISOString(),
-      },
-    },
-  };
-  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?user_id=eq.${encodeURIComponent(userId)}&id=eq.${encodeURIComponent(row.id)}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify(patch),
+  const { config } = resolveDiscordRagPersistenceConfig();
+  if (!config) return;
+  await attachDiscordMessageReceiptToRagPayload({
+    config,
+    planVersionId: args.planVersionId,
+    discordMessageId: args.discordMessageId,
+    webhookSource: args.webhookSource,
+    warningLabel: 'Scanner Discord message receipt',
   });
-  if (!update.ok) {
-    console.warn(`Scanner Discord message receipt update skipped (${update.status}).`);
-  }
 }
 
 function scannerWatchlistAlertKey(args: {
@@ -3400,6 +3371,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       tradeDate,
       window,
       completedFiveMinuteBarAssurance: completed5mAssurance,
+      completed5m,
     });
     preloadedLookLeft = gateResult.lookLeft;
     if (!gateResult.report.canEnterTradePlanningMode && window.allowsTradePlan) {
@@ -3441,7 +3413,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
   }
 
-  const lookLeft = preloadedLookLeft || (await fetchLookLeftContext(config, tradeDate, session).catch((error) => {
+  const lookLeft = preloadedLookLeft || (await fetchLookLeftContext(config, tradeDate, session, completed5m.time).catch((error) => {
     console.warn(`[scanner] 30-day scanner history preload unavailable: ${formatError(error)}`);
     return null;
   }));
