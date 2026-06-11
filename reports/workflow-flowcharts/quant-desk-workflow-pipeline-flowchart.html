@@ -1,0 +1,234 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Quant Desk Workflow Pipeline</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #02080a; font-family: Arial, Helvetica, sans-serif; color: #f7fbff; }
+  .canvas {
+    position: relative;
+    width: 1920px;
+    height: 1440px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 76% 8%, rgba(0,230,255,.16), transparent 28%),
+      radial-gradient(circle at 18% 70%, rgba(251,146,60,.10), transparent 32%),
+      linear-gradient(135deg, #02070a 0%, #071319 42%, #03080b 100%);
+  }
+  .grid {
+    position:absolute; inset:0;
+    background-image: linear-gradient(rgba(125,239,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(125,239,255,.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: .7;
+  }
+  .wm { position:absolute; left: 410px; top: 580px; transform: rotate(-16deg); font-size: 152px; font-weight: 1000; letter-spacing: 7px; color:#fff; opacity:.026; white-space:nowrap; }
+  .header { position:absolute; left:34px; right:34px; top:30px; height:128px; border:2px solid #14e6ff; border-radius:12px; background:linear-gradient(90deg, rgba(3,18,25,.95), rgba(8,53,58,.76), rgba(41,18,6,.70)); display:flex; align-items:center; gap:22px; padding:18px 26px; box-shadow: 0 0 34px rgba(20,230,255,.16); }
+  .logo { width:88px; height:88px; border-radius:50%; object-fit:cover; border:2px solid #14e6ff; box-shadow: 0 0 18px rgba(20,230,255,.45); }
+  .brand { font-size:22px; letter-spacing:3px; color:#7defff; font-weight:900; }
+  .title { font-size:50px; line-height:54px; font-weight:1000; color:#fff; text-shadow: 3px 3px #041016; }
+  .subtitle { font-size:24px; color:#d5e8ef; font-weight:800; }
+  .badge { margin-left:auto; border:2px solid #facc15; color:#facc15; background:#080d0f; border-radius:999px; padding:14px 24px; font-size:24px; font-weight:1000; text-align:center; }
+  .lane-title { position:absolute; top:190px; height:46px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:1000; letter-spacing:1px; }
+  .core-title { left:390px; width:940px; background:rgba(20,230,255,.14); border:1.5px solid #14e6ff; color:#7defff; }
+  .agents-title { right:34px; width:510px; background:rgba(251,146,60,.13); border:1.5px solid #fb923c; color:#fb923c; }
+  .storage-title { left:34px; width:310px; background:rgba(250,204,21,.12); border:1.5px solid #facc15; color:#facc15; }
+  .box { position:absolute; border-radius:12px; border:1.5px solid #315667; background:rgba(4,12,16,.88); padding:16px 18px; box-shadow: 0 12px 28px rgba(0,0,0,.28); }
+  .box h3 { margin:0 0 8px; font-size:25px; line-height:28px; color:#fff; }
+  .box p { margin:0; font-size:18px; line-height:23px; color:#d8e7ef; font-weight:700; }
+  .box .mini { margin-top:10px; color:#9fd3e5; font-size:15px; line-height:19px; font-weight:800; }
+  .source { border-color:#14e6ff; }
+  .scanner { border-color:#39e58a; }
+  .decision { border-color:#facc15; }
+  .discord { border-color:#fb923c; }
+  .blocker { border-color:#ef4444; }
+  .advisory { border-color:#8aa3b5; opacity:.98; }
+  .storage { border-color:#facc15; }
+  .tag { display:inline-block; margin-top:10px; border-radius:999px; padding:5px 10px; font-size:14px; font-weight:1000; color:#041016; background:#7defff; }
+  .tag.green { background:#39e58a; } .tag.gold{background:#facc15;} .tag.orange{background:#fb923c;} .tag.red{background:#ef4444;color:#fff;} .tag.gray{background:#b8c7d3;}
+  .note { position:absolute; left:34px; right:34px; bottom:72px; border:1.5px solid #365366; background:rgba(3,8,12,.92); border-radius:10px; padding:18px 24px; font-size:22px; font-weight:900; color:#e8f4ff; display:flex; justify-content:space-between; gap:20px; }
+  .note span { color:#7defff; }
+  .footer { position:absolute; left:18px; right:18px; bottom:16px; border:1px solid #365366; border-radius:8px; background:#050a0d; padding:14px; text-align:center; font-size:20px; font-weight:900; color:#e8f4ff; }
+  svg { position:absolute; inset:0; pointer-events:none; }
+  .arrow { stroke:#7defff; stroke-width:4; fill:none; marker-end:url(#arrow); filter: drop-shadow(0 0 4px rgba(20,230,255,.45)); }
+  .arrow2 { stroke:#fb923c; stroke-width:3.5; fill:none; marker-end:url(#arrowOrange); stroke-dasharray: 9 8; }
+  .arrow3 { stroke:#facc15; stroke-width:3.5; fill:none; marker-end:url(#arrowGold); }
+  .smallLabel { font-size:16px; font-weight:1000; fill:#d8e7ef; }
+  .legend { position:absolute; left:34px; top:1240px; width:820px; display:flex; gap:12px; flex-wrap:wrap; }
+  .legendItem { border:1px solid #365366; border-radius:999px; padding:8px 12px; background:#050d11; font-size:16px; font-weight:900; color:#d8e7ef; }
+  .dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:7px; vertical-align:0; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="grid"></div>
+  <div class="wm">YourMomsTrader</div>
+  <div class="header">
+    <img class="logo" src="file:///C:/Users/Mike/Documents/New project/brand-assets/x-profile/YourMomsTrader-X-avatar-800x800.png" />
+    <div>
+      <div class="brand">YourMomsTrader</div>
+      <div class="title">QUANT DESK WORKFLOW PIPELINE</div>
+      <div class="subtitle">How market data, scanner logic, agents, Discord, and RAG fit together</div>
+    </div>
+    <div class="badge">STRUCTURE FIRST<br/>RISK ALWAYS</div>
+  </div>
+
+  <div class="lane-title storage-title">DATA + MEMORY</div>
+  <div class="lane-title core-title">APP-OWNED DECISION PIPELINE</div>
+  <div class="lane-title agents-title">AGENTS + CONSUMERS</div>
+
+  <div class="box source" style="left:390px; top:270px; width:300px; height:142px;">
+    <h3>1. NinjaTrader OHLC</h3>
+    <p>Highest-authority live market facts: completed candles, volume, timestamps, swings, FVGs, liquidity events.</p>
+    <span class="tag">DATA AUTHORITY</span>
+  </div>
+  <div class="box storage" style="left:34px; top:270px; width:310px; height:142px;">
+    <h3>market_bars Cache</h3>
+    <p>Durable Supabase OHLC store. Scanner reads cache first, then repairs gaps from the bridge.</p>
+    <span class="tag gold">SUPABASE</span>
+  </div>
+
+  <div class="box source" style="left:760px; top:270px; width:300px; height:142px;">
+    <h3>2. Fact Builder</h3>
+    <p>Turns OHLC into machine-readable structure: session map, displacement, sweeps, MSS, levels.</p>
+    <span class="tag">FACTS ONLY</span>
+  </div>
+
+  <div class="box scanner" style="left:390px; top:485px; width:300px; height:152px;">
+    <h3>3. Setup Scanner</h3>
+    <p>Applies registered model definitions. Creates candidates only from structured evidence.</p>
+    <span class="tag green">NO INVENTED TRADES</span>
+  </div>
+  <div class="box scanner" style="left:760px; top:485px; width:300px; height:152px;">
+    <h3>4. Ranking Layer</h3>
+    <p>Scores opportunities by setup quality, trigger clarity, risk, stop proof, target room.</p>
+    <span class="tag green">RANKS CANDIDATES</span>
+  </div>
+  <div class="box blocker" style="left:1130px; top:485px; width:300px; height:152px;">
+    <h3>Data Quality Gate</h3>
+    <p>Missing or stale 5M / HTF context becomes a visible blocker, not a no-setup conclusion.</p>
+    <span class="tag red">NO SILENT DROP</span>
+  </div>
+
+  <div class="box decision" style="left:390px; top:710px; width:300px; height:158px;">
+    <h3>5. Trade Decision</h3>
+    <p>Approves, waits, rejects, or marks conditional. Owns execution boundaries and canExecute.</p>
+    <span class="tag gold">APP AUTHORITY</span>
+  </div>
+  <div class="box decision" style="left:760px; top:710px; width:300px; height:158px;">
+    <h3>6. Plan Math</h3>
+    <p>Entry, protected stop, risk, invalidation, T1 = 1.5R, T2 = 2.0R from actual risk.</p>
+    <span class="tag gold">DETERMINISTIC</span>
+  </div>
+  <div class="box decision" style="left:1130px; top:710px; width:300px; height:158px;">
+    <h3>7. DeskState</h3>
+    <p>One source of truth for market mode, selected candidate, visibility, blocker, next trigger.</p>
+    <span class="tag gold">VISIBILITY OWNER</span>
+  </div>
+
+  <div class="box discord" style="left:390px; top:940px; width:300px; height:160px;">
+    <h3>8. Discord Formatter</h3>
+    <p>Formats exactly DeskState: watch, conditional, review, plan, hold, no-trade, or data blocker.</p>
+    <span class="tag orange">NO RERANKING</span>
+  </div>
+  <div class="box discord" style="left:760px; top:940px; width:300px; height:160px;">
+    <h3>9. Live Bridge Alerts</h3>
+    <p>Posts readable updates, charts, level maps, health notices, and outcome buttons when valid.</p>
+    <span class="tag orange">DISCORD FIRST</span>
+  </div>
+  <div class="box storage" style="left:1130px; top:940px; width:300px; height:160px;">
+    <h3>10. RAG + Journal</h3>
+    <p>Stores plan metadata, DeskState, Discord receipts, outcomes, and lessons for future context.</p>
+    <span class="tag gold">LEARNING LOOP</span>
+  </div>
+
+  <div class="box advisory" style="right:34px; top:270px; width:510px; height:132px;">
+    <h3>Scanner Plan Selection Agent</h3>
+    <p>Consumes scanner candidates and visibility metadata. Selects the display candidate without inventing or approving trades.</p>
+    <span class="tag gray">CONSUMER</span>
+  </div>
+  <div class="box advisory" style="right:34px; top:430px; width:510px; height:132px;">
+    <h3>Scanner Health Agent</h3>
+    <p>Reports bridge, data, Discord, Gemini independence, and state-file health. Blocks alerts only for operational risk.</p>
+    <span class="tag gray">OPS GUARD</span>
+  </div>
+  <div class="box advisory" style="right:34px; top:590px; width:510px; height:132px;">
+    <h3>Diagnostic Replay Agent</h3>
+    <p>Replays audit history and validates DeskState path: watch before plan, no chase, same state across consumers.</p>
+    <span class="tag gray">AUDIT ONLY</span>
+  </div>
+  <div class="box advisory" style="right:34px; top:750px; width:510px; height:132px;">
+    <h3>Research + Review Agents</h3>
+    <p>Analyze samples, outcome math, model candidates, and human review labels. Research never approves live execution.</p>
+    <span class="tag gray">RESEARCH ONLY</span>
+  </div>
+  <div class="box advisory" style="right:34px; top:910px; width:510px; height:132px;">
+    <h3>Gemini / Visual Advisory</h3>
+    <p>Optional fallback for screenshots and descriptive context. Lower authority than OHLC; cannot overwrite app facts.</p>
+    <span class="tag gray">ADVISORY ONLY</span>
+  </div>
+  <div class="box advisory" style="right:34px; top:1070px; width:510px; height:132px;">
+    <h3>UI / RAG / Scheduler</h3>
+    <p>Consumes DeskState and records outcomes. It summarizes the desk state; it does not independently decide visibility.</p>
+    <span class="tag gray">SUMMARIZES STATE</span>
+  </div>
+
+  <div class="box storage" style="left:34px; top:455px; width:310px; height:150px;">
+    <h3>Supabase Records</h3>
+    <p>Trade plans, proof metadata, image URLs, RAG records, active-campaign ledger, and user-scoped outcomes.</p>
+    <span class="tag gold">DURABLE MEMORY</span>
+  </div>
+  <div class="box storage" style="left:34px; top:675px; width:310px; height:150px;">
+    <h3>Cloudflare Boundary</h3>
+    <p>Hosts app and protects Gemini API calls through the Pages Function. No Gemini key in browser code.</p>
+    <span class="tag gold">SECRET BOUNDARY</span>
+  </div>
+  <div class="box storage" style="left:34px; top:895px; width:310px; height:150px;">
+    <h3>Discord Outcomes</h3>
+    <p>Trader buttons update journal/RAG learning fields only. They never place trades or approve risk.</p>
+    <span class="tag gold">HUMAN CONFIRMATION</span>
+  </div>
+
+  <div class="legend">
+    <div class="legendItem"><span class="dot" style="background:#14e6ff"></span>Market data / facts</div>
+    <div class="legendItem"><span class="dot" style="background:#39e58a"></span>Scanner candidates</div>
+    <div class="legendItem"><span class="dot" style="background:#facc15"></span>Decision / visibility authority</div>
+    <div class="legendItem"><span class="dot" style="background:#fb923c"></span>Discord delivery</div>
+    <div class="legendItem"><span class="dot" style="background:#b8c7d3"></span>Advisory or audit consumers</div>
+  </div>
+
+  <svg viewBox="0 0 1920 1440">
+    <defs>
+      <marker id="arrow" markerWidth="14" markerHeight="14" refX="10" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#7defff"/></marker>
+      <marker id="arrowOrange" markerWidth="14" markerHeight="14" refX="10" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#fb923c"/></marker>
+      <marker id="arrowGold" markerWidth="14" markerHeight="14" refX="10" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#facc15"/></marker>
+    </defs>
+    <path class="arrow" d="M690 341 C720 341 730 341 760 341" />
+    <path class="arrow" d="M910 412 C910 445 540 445 540 485" />
+    <path class="arrow" d="M690 561 C722 561 728 561 760 561" />
+    <path class="arrow" d="M1060 561 C1092 561 1098 561 1130 561" />
+    <path class="arrow" d="M540 637 C540 670 540 680 540 710" />
+    <path class="arrow" d="M690 789 C722 789 728 789 760 789" />
+    <path class="arrow" d="M1060 789 C1092 789 1098 789 1130 789" />
+    <path class="arrow" d="M1280 868 C1280 905 540 905 540 940" />
+    <path class="arrow" d="M690 1020 C722 1020 728 1020 760 1020" />
+    <path class="arrow" d="M1060 1020 C1092 1020 1098 1020 1130 1020" />
+    <path class="arrow3" d="M1188 1100 C1188 1170 310 1170 310 1045" />
+    <text x="780" y="1188" class="smallLabel">outcome + lesson loop</text>
+    <path class="arrow3" d="M344 340 C370 340 365 340 390 340" />
+    <path class="arrow3" d="M344 530 C370 530 365 530 390 530" />
+    <path class="arrow2" d="M1430 790 C1490 790 1490 336 1400 336" />
+    <path class="arrow2" d="M1430 790 C1498 790 1500 494 1400 494" />
+    <path class="arrow2" d="M1430 790 C1510 790 1510 650 1400 650" />
+    <path class="arrow2" d="M1430 790 C1500 790 1500 970 1400 970" />
+    <text x="1458" y="808" class="smallLabel">agents consume / audit DeskState</text>
+  </svg>
+
+  <div class="note">
+    <div><span>Core rule:</span> OHLC facts feed the app-owned scanner and decision pipeline. Agents, Discord, RAG, and UI summarize DeskState; they do not invent, suppress, rerank, or approve trades.</div>
+    <div><span>Execution rule:</span> 5M trigger, protected stop, risk, invalidation, time window, and canExecute remain deterministic.</div>
+  </div>
+  <div class="footer">Decision Support Only • No automated orders • No prediction guarantees • No-trade and data-quality blockers are valid desk outcomes</div>
+</div>
+</body>
+</html>
