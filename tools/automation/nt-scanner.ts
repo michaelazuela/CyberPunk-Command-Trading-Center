@@ -63,6 +63,10 @@ import {
   type ScannerStateFileHealth,
 } from '../../src/agents/scannerHealthAgent';
 import {
+  ExecutionStatus,
+  NoTradeReason,
+  SetupCandidateStatus,
+  SetupType,
   type AnalysisResult,
   type ChartContext,
   type FailedBreakEventFact,
@@ -2679,6 +2683,68 @@ export function candidateForNormalizedVisualAuthority(
   };
 }
 
+export function candidateForDeskPlayContextChart(deskState: DeskState): SetupCandidate | null {
+  const play = deskState.primaryDeskPlay;
+  if (!play.discordEligible || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return null;
+  const primaryBias = play.direction === 'LONG' ? play.longBias : play.shortBias;
+  const blockers = Array.from(new Set([
+    ...primaryBias.blockers,
+    'canExecute=false',
+    'Desk Play chart is watch/context only.',
+    'No executable entry, stop, T1, T2, or risk approval is attached to this image.',
+  ]));
+  return {
+    setupType: primaryBias.setupType || SetupType.NoSetup,
+    scenarioLabel: `${play.direction} Desk Play Context - Watch Only`,
+    direction: play.direction,
+    detectedStatus: SetupCandidateStatus.Conditional,
+    confidence: 'Low',
+    priority: 0,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    invalidation: play.invalidation || deskState.invalidation || null,
+    decisionQualityScore: primaryBias.decisionQualityScore ?? primaryBias.rankScore ?? null,
+    decisionQualityRecommendation: 'Desk Play context only: wait for completed 5M proof and normal app-owned gates.',
+    rankScore: primaryBias.rankScore ?? null,
+    evidence: [
+      play.summary,
+      primaryBias.reason,
+      play.countertrendWarning,
+      ...play.notes,
+    ].filter((value): value is string => Boolean(value)),
+    missingEvidence: blockers,
+    missingLevels: [],
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: NoTradeReason.EntryTriggerPending,
+    requiredTrigger: play.nextTrigger || deskState.nextTrigger || primaryBias.nextTrigger || null,
+    nextAction: play.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
+    reducedRiskPlan: null,
+    activeRuleset: {
+      htfLineInSand: {
+        applied: true,
+        status: 'not_applicable',
+        required: 'completed_5m_or_15m_close_beyond_htf_line',
+        appliesToAllModels: true,
+        affectsExecution: false,
+        direction: play.direction,
+        lineInSand: play.lineInSand,
+        lineReason: 'Desk Play line in the sand',
+        requiredClose: play.nextTrigger || primaryBias.nextTrigger || null,
+        obstacleType: null,
+        obstacleSource: null,
+        evidence: [
+          `Line in the sand: ${typeof play.lineInSand === 'number' ? play.lineInSand.toFixed(2) : 'N/A'}`,
+          play.summary,
+        ].filter((value): value is string => Boolean(value)),
+        blockers,
+      },
+    },
+  };
+}
+
 export async function upsertScannerDiscordAlertRagRecord(args: {
   planVersionId: string;
   session: LiveSession;
@@ -3010,6 +3076,62 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   });
   validateDiscordPayload(payload, files);
   return { payload, files, chartMarkup, levelMap, auditLogPath };
+}
+
+export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
+  session: LiveSession;
+  tradeDate: string;
+  config: Pick<ScannerConfig, 'instrument'>;
+  state: ScannerState;
+  confidence: ScannerConfidenceBreakdown;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
+  windowLabel: string;
+  planVersionId: string;
+  deskState: DeskState;
+  decisionTapePath: string;
+  outputDir?: string;
+}): Promise<{
+  payload: DiscordWebhookPayload;
+  files: string[];
+  chartMarkup: string | null;
+}> {
+  const contextCandidate = candidateForDeskPlayContextChart(args.deskState);
+  const play = args.deskState.primaryDeskPlay;
+  const chartMarkup = contextCandidate
+    ? await renderChartMarkup({
+        chartContext: args.chartContext || null,
+        candidate: contextCandidate,
+        instrument: args.config.instrument,
+        tradeDate: args.tradeDate,
+        sessionLabel: args.session,
+        renderMode: 'desk_play_context',
+        contextLine: play.lineInSand,
+        contextLabel: 'Line in the sand',
+        outputDir: args.outputDir,
+        filePrefix: `scanner-desk-play-${args.session}-${args.tradeDate}-${args.config.instrument}`,
+      })
+    : null;
+  const files = [chartMarkup].filter((file): file is string => Boolean(file));
+  const payload = buildDiscordPayload({
+    session: args.session,
+    tradeDate: args.tradeDate,
+    config: args.config,
+    state: args.state,
+    confidence: args.confidence,
+    candidate: null,
+    normalized: args.normalized,
+    windowLabel: args.windowLabel,
+    planVersionId: args.planVersionId,
+    attachments: {
+      chartPlan: Boolean(chartMarkup),
+      priceLevelMap: false,
+      auditLogPath: args.decisionTapePath,
+    },
+    deskState: args.deskState,
+  });
+  validateDiscordPayload(payload, files);
+  return { payload, files, chartMarkup };
 }
 
 interface ScannerDiscordPostReceipt {
@@ -4255,21 +4377,21 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     });
     if (!state.deskPlaySent[deskPlayKey]) {
       const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
-      const payload = buildDiscordPayload({
-        session,
-        tradeDate,
-        config,
-        state: stateForAlert,
-        confidence,
-        candidate: null,
-        normalized,
-        windowLabel: window.label,
-        planVersionId: deskPlayPlanVersionId,
-        attachments: { chartPlan: false, priceLevelMap: false, auditLogPath: decisionTapePath },
-        deskState,
-      });
       try {
-        const receipt = await postDiscord(payload, config);
+        const deskPlayArtifacts = await prepareLiveScannerDeskPlayAlertArtifacts({
+          session,
+          tradeDate,
+          config,
+          state: stateForAlert,
+          confidence,
+          normalized,
+          chartContext: analysis.structuredChartContext || null,
+          windowLabel: window.label,
+          planVersionId: deskPlayPlanVersionId,
+          deskState,
+          decisionTapePath,
+        });
+        const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           state.deskPlaySent[deskPlayKey] = {

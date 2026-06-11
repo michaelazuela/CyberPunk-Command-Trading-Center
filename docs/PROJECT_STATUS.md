@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-11
-Task: Install Phase 10E through 10H Primary Desk Play, HTF countertrend framing, Discord Desk Play publishing, and June 11 regression coverage.
-Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
-Reason: Live scanner tapes could contain useful long/short structured evidence while Discord stayed quiet because the old path depended on selected-candidate alert eligibility. The desk needed scanner-owned long and short bias visibility, HTF/countertrend framing, and a compact Discord play update without loosening trade approvals.
-Tests run: npx tsc --noEmit; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts.
-Result: DeskState now carries `primaryDeskPlay` with primary direction, long bias, short bias, line in the sand, trigger, invalidation, no-chase language, HTF conflict/countertrend warning, and an explicit approval boundary. Discord can now publish a de-duplicated Desk Play update from DeskState when a full trade alert is suppressed but structured play context exists. June 11-style coverage proves a bullish long desk play remains primary while a counter-HTF short remains visible as review-only, with no outcome buttons or executable levels in the Desk Play card.
+Task: Install Phase 10E through 10H Primary Desk Play, HTF countertrend framing, Discord Desk Play publishing, June 11 regression coverage, and Desk Play context chart attachment.
+Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, tools/automation/chart-markup-renderer.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Live scanner tapes could contain useful long/short structured evidence while Discord stayed quiet because the old path depended on selected-candidate alert eligibility. The desk needed scanner-owned long and short bias visibility, HTF/countertrend framing, and a compact Discord play update with a readable context chart when a full trade alert is suppressed, without loosening trade approvals.
+Tests run: npx tsc --noEmit; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/chart-markup-renderer.test.ts; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: DeskState now carries `primaryDeskPlay` with primary direction, long bias, short bias, line in the sand, trigger, invalidation, no-chase language, HTF conflict/countertrend warning, and an explicit approval boundary. Discord can now publish a de-duplicated Desk Play update from DeskState when a full trade alert is suppressed but structured play context exists. Desk Play updates attach a watch/context chart that renders the line in the sand and clearly states that no executable entry, stop, target, risk approval, or automated order is implied. June 11-style coverage proves a bullish long desk play remains primary while a counter-HTF short remains visible as review-only, with no outcome buttons or executable levels in the Desk Play card.
 Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, scanner model definitions, or bridge data contracts changed.
 Bridge impact: None.
-Discord impact: Yes. Scanner may now post compact Desk Play/watch-only updates from DeskState during active windows when full trade alerts are suppressed.
+Discord impact: Yes. Scanner may now post compact Desk Play/watch-only updates from DeskState during active windows when full trade alerts are suppressed, with a single context chart attachment.
 Journal/RAG impact: No schema change. Desk Play updates are visibility-only and do not create outcome-button trade records.
 Supabase impact: No migration added.
-Known risks: None identified after focused verification.
-Next recommended action: Review live Discord Desk Play wording during the next active Morning/Lunch window, then tune phrasing only if needed.
+Known risks: None identified after focused and full verification.
+Next recommended action: Review live Discord Desk Play wording and chart readability during the next active Morning/Lunch window.
 
 ## Previous Change
 

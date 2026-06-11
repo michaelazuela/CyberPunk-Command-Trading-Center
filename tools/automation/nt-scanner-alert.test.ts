@@ -30,7 +30,9 @@ import {
   recordActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSuppressed,
   releaseDurableActiveCampaignScannerAlertClaim,
+  candidateForDeskPlayContextChart,
   candidateForNormalizedVisualAuthority,
+  prepareLiveScannerDeskPlayAlertArtifacts,
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
@@ -1674,6 +1676,101 @@ try {
   assert.equal(watchAudit.deskState.promotion.currentStage, 'watch');
   assert.equal(watchAudit.deskState.promotion.nextStage, 'conditional');
   assert.equal(shouldPersistScannerAlertToRag(watchAudit.deskState), false);
+
+  const deskPlayVisibility: ScannerVisibilityMetadata = {
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    suppressionReason: 'Full trade alert suppressed; Desk Play remains visible from scanner-owned state.',
+    nextTrigger: 'Completed 5M pullback must hold above 5323.25 and reclaim the retest.',
+    dataQualityBlocker: null,
+    holdWithReason: 'No executable entry/stop/target approval yet.',
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: false,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: ['Desk Play fixture visibility metadata only.'],
+  };
+  const deskPlayLifecycleTrace = buildCandidateLifecycleTrace({
+    candidates: [candidate],
+    selectedCandidate: candidate,
+    state: 'Conditional',
+    alertDecision: { shouldSend: false, reason: 'Full alert suppressed; publish Desk Play context.' },
+    canExecute: false,
+  });
+  const deskPlayState = buildDeskState({
+    state: 'Conditional',
+    candidate,
+    visibilityMetadata: deskPlayVisibility,
+    candidateLifecycleTrace: deskPlayLifecycleTrace,
+    canExecute: false,
+  });
+  const contextChartCandidate = candidateForDeskPlayContextChart(deskPlayState);
+  assert.equal(contextChartCandidate?.direction, 'LONG');
+  assert.equal(contextChartCandidate?.entry, null);
+  assert.equal(contextChartCandidate?.stop, null);
+  assert.equal(contextChartCandidate?.target1, null);
+  assert.equal(contextChartCandidate?.target2, null);
+  assert.equal(contextChartCandidate?.executionStatus, ExecutionStatus.Conditional);
+  assert.equal(contextChartCandidate?.activeRuleset?.htfLineInSand?.affectsExecution, false);
+  const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
+    session: 'lunch',
+    tradeDate: '2026-05-26',
+    config: { instrument: 'MES' },
+    state: 'Conditional',
+    confidence: {
+      score: 81,
+      qualifiedReasons: ['Desk Play context fixture.'],
+      missingReasons: ['No executable plan approval yet.'],
+      recommendation: 'Watch only.',
+      hardBlocker: null,
+    },
+    normalized: {
+      canExecute: false,
+      decisionStatus: TradeDecisionStatus.Wait,
+      decision: 'LONG',
+      noTradeReason: 'EntryTriggerPending',
+      invalidation: candidate.invalidation,
+      setupCandidates: [candidate],
+    } as any,
+    chartContext: chartContext as ChartContext,
+    windowLabel: 'Lunch/PM Setup Scanner',
+    planVersionId: 'SCANNER-DESK-PLAY-FIXTURE',
+    deskState: deskPlayState,
+    decisionTapePath: path.join(auditDir, 'desk-play-decision-tape.json'),
+    outputDir,
+  });
+  const deskPlayText = flattenDiscordPayloadText(deskPlayResult.payload);
+  assert.equal(deskPlayResult.files.length, 1);
+  assert.ok(deskPlayResult.chartMarkup);
+  assert.equal(deskPlayResult.payload.components, undefined);
+  assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
+  assert.ok(deskPlayText.includes('Chart: watch/context chart attached. No executable entry, stop, T1, or T2 is implied.'));
+  assert.ok(!/^Entry:/m.test(deskPlayText));
+  assert.ok(!/^Stop:/m.test(deskPlayText));
+  assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
+  const deskPlayChartHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext as ChartContext,
+    candidate: contextChartCandidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-26',
+    sessionLabel: 'lunch',
+    renderMode: 'desk_play_context',
+    contextLine: deskPlayState.primaryDeskPlay.lineInSand,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(deskPlayChartHtml.includes('[PM WATCH] MES - LONG CONTEXT'));
+  assert.ok(deskPlayChartHtml.includes('WATCH ONLY'));
+  assert.ok(deskPlayChartHtml.includes('No entry / stop / T1 / T2'));
+  assert.ok(!deskPlayChartHtml.includes('LONG ENTRY ZONE'));
 
   const executableLookingCandidate = {
     ...candidate,

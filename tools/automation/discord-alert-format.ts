@@ -536,6 +536,9 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 125)}`,
     `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 110)}`,
     play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
+    args.attachments.chartPlan
+      ? 'Chart: watch/context chart attached. No executable entry, stop, T1, or T2 is implied.'
+      : 'Chart: not attached; use DeskState text only until chart context is available.',
     '',
     'Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.',
   ];
@@ -899,7 +902,8 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  if (validFiles.length > 0 && validFiles.length < 2) {
+  const hasWatchContextChart = /watch\/context chart attached/i.test(mainText);
+  if (validFiles.length > 0 && validFiles.length < 2 && !hasWatchContextChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
   if (validFiles.length > 0 && mainText.length > 1600) {

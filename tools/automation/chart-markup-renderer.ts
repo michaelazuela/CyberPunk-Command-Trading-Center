@@ -18,6 +18,9 @@ export interface ChartMarkupRenderInput {
   instrument: string;
   tradeDate: string;
   sessionLabel: string;
+  renderMode?: 'trade_plan' | 'desk_play_context';
+  contextLine?: number | null;
+  contextLabel?: string | null;
   outputDir?: string;
   filePrefix?: string;
 }
@@ -155,6 +158,9 @@ interface PlanRenderModel {
   r2: number | null;
   runnerR: number | null;
   stretchR: number | null;
+  renderMode: 'trade_plan' | 'desk_play_context';
+  contextLine: number | null;
+  contextLabel: string;
   sweepEvent: LiquidityEventFact | null;
   reclaimEvent: ReclaimEventFact | null;
   displacementEvent: DisplacementCandleFact | null;
@@ -211,6 +217,8 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   if (!candidate || candles.length < 3) {
     throw new Error('Chart markup requires a selected candidate and at least 3 valid candles.');
   }
+  const renderMode = input.renderMode || 'trade_plan';
+  const isDeskPlayContext = renderMode === 'desk_play_context';
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
   const isLong = direction === 'LONG';
   const model = professionalCandidateModelLabel(candidate);
@@ -245,6 +253,12 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const entryLow = fvg && isPrice(fvg.lower) ? fvg.lower : isPrice(entry) && isPrice(risk) ? entry - risk * 0.25 : entry;
   const entryHigh = fvg && isPrice(fvg.upper) ? fvg.upper : isPrice(entry) && isPrice(risk) ? entry + risk * 0.25 : entry;
   const sweep = isPrice(sweepEvent?.level) ? sweepEvent.level : null;
+  const contextLine = isPrice(input.contextLine)
+    ? input.contextLine
+    : isPrice(candidate.activeRuleset?.htfLineInSand?.lineInSand)
+      ? candidate.activeRuleset.htfLineInSand.lineInSand
+      : null;
+  const contextLabel = compact(input.contextLabel || candidate.activeRuleset?.htfLineInSand?.lineReason || 'Line in the sand', 22);
   const contextBias = String(input.chartContext?.multiTimeframeContext?.alignment?.alignedDirection || input.chartContext?.marketStructure?.trend || 'unknown');
   const trendBias = String(input.chartContext?.multiTimeframeContext?.alignment?.executionBias || input.chartContext?.marketStructure?.trend || 'unknown');
   const narrative = compact(input.chartContext?.sessionStory?.summary || candidate.levelContextSummary || candidate.nextAction || 'Wait for completed 5M confirmation.', 34);
@@ -254,26 +268,32 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const staleStretch = targetLooksStale(stretch, candles, risk);
 
   const messages: string[] = [];
-  if (!isPrice(entryLow) || !isPrice(entryHigh)) messages.push('Review Required — Entry zone missing.');
-  if (!isPrice(stop)) messages.push('Review Required — Stop missing.');
-  if (!isPrice(t1) || !isPrice(t2)) messages.push('Review Required — Target data missing.');
-  if (nearlyEqual(t1, t2)) messages.push('Review Required — T1 and T2 are identical.');
-  if (staleT1 || staleT2) {
-    messages.push('Target Data Error — Target appears stale or invalid.');
-  }
-  if (staleRunner || staleStretch) {
-    messages.push('Review Required — Extension target is outside the current chart window.');
-  }
-  if (isPrice(entry) && isPrice(stop)) {
-    if (direction === 'LONG' && stop >= entry) messages.push('Review Required — Stop is not below long entry.');
-    if (direction === 'SHORT' && stop <= entry) messages.push('Review Required — Stop is not above short entry.');
-  }
-  if (isPrice(entryLow) && isPrice(entryHigh) && entryLow > entryHigh) {
-    messages.push('Review Required — Entry zone bounds are reversed.');
+  if (isDeskPlayContext) {
+    if (!isPrice(contextLine)) messages.push('Review Required — Desk Play line in the sand missing.');
+  } else {
+    if (!isPrice(entryLow) || !isPrice(entryHigh)) messages.push('Review Required — Entry zone missing.');
+    if (!isPrice(stop)) messages.push('Review Required — Stop missing.');
+    if (!isPrice(t1) || !isPrice(t2)) messages.push('Review Required — Target data missing.');
+    if (nearlyEqual(t1, t2)) messages.push('Review Required — T1 and T2 are identical.');
+    if (staleT1 || staleT2) {
+      messages.push('Target Data Error — Target appears stale or invalid.');
+    }
+    if (staleRunner || staleStretch) {
+      messages.push('Review Required — Extension target is outside the current chart window.');
+    }
+    if (isPrice(entry) && isPrice(stop)) {
+      if (direction === 'LONG' && stop >= entry) messages.push('Review Required — Stop is not below long entry.');
+      if (direction === 'SHORT' && stop <= entry) messages.push('Review Required — Stop is not above short entry.');
+    }
+    if (isPrice(entryLow) && isPrice(entryHigh) && entryLow > entryHigh) {
+      messages.push('Review Required — Entry zone bounds are reversed.');
+    }
   }
 
   const validationSeverity = messages.some((message) => message.includes('Data Error')) ? 'error' : messages.length ? 'review' : 'ok';
-  const displayStatus = validationSeverity === 'error'
+  const displayStatus = isDeskPlayContext
+    ? 'Watch Only'
+    : validationSeverity === 'error'
     ? 'Data Error'
     : validationSeverity === 'review'
       ? 'Review Required'
@@ -284,6 +304,7 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     entryHigh,
     stop,
     sweep,
+    contextLine,
     ...(messages.some((message) => message.includes('Target Data Error')) ? [] : [
       t1,
       t2,
@@ -313,6 +334,9 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     r2: rMultiple(direction, entry, stop, t2),
     runnerR: rMultiple(direction, entry, stop, runner),
     stretchR: rMultiple(direction, entry, stop, stretch),
+    renderMode,
+    contextLine,
+    contextLabel,
     sweepEvent,
     reclaimEvent,
     displacementEvent,
@@ -449,6 +473,17 @@ function renderAlertQuality(candidate: SetupCandidate): string {
   `;
 }
 
+function renderWatchContextNotice(model: PlanRenderModel): string {
+  return `
+    <rect x="24" y="486" width="392" height="132" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
+    <text x="38" y="515" class="alert-title" fill="#38bdf8">WATCH BOUNDARY</text>
+    <line x1="38" y1="527" x2="402" y2="527" stroke="#38bdf8" stroke-opacity=".34" />
+    <text x="38" y="555" class="small">canExecute: <tspan fill="#facc15">false</tspan></text>
+    <text x="38" y="582" class="small">Trade levels: <tspan fill="#f8fafc">not approved</tspan></text>
+    <text x="38" y="609" class="small">Next step: <tspan fill="#f8fafc">completed 5M proof required</tspan></text>
+  `;
+}
+
 function statusColor(status: string): string {
   const normalized = status.toLowerCase();
   if (normalized.includes('executable') || normalized.includes('qualified')) return '#22c55e';
@@ -459,6 +494,7 @@ function statusColor(status: string): string {
 }
 
 function planDisplayStatus(model: PlanRenderModel): 'EXECUTABLE' | 'CONDITIONAL' | 'WAIT' | 'BLOCKED' | 'NO TRADE' {
+  if (model.renderMode === 'desk_play_context') return 'WAIT';
   const status = String(model.candidate.executionStatus || model.displayStatus || '').toLowerCase();
   if (status.includes('executable')) return 'EXECUTABLE';
   if (status.includes('conditional')) return 'CONDITIONAL';
@@ -477,24 +513,39 @@ function actionStateLine(status: ReturnType<typeof planDisplayStatus>): string {
 function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRenderModel): string {
   const status = planDisplayStatus(model);
   const accent = model.isLong ? '#4ade80' : '#fb923c';
-  const headerFill = status === 'BLOCKED' || status === 'NO TRADE'
+  const isDeskPlayContext = model.renderMode === 'desk_play_context';
+  const headerFill = isDeskPlayContext
+    ? '#061821'
+    : status === 'BLOCKED' || status === 'NO TRADE'
     ? '#2a0d0d'
     : model.isLong
       ? '#062315'
       : '#261406';
   const prefix = sessionPlanPrefix(input.sessionLabel);
-  const title = `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
+  const title = isDeskPlayContext
+    ? `[${prefix} WATCH] ${input.instrument} - ${model.direction} CONTEXT`
+    : `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
+  const badge = isDeskPlayContext ? 'WATCH ONLY' : status;
+  const action = isDeskPlayContext ? 'Action: wait for completed 5M proof' : actionStateLine(status);
   return `
     <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
-    <rect x="1290" y="35" width="192" height="38" rx="19" fill="${statusColor(status)}" opacity=".94" />
-    <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(status)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(model.model, 42))}</text>
-    <text x="1076" y="94" class="banner-action">${escapeHtml(actionStateLine(status))}</text>
+    <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
+    <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Play Context - Watch Only' : model.model, 42))}</text>
+    <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }
 
 function renderRiskStrip(model: PlanRenderModel): string {
+  if (model.renderMode === 'desk_play_context') {
+    return `
+      <rect x="466" y="126" width="912" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
+      <text x="488" y="157" class="risk-strip">Context: <tspan fill="#f8fafc">Watch only</tspan></text>
+      <text x="742" y="157" class="risk-strip">Line: <tspan fill="#f8fafc">${money(model.contextLine)}</tspan></text>
+      <text x="1038" y="157" class="risk-strip">No entry / stop / T1 / T2</text>
+    `;
+  }
   const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
   const status = planDisplayStatus(model);
   const border = status === 'BLOCKED' ? '#ef4444' : status === 'EXECUTABLE' ? '#22c55e' : '#facc15';
@@ -516,6 +567,18 @@ function latestClose(plan: PlanRenderModel): number | null {
 }
 
 function renderRiskSummary(model: PlanRenderModel): string {
+  if (model.renderMode === 'desk_play_context') {
+    return `
+      <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
+      <text x="220" y="283" text-anchor="middle" class="panel-text">DESK PLAY CONTEXT</text>
+      <text x="46" y="318" class="small">Line: <tspan fill="#38bdf8">${money(model.contextLine)}</tspan></text>
+      <text x="46" y="350" class="small">Status: <tspan fill="#facc15">Watch only</tspan></text>
+      <text x="46" y="382" class="small">Entry: <tspan fill="#f8fafc">not approved</tspan></text>
+      <text x="46" y="414" class="small">Stop: <tspan fill="#f8fafc">not approved</tspan></text>
+      <text x="46" y="442" class="small">Targets: <tspan fill="#f8fafc">not approved</tspan></text>
+      <text x="46" y="462" class="small">Rule: <tspan fill="#f8fafc">5M trigger still required</tspan></text>
+    `;
+  }
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
   const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
   return `
@@ -862,13 +925,14 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const y = (price: number) => plot.bottom - ((price - low) / (high - low)) * (plot.bottom - plot.top);
   const markerAnchors = buildMarkerAnchors(plan, xStep, plot.left, y);
   const visibleTimeLabels = renderTimeAxisLabels(candles, xStep, plot.left, plot.right);
-  const entryZone = isPrice(entryLow) && isPrice(entryHigh)
+  const isDeskPlayContext = plan.renderMode === 'desk_play_context';
+  const entryZone = !isDeskPlayContext && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
        <text x="772" y="${Math.max(188, y(entryHigh) - 10)}" class="zone-title">${isLong ? 'LONG ENTRY ZONE' : 'SHORT ENTRY ZONE'}</text>`
     : '';
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
   const pathColor = isLong ? '#4ade80' : '#fb923c';
-  const targetsValidForChart = !plan.validationMessages.some((message) => message.includes('Target Data Error'));
+  const targetsValidForChart = !isDeskPlayContext && !plan.validationMessages.some((message) => message.includes('Target Data Error'));
   const runnerValidForChart = targetsValidForChart && !targetLooksStale(runner, candles, risk);
   const stretchValidForChart = targetsValidForChart && !targetLooksStale(stretch, candles, risk);
   const projectedPath = targetsValidForChart && isLong && isPrice(entryHigh) && isPrice(t2)
@@ -877,7 +941,9 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       ? `<polyline points="1160,${y(entryLow)} 1236,${y(t1 || entryLow)} 1284,${y(entryLow)} 1326,${y(t2)}" fill="none" stroke="${pathColor}" stroke-width="3" stroke-dasharray="10 9" marker-end="url(#arrow)" />`
       : '';
   const sameT1T2 = isPrice(t1) && isPrice(t2) && Math.abs(t1 - t2) < 0.01;
-  const managedLines = renderManagedLines([
+  const managedLevels = isDeskPlayContext
+    ? [{ label: plan.contextLabel, price: plan.contextLine, color: '#38bdf8', dash: '12 8', width: 3 }]
+    : [
     ...(stretchValidForChart && isPrice(stretch) ? [{ label: 'Stretch', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
     ...(runnerValidForChart && isPrice(runner) ? [{ label: 'Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
     { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
@@ -886,7 +952,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
       ? { label: 'T1/T2 2.0R', price: t2, color: '#facc15', dash: '8 7', width: 2.5 }
       : { label: targetsValidForChart ? 'T1 1.5R' : '', price: targetsValidForChart ? t1 : null, color: '#facc15', dash: '8 7', width: 2.5 },
     sameT1T2 ? { label: '', price: null, color: '#facc15' } : { label: targetsValidForChart ? 'T2 2.0R' : '', price: targetsValidForChart ? t2 : null, color: '#facc15', dash: '8 7', width: 2.5 },
-  ], y, { lineStart: plot.left, lineEnd: plot.right - 8, text: plot.right - 20, pill: 1406 });
+  ];
+  const managedLines = renderManagedLines(managedLevels, y, { lineStart: plot.left, lineEnd: plot.right - 8, text: plot.right - 20, pill: 1406 });
 
   return `<!doctype html>
 <html>
@@ -970,12 +1037,12 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="236" y="196" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
   <text x="32" y="222" class="context-mini">Narrative: <tspan class="context-value">${escapeHtml(narrative)}</tspan></text>
   ${renderRiskSummary(plan)}
-  ${renderAlertQuality(candidate)}
+  ${isDeskPlayContext ? renderWatchContextNotice(plan) : renderAlertQuality(candidate)}
   ${renderDirectionLogo(isLong)}
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
-  <text x="44" y="991" class="small">⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.</text>
+  <text x="44" y="991" class="small">${isDeskPlayContext ? 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
 </svg>
 </div>
 </body>
