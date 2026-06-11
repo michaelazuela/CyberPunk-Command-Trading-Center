@@ -1713,12 +1713,21 @@ try {
     candidateLifecycleTrace: deskPlayLifecycleTrace,
     canExecute: false,
   });
-  const contextChartCandidate = candidateForDeskPlayContextChart(deskPlayState);
+  const deskPlayNormalized = {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: 'EntryTriggerPending',
+    invalidation: candidate.invalidation,
+    setupCandidates: [candidate],
+  } as any;
+  const contextChartCandidate = candidateForDeskPlayContextChart(deskPlayState, deskPlayNormalized);
   assert.equal(contextChartCandidate?.direction, 'LONG');
-  assert.equal(contextChartCandidate?.entry, null);
-  assert.equal(contextChartCandidate?.stop, null);
-  assert.equal(contextChartCandidate?.target1, null);
-  assert.equal(contextChartCandidate?.target2, null);
+  assert.equal(contextChartCandidate?.entry, 5324.25);
+  assert.equal(contextChartCandidate?.stop, 5319.25);
+  assert.equal(contextChartCandidate?.target1, 5331.75);
+  assert.equal(contextChartCandidate?.target2, 5334.25);
+  assert.equal(contextChartCandidate?.riskPoints, 5);
   assert.equal(contextChartCandidate?.executionStatus, ExecutionStatus.Conditional);
   assert.equal(contextChartCandidate?.activeRuleset?.htfLineInSand?.affectsExecution, false);
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
@@ -1733,14 +1742,7 @@ try {
       recommendation: 'Watch only.',
       hardBlocker: null,
     },
-    normalized: {
-      canExecute: false,
-      decisionStatus: TradeDecisionStatus.Wait,
-      decision: 'LONG',
-      noTradeReason: 'EntryTriggerPending',
-      invalidation: candidate.invalidation,
-      setupCandidates: [candidate],
-    } as any,
+    normalized: deskPlayNormalized,
     chartContext: chartContext as ChartContext,
     windowLabel: 'Lunch/PM Setup Scanner',
     planVersionId: 'SCANNER-DESK-PLAY-FIXTURE',
@@ -1753,7 +1755,7 @@ try {
   assert.ok(deskPlayResult.chartMarkup);
   assert.equal(deskPlayResult.payload.components, undefined);
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
-  assert.ok(deskPlayText.includes('Chart: watch/context chart attached. No executable entry, stop, T1, or T2 is implied.'));
+  assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached. Entry/stop/T1/T2 use app math; canExecute remains false until gates pass.'));
   assert.ok(!/^Entry:/m.test(deskPlayText));
   assert.ok(!/^Stop:/m.test(deskPlayText));
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
@@ -1767,10 +1769,11 @@ try {
     contextLine: deskPlayState.primaryDeskPlay.lineInSand,
     contextLabel: 'Line in the sand',
   });
-  assert.ok(deskPlayChartHtml.includes('[PM WATCH] MES - LONG CONTEXT'));
-  assert.ok(deskPlayChartHtml.includes('WATCH ONLY'));
-  assert.ok(deskPlayChartHtml.includes('No entry / stop / T1 / T2'));
-  assert.ok(!deskPlayChartHtml.includes('LONG ENTRY ZONE'));
+  assert.ok(deskPlayChartHtml.includes('[PM REVIEW] MES - LONG DESK PLAN'));
+  assert.ok(deskPlayChartHtml.includes('REVIEW ONLY'));
+  assert.ok(deskPlayChartHtml.includes('Conditional Entry Zone'.toUpperCase()));
+  assert.ok(deskPlayChartHtml.includes('5331.75'));
+  assert.ok(deskPlayChartHtml.includes('5334.25'));
 
   const executableLookingCandidate = {
     ...candidate,

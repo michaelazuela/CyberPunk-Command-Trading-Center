@@ -8,7 +8,7 @@ import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
-import { TRADE_RULES } from '../../src/config/tradeRules';
+import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import {
   buildNinjaChartContext,
   getNinjaBridgeBars,
@@ -2683,31 +2683,97 @@ export function candidateForNormalizedVisualAuthority(
   };
 }
 
-export function candidateForDeskPlayContextChart(deskState: DeskState): SetupCandidate | null {
+function isFiniteTradePrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function deskPlayPlanningCandidate(args: {
+  deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): SetupCandidate | null {
+  const direction = args.deskState.primaryDeskPlay.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const candidates = args.normalized?.setupCandidates || [];
+  const selected = candidates.find((candidate) =>
+    candidate.direction === direction &&
+    isFiniteTradePrice(candidate.entry) &&
+    isFiniteTradePrice(candidate.stop),
+  );
+  return selected || null;
+}
+
+function deskPlayPlanningLevels(args: {
+  deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): Pick<SetupCandidate, 'entry' | 'stop' | 'target1' | 'target2' | 'riskPoints'> {
+  const direction = args.deskState.primaryDeskPlay.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return { entry: null, stop: null, target1: null, target2: null, riskPoints: null };
+  }
+  const candidate = deskPlayPlanningCandidate(args);
+  const entry = isFiniteTradePrice(args.normalized?.entry)
+    ? args.normalized.entry
+    : candidate?.entry ?? null;
+  const stop = isFiniteTradePrice(args.normalized?.stop)
+    ? args.normalized.stop
+    : candidate?.stop ?? null;
+  const computed = targetsFromEntryStop(direction, entry, stop);
+  if (
+    !isFiniteTradePrice(entry) ||
+    !isFiniteTradePrice(stop) ||
+    !isFiniteTradePrice(computed.target1) ||
+    !isFiniteTradePrice(computed.target2)
+  ) {
+    return { entry: null, stop: null, target1: null, target2: null, riskPoints: null };
+  }
+  return {
+    entry,
+    stop,
+    target1: computed.target1,
+    target2: computed.target2,
+    riskPoints: computed.riskPoints,
+  };
+}
+
+export function candidateForDeskPlayContextChart(
+  deskState: DeskState,
+  normalized?: ReturnType<typeof buildAppTradePlan> | null,
+): SetupCandidate | null {
   const play = deskState.primaryDeskPlay;
   if (!play.discordEligible || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return null;
   const primaryBias = play.direction === 'LONG' ? play.longBias : play.shortBias;
+  const planningLevels = deskPlayPlanningLevels({ deskState, normalized });
+  const hasPlanningLevels = isFiniteTradePrice(planningLevels.entry) &&
+    isFiniteTradePrice(planningLevels.stop) &&
+    isFiniteTradePrice(planningLevels.target1) &&
+    isFiniteTradePrice(planningLevels.target2);
   const blockers = Array.from(new Set([
     ...primaryBias.blockers,
     'canExecute=false',
-    'Desk Play chart is watch/context only.',
-    'No executable entry, stop, T1, T2, or risk approval is attached to this image.',
+    hasPlanningLevels
+      ? 'Desk Play chart shows conditional app-owned planning levels only.'
+      : 'Protected 5M structure stop not confirmed; planning levels unavailable.',
+    'No execution approval is attached to this image.',
   ]));
   return {
     setupType: primaryBias.setupType || SetupType.NoSetup,
-    scenarioLabel: `${play.direction} Desk Play Context - Watch Only`,
+    scenarioLabel: hasPlanningLevels
+      ? `${play.direction} Desk Play - Conditional Planning Levels`
+      : `${play.direction} Desk Play Context - Watch Only`,
     direction: play.direction,
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: 'Low',
     priority: 0,
-    entry: null,
-    stop: null,
-    target1: null,
-    target2: null,
-    riskPoints: null,
+    entry: planningLevels.entry,
+    stop: planningLevels.stop,
+    target1: planningLevels.target1,
+    target2: planningLevels.target2,
+    riskPoints: planningLevels.riskPoints,
     invalidation: play.invalidation || deskState.invalidation || null,
     decisionQualityScore: primaryBias.decisionQualityScore ?? primaryBias.rankScore ?? null,
-    decisionQualityRecommendation: 'Desk Play context only: wait for completed 5M proof and normal app-owned gates.',
+    decisionQualityRecommendation: hasPlanningLevels
+      ? 'Conditional planning levels only: targets are app-computed from entry to protected structure stop; canExecute remains false.'
+      : 'Desk Play context only: wait for completed 5M proof and protected structure stop.',
     rankScore: primaryBias.rankScore ?? null,
     evidence: [
       play.summary,
@@ -3096,7 +3162,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   files: string[];
   chartMarkup: string | null;
 }> {
-  const contextCandidate = candidateForDeskPlayContextChart(args.deskState);
+  const contextCandidate = candidateForDeskPlayContextChart(args.deskState, args.normalized);
   const play = args.deskState.primaryDeskPlay;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
@@ -3113,6 +3179,16 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
       })
     : null;
   const files = [chartMarkup].filter((file): file is string => Boolean(file));
+  const normalizedForPayload = contextCandidate
+    ? {
+        ...args.normalized,
+        entry: contextCandidate.entry ?? args.normalized.entry ?? null,
+        stop: contextCandidate.stop ?? args.normalized.stop ?? null,
+        t1: contextCandidate.target1 ?? args.normalized.t1 ?? null,
+        t2: contextCandidate.target2 ?? args.normalized.t2 ?? null,
+        riskPoints: contextCandidate.riskPoints ?? args.normalized.riskPoints ?? null,
+      }
+    : args.normalized;
   const payload = buildDiscordPayload({
     session: args.session,
     tradeDate: args.tradeDate,
@@ -3120,7 +3196,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     state: args.state,
     confidence: args.confidence,
     candidate: null,
-    normalized: args.normalized,
+    normalized: normalizedForPayload,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,
     attachments: {

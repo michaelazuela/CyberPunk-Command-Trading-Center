@@ -319,7 +319,7 @@ assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
 assert.ok(deskPlayText.includes('Long Above: 7342.00'));
 assert.ok(deskPlayText.includes('Short Below: 7303.50'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));
-assert.ok(deskPlayText.includes('Chart: watch/context chart attached. No executable entry, stop, T1, or T2 is implied.'));
+assert.ok(deskPlayText.includes('Chart: watch/context chart attached. Entry/stop/T1/T2 unavailable until protected structure is proven.'));
 assert.ok(deskPlayText.includes('Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.'));
 assert.ok(!/^Entry:/m.test(deskPlayText));
 assert.ok(!/^Stop:/m.test(deskPlayText));

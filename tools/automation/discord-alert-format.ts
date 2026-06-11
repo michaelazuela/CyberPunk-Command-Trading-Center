@@ -53,6 +53,8 @@ export interface CompactNormalizedPlan {
   canExecute?: boolean;
   decisionStatus?: string;
   decision?: string;
+  entry?: number | null;
+  stop?: number | null;
   noTradeReason?: string | null;
   invalidation?: string | null;
   t1?: number | null;
@@ -514,6 +516,15 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
   const direction = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : 'WAIT';
+  const hasConditionalLevels = args.attachments.chartPlan &&
+    typeof args.normalized.entry === 'number' &&
+    Number.isFinite(args.normalized.entry) &&
+    typeof args.normalized.stop === 'number' &&
+    Number.isFinite(args.normalized.stop) &&
+    typeof args.normalized.t1 === 'number' &&
+    Number.isFinite(args.normalized.t1) &&
+    typeof args.normalized.t2 === 'number' &&
+    Number.isFinite(args.normalized.t2);
   const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
     ? priceLine(play.lineInSand)
     : 'N/A';
@@ -536,8 +547,10 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 125)}`,
     `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 110)}`,
     play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
-    args.attachments.chartPlan
-      ? 'Chart: watch/context chart attached. No executable entry, stop, T1, or T2 is implied.'
+    hasConditionalLevels
+      ? 'Chart: conditional Desk Plan attached. Entry/stop/T1/T2 use app math; canExecute remains false until gates pass.'
+      : args.attachments.chartPlan
+      ? 'Chart: watch/context chart attached. Entry/stop/T1/T2 unavailable until protected structure is proven.'
       : 'Chart: not attached; use DeskState text only until chart context is available.',
     '',
     'Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.',
@@ -902,8 +915,8 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  const hasWatchContextChart = /watch\/context chart attached/i.test(mainText);
-  if (validFiles.length > 0 && validFiles.length < 2 && !hasWatchContextChart) {
+  const hasDeskPlaySingleChart = /watch\/context chart attached|conditional Desk Plan attached/i.test(mainText);
+  if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
   if (validFiles.length > 0 && mainText.length > 1600) {
