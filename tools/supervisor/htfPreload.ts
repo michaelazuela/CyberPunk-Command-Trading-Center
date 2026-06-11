@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
+import { buildWindowsSafeSpawnCommand } from './preWindowBackfill';
 
 const REQUIRED_HTF_PRELOAD_TIMEFRAMES = ['5m', '15m', '60m', '120m', '240m'] as const;
 type RequiredHtfPreloadTimeframe = typeof REQUIRED_HTF_PRELOAD_TIMEFRAMES[number];
@@ -147,7 +148,8 @@ export const defaultHtfPreloadRunner: HtfPreloadRunner = (command, args, options
   const stdout = fs.openSync(options.stdoutLog, 'a');
   const stderr = fs.openSync(options.stderrLog, 'a');
   try {
-    return spawnSync(command, args, {
+    const spawnCommand = buildWindowsSafeSpawnCommand(command, args);
+    return spawnSync(spawnCommand.command, spawnCommand.args, {
       cwd: options.cwd,
       timeout: options.timeout,
       windowsHide: true,

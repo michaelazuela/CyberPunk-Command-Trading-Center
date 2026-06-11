@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-11
+Task: Fix supervisor pre-window backfill Windows spawn failure.
+Files changed: docs/PROJECT_STATUS.md, tools/supervisor/htfPreload.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/supervisor.test.ts.
+Reason: The live supervisor reported `[SUPERVISOR] Pre-Window Backfill Failed` because the repair command failed before launch with `spawnSync npm.cmd EINVAL`; manual backfill succeeded, proving the issue was Windows process-launch plumbing rather than NinjaTrader market data.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; manual `npm run nt:backfill -- --instrument MES --bridge-instrument MES --bridge-url http://127.0.0.1:8765 --days 2 --delay-ms 50` repaired 692 bars; full required suite pending before commit.
+Result: Pre-window backfill and HTF preload now wrap npm through `cmd.exe /d /c` on Windows, matching the safer supervised child-service launch path and avoiding direct `npm.cmd` spawn failures from the tray/supervisor context.
+Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner scoring, or bridge contracts changed.
+Bridge impact: None. Manual repair read existing bridge data and upserted compact OHLCV into `market_bars`.
+Discord impact: Operational alert root cause fixed; no trade alert behavior changed.
+Journal/RAG impact: None.
+Supabase impact: No migration added. Existing market_bars cache was repaired through the existing backfill path.
+Known risks: None identified after focused verification.
+Next recommended action: Restart the Quant Desk supervisor once so the running daemon loads the patched launch helper.
+
+## Previous Change
+
 Date: 2026-06-10
 Task: Install Phase 10 Alpha through Delta scanner model E2E health and supervisor readiness contracts.
 Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/lib/scannerModelE2EHealth.ts, src/lib/scannerModelE2EHealth.test.ts, tools/supervisor/readinessDrill.ts, tools/supervisor/readinessDrill.test.ts.

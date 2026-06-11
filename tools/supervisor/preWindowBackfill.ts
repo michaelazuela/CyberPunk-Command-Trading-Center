@@ -35,6 +35,19 @@ function npmCommand(): string {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
 }
 
+function quoteWindowsArg(value: string): string {
+  if (value && !/\s|"/.test(value)) return value;
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+export function buildWindowsSafeSpawnCommand(command: string, args: string[]): { command: string; args: string[] } {
+  if (process.platform !== 'win32') return { command, args };
+  return {
+    command: 'cmd.exe',
+    args: ['/d', '/c', [command, ...args.map(quoteWindowsArg)].join(' ')],
+  };
+}
+
 function statePath(logsDir: string): string {
   return path.join(logsDir, 'pre-window-backfill-state.json');
 }
@@ -166,7 +179,8 @@ export function runPreWindowBackfillIfDue(
 
   let result: { status: number | null; error?: Error | null };
   try {
-    result = spawnSync(command.command, command.args, {
+    const spawnCommand = buildWindowsSafeSpawnCommand(command.command, command.args);
+    result = spawnSync(spawnCommand.command, spawnCommand.args, {
       cwd: process.cwd(),
       timeout: config.preWindowBackfill.timeoutMs,
       windowsHide: true,

@@ -14,7 +14,7 @@ import {
   sendSupervisorSelfHealNotification,
   type SupervisorNotificationState,
 } from './notifications';
-import { buildPreWindowBackfillCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
+import { buildPreWindowBackfillCommand, buildWindowsSafeSpawnCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   findExternalServiceProcesses,
   isProcessRunning,
@@ -51,6 +51,14 @@ const preWindowCommand = buildPreWindowBackfillCommand(defaultConfig.config);
 assert.deepEqual(preWindowCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
 assert.ok(preWindowCommand.args.includes('--days'));
 assert.ok(preWindowCommand.args.includes('2'));
+const safeSpawnCommand = buildWindowsSafeSpawnCommand('npm.cmd', ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
+if (process.platform === 'win32') {
+  assert.equal(safeSpawnCommand.command, 'cmd.exe');
+  assert.deepEqual(safeSpawnCommand.args.slice(0, 3), ['/d', '/c', 'npm.cmd run nt:backfill -- --bridge-instrument "MES 06-26"']);
+} else {
+  assert.equal(safeSpawnCommand.command, 'npm.cmd');
+  assert.deepEqual(safeSpawnCommand.args, ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
+}
 
 const fixedNow = new Date('2026-06-05T12:00:00.000Z');
 const status = buildSupervisorStatus(defaultConfig, null, null, null, fixedNow);
