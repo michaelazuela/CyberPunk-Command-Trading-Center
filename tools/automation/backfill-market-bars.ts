@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -62,12 +63,20 @@ function etDateTime(dateText: string, time: string): string {
 async function main() {
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
-  const bridgeInstrument = argValue('bridge-instrument') || 'MES 06-26';
+  let bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || instrument;
   const delayMs = Math.max(0, Number(argValue('delay-ms') || '250'));
   const config = loadMarketDataConfig();
   if (!config) {
     throw new Error('Market backfill requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID in .env.local.');
   }
+
+  const instrumentResolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl,
+    appInstrument: instrument,
+    requestedBridgeInstrument: bridgeInstrument,
+  });
+  bridgeInstrument = instrumentResolution.instrument;
+  if (instrumentResolution.warning) console.warn(`[backfill] ${instrumentResolution.warning}`);
 
   const dates = buildDates();
   console.log(`Quant Desk market backfill: ${dates.length} trade date(s), ${bridgeInstrument}, ${TIMEFRAMES.join(', ')}.`);

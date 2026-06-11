@@ -6,6 +6,7 @@ import { buildHealthReport } from './health';
 import { runHtfPreloadStartup } from './htfPreload';
 import { createSupervisorLogger } from './logger';
 import { sendSupervisorNotifications, sendSupervisorSelfHealNotification } from './notifications';
+import { runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   getSupervisorState,
   launchEnabledServices,
@@ -68,12 +69,14 @@ export function startSupervisor(): http.Server {
 
   const monitor = async () => {
     supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
+    const preWindowBackfill = runPreWindowBackfillIfDue(configResult.config, logger);
     lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
     const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
-    const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
+    const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery, new Date(), preWindowBackfill);
     const notificationResult = await sendSupervisorNotifications(status);
     logger.log(lastHealthReport.status === 'fail' ? 'warn' : 'info', 'Supervisor health checked.', {
       status: lastHealthReport.status,
+      preWindowBackfill: preWindowBackfill.reason,
       notificationsSent: notificationResult.sent,
       notificationsSkipped: notificationResult.skipped,
       notificationKinds: notificationResult.notifications.map((item) => item.kind),

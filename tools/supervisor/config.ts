@@ -28,6 +28,17 @@ export interface SupervisorHtfPreloadConfig {
   retryDelayMs: number;
 }
 
+export interface SupervisorPreWindowBackfillConfig {
+  enabled: boolean;
+  days: number;
+  delayMs: number;
+  timeoutMs: number;
+  morningStartEt: string;
+  morningEndEt: string;
+  lunchStartEt: string;
+  lunchEndEt: string;
+}
+
 export interface SupervisorConfig {
   host: string;
   port: number;
@@ -36,6 +47,7 @@ export interface SupervisorConfig {
   childServices: SupervisorChildService[];
   health: SupervisorHealthConfig;
   htfPreload: SupervisorHtfPreloadConfig;
+  preWindowBackfill: SupervisorPreWindowBackfillConfig;
 }
 
 export interface SupervisorConfigResult {
@@ -63,6 +75,7 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const bridgeUrl = env.NINJATRADER_BRIDGE_URL?.trim() || env.SUPERVISOR_BRIDGE_URL?.trim() || 'http://127.0.0.1:8765';
   const pollSeconds = env.SUPERVISOR_POLL_SECONDS?.trim() || '60';
   const barTimeZone = env.SUPERVISOR_BAR_TIME_ZONE?.trim() || 'eastern';
+  const recorderHeartbeatPath = env.SUPERVISOR_RECORDER_HEARTBEAT_PATH?.trim() || path.resolve(process.cwd(), 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
   const enabledServices = env.SUPERVISOR_SERVICES;
 
   return [
@@ -83,6 +96,7 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bridge-url', bridgeUrl,
         '--poll-seconds', pollSeconds,
         '--bar-time-zone', barTimeZone,
+        '--heartbeat-path', recorderHeartbeatPath,
       ],
       enabled: csvIncludes(enabledServices, 'candle-recorder', true),
     },
@@ -185,6 +199,16 @@ export function loadSupervisorConfig(
         timeoutMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS, 180_000, 'SUPERVISOR_HTF_PRELOAD_TIMEOUT_MS', errors),
         maxAttempts: Math.max(1, Math.floor(numberEnv(env.SUPERVISOR_HTF_PRELOAD_MAX_ATTEMPTS, 3, 'SUPERVISOR_HTF_PRELOAD_MAX_ATTEMPTS', errors))),
         retryDelayMs: numberEnv(env.SUPERVISOR_HTF_PRELOAD_RETRY_DELAY_MS, 15_000, 'SUPERVISOR_HTF_PRELOAD_RETRY_DELAY_MS', errors),
+      },
+      preWindowBackfill: {
+        enabled: boolEnv(env.SUPERVISOR_PRE_WINDOW_BACKFILL_ENABLED, true),
+        days: numberEnv(env.SUPERVISOR_PRE_WINDOW_BACKFILL_DAYS, 2, 'SUPERVISOR_PRE_WINDOW_BACKFILL_DAYS', errors),
+        delayMs: numberEnv(env.SUPERVISOR_PRE_WINDOW_BACKFILL_DELAY_MS, 50, 'SUPERVISOR_PRE_WINDOW_BACKFILL_DELAY_MS', errors),
+        timeoutMs: numberEnv(env.SUPERVISOR_PRE_WINDOW_BACKFILL_TIMEOUT_MS, 180_000, 'SUPERVISOR_PRE_WINDOW_BACKFILL_TIMEOUT_MS', errors),
+        morningStartEt: env.SUPERVISOR_MORNING_BACKFILL_START_ET?.trim() || '09:45',
+        morningEndEt: env.SUPERVISOR_MORNING_BACKFILL_END_ET?.trim() || '10:00',
+        lunchStartEt: env.SUPERVISOR_LUNCH_BACKFILL_START_ET?.trim() || '11:45',
+        lunchEndEt: env.SUPERVISOR_LUNCH_BACKFILL_END_ET?.trim() || '12:00',
       },
     },
     status: errors.length ? 'invalid' : 'valid',

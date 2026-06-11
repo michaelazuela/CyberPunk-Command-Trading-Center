@@ -29,6 +29,16 @@ Do not commit webhook URLs.
 
 ## Commands
 
+Preferred local workflow:
+
+```powershell
+.\Launch-QuantDeskSupervisorTray.vbs
+```
+
+Use the tray for normal mornings. It starts the supervisor hidden, keeps the scanner and candle recorder under one watchdog, runs startup/pre-window backfill, and exposes status/logs/repair actions from the tray menu.
+
+Command-line runs are diagnostic/fallback tools.
+
 Dry run without posting:
 
 ```powershell

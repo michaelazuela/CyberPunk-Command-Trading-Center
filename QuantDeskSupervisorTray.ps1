@@ -25,6 +25,7 @@ $IconPath = Join-Path $Root 'assets\launcher\quant-desk-supervisor-launcher.ico'
 $StartScript = Join-Path $Root 'Start-QuantDesk-Supervisor.ps1'
 $StopScript = Join-Path $Root 'Stop-QuantDesk-Supervisor.ps1'
 $SelfHealNotifyScript = 'npm run supervisor:notify-self-heal'
+$RepairCacheCommand = 'npm run nt:backfill -- --days 2'
 $TrayLogPath = Join-Path $LogsDir 'tray.log'
 $SelfHealEnabled = $true
 $SelfHealPausedByStop = $false
@@ -211,6 +212,8 @@ $startItem = $menu.Items.Add('Start Supervisor')
 $restartItem = $menu.Items.Add('Restart Supervisor Services')
 $stopItem = $menu.Items.Add('Stop All')
 $menu.Items.Add('-') | Out-Null
+$repairCacheItem = $menu.Items.Add('Repair Market Cache Now')
+$menu.Items.Add('-') | Out-Null
 $openStatusItem = $menu.Items.Add('Open Status')
 $openLogsItem = $menu.Items.Add('Open Logs')
 $refreshItem = $menu.Items.Add('Refresh')
@@ -265,6 +268,7 @@ function Update-Tray {
     $startItem.Enabled = -not $isRunning
     $restartItem.Enabled = $true
     $stopItem.Enabled = $isRunning
+    $repairCacheItem.Enabled = $true
     $openStatusItem.Enabled = $isRunning
     $openLogsItem.Enabled = $true
     $selfHealItem.Checked = $SelfHealEnabled
@@ -275,6 +279,7 @@ function Update-Tray {
     $startItem.Enabled = $true
     $restartItem.Enabled = $true
     $stopItem.Enabled = $true
+    $repairCacheItem.Enabled = $true
     $openStatusItem.Enabled = $false
     $openLogsItem.Enabled = $true
   }
@@ -304,6 +309,12 @@ $stopItem.Add_Click({
   $script:EndpointMissCount = 0
   $statusItem.Text = 'Status: Stop requested...'
   Start-LocalScript -ScriptPath $StopScript -Label 'stop' | Out-Null
+  Update-Tray
+})
+
+$repairCacheItem.Add_Click({
+  $statusItem.Text = 'Status: Market cache repair requested...'
+  Start-NpmCommand -Command $RepairCacheCommand -Label 'manual-market-cache-repair' | Out-Null
   Update-Tray
 })
 

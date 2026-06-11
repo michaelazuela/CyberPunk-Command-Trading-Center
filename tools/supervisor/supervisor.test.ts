@@ -14,6 +14,7 @@ import {
   sendSupervisorSelfHealNotification,
   type SupervisorNotificationState,
 } from './notifications';
+import { buildPreWindowBackfillCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   findExternalServiceProcesses,
   isProcessRunning,
@@ -37,11 +38,19 @@ assert.equal(defaultConfig.config.htfPreload.enabled, true);
 assert.equal(defaultConfig.config.htfPreload.days, 30);
 assert.equal(defaultConfig.config.htfPreload.maxAttempts, 3);
 assert.equal(defaultConfig.config.htfPreload.retryDelayMs, 15_000);
+assert.equal(defaultConfig.config.preWindowBackfill.enabled, true);
+assert.equal(defaultConfig.config.preWindowBackfill.days, 2);
+assert.equal(defaultConfig.config.preWindowBackfill.morningStartEt, '09:45');
+assert.equal(defaultConfig.config.preWindowBackfill.lunchStartEt, '11:45');
 const preloadCommand = buildHtfPreloadCommand(defaultConfig.config);
 assert.deepEqual(preloadCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
 assert.ok(preloadCommand.args.includes('--days'));
 assert.ok(preloadCommand.args.includes('30'));
 assert.ok(preloadCommand.args.includes('--delay-ms'));
+const preWindowCommand = buildPreWindowBackfillCommand(defaultConfig.config);
+assert.deepEqual(preWindowCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
+assert.ok(preWindowCommand.args.includes('--days'));
+assert.ok(preWindowCommand.args.includes('2'));
 
 const fixedNow = new Date('2026-06-05T12:00:00.000Z');
 const status = buildSupervisorStatus(defaultConfig, null, null, null, fixedNow);
@@ -103,6 +112,8 @@ const trayLauncher = fs.readFileSync(trayLauncherPath, 'utf8');
 assert.ok(trayScript.includes('System.Windows.Forms.NotifyIcon'));
 assert.ok(trayScript.includes('Open Logs'));
 assert.ok(trayScript.includes('Stop All'));
+assert.ok(trayScript.includes('Repair Market Cache Now'));
+assert.ok(trayScript.includes('manual-market-cache-repair'));
 assert.ok(trayScript.includes('Restart Supervisor Services'));
 assert.ok(trayScript.includes('Self-Heal Enabled'));
 assert.ok(trayScript.includes('Invoke-SelfHealIfNeeded'));
@@ -165,6 +176,16 @@ const processConfig = {
     maxAttempts: 3,
     retryDelayMs: 1,
   },
+  preWindowBackfill: {
+    enabled: true,
+    days: 2,
+    delayMs: 50,
+    timeoutMs: 1,
+    morningStartEt: '09:45',
+    morningEndEt: '10:00',
+    lunchStartEt: '11:45',
+    lunchEndEt: '12:00',
+  },
   childServices: [
     {
       id: 'test-child',
@@ -176,6 +197,17 @@ const processConfig = {
   ],
 };
 const logger = createSupervisorLogger(tempLogsDir);
+const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T08:00:00.000Z'));
+assert.equal(outsideWindowBackfill.attempted, false);
+assert.equal(outsideWindowBackfill.due, false);
+const dueBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T13:50:00.000Z'));
+assert.equal(dueBackfill.enabled, true);
+assert.equal(dueBackfill.due, true);
+assert.equal(dueBackfill.attempted, true);
+assert.equal(dueBackfill.run?.session, 'morning');
+assert.equal(dueBackfill.run?.tradeDate, '2026-06-05');
+assert.equal(dueBackfill.run?.ok, false);
+assert.ok(fs.existsSync(dueBackfill.run?.stdoutLog || ''));
 const preloadCalls: Array<{ command: string; args: string[]; timeout: number }> = [];
 const preloadResult = runHtfPreloadStartup(processConfig, logger, (command, args, options) => {
   preloadCalls.push({ command, args, timeout: options.timeout });

@@ -71,7 +71,7 @@ function logCheck(args: {
   };
 }
 
-export async function checkBridgeHealth(bridgeUrl: string): Promise<SupervisorHealthCheck> {
+export async function checkBridgeHealth(bridgeUrl: string, configuredBridgeInstrument: string | null = null): Promise<SupervisorHealthCheck> {
   try {
     const response = await fetch(`${bridgeUrl.replace(/\/+$/, '')}/health`, { signal: AbortSignal.timeout(3_000) });
     if (!response.ok) {
@@ -82,13 +82,32 @@ export async function checkBridgeHealth(bridgeUrl: string): Promise<SupervisorHe
         message: `Bridge health endpoint returned HTTP ${response.status}.`,
       };
     }
-    const parsed = await response.json().catch(() => null) as { ok?: boolean; defaultInstrument?: string } | null;
+    const parsed = await response.json().catch(() => null) as { ok?: boolean; defaultInstrument?: string; readOnly?: boolean; version?: string } | null;
+    const defaultInstrument = parsed?.defaultInstrument || null;
+    const configuredRoot = configuredBridgeInstrument?.trim().split(/\s+/)[0] || null;
+    const defaultRoot = defaultInstrument?.trim().split(/\s+/)[0] || null;
+    const contractMismatch = Boolean(
+      configuredBridgeInstrument &&
+      defaultInstrument &&
+      configuredBridgeInstrument.trim() !== defaultInstrument.trim() &&
+      configuredRoot !== defaultRoot,
+    );
     return {
       id: 'bridge',
       label: 'NinjaTrader bridge',
-      status: parsed?.ok === false ? 'fail' : 'ok',
-      message: parsed?.ok === false ? 'Bridge reported not OK.' : 'Bridge health endpoint is reachable.',
-      details: { defaultInstrument: parsed?.defaultInstrument || null },
+      status: parsed?.ok === false ? 'fail' : contractMismatch ? 'warn' : 'ok',
+      message: parsed?.ok === false
+        ? 'Bridge reported not OK.'
+        : contractMismatch
+          ? 'Bridge default instrument does not match the configured scanner contract root.'
+          : 'Bridge health endpoint is reachable.',
+      details: {
+        defaultInstrument,
+        configuredBridgeInstrument,
+        readOnly: parsed?.readOnly ?? null,
+        version: parsed?.version || null,
+        contractMismatch,
+      },
     };
   } catch (error) {
     return {
@@ -133,6 +152,12 @@ function activeContractCheck(config: SupervisorConfig): SupervisorHealthCheck {
   };
 }
 
+function configuredBridgeInstrument(config: SupervisorConfig): string | null {
+  const scanner = config.childServices.find((service) => service.id === 'scanner');
+  const bridgeInstrumentIndex = scanner?.args.indexOf('--bridge-instrument') ?? -1;
+  return bridgeInstrumentIndex >= 0 ? scanner?.args[bridgeInstrumentIndex + 1] || null : null;
+}
+
 function stateFileCheck(now: Date, staleAfterMs: number): SupervisorHealthCheck {
   const filePath = path.resolve(process.cwd(), 'tools', 'automation', '.nt-scanner-state.json');
   const age = fileAgeMs(filePath, now);
@@ -152,6 +177,56 @@ function stateFileCheck(now: Date, staleAfterMs: number): SupervisorHealthCheck 
     message: age > staleAfterMs ? 'Scanner state file has not changed recently.' : 'Scanner state file was updated recently.',
     details: { filePath, ageMs: Math.round(age), staleAfterMs },
   };
+}
+
+function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): SupervisorHealthCheck {
+  const recorder = config.childServices.find((service) => service.id === 'candle-recorder');
+  const heartbeatArgIndex = recorder?.args.indexOf('--heartbeat-path') ?? -1;
+  const heartbeatPath = heartbeatArgIndex >= 0 && recorder?.args[heartbeatArgIndex + 1]
+    ? recorder.args[heartbeatArgIndex + 1]
+    : path.resolve(process.cwd(), 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
+  try {
+    const raw = fs.readFileSync(heartbeatPath, 'utf8');
+    const parsed = JSON.parse(raw) as {
+      status?: 'ok' | 'warn' | 'error';
+      updatedAt?: string;
+      latestCompleted5m?: string | null;
+      barsProcessed?: number;
+      warning?: string | null;
+      error?: string | null;
+    };
+    const updatedAt = parsed.updatedAt ? new Date(parsed.updatedAt) : null;
+    const ageMs = updatedAt ? now.getTime() - updatedAt.getTime() : Number.POSITIVE_INFINITY;
+    const stale = !Number.isFinite(ageMs) || ageMs > config.health.logStaleAfterMs;
+    const badStatus = parsed.status === 'error';
+    return {
+      id: 'recorder_heartbeat',
+      label: 'Recorder heartbeat',
+      status: badStatus ? 'fail' : stale || parsed.status === 'warn' ? 'warn' : 'ok',
+      message: badStatus
+        ? `Recorder heartbeat reported an error: ${parsed.error || 'unknown error'}`
+        : stale
+          ? 'Recorder heartbeat is stale.'
+          : parsed.status === 'warn'
+            ? `Recorder heartbeat reported a warning: ${parsed.warning || 'unknown warning'}`
+            : 'Recorder heartbeat is fresh.',
+      details: {
+        heartbeatPath,
+        updatedAt: parsed.updatedAt || null,
+        ageMs: Number.isFinite(ageMs) ? Math.round(ageMs) : null,
+        latestCompleted5m: parsed.latestCompleted5m || null,
+        barsProcessed: parsed.barsProcessed ?? null,
+      },
+    };
+  } catch {
+    return {
+      id: 'recorder_heartbeat',
+      label: 'Recorder heartbeat',
+      status: 'warn',
+      message: 'Recorder heartbeat file is not available yet.',
+      details: { heartbeatPath },
+    };
+  }
 }
 
 export async function buildHealthReport(
@@ -174,6 +249,7 @@ export async function buildHealthReport(
     activeContractCheck(config),
     discordConfigCheck(env),
     stateFileCheck(now, config.health.logStaleAfterMs),
+    recorderHeartbeatCheck(config, now),
   ];
 
   for (const service of state.services) {
@@ -207,7 +283,7 @@ export async function buildHealthReport(
     }));
   }
 
-  checks.push(await checkBridgeHealth(config.health.bridgeUrl));
+  checks.push(await checkBridgeHealth(config.health.bridgeUrl, configuredBridgeInstrument(config)));
 
   return {
     status: worstStatus(checks),

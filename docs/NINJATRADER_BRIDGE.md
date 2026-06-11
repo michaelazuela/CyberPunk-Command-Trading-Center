@@ -159,6 +159,8 @@ Continuous recorder:
 npm run nt:candle-recorder
 ```
 
+The recorder writes a local heartbeat at `logs/supervisor/candle-recorder-heartbeat.json` when launched by the supervisor. The heartbeat includes status, latest completed 5M timestamp, processed bar count, and warning/error text.
+
 Backfill / gap repair:
 
 ```bash
@@ -208,6 +210,30 @@ The PowerShell launcher starts the candle recorder automatically unless `-NoReco
 ```
 
 Keep NinjaTrader open while recording or backfilling. If NinjaTrader is closed, the cache cannot receive new market data.
+
+## Supervisor-First Automation
+
+The preferred local workflow is the Quant Desk Supervisor tray:
+
+```powershell
+.\Launch-QuantDeskSupervisorTray.vbs
+```
+
+The tray starts the supervisor hidden, and the supervisor owns:
+
+- the local setup scanner
+- the NinjaTrader candle recorder
+- startup 30-day HTF preload/backfill
+- automatic pre-window cache repair before Morning and Lunch windows
+- service restart checks for supervisor-owned child processes
+- Discord operational notices for bridge, recorder, stale 5M, cache gap, and pre-window repair problems
+
+Default automatic repair windows:
+
+- Morning cache repair: 9:45-10:00 AM ET
+- Lunch cache repair: 11:45 AM-12:00 PM ET
+
+The tray also has **Repair Market Cache Now** for one-click manual repair without opening PowerShell. Command-line tools remain available for diagnostics, but they are not the intended morning startup path.
 
 ## First Test Checklist
 

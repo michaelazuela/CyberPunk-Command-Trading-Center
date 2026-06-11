@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import fs from 'node:fs';
+import path from 'node:path';
 import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
 import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
@@ -10,6 +12,18 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 type Instrument = 'MES' | 'MNQ';
 
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
+
+interface RecorderHeartbeat {
+  status: 'ok' | 'warn' | 'error';
+  updatedAt: string;
+  bridgeUrl: string;
+  instrument: Instrument;
+  bridgeInstrument: string;
+  latestCompleted5m: string | null;
+  barsProcessed: number;
+  warning: string | null;
+  error: string | null;
+}
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -42,6 +56,15 @@ function numberArg(name: string, fallback: number): number {
   if (raw === null) return fallback;
   const value = Number(raw);
   return Number.isFinite(value) ? value : fallback;
+}
+
+function defaultHeartbeatPath(): string {
+  return path.resolve(process.cwd(), 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
+}
+
+function writeHeartbeat(filePath: string, heartbeat: RecorderHeartbeat): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(heartbeat, null, 2), 'utf8');
 }
 
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {
@@ -130,7 +153,7 @@ async function recordOnce({
   maxStaleBarMinutes: number;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
-}) {
+}): Promise<{ total: number; latestCompleted5m: string | null; warning: string | null }> {
   const config = loadMarketDataConfig();
   if (!config) {
     throw new Error('Market candle recorder requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID in .env.local.');
@@ -147,7 +170,7 @@ async function recordOnce({
   });
   if (freshness.stale) {
     console.warn(`[market-cache] stale bridge data: ${freshness.reason}`);
-    return 0;
+    return { total: 0, latestCompleted5m: latest5m?.time || null, warning: freshness.reason };
   }
 
   let total = 0;
@@ -169,7 +192,7 @@ async function recordOnce({
     total += result.upserted;
     console.log(`[market-cache] ${timeframe}: upserted ${result.upserted} bars.`);
   }
-  return total;
+  return { total, latestCompleted5m: latest5m?.time || null, warning: null };
 }
 
 async function main() {
@@ -185,6 +208,7 @@ async function main() {
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)
     : 'eastern';
+  const heartbeatPath = argValue('heartbeat-path') || process.env.NINJATRADER_RECORDER_HEARTBEAT_PATH || defaultHeartbeatPath();
   const once = hasArg('once');
 
   const instrumentResolution = await resolveCurrentBridgeInstrument({
@@ -197,13 +221,37 @@ async function main() {
 
   console.log('Quant Desk NinjaTrader candle recorder started.');
   console.log(`Bridge: ${bridgeUrl} | Instrument: ${bridgeInstrument} | Timeframes: ${TIMEFRAMES.join(', ')} | Bar time: ${barTimeZone}/${barTimestampMode}`);
+  console.log(`Heartbeat: ${heartbeatPath}`);
 
   do {
     try {
-      const total = await recordOnce({ bridgeUrl, instrument, bridgeInstrument, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone });
-      console.log(`[market-cache] cycle complete: ${total} bars processed at ${new Date().toISOString()}.`);
+      const result = await recordOnce({ bridgeUrl, instrument, bridgeInstrument, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone });
+      writeHeartbeat(heartbeatPath, {
+        status: result.warning ? 'warn' : 'ok',
+        updatedAt: new Date().toISOString(),
+        bridgeUrl,
+        instrument,
+        bridgeInstrument,
+        latestCompleted5m: result.latestCompleted5m,
+        barsProcessed: result.total,
+        warning: result.warning,
+        error: null,
+      });
+      console.log(`[market-cache] cycle complete: ${result.total} bars processed at ${new Date().toISOString()}.`);
     } catch (error) {
-      console.error('[market-cache] recorder error:', formatError(error));
+      const message = formatError(error);
+      writeHeartbeat(heartbeatPath, {
+        status: 'error',
+        updatedAt: new Date().toISOString(),
+        bridgeUrl,
+        instrument,
+        bridgeInstrument,
+        latestCompleted5m: null,
+        barsProcessed: 0,
+        warning: null,
+        error: message,
+      });
+      console.error('[market-cache] recorder error:', message);
     }
     if (!once) await sleep(Math.max(5, pollSeconds) * 1000);
   } while (!once);

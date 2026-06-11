@@ -10,7 +10,11 @@ export type SupervisorNotificationKind =
   | 'recorder_recovered'
   | 'bridge_unreachable'
   | 'bridge_recovered'
+  | 'contract_mismatch'
+  | 'recorder_heartbeat_stale'
   | 'stale_5m_bars'
+  | 'pre_window_backfill_failed'
+  | 'pre_window_backfill_recovered'
   | 'market_data_gap_sync_pending'
   | 'supervisor_self_heal'
   | 'child_restarted';
@@ -104,6 +108,10 @@ function serviceStatus(status: SupervisorStatusPayload, id: string): string {
 
 function healthCheckStatus(status: SupervisorStatusPayload, id: string): string {
   return status.health?.checks.find((check) => check.id === id)?.status || 'unknown';
+}
+
+function healthCheck(status: SupervisorStatusPayload, id: string) {
+  return status.health?.checks.find((check) => check.id === id) || null;
 }
 
 function stale5mBlockers(status: SupervisorStatusPayload): string[] {
@@ -235,6 +243,74 @@ export function buildSupervisorNotifications(
     }));
   }
   nextState.lastStatuses.bridge = bridge;
+
+  const bridgeCheck = healthCheck(status, 'bridge');
+  const contractMismatch = Boolean((bridgeCheck?.details as any)?.contractMismatch);
+  if (contractMismatch && previous.lastStatuses.contract_mismatch !== 'mismatch') {
+    notifications.push(notification({
+      kind: 'contract_mismatch',
+      title: 'Bridge Contract Mismatch',
+      description: [
+        'NinjaTrader bridge health does not match the configured scanner bridge contract.',
+        `Configured: ${String((bridgeCheck?.details as any)?.configuredBridgeInstrument || 'unknown')}`,
+        `Bridge default: ${String((bridgeCheck?.details as any)?.defaultInstrument || 'unknown')}`,
+        'Scanner will continue to rely on its configured bridge instrument, but this should be corrected before trusting live alerts.',
+      ].join('\n'),
+      severity: 'warn',
+      now,
+    }));
+  }
+  nextState.lastStatuses.contract_mismatch = contractMismatch ? 'mismatch' : 'ok';
+
+  const heartbeat = healthCheckStatus(status, 'recorder_heartbeat');
+  const previousHeartbeat = previous.lastStatuses.recorder_heartbeat;
+  if ((heartbeat === 'warn' || heartbeat === 'fail') && previousHeartbeat !== heartbeat) {
+    notifications.push(notification({
+      kind: 'recorder_heartbeat_stale',
+      title: 'Recorder Heartbeat Needs Attention',
+      description: healthCheck(status, 'recorder_heartbeat')?.message || 'Recorder heartbeat is not fresh.',
+      severity: heartbeat === 'fail' ? 'fail' : 'warn',
+      now,
+    }));
+  }
+  nextState.lastStatuses.recorder_heartbeat = heartbeat;
+
+  const preWindow = status.preWindowBackfill;
+  if (preWindow?.attempted && preWindow.run) {
+    const key = `pre_window:${preWindow.run.tradeDate}:${preWindow.run.session}`;
+    const current = preWindow.run.ok ? 'ok' : 'fail';
+    const previousPreWindow = previous.lastStatuses[key];
+    if (!preWindow.run.ok && previousPreWindow !== 'fail') {
+      notifications.push(notification({
+        kind: 'pre_window_backfill_failed',
+        title: 'Pre-Window Backfill Failed',
+        description: [
+          `Session: ${preWindow.run.session}`,
+          `Trade date: ${preWindow.run.tradeDate}`,
+          preWindow.run.reason,
+          `Logs: ${preWindow.run.stdoutLog}`,
+        ].join('\n'),
+        severity: 'warn',
+        dedupeKey: key,
+        now,
+      }));
+    }
+    if (preWindow.run.ok && previousPreWindow === 'fail') {
+      notifications.push(notification({
+        kind: 'pre_window_backfill_recovered',
+        title: 'Pre-Window Backfill Recovered',
+        description: [
+          `Session: ${preWindow.run.session}`,
+          `Trade date: ${preWindow.run.tradeDate}`,
+          preWindow.run.reason,
+        ].join('\n'),
+        severity: 'ok',
+        dedupeKey: `${key}:recovered`,
+        now,
+      }));
+    }
+    nextState.lastStatuses[key] = current;
+  }
 
   const staleBlockers = stale5mBlockers(status);
   if (staleBlockers.length && shouldSendCooldown(previous, 'stale_5m_bars', now, staleCooldownMs)) {
@@ -411,7 +487,11 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
     `Scanner: ${serviceStatus(status, 'scanner')}`,
     `Recorder: ${serviceStatus(status, 'candle-recorder')}`,
     `Bridge: ${healthCheckStatus(status, 'bridge')}`,
+    `Recorder heartbeat: ${healthCheckStatus(status, 'recorder_heartbeat')}`,
     `Latest completed 5M: ${summary.latestCompleted5m || 'not reported yet'}`,
+    status.preWindowBackfill?.run
+      ? `Pre-window backfill: ${status.preWindowBackfill.run.session} ${status.preWindowBackfill.run.ok ? 'ok' : 'failed'}`
+      : `Pre-window backfill: ${status.preWindowBackfill?.reason || 'not evaluated'}`,
     status.delivery?.pendingMarketDataGapSync?.count
       ? `Pending gap sync: ${status.delivery.pendingMarketDataGapSync.count} (${status.delivery.pendingMarketDataGapSync.staleCount} stale)`
       : 'Pending gap sync: none',

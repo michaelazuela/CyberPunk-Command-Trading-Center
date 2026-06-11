@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Install NT-1 through NT-8 NinjaTrader bridge watchdog and Supabase backfill automation.
+Files changed: QuantDeskSupervisorTray.ps1, docs/DISCORD_ALERT_AUTOMATION.md, docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, tools/automation/backfill-market-bars.ts, tools/automation/candle-recorder.ts, tools/supervisor/config.ts, tools/supervisor/health.ts, tools/supervisor/index.ts, tools/supervisor/notifications.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/status.ts, tools/supervisor/supervisor.test.ts.
+Reason: Local bridge reliability needed to be automated and user-friendly so the trader does not have to start recorder/scanner/backfill PowerShell jobs manually each morning.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; git diff --check; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Added supervisor-owned pre-window backfill, recorder heartbeat JSON, heartbeat health checks, bridge contract mismatch visibility, pre-window backfill Discord operational notices, active bridge contract resolution for backfill, and a tray menu action to repair the market cache manually without command-line work.
+Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, or model definitions changed.
+Bridge impact: Read-only health visibility improved. Existing bridge endpoints and NinjaTrader AddOn behavior were not changed.
+Discord impact: Yes, operational supervisor notices only. No new trade alert hard blocker, trade plan, outcome buttons, or RAG outcome submission path was added.
+Journal/RAG impact: None. Operational notices do not write trade/outcome RAG records.
+Supabase impact: No migration added. Existing `market_bars` and gap ledger remain the durable cache paths.
+Known risks: None identified after focused verification.
+Next recommended action: Start Quant Desk through the tray shortcut so the supervisor owns recorder, scanner, startup preload, and pre-window repair.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Surface stale or missing completed 5M data in Discord without removing Market Mapping Mode.
 Files changed: docs/PROJECT_STATUS.md, scripts/architecture-guard.js, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Manual/live morning scanner reruns could appear quiet when the bridge had stale current-session 5M data. The desk needs a visible operational data-quality notice, not a silent Market Mapping fallback.
