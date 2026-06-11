@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Phase 9D-9F Discord watch alerts, watch-to-plan promotion metadata, and replay validation.
+Files changed: docs/PROJECT_STATUS.md, docs/SCANNER_DESK_STATE_PHASE_9_AUDIT.md, scripts/architecture-guard.js, src/agents/bridgeDiagnosticReplayAgent.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/diagnostic-replay.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/scanner-audit-import.ts.
+Reason: DeskState needed to drive Discord watch visibility, describe watch-to-plan continuity, and support replay validation before any further phases.
+Tests run: Focused checks passed: npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsc --noEmit. Full required suite is being rerun before commit.
+Result: Added watch-only Discord rendering from DeskState, `DeskState.promotion`, `validateDeskStateReplayPath`, scanner audit DeskState replay import, and diagnostic replay validation output.
+Trading logic changed: No. Setup definitions, approvals, canExecute, entry/stop/target rules, risk gates, model definitions, and bridge behavior are unchanged.
+Bridge impact: None.
+Discord impact: Yes. Scanner `POST_WATCH` DeskState now renders a watch-only alert without plan levels, visuals, or outcome buttons. Existing plan/review alert behavior is preserved.
+Journal/RAG impact: No schema change. Replay and consumers can inspect DeskState promotion/validation metadata from audit records.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Run the full required command suite, commit, push, then review Phase 9D-9F outputs before any further phases.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Phase 9A-9C scanner decision map, lifecycle trace, and active DeskState.
 Files changed: docs/ARCHITECTURE.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Scanner visibility needed a model authority inventory, per-cycle candidate lifecycle trace, and one active DeskState object so Discord/RAG/UI can consume deterministic scanner-owned state instead of independently deciding trade visibility.

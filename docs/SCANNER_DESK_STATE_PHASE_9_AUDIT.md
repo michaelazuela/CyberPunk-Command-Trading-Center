@@ -4,7 +4,7 @@ Date: 2026-06-10
 
 ## Scope
 
-Phase 9A-9C adds scanner-owned reporting metadata only. It does not change setup definitions, ranking weights, trade approvals, `canExecute`, entry, stop, target, risk, bridge behavior, or Discord hard blockers.
+Phase 9A-9F adds scanner-owned visibility, watch, promotion, and replay-validation metadata only. It does not change setup definitions, ranking weights, trade approvals, `canExecute`, entry, stop, target, risk, or bridge behavior.
 
 ## Phase 9A: Trade Decision Map Audit
 
@@ -51,6 +51,44 @@ Scanner decision tape and live Discord audit JSON now persist:
 
 `deskState` is the consumer-ready snapshot for Discord, RAG, and UI. It mirrors scanner-owned visibility/lifecycle metadata and existing `canExecute`; it does not create a new approval path.
 
+## Phase 9D: Discord Watch Alerts
+
+Owner: `tools/automation/discord-alert-format.ts`, consuming scanner-owned `DeskState`.
+
+When `DeskState.discordAction` is `post_watch`, Discord now renders a watch-only scanner alert:
+
+- headline says `WATCH FORMING`
+- includes line in the sand, trigger, reason, invalidation, and no-chase language
+- omits entry, stop, T1, T2, visual plan attachments, and outcome buttons
+
+The scanner may surface a `Watching` or `TriggerPending` candidate as a watch alert only inside the existing alert window and quality/duplicate checks. Watch alerts do not approve execution.
+
+## Phase 9E: Watch-To-Plan Promotion
+
+Owner: `src/lib/localScannerEngine.ts` via `DeskState.promotion`.
+
+Each DeskState now reports its current promotion stage and next possible stage:
+
+```text
+watch -> conditional -> human_review_ready -> posted_plan
+```
+
+`promotion.canPromoteNow` is always false because promotion remains controlled by the existing scanner, trade decision pipeline, and `canExecute` gates. Missing proof and next trigger are surfaced for continuity only.
+
+## Phase 9F: Replay Validation
+
+Owner: `src/lib/localScannerEngine.ts` via `validateDeskStateReplayPath`.
+
+Diagnostic replay now carries DeskState snapshots from scanner audit JSON and reports whether replay observed:
+
+- watch before plan/review
+- a continuous watch-to-plan path
+- no-chase/completed-5M/protected-structure language
+- scanner-owned source-of-truth markers
+- DeskState/visibility alignment for Discord/RAG/UI consumers
+
+Replay validation is diagnostic only. It does not approve trades, change rules, or change `canExecute`.
+
 ## Deferred
 
-None. Focused verification cleared the implementation risks found during Phase 9B and 9C fixture/type checks.
+None. Focused verification cleared the implementation risks found during Phase 9B, 9C, 9D, 9E, and 9F fixture/type checks.

@@ -59,6 +59,17 @@ export interface CompactNormalizedPlan {
   t2?: number | null;
 }
 
+export interface CompactDeskStateForDiscord {
+  marketMode?: string;
+  visibilityMode?: string;
+  discordAction?: string;
+  lineInSand?: number | null;
+  nextTrigger?: string | null;
+  invalidation?: string | null;
+  canExecute?: boolean;
+  dataQualityStatus?: string;
+}
+
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
   'Local Scanner Trading Card',
   'Trade State',
@@ -93,6 +104,7 @@ interface CompactDiscordSummaryArgs {
   scoreOverride?: number | null;
   decisionOverride?: string | null;
   statusOverride?: string | null;
+  deskState?: CompactDeskStateForDiscord | null;
 }
 
 interface MorningWatchlistDiscordArgs {
@@ -393,6 +405,64 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
   ];
 }
 
+function isDeskStateWatch(args: CompactDiscordSummaryArgs, candidate: SetupCandidate | null): boolean {
+  return Boolean(
+    candidate &&
+    !getEffectiveCanExecute(args.normalized) &&
+    (args.deskState?.discordAction === 'post_watch' || args.deskState?.visibilityMode === 'POST_WATCH')
+  );
+}
+
+function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): DiscordWebhookPayload {
+  const direction = candidate.direction === 'SHORT' ? 'SHORT' : candidate.direction === 'LONG' ? 'LONG' : 'NO TRADE';
+  const sessionLabel = sessionShortLabel(args.session);
+  const lineInSand = typeof args.deskState?.lineInSand === 'number' && Number.isFinite(args.deskState.lineInSand)
+    ? priceLine(args.deskState.lineInSand)
+    : 'N/A';
+  const trigger = compactLine(
+    args.deskState?.nextTrigger ||
+    candidate.requiredTrigger ||
+    candidate.nextAction ||
+    'Wait for completed 5M confirmation before any plan review.',
+    160,
+  );
+  const invalidation = compactLine(
+    args.deskState?.invalidation ||
+    candidate.invalidation ||
+    'Invalidation remains unconfirmed until the app-owned pipeline proves protected 5M structure.',
+    140,
+  );
+  const reason = compactLine(candidate.evidence?.[0] || candidate.scenarioLabel || professionalCandidateModelLabel(candidate), 140);
+  const description = [
+    `[${sessionLabel} WATCH] ${args.instrument} - ${direction} WATCH FORMING`,
+    'Status: WATCH ONLY - NOT EXECUTION APPROVAL',
+    '',
+    `Line in the sand: ${lineInSand}`,
+    `Trigger: ${trigger}`,
+    `Reason: ${reason}`,
+    `Invalidation: ${invalidation}`,
+    '',
+    'No chase. Wait for completed 5M proof, protected structure stop, target room, and normal app-owned gates.',
+    'No entry, stop, T1, T2, or outcome buttons are included in this watch alert.',
+    'Decision support only. No automated orders.',
+  ].join('\n');
+
+  return {
+    username: 'Quant Desk',
+    content: `🟠 [${sessionLabel} WATCH] ${args.instrument} - ${direction} WATCH FORMING | ${args.tradeDate}`,
+    embeds: [
+      {
+        title: 'Scanner Watch Alert',
+        description: professionalizeReportText(description),
+        color: 0xffa000,
+        fields: [],
+        footer: { text: 'Quant Desk • Scanner DeskState watch • Not execution approval' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
     ? riskScore.blockReason === NoTradeReason.RiskTooWide
@@ -483,6 +553,9 @@ export function compactAttachmentLine(attachments: CompactDiscordAttachmentState
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const bestCandidate = args.candidates[0] || null;
+  if (isDeskStateWatch(args, bestCandidate)) {
+    return scannerWatchDiscordSummary(args, bestCandidate as SetupCandidate);
+  }
   const effectiveCanExecute = getEffectiveCanExecute(args.normalized);
   const requestedStatus = args.statusOverride || args.normalized.decisionStatus || (effectiveCanExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
   const finalStatus = !effectiveCanExecute && (requestedStatus === TradeDecisionStatus.ApprovedTrade || requestedStatus === 'Approved' || requestedStatus === 'Executable')

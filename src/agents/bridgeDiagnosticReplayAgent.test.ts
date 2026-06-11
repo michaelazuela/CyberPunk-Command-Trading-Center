@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
+import { buildCandidateLifecycleTrace, buildDeskState, classifyScannerVisibility } from '../lib/localScannerEngine';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType } from '../types';
 import { runBridgeDiagnosticReplay, type BridgeDiagnosticReplayInput } from './bridgeDiagnosticReplayAgent';
 import { parseDiagnosticReplayArgs } from '../../tools/automation/diagnostic-replay';
@@ -78,6 +79,29 @@ function input(overrides: Partial<BridgeDiagnosticReplayInput> = {}): BridgeDiag
   };
 }
 
+function deskStateFor(state: 'Watching' | 'Conditional', setupCandidate: SetupCandidate) {
+  const visibility = classifyScannerVisibility({
+    state,
+    candidate: setupCandidate,
+    alertDecision: { shouldSend: true, reason: `${state} fixture alert.` },
+    canExecute: false,
+  });
+  const lifecycle = buildCandidateLifecycleTrace({
+    candidates: [setupCandidate],
+    selectedCandidate: setupCandidate,
+    state,
+    alertDecision: { shouldSend: true, reason: `${state} fixture alert.` },
+    canExecute: false,
+  });
+  return buildDeskState({
+    state,
+    candidate: setupCandidate,
+    visibilityMetadata: visibility,
+    candidateLifecycleTrace: lifecycle,
+    canExecute: false,
+  });
+}
+
 const approvedNoAlert = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate({ riskPoints: 10, target1: 123, target2: 128 })],
   scannerSelectedCandidate: candidate({
@@ -144,6 +168,49 @@ assert.equal(approvedWithAudit.finalClassification, 'A_VALID_APPROVED_NO_ALERT')
 assert.equal(approvedWithAudit.scannerAuditContext.scannerAuditStatus, 'present');
 assert.equal(approvedWithAudit.scannerAuditContext.matchingEvents.length, 1);
 assert.ok(approvedWithAudit.scannerAuditContext.summary.includes('trade alert audit'));
+
+const watchCandidateForReplay = candidate({
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  requiredTrigger: 'Completed 5M close through line in the sand required. No chase.',
+  executionStatus: ExecutionStatus.Conditional,
+});
+const conditionalCandidateForReplay = candidate({
+  executionStatus: ExecutionStatus.Conditional,
+  requiredTrigger: 'Completed 5M retest confirms human-review plan. No chase.',
+});
+const replayDeskStateWatchEvent = normalizeScannerAuditRecord({
+  createdAt: '2026-05-29T14:01:00Z',
+  source: 'live-scanner',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  session: 'morning',
+  state: 'Watching',
+  candidate: watchCandidateForReplay,
+  deskState: deskStateFor('Watching', watchCandidateForReplay),
+}, 'C:/tmp/scanner-watch-audit.json');
+const replayDeskStatePlanEvent = normalizeScannerAuditRecord({
+  createdAt: '2026-05-29T14:08:00Z',
+  source: 'live-scanner',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  session: 'morning',
+  state: 'Conditional',
+  candidate: conditionalCandidateForReplay,
+  deskState: deskStateFor('Conditional', conditionalCandidateForReplay),
+}, 'C:/tmp/scanner-plan-audit.json');
+const replayWithDeskState = runBridgeDiagnosticReplay(input({
+  scannerAuditEvents: [replayDeskStateWatchEvent, replayDeskStatePlanEvent],
+}));
+assert.equal(replayWithDeskState.deskStateReplayValidation.sourceOfTruth, 'scanner_desk_state_replay_validation');
+assert.equal(replayWithDeskState.deskStateReplayValidation.cycleCount, 2);
+assert.equal(replayWithDeskState.deskStateReplayValidation.watchAppearedBeforePlan, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.promotionPathObserved, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.discordRagUiAligned, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.authority.replayValidationApprovesTrade, false);
 
 const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate()],

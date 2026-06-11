@@ -2622,6 +2622,7 @@ function buildDiscordPayload(args: {
   windowLabel: string;
   planVersionId: string;
   attachments: CompactDiscordAttachmentState;
+  deskState?: DeskState | null;
 }): DiscordWebhookPayload {
   return compactDiscordSummary({
     session: args.session,
@@ -2636,13 +2637,16 @@ function buildDiscordPayload(args: {
     scoreOverride: args.confidence.score,
     decisionOverride: args.state,
     statusOverride: args.state,
-    components: buildOutcomeComponents({
-      planVersionId: args.planVersionId,
-      sessionType: args.session,
-      tradeDate: args.tradeDate,
-      instrument: args.config.instrument,
-      direction: args.candidate?.direction,
-    }),
+    deskState: args.deskState,
+    components: args.deskState?.discordAction === 'post_watch'
+      ? undefined
+      : buildOutcomeComponents({
+          planVersionId: args.planVersionId,
+          sessionType: args.session,
+          tradeDate: args.tradeDate,
+          instrument: args.config.instrument,
+          direction: args.candidate?.direction,
+        }),
   });
 }
 
@@ -2889,7 +2893,6 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   levelMap: string | null;
   auditLogPath: string;
 }> {
-  const visualCandidate = candidateForNormalizedVisualAuthority(args.candidate, args.normalized);
   const visibilityMetadata = args.visibilityMetadata || classifyScannerVisibility({
     state: args.state,
     candidate: args.candidate,
@@ -2912,6 +2915,9 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     candidateLifecycleTrace,
     canExecute: Boolean(args.normalized.canExecute),
   });
+  const visualCandidate = deskState.discordAction === 'post_watch'
+    ? null
+    : candidateForNormalizedVisualAuthority(args.candidate, args.normalized);
   const renderInput = visualCandidate
     ? {
         chartContext: args.chartContext || null,
@@ -2960,7 +2966,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     config: args.config,
     state: args.state,
     confidence: args.confidence,
-    candidate: visualCandidate,
+    candidate: deskState.discordAction === 'post_watch' ? args.candidate : visualCandidate,
     normalized: args.normalized,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,
@@ -2969,6 +2975,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
       priceLevelMap: Boolean(levelMap),
       auditLogPath,
     },
+    deskState,
   });
   validateDiscordPayload(payload, files);
   return { payload, files, chartMarkup, levelMap, auditLogPath };

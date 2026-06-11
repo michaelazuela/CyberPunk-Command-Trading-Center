@@ -200,6 +200,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Pullback: ${report.pullbackReview.status} - ${report.pullbackReview.summary}`,
     `Scanner: ${report.scannerAlertReview.reason}`,
     `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
+    `DeskState replay: cycles=${report.deskStateReplayValidation.cycleCount}; watchBeforePlan=${report.deskStateReplayValidation.watchAppearedBeforePlan}; promotionPath=${report.deskStateReplayValidation.promotionPathObserved}; aligned=${report.deskStateReplayValidation.discordRagUiAligned}`,
     `Timeframe MSS Evidence: ${report.timeframeMssEvidenceDiagnostics.timeframes.map((item) => `${item.timeframe} ${item.status} ${item.direction} break=${item.breaksStructure} completed=${item.completedBarStatus}`).join('; ')}`,
     `Active MSS Ruleset: ${report.activeTimeframeMssRulesetDiagnostics.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,

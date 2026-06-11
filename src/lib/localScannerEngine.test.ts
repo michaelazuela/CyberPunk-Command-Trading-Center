@@ -17,6 +17,7 @@ import {
   selectScannerPlan,
   scoreScannerCandidate,
   shouldSendScannerAlert,
+  validateDeskStateReplayPath,
 } from './localScannerEngine';
 import { SETUP_REGISTRY } from '../config/setupRegistry';
 import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
@@ -354,9 +355,15 @@ assert.equal(
   false
 );
 assert.equal(
-  shouldSendScannerAlert({ state: 'Watching', confidence: 100, window: morningWindow, candidate: strongCandidate }).shouldSend,
+  shouldSendScannerAlert({ state: 'Watching', confidence: 64, window: morningWindow, candidate: strongCandidate }).shouldSend,
   false
 );
+const watchAlertDecision = shouldSendScannerAlert({ state: 'Watching', confidence: 65, window: morningWindow, candidate: strongCandidate });
+assert.equal(watchAlertDecision.shouldSend, true);
+assert.ok(watchAlertDecision.reason.includes('watch qualified'));
+const triggerPendingWatchDecision = shouldSendScannerAlert({ state: 'TriggerPending', confidence: 65, window: morningWindow, candidate: strongCandidate });
+assert.equal(triggerPendingWatchDecision.shouldSend, true);
+assert.ok(triggerPendingWatchDecision.reason.includes('Watch only'));
 assert.equal(
   shouldSendScannerAlert({ state: 'MarketMapping', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
   false
@@ -763,6 +770,56 @@ assert.equal(deskState.bestLongPlan?.setupType, strongCandidate.setupType);
 assert.equal(deskState.suppressionReason, 'Discord duplicate suppressed by durable ledger.');
 assert.equal(deskState.dataQualityStatus, 'partial');
 assert.equal(deskState.notes.some((note) => note.includes('does not change trade approvals')), true);
+assert.equal(deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
+assert.equal(deskState.promotion.currentStage, 'human_review_ready');
+assert.equal(deskState.promotion.nextStage, 'posted_plan');
+assert.equal(deskState.promotion.canPromoteNow, false);
+
+const watchDeskVisibility = classifyScannerVisibility({
+  state: 'Watching',
+  candidate: candidate({
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    requiredTrigger: 'Completed 5M close through line in the sand required.',
+  }),
+  window: morningWindow,
+  alertDecision: { shouldSend: true, reason: 'Scanner watch qualified for Discord.' },
+  canExecute: false,
+});
+const watchLifecycle = buildCandidateLifecycleTrace({
+  candidates: [candidate({ entry: null, stop: null, target1: null, target2: null })],
+  selectedCandidate: candidate({ entry: null, stop: null, target1: null, target2: null }),
+  state: 'Watching',
+  window: morningWindow,
+  alertDecision: { shouldSend: true, reason: 'Scanner watch qualified for Discord.' },
+  canExecute: false,
+});
+const watchDeskState = buildDeskState({
+  state: 'Watching',
+  candidate: candidate({
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    requiredTrigger: 'Completed 5M close through line in the sand required.',
+  }),
+  visibilityMetadata: watchDeskVisibility,
+  candidateLifecycleTrace: watchLifecycle,
+  canExecute: false,
+});
+assert.equal(watchDeskState.promotion.currentStage, 'watch');
+assert.equal(watchDeskState.promotion.nextStage, 'conditional');
+assert.equal(watchDeskState.promotion.canPromoteNow, false);
+assert.ok(watchDeskState.promotion.missingProof.includes('App-owned entry trigger not confirmed.'));
+const replayValidation = validateDeskStateReplayPath([watchDeskState, deskState]);
+assert.equal(replayValidation.sourceOfTruth, 'scanner_desk_state_replay_validation');
+assert.equal(replayValidation.watchAppearedBeforePlan, true);
+assert.equal(replayValidation.promotionPathObserved, true);
+assert.equal(replayValidation.singleSourceOfTruthPresent, true);
+assert.equal(replayValidation.discordRagUiAligned, true);
+assert.equal(replayValidation.authority.replayValidationApprovesTrade, false);
 
 const keyA = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Conditional' });
 const keyB = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Executable' });

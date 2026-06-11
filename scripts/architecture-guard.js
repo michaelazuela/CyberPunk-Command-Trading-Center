@@ -211,7 +211,7 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!ownerContent.includes('ScannerVisibilityMetadata') || !ownerContent.includes('classifyScannerVisibility')) {
     fail('localScannerEngine.ts must own ScannerVisibilityMetadata and classifyScannerVisibility.');
   }
-  for (const requiredExport of ['buildTradeDecisionMapAudit', 'buildCandidateLifecycleTrace', 'buildDeskState', 'interface DeskState']) {
+  for (const requiredExport of ['buildTradeDecisionMapAudit', 'buildCandidateLifecycleTrace', 'buildDeskState', 'interface DeskState', 'DeskStatePromotionPath', 'validateDeskStateReplayPath']) {
     if (!ownerContent.includes(requiredExport)) {
       fail(`localScannerEngine.ts must own scanner visibility source-of-truth export: ${requiredExport}.`);
     }
@@ -228,6 +228,18 @@ function checkScannerVisibilityMetadataBoundary() {
   }
   if (!scannerContent.includes('candidateLifecycleTrace') || !scannerContent.includes('deskState')) {
     fail('nt-scanner.ts must persist scanner-owned candidateLifecycleTrace and deskState into scanner audit outputs.');
+  }
+
+  const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
+  const formatterContent = readFileSafe(formatterPath);
+  if (!formatterContent.includes('WATCH FORMING') || !formatterContent.includes('post_watch')) {
+    fail('discord-alert-format.ts must render scanner DeskState post_watch alerts as watch-only output.');
+  }
+
+  const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');
+  const replayContent = readFileSafe(replayPath);
+  if (!replayContent.includes('deskStateReplayValidation') || !replayContent.includes('validateDeskStateReplayPath')) {
+    fail('bridgeDiagnosticReplayAgent.ts must include scanner DeskState replay validation.');
   }
 }
 

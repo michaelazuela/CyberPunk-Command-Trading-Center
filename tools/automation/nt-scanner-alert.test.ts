@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
+import { buildCandidateLifecycleTrace, buildDeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   barsCoverRequestedLookback,
@@ -722,6 +723,8 @@ assert.equal(tapeEvent.deskState.sourceOfTruth, 'scanner_desk_state');
 assert.equal(tapeEvent.deskState.marketMode, 'watching');
 assert.equal(tapeEvent.deskState.visibilityMode, tapeEvent.visibility.visibilityMode);
 assert.equal(tapeEvent.deskState.canExecute, false);
+assert.equal(tapeEvent.deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
+assert.equal(tapeEvent.deskState.promotion.canPromoteNow, false);
 assert.equal(tapeEvent.failedPlanReversal.present, true);
 assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
 assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'data_limited');
@@ -1403,11 +1406,131 @@ try {
   assert.equal(audit.deskState.visibilityMode, audit.visibility.visibilityMode);
   assert.equal(audit.deskState.canExecute, false);
   assert.equal(audit.deskState.selectedCandidate.setupType, candidate.setupType);
+  assert.equal(audit.deskState.promotion.currentStage, 'conditional');
+  assert.equal(audit.deskState.promotion.nextStage, 'human_review_ready');
   assert.equal(audit.attachments.chartMarkup, result.chartMarkup);
   assert.equal(audit.attachments.priceLevelMap, result.levelMap);
   assert.ok(auditText.includes('Fixture target cascade remains audit-only.'));
   assert.ok(!text.includes('Fixture target cascade remains audit-only.'));
   assert.ok(result.auditLogPath.startsWith(auditDir));
+
+  const watchCandidate = {
+    ...candidate,
+    direction: 'SHORT',
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    requiredTrigger: 'Completed 5M close below 7320.25 required before short review.',
+    invalidation: 'Invalid if price reclaims 7320.25 on a completed 5M close.',
+    executionStatus: ExecutionStatus.Conditional,
+  } as SetupCandidate;
+  const watchVisibility: ScannerVisibilityMetadata = {
+    visibilityMode: 'POST_WATCH',
+    discordAction: 'post_watch',
+    suppressionReason: null,
+    nextTrigger: watchCandidate.requiredTrigger,
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: false,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: ['Fixture visibility metadata only.'],
+  };
+  const watchLifecycleTrace = buildCandidateLifecycleTrace({
+    candidates: [watchCandidate],
+    selectedCandidate: watchCandidate,
+    state: 'Watching',
+    alertDecision: { shouldSend: true, reason: 'Fixture forced scanner watch alert path.' },
+    canExecute: false,
+  });
+  const watchDeskState = buildDeskState({
+    state: 'Watching',
+    candidate: watchCandidate,
+    visibilityMetadata: watchVisibility,
+    candidateLifecycleTrace: watchLifecycleTrace,
+    canExecute: false,
+  });
+  const watchResult = await prepareLiveScannerDiscordAlertArtifacts({
+    session: 'morning',
+    tradeDate: '2026-05-26',
+    config: { instrument: 'MES' },
+    state: 'Watching',
+    confidence: {
+      score: 78,
+      qualifiedReasons: ['Structured watch evidence is present.'],
+      missingReasons: ['Full plan proof is still missing.'],
+      recommendation: 'Watch only.',
+      hardBlocker: null,
+    },
+    candidate: watchCandidate,
+    normalized: {
+      canExecute: false,
+      decisionStatus: TradeDecisionStatus.Wait,
+      decision: 'SHORT',
+      noTradeReason: null,
+      invalidation: watchCandidate.invalidation,
+      setupCandidates: [watchCandidate],
+    } as any,
+    chartContext: chartContext as ChartContext,
+    currentPrice: 7321,
+    completed5m: {
+      time: candles[30].timestamp!,
+      open: candles[30].open,
+      high: candles[30].high,
+      low: candles[30].low,
+      close: candles[30].close,
+      volume: 1000,
+    },
+    scoringTimestamp: candles[30].timestamp!,
+    scoringTimestampSource: 'fixture completed 5M candle',
+    windowLabel: 'Morning Setup Scanner',
+    staleReason: null,
+    targetCascade: {
+      activeTarget: null,
+      activeTimeframe: null,
+      sweptTargets: [],
+      promotedTarget: null,
+      path: ['watch fixture path remains audit-only'],
+      targetRoomPoor: false,
+      reason: 'Watch fixture target cascade remains audit-only.',
+    },
+    alertReason: 'Fixture forced scanner watch alert path.',
+    visibilityMetadata: watchVisibility,
+    candidateLifecycleTrace: watchLifecycleTrace,
+    deskState: watchDeskState,
+    planVersionId: 'SCANNER-WATCH-FIXTURE-TEST',
+    outputDir,
+    auditDir,
+  });
+  const watchText = flattenDiscordPayloadText(watchResult.payload);
+  assert.equal(watchResult.files.length, 0);
+  assert.equal(watchResult.chartMarkup, null);
+  assert.equal(watchResult.levelMap, null);
+  assert.equal(watchResult.payload.components, undefined);
+  assert.ok(watchText.includes('[AM WATCH] MES - SHORT WATCH FORMING'));
+  assert.ok(watchText.includes('WATCH ONLY - NOT EXECUTION APPROVAL'));
+  assert.ok(!/^Entry:/m.test(watchText));
+  assert.ok(!/^Stop:/m.test(watchText));
+  assert.ok(!/^T1:/m.test(watchText));
+  assert.ok(!/^T2:/m.test(watchText));
+  const watchAudit = JSON.parse(await fs.readFile(watchResult.auditLogPath, 'utf8'));
+  assert.equal(watchAudit.deskState.visibilityMode, 'POST_WATCH');
+  assert.equal(watchAudit.deskState.discordAction, 'post_watch');
+  assert.equal(watchAudit.deskState.canExecute, false);
+  assert.equal(watchAudit.deskState.promotion.currentStage, 'watch');
+  assert.equal(watchAudit.deskState.promotion.nextStage, 'conditional');
 
   const executableLookingCandidate = {
     ...candidate,

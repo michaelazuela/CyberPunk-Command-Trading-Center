@@ -194,6 +194,65 @@ assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extensi
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
+const watchCandidate = {
+  ...sampleCandidate('SHORT'),
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  requiredTrigger: 'Completed 5M close below 7320.25 required before short review.',
+  invalidation: 'Invalid if price reclaims 7320.25 on a completed 5M close.',
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+  evidence: ['HTF failed auction plus 15M/5M structure shifting lower.'],
+} as SetupCandidate;
+const watchPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-05-26',
+  instrument: 'MES',
+  planVersionId: 'WATCH-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: watchCandidate.invalidation,
+  },
+  candidates: [watchCandidate],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Morning Setup Scanner',
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'POST_WATCH',
+    discordAction: 'post_watch',
+    lineInSand: 7320.25,
+    nextTrigger: watchCandidate.requiredTrigger,
+    invalidation: watchCandidate.invalidation,
+    canExecute: false,
+  },
+  components: buildOutcomeComponents({
+    planVersionId: 'WATCH-TEST',
+    sessionType: 'morning',
+    tradeDate: '2026-05-26',
+    instrument: 'MES',
+    direction: 'SHORT',
+  }),
+});
+const watchText = flattenDiscordPayloadText(watchPayload);
+assert.ok(watchPayload.content?.includes('[AM WATCH] MES - SHORT WATCH FORMING'));
+assert.equal(watchPayload.components, undefined);
+assert.ok(watchText.includes('WATCH ONLY - NOT EXECUTION APPROVAL'));
+assert.ok(watchText.includes('Line in the sand: 7320.25'));
+assert.ok(watchText.includes('Trigger: Completed 5M close below 7320.25 required before short review.'));
+assert.ok(watchText.includes('No chase.'));
+assert.ok(!/^Entry:/m.test(watchText));
+assert.ok(!/^Stop:/m.test(watchText));
+assert.ok(!/^T1:/m.test(watchText));
+assert.ok(!/^T2:/m.test(watchText));
+assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(watchPayload)));
+
 const lunch = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-05-26',

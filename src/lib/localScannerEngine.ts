@@ -215,6 +215,23 @@ export type DeskStateMarketMode =
 
 export type DeskStateHtfContextStatus = 'sufficient' | 'partial' | 'insufficient' | 'not_applicable';
 export type DeskStateDataQualityStatus = 'ok' | 'partial' | 'data_limited';
+export type DeskStatePromotionStage =
+  | 'market_mapping'
+  | 'watch'
+  | 'conditional'
+  | 'human_review_ready'
+  | 'posted_plan'
+  | 'no_trade';
+
+export interface DeskStatePromotionPath {
+  sourceOfTruth: 'scanner_desk_state_promotion_path';
+  currentStage: DeskStatePromotionStage;
+  nextStage: DeskStatePromotionStage | null;
+  promotionTrigger: string | null;
+  missingProof: string[];
+  canPromoteNow: false;
+  notes: string[];
+}
 
 export interface DeskState {
   sourceOfTruth: 'scanner_desk_state';
@@ -232,9 +249,26 @@ export interface DeskState {
   htfContextStatus: DeskStateHtfContextStatus;
   dataQualityStatus: DeskStateDataQualityStatus;
   canExecute: boolean;
+  promotion: DeskStatePromotionPath;
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
   notes: string[];
+}
+
+export interface DeskStateReplayValidation {
+  sourceOfTruth: 'scanner_desk_state_replay_validation';
+  cycleCount: number;
+  watchAppearedBeforePlan: boolean;
+  promotionPathObserved: boolean;
+  noChasePreserved: boolean;
+  singleSourceOfTruthPresent: boolean;
+  discordRagUiAligned: boolean;
+  findings: string[];
+  authority: {
+    replayValidationApprovesTrade: false;
+    replayValidationChangesRules: false;
+    replayValidationChangesCanExecute: false;
+  };
 }
 
 export { selectScannerPlan } from '../agents/scannerPlanSelectionAgent';
@@ -939,6 +973,68 @@ function dataQualityStatusForDeskState(args: {
   return 'ok';
 }
 
+function promotionStageFromDeskState(args: {
+  marketMode: DeskStateMarketMode;
+  visibilityMode: ScannerVisibilityMode;
+  canExecute: boolean;
+}): DeskStatePromotionStage {
+  if (args.canExecute && args.visibilityMode === 'POST_PLAN') return 'posted_plan';
+  if (args.marketMode === 'market_mapping') return 'market_mapping';
+  if (args.visibilityMode === 'POST_WATCH') return 'watch';
+  if (args.visibilityMode === 'POST_CONDITIONAL') return 'conditional';
+  if (args.visibilityMode === 'POST_REVIEW' || args.marketMode === 'human_review_ready') return 'human_review_ready';
+  if (args.visibilityMode === 'NO_TRADE_WITH_REASON' || args.visibilityMode === 'HOLD_WITH_REASON' || args.visibilityMode === 'DATA_QUALITY_BLOCKER') return 'no_trade';
+  return 'no_trade';
+}
+
+function nextPromotionStage(stage: DeskStatePromotionStage): DeskStatePromotionStage | null {
+  if (stage === 'watch') return 'conditional';
+  if (stage === 'conditional') return 'human_review_ready';
+  if (stage === 'human_review_ready') return 'posted_plan';
+  return null;
+}
+
+function buildDeskStatePromotionPath(args: {
+  marketMode: DeskStateMarketMode;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  candidate: SetupCandidate | null;
+  canExecute: boolean;
+}): DeskStatePromotionPath {
+  const currentStage = promotionStageFromDeskState({
+    marketMode: args.marketMode,
+    visibilityMode: args.visibilityMetadata.visibilityMode,
+    canExecute: args.canExecute,
+  });
+  const nextStage = nextPromotionStage(currentStage);
+  const missingProof = Array.from(new Set([
+    ...args.candidateLifecycleTrace.missingProofSummary,
+    ...(args.candidate?.missingEvidence || []),
+    ...(args.candidate?.entry == null ? ['App-owned entry trigger not confirmed.'] : []),
+    ...(args.candidate?.stop == null ? ['Protected 5M structure stop not confirmed.'] : []),
+    ...(args.candidate?.target1 == null || args.candidate?.target2 == null ? ['App T1/T2 unavailable until entry and protected stop are proven.'] : []),
+  ]));
+  const promotionTrigger =
+    args.visibilityMetadata.nextTrigger ||
+    args.candidateLifecycleTrace.nextTrigger ||
+    args.candidate?.requiredTrigger ||
+    args.candidate?.nextAction ||
+    null;
+
+  return {
+    sourceOfTruth: 'scanner_desk_state_promotion_path',
+    currentStage,
+    nextStage,
+    promotionTrigger,
+    missingProof,
+    canPromoteNow: false,
+    notes: [
+      'Promotion path is descriptive only; the existing scanner, trade decision pipeline, and canExecute gates remain the only approval path.',
+      'Watch-to-plan continuity requires completed 5M proof, protected structure stop, target room, invalidation, and normal app-owned gates.',
+    ],
+  };
+}
+
 export function buildDeskState(args: {
   state: ScannerState;
   candidate?: SetupCandidate | null;
@@ -947,12 +1043,20 @@ export function buildDeskState(args: {
   canExecute?: boolean;
 }): DeskState {
   const candidate = args.candidate || null;
+  const marketMode = marketModeFromDeskVisibility({
+    state: args.state,
+    visibilityMode: args.visibilityMetadata.visibilityMode,
+  });
+  const promotion = buildDeskStatePromotionPath({
+    marketMode,
+    visibilityMetadata: args.visibilityMetadata,
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    candidate,
+    canExecute: Boolean(args.canExecute),
+  });
   return {
     sourceOfTruth: 'scanner_desk_state',
-    marketMode: marketModeFromDeskVisibility({
-      state: args.state,
-      visibilityMode: args.visibilityMetadata.visibilityMode,
-    }),
+    marketMode,
     activeCampaign: candidate?.activeCampaign || null,
     bestLongPlan: args.candidateLifecycleTrace.bestLongPlan,
     bestShortPlan: args.candidateLifecycleTrace.bestShortPlan,
@@ -969,12 +1073,83 @@ export function buildDeskState(args: {
       candidateLifecycleTrace: args.candidateLifecycleTrace,
     }),
     canExecute: Boolean(args.canExecute),
+    promotion,
     visibilityMetadata: args.visibilityMetadata,
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     notes: [
       'DeskState is the scanner-owned visibility snapshot for Discord, RAG, and UI consumers.',
       'DeskState does not change trade approvals, entry, stop, target, risk, model definitions, or canExecute.',
     ],
+  };
+}
+
+export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateReplayValidation {
+  const states = [...deskStates];
+  const watchIndex = states.findIndex((state) => state.promotion.currentStage === 'watch' || state.visibilityMode === 'POST_WATCH');
+  const planIndex = states.findIndex((state) =>
+    state.promotion.currentStage === 'conditional' ||
+    state.promotion.currentStage === 'human_review_ready' ||
+    state.promotion.currentStage === 'posted_plan' ||
+    state.visibilityMode === 'POST_CONDITIONAL' ||
+    state.visibilityMode === 'POST_REVIEW' ||
+    state.visibilityMode === 'POST_PLAN'
+  );
+  const watchAppearedBeforePlan = watchIndex >= 0 && planIndex >= 0 && watchIndex < planIndex;
+  const promotionPathObserved = states.some((state) => state.promotion.currentStage === 'watch' && state.promotion.nextStage === 'conditional') &&
+    states.some((state) => state.promotion.currentStage === 'conditional' || state.promotion.currentStage === 'human_review_ready' || state.promotion.currentStage === 'posted_plan');
+  const noChasePreserved = states.every((state) => {
+    const text = [
+      state.nextTrigger,
+      state.promotion.promotionTrigger,
+      ...state.promotion.missingProof,
+      ...state.promotion.notes,
+      ...state.notes,
+    ].filter(Boolean).join(' ');
+    return state.canExecute || /no chase|completed 5m|protected/i.test(text);
+  });
+  const singleSourceOfTruthPresent = states.every((state) =>
+    state.sourceOfTruth === 'scanner_desk_state' &&
+    state.visibilityMetadata?.sourceOfTruth === 'scanner_desk_state_visibility_metadata' &&
+    state.candidateLifecycleTrace?.sourceOfTruth === 'scanner_candidate_lifecycle_trace' &&
+    state.promotion?.sourceOfTruth === 'scanner_desk_state_promotion_path'
+  );
+  const discordRagUiAligned = states.every((state) =>
+    state.visibilityMode === state.visibilityMetadata.visibilityMode &&
+    state.discordAction === state.visibilityMetadata.discordAction &&
+    state.canExecute === state.visibilityMetadata.authority.canExecute
+  );
+  const findings = [
+    watchAppearedBeforePlan
+      ? 'Watch state appeared before a plan/review state.'
+      : 'Replay did not observe a watch state before plan/review state.',
+    promotionPathObserved
+      ? 'Watch-to-plan promotion path was observable in DeskState snapshots.'
+      : 'Replay did not observe a continuous watch-to-plan promotion path.',
+    noChasePreserved
+      ? 'No-chase/completed-5M/protected-structure language was preserved in non-executable states.'
+      : 'At least one non-executable DeskState lacked no-chase, completed-5M, or protected-structure language.',
+    singleSourceOfTruthPresent
+      ? 'DeskState, visibility metadata, lifecycle trace, and promotion path all carried scanner-owned source-of-truth markers.'
+      : 'One or more DeskState snapshots were missing scanner-owned source-of-truth markers.',
+    discordRagUiAligned
+      ? 'DeskState mirrors visibility mode, Discord action, and canExecute for downstream consumers.'
+      : 'DeskState and visibility metadata diverged on visibility mode, Discord action, or canExecute.',
+  ];
+
+  return {
+    sourceOfTruth: 'scanner_desk_state_replay_validation',
+    cycleCount: states.length,
+    watchAppearedBeforePlan,
+    promotionPathObserved,
+    noChasePreserved,
+    singleSourceOfTruthPresent,
+    discordRagUiAligned,
+    findings,
+    authority: {
+      replayValidationApprovesTrade: false,
+      replayValidationChangesRules: false,
+      replayValidationChangesCanExecute: false,
+    },
   };
 }
 
@@ -1569,11 +1744,18 @@ export function shouldSendScannerAlert(args: {
   if (args.duplicate && !args.stateImproved) {
     return { shouldSend: false, reason: 'Duplicate alert suppressed for same setup/reference/direction/state.' };
   }
-  if (args.state === 'Watching' || args.state === 'MapReady' || args.state === 'MarketMapping' || args.state === 'NoData') {
+  if (args.state === 'Watching') {
+    return args.candidate && args.confidence >= thresholds.conditional
+      ? { shouldSend: true, reason: 'Scanner watch qualified for Discord: structured evidence is forming. Watch only; no execution approval.' }
+      : { shouldSend: false, reason: 'Watching is logged locally until structured evidence reaches watch alert quality.' };
+  }
+  if (args.state === 'MapReady' || args.state === 'MarketMapping' || args.state === 'NoData') {
     return { shouldSend: false, reason: `${args.state} is logged locally but not sent to Discord by default.` };
   }
   if (args.state === 'TriggerPending') {
-    return { shouldSend: false, reason: 'TriggerPending is logged locally as developing context; no executable alert is published until the app-owned candidate gates pass.' };
+    return args.candidate && args.confidence >= thresholds.conditional
+      ? { shouldSend: true, reason: 'TriggerPending watch qualified for Discord: completed 5M proof is still pending. Watch only; no execution approval.' }
+      : { shouldSend: false, reason: 'TriggerPending is logged locally as developing context until watch alert quality is met.' };
   }
   if (args.state === 'Missed') {
     return args.confidence >= thresholds.educationalBlocked

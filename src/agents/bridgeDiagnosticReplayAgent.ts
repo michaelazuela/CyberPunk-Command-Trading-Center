@@ -3,6 +3,7 @@ import type { NormalizedTradePlan } from '../lib/tradePlan';
 import { isValidPrice } from '../lib/tradePlan';
 import { buildHtfLiquidityDrawState, type HtfLiquidityDrawState } from '../lib/htfLiquidityDrawEngine';
 import { buildMultiTimeframeMssEvidenceLayer } from '../lib/timeframeMssEvidence';
+import { validateDeskStateReplayPath, type DeskState, type DeskStateReplayValidation } from '../lib/localScannerEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../lib/activeTimeframeMssRulesetAudit';
 import { ExecutionStatus, SetupCandidate, SetupType, TradeDecisionStatus, type MultiTimeframeMssEvidenceLayer } from '../types';
 
@@ -55,6 +56,7 @@ export interface DiagnosticScannerAuditEvent {
   attachmentsGenerated: boolean;
   outcomeButtonsIncluded: boolean;
   ragOrSupabaseWriteAttempted: boolean;
+  deskState?: DeskState | null;
   originalFilePath: string;
 }
 
@@ -123,6 +125,7 @@ export interface BridgeDiagnosticReplayReport {
     summary: string;
     warnings: string[];
   };
+  deskStateReplayValidation: DeskStateReplayValidation;
   tradePlanFeasibility: {
     applicable: boolean;
     candidateEntryTrigger: number | null;
@@ -807,6 +810,11 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   const planApplicable = finalClassification === 'A_VALID_APPROVED_NO_ALERT' || finalClassification === 'B_APPROVED_ALREADY_TRIGGERED';
   const recommendation = newPlanRecommendation(finalClassification);
   const auditEvents = matchingAuditEvents(input);
+  const deskStateReplayValidation = validateDeskStateReplayPath(
+    auditEvents
+      .map((event) => event.deskState)
+      .filter((state): state is DeskState => Boolean(state))
+  );
 
   return {
     finalClassification,
@@ -851,6 +859,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
       summary: auditSummary(finalClassification, auditEvents),
       warnings: auditEvents.flatMap((event) => event.auditWarnings || []),
     },
+    deskStateReplayValidation,
     tradePlanFeasibility: {
       applicable: planApplicable,
       candidateEntryTrigger: planApplicable ? approvedCandidate?.entry ?? null : null,

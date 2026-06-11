@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { DiagnosticScannerAuditEvent } from '../../src/agents/bridgeDiagnosticReplayAgent';
+import type { DeskState } from '../../src/lib/localScannerEngine';
 
 export type ScannerAuditEventType = 'trade' | 'watchlist' | 'health' | 'diagnostic' | 'unknown';
 
@@ -144,6 +145,7 @@ export function normalizeScannerAuditRecord(value: unknown, filePath: string): S
     attachmentsGenerated: Boolean(attachments.chartMarkup || attachments.priceLevelMap || attachments.chartPlan || attachments.priceLevelMap),
     outcomeButtonsIncluded: JSON.stringify(record.components || '').includes('custom_id'),
     ragOrSupabaseWriteAttempted: Boolean(record.rag || record.ragSave || record.supabase || record.persistence || record.storage),
+    deskState: asRecord(record.deskState).sourceOfTruth === 'scanner_desk_state' ? asRecord(record.deskState) as unknown as DeskState : null,
     originalFilePath: filePath,
   };
 }
