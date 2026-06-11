@@ -178,6 +178,7 @@ function checkResponsibilityRegistry() {
   const requiredResponsibilities = [
     'canonical_time_windows',
     'setup_detection_and_ranking',
+    'desk_state_visibility_metadata',
     'trade_decision_pipeline',
     'discord_alert_rag_persistence',
     'discord_alert_formatting',
@@ -188,6 +189,45 @@ function checkResponsibilityRegistry() {
     if (!content.includes(`key: '${key}'`)) {
       fail(`responsibilityRegistry.ts is missing ${key}.`);
     }
+  }
+
+  if (!content.includes("authority: 'visibility_authority'")) {
+    fail('responsibilityRegistry.ts must identify scanner-owned DeskState/visibility metadata as visibility_authority.');
+  }
+}
+
+function checkScannerVisibilityMetadataBoundary() {
+  const ownerPath = path.join(ROOT, 'src', 'lib', 'localScannerEngine.ts');
+  const selectionPath = path.join(ROOT, 'src', 'agents', 'scannerPlanSelectionAgent.ts');
+  const scannerPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts');
+  for (const requiredPath of [ownerPath, selectionPath, scannerPath]) {
+    if (!fs.existsSync(requiredPath)) {
+      fail(`Missing visibility metadata boundary file: ${path.relative(ROOT, requiredPath)}.`);
+      return;
+    }
+  }
+
+  const ownerContent = readFileSafe(ownerPath);
+  if (!ownerContent.includes('ScannerVisibilityMetadata') || !ownerContent.includes('classifyScannerVisibility')) {
+    fail('localScannerEngine.ts must own ScannerVisibilityMetadata and classifyScannerVisibility.');
+  }
+  for (const requiredExport of ['buildTradeDecisionMapAudit', 'buildCandidateLifecycleTrace', 'buildDeskState', 'interface DeskState']) {
+    if (!ownerContent.includes(requiredExport)) {
+      fail(`localScannerEngine.ts must own scanner visibility source-of-truth export: ${requiredExport}.`);
+    }
+  }
+
+  const selectionContent = readFileSafe(selectionPath);
+  if (!selectionContent.includes('visibilityMetadata') || !selectionContent.includes('classifyScannerVisibility')) {
+    fail('scannerPlanSelectionAgent.ts must attach scanner-owned visibilityMetadata instead of leaving consumers to infer visibility.');
+  }
+
+  const scannerContent = readFileSafe(scannerPath);
+  if (!scannerContent.includes('visibilityMetadata') || !scannerContent.includes('visibility: visibilityMetadata')) {
+    fail('nt-scanner.ts must persist visibility metadata into scanner audit outputs.');
+  }
+  if (!scannerContent.includes('candidateLifecycleTrace') || !scannerContent.includes('deskState')) {
+    fail('nt-scanner.ts must persist scanner-owned candidateLifecycleTrace and deskState into scanner audit outputs.');
   }
 }
 
@@ -251,6 +291,7 @@ checkTradePlanUiBoundary();
 checkAutomationGeminiIndependence();
 checkCanonicalTimeWindowUsage();
 checkResponsibilityRegistry();
+checkScannerVisibilityMetadataBoundary();
 checkDiscordRagPersistenceSourceOfTruth();
 checkCodexPatchHygienePolicy();
 

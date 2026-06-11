@@ -1,9 +1,11 @@
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType, TradeDecisionStatus } from '../types';
 import {
   applyStaleChaseGuard,
+  classifyScannerVisibility,
   scannerStateFromDecision,
   type ScannerRiskGuards,
   type ScannerState,
+  type ScannerVisibilityMetadata,
   type StaleChaseResult,
   type TargetCascadeResult,
 } from '../lib/localScannerEngine';
@@ -25,6 +27,7 @@ export interface ScannerPlanSelection {
     | 'early_move_review_no_valid_candidate'
     | null;
   auditWarnings: string[];
+  visibilityMetadata?: ScannerVisibilityMetadata;
 }
 
 function normalizedPlanDirection(normalized: Pick<NormalizedTradePlan, 'decision'>): SetupCandidate['direction'] {
@@ -434,7 +437,7 @@ function intradayMssWatchState(candidate: SetupCandidate, earlyMoveIgnored = fal
   };
 }
 
-export function selectScannerPlan(args: {
+function selectScannerPlanCore(args: {
   normalized: NormalizedTradePlan;
   currentPrice: number | null;
   guards?: Partial<ScannerRiskGuards>;
@@ -627,5 +630,23 @@ export function selectScannerPlan(args: {
     stateForAlert,
     reviewStatus: null,
     auditWarnings,
+  };
+}
+
+export function selectScannerPlan(args: {
+  normalized: NormalizedTradePlan;
+  currentPrice: number | null;
+  guards?: Partial<ScannerRiskGuards>;
+  targetCascade?: TargetCascadeResult | null;
+}): ScannerPlanSelection {
+  const selection = selectScannerPlanCore(args);
+  return {
+    ...selection,
+    visibilityMetadata: classifyScannerVisibility({
+      state: selection.stateForAlert,
+      candidate: selection.candidate,
+      canExecute: Boolean(args.normalized.canExecute),
+      staleReason: selection.stale.reason,
+    }),
   };
 }

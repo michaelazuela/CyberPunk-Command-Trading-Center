@@ -714,6 +714,14 @@ assert.equal(tapeEvent.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tapeEvent.classification.missed, false);
 assert.equal(tapeEvent.classification.advisory, true);
 assert.equal(tapeEvent.discord.shouldSend, false);
+assert.equal(tapeEvent.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
+assert.equal(tapeEvent.candidateLifecycleTrace.candidateCount, 0);
+assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false);
+assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.reason, 'TriggerPending is logged locally as developing context.');
+assert.equal(tapeEvent.deskState.sourceOfTruth, 'scanner_desk_state');
+assert.equal(tapeEvent.deskState.marketMode, 'watching');
+assert.equal(tapeEvent.deskState.visibilityMode, tapeEvent.visibility.visibilityMode);
+assert.equal(tapeEvent.deskState.canExecute, false);
 assert.equal(tapeEvent.failedPlanReversal.present, true);
 assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
 assert.equal(tapeEvent.failedPlanReversal.htfStackStatus, 'data_limited');
@@ -1317,6 +1325,7 @@ try {
       decision: 'LONG',
       noTradeReason: null,
       invalidation: candidate.invalidation,
+      setupCandidates: [candidate],
     } as any,
     chartContext: chartContext as ChartContext,
     currentPrice: 5324.5,
@@ -1381,6 +1390,19 @@ try {
   const audit = JSON.parse(auditText);
   assert.equal(audit.source, 'live-scanner');
   assert.equal(audit.planVersionId, 'SCANNER-FIXTURE-TEST');
+  assert.equal(audit.visibility.sourceOfTruth, 'scanner_desk_state_visibility_metadata');
+  assert.equal(audit.visibility.visibilityMode, 'POST_CONDITIONAL');
+  assert.equal(audit.visibility.authority.canExecute, false);
+  assert.equal(audit.visibility.authority.discordEligible, true);
+  assert.equal(audit.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
+  assert.equal(audit.candidateLifecycleTrace.candidateCount, 1);
+  assert.equal(audit.candidateLifecycleTrace.selectedCandidate.setupType, candidate.setupType);
+  assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
+  assert.equal(audit.deskState.sourceOfTruth, 'scanner_desk_state');
+  assert.equal(audit.deskState.marketMode, 'conditional');
+  assert.equal(audit.deskState.visibilityMode, audit.visibility.visibilityMode);
+  assert.equal(audit.deskState.canExecute, false);
+  assert.equal(audit.deskState.selectedCandidate.setupType, candidate.setupType);
   assert.equal(audit.attachments.chartMarkup, result.chartMarkup);
   assert.equal(audit.attachments.priceLevelMap, result.levelMap);
   assert.ok(auditText.includes('Fixture target cascade remains audit-only.'));

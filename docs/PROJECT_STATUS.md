@@ -3,6 +3,38 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Phase 9A-9C scanner decision map, lifecycle trace, and active DeskState.
+Files changed: docs/ARCHITECTURE.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Scanner visibility needed a model authority inventory, per-cycle candidate lifecycle trace, and one active DeskState object so Discord/RAG/UI can consume deterministic scanner-owned state instead of independently deciding trade visibility.
+Tests run: Focused checks passed so far: npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit. Full required suite is being rerun before commit.
+Result: Added `buildTradeDecisionMapAudit`, `buildCandidateLifecycleTrace`, and `buildDeskState`; scanner decision tape and live Discord audit JSON now persist `visibility`, `candidateLifecycleTrace`, and `deskState` together.
+Trading logic changed: No. Setup definitions, rank weights, approvals, canExecute, entry/stop/target rules, risk gates, bridge behavior, and Discord hard blockers are unchanged.
+Bridge impact: None.
+Discord impact: Audit JSON now includes lifecycle trace and DeskState. Main Discord posting/content policy is unchanged.
+Journal/RAG impact: No schema change. RAG/UI consumers can now read scanner-owned DeskState from audit metadata.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Run the full required command suite, then commit and push Phase 8/9 scanner visibility cleanup together.
+
+## Previous Change
+
+Date: 2026-06-10
+Task: Phase 8.45-8.6 scanner visibility architecture cleanup.
+Files changed: docs/ARCHITECTURE.md, docs/PROJECT_STATUS.md, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, scripts/architecture-guard.js, src/agents/scannerPlanSelectionAgent.ts, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Trade visibility needed one scanner-owned source-of-truth metadata path so agents, Discord, RAG, and UI can summarize active candidates without inventing, suppressing, reranking, or reinterpreting app-owned structured OHLC evidence.
+Tests run: npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Added scanner-owned visibility metadata, authority terms, no-silent-drop lifecycle modes, audit persistence, and architecture guard coverage. No obsolete live trading path was deleted without proof; deferred cleanup is documented in `docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md`.
+Trading logic changed: No. Setup definitions, model gates, ranking weights, entry/stop/target rules, risk gates, bridge behavior, Discord hard blockers, and canExecute are unchanged.
+Bridge impact: None.
+Discord impact: Audit metadata added. Main Discord posting policy/content is not loosened by this phase.
+Journal/RAG impact: No schema change. RAG/Discord consumers can use scanner-owned visibility metadata from audit records.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Use the scanner decision tape and live Discord audit `visibility` field as the handoff point for any later UI/RAG/Discord display work.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Enforce patch-context hygiene in the architecture guard.
 Files changed: docs/CODEX_RULES.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js.
 Reason: User asked to fix the remaining caveat that patch-context mismatches cannot be made impossible. The workflow rule is now part of the architecture guard so future changes fail automated checks if the exact-context patching policy is removed or weakened.

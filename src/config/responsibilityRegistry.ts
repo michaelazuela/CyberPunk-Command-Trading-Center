@@ -3,6 +3,7 @@ export type ResponsibilityAuthority =
   | 'fact_extraction_only'
   | 'setup_scanner_authority'
   | 'trade_decision_authority'
+  | 'visibility_authority'
   | 'alert_format_authority'
   | 'persistence_authority'
   | 'advisory_only';
@@ -44,6 +45,15 @@ export const RESPONSIBILITY_REGISTRY: ResponsibilityOwner[] = [
     consumers: ['scanner automation', 'Discord alert selection', 'replay diagnostics'],
     mustNotReimplementIn: ['src/lib/gemini.ts', 'src/agents/*', 'tools/automation/discord-scheduler.ts'],
     protects: 'Keeps Intraday MSS campaigns sourced from NinjaTrader OHLC and app-owned setup candidates; advisory/Gemini paths may only summarize the watch.',
+  },
+  {
+    key: 'desk_state_visibility_metadata',
+    authority: 'visibility_authority',
+    owner: 'src/lib/localScannerEngine.ts',
+    sharedEntryPoint: 'src/agents/scannerPlanSelectionAgent.ts',
+    consumers: ['scanner automation', 'Discord alert formatting', 'RAG persistence', 'UI diagnostics'],
+    mustNotReimplementIn: ['src/agents/*', 'tools/automation/discord-alert-format.ts', 'tools/automation/discord-scheduler.ts', 'src/components/*'],
+    protects: 'Keeps trade visibility sourced from scanner-owned trade decision map audit, candidate lifecycle trace, DeskState, and visibility metadata; agents, Discord, RAG, and UI may summarize but must not invent, suppress, rerank, or reinterpret active trade candidates.',
   },
   {
     key: 'trade_decision_pipeline',

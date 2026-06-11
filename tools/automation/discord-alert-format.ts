@@ -493,7 +493,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
   const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);
-  const model = bestCandidate ? professionalCandidateModelLabel(bestCandidate) : 'No approved model candidate';
+  const model = bestCandidate ? professionalCandidateModelLabel(bestCandidate) : 'No registered active model candidate';
   const reportKind = designerStatus === 'EXECUTABLE' ? 'PLAN' : 'REVIEW';
   const sessionLabel = sessionShortLabel(args.session);
   const headlineDirection = designerStatus === 'NO TRADE' ? 'NO TRADE' : direction;

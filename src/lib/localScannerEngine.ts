@@ -1,4 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
+import { SETUP_REGISTRY, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
@@ -98,6 +99,142 @@ export interface TargetCascadeResult {
 export interface ScannerAlertDecision {
   shouldSend: boolean;
   reason: string;
+}
+
+export type ScannerVisibilityMode =
+  | 'POST_PLAN'
+  | 'POST_WATCH'
+  | 'POST_CONDITIONAL'
+  | 'POST_REVIEW'
+  | 'HOLD_WITH_REASON'
+  | 'NO_TRADE_WITH_REASON'
+  | 'DATA_QUALITY_BLOCKER';
+
+export type ScannerDiscordAction =
+  | 'post_plan'
+  | 'post_watch'
+  | 'post_conditional'
+  | 'post_review'
+  | 'hold'
+  | 'no_trade';
+
+export interface ScannerAuthorityMetadata {
+  registeredModel: boolean;
+  activeModel: boolean;
+  watchEligible: boolean;
+  planEligible: boolean;
+  discordEligible: boolean;
+  executionEligible: boolean;
+  humanReviewOnly: boolean;
+  canExecute: boolean;
+}
+
+export interface ScannerVisibilityMetadata {
+  visibilityMode: ScannerVisibilityMode;
+  discordAction: ScannerDiscordAction;
+  suppressionReason: string | null;
+  nextTrigger: string | null;
+  dataQualityBlocker: string | null;
+  holdWithReason: string | null;
+  noTradeWithReason: string | null;
+  hasMeaningfulStructuredEvidence: boolean;
+  sourceOfTruth: 'scanner_desk_state_visibility_metadata';
+  authority: ScannerAuthorityMetadata;
+  notes: string[];
+}
+
+export interface TradeDecisionMapAuditEntry {
+  setupType: SetupType;
+  modelName: string;
+  role: SetupRole;
+  parentModelFamily: string | null;
+  sessionWindows: SetupSession[];
+  requiredEvidence: string[];
+  rankWeight: number;
+  watchEligible: boolean;
+  planEligible: boolean;
+  discordEligible: boolean;
+  executionEligible: boolean;
+  humanReviewOnly: boolean;
+  canExecuteRelationship: string;
+  knownSuppressionPaths: string[];
+}
+
+export interface TradeDecisionMapAudit {
+  sourceOfTruth: 'setup_registry_trade_decision_map_audit';
+  generatedFrom: 'SETUP_REGISTRY';
+  tradingLogicChanged: false;
+  entries: TradeDecisionMapAuditEntry[];
+  notes: string[];
+}
+
+export interface ScannerCandidateLifecycleTraceItem {
+  candidateKey: string;
+  setupType: SetupType;
+  scenarioLabel: string | null;
+  direction: SetupCandidate['direction'];
+  detectedStatus: SetupCandidate['detectedStatus'];
+  executionStatus: SetupCandidate['executionStatus'];
+  candidateState: SetupCandidate['candidateState'] | null;
+  rankScore: number | null;
+  priority: number;
+  decisionQualityScore: number | null;
+  modelConfidenceScore: number | null;
+  visibilityMode: ScannerVisibilityMode;
+  blockReason: string | null;
+  missingEvidence: string[];
+  missingLevels: string[];
+  nextTrigger: string | null;
+  hasFullPlanLevels: boolean;
+  selected: boolean;
+  filteredOutReason: string | null;
+}
+
+export interface ScannerCandidateLifecycleTrace {
+  sourceOfTruth: 'scanner_candidate_lifecycle_trace';
+  candidateCount: number;
+  createdCandidates: ScannerCandidateLifecycleTraceItem[];
+  highestRankedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  bestLongPlan: ScannerCandidateLifecycleTraceItem | null;
+  bestShortPlan: ScannerCandidateLifecycleTraceItem | null;
+  selectedCandidateKey: string | null;
+  selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  filteredOutCandidates: ScannerCandidateLifecycleTraceItem[];
+  discordDecision: ScannerAlertDecision;
+  missingProofSummary: string[];
+  nextTrigger: string | null;
+  notes: string[];
+}
+
+export type DeskStateMarketMode =
+  | 'market_mapping'
+  | 'watching'
+  | 'conditional'
+  | 'human_review_ready'
+  | 'no_trade';
+
+export type DeskStateHtfContextStatus = 'sufficient' | 'partial' | 'insufficient' | 'not_applicable';
+export type DeskStateDataQualityStatus = 'ok' | 'partial' | 'data_limited';
+
+export interface DeskState {
+  sourceOfTruth: 'scanner_desk_state';
+  marketMode: DeskStateMarketMode;
+  activeCampaign: SetupCandidate['activeCampaign'] | null;
+  bestLongPlan: ScannerCandidateLifecycleTraceItem | null;
+  bestShortPlan: ScannerCandidateLifecycleTraceItem | null;
+  selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  lineInSand: number | null;
+  nextTrigger: string | null;
+  invalidation: string | null;
+  visibilityMode: ScannerVisibilityMode;
+  discordAction: ScannerDiscordAction;
+  suppressionReason: string | null;
+  htfContextStatus: DeskStateHtfContextStatus;
+  dataQualityStatus: DeskStateDataQualityStatus;
+  canExecute: boolean;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  notes: string[];
 }
 
 export { selectScannerPlan } from '../agents/scannerPlanSelectionAgent';
@@ -428,6 +565,419 @@ function isValidPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function hasFullPlanLevels(candidate: SetupCandidate | null | undefined): boolean {
+  return Boolean(
+    candidate &&
+    isValidPrice(candidate.entry) &&
+    isValidPrice(candidate.stop) &&
+    isValidPrice(candidate.target1) &&
+    isValidPrice(candidate.target2)
+  );
+}
+
+function hasMeaningfulStructuredEvidence(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate) return false;
+  return Boolean(
+    candidate.evidence?.length ||
+    candidate.missingEvidence?.length ||
+    candidate.requiredTrigger ||
+    candidate.nextAction ||
+    candidate.activeCampaign ||
+    candidate.htfLiquidityDrawState ||
+    candidate.failedPlanReversal ||
+    candidate.activeRuleset?.timeframeMss ||
+    candidate.activeRuleset?.htfLineInSand
+  );
+}
+
+function candidateNextTrigger(candidate: SetupCandidate | null | undefined): string | null {
+  if (!candidate) return null;
+  return candidate.requiredTrigger || candidate.nextAction || candidate.activeRuleset?.htfLineInSand?.requiredClose || null;
+}
+
+function dataQualityReasonForCandidate(candidate: SetupCandidate | null | undefined, explicitReason?: string | null): string | null {
+  if (explicitReason) return explicitReason;
+  const htfState = candidate?.htfLiquidityDrawState;
+  if (htfState?.classificationReliability === 'data_limited' || htfState?.htfContextDataLimited) {
+    return htfState.htfContextSufficiency?.blockers?.[0] ||
+      htfState.classificationReason ||
+      'Structured HTF context is data-limited; HTF may be context only, not candidate-promotion evidence.';
+  }
+  const coverageWarning = candidate?.missingEvidence?.find((item) => /data-limited|data limited|30-day|context gate|missing.*ohlc/i.test(item));
+  return coverageWarning || null;
+}
+
+export function buildScannerAuthorityMetadata(args: {
+  candidate?: SetupCandidate | null;
+  window?: ScannerWindowState | null;
+  canExecute?: boolean;
+  discordEligible?: boolean;
+}): ScannerAuthorityMetadata {
+  const candidate = args.candidate || null;
+  const directional = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT';
+  const fullPlan = hasFullPlanLevels(candidate);
+  const executionEligible = Boolean(
+    directional &&
+    candidate?.executionStatus === ExecutionStatus.Executable &&
+    !candidate.blockReason
+  );
+  return {
+    registeredModel: Boolean(candidate?.setupType),
+    activeModel: Boolean(candidate && (args.window ? args.window.allowsTradePlan : true)),
+    watchEligible: Boolean(directional && hasMeaningfulStructuredEvidence(candidate)),
+    planEligible: Boolean(directional && fullPlan),
+    discordEligible: Boolean(args.discordEligible ?? false),
+    executionEligible,
+    humanReviewOnly: Boolean(candidate?.humanReview || (candidate && !executionEligible)),
+    canExecute: Boolean(args.canExecute),
+  };
+}
+
+export function classifyScannerVisibility(args: {
+  state: ScannerState;
+  candidate?: SetupCandidate | null;
+  window?: ScannerWindowState | null;
+  alertDecision?: ScannerAlertDecision | null;
+  canExecute?: boolean;
+  staleReason?: string | null;
+  dataQualityBlocker?: string | null;
+}): ScannerVisibilityMetadata {
+  const candidate = args.candidate || null;
+  const structuredEvidence = hasMeaningfulStructuredEvidence(candidate);
+  const dataQualityBlocker = dataQualityReasonForCandidate(candidate, args.dataQualityBlocker);
+  const nextTrigger = candidateNextTrigger(candidate);
+  const suppressionReason = args.alertDecision && !args.alertDecision.shouldSend ? args.alertDecision.reason : null;
+  const state = args.state;
+  let visibilityMode: ScannerVisibilityMode;
+  let discordAction: ScannerDiscordAction;
+  let holdWithReason: string | null = null;
+  let noTradeWithReason: string | null = null;
+
+  if (dataQualityBlocker && structuredEvidence) {
+    visibilityMode = 'DATA_QUALITY_BLOCKER';
+    discordAction = 'hold';
+    holdWithReason = dataQualityBlocker;
+  } else if ((state === 'Approved' || state === 'Executable') && args.canExecute) {
+    visibilityMode = 'POST_PLAN';
+    discordAction = 'post_plan';
+  } else if (state === 'Approved' || state === 'Executable') {
+    visibilityMode = 'POST_REVIEW';
+    discordAction = 'post_review';
+    holdWithReason = 'Candidate is structurally visible, but normalized canExecute is false.';
+  } else if (state === 'Conditional') {
+    visibilityMode = candidate?.humanReview ? 'POST_REVIEW' : hasFullPlanLevels(candidate) ? 'POST_CONDITIONAL' : 'POST_WATCH';
+    discordAction = candidate?.humanReview ? 'post_review' : hasFullPlanLevels(candidate) ? 'post_conditional' : 'post_watch';
+  } else if (state === 'TriggerPending' || state === 'Watching') {
+    visibilityMode = 'POST_WATCH';
+    discordAction = 'post_watch';
+  } else if (state === 'Blocked' || state === 'Missed') {
+    visibilityMode = 'HOLD_WITH_REASON';
+    discordAction = 'hold';
+    holdWithReason = args.staleReason || candidate?.blockReason || nextTrigger || 'Execution is blocked; structured evidence remains visible for review.';
+  } else if (state === 'NoTrade') {
+    visibilityMode = 'NO_TRADE_WITH_REASON';
+    discordAction = 'no_trade';
+    noTradeWithReason = candidate?.blockReason || suppressionReason || 'No active app-owned setup candidate.';
+  } else {
+    visibilityMode = structuredEvidence ? 'HOLD_WITH_REASON' : 'NO_TRADE_WITH_REASON';
+    discordAction = structuredEvidence ? 'hold' : 'no_trade';
+    holdWithReason = structuredEvidence ? nextTrigger || suppressionReason || 'Structured evidence is logged, but no alert action is selected.' : null;
+    noTradeWithReason = structuredEvidence ? null : suppressionReason || 'No active structured setup evidence.';
+  }
+
+  return {
+    visibilityMode,
+    discordAction,
+    suppressionReason,
+    nextTrigger,
+    dataQualityBlocker: dataQualityBlocker || null,
+    holdWithReason,
+    noTradeWithReason,
+    hasMeaningfulStructuredEvidence: structuredEvidence,
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    authority: buildScannerAuthorityMetadata({
+      candidate,
+      window: args.window,
+      canExecute: args.canExecute,
+      discordEligible: Boolean(args.alertDecision?.shouldSend),
+    }),
+    notes: [
+      'Visibility metadata is diagnostic and formatting context only; it does not approve trades or change canExecute.',
+      'Agents, Discord, RAG, and UI may summarize this metadata but must not invent, suppress, or rerank app-owned candidates.',
+    ],
+  };
+}
+
+function registryEntryHumanReviewOnly(entry: SetupRegistryEntry): boolean {
+  return (
+    entry.setupType === SetupType.OpeningDriveFvgContinuation ||
+    entry.setupType === SetupType.IntradayMssMicroContinuation
+  );
+}
+
+function suppressionPathsForRegistryEntry(entry: SetupRegistryEntry): string[] {
+  const paths = [
+    'Outside canonical Morning/Lunch setup-scan windows.',
+    'Missing required structured evidence from the setup scanner.',
+    'Missing completed 5M trigger, protected structure stop, invalidation, target room, or risk proof.',
+    'Stale/chase guard marks the setup missed or blocked.',
+    'Durable ActiveCampaign ledger suppresses duplicate Discord alerts.',
+    'Discord quality threshold or duplicate alert policy suppresses posting while decision tape keeps the state.',
+    'Structured HTF context below the 30-day sufficiency requirement becomes data-quality visibility, not structural confirmation.',
+  ];
+
+  if (entry.role === 'supporting_evidence') {
+    paths.unshift('Supporting-evidence registry role contributes facts/reasons/scoring only and does not create the active candidate by itself.');
+  }
+  if (entry.role === 'deprecated') {
+    paths.unshift('Deprecated registry role is excluded from active scanner, Discord alert, and trade-decision authority.');
+  }
+  if (registryEntryHumanReviewOnly(entry)) {
+    paths.unshift('Human-review-only model metadata keeps canExecute false unless another deterministic app-owned path already allows execution.');
+  }
+
+  return paths;
+}
+
+function canExecuteRelationshipForRegistryEntry(entry: SetupRegistryEntry): string {
+  if (entry.role === 'deprecated') {
+    return 'Deprecated registry entry; canExecute must remain false unless a current app-owned primary model separately creates an executable plan.';
+  }
+  if (entry.role === 'supporting_evidence') {
+    return 'Supporting evidence can improve context/scoring only; canExecute is decided by the app-owned active candidate pipeline.';
+  }
+  if (registryEntryHumanReviewOnly(entry)) {
+    return 'Human-review-only primary model; current metadata expects canExecute=false and trader confirmation before action.';
+  }
+  return 'Primary model can be execution-eligible only after deterministic app-owned session, 5M trigger, stop, target, risk, invalidation, and canExecute gates pass.';
+}
+
+export function buildTradeDecisionMapAudit(entries: SetupRegistryEntry[] = SETUP_REGISTRY): TradeDecisionMapAudit {
+  return {
+    sourceOfTruth: 'setup_registry_trade_decision_map_audit',
+    generatedFrom: 'SETUP_REGISTRY',
+    tradingLogicChanged: false,
+    entries: entries.map((entry) => {
+      const primary = entry.role === 'primary_model';
+      const humanReviewOnly = registryEntryHumanReviewOnly(entry);
+      return {
+        setupType: entry.setupType,
+        modelName: entry.label,
+        role: entry.role,
+        parentModelFamily: entry.parentModelFamily || null,
+        sessionWindows: [...entry.allowedSessions],
+        requiredEvidence: [...entry.requiredEvidence],
+        rankWeight: entry.priority,
+        watchEligible: primary || entry.role === 'supporting_evidence',
+        planEligible: primary,
+        discordEligible: primary,
+        executionEligible: primary && !humanReviewOnly,
+        humanReviewOnly,
+        canExecuteRelationship: canExecuteRelationshipForRegistryEntry(entry),
+        knownSuppressionPaths: suppressionPathsForRegistryEntry(entry),
+      };
+    }),
+    notes: [
+      'Phase 9A audit is inventory metadata only; it does not approve, reject, rank, or suppress trades.',
+      'Rank weight mirrors the setup registry priority so drift is visible without changing scanner scoring.',
+      'Execution eligibility describes current authority boundaries; actual execution remains controlled by normalized canExecute.',
+    ],
+  };
+}
+
+function scannerCandidateKey(candidate: SetupCandidate): string {
+  return [
+    candidate.setupType,
+    candidate.direction,
+    candidate.scenarioLabel || 'scenario',
+    candidate.candidateState || candidate.executionStatus,
+  ].join('|');
+}
+
+function scannerStateForLifecycleCandidate(candidate: SetupCandidate): ScannerState {
+  if (candidate.executionStatus === ExecutionStatus.Executable) return 'Executable';
+  if (candidate.executionStatus === ExecutionStatus.Conditional) return 'Conditional';
+  if (candidate.executionStatus === ExecutionStatus.Blocked) return 'Blocked';
+  return candidate.direction === 'NO TRADE' ? 'NoTrade' : 'Watching';
+}
+
+function missingLevelLabels(candidate: SetupCandidate): string[] {
+  return (candidate.missingLevels || []).map((item) => item.label || item.key);
+}
+
+function filteredOutReasonForLifecycle(args: {
+  candidate: SetupCandidate;
+  selectedKey: string | null;
+  staleReason?: string | null;
+}): string | null {
+  const key = scannerCandidateKey(args.candidate);
+  if (args.selectedKey && key === args.selectedKey) return null;
+  if (args.candidate.blockReason) return String(args.candidate.blockReason);
+  if (args.staleReason) return args.staleReason;
+  if (args.candidate.direction === 'NO TRADE') return 'Candidate direction is NO TRADE.';
+  if (args.candidate.executionStatus === ExecutionStatus.Blocked) return 'Candidate execution status is blocked.';
+  if (!hasFullPlanLevels(args.candidate)) return 'Candidate is missing full entry, stop, T1, or T2 plan levels.';
+  if (args.selectedKey) return 'Another candidate was selected by the existing scanner selection path.';
+  return 'No selected candidate for this scanner cycle.';
+}
+
+export function buildCandidateLifecycleTrace(args: {
+  candidates?: SetupCandidate[] | null;
+  selectedCandidate?: SetupCandidate | null;
+  state: ScannerState;
+  window?: ScannerWindowState | null;
+  alertDecision: ScannerAlertDecision;
+  canExecute?: boolean;
+  staleReason?: string | null;
+  dataQualityBlocker?: string | null;
+}): ScannerCandidateLifecycleTrace {
+  const candidates = [...(args.candidates || [])];
+  const selectedKey = args.selectedCandidate ? scannerCandidateKey(args.selectedCandidate) : null;
+  const items = candidates.map((candidate): ScannerCandidateLifecycleTraceItem => {
+    const candidateState = selectedKey && scannerCandidateKey(candidate) === selectedKey
+      ? args.state
+      : scannerStateForLifecycleCandidate(candidate);
+    const visibility = classifyScannerVisibility({
+      state: candidateState,
+      candidate,
+      window: args.window,
+      alertDecision: selectedKey && scannerCandidateKey(candidate) === selectedKey
+        ? args.alertDecision
+        : { shouldSend: false, reason: 'Candidate was not selected by the existing scanner selection path.' },
+      canExecute: selectedKey && scannerCandidateKey(candidate) === selectedKey ? Boolean(args.canExecute) : false,
+      staleReason: args.staleReason,
+      dataQualityBlocker: args.dataQualityBlocker,
+    });
+    const selected = Boolean(selectedKey && scannerCandidateKey(candidate) === selectedKey);
+    return {
+      candidateKey: scannerCandidateKey(candidate),
+      setupType: candidate.setupType,
+      scenarioLabel: candidate.scenarioLabel || null,
+      direction: candidate.direction,
+      detectedStatus: candidate.detectedStatus,
+      executionStatus: candidate.executionStatus,
+      candidateState: candidate.candidateState || null,
+      rankScore: candidate.rankScore ?? null,
+      priority: candidate.priority,
+      decisionQualityScore: candidate.decisionQualityScore ?? null,
+      modelConfidenceScore: candidate.modelConfidenceScore ?? null,
+      visibilityMode: visibility.visibilityMode,
+      blockReason: candidate.blockReason ? String(candidate.blockReason) : null,
+      missingEvidence: [...(candidate.missingEvidence || [])],
+      missingLevels: missingLevelLabels(candidate),
+      nextTrigger: candidateNextTrigger(candidate),
+      hasFullPlanLevels: hasFullPlanLevels(candidate),
+      selected,
+      filteredOutReason: selected ? null : filteredOutReasonForLifecycle({ candidate, selectedKey, staleReason: args.staleReason }),
+    };
+  });
+  const sorted = [...items].sort((a, b) => {
+    const rankA = a.rankScore ?? a.decisionQualityScore ?? a.modelConfidenceScore ?? a.priority;
+    const rankB = b.rankScore ?? b.decisionQualityScore ?? b.modelConfidenceScore ?? b.priority;
+    return rankB - rankA;
+  });
+  const bestLongPlan = sorted.find((item) => item.direction === 'LONG') || null;
+  const bestShortPlan = sorted.find((item) => item.direction === 'SHORT') || null;
+  const selectedCandidate = selectedKey
+    ? items.find((item) => item.candidateKey === selectedKey) || null
+    : null;
+  const missingProofSummary = Array.from(new Set(items.flatMap((item) => [
+    ...item.missingEvidence,
+    ...item.missingLevels,
+    item.blockReason,
+  ].filter((value): value is string => Boolean(value)))));
+
+  return {
+    sourceOfTruth: 'scanner_candidate_lifecycle_trace',
+    candidateCount: items.length,
+    createdCandidates: items,
+    highestRankedCandidate: sorted[0] || null,
+    bestLongPlan,
+    bestShortPlan,
+    selectedCandidateKey: selectedKey,
+    selectedCandidate,
+    filteredOutCandidates: items.filter((item) => !item.selected),
+    discordDecision: args.alertDecision,
+    missingProofSummary,
+    nextTrigger: selectedCandidate?.nextTrigger || sorted.find((item) => item.nextTrigger)?.nextTrigger || null,
+    notes: [
+      'Lifecycle trace reports the existing scanner cycle only; it does not rerank, suppress, or approve candidates.',
+      'Discord post/suppress reason is copied from the existing alert decision so formatter paths can explain quiet outcomes.',
+    ],
+  };
+}
+
+function marketModeFromDeskVisibility(args: {
+  state: ScannerState;
+  visibilityMode: ScannerVisibilityMode;
+}): DeskStateMarketMode {
+  if (args.state === 'MarketMapping' || args.state === 'MapReady' || args.state === 'NoData') return 'market_mapping';
+  if (args.visibilityMode === 'POST_WATCH' || args.state === 'Watching' || args.state === 'TriggerPending') return 'watching';
+  if (args.visibilityMode === 'POST_CONDITIONAL' || args.state === 'Conditional') return 'conditional';
+  if (args.visibilityMode === 'POST_PLAN' || args.visibilityMode === 'POST_REVIEW' || args.state === 'Approved' || args.state === 'Executable') {
+    return 'human_review_ready';
+  }
+  return 'no_trade';
+}
+
+function htfContextStatusForDeskState(candidate: SetupCandidate | null): DeskStateHtfContextStatus {
+  if (!candidate?.htfLiquidityDrawState && !candidate?.activeRuleset?.htfLineInSand) return 'not_applicable';
+  const htfState = candidate.htfLiquidityDrawState;
+  if (htfState?.classificationReliability === 'data_limited' || htfState?.htfContextDataLimited) return 'insufficient';
+  const sufficiency = htfState?.htfContextSufficiency?.overallStatus;
+  if (sufficiency === 'sufficient') return 'sufficient';
+  if (sufficiency === 'data_limited' || sufficiency === 'missing') return 'insufficient';
+  return 'partial';
+}
+
+function dataQualityStatusForDeskState(args: {
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+}): DeskStateDataQualityStatus {
+  if (args.visibilityMetadata.dataQualityBlocker) return 'data_limited';
+  if (args.candidateLifecycleTrace.missingProofSummary.length > 0) return 'partial';
+  return 'ok';
+}
+
+export function buildDeskState(args: {
+  state: ScannerState;
+  candidate?: SetupCandidate | null;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  canExecute?: boolean;
+}): DeskState {
+  const candidate = args.candidate || null;
+  return {
+    sourceOfTruth: 'scanner_desk_state',
+    marketMode: marketModeFromDeskVisibility({
+      state: args.state,
+      visibilityMode: args.visibilityMetadata.visibilityMode,
+    }),
+    activeCampaign: candidate?.activeCampaign || null,
+    bestLongPlan: args.candidateLifecycleTrace.bestLongPlan,
+    bestShortPlan: args.candidateLifecycleTrace.bestShortPlan,
+    selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
+    lineInSand: candidate?.activeRuleset?.htfLineInSand?.lineInSand ?? null,
+    nextTrigger: args.visibilityMetadata.nextTrigger || args.candidateLifecycleTrace.nextTrigger,
+    invalidation: candidate?.invalidation || null,
+    visibilityMode: args.visibilityMetadata.visibilityMode,
+    discordAction: args.visibilityMetadata.discordAction,
+    suppressionReason: args.visibilityMetadata.suppressionReason,
+    htfContextStatus: htfContextStatusForDeskState(candidate),
+    dataQualityStatus: dataQualityStatusForDeskState({
+      visibilityMetadata: args.visibilityMetadata,
+      candidateLifecycleTrace: args.candidateLifecycleTrace,
+    }),
+    canExecute: Boolean(args.canExecute),
+    visibilityMetadata: args.visibilityMetadata,
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    notes: [
+      'DeskState is the scanner-owned visibility snapshot for Discord, RAG, and UI consumers.',
+      'DeskState does not change trade approvals, entry, stop, target, risk, model definitions, or canExecute.',
+    ],
+  };
+}
+
 function directionSign(direction: SetupCandidate['direction']): number {
   return direction === 'LONG' ? 1 : direction === 'SHORT' ? -1 : 0;
 }
@@ -475,7 +1025,7 @@ function recommendationForScore(score: number, hardBlocker?: string | null): str
   if (hardBlocker) return `No trade: ${hardBlocker}`;
   if (score >= ICT_SCORE_THRESHOLDS.QUALIFIED) return 'Qualified only if the 5M trigger, structure stop, actual risk, and target room remain confirmed.';
   if (score >= ICT_SCORE_THRESHOLDS.CONDITIONAL) return 'Conditional: good map, but wait for the missing confirmation before execution.';
-  if (score >= ICT_SCORE_THRESHOLDS.WATCHLIST) return 'Watchlist: monitor the level, but do not execute until the approved model and risk gate complete.';
+  if (score >= ICT_SCORE_THRESHOLDS.WATCHLIST) return 'Watchlist: monitor the level, but do not execute until the active model and deterministic risk gate complete.';
   return 'No trade: score is below the desk threshold or required evidence is missing.';
 }
 
@@ -651,11 +1201,11 @@ export function scoreScannerCandidate(
       hardBlocker,
       recommendation: recommendationForScore(ICT_SCORE_THRESHOLDS.NO_TRADE, hardBlocker),
       scorecard: [{
-        label: 'Approved model',
+        label: 'Registered model',
         score: 0,
         max: 25,
         status: 'blocked',
-        note: 'No approved Model 1 or Turtle Soup candidate was available.',
+        note: 'No registered primary Model 1 or Turtle Soup candidate was available.',
       }],
     };
   }
@@ -796,7 +1346,7 @@ export function scoreScannerCandidate(
     recommendation: recommendationForScore(finalScore),
     scorecard: [
       {
-        label: 'Approved model completion',
+        label: 'Active model completion',
         score: modelCompletion,
         max: 25,
         status: scoreStatus(modelCompletion, 25),
@@ -806,7 +1356,7 @@ export function scoreScannerCandidate(
             ? 'Turtle Soup evidence is present.'
             : signals.hasFvgOrImbalanceEntry
               ? 'Model 1 FVG/imbalance evidence is present.'
-              : 'Approved model is still missing required evidence.',
+              : 'Active model is still missing required evidence.',
       },
       {
         label: '5M execution quality',

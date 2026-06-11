@@ -14,12 +14,13 @@
 2. User-uploaded screenshots may provide optional visual/advisory context only when the Gemini fallback flag is enabled.
 3. Frontend prepares the image and session context for the approved Cloudflare API boundary only in that optional fallback mode.
 4. AI/OHLC extraction returns structured chart facts: candles, swings, levels, FVG zones, liquidity events, session context, and confidence flags. AI facts are lower authority than NinjaTrader OHLC and cannot overwrite OHLC-derived fields.
-5. The setup scanner applies approved setup definitions to those facts.
+5. The setup scanner applies registered active setup definitions to those facts.
 6. The ranking layer scores executable and conditional opportunities.
 7. The app-owned trade decision pipeline approves, waits, rejects, or marks conditional.
-8. The app computes executable T1/T2 from ENTRY and STOP.
-9. Supabase stores setup/trade/RAG records with storage URLs and metadata.
-10. RAG context feeds future Morning, Lunch, and Replay analysis.
+8. Scanner-owned trade decision map audit, candidate lifecycle trace, DeskState, and visibility metadata explain model authority, candidate creation/ranking/filtering, and whether structured evidence is a plan, watch, conditional, review, hold-with-reason, no-trade-with-reason, or data-quality blocker.
+9. The app computes executable T1/T2 from ENTRY and STOP.
+10. Supabase stores setup/trade/RAG records with storage URLs and metadata.
+11. RAG context feeds future Morning, Lunch, and Replay analysis.
 
 ## Key Files
 
@@ -38,6 +39,7 @@
 - `src/lib/planEngine.ts`: app-owned plan orchestration.
 - `src/lib/tradePlan.ts`: normalized trade plan extraction and T1/T2 math.
 - `src/lib/setupScanner.ts`: approved setup scan and candidate scoring inputs.
+- `src/lib/localScannerEngine.ts`: scanner state, alert eligibility, scanner-owned trade decision map audit, candidate lifecycle trace, DeskState, and visibility metadata.
 - `src/lib/tradeDecisionPipeline.ts`: deterministic final trade decision pipeline.
 - `src/lib/conditionalPlanBuilder.ts`: deterministic wait/conditional planning paths.
 - `src/lib/sessionLevelContextEngine.ts`: Asian/London/NY/ETH/RTH market map context.
@@ -74,6 +76,7 @@ Protected source-of-truth owners:
 
 - Canonical time windows: `src/config/timeWindows.ts`.
 - Setup detection and ranking: `src/lib/setupScanner.ts`.
+- DeskState / scanner visibility metadata: `src/lib/localScannerEngine.ts`, exposed through `src/agents/scannerPlanSelectionAgent.ts` and scanner audit JSON.
 - Trade decision pipeline: `src/lib/tradeDecisionPipeline.ts`.
 - Discord alert formatting: `tools/automation/discord-alert-format.ts`.
 - Discord alert RAG persistence and receipt patching: `tools/automation/discord-rag-persistence.ts`.

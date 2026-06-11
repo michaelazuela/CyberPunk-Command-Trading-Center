@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import {
   assessBridgeBarStaleness,
   applyStaleChaseGuard,
+  buildCandidateLifecycleTrace,
+  buildDeskState,
+  buildTradeDecisionMapAudit,
   buildTargetCascade,
+  classifyScannerVisibility,
   latestCompletedBar,
   MARKET_MAPPING_COVERAGE,
   resolveScannerWindow,
@@ -14,6 +18,7 @@ import {
   scoreScannerCandidate,
   shouldSendScannerAlert,
 } from './localScannerEngine';
+import { SETUP_REGISTRY } from '../config/setupRegistry';
 import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
 import { normalizeIctModelLabel, normalizeCandidateIctModelLabel } from './ictModelLabels';
 import { buildAppTradePlan } from './planEngine';
@@ -415,6 +420,9 @@ const staleSelection = selectScannerPlan({ normalized: staleNormalizedPlan, curr
 assert.equal(staleSelection.stateForAlert, 'Missed');
 assert.equal(staleSelection.candidate, staleNormalizedCandidate);
 assert.equal(staleSelection.stale.stale, true);
+assert.equal(staleSelection.visibilityMetadata?.visibilityMode, 'HOLD_WITH_REASON');
+assert.equal(staleSelection.visibilityMetadata?.authority.canExecute, true);
+assert.equal(staleSelection.visibilityMetadata?.authority.executionEligible, true);
 assert.ok(staleSelection.auditWarnings.some((warning) => warning.includes('already_triggered_no_fresh_entry')));
 assert.equal(JSON.stringify(staleNormalizedPlan), stalePlanBefore);
 
@@ -432,6 +440,8 @@ assert.equal(contextOnlyEarlyMoveSelection.stateForAlert, 'TriggerPending');
 assert.equal(contextOnlyEarlyMoveSelection.candidate, null);
 assert.equal(contextOnlyEarlyMoveSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(contextOnlyEarlyMoveSelection.stale.stale, false);
+assert.equal(contextOnlyEarlyMoveSelection.visibilityMetadata?.visibilityMode, 'POST_WATCH');
+assert.equal(contextOnlyEarlyMoveSelection.visibilityMetadata?.hasMeaningfulStructuredEvidence, false);
 assert.ok(contextOnlyEarlyMoveSelection.auditWarnings.some((warning) => warning.includes('context only')));
 
 const blockedPlanCandidate = candidate({
@@ -453,6 +463,8 @@ const blockedSelection = selectScannerPlan({
 assert.equal(blockedSelection.stateForAlert, 'Blocked');
 assert.notEqual(blockedSelection.stateForAlert, 'Approved');
 assert.notEqual(blockedSelection.stateForAlert, 'Executable');
+assert.equal(blockedSelection.visibilityMetadata?.visibilityMode, 'HOLD_WITH_REASON');
+assert.equal(blockedSelection.visibilityMetadata?.holdWithReason, NoTradeReason.InvalidStopLocation);
 
 const wrongDirectionCandidate = candidate({
   direction: 'SHORT',
@@ -630,6 +642,127 @@ assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.Wait
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.NoTrade, candidate: null }), 'NoTrade');
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.OutsideRules, candidate: null }), 'MarketMapping');
 assert.equal(scannerStateFromDecision({ decisionStatus: TradeDecisionStatus.Wait, candidate: strongCandidate, stale }), 'Missed');
+
+const dataQualityVisibility = classifyScannerVisibility({
+  state: 'Conditional',
+  candidate: candidate({
+    setupType: SetupType.HtfDrawContinuationAfterRaid,
+    htfLiquidityDrawState: {
+      source: 'ninjatrader_ohlc',
+      authority: 'ohlc_facts_only',
+      boundary: 'candidate_creation_only_not_execution_authority',
+      macroContext: 'unknown',
+      liquidityRaidState: 'unknown',
+      classification: 'NO_QUALIFIED_STATE',
+      timeframeStates: [],
+      fiveMinuteState: {
+        timeframe: '5M',
+        direction: 'unknown',
+        status: 'unknown',
+        lifecycleState: 'unknown',
+        evidence: [],
+        confidence: 0,
+      },
+      htfDrawContinuationPending: false,
+      htfContextDataLimited: true,
+      htfContextSufficiency: {
+        overallStatus: 'data_limited',
+        dataLimited: true,
+        blockers: ['120M bars loaded below 30-day minimum.'],
+        notes: [],
+        timeframeCoverage: [],
+      },
+      classificationReliability: 'data_limited',
+      confidence: 0,
+      notes: [],
+      blockers: ['120M bars loaded below 30-day minimum.'],
+      createsTradingPlanCandidate: false,
+      approvesExecution: false,
+    },
+  }),
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Blocked by fixture alert policy.' },
+  canExecute: false,
+});
+assert.equal(dataQualityVisibility.visibilityMode, 'DATA_QUALITY_BLOCKER');
+assert.equal(dataQualityVisibility.discordAction, 'hold');
+assert.equal(dataQualityVisibility.authority.canExecute, false);
+assert.ok(dataQualityVisibility.dataQualityBlocker?.includes('120M bars'));
+
+const tradeDecisionMapAudit = buildTradeDecisionMapAudit();
+assert.equal(tradeDecisionMapAudit.tradingLogicChanged, false);
+assert.equal(tradeDecisionMapAudit.entries.length, SETUP_REGISTRY.length);
+const auditedSetupTypes = new Set(tradeDecisionMapAudit.entries.map((entry) => entry.setupType));
+for (const entry of SETUP_REGISTRY) {
+  assert.equal(auditedSetupTypes.has(entry.setupType), true, `${entry.setupType} is missing from the Phase 9A audit`);
+}
+const deprecatedAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'deprecated');
+assert.ok(deprecatedAuditEntries.length > 0);
+assert.equal(deprecatedAuditEntries.every((entry) => !entry.discordEligible && !entry.executionEligible), true);
+const supportingAuditEntries = tradeDecisionMapAudit.entries.filter((entry) => entry.role === 'supporting_evidence');
+assert.ok(supportingAuditEntries.length > 0);
+assert.equal(supportingAuditEntries.every((entry) => entry.watchEligible && !entry.planEligible && !entry.executionEligible), true);
+const openingDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+assert.equal(openingDriveAudit?.humanReviewOnly, true);
+assert.equal(openingDriveAudit?.executionEligible, false);
+assert.ok(openingDriveAudit?.canExecuteRelationship.includes('canExecute=false'));
+
+const lifecycleTrace = buildCandidateLifecycleTrace({
+  candidates: [
+    strongCandidate,
+    candidate({
+      setupType: SetupType.TurtleSoup,
+      scenarioLabel: 'Lower ranked short watch',
+      direction: 'SHORT',
+      executionStatus: ExecutionStatus.Conditional,
+      rankScore: 72,
+      entry: null,
+      stop: null,
+      target1: null,
+      target2: null,
+      missingEvidence: ['Completed 5M reclaim close missing.'],
+      missingLevels: [{ key: 'entry', label: 'Entry trigger', reason: 'No completed 5M close.', source: '5m_execution', requiredFor: 'entry' }],
+    }),
+  ],
+  selectedCandidate: strongCandidate,
+  state: 'Executable',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Discord duplicate suppressed by durable ledger.' },
+  canExecute: true,
+});
+assert.equal(lifecycleTrace.candidateCount, 2);
+assert.equal(lifecycleTrace.selectedCandidate?.setupType, strongCandidate.setupType);
+assert.equal(lifecycleTrace.highestRankedCandidate?.setupType, strongCandidate.setupType);
+assert.equal(lifecycleTrace.bestLongPlan?.selected, true);
+assert.equal(lifecycleTrace.bestShortPlan?.filteredOutReason?.includes('missing full entry'), true);
+assert.equal(lifecycleTrace.discordDecision.shouldSend, false);
+assert.ok(lifecycleTrace.missingProofSummary.includes('Completed 5M reclaim close missing.'));
+assert.equal(lifecycleTrace.notes.some((note) => note.includes('does not rerank')), true);
+
+const deskVisibility = classifyScannerVisibility({
+  state: 'Executable',
+  candidate: strongCandidate,
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Discord duplicate suppressed by durable ledger.' },
+  canExecute: false,
+});
+const deskState = buildDeskState({
+  state: 'Executable',
+  candidate: strongCandidate,
+  visibilityMetadata: deskVisibility,
+  candidateLifecycleTrace: lifecycleTrace,
+  canExecute: false,
+});
+assert.equal(deskState.sourceOfTruth, 'scanner_desk_state');
+assert.equal(deskState.marketMode, 'human_review_ready');
+assert.equal(deskState.visibilityMode, deskVisibility.visibilityMode);
+assert.equal(deskState.discordAction, deskVisibility.discordAction);
+assert.equal(deskState.canExecute, false);
+assert.equal(deskState.selectedCandidate?.setupType, strongCandidate.setupType);
+assert.equal(deskState.bestLongPlan?.setupType, strongCandidate.setupType);
+assert.equal(deskState.suppressionReason, 'Discord duplicate suppressed by durable ledger.');
+assert.equal(deskState.dataQualityStatus, 'partial');
+assert.equal(deskState.notes.some((note) => note.includes('does not change trade approvals')), true);
 
 const keyA = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Conditional' });
 const keyB = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Executable' });

@@ -7,6 +7,7 @@ for (const key of [
   'canonical_time_windows',
   'setup_detection_and_ranking',
   'intraday_mss_campaign_lifecycle',
+  'desk_state_visibility_metadata',
   'trade_decision_pipeline',
   'discord_alert_rag_persistence',
   'discord_alert_formatting',
@@ -26,6 +27,21 @@ assert.ok(
 assert.ok(
   byKey.get('intraday_mss_campaign_lifecycle')?.protects.includes('advisory/Gemini paths may only summarize'),
   'Advisory/Gemini paths must not create Intraday MSS campaign watches.',
+);
+assert.equal(byKey.get('desk_state_visibility_metadata')?.authority, 'visibility_authority');
+assert.equal(byKey.get('desk_state_visibility_metadata')?.owner, 'src/lib/localScannerEngine.ts');
+assert.equal(byKey.get('desk_state_visibility_metadata')?.sharedEntryPoint, 'src/agents/scannerPlanSelectionAgent.ts');
+assert.ok(
+  byKey.get('desk_state_visibility_metadata')?.protects.includes('must not invent, suppress, rerank, or reinterpret active trade candidates'),
+  'Visibility metadata must be the source of truth for active trade visibility.',
+);
+assert.ok(
+  byKey.get('desk_state_visibility_metadata')?.protects.includes('candidate lifecycle trace'),
+  'Scanner-owned lifecycle trace must stay in the visibility authority boundary.',
+);
+assert.ok(
+  byKey.get('desk_state_visibility_metadata')?.protects.includes('trade decision map audit'),
+  'Scanner-owned trade decision map audit must stay in the visibility authority boundary.',
 );
 assert.equal(byKey.get('discord_alert_rag_persistence')?.owner, 'tools/automation/discord-rag-persistence.ts');
 assert.ok(

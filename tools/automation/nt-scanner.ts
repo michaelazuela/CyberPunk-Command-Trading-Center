@@ -21,7 +21,10 @@ import {
 } from '../../src/lib/ninjaTraderBridge';
 import {
   assessBridgeBarStaleness,
+  buildCandidateLifecycleTrace,
+  buildDeskState,
   buildTargetCascade,
+  classifyScannerVisibility,
   DEFAULT_SCANNER_RISK_GUARDS,
   getScannerTradeDate,
   latestCompletedBar,
@@ -37,8 +40,11 @@ import {
   type BridgeTimeZoneMode,
   type BridgeTimestampMode,
   type ScannerConfidenceBreakdown,
+  type ScannerCandidateLifecycleTrace,
+  type DeskState,
   type ScannerState,
   type ScannerThresholds,
+  type ScannerVisibilityMetadata,
   type TargetCascadeResult,
 } from '../../src/lib/localScannerEngine';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
@@ -1571,6 +1577,9 @@ async function writeScannerDiscordAuditLog(args: {
   historyCoverage?: ScannerHistoryCoverageRecord[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
+  visibilityMetadata?: ScannerVisibilityMetadata;
+  candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  deskState?: DeskState;
   chartMarkup: string | null;
   levelMap: string | null;
   auditDir?: string;
@@ -1582,6 +1591,28 @@ async function writeScannerDiscordAuditLog(args: {
   const conditionalRiskScore = auditCandidate
     ? scoreConditionalCandidateRiskForDisplay(auditCandidate)
     : null;
+  const visibilityMetadata = args.visibilityMetadata || classifyScannerVisibility({
+    state: args.state,
+    candidate: args.candidate,
+    alertDecision: { shouldSend: true, reason: args.alertReason },
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const candidateLifecycleTrace = args.candidateLifecycleTrace || buildCandidateLifecycleTrace({
+    candidates: args.normalized.setupCandidates || [],
+    selectedCandidate: args.candidate,
+    state: args.state,
+    alertDecision: { shouldSend: true, reason: args.alertReason },
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const deskState = args.deskState || buildDeskState({
+    state: args.state,
+    candidate: args.candidate,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    canExecute: Boolean(args.normalized.canExecute),
+  });
   const auditPayload = repairDuplicateAuditTargets({
     createdAt: new Date().toISOString(),
     source: 'live-scanner',
@@ -1604,6 +1635,9 @@ async function writeScannerDiscordAuditLog(args: {
     staleReason: args.staleReason,
     scannerReviewStatus: args.scannerReviewStatus || null,
     scannerAuditWarnings: args.scannerAuditWarnings || [],
+    visibility: visibilityMetadata,
+    candidateLifecycleTrace,
+    deskState,
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
@@ -1861,6 +1895,9 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   scannerReviewStatus?: string | null;
   scannerAuditWarnings?: string[];
   alertDecision: { shouldSend: boolean; reason: string };
+  visibilityMetadata?: ScannerVisibilityMetadata;
+  candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  deskState?: DeskState;
   planVersionId: string;
   dryRun: boolean;
   historyCoverage?: ScannerHistoryCoverageRecord[];
@@ -1877,6 +1914,28 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     existing = null;
   }
   const events = asRecord(existing?.events) || {};
+  const visibilityMetadata = args.visibilityMetadata || classifyScannerVisibility({
+    state: args.state,
+    candidate: args.candidate,
+    alertDecision: args.alertDecision,
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const candidateLifecycleTrace = args.candidateLifecycleTrace || buildCandidateLifecycleTrace({
+    candidates: args.normalized.setupCandidates || [],
+    selectedCandidate: args.candidate,
+    state: args.state,
+    alertDecision: args.alertDecision,
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const deskState = args.deskState || buildDeskState({
+    state: args.state,
+    candidate: args.candidate,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    canExecute: Boolean(args.normalized.canExecute),
+  });
   const event = {
     recordedAt: new Date().toISOString(),
     mode: args.dryRun ? 'dry_run' : 'live',
@@ -1904,6 +1963,9 @@ export async function writeScannerDecisionTapeAuditLog(args: {
       blockReason: args.candidate?.blockReason ?? args.normalized.noTradeReason ?? null,
     },
     scannerState: args.state,
+    visibility: visibilityMetadata,
+    candidateLifecycleTrace,
+    deskState,
     reviewStatus: args.scannerReviewStatus || null,
     staleReason: args.staleReason,
     confidence: args.confidence,
@@ -2814,6 +2876,9 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   historyCoverage?: ScannerHistoryCoverageRecord[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
+  visibilityMetadata?: ScannerVisibilityMetadata;
+  candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  deskState?: DeskState;
   planVersionId: string;
   outputDir?: string;
   auditDir?: string;
@@ -2825,6 +2890,28 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   auditLogPath: string;
 }> {
   const visualCandidate = candidateForNormalizedVisualAuthority(args.candidate, args.normalized);
+  const visibilityMetadata = args.visibilityMetadata || classifyScannerVisibility({
+    state: args.state,
+    candidate: args.candidate,
+    alertDecision: { shouldSend: true, reason: args.alertReason },
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const candidateLifecycleTrace = args.candidateLifecycleTrace || buildCandidateLifecycleTrace({
+    candidates: args.normalized.setupCandidates || [],
+    selectedCandidate: args.candidate,
+    state: args.state,
+    alertDecision: { shouldSend: true, reason: args.alertReason },
+    canExecute: Boolean(args.normalized.canExecute),
+    staleReason: args.staleReason,
+  });
+  const deskState = args.deskState || buildDeskState({
+    state: args.state,
+    candidate: args.candidate,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    canExecute: Boolean(args.normalized.canExecute),
+  });
   const renderInput = visualCandidate
     ? {
         chartContext: args.chartContext || null,
@@ -2860,6 +2947,9 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     historyCoverage: args.historyCoverage,
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    deskState,
     chartMarkup,
     levelMap,
     auditDir: args.auditDir,
@@ -3887,6 +3977,30 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       };
     }
   }
+  const visibilityMetadata = classifyScannerVisibility({
+    state: stateForAlert,
+    candidate,
+    window,
+    alertDecision,
+    canExecute: Boolean(normalized.canExecute),
+    staleReason: stale.reason,
+  });
+  const candidateLifecycleTrace = buildCandidateLifecycleTrace({
+    candidates: normalized.setupCandidates || [],
+    selectedCandidate: candidate,
+    state: stateForAlert,
+    window,
+    alertDecision,
+    canExecute: Boolean(normalized.canExecute),
+    staleReason: stale.reason,
+  });
+  const deskState = buildDeskState({
+    state: stateForAlert,
+    candidate,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    canExecute: Boolean(normalized.canExecute),
+  });
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
     tradeDate,
@@ -3902,6 +4016,9 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     scannerReviewStatus: selection.reviewStatus,
     scannerAuditWarnings: [...selection.auditWarnings, ...historyWarnings],
     alertDecision,
+    visibilityMetadata,
+    candidateLifecycleTrace,
+    deskState,
     planVersionId,
     dryRun: config.dryRun,
     historyCoverage,
@@ -3944,6 +4061,9 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       historyCoverage,
       targetCascade,
       alertReason: alertDecision.reason,
+      visibilityMetadata,
+      candidateLifecycleTrace,
+      deskState,
     });
     try {
       await upsertScannerDiscordAlertRagRecord({
