@@ -280,6 +280,55 @@ function checkDiscordRagPersistenceSourceOfTruth() {
   }
 }
 
+function checkPhase10E2EHealthContracts() {
+  const scannerHealthPath = path.join(ROOT, 'src', 'lib', 'scannerModelE2EHealth.ts');
+  if (!fs.existsSync(scannerHealthPath)) {
+    fail('Missing Phase 10 scanner model E2E health contract at src/lib/scannerModelE2EHealth.ts.');
+    return;
+  }
+
+  const scannerHealthContent = readFileSafe(scannerHealthPath);
+  for (const requiredPhrase of [
+    'scanner_phase_10_model_e2e_health',
+    'buildPhase10ModelHealthReport',
+    'stale_data_quality_route',
+    'DATA_QUALITY_BLOCKER',
+    'changesTradingLogic: false',
+    'changesScannerApprovals: false',
+    'changesCanExecute: false',
+    'changesEntryStopTargetRisk: false',
+    'changesDiscordHardBlockers: false',
+  ]) {
+    if (!scannerHealthContent.includes(requiredPhrase)) {
+      fail(`scannerModelE2EHealth.ts is missing Phase 10 boundary phrase: ${requiredPhrase}`);
+    }
+  }
+
+  const readinessPath = path.join(ROOT, 'tools', 'supervisor', 'readinessDrill.ts');
+  if (!fs.existsSync(readinessPath)) {
+    fail('Missing Phase 10 Delta supervisor readiness drill at tools/supervisor/readinessDrill.ts.');
+    return;
+  }
+
+  const readinessContent = readFileSafe(readinessPath);
+  for (const requiredPhrase of [
+    'supervisor_phase_10_delta_readiness_drill',
+    'buildSupervisorReadinessDrill',
+    'readOnly: true',
+    'postsDiscord: false',
+    'startsProcesses: false',
+    'changesTradingLogic: false',
+    'changesScannerBehavior: false',
+    'changesBridgeBehavior: false',
+    'changesDiscordBehavior: false',
+    'changesCanExecute: false',
+  ]) {
+    if (!readinessContent.includes(requiredPhrase)) {
+      fail(`readinessDrill.ts is missing Phase 10 Delta boundary phrase: ${requiredPhrase}`);
+    }
+  }
+}
+
 function checkCodexPatchHygienePolicy() {
   const rulesPath = path.join(ROOT, 'docs', 'CODEX_RULES.md');
   if (!fs.existsSync(rulesPath)) {
@@ -314,6 +363,7 @@ checkCanonicalTimeWindowUsage();
 checkResponsibilityRegistry();
 checkScannerVisibilityMetadataBoundary();
 checkDiscordRagPersistenceSourceOfTruth();
+checkPhase10E2EHealthContracts();
 checkCodexPatchHygienePolicy();
 
 if (hasError) {

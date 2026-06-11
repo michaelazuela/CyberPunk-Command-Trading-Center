@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Install Phase 10 Alpha through Delta scanner model E2E health and supervisor readiness contracts.
+Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/lib/scannerModelE2EHealth.ts, src/lib/scannerModelE2EHealth.test.ts, tools/supervisor/readinessDrill.ts, tools/supervisor/readinessDrill.test.ts.
+Reason: Every primary trading model needs an end-to-end health contract proving it remains visible through scanner lifecycle, DeskState, Discord/RAG boundaries, stale/data-quality handling, and supervisor readiness before live Discord/RAG workflows rely on it.
+Tests run: npx tsx src/lib/scannerModelE2EHealth.test.ts; npx tsx tools/supervisor/readinessDrill.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Added a Phase 10 model health matrix for all primary models, required stale/missing-data routing to data-quality visibility, portfolio-level source-of-truth checks, and a read-only supervisor readiness drill for config, child services, health, delivery, stale data, market-data gap sync, and pre-window backfill status.
+Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, model definitions, or scanner scoring changed.
+Bridge impact: None. The supervisor readiness drill reads status only and does not call or modify the bridge.
+Discord impact: None. The readiness drill does not post Discord; it only reports whether Discord delivery visibility is operationally ready.
+Journal/RAG impact: None. The Phase 10 contract validates RAG boundaries but does not write records or change schemas.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Use Phase 10 as the guardrail before reviewing live Discord/RAG outputs.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Install NT-1 through NT-8 NinjaTrader bridge watchdog and Supabase backfill automation.
 Files changed: QuantDeskSupervisorTray.ps1, docs/DISCORD_ALERT_AUTOMATION.md, docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, tools/automation/backfill-market-bars.ts, tools/automation/candle-recorder.ts, tools/supervisor/config.ts, tools/supervisor/health.ts, tools/supervisor/index.ts, tools/supervisor/notifications.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/status.ts, tools/supervisor/supervisor.test.ts.
 Reason: Local bridge reliability needed to be automated and user-friendly so the trader does not have to start recorder/scanner/backfill PowerShell jobs manually each morning.
