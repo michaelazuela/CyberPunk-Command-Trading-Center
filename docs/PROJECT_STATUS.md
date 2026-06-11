@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Make Desk Play Discord output read like a protected-structure decision map.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Desk Play alerts needed to show the active long/short decision map in plain trading-desk language while preserving the app-owned pipeline boundary: no guessed levels, no loose lines, no approval drift.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Desk Play Discord text now renders `LONG ABOVE` / `SHORT BELOW` decision-map blocks. When existing scanner-owned normalized/candidate entry and protected 5M stop are available, the formatter shows entry reference, protected stop, actual risk, and deterministic T1/T2 from the existing app math. When proof is missing, levels are withheld instead of guessed. The review-only status and canExecute boundary remain explicit.
+Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, scanner model definitions, or bridge data contracts changed.
+Bridge impact: None.
+Discord impact: Yes. Desk Play wording is cleaner, more deterministic, and shows protected-structure decision-map levels only when app-owned proof exists.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Review the next live Desk Play alert in Discord for readability during the active window.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Install Phase 10E through 10H Primary Desk Play, HTF countertrend framing, Discord Desk Play publishing, June 11 regression coverage, Desk Play context chart attachment, and conditional Desk Plan levels.
 Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, tools/automation/chart-markup-renderer.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Live scanner tapes could contain useful long/short structured evidence while Discord stayed quiet because the old path depended on selected-candidate alert eligibility. The desk needed scanner-owned long and short bias visibility, HTF/countertrend framing, and a compact Discord play update with a readable context chart when a full trade alert is suppressed. When app-owned entry and protected 5M structure stop proof already exist, the chart also needs to show conditional planning levels using the same T1=1.5R and T2=2.0R math, without loosening trade approvals.

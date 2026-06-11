@@ -59,6 +59,7 @@ export interface CompactNormalizedPlan {
   invalidation?: string | null;
   t1?: number | null;
   t2?: number | null;
+  setupCandidates?: SetupCandidate[];
 }
 
 export interface CompactDeskStateForDiscord {
@@ -154,6 +155,10 @@ interface ScannerHealthDiscordArgs {
 
 function priceLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+function isFinitePrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 function numberLine(value: number | null | undefined, digits = 2): string {
@@ -502,14 +507,97 @@ function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
   return args.deskState?.discordAction === 'hold' || args.deskState?.discordAction === 'no_trade';
 }
 
-function biasLine(label: 'Long' | 'Short', bias: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>['longBias']): string {
-  if (!bias) return `${label}: no active scanner-owned bias.`;
-  const state = bias.state ? ` (${bias.state})` : '';
-  const line = typeof bias.lineInSand === 'number' && Number.isFinite(bias.lineInSand)
-    ? ` | line ${priceLine(bias.lineInSand)}`
-    : '';
-  const trigger = bias.nextTrigger ? ` | ${compactLine(bias.nextTrigger, 88)}` : '';
-  return `${label}${state}:${line}${trigger || ` ${compactLine(bias.reason || 'Visible for review.', 88)}`}`.replace(': |', ':');
+function deskPlayLineForDirection(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): number | null {
+  const directionalLine = direction === 'LONG' ? play.longAbove : play.shortBelow;
+  if (isFinitePrice(directionalLine)) return directionalLine;
+  const biasLineInSand = direction === 'LONG' ? play.longBias?.lineInSand : play.shortBias?.lineInSand;
+  if (isFinitePrice(biasLineInSand)) return biasLineInSand;
+  return isFinitePrice(play.lineInSand) ? play.lineInSand : null;
+}
+
+function deskPlayCandidateForDirection(
+  normalized: CompactNormalizedPlan,
+  direction: 'LONG' | 'SHORT',
+): SetupCandidate | null {
+  return (normalized.setupCandidates || []).find((candidate) =>
+    candidate.direction === direction &&
+    isFinitePrice(candidate.entry) &&
+    isFinitePrice(candidate.stop),
+  ) || null;
+}
+
+function deskPlayDecisionMapLevels(
+  normalized: CompactNormalizedPlan,
+  direction: 'LONG' | 'SHORT',
+): { entry: number; stop: number; target1: number; target2: number; riskPoints: number } | null {
+  const candidate = deskPlayCandidateForDirection(normalized, direction);
+  const normalizedMatchesDirection = normalized.decision === direction;
+  const entry = normalizedMatchesDirection && isFinitePrice(normalized.entry)
+    ? normalized.entry
+    : candidate?.entry ?? null;
+  const stop = normalizedMatchesDirection && isFinitePrice(normalized.stop)
+    ? normalized.stop
+    : candidate?.stop ?? null;
+  const computed = targetsFromEntryStop(direction, entry, stop);
+  if (
+    !isFinitePrice(entry) ||
+    !isFinitePrice(stop) ||
+    !isFinitePrice(computed.target1) ||
+    !isFinitePrice(computed.target2) ||
+    !isFinitePrice(computed.riskPoints)
+  ) {
+    return null;
+  }
+  return {
+    entry,
+    stop,
+    target1: computed.target1,
+    target2: computed.target2,
+    riskPoints: computed.riskPoints,
+  };
+}
+
+function deskPlayDecisionMapBlock(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  normalized: CompactNormalizedPlan,
+  direction: 'LONG' | 'SHORT',
+): string[] {
+  const lineInSand = deskPlayLineForDirection(play, direction);
+  if (!isFinitePrice(lineInSand)) return [];
+  const levels = deskPlayDecisionMapLevels(normalized, direction);
+  const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
+  if (!levels) {
+    return [
+      `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+      'Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
+    ];
+  }
+  return [
+    `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+    `Entry reference: ${priceLine(levels.entry)}`,
+    `Protected 5M stop: ${priceLine(levels.stop)}`,
+    `Risk: ${numberLine(levels.riskPoints)} pts`,
+    `T1: ${priceLine(levels.target1)}`,
+    `T2: ${priceLine(levels.target2)}`,
+    'Status: Review only until completed 5M trigger/retest and canExecute gates pass.',
+  ];
+}
+
+function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return [];
+  const longBlock = deskPlayDecisionMapBlock(play, args.normalized, 'LONG');
+  const shortBlock = deskPlayDecisionMapBlock(play, args.normalized, 'SHORT');
+  if (!longBlock.length && !shortBlock.length) return [];
+  return [
+    'Decision Map:',
+    ...longBlock,
+    ...(longBlock.length && shortBlock.length ? [''] : []),
+    ...shortBlock,
+  ];
 }
 
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
@@ -528,32 +616,26 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
     ? priceLine(play.lineInSand)
     : 'N/A';
-  const longAbove = typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? priceLine(play.longAbove) : 'N/A';
-  const shortBelow = typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? priceLine(play.shortBelow) : 'N/A';
   const lines = [
     `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
     'Status: DESK PLAY / WATCH ONLY - NOT EXECUTION APPROVAL',
     '',
     `Current Play: ${compactLine(play?.title || 'WAIT - desk play not confirmed', 90)}`,
-    `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 115)}`,
+    `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 95)}`,
     `Line in the Sand: ${line}`,
-    `Long Above: ${longAbove}`,
-    `Short Below: ${shortBelow}`,
-    '',
-    biasLine('Long', play?.longBias),
-    biasLine('Short', play?.shortBias),
+    ...(play ? ['', ...deskPlayDecisionMapLines(args)] : []),
     ...(play?.countertrendWarning ? ['', `Countertrend: ${compactLine(play.countertrendWarning, 120)}`] : []),
     '',
-    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 125)}`,
-    `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 110)}`,
-    play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
+    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
+    `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 90)}`,
+    compactLine(play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.', 95),
     hasConditionalLevels
-      ? 'Chart: conditional Desk Plan attached. Entry/stop/T1/T2 use app math; canExecute remains false until gates pass.'
+      ? 'Chart: conditional Desk Plan attached; app math used; canExecute remains false.'
       : args.attachments.chartPlan
-      ? 'Chart: watch/context chart attached. Entry/stop/T1/T2 unavailable until protected structure is proven.'
+      ? 'Chart: watch/context attached; levels withheld until protected structure is proven.'
       : 'Chart: not attached; use DeskState text only until chart context is available.',
     '',
-    'Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.',
+    'Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.',
   ];
   return {
     username: 'Quant Desk',

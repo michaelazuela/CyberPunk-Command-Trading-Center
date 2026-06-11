@@ -316,14 +316,82 @@ assert.ok(deskPlayText.includes('Scanner Desk Play'));
 assert.ok(deskPlayText.includes('DESK PLAY / WATCH ONLY - NOT EXECUTION APPROVAL'));
 assert.ok(deskPlayText.includes('Current Play: LONG desk play'));
 assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
-assert.ok(deskPlayText.includes('Long Above: 7342.00'));
-assert.ok(deskPlayText.includes('Short Below: 7303.50'));
+assert.ok(deskPlayText.includes('Decision Map:'));
+assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
+assert.ok(deskPlayText.includes('SHORT BELOW 7303.50'));
+assert.ok(deskPlayText.includes('Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));
-assert.ok(deskPlayText.includes('Chart: watch/context chart attached. Entry/stop/T1/T2 unavailable until protected structure is proven.'));
-assert.ok(deskPlayText.includes('Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.'));
+assert.ok(deskPlayText.includes('Chart: watch/context attached; levels withheld until protected structure is proven.'));
+assert.ok(deskPlayText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));
 assert.ok(!/^Entry:/m.test(deskPlayText));
 assert.ok(!/^Stop:/m.test(deskPlayText));
 assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(deskPlayPayload)));
+
+const decisionMapShortCandidate = sampleCandidate('SHORT');
+decisionMapShortCandidate.entry = 7339.75;
+decisionMapShortCandidate.stop = 7350.25;
+decisionMapShortCandidate.target1 = null;
+decisionMapShortCandidate.target2 = null;
+decisionMapShortCandidate.riskPoints = null;
+const deskPlayDecisionMapPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-11',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-DESK-PLAY-DECISION-MAP-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'Review only until completed trigger/retest.',
+    invalidation: null,
+    setupCandidates: [decisionMapShortCandidate],
+  },
+  candidates: [decisionMapShortCandidate],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7342,
+    nextTrigger: 'Completed 5M acceptance below 7342.00, then retest failure.',
+    invalidation: 'Completed 5M reclaim above protected structure cancels the short review.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT review below line in the sand',
+      summary: 'Short review is visible only if completed 5M structure accepts below the line.',
+      lineInSand: 7342,
+      longAbove: null,
+      shortBelow: 7342,
+      nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+      invalidation: 'Completed 5M reclaim above 7342.00 pauses the short review.',
+      noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      shortBias: {
+        state: 'review',
+        scenarioLabel: 'Short below line in the sand',
+        lineInSand: 7342,
+        nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+        reason: 'Short review has app-owned entry/stop math available.',
+        blockers: ['canExecute=false'],
+      },
+    },
+  },
+});
+const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
+assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('Entry reference: 7339.75'));
+assert.ok(deskPlayDecisionMapText.includes('Protected 5M stop: 7350.25'));
+assert.ok(deskPlayDecisionMapText.includes('Risk: 10.50 pts'));
+assert.ok(deskPlayDecisionMapText.includes('T1: 7324.00'));
+assert.ok(deskPlayDecisionMapText.includes('T2: 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('Status: Review only until completed 5M trigger/retest and canExecute gates pass.'));
+assert.ok(deskPlayDecisionMapText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));
+assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlayDecisionMapText));
 
 const lunch = compactDiscordSummary({
   session: 'lunch',

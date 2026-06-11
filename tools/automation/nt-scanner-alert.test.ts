@@ -1755,7 +1755,7 @@ try {
   assert.ok(deskPlayResult.chartMarkup);
   assert.equal(deskPlayResult.payload.components, undefined);
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
-  assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached. Entry/stop/T1/T2 use app math; canExecute remains false until gates pass.'));
+  assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached; app math used; canExecute remains false.'));
   assert.ok(!/^Entry:/m.test(deskPlayText));
   assert.ok(!/^Stop:/m.test(deskPlayText));
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
