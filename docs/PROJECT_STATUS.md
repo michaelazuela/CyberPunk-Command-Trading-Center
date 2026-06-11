@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-11
-Task: Fix supervisor pre-window backfill Windows spawn failure.
-Files changed: docs/PROJECT_STATUS.md, tools/supervisor/htfPreload.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/supervisor.test.ts.
-Reason: The live supervisor reported `[SUPERVISOR] Pre-Window Backfill Failed` because the repair command failed before launch with `spawnSync npm.cmd EINVAL`; manual backfill succeeded, proving the issue was Windows process-launch plumbing rather than NinjaTrader market data.
-Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; manual `npm run nt:backfill -- --instrument MES --bridge-instrument MES --bridge-url http://127.0.0.1:8765 --days 2 --delay-ms 50` repaired 692 bars; full required suite pending before commit.
-Result: Pre-window backfill and HTF preload now wrap npm through `cmd.exe /d /c` on Windows, matching the safer supervised child-service launch path and avoiding direct `npm.cmd` spawn failures from the tray/supervisor context.
+Task: Fix supervisor pre-window backfill Windows spawn failure and live status reporting.
+Files changed: docs/PROJECT_STATUS.md, tools/supervisor/deliveryVisibility.ts, tools/supervisor/htfPreload.ts, tools/supervisor/index.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/supervisor.test.ts.
+Reason: The live supervisor reported `[SUPERVISOR] Pre-Window Backfill Failed` because the repair command failed before launch with `spawnSync npm.cmd EINVAL`; manual backfill succeeded, proving the issue was Windows process-launch plumbing rather than NinjaTrader market data. After restart, the local `supervisor:status` command could also report a stale local supervisor PID even while the live daemon endpoint was healthy. During active morning scan, delivery visibility could also keep warning on an old Market Mapping refresh even when the current completed 5M and decision tape were fresh.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; manual `npm run nt:backfill -- --instrument MES --bridge-instrument MES --bridge-url http://127.0.0.1:8765 --days 2 --delay-ms 50` repaired 692 bars.
+Result: Pre-window backfill and HTF preload now wrap npm through `cmd.exe /d /c` on Windows, matching the safer supervised child-service launch path and avoiding direct `npm.cmd` spawn failures from the tray/supervisor context. `supervisor:status` now reads the live daemon endpoint first and falls back to local inspection only when the daemon endpoint is unavailable. Delivery visibility no longer treats an old Market Mapping timestamp as stale while active scanner freshness is proven by current completed 5M state.
 Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner scoring, or bridge contracts changed.
 Bridge impact: None. Manual repair read existing bridge data and upserted compact OHLCV into `market_bars`.
 Discord impact: Operational alert root cause fixed; no trade alert behavior changed.
 Journal/RAG impact: None.
 Supabase impact: No migration added. Existing market_bars cache was repaired through the existing backfill path.
-Known risks: None identified after focused verification.
-Next recommended action: Restart the Quant Desk supervisor once so the running daemon loads the patched launch helper.
+Known risks: None identified after verification.
+Next recommended action: Continue monitoring through the Quant Desk tray; the supervisor has been restarted and loaded the patched launch helper.
 
 ## Previous Change
 

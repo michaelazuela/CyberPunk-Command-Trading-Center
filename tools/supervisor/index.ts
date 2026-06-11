@@ -27,8 +27,35 @@ function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+async function readLiveSupervisorStatus(configResult = loadSupervisorConfig()): Promise<unknown | null> {
+  try {
+    const response = await fetch(
+      `http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}`,
+      { signal: AbortSignal.timeout(3_000) },
+    );
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function runSupervisorCheck(): Promise<void> {
   const configResult = loadSupervisorConfig();
+  const state = getSupervisorState(configResult.config);
+  const health = await buildHealthReport(configResult.config, state);
+  const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
+  printJson(buildSupervisorStatus(configResult, state, health, delivery));
+  if (configResult.status !== 'valid') process.exitCode = 1;
+}
+
+export async function runSupervisorStatus(): Promise<void> {
+  const configResult = loadSupervisorConfig();
+  const liveStatus = await readLiveSupervisorStatus(configResult);
+  if (liveStatus) {
+    printJson(liveStatus);
+    return;
+  }
   const state = getSupervisorState(configResult.config);
   const health = await buildHealthReport(configResult.config, state);
   const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
@@ -136,7 +163,7 @@ if (command === 'check') {
 } else if (command === 'start') {
   startSupervisor();
 } else if (command === 'status') {
-  await runSupervisorCheck();
+  await runSupervisorStatus();
 } else if (command === 'stop') {
   await runSupervisorStop();
 } else if (command === 'notify-self-heal') {

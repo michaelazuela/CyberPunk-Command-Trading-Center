@@ -444,6 +444,25 @@ assert.equal(dryRunDeliveryReport.lastDelivery?.webhookSource, 'QUANT_DESK_SCANN
 assert.equal(dryRunDeliveryReport.lastDelivery?.deliveryStatus, 'sent');
 assert.equal(dryRunDeliveryReport.skippedDeliveries.length, 0);
 
+const activeScannerFreshStatePath = path.join(deliveryFixtureDir, '.nt-scanner-active-fresh-state.json');
+fs.writeFileSync(activeScannerFreshStatePath, JSON.stringify({
+  lastCompleted5mBySession: {
+    '2026-06-11:morning': '2026-06-11T10:05:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-11:morning': '2026-06-11T09:55:00.0000000',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const activeScannerFreshDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: activeScannerFreshStatePath,
+  auditDir,
+  now: new Date('2026-06-11T14:06:00.000Z'),
+  staleAfterMs: 180_000,
+});
+assert.deepEqual(activeScannerFreshDeliveryReport.staleDataBlockers, []);
+assert.equal(activeScannerFreshDeliveryReport.status, 'ok');
+
 const stalePreviousSessionStatePath = path.join(deliveryFixtureDir, '.nt-scanner-previous-session-state.json');
 fs.writeFileSync(stalePreviousSessionStatePath, JSON.stringify({
   lastCompleted5mBySession: {

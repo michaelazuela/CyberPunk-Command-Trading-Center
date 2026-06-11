@@ -250,17 +250,19 @@ function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: 
   }
 
   const activeTradeDate = isRthScannerFreshnessWindow(now) ? latestTradeDate(state, now) : null;
+  let latestCompletedFresh = false;
   if (activeTradeDate) {
     const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
       .map(([key, value]) => ({ key, value: stringOrNull(value) }))
       .filter((entry) => entry.value && tradeDateFromKey(entry.key) === activeTradeDate);
     const latestCompleted = latestEntry(lastCompleted);
-    if (latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) > staleAfterMs) {
+    latestCompletedFresh = Boolean(latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) <= staleAfterMs);
+    if (latestCompleted && !latestCompletedFresh) {
       blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
     }
   }
 
-  if (activeTradeDate) {
+  if (activeTradeDate && !latestCompletedFresh) {
     const lastRefresh = Object.entries(asRecord(state.lastMarketMapRefreshBySession))
       .map(([key, value]) => ({ key, value: stringOrNull(value) }))
       .filter((entry) => entry.value && tradeDateFromKey(entry.key) === activeTradeDate);
