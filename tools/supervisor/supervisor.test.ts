@@ -262,11 +262,20 @@ assert.deepEqual(missingPreloadAssurance.missingTimeframes, ['120m']);
 assert.match(missingPreloadAssurance.reason, /Operator action:/);
 assert.ok(missingPreloadAssurance.operatorActions.some((action) => action.includes('NinjaTrader')));
 assert.ok(missingPreloadAssurance.operatorActions.some((action) => action.includes('30 calendar days of 120m history')));
-const noBarsPreloadAssurance = parseHtfPreloadAssurance([
+const sessionGapPreloadAssurance = parseHtfPreloadAssurance([
   '[backfill] 2026-06-05 5m: upserted 300.',
   '[backfill] 2026-06-05 15m: upserted 100.',
   '[backfill] 2026-06-05 60m: upserted 25.',
   '[backfill] 2026-06-05 120m: upserted 13.',
+  '[backfill] 2026-06-05 240m: upserted 7.',
+].join('\n'), '[backfill] 2026-06-06 120m: no bars returned.\n');
+assert.equal(sessionGapPreloadAssurance.ok, true);
+assert.deepEqual(sessionGapPreloadAssurance.noBarsTimeframes, []);
+assert.equal(sessionGapPreloadAssurance.stderrWarning, false);
+const noBarsPreloadAssurance = parseHtfPreloadAssurance([
+  '[backfill] 2026-06-05 5m: upserted 300.',
+  '[backfill] 2026-06-05 15m: upserted 100.',
+  '[backfill] 2026-06-05 60m: upserted 25.',
   '[backfill] 2026-06-05 240m: upserted 7.',
 ].join('\n'), '[backfill] 2026-06-05 120m: no bars returned.\n');
 assert.equal(noBarsPreloadAssurance.ok, false);
