@@ -380,7 +380,7 @@ function launchSingleService(
   }
 }
 
-function stopProcessTree(pid: number): void {
+export function stopProcessTree(pid: number): void {
   if (process.platform === 'win32') {
     execFileSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
     return;

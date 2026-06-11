@@ -9,9 +9,11 @@ import { sendSupervisorNotifications, sendSupervisorSelfHealNotification } from 
 import { runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   getSupervisorState,
+  isProcessRunning,
   launchEnabledServices,
   restartFailedOwnedServices,
   stopOwnedServices,
+  stopProcessTree,
   stopSupervisorProcess,
 } from './processManager';
 import { buildSupervisorStatus } from './status';
@@ -66,10 +68,17 @@ export async function runSupervisorStatus(): Promise<void> {
 export async function runSupervisorStop(): Promise<void> {
   const configResult = loadSupervisorConfig();
   const logger = createSupervisorLogger(configResult.config.logsDir);
+  const liveStatus = await readLiveSupervisorStatus(configResult) as { supervisor?: { pid?: unknown } } | null;
+  const livePid = typeof liveStatus?.supervisor?.pid === 'number' ? liveStatus.supervisor.pid : null;
   const state = stopOwnedServices(configResult.config, logger);
   const health = await buildHealthReport(configResult.config, state);
   const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
   printJson(buildSupervisorStatus(configResult, state, health, delivery));
+  if (livePid && livePid !== process.pid && isProcessRunning(livePid)) {
+    logger.log('info', 'Supervisor process stop requested.', { pid: livePid, source: 'live_status' });
+    stopProcessTree(livePid);
+    return;
+  }
   stopSupervisorProcess(configResult.config, logger);
 }
 
