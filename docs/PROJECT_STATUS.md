@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Install Phase 10E through 10H Primary Desk Play, HTF countertrend framing, Discord Desk Play publishing, and June 11 regression coverage.
+Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Live scanner tapes could contain useful long/short structured evidence while Discord stayed quiet because the old path depended on selected-candidate alert eligibility. The desk needed scanner-owned long and short bias visibility, HTF/countertrend framing, and a compact Discord play update without loosening trade approvals.
+Tests run: npx tsc --noEmit; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts.
+Result: DeskState now carries `primaryDeskPlay` with primary direction, long bias, short bias, line in the sand, trigger, invalidation, no-chase language, HTF conflict/countertrend warning, and an explicit approval boundary. Discord can now publish a de-duplicated Desk Play update from DeskState when a full trade alert is suppressed but structured play context exists. June 11-style coverage proves a bullish long desk play remains primary while a counter-HTF short remains visible as review-only, with no outcome buttons or executable levels in the Desk Play card.
+Trading logic changed: No. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, scanner model definitions, or bridge data contracts changed.
+Bridge impact: None.
+Discord impact: Yes. Scanner may now post compact Desk Play/watch-only updates from DeskState during active windows when full trade alerts are suppressed.
+Journal/RAG impact: No schema change. Desk Play updates are visibility-only and do not create outcome-button trade records.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Review live Discord Desk Play wording during the next active Morning/Lunch window, then tune phrasing only if needed.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Fix supervisor pre-window backfill Windows spawn failure and live status reporting.
 Files changed: docs/PROJECT_STATUS.md, tools/supervisor/deliveryVisibility.ts, tools/supervisor/htfPreload.ts, tools/supervisor/index.ts, tools/supervisor/preWindowBackfill.ts, tools/supervisor/processManager.ts, tools/supervisor/supervisor.test.ts.
 Reason: The live supervisor reported `[SUPERVISOR] Pre-Window Backfill Failed` because the repair command failed before launch with `spawnSync npm.cmd EINVAL`; manual backfill succeeded, proving the issue was Windows process-launch plumbing rather than NinjaTrader market data. After restart, the local `supervisor:status` command could also report a stale local supervisor PID even while the live daemon endpoint was healthy. During active morning scan, delivery visibility could also keep warning on an old Market Mapping refresh even when the current completed 5M and decision tape were fresh. `supervisor:stop` also needed to use the live daemon PID instead of relying only on the local state file. HTF preload assurance treated weekend/no-session no-bars lines as failed even when the same timeframe had successful upserts.

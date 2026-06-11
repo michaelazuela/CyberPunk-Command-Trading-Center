@@ -253,6 +253,77 @@ assert.ok(!/^T1:/m.test(watchText));
 assert.ok(!/^T2:/m.test(watchText));
 assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(watchPayload)));
 
+const deskPlayPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-11',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-DESK-PLAY-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.NoTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Blocked setup did not meet educational Discord threshold.',
+    invalidation: null,
+  },
+  candidates: [],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  deskState: {
+    marketMode: 'no_trade',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7342,
+    nextTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+    invalidation: null,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG desk play',
+      summary: 'LONG remains primary while its line/trigger holds. Opposite side stays visible as countertrend_review.',
+      lineInSand: 7342,
+      longAbove: 7342,
+      shortBelow: 7303.5,
+      nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
+      invalidation: 'Completed 5M acceptance below 7342 damages the long continuation play.',
+      noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
+      htfConflict: true,
+      countertrendWarning: 'SHORT evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.',
+      discordEligible: true,
+      longBias: {
+        state: 'primary',
+        scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+        lineInSand: 7342,
+        nextTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+        reason: 'Long retest continuation remains primary.',
+        blockers: ['EntryTriggerPending'],
+      },
+      shortBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Bearish Turtle Soup Reversal',
+        lineInSand: 7303.5,
+        nextTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
+        reason: 'Short is counter-HTF review only.',
+        blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+      },
+    },
+  },
+});
+const deskPlayText = flattenDiscordPayloadText(deskPlayPayload);
+assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
+assert.equal(deskPlayPayload.components, undefined);
+assert.ok(deskPlayText.includes('Scanner Desk Play'));
+assert.ok(deskPlayText.includes('DESK PLAY / WATCH ONLY - NOT EXECUTION APPROVAL'));
+assert.ok(deskPlayText.includes('Current Play: LONG desk play'));
+assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
+assert.ok(deskPlayText.includes('Long Above: 7342.00'));
+assert.ok(deskPlayText.includes('Short Below: 7303.50'));
+assert.ok(deskPlayText.includes('counter-HTF/review-only'));
+assert.ok(deskPlayText.includes('Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.'));
+assert.ok(!/^Entry:/m.test(deskPlayText));
+assert.ok(!/^Stop:/m.test(deskPlayText));
+assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(deskPlayPayload)));
+
 const lunch = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-05-26',

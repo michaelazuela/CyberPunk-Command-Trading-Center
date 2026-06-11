@@ -185,6 +185,17 @@ export interface ScannerCandidateLifecycleTraceItem {
   missingEvidence: string[];
   missingLevels: string[];
   nextTrigger: string | null;
+  requiredTrigger: string | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  riskPoints: number | null;
+  invalidation: string | null;
+  lineInSand: number | null;
+  lineInSandReason: string | null;
+  htfConflict: boolean;
+  countertrend: boolean;
   hasFullPlanLevels: boolean;
   selected: boolean;
   filteredOutReason: string | null;
@@ -233,6 +244,48 @@ export interface DeskStatePromotionPath {
   notes: string[];
 }
 
+export type DeskPlayDirection = 'LONG' | 'SHORT' | 'WAIT';
+export type DeskPlayBiasState = 'primary' | 'secondary' | 'countertrend_review' | 'blocked' | 'not_present';
+
+export interface DeskPlayDirectionalBias {
+  direction: 'LONG' | 'SHORT';
+  state: DeskPlayBiasState;
+  candidateKey: string | null;
+  setupType: SetupType | null;
+  scenarioLabel: string | null;
+  rankScore: number | null;
+  decisionQualityScore: number | null;
+  lineInSand: number | null;
+  nextTrigger: string | null;
+  invalidation: string | null;
+  reason: string;
+  blockers: string[];
+}
+
+export interface PrimaryDeskPlay {
+  sourceOfTruth: 'scanner_primary_desk_play';
+  direction: DeskPlayDirection;
+  title: string;
+  summary: string;
+  lineInSand: number | null;
+  longAbove: number | null;
+  shortBelow: number | null;
+  nextTrigger: string | null;
+  invalidation: string | null;
+  noChase: string;
+  longBias: DeskPlayDirectionalBias;
+  shortBias: DeskPlayDirectionalBias;
+  htfConflict: boolean;
+  countertrendWarning: string | null;
+  discordEligible: boolean;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+  notes: string[];
+}
+
 export interface DeskState {
   sourceOfTruth: 'scanner_desk_state';
   marketMode: DeskStateMarketMode;
@@ -240,6 +293,7 @@ export interface DeskState {
   bestLongPlan: ScannerCandidateLifecycleTraceItem | null;
   bestShortPlan: ScannerCandidateLifecycleTraceItem | null;
   selectedCandidate: ScannerCandidateLifecycleTraceItem | null;
+  primaryDeskPlay: PrimaryDeskPlay;
   lineInSand: number | null;
   nextTrigger: string | null;
   invalidation: string | null;
@@ -839,6 +893,42 @@ function missingLevelLabels(candidate: SetupCandidate): string[] {
   return (candidate.missingLevels || []).map((item) => item.label || item.key);
 }
 
+function numericOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate) return false;
+  const text = [
+    ...(candidate.missingEvidence || []),
+    ...(candidate.evidence || []),
+    candidate.blockReason,
+    candidate.activeRuleset?.timeframeMss?.status,
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+  ].filter(Boolean).join(' ');
+  return /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
+}
+
+function lifecycleItemHasHtfConflict(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item) return false;
+  const text = [
+    ...item.missingEvidence,
+    ...item.missingLevels,
+    item.blockReason,
+    item.lineInSandReason,
+  ].filter(Boolean).join(' ');
+  return item.htfConflict || /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
+}
+
+function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | undefined): number {
+  if (!item) return Number.NEGATIVE_INFINITY;
+  let score = item.rankScore ?? item.decisionQualityScore ?? item.modelConfidenceScore ?? item.priority;
+  if (lifecycleItemHasHtfConflict(item)) score -= 12;
+  if (/Outside active setup scan window/i.test(item.missingEvidence.join(' '))) score -= 6;
+  if (/Minimum 2\.0R unavailable|TargetsUnavailable/i.test(item.missingEvidence.join(' '))) score -= 4;
+  return score;
+}
+
 function filteredOutReasonForLifecycle(args: {
   candidate: SetupCandidate;
   selectedKey: string | null;
@@ -900,6 +990,17 @@ export function buildCandidateLifecycleTrace(args: {
       missingEvidence: [...(candidate.missingEvidence || [])],
       missingLevels: missingLevelLabels(candidate),
       nextTrigger: candidateNextTrigger(candidate),
+      requiredTrigger: candidate.requiredTrigger || null,
+      entry: numericOrNull(candidate.entry),
+      stop: numericOrNull(candidate.stop),
+      target1: numericOrNull(candidate.target1),
+      target2: numericOrNull(candidate.target2),
+      riskPoints: numericOrNull(candidate.riskPoints),
+      invalidation: candidate.invalidation || null,
+      lineInSand: candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null,
+      lineInSandReason: candidate.activeRuleset?.htfLineInSand?.lineReason ?? null,
+      htfConflict: candidateHasHtfConflict(candidate),
+      countertrend: candidateHasHtfConflict(candidate),
       hasFullPlanLevels: hasFullPlanLevels(candidate),
       selected,
       filteredOutReason: selected ? null : filteredOutReasonForLifecycle({ candidate, selectedKey, staleReason: args.staleReason }),
@@ -1035,6 +1136,171 @@ function buildDeskStatePromotionPath(args: {
   };
 }
 
+function directionLabel(direction: DeskPlayDirection): string {
+  if (direction === 'LONG') return 'LONG';
+  if (direction === 'SHORT') return 'SHORT';
+  return 'WAIT';
+}
+
+function priceFromText(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const matches = [...text.matchAll(/\b(\d{4,5}(?:\.\d{1,2})?)\b/g)]
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isFinite(value));
+  return matches[0] ?? null;
+}
+
+function lineFromDirectionalTrigger(
+  direction: SetupCandidate['direction'],
+  text: string | null | undefined,
+): number | null {
+  if (!text || (direction !== 'LONG' && direction !== 'SHORT')) return null;
+  const range = text.match(/\b(\d{4,5}(?:\.\d{1,2})?)\s*-\s*(\d{4,5}(?:\.\d{1,2})?)\b/);
+  if (range) {
+    const first = Number(range[1]);
+    const second = Number(range[2]);
+    if (Number.isFinite(first) && Number.isFinite(second)) {
+      return direction === 'LONG' ? Math.max(first, second) : Math.min(first, second);
+    }
+  }
+  return priceFromText(text);
+}
+
+function lineForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null): number | null {
+  if (!item) return null;
+  return item.lineInSand ??
+    lineFromDirectionalTrigger(item.direction, item.nextTrigger) ??
+    lineFromDirectionalTrigger(item.direction, item.requiredTrigger) ??
+    item.entry ??
+    null;
+}
+
+function biasStateForLifecycleItem(
+  item: ScannerCandidateLifecycleTraceItem | null,
+  primaryDirection: DeskPlayDirection,
+): DeskPlayBiasState {
+  if (!item) return 'not_present';
+  if (item.executionStatus === ExecutionStatus.Blocked) return 'blocked';
+  if (item.countertrend || lifecycleItemHasHtfConflict(item)) return 'countertrend_review';
+  if (item.direction === primaryDirection) return 'primary';
+  return 'secondary';
+}
+
+function biasReasonForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null, state: DeskPlayBiasState): string {
+  if (!item) return 'No scanner-owned candidate for this side.';
+  if (state === 'countertrend_review') return 'Structured evidence exists, but opposing HTF/MSS context makes this a review-only countertrend idea until fresh completed 5M proof confirms.';
+  if (state === 'blocked') return item.blockReason || 'Candidate is blocked by existing scanner gates.';
+  if (state === 'primary') return item.nextTrigger || item.requiredTrigger || item.scenarioLabel || 'This side is the primary scanner-owned desk play.';
+  return item.nextTrigger || item.requiredTrigger || item.scenarioLabel || 'Secondary scenario remains visible for line-in-the-sand planning.';
+}
+
+function buildDirectionalBias(
+  direction: 'LONG' | 'SHORT',
+  item: ScannerCandidateLifecycleTraceItem | null,
+  primaryDirection: DeskPlayDirection,
+): DeskPlayDirectionalBias {
+  const state = biasStateForLifecycleItem(item, primaryDirection);
+  return {
+    direction,
+    state,
+    candidateKey: item?.candidateKey || null,
+    setupType: item?.setupType || null,
+    scenarioLabel: item?.scenarioLabel || null,
+    rankScore: item?.rankScore ?? null,
+    decisionQualityScore: item?.decisionQualityScore ?? null,
+    lineInSand: lineForLifecycleItem(item),
+    nextTrigger: item?.nextTrigger || item?.requiredTrigger || null,
+    invalidation: item?.invalidation || null,
+    reason: biasReasonForLifecycleItem(item, state),
+    blockers: item ? Array.from(new Set([
+      item.blockReason,
+      ...item.missingEvidence,
+      ...item.missingLevels,
+    ].filter((value): value is string => Boolean(value)))).slice(0, 8) : [],
+  };
+}
+
+function selectPrimaryDeskPlayDirection(trace: ScannerCandidateLifecycleTrace): DeskPlayDirection {
+  const long = trace.bestLongPlan;
+  const short = trace.bestShortPlan;
+  if (!long && !short) return 'WAIT';
+  if (long && !short) return lifecycleItemHasHtfConflict(long) ? 'WAIT' : 'LONG';
+  if (short && !long) return lifecycleItemHasHtfConflict(short) ? 'WAIT' : 'SHORT';
+  const longScore = lifecycleItemScore(long);
+  const shortScore = lifecycleItemScore(short);
+  if (Math.abs(longScore - shortScore) <= 2) {
+    if (lifecycleItemHasHtfConflict(short) && !lifecycleItemHasHtfConflict(long)) return 'LONG';
+    if (lifecycleItemHasHtfConflict(long) && !lifecycleItemHasHtfConflict(short)) return 'SHORT';
+  }
+  return longScore >= shortScore ? 'LONG' : 'SHORT';
+}
+
+function buildPrimaryDeskPlay(args: {
+  candidate: SetupCandidate | null;
+  visibilityMetadata: ScannerVisibilityMetadata;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  canExecute: boolean;
+}): PrimaryDeskPlay {
+  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace);
+  const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection);
+  const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection);
+  const primaryBias = primaryDirection === 'LONG' ? longBias : primaryDirection === 'SHORT' ? shortBias : null;
+  const oppositeBias = primaryDirection === 'LONG' ? shortBias : primaryDirection === 'SHORT' ? longBias : null;
+  const selectedLine = primaryBias?.lineInSand ??
+    args.candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
+    args.candidateLifecycleTrace.selectedCandidate?.lineInSand ??
+    null;
+  const htfConflict = lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestLongPlan) ||
+    lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
+  const countertrendWarning = oppositeBias?.state === 'countertrend_review'
+    ? `${oppositeBias.direction} evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.`
+    : null;
+  const title = primaryDirection === 'WAIT'
+    ? 'WAIT - desk play not confirmed'
+    : `${directionLabel(primaryDirection)} desk play`;
+  const summary = primaryBias
+    ? `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
+    : 'No primary directional play is confirmed from scanner-owned lifecycle state.';
+  const nextTrigger = primaryBias?.nextTrigger ||
+    args.visibilityMetadata.nextTrigger ||
+    args.candidateLifecycleTrace.nextTrigger ||
+    null;
+  const invalidation = primaryBias?.invalidation || args.candidate?.invalidation || null;
+  const discordEligible = Boolean(
+    primaryBias &&
+    primaryDirection !== 'WAIT' &&
+    (primaryBias.nextTrigger || primaryBias.lineInSand || primaryBias.reason) &&
+    !args.canExecute
+  );
+
+  return {
+    sourceOfTruth: 'scanner_primary_desk_play',
+    direction: primaryDirection,
+    title,
+    summary,
+    lineInSand: selectedLine,
+    longAbove: longBias.lineInSand,
+    shortBelow: shortBias.lineInSand,
+    nextTrigger,
+    invalidation,
+    noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
+    longBias,
+    shortBias,
+    htfConflict,
+    countertrendWarning,
+    discordEligible,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+    notes: [
+      'Primary Desk Play is scanner-owned visibility metadata only.',
+      'It reports long and short bias without selecting, approving, suppressing, or reranking executable trade candidates.',
+    ],
+  };
+}
+
 export function buildDeskState(args: {
   state: ScannerState;
   candidate?: SetupCandidate | null;
@@ -1054,6 +1320,12 @@ export function buildDeskState(args: {
     candidate,
     canExecute: Boolean(args.canExecute),
   });
+  const primaryDeskPlay = buildPrimaryDeskPlay({
+    candidate,
+    visibilityMetadata: args.visibilityMetadata,
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    canExecute: Boolean(args.canExecute),
+  });
   return {
     sourceOfTruth: 'scanner_desk_state',
     marketMode,
@@ -1061,9 +1333,10 @@ export function buildDeskState(args: {
     bestLongPlan: args.candidateLifecycleTrace.bestLongPlan,
     bestShortPlan: args.candidateLifecycleTrace.bestShortPlan,
     selectedCandidate: args.candidateLifecycleTrace.selectedCandidate,
-    lineInSand: candidate?.activeRuleset?.htfLineInSand?.lineInSand ?? null,
-    nextTrigger: args.visibilityMetadata.nextTrigger || args.candidateLifecycleTrace.nextTrigger,
-    invalidation: candidate?.invalidation || null,
+    primaryDeskPlay,
+    lineInSand: candidate?.activeRuleset?.htfLineInSand?.lineInSand ?? primaryDeskPlay.lineInSand,
+    nextTrigger: args.visibilityMetadata.nextTrigger || primaryDeskPlay.nextTrigger || args.candidateLifecycleTrace.nextTrigger,
+    invalidation: candidate?.invalidation || primaryDeskPlay.invalidation,
     visibilityMode: args.visibilityMetadata.visibilityMode,
     discordAction: args.visibilityMetadata.discordAction,
     suppressionReason: args.visibilityMetadata.suppressionReason,

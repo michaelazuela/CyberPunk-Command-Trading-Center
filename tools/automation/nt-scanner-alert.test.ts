@@ -978,6 +978,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     },
     activeCampaignSent: {},
     watchlistSent: {},
+    deskPlaySent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},

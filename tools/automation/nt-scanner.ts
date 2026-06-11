@@ -160,6 +160,7 @@ interface ScannerStateFile {
   alertDeliveries: Record<string, ScannerAlertDeliveryRecord>;
   activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
+  deskPlaySent: Record<string, { direction: string; lineInSand: number | null; sentAt: string }>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
@@ -946,6 +947,7 @@ function emptyScannerState(): ScannerStateFile {
     alertDeliveries: {},
     activeCampaignSent: {},
     watchlistSent: {},
+    deskPlaySent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},
@@ -964,6 +966,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         alertDeliveries: parsed.alertDeliveries || {},
         activeCampaignSent: parsed.activeCampaignSent || {},
         watchlistSent: parsed.watchlistSent || {},
+        deskPlaySent: parsed.deskPlaySent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
@@ -2790,6 +2793,21 @@ function scannerWatchlistAlertKey(args: {
   return `${args.tradeDate}:${args.instrument}:${args.session}:${args.direction}:${args.watchlistType}`;
 }
 
+function scannerDeskPlayAlertKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  deskState: DeskState;
+}): string {
+  const play = args.deskState.primaryDeskPlay;
+  const line = typeof play.lineInSand === 'number' && Number.isFinite(play.lineInSand)
+    ? play.lineInSand.toFixed(2)
+    : 'no-line';
+  const longState = play.longBias.state;
+  const shortState = play.shortBias.state;
+  return `${args.tradeDate}:${args.instrument}:${args.session}:DESK_PLAY:${play.direction}:${line}:${longState}:${shortState}`;
+}
+
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
   const parsed = parseBridgeTime(bar.time, mode);
   if (!parsed) return null;
@@ -4227,6 +4245,50 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
 
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
+
+  if (!alertDecision.shouldSend && window.allowsDiscordAlert && deskState.primaryDeskPlay.discordEligible) {
+    const deskPlayKey = scannerDeskPlayAlertKey({
+      tradeDate,
+      instrument: config.instrument,
+      session: window.session,
+      deskState,
+    });
+    if (!state.deskPlaySent[deskPlayKey]) {
+      const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
+      const payload = buildDiscordPayload({
+        session,
+        tradeDate,
+        config,
+        state: stateForAlert,
+        confidence,
+        candidate: null,
+        normalized,
+        windowLabel: window.label,
+        planVersionId: deskPlayPlanVersionId,
+        attachments: { chartPlan: false, priceLevelMap: false, auditLogPath: decisionTapePath },
+        deskState,
+      });
+      try {
+        const receipt = await postDiscord(payload, config);
+        if (receipt.deliveryStatus === 'sent') {
+          const sentAt = new Date().toISOString();
+          state.deskPlaySent[deskPlayKey] = {
+            direction: deskState.primaryDeskPlay.direction,
+            lineInSand: deskState.primaryDeskPlay.lineInSand,
+            sentAt,
+          };
+          state.sent[deskPlayKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+          console.log(`[scanner] Sent Desk Play update: ${deskPlayKey}`);
+        } else {
+          console.log(`[scanner] Desk Play update skipped (${receipt.webhookSource || 'unknown'}): ${deskPlayKey}`);
+        }
+      } catch (error) {
+        console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
+      }
+    } else {
+      console.log(`[scanner] Desk Play update already sent for ${deskPlayKey}.`);
+    }
+  }
 
   const previousDelivery = state.alertDeliveries[alertKey];
   if (!alertDecision.shouldSend && stale.stale && previousDelivery?.deliveryStatus === 'failed' && previousDelivery.retryEligible) {

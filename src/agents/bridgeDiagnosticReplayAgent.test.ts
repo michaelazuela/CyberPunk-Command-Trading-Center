@@ -212,6 +212,89 @@ assert.equal(replayWithDeskState.deskStateReplayValidation.promotionPathObserved
 assert.equal(replayWithDeskState.deskStateReplayValidation.discordRagUiAligned, true);
 assert.equal(replayWithDeskState.deskStateReplayValidation.authority.replayValidationApprovesTrade, false);
 
+const june11LongBias = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+  direction: 'LONG',
+  entry: 7312,
+  stop: 7271.75,
+  target1: 7400,
+  target2: 7420,
+  riskPoints: 40.25,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+  missingEvidence: ['Completed Morning context is incomplete; keep this as conditional only.'],
+  rankScore: 229,
+  decisionQualityScore: 87,
+});
+const june11CounterShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Bearish Turtle Soup Reversal',
+  direction: 'SHORT',
+  entry: 7298,
+  stop: 7314.5,
+  target1: 7263,
+  target2: 7256.25,
+  riskPoints: 16.5,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
+  missingEvidence: [
+    'Active timeframe MSS ruleset found opposing completed 5M bullish MSS.',
+    'Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.',
+    'No chase: wait for a completed 5M or 15M close below 7303.50.',
+  ],
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      lineInSand: 7303.5,
+      direction: 'SHORT',
+      requiredClose: 'Completed 5M or 15M close below 7303.50.',
+      lineReason: 'Nearest structured HTF/session support or downside objective in the trade path.',
+      obstacleType: 'imbalance_midpoint',
+      obstacleSource: 'app',
+      evidence: ['No chase: wait for completed close below the line.'],
+      blockers: [],
+      affectsExecution: false,
+    },
+  },
+  rankScore: 228,
+  decisionQualityScore: 93,
+});
+const june11Visibility = classifyScannerVisibility({
+  state: 'Blocked',
+  candidate: null,
+  alertDecision: { shouldSend: false, reason: 'Blocked setup did not meet educational Discord threshold.' },
+  canExecute: false,
+});
+const june11Lifecycle = buildCandidateLifecycleTrace({
+  candidates: [june11LongBias, june11CounterShort],
+  selectedCandidate: null,
+  state: 'Blocked',
+  alertDecision: { shouldSend: false, reason: 'Blocked setup did not meet educational Discord threshold.' },
+  canExecute: false,
+});
+const june11DeskState = buildDeskState({
+  state: 'Blocked',
+  candidate: null,
+  visibilityMetadata: june11Visibility,
+  candidateLifecycleTrace: june11Lifecycle,
+  canExecute: false,
+});
+assert.equal(june11DeskState.primaryDeskPlay.sourceOfTruth, 'scanner_primary_desk_play');
+assert.equal(june11DeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(june11DeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(june11DeskState.primaryDeskPlay.shortBias.state, 'countertrend_review');
+assert.equal(june11DeskState.primaryDeskPlay.shortBelow, 7303.5);
+assert.equal(june11DeskState.primaryDeskPlay.discordEligible, true);
+assert.equal(june11DeskState.canExecute, false);
+assert.equal(june11DeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('SHORT evidence is counter-HTF'));
+
 const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate()],
   scannerSelectedCandidate: candidate(),

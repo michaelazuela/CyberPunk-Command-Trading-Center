@@ -68,6 +68,36 @@ export interface CompactDeskStateForDiscord {
   invalidation?: string | null;
   canExecute?: boolean;
   dataQualityStatus?: string;
+  primaryDeskPlay?: {
+    direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+    title?: string;
+    summary?: string;
+    lineInSand?: number | null;
+    longAbove?: number | null;
+    shortBelow?: number | null;
+    nextTrigger?: string | null;
+    invalidation?: string | null;
+    noChase?: string;
+    htfConflict?: boolean;
+    countertrendWarning?: string | null;
+    discordEligible?: boolean;
+    longBias?: {
+      state?: string;
+      scenarioLabel?: string | null;
+      lineInSand?: number | null;
+      nextTrigger?: string | null;
+      reason?: string;
+      blockers?: string[];
+    };
+    shortBias?: {
+      state?: string;
+      scenarioLabel?: string | null;
+      lineInSand?: number | null;
+      nextTrigger?: string | null;
+      reason?: string;
+      blockers?: string[];
+    };
+  } | null;
 }
 
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
@@ -463,6 +493,68 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
   };
 }
 
+function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play?.discordEligible || getEffectiveCanExecute(args.normalized)) return false;
+  if (args.candidates.length === 0) return true;
+  return args.deskState?.discordAction === 'hold' || args.deskState?.discordAction === 'no_trade';
+}
+
+function biasLine(label: 'Long' | 'Short', bias: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>['longBias']): string {
+  if (!bias) return `${label}: no active scanner-owned bias.`;
+  const state = bias.state ? ` (${bias.state})` : '';
+  const line = typeof bias.lineInSand === 'number' && Number.isFinite(bias.lineInSand)
+    ? ` | line ${priceLine(bias.lineInSand)}`
+    : '';
+  const trigger = bias.nextTrigger ? ` | ${compactLine(bias.nextTrigger, 88)}` : '';
+  return `${label}${state}:${line}${trigger || ` ${compactLine(bias.reason || 'Visible for review.', 88)}`}`.replace(': |', ':');
+}
+
+function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
+  const play = args.deskState?.primaryDeskPlay;
+  const sessionLabel = sessionShortLabel(args.session);
+  const direction = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : 'WAIT';
+  const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
+    ? priceLine(play.lineInSand)
+    : 'N/A';
+  const longAbove = typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? priceLine(play.longAbove) : 'N/A';
+  const shortBelow = typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? priceLine(play.shortBelow) : 'N/A';
+  const lines = [
+    `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
+    'Status: DESK PLAY / WATCH ONLY - NOT EXECUTION APPROVAL',
+    '',
+    `Current Play: ${compactLine(play?.title || 'WAIT - desk play not confirmed', 90)}`,
+    `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 115)}`,
+    `Line in the Sand: ${line}`,
+    `Long Above: ${longAbove}`,
+    `Short Below: ${shortBelow}`,
+    '',
+    biasLine('Long', play?.longBias),
+    biasLine('Short', play?.shortBias),
+    ...(play?.countertrendWarning ? ['', `Countertrend: ${compactLine(play.countertrendWarning, 120)}`] : []),
+    '',
+    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 125)}`,
+    `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 110)}`,
+    play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.',
+    '',
+    'Boundary: no approval, canExecute, entry, stop, target, or risk rule changed.',
+  ];
+  return {
+    username: 'Quant Desk',
+    content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${direction} | ${args.tradeDate}`,
+    embeds: [
+      {
+        title: 'Scanner Desk Play',
+        description: professionalizeReportText(lines.join('\n')),
+        color: direction === 'LONG' ? 0x00a86b : direction === 'SHORT' ? 0xff6d00 : 0xffa000,
+        fields: [],
+        footer: { text: 'Quant Desk • Scanner DeskState play • Not execution approval' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
   const hardBlock = riskScore.blockReason
     ? riskScore.blockReason === NoTradeReason.RiskTooWide
@@ -553,6 +645,9 @@ export function compactAttachmentLine(attachments: CompactDiscordAttachmentState
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const bestCandidate = args.candidates[0] || null;
+  if (shouldRenderDeskPlay(args)) {
+    return scannerDeskPlayDiscordSummary(args);
+  }
   if (isDeskStateWatch(args, bestCandidate)) {
     return scannerWatchDiscordSummary(args, bestCandidate as SetupCandidate);
   }
