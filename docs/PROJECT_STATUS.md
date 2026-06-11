@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Fix pending Desk Play candidates disappearing as "no ICT candidate/reference level".
+Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts.
+Reason: The latest lunch scanner tape had structured LONG Desk Play candidates with entry, protected 5M stop, targets, and `EntryTriggerPending`, but the selection layer filtered blocked pending-trigger candidates before scoring. That flattened the cycle into zero-confidence "no ICT candidate/reference level" instead of a visible TriggerPending/watch or missed/no-fresh-entry review state.
+Tests run: npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Generic `EntryTriggerPending` candidates can now drive scanner visibility without changing execution approval. If price is still near the entry/retest area, the state becomes `TriggerPending` / `POST_WATCH`; if price has already moved away or reached target context, the state becomes `Missed` / no-fresh-entry. Specialized Intraday MSS watch wrapping remains protected.
+Trading logic changed: No execution approval change. No setup definitions, canExecute, entry, stop, target, risk, model definitions, bridge behavior, or Discord hard blockers changed. Scanner visibility classification changed for already-built pending-trigger candidates.
+Bridge impact: None.
+Discord impact: Yes. Pending Desk Play candidates can now surface as watch/trigger-pending or missed/no-fresh-entry instead of disappearing behind a no-candidate blocker.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Observe the next active Morning/Lunch cycle and confirm pending Desk Play states report TriggerPending/watch or missed/no-fresh-entry instead of no-candidate.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Make Desk Play Discord output read like a protected-structure decision map.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Desk Play alerts needed to show the active long/short decision map in plain trading-desk language while preserving the app-owned pipeline boundary: no guessed levels, no loose lines, no approval drift.

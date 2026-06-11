@@ -52,13 +52,18 @@ function candidatePrioritySort(a: SetupCandidate, b: SetupCandidate): number {
 }
 
 function candidateCanDriveScannerPlan(candidate: SetupCandidate): boolean {
+  const triggerPendingBlock = candidate.blockReason === NoTradeReason.EntryTriggerPending;
+  const specializedIntradayMssWatch =
+    triggerPendingBlock &&
+    candidate.setupType === SetupType.IntradayMssMicroContinuation &&
+    candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING';
   return (
     candidate.direction === 'LONG' ||
     candidate.direction === 'SHORT'
   ) && (
     candidate.executionStatus === ExecutionStatus.Executable ||
     candidate.executionStatus === ExecutionStatus.Conditional
-  ) && !candidate.blockReason;
+  ) && !specializedIntradayMssWatch && (!candidate.blockReason || triggerPendingBlock);
 }
 
 function findNormalizedPlanCandidate(normalized: NormalizedTradePlan): SetupCandidate | null {
@@ -437,6 +442,23 @@ function intradayMssWatchState(candidate: SetupCandidate, earlyMoveIgnored = fal
   };
 }
 
+function triggerPendingReviewState(candidate: SetupCandidate): ScannerPlanSelection {
+  return {
+    candidate,
+    stale: {
+      state: 'TriggerPending',
+      stale: false,
+      reason: candidate.requiredTrigger || candidate.nextAction || 'Completed 5M trigger/retest is still pending.',
+    },
+    state: 'TriggerPending',
+    stateForAlert: 'TriggerPending',
+    reviewStatus: null,
+    auditWarnings: [
+      'EntryTriggerPending candidate surfaced as scanner watch/review context. No entry approval, canExecute, stop, target, or risk gate was changed.',
+    ],
+  };
+}
+
 function selectScannerPlanCore(args: {
   normalized: NormalizedTradePlan;
   currentPrice: number | null;
@@ -606,6 +628,13 @@ function selectScannerPlanCore(args: {
       ...selection,
       auditWarnings: ['Fallback scanner candidate is stale/chasing. Scanner may publish it only as missed/no-fresh-entry review; canExecute remains false.'],
     };
+  }
+
+  if (fallback?.blockReason === NoTradeReason.EntryTriggerPending) {
+    if (intradayMssWatchCandidate && fallback.setupType === SetupType.IntradayMssMicroContinuation) {
+      return intradayMssWatchState(intradayMssWatchCandidate);
+    }
+    return triggerPendingReviewState(fallback);
   }
 
   const state = scannerStateFromDecision({

@@ -193,6 +193,59 @@ assert.equal(turtleSoupWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT')
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.reviewStatus, null);
 assert.ok(turtleSoupWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
 
+const pendingDeskPlayCandidate = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'LONG desk play pullback into imbalance',
+  direction: 'LONG',
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7312,
+  stop: 7271.75,
+  target1: 7372.5,
+  target2: 7392.5,
+  riskPoints: 40.25,
+  priority: 92,
+  rankScore: 92,
+  requiredTrigger: 'Entry only on completed 5M pullback/retest into bullish imbalance 7281.75-7342.',
+  nextAction: 'Wait for completed 5M retest/hold; no chase.',
+  evidence: [
+    'Sell-side sweep and reclaim confirmed.',
+    'Bullish displacement and imbalance context are present.',
+    'Market structure shift context is present.',
+  ],
+});
+const pendingDeskPlaySelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [pendingDeskPlayCandidate],
+  } as any,
+  currentPrice: 7313,
+});
+assert.equal(pendingDeskPlaySelection.stateForAlert, 'TriggerPending');
+assert.equal(pendingDeskPlaySelection.candidate, pendingDeskPlayCandidate);
+assert.equal(pendingDeskPlaySelection.candidate?.blockReason, NoTradeReason.EntryTriggerPending);
+assert.equal(pendingDeskPlaySelection.stale.stale, false);
+assert.equal(pendingDeskPlaySelection.visibilityMetadata?.visibilityMode, 'POST_WATCH');
+assert.equal(pendingDeskPlaySelection.visibilityMetadata?.discordAction, 'post_watch');
+assert.ok(pendingDeskPlaySelection.auditWarnings.some((warning) => warning.includes('EntryTriggerPending candidate surfaced')));
+
+const missedPendingDeskPlaySelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [pendingDeskPlayCandidate],
+  } as any,
+  currentPrice: 7398.5,
+});
+assert.equal(missedPendingDeskPlaySelection.stateForAlert, 'Missed');
+assert.equal(missedPendingDeskPlaySelection.candidate, pendingDeskPlayCandidate);
+assert.equal(missedPendingDeskPlaySelection.reviewStatus, 'already_triggered_no_fresh_entry');
+assert.equal(missedPendingDeskPlaySelection.stale.stale, true);
+assert.ok(missedPendingDeskPlaySelection.stale.reason?.includes('No chase'));
+
 const staleLongReclaimAfterFailedCampaign = candidate({
   setupType: SetupType.TurtleSoup,
   scenarioLabel: 'Bullish Turtle Soup Reversal',
