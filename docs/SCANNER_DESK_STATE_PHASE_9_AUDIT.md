@@ -63,6 +63,8 @@ When `DeskState.discordAction` is `post_watch`, Discord now renders a watch-only
 
 The scanner may surface a `Watching` or `TriggerPending` candidate as a watch alert only inside the existing alert window and quality/duplicate checks. Watch alerts do not approve execution.
 
+Review hardening: watch-only alerts are Discord/audit-only. They do not create pending trade/outcome RAG records and do not attach Discord receipts to RAG because there are no outcome buttons to submit.
+
 ## Phase 9E: Watch-To-Plan Promotion
 
 Owner: `src/lib/localScannerEngine.ts` via `DeskState.promotion`.
@@ -74,6 +76,8 @@ watch -> conditional -> human_review_ready -> posted_plan
 ```
 
 `promotion.canPromoteNow` is always false because promotion remains controlled by the existing scanner, trade decision pipeline, and `canExecute` gates. Missing proof and next trigger are surfaced for continuity only.
+
+Plan/review RAG records now carry `visibility`, `candidateLifecycleTrace`, and `deskState` in `trade_plan_json` so Discord outcome submissions can retain the scanner-owned state that produced the alert.
 
 ## Phase 9F: Replay Validation
 
@@ -88,6 +92,8 @@ Diagnostic replay now carries DeskState snapshots from scanner audit JSON and re
 - DeskState/visibility alignment for Discord/RAG/UI consumers
 
 Replay validation is diagnostic only. It does not approve trades, change rules, or change `canExecute`.
+
+If replay has no DeskState snapshots, source-of-truth and consumer-alignment checks report false rather than treating an empty audit set as aligned.
 
 ## Deferred
 

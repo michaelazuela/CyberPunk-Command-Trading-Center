@@ -229,6 +229,12 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!scannerContent.includes('candidateLifecycleTrace') || !scannerContent.includes('deskState')) {
     fail('nt-scanner.ts must persist scanner-owned candidateLifecycleTrace and deskState into scanner audit outputs.');
   }
+  if (!scannerContent.includes('shouldPersistScannerAlertToRag') || !scannerContent.includes("discordAction !== 'post_watch'")) {
+    fail('nt-scanner.ts must keep watch-only DeskState alerts out of pending trade/outcome RAG persistence.');
+  }
+  if (!scannerContent.includes('trade_plan_json') || !scannerContent.includes('visibility: args.visibilityMetadata') || !scannerContent.includes('deskState: args.deskState')) {
+    fail('nt-scanner.ts must persist DeskState visibility metadata into plan/review RAG trade_plan_json.');
+  }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);

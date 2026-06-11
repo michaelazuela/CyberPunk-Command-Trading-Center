@@ -35,6 +35,7 @@ import {
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerActiveCampaignKey,
+  shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
@@ -42,6 +43,7 @@ import {
   verifyScannerActiveCampaignLedgerReady,
   writeLocalMarketDataGapEvent,
   writeScannerDecisionTapeAuditLog,
+  upsertScannerDiscordAlertRagRecord,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
 } from './nt-scanner';
@@ -51,8 +53,20 @@ const outputDir = path.join(os.tmpdir(), `nt-scanner-alert-${Date.now()}`);
 const auditDir = path.join(outputDir, 'discord-audit');
 const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
+const previousSupabaseUrl = process.env.SUPABASE_URL;
+const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const previousDiscordRagUserId = process.env.DISCORD_RAG_USER_ID;
+const originalFetch = globalThis.fetch;
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
+
+function restoreOptionalEnv(key: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+}
 
 const completed5mAssuranceReady = evaluateCompletedFiveMinuteBarAssuranceGate({
   completed5m: { time: '2026-06-05T10:05:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
@@ -1408,11 +1422,60 @@ try {
   assert.equal(audit.deskState.selectedCandidate.setupType, candidate.setupType);
   assert.equal(audit.deskState.promotion.currentStage, 'conditional');
   assert.equal(audit.deskState.promotion.nextStage, 'human_review_ready');
+  assert.equal(shouldPersistScannerAlertToRag(audit.deskState), true);
   assert.equal(audit.attachments.chartMarkup, result.chartMarkup);
   assert.equal(audit.attachments.priceLevelMap, result.levelMap);
   assert.ok(auditText.includes('Fixture target cascade remains audit-only.'));
   assert.ok(!text.includes('Fixture target cascade remains audit-only.'));
   assert.ok(result.auditLogPath.startsWith(auditDir));
+
+  const ragCalls: Array<{ url: string; method: string; body: any }> = [];
+  process.env.SUPABASE_URL = 'https://supabase.example';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
+  process.env.DISCORD_RAG_USER_ID = 'user-test';
+  globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    ragCalls.push({
+      url: String(url),
+      method: String(init?.method || 'GET'),
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+    });
+    if (String(init?.method || 'GET') === 'PATCH') {
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify([{ id: 'rag-row-1' }]), { status: 201, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  try {
+    await upsertScannerDiscordAlertRagRecord({
+      planVersionId: 'SCANNER-FIXTURE-TEST-RAG',
+      session: 'morning',
+      tradeDate: '2026-05-26',
+      instrument: 'MES',
+      analysis: { structuredChartContext: chartContext } as any,
+      normalized: {
+        canExecute: false,
+        decisionStatus: TradeDecisionStatus.ConditionalTrade,
+        decision: 'LONG',
+        noTradeReason: null,
+        invalidation: candidate.invalidation,
+        setupCandidates: [candidate],
+      } as any,
+      candidate,
+      visibilityMetadata: audit.visibility,
+      candidateLifecycleTrace: audit.candidateLifecycleTrace,
+      deskState: audit.deskState,
+      confidence: 86,
+    });
+    const ragInsert = ragCalls.find((call) => call.method === 'POST');
+    assert.equal(ragInsert?.body.trade_plan_json.deskState.sourceOfTruth, 'scanner_desk_state');
+    assert.equal(ragInsert?.body.trade_plan_json.visibility.sourceOfTruth, 'scanner_desk_state_visibility_metadata');
+    assert.equal(ragInsert?.body.trade_plan_json.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
+    assert.equal(ragInsert?.body.trade_plan_json.approvalBoundary.discordOutcomeApprovesTrade, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreOptionalEnv('SUPABASE_URL', previousSupabaseUrl);
+    restoreOptionalEnv('SUPABASE_SERVICE_ROLE_KEY', previousSupabaseServiceRoleKey);
+    restoreOptionalEnv('DISCORD_RAG_USER_ID', previousDiscordRagUserId);
+  }
 
   const watchCandidate = {
     ...candidate,
@@ -1531,6 +1594,7 @@ try {
   assert.equal(watchAudit.deskState.canExecute, false);
   assert.equal(watchAudit.deskState.promotion.currentStage, 'watch');
   assert.equal(watchAudit.deskState.promotion.nextStage, 'conditional');
+  assert.equal(shouldPersistScannerAlertToRag(watchAudit.deskState), false);
 
   const executableLookingCandidate = {
     ...candidate,

@@ -820,6 +820,11 @@ assert.equal(replayValidation.promotionPathObserved, true);
 assert.equal(replayValidation.singleSourceOfTruthPresent, true);
 assert.equal(replayValidation.discordRagUiAligned, true);
 assert.equal(replayValidation.authority.replayValidationApprovesTrade, false);
+const emptyReplayValidation = validateDeskStateReplayPath([]);
+assert.equal(emptyReplayValidation.cycleCount, 0);
+assert.equal(emptyReplayValidation.singleSourceOfTruthPresent, false);
+assert.equal(emptyReplayValidation.discordRagUiAligned, false);
+assert.equal(emptyReplayValidation.noChasePreserved, false);
 
 const keyA = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Conditional' });
 const keyB = scannerAlertKey({ tradeDate: '2026-05-19', instrument: 'MES', session: 'morning', candidate: strongCandidate, state: 'Executable' });

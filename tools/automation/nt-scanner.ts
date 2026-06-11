@@ -2650,6 +2650,10 @@ function buildDiscordPayload(args: {
   });
 }
 
+export function shouldPersistScannerAlertToRag(deskState: Pick<DeskState, 'discordAction'> | null | undefined): boolean {
+  return deskState?.discordAction !== 'post_watch';
+}
+
 export function candidateForNormalizedVisualAuthority(
   candidate: SetupCandidate | null,
   normalized: ReturnType<typeof buildAppTradePlan>,
@@ -2669,7 +2673,7 @@ export function candidateForNormalizedVisualAuthority(
   };
 }
 
-async function upsertScannerDiscordAlertRagRecord(args: {
+export async function upsertScannerDiscordAlertRagRecord(args: {
   planVersionId: string;
   session: LiveSession;
   tradeDate: string;
@@ -2677,6 +2681,9 @@ async function upsertScannerDiscordAlertRagRecord(args: {
   analysis: AnalysisResult;
   normalized: ReturnType<typeof buildAppTradePlan>;
   candidate: SetupCandidate | null;
+  visibilityMetadata?: ScannerVisibilityMetadata | null;
+  candidateLifecycleTrace?: ScannerCandidateLifecycleTrace | null;
+  deskState?: DeskState | null;
   confidence: number;
 }): Promise<void> {
   const { config, missing } = resolveDiscordRagPersistenceConfig();
@@ -2725,6 +2732,9 @@ async function upsertScannerDiscordAlertRagRecord(args: {
       journalRecord,
       normalizedPlan: args.normalized,
       setupCandidates: args.candidate ? [args.candidate] : [],
+      visibility: args.visibilityMetadata || null,
+      candidateLifecycleTrace: args.candidateLifecycleTrace || null,
+      deskState: args.deskState || null,
       targetObjectives: args.analysis.structuredChartContext?.targetObjectives || [],
       outcome: {
         tradeTaken: null,
@@ -4072,19 +4082,26 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       candidateLifecycleTrace,
       deskState,
     });
-    try {
-      await upsertScannerDiscordAlertRagRecord({
-        planVersionId,
-        session,
-        tradeDate,
-        instrument: config.instrument,
-        analysis,
-        normalized,
-        candidate,
-        confidence: confidence.score,
-      });
-    } catch (error) {
-      console.warn(`Scanner Discord alert RAG pending save failed safely: ${sanitizedError(error)}`);
+    if (shouldPersistScannerAlertToRag(deskState)) {
+      try {
+        await upsertScannerDiscordAlertRagRecord({
+          planVersionId,
+          session,
+          tradeDate,
+          instrument: config.instrument,
+          analysis,
+          normalized,
+          candidate,
+          visibilityMetadata,
+          candidateLifecycleTrace,
+          deskState,
+          confidence: confidence.score,
+        });
+      } catch (error) {
+        console.warn(`Scanner Discord alert RAG pending save failed safely: ${sanitizedError(error)}`);
+      }
+    } else {
+      console.log(`[scanner-rag] Watch-only alert skipped trade RAG pending save: ${planVersionId}`);
     }
     const pendingDelivery = createPendingScannerAlertDeliveryRecord({
       alertKey,
@@ -4122,11 +4139,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         }).catch((ledgerError) => {
           console.warn(`[scanner-delivery] ActiveCampaign durable sent marker failed safely after Discord send: ${sanitizedError(ledgerError)}`);
         });
-        await attachDiscordMessageReceiptToRagRecord({
-          planVersionId,
-          discordMessageId: receipt.discordMessageId,
-          webhookSource: receipt.webhookSource,
-        });
+        if (shouldPersistScannerAlertToRag(deskState)) {
+          await attachDiscordMessageReceiptToRagRecord({
+            planVersionId,
+            discordMessageId: receipt.discordMessageId,
+            webhookSource: receipt.webhookSource,
+          });
+        }
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
           sentAt,
           httpStatus: receipt.httpStatus,

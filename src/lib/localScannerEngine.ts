@@ -1097,7 +1097,8 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
   const watchAppearedBeforePlan = watchIndex >= 0 && planIndex >= 0 && watchIndex < planIndex;
   const promotionPathObserved = states.some((state) => state.promotion.currentStage === 'watch' && state.promotion.nextStage === 'conditional') &&
     states.some((state) => state.promotion.currentStage === 'conditional' || state.promotion.currentStage === 'human_review_ready' || state.promotion.currentStage === 'posted_plan');
-  const noChasePreserved = states.every((state) => {
+  const hasDeskStateCycles = states.length > 0;
+  const noChasePreserved = hasDeskStateCycles && states.every((state) => {
     const text = [
       state.nextTrigger,
       state.promotion.promotionTrigger,
@@ -1107,13 +1108,13 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
     ].filter(Boolean).join(' ');
     return state.canExecute || /no chase|completed 5m|protected/i.test(text);
   });
-  const singleSourceOfTruthPresent = states.every((state) =>
+  const singleSourceOfTruthPresent = hasDeskStateCycles && states.every((state) =>
     state.sourceOfTruth === 'scanner_desk_state' &&
     state.visibilityMetadata?.sourceOfTruth === 'scanner_desk_state_visibility_metadata' &&
     state.candidateLifecycleTrace?.sourceOfTruth === 'scanner_candidate_lifecycle_trace' &&
     state.promotion?.sourceOfTruth === 'scanner_desk_state_promotion_path'
   );
-  const discordRagUiAligned = states.every((state) =>
+  const discordRagUiAligned = hasDeskStateCycles && states.every((state) =>
     state.visibilityMode === state.visibilityMetadata.visibilityMode &&
     state.discordAction === state.visibilityMetadata.discordAction &&
     state.canExecute === state.visibilityMetadata.authority.canExecute
