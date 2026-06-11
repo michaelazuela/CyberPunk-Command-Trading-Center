@@ -129,9 +129,11 @@ export interface SupervisorProcessInfo {
 }
 
 export function serviceMatchesCommandLine(service: SupervisorChildService, commandLine: string): boolean {
-  return commandLine.includes(`run ${service.npmScript}`)
+  const scriptMatches = commandLine.includes(`run ${service.npmScript}`)
     || commandLine.includes(`run ${service.npmScript.replace(/:/g, '\\:')}`)
     || commandLine.includes(service.npmScript);
+  if (!scriptMatches) return false;
+  return service.args.every((arg) => commandLine.includes(arg));
 }
 
 function listNodeProcesses(): SupervisorProcessInfo[] {

@@ -219,6 +219,30 @@ function checkDiscordRagPersistenceSourceOfTruth() {
   }
 }
 
+function checkCodexPatchHygienePolicy() {
+  const rulesPath = path.join(ROOT, 'docs', 'CODEX_RULES.md');
+  if (!fs.existsSync(rulesPath)) {
+    fail('Missing Codex rules at docs/CODEX_RULES.md.');
+    return;
+  }
+
+  const content = readFileSafe(rulesPath);
+  const requiredPhrases = [
+    '### Patch Context Hygiene',
+    'verify the exact current file context',
+    'immediately before patching',
+    'Anchor patches on stable, unique surrounding code',
+    'Keep patch hunks narrow',
+    're-read the exact current lines',
+  ];
+
+  for (const phrase of requiredPhrases) {
+    if (!content.includes(phrase)) {
+      fail(`docs/CODEX_RULES.md is missing patch-context hygiene requirement: ${phrase}`);
+    }
+  }
+}
+
 console.log('Running Architecture Guard Check...');
 checkCloudflareGeminiBoundary();
 checkCloudflareOpenAIBoundary();
@@ -228,6 +252,7 @@ checkAutomationGeminiIndependence();
 checkCanonicalTimeWindowUsage();
 checkResponsibilityRegistry();
 checkDiscordRagPersistenceSourceOfTruth();
+checkCodexPatchHygienePolicy();
 
 if (hasError) {
   console.error('\n🚨 ERROR: Architecture guard failed.');

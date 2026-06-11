@@ -143,6 +143,7 @@ for (const entry of fs.readdirSync(supervisorDir)) {
 }
 
 const tempLogsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-supervisor-test-'));
+const testChildRunArg = `--test-run=${process.pid}-${Date.now()}`;
 const processConfig = {
   host: '127.0.0.1',
   port: 8797,
@@ -169,7 +170,7 @@ const processConfig = {
       id: 'test-child',
       label: 'Supervisor test child',
       npmScript: 'supervisor:test-child',
-      args: [],
+      args: [testChildRunArg],
       enabled: true,
     },
   ],
@@ -234,23 +235,37 @@ assert.equal(noBarsPreloadAssurance.stderrWarning, true);
 assert.ok(noBarsPreloadAssurance.operatorActions.some((action) => action.includes('data-limited')));
 const launchedState = launchEnabledServices(processConfig, logger);
 const launchedChild = launchedState.services[0];
-assert.equal(launchedChild.status, 'running');
-assert.ok(launchedChild.pid);
-assert.equal(isProcessRunning(launchedChild.pid), true);
-assert.ok(fs.existsSync(launchedChild.stdoutLog));
-assert.ok(fs.existsSync(launchedChild.stderrLog));
-fs.appendFileSync(launchedChild.stdoutLog, `test heartbeat ${new Date().toISOString()}\n`, 'utf8');
+assert.ok(launchedChild.status === 'running' || launchedChild.status === 'external_running');
+if (launchedChild.status === 'running') {
+  assert.ok(launchedChild.pid);
+  assert.equal(isProcessRunning(launchedChild.pid), true);
+  assert.ok(fs.existsSync(launchedChild.stdoutLog));
+  assert.ok(fs.existsSync(launchedChild.stderrLog));
+  fs.appendFileSync(launchedChild.stdoutLog, `test heartbeat ${new Date().toISOString()}\n`, 'utf8');
+} else {
+  assert.ok(launchedChild.externalPids.length > 0);
+}
 
 const health = await buildHealthReport(processConfig, launchedState, new Date(), {});
-assert.ok(health.checks.some((check) => check.id === 'test-child_process' && check.status === 'ok'));
+assert.ok(health.checks.some((check) => (
+  check.id === 'test-child_process'
+  && (launchedChild.status === 'running' ? check.status === 'ok' : check.status === 'warn')
+)));
 assert.ok(health.checks.some((check) => check.id === 'discord_config' && check.status === 'warn'));
 
-const external = findExternalServiceProcesses(processConfig, [
-  { pid: 111, commandLine: 'cmd.exe /c npm.cmd run supervisor:test-child' },
-  { pid: launchedChild.pid, commandLine: 'cmd.exe /c npm.cmd run supervisor:test-child' },
-  { pid: 222, parentPid: launchedChild.pid, commandLine: 'node tsx tools/supervisor/test-child.ts' },
-]);
-assert.deepEqual(external.get('test-child'), [111]);
+if (launchedChild.pid) {
+  const external = findExternalServiceProcesses(processConfig, [
+    { pid: 111, commandLine: `cmd.exe /c npm.cmd run supervisor:test-child -- ${testChildRunArg}` },
+    { pid: launchedChild.pid, commandLine: `cmd.exe /c npm.cmd run supervisor:test-child -- ${testChildRunArg}` },
+    { pid: 222, parentPid: launchedChild.pid, commandLine: `node tsx tools/supervisor/test-child.ts ${testChildRunArg}` },
+  ]);
+  assert.deepEqual(external.get('test-child'), [111]);
+} else {
+  const external = findExternalServiceProcesses(processConfig, [
+    { pid: 111, commandLine: `cmd.exe /c npm.cmd run supervisor:test-child -- ${testChildRunArg}` },
+  ]);
+  assert.deepEqual(external.get('test-child'), [111]);
+}
 
 const deliveryFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-supervisor-delivery-'));
 const auditDir = path.join(deliveryFixtureDir, 'discord-audit');
@@ -407,6 +422,57 @@ const previousSessionDeliveryReport = buildDeliveryVisibilityReport({
 });
 assert.deepEqual(previousSessionDeliveryReport.staleDataBlockers, []);
 assert.equal(previousSessionDeliveryReport.status, 'ok');
+
+const pendingGapLedgerPath = path.join(deliveryFixtureDir, '.market-data-gap-events.json');
+fs.writeFileSync(pendingGapLedgerPath, JSON.stringify([
+  {
+    user_id: '00000000-0000-0000-0000-000000000001',
+    instrument: 'MES',
+    bridge_instrument: 'MES 06-26',
+    timeframe: '5m',
+    requested_from_et: '2026-06-05T10:00:00',
+    requested_to_et: '2026-06-05T10:30:00',
+    range_start_et: null,
+    range_end_et: null,
+    bars_loaded: 0,
+    cache_bars: 0,
+    bridge_repair_bars: 0,
+    source: 'missing',
+    status: 'open',
+    data_limitation_message: 'Completed 5M unavailable.',
+    operator_action: 'Run npm run market-data:gaps:sync.',
+    metadata: { canInventMissingBars: false },
+    localRecordedAt: '2026-06-05T02:40:00.000Z',
+    syncStatus: 'pending_supabase_sync',
+    syncReason: 'test pending sync',
+  },
+], null, 2), 'utf8');
+const pendingGapDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: statePath,
+  auditDir,
+  marketDataGapLedgerPath: pendingGapLedgerPath,
+  now: new Date('2026-06-05T02:51:09.681Z'),
+  staleAfterMs: 180_000,
+});
+assert.equal(pendingGapDeliveryReport.status, 'warn');
+assert.equal(pendingGapDeliveryReport.pendingMarketDataGapSync.count, 1);
+assert.equal(pendingGapDeliveryReport.pendingMarketDataGapSync.staleCount, 1);
+assert.ok(pendingGapDeliveryReport.staleDataBlockers.some((blocker) => blocker.includes('Market data gap repair ledger')));
+
+const pendingGapStatus = buildSupervisorStatus(defaultConfig, null, null, pendingGapDeliveryReport, fixedNow);
+const pendingGapNotifications = buildSupervisorNotifications(
+  pendingGapStatus,
+  { lastStatuses: {}, lastSentAtByKey: {} },
+  new Date('2026-06-05T02:51:09.681Z'),
+  180_000,
+);
+const pendingGapNotification = pendingGapNotifications.notifications.find((item) => item.kind === 'market_data_gap_sync_pending');
+assert.ok(pendingGapNotification);
+const pendingGapPayloadText = JSON.stringify(buildSupervisorDiscordPayload(pendingGapNotification, pendingGapStatus));
+assert.ok(pendingGapPayloadText.includes('Market Data Gap Sync Pending'));
+assert.ok(pendingGapPayloadText.includes('Run npm run market-data:gaps:sync'));
+assert.ok(pendingGapPayloadText.includes('Pending gap sync: 1 (1 stale)'));
+assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(pendingGapPayloadText), false);
 
 const notificationState: SupervisorNotificationState = {
   lastStatuses: {

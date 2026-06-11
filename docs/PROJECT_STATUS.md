@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-10
-Task: Harden Intraday MSS watch when timeframeMssEvidence is missing or missing 5M brokenLevel.
-Files changed: docs/PROJECT_STATUS.md, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts.
-Reason: User asked to fix the remaining quiet path where Intraday MSS stayed silent if structured timeframeMssEvidence was missing or lacked a 5M structureBreak.brokenLevel. The scanner now derives a watch-only 5M/15M MSS context from completed NinjaTrader OHLC candles using the deterministic timeframe MSS engine.
-Tests run: npx tsx src/lib/setupScanner.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
-Result: Passed. IntradayMssMicroContinuation can now recover a named watch line from completed OHLC fallback when timeframeMssEvidence is missing or incomplete, while still keeping entry/stop/T1/T2 gated by completed 5M candle/swing proof.
-Trading logic changed: Yes, watch-only hardening. The Intraday MSS model can surface a conditional watch from deterministic completed-OHLC fallback evidence. It does not approve execution, does not set canExecute, and does not invent protected stops or app targets.
-Bridge impact: None. No bridge contract or ingestion behavior changed.
-Discord impact: Indirect. Discord selection can receive a conditional Intraday MSS watch instead of silence when the scanner can derive the line from completed OHLC fallback.
-Journal/RAG impact: No schema change. Candidate evidence now records that completed 5M OHLC fallback supplied the watch context.
+Task: Enforce patch-context hygiene in the architecture guard.
+Files changed: docs/CODEX_RULES.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js.
+Reason: User asked to fix the remaining caveat that patch-context mismatches cannot be made impossible. The workflow rule is now part of the architecture guard so future changes fail automated checks if the exact-context patching policy is removed or weakened.
+Tests run: npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. `docs/CODEX_RULES.md` requires agents to read exact current context immediately before `apply_patch`, use stable unique anchors, keep hunks narrow, and re-read before retrying after any mismatch. `scripts/architecture-guard.js` now enforces that policy text exists.
+Trading logic changed: No. This is repo process/guardrail only.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
 Supabase impact: No migration added.
-Known risks: If completed 5M candles are missing, malformed, too few to derive 15M context, or do not produce deterministic MSS/displacement support, the scanner still stays quiet rather than guessing. That is intentional.
-Next recommended action: Restart scanner services after deploy if the running process predates this commit.
+Known risks: External patch tooling can still fail when file state changes between read and patch, but the repo now enforces the workflow that prevents stale-context patching from becoming accepted practice.
+Next recommended action: Keep this guard in `npm run lint` and do not bypass it during future agent changes.
 
 ## Previous Change
 

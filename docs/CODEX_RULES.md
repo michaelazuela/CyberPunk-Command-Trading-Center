@@ -188,6 +188,18 @@ Codex must follow these rules:
 * Do not add new strategies unless explicitly requested.
 * Preserve current behavior unless the prompt says otherwise.
 
+### Patch Context Hygiene
+
+Before using `apply_patch`, Codex must verify the exact current file context for every hunk it will touch.
+
+Required workflow:
+
+* Use `rg`, `Get-Content`, or another read-only file inspection command to capture the current nearby lines immediately before patching.
+* Anchor patches on stable, unique surrounding code instead of remembered text from an earlier turn.
+* Keep patch hunks narrow. Do not patch a large block when one or two targeted lines are enough.
+* If a patch-context mismatch occurs, stop editing that file, re-read the exact current lines, and apply a smaller corrected hunk.
+* Do not use a patch-context mismatch as a reason to rewrite unrelated code.
+
 ---
 
 ## Required Final Response

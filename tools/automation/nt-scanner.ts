@@ -71,6 +71,8 @@ import {
   toMarketDataGapEventRecord,
   upsertMarketBars,
   upsertMarketDataGapEvent,
+  type MarketDataGapEventRecord,
+  type MarketDataConfig,
   type MarketBarTimeframe,
 } from './market-data-store';
 import {
@@ -251,6 +253,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STATE_FILE = path.join(__dirname, '.nt-scanner-state.json');
 const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
+const MARKET_DATA_GAP_FALLBACK_LEDGER = path.join(__dirname, '.market-data-gap-events.json');
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
 const MARKET_STRUCTURE_CACHE_LIMIT = 20000;
 export const SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS = 30;
@@ -982,6 +985,142 @@ async function readState(): Promise<ScannerStateFile> {
 
 async function writeState(state: ScannerStateFile): Promise<void> {
   await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+}
+
+type LocalMarketDataGapEventRecord = MarketDataGapEventRecord & {
+  localRecordedAt: string;
+  syncStatus: 'pending_supabase_sync' | 'synced_to_supabase';
+  syncReason: string;
+  syncedAt?: string;
+  syncError?: string;
+};
+
+function marketDataGapEventKey(record: MarketDataGapEventRecord): string {
+  return [
+    record.user_id,
+    record.bridge_instrument,
+    record.timeframe,
+    record.requested_from_et,
+    record.requested_to_et,
+  ].join('|');
+}
+
+export async function writeLocalMarketDataGapEvent(args: {
+  record: MarketDataGapEventRecord;
+  reason: string;
+  ledgerPath?: string;
+}): Promise<{ path: string; key: string; records: number }> {
+  const ledgerPath = args.ledgerPath || MARKET_DATA_GAP_FALLBACK_LEDGER;
+  const key = marketDataGapEventKey(args.record);
+  let records: LocalMarketDataGapEventRecord[] = [];
+  try {
+    const parsed = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as unknown;
+    records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
+  } catch {
+    records = [];
+  }
+  const localRecord: LocalMarketDataGapEventRecord = {
+    ...args.record,
+    localRecordedAt: new Date().toISOString(),
+    syncStatus: 'pending_supabase_sync',
+    syncReason: args.reason,
+  };
+  const existingIndex = records.findIndex((item) => marketDataGapEventKey(item) === key);
+  if (existingIndex >= 0) {
+    records[existingIndex] = localRecord;
+  } else {
+    records.push(localRecord);
+  }
+  await fs.mkdir(path.dirname(ledgerPath), { recursive: true });
+  await fs.writeFile(ledgerPath, `${JSON.stringify(records, null, 2)}\n`, 'utf8');
+  return { path: ledgerPath, key, records: records.length };
+}
+
+export async function syncLocalMarketDataGapEventsToSupabase(args: {
+  marketConfig: MarketDataConfig;
+  ledgerPath?: string;
+  upsert?: typeof upsertMarketDataGapEvent;
+}): Promise<{ path: string; attempted: number; synced: number; failed: number }> {
+  const ledgerPath = args.ledgerPath || MARKET_DATA_GAP_FALLBACK_LEDGER;
+  let records: LocalMarketDataGapEventRecord[] = [];
+  try {
+    const parsed = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as unknown;
+    records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
+  } catch {
+    return { path: ledgerPath, attempted: 0, synced: 0, failed: 0 };
+  }
+
+  const upsert = args.upsert || upsertMarketDataGapEvent;
+  let attempted = 0;
+  let synced = 0;
+  let failed = 0;
+  const now = new Date().toISOString();
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    if (record.syncStatus === 'synced_to_supabase') continue;
+    attempted += 1;
+    try {
+      const { localRecordedAt, syncStatus, syncReason, syncedAt, syncError, ...marketRecord } = record;
+      void localRecordedAt;
+      void syncStatus;
+      void syncReason;
+      void syncedAt;
+      void syncError;
+      await upsert({
+        config: args.marketConfig,
+        record: {
+          ...marketRecord,
+          user_id: args.marketConfig.userId,
+        },
+      });
+      records[index] = {
+        ...record,
+        user_id: args.marketConfig.userId,
+        syncStatus: 'synced_to_supabase',
+        syncReason: 'Synced automatically by scanner after Supabase market_data_gap_events became available.',
+        syncedAt: now,
+        syncError: undefined,
+      };
+      synced += 1;
+    } catch (error) {
+      records[index] = {
+        ...record,
+        syncError: formatError(error),
+      };
+      failed += 1;
+    }
+  }
+
+  if (attempted > 0) {
+    await fs.writeFile(ledgerPath, `${JSON.stringify(records, null, 2)}\n`, 'utf8');
+  }
+  return { path: ledgerPath, attempted, synced, failed };
+}
+
+async function persistMarketDataGapEventWithFallback(args: {
+  marketConfig: MarketDataConfig | null;
+  record: MarketDataGapEventRecord;
+  logPrefix: string;
+}): Promise<{ source: 'supabase' | 'local_fallback'; detail: string }> {
+  if (args.marketConfig) {
+    try {
+      await upsertMarketDataGapEvent({
+        config: args.marketConfig,
+        record: args.record,
+      });
+      return { source: 'supabase', detail: 'market_data_gap_events upserted' };
+    } catch (error) {
+      const reason = `Supabase market_data_gap_events unavailable: ${formatError(error)}`;
+      const local = await writeLocalMarketDataGapEvent({ record: args.record, reason });
+      console.warn(`${args.logPrefix}: ${reason}; wrote local fallback ${local.path}.`);
+      return { source: 'local_fallback', detail: local.path };
+    }
+  }
+
+  const reason = 'Supabase market-data env unavailable; local fallback repair ledger used.';
+  const local = await writeLocalMarketDataGapEvent({ record: args.record, reason });
+  console.warn(`${args.logPrefix}: ${reason} ${local.path}.`);
+  return { source: 'local_fallback', detail: local.path };
 }
 
 export interface MissedScannerDeliveryFinding {
@@ -2023,37 +2162,34 @@ async function fetchScannerHistoryFrame(args: {
     ...verification,
     requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   };
-  if (!coverage.sufficient && marketConfig) {
-    try {
-      await upsertMarketDataGapEvent({
-        config: marketConfig,
-        record: toMarketDataGapEventRecord({
-          userId: marketConfig.userId,
-          instrument: args.config.instrument,
-          bridgeInstrument: args.config.bridgeInstrument,
-          timeframe: args.timeframe,
-          requestedFrom: args.from,
-          requestedTo: args.to,
-          rangeStart: coverage.rangeStart,
-          rangeEnd: coverage.rangeEnd,
-          barsLoaded: coverage.barsLoaded,
-          cacheBars: coverage.cacheBars,
-          bridgeRepairBars: coverage.bridgeRepairBars,
-          source: coverage.source,
-          dataLimitationMessage: coverage.dataLimitation?.message || coverage.warning,
-          operatorAction: coverage.dataLimitation?.operatorAction || null,
-          metadata: {
-            source: 'nt_scanner_market_data_ingestion',
-            canInventMissingBars: false,
-            htfPromotionAllowed: false,
-            invalidBars: coverage.invalidBars || 0,
-            duplicateTimestamps: coverage.duplicateTimestamps || 0,
-          },
-        }),
-      });
-    } catch (error) {
-      console.warn(`[scanner-history] ${args.timeframe}: market_data_gap_events upsert failed: ${formatError(error)}`);
-    }
+  if (!coverage.sufficient) {
+    await persistMarketDataGapEventWithFallback({
+      marketConfig,
+      logPrefix: `[scanner-history] ${args.timeframe}`,
+      record: toMarketDataGapEventRecord({
+        userId: marketConfig?.userId || '00000000-0000-0000-0000-000000000000',
+        instrument: args.config.instrument,
+        bridgeInstrument: args.config.bridgeInstrument,
+        timeframe: args.timeframe,
+        requestedFrom: args.from,
+        requestedTo: args.to,
+        rangeStart: coverage.rangeStart,
+        rangeEnd: coverage.rangeEnd,
+        barsLoaded: coverage.barsLoaded,
+        cacheBars: coverage.cacheBars,
+        bridgeRepairBars: coverage.bridgeRepairBars,
+        source: coverage.source,
+        dataLimitationMessage: coverage.dataLimitation?.message || coverage.warning,
+        operatorAction: coverage.dataLimitation?.operatorAction || null,
+        metadata: {
+          source: 'nt_scanner_market_data_ingestion',
+          canInventMissingBars: false,
+          htfPromotionAllowed: false,
+          invalidBars: coverage.invalidBars || 0,
+          duplicateTimestamps: coverage.duplicateTimestamps || 0,
+        },
+      }),
+    });
   }
   return { bars: sorted, coverage };
 }
@@ -3041,6 +3177,47 @@ export function evaluateCompletedFiveMinuteBarAssuranceGate(args: {
   };
 }
 
+export function buildCompletedFiveMinuteGapEventRecord(args: {
+  userId: string;
+  instrument: Instrument;
+  bridgeInstrument: string;
+  requestedFrom: string;
+  requestedTo: string;
+  liveBars: NinjaBridgeBar[];
+  cachedBars: NinjaBridgeBar[];
+  repairBars: NinjaBridgeBar[];
+  finalBars: NinjaBridgeBar[];
+  staleReason: string | null;
+  attempts: string[];
+}): MarketDataGapEventRecord {
+  const sorted = mergeBars([], args.finalBars);
+  return toMarketDataGapEventRecord({
+    userId: args.userId,
+    instrument: args.instrument,
+    bridgeInstrument: args.bridgeInstrument,
+    timeframe: '5m',
+    requestedFrom: args.requestedFrom,
+    requestedTo: args.requestedTo,
+    rangeStart: sorted[0]?.time || null,
+    rangeEnd: sorted[sorted.length - 1]?.time || null,
+    barsLoaded: sorted.length,
+    cacheBars: args.cachedBars.length,
+    bridgeRepairBars: args.repairBars.length,
+    source: marketDataSourceFromCounts(args.cachedBars.length, args.repairBars.length),
+    dataLimitationMessage: `Completed 5M Bar Assurance Gate remained blocked after live bridge, market_bars, and NinjaTrader historical repair. The scanner cannot invent missing completed 5M candles. ${args.staleReason || 'Latest completed 5M bar is unavailable or stale.'}`,
+    operatorAction: `Load/refresh ${args.bridgeInstrument} 5M history in NinjaTrader, run npm run nt:backfill for ${args.requestedFrom} to ${args.requestedTo}, then restart or rerun the scanner.`,
+    metadata: {
+      source: 'nt_scanner_completed_5m_assurance',
+      canInventMissingBars: false,
+      tradePlanningAllowed: false,
+      liveBars: args.liveBars.length,
+      cacheBars: args.cachedBars.length,
+      bridgeRepairBars: args.repairBars.length,
+      attempts: args.attempts,
+    },
+  });
+}
+
 async function resolveCompletedFiveMinuteWithSelfHealing(args: {
   config: ScannerConfig;
   now: Date;
@@ -3164,6 +3341,29 @@ async function resolveCompletedFiveMinuteWithSelfHealing(args: {
     ? `self_healing_result=blocked (${healedFreshness.reason || 'stale or missing'})`
     : `self_healing_result=ready (${healedCompleted?.time || 'N/A'})`);
 
+  if (healedFreshness.stale) {
+    const persisted = await persistMarketDataGapEventWithFallback({
+      marketConfig,
+      logPrefix: '[scanner-data] completed 5M blocker',
+      record: buildCompletedFiveMinuteGapEventRecord({
+        userId: marketConfig?.userId || '00000000-0000-0000-0000-000000000000',
+        instrument: args.config.instrument,
+        bridgeInstrument: args.config.bridgeInstrument,
+        requestedFrom: window.from,
+        requestedTo: window.to,
+        liveBars: args.liveBars5m,
+        cachedBars,
+        repairBars: repairedBars,
+        finalBars: healedBars,
+        staleReason: healedFreshness.reason || null,
+        attempts,
+      }),
+    });
+    attempts.push(persisted.source === 'supabase'
+      ? 'market_data_gap_events=recorded_completed_5m_blocker'
+      : `market_data_gap_events=local_fallback (${persisted.detail})`);
+  }
+
   return {
     bars5m: healedBars,
     completed5m: healedCompleted,
@@ -3190,6 +3390,14 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const tradeDate = getScannerTradeDate(now);
   const stateRead = await readStateWithHealth();
   const state = stateRead.state;
+  const marketDataConfigForGapSync = loadMarketDataConfig();
+  if (marketDataConfigForGapSync) {
+    const sync = await syncLocalMarketDataGapEventsToSupabase({ marketConfig: marketDataConfigForGapSync });
+    if (sync.attempted > 0) {
+      const level = sync.failed > 0 ? console.warn : console.log;
+      level(`[scanner-data] Local market-data gap ledger sync: attempted=${sync.attempted}, synced=${sync.synced}, failed=${sync.failed}, ledger=${sync.path}`);
+    }
+  }
 
   let healthOk = false;
   let bridgeHealth: NinjaBridgeHealth | null = null;

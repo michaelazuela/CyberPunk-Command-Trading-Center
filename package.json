@@ -10,6 +10,7 @@
     "nt:companion": "node tools/ninjatrader-bridge/companion-proxy.mjs",
     "nt:candle-recorder": "tsx tools/automation/candle-recorder.ts",
     "nt:backfill": "tsx tools/automation/backfill-market-bars.ts",
+    "market-data:gaps:sync": "tsx tools/automation/market-data-gap-sync.ts",
     "nt:discord-alerts": "tsx tools/automation/discord-scheduler.ts",
     "nt:scanner": "tsx tools/automation/nt-scanner.ts",
     "supervisor:start": "tsx tools/supervisor/index.ts start",

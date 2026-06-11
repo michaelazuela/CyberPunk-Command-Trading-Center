@@ -50,6 +50,7 @@ export interface DeliveryVisibilityReport {
   generatedAt: string;
   scannerStatePath: string;
   auditDir: string;
+  marketDataGapLedgerPath: string;
   stateReadable: boolean;
   stateError: string | null;
   lastAlert: ScannerSentRecord | null;
@@ -62,6 +63,12 @@ export interface DeliveryVisibilityReport {
   recentAuditFiles: AuditFileSummary[];
   recentDecisionTapes: AuditFileSummary[];
   staleDataBlockers: string[];
+  pendingMarketDataGapSync: {
+    count: number;
+    oldestLocalRecordedAt: string | null;
+    oldestAgeMs: number | null;
+    staleCount: number;
+  };
   boundaries: {
     readOnly: true;
     postsDiscord: false;
@@ -250,10 +257,37 @@ function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: 
   return blockers;
 }
 
+function pendingMarketDataGapSyncSummary(ledgerPath: string, now: Date, staleAfterMs: number): DeliveryVisibilityReport['pendingMarketDataGapSync'] {
+  let records: Array<Record<string, unknown>> = [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as unknown;
+    records = Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object')) : [];
+  } catch {
+    records = [];
+  }
+
+  const pending = records.filter((record) => record.syncStatus === 'pending_supabase_sync');
+  const pendingTimes = pending
+    .map((record) => stringOrNull(record.localRecordedAt))
+    .filter((value): value is string => Boolean(value))
+    .map((value) => ({ value, ms: parseDateMs(value) }))
+    .filter((item) => item.ms > 0)
+    .sort((a, b) => a.ms - b.ms);
+  const oldest = pendingTimes[0] || null;
+  const oldestAgeMs = oldest ? Math.max(0, now.getTime() - oldest.ms) : null;
+  return {
+    count: pending.length,
+    oldestLocalRecordedAt: oldest?.value || null,
+    oldestAgeMs,
+    staleCount: pendingTimes.filter((item) => now.getTime() - item.ms > staleAfterMs).length,
+  };
+}
+
 export function buildDeliveryVisibilityReport(args: {
   cwd?: string;
   scannerStatePath?: string;
   auditDir?: string;
+  marketDataGapLedgerPath?: string;
   now?: Date;
   staleAfterMs?: number;
   recentAuditLimit?: number;
@@ -263,6 +297,7 @@ export function buildDeliveryVisibilityReport(args: {
   const staleAfterMs = args.staleAfterMs ?? 180_000;
   const scannerStatePath = args.scannerStatePath || path.resolve(cwd, 'tools', 'automation', '.nt-scanner-state.json');
   const auditDir = args.auditDir || path.resolve(cwd, 'tools', 'automation', 'discord-audit');
+  const marketDataGapLedgerPath = args.marketDataGapLedgerPath || path.resolve(cwd, 'tools', 'automation', '.market-data-gap-events.json');
   const recentFiles = recentAuditFiles(auditDir, now, args.recentAuditLimit ?? 8);
 
   let stateReadable = false;
@@ -294,12 +329,19 @@ export function buildDeliveryVisibilityReport(args: {
   const pendingDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
   const skippedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
   const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs) : ['Scanner state file is not readable.'];
+  const pendingGapSync = pendingMarketDataGapSyncSummary(marketDataGapLedgerPath, now, staleAfterMs);
+  if (pendingGapSync.staleCount > 0) {
+    blockers.push(
+      `Market data gap repair ledger has ${pendingGapSync.staleCount} pending Supabase sync item(s) older than ${Math.round(staleAfterMs / 60_000)} minutes; run npm run market-data:gaps:sync or restore Supabase connectivity.`,
+    );
+  }
 
   return {
     status: !stateReadable || failedDeliveries.length || pendingDeliveries.length || blockers.length ? 'warn' : 'ok',
     generatedAt: now.toISOString(),
     scannerStatePath,
     auditDir,
+    marketDataGapLedgerPath,
     stateReadable,
     stateError,
     lastAlert: sent[0] || null,
@@ -312,6 +354,7 @@ export function buildDeliveryVisibilityReport(args: {
     recentAuditFiles: recentFiles,
     recentDecisionTapes: recentFiles.filter((file) => file.kind === 'decision_tape'),
     staleDataBlockers: blockers,
+    pendingMarketDataGapSync: pendingGapSync,
     boundaries: {
       readOnly: true,
       postsDiscord: false,

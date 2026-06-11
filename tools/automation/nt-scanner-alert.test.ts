@@ -7,6 +7,7 @@ import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './d
 import {
   barsCoverRequestedLookback,
   barsForMorningContinuationWatchlist,
+  buildCompletedFiveMinuteGapEventRecord,
   buildScannerHistoryPreloadPlan,
   buildSegmentedHistoryRepairWindows,
   attachFailedPlanReversalContextFromScannerState,
@@ -35,8 +36,10 @@ import {
   scannerActiveCampaignKey,
   shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
+  syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
   verifyScannerActiveCampaignLedgerReady,
+  writeLocalMarketDataGapEvent,
   writeScannerDecisionTapeAuditLog,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
@@ -230,6 +233,61 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
   source: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
   usingGenericFallback: false,
 });
+
+const completedFiveMinuteGapRecord = buildCompletedFiveMinuteGapEventRecord({
+  userId: '00000000-0000-0000-0000-000000000001',
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  requestedFrom: '2026-06-10T13:00:00-04:00',
+  requestedTo: '2026-06-10T15:00:00-04:00',
+  liveBars: [],
+  cachedBars: [],
+  repairBars: [],
+  finalBars: [],
+  staleReason: 'Latest completed 5M bar unavailable after repair.',
+  attempts: ['live_bridge=blocked', 'market_bars=blocked', 'historical_bridge=blocked'],
+});
+assert.equal(completedFiveMinuteGapRecord.timeframe, '5m');
+assert.equal(completedFiveMinuteGapRecord.status, 'open');
+assert.equal(completedFiveMinuteGapRecord.source, 'missing');
+assert.equal(completedFiveMinuteGapRecord.bars_loaded, 0);
+assert.equal(completedFiveMinuteGapRecord.metadata.canInventMissingBars, false);
+assert.equal(completedFiveMinuteGapRecord.metadata.tradePlanningAllowed, false);
+assert.match(completedFiveMinuteGapRecord.data_limitation_message || '', /cannot invent missing completed 5M candles/);
+assert.match(completedFiveMinuteGapRecord.operator_action || '', /nt:backfill/);
+const localGapLedgerPath = path.join(outputDir, 'market-data-gap-events.json');
+const localGapWrite = await writeLocalMarketDataGapEvent({
+  record: completedFiveMinuteGapRecord,
+  reason: 'test supabase unavailable',
+  ledgerPath: localGapLedgerPath,
+});
+const localGapRewrite = await writeLocalMarketDataGapEvent({
+  record: completedFiveMinuteGapRecord,
+  reason: 'test supabase still unavailable',
+  ledgerPath: localGapLedgerPath,
+});
+const localGapLedger = JSON.parse(await fs.readFile(localGapLedgerPath, 'utf8')) as Array<Record<string, unknown>>;
+assert.equal(localGapWrite.records, 1);
+assert.equal(localGapRewrite.records, 1);
+assert.equal(localGapLedger.length, 1);
+assert.equal(localGapLedger[0].syncStatus, 'pending_supabase_sync');
+assert.equal(localGapLedger[0].syncReason, 'test supabase still unavailable');
+const localGapSync = await syncLocalMarketDataGapEventsToSupabase({
+  ledgerPath: localGapLedgerPath,
+  marketConfig: {
+    userId: '00000000-0000-0000-0000-000000000001',
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'test-service-role',
+  },
+  upsert: async () => ({ upserted: 1 }),
+});
+const syncedLocalGapLedger = JSON.parse(await fs.readFile(localGapLedgerPath, 'utf8')) as Array<Record<string, unknown>>;
+assert.equal(localGapSync.attempted, 1);
+assert.equal(localGapSync.synced, 1);
+assert.equal(localGapSync.failed, 0);
+assert.equal(syncedLocalGapLedger.length, 1);
+assert.equal(syncedLocalGapLedger[0].syncStatus, 'synced_to_supabase');
+assert.equal(typeof syncedLocalGapLedger[0].syncedAt, 'string');
 
 const campaignCandidate = {
   setupType: SetupType.IntradayMssMicroContinuation,

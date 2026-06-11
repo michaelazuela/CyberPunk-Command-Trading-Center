@@ -2237,6 +2237,7 @@ type IntradayMssEvidenceResolution = {
   fifteen: TimeframeMssEvidence | undefined;
   source: 'timeframeMssEvidence' | 'completed_5m_ohlc_fallback';
   fallbackNotes: string[];
+  dataQualityBlockers: string[];
 };
 
 function readableCompletedFiveMinuteCandles(chartContext: ChartContext) {
@@ -2294,6 +2295,83 @@ function aggregateFiveMinuteBarsToFifteenMinuteBars(bars: NinjaBridgeBar[]): Nin
     });
 }
 
+function timeframeEvidenceSupportsFifteenMinuteDirection(evidence: TimeframeMssEvidence | undefined, expected: 'bullish' | 'bearish'): boolean {
+  return Boolean(
+    isConfirmedMss(evidence, expected) ||
+    (
+      evidence &&
+      evidence.completedBarStatus === 'completed' &&
+      evidence.direction === expected &&
+      evidence.displacementQuality.present &&
+      evidence.displacementQuality.direction === expected &&
+      evidence.status === 'displacement_without_mss'
+    )
+  );
+}
+
+function intradayMssEvidenceDataQualityBlockers(chartContext: ChartContext): string[] {
+  const blockers: string[] = [];
+  const rawCandleCount = chartContext.candles?.length || 0;
+  const readableCandles = readableCompletedFiveMinuteCandles(chartContext);
+  const fiveMinuteBars = readableCandles
+    .map(chartCandleToBridgeBar)
+    .filter((bar): bar is NinjaBridgeBar => Boolean(bar));
+
+  if (rawCandleCount === 0) {
+    blockers.push('Intraday MSS data-limited: no completed 5M OHLC candles are available to derive deterministic 5M/15M MSS support.');
+  } else if (fiveMinuteBars.length === 0) {
+    blockers.push(`Intraday MSS data-limited: ${rawCandleCount} completed 5M candle(s) were present but none had readable timestamp/open/high/low/close fields.`);
+  }
+
+  if (fiveMinuteBars.length > 0 && fiveMinuteBars.length < 7) {
+    blockers.push(`Intraday MSS data-limited: only ${fiveMinuteBars.length} readable completed 5M candle(s) loaded; at least 7 are required for deterministic swing/MSS fallback.`);
+  }
+
+  if (fiveMinuteBars.length < 7) return blockers;
+
+  const asOfTimestamp = chartContext.chartTimestamp || chartContext.screenshotTimestamp || fiveMinuteBars[fiveMinuteBars.length - 1]?.time || null;
+  const five = buildTimeframeMssEvidence({
+    timeframe: '5M',
+    bars: fiveMinuteBars,
+    asOfTimestamp,
+    barTimestampMode: 'open',
+    barTimeZone: 'eastern',
+  });
+  const expected =
+    isConfirmedMss(five, 'bullish') ? 'bullish' :
+    isConfirmedMss(five, 'bearish') ? 'bearish' :
+    null;
+
+  if (!expected) {
+    blockers.push(`Intraday MSS data-limited: completed 5M OHLC fallback did not produce confirmed bullish or bearish MSS support (status ${five.status}).`);
+  }
+
+  if (expected && parsePrice(five.structureBreak?.brokenLevel) === null) {
+    blockers.push('Intraday MSS data-limited: completed 5M MSS evidence did not produce a named structure-break line in the sand.');
+  }
+
+  const fifteenMinuteBars = aggregateFiveMinuteBarsToFifteenMinuteBars(fiveMinuteBars);
+  if (fifteenMinuteBars.length < 7) {
+    blockers.push(`Intraday MSS data-limited: only ${fifteenMinuteBars.length} derived completed 15M candle(s) were available from 5M OHLC; at least 7 are required for deterministic 15M context fallback.`);
+    return blockers;
+  }
+
+  if (expected) {
+    const fifteen = buildTimeframeMssEvidence({
+      timeframe: '15M',
+      bars: fifteenMinuteBars,
+      asOfTimestamp,
+      barTimestampMode: 'open',
+      barTimeZone: 'eastern',
+    });
+    if (!timeframeEvidenceSupportsFifteenMinuteDirection(fifteen, expected)) {
+      blockers.push(`Intraday MSS data-limited: completed 15M fallback did not confirm ${expected} MSS/displacement support (status ${fifteen.status}).`);
+    }
+  }
+
+  return blockers;
+}
+
 function buildIntradayMssFallbackEvidence(chartContext: ChartContext): IntradayMssEvidenceResolution | null {
   const fiveMinuteBars = readableCompletedFiveMinuteCandles(chartContext)
     .map(chartCandleToBridgeBar)
@@ -2325,6 +2403,7 @@ function buildIntradayMssFallbackEvidence(chartContext: ChartContext): IntradayM
       'Intraday MSS fallback built from completed 5M OHLC because timeframeMssEvidence was missing or incomplete.',
       'Fallback may name a watch line only; protected stop and targets still require completed 5M candle/swing proof.',
     ],
+    dataQualityBlockers: [],
   };
 }
 
@@ -2335,15 +2414,17 @@ function resolveIntradayMssEvidence(chartContext: ChartContext): IntradayMssEvid
   const fiveHasBreakLevel = parsePrice(five?.structureBreak?.brokenLevel) !== null;
   const existingUsable = Boolean(existing && five && fifteen && (isConfirmedMss(five, 'bullish') || isConfirmedMss(five, 'bearish')) && fiveHasBreakLevel);
   if (existingUsable) {
-    return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [] };
+    return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [], dataQualityBlockers: [] };
   }
+  const dataQualityBlockers = intradayMssEvidenceDataQualityBlockers(chartContext);
   const fallback = buildIntradayMssFallbackEvidence(chartContext);
-  if (!fallback) return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [] };
+  if (!fallback) return { five, fifteen, source: 'timeframeMssEvidence', fallbackNotes: [], dataQualityBlockers };
   return {
     five: fiveHasBreakLevel ? five : fallback.five,
     fifteen: fifteen ?? fallback.fifteen,
     source: 'completed_5m_ohlc_fallback',
     fallbackNotes: fallback.fallbackNotes,
+    dataQualityBlockers,
   };
 }
 
@@ -3088,18 +3169,7 @@ function fifteenMinuteMssOrDisplacementSupports(chartContext: ChartContext, dire
   if (direction !== 'LONG' && direction !== 'SHORT') return false;
   const expected = direction === 'LONG' ? 'bullish' : 'bearish';
   const fifteen = resolveIntradayMssEvidence(chartContext).fifteen;
-  return Boolean(
-    isConfirmedMss(fifteen, expected) ||
-    (
-      fifteen &&
-      fifteen.completedBarStatus === 'completed' &&
-      fifteen.direction === expected &&
-      fifteen.displacementQuality.present &&
-      fifteen.displacementQuality.direction === expected &&
-      fifteen.status === 'displacement_without_mss'
-    ) ||
-    displacementCandleFor(chartContext, direction, '15m')
-  );
+  return timeframeEvidenceSupportsFifteenMinuteDirection(fifteen, expected) || Boolean(displacementCandleFor(chartContext, direction, '15m'));
 }
 
 function intradayMssOrDisplacementDirection(chartContext: ChartContext): Direction {
@@ -3606,6 +3676,54 @@ function notDetectedIntradayMssMicroContinuationCandidate(entry: SetupRegistryEn
     blockReason: null,
     requiredTrigger: null,
     nextAction: 'Wait for aligned 15M/5M completed MSS and a completed 5M FVG retest/rejection or close-through beyond the named HTF line in the sand. Human confirmation remains required.',
+    reducedRiskPlan: null,
+  };
+}
+
+function dataLimitedIntradayMssMicroContinuationCandidate(entry: SetupRegistryEntry, blockers: string[]): SetupCandidate {
+  const uniqueBlockers = Array.from(new Set(blockers)).filter(Boolean);
+  return {
+    setupType: entry.setupType,
+    scenarioLabel: entry.label,
+    candidateState: 'NO_QUALIFIED_STATE',
+    pathway: 'intraday_mss_micro_continuation',
+    humanReview: {
+      status: 'OpeningObservationArmed',
+      canExecute: false,
+      requiresTraderConfirmation: true,
+      discordTradePlanEligible: false,
+      reason: 'Intraday MSS Micro Continuation cannot be promoted because completed NinjaTrader OHLC proof is data-limited.',
+    },
+    direction: 'NO TRADE',
+    detectedStatus: SetupCandidateStatus.Blocked,
+    confidence: 'Low',
+    priority: entry.priority,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+    riskPoints: null,
+    riskAdvisoryStatus: 'RISK_INVALID_OR_UNDEFINED',
+    riskPolicy: 'STRUCTURAL_RISK_ACKNOWLEDGED',
+    modelConfidenceScore: 0,
+    invalidation: null,
+    entryClarity: 0,
+    stopClarity: 0,
+    targetClarity: 0,
+    proximityScore: 0,
+    levelContextScore: 0,
+    levelContextSummary: 'Intraday MSS Micro Continuation data-limited: completed 5M OHLC/timeframe evidence is not sufficient to prove aligned 15M/5M MSS or a named 5M line in the sand.',
+    evidence: [
+      'NinjaTrader OHLC remains the authority. Gemini/advisory paths cannot invent the missing MSS, line, stop, or targets.',
+      'No trade plan is promoted while completed 5M candles or deterministic 15M/5M MSS support are insufficient.',
+    ],
+    missingEvidence: uniqueBlockers.length ? uniqueBlockers : entry.requiredEvidence,
+    executionStatus: ExecutionStatus.Blocked,
+    blockReason: NoTradeReason.MissingRequiredContext,
+    requiredTrigger: 'Repair/load completed 5M NinjaTrader OHLC or structured timeframeMssEvidence, then require aligned 15M/5M MSS/displacement support and a named 5M close-through line before a watch or plan can be promoted.',
+    nextAction: uniqueBlockers.length
+      ? `Data-limited Intraday MSS review. ${uniqueBlockers.join(' ')} Repair/backfill OHLC before promotion; no line, stop, or targets are invented.`
+      : 'Data-limited Intraday MSS review. Repair/backfill OHLC before promotion; no line, stop, or targets are invented.',
     reducedRiskPlan: null,
   };
 }
@@ -5235,6 +5353,14 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const htfDisplacementFvgCandidate = buildHtfDisplacementFvgContinuationCandidate(input);
   const openingDriveFvgCandidate = buildOpeningDriveFvgContinuationCandidate(input);
   const intradayMssMicroCandidate = buildIntradayMssMicroContinuationCandidate(input);
+  const intradayMssMicroDataLimitedCandidate = !intradayMssMicroCandidate && input.chartContext
+    ? (() => {
+      const entry = getPrimarySetupRegistry(input.sessionType).find((item) => item.setupType === SetupType.IntradayMssMicroContinuation);
+      if (!entry || !isInsideIntradayMssMicroContinuationWindow(input.chartContext)) return null;
+      const blockers = resolveIntradayMssEvidence(input.chartContext).dataQualityBlockers;
+      return blockers.length ? dataLimitedIntradayMssMicroContinuationCandidate(entry, blockers) : null;
+    })()
+    : null;
   const failedPlanReversalCandidate = buildFailedPlanReversalCandidate(input);
   const candidates = [
     ...getPrimarySetupRegistry(input.sessionType)
@@ -5249,6 +5375,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? openingDriveFvgCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroCandidate
           ? intradayMssMicroCandidate
+          : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroDataLimitedCandidate
+          ? intradayMssMicroDataLimitedCandidate
           : entry.setupType === SetupType.FailedPlanReversal && failedPlanReversalCandidate
           ? failedPlanReversalCandidate
           : entry.setupType === SetupType.HtfDrawContinuationAfterRaid

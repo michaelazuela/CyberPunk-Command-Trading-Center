@@ -2501,6 +2501,68 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('completed 5M OHLC because timeframeMssEvidence was missing or incomplete')));
   }],
 
+  ['Intraday MSS Micro Continuation surfaces data-limited blocker when too few completed 5M candles exist', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:45:00-04:00',
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: undefined,
+      fvgZones: [],
+      candles: intradayMssFallbackCandles().slice(0, 4),
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'NO TRADE');
+    assert.equal(micro.candidateState, 'NO_QUALIFIED_STATE');
+    assert.equal(micro.detectedStatus, SetupCandidateStatus.Blocked);
+    assert.equal(micro.executionStatus, ExecutionStatus.Blocked);
+    assert.equal(micro.blockReason, NoTradeReason.MissingRequiredContext);
+    assert.equal(micro.humanReview?.discordTradePlanEligible, false);
+    assert.equal(micro.entry, null);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.ok(micro.missingEvidence.some((item) => item.includes('only 4 readable completed 5M candle')));
+    assert.ok(micro.nextAction?.includes('no line, stop, or targets are invented'));
+  }],
+
+  ['Intraday MSS Micro Continuation surfaces data-limited blocker when completed 5M candles are malformed', () => {
+    const context = htfMssContext('LONG', {
+      sessionType: 'lunch',
+      chartTimestamp: '2026-06-09T13:45:00-04:00',
+      proposedEntry: null,
+      proposedStop: null,
+      riskPoints: null,
+      timeframeMssEvidence: undefined,
+      fvgZones: [],
+      candles: [
+        { index: 0, timestamp: '', open: 100, high: 101, low: 99, close: 100.5, direction: 'bullish', confidence: 'High' },
+        { index: 1, timestamp: '2026-06-09T13:05:00-04:00', open: Number.NaN, high: 102, low: 100, close: 101, direction: 'bullish', confidence: 'High' },
+      ],
+    });
+
+    const result = scanSetupCandidates({ sessionType: 'lunch', chartContext: context, result: null });
+    const micro = result.candidates.find((candidate) => candidate.setupType === SetupType.IntradayMssMicroContinuation);
+
+    assert.ok(micro);
+    assert.equal(micro.direction, 'NO TRADE');
+    assert.equal(micro.candidateState, 'NO_QUALIFIED_STATE');
+    assert.equal(micro.detectedStatus, SetupCandidateStatus.Blocked);
+    assert.equal(micro.executionStatus, ExecutionStatus.Blocked);
+    assert.equal(micro.blockReason, NoTradeReason.MissingRequiredContext);
+    assert.equal(micro.entry, null);
+    assert.equal(micro.stop, null);
+    assert.equal(micro.target1, null);
+    assert.equal(micro.target2, null);
+    assert.ok(micro.missingEvidence.some((item) => item.includes('none had readable timestamp/open/high/low/close fields')));
+    assert.ok(micro.evidence.some((item) => item.includes('NinjaTrader OHLC remains the authority')));
+  }],
+
   ['Intraday MSS Micro Continuation short uses latest protected 5M retest swing after close-through campaign activation', () => {
     const context = htfMssContext('SHORT', {
       sessionType: 'lunch',

@@ -11,6 +11,7 @@ export type SupervisorNotificationKind =
   | 'bridge_unreachable'
   | 'bridge_recovered'
   | 'stale_5m_bars'
+  | 'market_data_gap_sync_pending'
   | 'supervisor_self_heal'
   | 'child_restarted';
 
@@ -246,6 +247,24 @@ export function buildSupervisorNotifications(
     }));
   }
 
+  const pendingGapSync = status.delivery?.pendingMarketDataGapSync;
+  if (pendingGapSync && pendingGapSync.staleCount > 0 && shouldSendCooldown(previous, 'market_data_gap_sync_pending', now, staleCooldownMs)) {
+    notifications.push(notification({
+      kind: 'market_data_gap_sync_pending',
+      title: 'Market Data Gap Sync Pending',
+      description: [
+        `Local market-data repair ledger has ${pendingGapSync.count} pending Supabase sync item(s).`,
+        `Stale pending items: ${pendingGapSync.staleCount}.`,
+        `Oldest pending item: ${pendingGapSync.oldestLocalRecordedAt || 'unknown'}.`,
+        `Ledger: ${status.delivery?.marketDataGapLedgerPath || 'not reported'}.`,
+        'Run npm run market-data:gaps:sync after Supabase connectivity is restored.',
+      ].join('\n'),
+      severity: 'warn',
+      dedupeKey: 'market_data_gap_sync_pending',
+      now,
+    }));
+  }
+
   for (const service of status.childServices) {
     const previousRestartCount = Number(previous.lastStatuses[`restart:${service.id}`] || '0');
     if (service.restartCount > previousRestartCount) {
@@ -393,6 +412,9 @@ function buildOperationalReportFields(status?: SupervisorStatusPayload): Discord
     `Recorder: ${serviceStatus(status, 'candle-recorder')}`,
     `Bridge: ${healthCheckStatus(status, 'bridge')}`,
     `Latest completed 5M: ${summary.latestCompleted5m || 'not reported yet'}`,
+    status.delivery?.pendingMarketDataGapSync?.count
+      ? `Pending gap sync: ${status.delivery.pendingMarketDataGapSync.count} (${status.delivery.pendingMarketDataGapSync.staleCount} stale)`
+      : 'Pending gap sync: none',
   ];
   fields.push({ name: 'Supervisor Status', value: serviceLines.join('\n'), inline: false });
 
