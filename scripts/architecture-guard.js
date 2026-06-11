@@ -235,6 +235,9 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!scannerContent.includes('trade_plan_json') || !scannerContent.includes('visibility: args.visibilityMetadata') || !scannerContent.includes('deskState: args.deskState')) {
     fail('nt-scanner.ts must persist DeskState visibility metadata into plan/review RAG trade_plan_json.');
   }
+  if (!scannerContent.includes('buildScannerDataQualityNoticePayload') || !scannerContent.includes('sendScannerDataQualityNoticeIfNeeded') || !scannerContent.includes('No trade alert was posted')) {
+    fail('nt-scanner.ts must surface stale/missing completed 5M data as a Discord data-quality notice instead of silently falling through Market Mapping.');
+  }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);

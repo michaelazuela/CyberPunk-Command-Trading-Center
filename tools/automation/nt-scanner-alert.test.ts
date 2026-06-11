@@ -9,6 +9,7 @@ import {
   barsCoverRequestedLookback,
   barsForMorningContinuationWatchlist,
   buildCompletedFiveMinuteGapEventRecord,
+  buildScannerDataQualityNoticePayload,
   buildScannerHistoryPreloadPlan,
   buildSegmentedHistoryRepairWindows,
   attachFailedPlanReversalContextFromScannerState,
@@ -34,6 +35,7 @@ import {
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+  scannerDataQualityNoticeKey,
   scannerActiveCampaignKey,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
@@ -46,6 +48,7 @@ import {
   upsertScannerDiscordAlertRagRecord,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
+  type ScannerConfig,
 } from './nt-scanner';
 import { buildChartMarkupHtmlForTest, verifyApprovedDailyTradePlanRender } from './chart-markup-renderer';
 
@@ -135,6 +138,80 @@ const completed5mAssuranceStale = evaluateCompletedFiveMinuteBarAssuranceGate({
 });
 assert.equal(completed5mAssuranceStale.status, 'blocked');
 assert.ok(completed5mAssuranceStale.message.includes('Latest completed 5M candle is stale'));
+
+const scannerDataQualityNoticeConfig: ScannerConfig = {
+  instrument: 'MES',
+  bridgeInstrument: 'MES 06-26',
+  bridgeUrl: 'http://127.0.0.1:8765',
+  account: 'Sim101',
+  pollSeconds: 60,
+  dryRun: true,
+  once: true,
+  continuousMode: true,
+  scanWindows: true,
+  discordEnabled: true,
+  afternoonEnabled: false,
+  thresholds: { conditional: 65, executable: 80, educationalBlocked: 70 },
+  maxChaseDistancePoints: 10,
+  maxChaseDistanceR: 0.75,
+  staleSetupMaxCandles: 3,
+  targetAlreadySweptLookbackCandles: 12,
+  allowRetestOnlyEntries: false,
+  maxStaleBarMinutes: 10,
+  marketMapRefreshSeconds: 300,
+  preMarketDataGate: true,
+  macroCalendarEnabled: true,
+  geminiAdvisoryFallbackEnabled: false,
+  barTimestampMode: 'close',
+  barTimeZone: 'eastern',
+};
+const dataQualityNotice = buildScannerDataQualityNoticePayload({
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  config: scannerDataQualityNoticeConfig,
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7519,
+  completed5m: { time: '2026-06-05T09:45:00-04:00', open: 7518, high: 7520, low: 7515, close: 7519, volume: 1000 },
+  completedFiveMinuteBarAssurance: completed5mAssuranceStale,
+  reason: completed5mAssuranceStale.message,
+  manualRun: true,
+});
+const dataQualityText = flattenDiscordPayloadText(dataQualityNotice);
+assert.ok(dataQualityText.includes('No trade alert was posted'));
+assert.ok(dataQualityText.includes('Latest completed 5M'));
+assert.ok(dataQualityText.includes('Expected completed 5M near'));
+assert.ok(dataQualityText.includes('No entries, stops, targets, approvals, or outcome buttons were created'));
+assert.equal(dataQualityNotice.components, undefined);
+assert.equal(scannerDataQualityNoticeKey({
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  instrument: 'MES',
+  reason: completed5mAssuranceStale.message,
+  latestCompleted5mTime: completed5mAssuranceStale.latestCompletedTime,
+  expectedCompleted5mTime: completed5mAssuranceStale.expectedCompletedTime,
+}), scannerDataQualityNoticeKey({
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  instrument: 'MES',
+  reason: completed5mAssuranceStale.message,
+  latestCompleted5mTime: completed5mAssuranceStale.latestCompletedTime,
+  expectedCompleted5mTime: completed5mAssuranceStale.expectedCompletedTime,
+}));
+assert.notEqual(scannerDataQualityNoticeKey({
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  instrument: 'MES',
+  reason: completed5mAssuranceStale.message,
+  latestCompleted5mTime: '2026-06-05T09:50:00-04:00',
+  expectedCompleted5mTime: completed5mAssuranceStale.expectedCompletedTime,
+}), scannerDataQualityNoticeKey({
+  tradeDate: '2026-06-05',
+  session: 'morning',
+  instrument: 'MES',
+  reason: completed5mAssuranceStale.message,
+  latestCompleted5mTime: completed5mAssuranceStale.latestCompletedTime,
+  expectedCompleted5mTime: completed5mAssuranceStale.expectedCompletedTime,
+}));
 
 const sufficientHistoryCoverage = (['5m', '15m', '60m', '120m', '240m'] as const).map((timeframe) => ({
   timeframe,
@@ -902,6 +979,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     activeCampaignSent: {},
     watchlistSent: {},
     windowStartSent: {},
+    dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},
     lastMarketMapRefreshBySession: {},
     lastHealthStatus: null,

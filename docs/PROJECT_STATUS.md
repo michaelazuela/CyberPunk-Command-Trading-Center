@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-10
+Task: Surface stale or missing completed 5M data in Discord without removing Market Mapping Mode.
+Files changed: docs/PROJECT_STATUS.md, scripts/architecture-guard.js, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Manual/live morning scanner reruns could appear quiet when the bridge had stale current-session 5M data. The desk needs a visible operational data-quality notice, not a silent Market Mapping fallback.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run nt:scanner -- --instrument MES --bridge-instrument "MES 06-26" --once --bar-time-zone eastern --dry-run; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Added a deduped scanner data-quality Discord notice for missing/stale completed 5M blocker exits. The notice states no trade alert was posted, shows latest vs expected completed 5M timing, gives recovery steps, and carries no outcome buttons or trade-plan attachments.
+Trading logic changed: No. Market Mapping remains context-only. No setup definitions, approvals, canExecute, entries, stops, targets, risk gates, or bridge data interpretation were changed.
+Bridge impact: None.
+Discord impact: Yes, operational notice only. Stale/missing completed 5M data can now post a data-quality notice instead of only logging locally.
+Journal/RAG impact: None. Data-quality notices do not create trade/outcome RAG records.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: During the next stale/missing completed 5M condition inside a scanner cycle, confirm the Discord data-quality notice appears before fixing the bridge feed.
+
+## Previous Change
+
+Date: 2026-06-10
 Task: Review and harden Phase 9D-9F for live Discord/RAG workflow.
 Files changed: docs/PROJECT_STATUS.md, docs/SCANNER_DESK_STATE_PHASE_9_AUDIT.md, scripts/architecture-guard.js, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: User clarified the app UI is no longer the priority; live bridge updates through Discord and Discord outcome submission into RAG are the primary workflow.

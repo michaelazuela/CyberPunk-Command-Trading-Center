@@ -161,6 +161,7 @@ interface ScannerStateFile {
   activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
   windowStartSent: Record<string, string>;
+  dataQualityNoticeSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
   lastHealthStatus: ScannerHealthStatus | null;
@@ -946,6 +947,7 @@ function emptyScannerState(): ScannerStateFile {
     activeCampaignSent: {},
     watchlistSent: {},
     windowStartSent: {},
+    dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},
     lastMarketMapRefreshBySession: {},
     lastHealthStatus: null,
@@ -963,6 +965,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         activeCampaignSent: parsed.activeCampaignSent || {},
         watchlistSent: parsed.watchlistSent || {},
         windowStartSent: parsed.windowStartSent || {},
+        dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
         lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
         lastHealthStatus: parsed.lastHealthStatus || null,
@@ -3111,6 +3114,136 @@ async function sendScannerHealthAlertIfNeeded(args: {
   }
 }
 
+export function scannerDataQualityNoticeKey(args: {
+  tradeDate: string;
+  session: LiveSession | 'market_mapping';
+  instrument: Instrument;
+  reason: string;
+  latestCompleted5mTime?: string | null;
+  expectedCompleted5mTime?: string | null;
+}): string {
+  return [
+    args.tradeDate,
+    args.instrument,
+    args.session,
+    'data-quality',
+    args.latestCompleted5mTime || 'missing-latest-5m',
+    args.expectedCompleted5mTime || 'unknown-expected-5m',
+    args.reason.replace(/\s+/g, ' ').slice(0, 120),
+  ].join('|');
+}
+
+export function buildScannerDataQualityNoticePayload(args: {
+  tradeDate: string;
+  session: LiveSession | 'market_mapping';
+  config: ScannerConfig;
+  windowLabel: string;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  completedFiveMinuteBarAssurance: ScannerCompletedFiveMinuteBarAssuranceStatus;
+  reason: string;
+  manualRun: boolean;
+}): DiscordWebhookPayload {
+  const sessionLabel = args.session === 'market_mapping'
+    ? 'Market Mapping'
+    : args.session === 'morning'
+      ? 'Morning'
+      : 'Lunch';
+  const latest = args.completedFiveMinuteBarAssurance.latestCompletedTime || args.completed5m?.time || null;
+  const expected = args.completedFiveMinuteBarAssurance.expectedCompletedTime || null;
+  const recovery = (args.completedFiveMinuteBarAssurance.recoverySteps || []).slice(0, 3);
+  return {
+    username: 'Quant Desk',
+    content: `# Quant Desk Scanner Data-Quality Notice - ${sessionLabel}\nNo trade alert was posted. This is an operational data issue, not a no-trade setup conclusion.`,
+    embeds: [
+      {
+        title: `Scanner Data-Quality Blocker - ${sessionLabel}`,
+        description: 'The scanner kept Market Mapping context-only and did not create a trade plan because current completed 5M evidence was not usable.',
+        color: 0xd50000,
+        fields: [
+          {
+            name: 'Run Context',
+            value: clip([
+              `Trade date: ${args.tradeDate}`,
+              `Window: ${args.windowLabel}`,
+              `Manual one-cycle run: ${args.manualRun ? 'yes' : 'no'}`,
+              `Instrument: ${args.config.instrument}`,
+              `Bridge instrument: ${args.config.bridgeInstrument}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: '5M Data Status',
+            value: clip([
+              `Current price: ${money(args.currentPrice)}`,
+              `Latest completed 5M: ${latest || 'N/A'}`,
+              `Expected completed 5M near: ${expected || 'N/A'}`,
+              `Reason: ${args.reason}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: 'Desk Boundary',
+            value: 'No entries, stops, targets, approvals, or outcome buttons were created. Fix the live bridge/candle feed, then rerun the scanner.',
+            inline: false,
+          },
+          {
+            name: 'Recovery',
+            value: clip(recovery.length ? recovery.map((step, index) => `${index + 1}. ${step}`).join('\n') : 'Refresh NinjaTrader/bridge and wait for the next completed 5M bar.'),
+            inline: false,
+          },
+        ],
+        footer: { text: 'Quant Desk - Data-quality blocker - Market Mapping remains context only' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+async function sendScannerDataQualityNoticeIfNeeded(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  tradeDate: string;
+  session: LiveSession | 'market_mapping';
+  windowLabel: string;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  completedFiveMinuteBarAssurance: ScannerCompletedFiveMinuteBarAssuranceStatus;
+  reason: string;
+  manualRun: boolean;
+}): Promise<void> {
+  const noticeKey = scannerDataQualityNoticeKey({
+    tradeDate: args.tradeDate,
+    session: args.session,
+    instrument: args.config.instrument,
+    reason: args.reason,
+    latestCompleted5mTime: args.completedFiveMinuteBarAssurance.latestCompletedTime || args.completed5m?.time || null,
+    expectedCompleted5mTime: args.completedFiveMinuteBarAssurance.expectedCompletedTime || null,
+  });
+  if (args.state.dataQualityNoticeSent[noticeKey]) return;
+
+  if (!args.config.discordEnabled) {
+    args.state.dataQualityNoticeSent[noticeKey] = new Date().toISOString();
+    console.log(`[scanner-data] Discord data-quality notice skipped because Discord is disabled: ${noticeKey}`);
+    return;
+  }
+
+  const webhook = resolveScannerDiscordWebhookUrl();
+  if (!args.config.dryRun && !webhook.url) {
+    console.warn(`[scanner-data] Discord data-quality notice skipped because scanner Discord webhook is not configured: ${noticeKey}`);
+    return;
+  }
+
+  const payload = buildScannerDataQualityNoticePayload(args);
+  try {
+    await postDiscord(payload, args.config);
+    args.state.dataQualityNoticeSent[noticeKey] = new Date().toISOString();
+    console.log(`[scanner-data] Sent scanner data-quality notice: ${noticeKey}`);
+  } catch (error) {
+    console.warn(`[scanner-data] Discord data-quality notice failed: ${formatError(error)}`);
+  }
+}
+
 function buildWindowStartPayload(args: {
   session: LiveSession;
   tradeDate: string;
@@ -3571,6 +3704,18 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     });
     logScannerHealth(healthReport);
     await sendScannerHealthAlertIfNeeded({ config, state, report: healthReport });
+    await sendScannerDataQualityNoticeIfNeeded({
+      config,
+      state,
+      tradeDate,
+      session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+      windowLabel: window.label,
+      currentPrice: null,
+      completed5m: null,
+      completedFiveMinuteBarAssurance: completed5mAssurance,
+      reason: healthReport.blockingReasons[0] || completed5mAssurance.message,
+      manualRun: config.once,
+    });
     await writeState(state);
     console.log(`[scanner] ${new Date().toISOString()} NoData: bridge unavailable.`);
     return;
@@ -3669,12 +3814,39 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   await sendScannerHealthAlertIfNeeded({ config, state, report: healthReport });
 
   if (!canSendAlertsFromHealth(healthReport)) {
+    if (completed5mAssurance.status === 'blocked') {
+      await sendScannerDataQualityNoticeIfNeeded({
+        config,
+        state,
+        tradeDate,
+        session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+        windowLabel: window.label,
+        currentPrice,
+        completed5m,
+        completedFiveMinuteBarAssurance: completed5mAssurance,
+        reason: healthReport.blockingReasons[0] || completed5mAssurance.message || 'Scanner health blocked trade/watchlist alerts.',
+        manualRun: config.once,
+      });
+    }
     console.log(`[scanner] NoData: ${healthReport.blockingReasons.join(' | ')}`);
     await writeState(state);
     return;
   }
 
   if (bridgeFreshness.stale) {
+    await sendScannerDataQualityNoticeIfNeeded({
+      config,
+      state,
+      tradeDate,
+      session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+      windowLabel: window.label,
+      currentPrice,
+      completed5m,
+      completedFiveMinuteBarAssurance: completed5mAssurance,
+      reason: bridgeFreshness.reason || completed5mAssurance.message || 'Latest completed 5M candle is stale.',
+      manualRun: config.once,
+    });
+    await writeState(state);
     console.log(`[scanner] NoData: ${bridgeFreshness.reason}`);
     return;
   }
@@ -3747,6 +3919,18 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     if (completed5mAssurance.recoverySteps?.length) {
       console.warn(`[scanner-data] recovery: ${completed5mAssurance.recoverySteps.join(' | ')}`);
     }
+    await sendScannerDataQualityNoticeIfNeeded({
+      config,
+      state,
+      tradeDate,
+      session,
+      windowLabel: window.label,
+      currentPrice,
+      completed5m,
+      completedFiveMinuteBarAssurance: completed5mAssurance,
+      reason: completed5mAssurance.message,
+      manualRun: config.once,
+    });
     await writeState(state);
     return;
   }
