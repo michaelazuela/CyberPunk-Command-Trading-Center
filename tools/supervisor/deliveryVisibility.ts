@@ -135,6 +135,22 @@ function latestTradeDate(state: Record<string, unknown>, now: Date): string | nu
   return olderThanToday && beforeRth ? null : latest;
 }
 
+function etMinutes(now: Date): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(now).map((part) => [part.type, part.value]));
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+function isRthScannerFreshnessWindow(now: Date): boolean {
+  const minutes = etMinutes(now);
+  return minutes >= (9 * 60 + 30) && minutes <= (15 * 60 + 30);
+}
+
 function deliveryStatus(value: unknown): ScannerDeliveryStatus {
   if (value === 'sent' || value === 'failed' || value === 'pending' || value === 'skipped') return value;
   return 'unknown';
@@ -233,7 +249,7 @@ function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: 
     blockers.push(`Scanner health status is ${lastHealthStatus}.`);
   }
 
-  const activeTradeDate = latestTradeDate(state, now);
+  const activeTradeDate = isRthScannerFreshnessWindow(now) ? latestTradeDate(state, now) : null;
   if (activeTradeDate) {
     const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
       .map(([key, value]) => ({ key, value: stringOrNull(value) }))

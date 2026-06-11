@@ -455,6 +455,25 @@ const previousSessionDeliveryReport = buildDeliveryVisibilityReport({
 assert.deepEqual(previousSessionDeliveryReport.staleDataBlockers, []);
 assert.equal(previousSessionDeliveryReport.status, 'ok');
 
+const overnightSameDateStatePath = path.join(deliveryFixtureDir, '.nt-scanner-overnight-same-date-state.json');
+fs.writeFileSync(overnightSameDateStatePath, JSON.stringify({
+  lastCompleted5mBySession: {
+    '2026-06-11:morning': '2026-06-11T00:05:00',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-11:morning': '2026-06-11T00:05:00',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const overnightSameDateDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: overnightSameDateStatePath,
+  auditDir,
+  now: new Date('2026-06-11T04:08:58.000Z'),
+  staleAfterMs: 180_000,
+});
+assert.deepEqual(overnightSameDateDeliveryReport.staleDataBlockers, []);
+assert.equal(overnightSameDateDeliveryReport.status, 'ok');
+
 const pendingGapLedgerPath = path.join(deliveryFixtureDir, '.market-data-gap-events.json');
 fs.writeFileSync(pendingGapLedgerPath, JSON.stringify([
   {

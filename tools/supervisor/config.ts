@@ -75,7 +75,6 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const bridgeUrl = env.NINJATRADER_BRIDGE_URL?.trim() || env.SUPERVISOR_BRIDGE_URL?.trim() || 'http://127.0.0.1:8765';
   const pollSeconds = env.SUPERVISOR_POLL_SECONDS?.trim() || '60';
   const barTimeZone = env.SUPERVISOR_BAR_TIME_ZONE?.trim() || 'eastern';
-  const recorderHeartbeatPath = env.SUPERVISOR_RECORDER_HEARTBEAT_PATH?.trim() || path.resolve(process.cwd(), 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
   const enabledServices = env.SUPERVISOR_SERVICES;
 
   return [
@@ -96,7 +95,6 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bridge-url', bridgeUrl,
         '--poll-seconds', pollSeconds,
         '--bar-time-zone', barTimeZone,
-        '--heartbeat-path', recorderHeartbeatPath,
       ],
       enabled: csvIncludes(enabledServices, 'candle-recorder', true),
     },
