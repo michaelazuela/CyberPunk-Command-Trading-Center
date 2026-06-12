@@ -758,6 +758,11 @@ const deskState = buildDeskState({
   candidate: strongCandidate,
   visibilityMetadata: deskVisibility,
   candidateLifecycleTrace: lifecycleTrace,
+  targetCascade: buildTargetCascade({
+    candidate: strongCandidate,
+    objectives: [objective(112, 'london')],
+    recentBars: [],
+  }),
   canExecute: false,
 });
 assert.equal(deskState.sourceOfTruth, 'scanner_desk_state');
@@ -774,6 +779,10 @@ assert.equal(deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_pa
 assert.equal(deskState.promotion.currentStage, 'human_review_ready');
 assert.equal(deskState.promotion.nextStage, 'posted_plan');
 assert.equal(deskState.promotion.canPromoteNow, false);
+assert.equal(deskState.primaryDeskPlay.levelTransition?.sourceOfTruth, 'scanner_level_transition_map');
+assert.equal(deskState.primaryDeskPlay.levelTransition?.targetReactionLevel, 112);
+assert.ok(deskState.primaryDeskPlay.levelTransition?.profitProtectionInstruction.includes('target/reaction decision area'));
+assert.equal(deskState.primaryDeskPlay.levelTransition?.approvalBoundary.changesCanExecute, false);
 
 const watchDeskVisibility = classifyScannerVisibility({
   state: 'Watching',

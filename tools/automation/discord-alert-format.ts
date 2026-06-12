@@ -81,6 +81,16 @@ export interface CompactDeskStateForDiscord {
     targetReactionLevel?: number | null;
     targetReactionLabel?: string | null;
     targetReactionReason?: string | null;
+    levelTransition?: {
+      sourceOfTruth?: string;
+      targetReactionLevel?: number | null;
+      targetReactionLabel?: string | null;
+      targetReactionReason?: string | null;
+      longAbove?: number | null;
+      shortBelow?: number | null;
+      profitProtectionInstruction?: string;
+      nextStructureInstruction?: string;
+    } | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -305,10 +315,21 @@ function firstTargetReactionObjective(candidate: SetupCandidate): TargetObjectiv
 }
 
 function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
-  const reaction = firstTargetReactionObjective(candidate);
   const play = args.deskState?.primaryDeskPlay;
-  const longAbove = typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
-  const shortBelow = typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
+  const transition = play?.levelTransition;
+  const reaction = transition?.targetReactionLevel
+    ? {
+        label: transition.targetReactionLabel || 'HTF/session reaction level',
+        price: transition.targetReactionLevel,
+        reason: transition.targetReactionReason || transition.profitProtectionInstruction || 'HTF/session reaction level; watch for failure or reversal proof.',
+      }
+    : firstTargetReactionObjective(candidate);
+  const longAbove = typeof transition?.longAbove === 'number' && Number.isFinite(transition.longAbove)
+    ? transition.longAbove
+    : typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
+  const shortBelow = typeof transition?.shortBelow === 'number' && Number.isFinite(transition.shortBelow)
+    ? transition.shortBelow
+    : typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
   const nextLine = [
     longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
     shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
@@ -318,11 +339,11 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
     'Level Transition:',
     ...(reaction ? [
       `Target/reaction: ${reaction.label} ${priceLine(reaction.price)}`,
-      compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 85),
+      compactLine(transition?.profitProtectionInstruction || reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 110),
     ] : []),
     ...(nextLine ? [
       `After 5M shift: ${nextLine}.`,
-      'No continuation assumption at reaction level; wait for close/retest/protected structure.',
+      compactLine(transition?.nextStructureInstruction || 'No continuation assumption at reaction level; wait for close/retest/protected structure.', 110),
     ] : []),
   ];
 }
@@ -642,11 +663,18 @@ function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs): string[] {
 function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
-  const reactionLevel = typeof play.targetReactionLevel === 'number' && Number.isFinite(play.targetReactionLevel)
+  const transition = play.levelTransition;
+  const reactionLevel = typeof transition?.targetReactionLevel === 'number' && Number.isFinite(transition.targetReactionLevel)
+    ? transition.targetReactionLevel
+    : typeof play.targetReactionLevel === 'number' && Number.isFinite(play.targetReactionLevel)
     ? play.targetReactionLevel
     : null;
-  const longAbove = typeof play.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
-  const shortBelow = typeof play.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
+  const longAbove = typeof transition?.longAbove === 'number' && Number.isFinite(transition.longAbove)
+    ? transition.longAbove
+    : typeof play.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
+  const shortBelow = typeof transition?.shortBelow === 'number' && Number.isFinite(transition.shortBelow)
+    ? transition.shortBelow
+    : typeof play.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
   const nextLine = [
     longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
     shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
@@ -655,12 +683,12 @@ function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[]
   return [
     'Level Transition:',
     ...(reactionLevel !== null ? [
-      `Target/reaction: ${compactLine(play.targetReactionLabel || 'HTF/session reaction level', 70)} ${priceLine(reactionLevel)}`,
-      compactLine(play.targetReactionReason || 'Target/reaction level; watch for failure or reversal proof.', 85),
+      `Target/reaction: ${compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction level', 70)} ${priceLine(reactionLevel)}`,
+      compactLine(transition?.profitProtectionInstruction || play.targetReactionReason || 'Target/reaction level; watch for failure or reversal proof.', 110),
     ] : []),
     ...(nextLine ? [
       `After 5M shift: ${nextLine}.`,
-      'Map only; execution still needs completed 5M trigger/retest and canExecute gates.',
+      compactLine(transition?.nextStructureInstruction || 'Map only; execution still needs completed 5M trigger/retest and canExecute gates.', 150),
     ] : []),
   ];
 }

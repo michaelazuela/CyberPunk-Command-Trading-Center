@@ -1621,6 +1621,7 @@ async function writeScannerDiscordAuditLog(args: {
     candidate: args.candidate,
     visibilityMetadata,
     candidateLifecycleTrace,
+    targetCascade: args.targetCascade,
     canExecute: Boolean(args.normalized.canExecute),
   });
   const auditPayload = repairDuplicateAuditTargets({
@@ -1907,6 +1908,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   alertDecision: { shouldSend: boolean; reason: string };
   visibilityMetadata?: ScannerVisibilityMetadata;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
   planVersionId: string;
   dryRun: boolean;
@@ -1944,6 +1946,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidate: args.candidate,
     visibilityMetadata,
     candidateLifecycleTrace,
+    targetCascade: args.targetCascade,
     canExecute: Boolean(args.normalized.canExecute),
   });
   const event = {
@@ -3076,6 +3079,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     candidate: args.candidate,
     visibilityMetadata,
     candidateLifecycleTrace,
+    targetCascade: args.targetCascade,
     canExecute: Boolean(args.normalized.canExecute),
   });
   const visualCandidate = deskState.discordAction === 'post_watch'
@@ -4416,6 +4420,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidate,
     visibilityMetadata,
     candidateLifecycleTrace,
+    targetCascade,
     canExecute: Boolean(normalized.canExecute),
   });
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
@@ -4435,6 +4440,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     alertDecision,
     visibilityMetadata,
     candidateLifecycleTrace,
+    targetCascade,
     deskState,
     planVersionId,
     dryRun: config.dryRun,

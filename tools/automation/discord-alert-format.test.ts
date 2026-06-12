@@ -330,6 +330,16 @@ const deskPlayPayload = compactDiscordSummary({
       targetReactionLevel: 7288.25,
       targetReactionLabel: 'London Session Low',
       targetReactionReason: 'Real session liquidity where short delivery can stall or reverse.',
+      levelTransition: {
+        sourceOfTruth: 'scanner_level_transition_map',
+        targetReactionLevel: 7288.25,
+        targetReactionLabel: 'London Session Low',
+        targetReactionReason: 'Real session liquidity where short delivery can stall or reverse.',
+        longAbove: 7342,
+        shortBelow: 7303.5,
+        profitProtectionInstruction: 'Treat London Session Low 7288.25 as the target/reaction decision area.',
+        nextStructureInstruction: 'After a protected completed 5M market-structure shift, use LONG above 7342.00 / SHORT below 7303.50 as the next line-in-the-sand map.',
+      },
       nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
       invalidation: 'Completed 5M acceptance below 7342 damages the long continuation play.',
       noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
@@ -372,7 +382,9 @@ assert.ok(deskPlayText.includes('T1: 7372.50'));
 assert.ok(deskPlayText.includes('T2: 7392.50'));
 assert.ok(deskPlayText.includes('Level Transition:'));
 assert.ok(deskPlayText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(deskPlayText.includes('target/reaction decision area'));
 assert.ok(deskPlayText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7303.50.'));
+assert.ok(deskPlayText.includes('next line-in-the-sand map'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));
 assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached; app math used; canExecute remains false.'));
 assert.ok(deskPlayText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));

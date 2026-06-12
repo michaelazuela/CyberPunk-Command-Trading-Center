@@ -197,6 +197,7 @@ export interface ScannerCandidateLifecycleTraceItem {
   targetReactionLevel: number | null;
   targetReactionLabel: string | null;
   targetReactionReason: string | null;
+  levelTransition: DeskLevelTransitionMap | null;
   htfConflict: boolean;
   countertrend: boolean;
   hasFullPlanLevels: boolean;
@@ -265,6 +266,22 @@ export interface DeskPlayDirectionalBias {
   blockers: string[];
 }
 
+export interface DeskLevelTransitionMap {
+  sourceOfTruth: 'scanner_level_transition_map';
+  targetReactionLevel: number | null;
+  targetReactionLabel: string | null;
+  targetReactionReason: string | null;
+  longAbove: number | null;
+  shortBelow: number | null;
+  profitProtectionInstruction: string;
+  nextStructureInstruction: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -276,6 +293,7 @@ export interface PrimaryDeskPlay {
   targetReactionLevel: number | null;
   targetReactionLabel: string | null;
   targetReactionReason: string | null;
+  levelTransition: DeskLevelTransitionMap | null;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;
@@ -916,6 +934,39 @@ function candidateTargetReactionObjective(candidate: SetupCandidate): TargetObje
   );
 }
 
+function buildLevelTransitionMap(args: {
+  targetReaction: TargetObjective | null;
+  longAbove: number | null;
+  shortBelow: number | null;
+}): DeskLevelTransitionMap | null {
+  const hasReaction = Boolean(args.targetReaction);
+  const hasNextStructure = args.longAbove !== null || args.shortBelow !== null;
+  if (!hasReaction && !hasNextStructure) return null;
+  const nextLines = [
+    args.longAbove !== null ? `LONG above ${args.longAbove.toFixed(2)}` : null,
+    args.shortBelow !== null ? `SHORT below ${args.shortBelow.toFixed(2)}` : null,
+  ].filter(Boolean).join(' / ');
+  return {
+    sourceOfTruth: 'scanner_level_transition_map',
+    targetReactionLevel: args.targetReaction?.price ?? null,
+    targetReactionLabel: args.targetReaction?.label ?? null,
+    targetReactionReason: args.targetReaction?.reason ?? null,
+    longAbove: args.longAbove,
+    shortBelow: args.shortBelow,
+    profitProtectionInstruction: args.targetReaction
+      ? `Treat ${args.targetReaction.label} ${args.targetReaction.price.toFixed(2)} as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.`
+      : 'No target/reaction level is mapped for this cycle; do not invent a profit-taking or reversal area.',
+    nextStructureInstruction: nextLines
+      ? `After a protected completed 5M market-structure shift, use ${nextLines} as the next line-in-the-sand map.`
+      : 'No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   const text = [
@@ -993,6 +1044,12 @@ export function buildCandidateLifecycleTrace(args: {
     });
     const selected = Boolean(selectedKey && scannerCandidateKey(candidate) === selectedKey);
     const targetReaction = candidateTargetReactionObjective(candidate);
+    const lineInSand = candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null;
+    const levelTransition = buildLevelTransitionMap({
+      targetReaction,
+      longAbove: candidate.direction === 'LONG' ? lineInSand : null,
+      shortBelow: candidate.direction === 'SHORT' ? lineInSand : null,
+    });
     return {
       candidateKey: scannerCandidateKey(candidate),
       setupType: candidate.setupType,
@@ -1017,11 +1074,12 @@ export function buildCandidateLifecycleTrace(args: {
       target2: numericOrNull(candidate.target2),
       riskPoints: numericOrNull(candidate.riskPoints),
       invalidation: candidate.invalidation || null,
-      lineInSand: candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null,
+      lineInSand,
       lineInSandReason: candidate.activeRuleset?.htfLineInSand?.lineReason ?? null,
       targetReactionLevel: targetReaction?.price ?? null,
       targetReactionLabel: targetReaction?.label ?? null,
       targetReactionReason: targetReaction?.reason ?? null,
+      levelTransition,
       htfConflict: candidateHasHtfConflict(candidate),
       countertrend: candidateHasHtfConflict(candidate),
       hasFullPlanLevels: hasFullPlanLevels(candidate),
@@ -1262,6 +1320,7 @@ function buildPrimaryDeskPlay(args: {
   candidate: SetupCandidate | null;
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  targetCascade?: TargetCascadeResult | null;
   canExecute: boolean;
 }): PrimaryDeskPlay {
   const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace);
@@ -1287,18 +1346,37 @@ function buildPrimaryDeskPlay(args: {
   const targetReactionLevel = primaryBias && primaryDirection !== 'WAIT'
     ? (primaryDirection === 'LONG'
         ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLevel
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLevel) ?? null
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLevel) ??
+      args.targetCascade?.activeTarget?.price ??
+      null
     : null;
   const targetReactionLabel = primaryBias && primaryDirection !== 'WAIT'
     ? (primaryDirection === 'LONG'
         ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLabel
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLabel) ?? null
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLabel) ??
+      args.targetCascade?.activeTarget?.label ??
+      null
     : null;
   const targetReactionReason = primaryBias && primaryDirection !== 'WAIT'
     ? (primaryDirection === 'LONG'
         ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionReason
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionReason) ?? null
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionReason) ??
+      args.targetCascade?.activeTarget?.reason ??
+      args.targetCascade?.reason ??
+      null
     : null;
+  const targetReaction = targetReactionLevel !== null
+    ? {
+        price: targetReactionLevel,
+        label: targetReactionLabel || 'HTF/session reaction level',
+        reason: targetReactionReason || 'HTF/session target/reaction level from scanner-owned target context.',
+      } as TargetObjective
+    : null;
+  const levelTransition = buildLevelTransitionMap({
+    targetReaction,
+    longAbove: longBias.lineInSand,
+    shortBelow: shortBias.lineInSand,
+  });
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
@@ -1322,6 +1400,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionLevel,
     targetReactionLabel,
     targetReactionReason,
+    levelTransition,
     nextTrigger,
     invalidation,
     noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
@@ -1347,6 +1426,7 @@ export function buildDeskState(args: {
   candidate?: SetupCandidate | null;
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  targetCascade?: TargetCascadeResult | null;
   canExecute?: boolean;
 }): DeskState {
   const candidate = args.candidate || null;
@@ -1365,6 +1445,7 @@ export function buildDeskState(args: {
     candidate,
     visibilityMetadata: args.visibilityMetadata,
     candidateLifecycleTrace: args.candidateLifecycleTrace,
+    targetCascade: args.targetCascade,
     canExecute: Boolean(args.canExecute),
   });
   return {
