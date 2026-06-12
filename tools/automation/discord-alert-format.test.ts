@@ -376,19 +376,18 @@ assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
 assert.ok(deskPlayText.includes('Decision Map:'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('SHORT BELOW 7303.50'));
-assert.ok(deskPlayText.includes('Entry reference: 7312.00'));
-assert.ok(deskPlayText.includes('Protected 5M stop: 7271.75'));
-assert.ok(deskPlayText.includes('Risk: 40.25 pts'));
-assert.ok(deskPlayText.includes('T1: 7372.50'));
-assert.ok(deskPlayText.includes('T2: 7392.50'));
+assert.ok(deskPlayText.includes('Entry 7312.00'));
+assert.ok(deskPlayText.includes('Stop 7271.75'));
+assert.ok(deskPlayText.includes('Risk 40.25'));
+assert.ok(deskPlayText.includes('T1 7372.50'));
+assert.ok(deskPlayText.includes('T2 7392.50'));
 assert.ok(deskPlayText.includes('Level Transition:'));
 assert.ok(deskPlayText.includes('Target/reaction: London Session Low 7288.25'));
-assert.ok(deskPlayText.includes('target/reaction decision area'));
 assert.ok(deskPlayText.includes('take T1 seriously'));
-assert.ok(deskPlayText.includes('cap expectation at T2 into HTF/session structure'));
-assert.ok(deskPlayText.includes('Reversal risk live at HTF structure'));
+assert.ok(deskPlayText.includes('cap T2 into HTF'));
+assert.ok(deskPlayText.includes('reversal risk live'));
 assert.ok(deskPlayText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7303.50.'));
-assert.ok(deskPlayText.includes('next line-in-the-sand map'));
+assert.ok(deskPlayText.includes('Map only; execution still needs completed 5M trigger/retest and canExecute gates.'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));
 assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached; app math used; canExecute remains false.'));
 assert.ok(deskPlayText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));
@@ -452,12 +451,12 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 });
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
-assert.ok(deskPlayDecisionMapText.includes('Entry reference: 7339.75'));
-assert.ok(deskPlayDecisionMapText.includes('Protected 5M stop: 7350.25'));
-assert.ok(deskPlayDecisionMapText.includes('Risk: 10.50 pts'));
-assert.ok(deskPlayDecisionMapText.includes('T1: 7324.00'));
-assert.ok(deskPlayDecisionMapText.includes('T2: 7318.75'));
-assert.ok(deskPlayDecisionMapText.includes('Status: Review only until completed 5M trigger/retest and canExecute gates pass.'));
+assert.ok(deskPlayDecisionMapText.includes('Entry 7339.75'));
+assert.ok(deskPlayDecisionMapText.includes('Stop 7350.25'));
+assert.ok(deskPlayDecisionMapText.includes('Risk 10.50'));
+assert.ok(deskPlayDecisionMapText.includes('T1 7324.00'));
+assert.ok(deskPlayDecisionMapText.includes('T2 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('Review only.'));
 assert.ok(deskPlayDecisionMapText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlayDecisionMapText));
 
@@ -573,7 +572,7 @@ const scannerReadyPayload = compactDiscordSummary({
 validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
 assert.ok(scannerReadyText.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(scannerReadyText.includes('WAIT - normalized plan not executable; fresh completed 5M required'));
+assert.ok(scannerReadyText.includes('WAIT - fresh completed 5M required'));
 assert.ok(scannerReadyText.includes('Trigger State: MSS_HOLD_CONFIRMED'));
 assert.ok(scannerReadyText.includes('HTF Context:'));
 assert.ok(scannerReadyText.includes('Status: sufficient | Reliability: structural'));
@@ -772,7 +771,7 @@ const rawConditionalCanExecutePayload = compactDiscordSummary({
 validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
 const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
 assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
-assert.ok(rawConditionalText.includes('WAIT - normalized plan not executable; fresh completed 5M required'));
+assert.ok(rawConditionalText.includes('WAIT - fresh completed 5M required'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
 
 const riskTooWideCandidate = sampleCandidate('LONG');
@@ -1076,7 +1075,7 @@ assert.equal(
 );
 assert.equal(
   compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, true),
-  'Details: Visual attachments unavailable — review local logs before action.'
+  'Details: Visuals unavailable; review local logs before action.'
 );
 assert.equal(
   compactAttachmentLine({ chartPlan: false, priceLevelMap: false }, false),

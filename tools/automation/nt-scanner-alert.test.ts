@@ -1466,7 +1466,7 @@ try {
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('Compact Trade Plan Summary'));
   assert.ok(text.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-  assert.ok(text.includes('Status: WAIT - normalized plan not executable; fresh completed 5M required'));
+  assert.ok(text.includes('Status: WAIT - fresh completed 5M required'));
   assert.ok(text.includes('Plan:'));
   assert.ok(text.includes('Risk: 5.00 pts / N/A'));
   assert.ok(text.includes('Invalidation:'));

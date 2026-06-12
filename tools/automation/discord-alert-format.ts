@@ -392,7 +392,7 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
-  if (status === 'CONDITIONAL') return 'WAIT - normalized plan not executable; fresh completed 5M required';
+  if (status === 'CONDITIONAL') return 'WAIT - fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
   return 'WAIT - app-owned pipeline has not approved execution';
 }
@@ -501,8 +501,8 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
     ...(candidate.requiredTrigger || candidate.nextAction ? [
       '',
       'Trigger:',
-      compactLine(candidate.requiredTrigger || candidate.nextAction, 100),
-      ...(candidate.nextAction && candidate.nextAction !== candidate.requiredTrigger ? [compactLine(candidate.nextAction, 100)] : []),
+      compactLine(candidate.requiredTrigger || candidate.nextAction, 85),
+      ...(candidate.nextAction && candidate.nextAction !== candidate.requiredTrigger ? [compactLine(candidate.nextAction, 85)] : []),
       'No chase. Wait for completed 5M proof and protected structure.',
     ] : []),
   ];
@@ -630,15 +630,21 @@ function deskPlayDecisionMapBlock(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   normalized: CompactNormalizedPlan,
   direction: 'LONG' | 'SHORT',
+  compact: boolean,
 ): string[] {
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return [];
   const levels = deskPlayDecisionMapLevels(normalized, direction);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   if (!levels) {
+    const line = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
+    return compact
+      ? [`${line} | levels withheld until entry + protected 5M stop proof exist.`]
+      : [line, 'Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.'];
+  }
+  if (compact) {
     return [
-      `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
-      'Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
+      `${direction} ${triggerWord} ${priceLine(lineInSand)} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | Risk ${numberLine(levels.riskPoints)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)} | Review only.`,
     ];
   }
   return [
@@ -652,11 +658,11 @@ function deskPlayDecisionMapBlock(
   ];
 }
 
-function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs): string[] {
+function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs, compact = false): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
-  const longBlock = deskPlayDecisionMapBlock(play, args.normalized, 'LONG');
-  const shortBlock = deskPlayDecisionMapBlock(play, args.normalized, 'SHORT');
+  const longBlock = deskPlayDecisionMapBlock(play, args.normalized, 'LONG', compact);
+  const shortBlock = deskPlayDecisionMapBlock(play, args.normalized, 'SHORT', compact);
   if (!longBlock.length && !shortBlock.length) return [];
   return [
     'Decision Map:',
@@ -689,14 +695,11 @@ function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[]
   return [
     'Level Transition:',
     ...(reactionLevel !== null ? [
-      `Target/reaction: ${compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction level', 70)} ${priceLine(reactionLevel)}`,
-      compactLine(transition?.profitProtectionInstruction || play.targetReactionReason || 'Target/reaction level; watch for failure or reversal proof.', 110),
-      compactLine(transition?.targetManagementInstruction || 'Management: take T1 seriously; cap at T2 into HTF/session structure unless completed 5M accepts.', 115),
-      'Reversal risk live at HTF structure.',
+      `Target/reaction: ${compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction level', 50)} ${priceLine(reactionLevel)} | take T1 seriously; cap T2 into HTF; reversal risk live.`,
     ] : []),
     ...(nextLine ? [
       `After 5M shift: ${nextLine}.`,
-      compactLine(transition?.nextStructureInstruction || 'Map only; execution still needs completed 5M trigger/retest and canExecute gates.', 150),
+      'Map only; execution still needs completed 5M trigger/retest and canExecute gates.',
     ] : []),
   ];
 }
@@ -720,7 +723,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `Current Play: ${compactLine(play?.title || 'WAIT - desk play not confirmed', 90)}`,
     `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 95)}`,
     `Line in the Sand: ${line}`,
-    ...(play ? ['', ...deskPlayDecisionMapLines(args)] : []),
+    ...(play ? ['', ...deskPlayDecisionMapLines(args, true)] : []),
     ...(play ? ['', ...deskPlayLevelTransitionLines(args)] : []),
     ...(play?.countertrendWarning ? ['', `Countertrend: ${compactLine(play.countertrendWarning, 120)}`] : []),
     '',
@@ -836,7 +839,7 @@ export function compactAttachmentLine(attachments: CompactDiscordAttachmentState
   if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: Chart + Level Map attached.';
   if (attachments.chartPlan) return 'Details: Chart Plan attached. Price Level Map unavailable.';
   if (attachments.priceLevelMap) return 'Details: Price Level Map attached. Chart Plan unavailable.';
-  return 'Details: Visual attachments unavailable — review local logs before action.';
+  return 'Details: Visuals unavailable; review local logs before action.';
 }
 
 export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {

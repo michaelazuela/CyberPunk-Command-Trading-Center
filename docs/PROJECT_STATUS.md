@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Clean compact Discord payload wording and remove preferred-length warnings.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: The formatter still produced a 1200-character preferred-length warning from a conditional replay fixture and carried repeated Desk Play prose that was already covered by chart/DeskState context. The Discord card needed to stay useful while avoiding noisy warning output.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Passed. Compacted Desk Play decision-map lines, condensed HTF/session level-transition language, shortened generic conditional status/action detail wording, and kept app-owned long/short lines, entry/stop/T1/T2, missing proof, no-chase, and execution-boundary language visible.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord hard blockers changed.
+Bridge impact: None.
+Discord impact: Yes. Text formatting is shorter and cleaner; alert eligibility and payload hard blockers are unchanged.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor so live scanner/Discord formatting uses the compact wording.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Make the DeskState desk-agent plan narrative explicitly cover both long and short bias.
 Files changed: docs/PROJECT_STATUS.md, src/agents/deskAgentIntegration.test.ts, src/agents/deskAgentStack.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts.
 Reason: The desk-agent plan needs to read like a two-sided trading desk map: current play, long-side bias, short-side bias, target/reaction management, and the next protected 5M shift line. The opposing side must stay visible as review/countertrend/secondary context instead of disappearing behind the primary play.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None identified after verification.
 Next recommended action: Restart the supervisor so live desk-agent summaries use the two-sided narrative.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-11
 Task: Fix pending Desk Play candidates disappearing as "no ICT candidate/reference level".
