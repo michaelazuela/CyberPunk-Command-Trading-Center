@@ -3203,7 +3203,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   confidence: ScannerConfidenceBreakdown;
   normalized: ReturnType<typeof buildAppTradePlan>;
   chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
-  currentPrice?: number | null;
+  currentPrice: number | null;
   windowLabel: string;
   planVersionId: string;
   deskState: DeskState;

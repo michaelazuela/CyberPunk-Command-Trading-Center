@@ -1754,6 +1754,7 @@ try {
     },
     normalized: deskPlayNormalized,
     chartContext: chartContext as ChartContext,
+    currentPrice: 5325,
     windowLabel: 'Lunch/PM Setup Scanner',
     planVersionId: 'SCANNER-DESK-PLAY-FIXTURE',
     deskState: deskPlayState,

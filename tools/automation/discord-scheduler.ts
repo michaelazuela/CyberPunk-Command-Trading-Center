@@ -718,6 +718,15 @@ function currentPriceFromAnalysis(analysis: AnalysisResult): number | null {
   return typeof lastCandle?.close === 'number' && Number.isFinite(lastCandle.close) ? lastCandle.close : null;
 }
 
+function currentPriceFromPlanSnapshot(normalized: unknown, candidate: SetupCandidate | null | undefined): number | null {
+  const plan = normalized && typeof normalized === 'object' ? normalized as Record<string, unknown> : {};
+  const direct = plan.currentPrice;
+  if (typeof direct === 'number' && Number.isFinite(direct)) return direct;
+  const entry = plan.entry;
+  if (typeof entry === 'number' && Number.isFinite(entry)) return entry;
+  return typeof candidate?.entry === 'number' && Number.isFinite(candidate.entry) ? candidate.entry : null;
+}
+
 function topConditionalCandidates(candidates: SetupCandidate[] | undefined, currentPrice: number | null): SetupCandidate[] {
   const freshCandidates = (candidates || []).filter((candidate) => !applyStaleChaseGuard({
     candidate,
@@ -1201,6 +1210,7 @@ async function formatPlanPayload(args: {
   normalized: NormalizedAppTradePlan;
   candidates: SetupCandidate[];
   attachments: CompactDiscordAttachmentState;
+  currentPrice: number | null;
 }): Promise<DiscordWebhookPayload> {
   const selectedCandidate = args.candidates[0] || null;
   const selectedCandidateHasFullPlan = Boolean(
@@ -1221,6 +1231,7 @@ async function formatPlanPayload(args: {
     windowLabel: args.job === 'morning'
       ? `${MORNING_EXECUTION_START_ET}-${MORNING_EXECUTION_END_ET} ET`
       : `${LUNCH_EXECUTION_START_ET}-${LUNCH_EXECUTION_END_ET} ET`,
+    currentPrice: args.currentPrice,
     components: buildOutcomeComponents({
       planVersionId: args.planVersionId,
       sessionType: args.job,
@@ -1477,6 +1488,7 @@ async function runRepostScannerAudit(auditFile: string, dryRun: boolean): Promis
       priceLevelMap: Boolean(audit.attachments.priceLevelMap),
       auditLogPath: audit.auditFile,
     },
+    currentPrice: currentPriceFromPlanSnapshot(audit.normalizedPlan, audit.candidate),
   });
   const provenance: SchedulerReplayProvenanceResult = {
     mode: 'live_scanner_audit',
@@ -1523,7 +1535,8 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
   const analysis = await buildSessionAnalysis(config, job, tradeDate, asOfEt);
   const planVersionId = createPlanVersionId(job, tradeDate);
   const normalized = buildAppTradePlan(analysis, { sessionType: job, instrument: config.instrument, windowStatusOverride: 'active' });
-  const candidates = topConditionalCandidates(normalized.setupCandidates, currentPriceFromAnalysis(analysis));
+  const currentPrice = currentPriceFromAnalysis(analysis);
+  const candidates = topConditionalCandidates(normalized.setupCandidates, currentPrice);
   const provenance = await evaluateSchedulerReplayProvenance({
     auditDir: DISCORD_AUDIT_DIR,
     tradeDate,
@@ -1603,6 +1616,7 @@ async function runJob(job: AlertJob, config: SchedulerConfig, dryRun: boolean, t
       priceLevelMap: Boolean(levelMap),
       auditLogPath,
     },
+    currentPrice,
   }), provenance);
   validateDiscordPayload(payload, files);
   const receipt = await postDiscord(payload, dryRun, files);
