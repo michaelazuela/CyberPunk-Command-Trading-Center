@@ -295,6 +295,7 @@ assert.equal(june11DeskState.canExecute, false);
 assert.equal(june11DeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('SHORT is pressing into bullish HTF/session structure'));
 assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('Treat T1/T2 as management'));
+assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('HTF/session reaction line 7303.50'));
 
 const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate()],

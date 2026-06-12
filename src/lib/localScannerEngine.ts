@@ -1000,11 +1000,17 @@ function opposingHtfStructureLabel(direction: SetupCandidate['direction']): stri
   return 'opposing HTF/session structure';
 }
 
+function htfReactionAreaLabelForLifecycleItem(item: ScannerCandidateLifecycleTraceItem): string {
+  return typeof item.lineInSand === 'number' && Number.isFinite(item.lineInSand)
+    ? `the HTF/session reaction line ${item.lineInSand.toFixed(2)}`
+    : 'the HTF/session reaction area';
+}
+
 function htfManagementWarningForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null | undefined): string | null {
   if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT') || !lifecycleItemHasHtfConflict(item)) {
     return null;
   }
-  return `${item.direction} is pressing into ${opposingHtfStructureLabel(item.direction)}. Treat T1/T2 as management, stop pressing at the HTF/session reaction area, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`;
+  return `${item.direction} is pressing into ${opposingHtfStructureLabel(item.direction)}. Treat T1/T2 as management, stop pressing at ${htfReactionAreaLabelForLifecycleItem(item)}, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`;
 }
 
 function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | undefined): number {

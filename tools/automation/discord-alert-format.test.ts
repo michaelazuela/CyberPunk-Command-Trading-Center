@@ -590,6 +590,7 @@ const scannerHtfOppositionText = flattenDiscordPayloadText(scannerHtfOppositionP
 assert.ok(scannerHtfOppositionText.includes('HTF Caution:'));
 assert.ok(scannerHtfOppositionText.includes('SHORT is pressing into bullish HTF/session structure'));
 assert.ok(scannerHtfOppositionText.includes('Treat T1/T2 as management'));
+assert.ok(scannerHtfOppositionText.includes('HTF/session reaction line 7302.75'));
 
 const scannerReadyCandidate = sampleCandidate('LONG');
 scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;

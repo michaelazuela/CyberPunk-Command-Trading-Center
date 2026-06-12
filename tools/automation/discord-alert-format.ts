@@ -356,16 +356,20 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
 
 function scannerHtfCautionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
   const deskWarning = args.deskState?.primaryDeskPlay?.countertrendWarning;
+  const reactionArea = typeof candidate.activeRuleset?.htfLineInSand?.lineInSand === 'number' &&
+    Number.isFinite(candidate.activeRuleset.htfLineInSand.lineInSand)
+    ? `the HTF/session reaction line ${priceLine(candidate.activeRuleset.htfLineInSand.lineInSand)}`
+    : 'the HTF/session reaction area';
   const rulesetBlockers = [
     ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
     ...(candidate.activeRuleset?.htfLineInSand?.blockers || []),
   ].join(' ');
   const candidateHasHtfConflict = /opposing.*htf|htf.*conflict|opposing completed.*mss|countertrend/i.test(rulesetBlockers);
   const inferredWarning = candidateHasHtfConflict && (candidate.direction === 'LONG' || candidate.direction === 'SHORT')
-    ? `${candidate.direction} is pressing into ${candidate.direction === 'SHORT' ? 'bullish' : 'bearish'} HTF/session structure. Treat T1/T2 as management, stop pressing at the HTF/session reaction area, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`
+    ? `${candidate.direction} is pressing into ${candidate.direction === 'SHORT' ? 'bullish' : 'bearish'} HTF/session structure. Treat T1/T2 as management, stop pressing at ${reactionArea}, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`
     : null;
   const warning = deskWarning || inferredWarning;
-  return warning ? ['HTF Caution:', compactLine(warning, 135)] : [];
+  return warning ? ['HTF Caution:', compactLine(warning, 190)] : [];
 }
 
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {

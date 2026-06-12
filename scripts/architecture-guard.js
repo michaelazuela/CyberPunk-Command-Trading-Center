@@ -245,6 +245,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('bullish HTF/session structure') ||
     !ownerContent.includes('bearish HTF/session structure') ||
     !ownerContent.includes('Treat T1/T2 as management') ||
+    !ownerContent.includes('HTF/session reaction line') ||
     !ownerContent.includes('protected completed 5M line-in-the-sand shift')
   ) {
     fail('localScannerEngine.ts must preserve two-sided HTF/session opposition caution in scanner-owned DeskState.');
@@ -260,7 +261,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('HTF Caution:') ||
     !formatterContent.includes('bullish') ||
     !formatterContent.includes('bearish') ||
-    !formatterContent.includes('Treat T1/T2 as management')
+    !formatterContent.includes('Treat T1/T2 as management') ||
+    !formatterContent.includes('HTF/session reaction line')
   ) {
     fail('discord-alert-format.ts must render two-sided HTF/session opposition caution from DeskState/candidate evidence.');
   }
