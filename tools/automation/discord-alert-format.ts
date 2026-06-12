@@ -632,81 +632,81 @@ function deskPlayDecisionMapLevels(
   };
 }
 
-function deskPlayDecisionMapBlock(
+function deskPlayReactionLevel(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  normalized: CompactNormalizedPlan,
+): { price: number | null; label: string | null } {
+  const transition = play.levelTransition;
+  const price = isFinitePrice(transition?.targetReactionLevel)
+    ? transition.targetReactionLevel
+    : isFinitePrice(play.targetReactionLevel)
+    ? play.targetReactionLevel
+    : null;
+  return {
+    price,
+    label: transition?.targetReactionLabel || play.targetReactionLabel || null,
+  };
+}
+
+function deskPlayTransitionLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT',
-  compact: boolean,
-): string[] {
+): number | null {
+  const transition = play.levelTransition;
+  if (direction === 'LONG') {
+    return isFinitePrice(transition?.longAbove)
+      ? transition.longAbove
+      : isFinitePrice(play.longAbove)
+      ? play.longAbove
+      : null;
+  }
+  return isFinitePrice(transition?.shortBelow)
+    ? transition.shortBelow
+    : isFinitePrice(play.shortBelow)
+    ? play.shortBelow
+    : null;
+}
+
+function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return [];
+  const managedDirection = direction === 'LONG' ? 'SHORT' : 'LONG';
+  const reaction = deskPlayReactionLevel(play);
+  const continuationLine = deskPlayTransitionLine(play, managedDirection);
+  const structureWord = managedDirection === 'SHORT' ? 'support' : 'resistance';
+  if (reaction.price === null && continuationLine === null && !play.countertrendWarning) return [];
+  return [
+    `${managedDirection}: Manage, do not press`,
+    ...(reaction.price !== null
+      ? [`${managedDirection === 'SHORT' ? 'Short' : 'Long'} ran into HTF ${structureWord}: ${priceLine(reaction.price)}`]
+      : []),
+    ...(reaction.price !== null ? [`Take profit into ${priceLine(reaction.price)}`] : []),
+    ...(continuationLine !== null
+      ? [`No fresh ${managedDirection.toLowerCase()} unless price accepts ${managedDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(continuationLine)}`]
+      : []),
+  ];
+}
+
+function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return [];
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return [];
-  const levels = deskPlayDecisionMapLevels(normalized, direction);
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
+  const header = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
   if (!levels) {
-    const line = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
-    return compact
-      ? [`${line} | levels withheld until entry + protected 5M stop proof exist.`]
-      : [line, 'Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.'];
-  }
-  if (compact) {
     return [
-      `${direction} ${triggerWord} ${priceLine(lineInSand)} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | Risk ${numberLine(levels.riskPoints)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)} | Review only.`,
+      header,
+      'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
     ];
   }
   return [
-    `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
-    `Entry reference: ${priceLine(levels.entry)}`,
-    `Protected 5M stop: ${priceLine(levels.stop)}`,
+    header,
+    `Entry ref: ${priceLine(levels.entry)}`,
+    `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(levels.riskPoints)} pts`,
     `T1: ${priceLine(levels.target1)}`,
     `T2: ${priceLine(levels.target2)}`,
-    'Status: Review only until completed 5M trigger/retest and canExecute gates pass.',
-  ];
-}
-
-function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs, compact = false): string[] {
-  const play = args.deskState?.primaryDeskPlay;
-  if (!play) return [];
-  const longBlock = deskPlayDecisionMapBlock(play, args.normalized, 'LONG', compact);
-  const shortBlock = deskPlayDecisionMapBlock(play, args.normalized, 'SHORT', compact);
-  if (!longBlock.length && !shortBlock.length) return [];
-  return [
-    'Decision Map:',
-    ...longBlock,
-    ...(longBlock.length && shortBlock.length ? [''] : []),
-    ...shortBlock,
-  ];
-}
-
-function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[] {
-  const play = args.deskState?.primaryDeskPlay;
-  if (!play) return [];
-  const transition = play.levelTransition;
-  const reactionLevel = typeof transition?.targetReactionLevel === 'number' && Number.isFinite(transition.targetReactionLevel)
-    ? transition.targetReactionLevel
-    : typeof play.targetReactionLevel === 'number' && Number.isFinite(play.targetReactionLevel)
-    ? play.targetReactionLevel
-    : null;
-  const longAbove = typeof transition?.longAbove === 'number' && Number.isFinite(transition.longAbove)
-    ? transition.longAbove
-    : typeof play.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
-  const shortBelow = typeof transition?.shortBelow === 'number' && Number.isFinite(transition.shortBelow)
-    ? transition.shortBelow
-    : typeof play.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
-  const nextLine = [
-    longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
-    shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
-  ].filter(Boolean).join(' / ');
-  if (reactionLevel === null && !nextLine) return [];
-  return [
-    'Level Transition:',
-    ...(reactionLevel !== null ? [
-      `Target/reaction: ${compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction level', 50)} ${priceLine(reactionLevel)} | take T1 seriously; cap T2 into HTF; reversal risk live.`,
-    ] : []),
-    ...(nextLine ? [
-      `After 5M shift: ${nextLine}.`,
-      'Map only; execution still needs completed 5M trigger/retest and canExecute gates.',
-    ] : []),
   ];
 }
 
@@ -724,25 +724,24 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     : 'N/A';
   const lines = [
     `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
-    'Status: DESK PLAY / WATCH ONLY - NOT EXECUTION APPROVAL',
+    'Status: WATCH ONLY - NOT EXECUTION APPROVAL',
     '',
-    `Current Play: ${compactLine(play?.title || 'WAIT - desk play not confirmed', 90)}`,
-    `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 95)}`,
-    `Line in the Sand: ${line}`,
-    ...(play ? ['', ...deskPlayDecisionMapLines(args, true)] : []),
-    ...(play ? ['', ...deskPlayLevelTransitionLines(args)] : []),
-    ...(play?.countertrendWarning ? ['', `Countertrend: ${compactLine(play.countertrendWarning, 120)}`] : []),
+    ...(direction === 'LONG' || direction === 'SHORT' ? deskPlayManagementLines(args, direction) : [`Line in the sand: ${line}`]),
+    ...(play ? ['', ...deskPlayPrimaryLines(args, direction === 'LONG' || direction === 'SHORT' ? direction : 'LONG')] : []),
     '',
-    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
-    `Invalidation: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 90)}`,
-    compactLine(play?.noChase || 'No chase. Wait for completed 5M proof and app-owned gates.', 95),
+    'Trigger',
+    `${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
+    '',
+    'Invalid',
+    `${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 90)}`,
+    '',
     hasConditionalLevels
-      ? 'Chart: conditional Desk Plan attached; app math used; canExecute remains false.'
+      ? 'Chart: review chart attached; not execution approval.'
       : args.attachments.chartPlan
-      ? 'Chart: watch/context attached; levels withheld until protected structure is proven.'
+      ? 'Chart: watch chart attached; levels withheld until protected structure is proven.'
       : 'Chart: not attached; use DeskState text only until chart context is available.',
     '',
-    'Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.',
+    'Boundary: approvals and canExecute unchanged.',
   ];
   return {
     username: 'Quant Desk',

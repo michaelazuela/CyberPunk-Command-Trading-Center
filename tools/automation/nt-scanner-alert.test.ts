@@ -1755,9 +1755,13 @@ try {
   assert.ok(deskPlayResult.chartMarkup);
   assert.equal(deskPlayResult.payload.components, undefined);
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
-  assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached; app math used; canExecute remains false.'));
-  assert.ok(!/^Entry:/m.test(deskPlayText));
-  assert.ok(!/^Stop:/m.test(deskPlayText));
+  assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
+  assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
+  assert.ok(deskPlayText.includes('Entry ref: 5324.25'));
+  assert.ok(deskPlayText.includes('Stop: 5319.25'));
+  assert.ok(deskPlayText.includes('T1: 5331.75'));
+  assert.ok(deskPlayText.includes('T2: 5334.25'));
+  assert.ok(deskPlayText.includes('Chart: review chart attached; not execution approval.'));
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,

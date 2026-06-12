@@ -270,6 +270,14 @@ function checkScannerVisibilityMetadataBoundary() {
   if (formatterContent.includes('function firstTargetReactionObjective')) {
     fail('discord-alert-format.ts must not duplicate scanner target/reaction selection. Use candidateTargetReactionObjective from localScannerEngine.ts.');
   }
+  if (
+    !formatterContent.includes('Manage, do not press') ||
+    !formatterContent.includes('Entry ref:') ||
+    !formatterContent.includes('Chart: review chart attached; not execution approval.') ||
+    !formatterContent.includes('Boundary: approvals and canExecute unchanged.')
+  ) {
+    fail('discord-alert-format.ts must keep Desk Play alerts concise: manage side, active side, review chart status, and unchanged approval boundary.');
+  }
 
   const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');
   const replayContent = readFileSafe(replayPath);
