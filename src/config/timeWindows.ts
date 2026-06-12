@@ -1,32 +1,32 @@
 export const TIME_WINDOWS = {
   morning: {
     label: "Morning Setup Scan",
-    openHour: 10, openMinute: 0,
+    openHour: 9, openMinute: 15,
     closeHour: 12, closeMinute: 0,
     timezone: "America/New_York",
     screenshotEndHour: 12, screenshotEndMinute: 0,
-    bestChart: "5-min MES/MNQ from 10:00 AM through 12:00 PM ET",
+    bestChart: "5-min MES/MNQ from 9:15 AM through 12:00 PM ET",
     chartMustInclude: [
       "Midnight Open horizontal line (12:00 AM ET price)",
-      "10:00 AM setup-scan start",
+      "9:15 AM setup-scan start",
       "12:00 PM setup-scan handoff to Lunch/PM",
       "Opening range / Initial Balance context from 9:30–10:00 when available",
     ],
-    sessionNote: "Opening observation 9:30–10:00. Morning setup scanning is 10:00–12:00 ET.",
+    sessionNote: "Morning setup scanning is 9:15–12:00 ET. Opening range context from 9:30–10:00 remains context, not a separate execution blocker.",
   },
   lunch: {
     label: "Lunch/PM Setup Scan",
     openHour: 12, openMinute: 0,
-    closeHour: 15, closeMinute: 30,
+    closeHour: 16, closeMinute: 0,
     timezone: "America/New_York",
-    screenshotEndHour: 15, screenshotEndMinute: 30,
-    bestChart: "5-min MES/MNQ from 12:00 PM through 3:30 PM ET",
+    screenshotEndHour: 16, screenshotEndMinute: 0,
+    bestChart: "5-min MES/MNQ from 12:00 PM through 4:00 PM ET",
     chartMustInclude: [
-      "12:00 PM to 3:30 PM ET setup-scan range",
+      "12:00 PM to 4:00 PM ET setup-scan range",
       "Morning high and low extremes",
       "Reclaim behavior after trap"
     ],
-    sessionNote: "12:00 PM ET → 3:30 PM ET. Lunch/PM setup scan covers midday reversal, PM continuation, PM reversal, raid/reclaim/MSS.",
+    sessionNote: "12:00 PM ET → 4:00 PM ET. Lunch/PM setup scan covers midday reversal, PM continuation, PM reversal, raid/reclaim/MSS.",
   },
   midnightOpen: {
     label: "Midnight Open",
@@ -61,16 +61,16 @@ export const MARKET_MAPPING_WINDOW = {
   endHour: 16,
   endMinute: 0,
   timezone: "America/New_York",
-  note: "Context-only Market Mapping runs from 15 minutes before RTH open through the 4:00 PM ET market close.",
+  note: "Scanner desk-plan and market-map coverage runs from 15 minutes before RTH open through the 4:00 PM ET market close.",
 } as const;
 
 export type WindowKey = "morning" | "lunch";
 export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
 
-const MORNING_SETUP_SCAN_START = 10 * 60;
+const MORNING_SETUP_SCAN_START = 9 * 60 + 15;
 const MORNING_SETUP_SCAN_END = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_START = 12 * 60;
-const LUNCH_PM_SETUP_SCAN_END = 15 * 60 + 30;
+const LUNCH_PM_SETUP_SCAN_END = 16 * 60;
 const MARKET_MAPPING_WINDOW_START = MARKET_MAPPING_WINDOW.startHour * 60 + MARKET_MAPPING_WINDOW.startMinute;
 const MARKET_MAPPING_WINDOW_END = MARKET_MAPPING_WINDOW.endHour * 60 + MARKET_MAPPING_WINDOW.endMinute;
 const INTRADAY_MSS_MICRO_LATE_DAY_START =

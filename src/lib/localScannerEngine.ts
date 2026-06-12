@@ -1,5 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
-import { isMarketMappingWindowByEtMinutes, MARKET_MAPPING_WINDOW } from '../config/timeWindows';
+import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -559,34 +559,6 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
   const windows = TRADE_RULES.executionWindows;
   const allowsMarketMapping = isMarketMappingWindowByEtMinutes(minutes);
 
-  if (allowsMarketMapping && minutes < minutesFromClock(windows.openingObservation.startET)) {
-    return {
-      session: 'premarket',
-      label: MARKET_MAPPING_WINDOW.label,
-      quality: 'outside',
-      enabled: true,
-      allowsTradePlan: false,
-      allowsDiscordAlert: true,
-      allowsMarketMapping,
-      allowsDeskPlan: true,
-      nextWindowLabel: windows.openingObservation.label,
-    };
-  }
-
-  if (isBetween(minutes, windows.openingObservation.startET, windows.openingObservation.endET)) {
-    return {
-      session: 'premarket',
-      label: windows.openingObservation.label,
-      quality: 'observe_only',
-      enabled: windows.openingObservation.enabled,
-      allowsTradePlan: false,
-      allowsDiscordAlert: true,
-      allowsMarketMapping,
-      allowsDeskPlan: allowsMarketMapping,
-      nextWindowLabel: windows.morningExecution.label,
-    };
-  }
-
   if (isBetween(minutes, windows.morningExecution.startET, windows.morningExecution.endET)) {
     return {
       session: 'morning',
@@ -611,24 +583,11 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       allowsDiscordAlert: windows.middayTrapReversal.enabled,
       allowsMarketMapping,
       allowsDeskPlan: allowsMarketMapping,
-      nextWindowLabel: afternoonEnabled ? windows.afternoonExecution.label : null,
-    };
-  }
-
-  const afternoonActive = isBetween(minutes, windows.afternoonExecution.startET, windows.afternoonExecution.endET);
-  if (afternoonActive) {
-    return {
-      session: 'afternoon',
-      label: windows.afternoonExecution.label,
-      quality: windows.afternoonExecution.enabled && afternoonEnabled ? 'approved' : 'disabled',
-      enabled: windows.afternoonExecution.enabled && afternoonEnabled,
-      allowsTradePlan: windows.afternoonExecution.enabled && afternoonEnabled,
-      allowsDiscordAlert: allowsMarketMapping,
-      allowsMarketMapping,
-      allowsDeskPlan: allowsMarketMapping,
       nextWindowLabel: null,
     };
   }
+
+  void afternoonEnabled;
 
   return {
     session: 'outside',
@@ -640,13 +599,11 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     allowsMarketMapping,
     allowsDeskPlan: allowsMarketMapping,
     nextWindowLabel:
-      minutes < minutesFromClock(windows.openingObservation.startET)
-        ? windows.openingObservation.label
-        : minutes < minutesFromClock(windows.morningExecution.startET)
-          ? windows.morningExecution.label
-          : minutes < minutesFromClock(windows.middayTrapReversal.startET)
-            ? windows.middayTrapReversal.label
-            : null,
+      minutes < minutesFromClock(windows.morningExecution.startET)
+        ? windows.morningExecution.label
+        : minutes < minutesFromClock(windows.middayTrapReversal.startET)
+          ? windows.middayTrapReversal.label
+          : null,
   };
 }
 

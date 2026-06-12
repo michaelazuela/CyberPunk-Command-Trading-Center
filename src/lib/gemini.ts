@@ -178,7 +178,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
 
     HTF Context Sufficiency Visibility Rule: any output that references HTF/MSS structure must explicitly state whether HTF context is sufficient, partial, or insufficient. If reliability is data_limited, the output must state that HTF is context only, not structural confirmation, and cannot be used as candidate-promotion evidence. Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
 
-    Approved live setup scanning windows are two continuous blocks: Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
+    Approved live setup scanning windows are two continuous blocks: Morning 9:15-12:00 ET and Lunch/PM 12:00-16:00 ET. Do not use legacy pre-noon, lunch-only, or split-window cutoffs for current trading-plan generation.
 
     Narrative fallback may provide notes only. Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution.
 
@@ -354,8 +354,8 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - For a LONG breather plan: entry = break of the completed breather candle high, stop = breather candle low or nearest protected HL. For a SHORT breather plan: entry = break of the completed breather candle low, stop = breather candle high or nearest protected LH.
     - This is NOT inventing a future price. It is a systematic pending trigger derived from the visible completed candle. Label it trigger_state = PENDING_TRIGGER and explain that execution only occurs if price breaks the trigger level.
     - Only output NO TRADE when there is no measurable trigger candle, no valid structure-stop context, invalid structure, or the setup violates a kill switch.
-    - SETUP SCAN WINDOW LOCK: Live setup scanning is allowed only in two continuous ET blocks: Morning Setup Scan from 10:00 to before 12:00, and Lunch/PM Setup Scan from 12:00 to before 15:30. Before 10:00 and at/after 15:30 are outside setup scan authority.
-    - MORNING DECISION WINDOW LOCK: For 10:00-12:00 Morning Setup Scan, classify the 10:00-12:00 structure first. The 09:30-10:00 opening range is context only. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible completed 10:00-12:00 levels. Do not require future confirmation before producing ENTRY/STOP facts.
+    - SETUP SCAN WINDOW LOCK: Live setup scanning is allowed only in two continuous ET blocks: Morning Setup Scan from 9:15 to before 12:00, and Lunch/PM Setup Scan from 12:00 to before 16:00. Before 9:15 and at/after 16:00 are outside setup scan authority.
+    - MORNING DECISION WINDOW LOCK: For 9:15-12:00 Morning Setup Scan, classify the 9:15-12:00 structure first. The 09:30-10:00 opening range is context only, not a separate execution blocker. If later candles are absent, you may select a setup that is valid as a PENDING_TRIGGER using visible completed 9:15-12:00 levels. Do not require future confirmation before producing ENTRY/STOP facts.
     - PRICE FORMULA LOCK: The vision pass identifies visible setup clues and trigger-candle measurements only. The executable setup decision, no-trade gate, risk hard-block, and T1/T2 are app-calculated. Do not output non-formula targets.
     - IF (DISTANCE > 10pts) WITHOUT_FILL ➔ STATUS: STALE_CHASE_RISK. (No chase).
     - IF (VERTICAL_RUNAWAY) AND (NO_WICKS) ➔ mark impulse-continuation context only.

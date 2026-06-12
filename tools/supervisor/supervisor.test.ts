@@ -41,7 +41,7 @@ assert.equal(defaultConfig.config.htfPreload.maxAttempts, 3);
 assert.equal(defaultConfig.config.htfPreload.retryDelayMs, 15_000);
 assert.equal(defaultConfig.config.preWindowBackfill.enabled, true);
 assert.equal(defaultConfig.config.preWindowBackfill.days, 2);
-assert.equal(defaultConfig.config.preWindowBackfill.morningStartEt, '09:45');
+assert.equal(defaultConfig.config.preWindowBackfill.morningStartEt, '09:00');
 assert.equal(defaultConfig.config.preWindowBackfill.lunchStartEt, '11:45');
 const preloadCommand = buildHtfPreloadCommand(defaultConfig.config);
 assert.deepEqual(preloadCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
@@ -194,8 +194,8 @@ const processConfig = {
     days: 2,
     delayMs: 50,
     timeoutMs: 1,
-    morningStartEt: '09:45',
-    morningEndEt: '10:00',
+    morningStartEt: '09:00',
+    morningEndEt: '09:15',
     lunchStartEt: '11:45',
     lunchEndEt: '12:00',
   },
@@ -210,10 +210,10 @@ const processConfig = {
   ],
 };
 const logger = createSupervisorLogger(tempLogsDir);
-const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T08:00:00.000Z'));
+const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T12:59:00.000Z'));
 assert.equal(outsideWindowBackfill.attempted, false);
 assert.equal(outsideWindowBackfill.due, false);
-const dueBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T13:50:00.000Z'));
+const dueBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T13:10:00.000Z'));
 assert.equal(dueBackfill.enabled, true);
 assert.equal(dueBackfill.due, true);
 assert.equal(dueBackfill.attempted, true);

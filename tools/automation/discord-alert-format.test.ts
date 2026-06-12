@@ -173,7 +173,7 @@ const morning = compactDiscordSummary({
   candidates: [morningCandidate],
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Morning',
-  windowLabel: '10:00-12:00 ET',
+  windowLabel: '09:15-12:00 ET',
   deskState: {
     marketMode: 'human_review_ready',
     visibilityMode: 'POST_REVIEW',
@@ -805,7 +805,7 @@ const lunch = compactDiscordSummary({
   candidates: [sampleCandidate('SHORT')],
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Lunch',
-  windowLabel: '12:00-15:30 ET',
+  windowLabel: '12:00-16:00 ET',
   components: buildOutcomeComponents({
     planVersionId: 'LUNCH-TEST',
     sessionType: 'lunch',

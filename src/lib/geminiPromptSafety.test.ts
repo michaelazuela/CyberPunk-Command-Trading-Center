@@ -35,7 +35,7 @@ assert.ok(htfRule.includes('Potential MSS is not execution approval'));
 assert.ok(htfRule.includes('15M potential MSS may support a candidate only when 5M MSS is confirmed'));
 assert.ok(htfRule.includes('5M potential MSS may produce pending/developing states only and must not create a reversal-delivery candidate'));
 assert.ok(htfRule.includes('Narrative fallback cannot create HtfDrawContinuationAfterRaid and cannot approve execution'));
-assert.ok(htfRule.includes('Morning 10:00-12:00 ET and Lunch/PM 12:00-15:30 ET'));
+assert.ok(htfRule.includes('Morning 9:15-12:00 ET and Lunch/PM 12:00-16:00 ET'));
 assert.ok(htfRule.includes('Do not use legacy pre-noon, lunch-only, or split-window cutoffs'));
 assert.ok(htfRule.includes('HTF Context Sufficiency Visibility Rule'));
 assert.ok(htfRule.includes('sufficient, partial, or insufficient'));

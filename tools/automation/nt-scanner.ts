@@ -1322,7 +1322,7 @@ export function buildSegmentedHistoryRepairWindows(from: string, to: string, chu
 }
 
 function scannerHistoryPreloadTo(tradeDate: string, session: LiveSession, asOf?: string | Date | null): string {
-  const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : '15:30');
+  const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : '16:00');
   if (!asOf) return sessionClose;
 
   const rawAsOf = asOf instanceof Date ? asOf.toISOString() : asOf;
@@ -3634,14 +3634,10 @@ function buildWindowStartPayload(args: {
     : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
   const activeDeskPlanWindow = '09:15-16:00 ET';
   const fullSchedule = [
-    '⏸️ Before 09:15 ET: Scanner health only; desk plans paused',
-    '🧭 09:15-09:30 ET: Scanner active; desk plans/review maps allowed',
-    `👀 ${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
-    `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
-    `🧭 ${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Scanner active; desk plans/review maps allowed`,
-    `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
-    `🧭 ${TRADE_RULES.executionWindows.middayTrapReversal.endET}-16:00 ET: Scanner active; desk plans/review maps allowed`,
-    '⏸️ After 16:00 ET: Scanner health only; desk plans paused',
+    '⏸️ Before 09:15 ET: scanner health only; execution paused',
+    `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning execution scan`,
+    `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch/PM execution scan`,
+    '⏸️ After 16:00 ET: scanner health only; execution paused',
   ].join('\n');
   return {
     username: 'Quant Desk',
@@ -3656,7 +3652,7 @@ function buildWindowStartPayload(args: {
             name: '🕒 Scanner Window',
             value: clip([
               `🪟 Window: ${args.windowLabel}`,
-              `⏰ Active desk-plan time: ${activeDeskPlanWindow}`,
+              `⏰ Active execution/desk-plan time: ${activeDeskPlanWindow}`,
               `✅ Execution scan window: ${windowRange}`,
               `📈 Instrument: ${args.config.instrument}`,
               `🌉 Bridge instrument: ${args.config.bridgeInstrument}`,

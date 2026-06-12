@@ -32,7 +32,7 @@ export const TRADE_RULES = {
     },
     morningExecution: {
       label: 'Morning Setup Scan',
-      startET: '10:00',
+      startET: '09:15',
       endET: '12:00',
       quality: 'approved',
       enabled: true,
@@ -40,16 +40,9 @@ export const TRADE_RULES = {
     middayTrapReversal: {
       label: 'Lunch/PM Setup Scan',
       startET: '12:00',
-      endET: '15:30',
+      endET: '16:00',
       quality: 'strict',
       enabled: true,
-    },
-    afternoonExecution: {
-      label: 'Afternoon Execution Window',
-      startET: '13:30',
-      endET: '15:00',
-      quality: 'disabled',
-      enabled: false,
     },
   },
   targetModel: {
@@ -66,7 +59,7 @@ export const TRADE_RULES = {
   sessions: {
     morning: {
       label: 'Morning Setup Scan',
-      requiredScreenshotRange: '10:00 AM through 12:00 PM ET',
+      requiredScreenshotRange: '9:15 AM through 12:00 PM ET',
       allowedSetups: [
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,
@@ -89,7 +82,7 @@ export const TRADE_RULES = {
     },
     lunch: {
       label: 'Lunch/PM Setup Scan',
-      requiredScreenshotRange: '12:00 PM through 3:30 PM ET',
+      requiredScreenshotRange: '12:00 PM through 4:00 PM ET',
       allowedSetups: [
         SetupType.SweepMssFvgRetrace,
         SetupType.TurtleSoup,

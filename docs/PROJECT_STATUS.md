@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Rewire normal execution approval windows to 9:15 AM-4:00 PM ET.
+Files changed: AGENTS.md, docs/DISCORD_ALERT_AUTOMATION.md, docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, docs/TRADE_DECISION_PIPELINE.md, docs/WORKFLOWS.md, scripts/active-window-timestamp-guard.js, scripts/architecture-guard.js, src/config/timeWindows.ts, src/config/timeWindows.test.ts, src/config/tradeRules.ts, src/constants.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts, src/lib/htfLiquidityDrawEngine.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/utils.ts, tools/automation/bridge-history-smoke.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-scheduler.ts, tools/automation/failed-plan-reversal-phase8-audit.ts, tools/automation/htf-mss-actual-ohlc-replay.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/thirty-day-active-mss-plan-replay.ts, tools/supervisor/config.ts, tools/supervisor/supervisor.test.ts.
+Reason: The trader explicitly requested normal execution approval windows to run from 9:15 AM through 4:00 PM ET. Morning now starts 15 minutes before the RTH open and Lunch/PM remains active through the market close.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/config/timeWindows.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/lib/geminiPromptSafety.test.ts; npx tsx src/lib/htfLiquidityDrawEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Canonical execution approval windows, scanner window resolution, setup-scan eligibility, HTF draw active-window classification, Discord/scheduler copy, supervisor pre-window repair, bridge/replay defaults, Gemini prompt safety text, and architecture guards now use Morning 9:15 AM-12:00 PM ET and Lunch/PM 12:00 PM-4:00 PM ET. The old observation-only 9:30-10:00 blocker no longer blocks normal execution approval; opening range remains context.
+Trading logic changed: Yes, limited to user-approved time-window eligibility. No setup definitions, canExecute semantics, entry rules, stop rules, target math, risk gates, model definitions, or bridge data interpretation changed.
+Bridge impact: Defaults and docs now align with 9:15 AM-4:00 PM ET scan coverage. NinjaTrader OHLC remains the highest-authority read-only source data.
+Discord impact: Yes. Scheduler/status copy and alert fixtures now reflect 9:15 AM-4:00 PM ET execution/desk-plan coverage.
+Journal/RAG impact: No schema change. Existing DeskState/RAG persistence can receive plans from the updated approved windows.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor after this commit so the running scanner loads the new execution windows.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Expand active Quant Desk Scanner Window to publish Desk Plans from 9:15 AM-4:00 PM ET.
 Files changed: AGENTS.md, docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts.
 Reason: The prior boundary limited Market Mapping refresh but did not make the full 9:15 AM-4:00 PM ET scanner window produce live review maps. The trader needs simple `LONG ABOVE` / `SHORT BELOW` plans plus line-in-the-sand and HTF bias-line context throughout the active RTH desk window.

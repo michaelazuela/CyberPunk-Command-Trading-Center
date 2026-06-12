@@ -3278,12 +3278,14 @@ const tests: Array<[string, () => void]> = [
     assert.equal(result.bestExecutableCandidate, null);
   }],
 
-  ['Phase 3B active setup scan windows allow HTF setup through old cutoffs and block 15:30 ET', () => {
+  ['Phase 3B active setup scan windows allow HTF setup through 16:00 ET and block after close', () => {
     const allowed = [
       { sessionType: 'morning' as const, chartTimestamp: '2026-06-01T11:15:00-04:00' },
       { sessionType: 'morning' as const, chartTimestamp: '2026-06-01T11:50:00-04:00' },
       { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T13:00:00-04:00' },
       { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T15:29:00-04:00' },
+      { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T15:30:00-04:00' },
+      { sessionType: 'lunch' as const, chartTimestamp: '2026-06-01T15:59:00-04:00' },
     ];
 
     for (const fixture of allowed) {
@@ -3299,7 +3301,7 @@ const tests: Array<[string, () => void]> = [
       sessionType: 'lunch',
       chartContext: htfMssContext('LONG', {
         sessionType: 'lunch',
-        chartTimestamp: '2026-06-01T15:30:00-04:00',
+        chartTimestamp: '2026-06-01T16:00:00-04:00',
       }),
       result: null,
     });
@@ -4412,7 +4414,7 @@ const tests: Array<[string, () => void]> = [
 
     assert.ok(turtle);
     assert.equal(turtle.executionStatus, ExecutionStatus.Executable);
-    assert.ok(turtle.evidence.includes('Active window: Morning setup scan, 10:00-12:00 ET'));
+    assert.ok(turtle.evidence.includes('Active window: Morning setup scan, 9:15-12:00 ET'));
     assert.ok(turtle.evidence.includes('Draw on opposing liquidity identified'));
     assert.ok(turtle.evidence.includes('Sweep-first sequence confirmed'));
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
@@ -4427,7 +4429,7 @@ const tests: Array<[string, () => void]> = [
     const turtle = result.candidates.find((candidate) => candidate.setupType === SetupType.TurtleSoup);
 
     assert.ok(turtle);
-    assert.ok(turtle.evidence.includes('Active window: Lunch/PM setup scan, 12:00-15:30 ET'));
+    assert.ok(turtle.evidence.includes('Active window: Lunch/PM setup scan, 12:00-16:00 ET'));
     assert.equal(turtle.missingEvidence.includes('Fragmented lunch cutoff requires extra confirmation'), false);
     assert.ok(result.candidates.every((candidate) => isPrimarySetupCandidate(candidate)));
   }],

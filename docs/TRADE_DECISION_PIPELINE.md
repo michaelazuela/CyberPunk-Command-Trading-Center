@@ -156,11 +156,10 @@ Possible bias outputs:
 
 The app must evaluate whether the analysis is within the approved setup-scan context:
 
-- Opening Observation Window: 9:30 AM to 10:00 AM ET. Observation only; no setup scan approval.
-- Morning Setup Scan: 10:00 AM to before 12:00 PM ET.
-- Required Morning 5M setup-scan focus: 10:00 AM through 12:00 PM ET.
-- Lunch/PM Setup Scan: 12:00 PM to before 3:30 PM ET.
-- Required Lunch/PM 5M setup-scan focus: 12:00 PM through 3:30 PM ET.
+- Morning Setup Scan: 9:15 AM to before 12:00 PM ET.
+- Required Morning 5M setup-scan focus: 9:15 AM through 12:00 PM ET.
+- Lunch/PM Setup Scan: 12:00 PM to before 4:00 PM ET.
+- Required Lunch/PM 5M setup-scan focus: 12:00 PM through 4:00 PM ET.
 
 Replay mode must use the entered trading date and replay session, not the upload timestamp.
 

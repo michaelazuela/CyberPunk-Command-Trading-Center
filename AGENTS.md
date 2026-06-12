@@ -161,9 +161,8 @@ Replay sessions must reuse the live rule engine for the matching live session wh
 
 All trading windows must come from `src/config/timeWindows.ts`.
 
-- Opening Observation Window: 9:30 AM-10:00 AM ET. Observation only; no setup scan approval.
-- Morning Setup Scan: 10:00 AM-12:00 PM ET.
-- Lunch/PM Setup Scan: 12:00 PM-3:30 PM ET.
+- Morning Setup Scan: 9:15 AM-12:00 PM ET.
+- Lunch/PM Setup Scan: 12:00 PM-4:00 PM ET.
 - Required live/replay 5M setup-scan chart ranges must match those two continuous blocks.
 - Midnight Open is a core RAG feature, not temporary UI state.
 
@@ -173,7 +172,7 @@ Do not hardcode competing time strings in prompts, docs, UI text, or logic.
 
 The 15M ETH Context screenshot is context only.
 
-It may help identify ETH high/low, Asian high/low, London high/low, NY premarket high/low, overnight high/low, prior session high/low interaction, broader trend, compression/expansion, major support/resistance, and early RTH direction into 10:00 AM ET.
+It may help identify ETH high/low, Asian high/low, London high/low, NY premarket high/low, overnight high/low, prior session high/low interaction, broader trend, compression/expansion, major support/resistance, and early RTH direction into the 9:15 AM ET scanner start.
 
 It must not approve a trade by itself, generate final entry/stop/T1/T2 by itself, override the 5M execution chart, override the plan engine, override the trade decision pipeline, override risk rules, or override setup scanner ranking.
 
@@ -243,13 +242,12 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 
 ## Scanner Active Desk Plan Window
 
-The local scanner may run all day, but active Desk Plan / review-map production is limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but desk-plan and market-map refresh are paused.
+The local scanner may run all day, but active execution scanning, Desk Plan production, and review-map production are limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but execution, desk-plan, and market-map refresh are paused.
 
 - The active scanner window may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, target cascade context, and review-only Desk Plan maps.
 - Desk Plan maps may show `LONG ABOVE`, `SHORT BELOW`, line in the sand, entry reference, protected 5M stop, T1/T2, HTF objective/reaction/runner context, and HTF bias lines when scanner-owned structure exists.
 - Desk Plan maps must not approve execution, place orders, loosen `canExecute`, or change entry/stop/target/risk gates.
-- Keep `Opening Observation Window` as the specific 9:30-10:00 AM ET RTH phase. Do not use that label for overnight or all-day context building.
-- 9:15-10:00 AM ET and 3:30-4:00 PM ET are review-map/Desk Plan windows only. They are not execution-approval windows.
+- 9:15 AM-4:00 PM ET is the normal execution approval window, but execution still requires completed 5M trigger, protected structure stop, actual risk, target room, valid model, and `canExecute`.
 - Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.
 
 ## Verification Before Finishing

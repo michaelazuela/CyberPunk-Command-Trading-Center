@@ -167,7 +167,7 @@ async function freshTwoHourValidation(args: {
     };
   }
   const from = buildIso(calendarDateBefore(args.date, REQUIRED_LOOKBACK_DAYS), '00:00');
-  const to = buildIso(args.date, '15:30');
+  const to = buildIso(args.date, '16:00');
   try {
     const response = await getNinjaHistoricalBars({
       instrument: args.bridgeInstrument,

@@ -86,7 +86,7 @@ const DEFAULT_CONFIG: SchedulerConfig = {
   jobs: {
     premarket: { enabled: true, timeEt: '09:15' },
     morning: { enabled: true, timeEt: '12:00' },
-    lunch: { enabled: true, timeEt: '15:30' },
+    lunch: { enabled: true, timeEt: '16:00' },
     weekly: { enabled: true, timeEt: '08:00' },
     weeklyNewsletter: { enabled: true, timeEt: process.env.WEEKLY_NEWSLETTER_TIME_ET || '16:05' },
   },
@@ -1293,11 +1293,10 @@ async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartCont
           {
             name: '8️⃣ 🕒 Execution Windows',
             value: discordValue([
-              '👀 9:30-10:00 AM ET: Opening observation only.',
-              '🔎 10:00 AM-12:00 PM ET: Morning setup scanning.',
-              '🍽️ 12:00-3:30 PM ET: Lunch/PM setup scanning.',
-              '🧭 9:15 AM-4:00 PM ET: Scanner active; desk plans/review maps allowed.',
-              '⏸️ Before 9:15 AM and after 4:00 PM ET: Desk plans paused.',
+              '🔎 9:15 AM-12:00 PM ET: Morning execution scanning.',
+              '🍽️ 12:00-4:00 PM ET: Lunch/PM execution scanning.',
+              '🧭 9:15 AM-4:00 PM ET: scanner active; desk plans/review maps allowed.',
+              '⏸️ Before 9:15 AM and after 4:00 PM ET: execution and desk plans paused.',
               `🧱 Structured levels loaded: ${levels.length}.`,
             ].join('\n')),
             inline: false,

@@ -280,7 +280,7 @@ assert.equal(refined15mBearishSupport.planDirection, 'SHORT');
 assert.equal(refined15mBearishSupport.fifteenMinuteConfirmationStatus, 'potential_mss');
 assert.equal(refined15mBearishSupport.classification, 'REVERSAL_DELIVERY_PLAN_CANDIDATE');
 
-const fifteenThirtyOutside = buildHtfLiquidityDrawState({
+const fifteenThirtyLunch = buildHtfLiquidityDrawState({
   bars4H: sufficientHtfContext(bearishPendingBars()),
   bars2H: sufficientHtfContext(bearishPendingBars()),
   bars1H: sufficientHtfContext(bearishPendingBars()),
@@ -289,7 +289,18 @@ const fifteenThirtyOutside = buildHtfLiquidityDrawState({
   externalSellSideLiquidityTarget: 'London low / prior RTH low',
   chartTimestamp: '2026-06-01T15:30:00',
 });
-assert.equal(fifteenThirtyOutside.activeScanWindow, 'OUTSIDE_SETUP_SCAN');
+assert.equal(fifteenThirtyLunch.activeScanWindow, 'LUNCH_PM_SETUP_SCAN');
+
+const marketCloseOutside = buildHtfLiquidityDrawState({
+  bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars2H: sufficientHtfContext(bearishPendingBars()),
+  bars1H: sufficientHtfContext(bearishPendingBars()),
+  bars15M: sufficientHtfContext(bearishPendingBars()),
+  bars5M: sufficientHtfContext(bearishConfirmedBars()),
+  externalSellSideLiquidityTarget: 'London low / prior RTH low',
+  chartTimestamp: '2026-06-01T16:00:00',
+});
+assert.equal(marketCloseOutside.activeScanWindow, 'OUTSIDE_SETUP_SCAN');
 
 const missingTimeframes = buildHtfLiquidityDrawState({
   bars5M: bullishConfirmedBars(),

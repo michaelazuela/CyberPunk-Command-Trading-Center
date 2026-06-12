@@ -380,10 +380,10 @@ function isInsideApprovedSetupScanWindow(chartContext?: ChartContext | null): bo
   const minutes = latestChartMinutes(chartContext);
   if (minutes === null) return false;
   if (chartContext.sessionType === 'morning' || chartContext.sessionType === 'replay_morning') {
-    return minutes >= 10 * 60 && minutes < 12 * 60;
+    return minutes >= 9 * 60 + 15 && minutes < 12 * 60;
   }
   if (chartContext.sessionType === 'lunch' || chartContext.sessionType === 'replay_lunch') {
-    return minutes >= 12 * 60 && minutes < 15 * 60 + 30;
+    return minutes >= 12 * 60 && minutes < 16 * 60;
   }
   return false;
 }
@@ -454,13 +454,13 @@ function timeWindowQualityContext(chartContext?: ChartContext | null): Candidate
       };
     }
     if (minutes >= 10 * 60 && minutes < 12 * 60) {
-      return { evidence: ['Active window: Morning setup scan, 10:00-12:00 ET'], missingEvidence: [], score: 8, forceConditional: false };
+      return { evidence: ['Active window: Morning setup scan, 9:15-12:00 ET'], missingEvidence: [], score: 8, forceConditional: false };
     }
   }
 
   if (sessionType === 'lunch' || sessionType === 'replay_lunch') {
     if (minutes >= 12 * 60 && minutes < 15 * 60 + 30) {
-      return { evidence: ['Active window: Lunch/PM setup scan, 12:00-15:30 ET'], missingEvidence: [], score: 6, forceConditional: false };
+      return { evidence: ['Active window: Lunch/PM setup scan, 12:00-16:00 ET'], missingEvidence: [], score: 6, forceConditional: false };
     }
   }
 

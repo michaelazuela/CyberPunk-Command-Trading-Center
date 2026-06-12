@@ -5,10 +5,10 @@
 
 export const SYSTEM_RULES = {
   INSTRUMENTS: ['MES', 'MNQ'],
-  SESSION_OPEN: '09:30', // EDT
-  OBSERVATION_END: '10:00',
-  ENTRY_END: '15:30',
-  HARD_EXIT: '15:30',
+  SESSION_OPEN: '09:15', // ET scanner/execution window start
+  OBSERVATION_END: '09:15',
+  ENTRY_END: '16:00',
+  HARD_EXIT: '16:00',
   MAX_POSITION: 9,
   MAX_RISK_PER_TRADE: 0.02, // 2%
   FIXED_STOP_RISK_POINTS: 5,

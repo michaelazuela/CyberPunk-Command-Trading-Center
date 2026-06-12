@@ -159,11 +159,11 @@ function checkCanonicalTimeWindowUsage() {
   }
 
   const content = readFileSafe(timeWindowsPath);
-  if (!content.includes('Morning Setup Scan') || !content.includes('10:00 AM through 12:00 PM ET')) {
-    fail('timeWindows.ts must document the canonical Morning Setup Scan window as 10:00 AM-12:00 PM ET.');
+  if (!content.includes('Morning Setup Scan') || !content.includes('9:15 AM through 12:00 PM ET')) {
+    fail('timeWindows.ts must document the canonical Morning Setup Scan window as 9:15 AM-12:00 PM ET.');
   }
-  if (!content.includes('Lunch/PM Setup Scan') || !content.includes('12:00 PM through 3:30 PM ET')) {
-    fail('timeWindows.ts must document the canonical Lunch/PM Setup Scan window as 12:00 PM-3:30 PM ET.');
+  if (!content.includes('Lunch/PM Setup Scan') || !content.includes('12:00 PM through 4:00 PM ET')) {
+    fail('timeWindows.ts must document the canonical Lunch/PM Setup Scan window as 12:00 PM-4:00 PM ET.');
   }
 }
 

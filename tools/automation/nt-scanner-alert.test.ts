@@ -726,7 +726,7 @@ for (const timeframe of ['5m', '15m', '60m', '120m', '240m'] as const) {
 }
 const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
 assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
-assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T15:30:00-04:00');
+assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T16:00:00-04:00');
 
 const liveMorningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T10:05:00.0000000');
 assert.equal(liveMorningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');

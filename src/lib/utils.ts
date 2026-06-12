@@ -39,7 +39,7 @@ export function formatReplayRange(rangeKey: 'morning_eth_context' | 'morning_5m_
     switch (rangeKey) {
       case 'morning_eth_context': return 'Overnight / premarket into 10:00 AM ET';
       case 'morning_5m_execution': return '10:00 AM ET → 12:00 PM ET';
-      case 'lunch_5m_execution': return '12:00 PM ET → 3:30 PM ET';
+      case 'lunch_5m_execution': return '12:00 PM ET → 4:00 PM ET';
     }
   }
 }

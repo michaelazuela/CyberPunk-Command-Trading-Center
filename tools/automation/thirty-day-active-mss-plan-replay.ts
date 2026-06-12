@@ -686,7 +686,7 @@ async function main() {
       evaluateTo,
       preloadFrom,
       toTimestamp,
-      activeWindows: ['10:00-12:00 America/New_York', '12:00-15:30 America/New_York'],
+      activeWindows: ['09:15-12:00 America/New_York', '12:00-16:00 America/New_York'],
       postMssBars,
       bridgeChunkDays: chunkDays,
       slimOpeningDrive,
