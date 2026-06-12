@@ -338,6 +338,7 @@ const deskPlayPayload = compactDiscordSummary({
         longAbove: 7342,
         shortBelow: 7303.5,
         profitProtectionInstruction: 'Treat London Session Low 7288.25 as the target/reaction decision area.',
+        targetManagementInstruction: 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.',
         nextStructureInstruction: 'After a protected completed 5M market-structure shift, use LONG above 7342.00 / SHORT below 7303.50 as the next line-in-the-sand map.',
       },
       nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
@@ -383,6 +384,9 @@ assert.ok(deskPlayText.includes('T2: 7392.50'));
 assert.ok(deskPlayText.includes('Level Transition:'));
 assert.ok(deskPlayText.includes('Target/reaction: London Session Low 7288.25'));
 assert.ok(deskPlayText.includes('target/reaction decision area'));
+assert.ok(deskPlayText.includes('take T1 seriously'));
+assert.ok(deskPlayText.includes('cap expectation at T2 into HTF/session structure'));
+assert.ok(deskPlayText.includes('Reversal risk live at HTF structure'));
 assert.ok(deskPlayText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7303.50.'));
 assert.ok(deskPlayText.includes('next line-in-the-sand map'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));

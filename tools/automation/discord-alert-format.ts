@@ -89,6 +89,7 @@ export interface CompactDeskStateForDiscord {
       longAbove?: number | null;
       shortBelow?: number | null;
       profitProtectionInstruction?: string;
+      targetManagementInstruction?: string;
       nextStructureInstruction?: string;
     } | null;
     nextTrigger?: string | null;
@@ -339,11 +340,16 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
     'Level Transition:',
     ...(reaction ? [
       `Target/reaction: ${reaction.label} ${priceLine(reaction.price)}`,
-      compactLine(transition?.profitProtectionInstruction || reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 110),
+      transition?.targetManagementInstruction
+        ? 'Manage: T1 serious; cap T2 into HTF. Reversal risk live.'
+        : compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 85),
+      ...(transition?.targetManagementInstruction ? [
+        'Secure/reduce continuation assumptions at that level.',
+      ] : []),
     ] : []),
     ...(nextLine ? [
       `After 5M shift: ${nextLine}.`,
-      compactLine(transition?.nextStructureInstruction || 'No continuation assumption at reaction level; wait for close/retest/protected structure.', 110),
+      compactLine(transition?.nextStructureInstruction || 'Wait for close/retest/protected structure.', 95),
     ] : []),
   ];
 }
@@ -685,6 +691,8 @@ function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[]
     ...(reactionLevel !== null ? [
       `Target/reaction: ${compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction level', 70)} ${priceLine(reactionLevel)}`,
       compactLine(transition?.profitProtectionInstruction || play.targetReactionReason || 'Target/reaction level; watch for failure or reversal proof.', 110),
+      compactLine(transition?.targetManagementInstruction || 'Management: take T1 seriously; cap at T2 into HTF/session structure unless completed 5M accepts.', 115),
+      'Reversal risk live at HTF structure.',
     ] : []),
     ...(nextLine ? [
       `After 5M shift: ${nextLine}.`,

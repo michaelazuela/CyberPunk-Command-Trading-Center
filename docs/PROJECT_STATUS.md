@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-11
-Task: Properly wire target/reaction level transitions through scanner-owned DeskState.
+Task: Properly wire target/reaction level transitions and T1/T2 management caution through scanner-owned DeskState.
 Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts.
-Reason: Morning short delivery could post without clearly saying it was delivering into an important HTF/session reaction level, where continuation assumptions should be reduced, and what the next protected 5M long/short line in the sand is after a structure shift.
-Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
-Result: DeskState now carries a scanner-owned `levelTransition` map with target/reaction level, profit-protection instruction, next protected 5M long/short lines, and an explicit approval boundary. Live scanner/audit fallback paths pass the target cascade into DeskState, so Discord can render the same source-of-truth transition map instead of recomputing or guessing it.
+Reason: Morning short delivery could post without clearly saying it was delivering into an important HTF/session reaction level, where continuation assumptions should be reduced, T1/T2 should be managed conservatively, and the next protected 5M long/short line in the sand should be stated after a structure shift.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: DeskState now carries a scanner-owned `levelTransition` map with target/reaction level, profit-protection instruction, T1/T2 management caution, next protected 5M long/short lines, and an explicit approval boundary. Live scanner/audit fallback paths pass the target cascade into DeskState, so Discord can render the same source-of-truth transition map instead of recomputing or guessing it.
 Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord hard blockers changed.
 Bridge impact: None.
-Discord impact: Yes. Scanner/Desk Play wording now names the target/reaction area, says to secure/reduce continuation assumptions there, and states the next protected 5M line-in-the-sand map.
+Discord impact: Yes. Scanner/Desk Play wording now names the target/reaction area, says to secure/reduce continuation assumptions there, states to take T1 seriously and not press beyond T2 into HTF/session structure without completed 5M acceptance, and states the next protected 5M line-in-the-sand map.
 Journal/RAG impact: Existing Discord/RAG consumers receive clearer DeskState metadata; no schema change.
 Supabase impact: No migration added.
 Known risks: None identified after verification.
-Next recommended action: Observe the next Morning/Lunch alert and confirm it names the target/reaction area before expecting continuation or reversal.
+Next recommended action: Observe the next Morning/Lunch alert and confirm it tells the trader to manage T1/T2 conservatively when the play is delivering into HTF/session structure.
 
 ## Previous Change
 

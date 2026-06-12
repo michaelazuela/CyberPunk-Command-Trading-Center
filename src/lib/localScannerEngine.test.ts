@@ -782,6 +782,8 @@ assert.equal(deskState.promotion.canPromoteNow, false);
 assert.equal(deskState.primaryDeskPlay.levelTransition?.sourceOfTruth, 'scanner_level_transition_map');
 assert.equal(deskState.primaryDeskPlay.levelTransition?.targetReactionLevel, 112);
 assert.ok(deskState.primaryDeskPlay.levelTransition?.profitProtectionInstruction.includes('target/reaction decision area'));
+assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction.includes('take T1 seriously'));
+assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction.includes('cap expectation at T2'));
 assert.equal(deskState.primaryDeskPlay.levelTransition?.approvalBoundary.changesCanExecute, false);
 
 const watchDeskVisibility = classifyScannerVisibility({

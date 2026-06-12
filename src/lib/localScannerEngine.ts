@@ -274,6 +274,7 @@ export interface DeskLevelTransitionMap {
   longAbove: number | null;
   shortBelow: number | null;
   profitProtectionInstruction: string;
+  targetManagementInstruction: string;
   nextStructureInstruction: string;
   approvalBoundary: {
     changesTradeApprovals: false;
@@ -956,6 +957,9 @@ function buildLevelTransitionMap(args: {
     profitProtectionInstruction: args.targetReaction
       ? `Treat ${args.targetReaction.label} ${args.targetReaction.price.toFixed(2)} as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.`
       : 'No target/reaction level is mapped for this cycle; do not invent a profit-taking or reversal area.',
+    targetManagementInstruction: args.targetReaction
+      ? 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.'
+      : 'Management: app T1/T2 remain tactical only; no HTF/session reaction cap is mapped for this cycle.',
     nextStructureInstruction: nextLines
       ? `After a protected completed 5M market-structure shift, use ${nextLines} as the next line-in-the-sand map.`
       : 'No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.',
