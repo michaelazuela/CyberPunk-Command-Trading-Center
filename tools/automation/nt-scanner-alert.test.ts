@@ -38,6 +38,7 @@ import {
   resolveScannerDiscordWebhookUrl,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
+  scannerDeskPlanRefreshKey,
   scannerActiveCampaignKey,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
@@ -451,6 +452,68 @@ recordActiveCampaignScannerAlertSuppressed({
 });
 assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].suppressedCount, 1);
 assert.equal(activeCampaignLedger['2026-06-08:SHORT:15M5M-MSS'].resetPolicy, 'trade_date_direction_campaign');
+const baseDeskPlanRefreshState = {
+  activeCampaign: campaignCandidate.activeCampaign,
+  bestLongPlan: null,
+  selectedCandidate: null,
+  bestShortPlan: {
+    lineInSand: 7416.5,
+    entry: 7412.75,
+    stop: 7424.75,
+    target1: 7405.38,
+    target2: 7401.5,
+  },
+  primaryDeskPlay: {
+    direction: 'SHORT',
+    lineInSand: 7416.5,
+    targetReactionLevel: 7405,
+    longBias: { state: 'not_present', lineInSand: null },
+    shortBias: { state: 'primary', lineInSand: 7416.5 },
+    htfObjectiveLadder: { runner: { price: 7394.5 } },
+    htfProtectedStructureMap: {
+      rows: [
+        { timeframe: '5M', bias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7416.5 },
+      ],
+    },
+  },
+} as any;
+const firstDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskState: baseDeskPlanRefreshState,
+  latestCompleted5m: '2026-06-08T15:35:00.0000000',
+});
+const shiftedDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      lineInSand: 7412.75,
+      entry: 7410.25,
+      stop: 7419.25,
+      target1: 7396.75,
+      target2: 7392.25,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7412.75,
+      shortBias: { state: 'primary', lineInSand: 7412.75 },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', protectedStructure: 7419.25, confirmationLine: 7412.75 },
+        ],
+      },
+    },
+  },
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.notEqual(firstDeskPlanRefreshKey, shiftedDeskPlanRefreshKey);
+assert.ok(firstDeskPlanRefreshKey.includes('DESK_PLAN_REFRESH'));
+assert.ok(shiftedDeskPlanRefreshKey.includes('m5=BEAR:7419.25:7412.75'));
 assert.deepEqual(loadScannerActiveCampaignLedgerConfig({
   SUPABASE_URL: 'https://project.supabase.co/rest/v1',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-test',
@@ -981,6 +1044,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     activeCampaignSent: {},
     watchlistSent: {},
     deskPlaySent: {},
+    deskPlanRefreshSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},

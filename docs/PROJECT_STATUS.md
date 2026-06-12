@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-12
+Task: Phase 10J Live Desk Plan Refresh and stop-management visibility standard.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: ActiveCampaign duplicate suppression correctly prevents repeated trade alerts, but it was too blunt for live desk management. A same-campaign plan can need a fresh Discord Desk Plan when the latest completed 5M, protected 5M structure, line in the sand, entry, stop, T1/T2, reaction level, or runner map changes.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Added a dedicated `deskPlanRefreshSent` scanner-state ledger and a deterministic Desk Plan refresh fingerprint that is separate from the durable ActiveCampaign trade-alert ledger. Same-campaign duplicate trade alerts remain suppressed, while review-only Desk Plan refreshes can post when scanner-owned current 5M structure/levels change. The refresh ledger records campaign id, completed 5M, direction, long/short lines, entry, stop, T1/T2, and reaction level for auditability.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge behavior changed.
+Bridge impact: None. NinjaTrader OHLC remains read-only source data.
+Discord impact: Yes. Desk Play visibility can refresh on a new structure-aware fingerprint even when a same-campaign trade alert is suppressed.
+Journal/RAG impact: No schema change. Existing Desk Play RAG persistence continues to receive DeskState/visibility/lifecycle metadata when the refresh posts.
+Supabase impact: No migration added. Durable Supabase ActiveCampaign one-trade-alert dedupe remains unchanged.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor after verification so the running scanner uses the new refresh standard.
+
+## Previous Change
+
 Date: 2026-06-11
 Task: Treat duplicate supervisor starts as already-running instead of startup failure.
 Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None identified after verification.
 Next recommended action: Restart the supervisor so the running daemon uses the patched duplicate-start behavior.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-11
 Task: Clean compact Discord payload wording and remove preferred-length warnings.

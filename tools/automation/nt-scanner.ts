@@ -167,6 +167,7 @@ interface ScannerStateFile {
   activeCampaignSent: Record<string, ScannerActiveCampaignLedgerRecord>;
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
   deskPlaySent: Record<string, { direction: string; lineInSand: number | null; sentAt: string }>;
+  deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   lastCompleted5mBySession: Record<string, string>;
@@ -195,6 +196,25 @@ export interface ScannerActiveCampaignLedgerRecord {
   lastSeenAt: string;
   suppressedCount: number;
   resetPolicy: ScannerActiveCampaignResetPolicy;
+}
+
+export interface ScannerDeskPlanRefreshLedgerRecord {
+  fingerprint: string;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  activeCampaignId: string | null;
+  direction: string;
+  latestCompleted5m: string | null;
+  lineInSand: number | null;
+  longLine: number | null;
+  shortLine: number | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  targetReactionLevel: number | null;
+  sentAt: string;
 }
 
 export interface ScannerActiveCampaignDurableLedgerConfig {
@@ -954,6 +974,7 @@ function emptyScannerState(): ScannerStateFile {
     activeCampaignSent: {},
     watchlistSent: {},
     deskPlaySent: {},
+    deskPlanRefreshSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     lastCompleted5mBySession: {},
@@ -973,6 +994,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         activeCampaignSent: parsed.activeCampaignSent || {},
         watchlistSent: parsed.watchlistSent || {},
         deskPlaySent: parsed.deskPlaySent || {},
+        deskPlanRefreshSent: parsed.deskPlanRefreshSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
@@ -2973,19 +2995,102 @@ function scannerWatchlistAlertKey(args: {
   return `${args.tradeDate}:${args.instrument}:${args.session}:${args.direction}:${args.watchlistType}`;
 }
 
-function scannerDeskPlayAlertKey(args: {
+function deskPlanRefreshPrice(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'none';
+}
+
+function deskPlanRefreshBiasFields(bias: DeskPlayDirectionalBias) {
+  return {
+    line: bias.lineInSand,
+    entry: null,
+    stop: null,
+    target1: null,
+    target2: null,
+  };
+}
+
+function deskPlanRefreshLifecycleFields(item: DeskState['bestLongPlan'] | DeskState['bestShortPlan'] | DeskState['selectedCandidate']) {
+  return {
+    line: item?.lineInSand ?? null,
+    entry: item?.entry ?? null,
+    stop: item?.stop ?? null,
+    target1: item?.target1 ?? null,
+    target2: item?.target2 ?? null,
+  };
+}
+
+export function scannerDeskPlanRefreshKey(args: {
   tradeDate: string;
   instrument: Instrument;
   session: string;
   deskState: DeskState;
+  latestCompleted5m?: string | null;
 }): string {
   const play = args.deskState.primaryDeskPlay;
-  const line = typeof play.lineInSand === 'number' && Number.isFinite(play.lineInSand)
-    ? play.lineInSand.toFixed(2)
-    : 'no-line';
-  const longState = play.longBias.state;
-  const shortState = play.shortBias.state;
-  return `${args.tradeDate}:${args.instrument}:${args.session}:DESK_PLAY:${play.direction}:${line}:${longState}:${shortState}`;
+  const longBiasFields = deskPlanRefreshBiasFields(play.longBias);
+  const shortBiasFields = deskPlanRefreshBiasFields(play.shortBias);
+  const longLifecycleFields = deskPlanRefreshLifecycleFields(args.deskState.bestLongPlan);
+  const shortLifecycleFields = deskPlanRefreshLifecycleFields(args.deskState.bestShortPlan);
+  const long = {
+    ...longLifecycleFields,
+    line: longLifecycleFields.line ?? longBiasFields.line,
+  };
+  const short = {
+    ...shortLifecycleFields,
+    line: shortLifecycleFields.line ?? shortBiasFields.line,
+  };
+  const protected5m = play.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M') || null;
+  const parts = [
+    args.tradeDate,
+    args.instrument,
+    args.session,
+    'DESK_PLAN_REFRESH',
+    args.latestCompleted5m || 'no-completed-5m',
+    args.deskState.activeCampaign?.id || 'no-campaign',
+    play.direction,
+    `line=${deskPlanRefreshPrice(play.lineInSand)}`,
+    `long=${play.longBias.state}:${deskPlanRefreshPrice(long.line)}:${deskPlanRefreshPrice(long.entry)}:${deskPlanRefreshPrice(long.stop)}:${deskPlanRefreshPrice(long.target1)}:${deskPlanRefreshPrice(long.target2)}`,
+    `short=${play.shortBias.state}:${deskPlanRefreshPrice(short.line)}:${deskPlanRefreshPrice(short.entry)}:${deskPlanRefreshPrice(short.stop)}:${deskPlanRefreshPrice(short.target1)}:${deskPlanRefreshPrice(short.target2)}`,
+    `reaction=${deskPlanRefreshPrice(play.targetReactionLevel)}`,
+    `runner=${deskPlanRefreshPrice(play.htfObjectiveLadder.runner?.price)}`,
+    `m5=${protected5m?.bias || 'none'}:${deskPlanRefreshPrice(protected5m?.protectedStructure)}:${deskPlanRefreshPrice(protected5m?.confirmationLine)}`,
+  ];
+  return parts.join(':');
+}
+
+function scannerDeskPlanRefreshRecord(args: {
+  key: string;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  deskState: DeskState;
+  latestCompleted5m?: string | null;
+  sentAt: string;
+}): ScannerDeskPlanRefreshLedgerRecord {
+  const play = args.deskState.primaryDeskPlay;
+  const primaryLifecycle = play.direction === 'LONG'
+    ? args.deskState.bestLongPlan
+    : play.direction === 'SHORT'
+    ? args.deskState.bestShortPlan
+    : args.deskState.selectedCandidate || args.deskState.bestLongPlan || args.deskState.bestShortPlan;
+  return {
+    fingerprint: args.key,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    activeCampaignId: args.deskState.activeCampaign?.id || null,
+    direction: play.direction,
+    latestCompleted5m: args.latestCompleted5m || null,
+    lineInSand: play.lineInSand,
+    longLine: play.longBias.lineInSand,
+    shortLine: play.shortBias.lineInSand,
+    entry: primaryLifecycle?.entry ?? null,
+    stop: primaryLifecycle?.stop ?? null,
+    target1: primaryLifecycle?.target1 ?? null,
+    target2: primaryLifecycle?.target2 ?? null,
+    targetReactionLevel: play.targetReactionLevel,
+    sentAt: args.sentAt,
+  };
 }
 
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
@@ -4504,13 +4609,14 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
 
   if (!alertDecision.shouldSend && window.allowsDiscordAlert && deskState.primaryDeskPlay.discordEligible) {
-    const deskPlayKey = scannerDeskPlayAlertKey({
+    const deskPlayKey = scannerDeskPlanRefreshKey({
       tradeDate,
       instrument: config.instrument,
       session: window.session,
       deskState,
+      latestCompleted5m: completed5m.time,
     });
-    if (!state.deskPlaySent[deskPlayKey]) {
+    if (!state.deskPlanRefreshSent[deskPlayKey]) {
       const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
       try {
         const deskPlayArtifacts = await prepareLiveScannerDeskPlayAlertArtifacts({
@@ -4549,6 +4655,15 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
+          state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
+            key: deskPlayKey,
+            tradeDate,
+            instrument: config.instrument,
+            session: window.session,
+            deskState,
+            latestCompleted5m: completed5m.time,
+            sentAt,
+          });
           state.deskPlaySent[deskPlayKey] = {
             direction: deskState.primaryDeskPlay.direction,
             lineInSand: deskState.primaryDeskPlay.lineInSand,
@@ -4563,7 +4678,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
       }
     } else {
-      console.log(`[scanner] Desk Play update already sent for ${deskPlayKey}.`);
+      console.log(`[scanner] Desk Plan refresh already sent for ${deskPlayKey}.`);
     }
   }
 
