@@ -1350,6 +1350,11 @@ function buildPrimaryDeskPlay(args: {
     : primaryDirection === 'SHORT'
     ? args.candidateLifecycleTrace.bestShortPlan
     : null;
+  const oppositeLifecycleItem = primaryDirection === 'LONG'
+    ? args.candidateLifecycleTrace.bestShortPlan
+    : primaryDirection === 'SHORT'
+    ? args.candidateLifecycleTrace.bestLongPlan
+    : null;
   const selectedLifecycleItem = args.candidateLifecycleTrace.selectedCandidate;
   const deskMapLifecycleItem = primaryLifecycleItem ||
     selectedLifecycleItem ||
@@ -1362,6 +1367,7 @@ function buildPrimaryDeskPlay(args: {
     lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
   const countertrendWarning = htfManagementWarningForLifecycleItem(primaryLifecycleItem) ||
     htfManagementWarningForLifecycleItem(selectedLifecycleItem) ||
+    htfManagementWarningForLifecycleItem(oppositeLifecycleItem) ||
     (oppositeBias?.state === 'countertrend_review'
     ? `${oppositeBias.direction} evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.`
     : null);

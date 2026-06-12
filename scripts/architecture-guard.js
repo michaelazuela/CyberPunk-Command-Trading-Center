@@ -239,10 +239,30 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('nt-scanner.ts must surface stale/missing completed 5M data as a Discord data-quality notice instead of silently falling through Market Mapping.');
   }
 
+  if (
+    !ownerContent.includes('htfManagementWarningForLifecycleItem') ||
+    !ownerContent.includes('pressing into') ||
+    !ownerContent.includes('bullish HTF/session structure') ||
+    !ownerContent.includes('bearish HTF/session structure') ||
+    !ownerContent.includes('Treat T1/T2 as management') ||
+    !ownerContent.includes('protected completed 5M line-in-the-sand shift')
+  ) {
+    fail('localScannerEngine.ts must preserve two-sided HTF/session opposition caution in scanner-owned DeskState.');
+  }
+
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);
   if (!formatterContent.includes('WATCH FORMING') || !formatterContent.includes('post_watch')) {
     fail('discord-alert-format.ts must render scanner DeskState post_watch alerts as watch-only output.');
+  }
+  if (
+    !formatterContent.includes('scannerHtfCautionLines') ||
+    !formatterContent.includes('HTF Caution:') ||
+    !formatterContent.includes('bullish') ||
+    !formatterContent.includes('bearish') ||
+    !formatterContent.includes('Treat T1/T2 as management')
+  ) {
+    fail('discord-alert-format.ts must render two-sided HTF/session opposition caution from DeskState/candidate evidence.');
   }
 
   const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');

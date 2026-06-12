@@ -293,7 +293,8 @@ assert.equal(june11DeskState.primaryDeskPlay.shortBelow, 7303.5);
 assert.equal(june11DeskState.primaryDeskPlay.discordEligible, true);
 assert.equal(june11DeskState.canExecute, false);
 assert.equal(june11DeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
-assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('SHORT evidence is counter-HTF'));
+assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('SHORT is pressing into bullish HTF/session structure'));
+assert.ok(june11DeskState.primaryDeskPlay.countertrendWarning?.includes('Treat T1/T2 as management'));
 
 const approvedAlreadyTriggered = runBridgeDiagnosticReplay(input({
   approvedSetupCandidates: [candidate()],
