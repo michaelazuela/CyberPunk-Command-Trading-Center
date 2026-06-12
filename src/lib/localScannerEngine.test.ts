@@ -845,6 +845,92 @@ assert.ok(htfFramedDeskState.primaryDeskPlay.countertrendWarning?.includes('SHOR
 assert.equal(htfFramedDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(htfFramedDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 
+const refinedFifteenFiveLong = candidate({
+  scenarioLabel: '15M and 5M bullish campaign refined from stale broad conflict',
+  direction: 'LONG',
+  setupType: SetupType.IntradayMssMicroContinuation,
+  entry: 7434.5,
+  stop: 7418.75,
+  target1: 7458,
+  target2: 7466,
+  riskPoints: 15.75,
+  evidence: [
+    'HTF caution: opposing completed HTF MSS on 60M is reported for human review, not used to erase raw evidence or suppress the human-review plan.',
+  ],
+  missingEvidence: [
+    'No completed 60M/120M/240M MSS support; HTF is caution/context only.',
+  ],
+  requiredTrigger: 'Human-review only: aligned completed 15M and 5M MSS. The completed 5M close-through activates the campaign.',
+  activeCampaign: {
+    id: '2026-06-12:LONG:15M5M-MSS',
+    source: 'app_owned_structured_ohlc',
+    authority: 'campaign_context_only_not_execution_authority',
+    status: 'active',
+    direction: 'LONG',
+    primaryTrigger: '15M_5M_MSS',
+    executionTimeframe: '5M',
+    htfRelationship: 'caution',
+    confidenceAdjustment: -2,
+    evidenceLayers: [
+      {
+        layer: '15M_5M_MSS_CAMPAIGN',
+        status: 'confirmed',
+        direction: 'LONG',
+        evidence: [
+          'LONG 15M MSS/displacement context confirmed from structured OHLC.',
+          'LONG 5M MSS confirmed from structured OHLC.',
+        ],
+        blockers: [],
+      },
+    ],
+    htfSupportTimeframes: [],
+    htfConflictTimeframes: ['60M'],
+    obstacleMap: {
+      lineInSand: 7420,
+      reason: '15M/5M bullish campaign line in the sand.',
+      role: 'management_obstacle',
+      caution: 'Manage around 7420.00.',
+    },
+    deDuplication: {
+      oneTradePerCampaignRecommended: true,
+      enforced: true,
+      resetPolicy: 'trade_date_direction_campaign',
+    },
+    notes: [
+      'HTF conflict becomes caution/management context and does not erase raw 15M/5M MSS evidence.',
+      '5M remains execution authority for entry, stop, risk, invalidation, and app targets.',
+    ],
+  },
+});
+const refinedFifteenFiveLifecycle = buildCandidateLifecycleTrace({
+  candidates: [refinedFifteenFiveLong],
+  selectedCandidate: refinedFifteenFiveLong,
+  state: 'Conditional',
+  window: onePmLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: confirmed 15M/5M campaign should refine stale broad-context conflict.' },
+  canExecute: false,
+});
+const refinedFifteenFiveDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: refinedFifteenFiveLong,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: refinedFifteenFiveLong,
+    window: onePmLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: confirmed 15M/5M campaign should refine stale broad-context conflict.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: refinedFifteenFiveLifecycle,
+  canExecute: false,
+});
+assert.equal(refinedFifteenFiveLifecycle.selectedCandidate?.htfSupported, true);
+assert.equal(refinedFifteenFiveLifecycle.selectedCandidate?.htfConflict, false);
+assert.equal(refinedFifteenFiveDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(refinedFifteenFiveDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.ok(!refinedFifteenFiveDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play'));
+assert.equal(refinedFifteenFiveDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(refinedFifteenFiveDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
 const unsupportedShort = candidate({
   scenarioLabel: 'High score short without HTF support',
   direction: 'SHORT',

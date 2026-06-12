@@ -1249,9 +1249,14 @@ function buildHtfProtectedStructureMap(
 
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
+  const confirmedIntradayCampaign = candidateHasConfirmedIntradayMssCampaign(candidate);
   const text = [
     ...(candidate.missingEvidence || []),
-    ...(candidate.evidence || []),
+    ...(
+      confirmedIntradayCampaign
+        ? (candidate.evidence || []).filter((item) => !/htf caution.*opposing completed|opposing completed.*reported for human review/i.test(item))
+        : (candidate.evidence || [])
+    ),
     candidate.blockReason,
     candidate.activeRuleset?.timeframeMss?.status,
     ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
@@ -1263,8 +1268,23 @@ function textHasHtfCautionOnlyNoSupport(text: string): boolean {
   return /no completed (?:60m\/120m\/240m|htf).*mss support|htf is caution\/context only/i.test(text);
 }
 
+function candidateHasConfirmedIntradayMssCampaign(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate?.activeCampaign) return false;
+  if (candidate.activeCampaign.primaryTrigger !== '15M_5M_MSS') return false;
+  return candidate.activeCampaign.evidenceLayers.some((layer) =>
+    layer.layer === '15M_5M_MSS_CAMPAIGN' &&
+    layer.status === 'confirmed' &&
+    layer.direction === candidate.direction
+  );
+}
+
+function textHasConfirmedIntradayMssCampaign(text: string): boolean {
+  return /15m.*5m.*mss|5m.*15m.*mss|aligned completed 15m and 5m|15m\/5m.*campaign/i.test(text);
+}
+
 function candidateHasHtfSupport(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
+  if (candidateHasConfirmedIntradayMssCampaign(candidate)) return true;
   const text = [
     ...(candidate.evidence || []),
     ...(candidate.missingEvidence || []),
@@ -1300,6 +1320,7 @@ function lifecycleItemHasHtfSupport(item: ScannerCandidateLifecycleTraceItem | n
     item.requiredTrigger,
     item.targetReactionReason,
   ].filter(Boolean).join(' ');
+  if (item.htfSupported && textHasConfirmedIntradayMssCampaign(text)) return true;
   if (textHasHtfCautionOnlyNoSupport(text)) return false;
   if (item.htfSupported) return true;
   return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
