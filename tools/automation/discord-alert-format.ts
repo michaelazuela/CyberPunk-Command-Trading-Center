@@ -876,7 +876,7 @@ function deskPlayHtfProtectedStructureLines(play: NonNullable<CompactDeskStateFo
       return `${tf}: ${bias} ${side} ${protectedLevel} | confirm ${confirm} | target ${target}`;
     });
   return [
-    'HTF Structure:',
+    'HTF Protected Structure Map',
     ...rows,
     `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M still controls execution.`,
   ];

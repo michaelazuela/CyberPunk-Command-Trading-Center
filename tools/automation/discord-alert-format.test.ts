@@ -507,7 +507,7 @@ assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
 assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(deskPlayText.includes('Scanner Desk Play'));
 assert.ok(deskPlayText.includes('Status: REVIEW ONLY - NOT EXECUTION'));
-assert.ok(deskPlayText.includes('HTF Structure:'));
+assert.ok(deskPlayText.includes('HTF Protected Structure Map'));
 assert.ok(deskPlayText.includes('4H: BULL above 7271.75 | confirm 7342.00 | target 7428.75'));
 assert.ok(deskPlayText.includes('2H: BULL above 7288.25 | confirm 7342.00 | target 7410.00'));
 assert.ok(deskPlayText.includes('1H: NEUTRAL line 7303.50 | confirm 7342.00 | target N/A'));
@@ -645,7 +645,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 });
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
-assert.ok(deskPlayDecisionMapText.includes('HTF Structure:'));
+assert.ok(deskPlayDecisionMapText.includes('HTF Protected Structure Map'));
 assert.ok(deskPlayDecisionMapText.includes('4H: CONFLICT line 7377.50 | confirm 7423.75 | target 7460.00'));
 assert.ok(deskPlayDecisionMapText.includes('15M: BEAR below 7440.25 | confirm 7342.00 | target 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('5M: BEAR below 7350.25 | confirm 7342.00 | target 7318.75'));

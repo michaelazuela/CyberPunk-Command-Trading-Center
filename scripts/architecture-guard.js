@@ -311,7 +311,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Confidence:') ||
     !formatterContent.includes('HTF reaction:') ||
     !formatterContent.includes('HTF Runner Map') ||
-    !formatterContent.includes('HTF Structure:') ||
+    !formatterContent.includes('HTF Protected Structure Map') ||
     !formatterContent.includes('5M still controls execution') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||
