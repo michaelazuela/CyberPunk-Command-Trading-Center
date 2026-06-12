@@ -293,6 +293,44 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('discord-alert-format.ts must not preserve obsolete Desk Play chart wording.');
   }
 
+  const chartRendererPath = path.join(ROOT, 'tools', 'automation', 'chart-markup-renderer.ts');
+  const chartRendererContent = readFileSafe(chartRendererPath);
+  if (
+    !chartRendererContent.includes('Desk Play - Review Levels') ||
+    !chartRendererContent.includes('Action: wait for completed 5M proof') ||
+    !chartRendererContent.includes('REVIEW LEVELS') ||
+    !chartRendererContent.includes('REVIEW ENTRY ZONE') ||
+    !chartRendererContent.includes('REVIEW DESK PLAN ONLY') ||
+    !chartRendererContent.includes('completed 5M proof')
+  ) {
+    fail('chart-markup-renderer.ts must label Desk Play chart artifacts as review-only.');
+  }
+  if (
+    chartRendererContent.includes('Desk Play - Conditional Levels') ||
+    chartRendererContent.includes('trigger + canExecute') ||
+    chartRendererContent.includes('trigger + approval gates') ||
+    chartRendererContent.includes('CONDITIONAL LEVELS') ||
+    chartRendererContent.includes('CONDITIONAL ENTRY ZONE') ||
+    chartRendererContent.includes('CONDITIONAL DESK PLAN ONLY')
+  ) {
+    fail('chart-markup-renderer.ts must not use obsolete conditional wording for Desk Play chart artifacts.');
+  }
+
+  const scannerAutomationPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts');
+  const scannerAutomationContent = readFileSafe(scannerAutomationPath);
+  if (
+    !scannerAutomationContent.includes('Desk Play - Review Planning Levels') ||
+    !scannerAutomationContent.includes('Desk Play chart shows review-only app-owned planning levels.')
+  ) {
+    fail('nt-scanner.ts must create Desk Play chart candidates with review-only wording.');
+  }
+  if (
+    scannerAutomationContent.includes('Desk Play - Conditional Planning Levels') ||
+    scannerAutomationContent.includes('conditional app-owned planning levels')
+  ) {
+    fail('nt-scanner.ts must not create Desk Play chart candidates with obsolete conditional wording.');
+  }
+
   const deskAgentStackPath = path.join(ROOT, 'src', 'agents', 'deskAgentStack.ts');
   const deskAgentStackContent = readFileSafe(deskAgentStackPath);
   if (

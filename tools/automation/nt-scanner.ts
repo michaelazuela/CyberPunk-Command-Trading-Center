@@ -2754,14 +2754,14 @@ export function candidateForDeskPlayContextChart(
     ...primaryBias.blockers,
     'canExecute=false',
     hasPlanningLevels
-      ? 'Desk Play chart shows conditional app-owned planning levels only.'
+      ? 'Desk Play chart shows review-only app-owned planning levels.'
       : 'Protected 5M structure stop not confirmed; planning levels unavailable.',
     'No execution approval is attached to this image.',
   ]));
   return {
     setupType: primaryBias.setupType || SetupType.NoSetup,
     scenarioLabel: hasPlanningLevels
-      ? `${play.direction} Desk Play - Conditional Planning Levels`
+      ? `${play.direction} Desk Play - Review Planning Levels`
       : `${play.direction} Desk Play Context - Watch Only`,
     direction: play.direction,
     detectedStatus: SetupCandidateStatus.Conditional,
@@ -2775,7 +2775,7 @@ export function candidateForDeskPlayContextChart(
     invalidation: play.invalidation || deskState.invalidation || null,
     decisionQualityScore: primaryBias.decisionQualityScore ?? primaryBias.rankScore ?? null,
     decisionQualityRecommendation: hasPlanningLevels
-      ? 'Conditional planning levels only: targets are app-computed from entry to protected structure stop; canExecute remains false.'
+      ? 'Review planning levels only: targets are app-computed from entry to protected structure stop; canExecute remains false.'
       : 'Desk Play context only: wait for completed 5M proof and protected structure stop.',
     rankScore: primaryBias.rankScore ?? null,
     evidence: [

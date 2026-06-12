@@ -480,8 +480,8 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
     <text x="38" y="515" class="alert-title" fill="#38bdf8">${hasDeskPlayLevels ? 'REVIEW BOUNDARY' : 'WATCH BOUNDARY'}</text>
     <line x1="38" y1="527" x2="402" y2="527" stroke="#38bdf8" stroke-opacity=".34" />
     <text x="38" y="555" class="small">canExecute: <tspan fill="#facc15">false</tspan></text>
-    <text x="38" y="582" class="small">Trade levels: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'conditional planning only' : 'not available'}</tspan></text>
-    <text x="38" y="609" class="small">Next step: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'trigger + approval gates' : 'protected 5M stop required'}</tspan></text>
+    <text x="38" y="582" class="small">Trade levels: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan></text>
+    <text x="38" y="609" class="small">Next step: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
   `;
 }
 
@@ -529,14 +529,14 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     : `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
   const badge = isDeskPlayContext ? 'REVIEW ONLY' : status;
   const action = isDeskPlayContext
-    ? hasDeskPlayLevels ? 'Action: wait for trigger + canExecute' : 'Action: wait for protected 5M stop'
+    ? hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
     : actionStateLine(status);
   return `
     <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Play - Conditional Levels' : model.model, 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Play - Review Levels' : model.model, 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }
@@ -545,11 +545,11 @@ function renderRiskStrip(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
     if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
       return `
-        <rect x="466" y="126" width="912" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
+        <rect x="466" y="126" width="740" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
         <text x="488" y="157" class="risk-strip">Risk: <tspan fill="#f8fafc">${model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
-        <text x="690" y="157" class="risk-strip">Entry: <tspan fill="#f8fafc">${money(model.entry)}</tspan></text>
-        <text x="910" y="157" class="risk-strip">Stop: <tspan fill="#ef4444">${money(model.stop)}</tspan></text>
-        <text x="1118" y="157" class="risk-strip">T1/T2: <tspan fill="#facc15">${money(model.t1)} / ${money(model.t2)}</tspan></text>
+        <text x="648" y="157" class="risk-strip">Line: <tspan fill="#f8fafc">${money(model.contextLine)}</tspan></text>
+        <text x="824" y="157" class="risk-strip">Entry: <tspan fill="#f8fafc">${money(model.entry)}</tspan></text>
+        <text x="1024" y="157" class="risk-strip">Stop: <tspan fill="#ef4444">${money(model.stop)}</tspan></text>
       `;
     }
     return `
@@ -584,7 +584,7 @@ function renderRiskSummary(model: PlanRenderModel): string {
     if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
       return `
         <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
-        <text x="220" y="283" text-anchor="middle" class="panel-text">CONDITIONAL LEVELS</text>
+        <text x="220" y="283" text-anchor="middle" class="panel-text">REVIEW LEVELS</text>
         <text x="46" y="318" class="small">Entry Zone: <tspan fill="#4ade80">${money(model.entryLow)} - ${money(model.entryHigh)}</tspan></text>
         <text x="46" y="350" class="small">Stop: <tspan fill="#ef4444">${money(model.stop)}</tspan></text>
         <text x="46" y="382" class="small">Risk: <tspan fill="#f8fafc">~${model.risk ? model.risk.toFixed(2) : 'N/A'} pts</tspan></text>
@@ -954,7 +954,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const hasDeskPlayLevels = isDeskPlayContext && isPrice(plan.entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
   const entryZone = (!isDeskPlayContext || hasDeskPlayLevels) && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
-       <text x="772" y="${Math.max(188, y(entryHigh) - 10)}" class="zone-title">${isDeskPlayContext ? 'CONDITIONAL ENTRY ZONE' : isLong ? 'LONG ENTRY ZONE' : 'SHORT ENTRY ZONE'}</text>`
+       <text x="772" y="${Math.max(188, y(entryHigh) - 10)}" class="zone-title">${isDeskPlayContext ? 'REVIEW ENTRY ZONE' : isLong ? 'LONG ENTRY ZONE' : 'SHORT ENTRY ZONE'}</text>`
     : '';
   const priceTicks = Array.from({ length: 9 }, (_, index) => low + ((high - low) / 8) * index);
   const pathColor = isLong ? '#4ade80' : '#fb923c';
@@ -1068,7 +1068,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
-  <text x="44" y="991" class="small">${isDeskPlayContext ? hasDeskPlayLevels ? 'CONDITIONAL DESK PLAN ONLY. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
+  <text x="44" y="991" class="small">${isDeskPlayContext ? hasDeskPlayLevels ? 'REVIEW DESK PLAN ONLY. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
 </svg>
 </div>
 </body>

@@ -1730,6 +1730,10 @@ try {
   assert.equal(contextChartCandidate?.riskPoints, 5);
   assert.equal(contextChartCandidate?.executionStatus, ExecutionStatus.Conditional);
   assert.equal(contextChartCandidate?.activeRuleset?.htfLineInSand?.affectsExecution, false);
+  assert.ok(contextChartCandidate?.scenarioLabel?.includes('Review Planning Levels'));
+  assert.ok(!contextChartCandidate?.scenarioLabel?.includes('Conditional Planning Levels'));
+  assert.ok(contextChartCandidate?.decisionQualityRecommendation?.includes('Review planning levels only'));
+  assert.ok(contextChartCandidate?.missingEvidence?.includes('Desk Play chart shows review-only app-owned planning levels.'));
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
     session: 'lunch',
     tradeDate: '2026-05-26',
@@ -1777,7 +1781,21 @@ try {
   });
   assert.ok(deskPlayChartHtml.includes('[PM REVIEW] MES - LONG DESK PLAN'));
   assert.ok(deskPlayChartHtml.includes('REVIEW ONLY'));
-  assert.ok(deskPlayChartHtml.includes('Conditional Entry Zone'.toUpperCase()));
+  assert.ok(deskPlayChartHtml.includes('REVIEW ENTRY ZONE'));
+  assert.ok(deskPlayChartHtml.includes('Desk Play - Review Levels'));
+  assert.ok(deskPlayChartHtml.includes('Action: wait for completed 5M proof'));
+  assert.ok(deskPlayChartHtml.includes('REVIEW LEVELS'));
+  assert.ok(deskPlayChartHtml.includes('REVIEW DESK PLAN ONLY'));
+  assert.ok(deskPlayChartHtml.includes('Next step: <tspan fill="#f8fafc">completed 5M proof</tspan>'));
+  assert.equal(typeof deskPlayState.primaryDeskPlay.lineInSand, 'number');
+  assert.ok(deskPlayChartHtml.includes('Line:'));
+  assert.ok(!deskPlayChartHtml.includes('Desk Play line in the sand missing'));
+  assert.ok(!deskPlayChartHtml.includes('trigger + canExecute'));
+  assert.ok(!deskPlayChartHtml.includes('trigger + approval gates'));
+  assert.ok(!deskPlayChartHtml.includes('CONDITIONAL ENTRY ZONE'));
+  assert.ok(!deskPlayChartHtml.includes('Desk Play - Conditional Levels'));
+  assert.ok(!deskPlayChartHtml.includes('CONDITIONAL LEVELS'));
+  assert.ok(!deskPlayChartHtml.includes('CONDITIONAL DESK PLAN ONLY'));
   assert.ok(deskPlayChartHtml.includes('5331.75'));
   assert.ok(deskPlayChartHtml.includes('5334.25'));
 
