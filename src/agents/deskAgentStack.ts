@@ -1,5 +1,5 @@
 import { DESK_AGENT_AUTHORITY, DESK_AUTHORITY_MESSAGES } from './deskAgentBoundaries';
-import type { DeskState } from '../lib/localScannerEngine';
+import type { DeskPlayDirectionalBias, DeskState } from '../lib/localScannerEngine';
 
 export type DeskAgentKey =
   | 'scannerHealthAgent'
@@ -47,6 +47,8 @@ export interface DeskAgentPlanNarrative {
   currentPlay: string;
   htfStructure: string;
   lineInSand: number | null;
+  longBias: string;
+  shortBias: string;
   targetReaction: string | null;
   management: string;
   nextStructureMap: string;
@@ -225,6 +227,21 @@ function priceLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
 
+function biasStateLabel(state: DeskPlayDirectionalBias['state']): string {
+  if (state === 'countertrend_review') return 'countertrend review';
+  if (state === 'not_present') return 'not present';
+  return state;
+}
+
+function formatDeskBias(bias: DeskPlayDirectionalBias): string {
+  const line = bias.direction === 'LONG'
+    ? `LONG above ${priceLine(bias.lineInSand)}`
+    : `SHORT below ${priceLine(bias.lineInSand)}`;
+  const trigger = bias.nextTrigger || bias.reason;
+  const blockers = bias.blockers.length > 0 ? ` Blockers: ${bias.blockers.slice(0, 3).join('; ')}.` : '';
+  return `${bias.direction} Bias: ${biasStateLabel(bias.state)} | ${line} | ${trigger}${blockers}`;
+}
+
 export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlanNarrative {
   const play = deskState.primaryDeskPlay;
   const transition = play.levelTransition;
@@ -245,11 +262,15 @@ export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlan
     (targetReaction
       ? 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.'
       : 'Management: app T1/T2 remain tactical only until scanner-owned HTF/session reaction context is mapped.');
+  const longBias = formatDeskBias(play.longBias);
+  const shortBias = formatDeskBias(play.shortBias);
   const executionBoundary = 'Desk narrative is decision support only. It does not approve execution, change canExecute, or change entry, stop, target, risk, model, or bridge rules.';
   const plainText = [
     `Current Play: ${play.title}`,
     `HTF/Structure: ${play.summary}`,
     `Line in the Sand: ${priceLine(play.lineInSand)}`,
+    longBias,
+    shortBias,
     ...(targetReaction ? [`Target/reaction: ${targetReaction}`] : []),
     management,
     `After 5M shift: ${nextStructureMap}.`,
@@ -263,6 +284,8 @@ export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlan
     currentPlay: play.title,
     htfStructure: play.summary,
     lineInSand: play.lineInSand,
+    longBias,
+    shortBias,
     targetReaction,
     management,
     nextStructureMap,

@@ -158,6 +158,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - Say T1 should be taken seriously.
     - Say expectation should be capped at or before T2 into that HTF/session structure unless completed 5M acceptance clears it.
     - State that reversal risk is live at that structure.
+    - State both long-side bias and short-side bias when DeskState provides both, even when one side is review-only or countertrend.
     - State the next protected 5M line-in-the-sand map for the opposite/continuation scenario when available.
     This is management context only. It must not change app-owned entry, stop, T1, T2, risk, canExecute, model rules, or final approval.
 

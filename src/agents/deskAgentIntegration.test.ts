@@ -305,6 +305,12 @@ const deskState = buildDeskState({
 const deskNarrative = buildDeskAgentPlanNarrative(deskState);
 const deskNarrativeText = deskNarrative.plainText.join('\n');
 assert.equal(deskNarrative.sourceOfTruth, 'desk_agent_plan_narrative_from_scanner_desk_state');
+assert.ok(deskNarrativeText.includes('LONG Bias:'));
+assert.ok(deskNarrativeText.includes('LONG above 7342.00'));
+assert.ok(deskNarrativeText.includes('Completed 5M reclaim above 7342.00 after protected structure shift.'));
+assert.ok(deskNarrativeText.includes('SHORT Bias:'));
+assert.ok(deskNarrativeText.includes('SHORT below 7342.00'));
+assert.ok(deskNarrativeText.includes('Completed 5M acceptance below 7342.00, then failed retest.'));
 assert.ok(deskNarrativeText.includes('Target/reaction: London Session Low 7288.25'));
 assert.ok(deskNarrativeText.includes('take T1 seriously'));
 assert.ok(deskNarrativeText.includes('cap expectation at T2 into HTF/session structure'));

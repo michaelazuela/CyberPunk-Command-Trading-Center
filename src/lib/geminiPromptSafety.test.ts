@@ -14,6 +14,7 @@ assert.ok(source.includes('Name the HTF/session target/reaction level.'));
 assert.ok(source.includes('Say T1 should be taken seriously.'));
 assert.ok(source.includes('capped at or before T2 into that HTF/session structure'));
 assert.ok(source.includes('reversal risk is live at that structure'));
+assert.ok(source.includes('State both long-side bias and short-side bias when DeskState provides both'));
 assert.ok(source.includes('next protected 5M line-in-the-sand map'));
 assert.ok(source.includes('must not change app-owned entry, stop, T1, T2, risk, canExecute, model rules, or final approval'));
 

@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-11
-Task: Add DeskState target/reaction management to the desk-agent plan narrative.
+Task: Make the DeskState desk-agent plan narrative explicitly cover both long and short bias.
 Files changed: docs/PROJECT_STATUS.md, src/agents/deskAgentIntegration.test.ts, src/agents/deskAgentStack.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts.
-Reason: The HTF/session target-reaction management read must be part of the plan the desk agent gives the trader, not only Discord formatting. When a play is delivering into HTF/session structure, the desk agent must say to take T1 seriously, cap expectation at/near T2 unless completed 5M acceptance clears the level, and watch for reversal/line-in-the-sand shift.
-Tests run: npx tsx src/agents/deskAgentIntegration.test.ts; npx tsx src/lib/geminiPromptSafety.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
-Result: Added a scanner-DeskState-owned desk-agent plan narrative builder and prompt rule so the desk agent can produce the same target/reaction, T1/T2 management, reversal-risk, and next 5M shift-line language from `DeskState.primaryDeskPlay.levelTransition`.
+Reason: The desk-agent plan needs to read like a two-sided trading desk map: current play, long-side bias, short-side bias, target/reaction management, and the next protected 5M shift line. The opposing side must stay visible as review/countertrend/secondary context instead of disappearing behind the primary play.
+Tests run: npx tsx src/agents/deskAgentIntegration.test.ts; npx tsx src/lib/geminiPromptSafety.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Passed. Added explicit `LONG Bias` and `SHORT Bias` narrative lines from `DeskState.primaryDeskPlay.longBias` and `DeskState.primaryDeskPlay.shortBias`, and updated Gemini prompt safety wording to require both sides when DeskState provides both.
 Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord hard blockers changed.
 Bridge impact: None.
 Discord impact: No new Discord behavior in this change. Prior Discord wording remains.
 Journal/RAG impact: No schema change. Desk-agent/RAG consumers can use the new narrative text from DeskState.
 Supabase impact: No migration added.
 Known risks: None identified after verification.
-Next recommended action: Use the desk-agent narrative from DeskState when summarizing active Morning/Lunch plans so HTF/session reaction management is always part of the trader-facing plan.
+Next recommended action: Restart the supervisor so live desk-agent summaries use the two-sided narrative.
 
 ## Previous Change
 
