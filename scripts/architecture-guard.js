@@ -289,6 +289,19 @@ function checkScannerVisibilityMetadataBoundary() {
   ) {
     fail('discord-alert-format.ts must keep Desk Play alerts concise: manage side, active side, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');
   }
+  if (formatterContent.includes('conditional Desk Plan attached') || formatterContent.includes('watch/context chart attached')) {
+    fail('discord-alert-format.ts must not preserve obsolete Desk Play chart wording.');
+  }
+
+  const deskAgentStackPath = path.join(ROOT, 'src', 'agents', 'deskAgentStack.ts');
+  const deskAgentStackContent = readFileSafe(deskAgentStackPath);
+  if (
+    deskAgentStackContent.includes('Current Play:') ||
+    deskAgentStackContent.includes('HTF/Structure:') ||
+    deskAgentStackContent.includes('Target/reaction:')
+  ) {
+    fail('deskAgentStack.ts must not emit obsolete verbose Desk Play narrative labels.');
+  }
 
   const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');
   const replayContent = readFileSafe(replayPath);

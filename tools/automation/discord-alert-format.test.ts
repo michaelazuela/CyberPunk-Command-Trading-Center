@@ -217,9 +217,8 @@ assert.ok(flattenDiscordPayloadText(morning).includes('Targets:'));
 assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secure'));
 assert.ok(flattenDiscordPayloadText(morning).includes('T2: 5328.00 - base exit'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extension if T2 clears'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Level Transition:'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Target/reaction: NY premarket high 5329.00'));
-assert.ok(flattenDiscordPayloadText(morning).includes('After 5M shift: LONG above 5320.00 / SHORT below 5316.00.'));
+assert.ok(flattenDiscordPayloadText(morning).includes('HTF reaction: NY premarket high 5329.00'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Next 5M map: LONG above 5320.00 / SHORT below 5316.00.'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 

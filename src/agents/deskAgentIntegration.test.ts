@@ -305,17 +305,20 @@ const deskState = buildDeskState({
 const deskNarrative = buildDeskAgentPlanNarrative(deskState);
 const deskNarrativeText = deskNarrative.plainText.join('\n');
 assert.equal(deskNarrative.sourceOfTruth, 'desk_agent_plan_narrative_from_scanner_desk_state');
-assert.ok(deskNarrativeText.includes('LONG Bias:'));
-assert.ok(deskNarrativeText.includes('LONG above 7342.00'));
+assert.ok(deskNarrativeText.includes('DESK PLAY'));
+assert.ok(deskNarrativeText.includes('Status: WATCH ONLY - NOT EXECUTION APPROVAL'));
+assert.ok(deskNarrativeText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskNarrativeText.includes('Completed 5M reclaim above 7342.00 after protected structure shift.'));
-assert.ok(deskNarrativeText.includes('SHORT Bias:'));
-assert.ok(deskNarrativeText.includes('SHORT below 7342.00'));
+assert.ok(deskNarrativeText.includes('SHORT BELOW 7342.00'));
 assert.ok(deskNarrativeText.includes('Completed 5M acceptance below 7342.00, then failed retest.'));
-assert.ok(deskNarrativeText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(deskNarrativeText.includes('HTF reaction: London Session Low 7288.25'));
 assert.ok(deskNarrativeText.includes('take T1 seriously'));
 assert.ok(deskNarrativeText.includes('cap expectation at T2 into HTF/session structure'));
 assert.ok(deskNarrativeText.includes('Reversal risk is live'));
-assert.ok(deskNarrativeText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7342.00.'));
+assert.ok(deskNarrativeText.includes('Next 5M map: LONG above 7342.00 / SHORT below 7342.00.'));
+assert.ok(!deskNarrativeText.includes('Current Play:'));
+assert.ok(!deskNarrativeText.includes('HTF/Structure:'));
+assert.ok(!deskNarrativeText.includes('Target/reaction:'));
 assert.equal(deskNarrative.approvalBoundary.changesCanExecute, false);
 assert.equal(deskNarrative.approvalBoundary.changesEntryStopTargets, false);
 
@@ -394,8 +397,9 @@ const htfOppositionShortDeskState = buildDeskState({
 });
 const htfOppositionShortText = buildDeskAgentPlanNarrative(htfOppositionShortDeskState).plainText.join('\n');
 assert.ok(htfOppositionShortText.includes('SHORT is pressing into bullish HTF/session structure'));
-assert.ok(htfOppositionShortText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(htfOppositionShortText.includes('HTF reaction: London Session Low 7288.25'));
 assert.ok(htfOppositionShortText.includes('wait for a protected completed 5M line-in-the-sand shift'));
+assert.ok(!htfOppositionShortText.includes('Target/reaction:'));
 
 const htfOppositionLong = candidate({
   direction: 'LONG',

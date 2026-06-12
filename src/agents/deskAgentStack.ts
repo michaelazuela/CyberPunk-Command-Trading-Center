@@ -44,12 +44,10 @@ export interface DeskStackHandoff {
 
 export interface DeskAgentPlanNarrative {
   sourceOfTruth: 'desk_agent_plan_narrative_from_scanner_desk_state';
-  currentPlay: string;
-  htfStructure: string;
   lineInSand: number | null;
   longBias: string;
   shortBias: string;
-  targetReaction: string | null;
+  htfReaction: string | null;
   management: string;
   nextStructureMap: string;
   trigger: string;
@@ -227,6 +225,12 @@ function priceLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 }
 
+function directionLabel(direction: string): string {
+  if (direction === 'LONG') return 'LONG';
+  if (direction === 'SHORT') return 'SHORT';
+  return 'WAIT';
+}
+
 function biasStateLabel(state: DeskPlayDirectionalBias['state']): string {
   if (state === 'countertrend_review') return 'countertrend review';
   if (state === 'not_present') return 'not present';
@@ -235,17 +239,20 @@ function biasStateLabel(state: DeskPlayDirectionalBias['state']): string {
 
 function formatDeskBias(bias: DeskPlayDirectionalBias): string {
   const line = bias.direction === 'LONG'
-    ? `LONG above ${priceLine(bias.lineInSand)}`
-    : `SHORT below ${priceLine(bias.lineInSand)}`;
+    ? `LONG ABOVE ${priceLine(bias.lineInSand)}`
+    : `SHORT BELOW ${priceLine(bias.lineInSand)}`;
   const trigger = bias.nextTrigger || bias.reason;
+  const confidence = bias.lineConfidence?.score !== null && bias.lineConfidence?.score !== undefined
+    ? `Confidence ${Math.round(bias.lineConfidence.score)}/100 ${bias.lineConfidence.label}`
+    : 'Confidence N/A';
   const blockers = bias.blockers.length > 0 ? ` Blockers: ${bias.blockers.slice(0, 3).join('; ')}.` : '';
-  return `${bias.direction} Bias: ${biasStateLabel(bias.state)} | ${line} | ${trigger}${blockers}`;
+  return `${line} | ${confidence} | ${biasStateLabel(bias.state)} | ${trigger}${blockers}`;
 }
 
 export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlanNarrative {
   const play = deskState.primaryDeskPlay;
   const transition = play.levelTransition;
-  const targetReaction = transition?.targetReactionLevel !== null && transition?.targetReactionLevel !== undefined
+  const htfReaction = transition?.targetReactionLevel !== null && transition?.targetReactionLevel !== undefined
     ? `${transition.targetReactionLabel || 'HTF/session reaction level'} ${priceLine(transition.targetReactionLevel)}`
     : play.targetReactionLevel !== null
       ? `${play.targetReactionLabel || 'HTF/session reaction level'} ${priceLine(play.targetReactionLevel)}`
@@ -259,35 +266,34 @@ export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlan
       : play.shortBelow !== null ? `SHORT below ${priceLine(play.shortBelow)}` : null,
   ].filter(Boolean).join(' / ') || 'No protected 5M shift line is mapped yet.';
   const management = transition?.targetManagementInstruction ||
-    (targetReaction
+    (htfReaction
       ? 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.'
       : 'Management: app T1/T2 remain tactical only until scanner-owned HTF/session reaction context is mapped.');
   const longBias = formatDeskBias(play.longBias);
   const shortBias = formatDeskBias(play.shortBias);
   const executionBoundary = 'Desk narrative is decision support only. It does not approve execution, change canExecute, or change entry, stop, target, risk, model, or bridge rules.';
   const plainText = [
-    `Current Play: ${play.title}`,
-    `HTF/Structure: ${play.summary}`,
-    `Line in the Sand: ${priceLine(play.lineInSand)}`,
+    `${directionLabel(play.direction)} DESK PLAY`,
+    'Status: WATCH ONLY - NOT EXECUTION APPROVAL',
     longBias,
     shortBias,
-    ...(targetReaction ? [`Target/reaction: ${targetReaction}`] : []),
+    ...(htfReaction ? [`HTF reaction: ${htfReaction}`] : []),
     management,
     ...(play.countertrendWarning ? [`HTF Caution: ${play.countertrendWarning}`] : []),
-    `After 5M shift: ${nextStructureMap}.`,
-    `Trigger: ${play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.'}`,
-    `Invalidation: ${play.invalidation || deskState.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.'}`,
+    `Next 5M map: ${nextStructureMap}.`,
+    'Trigger',
+    play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.',
+    'Invalid',
+    play.invalidation || deskState.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.',
     executionBoundary,
   ];
 
   return {
     sourceOfTruth: 'desk_agent_plan_narrative_from_scanner_desk_state',
-    currentPlay: play.title,
-    htfStructure: play.summary,
     lineInSand: play.lineInSand,
     longBias,
     shortBias,
-    targetReaction,
+    htfReaction,
     management,
     nextStructureMap,
     trigger: play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.',

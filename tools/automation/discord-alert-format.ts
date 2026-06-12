@@ -357,9 +357,8 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
   ].filter(Boolean).join(' / ');
   if (!reaction && !nextLine) return [];
   return [
-    'Level Transition:',
     ...(reaction ? [
-      `Target/reaction: ${reaction.label} ${priceLine(reaction.price)}`,
+      `HTF reaction: ${reaction.label} ${priceLine(reaction.price)}`,
       transition?.targetManagementInstruction
         ? 'Manage: T1 serious; cap T2 into HTF. Reversal risk live.'
         : compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 85),
@@ -368,7 +367,7 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
       ] : []),
     ] : []),
     ...(nextLine ? [
-      `After 5M shift: ${nextLine}.`,
+      `Next 5M map: ${nextLine}.`,
       compactLine(transition?.nextStructureInstruction || 'Wait for close/retest/protected structure.', 95),
     ] : []),
   ];
@@ -1193,7 +1192,7 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  const hasDeskPlaySingleChart = /watch\/context chart attached|conditional Desk Plan attached/i.test(mainText);
+  const hasDeskPlaySingleChart = /watch chart attached|review chart attached/i.test(mainText);
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
