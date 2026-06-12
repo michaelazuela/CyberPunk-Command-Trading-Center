@@ -735,6 +735,7 @@ function deskPlayCandidateForDirection(
 function deskPlayDecisionMapLevels(
   normalized: CompactNormalizedPlan,
   direction: 'LONG' | 'SHORT',
+  lineInSand?: number | null,
 ): { entry: number; stop: number; target1: number; target2: number; riskPoints: number } | null {
   const candidate = deskPlayCandidateForDirection(normalized, direction);
   const normalizedMatchesDirection = normalized.decision === direction;
@@ -745,12 +746,35 @@ function deskPlayDecisionMapLevels(
     ? normalized.stop
     : candidate?.stop ?? null;
   const computed = targetsFromEntryStop(direction, entry, stop);
+  const sideIsValid = direction === 'LONG'
+    ? isFinitePrice(entry) && isFinitePrice(stop) && stop < entry
+    : isFinitePrice(entry) && isFinitePrice(stop) && stop > entry;
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const lineIsValid = !isFinitePrice(lineInSand)
+    ? true
+    : direction === 'LONG'
+    ? isFinitePrice(entry) &&
+      isFinitePrice(stop) &&
+      entry >= lineInSand &&
+      stop < lineInSand &&
+      entry - lineInSand <= Math.max(lineInSand - stop, tick)
+    : isFinitePrice(entry) &&
+      isFinitePrice(stop) &&
+      entry <= lineInSand &&
+      stop > lineInSand &&
+      lineInSand - entry <= Math.max(stop - lineInSand, tick);
+  const targetsAreValid = direction === 'LONG'
+    ? isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 > entry! && computed.target2 > computed.target1
+    : isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 < entry! && computed.target2 < computed.target1;
   if (
     !isFinitePrice(entry) ||
     !isFinitePrice(stop) ||
     !isFinitePrice(computed.target1) ||
     !isFinitePrice(computed.target2) ||
-    !isFinitePrice(computed.riskPoints)
+    !isFinitePrice(computed.riskPoints) ||
+    !sideIsValid ||
+    !lineIsValid ||
+    !targetsAreValid
   ) {
     return null;
   }
@@ -954,7 +978,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   if (!play) return [];
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return [];
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction);
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   const header = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
   if (!levels) {
@@ -984,7 +1008,7 @@ function deskPlayWaitMapLine(
 ): string | null {
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return null;
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction);
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)} | levels pending`;
   return `${direction} ${triggerWord} ${priceLine(lineInSand)} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
@@ -1044,7 +1068,8 @@ function deskPlayInvalidationLine(
   direction: 'LONG' | 'SHORT' | 'WAIT',
 ): string {
   if (direction === 'LONG' || direction === 'SHORT') {
-    const levels = deskPlayDecisionMapLevels(args.normalized, direction);
+    const line = play ? deskPlayLineForDirection(play, direction) : null;
+    const levels = deskPlayDecisionMapLevels(args.normalized, direction, line);
     if (levels?.stop !== null && levels?.stop !== undefined && isFinitePrice(levels.stop)) {
       return `Invalid: completed 5M ${direction === 'LONG' ? 'below' : 'above'} ${priceLine(levels.stop)}.`;
     }
@@ -1074,7 +1099,8 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const hasConditionalLevels = Boolean(
     args.attachments.chartPlan &&
     (direction === 'LONG' || direction === 'SHORT') &&
-    deskPlayDecisionMapLevels(args.normalized, direction),
+    play &&
+    deskPlayDecisionMapLevels(args.normalized, direction, deskPlayLineForDirection(play, direction)),
   );
   const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
     ? priceLine(play.lineInSand)

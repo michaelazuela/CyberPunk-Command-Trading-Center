@@ -524,11 +524,12 @@ assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
 assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
-assert.ok(deskPlayText.includes('Entry ref: 7312.00'));
-assert.ok(deskPlayText.includes('Stop: 7271.75'));
-assert.ok(deskPlayText.includes('Risk: 40.25 pts'));
-assert.ok(deskPlayText.includes('T1: 7372.50'));
-assert.ok(deskPlayText.includes('T2: 7392.50'));
+assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
+assert.ok(!deskPlayText.includes('Entry ref: 7312.00'));
+assert.ok(!deskPlayText.includes('Stop: 7271.75'));
+assert.ok(!deskPlayText.includes('Risk: 40.25 pts'));
+assert.ok(!deskPlayText.includes('T1: 7372.50'));
+assert.ok(!deskPlayText.includes('T2: 7392.50'));
 assert.ok(deskPlayText.includes('HTF Runner Map'));
 assert.ok(deskPlayText.includes('App targets: T1 7372.50 / T2 7392.50'));
 assert.ok(deskPlayText.includes('Next draw: Prior RTH high 7410.00 2.4R'));
@@ -537,8 +538,8 @@ assert.ok(deskPlayText.includes('App T1/T2 remain tactical'));
 assert.ok(deskPlayText.includes('Trigger:'));
 assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.00.'));
 assert.ok(deskPlayText.includes('Invalid:'));
-assert.ok(deskPlayText.includes('Invalid: completed 5M below 7271.75.'));
-assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
+assert.ok(deskPlayText.includes('Invalid: LONG fails below 7342.00'));
+assert.ok(deskPlayText.includes('Chart: watch chart attached; levels withheld until protected structure is proven.'));
 assert.ok(deskPlayText.includes('Boundary: no approval/canExecute change.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
@@ -660,6 +661,80 @@ assert.ok(deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecut
 assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play is confirmed'), false);
 assert.equal(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'), false);
 assert.ok(!deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
+
+const detachedLongCandidate = sampleCandidate('LONG');
+detachedLongCandidate.entry = 7426.5;
+detachedLongCandidate.stop = 7408.25;
+detachedLongCandidate.target1 = null;
+detachedLongCandidate.target2 = null;
+detachedLongCandidate.riskPoints = null;
+const wrongSideShortCandidate = sampleCandidate('SHORT');
+wrongSideShortCandidate.entry = 7441;
+wrongSideShortCandidate.stop = 7433;
+wrongSideShortCandidate.target1 = null;
+wrongSideShortCandidate.target2 = null;
+wrongSideShortCandidate.riskPoints = null;
+const invalidDeskMapPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-12',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-DESK-PLAY-INVALID-LEVELS-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'Review only until completed trigger/retest.',
+    invalidation: null,
+    setupCandidates: [detachedLongCandidate, wrongSideShortCandidate],
+  },
+  candidates: [detachedLongCandidate, wrongSideShortCandidate],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  currentPrice: 7440,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7437.5,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'WAIT review map',
+      summary: 'Two-sided map until completed structure confirms.',
+      lineInSand: 7437.5,
+      longAbove: 7410,
+      shortBelow: 7437.5,
+      nextTrigger: 'Wait for completed 5M proof.',
+      invalidation: 'Protected structure must hold.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      shortBias: {
+        state: 'review',
+        scenarioLabel: 'Short below line in the sand',
+        lineInSand: 7437.5,
+        nextTrigger: 'Completed 5M close below 7437.50, then failed retest.',
+        reason: 'Review only.',
+        blockers: ['canExecute=false'],
+      },
+      longBias: {
+        state: 'review',
+        scenarioLabel: 'Long above line in the sand',
+        lineInSand: 7410,
+        nextTrigger: 'Completed 5M close above 7410.00, then hold retest.',
+        reason: 'Review only.',
+        blockers: ['canExecute=false'],
+      },
+    },
+  },
+});
+const invalidDeskMapText = flattenDiscordPayloadText(invalidDeskMapPayload);
+assert.ok(invalidDeskMapText.includes('LONG ABOVE 7410.00 | levels pending'));
+assert.ok(invalidDeskMapText.includes('SHORT BELOW 7437.50 | levels pending'));
+assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
+assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
+assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
 
 const deskPlaySupportedShortPayload = compactDiscordSummary({
   session: 'lunch',
