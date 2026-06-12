@@ -30,6 +30,11 @@ export interface ScannerPlanSelection {
   visibilityMetadata?: ScannerVisibilityMetadata;
 }
 
+type LatestCompletedBarPriceRange = {
+  high?: number | null;
+  low?: number | null;
+} | null;
+
 function normalizedPlanDirection(normalized: Pick<NormalizedTradePlan, 'decision'>): SetupCandidate['direction'] {
   return normalized.decision === 'LONG' || normalized.decision === 'SHORT' ? normalized.decision : 'NO TRADE';
 }
@@ -51,6 +56,15 @@ function candidatePrioritySort(a: SetupCandidate, b: SetupCandidate): number {
   return (b.decisionQualityScore || b.rankScore || b.priority || 0) - (a.decisionQualityScore || a.rankScore || a.priority || 0);
 }
 
+function candidateHasOpposingHtfConflict(candidate: SetupCandidate): boolean {
+  const text = [
+    ...(candidate.missingEvidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+    candidate.activeCampaign?.htfRelationship === 'conflict' ? 'active campaign HTF conflict' : null,
+  ].filter(Boolean).join(' ');
+  return /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
+}
+
 function candidateCanDriveScannerPlan(candidate: SetupCandidate): boolean {
   const triggerPendingBlock = candidate.blockReason === NoTradeReason.EntryTriggerPending;
   const specializedIntradayMssWatch =
@@ -64,6 +78,29 @@ function candidateCanDriveScannerPlan(candidate: SetupCandidate): boolean {
     candidate.executionStatus === ExecutionStatus.Executable ||
     candidate.executionStatus === ExecutionStatus.Conditional
   ) && !specializedIntradayMssWatch && (!candidate.blockReason || triggerPendingBlock);
+}
+
+function candidateInvalidatedByMarketPrice(
+  candidate: SetupCandidate,
+  currentPrice: number | null,
+  latestCompletedBar?: LatestCompletedBarPriceRange,
+): boolean {
+  if (!isValidPrice(candidate.stop)) return false;
+  const latestHigh = latestCompletedBar && isValidPrice(latestCompletedBar.high) ? latestCompletedBar.high : null;
+  const latestLow = latestCompletedBar && isValidPrice(latestCompletedBar.low) ? latestCompletedBar.low : null;
+  if (candidate.direction === 'LONG') {
+    return (
+      (isValidPrice(currentPrice) && currentPrice <= candidate.stop) ||
+      (latestLow !== null && latestLow <= candidate.stop)
+    );
+  }
+  if (candidate.direction === 'SHORT') {
+    return (
+      (isValidPrice(currentPrice) && currentPrice >= candidate.stop) ||
+      (latestHigh !== null && latestHigh >= candidate.stop)
+    );
+  }
+  return false;
 }
 
 function findNormalizedPlanCandidate(normalized: NormalizedTradePlan): SetupCandidate | null {
@@ -94,11 +131,17 @@ function staleSeverity(stale: StaleChaseResult): number {
 function freshCandidateFromFallbackPool(
   normalized: NormalizedTradePlan,
   currentPrice: number | null,
+  latestCompletedBar?: LatestCompletedBarPriceRange,
   guards?: Partial<ScannerRiskGuards>,
 ): SetupCandidate | null {
   const candidates = (normalized.setupCandidates || [])
     .filter(candidateCanDriveScannerPlan)
+    .filter((candidate) => !candidateInvalidatedByMarketPrice(candidate, currentPrice, latestCompletedBar))
     .sort((a, b) => {
+      const aHtfConflict = candidateHasOpposingHtfConflict(a);
+      const bHtfConflict = candidateHasOpposingHtfConflict(b);
+      if (aHtfConflict !== bHtfConflict) return aHtfConflict ? 1 : -1;
+
       const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
       const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
       if (aSeverity !== bSeverity) return aSeverity - bSeverity;
@@ -126,6 +169,7 @@ function earlyMoveReviewOppositeDirectionCandidate(normalized: NormalizedTradePl
 function freshOppositeEarlyMoveCandidateFromFallbackPool(
   normalized: NormalizedTradePlan,
   currentPrice: number | null,
+  latestCompletedBar?: LatestCompletedBarPriceRange,
   guards?: Partial<ScannerRiskGuards>,
 ): SetupCandidate | null {
   const earlyMoveDirection = normalized.earlyMoveReview?.direction;
@@ -138,8 +182,13 @@ function freshOppositeEarlyMoveCandidateFromFallbackPool(
 
   const candidates = (normalized.setupCandidates || [])
     .filter(candidateCanDriveScannerPlan)
+    .filter((candidate) => !candidateInvalidatedByMarketPrice(candidate, currentPrice, latestCompletedBar))
     .filter((candidate) => candidate.direction !== earlyMoveDirection)
     .sort((a, b) => {
+      const aHtfConflict = candidateHasOpposingHtfConflict(a);
+      const bHtfConflict = candidateHasOpposingHtfConflict(b);
+      if (aHtfConflict !== bHtfConflict) return aHtfConflict ? 1 : -1;
+
       const aSeverity = staleSeverity(applyStaleChaseGuard({ candidate: a, currentPrice, guards }));
       const bSeverity = staleSeverity(applyStaleChaseGuard({ candidate: b, currentPrice, guards }));
       if (aSeverity !== bSeverity) return aSeverity - bSeverity;
@@ -154,9 +203,14 @@ function freshOppositeEarlyMoveCandidateFromFallbackPool(
   return candidates[0] || null;
 }
 
-function humanReviewCandidateFromFallbackPool(normalized: NormalizedTradePlan): SetupCandidate | null {
+function humanReviewCandidateFromFallbackPool(
+  normalized: NormalizedTradePlan,
+  currentPrice: number | null,
+  latestCompletedBar?: LatestCompletedBarPriceRange,
+): SetupCandidate | null {
   return (normalized.setupCandidates || [])
     .filter((candidate) => candidateCanDriveScannerPlan(candidate))
+    .filter((candidate) => !candidateInvalidatedByMarketPrice(candidate, currentPrice, latestCompletedBar))
     .filter((candidate) =>
       candidate.candidateState === 'HUMAN_REVIEW_READY' ||
       candidate.humanReview?.discordTradePlanEligible === true
@@ -170,7 +224,11 @@ function earlyMoveReviewAppliesToCandidate(normalized: NormalizedTradePlan, cand
   return normalized.earlyMoveReview.direction === candidate.direction;
 }
 
-function turtleSoupWatchCandidateFromPool(normalized: NormalizedTradePlan): SetupCandidate | null {
+function turtleSoupWatchCandidateFromPool(
+  normalized: NormalizedTradePlan,
+  currentPrice: number | null,
+  latestCompletedBar?: LatestCompletedBarPriceRange,
+): SetupCandidate | null {
   const candidate = (normalized.setupCandidates || [])
     .filter((item) =>
       item.setupType === SetupType.TurtleSoup &&
@@ -180,7 +238,13 @@ function turtleSoupWatchCandidateFromPool(normalized: NormalizedTradePlan): Setu
       isValidPrice(item.stop) &&
       isValidPrice(item.target1)
     )
-    .sort(candidatePrioritySort)[0] || null;
+    .filter((item) => !candidateInvalidatedByMarketPrice(item, currentPrice, latestCompletedBar))
+    .sort((a, b) => {
+      const aHtfConflict = candidateHasOpposingHtfConflict(a);
+      const bHtfConflict = candidateHasOpposingHtfConflict(b);
+      if (aHtfConflict !== bHtfConflict) return aHtfConflict ? 1 : -1;
+      return candidatePrioritySort(a, b);
+    })[0] || null;
 
   if (!candidate) return null;
 
@@ -462,6 +526,7 @@ function triggerPendingReviewState(candidate: SetupCandidate): ScannerPlanSelect
 function selectScannerPlanCore(args: {
   normalized: NormalizedTradePlan;
   currentPrice: number | null;
+  latestCompletedBar?: LatestCompletedBarPriceRange;
   guards?: Partial<ScannerRiskGuards>;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
@@ -534,7 +599,7 @@ function selectScannerPlanCore(args: {
 
   if (args.normalized.earlyMoveReview?.status === 'already_triggered_no_fresh_entry') {
     const oppositeProofCandidate = withTurtleSoupLineInSand(
-      freshOppositeEarlyMoveCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards),
+      freshOppositeEarlyMoveCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards),
     );
     if (oppositeProofCandidate && earlyMoveReviewOppositeDirectionCandidate(args.normalized, oppositeProofCandidate)) {
       const stale = applyStaleChaseGuard({
@@ -558,11 +623,11 @@ function selectScannerPlanCore(args: {
       };
     }
 
-    const humanReviewCandidate = humanReviewCandidateFromFallbackPool(args.normalized);
+    const humanReviewCandidate = humanReviewCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar);
     if (humanReviewCandidate && earlyMoveReviewAppliesToCandidate(args.normalized, humanReviewCandidate)) {
       return humanReviewNoChaseState(args.normalized, humanReviewCandidate);
     }
-    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized);
+    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
     if (turtleSoupWatchCandidate) {
       return turtleSoupWatchState(turtleSoupWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, turtleSoupWatchCandidate));
     }
@@ -570,7 +635,7 @@ function selectScannerPlanCore(args: {
     if (intradayMssWatchCandidate) {
       return intradayMssWatchState(intradayMssWatchCandidate, !earlyMoveReviewAppliesToCandidate(args.normalized, intradayMssWatchCandidate));
     }
-    const proofCandidate = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards));
+    const proofCandidate = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
     if (!proofCandidate) return earlyMoveContextOnlyState(args.normalized);
     if (!earlyMoveReviewAppliesToCandidate(args.normalized, proofCandidate)) {
       const stale = applyStaleChaseGuard({
@@ -601,9 +666,9 @@ function selectScannerPlanCore(args: {
   }
 
   const intradayMssWatchCandidate = intradayMssRetestPendingWatchCandidateFromPool(args.normalized, args.currentPrice, args.guards);
-  const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.guards));
+  const fallback = withTurtleSoupLineInSand(freshCandidateFromFallbackPool(args.normalized, args.currentPrice, args.latestCompletedBar, args.guards));
   if (!fallback) {
-    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized);
+    const turtleSoupWatchCandidate = turtleSoupWatchCandidateFromPool(args.normalized, args.currentPrice, args.latestCompletedBar);
     if (turtleSoupWatchCandidate) return turtleSoupWatchState(turtleSoupWatchCandidate);
     if (intradayMssWatchCandidate) return intradayMssWatchState(intradayMssWatchCandidate);
   }
@@ -665,6 +730,7 @@ function selectScannerPlanCore(args: {
 export function selectScannerPlan(args: {
   normalized: NormalizedTradePlan;
   currentPrice: number | null;
+  latestCompletedBar?: LatestCompletedBarPriceRange;
   guards?: Partial<ScannerRiskGuards>;
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {

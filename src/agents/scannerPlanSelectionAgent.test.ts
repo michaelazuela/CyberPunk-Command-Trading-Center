@@ -147,7 +147,7 @@ const turtleSoupWatchSelection = selectScannerPlan({
     decision: 'NO TRADE',
     setupCandidates: [turtleSoupShortWatch],
   } as any,
-  currentPrice: 7462,
+  currentPrice: 7454,
 });
 assert.equal(turtleSoupWatchSelection.stateForAlert, 'Conditional');
 assert.notEqual(turtleSoupWatchSelection.candidate, turtleSoupShortWatch);
@@ -186,12 +186,110 @@ const turtleSoupWatchWithOppositeEarlyMove = selectScannerPlan({
       action: 'Old long move is extended; no fresh long entry.',
     },
   } as any,
-  currentPrice: 7462,
+  currentPrice: 7454,
 });
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.stateForAlert, 'Conditional');
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.candidate?.direction, 'SHORT');
 assert.equal(turtleSoupWatchWithOppositeEarlyMove.reviewStatus, null);
 assert.ok(turtleSoupWatchWithOppositeEarlyMove.auditWarnings.some((warning) => warning.includes('Opposite-direction early-move review ignored')));
+
+const invalidatedTurtleSoupShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Invalidated Turtle Soup SHORT',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Blocked,
+  executionStatus: ExecutionStatus.Blocked,
+  entry: 7437.5,
+  stop: 7440.25,
+  target1: 7401.25,
+  target2: 7383,
+  riskPoints: 2.75,
+  blockReason: NoTradeReason.InvalidStopLocation,
+  requiredTrigger: null,
+  nextAction: 'Old short watch should not be reused after stop is breached.',
+  evidence: ['Buy-side sweep and reclaim context present.'],
+});
+const validTurtleSoupLong = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'Current Turtle Soup LONG',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Blocked,
+  executionStatus: ExecutionStatus.Blocked,
+  entry: 7410.75,
+  stop: 7408.25,
+  target1: 7470,
+  target2: 7480,
+  riskPoints: 2.5,
+  blockReason: NoTradeReason.InvalidStopLocation,
+  requiredTrigger: null,
+  nextAction: 'Long watch remains valid above its protected stop.',
+  evidence: ['Sell-side sweep and reclaim context present.'],
+});
+const invalidatedShortSkippedForLongWatch = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [invalidatedTurtleSoupShort, validTurtleSoupLong],
+  } as any,
+  currentPrice: 7440,
+  latestCompletedBar: { high: 7443.25, low: 7434.25 },
+});
+assert.equal(invalidatedShortSkippedForLongWatch.stateForAlert, 'Conditional');
+assert.equal(invalidatedShortSkippedForLongWatch.candidate?.direction, 'LONG');
+assert.equal(invalidatedShortSkippedForLongWatch.candidate?.setupType, SetupType.TurtleSoup);
+assert.equal(invalidatedShortSkippedForLongWatch.candidate?.blockReason, null);
+assert.ok(invalidatedShortSkippedForLongWatch.candidate?.requiredTrigger?.includes('completed 5M close above'));
+
+const htfOpposedShort = candidate({
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'HTF-opposed Turtle Soup SHORT',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  entry: 7427.25,
+  stop: 7440.25,
+  target1: 7399.5,
+  target2: 7383,
+  riskPoints: 13,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  rankScore: 240,
+  priority: 96,
+  missingEvidence: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+  requiredTrigger: 'Bearish Turtle Soup short pending.',
+  nextAction: 'Short is HTF-opposed review only.',
+});
+const nonConflictedLongReview = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'Non-conflicted LONG review',
+  direction: 'LONG',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  entry: 7418,
+  stop: 7398.25,
+  target1: 7460,
+  target2: 7477.5,
+  riskPoints: 19.75,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  rankScore: 230,
+  priority: 98,
+  missingEvidence: ['Completed Morning context is incomplete; keep this as conditional only.'],
+  requiredTrigger: 'Entry only on retrace into bullish imbalance after sweep, reclaim, displacement, and bullish structure shift.',
+  nextAction: 'Long review is waiting on retrace.',
+});
+const htfOpposedShortDoesNotSuppressLong = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [htfOpposedShort, nonConflictedLongReview],
+  } as any,
+  currentPrice: 7434.5,
+  latestCompletedBar: { high: 7440, low: 7430.75 },
+});
+assert.equal(htfOpposedShortDoesNotSuppressLong.stateForAlert, 'Missed');
+assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.direction, 'LONG');
+assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.setupType, SetupType.SweepMssFvgRetrace);
 
 const pendingDeskPlayCandidate = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
@@ -743,7 +841,7 @@ const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'Conditional');
-assert.equal(tenFifteenSelection.candidate?.setupType, SetupType.TurtleSoup);
-assert.equal(tenFifteenSelection.reviewStatus, null);
+assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
+assert.equal(tenFifteenSelection.candidate, null);
+assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tenFifteenSelection.stale.stale, false);

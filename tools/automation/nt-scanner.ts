@@ -4277,6 +4277,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   let initialSelection = selectScannerPlan({
     normalized,
     currentPrice,
+    latestCompletedBar: completed5m,
     guards: scannerGuards,
   });
   let initialCandidate = initialSelection.candidate;
@@ -4296,6 +4297,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       initialSelection = selectScannerPlan({
         normalized,
         currentPrice,
+        latestCompletedBar: completed5m,
         guards: scannerGuards,
       });
       initialCandidate = initialSelection.candidate;
@@ -4311,6 +4313,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const selection = selectScannerPlan({
     normalized,
     currentPrice,
+    latestCompletedBar: completed5m,
     guards: scannerGuards,
     targetCascade,
   });

@@ -623,9 +623,9 @@ const tenFifteenSelection = selectScannerPlan({
   normalized: tenFifteenMovePlan,
   currentPrice: morningMoveBars[9].close,
 });
-assert.equal(tenFifteenSelection.stateForAlert, 'Conditional');
-assert.equal(tenFifteenSelection.candidate?.setupType, SetupType.TurtleSoup);
-assert.equal(tenFifteenSelection.reviewStatus, null);
+assert.equal(tenFifteenSelection.stateForAlert, 'TriggerPending');
+assert.equal(tenFifteenSelection.candidate, null);
+assert.equal(tenFifteenSelection.reviewStatus, 'early_move_review_no_valid_candidate');
 assert.equal(tenFifteenSelection.stale.stale, false);
 
 const cascade = buildTargetCascade({
