@@ -1,6 +1,7 @@
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
-import { NoTradeReason, TradeDecisionStatus, type SetupCandidate, type TargetObjective } from '../../src/types';
+import { candidateTargetReactionObjective } from '../../src/lib/localScannerEngine';
+import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import {
   assertDiscordReportDesignerIsAdvisoryOnly,
   designDiscordVisualReport,
@@ -302,19 +303,6 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
   ];
 }
 
-function firstTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
-  const plan = candidate.targetObjectivePlan;
-  if (!plan) return null;
-  return (
-    plan.nearestObstacleTarget ||
-    plan.obstacleTarget1 ||
-    plan.nearestLiquidityTarget ||
-    plan.liquidityTarget1 ||
-    plan.selectedT1 ||
-    null
-  );
-}
-
 function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
   const play = args.deskState?.primaryDeskPlay;
   const transition = play?.levelTransition;
@@ -324,7 +312,7 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
         price: transition.targetReactionLevel,
         reason: transition.targetReactionReason || transition.profitProtectionInstruction || 'HTF/session reaction level; watch for failure or reversal proof.',
       }
-    : firstTargetReactionObjective(candidate);
+    : candidateTargetReactionObjective(candidate);
   const longAbove = typeof transition?.longAbove === 'number' && Number.isFinite(transition.longAbove)
     ? transition.longAbove
     : typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;

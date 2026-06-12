@@ -258,6 +258,7 @@ function checkScannerVisibilityMetadataBoundary() {
   }
   if (
     !formatterContent.includes('scannerHtfCautionLines') ||
+    !formatterContent.includes('candidateTargetReactionObjective') ||
     !formatterContent.includes('HTF Caution:') ||
     !formatterContent.includes('bullish') ||
     !formatterContent.includes('bearish') ||
@@ -265,6 +266,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('HTF/session reaction line')
   ) {
     fail('discord-alert-format.ts must render two-sided HTF/session opposition caution from DeskState/candidate evidence.');
+  }
+  if (formatterContent.includes('function firstTargetReactionObjective')) {
+    fail('discord-alert-format.ts must not duplicate scanner target/reaction selection. Use candidateTargetReactionObjective from localScannerEngine.ts.');
   }
 
   const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');

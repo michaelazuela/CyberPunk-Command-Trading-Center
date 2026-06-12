@@ -786,6 +786,50 @@ assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction
 assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction.includes('cap expectation at T2'));
 assert.equal(deskState.primaryDeskPlay.levelTransition?.approvalBoundary.changesCanExecute, false);
 
+const targetPlanReactionObjective = objective(107, 'london');
+const targetPlanOnlyCandidate = candidate({
+  targetObjectivePlan: {
+    objectives: [targetPlanReactionObjective],
+    obstacleTarget1: null,
+    liquidityTarget1: targetPlanReactionObjective,
+    liquidityTarget2: null,
+    liquidityRunnerTarget: null,
+    nearestLiquidityTarget: targetPlanReactionObjective,
+    nearestObstacleTarget: null,
+    runnerTarget: null,
+    selectedT1: targetPlanReactionObjective,
+    selectedT2: null,
+    targetQuality: 'clear_path',
+    targetModel: 'actual_r_with_structural_context',
+    notes: [],
+  },
+});
+const targetPlanOnlyLifecycle = buildCandidateLifecycleTrace({
+  candidates: [targetPlanOnlyCandidate],
+  selectedCandidate: targetPlanOnlyCandidate,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Target plan reaction fixture.' },
+  canExecute: false,
+});
+const targetPlanOnlyDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: targetPlanOnlyCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: targetPlanOnlyCandidate,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Target plan reaction fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: targetPlanOnlyLifecycle,
+  canExecute: false,
+});
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.targetReactionLevel, 107);
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.targetReactionLabel, 'london liquidity 107');
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.levelTransition?.targetReactionLevel, 107);
+assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.levelTransition?.profitProtectionInstruction.includes('london liquidity 107'));
+
 const watchDeskVisibility = classifyScannerVisibility({
   state: 'Watching',
   candidate: candidate({

@@ -922,7 +922,7 @@ function numericOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function candidateTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
+export function candidateTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
   const plan = candidate.targetObjectivePlan;
   if (!plan) return null;
   return (
