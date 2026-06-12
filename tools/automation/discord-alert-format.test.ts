@@ -542,6 +542,55 @@ const scanner = compactDiscordSummary({
 assertCompactPayload(scanner, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(scanner.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
 
+const scannerHtfOppositionCandidate = sampleCandidate('SHORT');
+scannerHtfOppositionCandidate.activeRuleset = {
+  timeframeMss: {
+    applied: true,
+    status: 'blocked',
+    required: 'aligned_confirmed_5m_mss',
+    appliesToAllModels: true,
+    affectsExecution: false,
+    evidence: ['Active timeframe MSS context aligned on 15M, 240M.'],
+    blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+  },
+  htfLineInSand: {
+    applied: true,
+    status: 'blocked',
+    required: 'completed_5m_or_15m_close_beyond_htf_line',
+    appliesToAllModels: true,
+    affectsExecution: false,
+    direction: 'SHORT',
+    lineInSand: 7302.75,
+    lineReason: 'Nearest structured HTF/session support or downside objective in the trade path.',
+    requiredClose: 'Completed 5M or 15M close below 7302.75 required before short continuation is active.',
+    obstacleType: 'imbalance_zone',
+    obstacleSource: 'rth_morning',
+    evidence: ['HTF/session line 7302.75 is management context.'],
+    blockers: ['No chase: wait for completed proof below HTF/session support.'],
+  },
+};
+const scannerHtfOppositionPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-11',
+  instrument: 'MES',
+  planVersionId: 'SCANNER-HTF-OPPOSITION',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [scannerHtfOppositionCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  statusOverride: 'Conditional',
+});
+const scannerHtfOppositionText = flattenDiscordPayloadText(scannerHtfOppositionPayload);
+assert.ok(scannerHtfOppositionText.includes('HTF Caution:'));
+assert.ok(scannerHtfOppositionText.includes('SHORT is pressing into bullish HTF/session structure'));
+assert.ok(scannerHtfOppositionText.includes('Treat T1/T2 as management'));
+
 const scannerReadyCandidate = sampleCandidate('LONG');
 scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
 scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';

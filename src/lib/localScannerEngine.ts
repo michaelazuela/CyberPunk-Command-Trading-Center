@@ -994,6 +994,19 @@ function lifecycleItemHasHtfConflict(item: ScannerCandidateLifecycleTraceItem | 
   return item.htfConflict || /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
 }
 
+function opposingHtfStructureLabel(direction: SetupCandidate['direction']): string {
+  if (direction === 'SHORT') return 'bullish HTF/session structure';
+  if (direction === 'LONG') return 'bearish HTF/session structure';
+  return 'opposing HTF/session structure';
+}
+
+function htfManagementWarningForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null | undefined): string | null {
+  if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT') || !lifecycleItemHasHtfConflict(item)) {
+    return null;
+  }
+  return `${item.direction} is pressing into ${opposingHtfStructureLabel(item.direction)}. Treat T1/T2 as management, stop pressing at the HTF/session reaction area, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`;
+}
+
 function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | undefined): number {
   if (!item) return Number.NEGATIVE_INFINITY;
   let score = item.rankScore ?? item.decisionQualityScore ?? item.modelConfidenceScore ?? item.priority;
@@ -1332,39 +1345,46 @@ function buildPrimaryDeskPlay(args: {
   const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection);
   const primaryBias = primaryDirection === 'LONG' ? longBias : primaryDirection === 'SHORT' ? shortBias : null;
   const oppositeBias = primaryDirection === 'LONG' ? shortBias : primaryDirection === 'SHORT' ? longBias : null;
+  const primaryLifecycleItem = primaryDirection === 'LONG'
+    ? args.candidateLifecycleTrace.bestLongPlan
+    : primaryDirection === 'SHORT'
+    ? args.candidateLifecycleTrace.bestShortPlan
+    : null;
+  const selectedLifecycleItem = args.candidateLifecycleTrace.selectedCandidate;
+  const deskMapLifecycleItem = primaryLifecycleItem ||
+    selectedLifecycleItem ||
+    args.candidateLifecycleTrace.highestRankedCandidate;
   const selectedLine = primaryBias?.lineInSand ??
+    selectedLifecycleItem?.lineInSand ??
     args.candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
-    args.candidateLifecycleTrace.selectedCandidate?.lineInSand ??
     null;
   const htfConflict = lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestLongPlan) ||
     lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
-  const countertrendWarning = oppositeBias?.state === 'countertrend_review'
+  const countertrendWarning = htfManagementWarningForLifecycleItem(primaryLifecycleItem) ||
+    htfManagementWarningForLifecycleItem(selectedLifecycleItem) ||
+    (oppositeBias?.state === 'countertrend_review'
     ? `${oppositeBias.direction} evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.`
-    : null;
+    : null);
   const title = primaryDirection === 'WAIT'
     ? 'WAIT - desk play not confirmed'
     : `${directionLabel(primaryDirection)} desk play`;
   const summary = primaryBias
     ? `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
+    : countertrendWarning && selectedLifecycleItem?.direction
+    ? `No primary directional play is confirmed. ${selectedLifecycleItem.direction} evidence is review-only against opposing HTF/session structure until protected 5M proof changes the map.`
     : 'No primary directional play is confirmed from scanner-owned lifecycle state.';
-  const targetReactionLevel = primaryBias && primaryDirection !== 'WAIT'
-    ? (primaryDirection === 'LONG'
-        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLevel
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLevel) ??
+  const targetReactionLevel = deskMapLifecycleItem && deskMapLifecycleItem.direction !== 'NO TRADE'
+    ? deskMapLifecycleItem.targetReactionLevel ??
       args.targetCascade?.activeTarget?.price ??
       null
     : null;
-  const targetReactionLabel = primaryBias && primaryDirection !== 'WAIT'
-    ? (primaryDirection === 'LONG'
-        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLabel
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLabel) ??
+  const targetReactionLabel = deskMapLifecycleItem && deskMapLifecycleItem.direction !== 'NO TRADE'
+    ? deskMapLifecycleItem.targetReactionLabel ??
       args.targetCascade?.activeTarget?.label ??
       null
     : null;
-  const targetReactionReason = primaryBias && primaryDirection !== 'WAIT'
-    ? (primaryDirection === 'LONG'
-        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionReason
-        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionReason) ??
+  const targetReactionReason = deskMapLifecycleItem && deskMapLifecycleItem.direction !== 'NO TRADE'
+    ? deskMapLifecycleItem.targetReactionReason ??
       args.targetCascade?.activeTarget?.reason ??
       args.targetCascade?.reason ??
       null

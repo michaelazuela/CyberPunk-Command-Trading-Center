@@ -319,6 +319,128 @@ assert.ok(deskNarrativeText.includes('After 5M shift: LONG above 7342.00 / SHORT
 assert.equal(deskNarrative.approvalBoundary.changesCanExecute, false);
 assert.equal(deskNarrative.approvalBoundary.changesEntryStopTargets, false);
 
+const htfOppositionShort = candidate({
+  direction: 'SHORT',
+  entry: 7295.5,
+  stop: 7336,
+  target1: 7234.75,
+  target2: 7214.5,
+  riskPoints: 40.5,
+  rankScore: 91,
+  requiredTrigger: 'Entry only on retrace into bearish imbalance after sweep, reclaim, displacement, and bearish structure shift.',
+  activeRuleset: {
+    timeframeMss: {
+      applied: true,
+      status: 'blocked',
+      required: 'aligned_confirmed_5m_mss',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      evidence: ['Active timeframe MSS context aligned on 15M, 240M.'],
+      blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+    },
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'SHORT',
+      lineInSand: 7302.75,
+      lineReason: 'Nearest structured HTF/session support or downside objective in the trade path.',
+      requiredClose: 'Completed 5M or 15M close below 7302.75 required before short continuation is active.',
+      obstacleType: 'imbalance_zone',
+      obstacleSource: 'rth_morning',
+      evidence: ['HTF/session line 7302.75 is management context.'],
+      blockers: ['No chase: wait for completed proof below HTF/session support.'],
+    },
+  },
+  targetObjectivePlan: {
+    selectedT1: reactionObjective,
+    selectedT2: null,
+    nearestObstacleTarget: null,
+    obstacleTarget1: null,
+    nearestLiquidityTarget: reactionObjective,
+    liquidityTarget1: reactionObjective,
+    liquidityTarget2: null,
+    liquidityRunnerTarget: null,
+    runnerTarget: null,
+    targetManagementInstruction: null,
+    liquidityMapSummary: 'LQ1 7288.25 London Session Low',
+    targetPathWarning: null,
+    targetQuality: 'target_blocked',
+    objectives: [reactionObjective],
+    notes: [],
+    targetModel: 'actual_r_with_structural_context',
+  },
+});
+const htfOppositionShortTrace = buildCandidateLifecycleTrace({
+  candidates: [htfOppositionShort],
+  selectedCandidate: htfOppositionShort,
+  state: 'Conditional',
+  alertDecision: { shouldSend: false, reason: 'HTF opposition fixture.' },
+  canExecute: false,
+});
+const htfOppositionShortDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: htfOppositionShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: htfOppositionShort,
+    alertDecision: { shouldSend: false, reason: 'HTF opposition fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: htfOppositionShortTrace,
+  canExecute: false,
+});
+const htfOppositionShortText = buildDeskAgentPlanNarrative(htfOppositionShortDeskState).plainText.join('\n');
+assert.ok(htfOppositionShortText.includes('SHORT is pressing into bullish HTF/session structure'));
+assert.ok(htfOppositionShortText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(htfOppositionShortText.includes('wait for a protected completed 5M line-in-the-sand shift'));
+
+const htfOppositionLong = candidate({
+  direction: 'LONG',
+  entry: 7312,
+  stop: 7271.75,
+  target1: 7372.5,
+  target2: 7392.5,
+  riskPoints: 40.25,
+  rankScore: 91,
+  requiredTrigger: 'Entry only on retrace into bullish imbalance after sweep, reclaim, displacement, and bullish structure shift.',
+  activeRuleset: {
+    timeframeMss: {
+      applied: true,
+      status: 'blocked',
+      required: 'aligned_confirmed_5m_mss',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      evidence: ['Active timeframe MSS context aligned on 15M, 240M.'],
+      blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+    },
+  },
+});
+const htfOppositionLongTrace = buildCandidateLifecycleTrace({
+  candidates: [htfOppositionLong],
+  selectedCandidate: htfOppositionLong,
+  state: 'Conditional',
+  alertDecision: { shouldSend: false, reason: 'HTF opposition fixture.' },
+  canExecute: false,
+});
+const htfOppositionLongDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: htfOppositionLong,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: htfOppositionLong,
+    alertDecision: { shouldSend: false, reason: 'HTF opposition fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: htfOppositionLongTrace,
+  canExecute: false,
+});
+const htfOppositionLongText = buildDeskAgentPlanNarrative(htfOppositionLongDeskState).plainText.join('\n');
+assert.ok(htfOppositionLongText.includes('LONG is pressing into bearish HTF/session structure'));
+assert.ok(htfOppositionLongText.includes('wait for a protected completed 5M line-in-the-sand shift'));
+
 const safetyAudit = auditDeskStackSafety({
   readyHealth,
   advisoryRisk,

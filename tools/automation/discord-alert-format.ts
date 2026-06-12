@@ -354,6 +354,20 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
   ];
 }
 
+function scannerHtfCautionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
+  const deskWarning = args.deskState?.primaryDeskPlay?.countertrendWarning;
+  const rulesetBlockers = [
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+    ...(candidate.activeRuleset?.htfLineInSand?.blockers || []),
+  ].join(' ');
+  const candidateHasHtfConflict = /opposing.*htf|htf.*conflict|opposing completed.*mss|countertrend/i.test(rulesetBlockers);
+  const inferredWarning = candidateHasHtfConflict && (candidate.direction === 'LONG' || candidate.direction === 'SHORT')
+    ? `${candidate.direction} is pressing into ${candidate.direction === 'SHORT' ? 'bullish' : 'bearish'} HTF/session structure. Treat T1/T2 as management, stop pressing at the HTF/session reaction area, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`
+    : null;
+  const warning = deskWarning || inferredWarning;
+  return warning ? ['HTF Caution:', compactLine(warning, 135)] : [];
+}
+
 function compactSessionDecisionLabel(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): string {
   if (getEffectiveCanExecute(normalized)) return 'Executable';
   if (override && !/approved|executable/i.test(override)) return override;
@@ -910,6 +924,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   );
   const includeMemory = designerStatus === 'EXECUTABLE' || bestCandidateHasFullPlan;
   const levelTransitionLines = bestCandidate ? scannerLevelTransitionLines(args, bestCandidate) : [];
+  const htfCautionLines = bestCandidate ? scannerHtfCautionLines(args, bestCandidate) : [];
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
@@ -919,6 +934,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         '',
         ...levelTransitionLines,
         ...(levelTransitionLines.length ? [''] : []),
+        ...htfCautionLines,
+        ...(htfCautionLines.length ? [''] : []),
         ...riskLines,
         ...(riskLines.length ? [''] : []),
         ...htfLines,

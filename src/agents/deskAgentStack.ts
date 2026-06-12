@@ -273,6 +273,7 @@ export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlan
     shortBias,
     ...(targetReaction ? [`Target/reaction: ${targetReaction}`] : []),
     management,
+    ...(play.countertrendWarning ? [`HTF Caution: ${play.countertrendWarning}`] : []),
     `After 5M shift: ${nextStructureMap}.`,
     `Trigger: ${play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.'}`,
     `Invalidation: ${play.invalidation || deskState.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.'}`,
