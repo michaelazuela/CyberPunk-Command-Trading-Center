@@ -251,6 +251,31 @@ export interface DeskStatePromotionPath {
 export type DeskPlayDirection = 'LONG' | 'SHORT' | 'WAIT';
 export type DeskPlayBiasState = 'primary' | 'secondary' | 'countertrend_review' | 'blocked' | 'not_present';
 
+export interface DeskPlayLineConfidence {
+  sourceOfTruth: 'scanner_lifecycle_line_confidence';
+  score: number | null;
+  label: 'high' | 'medium' | 'low' | 'unavailable';
+  reason: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+  };
+}
+
+export interface DeskPlayHtfReactionContext {
+  sourceOfTruth: 'scanner_htf_reaction_context';
+  reactionLevel: number | null;
+  reactionLabel: string | null;
+  reactionReason: string | null;
+  sourceTimeframes: string[];
+  strength: 'major' | 'strong' | 'moderate' | 'tactical' | 'unknown';
+  whyItMayReact: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+  };
+}
+
 export interface DeskPlayDirectionalBias {
   direction: 'LONG' | 'SHORT';
   state: DeskPlayBiasState;
@@ -259,7 +284,10 @@ export interface DeskPlayDirectionalBias {
   scenarioLabel: string | null;
   rankScore: number | null;
   decisionQualityScore: number | null;
+  modelConfidenceScore: number | null;
   lineInSand: number | null;
+  lineConfidence: DeskPlayLineConfidence;
+  htfReactionContext: DeskPlayHtfReactionContext;
   nextTrigger: string | null;
   invalidation: string | null;
   reason: string;
@@ -1279,6 +1307,102 @@ function lineForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null): 
     null;
 }
 
+function confidenceLabel(score: number | null): DeskPlayLineConfidence['label'] {
+  if (score === null) return 'unavailable';
+  if (score >= 75) return 'high';
+  if (score >= 55) return 'medium';
+  return 'low';
+}
+
+function buildLineConfidence(item: ScannerCandidateLifecycleTraceItem | null): DeskPlayLineConfidence {
+  const rawScore = item
+    ? item.decisionQualityScore ??
+      item.modelConfidenceScore ??
+      item.rankScore ??
+      null
+    : null;
+  const score = rawScore !== null ? Math.max(0, Math.min(100, Math.round(rawScore))) : null;
+  const line = lineForLifecycleItem(item);
+  const label = confidenceLabel(score);
+  const reason = !item
+    ? 'No scanner-owned candidate is present for this side.'
+    : line === null
+    ? 'Scanner has not mapped a line in the sand for this side.'
+    : item.htfConflict || lifecycleItemHasHtfConflict(item)
+    ? 'Structured evidence exists, but opposing HTF/MSS context keeps this line review-only.'
+    : item.hasFullPlanLevels
+    ? 'Line is backed by scanner-owned setup evidence and app-owned planning levels.'
+    : 'Line is mapped from scanner-owned trigger/structure evidence, but full entry/stop/target proof is still incomplete.';
+  return {
+    sourceOfTruth: 'scanner_lifecycle_line_confidence',
+    score,
+    label,
+    reason,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+    },
+  };
+}
+
+function uniqueTimeframesFromText(text: string): string[] {
+  const normalized = text.toUpperCase();
+  const found: string[] = [];
+  const add = (label: string, patterns: RegExp[]) => {
+    if (patterns.some((pattern) => pattern.test(normalized)) && !found.includes(label)) found.push(label);
+  };
+  add('15M', [/\b15M\b/, /\b15\s*MIN\b/, /\bSESSION\b/, /\bLONDON\b/, /\bASIAN\b/, /\bRTH\b/, /\bETH\b/]);
+  add('60M', [/\b60M\b/, /\b1H\b/, /\b60\s*MIN\b/]);
+  add('120M', [/\b120M\b/, /\b2H\b/, /\b120\s*MIN\b/]);
+  add('240M', [/\b240M\b/, /\b4H\b/, /\b240\s*MIN\b/]);
+  return found;
+}
+
+function reactionStrengthFromTimeframes(timeframes: string[]): DeskPlayHtfReactionContext['strength'] {
+  if (timeframes.includes('240M')) return 'major';
+  if (timeframes.includes('120M') || timeframes.includes('60M')) return 'strong';
+  if (timeframes.includes('15M')) return 'moderate';
+  return 'unknown';
+}
+
+function buildHtfReactionContext(item: ScannerCandidateLifecycleTraceItem | null): DeskPlayHtfReactionContext {
+  const evidenceText = item
+    ? [
+        item.lineInSandReason,
+        item.targetReactionLabel,
+        item.targetReactionReason,
+        item.scenarioLabel,
+        item.requiredTrigger,
+        item.nextTrigger,
+        item.blockReason,
+        ...item.missingEvidence,
+        ...item.missingLevels,
+      ].filter(Boolean).join(' ')
+    : '';
+  const sourceTimeframes = uniqueTimeframesFromText(evidenceText);
+  const strength = reactionStrengthFromTimeframes(sourceTimeframes);
+  const reactionLevel = item?.targetReactionLevel ?? item?.lineInSand ?? null;
+  const reactionLabel = item?.targetReactionLabel || item?.lineInSandReason || null;
+  const reactionReason = item?.targetReactionReason || item?.lineInSandReason || null;
+  const whyItMayReact = reactionReason ||
+    (reactionLabel ? `${reactionLabel} is mapped from scanner-owned HTF/session structure.` : null) ||
+    (sourceTimeframes.length ? `${sourceTimeframes.join('/')} structure is active in the scanner evidence.` : null) ||
+    'No higher-timeframe reaction context is mapped for this side yet.';
+  return {
+    sourceOfTruth: 'scanner_htf_reaction_context',
+    reactionLevel,
+    reactionLabel,
+    reactionReason,
+    sourceTimeframes,
+    strength: reactionLevel !== null ? strength : 'unknown',
+    whyItMayReact,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+    },
+  };
+}
+
 function biasStateForLifecycleItem(
   item: ScannerCandidateLifecycleTraceItem | null,
   primaryDirection: DeskPlayDirection,
@@ -1312,7 +1436,10 @@ function buildDirectionalBias(
     scenarioLabel: item?.scenarioLabel || null,
     rankScore: item?.rankScore ?? null,
     decisionQualityScore: item?.decisionQualityScore ?? null,
+    modelConfidenceScore: item?.modelConfidenceScore ?? null,
     lineInSand: lineForLifecycleItem(item),
+    lineConfidence: buildLineConfidence(item),
+    htfReactionContext: buildHtfReactionContext(item),
     nextTrigger: item?.nextTrigger || item?.requiredTrigger || null,
     invalidation: item?.invalidation || null,
     reason: biasReasonForLifecycleItem(item, state),

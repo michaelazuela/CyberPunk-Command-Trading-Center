@@ -350,7 +350,22 @@ const deskPlayPayload = compactDiscordSummary({
       longBias: {
         state: 'primary',
         scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+        decisionQualityScore: 82,
+        modelConfidenceScore: 79,
         lineInSand: 7342,
+        lineConfidence: {
+          score: 82,
+          label: 'high',
+          reason: 'Line is backed by scanner-owned setup evidence and app-owned planning levels.',
+        },
+        htfReactionContext: {
+          reactionLevel: 7342,
+          reactionLabel: '15M bullish imbalance top',
+          reactionReason: '15M imbalance retest can react if reclaim holds.',
+          sourceTimeframes: ['15M'],
+          strength: 'moderate',
+          whyItMayReact: '15M imbalance retest can react if reclaim holds.',
+        },
         nextTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
         reason: 'Long retest continuation remains primary.',
         blockers: ['EntryTriggerPending'],
@@ -358,7 +373,22 @@ const deskPlayPayload = compactDiscordSummary({
       shortBias: {
         state: 'countertrend_review',
         scenarioLabel: 'Bearish Turtle Soup Reversal',
+        decisionQualityScore: 58,
+        modelConfidenceScore: 61,
         lineInSand: 7303.5,
+        lineConfidence: {
+          score: 58,
+          label: 'medium',
+          reason: 'Structured evidence exists, but opposing HTF/MSS context keeps this line review-only.',
+        },
+        htfReactionContext: {
+          reactionLevel: 7288.25,
+          reactionLabel: 'London Session Low',
+          reactionReason: 'Real session liquidity where short delivery can stall or reverse.',
+          sourceTimeframes: ['15M', '60M', '120M'],
+          strength: 'strong',
+          whyItMayReact: 'Real session liquidity where short delivery can stall or reverse.',
+        },
         nextTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
         reason: 'Short is counter-HTF review only.',
         blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
@@ -373,9 +403,13 @@ assert.ok(deskPlayText.includes('Scanner Desk Play'));
 assert.ok(deskPlayText.includes('Status: WATCH ONLY - NOT EXECUTION APPROVAL'));
 assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
 assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
+assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
+assert.ok(deskPlayText.includes('HTF reaction: London Session Low 7288.25 | 15M/60M/120M | strength strong'));
 assert.ok(deskPlayText.includes('Take profit into 7288.25'));
 assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.50'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
+assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
+assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
 assert.ok(deskPlayText.includes('Entry ref: 7312.00'));
 assert.ok(deskPlayText.includes('Stop: 7271.75'));
 assert.ok(deskPlayText.includes('Risk: 40.25 pts'));

@@ -785,6 +785,11 @@ assert.ok(deskState.primaryDeskPlay.levelTransition?.profitProtectionInstruction
 assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction.includes('take T1 seriously'));
 assert.ok(deskState.primaryDeskPlay.levelTransition?.targetManagementInstruction.includes('cap expectation at T2'));
 assert.equal(deskState.primaryDeskPlay.levelTransition?.approvalBoundary.changesCanExecute, false);
+assert.equal(deskState.primaryDeskPlay.longBias.lineConfidence.sourceOfTruth, 'scanner_lifecycle_line_confidence');
+assert.equal(deskState.primaryDeskPlay.longBias.lineConfidence.label, 'high');
+assert.equal(deskState.primaryDeskPlay.longBias.lineConfidence.approvalBoundary.changesCanExecute, false);
+assert.equal(deskState.primaryDeskPlay.longBias.htfReactionContext.sourceOfTruth, 'scanner_htf_reaction_context');
+assert.equal(deskState.primaryDeskPlay.longBias.htfReactionContext.approvalBoundary.changesTradeApprovals, false);
 
 const targetPlanReactionObjective = objective(107, 'london');
 const targetPlanOnlyCandidate = candidate({
@@ -829,6 +834,9 @@ assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.targetReactionLevel, 107);
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.targetReactionLabel, 'london liquidity 107');
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.levelTransition?.targetReactionLevel, 107);
 assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.levelTransition?.profitProtectionInstruction.includes('london liquidity 107'));
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.reactionLevel, 107);
+assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.sourceTimeframes.includes('15M'));
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.strength, 'moderate');
 
 const watchDeskVisibility = classifyScannerVisibility({
   state: 'Watching',

@@ -1757,6 +1757,8 @@ try {
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
   assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
   assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
+  assert.ok(deskPlayText.includes('Confidence:'));
+  assert.ok(deskPlayText.includes('HTF reaction:'));
   assert.ok(deskPlayText.includes('Entry ref: 5324.25'));
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));

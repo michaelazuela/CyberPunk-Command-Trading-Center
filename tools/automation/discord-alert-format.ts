@@ -102,7 +102,23 @@ export interface CompactDeskStateForDiscord {
     longBias?: {
       state?: string;
       scenarioLabel?: string | null;
+      rankScore?: number | null;
+      decisionQualityScore?: number | null;
+      modelConfidenceScore?: number | null;
       lineInSand?: number | null;
+      lineConfidence?: {
+        score?: number | null;
+        label?: string | null;
+        reason?: string | null;
+      } | null;
+      htfReactionContext?: {
+        reactionLevel?: number | null;
+        reactionLabel?: string | null;
+        reactionReason?: string | null;
+        sourceTimeframes?: string[];
+        strength?: string | null;
+        whyItMayReact?: string | null;
+      } | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -110,7 +126,23 @@ export interface CompactDeskStateForDiscord {
     shortBias?: {
       state?: string;
       scenarioLabel?: string | null;
+      rankScore?: number | null;
+      decisionQualityScore?: number | null;
+      modelConfidenceScore?: number | null;
       lineInSand?: number | null;
+      lineConfidence?: {
+        score?: number | null;
+        label?: string | null;
+        reason?: string | null;
+      } | null;
+      htfReactionContext?: {
+        reactionLevel?: number | null;
+        reactionLabel?: string | null;
+        reactionReason?: string | null;
+        sourceTimeframes?: string[];
+        strength?: string | null;
+        whyItMayReact?: string | null;
+      } | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -666,6 +698,52 @@ function deskPlayTransitionLine(
     : null;
 }
 
+function deskPlayBiasForDirection(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+) {
+  return direction === 'LONG' ? play.longBias : play.shortBias;
+}
+
+function deskPlayConfidenceLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const bias = deskPlayBiasForDirection(play, direction);
+  const score = typeof bias?.lineConfidence?.score === 'number' && Number.isFinite(bias.lineConfidence.score)
+    ? Math.round(bias.lineConfidence.score)
+    : typeof bias?.decisionQualityScore === 'number' && Number.isFinite(bias.decisionQualityScore)
+    ? Math.round(bias.decisionQualityScore)
+    : typeof bias?.modelConfidenceScore === 'number' && Number.isFinite(bias.modelConfidenceScore)
+    ? Math.round(bias.modelConfidenceScore)
+    : typeof bias?.rankScore === 'number' && Number.isFinite(bias.rankScore)
+    ? Math.round(bias.rankScore)
+    : null;
+  const label = compactLine(bias?.lineConfidence?.label || (score === null ? 'unavailable' : score >= 75 ? 'high' : score >= 55 ? 'medium' : 'low'), 18);
+  return `Confidence: ${score === null ? 'N/A' : `${score}/100`} ${label}`;
+}
+
+function deskPlayHtfReactionLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const bias = deskPlayBiasForDirection(play, direction);
+  const context = bias?.htfReactionContext;
+  const level = isFinitePrice(context?.reactionLevel)
+    ? context.reactionLevel
+    : isFinitePrice(play.targetReactionLevel)
+    ? play.targetReactionLevel
+    : null;
+  const timeframes = Array.isArray(context?.sourceTimeframes) && context.sourceTimeframes.length
+    ? context.sourceTimeframes.join('/')
+    : 'HTF/session';
+  const strength = compactLine(context?.strength || 'unknown', 16);
+  const label = compactLine(context?.reactionLabel || play.targetReactionLabel || 'reaction area', 34);
+  const why = compactLine(context?.whyItMayReact || context?.reactionReason || play.targetReactionReason || 'Scanner-owned HTF/session context.', 74);
+  if (level === null && !context?.whyItMayReact && !context?.reactionReason) return null;
+  return `HTF reaction: ${level === null ? label : `${label} ${priceLine(level)}`} | ${timeframes} | strength ${strength} | ${why}`;
+}
+
 function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
@@ -679,6 +757,8 @@ function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LO
     ...(reaction.price !== null
       ? [`${managedDirection === 'SHORT' ? 'Short' : 'Long'} ran into HTF ${structureWord}: ${priceLine(reaction.price)}`]
       : []),
+    ...(deskPlayConfidenceLine(play, managedDirection) ? [deskPlayConfidenceLine(play, managedDirection)!] : []),
+    ...(deskPlayHtfReactionLine(play, managedDirection) ? [deskPlayHtfReactionLine(play, managedDirection)!] : []),
     ...(reaction.price !== null ? [`Take profit into ${priceLine(reaction.price)}`] : []),
     ...(continuationLine !== null
       ? [`No fresh ${managedDirection.toLowerCase()} unless price accepts ${managedDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(continuationLine)}`]
@@ -697,11 +777,15 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   if (!levels) {
     return [
       header,
+      ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
+      ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
       'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
     ];
   }
   return [
     header,
+    ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
+    ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
     `Entry ref: ${priceLine(levels.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(levels.riskPoints)} pts`,

@@ -250,6 +250,14 @@ function checkScannerVisibilityMetadataBoundary() {
   ) {
     fail('localScannerEngine.ts must preserve two-sided HTF/session opposition caution in scanner-owned DeskState.');
   }
+  if (
+    !ownerContent.includes('scanner_lifecycle_line_confidence') ||
+    !ownerContent.includes('scanner_htf_reaction_context') ||
+    !ownerContent.includes('changesTradeApprovals: false') ||
+    !ownerContent.includes('changesCanExecute: false')
+  ) {
+    fail('localScannerEngine.ts must keep Desk Play line confidence and HTF reaction context scanner-owned metadata only.');
+  }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);
@@ -273,10 +281,13 @@ function checkScannerVisibilityMetadataBoundary() {
   if (
     !formatterContent.includes('Manage, do not press') ||
     !formatterContent.includes('Entry ref:') ||
+    !formatterContent.includes('Confidence:') ||
+    !formatterContent.includes('HTF reaction:') ||
+    !formatterContent.includes('strength') ||
     !formatterContent.includes('Chart: review chart attached; not execution approval.') ||
     !formatterContent.includes('Boundary: approvals and canExecute unchanged.')
   ) {
-    fail('discord-alert-format.ts must keep Desk Play alerts concise: manage side, active side, review chart status, and unchanged approval boundary.');
+    fail('discord-alert-format.ts must keep Desk Play alerts concise: manage side, active side, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');
   }
 
   const replayPath = path.join(ROOT, 'src', 'agents', 'bridgeDiagnosticReplayAgent.ts');
