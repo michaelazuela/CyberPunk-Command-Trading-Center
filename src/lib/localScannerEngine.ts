@@ -30,6 +30,7 @@ export interface ScannerWindowState {
   allowsTradePlan: boolean;
   allowsDiscordAlert: boolean;
   allowsMarketMapping: boolean;
+  allowsDeskPlan: boolean;
   nextWindowLabel: string | null;
 }
 
@@ -565,8 +566,9 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       quality: 'outside',
       enabled: true,
       allowsTradePlan: false,
-      allowsDiscordAlert: false,
+      allowsDiscordAlert: true,
       allowsMarketMapping,
+      allowsDeskPlan: true,
       nextWindowLabel: windows.openingObservation.label,
     };
   }
@@ -578,8 +580,9 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       quality: 'observe_only',
       enabled: windows.openingObservation.enabled,
       allowsTradePlan: false,
-      allowsDiscordAlert: false,
+      allowsDiscordAlert: true,
       allowsMarketMapping,
+      allowsDeskPlan: allowsMarketMapping,
       nextWindowLabel: windows.morningExecution.label,
     };
   }
@@ -593,6 +596,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       allowsTradePlan: windows.morningExecution.enabled,
       allowsDiscordAlert: windows.morningExecution.enabled,
       allowsMarketMapping,
+      allowsDeskPlan: allowsMarketMapping,
       nextWindowLabel: windows.middayTrapReversal.label,
     };
   }
@@ -606,6 +610,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       allowsTradePlan: windows.middayTrapReversal.enabled,
       allowsDiscordAlert: windows.middayTrapReversal.enabled,
       allowsMarketMapping,
+      allowsDeskPlan: allowsMarketMapping,
       nextWindowLabel: afternoonEnabled ? windows.afternoonExecution.label : null,
     };
   }
@@ -618,8 +623,9 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       quality: windows.afternoonExecution.enabled && afternoonEnabled ? 'approved' : 'disabled',
       enabled: windows.afternoonExecution.enabled && afternoonEnabled,
       allowsTradePlan: windows.afternoonExecution.enabled && afternoonEnabled,
-      allowsDiscordAlert: windows.afternoonExecution.enabled && afternoonEnabled,
+      allowsDiscordAlert: allowsMarketMapping,
       allowsMarketMapping,
+      allowsDeskPlan: allowsMarketMapping,
       nextWindowLabel: null,
     };
   }
@@ -632,6 +638,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     allowsTradePlan: false,
     allowsDiscordAlert: false,
     allowsMarketMapping,
+    allowsDeskPlan: allowsMarketMapping,
     nextWindowLabel:
       minutes < minutesFromClock(windows.openingObservation.startET)
         ? windows.openingObservation.label
@@ -649,7 +656,7 @@ export function scannerContextLogLabel(window: ScannerWindowState): string {
 }
 
 export function scannerContextState(window: ScannerWindowState): ScannerState {
-  if (window.allowsTradePlan) return 'MapReady';
+  if (window.allowsDeskPlan) return 'MapReady';
   return window.allowsMarketMapping ? 'MarketMapping' : 'NoData';
 }
 
@@ -846,7 +853,7 @@ export function buildScannerAuthorityMetadata(args: {
   );
   return {
     registeredModel: Boolean(candidate?.setupType),
-    activeModel: Boolean(candidate && (args.window ? args.window.allowsTradePlan : true)),
+    activeModel: Boolean(candidate && (args.window ? args.window.allowsDeskPlan : true)),
     watchEligible: Boolean(directional && hasMeaningfulStructuredEvidence(candidate)),
     planEligible: Boolean(directional && fullPlan),
     discordEligible: Boolean(args.discordEligible ?? false),
@@ -2270,13 +2277,15 @@ export function scoreScannerCandidate(
   const missingReasons: string[] = [];
   let score = 0;
   const currentPriceAvailable = isValidPrice(currentPrice);
-  const sessionWeight = window.session === 'morning'
+  const sessionWeight = window.session === 'morning' || window.session === 'premarket'
     ? SESSION_TIME_WEIGHTS.morning
     : window.session === 'lunch'
       ? SESSION_TIME_WEIGHTS.lunch
       : window.session === 'afternoon'
         ? SESSION_TIME_WEIGHTS.afternoon
-        : SESSION_TIME_WEIGHTS.outside;
+        : window.allowsDeskPlan
+          ? SESSION_TIME_WEIGHTS.lunch
+          : SESSION_TIME_WEIGHTS.outside;
 
   const add = (condition: boolean, points: number, good: string, missing: string) => {
     if (condition) {
@@ -2305,8 +2314,8 @@ export function scoreScannerCandidate(
     };
   }
 
-  if (!window.allowsTradePlan || sessionWeight === 0) {
-    const hardBlocker = 'outside approved ICT execution session';
+  if (!window.allowsDeskPlan || sessionWeight === 0) {
+    const hardBlocker = 'outside active Quant Desk scanner window';
     return {
       score: ICT_SCORE_THRESHOLDS.NO_TRADE,
       qualifiedReasons,
@@ -2318,7 +2327,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 10,
         status: 'blocked',
-        note: 'The scanner is outside the approved morning/lunch execution window.',
+        note: 'The scanner is outside the 9:15 AM-4:00 PM ET desk-plan window.',
       }],
     };
   }

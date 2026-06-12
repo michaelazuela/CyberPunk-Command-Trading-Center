@@ -90,24 +90,28 @@ const closeWindow = resolveScannerWindow(new Date('2026-05-19T16:00:00-04:00'));
 
 assert.equal(openingWindow.session, 'premarket');
 assert.equal(openingWindow.allowsTradePlan, false);
-assert.equal(openingWindow.allowsDiscordAlert, false);
+assert.equal(openingWindow.allowsDiscordAlert, true);
 assert.equal(openingWindow.allowsMarketMapping, true);
+assert.equal(openingWindow.allowsDeskPlan, true);
 assert.equal(scannerContextLogLabel(openingWindow), 'Opening Observation Window');
-assert.equal(scannerContextState(openingWindow), 'MarketMapping');
+assert.equal(scannerContextState(openingWindow), 'MapReady');
 assert.equal(nineFiftyNineWindow.session, 'premarket');
 assert.equal(nineFiftyNineWindow.allowsTradePlan, false);
-assert.equal(nineFiftyNineWindow.allowsDiscordAlert, false);
+assert.equal(nineFiftyNineWindow.allowsDiscordAlert, true);
 assert.equal(nineFiftyNineWindow.allowsMarketMapping, true);
+assert.equal(nineFiftyNineWindow.allowsDeskPlan, true);
 assert.equal(preOpenMappingWindow.session, 'premarket');
 assert.equal(preOpenMappingWindow.allowsTradePlan, false);
-assert.equal(preOpenMappingWindow.allowsDiscordAlert, false);
+assert.equal(preOpenMappingWindow.allowsDiscordAlert, true);
 assert.equal(preOpenMappingWindow.allowsMarketMapping, true);
+assert.equal(preOpenMappingWindow.allowsDeskPlan, true);
 assert.equal(scannerContextLogLabel(preOpenMappingWindow), 'Market Mapping Mode');
-assert.equal(scannerContextState(preOpenMappingWindow), 'MarketMapping');
+assert.equal(scannerContextState(preOpenMappingWindow), 'MapReady');
 assert.equal(morningWindow.session, 'morning');
 assert.equal(morningWindow.label, 'Morning Setup Scan');
 assert.equal(morningWindow.allowsTradePlan, true);
 assert.equal(morningWindow.allowsMarketMapping, true);
+assert.equal(morningWindow.allowsDeskPlan, true);
 assert.equal(scannerContextState(morningWindow), 'MapReady');
 assert.equal(lateMorningWindow.session, 'morning');
 assert.equal(lateMorningWindow.allowsTradePlan, true);
@@ -127,13 +131,16 @@ assert.equal(threeTwentyNineLunchPmWindow.allowsTradePlan, true);
 assert.equal(postScanWindow.session, 'outside');
 assert.equal(postScanWindow.allowsTradePlan, false);
 assert.equal(postScanWindow.allowsMarketMapping, true);
+assert.equal(postScanWindow.allowsDeskPlan, true);
 assert.equal(scannerContextLogLabel(postScanWindow), 'Market Mapping Mode');
-assert.equal(scannerContextState(postScanWindow), 'MarketMapping');
+assert.equal(scannerContextState(postScanWindow), 'MapReady');
 assert.equal(outsideWindow.allowsDiscordAlert, false);
 assert.equal(outsideWindow.allowsMarketMapping, false);
+assert.equal(outsideWindow.allowsDeskPlan, false);
 assert.equal(scannerContextLogLabel(outsideWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
 assert.equal(scannerContextState(outsideWindow), 'NoData');
 assert.equal(closeWindow.allowsMarketMapping, false);
+assert.equal(closeWindow.allowsDeskPlan, false);
 assert.equal(scannerContextLogLabel(closeWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
 assert.equal(scannerContextState(closeWindow), 'NoData');
 assert.ok(MARKET_MAPPING_COVERAGE.includes('prior day/week/month levels'));
@@ -596,7 +603,8 @@ const openingMoveSelection = selectScannerPlan({
   normalized: openingMovePlan,
   currentPrice: morningMoveBars[5].close,
 });
-assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDiscordAlert, false);
+assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDiscordAlert, true);
+assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDeskPlan, true);
 assert.equal(
   shouldSendScannerAlert({
     state: openingMoveSelection.stateForAlert,

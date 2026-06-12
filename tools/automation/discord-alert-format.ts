@@ -898,28 +898,28 @@ function currentHtfBiasLine(args: {
 
   if (args.rowBias === 'BULL') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
-      return `${tf}: BEAR now | BULL above ${protectedText} | proof: close+hold above | target ${targetText}`;
+      return `${tf}: BEAR now | line ${protectedText} | changes BULL above ${protectedText} | confirm close+hold above | target ${targetText}`;
     }
-    return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
+    return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
   }
   if (args.rowBias === 'BEAR') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice > args.protectedLevel) {
-      return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
+      return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
     }
-    return `${tf}: BEAR now | BULL above ${protectedText} | proof: close+hold above | target ${targetText}`;
+    return `${tf}: BEAR now | line ${protectedText} | changes BULL above ${protectedText} | confirm close+hold above | target ${targetText}`;
   }
 
   if (currentPrice !== null && isFinitePrice(args.confirmationLine) && currentPrice >= args.confirmationLine) {
-    return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
+    return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice <= args.protectedLevel) {
-    return `${tf}: BEAR now | BULL above ${confirmText} | proof: close+hold above | target ${targetText}`;
+    return `${tf}: BEAR now | line ${confirmText} | changes BULL above ${confirmText} | confirm close+hold above | target ${targetText}`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && isFinitePrice(args.confirmationLine)) {
-    return `${tf}: RANGE now | BULL above ${confirmText} / BEAR below ${protectedText} | proof: close+hold | target ${targetText}`;
+    return `${tf}: RANGE now | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm close+hold | target ${targetText}`;
   }
 
-  return `${tf}: Bias pending | BULL above ${confirmText} / BEAR below ${protectedText} | proof: close+hold | target ${targetText}`;
+  return `${tf}: Bias pending | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm close+hold | target ${targetText}`;
 }
 
 function deskPlayHtfProtectedStructureLines(
@@ -945,7 +945,7 @@ function deskPlayHtfProtectedStructureLines(
       });
     });
   return [
-    'HTF Protected Structure Map',
+    'HTF Bias Lines',
     ...rows,
     `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M still controls execution.`,
   ];

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Expand active Quant Desk Scanner Window to publish Desk Plans from 9:15 AM-4:00 PM ET.
+Files changed: AGENTS.md, docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts.
+Reason: The prior boundary limited Market Mapping refresh but did not make the full 9:15 AM-4:00 PM ET scanner window produce live review maps. The trader needs simple `LONG ABOVE` / `SHORT BELOW` plans plus line-in-the-sand and HTF bias-line context throughout the active RTH desk window.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/agents/scannerPlanSelectionAgent.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Added `allowsDeskPlan` as a separate scanner-window authority from `allowsTradePlan`. Desk Plans/review maps can populate from 9:15 AM through the 4:00 PM ET close, while execution approval remains controlled by existing gates. Discord HTF structure now renders as compact `HTF Bias Lines`, showing current timeframe bias, line in the sand, the price where bias changes, close/hold confirmation, and target.
+Trading logic changed: No execution approval change. No setup definitions, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge data interpretation changed.
+Bridge impact: None. NinjaTrader OHLC remains read-only source data.
+Discord impact: Yes. Scanner window heartbeat and Desk Play text now reflect 9:15 AM-4:00 PM ET active desk-plan coverage and compact HTF bias-line wording.
+Journal/RAG impact: Desk Play records may now be produced during the broader active scanner window when existing DeskState visibility allows them. No schema change.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor after verification so the running scanner uses the new active Desk Plan window.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Limit Market Mapping refresh to 9:15 AM-4:00 PM ET.
 Files changed: AGENTS.md, docs/PROJECT_STATUS.md, src/config/timeWindows.ts, src/config/timeWindows.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts.
 Reason: Market Mapping should not run all day and overnight. The scanner should keep health/state online, but context-only market-map refresh now starts 15 minutes before RTH open and pauses at the 4:00 PM ET market close.

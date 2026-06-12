@@ -1504,7 +1504,7 @@ function summarizePreMarketDataReadinessBackfillGate(report: ScannerPreMarketDat
 
 function shouldRunPreMarketDataReadinessGate(config: ScannerConfig, window: ReturnType<typeof resolveScannerWindow>): boolean {
   if (!config.preMarketDataGate || !config.scanWindows) return false;
-  return window.allowsTradePlan || window.session === 'premarket';
+  return window.allowsDeskPlan || window.session === 'premarket';
 }
 
 async function runPreMarketDataReadinessBackfillGate(args: {
@@ -2059,6 +2059,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
 
 function mappingSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession {
   if (window.session === 'lunch') return 'lunch';
+  if (window.session === 'afternoon') return 'lunch';
   if (window.nextWindowLabel?.toLowerCase().includes('midday')) return 'lunch';
   return 'morning';
 }
@@ -3631,15 +3632,16 @@ function buildWindowStartPayload(args: {
   const windowRange = args.session === 'morning'
     ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
     : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
+  const activeDeskPlanWindow = '09:15-16:00 ET';
   const fullSchedule = [
-    '⏸️ Before 09:15 ET: Market Mapping paused',
-    '🗺️ 09:15-09:30 ET: Market Mapping only',
+    '⏸️ Before 09:15 ET: Scanner health only; desk plans paused',
+    '🧭 09:15-09:30 ET: Scanner active; desk plans/review maps allowed',
     `👀 ${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
     `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
-    `🗺️ ${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Market Mapping only`,
+    `🧭 ${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Scanner active; desk plans/review maps allowed`,
     `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
-    `🗺️ ${TRADE_RULES.executionWindows.middayTrapReversal.endET}-16:00 ET: Market Mapping only`,
-    '⏸️ After 16:00 ET: Market Mapping paused',
+    `🧭 ${TRADE_RULES.executionWindows.middayTrapReversal.endET}-16:00 ET: Scanner active; desk plans/review maps allowed`,
+    '⏸️ After 16:00 ET: Scanner health only; desk plans paused',
   ].join('\n');
   return {
     username: 'Quant Desk',
@@ -3654,7 +3656,8 @@ function buildWindowStartPayload(args: {
             name: '🕒 Scanner Window',
             value: clip([
               `🪟 Window: ${args.windowLabel}`,
-              `⏰ Time: ${windowRange}`,
+              `⏰ Active desk-plan time: ${activeDeskPlanWindow}`,
+              `✅ Execution scan window: ${windowRange}`,
               `📈 Instrument: ${args.config.instrument}`,
               `🌉 Bridge instrument: ${args.config.bridgeInstrument}`,
             ].join('\n')),
@@ -4245,7 +4248,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     }
   }
 
-  if (!window.allowsTradePlan || !config.scanWindows) {
+  if (!window.allowsDeskPlan || !config.scanWindows) {
     const mappingState = scannerContextState(window);
     const mappingLabel = config.scanWindows ? scannerContextLogLabel(window) : 'Market Mapping Mode';
     if (!window.allowsMarketMapping) {
@@ -4261,7 +4264,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     return;
   }
 
-  const session = window.session === 'lunch' ? 'lunch' : 'morning';
+  const session = mappingSessionForWindow(window);
   const sessionKey = `${tradeDate}:${session}`;
   if (!completed5m) {
     console.log(`[scanner] ${window.label}: NoData, no completed 5M candle available.`);

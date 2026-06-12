@@ -241,14 +241,15 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 - Save displacement imbalance zones as structural target/context levels.
 - The session story may improve target selection and setup ranking, but the 5M trigger, stop, risk, invalidation, and deterministic pipeline still decide execution.
 
-## Scanner Market Mapping Mode
+## Scanner Active Desk Plan Window
 
-The local scanner may run all day, but context-only `MarketMapping` refresh is limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but market-map refresh is paused.
+The local scanner may run all day, but active Desk Plan / review-map production is limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but desk-plan and market-map refresh are paused.
 
-- Market Mapping Mode may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, and target cascade context.
-- Market Mapping Mode must not produce actionable trade plans, Discord trade alerts, entries, stops, or approvals.
+- The active scanner window may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, target cascade context, and review-only Desk Plan maps.
+- Desk Plan maps may show `LONG ABOVE`, `SHORT BELOW`, line in the sand, entry reference, protected 5M stop, T1/T2, HTF objective/reaction/runner context, and HTF bias lines when scanner-owned structure exists.
+- Desk Plan maps must not approve execution, place orders, loosen `canExecute`, or change entry/stop/target/risk gates.
 - Keep `Opening Observation Window` as the specific 9:30-10:00 AM ET RTH phase. Do not use that label for overnight or all-day context building.
-- 9:15-9:30 AM ET and 3:30-4:00 PM ET are Market Mapping only. They are not trade-planning windows.
+- 9:15-10:00 AM ET and 3:30-4:00 PM ET are review-map/Desk Plan windows only. They are not execution-approval windows.
 - Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.
 
 ## Verification Before Finishing

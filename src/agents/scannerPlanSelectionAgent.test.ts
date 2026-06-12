@@ -795,7 +795,8 @@ const openingMoveSelection = selectScannerPlan({
   normalized: openingMovePlan,
   currentPrice: morningMoveBars[5].close,
 });
-assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDiscordAlert, false);
+assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDiscordAlert, true);
+assert.equal(resolveScannerWindow(new Date('2026-05-28T09:55:00-04:00')).allowsDeskPlan, true);
 assert.equal(
   shouldSendScannerAlert({
     state: openingMoveSelection.stateForAlert,
