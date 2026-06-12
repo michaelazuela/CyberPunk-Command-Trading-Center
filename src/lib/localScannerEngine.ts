@@ -1204,9 +1204,15 @@ function timeframeStructureNote(row: DeskHtfProtectedStructureRow): string {
   return `${protectedText}; ${confirmText}; ${targetText}`;
 }
 
-function buildHtfProtectedStructureMap(candidate: SetupCandidate | null): DeskHtfProtectedStructureMap {
-  const htfState = candidate?.htfLiquidityDrawState || null;
-  const rows = (htfState?.timeframeStack || htfState?.timeframeStates || []).map((state): DeskHtfProtectedStructureRow => {
+function buildHtfProtectedStructureMap(
+  candidate: SetupCandidate | null,
+  fallbackHtfState?: SetupCandidate['htfLiquidityDrawState'] | null,
+): DeskHtfProtectedStructureMap {
+  const htfState = candidate?.htfLiquidityDrawState || fallbackHtfState || null;
+  const timeframeStates = htfState?.timeframeStack?.length
+    ? htfState.timeframeStack
+    : htfState?.timeframeStates || [];
+  const rows = timeframeStates.map((state): DeskHtfProtectedStructureRow => {
     const target = targetFromExternalLiquidityTarget(state.externalLiquidityTarget);
     const row: DeskHtfProtectedStructureRow = {
       sourceOfTruth: 'scanner_htf_protected_structure_map',
@@ -1473,9 +1479,12 @@ function marketModeFromDeskVisibility(args: {
   return 'no_trade';
 }
 
-function htfContextStatusForDeskState(candidate: SetupCandidate | null): DeskStateHtfContextStatus {
-  if (!candidate?.htfLiquidityDrawState && !candidate?.activeRuleset?.htfLineInSand) return 'not_applicable';
-  const htfState = candidate.htfLiquidityDrawState;
+function htfContextStatusForDeskState(
+  candidate: SetupCandidate | null,
+  fallbackHtfState?: SetupCandidate['htfLiquidityDrawState'] | null,
+): DeskStateHtfContextStatus {
+  const htfState = candidate?.htfLiquidityDrawState || fallbackHtfState || null;
+  if (!htfState && !candidate?.activeRuleset?.htfLineInSand) return 'not_applicable';
   if (htfState?.classificationReliability === 'data_limited' || htfState?.htfContextDataLimited) return 'insufficient';
   const sufficiency = htfState?.htfContextSufficiency?.overallStatus;
   if (sufficiency === 'sufficient') return 'sufficient';
@@ -1758,6 +1767,7 @@ function buildPrimaryDeskPlay(args: {
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
   targetCascade?: TargetCascadeResult | null;
+  htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
   canExecute: boolean;
 }): PrimaryDeskPlay {
   const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace);
@@ -1835,7 +1845,7 @@ function buildPrimaryDeskPlay(args: {
     candidate: args.candidate,
     targetReaction,
   });
-  const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate);
+  const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState);
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
@@ -1894,6 +1904,7 @@ export function buildDeskState(args: {
   visibilityMetadata: ScannerVisibilityMetadata;
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
   targetCascade?: TargetCascadeResult | null;
+  htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
   canExecute?: boolean;
 }): DeskState {
   const candidate = args.candidate || null;
@@ -1913,6 +1924,7 @@ export function buildDeskState(args: {
     visibilityMetadata: args.visibilityMetadata,
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     targetCascade: args.targetCascade,
+    htfLiquidityDrawState: args.htfLiquidityDrawState,
     canExecute: Boolean(args.canExecute),
   });
   return {
@@ -1929,7 +1941,7 @@ export function buildDeskState(args: {
     visibilityMode: args.visibilityMetadata.visibilityMode,
     discordAction: args.visibilityMetadata.discordAction,
     suppressionReason: args.visibilityMetadata.suppressionReason,
-    htfContextStatus: htfContextStatusForDeskState(candidate),
+    htfContextStatus: htfContextStatusForDeskState(candidate, args.htfLiquidityDrawState),
     dataQualityStatus: dataQualityStatusForDeskState({
       visibilityMetadata: args.visibilityMetadata,
       candidateLifecycleTrace: args.candidateLifecycleTrace,

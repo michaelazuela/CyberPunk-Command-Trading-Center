@@ -1089,6 +1089,109 @@ assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.runner?.
 assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.managementInstruction.includes('App T1/T2 remain tactical'));
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.approvalBoundary.changesEntryStopTargets, false);
 
+const cycleLevelHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
+  source: 'ninjatrader_ohlc',
+  authority: 'ohlc_facts_only',
+  boundary: 'context_only_not_execution_authority',
+  drawDirection: 'unknown',
+  planDirection: 'NONE',
+  macroContext: 'conflicting',
+  raidState: 'none',
+  liquidityRaidState: 'none',
+  reclaimStatus: 'not_confirmed',
+  classification: 'CONFLICTING_MSS',
+  timeframeStates: [
+    {
+      timeframe: '4H',
+      direction: 'neutral',
+      status: 'conflicting',
+      lifecycleState: 'conflicting_mss',
+      evidence: ['Confirmed close above prior 5M swing high 7620.5 with displacement.'],
+      invalidationLevel: 7386.25,
+      confirmationLevel: 7620.5,
+      externalLiquidityTarget: '4H buy-side reaction 7476.75',
+      confidence: 35,
+    },
+    {
+      timeframe: '15M',
+      direction: 'bearish',
+      status: 'confirmed',
+      lifecycleState: 'confirmed_mss',
+      evidence: ['Confirmed close below prior 5M swing low 7402.5 with displacement.'],
+      invalidationLevel: 7418.25,
+      confirmationLevel: 7402.5,
+      externalLiquidityTarget: '15M sell-side reaction 7377.50',
+      confidence: 66,
+    },
+  ],
+  timeframeStack: [],
+  fiveMinuteState: {
+    timeframe: '5M',
+    direction: 'neutral',
+    status: 'conflicting',
+    lifecycleState: 'conflicting_mss',
+    evidence: [],
+    confidence: 35,
+  },
+  fiveMinuteMssTriggerConfirmed: false,
+  fiveMinuteMssConfirmationType: 'unknown',
+  postShiftState: 'unknown',
+  fifteenMinuteConfirmationStatus: 'confirmed',
+  activeScanWindow: 'LUNCH_PM_SETUP_SCAN',
+  htfDrawContinuationPending: false,
+  htfContextSufficiency: {
+    overallStatus: 'sufficient',
+    dataLimited: false,
+    blockers: [],
+    notes: [],
+    timeframeCoverage: [],
+  },
+  htfContextDataLimited: false,
+  timeframeCoverage: [],
+  classificationReliability: 'structural',
+  classificationReason: 'Structured cycle-level HTF facts are sufficient.',
+  confidence: 35,
+  notes: [],
+  blockers: [],
+  createsTradingPlanCandidate: false,
+  approvesExecution: false,
+};
+const fallbackHtfCandidate = candidate({
+  htfLiquidityDrawState: undefined,
+  evidence: ['Selected candidate has no embedded HTF state.'],
+});
+const fallbackHtfLifecycle = buildCandidateLifecycleTrace({
+  candidates: [fallbackHtfCandidate],
+  selectedCandidate: fallbackHtfCandidate,
+  state: 'Watching',
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: true, reason: 'Cycle-level HTF map fixture.' },
+  canExecute: false,
+});
+const fallbackHtfDeskState = buildDeskState({
+  state: 'Watching',
+  candidate: fallbackHtfCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Watching',
+    candidate: fallbackHtfCandidate,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: true, reason: 'Cycle-level HTF map fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: fallbackHtfLifecycle,
+  htfLiquidityDrawState: cycleLevelHtfState,
+  canExecute: false,
+});
+assert.equal(fallbackHtfDeskState.htfContextStatus, 'sufficient');
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.sourceOfTruth, 'scanner_htf_protected_structure_map');
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.length, 2);
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.rows[0].timeframe, '4H');
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.rows[0].protectedStructure, 7386.25);
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.rows[0].confirmationLine, 7620.5);
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.rows[0].target, 7476.75);
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.approvalBoundary.changesCanExecute, false);
+assert.equal(fallbackHtfDeskState.primaryDeskPlay.htfProtectedStructureMap.approvalBoundary.changesEntryStopTargets, false);
+
 const watchDeskVisibility = classifyScannerVisibility({
   state: 'Watching',
   candidate: candidate({

@@ -257,6 +257,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('scanner_htf_protected_structure_map') ||
     !ownerContent.includes('DeskHtfObjectiveLadder') ||
     !ownerContent.includes('DeskHtfProtectedStructureMap') ||
+    !ownerContent.includes('fallbackHtfState') ||
+    !ownerContent.includes('htfLiquidityDrawState: args.htfLiquidityDrawState') ||
     !ownerContent.includes('App T1/T2 remain tactical') ||
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')

@@ -1949,6 +1949,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     visibilityMetadata,
     candidateLifecycleTrace,
     targetCascade: args.targetCascade,
+    htfLiquidityDrawState: (asRecord(args.chartContext)?.htfLiquidityDrawState || null) as SetupCandidate['htfLiquidityDrawState'] | null,
     canExecute: Boolean(args.normalized.canExecute),
   });
   const event = {
@@ -3122,6 +3123,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     visibilityMetadata,
     candidateLifecycleTrace,
     targetCascade: args.targetCascade,
+    htfLiquidityDrawState: args.chartContext?.htfLiquidityDrawState || null,
     canExecute: Boolean(args.normalized.canExecute),
   });
   const visualCandidate = deskState.discordAction === 'post_watch'
@@ -4463,6 +4465,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     visibilityMetadata,
     candidateLifecycleTrace,
     targetCascade,
+    htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
     canExecute: Boolean(normalized.canExecute),
   });
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
