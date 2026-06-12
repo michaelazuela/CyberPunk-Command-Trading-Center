@@ -342,6 +342,31 @@ export interface DeskHtfObjectiveLadder {
   };
 }
 
+export interface DeskHtfProtectedStructureRow {
+  sourceOfTruth: 'scanner_htf_protected_structure_map';
+  timeframe: '4H' | '2H' | '1H' | '15M' | '5M';
+  bias: 'BULL' | 'BEAR' | 'NEUTRAL' | 'CONFLICT' | 'UNKNOWN';
+  protectedStructure: number | null;
+  confirmationLine: number | null;
+  target: number | null;
+  targetLabel: string | null;
+  confidence: number | null;
+  status: string;
+  note: string;
+}
+
+export interface DeskHtfProtectedStructureMap {
+  sourceOfTruth: 'scanner_htf_protected_structure_map';
+  rows: DeskHtfProtectedStructureRow[];
+  reliability: 'structural' | 'data_limited' | 'estimated' | 'unknown';
+  summary: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -355,6 +380,7 @@ export interface PrimaryDeskPlay {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;
@@ -1136,6 +1162,85 @@ function buildHtfObjectiveLadder(args: {
   };
 }
 
+function targetFromExternalLiquidityTarget(value: string | null | undefined): { price: number | null; label: string | null } {
+  if (!value) return { price: null, label: null };
+  return {
+    price: priceFromText(value),
+    label: value,
+  };
+}
+
+function biasFromTimeframeDirection(
+  direction: string | null | undefined,
+  status: string | null | undefined,
+): DeskHtfProtectedStructureRow['bias'] {
+  if (status === 'conflicting') return 'CONFLICT';
+  if (direction === 'bullish') return 'BULL';
+  if (direction === 'bearish') return 'BEAR';
+  if (direction === 'neutral') return 'NEUTRAL';
+  return 'UNKNOWN';
+}
+
+function protectedStructureFromTimeframeState(state: NonNullable<SetupCandidate['htfLiquidityDrawState']>['timeframeStates'][number]): number | null {
+  const explicit = numericOrNull(state.invalidationLevel);
+  if (explicit !== null) return explicit;
+  const text = (state.evidence || []).join(' ');
+  const sweptOrReclaimed = text.match(/\b(?:at|level)\s+(\d{4,5}(?:\.\d{1,2})?)\b/i);
+  return sweptOrReclaimed ? numericOrNull(Number(sweptOrReclaimed[1])) : null;
+}
+
+function confirmationLineFromTimeframeState(state: NonNullable<SetupCandidate['htfLiquidityDrawState']>['timeframeStates'][number]): number | null {
+  const explicit = numericOrNull(state.confirmationLevel);
+  if (explicit !== null) return explicit;
+  const text = (state.evidence || []).join(' ');
+  const swingBreak = text.match(/\b(?:above|below)\s+prior\s+5M\s+swing\s+(?:high|low)\s+(\d{4,5}(?:\.\d{1,2})?)\b/i);
+  return swingBreak ? numericOrNull(Number(swingBreak[1])) : null;
+}
+
+function timeframeStructureNote(row: DeskHtfProtectedStructureRow): string {
+  const protectedText = row.protectedStructure !== null ? `protected ${row.protectedStructure.toFixed(2)}` : 'protected level not mapped';
+  const confirmText = row.confirmationLine !== null ? `confirm ${row.confirmationLine.toFixed(2)}` : 'confirmation line not mapped';
+  const targetText = row.target !== null ? `target ${row.target.toFixed(2)}` : 'target not mapped';
+  return `${protectedText}; ${confirmText}; ${targetText}`;
+}
+
+function buildHtfProtectedStructureMap(candidate: SetupCandidate | null): DeskHtfProtectedStructureMap {
+  const htfState = candidate?.htfLiquidityDrawState || null;
+  const rows = (htfState?.timeframeStack || htfState?.timeframeStates || []).map((state): DeskHtfProtectedStructureRow => {
+    const target = targetFromExternalLiquidityTarget(state.externalLiquidityTarget);
+    const row: DeskHtfProtectedStructureRow = {
+      sourceOfTruth: 'scanner_htf_protected_structure_map',
+      timeframe: state.timeframe,
+      bias: biasFromTimeframeDirection(state.direction, state.status),
+      protectedStructure: protectedStructureFromTimeframeState(state),
+      confirmationLine: confirmationLineFromTimeframeState(state),
+      target: target.price,
+      targetLabel: target.label,
+      confidence: numericOrNull(state.confidence),
+      status: state.lifecycleState || state.status || 'unknown',
+      note: '',
+    };
+    return {
+      ...row,
+      note: timeframeStructureNote(row),
+    };
+  });
+  const reliability = htfState?.classificationReliability || 'unknown';
+  return {
+    sourceOfTruth: 'scanner_htf_protected_structure_map',
+    rows,
+    reliability,
+    summary: rows.length
+      ? 'HTF protected structure rows are scanner-owned context only; 5M execution gates still control approval.'
+      : 'No scanner-owned HTF protected structure map is available for this cycle.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   const text = [
@@ -1730,6 +1835,7 @@ function buildPrimaryDeskPlay(args: {
     candidate: args.candidate,
     targetReaction,
   });
+  const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate);
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
@@ -1761,6 +1867,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionReason,
     levelTransition,
     htfObjectiveLadder,
+    htfProtectedStructureMap,
     nextTrigger,
     invalidation,
     noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',

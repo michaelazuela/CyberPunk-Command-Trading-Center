@@ -105,6 +105,23 @@ export interface CompactDeskStateForDiscord {
       objectives?: CompactHtfObjective[];
       managementInstruction?: string | null;
     } | null;
+    htfProtectedStructureMap?: {
+      sourceOfTruth?: string;
+      reliability?: string;
+      summary?: string;
+      rows?: Array<{
+        sourceOfTruth?: string;
+        timeframe?: string;
+        bias?: string;
+        protectedStructure?: number | null;
+        confirmationLine?: number | null;
+        target?: number | null;
+        targetLabel?: string | null;
+        confidence?: number | null;
+        status?: string;
+        note?: string;
+      }>;
+    } | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -840,6 +857,31 @@ function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDi
   return lines.length > 2 ? lines : [];
 }
 
+function deskPlayHtfProtectedStructureLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
+  const map = play.htfProtectedStructureMap;
+  if (!map || map.sourceOfTruth !== 'scanner_htf_protected_structure_map' || !Array.isArray(map.rows) || map.rows.length === 0) {
+    return [];
+  }
+  const order = new Map([['4H', 0], ['2H', 1], ['1H', 2], ['15M', 3], ['5M', 4]]);
+  const rows = [...map.rows]
+    .sort((a, b) => (order.get(String(a.timeframe)) ?? 99) - (order.get(String(b.timeframe)) ?? 99))
+    .slice(0, 5)
+    .map((row) => {
+      const tf = compactLine(row.timeframe || 'TF', 4);
+      const bias = compactLine(row.bias || 'UNKNOWN', 8);
+      const side = row.bias === 'BULL' ? 'above' : row.bias === 'BEAR' ? 'below' : 'line';
+      const protectedLevel = isFinitePrice(row.protectedStructure) ? priceLine(row.protectedStructure) : 'N/A';
+      const confirm = isFinitePrice(row.confirmationLine) ? priceLine(row.confirmationLine) : 'N/A';
+      const target = isFinitePrice(row.target) ? priceLine(row.target) : 'N/A';
+      return `${tf}: ${bias} ${side} ${protectedLevel} | confirm ${confirm} | target ${target}`;
+    });
+  return [
+    'HTF Structure:',
+    ...rows,
+    `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M still controls execution.`,
+  ];
+}
+
 function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
@@ -890,13 +932,40 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   ];
 }
 
-function deskPlayWaitLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
+function deskPlayWaitMapLine(
+  args: CompactDiscordSummaryArgs,
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const lineInSand = deskPlayLineForDirection(play, direction);
+  if (!isFinitePrice(lineInSand)) return null;
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction);
+  const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
+  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)} | levels pending`;
+  return `${direction} ${triggerWord} ${priceLine(lineInSand)} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
+}
+
+function deskPlayWaitLines(
+  args: CompactDiscordSummaryArgs,
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const reaction = deskPlayReactionLevel(play);
+  const warningDirection = play.countertrendWarning?.match(/\b(LONG|SHORT)\b/)?.[1] || null;
+  const opposingStructure = play.countertrendWarning?.match(/\b(bullish|bearish)\s+HTF\/session structure/i)?.[1] || null;
+  const caution = reaction.price !== null
+    ? `Caution: ${warningDirection || 'Trade'} into ${opposingStructure ? `${opposingStructure} ` : ''}HTF ${priceLine(reaction.price)}. Stop pressing.`
+    : play.countertrendWarning
+    ? `Caution: ${compactLine(play.countertrendWarning, 86)}`
+    : null;
+  const mapLines = [
+    deskPlayWaitMapLine(args, play, 'LONG'),
+    deskPlayWaitMapLine(args, play, 'SHORT'),
+  ].filter((line): line is string => Boolean(line));
   const lines = [
-    play.summary,
-    ...(play.countertrendWarning ? [play.countertrendWarning] : []),
-    `LONG line: ${priceLine(play.longAbove ?? play.longBias?.lineInSand ?? null)}`,
-    `SHORT line: ${priceLine(play.shortBelow ?? play.shortBias?.lineInSand ?? null)}`,
-    'Status: review-only map; no HTF-supported active play.',
+    'Review Map:',
+    ...mapLines,
+    caution,
+    'Need: protected 5M shift + canExecute.',
   ];
   return lines.filter((line): line is string => Boolean(line));
 }
@@ -921,29 +990,29 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     : 'N/A';
   const lines = [
     `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
-    'Status: WATCH - NOT EXECUTION APPROVAL',
+    'Status: REVIEW ONLY - NOT EXECUTION',
     '',
+    ...(play ? deskPlayHtfProtectedStructureLines(play) : []),
+    ...(play ? [''] : []),
     ...(direction === 'LONG' || direction === 'SHORT'
       ? deskPlayManagementLines(args, direction)
       : play
-      ? deskPlayWaitLines(play)
+      ? deskPlayWaitLines(args, play)
       : [`Line in the sand: ${line}`]),
     ...(play && (direction === 'LONG' || direction === 'SHORT') ? ['', ...deskPlayPrimaryLines(args, direction)] : []),
-    ...(play ? ['', ...deskPlayHtfObjectiveLadderLines(play)] : []),
+    ...(play && direction !== 'WAIT' ? ['', ...deskPlayHtfObjectiveLadderLines(play)] : []),
     '',
-    'Trigger',
-    `${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
+    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 86)}`,
     '',
-    'Invalid',
-    `${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 90)}`,
+    `Invalid: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation needs protected 5M structure.', 76)}`,
     '',
     hasConditionalLevels
       ? 'Chart: review attached; not execution approval.'
       : args.attachments.chartPlan
       ? 'Chart: watch chart attached; levels withheld until protected structure is proven.'
-      : 'Chart: not attached; use DeskState text only until chart context is available.',
+      : 'Chart: none.',
     '',
-    'Boundary: approvals/canExecute unchanged.',
+    'Boundary: no approval/canExecute change.',
   ];
   return {
     username: 'Quant Desk',

@@ -254,7 +254,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('scanner_lifecycle_line_confidence') ||
     !ownerContent.includes('scanner_htf_reaction_context') ||
     !ownerContent.includes('scanner_htf_objective_ladder') ||
+    !ownerContent.includes('scanner_htf_protected_structure_map') ||
     !ownerContent.includes('DeskHtfObjectiveLadder') ||
+    !ownerContent.includes('DeskHtfProtectedStructureMap') ||
     !ownerContent.includes('App T1/T2 remain tactical') ||
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')
@@ -309,12 +311,18 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Confidence:') ||
     !formatterContent.includes('HTF reaction:') ||
     !formatterContent.includes('HTF Runner Map') ||
+    !formatterContent.includes('HTF Structure:') ||
+    !formatterContent.includes('5M still controls execution') ||
+    !formatterContent.includes('protectedStructure') ||
+    !formatterContent.includes('confirmationLine') ||
     !formatterContent.includes('App T1/T2 tactical') ||
+    !formatterContent.includes('Review Map:') ||
+    !formatterContent.includes('Need: protected 5M shift + canExecute.') ||
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
     !formatterContent.includes('strength') ||
     !formatterContent.includes('Chart: review attached; not execution approval.') ||
-    !formatterContent.includes('Boundary: approvals/canExecute unchanged.') ||
+    !formatterContent.includes('Boundary: no approval/canExecute change.') ||
     !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
   ) {
     fail('discord-alert-format.ts must keep Desk Play alerts concise with RAG buttons, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');

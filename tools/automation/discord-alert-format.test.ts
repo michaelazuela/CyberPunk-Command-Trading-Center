@@ -380,6 +380,73 @@ const deskPlayPayload = compactDiscordSummary({
         objectives: [],
         managementInstruction: 'App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.',
       },
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '4H',
+            bias: 'BULL',
+            protectedStructure: 7271.75,
+            confirmationLine: 7342,
+            target: 7428.75,
+            targetLabel: 'Full ETH high 7428.75',
+            confidence: 78,
+            status: 'confirmed_mss',
+            note: 'protected 7271.75; confirm 7342.00; target 7428.75',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '2H',
+            bias: 'BULL',
+            protectedStructure: 7288.25,
+            confirmationLine: 7342,
+            target: 7410,
+            targetLabel: 'Prior RTH high 7410.00',
+            confidence: 72,
+            status: 'confirmed_mss',
+            note: 'protected 7288.25; confirm 7342.00; target 7410.00',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '1H',
+            bias: 'NEUTRAL',
+            protectedStructure: 7303.5,
+            confirmationLine: 7342,
+            target: null,
+            targetLabel: null,
+            confidence: 51,
+            status: 'conflicting_mss',
+            note: 'protected 7303.50; confirm 7342.00; target not mapped',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '15M',
+            bias: 'BULL',
+            protectedStructure: 7342,
+            confirmationLine: 7342,
+            target: 7410,
+            targetLabel: 'Prior RTH high 7410.00',
+            confidence: 69,
+            status: 'confirmed_mss',
+            note: 'protected 7342.00; confirm 7342.00; target 7410.00',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '5M',
+            bias: 'BULL',
+            protectedStructure: 7271.75,
+            confirmationLine: 7342,
+            target: 7392.5,
+            targetLabel: 'App T2 7392.50',
+            confidence: 82,
+            status: 'confirmed_mss',
+            note: 'protected 7271.75; confirm 7342.00; target 7392.50',
+          },
+        ],
+        summary: 'HTF protected structure rows are scanner-owned context only.',
+      },
       nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
       invalidation: 'Completed 5M acceptance below 7342 damages the long continuation play.',
       noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
@@ -439,7 +506,14 @@ const deskPlayText = flattenDiscordPayloadText(deskPlayPayload);
 assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
 assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(deskPlayText.includes('Scanner Desk Play'));
-assert.ok(deskPlayText.includes('Status: WATCH - NOT EXECUTION APPROVAL'));
+assert.ok(deskPlayText.includes('Status: REVIEW ONLY - NOT EXECUTION'));
+assert.ok(deskPlayText.includes('HTF Structure:'));
+assert.ok(deskPlayText.includes('4H: BULL above 7271.75 | confirm 7342.00 | target 7428.75'));
+assert.ok(deskPlayText.includes('2H: BULL above 7288.25 | confirm 7342.00 | target 7410.00'));
+assert.ok(deskPlayText.includes('1H: NEUTRAL line 7303.50 | confirm 7342.00 | target N/A'));
+assert.ok(deskPlayText.includes('15M: BULL above 7342.00 | confirm 7342.00 | target 7410.00'));
+assert.ok(deskPlayText.includes('5M: BULL above 7271.75 | confirm 7342.00 | target 7392.50'));
+assert.ok(deskPlayText.includes('Reliability: structural; 5M still controls execution.'));
 assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
 assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
 assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
@@ -459,12 +533,12 @@ assert.ok(deskPlayText.includes('App targets: T1 7372.50 / T2 7392.50'));
 assert.ok(deskPlayText.includes('Next draw: Prior RTH high 7410.00 2.4R'));
 assert.ok(deskPlayText.includes('Runner: Full ETH high 7428.75 2.9R'));
 assert.ok(deskPlayText.includes('App T1/T2 remain tactical'));
-assert.ok(deskPlayText.includes('Trigger'));
+assert.ok(deskPlayText.includes('Trigger:'));
 assert.ok(deskPlayText.includes('Completed 5M pullback must hold above 7342 and reclaim the retest.'));
-assert.ok(deskPlayText.includes('Invalid'));
+assert.ok(deskPlayText.includes('Invalid:'));
 assert.ok(deskPlayText.includes('Completed 5M acceptance below 7342 damages the long continuation play.'));
 assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
-assert.ok(deskPlayText.includes('Boundary: approvals/canExecute unchanged.'));
+assert.ok(deskPlayText.includes('Boundary: no approval/canExecute change.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
 assert.ok(!deskPlayText.includes('Decision Map:'));
@@ -515,6 +589,49 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
       htfConflict: false,
       countertrendWarning: null,
       discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '4H',
+            bias: 'CONFLICT',
+            protectedStructure: 7377.5,
+            confirmationLine: 7423.75,
+            target: 7460,
+            targetLabel: '4H buy-side pool 7460.00',
+            confidence: 35,
+            status: 'conflicting_mss',
+            note: 'protected 7377.50; confirm 7423.75; target 7460.00',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '15M',
+            bias: 'BEAR',
+            protectedStructure: 7440.25,
+            confirmationLine: 7342,
+            target: 7318.75,
+            targetLabel: '15M sell-side pool 7318.75',
+            confidence: 66,
+            status: 'confirmed_mss',
+            note: 'protected 7440.25; confirm 7342.00; target 7318.75',
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '5M',
+            bias: 'BEAR',
+            protectedStructure: 7350.25,
+            confirmationLine: 7342,
+            target: 7318.75,
+            targetLabel: 'App T2 7318.75',
+            confidence: 72,
+            status: 'confirmed_mss',
+            note: 'protected 7350.25; confirm 7342.00; target 7318.75',
+          },
+        ],
+        summary: 'HTF protected structure rows are scanner-owned context only.',
+      },
       shortBias: {
         state: 'review',
         scenarioLabel: 'Short below line in the sand',
@@ -528,10 +645,16 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 });
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
-assert.ok(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'));
-assert.ok(deskPlayDecisionMapText.includes('SHORT line: 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('HTF Structure:'));
+assert.ok(deskPlayDecisionMapText.includes('4H: CONFLICT line 7377.50 | confirm 7423.75 | target 7460.00'));
+assert.ok(deskPlayDecisionMapText.includes('15M: BEAR below 7440.25 | confirm 7342.00 | target 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('5M: BEAR below 7350.25 | confirm 7342.00 | target 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
+assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00 | Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));
+assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play is confirmed'), false);
+assert.equal(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'), false);
 assert.ok(!deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
-assert.ok(!deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
 
 const deskPlaySupportedShortPayload = compactDiscordSummary({
   session: 'lunch',
@@ -590,7 +713,7 @@ assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('Risk: 10.50 pts'));
 assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
 assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
-assert.ok(deskPlaySupportedShortText.includes('Boundary: approvals/canExecute unchanged.'));
+assert.ok(deskPlaySupportedShortText.includes('Boundary: no approval/canExecute change.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
 
 const lunch = compactDiscordSummary({
