@@ -869,11 +869,15 @@ function deskPlayHtfProtectedStructureLines(play: NonNullable<CompactDeskStateFo
     .map((row) => {
       const tf = compactLine(row.timeframe || 'TF', 4);
       const bias = compactLine(row.bias || 'UNKNOWN', 8);
-      const side = row.bias === 'BULL' ? 'above' : row.bias === 'BEAR' ? 'below' : 'line';
       const protectedLevel = isFinitePrice(row.protectedStructure) ? priceLine(row.protectedStructure) : 'N/A';
       const confirm = isFinitePrice(row.confirmationLine) ? priceLine(row.confirmationLine) : 'N/A';
       const target = isFinitePrice(row.target) ? priceLine(row.target) : 'N/A';
-      return `${tf}: ${bias} ${side} ${protectedLevel} | confirm ${confirm} | target ${target}`;
+      if (row.bias === 'CONFLICT' || row.bias === 'NEUTRAL') {
+        return `${tf}: ${row.bias === 'CONFLICT' ? 'MIXED' : bias} bias | bull above ${confirm} / bear below ${protectedLevel} | target ${target}`;
+      }
+      if (row.bias === 'BULL') return `${tf}: BULL bias | hold above ${protectedLevel} | confirm ${confirm} | target ${target}`;
+      if (row.bias === 'BEAR') return `${tf}: BEAR bias | hold below ${protectedLevel} | confirm ${confirm} | target ${target}`;
+      return `${tf}: ${bias} bias | bull above ${confirm} / bear below ${protectedLevel} | target ${target}`;
     });
   return [
     'HTF Protected Structure Map',
