@@ -2635,6 +2635,7 @@ function buildDiscordPayload(args: {
   confidence: ScannerConfidenceBreakdown;
   candidate: SetupCandidate | null;
   normalized: ReturnType<typeof buildAppTradePlan>;
+  currentPrice?: number | null;
   windowLabel: string;
   planVersionId: string;
   attachments: CompactDiscordAttachmentState;
@@ -2653,6 +2654,7 @@ function buildDiscordPayload(args: {
     scoreOverride: args.confidence.score,
     decisionOverride: args.state,
     statusOverride: args.state,
+    currentPrice: args.currentPrice,
     deskState: args.deskState,
     components: args.deskState?.discordAction === 'post_watch'
       ? undefined
@@ -3179,6 +3181,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     confidence: args.confidence,
     candidate: deskState.discordAction === 'post_watch' ? args.candidate : visualCandidate,
     normalized: args.normalized,
+    currentPrice: args.currentPrice,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,
     attachments: {
@@ -3200,6 +3203,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   confidence: ScannerConfidenceBreakdown;
   normalized: ReturnType<typeof buildAppTradePlan>;
   chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
+  currentPrice?: number | null;
   windowLabel: string;
   planVersionId: string;
   deskState: DeskState;
@@ -3245,6 +3249,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     confidence: args.confidence,
     candidate: contextCandidate,
     normalized: normalizedForPayload,
+    currentPrice: args.currentPrice,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,
     attachments: {
@@ -4516,6 +4521,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           confidence,
           normalized,
           chartContext: analysis.structuredChartContext || null,
+          currentPrice,
           windowLabel: window.label,
           planVersionId: deskPlayPlanVersionId,
           deskState,

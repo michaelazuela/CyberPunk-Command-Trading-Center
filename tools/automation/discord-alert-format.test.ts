@@ -311,6 +311,7 @@ const deskPlayPayload = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
+  currentPrice: 7350,
   components: buildOutcomeComponents({
     planVersionId: 'LUNCH-DESK-PLAY-TEST',
     sessionType: 'lunch',
@@ -508,11 +509,11 @@ assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.co
 assert.ok(deskPlayText.includes('Scanner Desk Play'));
 assert.ok(deskPlayText.includes('Status: REVIEW ONLY - NOT EXECUTION'));
 assert.ok(deskPlayText.includes('HTF Protected Structure Map'));
-assert.ok(deskPlayText.includes('4H: BULL bias | hold above 7271.75 | confirm 7342.00 | target 7428.75'));
-assert.ok(deskPlayText.includes('2H: BULL bias | hold above 7288.25 | confirm 7342.00 | target 7410.00'));
-assert.ok(deskPlayText.includes('1H: NEUTRAL bias | bull above 7342.00 / bear below 7303.50 | target N/A'));
-assert.ok(deskPlayText.includes('15M: BULL bias | hold above 7342.00 | confirm 7342.00 | target 7410.00'));
-assert.ok(deskPlayText.includes('5M: BULL bias | hold above 7271.75 | confirm 7342.00 | target 7392.50'));
+assert.ok(deskPlayText.includes('4H: BULL bias now | changes below 7271.75 | confirm 7342.00 | target 7428.75'));
+assert.ok(deskPlayText.includes('2H: BULL bias now | changes below 7288.25 | confirm 7342.00 | target 7410.00'));
+assert.ok(deskPlayText.includes('1H: BULL bias now | changes below 7303.50 | confirm 7342.00 | target N/A'));
+assert.ok(deskPlayText.includes('15M: BULL bias now | changes below 7342.00 | confirm 7342.00 | target 7410.00'));
+assert.ok(deskPlayText.includes('5M: BULL bias now | changes below 7271.75 | confirm 7342.00 | target 7392.50'));
 assert.ok(deskPlayText.includes('Reliability: structural; 5M still controls execution.'));
 assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
 assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
@@ -568,6 +569,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
   attachments: { chartPlan: false, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
+  currentPrice: 7360,
   deskState: {
     marketMode: 'watching',
     visibilityMode: 'HOLD_WITH_REASON',
@@ -646,9 +648,9 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
 assert.ok(deskPlayDecisionMapText.includes('HTF Protected Structure Map'));
-assert.ok(deskPlayDecisionMapText.includes('4H: MIXED bias | bull above 7423.75 / bear below 7377.50 | target 7460.00'));
-assert.ok(deskPlayDecisionMapText.includes('15M: BEAR bias | hold below 7440.25 | confirm 7342.00 | target 7318.75'));
-assert.ok(deskPlayDecisionMapText.includes('5M: BEAR bias | hold below 7350.25 | confirm 7342.00 | target 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('4H: BEAR bias now | changes above 7423.75 | bear line 7377.50 | target 7460.00'));
+assert.ok(deskPlayDecisionMapText.includes('15M: BEAR bias now | changes above 7440.25 | bear confirm 7342.00 | target 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('5M: BULL bias now | BEAR returns below 7350.25 | bear confirm 7342.00 | target 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00 | Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));

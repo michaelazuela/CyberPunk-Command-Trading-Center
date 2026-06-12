@@ -223,6 +223,7 @@ interface CompactDiscordSummaryArgs {
   decisionOverride?: string | null;
   statusOverride?: string | null;
   deskState?: CompactDeskStateForDiscord | null;
+  currentPrice?: number | null;
 }
 
 interface MorningWatchlistDiscordArgs {
@@ -857,7 +858,50 @@ function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDi
   return lines.length > 2 ? lines : [];
 }
 
-function deskPlayHtfProtectedStructureLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
+function currentHtfBiasLine(args: {
+  timeframe: string;
+  rowBias: string | null | undefined;
+  protectedLevel: number | null;
+  confirmationLine: number | null;
+  target: number | null;
+  currentPrice: number | null | undefined;
+}): string {
+  const tf = compactLine(args.timeframe || 'TF', 4);
+  const protectedText = priceLine(args.protectedLevel);
+  const confirmText = priceLine(args.confirmationLine);
+  const targetText = priceLine(args.target);
+  const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+
+  if (args.rowBias === 'BULL') {
+    if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
+      return `${tf}: BEAR bias now | BULL returns above ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+    }
+    return `${tf}: BULL bias now | changes below ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+  }
+  if (args.rowBias === 'BEAR') {
+    if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice > args.protectedLevel) {
+      return `${tf}: BULL bias now | BEAR returns below ${protectedText} | bear confirm ${confirmText} | target ${targetText}`;
+    }
+    return `${tf}: BEAR bias now | changes above ${protectedText} | bear confirm ${confirmText} | target ${targetText}`;
+  }
+
+  if (currentPrice !== null && isFinitePrice(args.confirmationLine) && currentPrice >= args.confirmationLine) {
+    return `${tf}: BULL bias now | changes below ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+  }
+  if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice <= args.protectedLevel) {
+    return `${tf}: BEAR bias now | changes above ${confirmText} | bear line ${protectedText} | target ${targetText}`;
+  }
+  if (currentPrice !== null && isFinitePrice(args.protectedLevel) && isFinitePrice(args.confirmationLine)) {
+    return `${tf}: RANGE bias now | BULL above ${confirmText} / BEAR below ${protectedText} | target ${targetText}`;
+  }
+
+  return `${tf}: Bias pending | BULL above ${confirmText} / BEAR below ${protectedText} | target ${targetText}`;
+}
+
+function deskPlayHtfProtectedStructureLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  currentPrice?: number | null,
+): string[] {
   const map = play.htfProtectedStructureMap;
   if (!map || map.sourceOfTruth !== 'scanner_htf_protected_structure_map' || !Array.isArray(map.rows) || map.rows.length === 0) {
     return [];
@@ -867,17 +911,14 @@ function deskPlayHtfProtectedStructureLines(play: NonNullable<CompactDeskStateFo
     .sort((a, b) => (order.get(String(a.timeframe)) ?? 99) - (order.get(String(b.timeframe)) ?? 99))
     .slice(0, 5)
     .map((row) => {
-      const tf = compactLine(row.timeframe || 'TF', 4);
-      const bias = compactLine(row.bias || 'UNKNOWN', 8);
-      const protectedLevel = isFinitePrice(row.protectedStructure) ? priceLine(row.protectedStructure) : 'N/A';
-      const confirm = isFinitePrice(row.confirmationLine) ? priceLine(row.confirmationLine) : 'N/A';
-      const target = isFinitePrice(row.target) ? priceLine(row.target) : 'N/A';
-      if (row.bias === 'CONFLICT' || row.bias === 'NEUTRAL') {
-        return `${tf}: ${row.bias === 'CONFLICT' ? 'MIXED' : bias} bias | bull above ${confirm} / bear below ${protectedLevel} | target ${target}`;
-      }
-      if (row.bias === 'BULL') return `${tf}: BULL bias | hold above ${protectedLevel} | confirm ${confirm} | target ${target}`;
-      if (row.bias === 'BEAR') return `${tf}: BEAR bias | hold below ${protectedLevel} | confirm ${confirm} | target ${target}`;
-      return `${tf}: ${bias} bias | bull above ${confirm} / bear below ${protectedLevel} | target ${target}`;
+      return currentHtfBiasLine({
+        timeframe: row.timeframe || 'TF',
+        rowBias: row.bias,
+        protectedLevel: isFinitePrice(row.protectedStructure) ? row.protectedStructure : null,
+        confirmationLine: isFinitePrice(row.confirmationLine) ? row.confirmationLine : null,
+        target: isFinitePrice(row.target) ? row.target : null,
+        currentPrice,
+      });
     });
   return [
     'HTF Protected Structure Map',
@@ -996,7 +1037,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
     'Status: REVIEW ONLY - NOT EXECUTION',
     '',
-    ...(play ? deskPlayHtfProtectedStructureLines(play) : []),
+    ...(play ? deskPlayHtfProtectedStructureLines(play, args.currentPrice) : []),
     ...(play ? [''] : []),
     ...(direction === 'LONG' || direction === 'SHORT'
       ? deskPlayManagementLines(args, direction)
