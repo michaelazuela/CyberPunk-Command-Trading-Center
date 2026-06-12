@@ -243,11 +243,12 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 
 ## Scanner Market Mapping Mode
 
-The local scanner runs all day and overnight. Outside Morning/Lunch execution windows, it is in `MarketMapping` state, not trade-planning mode.
+The local scanner may run all day, but context-only `MarketMapping` refresh is limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but market-map refresh is paused.
 
 - Market Mapping Mode may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, and target cascade context.
 - Market Mapping Mode must not produce actionable trade plans, Discord trade alerts, entries, stops, or approvals.
 - Keep `Opening Observation Window` as the specific 9:30-10:00 AM ET RTH phase. Do not use that label for overnight or all-day context building.
+- 9:15-9:30 AM ET and 3:30-4:00 PM ET are Market Mapping only. They are not trade-planning windows.
 - Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.
 
 ## Verification Before Finishing

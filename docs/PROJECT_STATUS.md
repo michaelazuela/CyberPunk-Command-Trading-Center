@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Limit Market Mapping refresh to 9:15 AM-4:00 PM ET.
+Files changed: AGENTS.md, docs/PROJECT_STATUS.md, src/config/timeWindows.ts, src/config/timeWindows.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts.
+Reason: Market Mapping should not run all day and overnight. The scanner should keep health/state online, but context-only market-map refresh now starts 15 minutes before RTH open and pauses at the 4:00 PM ET market close.
+Tests run: npx tsx src/config/timeWindows.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Added a canonical `MARKET_MAPPING_WINDOW` and `allowsMarketMapping` scanner-window flag. Off-hours scanner cycles now skip market-map refresh and log Market Mapping Off Hours instead of refreshing context. Discord schedule copy now shows 9:15 AM-4:00 PM ET as the only Market Mapping span outside setup windows.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge data interpretation changed.
+Bridge impact: None. NinjaTrader OHLC remains read-only source data.
+Discord impact: Schedule/visibility wording changed only. No alert eligibility or trade approval changed.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor after verification so the running scanner uses the new Market Mapping boundary.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Phase 10J Live Desk Plan Refresh and stop-management visibility standard.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: ActiveCampaign duplicate suppression correctly prevents repeated trade alerts, but it was too blunt for live desk management. A same-campaign plan can need a fresh Discord Desk Plan when the latest completed 5M, protected 5M structure, line in the sand, entry, stop, T1/T2, reaction level, or runner map changes.

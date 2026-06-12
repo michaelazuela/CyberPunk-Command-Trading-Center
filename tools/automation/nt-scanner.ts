@@ -9,6 +9,7 @@ import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
+import { MARKET_MAPPING_WINDOW } from '../../src/config/timeWindows';
 import {
   buildNinjaChartContext,
   getNinjaBridgeBars,
@@ -3631,12 +3632,14 @@ function buildWindowStartPayload(args: {
     ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
     : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
   const fullSchedule = [
-    `🗺️ Before ${TRADE_RULES.executionWindows.openingObservation.startET} ET: Market Mapping only`,
+    '⏸️ Before 09:15 ET: Market Mapping paused',
+    '🗺️ 09:15-09:30 ET: Market Mapping only',
     `👀 ${TRADE_RULES.executionWindows.openingObservation.startET}-${TRADE_RULES.executionWindows.openingObservation.endET} ET: Opening observation, no trade approval`,
     `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning setup scanning`,
     `🗺️ ${TRADE_RULES.executionWindows.morningExecution.endET}-${TRADE_RULES.executionWindows.middayTrapReversal.startET} ET: Market Mapping only`,
     `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch setup scanning`,
-    `🗺️ After ${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Market Mapping only`,
+    `🗺️ ${TRADE_RULES.executionWindows.middayTrapReversal.endET}-16:00 ET: Market Mapping only`,
+    '⏸️ After 16:00 ET: Market Mapping paused',
   ].join('\n');
   return {
     username: 'Quant Desk',
@@ -4245,6 +4248,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (!window.allowsTradePlan || !config.scanWindows) {
     const mappingState = scannerContextState(window);
     const mappingLabel = config.scanWindows ? scannerContextLogLabel(window) : 'Market Mapping Mode';
+    if (!window.allowsMarketMapping) {
+      console.log(
+        `[scanner] ${mappingLabel}: ${mappingState}, market map refresh paused outside ${MARKET_MAPPING_WINDOW.startHour}:${String(MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${MARKET_MAPPING_WINDOW.endHour}:${String(MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}`,
+      );
+      await writeState(state);
+      return;
+    }
     const mapStatus = await refreshMarketMapContext({ config, state, tradeDate, window, liveBars });
     console.log(`[scanner] ${mappingLabel}: ${mappingState}, context updated only | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText} | ${mapStatus}`);
     await writeState(state);

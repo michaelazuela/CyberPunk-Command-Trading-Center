@@ -1,4 +1,5 @@
 import { TRADE_RULES } from '../config/tradeRules';
+import { isMarketMappingWindowByEtMinutes, MARKET_MAPPING_WINDOW } from '../config/timeWindows';
 import { SETUP_REGISTRY, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
@@ -28,10 +29,12 @@ export interface ScannerWindowState {
   enabled: boolean;
   allowsTradePlan: boolean;
   allowsDiscordAlert: boolean;
+  allowsMarketMapping: boolean;
   nextWindowLabel: string | null;
 }
 
 export const MARKET_MAPPING_LABEL = 'Market Mapping Mode';
+export const MARKET_MAPPING_OFF_HOURS_LABEL = 'Market Mapping Off Hours';
 
 export const MARKET_MAPPING_COVERAGE = [
   'ETH high/low',
@@ -553,6 +556,20 @@ export function getScannerTradeDate(date = new Date()): string {
 export function resolveScannerWindow(date = new Date(), afternoonEnabled = false): ScannerWindowState {
   const minutes = etClockMinutes(date);
   const windows = TRADE_RULES.executionWindows;
+  const allowsMarketMapping = isMarketMappingWindowByEtMinutes(minutes);
+
+  if (allowsMarketMapping && minutes < minutesFromClock(windows.openingObservation.startET)) {
+    return {
+      session: 'premarket',
+      label: MARKET_MAPPING_WINDOW.label,
+      quality: 'outside',
+      enabled: true,
+      allowsTradePlan: false,
+      allowsDiscordAlert: false,
+      allowsMarketMapping,
+      nextWindowLabel: windows.openingObservation.label,
+    };
+  }
 
   if (isBetween(minutes, windows.openingObservation.startET, windows.openingObservation.endET)) {
     return {
@@ -562,6 +579,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       enabled: windows.openingObservation.enabled,
       allowsTradePlan: false,
       allowsDiscordAlert: false,
+      allowsMarketMapping,
       nextWindowLabel: windows.morningExecution.label,
     };
   }
@@ -574,6 +592,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       enabled: windows.morningExecution.enabled,
       allowsTradePlan: windows.morningExecution.enabled,
       allowsDiscordAlert: windows.morningExecution.enabled,
+      allowsMarketMapping,
       nextWindowLabel: windows.middayTrapReversal.label,
     };
   }
@@ -586,6 +605,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       enabled: windows.middayTrapReversal.enabled,
       allowsTradePlan: windows.middayTrapReversal.enabled,
       allowsDiscordAlert: windows.middayTrapReversal.enabled,
+      allowsMarketMapping,
       nextWindowLabel: afternoonEnabled ? windows.afternoonExecution.label : null,
     };
   }
@@ -599,6 +619,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
       enabled: windows.afternoonExecution.enabled && afternoonEnabled,
       allowsTradePlan: windows.afternoonExecution.enabled && afternoonEnabled,
       allowsDiscordAlert: windows.afternoonExecution.enabled && afternoonEnabled,
+      allowsMarketMapping,
       nextWindowLabel: null,
     };
   }
@@ -610,6 +631,7 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     enabled: false,
     allowsTradePlan: false,
     allowsDiscordAlert: false,
+    allowsMarketMapping,
     nextWindowLabel:
       minutes < minutesFromClock(windows.openingObservation.startET)
         ? windows.openingObservation.label
@@ -622,11 +644,13 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
 }
 
 export function scannerContextLogLabel(window: ScannerWindowState): string {
+  if (!window.allowsMarketMapping) return MARKET_MAPPING_OFF_HOURS_LABEL;
   return window.quality === 'observe_only' ? window.label : MARKET_MAPPING_LABEL;
 }
 
 export function scannerContextState(window: ScannerWindowState): ScannerState {
-  return window.allowsTradePlan ? 'MapReady' : 'MarketMapping';
+  if (window.allowsTradePlan) return 'MapReady';
+  return window.allowsMarketMapping ? 'MarketMapping' : 'NoData';
 }
 
 const BRIDGE_TIME_ZONES: Record<Exclude<BridgeTimeZoneMode, 'local'>, string> = {

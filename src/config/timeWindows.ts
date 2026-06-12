@@ -54,6 +54,16 @@ export const MODEL_SPECIFIC_TIME_WINDOWS = {
   },
 } as const;
 
+export const MARKET_MAPPING_WINDOW = {
+  label: "Market Mapping Window",
+  startHour: 9,
+  startMinute: 15,
+  endHour: 16,
+  endMinute: 0,
+  timezone: "America/New_York",
+  note: "Context-only Market Mapping runs from 15 minutes before RTH open through the 4:00 PM ET market close.",
+} as const;
+
 export type WindowKey = "morning" | "lunch";
 export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
 
@@ -61,6 +71,8 @@ const MORNING_SETUP_SCAN_START = 10 * 60;
 const MORNING_SETUP_SCAN_END = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_START = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_END = 15 * 60 + 30;
+const MARKET_MAPPING_WINDOW_START = MARKET_MAPPING_WINDOW.startHour * 60 + MARKET_MAPPING_WINDOW.startMinute;
+const MARKET_MAPPING_WINDOW_END = MARKET_MAPPING_WINDOW.endHour * 60 + MARKET_MAPPING_WINDOW.endMinute;
 const INTRADAY_MSS_MICRO_LATE_DAY_START =
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour * 60 +
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startMinute;
@@ -107,6 +119,10 @@ export function classifyActiveSetupScanWindowByEtMinutes(minutes: number): Activ
   if (minutes >= MORNING_SETUP_SCAN_START && minutes < MORNING_SETUP_SCAN_END) return 'MORNING_SETUP_SCAN';
   if (minutes >= LUNCH_PM_SETUP_SCAN_START && minutes < LUNCH_PM_SETUP_SCAN_END) return 'LUNCH_PM_SETUP_SCAN';
   return 'OUTSIDE_SETUP_SCAN';
+}
+
+export function isMarketMappingWindowByEtMinutes(minutes: number): boolean {
+  return minutes >= MARKET_MAPPING_WINDOW_START && minutes < MARKET_MAPPING_WINDOW_END;
 }
 
 export function isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes: number): boolean {
