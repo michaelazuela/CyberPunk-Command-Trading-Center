@@ -46,8 +46,12 @@ try {
   assert.ok(!labels(longComponents).includes('Short T1 Hit'));
   assert.ok(!labels(longComponents).includes('Short T2 Hit'));
   assert.ok(urls(longComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
-  assert.ok(urls(longComponents).every((url) => !/5320|5316|entry|stop|target|riskPoints|canExecute/i.test(url)));
   const longPayloads = urls(longComponents).map(decodeOutcomePayload);
+  assert.ok(longPayloads.every((payload) => !('entry' in payload)));
+  assert.ok(longPayloads.every((payload) => !('stop' in payload)));
+  assert.ok(longPayloads.every((payload) => !('target' in payload)));
+  assert.ok(longPayloads.every((payload) => !('riskPoints' in payload)));
+  assert.ok(longPayloads.every((payload) => !('canExecute' in payload)));
   assert.equal(normalizeDiscordOutcomeSecret('  "test-secret"  '), 'test-secret');
   assert.equal(longPayloads[0].kid, discordOutcomeSecretKeyId('test-secret'));
   assert.equal(discordOutcomeSecretKeyId('  "test-secret"  '), discordOutcomeSecretKeyId('test-secret'));
@@ -81,7 +85,13 @@ try {
   assert.equal(shortPayloads[3].hit, 'STRETCH');
   assert.ok(urls(shortComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
 
-  assert.equal(buildOutcomeComponents({ ...baseArgs, direction: null }), undefined);
+  const neutralComponents = buildOutcomeComponents({ ...baseArgs, direction: null });
+  assert.deepEqual(labels(neutralComponents), ['No Trade', 'Missed']);
+  const neutralPayloads = urls(neutralComponents).map(decodeOutcomePayload);
+  assert.equal(neutralPayloads[0].dir, 'NONE');
+  assert.equal(neutralPayloads[0].tr, 'no_trade');
+  assert.equal(neutralPayloads[1].dir, 'NONE');
+  assert.equal(neutralPayloads[1].tr, 'missed_trade');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook', longComponents), 'https://discord.example/webhook?with_components=true&wait=true');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook?wait=true', longComponents), 'https://discord.example/webhook?wait=true&with_components=true');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook', undefined), 'https://discord.example/webhook');

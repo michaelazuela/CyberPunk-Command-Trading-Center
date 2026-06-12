@@ -39,6 +39,7 @@ import {
   toEtMinutes,
   type BridgeTimeZoneMode,
   type BridgeTimestampMode,
+  type DeskPlayDirectionalBias,
   type ScannerConfidenceBreakdown,
   type ScannerCandidateLifecycleTrace,
   type DeskState,
@@ -69,6 +70,7 @@ import {
   SetupType,
   type AnalysisResult,
   type ChartContext,
+  type DecisionQualityScoreItem,
   type FailedBreakEventFact,
   type FailedPlanReversalContext,
   type SetupCandidate,
@@ -2738,6 +2740,45 @@ function deskPlayPlanningLevels(args: {
   };
 }
 
+function deskPlayBiasQualityScore(bias: DeskPlayDirectionalBias): number | null {
+  const raw = typeof bias.lineConfidence?.score === 'number' && Number.isFinite(bias.lineConfidence.score)
+    ? bias.lineConfidence.score
+    : typeof bias.decisionQualityScore === 'number' && Number.isFinite(bias.decisionQualityScore)
+    ? bias.decisionQualityScore
+    : typeof bias.modelConfidenceScore === 'number' && Number.isFinite(bias.modelConfidenceScore)
+    ? bias.modelConfidenceScore
+    : typeof bias.rankScore === 'number' && Number.isFinite(bias.rankScore)
+    ? bias.rankScore
+    : null;
+  return raw === null ? null : Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+function deskPlayBiasQualityLabel(bias: DeskPlayDirectionalBias, score: number | null): 'high' | 'medium' | 'low' | 'unavailable' {
+  if (bias.lineConfidence?.label) return bias.lineConfidence.label;
+  if (score === null) return 'unavailable';
+  if (score >= 75) return 'high';
+  if (score >= 55) return 'medium';
+  return 'low';
+}
+
+function deskPlaySideQualityScorecard(
+  longBias: DeskPlayDirectionalBias,
+  shortBias: DeskPlayDirectionalBias,
+): DecisionQualityScoreItem[] {
+  return [longBias, shortBias].map((bias) => {
+    const score = deskPlayBiasQualityScore(bias);
+    const label = deskPlayBiasQualityLabel(bias, score);
+    const safeScore = score ?? 0;
+    return {
+      label: `${bias.direction} Quality`,
+      score: safeScore,
+      max: 100,
+      status: label === 'high' ? 'strong' : label === 'medium' ? 'partial' : label === 'low' ? 'weak' : 'blocked',
+      note: `${label}. ${bias.lineConfidence?.reason || bias.reason || 'Scanner-owned Desk Play side confidence.'}`,
+    };
+  });
+}
+
 export function candidateForDeskPlayContextChart(
   deskState: DeskState,
   normalized?: ReturnType<typeof buildAppTradePlan> | null,
@@ -2774,6 +2815,7 @@ export function candidateForDeskPlayContextChart(
     riskPoints: planningLevels.riskPoints,
     invalidation: play.invalidation || deskState.invalidation || null,
     decisionQualityScore: primaryBias.decisionQualityScore ?? primaryBias.rankScore ?? null,
+    decisionQualityScorecard: deskPlaySideQualityScorecard(play.longBias, play.shortBias),
     decisionQualityRecommendation: hasPlanningLevels
       ? 'Review planning levels only: targets are app-computed from entry to protected structure stop; canExecute remains false.'
       : 'Desk Play context only: wait for completed 5M proof and protected structure stop.',
@@ -3199,7 +3241,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     config: args.config,
     state: args.state,
     confidence: args.confidence,
-    candidate: null,
+    candidate: contextCandidate,
     normalized: normalizedForPayload,
     windowLabel: args.windowLabel,
     planVersionId: args.planVersionId,
@@ -4473,6 +4515,25 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           deskState,
           decisionTapePath,
         });
+        if (shouldPersistScannerAlertToRag(deskState)) {
+          try {
+            await upsertScannerDiscordAlertRagRecord({
+              planVersionId: deskPlayPlanVersionId,
+              session,
+              tradeDate,
+              instrument: config.instrument,
+              analysis,
+              normalized,
+              candidate: candidateForDeskPlayContextChart(deskState, normalized) || candidate,
+              visibilityMetadata,
+              candidateLifecycleTrace,
+              deskState,
+              confidence: confidence.score,
+            });
+          } catch (error) {
+            console.warn(`Scanner Desk Play RAG pending save failed safely: ${sanitizedError(error)}`);
+          }
+        }
         const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();

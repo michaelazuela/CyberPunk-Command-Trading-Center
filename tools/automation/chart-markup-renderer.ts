@@ -144,6 +144,8 @@ interface PlanRenderModel {
   isLong: boolean;
   model: string;
   score: number | null;
+  longQuality: DecisionQualityScoreItem | null;
+  shortQuality: DecisionQualityScoreItem | null;
   entry: number | null;
   entryLow: number | null;
   entryHigh: number | null;
@@ -152,6 +154,9 @@ interface PlanRenderModel {
   t2: number | null;
   runner: number | null;
   stretch: number | null;
+  htfNextDrawLabel: string | null;
+  htfRunnerLabel: string | null;
+  htfExtensionLabel: string | null;
   sweep: number | null;
   risk: number | null;
   r1: number | null;
@@ -201,6 +206,21 @@ function firstMeaningfulExtension(
   return null;
 }
 
+function targetLabelForPrice(candidate: SetupCandidate, price: number | null, fallback: string): string | null {
+  if (!isPrice(price)) return null;
+  const plan = candidate.targetObjectivePlan;
+  const match = [
+    plan?.nearestObstacleTarget,
+    plan?.obstacleTarget1,
+    plan?.nearestLiquidityTarget,
+    plan?.liquidityTarget1,
+    plan?.liquidityTarget2,
+    plan?.liquidityRunnerTarget,
+    plan?.runnerTarget,
+  ].find((objective) => objective && nearlyEqual(objective.price, price));
+  return compact(match?.label || fallback, 20);
+}
+
 function targetLooksStale(price: number | null, candles: PlanRenderModel['candles'], risk: number | null): boolean {
   if (!isPrice(price) || candles.length < 3) return false;
   const candleHigh = Math.max(...candles.map((candle) => candle.high));
@@ -223,6 +243,8 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const isLong = direction === 'LONG';
   const model = professionalCandidateModelLabel(candidate);
   const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
+  const longQuality = isDeskPlayContext ? deskPlaySideQuality(candidate, 'LONG') : null;
+  const shortQuality = isDeskPlayContext ? deskPlaySideQuality(candidate, 'SHORT') : null;
   const fvg = matchingFvg(input.chartContext, candidate);
   const sweepEvent = matchingSweep(input.chartContext, candidate);
   const reclaimEvent = matchingReclaim(input.chartContext, candidate);
@@ -249,6 +271,9 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
         candidate.targetObjectivePlan?.runnerTarget?.price,
       ])
     : null;
+  const htfNextDrawLabel = targetLabelForPrice(candidate, runner, 'Next draw');
+  const htfRunnerLabel = targetLabelForPrice(candidate, runner, 'HTF runner');
+  const htfExtensionLabel = targetLabelForPrice(candidate, stretch, 'HTF extension');
   const risk = isPrice(entry) && isPrice(stop) ? Math.abs(entry - stop) : null;
   const entryLow = fvg && isPrice(fvg.lower) ? fvg.lower : isPrice(entry) && isPrice(risk) ? entry - risk * 0.25 : entry;
   const entryHigh = fvg && isPrice(fvg.upper) ? fvg.upper : isPrice(entry) && isPrice(risk) ? entry + risk * 0.25 : entry;
@@ -320,6 +345,8 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     isLong,
     model,
     score,
+    longQuality,
+    shortQuality,
     entry,
     entryLow,
     entryHigh,
@@ -328,6 +355,9 @@ function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
     t2,
     runner,
     stretch,
+    htfNextDrawLabel,
+    htfRunnerLabel,
+    htfExtensionLabel,
     sweep,
     risk,
     r1: rMultiple(direction, entry, stop, t1),
@@ -445,6 +475,42 @@ function alertQualityBreakdown(candidate: SetupCandidate): DecisionQualityScoreI
   ];
 }
 
+function deskPlaySideQuality(candidate: SetupCandidate, direction: 'LONG' | 'SHORT'): DecisionQualityScoreItem | null {
+  const scorecard = candidate.decisionQualityScorecard || [];
+  const item = scorecard.find((scoreItem) => {
+    const label = String(scoreItem.label || '').toUpperCase();
+    return label.startsWith(`${direction} `) && /QUALITY|CONFIDENCE|LINE/.test(label);
+  });
+  if (item) return item;
+  if (candidate.direction === direction && typeof candidate.decisionQualityScore === 'number') {
+    return {
+      label: `${direction} Quality`,
+      score: Math.max(0, Math.min(100, Math.round(candidate.decisionQualityScore))),
+      max: 100,
+      status: candidate.decisionQualityScore >= 75 ? 'strong' : candidate.decisionQualityScore >= 55 ? 'partial' : 'weak',
+      note: 'Primary Desk Play quality.',
+    };
+  }
+  return null;
+}
+
+function qualityLabel(item: DecisionQualityScoreItem | null): string {
+  if (!item) return 'N/A';
+  const noteLabel = String(item.note || '').match(/\b(high|medium|low|unavailable)\b/i)?.[1]?.toLowerCase();
+  if (noteLabel) return noteLabel;
+  const ratio = item.max > 0 ? item.score / item.max : 0;
+  if (ratio >= 0.75) return 'high';
+  if (ratio >= 0.55) return 'medium';
+  if (ratio > 0) return 'low';
+  return 'unavailable';
+}
+
+function qualityDisplay(item: DecisionQualityScoreItem | null): string {
+  if (!item) return 'N/A';
+  const max = item.max > 0 ? item.max : 100;
+  return `${Math.round(item.score)}/${max} ${qualityLabel(item)}`;
+}
+
 function renderAlertQuality(candidate: SetupCandidate): string {
   const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
   const items = alertQualityBreakdown(candidate);
@@ -476,12 +542,14 @@ function renderAlertQuality(candidate: SetupCandidate): string {
 function renderWatchContextNotice(model: PlanRenderModel): string {
   const hasDeskPlayLevels = isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
   return `
-    <rect x="24" y="486" width="392" height="132" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
-    <text x="38" y="515" class="alert-title" fill="#38bdf8">${hasDeskPlayLevels ? 'REVIEW BOUNDARY' : 'WATCH BOUNDARY'}</text>
+    <rect x="24" y="486" width="392" height="168" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
+    <text x="38" y="515" class="alert-title" fill="#38bdf8">ALERT QUALITY</text>
     <line x1="38" y1="527" x2="402" y2="527" stroke="#38bdf8" stroke-opacity=".34" />
-    <text x="38" y="555" class="small">canExecute: <tspan fill="#facc15">false</tspan></text>
-    <text x="38" y="582" class="small">Trade levels: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan></text>
-    <text x="38" y="609" class="small">Next step: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
+    <text x="38" y="552" class="small">LONG Quality: <tspan fill="#f8fafc">${qualityDisplay(model.longQuality)}</tspan></text>
+    <text x="38" y="576" class="small">SHORT Quality: <tspan fill="#f8fafc">${qualityDisplay(model.shortQuality)}</tspan></text>
+    <text x="38" y="600" class="small">canExecute: <tspan fill="#facc15">false</tspan></text>
+    <text x="38" y="622" class="small">Levels: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan></text>
+    <text x="38" y="638" class="small">Next: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
   `;
 }
 
@@ -525,7 +593,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
       : '#261406';
   const prefix = sessionPlanPrefix(input.sessionLabel);
   const title = isDeskPlayContext
-    ? `[${prefix} REVIEW] ${input.instrument} - ${model.direction} DESK PLAN`
+    ? `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
     : `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
   const badge = isDeskPlayContext ? 'REVIEW ONLY' : status;
   const action = isDeskPlayContext
@@ -536,8 +604,23 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Play - Review Levels' : model.model, 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Map - Review Levels' : model.model, 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
+  `;
+}
+
+function renderDeskPlayMetricChip(args: {
+  x: number;
+  label: string;
+  value: string;
+  valueColor?: string;
+  width?: number;
+}): string {
+  const width = args.width ?? 172;
+  return `
+    <rect x="${args.x}" y="126" width="${width}" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.4" opacity=".96" />
+    <text x="${args.x + 14}" y="157" class="risk-chip-label">${escapeHtml(args.label)}</text>
+    <text x="${args.x + 74}" y="157" class="risk-chip-value" fill="${args.valueColor || '#f8fafc'}">${escapeHtml(args.value)}</text>
   `;
 }
 
@@ -545,11 +628,10 @@ function renderRiskStrip(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
     if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
       return `
-        <rect x="466" y="126" width="740" height="48" rx="8" fill="#050908" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
-        <text x="488" y="157" class="risk-strip">Risk: <tspan fill="#f8fafc">${model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
-        <text x="648" y="157" class="risk-strip">Line: <tspan fill="#f8fafc">${money(model.contextLine)}</tspan></text>
-        <text x="824" y="157" class="risk-strip">Entry: <tspan fill="#f8fafc">${money(model.entry)}</tspan></text>
-        <text x="1024" y="157" class="risk-strip">Stop: <tspan fill="#ef4444">${money(model.stop)}</tspan></text>
+        ${renderDeskPlayMetricChip({ x: 466, label: 'Risk', value: model.risk ? `${model.risk.toFixed(2)} pts` : 'N/A', width: 174 })}
+        ${renderDeskPlayMetricChip({ x: 652, label: 'Line', value: money(model.contextLine), width: 170 })}
+        ${renderDeskPlayMetricChip({ x: 834, label: 'Entry', value: money(model.entry), width: 180 })}
+        ${renderDeskPlayMetricChip({ x: 1026, label: 'Stop', value: money(model.stop), valueColor: '#ef4444', width: 180 })}
       `;
     }
     return `
@@ -581,6 +663,9 @@ function latestClose(plan: PlanRenderModel): number | null {
 
 function renderRiskSummary(model: PlanRenderModel): string {
   if (model.renderMode === 'desk_play_context') {
+    const runnerText = isPrice(model.runner)
+      ? `${model.htfRunnerLabel || model.htfNextDrawLabel || 'HTF runner'} ${money(model.runner)}`
+      : 'N/A';
     if (isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2)) {
       return `
         <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
@@ -590,7 +675,7 @@ function renderRiskSummary(model: PlanRenderModel): string {
         <text x="46" y="382" class="small">Risk: <tspan fill="#f8fafc">~${model.risk ? model.risk.toFixed(2) : 'N/A'} pts</tspan></text>
         <text x="46" y="414" class="small">T1: <tspan fill="#facc15">${money(model.t1)}${isPrice(model.r1) ? ` (${model.r1.toFixed(1)}R)` : ''}</tspan></text>
         <text x="46" y="442" class="small">T2: <tspan fill="#facc15">${money(model.t2)}${isPrice(model.r2) ? ` (${model.r2.toFixed(1)}R)` : ''}</tspan></text>
-        <text x="46" y="462" class="small">Status: <tspan fill="#f8fafc">review only / canExecute false</tspan></text>
+        <text x="46" y="462" class="small">HTF Runner: <tspan fill="#38bdf8">${escapeHtml(runnerText)}</tspan></text>
       `;
     }
     return `
@@ -606,6 +691,9 @@ function renderRiskSummary(model: PlanRenderModel): string {
   }
   const border = model.validationSeverity === 'error' ? '#ef4444' : model.validationSeverity === 'review' ? '#f97316' : '#64748b';
   const targetDataError = model.validationMessages.some((message) => message.includes('Target Data Error'));
+  const runnerText = isPrice(model.runner)
+    ? `${model.htfRunnerLabel || model.htfNextDrawLabel || 'HTF runner'} ${money(model.runner)}`
+    : money(model.runner);
   return `
     <rect x="24" y="252" width="392" height="214" rx="9" fill="#070b0f" stroke="${border}" stroke-width="1.5" opacity=".96" />
     <text x="220" y="283" text-anchor="middle" class="panel-text">RISK SUMMARY</text>
@@ -614,7 +702,7 @@ function renderRiskSummary(model: PlanRenderModel): string {
     <text x="46" y="382" class="small">Risk: <tspan fill="${model.validationSeverity === 'ok' ? '#f8fafc' : '#f97316'}">${model.risk ? `~${model.risk.toFixed(2)} pts` : 'N/A'}</tspan></text>
     <text x="46" y="414" class="small">T1: <tspan fill="${targetDataError ? '#ef4444' : '#facc15'}">${money(model.t1)}${targetDataError ? ' requires review' : isPrice(model.r1) ? ` (${model.r1.toFixed(1)}R)` : ''}</tspan></text>
     <text x="46" y="442" class="small">T2: <tspan fill="${targetDataError ? '#ef4444' : '#facc15'}">${money(model.t2)}${targetDataError ? ' requires review' : isPrice(model.r2) ? ` (${model.r2.toFixed(1)}R)` : ''}</tspan></text>
-    <text x="46" y="462" class="small">Runner: <tspan fill="${targetDataError ? '#ef4444' : '#38bdf8'}">${money(model.runner)}${targetDataError ? ' requires review' : isPrice(model.runnerR) ? ` (${model.runnerR.toFixed(1)}R)` : ''}</tspan></text>
+    <text x="46" y="462" class="small">HTF Runner: <tspan fill="${targetDataError ? '#ef4444' : '#38bdf8'}">${escapeHtml(runnerText)}${targetDataError ? ' requires review' : isPrice(model.runnerR) ? ` (${model.runnerR.toFixed(1)}R)` : ''}</tspan></text>
   `;
 }
 
@@ -970,8 +1058,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const managedLevels = isDeskPlayContext && !hasDeskPlayLevels
     ? [{ label: plan.contextLabel, price: plan.contextLine, color: '#38bdf8', dash: '12 8', width: 3 }]
     : [
-    ...(stretchValidForChart && isPrice(stretch) ? [{ label: 'Stretch', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
-    ...(runnerValidForChart && isPrice(runner) ? [{ label: 'Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
+    ...(stretchValidForChart && isPrice(stretch) ? [{ label: 'HTF Ext', price: stretch, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
+    ...(runnerValidForChart && isPrice(runner) ? [{ label: 'HTF Runner', price: runner, color: '#38bdf8', dash: '10 8', width: 2.2 }] : []),
     { label: 'Entry', price: plan.entry, color: pathColor, width: 3 },
     { label: 'Stop', price: stop, color: '#ef4444', width: 3 },
     targetsValidForChart && sameT1T2
@@ -1011,6 +1099,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
     .context-value { font-size: 15px; fill: #4ade80; font-weight: 850; }
     .status-badge { font-size: 15px; font-weight: 950; fill: #020403; }
     .risk-strip { font-size: 20px; fill: #cbd5e1; font-weight: 900; }
+    .risk-chip-label { font-size: 17px; fill: #cbd5e1; font-weight: 900; }
+    .risk-chip-value { font-size: 18px; font-weight: 950; }
     .validation { font-size: 17px; font-weight: 900; }
     .marker-num { font-size: 35px; fill: #4ade80; font-weight: 900; }
     .marker-badge { font-size: 25px; font-weight: 950; }
@@ -1068,7 +1158,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}
   <rect x="16" y="956" width="1504" height="56" rx="9" fill="#070b0f" stroke="#64748b" />
-  <text x="44" y="991" class="small">${isDeskPlayContext ? hasDeskPlayLevels ? 'REVIEW DESK PLAN ONLY. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
+  <text x="44" y="991" class="small">${isDeskPlayContext ? hasDeskPlayLevels ? 'PREP / REVIEW ONLY - NOT EXECUTION APPROVAL. Levels use app math from entry to protected structure stop. canExecute=false. No automated orders.' : 'WATCH / CONTEXT CHART ONLY. No executable entry, stop, target, risk approval, or automated orders. Decision support only.' : '⚠ THIS IS A DECISION SUPPORT PLAN ONLY. Not financial advice. Not predictive. No automated orders. You are responsible for all final trading decisions.'}</text>
 </svg>
 </div>
 </body>
@@ -1089,8 +1179,8 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   const current = latestClose(plan);
   const targetPlan = plan.candidate.targetObjectivePlan;
   const levelRowSource: Array<{ key: string; label: string; price: number | null | undefined; color: string; dash?: string }> = [
-    { key: 'stretch', label: 'STRETCH', price: stretchValidForMap ? plan.stretch : null, color: '#38bdf8', dash: '10 8' },
-    { key: 'runner', label: 'RUNNER', price: runnerValidForMap ? plan.runner : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'stretch', label: 'HTF EXT', price: stretchValidForMap ? plan.stretch : null, color: '#38bdf8', dash: '10 8' },
+    { key: 'runner', label: 'HTF RUNNER', price: runnerValidForMap ? plan.runner : null, color: '#38bdf8', dash: '10 8' },
     { key: 't2', label: nearlyEqual(plan.t1, plan.t2) ? 'T1/T2' : 'T2 2.0R', price: validTargets ? plan.t2 : null, color: '#facc15', dash: '8 7' },
     { key: 't1', label: 'T1 1.5R', price: validTargets && !nearlyEqual(plan.t1, plan.t2) ? plan.t1 : null, color: '#facc15', dash: '8 7' },
     { key: 'obstacle', label: 'OBSTACLE', price: validTargets ? targetPlan?.obstacleTarget1?.price || targetPlan?.nearestObstacleTarget?.price : null, color: '#f97316', dash: '6 6' },
@@ -1184,8 +1274,8 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
     : 'Targets require validation before execution.';
   const contextNote = [
     targetPlan?.obstacleTarget1 ? `Obstacle ${money(targetPlan.obstacleTarget1.price)}` : null,
-    isPrice(plan.runner) ? `Runner ${money(plan.runner)}` : null,
-    isPrice(plan.stretch) ? `Stretch ${money(plan.stretch)}` : null,
+    isPrice(plan.runner) ? `HTF Runner ${money(plan.runner)}` : null,
+    isPrice(plan.stretch) ? `HTF Ext ${money(plan.stretch)}` : null,
   ].filter(Boolean).join(' | ') || 'No extra liquidity/obstacle context provided.';
   const invalidationNote = compact(plan.candidate.invalidation || 'Invalidation follows protected structure stop.', 96);
 

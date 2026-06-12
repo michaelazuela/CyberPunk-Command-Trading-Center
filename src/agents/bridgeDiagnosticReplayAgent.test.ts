@@ -224,6 +224,7 @@ const june11LongBias = candidate({
   executionStatus: ExecutionStatus.Conditional,
   blockReason: NoTradeReason.EntryTriggerPending,
   requiredTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+  evidence: ['HTF MSS support in campaign direction: 60M, 120M.'],
   missingEvidence: ['Completed Morning context is incomplete; keep this as conditional only.'],
   rankScore: 229,
   decisionQualityScore: 87,

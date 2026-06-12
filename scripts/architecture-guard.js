@@ -253,10 +253,35 @@ function checkScannerVisibilityMetadataBoundary() {
   if (
     !ownerContent.includes('scanner_lifecycle_line_confidence') ||
     !ownerContent.includes('scanner_htf_reaction_context') ||
+    !ownerContent.includes('scanner_htf_objective_ladder') ||
+    !ownerContent.includes('DeskHtfObjectiveLadder') ||
+    !ownerContent.includes('App T1/T2 remain tactical') ||
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')
   ) {
-    fail('localScannerEngine.ts must keep Desk Play line confidence and HTF reaction context scanner-owned metadata only.');
+    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, and HTF objective ladder scanner-owned metadata only.');
+  }
+  if (
+    !ownerContent.includes('const longPrimaryEligible = lifecycleItemHasHtfSupport(long) && !lifecycleItemHasHtfConflict(long)') ||
+    !ownerContent.includes('const shortPrimaryEligible = lifecycleItemHasHtfSupport(short) && !lifecycleItemHasHtfConflict(short)')
+  ) {
+    fail('localScannerEngine.ts must prevent HTF-opposed or HTF-unsupported candidates from becoming the primary Desk Play headline.');
+  }
+  if (
+    !ownerContent.includes('candidateHasHtfSupport') ||
+    !ownerContent.includes('lifecycleItemHasHtfSupport') ||
+    !ownerContent.includes('textHasHtfCautionOnlyNoSupport') ||
+    !ownerContent.includes('HTF is caution/context only') ||
+    !ownerContent.includes('No HTF-supported directional play is confirmed') ||
+    !ownerContent.includes('completed HTF support is not confirmed')
+  ) {
+    fail('localScannerEngine.ts must require completed HTF support, and treat HTF caution/context-only evidence as unsupported, before a candidate becomes the primary Desk Play headline.');
+  }
+  if (ownerContent.includes('structure supports|big-picture.*supports') || ownerContent.includes('structure supports/i')) {
+    fail('localScannerEngine.ts must not infer primary Desk Play HTF support from broad generic structure-support wording.');
+  }
+  if (ownerContent.includes('No primary directional play')) {
+    fail('localScannerEngine.ts WAIT Desk Play summaries must explicitly say no HTF-supported directional play is confirmed.');
   }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
@@ -283,11 +308,16 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Entry ref:') ||
     !formatterContent.includes('Confidence:') ||
     !formatterContent.includes('HTF reaction:') ||
+    !formatterContent.includes('HTF Runner Map') ||
+    !formatterContent.includes('App T1/T2 tactical') ||
+    !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
+    !formatterContent.includes('firstMeaningfulTargetObjective') ||
     !formatterContent.includes('strength') ||
-    !formatterContent.includes('Chart: review chart attached; not execution approval.') ||
-    !formatterContent.includes('Boundary: approvals and canExecute unchanged.')
+    !formatterContent.includes('Chart: review attached; not execution approval.') ||
+    !formatterContent.includes('Boundary: approvals/canExecute unchanged.') ||
+    !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
   ) {
-    fail('discord-alert-format.ts must keep Desk Play alerts concise: manage side, active side, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');
+    fail('discord-alert-format.ts must keep Desk Play alerts concise with RAG buttons, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');
   }
   if (formatterContent.includes('conditional Desk Plan attached') || formatterContent.includes('watch/context chart attached')) {
     fail('discord-alert-format.ts must not preserve obsolete Desk Play chart wording.');
@@ -296,33 +326,48 @@ function checkScannerVisibilityMetadataBoundary() {
   const chartRendererPath = path.join(ROOT, 'tools', 'automation', 'chart-markup-renderer.ts');
   const chartRendererContent = readFileSafe(chartRendererPath);
   if (
-    !chartRendererContent.includes('Desk Play - Review Levels') ||
+    !chartRendererContent.includes('Desk Map - Review Levels') ||
     !chartRendererContent.includes('Action: wait for completed 5M proof') ||
     !chartRendererContent.includes('REVIEW LEVELS') ||
     !chartRendererContent.includes('REVIEW ENTRY ZONE') ||
-    !chartRendererContent.includes('REVIEW DESK PLAN ONLY') ||
+    !chartRendererContent.includes('ALERT QUALITY') ||
+    !chartRendererContent.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL') ||
+    !chartRendererContent.includes('renderDeskPlayMetricChip') ||
+    !chartRendererContent.includes('deskPlaySideQuality') ||
+    !chartRendererContent.includes('LONG Quality: <tspan fill="#f8fafc">${qualityDisplay(model.longQuality)}</tspan>') ||
+    !chartRendererContent.includes('SHORT Quality: <tspan fill="#f8fafc">${qualityDisplay(model.shortQuality)}</tspan>') ||
+    !chartRendererContent.includes('HTF Runner') ||
+    !chartRendererContent.includes('HTF RUNNER') ||
+    !chartRendererContent.includes("Levels: <tspan fill=\"#f8fafc\">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan>") ||
     !chartRendererContent.includes('completed 5M proof')
   ) {
-    fail('chart-markup-renderer.ts must label Desk Play chart artifacts as review-only.');
+    fail('chart-markup-renderer.ts must label Desk Play chart artifacts as prep/review-only with two-sided quality and separated level chips.');
   }
   if (
     chartRendererContent.includes('Desk Play - Conditional Levels') ||
+    chartRendererContent.includes('Desk Play - Review Levels') ||
     chartRendererContent.includes('trigger + canExecute') ||
     chartRendererContent.includes('trigger + approval gates') ||
+    chartRendererContent.includes('conditional planning only') ||
+    chartRendererContent.includes('Trade levels:') ||
     chartRendererContent.includes('CONDITIONAL LEVELS') ||
     chartRendererContent.includes('CONDITIONAL ENTRY ZONE') ||
-    chartRendererContent.includes('CONDITIONAL DESK PLAN ONLY')
+    chartRendererContent.includes('CONDITIONAL DESK PLAN ONLY') ||
+    chartRendererContent.includes('REVIEW DESK PLAN ONLY')
   ) {
-    fail('chart-markup-renderer.ts must not use obsolete conditional wording for Desk Play chart artifacts.');
+    fail('chart-markup-renderer.ts must not use obsolete conditional/review-only wording for Desk Play chart artifacts.');
   }
 
   const scannerAutomationPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts');
   const scannerAutomationContent = readFileSafe(scannerAutomationPath);
   if (
     !scannerAutomationContent.includes('Desk Play - Review Planning Levels') ||
-    !scannerAutomationContent.includes('Desk Play chart shows review-only app-owned planning levels.')
+    !scannerAutomationContent.includes('Desk Play chart shows review-only app-owned planning levels.') ||
+    !scannerAutomationContent.includes('deskPlaySideQualityScorecard(play.longBias, play.shortBias)') ||
+    !scannerAutomationContent.includes('planVersionId: deskPlayPlanVersionId') ||
+    !scannerAutomationContent.includes('candidateForDeskPlayContextChart(deskState, normalized) || candidate')
   ) {
-    fail('nt-scanner.ts must create Desk Play chart candidates with review-only wording.');
+    fail('nt-scanner.ts must create Desk Play chart candidates with review-only wording, two-sided quality metadata, and matching pending RAG records.');
   }
   if (
     scannerAutomationContent.includes('Desk Play - Conditional Planning Levels') ||

@@ -1185,7 +1185,7 @@ const candidate: SetupCandidate = {
   targetClarity: 90,
   proximityScore: 1,
   levelContextScore: 18,
-  evidence: ['Sweep confirmed', 'Reclaim confirmed', 'Displacement confirmed'],
+  evidence: ['HTF MSS support in campaign direction: 60M, 120M.', 'Sweep confirmed', 'Reclaim confirmed', 'Displacement confirmed'],
   missingEvidence: ['Missing reasons should remain audit-only'],
   executionStatus: ExecutionStatus.Conditional,
   blockReason: null,
@@ -1664,7 +1664,7 @@ try {
   assert.equal(watchResult.levelMap, null);
   assert.equal(watchResult.payload.components, undefined);
   assert.ok(watchText.includes('[AM WATCH] MES - SHORT WATCH FORMING'));
-  assert.ok(watchText.includes('WATCH ONLY - NOT EXECUTION APPROVAL'));
+  assert.ok(watchText.includes('WATCH - NOT EXECUTION APPROVAL'));
   assert.ok(!/^Entry:/m.test(watchText));
   assert.ok(!/^Stop:/m.test(watchText));
   assert.ok(!/^T1:/m.test(watchText));
@@ -1699,16 +1699,20 @@ try {
     },
     notes: ['Desk Play fixture visibility metadata only.'],
   };
+  const deskPlayCandidate = {
+    ...candidate,
+    evidence: ['HTF MSS support in campaign direction: 60M, 120M.', ...(candidate.evidence || [])],
+  };
   const deskPlayLifecycleTrace = buildCandidateLifecycleTrace({
-    candidates: [candidate],
-    selectedCandidate: candidate,
+    candidates: [deskPlayCandidate],
+    selectedCandidate: deskPlayCandidate,
     state: 'Conditional',
     alertDecision: { shouldSend: false, reason: 'Full alert suppressed; publish Desk Play context.' },
     canExecute: false,
   });
   const deskPlayState = buildDeskState({
     state: 'Conditional',
-    candidate,
+    candidate: deskPlayCandidate,
     visibilityMetadata: deskPlayVisibility,
     candidateLifecycleTrace: deskPlayLifecycleTrace,
     canExecute: false,
@@ -1718,8 +1722,8 @@ try {
     decisionStatus: TradeDecisionStatus.Wait,
     decision: 'LONG',
     noTradeReason: 'EntryTriggerPending',
-    invalidation: candidate.invalidation,
-    setupCandidates: [candidate],
+    invalidation: deskPlayCandidate.invalidation,
+    setupCandidates: [deskPlayCandidate],
   } as any;
   const contextChartCandidate = candidateForDeskPlayContextChart(deskPlayState, deskPlayNormalized);
   assert.equal(contextChartCandidate?.direction, 'LONG');
@@ -1732,6 +1736,8 @@ try {
   assert.equal(contextChartCandidate?.activeRuleset?.htfLineInSand?.affectsExecution, false);
   assert.ok(contextChartCandidate?.scenarioLabel?.includes('Review Planning Levels'));
   assert.ok(!contextChartCandidate?.scenarioLabel?.includes('Conditional Planning Levels'));
+  assert.ok(contextChartCandidate?.decisionQualityScorecard?.some((item) => item.label === 'LONG Quality'));
+  assert.ok(contextChartCandidate?.decisionQualityScorecard?.some((item) => item.label === 'SHORT Quality'));
   assert.ok(contextChartCandidate?.decisionQualityRecommendation?.includes('Review planning levels only'));
   assert.ok(contextChartCandidate?.missingEvidence?.includes('Desk Play chart shows review-only app-owned planning levels.'));
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
@@ -1757,7 +1763,10 @@ try {
   const deskPlayText = flattenDiscordPayloadText(deskPlayResult.payload);
   assert.equal(deskPlayResult.files.length, 1);
   assert.ok(deskPlayResult.chartMarkup);
-  assert.equal(deskPlayResult.payload.components, undefined);
+  assert.deepEqual(
+    (deskPlayResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
+    ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed'],
+  );
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
   assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
   assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
@@ -1767,7 +1776,7 @@ try {
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Chart: review chart attached; not execution approval.'));
+  assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,
@@ -1779,19 +1788,29 @@ try {
     contextLine: deskPlayState.primaryDeskPlay.lineInSand,
     contextLabel: 'Line in the sand',
   });
-  assert.ok(deskPlayChartHtml.includes('[PM REVIEW] MES - LONG DESK PLAN'));
+  assert.ok(deskPlayChartHtml.includes('[PM PREP] MES - LONG DESK MAP'));
   assert.ok(deskPlayChartHtml.includes('REVIEW ONLY'));
   assert.ok(deskPlayChartHtml.includes('REVIEW ENTRY ZONE'));
-  assert.ok(deskPlayChartHtml.includes('Desk Play - Review Levels'));
+  assert.ok(deskPlayChartHtml.includes('Desk Map - Review Levels'));
   assert.ok(deskPlayChartHtml.includes('Action: wait for completed 5M proof'));
   assert.ok(deskPlayChartHtml.includes('REVIEW LEVELS'));
-  assert.ok(deskPlayChartHtml.includes('REVIEW DESK PLAN ONLY'));
-  assert.ok(deskPlayChartHtml.includes('Next step: <tspan fill="#f8fafc">completed 5M proof</tspan>'));
+  assert.ok(deskPlayChartHtml.includes('ALERT QUALITY'));
+  assert.ok(deskPlayChartHtml.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL'));
+  assert.ok(deskPlayChartHtml.includes('LONG Quality: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('SHORT Quality: <tspan fill="#f8fafc">'));
+  assert.ok(!deskPlayChartHtml.includes('Confidence: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('Levels: <tspan fill="#f8fafc">review planning only</tspan>'));
+  assert.ok(deskPlayChartHtml.includes('Next: <tspan fill="#f8fafc">completed 5M proof</tspan>'));
   assert.equal(typeof deskPlayState.primaryDeskPlay.lineInSand, 'number');
-  assert.ok(deskPlayChartHtml.includes('Line:'));
+  assert.ok(deskPlayChartHtml.includes('risk-chip-label">Line</text>'));
+  assert.ok(deskPlayChartHtml.includes('risk-chip-label">Risk</text>'));
+  assert.ok(deskPlayChartHtml.includes('risk-chip-label">Entry</text>'));
+  assert.ok(deskPlayChartHtml.includes('risk-chip-label">Stop</text>'));
+  assert.ok(!deskPlayChartHtml.includes('Trade levels:'));
   assert.ok(!deskPlayChartHtml.includes('Desk Play line in the sand missing'));
   assert.ok(!deskPlayChartHtml.includes('trigger + canExecute'));
   assert.ok(!deskPlayChartHtml.includes('trigger + approval gates'));
+  assert.ok(!deskPlayChartHtml.includes('conditional planning only'));
   assert.ok(!deskPlayChartHtml.includes('CONDITIONAL ENTRY ZONE'));
   assert.ok(!deskPlayChartHtml.includes('Desk Play - Conditional Levels'));
   assert.ok(!deskPlayChartHtml.includes('CONDITIONAL LEVELS'));

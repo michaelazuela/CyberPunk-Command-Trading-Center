@@ -199,6 +199,7 @@ export interface ScannerCandidateLifecycleTraceItem {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   htfConflict: boolean;
+  htfSupported: boolean;
   countertrend: boolean;
   hasFullPlanLevels: boolean;
   selected: boolean;
@@ -311,6 +312,36 @@ export interface DeskLevelTransitionMap {
   };
 }
 
+export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
+
+export interface DeskHtfObjective {
+  sourceOfTruth: 'scanner_htf_objective_ladder';
+  kind: DeskHtfObjectiveKind;
+  label: string;
+  price: number;
+  source: TargetObjective['source'] | 'scanner_reaction';
+  rMultiple: number | null;
+  instruction: string;
+}
+
+export interface DeskHtfObjectiveLadder {
+  sourceOfTruth: 'scanner_htf_objective_ladder';
+  direction: DeskPlayDirection;
+  appTarget1: number | null;
+  appTarget2: number | null;
+  reaction: DeskHtfObjective | null;
+  nextDraw: DeskHtfObjective | null;
+  runner: DeskHtfObjective | null;
+  extension: DeskHtfObjective | null;
+  objectives: DeskHtfObjective[];
+  managementInstruction: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -323,6 +354,7 @@ export interface PrimaryDeskPlay {
   targetReactionLabel: string | null;
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
+  htfObjectiveLadder: DeskHtfObjectiveLadder;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;
@@ -999,6 +1031,111 @@ function buildLevelTransitionMap(args: {
   };
 }
 
+function objectivePriceKey(price: number): string {
+  return price.toFixed(2);
+}
+
+function objectiveInstruction(kind: DeskHtfObjectiveKind, objective: TargetObjective | null): string {
+  if (kind === 'reaction') return 'Reaction zone: take T1/T2 seriously and protect if 5M rejects.';
+  if (kind === 'next_draw') return 'Next draw after app targets; runner only if completed 5M acceptance continues.';
+  if (kind === 'runner') return 'Runner objective; trail only after T2 clears with completed 5M acceptance.';
+  if (kind === 'extension') return 'Stretch objective; do not plan for it unless structure keeps delivering beyond the runner.';
+  return objective?.reason || 'Scanner-owned target-management objective.';
+}
+
+function htfObjectiveFromTarget(kind: DeskHtfObjectiveKind, objective: TargetObjective | null): DeskHtfObjective | null {
+  if (!objective || numericOrNull(objective.price) === null) return null;
+  return {
+    sourceOfTruth: 'scanner_htf_objective_ladder',
+    kind,
+    label: objective.label,
+    price: objective.price,
+    source: objective.source || 'scanner_reaction',
+    rMultiple: numericOrNull(objective.rMultiple),
+    instruction: objectiveInstruction(kind, objective),
+  };
+}
+
+function firstDirectionalObjective(
+  direction: 'LONG' | 'SHORT',
+  base: number | null,
+  objectives: Array<TargetObjective | null | undefined>,
+): TargetObjective | null {
+  for (const objective of objectives) {
+    if (!objective) continue;
+    if (base === null || (direction === 'LONG' ? objective.price > base + 0.01 : objective.price < base - 0.01)) {
+      return objective;
+    }
+  }
+  return null;
+}
+
+function buildHtfObjectiveLadder(args: {
+  direction: DeskPlayDirection;
+  candidate: SetupCandidate | null;
+  targetReaction: TargetObjective | null;
+}): DeskHtfObjectiveLadder {
+  const candidateDirection = args.direction === 'LONG' || args.direction === 'SHORT'
+    ? args.direction
+    : args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : null;
+  const plan = args.candidate?.targetObjectivePlan || null;
+  const appTarget1 = numericOrNull(args.candidate?.target1) ?? numericOrNull(plan?.selectedT1?.price);
+  const appTarget2 = numericOrNull(args.candidate?.target2) ?? numericOrNull(plan?.selectedT2?.price);
+  const reaction = htfObjectiveFromTarget('reaction', args.targetReaction);
+  const nextDraw = candidateDirection
+    ? htfObjectiveFromTarget('next_draw', firstDirectionalObjective(candidateDirection, appTarget2, [
+        plan?.nearestLiquidityTarget,
+        plan?.liquidityTarget1,
+        plan?.liquidityTarget2,
+        plan?.liquidityRunnerTarget,
+        plan?.runnerTarget,
+      ]))
+    : null;
+  const runner = candidateDirection
+    ? htfObjectiveFromTarget('runner', firstDirectionalObjective(candidateDirection, nextDraw?.price ?? appTarget2, [
+        plan?.liquidityTarget2,
+        plan?.liquidityRunnerTarget,
+        plan?.runnerTarget,
+      ]))
+    : null;
+  const extension = candidateDirection
+    ? htfObjectiveFromTarget('extension', firstDirectionalObjective(candidateDirection, runner?.price ?? nextDraw?.price ?? appTarget2, [
+        plan?.liquidityRunnerTarget,
+        plan?.runnerTarget,
+      ]))
+    : null;
+  const seen = new Set<string>();
+  const objectives = [reaction, nextDraw, runner, extension].filter((objective): objective is DeskHtfObjective => {
+    if (!objective) return false;
+    const key = `${objective.kind}:${objectivePriceKey(objective.price)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const managementInstruction = objectives.length
+    ? 'App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.'
+    : 'No HTF objective ladder is mapped this cycle. App T1/T2 remain the only visible tactical targets.';
+  return {
+    sourceOfTruth: 'scanner_htf_objective_ladder',
+    direction: args.direction,
+    appTarget1,
+    appTarget2,
+    reaction,
+    nextDraw,
+    runner,
+    extension,
+    objectives,
+    managementInstruction,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   const text = [
@@ -1011,6 +1148,25 @@ function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): 
   return /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
 }
 
+function textHasHtfCautionOnlyNoSupport(text: string): boolean {
+  return /no completed (?:60m\/120m\/240m|htf).*mss support|htf is caution\/context only/i.test(text);
+}
+
+function candidateHasHtfSupport(candidate: SetupCandidate | null | undefined): boolean {
+  if (!candidate) return false;
+  const text = [
+    ...(candidate.evidence || []),
+    ...(candidate.missingEvidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.evidence || []),
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+    candidate.activeCampaign?.htfRelationship === 'caution' ? 'HTF is caution/context only.' : null,
+    candidate.activeCampaign?.htfRelationship === 'support' ? 'active campaign HTF support' : null,
+  ].filter(Boolean).join(' ');
+  if (textHasHtfCautionOnlyNoSupport(text)) return false;
+  if ((candidate.activeCampaign?.htfSupportTimeframes || []).length > 0) return true;
+  return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
+}
+
 function lifecycleItemHasHtfConflict(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
   if (!item) return false;
   const text = [
@@ -1020,6 +1176,22 @@ function lifecycleItemHasHtfConflict(item: ScannerCandidateLifecycleTraceItem | 
     item.lineInSandReason,
   ].filter(Boolean).join(' ');
   return item.htfConflict || /opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss|countertrend/i.test(text);
+}
+
+function lifecycleItemHasHtfSupport(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item) return false;
+  const text = [
+    ...item.missingEvidence,
+    ...item.missingLevels,
+    item.blockReason,
+    item.lineInSandReason,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.targetReactionReason,
+  ].filter(Boolean).join(' ');
+  if (textHasHtfCautionOnlyNoSupport(text)) return false;
+  if (item.htfSupported) return true;
+  return /htf mss support in campaign direction|active campaign htf support|active timeframe mss context aligned on|higher-timeframe bias aligned|higher-timeframe (?:structure|bias|mss).*supports|(?:15m|60m|120m|240m|1h|2h|4h).*htf support/i.test(text);
 }
 
 function opposingHtfStructureLabel(direction: SetupCandidate['direction']): string {
@@ -1041,10 +1213,18 @@ function htfManagementWarningForLifecycleItem(item: ScannerCandidateLifecycleTra
   return `${item.direction} is pressing into ${opposingHtfStructureLabel(item.direction)}. Treat T1/T2 as management, stop pressing at ${htfReactionAreaLabelForLifecycleItem(item)}, and wait for a protected completed 5M line-in-the-sand shift before continuing or reversing.`;
 }
 
+function htfSupportWarningForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | null | undefined): string | null {
+  if (!item || (item.direction !== 'LONG' && item.direction !== 'SHORT') || lifecycleItemHasHtfConflict(item) || lifecycleItemHasHtfSupport(item)) {
+    return null;
+  }
+  return `${item.direction} evidence is review-only because completed HTF support is not confirmed. Keep both sides mapped; do not headline this as the active play until HTF support or completed 5M reversal proof changes the map.`;
+}
+
 function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | undefined): number {
   if (!item) return Number.NEGATIVE_INFINITY;
   let score = item.rankScore ?? item.decisionQualityScore ?? item.modelConfidenceScore ?? item.priority;
   if (lifecycleItemHasHtfConflict(item)) score -= 12;
+  if (!lifecycleItemHasHtfSupport(item)) score -= 8;
   if (/Outside active setup scan window/i.test(item.missingEvidence.join(' '))) score -= 6;
   if (/Minimum 2\.0R unavailable|TargetsUnavailable/i.test(item.missingEvidence.join(' '))) score -= 4;
   return score;
@@ -1132,6 +1312,7 @@ export function buildCandidateLifecycleTrace(args: {
       targetReactionReason: targetReaction?.reason ?? null,
       levelTransition,
       htfConflict: candidateHasHtfConflict(candidate),
+      htfSupported: candidateHasHtfSupport(candidate),
       countertrend: candidateHasHtfConflict(candidate),
       hasFullPlanLevels: hasFullPlanLevels(candidate),
       selected,
@@ -1455,14 +1636,15 @@ function selectPrimaryDeskPlayDirection(trace: ScannerCandidateLifecycleTrace): 
   const long = trace.bestLongPlan;
   const short = trace.bestShortPlan;
   if (!long && !short) return 'WAIT';
-  if (long && !short) return lifecycleItemHasHtfConflict(long) ? 'WAIT' : 'LONG';
-  if (short && !long) return lifecycleItemHasHtfConflict(short) ? 'WAIT' : 'SHORT';
+  if (long && !short) return lifecycleItemHasHtfConflict(long) || !lifecycleItemHasHtfSupport(long) ? 'WAIT' : 'LONG';
+  if (short && !long) return lifecycleItemHasHtfConflict(short) || !lifecycleItemHasHtfSupport(short) ? 'WAIT' : 'SHORT';
+  const longPrimaryEligible = lifecycleItemHasHtfSupport(long) && !lifecycleItemHasHtfConflict(long);
+  const shortPrimaryEligible = lifecycleItemHasHtfSupport(short) && !lifecycleItemHasHtfConflict(short);
+  if (longPrimaryEligible && !shortPrimaryEligible) return 'LONG';
+  if (shortPrimaryEligible && !longPrimaryEligible) return 'SHORT';
+  if (!longPrimaryEligible && !shortPrimaryEligible) return 'WAIT';
   const longScore = lifecycleItemScore(long);
   const shortScore = lifecycleItemScore(short);
-  if (Math.abs(longScore - shortScore) <= 2) {
-    if (lifecycleItemHasHtfConflict(short) && !lifecycleItemHasHtfConflict(long)) return 'LONG';
-    if (lifecycleItemHasHtfConflict(long) && !lifecycleItemHasHtfConflict(short)) return 'SHORT';
-  }
   return longScore >= shortScore ? 'LONG' : 'SHORT';
 }
 
@@ -1500,6 +1682,7 @@ function buildPrimaryDeskPlay(args: {
     lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
   const countertrendWarning = htfManagementWarningForLifecycleItem(primaryLifecycleItem) ||
     htfManagementWarningForLifecycleItem(selectedLifecycleItem) ||
+    htfSupportWarningForLifecycleItem(selectedLifecycleItem) ||
     htfManagementWarningForLifecycleItem(oppositeLifecycleItem) ||
     (oppositeBias?.state === 'countertrend_review'
     ? `${oppositeBias.direction} evidence is counter-HTF/review-only until completed 5M confirmation proves the reversal path.`
@@ -1509,9 +1692,11 @@ function buildPrimaryDeskPlay(args: {
     : `${directionLabel(primaryDirection)} desk play`;
   const summary = primaryBias
     ? `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
+    : selectedLifecycleItem?.direction && !lifecycleItemHasHtfSupport(selectedLifecycleItem)
+    ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF support or protected 5M reversal proof changes the map.`
     : countertrendWarning && selectedLifecycleItem?.direction
-    ? `No primary directional play is confirmed. ${selectedLifecycleItem.direction} evidence is review-only against opposing HTF/session structure until protected 5M proof changes the map.`
-    : 'No primary directional play is confirmed from scanner-owned lifecycle state.';
+    ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence is review-only against opposing HTF/session structure until protected 5M proof changes the map.`
+    : 'No HTF-supported directional play is confirmed from scanner-owned lifecycle state.';
   const targetReactionLevel = deskMapLifecycleItem && deskMapLifecycleItem.direction !== 'NO TRADE'
     ? deskMapLifecycleItem.targetReactionLevel ??
       args.targetCascade?.activeTarget?.price ??
@@ -1540,16 +1725,27 @@ function buildPrimaryDeskPlay(args: {
     longAbove: longBias.lineInSand,
     shortBelow: shortBias.lineInSand,
   });
+  const htfObjectiveLadder = buildHtfObjectiveLadder({
+    direction: primaryDirection,
+    candidate: args.candidate,
+    targetReaction,
+  });
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
     null;
   const invalidation = primaryBias?.invalidation || args.candidate?.invalidation || null;
+  const waitWithStructuredEvidence = primaryDirection === 'WAIT' && Boolean(selectedLifecycleItem);
   const discordEligible = Boolean(
-    primaryBias &&
-    primaryDirection !== 'WAIT' &&
-    (primaryBias.nextTrigger || primaryBias.lineInSand || primaryBias.reason) &&
-    !args.canExecute
+    !args.canExecute &&
+    (
+      (
+        primaryBias &&
+        primaryDirection !== 'WAIT' &&
+        (primaryBias.nextTrigger || primaryBias.lineInSand || primaryBias.reason)
+      ) ||
+      waitWithStructuredEvidence
+    )
   );
 
   return {
@@ -1564,6 +1760,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionLabel,
     targetReactionReason,
     levelTransition,
+    htfObjectiveLadder,
     nextTrigger,
     invalidation,
     noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',

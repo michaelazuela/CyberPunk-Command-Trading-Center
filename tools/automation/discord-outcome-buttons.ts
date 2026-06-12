@@ -205,8 +205,6 @@ function outcomeButton(label: string, emoji: string, url: string): DiscordLinkBu
 }
 
 export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRow[] | undefined {
-  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return undefined;
-
   const makeUrl = (
     outcome: string,
     tradeResult: TradeResult,
@@ -214,6 +212,26 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
     direction: TradeDirection | 'NONE',
     targetHit: TargetHit,
   ) => buildOutcomeUrl({ ...args, outcome, tradeResult, tradeTaken, direction, targetHit });
+
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') {
+    const noTrade = makeUrl('not_taken', 'no_trade', false, 'NONE', 'NONE');
+    const missed = makeUrl('missed_trade', 'missed_trade', false, 'NONE', 'NONE');
+    if (!noTrade || !missed) {
+      if (!isTestProcess()) {
+        console.warn('Outcome buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
+      }
+      return undefined;
+    }
+    return [
+      {
+        type: 1,
+        components: [
+          outcomeButton('No Trade', '🚫', noTrade),
+          outcomeButton('Missed', '⏭️', missed),
+        ],
+      },
+    ];
+  }
 
   const t1Hit = makeUrl(`${args.direction.toLowerCase()}_t1_hit`, 'win', true, args.direction, 'T1');
   const t2Hit = makeUrl(`${args.direction.toLowerCase()}_t2_hit`, 'win', true, args.direction, 'T2');

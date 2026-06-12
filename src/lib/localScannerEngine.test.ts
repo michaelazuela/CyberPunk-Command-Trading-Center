@@ -791,19 +791,262 @@ assert.equal(deskState.primaryDeskPlay.longBias.lineConfidence.approvalBoundary.
 assert.equal(deskState.primaryDeskPlay.longBias.htfReactionContext.sourceOfTruth, 'scanner_htf_reaction_context');
 assert.equal(deskState.primaryDeskPlay.longBias.htfReactionContext.approvalBoundary.changesTradeApprovals, false);
 
+const htfSupportedLong = candidate({
+  scenarioLabel: 'HTF supported long recovery',
+  direction: 'LONG',
+  rankScore: 70,
+  decisionQualityScore: 70,
+  entry: 7407,
+  stop: 7396.75,
+  target1: 7422.5,
+  target2: 7427.5,
+  riskPoints: 10.25,
+  evidence: ['Completed 5M reclaim/retest is the long-side recovery map.', 'HTF MSS support in campaign direction: 60M, 120M.'],
+});
+const htfOpposedShort = candidate({
+  scenarioLabel: 'High score short into bullish HTF support',
+  direction: 'SHORT',
+  rankScore: 98,
+  decisionQualityScore: 98,
+  entry: 7391.25,
+  stop: 7425,
+  target1: 7340.75,
+  target2: 7323.75,
+  riskPoints: 33.75,
+  missingEvidence: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
+});
+const htfFramedLifecycle = buildCandidateLifecycleTrace({
+  candidates: [htfOpposedShort, htfSupportedLong],
+  selectedCandidate: htfOpposedShort,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: short was selected but is HTF-opposed.' },
+  canExecute: false,
+});
+const htfFramedDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: htfOpposedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: htfOpposedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: short was selected but is HTF-opposed.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: htfFramedLifecycle,
+  canExecute: false,
+});
+assert.equal(htfFramedDeskState.selectedCandidate?.direction, 'SHORT');
+assert.equal(htfFramedDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(htfFramedDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(htfFramedDeskState.primaryDeskPlay.shortBias.state, 'countertrend_review');
+assert.ok(htfFramedDeskState.primaryDeskPlay.summary.includes('LONG remains primary'));
+assert.ok(htfFramedDeskState.primaryDeskPlay.countertrendWarning?.includes('SHORT is pressing into bullish HTF/session structure'));
+assert.equal(htfFramedDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(htfFramedDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
+const unsupportedShort = candidate({
+  scenarioLabel: 'High score short without HTF support',
+  direction: 'SHORT',
+  rankScore: 100,
+  decisionQualityScore: 98,
+  entry: 7391.25,
+  stop: 7425,
+  target1: 7340.75,
+  target2: 7323.75,
+  riskPoints: 33.75,
+  evidence: ['Completed 5M bearish sweep/reclaim is present.'],
+});
+const unsupportedLifecycle = buildCandidateLifecycleTrace({
+  candidates: [unsupportedShort],
+  selectedCandidate: unsupportedShort,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: selected side lacks completed HTF support.' },
+  canExecute: false,
+});
+const unsupportedDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: unsupportedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: unsupportedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: selected side lacks completed HTF support.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: unsupportedLifecycle,
+  canExecute: false,
+});
+assert.equal(unsupportedDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(unsupportedDeskState.primaryDeskPlay.shortBias.state, 'secondary');
+assert.ok(unsupportedDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play is confirmed'));
+assert.ok(unsupportedDeskState.primaryDeskPlay.countertrendWarning?.includes('completed HTF support is not confirmed'));
+assert.equal(unsupportedDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(unsupportedDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
+const june12UnsupportedShort = candidate({
+  scenarioLabel: 'June 12 short retrace without completed HTF support',
+  setupType: SetupType.SweepMssFvgRetrace,
+  direction: 'SHORT',
+  rankScore: 261,
+  decisionQualityScore: 98,
+  entry: 7391.25,
+  stop: 7425,
+  target1: 7340.75,
+  target2: 7323.75,
+  riskPoints: 33.75,
+  evidence: [
+    'Completed 5M bearish sweep/reclaim is present.',
+    'Generic structure supports the 5M trigger, but no completed HTF support is confirmed.',
+    'No completed 60M/120M/240M MSS support; HTF is caution/context only.',
+  ],
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.',
+  nextAction: 'Wait for retrace.',
+});
+const june12CountertrendLong = candidate({
+  scenarioLabel: 'June 12 failed short long review',
+  direction: 'LONG',
+  rankScore: 196.5,
+  decisionQualityScore: 50,
+  modelConfidenceScore: 70,
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  missingEvidence: [
+    'Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M.',
+    'No chase: wait for a completed 5M or 15M close above 7410.00.',
+  ],
+  requiredTrigger: 'Failed Plan Reversal long requires failed short decision level, then fresh completed 5M bullish trigger/retest.',
+});
+const june12Lifecycle = buildCandidateLifecycleTrace({
+  candidates: [june12UnsupportedShort, june12CountertrendLong],
+  selectedCandidate: june12UnsupportedShort,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: June 12 selected short lacked completed HTF support.' },
+  canExecute: false,
+});
+const june12DeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: june12UnsupportedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: june12UnsupportedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: June 12 selected short lacked completed HTF support.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: june12Lifecycle,
+  canExecute: false,
+});
+assert.equal(june12DeskState.selectedCandidate?.direction, 'SHORT');
+assert.equal(june12DeskState.selectedCandidate?.htfSupported, false);
+assert.equal(june12DeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(june12DeskState.primaryDeskPlay.shortBias.state, 'secondary');
+assert.equal(june12DeskState.primaryDeskPlay.longBias.state, 'countertrend_review');
+assert.ok(june12DeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play is confirmed'));
+assert.ok(june12DeskState.primaryDeskPlay.countertrendWarning?.includes('completed HTF support is not confirmed'));
+assert.equal(june12DeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(june12DeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
+const staleSupportedFlagLifecycle = {
+  ...june12Lifecycle,
+  bestShortPlan: june12Lifecycle.bestShortPlan
+    ? {
+        ...june12Lifecycle.bestShortPlan,
+        htfSupported: true,
+        missingEvidence: [
+          ...june12Lifecycle.bestShortPlan.missingEvidence,
+          'No completed 60M/120M/240M MSS support; HTF is caution/context only.',
+        ],
+      }
+    : null,
+  selectedCandidate: june12Lifecycle.selectedCandidate
+    ? {
+        ...june12Lifecycle.selectedCandidate,
+        htfSupported: true,
+        missingEvidence: [
+          ...june12Lifecycle.selectedCandidate.missingEvidence,
+          'No completed 60M/120M/240M MSS support; HTF is caution/context only.',
+        ],
+      }
+    : null,
+};
+const staleSupportedFlagDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: june12UnsupportedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: june12UnsupportedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: stale htfSupported flag cannot override HTF caution-only evidence.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: staleSupportedFlagLifecycle,
+  canExecute: false,
+});
+assert.equal(staleSupportedFlagDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(staleSupportedFlagDeskState.primaryDeskPlay.shortBias.state, 'secondary');
+assert.ok(staleSupportedFlagDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play is confirmed'));
+assert.ok(staleSupportedFlagDeskState.primaryDeskPlay.countertrendWarning?.includes('completed HTF support is not confirmed'));
+assert.equal(staleSupportedFlagDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(staleSupportedFlagDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
+const htfSupportedButConflictedLong = candidate({
+  scenarioLabel: 'Supported but HTF-opposed long review',
+  direction: 'LONG',
+  rankScore: 84,
+  decisionQualityScore: 84,
+  evidence: ['HTF MSS support in campaign direction: 60M.'],
+  missingEvidence: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 15M, 240M.'],
+});
+const htfSupportedButConflictedLifecycle = buildCandidateLifecycleTrace({
+  candidates: [htfSupportedButConflictedLong],
+  selectedCandidate: htfSupportedButConflictedLong,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'Regression fixture: selected side has support text but remains HTF-opposed.' },
+  canExecute: false,
+});
+const htfSupportedButConflictedDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: htfSupportedButConflictedLong,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: htfSupportedButConflictedLong,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: selected side has support text but remains HTF-opposed.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: htfSupportedButConflictedLifecycle,
+  canExecute: false,
+});
+assert.equal(htfSupportedButConflictedDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(htfSupportedButConflictedDeskState.primaryDeskPlay.longBias.state, 'countertrend_review');
+assert.ok(htfSupportedButConflictedDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play is confirmed'));
+assert.ok(!htfSupportedButConflictedDeskState.primaryDeskPlay.summary.includes('No primary directional play'));
+assert.equal(htfSupportedButConflictedDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(htfSupportedButConflictedDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
 const targetPlanReactionObjective = objective(107, 'london');
+const targetPlanRunnerObjective = objective(112, 'previous_rth');
+const targetPlanExtensionObjective = objective(118, 'current_window');
 const targetPlanOnlyCandidate = candidate({
   targetObjectivePlan: {
-    objectives: [targetPlanReactionObjective],
+    objectives: [targetPlanReactionObjective, targetPlanRunnerObjective, targetPlanExtensionObjective],
     obstacleTarget1: null,
     liquidityTarget1: targetPlanReactionObjective,
-    liquidityTarget2: null,
-    liquidityRunnerTarget: null,
+    liquidityTarget2: targetPlanRunnerObjective,
+    liquidityRunnerTarget: targetPlanExtensionObjective,
     nearestLiquidityTarget: targetPlanReactionObjective,
     nearestObstacleTarget: null,
-    runnerTarget: null,
+    runnerTarget: targetPlanExtensionObjective,
     selectedT1: targetPlanReactionObjective,
-    selectedT2: null,
+    selectedT2: objective(108, 'london'),
     targetQuality: 'clear_path',
     targetModel: 'actual_r_with_structural_context',
     notes: [],
@@ -837,6 +1080,14 @@ assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.levelTransition?.profitProtect
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.reactionLevel, 107);
 assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.sourceTimeframes.includes('15M'));
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.longBias.htfReactionContext.strength, 'moderate');
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.sourceOfTruth, 'scanner_htf_objective_ladder');
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, 108);
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, 108);
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.reaction?.price, 107);
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.nextDraw?.price, 112);
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.runner?.price, 118);
+assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.managementInstruction.includes('App T1/T2 remain tactical'));
+assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.approvalBoundary.changesEntryStopTargets, false);
 
 const watchDeskVisibility = classifyScannerVisibility({
   state: 'Watching',

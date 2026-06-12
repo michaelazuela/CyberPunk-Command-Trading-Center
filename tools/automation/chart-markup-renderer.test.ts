@@ -384,7 +384,7 @@ try {
   assert.ok(june10LevelMapHtml.includes('T2 2.0R'));
   assert.ok(june10LevelMapHtml.includes('7413.75'));
   assert.ok(june10LevelMapHtml.includes('7429.50'));
-  assert.ok(!june10LevelMapHtml.includes('<text x="256"') || !june10LevelMapHtml.includes('STRETCH'), 'Far stretch should not render as a plotted level row.');
+  assert.ok(!june10LevelMapHtml.includes('<text x="256"') || !june10LevelMapHtml.includes('HTF EXT'), 'Far stretch should not render as a plotted level row.');
 
   const levelMapHtml = buildPriceLevelMapHtmlForTest({
     chartContext,
@@ -401,13 +401,13 @@ try {
   assert.ok(levelMapHtml.includes('STOP'));
   assert.ok(levelMapHtml.includes('T1 1.5R'));
   assert.ok(levelMapHtml.includes('T2 2.0R'));
-  assert.ok(levelMapHtml.includes('RUNNER'));
-  assert.ok(levelMapHtml.includes('STRETCH'));
+  assert.ok(levelMapHtml.includes('HTF RUNNER'));
+  assert.ok(levelMapHtml.includes('HTF EXT'));
   assert.ok(levelMapHtml.includes('OBSTACLE'));
   assert.ok(levelMapHtml.includes('Risk 5.00 pts | Dollars N/A | Contracts N/A'));
   assert.ok(levelMapHtml.includes('Obstacle 7084.75'));
-  assert.ok(levelMapHtml.includes('Runner 7092.25'));
-  assert.ok(levelMapHtml.includes('Stretch 7101.25'));
+  assert.ok(levelMapHtml.includes('HTF Runner 7092.25'));
+  assert.ok(levelMapHtml.includes('HTF Ext 7101.25'));
   assert.ok(!levelMapHtml.includes('canExecute'));
   assert.ok(!levelMapHtml.includes('noTradeReason'));
 

@@ -271,7 +271,7 @@ const watchPayload = compactDiscordSummary({
 const watchText = flattenDiscordPayloadText(watchPayload);
 assert.ok(watchPayload.content?.includes('[AM WATCH] MES - SHORT WATCH FORMING'));
 assert.equal(watchPayload.components, undefined);
-assert.ok(watchText.includes('WATCH ONLY - NOT EXECUTION APPROVAL'));
+assert.ok(watchText.includes('WATCH - NOT EXECUTION APPROVAL'));
 assert.ok(watchText.includes('Line in the sand: 7320.25'));
 assert.ok(watchText.includes('Trigger: Completed 5M close below 7320.25 required before short review.'));
 assert.ok(watchText.includes('No chase.'));
@@ -311,6 +311,13 @@ const deskPlayPayload = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
+  components: buildOutcomeComponents({
+    planVersionId: 'LUNCH-DESK-PLAY-TEST',
+    sessionType: 'lunch',
+    tradeDate: '2026-06-11',
+    instrument: 'MES',
+    direction: 'LONG',
+  }),
   deskState: {
     marketMode: 'no_trade',
     visibilityMode: 'HOLD_WITH_REASON',
@@ -339,6 +346,39 @@ const deskPlayPayload = compactDiscordSummary({
         profitProtectionInstruction: 'Treat London Session Low 7288.25 as the target/reaction decision area.',
         targetManagementInstruction: 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.',
         nextStructureInstruction: 'After a protected completed 5M market-structure shift, use LONG above 7342.00 / SHORT below 7303.50 as the next line-in-the-sand map.',
+      },
+      htfObjectiveLadder: {
+        sourceOfTruth: 'scanner_htf_objective_ladder',
+        direction: 'LONG',
+        appTarget1: 7372.5,
+        appTarget2: 7392.5,
+        reaction: {
+          kind: 'reaction',
+          label: 'London Session Low',
+          price: 7288.25,
+          source: 'london',
+          rMultiple: null,
+          instruction: 'Reaction zone: take T1/T2 seriously and protect if 5M rejects.',
+        },
+        nextDraw: {
+          kind: 'next_draw',
+          label: 'Prior RTH high',
+          price: 7410,
+          source: 'previous_rth',
+          rMultiple: 2.4,
+          instruction: 'Next draw after app targets; runner only if completed 5M acceptance continues.',
+        },
+        runner: {
+          kind: 'runner',
+          label: 'Full ETH high',
+          price: 7428.75,
+          source: 'eth',
+          rMultiple: 2.9,
+          instruction: 'Runner objective; trail only after T2 clears with completed 5M acceptance.',
+        },
+        extension: null,
+        objectives: [],
+        managementInstruction: 'App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.',
       },
       nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
       invalidation: 'Completed 5M acceptance below 7342 damages the long continuation play.',
@@ -397,9 +437,9 @@ const deskPlayPayload = compactDiscordSummary({
 });
 const deskPlayText = flattenDiscordPayloadText(deskPlayPayload);
 assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
-assert.equal(deskPlayPayload.components, undefined);
+assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(deskPlayText.includes('Scanner Desk Play'));
-assert.ok(deskPlayText.includes('Status: WATCH ONLY - NOT EXECUTION APPROVAL'));
+assert.ok(deskPlayText.includes('Status: WATCH - NOT EXECUTION APPROVAL'));
 assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
 assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
 assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
@@ -414,17 +454,22 @@ assert.ok(deskPlayText.includes('Stop: 7271.75'));
 assert.ok(deskPlayText.includes('Risk: 40.25 pts'));
 assert.ok(deskPlayText.includes('T1: 7372.50'));
 assert.ok(deskPlayText.includes('T2: 7392.50'));
+assert.ok(deskPlayText.includes('HTF Runner Map'));
+assert.ok(deskPlayText.includes('App targets: T1 7372.50 / T2 7392.50'));
+assert.ok(deskPlayText.includes('Next draw: Prior RTH high 7410.00 2.4R'));
+assert.ok(deskPlayText.includes('Runner: Full ETH high 7428.75 2.9R'));
+assert.ok(deskPlayText.includes('App T1/T2 remain tactical'));
 assert.ok(deskPlayText.includes('Trigger'));
 assert.ok(deskPlayText.includes('Completed 5M pullback must hold above 7342 and reclaim the retest.'));
 assert.ok(deskPlayText.includes('Invalid'));
 assert.ok(deskPlayText.includes('Completed 5M acceptance below 7342 damages the long continuation play.'));
-assert.ok(deskPlayText.includes('Chart: review chart attached; not execution approval.'));
-assert.ok(deskPlayText.includes('Boundary: approvals and canExecute unchanged.'));
+assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
+assert.ok(deskPlayText.includes('Boundary: approvals/canExecute unchanged.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
 assert.ok(!deskPlayText.includes('Decision Map:'));
 assert.ok(!deskPlayText.includes('Level Transition:'));
-assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(deskPlayPayload)));
+assert.ok(/Long T1 Hit|Long Stopped|Scratch|Missed/.test(JSON.stringify(deskPlayPayload)));
 
 const decisionMapShortCandidate = sampleCandidate('SHORT');
 decisionMapShortCandidate.entry = 7339.75;
@@ -482,14 +527,71 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
   },
 });
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
-assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
-assert.ok(deskPlayDecisionMapText.includes('Entry ref: 7339.75'));
-assert.ok(deskPlayDecisionMapText.includes('Stop: 7350.25'));
-assert.ok(deskPlayDecisionMapText.includes('Risk: 10.50 pts'));
-assert.ok(deskPlayDecisionMapText.includes('T1: 7324.00'));
-assert.ok(deskPlayDecisionMapText.includes('T2: 7318.75'));
-assert.ok(deskPlayDecisionMapText.includes('Boundary: approvals and canExecute unchanged.'));
-assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlayDecisionMapText));
+assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
+assert.ok(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'));
+assert.ok(deskPlayDecisionMapText.includes('SHORT line: 7342.00'));
+assert.ok(!deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
+assert.ok(!deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
+
+const deskPlaySupportedShortPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-11',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-DESK-PLAY-SUPPORTED-SHORT-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'Review only until completed trigger/retest.',
+    invalidation: null,
+    setupCandidates: [decisionMapShortCandidate],
+  },
+  candidates: [decisionMapShortCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7342,
+    nextTrigger: 'Completed 5M acceptance below 7342.00, then retest failure.',
+    invalidation: 'Completed 5M reclaim above protected structure cancels the short review.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT review below line in the sand',
+      summary: 'Short review is visible only if completed 5M structure accepts below the line.',
+      lineInSand: 7342,
+      longAbove: null,
+      shortBelow: 7342,
+      nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+      invalidation: 'Completed 5M reclaim above 7342.00 pauses the short review.',
+      noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Short below line in the sand',
+        lineInSand: 7342,
+        nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+        reason: 'Short review has explicit completed HTF support and app-owned entry/stop math available.',
+        blockers: ['canExecute=false'],
+      },
+    },
+  },
+});
+const deskPlaySupportedShortText = flattenDiscordPayloadText(deskPlaySupportedShortPayload);
+assert.ok(deskPlaySupportedShortPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
+assert.ok(deskPlaySupportedShortText.includes('SHORT BELOW 7342.00'));
+assert.ok(deskPlaySupportedShortText.includes('Entry ref: 7339.75'));
+assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
+assert.ok(deskPlaySupportedShortText.includes('Risk: 10.50 pts'));
+assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
+assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
+assert.ok(deskPlaySupportedShortText.includes('Boundary: approvals/canExecute unchanged.'));
+assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
 
 const lunch = compactDiscordSummary({
   session: 'lunch',
@@ -550,11 +652,79 @@ const extensionText = flattenDiscordPayloadText(extensionPayload);
 assert.ok(extensionText.includes('Confidence: 98/100'));
 assert.ok(extensionText.includes('T1: 7609.75 - scale/secure'));
 assert.ok(extensionText.includes('T2: 7611.75 - base exit'));
+assert.ok(extensionText.includes('HTF Runner Map:'));
+assert.ok(extensionText.includes('Next draw: Full ETH high 7632.75'));
 assert.ok(extensionText.includes('Runner: 7620.00 - extension if T2 clears'));
-assert.ok(extensionText.includes('Stretch: 7632.75 - trail only if structure keeps delivering'));
-assert.equal(extensionText.includes('LQ / Runner Objectives:'), false);
-assert.equal(extensionText.includes('App T1'), false);
-assert.equal(extensionText.includes('App T2'), false);
+assert.ok(extensionText.includes('Extension: Full ETH high 7632.75'));
+assert.ok(extensionText.includes('Mgmt: App T1/T2 tactical; runner needs 5M acceptance beyond T2.'));
+
+const insideLongTargetCandidate = sampleCandidate('LONG');
+insideLongTargetCandidate.entry = 7407;
+insideLongTargetCandidate.stop = 7396.75;
+insideLongTargetCandidate.target1 = 7422.5;
+insideLongTargetCandidate.target2 = 7427.5;
+insideLongTargetCandidate.targetObjectivePlan = {
+  ...insideLongTargetCandidate.targetObjectivePlan!,
+  nearestLiquidityTarget: { ...insideLongTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside long liquidity', price: 7425 },
+  liquidityTarget1: { ...insideLongTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside long liquidity', price: 7425 },
+  liquidityTarget2: { ...insideLongTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside long runner', price: 7426.5 },
+  liquidityRunnerTarget: null,
+  runnerTarget: null,
+};
+const insideLongPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-12',
+  instrument: 'MES',
+  planVersionId: 'TARGET-LADDER-INSIDE-LONG',
+  normalized: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+    t1: 7422.5,
+    t2: 7427.5,
+  },
+  candidates: [insideLongTargetCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+const insideLongText = flattenDiscordPayloadText(insideLongPayload);
+assert.equal(/Runner: Inside long/i.test(insideLongText), false);
+
+const insideShortTargetCandidate = sampleCandidate('SHORT');
+insideShortTargetCandidate.entry = 7401.5;
+insideShortTargetCandidate.stop = 7425;
+insideShortTargetCandidate.target1 = 7366.25;
+insideShortTargetCandidate.target2 = 7354.5;
+insideShortTargetCandidate.targetObjectivePlan = {
+  ...insideShortTargetCandidate.targetObjectivePlan!,
+  nearestLiquidityTarget: { ...insideShortTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside short liquidity', price: 7360 },
+  liquidityTarget1: { ...insideShortTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside short liquidity', price: 7360 },
+  liquidityTarget2: { ...insideShortTargetCandidate.targetObjectivePlan!.liquidityTarget1!, label: 'Inside short runner', price: 7358 },
+  liquidityRunnerTarget: null,
+  runnerTarget: null,
+};
+const insideShortPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-12',
+  instrument: 'MES',
+  planVersionId: 'TARGET-LADDER-INSIDE-SHORT',
+  normalized: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+    t1: 7366.25,
+    t2: 7354.5,
+  },
+  candidates: [insideShortTargetCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+const insideShortText = flattenDiscordPayloadText(insideShortPayload);
+assert.equal(/Runner: Inside short/i.test(insideShortText), false);
 
 const scanner = compactDiscordSummary({
   session: 'morning',
@@ -1148,7 +1318,7 @@ for (const payload of [readyHealthPayload, degradedPayload, blockedPayload]) {
 
 assert.equal(
   compactAttachmentLine({ chartPlan: true, priceLevelMap: false }, true),
-  'Details: Chart Plan attached. Price Level Map unavailable.'
+  'Details: Chart attached; Level Map unavailable.'
 );
 assert.equal(
   compactAttachmentLine({ chartPlan: false, priceLevelMap: true }, true),

@@ -93,6 +93,18 @@ export interface CompactDeskStateForDiscord {
       targetManagementInstruction?: string;
       nextStructureInstruction?: string;
     } | null;
+    htfObjectiveLadder?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      appTarget1?: number | null;
+      appTarget2?: number | null;
+      reaction?: CompactHtfObjective | null;
+      nextDraw?: CompactHtfObjective | null;
+      runner?: CompactHtfObjective | null;
+      extension?: CompactHtfObjective | null;
+      objectives?: CompactHtfObjective[];
+      managementInstruction?: string | null;
+    } | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -148,6 +160,15 @@ export interface CompactDeskStateForDiscord {
       blockers?: string[];
     };
   } | null;
+}
+
+interface CompactHtfObjective {
+  kind?: string;
+  label?: string | null;
+  price?: number | null;
+  source?: string | null;
+  rMultiple?: number | null;
+  instruction?: string | null;
 }
 
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
@@ -308,6 +329,35 @@ function firstMeaningfulExtension(
   return null;
 }
 
+function objectiveLine(label: string, objective: CompactHtfObjective | null | undefined): string | null {
+  if (!objective || !isFinitePrice(objective.price)) return null;
+  const rText = isFinitePrice(objective.rMultiple) ? ` ${objective.rMultiple.toFixed(1)}R` : '';
+  return `${label}: ${compactLine(objective.label || 'HTF objective', 28)} ${priceLine(objective.price)}${rText}`;
+}
+
+function targetObjectiveLine(
+  label: string,
+  objective: { label?: string | null; price?: number | null; source?: string | null; rMultiple?: number | null } | null | undefined,
+): string | null {
+  return objectiveLine(label, objective);
+}
+
+function objectiveExtendsBeyondAppTarget(
+  direction: SetupCandidate['direction'],
+  objective: { price?: number | null } | null | undefined,
+  appTargetBoundary: number | null | undefined,
+): boolean {
+  return Boolean(objective && isMeaningfulExtension(direction, objective.price, appTargetBoundary));
+}
+
+function firstMeaningfulTargetObjective(
+  direction: SetupCandidate['direction'],
+  base: number | null | undefined,
+  objectives: Array<{ label?: string | null; price?: number | null; source?: string | null; rMultiple?: number | null } | null | undefined>,
+) {
+  return objectives.find((objective) => objectiveExtendsBeyondAppTarget(direction, objective, base)) || null;
+}
+
 function compactTargetLadderLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
   const appTargets = appTargetLevels(candidate, normalized);
   if (appTargets.target1 == null && appTargets.target2 == null) {
@@ -326,12 +376,43 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
     targetPlan?.liquidityRunnerTarget?.price,
     targetPlan?.runnerTarget?.price,
   ]);
+  const nextDrawObjective = firstMeaningfulTargetObjective(candidate.direction, appTargets.target2, [
+    targetPlan?.nearestLiquidityTarget,
+    targetPlan?.liquidityTarget1,
+    targetPlan?.liquidityTarget2,
+    targetPlan?.liquidityRunnerTarget,
+    targetPlan?.runnerTarget,
+  ]);
+  const runnerObjective = firstMeaningfulTargetObjective(candidate.direction, nextDrawObjective?.price ?? appTargets.target2, [
+    targetPlan?.liquidityTarget2,
+    targetPlan?.liquidityRunnerTarget,
+    targetPlan?.runnerTarget,
+  ]);
+  const extensionObjective = firstMeaningfulTargetObjective(candidate.direction, runnerObjective?.price ?? runner ?? appTargets.target2, [
+    targetPlan?.liquidityRunnerTarget,
+    targetPlan?.runnerTarget,
+  ]);
+  const nextDrawLine = targetObjectiveLine('Next draw', nextDrawObjective);
+  const runnerLine = targetObjectiveLine('Runner', runnerObjective) ||
+    (runner ? `Runner: ${priceLine(runner)} - extension if T2 clears` : null);
+  const extensionLine = targetObjectiveLine('Extension', extensionObjective) ||
+    (stretch ? `Extension: ${priceLine(stretch)} - trail only if structure keeps delivering` : null);
+  const htfRunnerMapLines = [
+    nextDrawLine,
+    runnerLine,
+    extensionLine && extensionLine !== runnerLine ? extensionLine : null,
+  ].filter((line): line is string => Boolean(line));
   return [
     'Targets:',
     `T1: ${priceLine(appTargets.target1)} - scale/secure`,
     `T2: ${priceLine(appTargets.target2)} - base exit`,
-    ...(runner ? [`Runner: ${priceLine(runner)} - extension if T2 clears`] : []),
-    ...(stretch ? [`Stretch: ${priceLine(stretch)} - trail only if structure keeps delivering`] : []),
+    ...(htfRunnerMapLines.length
+      ? [
+          'HTF Runner Map:',
+          ...htfRunnerMapLines,
+          'Mgmt: App T1/T2 tactical; runner needs 5M acceptance beyond T2.',
+        ]
+      : []),
   ];
 }
 
@@ -361,14 +442,14 @@ function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate:
       `HTF reaction: ${reaction.label} ${priceLine(reaction.price)}`,
       transition?.targetManagementInstruction
         ? 'Manage: T1 serious; cap T2 into HTF. Reversal risk live.'
-        : compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 85),
+        : compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 62),
       ...(transition?.targetManagementInstruction ? [
         'Secure/reduce continuation assumptions at that level.',
       ] : []),
     ] : []),
     ...(nextLine ? [
       `Next 5M map: ${nextLine}.`,
-      compactLine(transition?.nextStructureInstruction || 'Wait for close/retest/protected structure.', 95),
+      compactLine(transition?.nextStructureInstruction || 'Wait for close/retest/protected structure.', 72),
     ] : []),
   ];
 }
@@ -575,7 +656,7 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
   const reason = compactLine(candidate.evidence?.[0] || candidate.scenarioLabel || professionalCandidateModelLabel(candidate), 140);
   const description = [
     `[${sessionLabel} WATCH] ${args.instrument} - ${direction} WATCH FORMING`,
-    'Status: WATCH ONLY - NOT EXECUTION APPROVAL',
+    'Status: WATCH - NOT EXECUTION APPROVAL',
     '',
     `Line in the sand: ${lineInSand}`,
     `Trigger: ${trigger}`,
@@ -606,6 +687,7 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
 function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
   const play = args.deskState?.primaryDeskPlay;
   if (!play?.discordEligible || getEffectiveCanExecute(args.normalized)) return false;
+  if (play.direction === 'WAIT') return args.candidates.length === 0 && !args.attachments.chartPlan;
   if (args.candidates.length === 0) return true;
   return args.deskState?.discordAction === 'hold' || args.deskState?.discordAction === 'no_trade';
 }
@@ -743,6 +825,21 @@ function deskPlayHtfReactionLine(
   return `HTF reaction: ${level === null ? label : `${label} ${priceLine(level)}`} | ${timeframes} | strength ${strength} | ${why}`;
 }
 
+function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
+  const ladder = play.htfObjectiveLadder;
+  if (!ladder || ladder.sourceOfTruth !== 'scanner_htf_objective_ladder') return [];
+  const lines = [
+    'HTF Runner Map',
+    `App targets: T1 ${priceLine(ladder.appTarget1 ?? null)} / T2 ${priceLine(ladder.appTarget2 ?? null)}`,
+    objectiveLine('Reaction', ladder.reaction),
+    objectiveLine('Next draw', ladder.nextDraw),
+    objectiveLine('Runner', ladder.runner),
+    objectiveLine('Extension', ladder.extension),
+    compactLine(ladder.managementInstruction || 'App T1/T2 tactical; HTF ladder is management only.', 86),
+  ].filter((line): line is string => Boolean(line));
+  return lines.length > 2 ? lines : [];
+}
+
 function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
@@ -793,10 +890,27 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   ];
 }
 
+function deskPlayWaitLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
+  const lines = [
+    play.summary,
+    ...(play.countertrendWarning ? [play.countertrendWarning] : []),
+    `LONG line: ${priceLine(play.longAbove ?? play.longBias?.lineInSand ?? null)}`,
+    `SHORT line: ${priceLine(play.shortBelow ?? play.shortBias?.lineInSand ?? null)}`,
+    'Status: review-only map; no HTF-supported active play.',
+  ];
+  return lines.filter((line): line is string => Boolean(line));
+}
+
+function deskPlayHeadlineDirection(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined): 'LONG' | 'SHORT' | 'WAIT' {
+  if (!play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return 'WAIT';
+  const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
+  return bias?.state === 'primary' ? play.direction : 'WAIT';
+}
+
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
-  const direction = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : 'WAIT';
+  const direction = deskPlayHeadlineDirection(play);
   const hasConditionalLevels = Boolean(
     args.attachments.chartPlan &&
     (direction === 'LONG' || direction === 'SHORT') &&
@@ -807,10 +921,15 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     : 'N/A';
   const lines = [
     `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
-    'Status: WATCH ONLY - NOT EXECUTION APPROVAL',
+    'Status: WATCH - NOT EXECUTION APPROVAL',
     '',
-    ...(direction === 'LONG' || direction === 'SHORT' ? deskPlayManagementLines(args, direction) : [`Line in the sand: ${line}`]),
-    ...(play ? ['', ...deskPlayPrimaryLines(args, direction === 'LONG' || direction === 'SHORT' ? direction : 'LONG')] : []),
+    ...(direction === 'LONG' || direction === 'SHORT'
+      ? deskPlayManagementLines(args, direction)
+      : play
+      ? deskPlayWaitLines(play)
+      : [`Line in the sand: ${line}`]),
+    ...(play && (direction === 'LONG' || direction === 'SHORT') ? ['', ...deskPlayPrimaryLines(args, direction)] : []),
+    ...(play ? ['', ...deskPlayHtfObjectiveLadderLines(play)] : []),
     '',
     'Trigger',
     `${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
@@ -819,12 +938,12 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.', 90)}`,
     '',
     hasConditionalLevels
-      ? 'Chart: review chart attached; not execution approval.'
+      ? 'Chart: review attached; not execution approval.'
       : args.attachments.chartPlan
       ? 'Chart: watch chart attached; levels withheld until protected structure is proven.'
       : 'Chart: not attached; use DeskState text only until chart context is available.',
     '',
-    'Boundary: approvals and canExecute unchanged.',
+    'Boundary: approvals/canExecute unchanged.',
   ];
   return {
     username: 'Quant Desk',
@@ -839,6 +958,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
         timestamp: new Date().toISOString(),
       },
     ],
+    ...(args.components?.length ? { components: args.components } : {}),
   };
 }
 
@@ -925,7 +1045,7 @@ function noTradeReason(candidate: SetupCandidate | null, normalized: CompactNorm
 export function compactAttachmentLine(attachments: CompactDiscordAttachmentState, hasCandidate: boolean): string {
   if (!hasCandidate) return 'Details: Visual attachments not generated because no active plan candidate was available.';
   if (attachments.chartPlan && attachments.priceLevelMap) return 'Details: Chart + Level Map attached.';
-  if (attachments.chartPlan) return 'Details: Chart Plan attached. Price Level Map unavailable.';
+  if (attachments.chartPlan) return 'Details: Chart attached; Level Map unavailable.';
   if (attachments.priceLevelMap) return 'Details: Price Level Map attached. Chart Plan unavailable.';
   return 'Details: Visuals unavailable; review local logs before action.';
 }
@@ -1015,11 +1135,11 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         ...htfLines,
         ...(htfLines.length ? [''] : []),
         'Invalidation:',
-        compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 160),
+        compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 140),
         '',
         ...(includeMemory ? [...memoryLines(), ''] : []),
         'Action:',
-        compactLine(designerRecommendation.actionLine, 120),
+        compactLine(designerRecommendation.actionLine, 100),
         '',
         compactAttachmentLine(args.attachments, true),
         'Decision support only.',
@@ -1192,7 +1312,7 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  const hasDeskPlaySingleChart = /watch chart attached|review chart attached/i.test(mainText);
+  const hasDeskPlaySingleChart = /watch chart attached|review (?:chart )?attached/i.test(mainText);
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
