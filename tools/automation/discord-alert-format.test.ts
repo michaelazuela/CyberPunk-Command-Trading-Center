@@ -535,9 +535,9 @@ assert.ok(deskPlayText.includes('Next draw: Prior RTH high 7410.00 2.4R'));
 assert.ok(deskPlayText.includes('Runner: Full ETH high 7428.75 2.9R'));
 assert.ok(deskPlayText.includes('App T1/T2 remain tactical'));
 assert.ok(deskPlayText.includes('Trigger:'));
-assert.ok(deskPlayText.includes('Completed 5M pullback must hold above 7342 and reclaim the retest.'));
+assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.00.'));
 assert.ok(deskPlayText.includes('Invalid:'));
-assert.ok(deskPlayText.includes('Completed 5M acceptance below 7342 damages the long continuation play.'));
+assert.ok(deskPlayText.includes('Invalid: completed 5M below 7271.75.'));
 assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
 assert.ok(deskPlayText.includes('Boundary: no approval/canExecute change.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
@@ -575,7 +575,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
     visibilityMode: 'HOLD_WITH_REASON',
     discordAction: 'hold',
     lineInSand: 7342,
-    nextTrigger: 'Completed 5M acceptance below 7342.00, then retest failure.',
+    nextTrigger: 'Bearish Failed Breakout Reversal: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
     invalidation: 'Completed 5M reclaim above protected structure cancels the short review.',
     canExecute: false,
     primaryDeskPlay: {
@@ -585,7 +585,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
       lineInSand: 7342,
       longAbove: null,
       shortBelow: 7342,
-      nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+      nextTrigger: 'Bearish Failed Breakout Reversal: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
       invalidation: 'Completed 5M reclaim above 7342.00 pauses the short review.',
       noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
       htfConflict: false,
@@ -653,6 +653,9 @@ assert.ok(deskPlayDecisionMapText.includes('15M: BEAR bias now | changes above 7
 assert.ok(deskPlayDecisionMapText.includes('5M: BULL bias now | BEAR returns below 7350.25 | bear confirm 7342.00 | target 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00 | Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('Trigger: LONG above 7342.00 / SHORT below 7342.00; completed 5M close/retest only.'));
+assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
+assert.ok(!deskPlayDecisionMapText.includes('reclaim back below t...'));
 assert.ok(deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));
 assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play is confirmed'), false);
 assert.equal(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'), false);

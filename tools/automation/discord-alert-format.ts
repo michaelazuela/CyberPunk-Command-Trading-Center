@@ -1015,6 +1015,52 @@ function deskPlayWaitLines(
   return lines.filter((line): line is string => Boolean(line));
 }
 
+function deskPlayTriggerLine(
+  args: CompactDiscordSummaryArgs,
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string {
+  if (!play) return 'Trigger: completed 5M proof + retest/hold.';
+  if (direction === 'LONG' || direction === 'SHORT') {
+    const line = deskPlayLineForDirection(play, direction);
+    if (isFinitePrice(line)) {
+      return `Trigger: completed 5M close/retest ${direction === 'LONG' ? 'above' : 'below'} ${priceLine(line)}.`;
+    }
+  }
+  const longLine = deskPlayLineForDirection(play, 'LONG');
+  const shortLine = deskPlayLineForDirection(play, 'SHORT');
+  const parts = [
+    isFinitePrice(longLine) ? `LONG above ${priceLine(longLine)}` : null,
+    isFinitePrice(shortLine) ? `SHORT below ${priceLine(shortLine)}` : null,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length
+    ? `Trigger: ${parts.join(' / ')}; completed 5M close/retest only.`
+    : `Trigger: ${compactLine(args.deskState?.nextTrigger || 'completed 5M proof + retest/hold.', 64)}`;
+}
+
+function deskPlayInvalidationLine(
+  args: CompactDiscordSummaryArgs,
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string {
+  if (direction === 'LONG' || direction === 'SHORT') {
+    const levels = deskPlayDecisionMapLevels(args.normalized, direction);
+    if (levels?.stop !== null && levels?.stop !== undefined && isFinitePrice(levels.stop)) {
+      return `Invalid: completed 5M ${direction === 'LONG' ? 'below' : 'above'} ${priceLine(levels.stop)}.`;
+    }
+  }
+  if (play) {
+    const longLine = deskPlayLineForDirection(play, 'LONG');
+    const shortLine = deskPlayLineForDirection(play, 'SHORT');
+    const parts = [
+      isFinitePrice(longLine) ? `LONG fails below ${priceLine(longLine)}` : null,
+      isFinitePrice(shortLine) ? `SHORT fails above ${priceLine(shortLine)}` : null,
+    ].filter((part): part is string => Boolean(part));
+    if (parts.length) return `Invalid: ${parts.join(' / ')}.`;
+  }
+  return `Invalid: ${compactLine(args.deskState?.invalidation || 'protected 5M structure fails.', 64)}`;
+}
+
 function deskPlayHeadlineDirection(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined): 'LONG' | 'SHORT' | 'WAIT' {
   if (!play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return 'WAIT';
   const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
@@ -1047,9 +1093,9 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     ...(play && (direction === 'LONG' || direction === 'SHORT') ? ['', ...deskPlayPrimaryLines(args, direction)] : []),
     ...(play && direction !== 'WAIT' ? ['', ...deskPlayHtfObjectiveLadderLines(play)] : []),
     '',
-    `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 86)}`,
+    deskPlayTriggerLine(args, play, direction),
     '',
-    `Invalid: ${compactLine(play?.invalidation || args.deskState?.invalidation || 'Invalidation needs protected 5M structure.', 76)}`,
+    deskPlayInvalidationLine(args, play, direction),
     '',
     hasConditionalLevels
       ? 'Chart: review attached; not execution approval.'
