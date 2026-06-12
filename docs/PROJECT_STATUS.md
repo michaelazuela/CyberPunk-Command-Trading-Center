@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Treat duplicate supervisor starts as already-running instead of startup failure.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts.
+Reason: The tray could show a scary stopped/failed startup state when a second hidden supervisor start raced an already-running daemon and hit `EADDRINUSE` on the status port. This made a healthy supervisor look broken.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run supervisor:start duplicate-start smoke; npm run supervisor:status; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Passed. Duplicate starts now bind-check before launching child services, classify `EADDRINUSE` as "already running", exit cleanly, and avoid spinning up duplicate scanner/recorder child services. The tray now waits briefly before rechecking the status endpoint after start/self-heal so it does not lock in a stale stopped label while the daemon is coming up.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord trade alert rules changed.
+Bridge impact: None. Bridge health is still read-only.
+Discord impact: None. No alert eligibility or delivery behavior changed.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor so the running daemon uses the patched duplicate-start behavior.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Clean compact Discord payload wording and remove preferred-length warnings.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: The formatter still produced a 1200-character preferred-length warning from a conditional replay fixture and carried repeated Desk Play prose that was already covered by chart/DeskState context. The Discord card needed to stay useful while avoiding noisy warning output.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None identified after verification.
 Next recommended action: Restart the supervisor so live scanner/Discord formatting uses the compact wording.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-11
 Task: Make the DeskState desk-agent plan narrative explicitly cover both long and short bias.

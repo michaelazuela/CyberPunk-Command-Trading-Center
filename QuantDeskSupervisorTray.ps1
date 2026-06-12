@@ -258,6 +258,7 @@ function Update-Tray {
     $state = Get-TrayState
     Invoke-SelfHealIfNeeded -Payload $state.Payload
     if (-not $state.Payload -and -not $SelfHealPausedByStop -and $SelfHealEnabled -and -not $NoAutoStart) {
+      Start-Sleep -Milliseconds 1200
       $state = Get-TrayState
     }
     $notifyIcon.Icon = $icons[$state.Level]

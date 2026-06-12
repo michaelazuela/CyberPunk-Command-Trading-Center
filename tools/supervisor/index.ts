@@ -1,4 +1,6 @@
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { loadSupervisorConfig } from './config';
 import { buildDeliveryVisibilityReport } from './deliveryVisibility';
@@ -29,6 +31,10 @@ function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function isDirectCliEntrypoint(): boolean {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url)));
+}
+
 async function readLiveSupervisorStatus(configResult = loadSupervisorConfig()): Promise<unknown | null> {
   try {
     const response = await fetch(
@@ -40,6 +46,15 @@ async function readLiveSupervisorStatus(configResult = loadSupervisorConfig()): 
   } catch {
     return null;
   }
+}
+
+export function isAddressInUseError(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'EADDRINUSE'
+  );
 }
 
 export async function runSupervisorCheck(): Promise<void> {
@@ -91,17 +106,9 @@ export function startSupervisor(): http.Server {
     autoRestartsChildProcesses: configResult.config.health.restartEnabled,
     restartPolicy: 'owned_failed_child_process_only',
   });
-  const preloadResult = runHtfPreloadStartup(configResult.config, logger);
-  logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
-    enabled: preloadResult.enabled,
-    attempted: preloadResult.attempted,
-    ok: preloadResult.ok,
-    reason: preloadResult.reason,
-    stdoutLog: preloadResult.stdoutLog,
-    stderrLog: preloadResult.stderrLog,
-  });
-  let supervisorState = launchEnabledServices(configResult.config, logger);
+  let supervisorState = withCurrentSupervisorPid(getSupervisorState(configResult.config));
   let lastHealthReport = null as Awaited<ReturnType<typeof buildHealthReport>> | null;
+  let monitorTimer: NodeJS.Timeout | null = null;
 
   const monitor = async () => {
     supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
@@ -118,11 +125,6 @@ export function startSupervisor(): http.Server {
       notificationKinds: notificationResult.notifications.map((item) => item.kind),
     });
   };
-  const monitorTimer = setInterval(() => {
-    monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
-  }, configResult.config.health.monitorIntervalMs);
-  monitor().catch((error) => logger.log('warn', 'Initial supervisor monitor failed safely.', { error: String(error) }));
-
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${configResult.config.host}:${configResult.config.port}`);
     if (request.method === 'GET' && url.pathname === configResult.config.statusPath) {
@@ -144,12 +146,30 @@ export function startSupervisor(): http.Server {
 
   const shutdown = () => {
     logger.log('info', 'Supervisor shutting down.');
-    clearInterval(monitorTimer);
+    if (monitorTimer) clearInterval(monitorTimer);
     stopOwnedServices(configResult.config, logger);
     process.exit(0);
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+
+  server.on('error', (error) => {
+    if (isAddressInUseError(error)) {
+      logger.log('info', 'Supervisor already running; status endpoint port is in use.', {
+        host: configResult.config.host,
+        port: configResult.config.port,
+        statusPath: configResult.config.statusPath,
+      });
+      process.stdout.write(
+        `Quant Desk Local Supervisor already running on http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}\n`,
+      );
+      process.exit(0);
+    }
+
+    logger.log('error', 'Supervisor failed to listen.', { error: String(error) });
+    process.stderr.write(`Quant Desk Local Supervisor failed to start: ${String(error)}\n`);
+    process.exit(1);
+  });
 
   server.listen(configResult.config.port, configResult.config.host, () => {
     logger.log('info', 'Supervisor listening.', {
@@ -160,26 +180,43 @@ export function startSupervisor(): http.Server {
     process.stdout.write(
       `Quant Desk Local Supervisor listening on http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}\n`,
     );
+
+    const preloadResult = runHtfPreloadStartup(configResult.config, logger);
+    logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
+      enabled: preloadResult.enabled,
+      attempted: preloadResult.attempted,
+      ok: preloadResult.ok,
+      reason: preloadResult.reason,
+      stdoutLog: preloadResult.stdoutLog,
+      stderrLog: preloadResult.stderrLog,
+    });
+    supervisorState = launchEnabledServices(configResult.config, logger);
+    monitorTimer = setInterval(() => {
+      monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
+    }, configResult.config.health.monitorIntervalMs);
+    monitor().catch((error) => logger.log('warn', 'Initial supervisor monitor failed safely.', { error: String(error) }));
   });
 
   return server;
 }
 
-const command = process.argv[2] || 'start';
+if (isDirectCliEntrypoint()) {
+  const command = process.argv[2] || 'start';
 
-if (command === 'check') {
-  await runSupervisorCheck();
-} else if (command === 'start') {
-  startSupervisor();
-} else if (command === 'status') {
-  await runSupervisorStatus();
-} else if (command === 'stop') {
-  await runSupervisorStop();
-} else if (command === 'notify-self-heal') {
-  const configResult = loadSupervisorConfig();
-  const result = await sendSupervisorSelfHealNotification(configResult.config.logsDir);
-  printJson(result);
-} else {
-  process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|notify-self-heal]\n');
-  process.exitCode = 1;
+  if (command === 'check') {
+    await runSupervisorCheck();
+  } else if (command === 'start') {
+    startSupervisor();
+  } else if (command === 'status') {
+    await runSupervisorStatus();
+  } else if (command === 'stop') {
+    await runSupervisorStop();
+  } else if (command === 'notify-self-heal') {
+    const configResult = loadSupervisorConfig();
+    const result = await sendSupervisorSelfHealNotification(configResult.config.logsDir);
+    printJson(result);
+  } else {
+    process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|notify-self-heal]\n');
+    process.exitCode = 1;
+  }
 }

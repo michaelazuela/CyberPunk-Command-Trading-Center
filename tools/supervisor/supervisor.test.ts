@@ -23,6 +23,7 @@ import {
   stopOwnedServices,
 } from './processManager';
 import { buildSupervisorStatus } from './status';
+import { isAddressInUseError } from './index';
 
 const defaultConfig = loadSupervisorConfig({}, 'C:\\quant-desk');
 assert.equal(defaultConfig.status, 'valid');
@@ -75,6 +76,9 @@ assert.equal(status.boundaries.changesTradingLogic, false);
 assert.equal(status.boundaries.changesScannerBehavior, false);
 assert.equal(status.boundaries.changesBridgeBehavior, false);
 assert.equal(status.boundaries.changesDiscordBehavior, false);
+assert.equal(isAddressInUseError({ code: 'EADDRINUSE' }), true);
+assert.equal(isAddressInUseError({ code: 'ECONNREFUSED' }), false);
+assert.equal(isAddressInUseError(new Error('listen EADDRINUSE')), false);
 assert.equal(status.boundaries.changesCanExecuteBehavior, false);
 assert.equal(JSON.stringify(status).includes('"canExecute":true'), false);
 assert.equal(status.boundaries.changesDiscordBehavior, false);
@@ -127,6 +131,7 @@ assert.ok(trayScript.includes('Self-Heal Enabled'));
 assert.ok(trayScript.includes('Invoke-SelfHealIfNeeded'));
 assert.ok(trayScript.includes('SelfHealPausedByStop'));
 assert.ok(trayScript.includes('supervisor:notify-self-heal'));
+assert.ok(trayScript.includes('Start-Sleep -Milliseconds 1200'));
 assert.equal(trayScript.includes('Add_Opening'), false);
 assert.equal(trayScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(trayScript.includes('scanSetupCandidates'), false);
