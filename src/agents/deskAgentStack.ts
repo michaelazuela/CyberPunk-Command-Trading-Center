@@ -1,4 +1,5 @@
 import { DESK_AGENT_AUTHORITY, DESK_AUTHORITY_MESSAGES } from './deskAgentBoundaries';
+import type { DeskState } from '../lib/localScannerEngine';
 
 export type DeskAgentKey =
   | 'scannerHealthAgent'
@@ -39,6 +40,25 @@ export interface DeskStackHandoff {
     proofAuthority: typeof DESK_AGENT_AUTHORITY.proofAuthority;
   };
   safetyNotes: string[];
+}
+
+export interface DeskAgentPlanNarrative {
+  sourceOfTruth: 'desk_agent_plan_narrative_from_scanner_desk_state';
+  currentPlay: string;
+  htfStructure: string;
+  lineInSand: number | null;
+  targetReaction: string | null;
+  management: string;
+  nextStructureMap: string;
+  trigger: string;
+  invalidation: string;
+  executionBoundary: string;
+  plainText: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
 }
 
 export interface DeskStackSafetyFinding {
@@ -106,8 +126,8 @@ export const DESK_AGENT_ROLE_CONTRACTS: DeskAgentRoleContract[] = [
     key: 'workflowOrchestrator',
     displayName: 'Workflow Orchestrator',
     authority: 'app_owned_plan_wrapper',
-    consumes: ['chart facts', 'analysis result', 'memory advisory', 'proof/RAG context'],
-    produces: ['fact merge', 'workflow decision wrapper', 'RAG context wrapper', 'authority snapshot'],
+    consumes: ['chart facts', 'analysis result', 'memory advisory', 'proof/RAG context', 'scanner-owned DeskState'],
+    produces: ['fact merge', 'workflow decision wrapper', 'RAG context wrapper', 'authority snapshot', 'DeskState plan narrative with HTF reaction management'],
     mustNot: [...COMMON_MUST_NOT, 'move fact extraction into execution authority'],
   },
   {
@@ -198,6 +218,63 @@ export function buildDeskStackHandoff(): DeskStackHandoff {
       DESK_AUTHORITY_MESSAGES.appPipelineFinalAuthority,
       DESK_AUTHORITY_MESSAGES.proofLearningOnly,
     ],
+  };
+}
+
+function priceLine(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+export function buildDeskAgentPlanNarrative(deskState: DeskState): DeskAgentPlanNarrative {
+  const play = deskState.primaryDeskPlay;
+  const transition = play.levelTransition;
+  const targetReaction = transition?.targetReactionLevel !== null && transition?.targetReactionLevel !== undefined
+    ? `${transition.targetReactionLabel || 'HTF/session reaction level'} ${priceLine(transition.targetReactionLevel)}`
+    : play.targetReactionLevel !== null
+      ? `${play.targetReactionLabel || 'HTF/session reaction level'} ${priceLine(play.targetReactionLevel)}`
+      : null;
+  const nextStructureMap = [
+    transition?.longAbove !== null && transition?.longAbove !== undefined
+      ? `LONG above ${priceLine(transition.longAbove)}`
+      : play.longAbove !== null ? `LONG above ${priceLine(play.longAbove)}` : null,
+    transition?.shortBelow !== null && transition?.shortBelow !== undefined
+      ? `SHORT below ${priceLine(transition.shortBelow)}`
+      : play.shortBelow !== null ? `SHORT below ${priceLine(play.shortBelow)}` : null,
+  ].filter(Boolean).join(' / ') || 'No protected 5M shift line is mapped yet.';
+  const management = transition?.targetManagementInstruction ||
+    (targetReaction
+      ? 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.'
+      : 'Management: app T1/T2 remain tactical only until scanner-owned HTF/session reaction context is mapped.');
+  const executionBoundary = 'Desk narrative is decision support only. It does not approve execution, change canExecute, or change entry, stop, target, risk, model, or bridge rules.';
+  const plainText = [
+    `Current Play: ${play.title}`,
+    `HTF/Structure: ${play.summary}`,
+    `Line in the Sand: ${priceLine(play.lineInSand)}`,
+    ...(targetReaction ? [`Target/reaction: ${targetReaction}`] : []),
+    management,
+    `After 5M shift: ${nextStructureMap}.`,
+    `Trigger: ${play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.'}`,
+    `Invalidation: ${play.invalidation || deskState.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.'}`,
+    executionBoundary,
+  ];
+
+  return {
+    sourceOfTruth: 'desk_agent_plan_narrative_from_scanner_desk_state',
+    currentPlay: play.title,
+    htfStructure: play.summary,
+    lineInSand: play.lineInSand,
+    targetReaction,
+    management,
+    nextStructureMap,
+    trigger: play.nextTrigger || deskState.nextTrigger || 'Wait for completed 5M proof and retest/hold.',
+    invalidation: play.invalidation || deskState.invalidation || 'Invalidation remains unconfirmed until protected 5M structure is proven.',
+    executionBoundary,
+    plainText,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
   };
 }
 

@@ -3,18 +3,18 @@
 ## Latest Change
 
 Date: 2026-06-11
-Task: Properly wire target/reaction level transitions and T1/T2 management caution through scanner-owned DeskState.
-Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts.
-Reason: Morning short delivery could post without clearly saying it was delivering into an important HTF/session reaction level, where continuation assumptions should be reduced, T1/T2 should be managed conservatively, and the next protected 5M long/short line in the sand should be stated after a structure shift.
-Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
-Result: DeskState now carries a scanner-owned `levelTransition` map with target/reaction level, profit-protection instruction, T1/T2 management caution, next protected 5M long/short lines, and an explicit approval boundary. Live scanner/audit fallback paths pass the target cascade into DeskState, so Discord can render the same source-of-truth transition map instead of recomputing or guessing it.
+Task: Add DeskState target/reaction management to the desk-agent plan narrative.
+Files changed: docs/PROJECT_STATUS.md, src/agents/deskAgentIntegration.test.ts, src/agents/deskAgentStack.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts.
+Reason: The HTF/session target-reaction management read must be part of the plan the desk agent gives the trader, not only Discord formatting. When a play is delivering into HTF/session structure, the desk agent must say to take T1 seriously, cap expectation at/near T2 unless completed 5M acceptance clears the level, and watch for reversal/line-in-the-sand shift.
+Tests run: npx tsx src/agents/deskAgentIntegration.test.ts; npx tsx src/lib/geminiPromptSafety.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Added a scanner-DeskState-owned desk-agent plan narrative builder and prompt rule so the desk agent can produce the same target/reaction, T1/T2 management, reversal-risk, and next 5M shift-line language from `DeskState.primaryDeskPlay.levelTransition`.
 Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord hard blockers changed.
 Bridge impact: None.
-Discord impact: Yes. Scanner/Desk Play wording now names the target/reaction area, says to secure/reduce continuation assumptions there, states to take T1 seriously and not press beyond T2 into HTF/session structure without completed 5M acceptance, and states the next protected 5M line-in-the-sand map.
-Journal/RAG impact: Existing Discord/RAG consumers receive clearer DeskState metadata; no schema change.
+Discord impact: No new Discord behavior in this change. Prior Discord wording remains.
+Journal/RAG impact: No schema change. Desk-agent/RAG consumers can use the new narrative text from DeskState.
 Supabase impact: No migration added.
 Known risks: None identified after verification.
-Next recommended action: Observe the next Morning/Lunch alert and confirm it tells the trader to manage T1/T2 conservatively when the play is delivering into HTF/session structure.
+Next recommended action: Use the desk-agent narrative from DeskState when summarizing active Morning/Lunch plans so HTF/session reaction management is always part of the trader-facing plan.
 
 ## Previous Change
 

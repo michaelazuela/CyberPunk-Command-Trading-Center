@@ -8,7 +8,9 @@ import { selectScannerPlan } from './scannerPlanSelectionAgent';
 import { buildWeeklyTradingAnalysisReport } from './tradingAnalysisAgent';
 import { detectMorningContinuationWatchlist } from './morningContinuationWatchlistAgent';
 import { buildWorkflowDecision, workflowAuthorityNote, workflowAuthoritySnapshot } from './workflowOrchestrator';
-import { auditDeskStackSafety, buildDeskStackHandoff } from './deskAgentStack';
+import { auditDeskStackSafety, buildDeskAgentPlanNarrative, buildDeskStackHandoff } from './deskAgentStack';
+import { buildCandidateLifecycleTrace, buildDeskState, buildTargetCascade, classifyScannerVisibility } from '../lib/localScannerEngine';
+import type { TargetObjective } from '../types';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1000 };
@@ -188,6 +190,128 @@ const scannerPlanRole = handoff.roles.find((role) => role.key === 'scannerPlanSe
 assert.ok(scannerPlanRole?.consumes.some((item) => item.includes('NinjaTrader-OHLC setup candidates')));
 assert.ok(scannerPlanRole?.produces.some((item) => item.includes('Intraday MSS watch lifecycle status')));
 assert.ok(scannerPlanRole?.mustNot.some((item) => item.includes('Gemini/advisory context create Intraday MSS watches')));
+const workflowRole = handoff.roles.find((role) => role.key === 'workflowOrchestrator');
+assert.ok(workflowRole?.produces.some((item) => item.includes('DeskState plan narrative')));
+
+const reactionObjective: TargetObjective = {
+  label: 'London Session Low',
+  price: 7288.25,
+  direction: 'SHORT',
+  source: 'london',
+  type: 'low',
+  confidence: 'High',
+  score: 90,
+  distancePoints: 51.5,
+  rMultiple: 1.5,
+  reason: 'Real session liquidity where short delivery can stall or reverse.',
+};
+const shortDeliveryCandidate = candidate({
+  direction: 'SHORT',
+  entry: 7339.75,
+  stop: 7350.25,
+  target1: 7324,
+  target2: 7318.75,
+  riskPoints: 10.5,
+  rankScore: 95,
+  requiredTrigger: 'Completed 5M acceptance below 7342.00, then failed retest.',
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'passed',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'SHORT',
+      lineInSand: 7342,
+      lineReason: 'Protected 5M short continuation line below HTF reaction area.',
+      requiredClose: 'Completed 5M close below 7342.00.',
+      obstacleType: 'low',
+      obstacleSource: 'london',
+      evidence: ['London Session Low is target/reaction context.'],
+      blockers: [],
+    },
+  },
+  targetObjectivePlan: {
+    selectedT1: reactionObjective,
+    selectedT2: null,
+    nearestObstacleTarget: null,
+    obstacleTarget1: null,
+    nearestLiquidityTarget: reactionObjective,
+    liquidityTarget1: reactionObjective,
+    liquidityTarget2: null,
+    liquidityRunnerTarget: null,
+    runnerTarget: null,
+    targetManagementInstruction: 'Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.',
+    liquidityMapSummary: 'LQ1 7288.25 London Session Low',
+    targetPathWarning: null,
+    targetQuality: 'clear_path',
+    objectives: [reactionObjective],
+    notes: [],
+    targetModel: 'actual_r_with_structural_context',
+  },
+});
+const longShiftCandidate = candidate({
+  direction: 'LONG',
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  rankScore: 80,
+  requiredTrigger: 'Completed 5M reclaim above 7342.00 after protected structure shift.',
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'passed',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: false,
+      direction: 'LONG',
+      lineInSand: 7342,
+      lineReason: 'New protected 5M long line after reversal shift.',
+      requiredClose: 'Completed 5M close above 7342.00.',
+      obstacleType: 'high',
+      obstacleSource: 'london',
+      evidence: ['Long line appears only after protected 5M shift.'],
+      blockers: [],
+    },
+  },
+});
+const deskLifecycle = buildCandidateLifecycleTrace({
+  candidates: [shortDeliveryCandidate, longShiftCandidate],
+  selectedCandidate: shortDeliveryCandidate,
+  state: 'Conditional',
+  alertDecision: { shouldSend: false, reason: 'Desk narrative fixture.' },
+  canExecute: false,
+});
+const deskVisibility = classifyScannerVisibility({
+  state: 'Conditional',
+  candidate: shortDeliveryCandidate,
+  alertDecision: { shouldSend: false, reason: 'Desk narrative fixture.' },
+  canExecute: false,
+});
+const deskState = buildDeskState({
+  state: 'Conditional',
+  candidate: shortDeliveryCandidate,
+  visibilityMetadata: deskVisibility,
+  candidateLifecycleTrace: deskLifecycle,
+  targetCascade: buildTargetCascade({
+    candidate: shortDeliveryCandidate,
+    objectives: [reactionObjective],
+    recentBars: [],
+  }),
+  canExecute: false,
+});
+const deskNarrative = buildDeskAgentPlanNarrative(deskState);
+const deskNarrativeText = deskNarrative.plainText.join('\n');
+assert.equal(deskNarrative.sourceOfTruth, 'desk_agent_plan_narrative_from_scanner_desk_state');
+assert.ok(deskNarrativeText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(deskNarrativeText.includes('take T1 seriously'));
+assert.ok(deskNarrativeText.includes('cap expectation at T2 into HTF/session structure'));
+assert.ok(deskNarrativeText.includes('Reversal risk is live'));
+assert.ok(deskNarrativeText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7342.00.'));
+assert.equal(deskNarrative.approvalBoundary.changesCanExecute, false);
+assert.equal(deskNarrative.approvalBoundary.changesEntryStopTargets, false);
 
 const safetyAudit = auditDeskStackSafety({
   readyHealth,
@@ -201,6 +325,7 @@ const safetyAudit = auditDeskStackSafety({
   outcomeClosure,
   weeklyReport,
   handoff,
+  deskNarrative,
 });
 assert.equal(safetyAudit.safe, true, safetyAudit.findings.map((finding) => `${finding.path}: ${finding.reason}`).join('\n'));
 assert.equal(safetyAudit.findingCount, 0);
