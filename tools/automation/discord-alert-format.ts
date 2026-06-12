@@ -898,28 +898,28 @@ function currentHtfBiasLine(args: {
 
   if (args.rowBias === 'BULL') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
-      return `${tf}: BEAR bias now | BULL returns above ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+      return `${tf}: BEAR now | BULL above ${protectedText} | proof: close+hold above | target ${targetText}`;
     }
-    return `${tf}: BULL bias now | changes below ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+    return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
   }
   if (args.rowBias === 'BEAR') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice > args.protectedLevel) {
-      return `${tf}: BULL bias now | BEAR returns below ${protectedText} | bear confirm ${confirmText} | target ${targetText}`;
+      return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
     }
-    return `${tf}: BEAR bias now | changes above ${protectedText} | bear confirm ${confirmText} | target ${targetText}`;
+    return `${tf}: BEAR now | BULL above ${protectedText} | proof: close+hold above | target ${targetText}`;
   }
 
   if (currentPrice !== null && isFinitePrice(args.confirmationLine) && currentPrice >= args.confirmationLine) {
-    return `${tf}: BULL bias now | changes below ${protectedText} | confirm ${confirmText} | target ${targetText}`;
+    return `${tf}: BULL now | BEAR below ${protectedText} | proof: close+hold below | target ${targetText}`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice <= args.protectedLevel) {
-    return `${tf}: BEAR bias now | changes above ${confirmText} | bear line ${protectedText} | target ${targetText}`;
+    return `${tf}: BEAR now | BULL above ${confirmText} | proof: close+hold above | target ${targetText}`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && isFinitePrice(args.confirmationLine)) {
-    return `${tf}: RANGE bias now | BULL above ${confirmText} / BEAR below ${protectedText} | target ${targetText}`;
+    return `${tf}: RANGE now | BULL above ${confirmText} / BEAR below ${protectedText} | proof: close+hold | target ${targetText}`;
   }
 
-  return `${tf}: Bias pending | BULL above ${confirmText} / BEAR below ${protectedText} | target ${targetText}`;
+  return `${tf}: Bias pending | BULL above ${confirmText} / BEAR below ${protectedText} | proof: close+hold | target ${targetText}`;
 }
 
 function deskPlayHtfProtectedStructureLines(
