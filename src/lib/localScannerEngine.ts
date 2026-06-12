@@ -194,6 +194,9 @@ export interface ScannerCandidateLifecycleTraceItem {
   invalidation: string | null;
   lineInSand: number | null;
   lineInSandReason: string | null;
+  targetReactionLevel: number | null;
+  targetReactionLabel: string | null;
+  targetReactionReason: string | null;
   htfConflict: boolean;
   countertrend: boolean;
   hasFullPlanLevels: boolean;
@@ -270,6 +273,9 @@ export interface PrimaryDeskPlay {
   lineInSand: number | null;
   longAbove: number | null;
   shortBelow: number | null;
+  targetReactionLevel: number | null;
+  targetReactionLabel: string | null;
+  targetReactionReason: string | null;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;
@@ -897,6 +903,19 @@ function numericOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function candidateTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
+  const plan = candidate.targetObjectivePlan;
+  if (!plan) return null;
+  return (
+    plan.nearestObstacleTarget ||
+    plan.obstacleTarget1 ||
+    plan.nearestLiquidityTarget ||
+    plan.liquidityTarget1 ||
+    plan.selectedT1 ||
+    null
+  );
+}
+
 function candidateHasHtfConflict(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   const text = [
@@ -973,6 +992,7 @@ export function buildCandidateLifecycleTrace(args: {
       dataQualityBlocker: args.dataQualityBlocker,
     });
     const selected = Boolean(selectedKey && scannerCandidateKey(candidate) === selectedKey);
+    const targetReaction = candidateTargetReactionObjective(candidate);
     return {
       candidateKey: scannerCandidateKey(candidate),
       setupType: candidate.setupType,
@@ -999,6 +1019,9 @@ export function buildCandidateLifecycleTrace(args: {
       invalidation: candidate.invalidation || null,
       lineInSand: candidate.activeRuleset?.htfLineInSand?.lineInSand ?? null,
       lineInSandReason: candidate.activeRuleset?.htfLineInSand?.lineReason ?? null,
+      targetReactionLevel: targetReaction?.price ?? null,
+      targetReactionLabel: targetReaction?.label ?? null,
+      targetReactionReason: targetReaction?.reason ?? null,
       htfConflict: candidateHasHtfConflict(candidate),
       countertrend: candidateHasHtfConflict(candidate),
       hasFullPlanLevels: hasFullPlanLevels(candidate),
@@ -1261,6 +1284,21 @@ function buildPrimaryDeskPlay(args: {
   const summary = primaryBias
     ? `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
     : 'No primary directional play is confirmed from scanner-owned lifecycle state.';
+  const targetReactionLevel = primaryBias && primaryDirection !== 'WAIT'
+    ? (primaryDirection === 'LONG'
+        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLevel
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLevel) ?? null
+    : null;
+  const targetReactionLabel = primaryBias && primaryDirection !== 'WAIT'
+    ? (primaryDirection === 'LONG'
+        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionLabel
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionLabel) ?? null
+    : null;
+  const targetReactionReason = primaryBias && primaryDirection !== 'WAIT'
+    ? (primaryDirection === 'LONG'
+        ? args.candidateLifecycleTrace.bestLongPlan?.targetReactionReason
+        : args.candidateLifecycleTrace.bestShortPlan?.targetReactionReason) ?? null
+    : null;
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
@@ -1281,6 +1319,9 @@ function buildPrimaryDeskPlay(args: {
     lineInSand: selectedLine,
     longAbove: longBias.lineInSand,
     shortBelow: shortBias.lineInSand,
+    targetReactionLevel,
+    targetReactionLabel,
+    targetReactionReason,
     nextTrigger,
     invalidation,
     noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',

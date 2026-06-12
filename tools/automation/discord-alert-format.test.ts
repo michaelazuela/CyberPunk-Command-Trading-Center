@@ -174,6 +174,32 @@ const morning = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Morning',
   windowLabel: '10:00-12:00 ET',
+  deskState: {
+    marketMode: 'human_review_ready',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 5320,
+    nextTrigger: 'Completed 5M shift through the reaction level, then retest/hold.',
+    invalidation: 'Invalid if protected structure fails.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG desk play',
+      summary: 'Long remains primary after reaction-level reclaim.',
+      lineInSand: 5320,
+      longAbove: 5320,
+      shortBelow: 5316,
+      targetReactionLevel: 5329,
+      targetReactionLabel: 'NY premarket high',
+      targetReactionReason: 'Real session liquidity.',
+      nextTrigger: 'Completed 5M shift through the reaction level, then retest/hold.',
+      invalidation: 'Invalid if protected structure fails.',
+      noChase: 'No chase. Wait for completed 5M proof.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+    },
+  },
   components: buildOutcomeComponents({
     planVersionId: 'MORNING-TEST',
     sessionType: 'morning',
@@ -191,6 +217,9 @@ assert.ok(flattenDiscordPayloadText(morning).includes('Targets:'));
 assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secure'));
 assert.ok(flattenDiscordPayloadText(morning).includes('T2: 5328.00 - base exit'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extension if T2 clears'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Level Transition:'));
+assert.ok(flattenDiscordPayloadText(morning).includes('Target/reaction: NY premarket high 5329.00'));
+assert.ok(flattenDiscordPayloadText(morning).includes('After 5M shift: LONG above 5320.00 / SHORT below 5316.00.'));
 assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
@@ -253,6 +282,19 @@ assert.ok(!/^T1:/m.test(watchText));
 assert.ok(!/^T2:/m.test(watchText));
 assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(watchPayload)));
 
+const deskPlayLongCandidate = {
+  ...sampleCandidate('LONG'),
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+  entry: 7312,
+  stop: 7271.75,
+  target1: 7400,
+  target2: 7420,
+  riskPoints: 40.25,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+  invalidation: 'Invalid if price trades below the sweep low structure stop near 7271.75.',
+} as SetupCandidate;
 const deskPlayPayload = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-06-11',
@@ -264,8 +306,9 @@ const deskPlayPayload = compactDiscordSummary({
     decision: 'NO TRADE',
     noTradeReason: 'Blocked setup did not meet educational Discord threshold.',
     invalidation: null,
+    setupCandidates: [deskPlayLongCandidate],
   },
-  candidates: [],
+  candidates: [deskPlayLongCandidate],
   attachments: { chartPlan: true, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
@@ -284,6 +327,9 @@ const deskPlayPayload = compactDiscordSummary({
       lineInSand: 7342,
       longAbove: 7342,
       shortBelow: 7303.5,
+      targetReactionLevel: 7288.25,
+      targetReactionLabel: 'London Session Low',
+      targetReactionReason: 'Real session liquidity where short delivery can stall or reverse.',
       nextTrigger: 'Completed 5M pullback must hold above 7342 and reclaim the retest.',
       invalidation: 'Completed 5M acceptance below 7342 damages the long continuation play.',
       noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
@@ -319,11 +365,17 @@ assert.ok(deskPlayText.includes('Line in the Sand: 7342.00'));
 assert.ok(deskPlayText.includes('Decision Map:'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('SHORT BELOW 7303.50'));
-assert.ok(deskPlayText.includes('Status: Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
+assert.ok(deskPlayText.includes('Entry reference: 7312.00'));
+assert.ok(deskPlayText.includes('Protected 5M stop: 7271.75'));
+assert.ok(deskPlayText.includes('Risk: 40.25 pts'));
+assert.ok(deskPlayText.includes('T1: 7372.50'));
+assert.ok(deskPlayText.includes('T2: 7392.50'));
+assert.ok(deskPlayText.includes('Level Transition:'));
+assert.ok(deskPlayText.includes('Target/reaction: London Session Low 7288.25'));
+assert.ok(deskPlayText.includes('After 5M shift: LONG above 7342.00 / SHORT below 7303.50.'));
 assert.ok(deskPlayText.includes('counter-HTF/review-only'));
-assert.ok(deskPlayText.includes('Chart: watch/context attached; levels withheld until protected structure is proven.'));
+assert.ok(deskPlayText.includes('Chart: conditional Desk Plan attached; app math used; canExecute remains false.'));
 assert.ok(deskPlayText.includes('Boundary: approvals, canExecute, entry, stop, target, and risk gates unchanged.'));
-assert.ok(!/^Entry:/m.test(deskPlayText));
 assert.ok(!/^Stop:/m.test(deskPlayText));
 assert.ok(!/Long T1 Hit|Short T1 Hit|Stopped|Scratch/.test(JSON.stringify(deskPlayPayload)));
 

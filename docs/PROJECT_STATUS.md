@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-11
+Task: Add target/reaction level transition language to scanner and Desk Play Discord output.
+Files changed: docs/PROJECT_STATUS.md, src/lib/localScannerEngine.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts.
+Reason: Morning short delivery could post without clearly saying it was delivering into an important HTF/session reaction level, and Desk Play updates could show a new long/short line in the sand without explaining the target-to-reversal transition.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Candidate lifecycle metadata now carries the nearest target/reaction objective into DeskState. Discord scanner alerts and Desk Play updates now include a Level Transition section that names the target/reaction level and the next completed-5M structure lines, such as LONG above / SHORT below. Desk Play decision maps also show app-owned candidate entry, protected stop, risk, T1, and T2 when those levels exist even if normalized canExecute remains false.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord hard blockers changed.
+Bridge impact: None.
+Discord impact: Yes. Scanner/Desk Play wording is more explicit about target/reaction levels and next line-in-the-sand transitions.
+Journal/RAG impact: Existing Discord/RAG consumers receive clearer text from the same DeskState/candidate metadata; no schema change.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Observe the next Morning/Lunch Discord alert and confirm it calls out the reaction level and next 5M structure line before/after any reversal attempt.
+
+## Previous Change
+
+Date: 2026-06-11
 Task: Fix pending Desk Play candidates disappearing as "no ICT candidate/reference level".
 Files changed: docs/PROJECT_STATUS.md, src/agents/scannerPlanSelectionAgent.ts, src/agents/scannerPlanSelectionAgent.test.ts.
 Reason: The latest lunch scanner tape had structured LONG Desk Play candidates with entry, protected 5M stop, targets, and `EntryTriggerPending`, but the selection layer filtered blocked pending-trigger candidates before scoring. That flattened the cycle into zero-confidence "no ICT candidate/reference level" instead of a visible TriggerPending/watch or missed/no-fresh-entry review state.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None identified after focused verification.
 Next recommended action: Observe the next active Morning/Lunch cycle and confirm pending Desk Play states report TriggerPending/watch or missed/no-fresh-entry instead of no-candidate.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-11
 Task: Make Desk Play Discord output read like a protected-structure decision map.

@@ -1,6 +1,6 @@
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
-import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
+import { NoTradeReason, TradeDecisionStatus, type SetupCandidate, type TargetObjective } from '../../src/types';
 import {
   assertDiscordReportDesignerIsAdvisoryOnly,
   designDiscordVisualReport,
@@ -78,6 +78,9 @@ export interface CompactDeskStateForDiscord {
     lineInSand?: number | null;
     longAbove?: number | null;
     shortBelow?: number | null;
+    targetReactionLevel?: number | null;
+    targetReactionLabel?: string | null;
+    targetReactionReason?: string | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -285,6 +288,42 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
     `T2: ${priceLine(appTargets.target2)} - base exit`,
     ...(runner ? [`Runner: ${priceLine(runner)} - extension if T2 clears`] : []),
     ...(stretch ? [`Stretch: ${priceLine(stretch)} - trail only if structure keeps delivering`] : []),
+  ];
+}
+
+function firstTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
+  const plan = candidate.targetObjectivePlan;
+  if (!plan) return null;
+  return (
+    plan.nearestObstacleTarget ||
+    plan.obstacleTarget1 ||
+    plan.nearestLiquidityTarget ||
+    plan.liquidityTarget1 ||
+    plan.selectedT1 ||
+    null
+  );
+}
+
+function scannerLevelTransitionLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): string[] {
+  const reaction = firstTargetReactionObjective(candidate);
+  const play = args.deskState?.primaryDeskPlay;
+  const longAbove = typeof play?.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
+  const shortBelow = typeof play?.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
+  const nextLine = [
+    longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
+    shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
+  ].filter(Boolean).join(' / ');
+  if (!reaction && !nextLine) return [];
+  return [
+    'Level Transition:',
+    ...(reaction ? [
+      `Target/reaction: ${reaction.label} ${priceLine(reaction.price)}`,
+      compactLine(reaction.reason || 'HTF/session reaction level; watch for failure or reversal proof.', 85),
+    ] : []),
+    ...(nextLine ? [
+      `After 5M shift: ${nextLine}.`,
+      'No continuation assumption at reaction level; wait for close/retest/protected structure.',
+    ] : []),
   ];
 }
 
@@ -600,19 +639,41 @@ function deskPlayDecisionMapLines(args: CompactDiscordSummaryArgs): string[] {
   ];
 }
 
+function deskPlayLevelTransitionLines(args: CompactDiscordSummaryArgs): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return [];
+  const reactionLevel = typeof play.targetReactionLevel === 'number' && Number.isFinite(play.targetReactionLevel)
+    ? play.targetReactionLevel
+    : null;
+  const longAbove = typeof play.longAbove === 'number' && Number.isFinite(play.longAbove) ? play.longAbove : null;
+  const shortBelow = typeof play.shortBelow === 'number' && Number.isFinite(play.shortBelow) ? play.shortBelow : null;
+  const nextLine = [
+    longAbove !== null ? `LONG above ${priceLine(longAbove)}` : null,
+    shortBelow !== null ? `SHORT below ${priceLine(shortBelow)}` : null,
+  ].filter(Boolean).join(' / ');
+  if (reactionLevel === null && !nextLine) return [];
+  return [
+    'Level Transition:',
+    ...(reactionLevel !== null ? [
+      `Target/reaction: ${compactLine(play.targetReactionLabel || 'HTF/session reaction level', 70)} ${priceLine(reactionLevel)}`,
+      compactLine(play.targetReactionReason || 'Target/reaction level; watch for failure or reversal proof.', 85),
+    ] : []),
+    ...(nextLine ? [
+      `After 5M shift: ${nextLine}.`,
+      'Map only; execution still needs completed 5M trigger/retest and canExecute gates.',
+    ] : []),
+  ];
+}
+
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
   const direction = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : 'WAIT';
-  const hasConditionalLevels = args.attachments.chartPlan &&
-    typeof args.normalized.entry === 'number' &&
-    Number.isFinite(args.normalized.entry) &&
-    typeof args.normalized.stop === 'number' &&
-    Number.isFinite(args.normalized.stop) &&
-    typeof args.normalized.t1 === 'number' &&
-    Number.isFinite(args.normalized.t1) &&
-    typeof args.normalized.t2 === 'number' &&
-    Number.isFinite(args.normalized.t2);
+  const hasConditionalLevels = Boolean(
+    args.attachments.chartPlan &&
+    (direction === 'LONG' || direction === 'SHORT') &&
+    deskPlayDecisionMapLevels(args.normalized, direction),
+  );
   const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
     ? priceLine(play.lineInSand)
     : 'N/A';
@@ -624,6 +685,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     `HTF/Structure: ${compactLine(play?.summary || 'Scanner-owned DeskState has not confirmed a directional play.', 95)}`,
     `Line in the Sand: ${line}`,
     ...(play ? ['', ...deskPlayDecisionMapLines(args)] : []),
+    ...(play ? ['', ...deskPlayLevelTransitionLines(args)] : []),
     ...(play?.countertrendWarning ? ['', `Countertrend: ${compactLine(play.countertrendWarning, 120)}`] : []),
     '',
     `Trigger: ${compactLine(play?.nextTrigger || args.deskState?.nextTrigger || 'Wait for completed 5M confirmation and retest/hold.', 100)}`,
@@ -808,6 +870,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     bestLevels?.target2 != null
   );
   const includeMemory = designerStatus === 'EXECUTABLE' || bestCandidateHasFullPlan;
+  const levelTransitionLines = bestCandidate ? scannerLevelTransitionLines(args, bestCandidate) : [];
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
@@ -815,6 +878,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         '',
         ...compactPlanLines(bestCandidate, args.normalized),
         '',
+        ...levelTransitionLines,
+        ...(levelTransitionLines.length ? [''] : []),
         ...riskLines,
         ...(riskLines.length ? [''] : []),
         ...htfLines,
