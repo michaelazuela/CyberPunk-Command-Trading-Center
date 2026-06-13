@@ -294,6 +294,22 @@ function checkScannerVisibilityMetadataBoundary() {
   if (ownerContent.includes('No primary directional play')) {
     fail('localScannerEngine.ts WAIT Desk Play summaries must explicitly say no HTF-supported directional play is confirmed.');
   }
+  const packageJson = readFileSafe(path.join(ROOT, 'package.json'));
+  const june12ReplayProofPath = path.join(ROOT, 'tools', 'automation', 'june12-protected-structure-replay.test.ts');
+  const june12ReplayProofContent = readFileSafe(june12ReplayProofPath);
+  if (
+    !packageJson.includes('tools/automation/june12-protected-structure-replay.test.ts') ||
+    !june12ReplayProofContent.includes("new Date('2026-06-12T10:55:00-04:00')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.selectedCandidate?.direction, 'SHORT')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.direction, 'LONG')") ||
+    !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes('changesCanExecute, false') ||
+    !june12ReplayProofContent.includes('changesTradeApprovals, false') ||
+    !june12ReplayProofContent.includes('changesEntryStopTargets, false')
+  ) {
+    fail('June 12 10:55 protected-structure replay proof must stay in npm test and prove SHORT remains visible while protected 15M/5M bullish structure headlines LONG review-only without approval drift.');
+  }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);
