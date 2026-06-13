@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { targetsFromEntryStop } from '../../src/config/tradeRules';
 import { getNinjaHistoricalBars, type NinjaBridgeBar, type NinjaBridgeTimeframe } from '../../src/lib/ninjaTraderBridge';
 import {
   ExecutionStatus,
@@ -13,6 +15,16 @@ import {
 } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, type MarketBarTimeframe } from './market-data-store';
 import { renderChartMarkup } from './chart-markup-renderer';
+import {
+  assertDiscordOutcomeEndpointSecretReady,
+  buildOutcomeComponents,
+  discordWebhookUrlForPayload,
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal,
+} from './discord-outcome-buttons';
+
+dotenv.config({ quiet: true });
+dotenv.config({ path: '.env.local', override: false, quiet: true });
+loadCanonicalDiscordOutcomeSecretFromEnvLocal(process.cwd(), { warnOnOverride: true });
 
 const __filename = fileURLToPath(import.meta.url);
 const DEFAULT_OVERLAY = path.resolve(
@@ -21,6 +33,7 @@ const DEFAULT_OVERLAY = path.resolve(
   'phase-10k-protected-structure-overlay-2026-06-08-to-2026-06-12.json',
 );
 const DEFAULT_OUTPUT_ROOT = path.resolve('reports/protected-structure-review/2026-06-08-to-2026-06-12');
+const MES_DOLLARS_PER_POINT = 5;
 
 type Direction = 'LONG' | 'SHORT';
 
@@ -59,6 +72,8 @@ export interface TradeReviewOptions {
   from?: string;
   to?: string;
   renderCharts?: boolean;
+  postDiscord?: boolean;
+  dryRun?: boolean;
 }
 
 interface LoadedReviewBars {
@@ -78,10 +93,19 @@ interface ReviewCampaignRow {
   confirmations: number;
   firstClose: number;
   lineInSand: number;
+  entry: number;
+  stop: number;
+  riskPoints: number;
+  target1: number;
+  target2: number;
+  oneContractRiskDollars: number;
+  oneContractT1Dollars: number;
+  oneContractT2Dollars: number;
   bias5: OverlayBias;
   bias15: OverlayBias;
   status: 'REVIEW ONLY - not execution approval';
   chart: string | null;
+  discordMessageId: string | null;
 }
 
 interface ReviewSourceSummary {
@@ -99,6 +123,14 @@ function parseArgs(argv: string[]): TradeReviewOptions {
   for (const arg of argv) {
     if (arg === '--no-charts') {
       options.renderCharts = false;
+      continue;
+    }
+    if (arg === '--post-discord') {
+      options.postDiscord = true;
+      continue;
+    }
+    if (arg === '--dry-run') {
+      options.dryRun = true;
       continue;
     }
     const match = arg.match(/^--([^=]+)=(.*)$/);
@@ -182,6 +214,34 @@ function lineInSand(segment: OverlaySegment): number {
   return segment.dir === 'LONG' ? Math.min(...values) : Math.max(...values);
 }
 
+function entryReference(segment: OverlaySegment): number {
+  return segment.first.bias5.confirm;
+}
+
+function protectedStop(segment: OverlaySegment): number {
+  return segment.first.bias5.protect;
+}
+
+function reviewLevels(segment: OverlaySegment) {
+  const entry = entryReference(segment);
+  const stop = protectedStop(segment);
+  const targets = targetsFromEntryStop(segment.dir, entry, stop);
+  if (!Number.isFinite(targets.target1) || !Number.isFinite(targets.target2)) {
+    throw new Error(`Could not compute app-owned targets for ${segment.date} ${segment.start} ${segment.dir}.`);
+  }
+  const riskPoints = Math.abs(entry - stop);
+  return {
+    entry,
+    stop,
+    riskPoints,
+    target1: targets.target1 as number,
+    target2: targets.target2 as number,
+    oneContractRiskDollars: riskPoints * MES_DOLLARS_PER_POINT,
+    oneContractT1Dollars: riskPoints * 1.5 * MES_DOLLARS_PER_POINT,
+    oneContractT2Dollars: riskPoints * 2 * MES_DOLLARS_PER_POINT,
+  };
+}
+
 function chartCandlesForDate(bars: NinjaBridgeBar[], date: string): ChartCandleFact[] {
   const start = timeMs(`${date}T09:00:00-04:00`);
   const end = timeMs(`${date}T16:00:00-04:00`);
@@ -209,6 +269,7 @@ function chartCandlesForDate(bars: NinjaBridgeBar[], date: string): ChartCandleF
 
 function candidateForSegment(segment: OverlaySegment): SetupCandidate {
   const line = lineInSand(segment);
+  const levels = reviewLevels(segment);
   return {
     setupType: SetupType.IntradayMssMicroContinuation,
     scenarioLabel: 'Protected 15M + 5M Trend Confirmation',
@@ -217,11 +278,11 @@ function candidateForSegment(segment: OverlaySegment): SetupCandidate {
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: 'Medium',
     priority: 7,
-    entry: null,
-    stop: null,
-    target1: null,
-    target2: null,
-    riskPoints: null,
+    entry: levels.entry,
+    stop: levels.stop,
+    target1: levels.target1,
+    target2: levels.target2,
+    riskPoints: levels.riskPoints,
     modelConfidenceScore: 78,
     decisionQualityScore: 78,
     levelContextSummary: `${segment.dir} review map: 15M and 5M protected structure aligned.`,
@@ -275,6 +336,104 @@ function candidateForSegment(segment: OverlaySegment): SetupCandidate {
   };
 }
 
+function planVersionId(row: Pick<ReviewCampaignRow, 'date' | 'id' | 'direction'>): string {
+  return `protected-structure-review-${row.date}-${String(row.id).padStart(2, '0')}-${row.direction.toLowerCase()}`;
+}
+
+function discordPayloadForRow(row: ReviewCampaignRow) {
+  const title = `[PROTECTED STRUCTURE REVIEW] MES ${row.direction} #${row.id}`;
+  const content = [
+    `${title} | ${row.date} ${row.start.slice(11, 16)}-${row.end.slice(11, 16)} ET`,
+    'Status: REVIEW ONLY - NOT EXECUTION APPROVAL',
+    '',
+    `${row.direction} review plan`,
+    `Entry ref: ${fmt(row.entry)}`,
+    `Protected 5M stop: ${fmt(row.stop)}`,
+    `Risk: ${fmt(row.riskPoints)} pts / $${fmt(row.oneContractRiskDollars)} per 1 MES`,
+    `T1: ${fmt(row.target1)} / +$${fmt(row.oneContractT1Dollars)} per 1 MES`,
+    `T2: ${fmt(row.target2)} / +$${fmt(row.oneContractT2Dollars)} per 1 MES`,
+    '',
+    `5M: ${row.bias5.bias} confirm ${fmt(row.bias5.confirm)} / protect ${fmt(row.bias5.protect)}`,
+    `15M: ${row.bias15.bias} confirm ${fmt(row.bias15.confirm)} / protect ${fmt(row.bias15.protect)}`,
+    `HTF line in sand: ${fmt(row.lineInSand)}`,
+    '',
+    'Learning buttons record trader outcome only. They do not approve trades, place orders, or change rules.',
+  ].join('\n');
+  return {
+    content,
+    embeds: [
+      {
+        title,
+        description: 'Protected 15M+5M trend confirmation review map. App-owned math, review only.',
+        color: row.direction === 'LONG' ? 0x22c55e : 0xf97316,
+        fields: [
+          { name: 'Plan', value: `Entry ${fmt(row.entry)} | Stop ${fmt(row.stop)} | T1 ${fmt(row.target1)} | T2 ${fmt(row.target2)}`, inline: false },
+          { name: '1 MES', value: `Risk $${fmt(row.oneContractRiskDollars)} | T1 +$${fmt(row.oneContractT1Dollars)} | T2 +$${fmt(row.oneContractT2Dollars)}`, inline: false },
+          { name: 'Boundary', value: 'Review only. canExecute unchanged. No automated orders.', inline: false },
+        ],
+        footer: { text: 'Quant Desk • Protected Structure Review • RAG learning buttons' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+    components: buildOutcomeComponents({
+      planVersionId: planVersionId(row),
+      sessionType: row.start.slice(11, 16) >= '12:00' ? 'lunch' : 'morning',
+      tradeDate: row.date,
+      instrument: 'MES',
+      direction: row.direction,
+    }),
+  };
+}
+
+async function postDiscordReviewRow(row: ReviewCampaignRow, dryRun: boolean): Promise<string | null> {
+  const payload = discordPayloadForRow(row);
+  const files = row.chart ? [path.resolve(row.chart)] : [];
+  if (dryRun) {
+    console.log(JSON.stringify({ ...payload, files }, null, 2));
+    return null;
+  }
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl) throw new Error('DISCORD_WEBHOOK_URL is required to post protected-structure review charts.');
+  await assertDiscordOutcomeEndpointSecretReady(payload.components);
+  const url = discordWebhookUrlForPayload(webhookUrl, payload.components);
+  const payloadWithImage = files[0] && payload.embeds[0]
+    ? {
+      ...payload,
+      embeds: [
+        {
+          ...payload.embeds[0],
+          image: { url: `attachment://${path.basename(files[0])}` },
+        },
+        ...payload.embeds.slice(1),
+      ],
+    }
+    : payload;
+  const response = files.length
+    ? await (async () => {
+      const form = new FormData();
+      form.append('payload_json', JSON.stringify(payloadWithImage));
+      for (const [index, file] of files.entries()) {
+        const bytes = await fs.readFile(file);
+        form.append(`files[${index}]`, new Blob([bytes], { type: 'image/png' }), path.basename(file));
+      }
+      return fetch(url, { method: 'POST', body: form });
+    })()
+    : await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloadWithImage),
+    });
+  if (!response.ok) throw new Error(`Discord webhook failed (${response.status}).`);
+  const bodyText = await response.text().catch(() => '');
+  if (!bodyText.trim()) return null;
+  try {
+    const parsed = JSON.parse(bodyText);
+    return typeof parsed?.id === 'string' ? parsed.id : null;
+  } catch {
+    return null;
+  }
+}
+
 function chartContextForSegment(segment: OverlaySegment, bars: NinjaBridgeBar[]): Partial<ChartContext> {
   return {
     candles: chartCandlesForDate(bars, segment.date),
@@ -324,9 +483,15 @@ function markdownForReport(summary: {
       `- Confirmations: ${row.confirmations} completed 5M bars`,
       `- First aligned close: ${fmt(row.firstClose)}`,
       `- Line in the sand: ${fmt(row.lineInSand)}`,
+      `- Entry ref: ${fmt(row.entry)}`,
+      `- Protected 5M stop: ${fmt(row.stop)}`,
+      `- Risk: ${fmt(row.riskPoints)} pts / $${fmt(row.oneContractRiskDollars)} per 1 MES`,
+      `- T1: ${fmt(row.target1)} / +$${fmt(row.oneContractT1Dollars)} per 1 MES`,
+      `- T2: ${fmt(row.target2)} / +$${fmt(row.oneContractT2Dollars)} per 1 MES`,
       `- 5M: ${row.bias5.bias} | confirm ${fmt(row.bias5.confirm)} | protected ${fmt(row.bias5.protect)}`,
       `- 15M: ${row.bias15.bias} | confirm ${fmt(row.bias15.confirm)} | protected ${fmt(row.bias15.protect)}`,
       `- Chart: ${row.chart || 'not rendered'}`,
+      `- Discord message id: ${row.discordMessageId || 'not posted'}`,
       '',
     );
   }
@@ -344,6 +509,8 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
   const from = options.from || '2026-06-08T00:00:00-04:00';
   const to = options.to || '2026-06-12T16:00:00-04:00';
   const renderCharts = options.renderCharts !== false;
+  const postDiscord = options.postDiscord === true;
+  const dryRun = options.dryRun === true;
 
   const overlay = JSON.parse(await fs.readFile(overlayPath, 'utf8')) as OverlayReport;
   const loaded = await loadReviewBars({ bridgeInstrument, timeframe, marketTimeframe, from, to });
@@ -359,6 +526,7 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
   for (let index = 0; index < overlay.segments.length; index += 1) {
     const segment = overlay.segments[index];
     const line = lineInSand(segment);
+    const levels = reviewLevels(segment);
     const chart = renderCharts
       ? await renderChartMarkup({
         chartContext: chartContextForSegment(segment, loaded.bars),
@@ -373,7 +541,7 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
         filePrefix: `${String(index + 1).padStart(2, '0')}-${segment.date}-${segment.dir.toLowerCase()}-${segment.start.slice(11, 16).replace(':', '')}`,
       })
       : null;
-    campaigns.push({
+    const row: ReviewCampaignRow = {
       id: index + 1,
       date: segment.date,
       direction: segment.dir,
@@ -382,11 +550,17 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
       confirmations: segment.count,
       firstClose: segment.first.close,
       lineInSand: line,
+      ...levels,
       bias5: segment.first.bias5,
       bias15: segment.first.bias15,
       status: 'REVIEW ONLY - not execution approval',
       chart: chart ? path.relative(process.cwd(), chart) : null,
-    });
+      discordMessageId: null,
+    };
+    if (postDiscord) {
+      row.discordMessageId = await postDiscordReviewRow(row, dryRun);
+    }
+    campaigns.push(row);
   }
 
   const source: ReviewSourceSummary = {
@@ -419,7 +593,16 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
     totals: overlay.totals,
     campaigns,
   }));
-  return { outputRoot, jsonPath, markdownPath, campaigns: campaigns.length, charts: campaigns.filter((row) => row.chart).length, source };
+  return {
+    outputRoot,
+    jsonPath,
+    markdownPath,
+    campaigns: campaigns.length,
+    charts: campaigns.filter((row) => row.chart).length,
+    discordPosted: campaigns.filter((row) => row.discordMessageId).length,
+    discordDryRun: postDiscord && dryRun,
+    source,
+  };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-13
+Task: Post protected-structure trade-review cards with charts and RAG buttons.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts.
+Reason: The trader requested the prior-week protected 15M+5M alignment review as trade-by-trade Discord cards, each with entry reference, protected 5M stop, T1/T2, one-MES risk/reward dollars, a chart, and RAG outcome buttons for learning.
+Tests run: npm run diagnostic:protected-structure-trade-review -- --post-discord --dry-run --no-charts; npm run diagnostic:protected-structure-trade-review; npm run diagnostic:protected-structure-trade-review -- --post-discord; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The protected-structure review command can now build Discord-ready review cards, attach generated charts, and include signed RAG outcome buttons. It preflights the deployed outcome endpoint before sending, uses the canonical `.env.local` outcome secret so stale shell secrets cannot sign unusable buttons, and posted 13 review-only MES cards for June 8-12 with charts and learning buttons.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge behavior changed.
+Bridge impact: Read-only diagnostic use of existing market_bars/NinjaTrader historical bars.
+Discord impact: Yes. The protected-structure review command can post review-only chart cards with RAG outcome buttons.
+Journal/RAG impact: Yes. Discord buttons submit trader-confirmed learning outcomes only; they do not approve trades or place orders.
+Supabase impact: No migration added. Existing RAG/outcome persistence path is reused.
+Known risks: None identified after verification.
+Next recommended action: Review the 13 Discord cards and use the RAG buttons to mark outcomes for learning.
+
+## Previous Change
+
+Date: 2026-06-13
 Task: Harden protected-structure trade-review reruns and chart windows.
 Files changed: .gitignore, docs/PROJECT_STATUS.md, package.json, tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, tools/automation/protected-structure-trade-review.ts.
 Reason: The prior-week protected-structure review was initially run with ad hoc shell glue and exposed two repeatable risks: Supabase market-cache credentials may be unavailable in a local shell, and desk-review charts that begin during the morning could be clipped at noon even when the campaign continues into Lunch/PM.
