@@ -21,7 +21,7 @@ const TIMEFRAME_MINUTES: Record<MssEvidenceTimeframe, number> = {
   '240M': 240,
 };
 
-const DEFAULT_BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'close';
+const DEFAULT_BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'open';
 const DEFAULT_BAR_TIME_ZONE: BridgeBarTimeZoneMode = 'eastern';
 
 function isFinitePrice(value: unknown): value is number {

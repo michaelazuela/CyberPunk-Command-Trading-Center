@@ -202,7 +202,7 @@ async function main() {
   const pollSeconds = Number(argValue('poll-seconds') || '60');
   const limit = Math.max(10, Math.min(450, Number(argValue('limit') || '120')));
   const maxStaleBarMinutes = numberArg('max-stale-bar-minutes', 10);
-  const timestampModeArg = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'close';
+  const timestampModeArg = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'open';
   const barTimestampMode: BridgeTimestampMode = timestampModeArg === 'open' ? 'open' : 'close';
   const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'eastern';
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)

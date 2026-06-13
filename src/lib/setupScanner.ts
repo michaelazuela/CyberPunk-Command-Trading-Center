@@ -1275,7 +1275,8 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
     missingEvidence.push('Stop beyond sweep extreme');
   }
 
-  const actualRisk = riskPoints(entry, stop);
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
   const rTargets = targetsFromEntryStop(direction, entry, stop);
   const minimumTarget = entry !== null && actualRisk !== null
     ? direction === 'LONG'
@@ -1286,8 +1287,8 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   const liquidityTarget = entry !== null && minimumTarget !== null
     ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
     : null;
-  const target2 = liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2);
-  const target1 = rTargets.target1;
+  const target2 = stopIsDirectionallyValid ? liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2) : null;
+  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
   const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
   const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
   if (hasTwoR) evidence.push('Minimum 2.0R available');
@@ -1295,7 +1296,7 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   if (target2 !== null) evidence.push(liquidityTarget !== null ? 'Targeting opposing liquidity' : 'Targeting valid R-based objective');
   else missingEvidence.push('Targeting opposing liquidity');
 
-  const fullSequence = hasSweep && hasReclaim && hasDisplacement && hasMss && hasFvg && retraceIntoFvg && entry !== null && stop !== null && target2 !== null && hasTwoR;
+  const fullSequence = hasSweep && hasReclaim && hasDisplacement && hasMss && hasFvg && retraceIntoFvg && entry !== null && stop !== null && stopIsDirectionallyValid && target2 !== null && hasTwoR;
   const partialCount = [hasSweep, hasReclaim, hasDisplacement, hasMss, hasFvg, retraceIntoFvg].filter(Boolean).length;
   const possible = !fullSequence && partialCount >= 2;
 
@@ -1575,7 +1576,8 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     missingEvidence.push('Stop beyond sweep wick');
   }
 
-  const actualRisk = riskPoints(entry, stop);
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
+  const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
   const rTargets = targetsFromEntryStop(direction, entry, stop);
   const minimumTarget = entry !== null && actualRisk !== null
     ? direction === 'LONG'
@@ -1586,8 +1588,8 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   const liquidityTarget = entry !== null && minimumTarget !== null
     ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
     : null;
-  const target1 = rTargets.target1;
-  const target2 = rTargets.target2;
+  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
+  const target2 = stopIsDirectionallyValid ? rTargets.target2 : null;
   const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
   const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
   const hasMinimumTargetRoom = hasExplicitTargetMap ? liquidityTarget !== null : hasTwoR;
@@ -1609,6 +1611,7 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     hasFailedContinuation &&
     entry !== null &&
     stop !== null &&
+    stopIsDirectionallyValid &&
     target2 !== null &&
     hasMinimumTargetRoom &&
     !bigPicture.countertrend;
@@ -1899,6 +1902,12 @@ function riskPoints(entry: number | null, stop: number | null): number | null {
   return Math.abs(entry - stop);
 }
 
+function hasDirectionallyValidStop(direction: Direction, entry: number | null, stop: number | null): boolean {
+  if (direction !== 'LONG' && direction !== 'SHORT') return false;
+  if (entry === null || stop === null) return false;
+  return direction === 'LONG' ? stop < entry : stop > entry;
+}
+
 function riskAdvisoryStatusFor(risk: number | null | undefined): RiskAdvisory {
   if (risk === null || risk === undefined || !Number.isFinite(risk) || risk <= 0) return 'RISK_INVALID_OR_UNDEFINED';
   if (risk > TRADE_RULES.maxRiskPoints * 2) return 'RISK_EXTENDED_STRUCTURAL';
@@ -1924,6 +1933,8 @@ function executionStatusFor(
   status: SetupCandidateStatus,
   direction: Direction,
   risk: number | null,
+  entryPrice: number | null,
+  stopPrice: number | null,
   hasEntry: boolean,
   hasStop: boolean,
   hasTarget: boolean,
@@ -1943,6 +1954,12 @@ function executionStatusFor(
   }
   if (!hasEntry) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerMissing };
   if (!hasStop || risk === null || risk <= 0) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.InvalidStopLocation };
+  if (
+    (direction === 'LONG' && entryPrice !== null && stopPrice !== null && stopPrice >= entryPrice) ||
+    (direction === 'SHORT' && entryPrice !== null && stopPrice !== null && stopPrice <= entryPrice)
+  ) {
+    return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.InvalidStopLocation };
+  }
   if (!hasTarget) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.TargetsUnavailable };
   if (!hasInvalidation) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.InvalidStopLocation };
   if (hasPendingTrigger) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending };
@@ -2016,6 +2033,8 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     detectedStatus,
     direction,
     risk,
+    entryPrice,
+    stopPrice,
     entryPrice !== null,
     stopPrice !== null,
     targets.target1 !== null && targets.target2 !== null,

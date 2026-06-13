@@ -28,7 +28,7 @@ const PRELOAD_FROM = '2026-05-02T00:00:00-04:00';
 const RTH_FROM = '2026-06-01T09:30:00-04:00';
 const RTH_TO = '2026-06-05T16:00:00-04:00';
 const TRADE_DATES = ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05'];
-const BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'close';
+const BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'open';
 const BAR_TIME_ZONE: BridgeBarTimeZoneMode = 'eastern';
 
 function argValue(name: string): string | null {

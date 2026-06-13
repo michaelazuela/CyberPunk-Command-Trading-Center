@@ -74,7 +74,7 @@ export function parseDiagnosticReplayArgs(args = process.argv.slice(2)): Diagnos
   if (direction !== 'LONG' && direction !== 'SHORT' && direction !== 'AUTO') {
     throw new Error('--direction must be LONG, SHORT, or AUTO.');
   }
-  const timestampMode = (readFlag(args, '--bar-timestamp-mode') || 'close').toLowerCase();
+  const timestampMode = (readFlag(args, '--bar-timestamp-mode') || 'open').toLowerCase();
   if (timestampMode !== 'open' && timestampMode !== 'close') {
     throw new Error('--bar-timestamp-mode must be open or close.');
   }

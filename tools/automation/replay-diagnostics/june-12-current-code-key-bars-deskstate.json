@@ -1,0 +1,1239 @@
+{
+  "createdAt": "2026-06-13T03:20:41.102Z",
+  "source": "current_code_default_open_timestamp_mode",
+  "rows": [
+    {
+      "time": "10:50",
+      "close": 7391.25,
+      "chartCurrentPrice": 7391.25,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "SweepMssFvgRetrace",
+        "state": "Approved"
+      },
+      "deskPlay": {
+        "direction": "WAIT",
+        "longAbove": 7391.25,
+        "shortBelow": 7383,
+        "summary": "No HTF-supported directional play is confirmed. SHORT evidence stays review-only until completed HTF support or protected 5M reversal proof changes the map.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "WAIT",
+          "appTarget1": 7334.25,
+          "appTarget2": 7315.25,
+          "reaction": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "reaction",
+            "label": "Round Number 7390",
+            "price": 7390,
+            "source": "scanner_reaction",
+            "rMultiple": null,
+            "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+          },
+          "nextDraw": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "next_draw",
+            "label": "Prior RTH Day Low",
+            "price": 7263,
+            "source": "previous_rth",
+            "rMultiple": 3.38,
+            "instruction": "Next draw after app targets; runner only if completed 5M acceptance continues."
+          },
+          "runner": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "runner",
+            "label": "Full ETH Context Low",
+            "price": 7232.5,
+            "source": "full_context",
+            "rMultiple": 4.18,
+            "instruction": "Runner objective; trail only after T2 clears with completed 5M acceptance."
+          },
+          "extension": null,
+          "objectives": [
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "reaction",
+              "label": "Round Number 7390",
+              "price": 7390,
+              "source": "scanner_reaction",
+              "rMultiple": null,
+              "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+            },
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "next_draw",
+              "label": "Prior RTH Day Low",
+              "price": 7263,
+              "source": "previous_rth",
+              "rMultiple": 3.38,
+              "instruction": "Next draw after app targets; runner only if completed 5M acceptance continues."
+            },
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "runner",
+              "label": "Full ETH Context Low",
+              "price": 7232.5,
+              "source": "full_context",
+              "rMultiple": 4.18,
+              "instruction": "Runner objective; trail only after T2 clears with completed 5M acceptance."
+            }
+          ],
+          "managementInstruction": "App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "TurtleSoup|LONG|scenario|Blocked",
+        "setupType": "TurtleSoup",
+        "scenarioLabel": null,
+        "direction": "LONG",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 118,
+        "priority": 95,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Valid entry after reclaim or retrace",
+          "App T1/T2 from actual entry/stop risk",
+          "Forward opposing liquidity objective for management context",
+          "Minimum 2.0R unavailable",
+          "Countertrend setup requires immediate failure confirmation; do not fight big-picture structure",
+          "Structure signal conflicts with higher-timeframe thesis",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 120M.",
+          "No chase: wait for a completed 5M or 15M close above 7391.25 because 7391.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: London Bearish Displacement Imbalance Midpoint (london imbalance_midpoint).",
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
+        "requiredTrigger": "Countertrend bullish Turtle Soup requires immediate reclaim failure against the bearish big-picture structure, then fresh 5M confirmation. Do not fight big-picture structure. Completed 5M or 15M close above 7391.25 required before long continuation is active.",
+        "entry": null,
+        "stop": 7410.25,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "invalidation": "Invalid if price trades below the sweep wick structure stop near 7410.25.",
+        "lineInSand": 7391.25,
+        "lineInSandReason": "7391.25 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: London Bearish Displacement Imbalance Midpoint (london imbalance_midpoint).",
+        "targetReactionLevel": null,
+        "targetReactionLabel": null,
+        "targetReactionReason": null,
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": null,
+          "targetReactionLabel": null,
+          "targetReactionReason": null,
+          "longAbove": 7391.25,
+          "shortBelow": null,
+          "profitProtectionInstruction": "No target/reaction level is mapped for this cycle; do not invent a profit-taking or reversal area.",
+          "targetManagementInstruction": "Management: app T1/T2 remain tactical only; no HTF/session reaction cap is mapped for this cycle.",
+          "nextStructureInstruction": "After a protected completed 5M market-structure shift, use LONG above 7391.25 as the next line-in-the-sand map.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": false,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "bestShort": {
+        "candidateKey": "SweepMssFvgRetrace|SHORT|ICT Model 1 Short: Sweep Reclaim Imbalance Retrace|Executable",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "ICT Model 1 Short: Sweep Reclaim Imbalance Retrace",
+        "direction": "SHORT",
+        "detectedStatus": "Conditional",
+        "executionStatus": "Executable",
+        "candidateState": null,
+        "rankScore": 260,
+        "priority": 98,
+        "decisionQualityScore": 98,
+        "modelConfidenceScore": null,
+        "visibilityMode": "POST_REVIEW",
+        "blockReason": null,
+        "missingEvidence": [],
+        "missingLevels": [],
+        "nextTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "requiredTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "entry": 7391.25,
+        "stop": 7429.25,
+        "target1": 7334.25,
+        "target2": 7315.25,
+        "riskPoints": 38,
+        "invalidation": "Invalid if price trades above the sweep high structure stop near 7429.25.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7390,
+        "targetReactionLabel": "Round Number 7390",
+        "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7390,
+          "targetReactionLabel": "Round Number 7390",
+          "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7390 7390.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": true,
+        "filteredOutReason": null
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "RANGE",
+          "biasChangeLine": 7421.5,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "RANGE",
+          "biasChangeLine": 7411.75,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "RANGE",
+          "biasChangeLine": 7393.25,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    },
+    {
+      "time": "10:55",
+      "close": 7433.5,
+      "chartCurrentPrice": 7433.5,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "IntradayMssMicroContinuation",
+        "state": "Conditional"
+      },
+      "deskPlay": {
+        "direction": "LONG",
+        "longAbove": 7395,
+        "shortBelow": 7383,
+        "summary": "LONG remains primary while its line/trigger holds. Opposite side stays visible as blocked.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "LONG",
+          "appTarget1": 7405.5,
+          "appTarget2": 7409,
+          "reaction": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "reaction",
+            "label": "Session Bullish Displacement Imbalance Midpoint",
+            "price": 7396.5,
+            "source": "scanner_reaction",
+            "rMultiple": null,
+            "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+          },
+          "nextDraw": null,
+          "runner": null,
+          "extension": null,
+          "objectives": [
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "reaction",
+              "label": "Session Bullish Displacement Imbalance Midpoint",
+              "price": 7396.5,
+              "source": "scanner_reaction",
+              "rMultiple": null,
+              "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+            }
+          ],
+          "managementInstruction": "App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "OpeningDriveFvgContinuation|LONG|Opening Drive FVG Continuation|OPENING_OBSERVATION_ARMED",
+        "setupType": "OpeningDriveFvgContinuation",
+        "scenarioLabel": "Opening Drive FVG Continuation",
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "candidateState": "OPENING_OBSERVATION_ARMED",
+        "rankScore": 237.6,
+        "priority": 97,
+        "decisionQualityScore": 70,
+        "modelConfidenceScore": 93,
+        "visibilityMode": "POST_REVIEW",
+        "blockReason": "EntryTriggerPending",
+        "missingEvidence": [
+          "Forward target room remains after the FVG retest",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
+        "requiredTrigger": "Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.",
+        "entry": 7395,
+        "stop": 7388,
+        "target1": 7405.5,
+        "target2": 7409,
+        "riskPoints": 7,
+        "invalidation": "Invalid if price trades below the protected 5M opening-drive/FVG structure stop near 7388.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7396.5,
+        "targetReactionLabel": "Session Bullish Displacement Imbalance Midpoint",
+        "targetReactionReason": "Session Bullish Displacement Imbalance Midpoint is a long-side reaction/target zone 0.21R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7396.5,
+          "targetReactionLabel": "Session Bullish Displacement Imbalance Midpoint",
+          "targetReactionReason": "Session Bullish Displacement Imbalance Midpoint is a long-side reaction/target zone 0.21R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Session Bullish Displacement Imbalance Midpoint 7396.50 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "EntryTriggerPending"
+      },
+      "bestShort": {
+        "candidateKey": "SweepMssFvgRetrace|SHORT|ICT Model 1 Short: Sweep Reclaim Imbalance Retrace|Blocked",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "ICT Model 1 Short: Sweep Reclaim Imbalance Retrace",
+        "direction": "SHORT",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 174,
+        "priority": 98,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "requiredTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "entry": 7391.25,
+        "stop": 7429.25,
+        "target1": 7334.25,
+        "target2": 7315.25,
+        "riskPoints": 38,
+        "invalidation": "Invalid if price trades above the sweep high structure stop near 7429.25.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7390,
+        "targetReactionLabel": "Round Number 7390",
+        "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7390,
+          "targetReactionLabel": "Round Number 7390",
+          "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7390 7390.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "BULL",
+          "biasChangeLine": 7384.25,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    },
+    {
+      "time": "11:00",
+      "close": 7440.75,
+      "chartCurrentPrice": 7440.75,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "IntradayMssMicroContinuation",
+        "state": "Conditional"
+      },
+      "deskPlay": {
+        "direction": "LONG",
+        "longAbove": 7443.5,
+        "shortBelow": 7383,
+        "summary": "LONG remains primary while its line/trigger holds. Opposite side stays visible as blocked.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "LONG",
+          "appTarget1": null,
+          "appTarget2": null,
+          "reaction": null,
+          "nextDraw": null,
+          "runner": null,
+          "extension": null,
+          "objectives": [],
+          "managementInstruction": "No HTF objective ladder is mapped this cycle. App T1/T2 remain the only visible tactical targets.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "TurtleSoup|LONG|scenario|Conditional",
+        "setupType": "TurtleSoup",
+        "scenarioLabel": null,
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "candidateState": null,
+        "rankScore": 240,
+        "priority": 95,
+        "decisionQualityScore": 78,
+        "modelConfidenceScore": null,
+        "visibilityMode": "POST_WATCH",
+        "blockReason": "EntryTriggerMissing",
+        "missingEvidence": [
+          "Valid entry after reclaim or retrace",
+          "App T1/T2 from actual entry/stop risk",
+          "Forward opposing liquidity objective for management context",
+          "Minimum 2.0R unavailable",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 120M.",
+          "No chase: wait for a completed 5M or 15M close above 7443.50 because 7443.50 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Current Imported Window High (current_window high)."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
+        "requiredTrigger": "Bullish Turtle Soup requires an established sell-side liquidity raid, reclaim above the swept low, valid entry after reclaim or retrace, and stop beyond the sweep wick. Completed 5M or 15M close above 7443.50 required before long continuation is active.",
+        "entry": null,
+        "stop": 7410.25,
+        "target1": null,
+        "target2": null,
+        "riskPoints": null,
+        "invalidation": "Invalid if price trades below the sweep wick structure stop near 7410.25.",
+        "lineInSand": 7443.5,
+        "lineInSandReason": "7443.50 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Current Imported Window High (current_window high).",
+        "targetReactionLevel": null,
+        "targetReactionLabel": null,
+        "targetReactionReason": null,
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": null,
+          "targetReactionLabel": null,
+          "targetReactionReason": null,
+          "longAbove": 7443.5,
+          "shortBelow": null,
+          "profitProtectionInstruction": "No target/reaction level is mapped for this cycle; do not invent a profit-taking or reversal area.",
+          "targetManagementInstruction": "Management: app T1/T2 remain tactical only; no HTF/session reaction cap is mapped for this cycle.",
+          "nextStructureInstruction": "After a protected completed 5M market-structure shift, use LONG above 7443.50 as the next line-in-the-sand map.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": false,
+        "selected": false,
+        "filteredOutReason": "EntryTriggerMissing"
+      },
+      "bestShort": {
+        "candidateKey": "SweepMssFvgRetrace|SHORT|ICT Model 1 Short: Sweep Reclaim Imbalance Retrace|Blocked",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": "ICT Model 1 Short: Sweep Reclaim Imbalance Retrace",
+        "direction": "SHORT",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 174,
+        "priority": 98,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "requiredTrigger": "Entry only on retrace into bearish imbalance 7383-7399.5 after sweep, reclaim, displacement, and bearish structure shift.",
+        "entry": 7391.25,
+        "stop": 7429.25,
+        "target1": 7334.25,
+        "target2": 7315.25,
+        "riskPoints": 38,
+        "invalidation": "Invalid if price trades above the sweep high structure stop near 7429.25.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7390,
+        "targetReactionLabel": "Round Number 7390",
+        "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7390,
+          "targetReactionLabel": "Round Number 7390",
+          "targetReactionReason": "Round Number 7390 is a short-side reaction/target zone 0.03R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7390 7390.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "BULL",
+          "biasChangeLine": 7384.25,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    },
+    {
+      "time": "11:05",
+      "close": 7437.75,
+      "chartCurrentPrice": 7437.75,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "IntradayMssMicroContinuation",
+        "state": "Conditional"
+      },
+      "deskPlay": {
+        "direction": "LONG",
+        "longAbove": 7440,
+        "shortBelow": 7423.75,
+        "summary": "LONG remains primary while its line/trigger holds. Opposite side stays visible as blocked.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "LONG",
+          "appTarget1": null,
+          "appTarget2": null,
+          "reaction": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "reaction",
+            "label": "London Bearish Displacement Imbalance Top",
+            "price": 7399.5,
+            "source": "scanner_reaction",
+            "rMultiple": null,
+            "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+          },
+          "nextDraw": null,
+          "runner": null,
+          "extension": null,
+          "objectives": [
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "reaction",
+              "label": "London Bearish Displacement Imbalance Top",
+              "price": 7399.5,
+              "source": "scanner_reaction",
+              "rMultiple": null,
+              "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+            }
+          ],
+          "managementInstruction": "App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "SweepMssFvgRetrace|LONG|scenario|Conditional",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": null,
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "candidateState": null,
+        "rankScore": 261.5,
+        "priority": 98,
+        "decisionQualityScore": 81,
+        "modelConfidenceScore": null,
+        "visibilityMode": "POST_WATCH",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Minimum 2.0R available",
+          "Targeting opposing liquidity",
+          "Avoid longs in premium unless reversal logic is strong",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 120M.",
+          "No chase: wait for a completed 5M or 15M close above 7440.00 because 7440.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7440 (app round_number)."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7440.00 required before long continuation is active.",
+        "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7440.00 required before long continuation is active.",
+        "entry": 7395,
+        "stop": 7396.75,
+        "target1": null,
+        "target2": null,
+        "riskPoints": 1.75,
+        "invalidation": "Invalid if price trades below the sweep low structure stop near 7396.75.",
+        "lineInSand": 7440,
+        "lineInSandReason": "7440.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7440 (app round_number).",
+        "targetReactionLevel": 7399.5,
+        "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+        "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7399.5,
+          "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+          "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": 7440,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat London Bearish Displacement Imbalance Top 7399.50 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "After a protected completed 5M market-structure shift, use LONG above 7440.00 as the next line-in-the-sand map.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": false,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "bestShort": {
+        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
+        "setupType": "TurtleSoup",
+        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "direction": "SHORT",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 258,
+        "priority": 96,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "entry": 7401.5,
+        "stop": 7425,
+        "target1": 7353.75,
+        "target2": 7263,
+        "riskPoints": 23.5,
+        "invalidation": "Invalid if price trades above the sweep wick structure stop near 7425.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7400,
+        "targetReactionLabel": "Round Number 7400",
+        "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7400,
+          "targetReactionLabel": "Round Number 7400",
+          "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7400 7400.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "BULL",
+          "biasChangeLine": 7384.25,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    },
+    {
+      "time": "11:15",
+      "close": 7448.25,
+      "chartCurrentPrice": 7448.25,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "IntradayMssMicroContinuation",
+        "state": "Conditional"
+      },
+      "deskPlay": {
+        "direction": "LONG",
+        "longAbove": 7450,
+        "shortBelow": 7423.75,
+        "summary": "LONG remains primary while its line/trigger holds. Opposite side stays visible as blocked.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "LONG",
+          "appTarget1": null,
+          "appTarget2": null,
+          "reaction": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "reaction",
+            "label": "London Bearish Displacement Imbalance Top",
+            "price": 7399.5,
+            "source": "scanner_reaction",
+            "rMultiple": null,
+            "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+          },
+          "nextDraw": null,
+          "runner": null,
+          "extension": null,
+          "objectives": [
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "reaction",
+              "label": "London Bearish Displacement Imbalance Top",
+              "price": 7399.5,
+              "source": "scanner_reaction",
+              "rMultiple": null,
+              "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+            }
+          ],
+          "managementInstruction": "App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "SweepMssFvgRetrace|LONG|scenario|Conditional",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": null,
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "candidateState": null,
+        "rankScore": 261.5,
+        "priority": 98,
+        "decisionQualityScore": 81,
+        "modelConfidenceScore": null,
+        "visibilityMode": "POST_WATCH",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Minimum 2.0R available",
+          "Targeting opposing liquidity",
+          "Avoid longs in premium unless reversal logic is strong",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 120M.",
+          "No chase: wait for a completed 5M or 15M close above 7450.00 because 7450.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7450 (app round_number)."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7450.00 required before long continuation is active.",
+        "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7450.00 required before long continuation is active.",
+        "entry": 7395,
+        "stop": 7396.75,
+        "target1": null,
+        "target2": null,
+        "riskPoints": 1.75,
+        "invalidation": "Invalid if price trades below the sweep low structure stop near 7396.75.",
+        "lineInSand": 7450,
+        "lineInSandReason": "7450.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7450 (app round_number).",
+        "targetReactionLevel": 7399.5,
+        "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+        "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7399.5,
+          "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+          "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": 7450,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat London Bearish Displacement Imbalance Top 7399.50 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "After a protected completed 5M market-structure shift, use LONG above 7450.00 as the next line-in-the-sand map.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": false,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "bestShort": {
+        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
+        "setupType": "TurtleSoup",
+        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "direction": "SHORT",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 257,
+        "priority": 96,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "entry": 7401.5,
+        "stop": 7425,
+        "target1": 7353.75,
+        "target2": 7263,
+        "riskPoints": 23.5,
+        "invalidation": "Invalid if price trades above the sweep wick structure stop near 7425.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7400,
+        "targetReactionLabel": "Round Number 7400",
+        "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7400,
+          "targetReactionLabel": "Round Number 7400",
+          "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7400 7400.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "BULL",
+          "biasChangeLine": 7384.25,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    },
+    {
+      "time": "11:30",
+      "close": 7458.75,
+      "chartCurrentPrice": 7458.75,
+      "selected": {
+        "direction": "SHORT",
+        "setupType": "IntradayMssMicroContinuation",
+        "state": "Conditional"
+      },
+      "deskPlay": {
+        "direction": "LONG",
+        "longAbove": 7460,
+        "shortBelow": 7423.75,
+        "summary": "LONG remains primary while its line/trigger holds. Opposite side stays visible as blocked.",
+        "ladder": {
+          "sourceOfTruth": "scanner_htf_objective_ladder",
+          "direction": "LONG",
+          "appTarget1": null,
+          "appTarget2": null,
+          "reaction": {
+            "sourceOfTruth": "scanner_htf_objective_ladder",
+            "kind": "reaction",
+            "label": "London Bearish Displacement Imbalance Top",
+            "price": 7399.5,
+            "source": "scanner_reaction",
+            "rMultiple": null,
+            "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+          },
+          "nextDraw": null,
+          "runner": null,
+          "extension": null,
+          "objectives": [
+            {
+              "sourceOfTruth": "scanner_htf_objective_ladder",
+              "kind": "reaction",
+              "label": "London Bearish Displacement Imbalance Top",
+              "price": 7399.5,
+              "source": "scanner_reaction",
+              "rMultiple": null,
+              "instruction": "Reaction zone: take T1/T2 seriously and protect if 5M rejects."
+            }
+          ],
+          "managementInstruction": "App T1/T2 remain tactical. Use the HTF ladder for management only: protect at reaction zones; hold runners only after completed 5M acceptance beyond T2.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        }
+      },
+      "bestLong": {
+        "candidateKey": "SweepMssFvgRetrace|LONG|scenario|Conditional",
+        "setupType": "SweepMssFvgRetrace",
+        "scenarioLabel": null,
+        "direction": "LONG",
+        "detectedStatus": "Possible",
+        "executionStatus": "Conditional",
+        "candidateState": null,
+        "rankScore": 261.5,
+        "priority": 98,
+        "decisionQualityScore": 81,
+        "modelConfidenceScore": null,
+        "visibilityMode": "POST_WATCH",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Minimum 2.0R available",
+          "Targeting opposing liquidity",
+          "Avoid longs in premium unless reversal logic is strong",
+          "Active timeframe MSS ruleset requires confirmed completed aligned 5M MSS before executable status.",
+          "Active timeframe MSS ruleset found opposing completed 5M bearish MSS.",
+          "Active timeframe MSS ruleset found opposing completed HTF MSS on 120M.",
+          "No chase: wait for a completed 5M or 15M close above 7460.00 because 7460.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7460 (app round_number)."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7460.00 required before long continuation is active.",
+        "requiredTrigger": "Retrace into the bullish FVG after sell-side sweep, reclaim, displacement, and market structure shift. Completed 5M or 15M close above 7460.00 required before long continuation is active.",
+        "entry": 7395,
+        "stop": 7396.75,
+        "target1": null,
+        "target2": null,
+        "riskPoints": 1.75,
+        "invalidation": "Invalid if price trades below the sweep low structure stop near 7396.75.",
+        "lineInSand": 7460,
+        "lineInSandReason": "7460.00 matters because it is the nearest structured HTF/session resistance or upside objective in the trade path: Round Number 7460 (app round_number).",
+        "targetReactionLevel": 7399.5,
+        "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+        "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7399.5,
+          "targetReactionLabel": "London Bearish Displacement Imbalance Top",
+          "targetReactionReason": "London Bearish Displacement Imbalance Top is a long-side reaction/target zone 2.57R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": 7460,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat London Bearish Displacement Imbalance Top 7399.50 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "After a protected completed 5M market-structure shift, use LONG above 7460.00 as the next line-in-the-sand map.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": true,
+        "htfSupported": true,
+        "countertrend": true,
+        "hasFullPlanLevels": false,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "bestShort": {
+        "candidateKey": "TurtleSoup|SHORT|Bearish Turtle Soup Reversal|Blocked",
+        "setupType": "TurtleSoup",
+        "scenarioLabel": "Bearish Turtle Soup Reversal",
+        "direction": "SHORT",
+        "detectedStatus": "Blocked",
+        "executionStatus": "Blocked",
+        "candidateState": null,
+        "rankScore": 257,
+        "priority": 96,
+        "decisionQualityScore": 44,
+        "modelConfidenceScore": null,
+        "visibilityMode": "HOLD_WITH_REASON",
+        "blockReason": "InvalidStopLocation",
+        "missingEvidence": [
+          "Candidate invalidated: current 5M price action has already traded through the structure stop/invalidation."
+        ],
+        "missingLevels": [],
+        "nextTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "requiredTrigger": "Bearish Turtle Soup: buy-side sweep above 7423.75, reclaim back below the swept high, then confirm downward rejection or expansion.",
+        "entry": 7401.5,
+        "stop": 7425,
+        "target1": 7353.75,
+        "target2": 7263,
+        "riskPoints": 23.5,
+        "invalidation": "Invalid if price trades above the sweep wick structure stop near 7425.",
+        "lineInSand": null,
+        "lineInSandReason": null,
+        "targetReactionLevel": 7400,
+        "targetReactionLabel": "Round Number 7400",
+        "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+        "levelTransition": {
+          "sourceOfTruth": "scanner_level_transition_map",
+          "targetReactionLevel": 7400,
+          "targetReactionLabel": "Round Number 7400",
+          "targetReactionReason": "Round Number 7400 is a short-side reaction/target zone 0.06R from candidate entry. Watch for pause, rejection, reclaim, or runner continuation there.",
+          "longAbove": null,
+          "shortBelow": null,
+          "profitProtectionInstruction": "Treat Round Number 7400 7400.00 as the target/reaction decision area. Secure profits or reduce continuation assumptions there until completed 5M proof appears.",
+          "targetManagementInstruction": "Management: take T1 seriously; cap expectation at T2 into HTF/session structure unless completed 5M acceptance clears it. Reversal risk is live.",
+          "nextStructureInstruction": "No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.",
+          "approvalBoundary": {
+            "changesTradeApprovals": false,
+            "changesCanExecute": false,
+            "changesEntryStopTargets": false
+          }
+        },
+        "htfConflict": false,
+        "htfSupported": false,
+        "countertrend": false,
+        "hasFullPlanLevels": true,
+        "selected": false,
+        "filteredOutReason": "InvalidStopLocation"
+      },
+      "protectedRows": [
+        {
+          "timeframe": "4H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7620.5,
+          "confirmationLine": 7620.5,
+          "protectedStructure": 7577.5
+        },
+        {
+          "timeframe": "2H",
+          "currentBias": "BEAR",
+          "biasChangeLine": 7588,
+          "confirmationLine": 7588,
+          "protectedStructure": 7527.5
+        },
+        {
+          "timeframe": "1H",
+          "currentBias": "BULL",
+          "biasChangeLine": 7384.25,
+          "confirmationLine": 7421.5,
+          "protectedStructure": 7384.25
+        },
+        {
+          "timeframe": "15M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7411.75,
+          "protectedStructure": 7377.5
+        },
+        {
+          "timeframe": "5M",
+          "currentBias": "BULL",
+          "biasChangeLine": 7377.5,
+          "confirmationLine": 7393.25,
+          "protectedStructure": 7377.5
+        }
+      ],
+      "canExecute": false
+    }
+  ]
+}

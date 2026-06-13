@@ -284,6 +284,43 @@ function checkScannerVisibilityMetadataBoundary() {
   ) {
     fail('localScannerEngine.ts must prevent HTF-opposed or HTF-unsupported candidates from becoming the primary Desk Play headline except when scanner-owned protected 15M/5M structure support is resolved.');
   }
+
+  const bridgePath = path.join(ROOT, 'src', 'lib', 'ninjaTraderBridge.ts');
+  const timeframeMssPath = path.join(ROOT, 'src', 'lib', 'timeframeMssEvidence.ts');
+  const tradeRulesPath = path.join(ROOT, 'src', 'config', 'tradeRules.ts');
+  const tradeRulesTestPath = path.join(ROOT, 'src', 'config', 'tradeRules.test.ts');
+  const setupScannerPath = path.join(ROOT, 'src', 'lib', 'setupScanner.ts');
+  const conditionalPlanBuilderPath = path.join(ROOT, 'src', 'lib', 'conditionalPlanBuilder.ts');
+  const bridgeContent = readFileSafe(bridgePath);
+  const timeframeMssContent = readFileSafe(timeframeMssPath);
+  const tradeRulesContent = readFileSafe(tradeRulesPath);
+  const tradeRulesTestContent = readFileSafe(tradeRulesTestPath);
+  const setupScannerContent = readFileSafe(setupScannerPath);
+  const conditionalPlanBuilderContent = readFileSafe(conditionalPlanBuilderPath);
+  if (
+    !bridgeContent.includes("barTimestampMode = 'open'") ||
+    !ownerContent.includes("timestampMode: BridgeTimestampMode = 'open'") ||
+    !ownerContent.includes("args.timestampMode || 'open'") ||
+    !timeframeMssContent.includes("const DEFAULT_BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'open'") ||
+    !scannerContent.includes("NINJATRADER_BAR_TIMESTAMP_MODE || 'open'") ||
+    !scannerContent.includes('NinjaTrader bridge bars are treated as bar-open times by default')
+  ) {
+    fail('NinjaTrader bridge, scanner, freshness, and HTF MSS defaults must treat bridge bars as open timestamps unless explicitly overridden.');
+  }
+  if (
+    !tradeRulesContent.includes("direction === 'LONG' && stop >= entry") ||
+    !tradeRulesContent.includes("direction === 'SHORT' && stop <= entry") ||
+    !setupScannerContent.includes('function hasDirectionallyValidStop') ||
+    !setupScannerContent.includes('stopIsDirectionallyValid ? rTargets.target1 : null') ||
+    !setupScannerContent.includes('stopIsDirectionallyValid ? rTargets.target2 : null') ||
+    !conditionalPlanBuilderContent.includes('function hasDirectionallyValidStop') ||
+    !conditionalPlanBuilderContent.includes('stopIsDirectionallyValid ? input.target1Override ?? computedTargets.target1 : null') ||
+    !conditionalPlanBuilderContent.includes('stopIsDirectionallyValid ? input.target2Override ?? computedTargets.target2 : null') ||
+    !tradeRulesTestContent.includes("targetsFromEntryStop('LONG', 7395, 7396.75)") ||
+    !tradeRulesTestContent.includes("targetsFromEntryStop('SHORT', 7430, 7429.25)")
+  ) {
+    fail('App target math must reject directionally invalid stops so wrong-side stop levels cannot create fake R targets.');
+  }
   if (
     !ownerContent.includes('candidateHasHtfSupport') ||
     !ownerContent.includes('lifecycleItemHasHtfSupport') ||

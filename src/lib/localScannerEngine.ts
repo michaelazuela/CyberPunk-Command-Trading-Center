@@ -709,7 +709,7 @@ export function latestCompletedBar(
   bars: NinjaBridgeBar[],
   timeframeMinutes: number,
   now = new Date(),
-  timestampMode: BridgeTimestampMode = 'close',
+  timestampMode: BridgeTimestampMode = 'open',
   timeZoneMode: BridgeTimeZoneMode = 'eastern'
 ): NinjaBridgeBar | null {
   const completed = bars.filter((bar) => {
@@ -730,7 +730,7 @@ export function assessBridgeBarStaleness(args: {
 }): BridgeBarStalenessResult {
   const now = args.now || new Date();
   const maxAllowedMinutes = args.maxStaleBarMinutes ?? 10;
-  const timestampMode = args.timestampMode || 'close';
+  const timestampMode = args.timestampMode || 'open';
   const timeZoneMode = args.timeZoneMode || 'eastern';
   if (!args.latestBar) {
     return {
@@ -1285,8 +1285,8 @@ function currentBiasFromProtectedStructure(args: {
   if (args.rowBias === 'BEAR') {
     return protectedStructure !== null && currentPrice > protectedStructure ? bearishChange : bullishChange;
   }
-  if (confirmationLine !== null && currentPrice >= confirmationLine) return bearishChange;
   if (protectedStructure !== null && currentPrice <= protectedStructure) return bullishChange;
+  if (confirmationLine !== null && currentPrice >= confirmationLine) return bearishChange;
   if (protectedStructure !== null && confirmationLine !== null) {
     return {
       currentBias: 'RANGE',

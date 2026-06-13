@@ -113,6 +113,7 @@ const oneTwentyNoonCloseTimestampMode = buildTimeframeMssEvidence({
   timeframe: '120M',
   bars: june5OneTwentyMinuteWithIncompleteNoonMss,
   asOfTimestamp: '2026-06-05T12:30:00-04:00',
+  barTimestampMode: 'close',
 });
 assert.equal(oneTwentyNoonCloseTimestampMode.status, 'confirmed_mss');
 assert.equal(oneTwentyNoonCloseTimestampMode.breaksStructure, true);

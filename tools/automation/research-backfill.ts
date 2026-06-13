@@ -120,7 +120,7 @@ function assertConcept(value: string | null): ResearchBackfillConceptSelector {
 export function parseResearchBackfillArgs(args = process.argv.slice(2)): ResearchBackfillCliOptions {
   const instrument = (readFlag(args, '--instrument') || 'MES').toUpperCase();
   if (instrument !== 'MES' && instrument !== 'MNQ') throw new Error('--instrument must be MES or MNQ.');
-  const timestampMode = (readFlag(args, '--bar-timestamp-mode') || 'close').toLowerCase();
+  const timestampMode = (readFlag(args, '--bar-timestamp-mode') || 'open').toLowerCase();
   if (timestampMode !== 'open' && timestampMode !== 'close') throw new Error('--bar-timestamp-mode must be open or close.');
   const timeZone = (readFlag(args, '--bar-time-zone') || 'eastern').toLowerCase();
   if (timeZone !== 'eastern' && timeZone !== 'central' && timeZone !== 'pacific' && timeZone !== 'local') {

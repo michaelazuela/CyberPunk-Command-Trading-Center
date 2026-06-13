@@ -151,6 +151,9 @@ export function targetsFromEntryStop(
   if (!isValidPrice(entry) || !isValidPrice(stop) || (direction !== 'LONG' && direction !== 'SHORT')) {
     return { target1: null, target2: null, riskPoints: null };
   }
+  if ((direction === 'LONG' && stop >= entry) || (direction === 'SHORT' && stop <= entry)) {
+    return { target1: null, target2: null, riskPoints: null };
+  }
   const riskPoints = Math.abs(entry - stop);
   if (!Number.isFinite(riskPoints) || riskPoints <= 0) {
     return { target1: null, target2: null, riskPoints: null };

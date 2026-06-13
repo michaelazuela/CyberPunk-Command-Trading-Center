@@ -949,7 +949,7 @@ function printHelp() {
     '  --market-map-refresh-seconds 300 Refresh durable look-left map while outside trade windows.',
     '  --pre-market-data-gate true    Preload/repair 30-day 5M/15M/1H/2H/4H context before setup scans.',
     '  --macro-calendar false         Disable high-impact macro calendar caution.',
-    '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
+    '  --bar-timestamp-mode open      NinjaTrader bridge bars are treated as bar-open times by default; use close only for close-timestamped feeds.',
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
     '  --discord-message-cleanup true Delete scanner Discord messages after the configured TTL. Defaults to true.',
     '  --discord-message-ttl-minutes 15  Age in minutes before scanner Discord messages are deleted; 0 disables cleanup.',
@@ -963,7 +963,7 @@ function printHelp() {
 function loadConfig(): ScannerConfig {
   const dryRun = hasArg('dry-run');
   const once = hasArg('once');
-  const timestampMode = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'close';
+  const timestampMode = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'open';
   const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'eastern';
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)

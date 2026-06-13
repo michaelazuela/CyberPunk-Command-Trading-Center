@@ -876,7 +876,7 @@ export function buildNinjaChartContext({
   instrument,
   tradeDate,
   midnightOpen,
-  barTimestampMode = 'close',
+  barTimestampMode = 'open',
   barTimeZone = 'eastern',
 }: {
   bars5m: NinjaBridgeBar[];

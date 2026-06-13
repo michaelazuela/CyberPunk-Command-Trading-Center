@@ -199,7 +199,7 @@ export function buildMultiTimeframeCampaignEvidence(args: {
       timeframe: timeframe as MssEvidenceTimeframe,
       bars,
       asOfTimestamp: args.asOfTimestamp,
-      barTimestampMode: args.barTimestampMode || 'close',
+      barTimestampMode: args.barTimestampMode || 'open',
       barTimeZone: args.barTimeZone || 'eastern',
     });
     const displacement = latestDisplacement(bars);

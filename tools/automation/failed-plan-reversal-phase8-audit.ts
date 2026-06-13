@@ -312,7 +312,7 @@ export async function buildFailedPlanReversalPhase8AuditReport(args: {
       date,
       bridgeInstrument: args.bridgeInstrument || `${instrument} 06-26`,
       bridgeUrl: args.bridgeUrl || DEFAULT_BRIDGE_URL,
-      barTimestampMode: args.barTimestampMode || 'close',
+      barTimestampMode: args.barTimestampMode || 'open',
       barTimeZone: args.barTimeZone || 'eastern',
       enabled: Boolean(args.refreshTwoHourFromBridge),
     });

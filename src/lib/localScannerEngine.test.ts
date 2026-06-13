@@ -171,7 +171,8 @@ const closeTimestampCompleted = latestCompletedBar(
     bar('2026-05-19T10:05:00', 1, 2, 0, 1),
   ],
   5,
-  new Date('2026-05-19T10:07:00-04:00')
+  new Date('2026-05-19T10:07:00-04:00'),
+  'close'
 );
 assert.equal(closeTimestampCompleted?.time, '2026-05-19T10:05:00');
 
@@ -189,6 +190,7 @@ const freshCloseTimestampBridge = assessBridgeBarStaleness({
   timeframeMinutes: 5,
   now: new Date('2026-05-19T10:12:00-04:00'),
   maxStaleBarMinutes: 10,
+  timestampMode: 'close',
 });
 assert.equal(freshCloseTimestampBridge.stale, false);
 

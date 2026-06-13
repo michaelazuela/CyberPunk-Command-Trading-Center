@@ -102,6 +102,12 @@ function riskPoints(entry: number | null, stop: number | null): number | null {
   return roundToTick(Math.abs(entry - stop));
 }
 
+function hasDirectionallyValidStop(direction: Direction, entry: number | null, stop: number | null): boolean {
+  if (direction !== 'LONG' && direction !== 'SHORT') return false;
+  if (!isPrice(entry) || !isPrice(stop)) return false;
+  return direction === 'LONG' ? stop < entry : stop > entry;
+}
+
 function targets(direction: Direction, entry: number | null, stop: number | null) {
   const computedTargets = targetsFromEntryStop(direction, entry, stop);
   if ((direction !== 'LONG' && direction !== 'SHORT') || !isPrice(entry) || !isPrice(stop) || computedTargets.target1 === null || computedTargets.target2 === null) {
@@ -773,10 +779,10 @@ function missingLevel(
   return { key, label, reason, requiredFor, source };
 }
 
-function executionFor(entry: number | null, stop: number | null, hasTrigger: boolean, hasInvalidation: boolean) {
+function executionFor(direction: Direction, entry: number | null, stop: number | null, hasTrigger: boolean, hasInvalidation: boolean) {
   const risk = riskPoints(entry, stop);
   if (!isPrice(entry)) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending };
-  if (!isPrice(stop) || risk === null || !hasInvalidation) {
+  if (!isPrice(stop) || risk === null || !hasDirectionallyValidStop(direction, entry, stop) || !hasInvalidation) {
     return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.InvalidStopLocation };
   }
   if (!hasTrigger) return { executionStatus: ExecutionStatus.Conditional, blockReason: NoTradeReason.EntryTriggerPending };
@@ -803,10 +809,11 @@ function makeCandidate(input: {
   target2Override?: number | null;
 }): SetupCandidate {
   const structureStop = isPrice(input.stop) ? roundToTick(input.stop) : null;
-  const risk = riskPoints(input.entry, structureStop);
+  const stopIsDirectionallyValid = hasDirectionallyValidStop(input.direction, input.entry, structureStop);
+  const risk = stopIsDirectionallyValid ? riskPoints(input.entry, structureStop) : null;
   const computedTargets = targets(input.direction, input.entry, structureStop);
-  let target1 = input.target1Override ?? computedTargets.target1;
-  let target2 = input.target2Override ?? computedTargets.target2;
+  let target1 = stopIsDirectionallyValid ? input.target1Override ?? computedTargets.target1 : null;
+  let target2 = stopIsDirectionallyValid ? input.target2Override ?? computedTargets.target2 : null;
   if (
     isPrice(target1) &&
     isPrice(target2) &&
@@ -818,7 +825,7 @@ function makeCandidate(input: {
     target1 = computedTargets.target1;
     target2 = computedTargets.target2;
   }
-  const execution = executionFor(input.entry, structureStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
+  const execution = executionFor(input.direction, input.entry, structureStop, Boolean(input.hasTrigger), Boolean(input.invalidation));
   const levelContext = levelContextForDirection(input.chartContext, input.direction);
   const riskAdvisoryStatus =
     risk === null || risk <= 0 ? 'RISK_INVALID_OR_UNDEFINED' :
