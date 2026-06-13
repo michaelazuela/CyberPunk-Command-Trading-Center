@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-13
+Task: Harden protected-structure trade-review reruns and chart windows.
+Files changed: .gitignore, docs/PROJECT_STATUS.md, package.json, tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, tools/automation/protected-structure-trade-review.ts.
+Reason: The prior-week protected-structure review was initially run with ad hoc shell glue and exposed two repeatable risks: Supabase market-cache credentials may be unavailable in a local shell, and desk-review charts that begin during the morning could be clipped at noon even when the campaign continues into Lunch/PM.
+Tests run: npx tsx tools/automation/chart-markup-renderer.test.ts; npm run diagnostic:protected-structure-trade-review -- --no-charts; npm run diagnostic:protected-structure-trade-review; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Added `npm run diagnostic:protected-structure-trade-review` as the standard chart-backed trade-by-trade protected-structure review command. It reads the saved protected-structure overlay, loads `market_bars` when configured, falls back to NinjaTrader `/historical-bars` when Supabase credentials are unavailable, and emits markdown/JSON plus review charts. Desk-review chart rendering now uses the full active desk-review day while normal morning trade-plan charts keep the morning crop. Generated protected-structure review artifacts are ignored by Git.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge behavior changed.
+Bridge impact: Read-only diagnostic use of the existing NinjaTrader historical-bars endpoint.
+Discord impact: None directly. The generated charts remain review-only artifacts and do not post to Discord by themselves.
+Journal/RAG impact: None.
+Supabase impact: No migration added. The diagnostic reads `market_bars` only when existing env credentials are present.
+Known risks: None identified after verification.
+Next recommended action: Use `npm run diagnostic:protected-structure-trade-review` for last-week protected-structure chart review instead of ad hoc shell scripts.
+
+## Previous Change
+
+Date: 2026-06-13
 Task: Promote protected-structure trend confirmation above candidate framing.
 Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/june12-protected-structure-replay.test.ts, tools/automation/protected-structure-trend-confirmation-replay.test.ts, tools/automation/thirty-day-active-mss-plan-replay.ts, tools/automation/thirty-day-active-mss-plan-replay.test.ts.
 Reason: The scanner had the protected HTF facts, but trader-facing output could still let selected-candidate text, blocker language, old WAIT framing, or selected-candidate target context compete with the protected 15M+5M structure read. The prior active-MSS replay command could also silently accept wrong date flags, fall back to the default 30-day window, and run a heap-heavy renderer as the standard proof path.

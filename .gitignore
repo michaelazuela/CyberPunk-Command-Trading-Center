@@ -10,6 +10,7 @@ logs/
 supabase/.temp/
 /Session
 /reports/approval/
+/reports/protected-structure-review/
 /test-screenshots/
 tools/automation/Session
 tools/automation/Supabase

@@ -24,6 +24,7 @@
     "diagnostic:htf-mss-actual-ohlc": "tsx tools/automation/htf-mss-actual-ohlc-replay.ts",
     "diagnostic:active-mss-replay": "tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts",
     "diagnostic:protected-structure-trend-confirmation": "tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts",
+    "diagnostic:protected-structure-trade-review": "tsx tools/automation/protected-structure-trade-review.ts",
     "diagnostic:active-mss-replay:lean": "node --max-old-space-size=4096 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --slim-opening-drive=true --max-samples=80",
     "diagnostic:active-mss-replay:heavy": "node --max-old-space-size=8192 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --allow-heavy-replay=true",
     "diagnostic:active-mss-replay:verbose": "node --max-old-space-size=8192 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --allow-heavy-replay=true --verbose-rows=true --max-samples=500",

@@ -73,13 +73,19 @@ function minutesFromTimestamp(value?: string | null): number | null {
   return Number(direct[1]) * 60 + Number(direct[2]);
 }
 
-function sessionRenderStartMinutes(sessionLabel: string): number | null {
+function isDeskReviewSessionLabel(sessionLabel: string): boolean {
+  return /desk\s+(review|map|play)|review\s+map|protected\s+structure/i.test(sessionLabel);
+}
+
+function sessionRenderStartMinutes(sessionLabel: string, renderMode: ChartMarkupRenderInput['renderMode'] = 'trade_plan'): number | null {
+  if (renderMode === 'desk_play_context' && isDeskReviewSessionLabel(sessionLabel)) return 9 * 60;
   if (/lunch|pm/i.test(sessionLabel)) return 12 * 60;
   if (/morning|am/i.test(sessionLabel)) return 9 * 60;
   return null;
 }
 
-function sessionRenderEndMinutes(sessionLabel: string): number | null {
+function sessionRenderEndMinutes(sessionLabel: string, renderMode: ChartMarkupRenderInput['renderMode'] = 'trade_plan'): number | null {
+  if (renderMode === 'desk_play_context' && isDeskReviewSessionLabel(sessionLabel)) return 16 * 60 + 40;
   if (/lunch|pm/i.test(sessionLabel)) return 16 * 60 + 40;
   if (/morning|am/i.test(sessionLabel)) return 12 * 60;
   return null;
@@ -88,9 +94,10 @@ function sessionRenderEndMinutes(sessionLabel: string): number | null {
 function candlesForVisualWindow(
   candles: ReturnType<typeof validCandles>,
   sessionLabel: string,
+  renderMode: ChartMarkupRenderInput['renderMode'] = 'trade_plan',
 ): ReturnType<typeof validCandles> {
-  const startMinutes = sessionRenderStartMinutes(sessionLabel);
-  const endMinutes = sessionRenderEndMinutes(sessionLabel);
+  const startMinutes = sessionRenderStartMinutes(sessionLabel, renderMode);
+  const endMinutes = sessionRenderEndMinutes(sessionLabel, renderMode);
   if (startMinutes === null) return candles;
   const clipped = candles.filter((candle) => {
     const minutes = minutesFromTimestamp(candle.timestamp);
@@ -233,11 +240,11 @@ function targetLooksStale(price: number | null, candles: PlanRenderModel['candle
 
 function buildPlanRenderModel(input: ChartMarkupRenderInput): PlanRenderModel {
   const candidate = input.candidate;
-  const candles = candlesForVisualWindow(validCandles(input.chartContext), input.sessionLabel);
+  const renderMode = input.renderMode || 'trade_plan';
+  const candles = candlesForVisualWindow(validCandles(input.chartContext), input.sessionLabel, renderMode);
   if (!candidate || candles.length < 3) {
     throw new Error('Chart markup requires a selected candidate and at least 3 valid candles.');
   }
-  const renderMode = input.renderMode || 'trade_plan';
   const isDeskPlayContext = renderMode === 'desk_play_context';
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
   const isLong = direction === 'LONG';

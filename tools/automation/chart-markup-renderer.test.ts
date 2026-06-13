@@ -464,6 +464,59 @@ try {
   assert.ok(!missingLevelsHtml.includes('>0.00<'));
   assert.ok(!missingLevelsHtml.includes('0.00</tspan>'));
 
+  const fullDeskReviewCandles = Array.from({ length: 85 }, (_, index) => {
+    const hour = 9 + Math.floor(index / 12);
+    const minute = (index % 12) * 5;
+    const open = 7080 + index * 0.15;
+    const close = open + (index % 2 === 0 ? 0.25 : -0.15);
+    return {
+      index,
+      timestamp: `2026-05-22T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00-04:00`,
+      open,
+      high: Math.max(open, close) + 0.5,
+      low: Math.min(open, close) - 0.5,
+      close,
+      direction: close >= open ? 'bullish' as const : 'bearish' as const,
+      confidence: 'High' as const,
+    };
+  });
+  const deskReviewHtml = buildChartMarkupHtmlForTest({
+    chartContext: { ...chartContext, candles: fullDeskReviewCandles },
+    candidate: {
+      ...missingLevelsCandidate,
+      activeRuleset: {
+        htfLineInSand: {
+          applied: true,
+          status: 'passed',
+          required: 'completed_5m_or_15m_close_beyond_htf_line',
+          appliesToAllModels: true,
+          affectsExecution: false,
+          direction: 'LONG',
+          lineInSand: 7075,
+          lineReason: 'Desk review line',
+          requiredClose: 'Hold above 7075.00',
+          obstacleType: null,
+          obstacleSource: null,
+          evidence: [],
+          blockers: [],
+        },
+      },
+    },
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'Morning Desk Review',
+    renderMode: 'desk_play_context',
+  });
+  assert.ok(deskReviewHtml.includes('>16:00<'), 'desk-review charts must not clip campaigns at noon');
+  const morningTradePlanHtml = buildChartMarkupHtmlForTest({
+    chartContext: { ...chartContext, candles: fullDeskReviewCandles },
+    candidate,
+    instrument: 'MES',
+    tradeDate: '2026-05-22',
+    sessionLabel: 'morning',
+  });
+  assert.ok(!morningTradePlanHtml.includes('>16:00<'), 'normal morning trade-plan charts should keep the morning crop');
+
   const output = await renderChartMarkup({
     chartContext,
     candidate,
