@@ -308,11 +308,13 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('NinjaTrader bridge, scanner, freshness, and HTF MSS defaults must treat bridge bars as open timestamps unless explicitly overridden.');
   }
   const closeTimestampHardcodes = [];
-  for (const dir of [path.join(ROOT, 'src', 'agents'), path.join(ROOT, 'tools', 'automation')]) {
+  for (const dir of [path.join(ROOT, 'src'), path.join(ROOT, 'tools', 'automation'), path.join(ROOT, 'scripts')]) {
     walk(dir, (filePath, content) => {
       const relative = path.relative(ROOT, filePath);
       if (
+        relative === path.join('scripts', 'architecture-guard.js') ||
         relative.endsWith('.test.ts') ||
+        relative.endsWith('.test.js') ||
         relative.includes(`${path.sep}replay-diagnostics${path.sep}`) ||
         relative.includes(`${path.sep}discord-audit${path.sep}`)
       ) {

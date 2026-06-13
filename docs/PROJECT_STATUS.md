@@ -943,7 +943,7 @@ Next recommended action: Keep the evidence diagnostic-only unless a separately a
 Date: 2026-06-07
 Task: Make multi-timeframe MSS evidence completed-bar status timestamp-mode aware.
 Files changed: docs/PROJECT_STATUS.md, src/lib/ninjaTraderBridge.ts, src/lib/timeframeMssEvidence.ts, src/lib/timeframeMssEvidence.test.ts, src/types.ts, tools/automation/nt-scanner.ts.
-Reason: Remove the completed-bar status assumption that NinjaTrader OHLC timestamps are always bar-open times. Evidence now records and evaluates `open` or `close` timestamp mode explicitly, defaulting to the scanner convention of `close`.
+Reason: Remove the completed-bar status assumption that NinjaTrader OHLC timestamps are always bar-open times. Evidence now records and evaluates `open` or `close` timestamp mode explicitly. Current scanner and replay defaults use the NinjaTrader bridge convention of open-time bars unless an explicit diagnostic override is provided.
 Tests run: npx tsx src/lib/timeframeMssEvidence.test.ts; npx tsc --noEmit.
 Result: Passed. The June 5 120M noon regression now proves an open-time noon bar only counts after 14:00 ET, while close-time mode can count a 12:00 timestamp as completed at 12:00 ET.
 Trading logic changed: No.
