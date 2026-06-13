@@ -502,6 +502,7 @@ export const DEFAULT_SCANNER_RISK_GUARDS: ScannerRiskGuards = {
 function etParts(date: Date) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
+    weekday: 'short',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -516,7 +517,13 @@ function etParts(date: Date) {
     day: value('day'),
     hour: Number(value('hour')),
     minute: Number(value('minute')),
+    weekday: value('weekday'),
   };
+}
+
+function isEtWeekend(date: Date): boolean {
+  const weekday = etParts(date).weekday;
+  return weekday === 'Sat' || weekday === 'Sun';
 }
 
 function minutesFromClock(clock: string): number {
@@ -557,7 +564,22 @@ export function getScannerTradeDate(date = new Date()): string {
 export function resolveScannerWindow(date = new Date(), afternoonEnabled = false): ScannerWindowState {
   const minutes = etClockMinutes(date);
   const windows = TRADE_RULES.executionWindows;
-  const allowsMarketMapping = isMarketMappingWindowByEtMinutes(minutes);
+  const isWeekend = isEtWeekend(date);
+  const allowsMarketMapping = !isWeekend && isMarketMappingWindowByEtMinutes(minutes);
+
+  if (isWeekend) {
+    return {
+      session: 'outside',
+      label: 'Market Closed - Weekend',
+      quality: 'outside',
+      enabled: false,
+      allowsTradePlan: false,
+      allowsDiscordAlert: false,
+      allowsMarketMapping: false,
+      allowsDeskPlan: false,
+      nextWindowLabel: windows.morningExecution.label,
+    };
+  }
 
   if (isBetween(minutes, windows.morningExecution.startET, windows.morningExecution.endET)) {
     return {

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildCandidateLifecycleTrace, buildDeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
+import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   barsCoverRequestedLookback,
@@ -38,6 +38,7 @@ import {
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
+  shouldSendScannerDataQualityNoticeForWindow,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
   scannerDeskPlanRefreshKey,
@@ -295,6 +296,18 @@ assert.ok(dataQualityText.includes('Latest completed 5M'));
 assert.ok(dataQualityText.includes('Expected completed 5M near'));
 assert.ok(dataQualityText.includes('No entries, stops, targets, approvals, or outcome buttons were created'));
 assert.equal(dataQualityNotice.components, undefined);
+assert.equal(
+  shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-05T10:00:00-04:00'))),
+  true,
+);
+assert.equal(
+  shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-05T16:46:00-04:00'))),
+  false,
+);
+assert.equal(
+  shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-13T10:00:00-04:00'))),
+  false,
+);
 assert.equal(scannerDataQualityNoticeKey({
   tradeDate: '2026-06-05',
   session: 'morning',

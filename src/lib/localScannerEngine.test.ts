@@ -87,6 +87,7 @@ const outsideWindow = resolveScannerWindow(new Date('2026-05-19T08:00:00-04:00')
 const preOpenMappingWindow = resolveScannerWindow(new Date('2026-05-19T09:15:00-04:00'));
 const postScanWindow = resolveScannerWindow(new Date('2026-05-19T15:30:00-04:00'));
 const closeWindow = resolveScannerWindow(new Date('2026-05-19T16:00:00-04:00'));
+const weekendWindow = resolveScannerWindow(new Date('2026-06-13T10:00:00-04:00'));
 
 assert.equal(openingWindow.session, 'morning');
 assert.equal(openingWindow.allowsTradePlan, true);
@@ -143,6 +144,14 @@ assert.equal(closeWindow.allowsMarketMapping, false);
 assert.equal(closeWindow.allowsDeskPlan, false);
 assert.equal(scannerContextLogLabel(closeWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
 assert.equal(scannerContextState(closeWindow), 'NoData');
+assert.equal(weekendWindow.session, 'outside');
+assert.equal(weekendWindow.label, 'Market Closed - Weekend');
+assert.equal(weekendWindow.allowsTradePlan, false);
+assert.equal(weekendWindow.allowsDiscordAlert, false);
+assert.equal(weekendWindow.allowsMarketMapping, false);
+assert.equal(weekendWindow.allowsDeskPlan, false);
+assert.equal(scannerContextLogLabel(weekendWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
+assert.equal(scannerContextState(weekendWindow), 'NoData');
 assert.ok(MARKET_MAPPING_COVERAGE.includes('prior day/week/month levels'));
 
 const completed = latestCompletedBar(

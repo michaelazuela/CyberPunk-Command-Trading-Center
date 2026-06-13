@@ -3746,9 +3746,14 @@ export function buildScannerDataQualityNoticePayload(args: {
   };
 }
 
+export function shouldSendScannerDataQualityNoticeForWindow(window: ReturnType<typeof resolveScannerWindow>): boolean {
+  return window.allowsDeskPlan && window.allowsMarketMapping;
+}
+
 async function sendScannerDataQualityNoticeIfNeeded(args: {
   config: ScannerConfig;
   state: ScannerStateFile;
+  scannerWindow: ReturnType<typeof resolveScannerWindow>;
   tradeDate: string;
   session: LiveSession | 'market_mapping';
   windowLabel: string;
@@ -3758,6 +3763,11 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
   reason: string;
   manualRun: boolean;
 }): Promise<void> {
+  if (!shouldSendScannerDataQualityNoticeForWindow(args.scannerWindow)) {
+    console.log(`[scanner-data] Data-quality notice skipped because scanner desk-plan window is inactive: ${args.scannerWindow.label}`);
+    return;
+  }
+
   const noticeKey = scannerDataQualityNoticeKey({
     tradeDate: args.tradeDate,
     session: args.session,
@@ -4271,6 +4281,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await sendScannerDataQualityNoticeIfNeeded({
       config,
       state,
+      scannerWindow: window,
       tradeDate,
       session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
       windowLabel: window.label,
@@ -4382,6 +4393,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       await sendScannerDataQualityNoticeIfNeeded({
         config,
         state,
+        scannerWindow: window,
         tradeDate,
         session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
         windowLabel: window.label,
@@ -4401,6 +4413,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await sendScannerDataQualityNoticeIfNeeded({
       config,
       state,
+      scannerWindow: window,
       tradeDate,
       session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
       windowLabel: window.label,
@@ -4493,6 +4506,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await sendScannerDataQualityNoticeIfNeeded({
       config,
       state,
+      scannerWindow: window,
       tradeDate,
       session,
       windowLabel: window.label,
