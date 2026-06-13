@@ -676,7 +676,7 @@ function buildTimeframeMssEvidenceDiagnostics(input: BridgeDiagnosticReplayInput
       '240M': sortedBars(input.bars240m),
     },
     asOfTimestamp: sortedExecution5m.at(-1)?.time || sorted5m.at(-1)?.time || null,
-    barTimestampMode: 'close',
+    barTimestampMode: 'open',
     barTimeZone: 'eastern',
   });
 

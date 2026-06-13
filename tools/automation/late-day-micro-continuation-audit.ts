@@ -771,7 +771,7 @@ export async function runLateDayMicroContinuationAudit() {
         '240M': through(byKey['240m'], bar.time),
       },
       asOfTimestamp: bar.time,
-      barTimestampMode: 'close',
+      barTimestampMode: 'open',
       barTimeZone: 'eastern',
     });
     const five = evidence.timeframes['5M'];

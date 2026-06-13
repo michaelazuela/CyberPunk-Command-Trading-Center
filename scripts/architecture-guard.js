@@ -307,6 +307,24 @@ function checkScannerVisibilityMetadataBoundary() {
   ) {
     fail('NinjaTrader bridge, scanner, freshness, and HTF MSS defaults must treat bridge bars as open timestamps unless explicitly overridden.');
   }
+  const closeTimestampHardcodes = [];
+  for (const dir of [path.join(ROOT, 'src', 'agents'), path.join(ROOT, 'tools', 'automation')]) {
+    walk(dir, (filePath, content) => {
+      const relative = path.relative(ROOT, filePath);
+      if (
+        relative.endsWith('.test.ts') ||
+        relative.includes(`${path.sep}replay-diagnostics${path.sep}`) ||
+        relative.includes(`${path.sep}discord-audit${path.sep}`)
+      ) {
+        return;
+      }
+      if (content.includes("barTimestampMode: 'close'")) closeTimestampHardcodes.push(relative);
+      if (content.includes("NINJATRADER_BAR_TIMESTAMP_MODE || 'close'")) closeTimestampHardcodes.push(relative);
+    });
+  }
+  if (closeTimestampHardcodes.length) {
+    fail(`Non-test scanner/replay code must not hardcode NinjaTrader close timestamp mode: ${Array.from(new Set(closeTimestampHardcodes)).join(', ')}`);
+  }
   if (
     !tradeRulesContent.includes("direction === 'LONG' && stop >= entry") ||
     !tradeRulesContent.includes("direction === 'SHORT' && stop <= entry") ||

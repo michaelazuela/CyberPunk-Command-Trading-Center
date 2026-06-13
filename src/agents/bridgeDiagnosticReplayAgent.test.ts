@@ -140,7 +140,7 @@ assert.equal(approvedNoAlert.timeframeMssEvidenceDiagnostics.changesTradeLogic, 
 assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '15M'));
 assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '60M'));
 assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.some((item) => item.timeframe === '240M'));
-assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.every((item) => item.barTimestampMode === 'close'));
+assert.ok(approvedNoAlert.timeframeMssEvidenceDiagnostics.timeframes.every((item) => item.barTimestampMode === 'open'));
 assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.status, 'passed');
 assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.appliesToAllModels, true);
 assert.equal(approvedNoAlert.activeTimeframeMssRulesetDiagnostics.affectsExecution, false);

@@ -415,7 +415,7 @@ async function main() {
     },
     asOfTimestamp: campaignAsOfTimestamp,
     coverage: campaignCoverageFacts({ loaded, asOfTimestamp: campaignAsOfTimestamp, preloadDate }),
-    barTimestampMode: 'close',
+    barTimestampMode: 'open',
     barTimeZone: 'eastern',
   });
   const campaignTradeDirection = multiTimeframeCampaignAudit.campaignDirection === 'LONG' || multiTimeframeCampaignAudit.campaignDirection === 'SHORT'
@@ -450,7 +450,7 @@ async function main() {
       sessionType: 'replay_morning',
       instrument,
       tradeDate,
-      barTimestampMode: 'close',
+      barTimestampMode: 'open',
       barTimeZone: 'eastern',
     }) as ChartContext | null;
     if (!context) {

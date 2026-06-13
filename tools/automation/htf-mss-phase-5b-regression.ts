@@ -142,7 +142,7 @@ function baseBearishChartContext(overrides: Partial<ChartContext> = {}): ChartCo
         '240M': bars240m,
       },
       asOfTimestamp: '2026-06-02T14:10:00-04:00',
-      barTimestampMode: 'close',
+      barTimestampMode: 'open',
       barTimeZone: 'eastern',
     }),
     htfLiquidityDrawState,

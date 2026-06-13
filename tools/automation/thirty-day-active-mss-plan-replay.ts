@@ -573,7 +573,7 @@ async function main() {
       sessionType,
       instrument: instrument === 'MNQ' ? 'MNQ' : 'MES',
       tradeDate,
-      barTimestampMode: 'close',
+      barTimestampMode: 'open',
       barTimeZone: 'eastern',
     }) as ChartContext | null;
     if (!context) {

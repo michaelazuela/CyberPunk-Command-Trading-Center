@@ -125,7 +125,7 @@ function baseChartContext(overrides: Partial<ChartContext> = {}): ChartContext {
         '240M': bars240M,
       },
       asOfTimestamp: '2026-06-01T14:10:00-04:00',
-      barTimestampMode: 'close',
+      barTimestampMode: 'open',
       barTimeZone: 'eastern',
     }),
     htfLiquidityDrawState,
