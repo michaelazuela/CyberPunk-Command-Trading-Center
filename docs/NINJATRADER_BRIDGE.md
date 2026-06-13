@@ -34,6 +34,18 @@ NinjaTrader 8 Desktop
 
 The bridge is read-only in v1. It must not place, change, cancel, reverse, flatten, or otherwise submit orders.
 
+## Bar Timestamp Contract
+
+`QuantDeskBridge` emits OHLC bars using NinjaTrader `Bars.GetTime(index)` / `BarsSeries.GetTime(index)`. Quant Desk treats that `time` field as the bar-open timestamp.
+
+Scanner, recorder, replay, and HTF/MSS evidence builders must default to:
+
+```text
+NINJATRADER_BAR_TIMESTAMP_MODE=open
+```
+
+Use `close` only for an explicitly close-timestamped external feed. Invalid or missing timestamp-mode settings fall back to `open` so the live scanner cannot shift NinjaTrader bars one candle backward by accident.
+
 Official NinjaTrader references used for this scaffold:
 
 - AddOn lifecycle uses `OnStateChange()` and the `State.Active` / `State.Terminated` lifecycle.

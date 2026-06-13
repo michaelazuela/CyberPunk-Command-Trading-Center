@@ -54,6 +54,7 @@ import {
   writeLocalMarketDataGapEvent,
   writeScannerDecisionTapeAuditLog,
   upsertScannerDiscordAlertRagRecord,
+  normalizeScannerBarTimestampMode,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
   type ScannerConfig,
@@ -68,6 +69,16 @@ const previousSupabaseUrl = process.env.SUPABASE_URL;
 const previousSupabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const previousDiscordRagUserId = process.env.DISCORD_RAG_USER_ID;
 const originalFetch = globalThis.fetch;
+
+assert.equal(normalizeScannerBarTimestampMode(undefined), 'open');
+assert.equal(normalizeScannerBarTimestampMode(null), 'open');
+assert.equal(normalizeScannerBarTimestampMode(''), 'open');
+assert.equal(normalizeScannerBarTimestampMode('open'), 'open');
+assert.equal(normalizeScannerBarTimestampMode('OPEN'), 'open');
+assert.equal(normalizeScannerBarTimestampMode('close'), 'close');
+assert.equal(normalizeScannerBarTimestampMode('CLOSE'), 'close');
+assert.equal(normalizeScannerBarTimestampMode('bar-open'), 'open');
+assert.equal(normalizeScannerBarTimestampMode('bad-env-value'), 'open');
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 

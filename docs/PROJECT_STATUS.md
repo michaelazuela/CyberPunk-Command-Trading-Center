@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Harden NinjaTrader bar timestamp mode against close-time drift.
+Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Parts of the bridge/scanner pipeline previously could treat NinjaTrader bars as close-timestamped even though the add-on emits bar-open timestamps, shifting the scanner one candle behind and making valid DeskState context late or missing.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Scanner timestamp-mode parsing now normalizes missing, invalid, or typo values to `open`; only an explicit `close` value can use close-time interpretation. The NinjaTrader bridge docs now define the bar-open timestamp contract.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, or model definitions changed.
+Bridge impact: Contract documentation clarified. Bridge endpoints and emitted OHLC payloads were not changed.
+Discord impact: Indirect. Prevents late/missing desk reports caused by accidental close-time scanner interpretation.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor/scanner so the running process loads the hardened timestamp-mode parser.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Harden Quant Desk tray startup after NinjaTrader updates.
 Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/supervisor.test.ts.
 Reason: After updating NinjaTrader, the tray could temporarily show `Stopped - Supervisor status endpoint is not reachable` while the hidden supervisor was still starting, running HTF preload, or reconnecting. That looked like a failed connection even when the bridge recovered normally.

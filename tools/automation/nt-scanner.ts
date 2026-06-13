@@ -925,6 +925,12 @@ function numberArg(name: string, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
+export function normalizeScannerBarTimestampMode(raw: string | null | undefined): BridgeTimestampMode {
+  const value = (raw || '').trim().toLowerCase();
+  if (value === 'close') return 'close';
+  return 'open';
+}
+
 function printHelp() {
   console.log([
     'Quant Desk local deterministic NinjaTrader scanner',
@@ -963,7 +969,7 @@ function printHelp() {
 function loadConfig(): ScannerConfig {
   const dryRun = hasArg('dry-run');
   const once = hasArg('once');
-  const timestampMode = argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE || 'open';
+  const timestampMode = normalizeScannerBarTimestampMode(argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE);
   const timeZoneArg = argValue('bar-time-zone') || process.env.NINJATRADER_BAR_TIME_ZONE || 'eastern';
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)
@@ -997,7 +1003,7 @@ function loadConfig(): ScannerConfig {
     preMarketDataGate: boolArg('pre-market-data-gate', true),
     macroCalendarEnabled: boolArg('macro-calendar', true),
     geminiAdvisoryFallbackEnabled: isGeminiAdvisoryFallbackEnabled(),
-    barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
+    barTimestampMode: timestampMode,
     barTimeZone,
     discordMessageCleanupEnabled: cleanupEnabled,
     discordMessageTtlMinutes: ttlMinutes,

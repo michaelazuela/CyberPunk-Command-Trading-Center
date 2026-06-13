@@ -302,7 +302,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes("timestampMode: BridgeTimestampMode = 'open'") ||
     !ownerContent.includes("args.timestampMode || 'open'") ||
     !timeframeMssContent.includes("const DEFAULT_BAR_TIMESTAMP_MODE: BridgeBarTimestampMode = 'open'") ||
-    !scannerContent.includes("NINJATRADER_BAR_TIMESTAMP_MODE || 'open'") ||
+    !scannerContent.includes('function normalizeScannerBarTimestampMode') ||
+    !scannerContent.includes("if (value === 'close') return 'close'") ||
+    !scannerContent.includes("normalizeScannerBarTimestampMode(argValue('bar-timestamp-mode') || process.env.NINJATRADER_BAR_TIMESTAMP_MODE)") ||
     !scannerContent.includes('NinjaTrader bridge bars are treated as bar-open times by default')
   ) {
     fail('NinjaTrader bridge, scanner, freshness, and HTF MSS defaults must treat bridge bars as open timestamps unless explicitly overridden.');
