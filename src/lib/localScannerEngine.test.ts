@@ -1079,6 +1079,128 @@ assert.ok(june12DeskState.primaryDeskPlay.countertrendWarning?.includes('complet
 assert.equal(june12DeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(june12DeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 
+const june12ProtectedBullishHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
+  source: 'ninjatrader_ohlc',
+  authority: 'ohlc_facts_only',
+  boundary: 'context_only_not_execution_authority',
+  drawDirection: 'buy_side',
+  planDirection: 'LONG',
+  macroContext: 'conflicting',
+  liquidityRaidState: 'none',
+  classification: 'CONFLICTING_MSS',
+  timeframeStates: [
+    {
+      timeframe: '4H',
+      direction: 'neutral',
+      status: 'conflicting',
+      lifecycleState: 'conflicting_mss',
+      evidence: ['4H wider structure remains two-sided.'],
+      invalidationLevel: 7577.5,
+      confirmationLevel: 7620.5,
+      confidence: 45,
+    },
+    {
+      timeframe: '2H',
+      direction: 'neutral',
+      status: 'conflicting',
+      lifecycleState: 'conflicting_mss',
+      evidence: ['2H wider structure remains two-sided.'],
+      invalidationLevel: 7527.5,
+      confirmationLevel: 7588,
+      confidence: 45,
+    },
+    {
+      timeframe: '1H',
+      direction: 'bullish',
+      status: 'confirmed',
+      lifecycleState: 'confirmed_mss',
+      evidence: ['1H protected bullish structure held above 7338.75.'],
+      invalidationLevel: 7270.25,
+      confirmationLevel: 7338.75,
+      confidence: 70,
+    },
+    {
+      timeframe: '15M',
+      direction: 'bullish',
+      status: 'confirmed',
+      lifecycleState: 'confirmed_mss',
+      evidence: ['15M protected MSS box held; completed close reclaimed 7411.75.'],
+      invalidationLevel: 7377.5,
+      confirmationLevel: 7411.75,
+      externalLiquidityTarget: '15M buy-side draw 7460.00',
+      confidence: 76,
+    },
+    {
+      timeframe: '5M',
+      direction: 'bullish',
+      status: 'confirmed',
+      lifecycleState: 'confirmed_mss',
+      evidence: ['5M protected MSS held and reclaimed 7393.25.'],
+      invalidationLevel: 7377.5,
+      confirmationLevel: 7393.25,
+      externalLiquidityTarget: '5M buy-side draw 7450.00',
+      confidence: 78,
+    },
+  ],
+  timeframeStack: [],
+  fiveMinuteState: {
+    timeframe: '5M',
+    direction: 'bullish',
+    status: 'confirmed',
+    lifecycleState: 'confirmed_mss',
+    evidence: ['5M protected MSS held and reclaimed 7393.25.'],
+    invalidationLevel: 7377.5,
+    confirmationLevel: 7393.25,
+    confidence: 78,
+  },
+  fiveMinuteMssTriggerConfirmed: true,
+  fiveMinuteMssConfirmationType: 'reclaim_then_break',
+  postShiftState: 'retest_pending',
+  fifteenMinuteConfirmationStatus: 'confirmed',
+  activeScanWindow: 'MORNING_SETUP_SCAN',
+  htfDrawContinuationPending: false,
+  htfContextSufficiency: {
+    overallStatus: 'sufficient',
+    dataLimited: false,
+    blockers: [],
+    notes: [],
+    timeframeCoverage: [],
+  },
+  htfContextDataLimited: false,
+  timeframeCoverage: [],
+  classificationReliability: 'structural',
+  classificationReason: 'Protected 15M and 5M bullish structure held; wider HTF context remains management only.',
+  confidence: 72,
+  notes: [],
+  blockers: [],
+  createsTradingPlanCandidate: false,
+  approvesExecution: false,
+};
+const june12ProtectedHoldDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: june12UnsupportedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: june12UnsupportedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: protected 15M/5M bullish structure held.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: june12Lifecycle,
+  htfLiquidityDrawState: june12ProtectedBullishHtfState,
+  currentPrice: 7433.5,
+  canExecute: false,
+});
+assert.equal(june12ProtectedHoldDeskState.selectedCandidate?.direction, 'SHORT');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'primary');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.state, 'secondary');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.find((row) => row.timeframe === '15M')?.currentBias, 'BULL');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M')?.currentBias, 'BULL');
+assert.ok(!june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play'));
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
 const staleSupportedFlagLifecycle = {
   ...june12Lifecycle,
   bestShortPlan: june12Lifecycle.bestShortPlan

@@ -266,10 +266,12 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, and HTF objective ladder scanner-owned metadata only.');
   }
   if (
-    !ownerContent.includes('const longPrimaryEligible = lifecycleItemHasHtfSupport(long) && !lifecycleItemHasHtfConflict(long)') ||
-    !ownerContent.includes('const shortPrimaryEligible = lifecycleItemHasHtfSupport(short) && !lifecycleItemHasHtfConflict(short)')
+    !ownerContent.includes('lifecycleItemPrimaryEligible') ||
+    !ownerContent.includes('lifecycleItemHasProtectedStructureSupport') ||
+    !ownerContent.includes('protectedStructureSupportDirection') ||
+    !ownerContent.includes('return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item)')
   ) {
-    fail('localScannerEngine.ts must prevent HTF-opposed or HTF-unsupported candidates from becoming the primary Desk Play headline.');
+    fail('localScannerEngine.ts must prevent HTF-opposed or HTF-unsupported candidates from becoming the primary Desk Play headline except when scanner-owned protected 15M/5M structure support is resolved.');
   }
   if (
     !ownerContent.includes('candidateHasHtfSupport') ||

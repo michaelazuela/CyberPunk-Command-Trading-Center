@@ -350,6 +350,9 @@ export interface DeskHtfProtectedStructureRow {
   sourceOfTruth: 'scanner_htf_protected_structure_map';
   timeframe: '4H' | '2H' | '1H' | '15M' | '5M';
   bias: 'BULL' | 'BEAR' | 'NEUTRAL' | 'CONFLICT' | 'UNKNOWN';
+  currentBias: 'BULL' | 'BEAR' | 'RANGE' | 'UNKNOWN';
+  biasChangeLine: number | null;
+  biasChangeConfirmation: string | null;
   protectedStructure: number | null;
   confirmationLine: number | null;
   target: number | null;
@@ -1208,16 +1211,76 @@ function confirmationLineFromTimeframeState(state: NonNullable<SetupCandidate['h
   return swingBreak ? numericOrNull(Number(swingBreak[1])) : null;
 }
 
+function currentBiasFromProtectedStructure(args: {
+  rowBias: DeskHtfProtectedStructureRow['bias'];
+  protectedStructure: number | null;
+  confirmationLine: number | null;
+  currentPrice?: number | null;
+}): Pick<DeskHtfProtectedStructureRow, 'currentBias' | 'biasChangeLine' | 'biasChangeConfirmation'> {
+  const currentPrice = numericOrNull(args.currentPrice);
+  const protectedStructure = numericOrNull(args.protectedStructure);
+  const confirmationLine = numericOrNull(args.confirmationLine);
+  const bullishChange = {
+    currentBias: 'BEAR' as const,
+    biasChangeLine: confirmationLine ?? protectedStructure,
+    biasChangeConfirmation: 'completed close+hold above',
+  };
+  const bearishChange = {
+    currentBias: 'BULL' as const,
+    biasChangeLine: protectedStructure ?? confirmationLine,
+    biasChangeConfirmation: 'completed close+hold below',
+  };
+
+  if (currentPrice === null) {
+    return {
+      currentBias: 'UNKNOWN',
+      biasChangeLine: confirmationLine ?? protectedStructure,
+      biasChangeConfirmation: 'current price unavailable',
+    };
+  }
+
+  if (args.rowBias === 'BULL') {
+    return protectedStructure !== null && currentPrice < protectedStructure
+      ? {
+          currentBias: 'BEAR',
+          biasChangeLine: protectedStructure,
+          biasChangeConfirmation: 'completed close+hold above',
+        }
+      : bearishChange;
+  }
+  if (args.rowBias === 'BEAR') {
+    return protectedStructure !== null && currentPrice > protectedStructure ? bearishChange : bullishChange;
+  }
+  if (confirmationLine !== null && currentPrice >= confirmationLine) return bearishChange;
+  if (protectedStructure !== null && currentPrice <= protectedStructure) return bullishChange;
+  if (protectedStructure !== null && confirmationLine !== null) {
+    return {
+      currentBias: 'RANGE',
+      biasChangeLine: confirmationLine,
+      biasChangeConfirmation: 'BULL above / BEAR below on completed close+hold',
+    };
+  }
+  return {
+    currentBias: 'UNKNOWN',
+    biasChangeLine: confirmationLine ?? protectedStructure,
+    biasChangeConfirmation: 'protected and confirmation lines incomplete',
+  };
+}
+
 function timeframeStructureNote(row: DeskHtfProtectedStructureRow): string {
   const protectedText = row.protectedStructure !== null ? `protected ${row.protectedStructure.toFixed(2)}` : 'protected level not mapped';
   const confirmText = row.confirmationLine !== null ? `confirm ${row.confirmationLine.toFixed(2)}` : 'confirmation line not mapped';
   const targetText = row.target !== null ? `target ${row.target.toFixed(2)}` : 'target not mapped';
-  return `${protectedText}; ${confirmText}; ${targetText}`;
+  const currentBiasText = row.currentBias !== 'UNKNOWN'
+    ? `current ${row.currentBias}; changes at ${row.biasChangeLine !== null ? row.biasChangeLine.toFixed(2) : 'N/A'} by ${row.biasChangeConfirmation || 'completed confirmation'}`
+    : 'current bias not resolved';
+  return `${currentBiasText}; ${protectedText}; ${confirmText}; ${targetText}`;
 }
 
 function buildHtfProtectedStructureMap(
   candidate: SetupCandidate | null,
   fallbackHtfState?: SetupCandidate['htfLiquidityDrawState'] | null,
+  currentPrice?: number | null,
 ): DeskHtfProtectedStructureMap {
   const htfState = candidate?.htfLiquidityDrawState || fallbackHtfState || null;
   const timeframeStates = htfState?.timeframeStack?.length
@@ -1229,6 +1292,9 @@ function buildHtfProtectedStructureMap(
       sourceOfTruth: 'scanner_htf_protected_structure_map',
       timeframe: state.timeframe,
       bias: biasFromTimeframeDirection(state.direction, state.status),
+      currentBias: 'UNKNOWN',
+      biasChangeLine: null,
+      biasChangeConfirmation: null,
       protectedStructure: protectedStructureFromTimeframeState(state),
       confirmationLine: confirmationLineFromTimeframeState(state),
       target: target.price,
@@ -1237,9 +1303,16 @@ function buildHtfProtectedStructureMap(
       status: state.lifecycleState || state.status || 'unknown',
       note: '',
     };
+    const currentBias = currentBiasFromProtectedStructure({
+      rowBias: row.bias,
+      protectedStructure: row.protectedStructure,
+      confirmationLine: row.confirmationLine,
+      currentPrice,
+    });
     return {
       ...row,
-      note: timeframeStructureNote(row),
+      ...currentBias,
+      note: timeframeStructureNote({ ...row, ...currentBias }),
     };
   });
   const reliability = htfState?.classificationReliability || 'unknown';
@@ -1730,13 +1803,37 @@ function buildHtfReactionContext(item: ScannerCandidateLifecycleTraceItem | null
   };
 }
 
+function directionForCurrentHtfBias(bias: DeskHtfProtectedStructureRow['currentBias']): Exclude<SetupCandidate['direction'], 'NO TRADE'> | null {
+  if (bias === 'BULL') return 'LONG';
+  if (bias === 'BEAR') return 'SHORT';
+  return null;
+}
+
+function protectedStructureSupportDirection(map: DeskHtfProtectedStructureMap): Exclude<SetupCandidate['direction'], 'NO TRADE'> | null {
+  if (map.reliability === 'data_limited') return null;
+  const fifteenMinute = map.rows.find((row) => row.timeframe === '15M');
+  const fiveMinute = map.rows.find((row) => row.timeframe === '5M');
+  const fifteenDirection = fifteenMinute ? directionForCurrentHtfBias(fifteenMinute.currentBias) : null;
+  const fiveDirection = fiveMinute ? directionForCurrentHtfBias(fiveMinute.currentBias) : null;
+  return fifteenDirection && fifteenDirection === fiveDirection ? fifteenDirection : null;
+}
+
+function lifecycleItemHasProtectedStructureSupport(
+  item: ScannerCandidateLifecycleTraceItem | null | undefined,
+  map: DeskHtfProtectedStructureMap,
+): boolean {
+  if (!item || item.direction === 'NO TRADE') return false;
+  return protectedStructureSupportDirection(map) === item.direction;
+}
+
 function biasStateForLifecycleItem(
   item: ScannerCandidateLifecycleTraceItem | null,
   primaryDirection: DeskPlayDirection,
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap,
 ): DeskPlayBiasState {
   if (!item) return 'not_present';
   if (item.executionStatus === ExecutionStatus.Blocked) return 'blocked';
-  if (item.countertrend || lifecycleItemHasHtfConflict(item)) return 'countertrend_review';
+  if ((item.countertrend || lifecycleItemHasHtfConflict(item)) && !lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)) return 'countertrend_review';
   if (item.direction === primaryDirection) return 'primary';
   return 'secondary';
 }
@@ -1753,8 +1850,9 @@ function buildDirectionalBias(
   direction: 'LONG' | 'SHORT',
   item: ScannerCandidateLifecycleTraceItem | null,
   primaryDirection: DeskPlayDirection,
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap,
 ): DeskPlayDirectionalBias {
-  const state = biasStateForLifecycleItem(item, primaryDirection);
+  const state = biasStateForLifecycleItem(item, primaryDirection, htfProtectedStructureMap);
   return {
     direction,
     state,
@@ -1778,14 +1876,26 @@ function buildDirectionalBias(
   };
 }
 
-function selectPrimaryDeskPlayDirection(trace: ScannerCandidateLifecycleTrace): DeskPlayDirection {
+function lifecycleItemPrimaryEligible(
+  item: ScannerCandidateLifecycleTraceItem | null,
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap,
+): boolean {
+  if (!item) return false;
+  if (lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)) return true;
+  return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item);
+}
+
+function selectPrimaryDeskPlayDirection(
+  trace: ScannerCandidateLifecycleTrace,
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap,
+): DeskPlayDirection {
   const long = trace.bestLongPlan;
   const short = trace.bestShortPlan;
   if (!long && !short) return 'WAIT';
-  if (long && !short) return lifecycleItemHasHtfConflict(long) || !lifecycleItemHasHtfSupport(long) ? 'WAIT' : 'LONG';
-  if (short && !long) return lifecycleItemHasHtfConflict(short) || !lifecycleItemHasHtfSupport(short) ? 'WAIT' : 'SHORT';
-  const longPrimaryEligible = lifecycleItemHasHtfSupport(long) && !lifecycleItemHasHtfConflict(long);
-  const shortPrimaryEligible = lifecycleItemHasHtfSupport(short) && !lifecycleItemHasHtfConflict(short);
+  if (long && !short) return lifecycleItemPrimaryEligible(long, htfProtectedStructureMap) ? 'LONG' : 'WAIT';
+  if (short && !long) return lifecycleItemPrimaryEligible(short, htfProtectedStructureMap) ? 'SHORT' : 'WAIT';
+  const longPrimaryEligible = lifecycleItemPrimaryEligible(long, htfProtectedStructureMap);
+  const shortPrimaryEligible = lifecycleItemPrimaryEligible(short, htfProtectedStructureMap);
   if (longPrimaryEligible && !shortPrimaryEligible) return 'LONG';
   if (shortPrimaryEligible && !longPrimaryEligible) return 'SHORT';
   if (!longPrimaryEligible && !shortPrimaryEligible) return 'WAIT';
@@ -1800,11 +1910,13 @@ function buildPrimaryDeskPlay(args: {
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
   targetCascade?: TargetCascadeResult | null;
   htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
+  currentPrice?: number | null;
   canExecute: boolean;
 }): PrimaryDeskPlay {
-  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace);
-  const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection);
-  const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection);
+  const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
+  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap);
+  const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection, htfProtectedStructureMap);
+  const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection, htfProtectedStructureMap);
   const primaryBias = primaryDirection === 'LONG' ? longBias : primaryDirection === 'SHORT' ? shortBias : null;
   const oppositeBias = primaryDirection === 'LONG' ? shortBias : primaryDirection === 'SHORT' ? longBias : null;
   const primaryLifecycleItem = primaryDirection === 'LONG'
@@ -1877,7 +1989,6 @@ function buildPrimaryDeskPlay(args: {
     candidate: args.candidate,
     targetReaction,
   });
-  const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState);
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
     args.candidateLifecycleTrace.nextTrigger ||
@@ -1937,6 +2048,7 @@ export function buildDeskState(args: {
   candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
   targetCascade?: TargetCascadeResult | null;
   htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
+  currentPrice?: number | null;
   canExecute?: boolean;
 }): DeskState {
   const candidate = args.candidate || null;
@@ -1957,6 +2069,7 @@ export function buildDeskState(args: {
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     targetCascade: args.targetCascade,
     htfLiquidityDrawState: args.htfLiquidityDrawState,
+    currentPrice: args.currentPrice,
     canExecute: Boolean(args.canExecute),
   });
   return {

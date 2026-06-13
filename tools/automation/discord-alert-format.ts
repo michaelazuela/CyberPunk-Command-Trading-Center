@@ -113,6 +113,9 @@ export interface CompactDeskStateForDiscord {
         sourceOfTruth?: string;
         timeframe?: string;
         bias?: string;
+        currentBias?: string;
+        biasChangeLine?: number | null;
+        biasChangeConfirmation?: string | null;
         protectedStructure?: number | null;
         confirmationLine?: number | null;
         target?: number | null;
@@ -885,6 +888,9 @@ function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDi
 function currentHtfBiasLine(args: {
   timeframe: string;
   rowBias: string | null | undefined;
+  rowCurrentBias?: string | null;
+  rowBiasChangeLine?: number | null;
+  rowBiasChangeConfirmation?: string | null;
   protectedLevel: number | null;
   confirmationLine: number | null;
   target: number | null;
@@ -895,6 +901,21 @@ function currentHtfBiasLine(args: {
   const confirmText = priceLine(args.confirmationLine);
   const targetText = priceLine(args.target);
   const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+  const rowCurrentBias = args.rowCurrentBias || null;
+
+  if (currentPrice === null && rowCurrentBias && rowCurrentBias !== 'UNKNOWN') {
+    const lineText = priceLine(isFinitePrice(args.rowBiasChangeLine) ? args.rowBiasChangeLine : args.protectedLevel ?? args.confirmationLine);
+    const confirmation = compactLine(args.rowBiasChangeConfirmation || 'completed close+hold', 28);
+    if (rowCurrentBias === 'BULL') {
+      return `${tf}: BULL now | line ${lineText} | changes BEAR below ${lineText} | confirm ${confirmation} | target ${targetText}`;
+    }
+    if (rowCurrentBias === 'BEAR') {
+      return `${tf}: BEAR now | line ${lineText} | changes BULL above ${lineText} | confirm ${confirmation} | target ${targetText}`;
+    }
+    if (rowCurrentBias === 'RANGE') {
+      return `${tf}: RANGE now | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm ${confirmation} | target ${targetText}`;
+    }
+  }
 
   if (args.rowBias === 'BULL') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
@@ -938,6 +959,9 @@ function deskPlayHtfProtectedStructureLines(
       return currentHtfBiasLine({
         timeframe: row.timeframe || 'TF',
         rowBias: row.bias,
+        rowCurrentBias: row.currentBias,
+        rowBiasChangeLine: row.biasChangeLine,
+        rowBiasChangeConfirmation: row.biasChangeConfirmation,
         protectedLevel: isFinitePrice(row.protectedStructure) ? row.protectedStructure : null,
         confirmationLine: isFinitePrice(row.confirmationLine) ? row.confirmationLine : null,
         target: isFinitePrice(row.target) ? row.target : null,
