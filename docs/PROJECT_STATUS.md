@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-13
+Task: Guard Discord RAG button signing against stale local outcome secrets.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-outcome-buttons.test.ts.
+Reason: A stale shell `DISCORD_OUTCOME_SECRET` previously overrode `.env.local` in one posting path, causing local RAG button signatures to mismatch the deployed Cloudflare outcome endpoint until the review script was patched.
+Tests run: npx tsx tools/automation/discord-outcome-buttons.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The Discord outcome button test now scans runtime automation files that sign or preflight outcome buttons and fails if they do not call `loadCanonicalDiscordOutcomeSecretFromEnvLocal`. This protects the scanner, scheduler, and protected-structure review poster from the stale shell secret class of failure.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or Discord visibility gates changed.
+Bridge impact: None.
+Discord impact: Yes. Runtime RAG button posting paths are guarded so local signing uses the canonical repo secret before preflight/posting.
+Journal/RAG impact: Yes. This hardens RAG outcome button reliability only; buttons still record trader outcomes and do not approve trades.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Keep using the guarded posting paths for scanner, scheduler, and protected-structure review cards.
+
+## Previous Change
+
+Date: 2026-06-13
 Task: Prevent protected-structure review artifacts and raw OHLC dumps from becoming dirty/noisy output.
 Files changed: docs/PROJECT_STATUS.md, package.json, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts.
 Reason: The protected-structure review command should keep generated reports out of Git and should never put raw candle arrays into diagnostic JSON or console output.

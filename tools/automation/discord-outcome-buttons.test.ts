@@ -33,6 +33,22 @@ function decodeOutcomePayload(url: string): Record<string, any> {
   return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
 }
 
+function runtimeOutcomeButtonFiles(): string[] {
+  const automationDir = path.resolve('tools/automation');
+  return fs.readdirSync(automationDir)
+    .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+    .map((file) => path.join(automationDir, file))
+    .filter((filePath) => {
+      const source = fs.readFileSync(filePath, 'utf8');
+      return source.includes("from './discord-outcome-buttons'")
+        && (
+          source.includes('buildOutcomeComponents')
+          || source.includes('assertDiscordOutcomeEndpointSecretReady')
+          || source.includes('checkDiscordOutcomeEndpointSecret')
+        );
+    });
+}
+
 try {
   const baseArgs = {
     planVersionId: 'PLAN-TEST',
@@ -121,6 +137,15 @@ try {
     /blocked before posting.*does not match deployed active key id/i,
   );
   await assert.doesNotReject(() => assertDiscordOutcomeEndpointSecretReady(undefined, mismatchedFetch));
+
+  for (const filePath of runtimeOutcomeButtonFiles()) {
+    const source = fs.readFileSync(filePath, 'utf8');
+    assert.match(
+      source,
+      /loadCanonicalDiscordOutcomeSecretFromEnvLocal\s*\(/,
+      `${path.relative(process.cwd(), filePath)} signs or preflights Discord outcome buttons without canonical .env.local secret loading`,
+    );
+  }
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'discord-outcome-secret-'));
   fs.writeFileSync(path.join(tempDir, '.env.local'), 'DISCORD_OUTCOME_SECRET=\"canonical-test-secret\"\n');
