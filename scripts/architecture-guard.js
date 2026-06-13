@@ -259,11 +259,17 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('DeskHtfProtectedStructureMap') ||
     !ownerContent.includes('fallbackHtfState') ||
     !ownerContent.includes('htfLiquidityDrawState: args.htfLiquidityDrawState') ||
+    !ownerContent.includes('primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null') ||
+    !ownerContent.includes('htfObjectiveFromProtectedStructureRow') ||
+    !ownerContent.includes('directionForCurrentHtfBias(row.currentBias) !== direction') ||
+    !ownerContent.includes('args.candidate?.direction === candidateDirection ? args.candidate?.targetObjectivePlan || null : null') ||
+    !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target1)') ||
+    !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target2)') ||
     !ownerContent.includes('App T1/T2 remain tactical') ||
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')
   ) {
-    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, and HTF objective ladder scanner-owned metadata only.');
+    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, and direction-owned HTF objective ladder scanner-owned metadata only.');
   }
   if (
     !ownerContent.includes('lifecycleItemPrimaryEligible') ||
@@ -304,6 +310,11 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
     !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.direction, 'LONG')") ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, 7450)') ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, 7460)') ||
+    !june12ReplayProofContent.includes('assert.notEqual(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, selectedShort.target1)') ||
+    !june12ReplayProofContent.includes('assert.notEqual(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, selectedShort.target2)') ||
     !june12ReplayProofContent.includes('changesCanExecute, false') ||
     !june12ReplayProofContent.includes('changesTradeApprovals, false') ||
     !june12ReplayProofContent.includes('changesEntryStopTargets, false')

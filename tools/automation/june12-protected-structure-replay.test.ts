@@ -207,6 +207,8 @@ assert.equal(fiveMinute?.biasChangeLine, 7377.5);
 assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.direction, 'LONG');
 assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, 7450);
 assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, 7460);
+assert.notEqual(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, selectedShort.target1);
+assert.notEqual(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, selectedShort.target2);
 assert.equal(deskState.canExecute, false);
 assert.equal(deskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(deskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
