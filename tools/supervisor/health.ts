@@ -152,6 +152,26 @@ function activeContractCheck(config: SupervisorConfig): SupervisorHealthCheck {
   };
 }
 
+function etTimeParts(now: Date): { minutes: number; weekday: string } {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(now).map((part) => [part.type, part.value]));
+  return {
+    minutes: Number(parts.hour) * 60 + Number(parts.minute),
+    weekday: String(parts.weekday || ''),
+  };
+}
+
+function isAfterRthScannerCloseOrWeekend(now: Date): boolean {
+  const parts = etTimeParts(now);
+  return parts.weekday === 'Sat' || parts.weekday === 'Sun' || parts.minutes >= 16 * 60;
+}
+
 function configuredBridgeInstrument(config: SupervisorConfig): string | null {
   const scanner = config.childServices.find((service) => service.id === 'scanner');
   const bridgeInstrumentIndex = scanner?.args.indexOf('--bridge-instrument') ?? -1;
@@ -199,14 +219,17 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
     const ageMs = updatedAt ? now.getTime() - updatedAt.getTime() : Number.POSITIVE_INFINITY;
     const stale = !Number.isFinite(ageMs) || ageMs > config.health.logStaleAfterMs;
     const badStatus = parsed.status === 'error';
+    const afterCloseStaleBarWarning = !stale && parsed.status === 'warn' && isAfterRthScannerCloseOrWeekend(now);
     return {
       id: 'recorder_heartbeat',
       label: 'Recorder heartbeat',
-      status: badStatus ? 'fail' : stale || parsed.status === 'warn' ? 'warn' : 'ok',
+      status: badStatus ? 'fail' : stale || (parsed.status === 'warn' && !afterCloseStaleBarWarning) ? 'warn' : 'ok',
       message: badStatus
         ? `Recorder heartbeat reported an error: ${parsed.error || 'unknown error'}`
         : stale
           ? 'Recorder heartbeat is stale.'
+          : afterCloseStaleBarWarning
+            ? `Recorder heartbeat is fresh; latest completed 5M is paused after the 4:00 PM ET scanner close (${parsed.latestCompleted5m || 'unknown'}).`
           : parsed.status === 'warn'
             ? `Recorder heartbeat reported a warning: ${parsed.warning || 'unknown warning'}`
             : 'Recorder heartbeat is fresh.',

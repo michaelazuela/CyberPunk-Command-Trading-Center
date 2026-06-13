@@ -201,6 +201,16 @@ export interface ScannerDiscordCleanupRecord {
   lastError: string | null;
 }
 
+const SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS = new Set<ScannerDiscordCleanupKind>([
+  'health',
+  'data_quality',
+  'window_start',
+]);
+
+function scannerDiscordCleanupKindIsEphemeral(kind: ScannerDiscordCleanupKind): boolean {
+  return SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS.has(kind);
+}
+
 export interface ScannerActiveCampaignLedgerRecord {
   campaignId: string;
   tradeDate: string;
@@ -3454,6 +3464,7 @@ export function recordScannerDiscordCleanupMessage(args: {
   now?: Date;
 }): ScannerDiscordCleanupRecord | null {
   if (!scannerDiscordMessageCleanupEnabled(args.config)) return null;
+  if (!scannerDiscordCleanupKindIsEphemeral(args.kind)) return null;
   if (args.receipt.deliveryStatus !== 'sent' || !args.receipt.discordMessageId) return null;
   const now = args.now || new Date();
   const postedAt = now.toISOString();
@@ -3497,6 +3508,16 @@ export async function cleanupExpiredScannerDiscordMessages(args: {
     if (record.deleteStatus !== 'pending') continue;
     if (Date.parse(record.expiresAt) > now.getTime()) continue;
     checked += 1;
+    if (!scannerDiscordCleanupKindIsEphemeral(record.kind)) {
+      args.state.discordCleanupMessages[record.key] = {
+        ...record,
+        deleteStatus: 'skipped',
+        deletedAt: now.toISOString(),
+        lastError: 'protected_message_kind_not_ephemeral',
+      };
+      skipped += 1;
+      continue;
+    }
     if (args.config.dryRun || !args.config.discordEnabled || !webhook.url) {
       args.state.discordCleanupMessages[record.key] = {
         ...record,

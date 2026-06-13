@@ -22,6 +22,7 @@ import {
   restartFailedOwnedServices,
   stopOwnedServices,
 } from './processManager';
+import type { SupervisorState } from './processManager';
 import { buildSupervisorStatus } from './status';
 import { isAddressInUseError } from './index';
 
@@ -216,6 +217,40 @@ const processConfig = {
   ],
 };
 const logger = createSupervisorLogger(tempLogsDir);
+const afterCloseRecorderHeartbeatPath = path.join(tempLogsDir, 'after-close-recorder-heartbeat.json');
+fs.writeFileSync(afterCloseRecorderHeartbeatPath, JSON.stringify({
+  status: 'warn',
+  updatedAt: '2026-06-13T01:25:20.732Z',
+  latestCompleted5m: '2026-06-12T17:00:00.0000000',
+  warning: 'NinjaTrader bridge is reachable, but latest completed 5M candle is stale.',
+}, null, 2), 'utf8');
+const afterCloseHealthState = {
+  statePath: path.join(tempLogsDir, 'after-close-health-state.json'),
+  supervisorPid: process.pid,
+  services: [{
+    id: 'candle-recorder',
+    status: 'running',
+    pid: process.pid,
+    startedAt: '2026-06-13T01:20:00.000Z',
+    stdoutLog: afterCloseRecorderHeartbeatPath,
+    stderrLog: path.join(tempLogsDir, 'after-close-recorder-stderr.log'),
+    error: null,
+    restartCount: 0,
+    lastRestartAt: null,
+    lastRestartReason: null,
+    externalPids: [],
+  }],
+  startedAt: '2026-06-13T01:20:00.000Z',
+} satisfies SupervisorState;
+const afterCloseHealth = await buildHealthReport(
+  processConfig,
+  afterCloseHealthState,
+  new Date('2026-06-13T01:25:51.464Z'),
+  {},
+);
+const afterCloseHeartbeat = afterCloseHealth.checks.find((check) => check.id === 'recorder_heartbeat');
+assert.equal(afterCloseHeartbeat?.status, 'ok');
+assert.ok(afterCloseHeartbeat?.message.includes('paused after the 4:00 PM ET scanner close'));
 const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T12:59:00.000Z'));
 assert.equal(outsideWindowBackfill.attempted, false);
 assert.equal(outsideWindowBackfill.due, false);
@@ -520,6 +555,25 @@ const overnightSameDateDeliveryReport = buildDeliveryVisibilityReport({
 });
 assert.deepEqual(overnightSameDateDeliveryReport.staleDataBlockers, []);
 assert.equal(overnightSameDateDeliveryReport.status, 'ok');
+
+const afterClosePausedStatePath = path.join(deliveryFixtureDir, '.nt-scanner-after-close-paused-state.json');
+fs.writeFileSync(afterClosePausedStatePath, JSON.stringify({
+  lastCompleted5mBySession: {
+    '2026-06-12:lunch': '2026-06-12T17:00:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-12:lunch': '2026-06-12T17:00:00.0000000',
+  },
+  lastHealthStatus: 'BLOCKED',
+}, null, 2), 'utf8');
+const afterClosePausedDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: afterClosePausedStatePath,
+  auditDir,
+  now: new Date('2026-06-13T01:25:51.464Z'),
+  staleAfterMs: 180_000,
+});
+assert.deepEqual(afterClosePausedDeliveryReport.staleDataBlockers, []);
+assert.equal(afterClosePausedDeliveryReport.status, 'ok');
 
 const pendingGapLedgerPath = path.join(deliveryFixtureDir, '.market-data-gap-events.json');
 fs.writeFileSync(pendingGapLedgerPath, JSON.stringify([

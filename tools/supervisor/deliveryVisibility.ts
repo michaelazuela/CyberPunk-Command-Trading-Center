@@ -148,7 +148,7 @@ function etMinutes(now: Date): number {
 
 function isRthScannerFreshnessWindow(now: Date): boolean {
   const minutes = etMinutes(now);
-  return minutes >= (9 * 60 + 30) && minutes <= (15 * 60 + 30);
+  return minutes >= (9 * 60 + 15) && minutes < (16 * 60);
 }
 
 function deliveryStatus(value: unknown): ScannerDeliveryStatus {
@@ -244,12 +244,13 @@ function latestEntry(entries: Array<{ key: string; value: string | null }>): { k
 
 function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: number): string[] {
   const blockers: string[] = [];
+  const scannerFreshnessWindowActive = isRthScannerFreshnessWindow(now);
   const lastHealthStatus = stringOrNull(state.lastHealthStatus);
-  if (lastHealthStatus && lastHealthStatus !== 'READY') {
+  if (scannerFreshnessWindowActive && lastHealthStatus && lastHealthStatus !== 'READY') {
     blockers.push(`Scanner health status is ${lastHealthStatus}.`);
   }
 
-  const activeTradeDate = isRthScannerFreshnessWindow(now) ? latestTradeDate(state, now) : null;
+  const activeTradeDate = scannerFreshnessWindowActive ? latestTradeDate(state, now) : null;
   let latestCompletedFresh = false;
   if (activeTradeDate) {
     const lastCompleted = Object.entries(asRecord(state.lastCompleted5mBySession))
