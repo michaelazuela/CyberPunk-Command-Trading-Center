@@ -329,6 +329,15 @@ const deskPlayPayload = compactDiscordSummary({
     canExecute: false,
     primaryDeskPlay: {
       direction: 'LONG',
+      trendConfirmation: {
+        sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
+        direction: 'LONG',
+        status: 'aligned',
+        supportingTimeframes: ['15M', '5M'],
+        lineInSand: 7271.75,
+        confirmation: '15M and 5M protected structure are BULL now; changes BEAR below 7271.75 on completed close+hold.',
+        summary: 'Desk Direction: LONG. Trend confirmation: 15M+5M protected structure aligned; changes BEAR below 7271.75.',
+      },
       title: 'LONG desk play',
       summary: 'LONG remains primary while its line/trigger holds. Opposite side stays visible as countertrend_review.',
       lineInSand: 7342,
@@ -515,6 +524,9 @@ assert.ok(deskPlayText.includes('1H: BULL now | line 7303.50 | changes BEAR belo
 assert.ok(deskPlayText.includes('15M: BULL now | line 7342.00 | changes BEAR below 7342.00 | confirm close+hold below | target 7410.00'));
 assert.ok(deskPlayText.includes('5M: BULL now | line 7271.75 | changes BEAR below 7271.75 | confirm close+hold below | target 7392.50'));
 assert.ok(deskPlayText.includes('Reliability: structural; 5M still controls execution.'));
+assert.ok(deskPlayText.includes('Desk Direction'));
+assert.ok(deskPlayText.includes('LONG | aligned | 15M+5M | Line 7271.75'));
+assert.ok(deskPlayText.includes('Desk Direction: LONG. Trend confirmation: 15M+5M protected structure aligned; changes BEAR below 7271.75.'));
 assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
 assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
 assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));

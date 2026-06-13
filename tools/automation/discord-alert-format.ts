@@ -74,6 +74,15 @@ export interface CompactDeskStateForDiscord {
   dataQualityStatus?: string;
   primaryDeskPlay?: {
     direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+    trendConfirmation?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      status?: string;
+      supportingTimeframes?: string[];
+      lineInSand?: number | null;
+      confirmation?: string;
+      summary?: string;
+    } | null;
     title?: string;
     summary?: string;
     lineInSand?: number | null;
@@ -975,6 +984,25 @@ function deskPlayHtfProtectedStructureLines(
   ];
 }
 
+function deskPlayTrendConfirmationLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const trend = play.trendConfirmation;
+  if (!trend || trend.sourceOfTruth !== 'scanner_protected_structure_trend_confirmation') return [];
+  const direction = trend.direction === 'LONG' || trend.direction === 'SHORT' ? trend.direction : 'WAIT';
+  const status = trend.status || 'unknown';
+  const timeframes = Array.isArray(trend.supportingTimeframes) && trend.supportingTimeframes.length
+    ? trend.supportingTimeframes.join('+')
+    : '15M+5M';
+  const line = isFinitePrice(trend.lineInSand) ? ` | Line ${priceLine(trend.lineInSand)}` : '';
+  const summary = trend.summary || trend.confirmation || 'Protected-structure trend confirmation pending.';
+  return [
+    'Desk Direction',
+    `${direction} | ${status} | ${timeframes}${line}`,
+    compactLine(summary, 140),
+  ];
+}
+
 function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) return [];
@@ -1134,6 +1162,8 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     'Status: REVIEW ONLY - NOT EXECUTION',
     '',
     ...(play ? deskPlayHtfProtectedStructureLines(play, args.currentPrice) : []),
+    ...(play ? [''] : []),
+    ...(play ? deskPlayTrendConfirmationLines(play) : []),
     ...(play ? [''] : []),
     ...(direction === 'LONG' || direction === 'SHORT'
       ? deskPlayManagementLines(args, direction)

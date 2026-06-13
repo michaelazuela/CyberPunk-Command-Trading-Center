@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildNinjaChartContext, getNinjaHistoricalBars, type NinjaBridgeBar, type NinjaBridgeTimeframe } from '../../src/lib/ninjaTraderBridge';
 import { parseBridgeTime } from '../../src/lib/localScannerEngine';
 import { scanSetupCandidates } from '../../src/lib/setupScanner';
@@ -17,6 +18,7 @@ dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
 
 const REPORT_DIR = resolve('tools/automation/replay-diagnostics');
+const THIS_FILE = fileURLToPath(import.meta.url);
 const DEFAULT_JSON = join(REPORT_DIR, 'thirty-day-active-mss-plan-replay-2026-05-07-to-2026-06-05.json');
 const DEFAULT_MD = join(REPORT_DIR, 'thirty-day-active-mss-plan-replay-2026-05-07-to-2026-06-05.md');
 
@@ -29,6 +31,27 @@ const TIMEFRAMES: Array<{ bridge: NinjaBridgeTimeframe; market: MarketBarTimefra
   { bridge: '120m', market: '120m', contextKey: 'bars120m' },
   { bridge: '240m', market: '240m', contextKey: 'bars240m' },
 ];
+
+const ALLOWED_CLI_ARGS = new Set([
+  'bridge-url',
+  'instrument',
+  'bridge-instrument',
+  'evaluate-from',
+  'evaluate-to',
+  'from',
+  'to',
+  'preload-date',
+  'chunk-days',
+  'post-mss-bars',
+  'skip-market-bars',
+  'slim-opening-drive',
+  'verbose-rows',
+  'max-samples',
+  'max-structural-mss-events',
+  'allow-heavy-replay',
+  'json',
+  'md',
+]);
 
 interface BarsByTimeframe {
   bars5m: NinjaBridgeBar[];
@@ -63,6 +86,39 @@ function argValue(name: string): string | null {
   if (directIndex >= 0 && process.argv[directIndex + 1]) return process.argv[directIndex + 1];
   const matched = process.argv.find((arg) => arg.startsWith(prefix));
   return matched ? matched.slice(prefix.length) : null;
+}
+
+function argValueFrom(argv: string[], name: string): string | null {
+  const prefix = `--${name}=`;
+  const directIndex = argv.indexOf(`--${name}`);
+  if (directIndex >= 0 && argv[directIndex + 1] && !argv[directIndex + 1].startsWith('--')) return argv[directIndex + 1];
+  const matched = argv.find((arg) => arg.startsWith(prefix));
+  return matched ? matched.slice(prefix.length) : null;
+}
+
+function cliArgName(arg: string): string | null {
+  if (!arg.startsWith('--')) return null;
+  return arg.slice(2).split('=')[0] || null;
+}
+
+export function validateActiveMssReplayArgs(argv: string[] = process.argv.slice(2)): void {
+  const unknown = argv
+    .map(cliArgName)
+    .filter((name): name is string => Boolean(name) && !ALLOWED_CLI_ARGS.has(name));
+  if (unknown.length) {
+    throw new Error(`Unknown active-MSS replay option(s): ${Array.from(new Set(unknown)).map((name) => `--${name}`).join(', ')}. Use --evaluate-from/--evaluate-to or aliases --from/--to for the replay date range.`);
+  }
+}
+
+export function resolveActiveMssReplayDateRange(argv: string[] = process.argv.slice(2)): {
+  evaluateFrom: string;
+  evaluateTo: string;
+} {
+  validateActiveMssReplayArgs(argv);
+  return {
+    evaluateFrom: argValueFrom(argv, 'evaluate-from') || argValueFrom(argv, 'from') || '2026-05-07',
+    evaluateTo: argValueFrom(argv, 'evaluate-to') || argValueFrom(argv, 'to') || '2026-06-05',
+  };
 }
 
 function normalizeTime(value: string): string {
@@ -503,16 +559,18 @@ function buildReplayMarkdown(report: any): string {
 }
 
 async function main() {
+  const dateRange = resolveActiveMssReplayDateRange();
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = argValue('instrument') || 'MES';
   const bridgeInstrument = argValue('bridge-instrument') || 'MES 06-26';
-  const evaluateFrom = argValue('evaluate-from') || '2026-05-07';
-  const evaluateTo = argValue('evaluate-to') || '2026-06-05';
+  const evaluateFrom = dateRange.evaluateFrom;
+  const evaluateTo = dateRange.evaluateTo;
   const preloadDate = argValue('preload-date') || '2026-04-07';
   const chunkDays = numberArg('chunk-days', 14);
   const postMssBars = numberArg('post-mss-bars', 6);
   const skipMarketBars = argValue('skip-market-bars') === 'true';
   const slimOpeningDrive = argValue('slim-opening-drive') === 'true';
+  const allowHeavyReplay = argValue('allow-heavy-replay') === 'true';
   const verboseRows = argValue('verbose-rows') === 'true';
   const maxSamples = Math.max(0, Math.floor(numberArg('max-samples', slimOpeningDrive ? 80 : 80)));
   const maxStructuralMssEvents = Math.max(0, Math.floor(numberArg('max-structural-mss-events', slimOpeningDrive ? 25 : 250)));
@@ -520,6 +578,10 @@ async function main() {
   const toTimestamp = `${evaluateTo}T16:00:00-04:00`;
   const jsonPath = resolve(argValue('json') || DEFAULT_JSON);
   const mdPath = resolve(argValue('md') || DEFAULT_MD);
+
+  if (!slimOpeningDrive && !allowHeavyReplay) {
+    throw new Error('Full active-MSS replay is heap-heavy and must be requested explicitly with --allow-heavy-replay=true. Use npm run diagnostic:protected-structure-trend-confirmation for the standard prior-week 15M+5M alignment proof.');
+  }
 
   mkdirSync(REPORT_DIR, { recursive: true });
 
@@ -543,11 +605,14 @@ async function main() {
 
   const activeWindowBars = barsByTimeframe.bars5m.filter((bar) => isEvaluationTimestamp(bar.time, evaluateFrom, evaluateTo));
   const mssReplayWindow = barsNearStructuralMss(activeWindowBars, barsByTimeframe.bars5m, postMssBars);
+  const boundedMssEvaluationBars = maxStructuralMssEvents > 0 && !verboseRows
+    ? mssReplayWindow.evaluationBars.slice(0, maxStructuralMssEvents)
+    : mssReplayWindow.evaluationBars;
   const openingDriveWindowBars = activeWindowBars.filter((bar) => {
     const minutes = minutesEt(bar.time);
     return minutes !== null && minutes >= 9 * 60 + 30 && minutes < 11 * 60;
   });
-  const evaluationBars = slimOpeningDrive ? openingDriveWindowBars : mssReplayWindow.evaluationBars;
+  const evaluationBars = slimOpeningDrive ? openingDriveWindowBars : boundedMssEvaluationBars;
   const triggeredPlans: any[] = [];
   const scannerExecutableCandidates: any[] = [];
   const conditionalCandidateSamples: any[] = [];
@@ -726,6 +791,7 @@ async function main() {
       verboseRows,
       maxSamples,
       maxStructuralMssEvents,
+      structuralMssEvaluationBarsRetained: evaluationBars.length,
       fullRowsRetained: verboseRows,
       nodeHeapRecommendation: 'Use npm run diagnostic:active-mss-replay:verbose only when full diagnostic row retention is required.',
     },
@@ -788,7 +854,9 @@ async function main() {
   console.log(`Markdown: ${mdPath}`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] && resolve(process.argv[1]) === THIS_FILE) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

@@ -262,6 +262,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null') ||
     !ownerContent.includes('htfObjectiveFromProtectedStructureRow') ||
     !ownerContent.includes('directionForCurrentHtfBias(row.currentBias) !== direction') ||
+    !ownerContent.includes('scanner_protected_structure_trend_confirmation') ||
+    !ownerContent.includes('buildProtectedStructureTrendConfirmation') ||
+    !ownerContent.includes('Desk Direction:') ||
     !ownerContent.includes('args.candidate?.direction === candidateDirection ? args.candidate?.targetObjectivePlan || null : null') ||
     !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target1)') ||
     !ownerContent.includes('numericOrNull(args.primaryLifecycleItem?.target2)') ||
@@ -364,11 +367,19 @@ function checkScannerVisibilityMetadataBoundary() {
   const localScannerEngineTestContent = readFileSafe(localScannerEngineTestPath);
   const june12ReplayProofPath = path.join(ROOT, 'tools', 'automation', 'june12-protected-structure-replay.test.ts');
   const june12ReplayProofContent = readFileSafe(june12ReplayProofPath);
+  const activeMssReplayPath = path.join(ROOT, 'tools', 'automation', 'thirty-day-active-mss-plan-replay.ts');
+  const activeMssReplayContent = readFileSafe(activeMssReplayPath);
+  const activeMssReplayTestPath = path.join(ROOT, 'tools', 'automation', 'thirty-day-active-mss-plan-replay.test.ts');
+  const activeMssReplayTestContent = readFileSafe(activeMssReplayTestPath);
   if (
     !packageJson.includes('tools/automation/june12-protected-structure-replay.test.ts') ||
+    !packageJson.includes('tools/automation/thirty-day-active-mss-plan-replay.test.ts') ||
+    !packageJson.includes('tools/automation/protected-structure-trend-confirmation-replay.test.ts') ||
     !june12ReplayProofContent.includes("new Date('2026-06-12T10:55:00-04:00')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.selectedCandidate?.direction, 'SHORT')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.direction, 'LONG')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
     !june12ReplayProofContent.includes('assert.equal(fifteenMinute?.biasChangeLine, 7377.5)') ||
     !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
@@ -383,6 +394,37 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes('changesEntryStopTargets, false')
   ) {
     fail('June 12 10:55 protected-structure replay proof must stay in npm test and prove SHORT remains visible while protected 15M/5M bullish structure headlines LONG review-only without approval drift.');
+  }
+  if (
+    !activeMssReplayContent.includes('validateActiveMssReplayArgs') ||
+    !activeMssReplayContent.includes('resolveActiveMssReplayDateRange') ||
+    !activeMssReplayContent.includes("'evaluate-from'") ||
+    !activeMssReplayContent.includes("'evaluate-to'") ||
+    !activeMssReplayContent.includes("'from'") ||
+    !activeMssReplayContent.includes("'to'") ||
+    !activeMssReplayContent.includes("'allow-heavy-replay'") ||
+    !activeMssReplayContent.includes('Full active-MSS replay is heap-heavy') ||
+    !activeMssReplayContent.includes('boundedMssEvaluationBars') ||
+    !activeMssReplayContent.includes('mssReplayWindow.evaluationBars.slice(0, maxStructuralMssEvents)') ||
+    !activeMssReplayTestContent.includes("validateActiveMssReplayArgs(['--start'") ||
+    !activeMssReplayTestContent.includes("resolveActiveMssReplayDateRange(['--from'") ||
+    !packageJson.includes('diagnostic:protected-structure-trend-confirmation') ||
+    !packageJson.includes('diagnostic:active-mss-replay:heavy')
+  ) {
+    fail('Active MSS replay tooling must reject unknown date flags and support --evaluate-from/--evaluate-to plus --from/--to aliases so last-week replays cannot silently fall back to the default 30-day window.');
+  }
+  const protectedTrendReplayProofPath = path.join(ROOT, 'tools', 'automation', 'protected-structure-trend-confirmation-replay.test.ts');
+  const protectedTrendReplayProofContent = readFileSafe(protectedTrendReplayProofPath);
+  if (
+    !protectedTrendReplayProofContent.includes('phase_10k_research_only_protected_structure_overlay') ||
+    !protectedTrendReplayProofContent.includes("report.window.from, '2026-06-08'") ||
+    !protectedTrendReplayProofContent.includes("report.window.to, '2026-06-12'") ||
+    !protectedTrendReplayProofContent.includes("sample.bias5.bias, bias") ||
+    !protectedTrendReplayProofContent.includes("sample.bias15.bias, bias") ||
+    !protectedTrendReplayProofContent.includes("june12.firstLong?.time, '2026-06-12T11:00:00'") ||
+    !protectedTrendReplayProofContent.includes('changesCanExecute, false')
+  ) {
+    fail('Prior-week protected-structure trend-confirmation replay proof must verify aligned 15M+5M LONG/SHORT bias without approval or canExecute drift.');
   }
   if (
     !localScannerEngineTestContent.includes("assert.equal(june12FifteenMinuteRow?.currentBias, 'BULL')") ||
@@ -424,6 +466,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('HTF reaction:') ||
     !formatterContent.includes('HTF Runner Map') ||
     !formatterContent.includes('HTF Bias Lines') ||
+    !formatterContent.includes('Desk Direction') ||
+    !formatterContent.includes('scanner_protected_structure_trend_confirmation') ||
     !formatterContent.includes('5M still controls execution') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||

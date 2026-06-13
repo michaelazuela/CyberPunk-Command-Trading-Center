@@ -198,6 +198,10 @@ const fiveMinute = deskState.primaryDeskPlay.htfProtectedStructureMap.rows.find(
 
 assert.equal(deskState.selectedCandidate?.direction, 'SHORT');
 assert.equal(deskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(deskState.primaryDeskPlay.trendConfirmation.sourceOfTruth, 'scanner_protected_structure_trend_confirmation');
+assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
+assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
+assert.ok(deskState.primaryDeskPlay.summary.includes('Desk Direction: LONG'));
 assert.equal(deskState.primaryDeskPlay.longBias.state, 'primary');
 assert.equal(deskState.primaryDeskPlay.shortBias.state, 'secondary');
 assert.equal(fifteenMinute?.currentBias, 'BULL');

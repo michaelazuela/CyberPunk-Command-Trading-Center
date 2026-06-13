@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-13
+Task: Promote protected-structure trend confirmation above candidate framing.
+Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/june12-protected-structure-replay.test.ts, tools/automation/protected-structure-trend-confirmation-replay.test.ts, tools/automation/thirty-day-active-mss-plan-replay.ts, tools/automation/thirty-day-active-mss-plan-replay.test.ts.
+Reason: The scanner had the protected HTF facts, but trader-facing output could still let selected-candidate text, blocker language, old WAIT framing, or selected-candidate target context compete with the protected 15M+5M structure read. The prior active-MSS replay command could also silently accept wrong date flags, fall back to the default 30-day window, and run a heap-heavy renderer as the standard proof path.
+Tests run: npx tsx tools/automation/thirty-day-active-mss-plan-replay.test.ts; npx tsx tools/automation/june12-protected-structure-replay.test.ts; npx tsx tools/automation/protected-structure-trend-confirmation-replay.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. DeskState now carries `scanner_protected_structure_trend_confirmation` as a top-level metadata layer. Discord prints a concise `Desk Direction` section before candidate review details. The June 12 proof now asserts selected SHORT can remain visible while protected 15M+5M bullish structure headlines LONG review-only, and the prior-week verifier proves confirmed LONG/SHORT samples require both 15M and 5M bias alignment. Active-MSS replay arguments now reject unknown flags, support `--evaluate-from/--evaluate-to` plus `--from/--to` aliases, and the standard diagnostic command now uses the lean protected-structure verifier. The old heap-heavy renderer is only available through explicit `diagnostic:active-mss-replay:heavy` / `--allow-heavy-replay=true`.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge data interpretation changed.
+Bridge impact: None.
+Discord impact: Yes. Desk Play reports now show the protected-structure desk direction before candidate review language.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor/scanner so the running process loads the new Desk Direction formatter and replay safeguards.
+
+## Previous Change
+
 Date: 2026-06-12
 Task: Harden NinjaTrader bar timestamp mode against close-time drift.
 Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.

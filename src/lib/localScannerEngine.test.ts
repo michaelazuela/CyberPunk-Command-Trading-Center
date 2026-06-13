@@ -1195,6 +1195,10 @@ const june12ProtectedHoldDeskState = buildDeskState({
 });
 assert.equal(june12ProtectedHoldDeskState.selectedCandidate?.direction, 'SHORT');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.direction, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.sourceOfTruth, 'scanner_protected_structure_trend_confirmation');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
+assert.ok(june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('Desk Direction: LONG'));
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'primary');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.state, 'secondary');
 const june12FifteenMinuteRow = june12ProtectedHoldDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.find((row) => row.timeframe === '15M');

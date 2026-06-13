@@ -374,9 +374,25 @@ export interface DeskHtfProtectedStructureMap {
   };
 }
 
+export interface DeskTrendConfirmation {
+  sourceOfTruth: 'scanner_protected_structure_trend_confirmation';
+  direction: DeskPlayDirection;
+  status: 'aligned' | 'not_aligned' | 'data_limited' | 'unavailable';
+  supportingTimeframes: Array<'15M' | '5M'>;
+  lineInSand: number | null;
+  confirmation: string;
+  summary: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
+  trendConfirmation: DeskTrendConfirmation;
   title: string;
   summary: string;
   lineInSand: number | null;
@@ -1852,6 +1868,76 @@ function protectedStructureSupportDirection(map: DeskHtfProtectedStructureMap): 
   return fifteenDirection && fifteenDirection === fiveDirection ? fifteenDirection : null;
 }
 
+function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructureMap): DeskTrendConfirmation {
+  const baseBoundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+  } as const;
+  if (map.reliability === 'data_limited') {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
+      direction: 'WAIT',
+      status: 'data_limited',
+      supportingTimeframes: [],
+      lineInSand: null,
+      confirmation: 'HTF context is data-limited; protected structure cannot promote a desk direction.',
+      summary: 'Trend confirmation unavailable: HTF protected-structure context is data-limited.',
+      approvalBoundary: baseBoundary,
+    };
+  }
+  const fifteenMinute = map.rows.find((row) => row.timeframe === '15M');
+  const fiveMinute = map.rows.find((row) => row.timeframe === '5M');
+  const direction = protectedStructureSupportDirection(map);
+  if (!fifteenMinute || !fiveMinute) {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
+      direction: 'WAIT',
+      status: 'unavailable',
+      supportingTimeframes: [],
+      lineInSand: null,
+      confirmation: '15M and 5M protected structure rows are both required.',
+      summary: 'Trend confirmation unavailable: missing 15M or 5M protected-structure row.',
+      approvalBoundary: baseBoundary,
+    };
+  }
+  if (!direction) {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
+      direction: 'WAIT',
+      status: 'not_aligned',
+      supportingTimeframes: [],
+      lineInSand: null,
+      confirmation: '15M and 5M protected structure are not aligned.',
+      summary: 'Trend confirmation: WAIT until 15M and 5M protected structure align.',
+      approvalBoundary: baseBoundary,
+    };
+  }
+  const lineInSand = direction === 'LONG'
+    ? Math.min(
+        ...[fifteenMinute.biasChangeLine, fiveMinute.biasChangeLine]
+          .filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
+      )
+    : Math.max(
+        ...[fifteenMinute.biasChangeLine, fiveMinute.biasChangeLine]
+          .filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
+      );
+  const resolvedLine = Number.isFinite(lineInSand) ? lineInSand : null;
+  const changeText = direction === 'LONG'
+    ? `changes BEAR below ${resolvedLine !== null ? resolvedLine.toFixed(2) : 'protected structure'}`
+    : `changes BULL above ${resolvedLine !== null ? resolvedLine.toFixed(2) : 'protected structure'}`;
+  return {
+    sourceOfTruth: 'scanner_protected_structure_trend_confirmation',
+    direction,
+    status: 'aligned',
+    supportingTimeframes: ['15M', '5M'],
+    lineInSand: resolvedLine,
+    confirmation: `15M and 5M protected structure are ${direction === 'LONG' ? 'BULL' : 'BEAR'} now; ${changeText} on completed close+hold.`,
+    summary: `Desk Direction: ${direction}. Trend confirmation: 15M+5M protected structure aligned; ${changeText}.`,
+    approvalBoundary: baseBoundary,
+  };
+}
+
 function lifecycleItemHasProtectedStructureSupport(
   item: ScannerCandidateLifecycleTraceItem | null | undefined,
   map: DeskHtfProtectedStructureMap,
@@ -1948,6 +2034,7 @@ function buildPrimaryDeskPlay(args: {
   canExecute: boolean;
 }): PrimaryDeskPlay {
   const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
+  const trendConfirmation = buildProtectedStructureTrendConfirmation(htfProtectedStructureMap);
   const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap);
   const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection, htfProtectedStructureMap);
   const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection, htfProtectedStructureMap);
@@ -1984,7 +2071,9 @@ function buildPrimaryDeskPlay(args: {
     ? 'WAIT - desk play not confirmed'
     : `${directionLabel(primaryDirection)} desk play`;
   const summary = primaryBias
-    ? `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
+    ? trendConfirmation.status === 'aligned' && trendConfirmation.direction === primaryDirection
+      ? `${trendConfirmation.summary} Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
+      : `${directionLabel(primaryDirection)} remains primary while its line/trigger holds. Opposite side stays visible as ${oppositeBias?.state || 'not_present'}.`
     : selectedLifecycleItem?.direction && !lifecycleItemHasHtfSupport(selectedLifecycleItem)
     ? `No HTF-supported directional play is confirmed. ${selectedLifecycleItem.direction} evidence stays review-only until completed HTF support or protected 5M reversal proof changes the map.`
     : countertrendWarning && selectedLifecycleItem?.direction
@@ -2046,6 +2135,7 @@ function buildPrimaryDeskPlay(args: {
   return {
     sourceOfTruth: 'scanner_primary_desk_play',
     direction: primaryDirection,
+    trendConfirmation,
     title,
     summary,
     lineInSand: selectedLine,
