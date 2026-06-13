@@ -736,6 +736,71 @@ assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
 assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
 
+const waitDeskMapWithCandidate = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-12',
+  instrument: 'MES',
+  planVersionId: 'AM-WAIT-DESK-MAP-WITH-CANDIDATE-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: 'Invalid below protected structure.',
+    setupCandidates: [detachedLongCandidate],
+  },
+  candidates: [detachedLongCandidate],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7415,
+  deskState: {
+    marketMode: 'human_review_ready',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7407.25,
+    nextTrigger: 'LONG above 7407.25 only after completed 5M proof.',
+    invalidation: 'Invalid below protected structure.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'WAIT',
+      title: 'WAIT - desk play not confirmed',
+      summary: 'No HTF-supported directional play is confirmed from scanner-owned lifecycle state.',
+      lineInSand: 7407.25,
+      longAbove: 7407.25,
+      shortBelow: 7400,
+      nextTrigger: 'LONG above 7407.25 / SHORT below 7400.00; completed 5M close/retest only.',
+      invalidation: 'Protected structure must hold.',
+      htfConflict: true,
+      countertrendWarning: 'LONG is pressing into bearish HTF/session structure. Treat T1/T2 as management.',
+      discordEligible: true,
+      longBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Long review only',
+        lineInSand: 7407.25,
+        nextTrigger: 'Completed 5M close above 7407.25, then hold retest.',
+        reason: 'Review only; primary desk state is WAIT.',
+        blockers: ['canExecute=false'],
+      },
+      shortBias: {
+        state: 'secondary',
+        scenarioLabel: 'Short review below line',
+        lineInSand: 7400,
+        nextTrigger: 'Completed 5M close below 7400.00, then failed retest.',
+        reason: 'Review only.',
+        blockers: ['canExecute=false'],
+      },
+    },
+  },
+});
+const waitDeskMapWithCandidateText = flattenDiscordPayloadText(waitDeskMapWithCandidate);
+assert.ok(waitDeskMapWithCandidate.content?.includes('[AM DESK PLAY] MES - WAIT'));
+assert.ok(!waitDeskMapWithCandidate.content?.includes('[AM REVIEW] MES - LONG'));
+assert.ok(waitDeskMapWithCandidateText.includes('Review Map:'));
+assert.ok(waitDeskMapWithCandidateText.includes('LONG ABOVE 7407.25'));
+assert.ok(waitDeskMapWithCandidateText.includes('SHORT BELOW 7400.00'));
+assert.ok(waitDeskMapWithCandidateText.includes('Need: protected 5M shift + canExecute.'));
+
 const deskPlaySupportedShortPayload = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-06-11',

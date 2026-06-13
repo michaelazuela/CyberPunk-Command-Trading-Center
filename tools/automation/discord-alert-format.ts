@@ -705,7 +705,7 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
 function shouldRenderDeskPlay(args: CompactDiscordSummaryArgs): boolean {
   const play = args.deskState?.primaryDeskPlay;
   if (!play?.discordEligible || getEffectiveCanExecute(args.normalized)) return false;
-  if (play.direction === 'WAIT') return args.candidates.length === 0 && !args.attachments.chartPlan;
+  if (play.direction === 'WAIT') return true;
   if (args.candidates.length === 0) return true;
   return args.deskState?.discordAction === 'hold' || args.deskState?.discordAction === 'no_trade';
 }
