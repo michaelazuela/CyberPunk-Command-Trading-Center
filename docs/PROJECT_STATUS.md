@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Harden Quant Desk tray startup after NinjaTrader updates.
+Files changed: QuantDeskSupervisorTray.ps1, docs/PROJECT_STATUS.md, tools/supervisor/supervisor.test.ts.
+Reason: After updating NinjaTrader, the tray could temporarily show `Stopped - Supervisor status endpoint is not reachable` while the hidden supervisor was still starting, running HTF preload, or reconnecting. That looked like a failed connection even when the bridge recovered normally.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; PowerShell parser check for QuantDeskSupervisorTray.ps1; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The tray now opens a startup grace window for manual start, restart, self-heal, and initial tray startup; shows `Starting` or `Reconnecting` instead of a false stopped state when a start is in progress or the supervisor process exists; and lets self-heal retry after the startup grace expires.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner decisions, or bridge data interpretation changed.
+Bridge impact: None. NinjaTrader OHLC remains read-only source data.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart/open the tray so the updated status handling is loaded.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Add scanner Discord message cleanup setting.
 Files changed: docs/DISCORD_ALERT_AUTOMATION.md, docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: The trader requested a setting to delete stale scanner Discord messages like data-quality notices after 15 minutes so old operational messages do not clutter the channel.

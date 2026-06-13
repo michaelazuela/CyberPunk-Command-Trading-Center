@@ -32,6 +32,8 @@ $SelfHealPausedByStop = $false
 $SelfHealInProgress = $false
 $EndpointMissCount = 0
 $SelfHealThreshold = 2
+$SupervisorStartupGraceSeconds = 120
+$SupervisorStartingUntil = [datetime]::MinValue
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -52,6 +54,62 @@ function Write-TrayLog {
     details = $Details
   }
   Add-Content -Path $TrayLogPath -Value ($entry | ConvertTo-Json -Compress -Depth 4)
+}
+
+function Set-SupervisorStarting {
+  param(
+    [string]$Reason = 'start-requested'
+  )
+
+  $script:SupervisorStartingUntil = (Get-Date).AddSeconds($SupervisorStartupGraceSeconds)
+  Write-TrayLog -Message 'Supervisor startup grace window opened.' -Details @{
+    reason = $Reason
+    graceSeconds = $SupervisorStartupGraceSeconds
+    until = $script:SupervisorStartingUntil.ToUniversalTime().ToString('o')
+  }
+}
+
+function Test-SupervisorStarting {
+  return (Get-Date) -lt $script:SupervisorStartingUntil
+}
+
+function Test-ProcessRunningById {
+  param(
+    [AllowNull()]
+    $ProcessId
+  )
+
+  if (-not $ProcessId) {
+    return $false
+  }
+
+  try {
+    $process = Get-Process -Id ([int]$ProcessId) -ErrorAction Stop
+    return $null -ne $process
+  } catch {
+    return $false
+  }
+}
+
+function Get-SupervisorProcessFallbackStatus {
+  $statePath = Join-Path $LogsDir 'supervisor-state.json'
+  if (-not (Test-Path $statePath)) {
+    return $null
+  }
+
+  try {
+    $state = Get-Content -Path $statePath -Raw | ConvertFrom-Json
+    if (Test-ProcessRunningById -ProcessId $state.supervisorPid) {
+      return [pscustomobject]@{
+        SupervisorPid = [int]$state.supervisorPid
+        StartedAt = $state.startedAt
+      }
+    }
+  } catch {
+    return $null
+  }
+
+  return $null
 }
 
 function Start-LocalScript {
@@ -110,13 +168,35 @@ function Get-SupervisorPayload {
 function Get-TrayState {
   $payload = Get-SupervisorPayload
   if (-not $payload) {
+    $processFallback = Get-SupervisorProcessFallbackStatus
+    if (-not $SelfHealPausedByStop -and (Test-SupervisorStarting)) {
+      return [pscustomobject]@{
+        Level = 'yellow'
+        Label = 'Starting'
+        Detail = 'Supervisor start requested; waiting for status endpoint.'
+        Payload = $null
+        ProcessRunning = $null -ne $processFallback
+      }
+    }
+    if (-not $SelfHealPausedByStop -and $processFallback) {
+      return [pscustomobject]@{
+        Level = 'yellow'
+        Label = 'Reconnecting'
+        Detail = "Supervisor process $($processFallback.SupervisorPid) is running; waiting for status endpoint."
+        Payload = $null
+        ProcessRunning = $true
+      }
+    }
     return [pscustomobject]@{
       Level = 'red'
       Label = 'Stopped'
       Detail = if ($SelfHealPausedByStop) { 'Stopped by user; self-heal paused.' } else { 'Supervisor status endpoint is not reachable.' }
       Payload = $null
+      ProcessRunning = $false
     }
   }
+
+  $script:SupervisorStartingUntil = [datetime]::MinValue
 
   $healthStatus = if ($payload.health -and $payload.health.status) { [string]$payload.health.status } else { 'warn' }
   $deliveryStatus = if ($payload.delivery -and $payload.delivery.status) { [string]$payload.delivery.status } else { 'unknown' }
@@ -127,6 +207,7 @@ function Get-TrayState {
       Label = 'Needs Attention'
       Detail = "Supervisor=$($payload.supervisor.status); health=$healthStatus"
       Payload = $payload
+      ProcessRunning = $true
     }
   }
 
@@ -136,6 +217,7 @@ function Get-TrayState {
       Label = 'Warning'
       Detail = "Health=$healthStatus; delivery=$deliveryStatus"
       Payload = $payload
+      ProcessRunning = $true
     }
   }
 
@@ -144,6 +226,7 @@ function Get-TrayState {
     Label = 'Healthy'
     Detail = "Supervisor is running; delivery=$deliveryStatus"
     Payload = $payload
+    ProcessRunning = $true
   }
 }
 
@@ -234,6 +317,15 @@ function Invoke-SelfHealIfNeeded {
     $script:SelfHealInProgress = $false
     return
   }
+  if ($script:SelfHealInProgress -and (Test-SupervisorStarting)) {
+    return
+  }
+  if ($script:SelfHealInProgress -and -not (Test-SupervisorStarting)) {
+    Write-TrayLog -Message 'Supervisor startup grace expired; self-heal may retry.' -Details @{
+      misses = $script:EndpointMissCount
+    }
+    $script:SelfHealInProgress = $false
+  }
   if (-not $script:SelfHealEnabled -or $script:SelfHealPausedByStop -or $script:SelfHealInProgress -or $NoAutoStart) {
     return
   }
@@ -248,6 +340,7 @@ function Invoke-SelfHealIfNeeded {
     threshold = $SelfHealThreshold
   }
   $script:SelfHealInProgress = $true
+  Set-SupervisorStarting -Reason 'self-heal-start'
   Start-LocalScript -ScriptPath $StartScript -Label 'self-heal-start' | Out-Null
   Start-NpmCommand -Command $SelfHealNotifyScript -Label 'self-heal-notify' | Out-Null
   $script:EndpointMissCount = 0
@@ -265,12 +358,12 @@ function Update-Tray {
     $notifyIcon.Text = "Quant Desk Supervisor - $($state.Label)"
     $statusItem.Text = "Status: $($state.Label) - $($state.Detail)"
 
-    $isRunning = $null -ne $state.Payload
+    $isRunning = ($null -ne $state.Payload) -or [bool]$state.ProcessRunning -or (Test-SupervisorStarting)
     $startItem.Enabled = -not $isRunning
     $restartItem.Enabled = $true
-    $stopItem.Enabled = $isRunning
+    $stopItem.Enabled = ($null -ne $state.Payload) -or [bool]$state.ProcessRunning
     $repairCacheItem.Enabled = $true
-    $openStatusItem.Enabled = $isRunning
+    $openStatusItem.Enabled = $null -ne $state.Payload
     $openLogsItem.Enabled = $true
     $selfHealItem.Checked = $SelfHealEnabled
   } catch {
@@ -290,6 +383,7 @@ $startItem.Add_Click({
   $script:SelfHealPausedByStop = $false
   $script:SelfHealInProgress = $false
   $script:EndpointMissCount = 0
+  Set-SupervisorStarting -Reason 'manual-start'
   $statusItem.Text = 'Status: Start requested...'
   Start-LocalScript -ScriptPath $StartScript -Label 'start' | Out-Null
   Update-Tray
@@ -299,6 +393,7 @@ $restartItem.Add_Click({
   $script:SelfHealPausedByStop = $false
   $script:SelfHealInProgress = $true
   $script:EndpointMissCount = 0
+  Set-SupervisorStarting -Reason 'manual-restart'
   $statusItem.Text = 'Status: Restart requested...'
   Start-RestartSequence | Out-Null
   Update-Tray
@@ -358,6 +453,7 @@ $timer.Start()
 if (-not $NoAutoStart -and -not (Get-SupervisorPayload)) {
   Write-TrayLog -Message 'Supervisor endpoint unavailable on tray startup; initial start requested.'
   $script:SelfHealInProgress = $true
+  Set-SupervisorStarting -Reason 'initial-start'
   Start-LocalScript -ScriptPath $StartScript -Label 'initial-start' | Out-Null
 }
 
