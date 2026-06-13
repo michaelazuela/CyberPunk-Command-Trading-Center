@@ -36,6 +36,7 @@ export enum SetupType {
   HtfDisplacementMssContinuation = 'HtfDisplacementMssContinuation',
   HtfDisplacementFvgContinuation = 'HtfDisplacementFvgContinuation',
   OpeningDriveFvgContinuation = 'OpeningDriveFvgContinuation',
+  AfterLunchDriveFvgContinuation = 'AfterLunchDriveFvgContinuation',
   IntradayMssMicroContinuation = 'IntradayMssMicroContinuation',
   FailedPlanReversal = 'FailedPlanReversal',
   OpeningOrderBlock = 'OpeningOrderBlock',
@@ -788,6 +789,7 @@ export type TradingPlanCandidateState =
   | 'MSS_HOLD_CONFIRMED'
   | 'MSS_CONTINUATION_RETEST_PENDING'
   | 'OPENING_OBSERVATION_ARMED'
+  | 'AFTER_LUNCH_DRIVE_ARMED'
   | 'HUMAN_REVIEW_READY'
   | 'FAILED_LONG_TO_BEARISH_DECISION_PENDING'
   | 'FAILED_LONG_TO_BEARISH_MSS_CONFIRMED'
@@ -1114,12 +1116,12 @@ export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
   candidateState?: TradingPlanCandidateState;
-  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'failed_plan_reversal';
+  pathway?: 'primary_setup_scanner' | 'htf_liquidity_draw_mss' | 'htf_displacement_mss_continuation' | 'htf_displacement_fvg_continuation' | 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation' | 'intraday_mss_micro_continuation' | 'failed_plan_reversal';
   activeCampaign?: ActiveCampaign;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   failedPlanReversal?: FailedPlanReversalContext;
   humanReview?: {
-    status: 'OpeningObservationArmed' | 'HumanReviewReady';
+    status: 'OpeningObservationArmed' | 'AfterLunchDriveArmed' | 'HumanReviewReady';
     canExecute: false;
     requiresTraderConfirmation: true;
     discordTradePlanEligible: boolean;

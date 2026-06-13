@@ -151,6 +151,15 @@ function setupFromText(...parts: Array<unknown>): SetupType {
     text.includes('HTF_DISPLACEMENT_FVG_CONTINUATION')
   ) return SetupType.HtfDisplacementFvgContinuation;
   if (
+    text.includes('AFTER-LUNCH DRIVE FVG CONTINUATION') ||
+    text.includes('AFTER LUNCH DRIVE FVG CONTINUATION') ||
+    text.includes('AFTER_LUNCH_DRIVE_FVG_CONTINUATION')
+  ) return SetupType.AfterLunchDriveFvgContinuation;
+  if (
+    text.includes('OPENING DRIVE FVG CONTINUATION') ||
+    text.includes('OPENING_DRIVE_FVG_CONTINUATION')
+  ) return SetupType.OpeningDriveFvgContinuation;
+  if (
     text.includes('INTRADAY MSS MICRO CONTINUATION') ||
     text.includes('INTRADAY_MSS_MICRO_CONTINUATION') ||
     text.includes('MICRO CONTINUATION RETEST')
@@ -369,6 +378,7 @@ function setupScore(setupType: SetupType): number {
     case SetupType.HtfDisplacementMssContinuation: return 99;
     case SetupType.HtfDisplacementFvgContinuation: return 97;
     case SetupType.OpeningDriveFvgContinuation: return 98;
+    case SetupType.AfterLunchDriveFvgContinuation: return 98;
     case SetupType.IntradayMssMicroContinuation: return 97;
     case SetupType.FailedPlanReversal: return 98;
     case SetupType.TurtleSoup: return 98;
@@ -614,6 +624,8 @@ function computeDecisionQuality(candidate: SetupCandidate, chartContext: ChartCo
               ? 'HTF displacement + FVG continuation sequence quality.'
           : candidate.setupType === SetupType.OpeningDriveFvgContinuation
               ? 'Opening drive FVG continuation sequence quality.'
+          : candidate.setupType === SetupType.AfterLunchDriveFvgContinuation
+              ? 'After-lunch drive FVG continuation sequence quality.'
           : candidate.setupType === SetupType.IntradayMssMicroContinuation
               ? 'Intraday MSS micro-continuation sequence quality.'
           : candidate.setupType === SetupType.FailedPlanReversal

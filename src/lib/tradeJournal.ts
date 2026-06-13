@@ -15,6 +15,7 @@ export type TradeJournalModelType =
   | 'HTF Displacement + 5M MSS Continuation'
   | 'HTF Displacement + FVG Continuation'
   | 'Opening Drive FVG Continuation'
+  | 'After-Lunch Drive FVG Continuation'
   | 'Intraday MSS Micro Continuation'
   | 'Failed Plan Reversal'
   | 'ICT setup';

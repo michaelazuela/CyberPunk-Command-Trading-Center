@@ -448,18 +448,18 @@ function timeWindowQualityContext(chartContext?: ChartContext | null): Candidate
     if (minutes >= 9 * 60 + 30 && minutes < 10 * 60) {
       return {
         evidence: ['Opening observation window'],
-        missingEvidence: ['Opening observation window; wait for confirmed post-open structure'],
-        score: -4,
+        missingEvidence: ['Opening range context; execution approval still requires confirmed 5M structure and normal gates'],
+        score: 2,
         forceConditional: false,
       };
     }
-    if (minutes >= 10 * 60 && minutes < 12 * 60) {
+    if (minutes >= 9 * 60 + 15 && minutes < 12 * 60) {
       return { evidence: ['Active window: Morning setup scan, 9:15-12:00 ET'], missingEvidence: [], score: 8, forceConditional: false };
     }
   }
 
   if (sessionType === 'lunch' || sessionType === 'replay_lunch') {
-    if (minutes >= 12 * 60 && minutes < 15 * 60 + 30) {
+    if (minutes >= 12 * 60 && minutes < 16 * 60) {
       return { evidence: ['Active window: Lunch/PM setup scan, 12:00-16:00 ET'], missingEvidence: [], score: 6, forceConditional: false };
     }
   }
@@ -2902,16 +2902,74 @@ function htfDisplacementFvgConfidenceScore(args: {
   );
 }
 
-function isInsideOpeningDriveArmWindow(chartContext?: ChartContext | null): boolean {
-  if (!chartContext || (chartContext.sessionType !== 'morning' && chartContext.sessionType !== 'replay_morning')) return false;
-  const minutes = latestChartMinutes(chartContext);
-  return minutes !== null && minutes >= 9 * 60 + 30 && minutes < 10 * 60;
+interface SessionDriveFvgPhase {
+  setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation;
+  pathway: 'opening_drive_fvg_continuation' | 'after_lunch_drive_fvg_continuation';
+  phaseLabel: 'Opening Drive' | 'After-Lunch Drive';
+  displacementLabel: 'opening' | 'after-lunch';
+  armWindowLabel: string;
+  reviewWindowLabel: string;
+  armedState: 'OPENING_OBSERVATION_ARMED' | 'AFTER_LUNCH_DRIVE_ARMED';
+  armedStatus: 'OpeningObservationArmed' | 'AfterLunchDriveArmed';
+  armReason: string;
+  waitReason: string;
+  armStart: number;
+  armEnd: number;
+  reviewStart: number;
+  reviewEnd: number;
 }
 
-function isInsideOpeningDriveReviewWindow(chartContext?: ChartContext | null): boolean {
-  if (!chartContext || (chartContext.sessionType !== 'morning' && chartContext.sessionType !== 'replay_morning')) return false;
+function sessionDriveFvgPhaseFor(
+  chartContext: ChartContext | null | undefined,
+  setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation,
+): SessionDriveFvgPhase | null {
+  if (!chartContext) return null;
+  if (setupType === SetupType.OpeningDriveFvgContinuation) {
+    if (chartContext.sessionType !== 'morning' && chartContext.sessionType !== 'replay_morning') return null;
+    return {
+      setupType,
+      pathway: 'opening_drive_fvg_continuation',
+      phaseLabel: 'Opening Drive',
+      displacementLabel: 'opening',
+      armWindowLabel: '9:30-10:00 ET',
+      reviewWindowLabel: '10:00-11:00 ET',
+      armedState: 'OPENING_OBSERVATION_ARMED',
+      armedStatus: 'OpeningObservationArmed',
+      armReason: 'Opening-drive FVG continuation is armed from observation context only; wait for 10:00-11:00 ET FVG retest/mitigation.',
+      waitReason: 'Opening Drive FVG Continuation is not armed.',
+      armStart: 9 * 60 + 30,
+      armEnd: 10 * 60,
+      reviewStart: 10 * 60,
+      reviewEnd: 11 * 60,
+    };
+  }
+  if (chartContext.sessionType !== 'lunch' && chartContext.sessionType !== 'replay_lunch') return null;
+  return {
+    setupType,
+    pathway: 'after_lunch_drive_fvg_continuation',
+    phaseLabel: 'After-Lunch Drive',
+    displacementLabel: 'after-lunch',
+    armWindowLabel: '12:00-12:30 ET',
+    reviewWindowLabel: '12:30-13:30 ET',
+    armedState: 'AFTER_LUNCH_DRIVE_ARMED',
+    armedStatus: 'AfterLunchDriveArmed',
+    armReason: 'After-lunch drive FVG continuation is armed from the first post-lunch drive only; wait for 12:30-13:30 ET FVG retest/mitigation.',
+    waitReason: 'After-Lunch Drive FVG Continuation is not armed.',
+    armStart: 12 * 60,
+    armEnd: 12 * 60 + 30,
+    reviewStart: 12 * 60 + 30,
+    reviewEnd: 13 * 60 + 30,
+  };
+}
+
+function isInsideSessionDriveArmWindow(chartContext: ChartContext | null | undefined, phase: SessionDriveFvgPhase): boolean {
   const minutes = latestChartMinutes(chartContext);
-  return minutes !== null && minutes >= 10 * 60 && minutes < 11 * 60;
+  return minutes !== null && minutes >= phase.armStart && minutes < phase.armEnd;
+}
+
+function isInsideSessionDriveReviewWindow(chartContext: ChartContext | null | undefined, phase: SessionDriveFvgPhase): boolean {
+  const minutes = latestChartMinutes(chartContext);
+  return minutes !== null && minutes >= phase.reviewStart && minutes < phase.reviewEnd;
 }
 
 function directionalFvgZone(chartContext: ChartContext, direction: Direction) {
@@ -3026,16 +3084,21 @@ function openingDriveConfidenceScore(args: {
   );
 }
 
-function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): SetupCandidate | null {
+function buildSessionDriveFvgContinuationCandidate(
+  input: SetupScannerInput,
+  setupType: SetupType.OpeningDriveFvgContinuation | SetupType.AfterLunchDriveFvgContinuation,
+): SetupCandidate | null {
   const chartContext = input.chartContext;
   if (!chartContext) return null;
-  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+  const registry = getPrimarySetupRegistry(input.sessionType).find((entry) => entry.setupType === setupType);
   if (!registry) return null;
+  const phase = sessionDriveFvgPhaseFor(chartContext, setupType);
+  if (!phase) return null;
   const direction = htfDisplacementDirection(chartContext);
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
 
-  const armWindow = isInsideOpeningDriveArmWindow(chartContext);
-  const reviewWindow = isInsideOpeningDriveReviewWindow(chartContext);
+  const armWindow = isInsideSessionDriveArmWindow(chartContext, phase);
+  const reviewWindow = isInsideSessionDriveReviewWindow(chartContext, phase);
   if (!armWindow && !reviewWindow) return null;
 
   const fifteenDisplacement = displacementCandleFor(chartContext, direction, '15m');
@@ -3088,7 +3151,7 @@ function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): Se
   const zoneLabel = `${parsePrice(fvg.lower)}-${parsePrice(fvg.upper)}`;
   const missingEvidence = Array.from(new Set([
     ...htfGate.missingEvidence,
-    ...(!reviewWindow ? ['Opening Drive FVG candidate is armed during 9:30-10:00 ET observation; human-review plan waits for 10:00-11:00 ET review window.'] : []),
+    ...(!reviewWindow ? [`${phase.phaseLabel} FVG candidate is armed during ${phase.armWindowLabel}; human-review plan waits for ${phase.reviewWindowLabel} review window.`] : []),
     ...(!retest.confirmed ? [retest.reason] : []),
     ...(entry === null ? ['Defined 5M FVG retest entry or entry zone'] : []),
     ...(stop === null ? ['Protected 5M structure stop'] : []),
@@ -3098,18 +3161,18 @@ function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): Se
   ]));
 
   return {
-    setupType: SetupType.OpeningDriveFvgContinuation,
+    setupType,
     scenarioLabel: registry.label,
-    candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : 'OPENING_OBSERVATION_ARMED',
-    pathway: 'opening_drive_fvg_continuation',
+    candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : phase.armedState,
+    pathway: phase.pathway,
     humanReview: {
-      status: humanReviewReady ? 'HumanReviewReady' : 'OpeningObservationArmed',
+      status: humanReviewReady ? 'HumanReviewReady' : phase.armedStatus,
       canExecute: false,
       requiresTraderConfirmation: true,
       discordTradePlanEligible: humanReviewReady,
       reason: humanReviewReady
-        ? 'Opening-drive FVG continuation is structurally qualified for human review. Trader confirmation is required before action.'
-        : 'Opening-drive FVG continuation is armed from observation context only; wait for 10:00-11:00 ET FVG retest/mitigation.',
+        ? `${phase.phaseLabel} FVG continuation is structurally qualified for human review. Trader confirmation is required before action.`
+        : phase.armReason,
     },
     direction,
     detectedStatus: humanReviewReady ? SetupCandidateStatus.Conditional : SetupCandidateStatus.Possible,
@@ -3129,9 +3192,9 @@ function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): Se
     targetClarity: targets.target1 !== null && targets.target2 !== null && target ? 0.85 : 0.3,
     proximityScore: enoughRoom ? 0.75 : 0.25,
     levelContextScore: score / 5,
-    levelContextSummary: `Opening drive FVG continuation: ${dirLabel} 15M displacement, ${dirLabel} 5M structure, FVG zone ${zoneLabel}, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
+    levelContextSummary: `${phase.phaseLabel} FVG continuation: ${dirLabel} 15M displacement, ${dirLabel} 5M structure, FVG zone ${zoneLabel}, target ${target ? `${target.label} ${target.price}` : 'unavailable'}.`,
     evidence: Array.from(new Set([
-      `${dirLabel} 15M opening displacement confirmed`,
+      `${dirLabel} 15M ${phase.displacementLabel} displacement confirmed`,
       ...(hasCompletedMssClose ? [`${dirLabel} completed 5M MSS confirmed`] : []),
       ...(fiveDisplacement ? [`${dirLabel} 5M displacement structure confirmed`] : []),
       `5M FVG / imbalance zone: ${zoneLabel}`,
@@ -3142,18 +3205,18 @@ function buildOpeningDriveFvgContinuationCandidate(input: SetupScannerInput): Se
       `Directional bias: ${direction}; bias supports ${direction} when 15M displacement, 5M structure, and FVG retest align.`,
       `Confidence score: ${score}/100`,
       'Human review required. Decision-support plan only. Trader must confirm entry before action.',
-      'OpeningDriveFvgContinuation never sets canExecute true and does not approve broker execution.',
+      `${setupType} never sets canExecute true and does not approve broker execution.`,
       ...(riskNote ? [riskNote] : []),
     ])),
     missingEvidence,
     executionStatus: ExecutionStatus.Conditional,
     blockReason: humanReviewReady ? null : NoTradeReason.EntryTriggerPending,
     requiredTrigger: direction === 'SHORT'
-      ? 'Human-review short: 15M bearish opening displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward sell-side target context.'
-      : 'Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET, protected structure stop, app T1/T2, and forward buy-side target context.',
+      ? `Human-review short: 15M bearish ${phase.displacementLabel} displacement, completed 5M bearish MSS/displacement, bearish 5M FVG retest/mitigation during ${phase.reviewWindowLabel}, protected structure stop, app T1/T2, and forward sell-side target context.`
+      : `Human-review long: 15M bullish ${phase.displacementLabel} displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during ${phase.reviewWindowLabel}, protected structure stop, app T1/T2, and forward buy-side target context.`,
     nextAction: humanReviewReady
-      ? `Human Review Ready ${dirLabel} Opening Drive FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required.${riskNote ? ` ${riskNote}` : ''}`
-      : 'Opening Drive FVG candidate armed. Wait for 10:00-11:00 ET 5M FVG retest/mitigation, protected stop, app targets, and forward target room before human-review plan output.',
+      ? `Human Review Ready ${dirLabel} ${phase.phaseLabel} FVG plan. Discord may show the full trade plan; canExecute remains false and trader confirmation is required.${riskNote ? ` ${riskNote}` : ''}`
+      : `${phase.phaseLabel} FVG candidate armed. Wait for ${phase.reviewWindowLabel} 5M FVG retest/mitigation, protected stop, app targets, and forward target room before human-review plan output.`,
     reducedRiskPlan: null,
   };
 }
@@ -3596,18 +3659,22 @@ function notDetectedHtfDisplacementFvgCandidate(entry: SetupRegistryEntry): Setu
   };
 }
 
-function notDetectedOpeningDriveFvgCandidate(entry: SetupRegistryEntry): SetupCandidate {
+function notDetectedSessionDriveFvgCandidate(entry: SetupRegistryEntry): SetupCandidate {
+  const isAfterLunch = entry.setupType === SetupType.AfterLunchDriveFvgContinuation;
+  const phaseLabel = isAfterLunch ? 'After-Lunch Drive' : 'Opening Drive';
+  const status = isAfterLunch ? 'AfterLunchDriveArmed' : 'OpeningObservationArmed';
+  const reviewWindow = isAfterLunch ? '12:30-13:30 ET' : '10:00-11:00 ET';
   return {
     setupType: entry.setupType,
     scenarioLabel: entry.label,
     candidateState: 'NO_QUALIFIED_STATE',
-    pathway: 'opening_drive_fvg_continuation',
+    pathway: isAfterLunch ? 'after_lunch_drive_fvg_continuation' : 'opening_drive_fvg_continuation',
     humanReview: {
-      status: 'OpeningObservationArmed',
+      status,
       canExecute: false,
       requiresTraderConfirmation: true,
       discordTradePlanEligible: false,
-      reason: 'Opening Drive FVG Continuation is not armed.',
+      reason: `${phaseLabel} FVG Continuation is not armed.`,
     },
     direction: 'NO TRADE',
     detectedStatus: SetupCandidateStatus.NotDetected,
@@ -3627,13 +3694,13 @@ function notDetectedOpeningDriveFvgCandidate(entry: SetupRegistryEntry): SetupCa
     targetClarity: 0,
     proximityScore: 0,
     levelContextScore: 0,
-    levelContextSummary: 'Opening Drive FVG Continuation requires 15M opening displacement, aligned 5M MSS/displacement, 5M FVG, and 10:00-11:00 ET FVG retest for human review.',
+    levelContextSummary: `${phaseLabel} FVG Continuation requires 15M displacement, aligned 5M MSS/displacement, 5M FVG, and ${reviewWindow} FVG retest for human review.`,
     evidence: [],
     missingEvidence: entry.requiredEvidence,
     executionStatus: ExecutionStatus.NotDetected,
     blockReason: null,
     requiredTrigger: null,
-    nextAction: 'Wait for 15M opening displacement, aligned 5M structure, and a 5M FVG retest/mitigation in the review window. Human confirmation remains required.',
+    nextAction: `Wait for 15M ${isAfterLunch ? 'after-lunch' : 'opening'} displacement, aligned 5M structure, and a 5M FVG retest/mitigation in the review window. Human confirmation remains required.`,
     reducedRiskPlan: null,
   };
 }
@@ -4435,7 +4502,7 @@ export function rankSetupCandidate(candidate: SetupCandidate): number {
     candidate.pathway === 'htf_liquidity_draw_mss' ? 24 :
     candidate.pathway === 'htf_displacement_mss_continuation' ? 22 :
     candidate.pathway === 'htf_displacement_fvg_continuation' ? 20 :
-    candidate.pathway === 'opening_drive_fvg_continuation' ? 23 :
+    candidate.pathway === 'opening_drive_fvg_continuation' || candidate.pathway === 'after_lunch_drive_fvg_continuation' ? 23 :
     candidate.pathway === 'intraday_mss_micro_continuation' ? 24 :
     candidate.pathway === 'failed_plan_reversal' ? 21 :
     0;
@@ -5285,7 +5352,7 @@ function applyActiveTimeframeMssRulesToCandidate(candidate: SetupCandidate, char
   const alignedHigherTimeframeMss = (['15M', '60M', '120M', '240M'] as const)
     .map((timeframe) => layer.timeframes[timeframe])
     .filter((item) => isConfirmedMss(item, expectedDirection));
-  const openingDriveHumanReview = candidate.pathway === 'opening_drive_fvg_continuation';
+  const openingDriveHumanReview = candidate.pathway === 'opening_drive_fvg_continuation' || candidate.pathway === 'after_lunch_drive_fvg_continuation';
 
   const evidence = [
     `Active timeframe MSS ruleset applied to all models: requires confirmed completed 5M ${expectedDirection} MSS before executable status.`,
@@ -5351,7 +5418,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
   const htfCandidate = buildHtfLiquidityDrawCandidate(input);
   const htfDisplacementCandidate = buildHtfDisplacementMssContinuationCandidate(input);
   const htfDisplacementFvgCandidate = buildHtfDisplacementFvgContinuationCandidate(input);
-  const openingDriveFvgCandidate = buildOpeningDriveFvgContinuationCandidate(input);
+  const openingDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.OpeningDriveFvgContinuation);
+  const afterLunchDriveFvgCandidate = buildSessionDriveFvgContinuationCandidate(input, SetupType.AfterLunchDriveFvgContinuation);
   const intradayMssMicroCandidate = buildIntradayMssMicroContinuationCandidate(input);
   const intradayMssMicroDataLimitedCandidate = !intradayMssMicroCandidate && input.chartContext
     ? (() => {
@@ -5373,6 +5441,8 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           ? htfDisplacementFvgCandidate
           : entry.setupType === SetupType.OpeningDriveFvgContinuation && openingDriveFvgCandidate
           ? openingDriveFvgCandidate
+          : entry.setupType === SetupType.AfterLunchDriveFvgContinuation && afterLunchDriveFvgCandidate
+          ? afterLunchDriveFvgCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroCandidate
           ? intradayMssMicroCandidate
           : entry.setupType === SetupType.IntradayMssMicroContinuation && intradayMssMicroDataLimitedCandidate
@@ -5386,7 +5456,9 @@ export function scanSetupCandidates(input: SetupScannerInput): SetupScanResult {
           : entry.setupType === SetupType.HtfDisplacementFvgContinuation
           ? notDetectedHtfDisplacementFvgCandidate(entry)
           : entry.setupType === SetupType.OpeningDriveFvgContinuation
-          ? notDetectedOpeningDriveFvgCandidate(entry)
+          ? notDetectedSessionDriveFvgCandidate(entry)
+          : entry.setupType === SetupType.AfterLunchDriveFvgContinuation
+          ? notDetectedSessionDriveFvgCandidate(entry)
           : entry.setupType === SetupType.IntradayMssMicroContinuation
           ? notDetectedIntradayMssMicroContinuationCandidate(entry)
           : entry.setupType === SetupType.FailedPlanReversal

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Make Opening Drive FVG Continuation morning-only and add After-Lunch Drive FVG Continuation.
+Files changed: docs/PROJECT_STATUS.md, src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/config/tradeRules.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts, src/lib/ictModelLabels.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/tradeDecisionPipeline.ts, src/lib/tradeDecisionPipeline.test.ts, src/lib/tradeJournal.ts, src/types.ts, tools/automation/professional-report-language.ts.
+Reason: The trader requested Opening Drive FVG Continuation be updated to morning only and a separate after-lunch drive model be added without changing approvals or app-owned trade math.
+Tests run: npx tsx src/config/setupRegistry.test.ts; npx tsx src/lib/geminiPromptSafety.test.ts; npx tsx src/lib/tradeDecisionPipeline.test.ts; npx tsx src/lib/setupScanner.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Opening Drive FVG Continuation is now morning/replay-morning only. After-Lunch Drive FVG Continuation is a new Lunch/PM/replay-lunch human-review model that can arm during the first lunch drive, become review-ready in the after-lunch review window when structured 15M/5M drive/FVG evidence is complete, and produce app-owned entry, protected stop, T1/T2, invalidation, and target-context metadata while keeping canExecute false.
+Trading logic changed: Yes, limited to adding the user-approved after-lunch human-review model and correcting the Opening Drive session boundary. No executable approval semantics, canExecute gates, entry math, stop math, target math, risk gates, or bridge authority changed.
+Bridge impact: None. NinjaTrader OHLC remains the highest-authority read-only evidence layer.
+Discord impact: Yes. Desk/Discord metadata can now label after-lunch drive review plans and no longer treats Opening Drive as a Lunch/PM model.
+Journal/RAG impact: Model labeling and journal unions now include After-Lunch Drive FVG Continuation. No schema change.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor after this commit so the running scanner loads the updated setup registry and session boundaries.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Rewire normal execution approval windows to 9:15 AM-4:00 PM ET.
 Files changed: AGENTS.md, docs/DISCORD_ALERT_AUTOMATION.md, docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, docs/TRADE_DECISION_PIPELINE.md, docs/WORKFLOWS.md, scripts/active-window-timestamp-guard.js, scripts/architecture-guard.js, src/config/timeWindows.ts, src/config/timeWindows.test.ts, src/config/tradeRules.ts, src/constants.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts, src/lib/htfLiquidityDrawEngine.test.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/utils.ts, tools/automation/bridge-history-smoke.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-scheduler.ts, tools/automation/failed-plan-reversal-phase8-audit.ts, tools/automation/htf-mss-actual-ohlc-replay.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/thirty-day-active-mss-plan-replay.ts, tools/supervisor/config.ts, tools/supervisor/supervisor.test.ts.
 Reason: The trader explicitly requested normal execution approval windows to run from 9:15 AM through 4:00 PM ET. Morning now starts 15 minutes before the RTH open and Lunch/PM remains active through the market close.

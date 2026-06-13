@@ -1360,6 +1360,7 @@ function isPrimarySetupCandidate(candidate: { setupType: SetupType }) {
     candidate.setupType === SetupType.HtfDisplacementMssContinuation ||
     candidate.setupType === SetupType.HtfDisplacementFvgContinuation ||
     candidate.setupType === SetupType.OpeningDriveFvgContinuation ||
+    candidate.setupType === SetupType.AfterLunchDriveFvgContinuation ||
     candidate.setupType === SetupType.IntradayMssMicroContinuation ||
     candidate.setupType === SetupType.FailedPlanReversal
   );
@@ -4034,6 +4035,92 @@ const tests: Array<[string, () => void]> = [
     assert.ok(candidate.evidence.some((item) => item.includes('Forward sell-side liquidity 7505')));
     assert.equal(candidate.evidence.some((item) => item.includes('Behind-price London low')), false);
     assert.equal(candidate.missingEvidence.includes('Forward target room remains after the FVG retest'), false);
+  }],
+
+  ['After-Lunch Drive FVG continuation creates a human-review short plan with full levels and canExecute false', () => {
+    const base = htfDisplacementContinuationContext('SHORT');
+    const context = htfDisplacementContinuationContext('SHORT', {
+      sessionType: 'replay_lunch',
+      chartTimestamp: '2026-06-05T12:45:00-04:00',
+      keyLevels: {
+        ...base.keyLevels,
+        currentPrice: 7584,
+      },
+      proposedEntry: 7586.5,
+      proposedStop: 7590,
+      riskPoints: 3.5,
+      fvgZones: [{
+        direction: 'SHORT',
+        upper: 7589,
+        lower: 7584,
+        midpoint: 7586.5,
+        formedAt: '2026-06-05T12:15:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 50,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+      targetObjectives: [{
+        label: 'Forward lunch sell-side liquidity',
+        price: 7574,
+        direction: 'SHORT',
+        source: 'app',
+        type: 'liquidity_pool',
+        confidence: 'High',
+        score: 95,
+        reason: 'Forward target for after-lunch drive short.',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.AfterLunchDriveFvgContinuation);
+    const openingCandidate = result.candidates.find((entry) => entry.setupType === SetupType.OpeningDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(openingCandidate, undefined);
+    assert.equal(candidate.direction, 'SHORT');
+    assert.equal(candidate.pathway, 'after_lunch_drive_fvg_continuation');
+    assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, null);
+    assert.equal(candidate.humanReview?.canExecute, false);
+    assert.equal(candidate.humanReview?.requiresTraderConfirmation, true);
+    assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
+    assert.equal(candidate.entry, 7586.5);
+    assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.target1, 7581.25);
+    assert.equal(candidate.target2, 7579.5);
+    assert.ok(candidate.requiredTrigger?.includes('12:30-13:30 ET'));
+    assert.ok(candidate.evidence.some((item) => item.includes('15M after-lunch displacement confirmed')));
+    assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.AfterLunchDriveFvgContinuation);
+  }],
+
+  ['After-Lunch Drive FVG continuation arms during first lunch drive but waits for review window', () => {
+    const context = htfDisplacementContinuationContext('LONG', {
+      sessionType: 'replay_lunch',
+      chartTimestamp: '2026-06-05T12:15:00-04:00',
+      fvgZones: [{
+        direction: 'LONG',
+        upper: 7603.5,
+        lower: 7600.5,
+        midpoint: 7602,
+        formedAt: '2026-06-05T12:10:00-04:00',
+        formedCandleIndex: 1,
+        filledPercent: 40,
+        impulseQualified: true,
+        confidence: 'High',
+      }],
+    });
+    const result = scanSetupCandidates({ sessionType: 'replay_lunch', chartContext: context, result: null });
+    const candidate = result.candidates.find((entry) => entry.setupType === SetupType.AfterLunchDriveFvgContinuation);
+
+    assert.ok(candidate);
+    assert.equal(candidate.direction, 'LONG');
+    assert.equal(candidate.candidateState, 'AFTER_LUNCH_DRIVE_ARMED');
+    assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
+    assert.equal(candidate.blockReason, NoTradeReason.EntryTriggerPending);
+    assert.equal(candidate.humanReview?.status, 'AfterLunchDriveArmed');
+    assert.equal(candidate.humanReview?.discordTradePlanEligible, false);
+    assert.ok(candidate.missingEvidence.some((item) => item.includes('12:00-12:30 ET')));
   }],
 
   ['HTF displacement FVG continuation is conditional when less than 60 percent path remains', () => {

@@ -898,6 +898,7 @@ export function classifyScannerVisibility(args: {
 function registryEntryHumanReviewOnly(entry: SetupRegistryEntry): boolean {
   return (
     entry.setupType === SetupType.OpeningDriveFvgContinuation ||
+    entry.setupType === SetupType.AfterLunchDriveFvgContinuation ||
     entry.setupType === SetupType.IntradayMssMicroContinuation
   );
 }

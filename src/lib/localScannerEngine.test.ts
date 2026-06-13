@@ -740,6 +740,10 @@ const openingDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.se
 assert.equal(openingDriveAudit?.humanReviewOnly, true);
 assert.equal(openingDriveAudit?.executionEligible, false);
 assert.ok(openingDriveAudit?.canExecuteRelationship.includes('canExecute=false'));
+const afterLunchDriveAudit = tradeDecisionMapAudit.entries.find((entry) => entry.setupType === SetupType.AfterLunchDriveFvgContinuation);
+assert.equal(afterLunchDriveAudit?.humanReviewOnly, true);
+assert.equal(afterLunchDriveAudit?.executionEligible, false);
+assert.ok(afterLunchDriveAudit?.canExecuteRelationship.includes('canExecute=false'));
 
 const lifecycleTrace = buildCandidateLifecycleTrace({
   candidates: [

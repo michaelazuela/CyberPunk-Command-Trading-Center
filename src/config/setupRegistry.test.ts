@@ -36,6 +36,7 @@ const primaryExpected = [
   SetupType.HtfDisplacementMssContinuation,
   SetupType.HtfDisplacementFvgContinuation,
   SetupType.OpeningDriveFvgContinuation,
+  SetupType.AfterLunchDriveFvgContinuation,
   SetupType.IntradayMssMicroContinuation,
   SetupType.FailedPlanReversal,
 ];
@@ -82,6 +83,7 @@ const expectedFamilyByPrimarySetup = new Map<SetupType, ParentModelFamily>([
   [SetupType.HtfDisplacementMssContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.HtfDisplacementFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.OpeningDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
+  [SetupType.AfterLunchDriveFvgContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.IntradayMssMicroContinuation, 'HTF_DISPLACEMENT_CONTINUATION'],
   [SetupType.FailedPlanReversal, 'FAILED_PLAN_REVERSAL'],
 ]);
@@ -125,7 +127,7 @@ for (const sessionType of ['morning', 'lunch', 'replay_morning', 'replay_lunch']
   const allowedTypes = setupTypes(allowed);
   const sessionPrimaryExpected = sessionType === 'lunch' || sessionType === 'replay_lunch'
     ? primaryExpected.filter((setupType) => setupType !== SetupType.OpeningDriveFvgContinuation)
-    : primaryExpected;
+    : primaryExpected.filter((setupType) => setupType !== SetupType.AfterLunchDriveFvgContinuation);
 
   assertExactSet(primaryTypes, sessionPrimaryExpected, `${sessionType} primary registry`);
   assertExactSet(supportingTypes, supportingExpected, `${sessionType} supporting registry`);

@@ -89,7 +89,7 @@ export const TRADE_RULES = {
         SetupType.HtfDrawContinuationAfterRaid,
         SetupType.HtfDisplacementMssContinuation,
         SetupType.HtfDisplacementFvgContinuation,
-        SetupType.OpeningDriveFvgContinuation,
+        SetupType.AfterLunchDriveFvgContinuation,
         SetupType.IntradayMssMicroContinuation,
         SetupType.FailedPlanReversal,
       ],

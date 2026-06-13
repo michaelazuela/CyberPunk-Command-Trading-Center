@@ -3,6 +3,7 @@ import { SetupType, type SetupCandidate } from '../../src/types';
 export type ProfessionalModelLabel =
   | 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback'
   | 'Failed Breakout Reversal'
+  | 'Drive FVG Continuation'
   | 'Intraday Structure-Shift Micro Continuation'
   | 'Failed Plan Reversal'
   | 'Trade setup';
@@ -15,6 +16,7 @@ export const PROFESSIONAL_FALLBACK_LABEL: ProfessionalModelLabel = 'Trade setup'
 export function professionalModelLabel(setupType?: SetupType | string | null): ProfessionalModelLabel {
   if (setupType === SetupType.SweepMssFvgRetrace) return PROFESSIONAL_MODEL_ONE_LABEL;
   if (setupType === SetupType.TurtleSoup) return PROFESSIONAL_MODEL_TWO_LABEL;
+  if (setupType === SetupType.OpeningDriveFvgContinuation || setupType === SetupType.AfterLunchDriveFvgContinuation) return 'Drive FVG Continuation';
   if (setupType === SetupType.IntradayMssMicroContinuation) return 'Intraday Structure-Shift Micro Continuation';
   if (setupType === SetupType.FailedPlanReversal) return 'Failed Plan Reversal';
   return PROFESSIONAL_FALLBACK_LABEL;
