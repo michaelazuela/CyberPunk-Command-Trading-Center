@@ -1038,8 +1038,8 @@ const june12CountertrendLong = candidate({
   modelConfidenceScore: 70,
   entry: null,
   stop: null,
-  target1: null,
-  target2: null,
+  target1: 7450,
+  target2: 7460,
   riskPoints: null,
   blockReason: NoTradeReason.EntryTriggerPending,
   missingEvidence: [
@@ -1197,6 +1197,10 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'prima
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.state, 'secondary');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.find((row) => row.timeframe === '15M')?.currentBias, 'BULL');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M')?.currentBias, 'BULL');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfObjectiveLadder.direction, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, 7450);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, 7460);
+assert.notEqual(june12ProtectedHoldDeskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, june12UnsupportedShort.target1);
 assert.ok(!june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play'));
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);

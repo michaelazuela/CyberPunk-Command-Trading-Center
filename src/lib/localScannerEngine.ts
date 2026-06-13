@@ -1096,6 +1096,26 @@ function htfObjectiveFromTarget(kind: DeskHtfObjectiveKind, objective: TargetObj
   };
 }
 
+function htfObjectiveFromProtectedStructureRow(
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  row: DeskHtfProtectedStructureRow,
+): TargetObjective | null {
+  if (directionForCurrentHtfBias(row.currentBias) !== direction) return null;
+  if (numericOrNull(row.target) === null) return null;
+  return {
+    label: row.targetLabel || `${row.timeframe} aligned bias target`,
+    price: row.target,
+    direction,
+    source: 'ninjatrader',
+    type: 'liquidity_pool',
+    confidence: row.confidence !== null && row.confidence >= 70 ? 'High' : row.confidence !== null && row.confidence >= 50 ? 'Medium' : 'Low',
+    score: row.confidence ?? 50,
+    distancePoints: null,
+    rMultiple: null,
+    reason: `${row.timeframe} current bias is ${row.currentBias}; target supports the cleanest resolved timeframe bias.`,
+  };
+}
+
 function firstDirectionalObjective(
   direction: 'LONG' | 'SHORT',
   base: number | null,
@@ -1113,16 +1133,27 @@ function firstDirectionalObjective(
 function buildHtfObjectiveLadder(args: {
   direction: DeskPlayDirection;
   candidate: SetupCandidate | null;
+  primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null;
   targetReaction: TargetObjective | null;
+  htfProtectedStructureMap?: DeskHtfProtectedStructureMap | null;
 }): DeskHtfObjectiveLadder {
   const candidateDirection = args.direction === 'LONG' || args.direction === 'SHORT'
     ? args.direction
     : args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
     ? args.candidate.direction
     : null;
-  const plan = args.candidate?.targetObjectivePlan || null;
-  const appTarget1 = numericOrNull(args.candidate?.target1) ?? numericOrNull(plan?.selectedT1?.price);
-  const appTarget2 = numericOrNull(args.candidate?.target2) ?? numericOrNull(plan?.selectedT2?.price);
+  const plan = args.candidate?.direction === candidateDirection ? args.candidate?.targetObjectivePlan || null : null;
+  const htfBiasTargets = candidateDirection
+    ? (args.htfProtectedStructureMap?.rows || [])
+        .map((row) => htfObjectiveFromProtectedStructureRow(candidateDirection, row))
+        .filter((objective): objective is TargetObjective => Boolean(objective))
+    : [];
+  const appTarget1 = numericOrNull(args.primaryLifecycleItem?.target1) ??
+    (args.candidate?.direction === candidateDirection ? numericOrNull(args.candidate?.target1) : null) ??
+    numericOrNull(plan?.selectedT1?.price);
+  const appTarget2 = numericOrNull(args.primaryLifecycleItem?.target2) ??
+    (args.candidate?.direction === candidateDirection ? numericOrNull(args.candidate?.target2) : null) ??
+    numericOrNull(plan?.selectedT2?.price);
   const reaction = htfObjectiveFromTarget('reaction', args.targetReaction);
   const nextDraw = candidateDirection
     ? htfObjectiveFromTarget('next_draw', firstDirectionalObjective(candidateDirection, appTarget2, [
@@ -1131,6 +1162,7 @@ function buildHtfObjectiveLadder(args: {
         plan?.liquidityTarget2,
         plan?.liquidityRunnerTarget,
         plan?.runnerTarget,
+        ...htfBiasTargets,
       ]))
     : null;
   const runner = candidateDirection
@@ -1138,12 +1170,14 @@ function buildHtfObjectiveLadder(args: {
         plan?.liquidityTarget2,
         plan?.liquidityRunnerTarget,
         plan?.runnerTarget,
+        ...htfBiasTargets,
       ]))
     : null;
   const extension = candidateDirection
     ? htfObjectiveFromTarget('extension', firstDirectionalObjective(candidateDirection, runner?.price ?? nextDraw?.price ?? appTarget2, [
         plan?.liquidityRunnerTarget,
         plan?.runnerTarget,
+        ...htfBiasTargets,
       ]))
     : null;
   const seen = new Set<string>();
@@ -1987,7 +2021,9 @@ function buildPrimaryDeskPlay(args: {
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
+    primaryLifecycleItem,
     targetReaction,
+    htfProtectedStructureMap,
   });
   const nextTrigger = primaryBias?.nextTrigger ||
     args.visibilityMetadata.nextTrigger ||
