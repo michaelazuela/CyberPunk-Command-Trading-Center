@@ -346,7 +346,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.selectedCandidate?.direction, 'SHORT')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes('assert.equal(fifteenMinute?.biasChangeLine, 7377.5)') ||
     !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
+    !june12ReplayProofContent.includes('assert.equal(fiveMinute?.biasChangeLine, 7377.5)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.direction, 'LONG')") ||
     !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget1, 7450)') ||
     !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.htfObjectiveLadder.appTarget2, 7460)') ||
