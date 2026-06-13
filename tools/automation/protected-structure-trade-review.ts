@@ -118,6 +118,8 @@ interface ReviewSourceSummary {
   lastBar: string | null;
 }
 
+const RAW_OHLC_KEYS = new Set(['bars', 'candles', 'rawBars', 'chartContext']);
+
 function parseArgs(argv: string[]): TradeReviewOptions {
   const options: TradeReviewOptions = {};
   for (const arg of argv) {
@@ -498,6 +500,38 @@ function markdownForReport(summary: {
   return lines.join('\n');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function looksLikeRawOhlcBar(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const hasTime = typeof value.time === 'string' || typeof value.timestamp === 'string';
+  return hasTime
+    && typeof value.open === 'number'
+    && typeof value.high === 'number'
+    && typeof value.low === 'number'
+    && typeof value.close === 'number';
+}
+
+export function assertProtectedStructureReviewReportIsCompact(value: unknown, pathLabel = 'report'): void {
+  if (Array.isArray(value)) {
+    if (value.some(looksLikeRawOhlcBar)) {
+      throw new Error(`Protected-structure review report must not include raw OHLC bars at ${pathLabel}.`);
+    }
+    value.forEach((entry, index) => assertProtectedStructureReviewReportIsCompact(entry, `${pathLabel}[${index}]`));
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = `${pathLabel}.${key}`;
+    if (RAW_OHLC_KEYS.has(key) && child !== null && child !== undefined) {
+      throw new Error(`Protected-structure review report must not include raw ${key} data at ${childPath}.`);
+    }
+    assertProtectedStructureReviewReportIsCompact(child, childPath);
+  }
+}
+
 export async function generateProtectedStructureTradeReview(options: TradeReviewOptions = {}) {
   const overlayPath = path.resolve(options.overlayPath || DEFAULT_OVERLAY);
   const outputRoot = path.resolve(options.outputRoot || DEFAULT_OUTPUT_ROOT);
@@ -582,6 +616,7 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
     totals: overlay.totals,
     campaigns,
   };
+  assertProtectedStructureReviewReportIsCompact(summary);
   const jsonPath = path.join(outputRoot, 'trade-by-trade-review.json');
   const markdownPath = path.join(outputRoot, 'trade-by-trade-review.md');
   await fs.writeFile(jsonPath, JSON.stringify(summary, null, 2));

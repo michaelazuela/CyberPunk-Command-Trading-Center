@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-13
+Task: Prevent protected-structure review artifacts and raw OHLC dumps from becoming dirty/noisy output.
+Files changed: docs/PROJECT_STATUS.md, package.json, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts.
+Reason: The protected-structure review command should keep generated reports out of Git and should never put raw candle arrays into diagnostic JSON or console output.
+Tests run: npx tsx tools/automation/protected-structure-trade-review.test.ts; npm run diagnostic:protected-structure-trade-review -- --no-charts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The report writer now asserts that protected-structure review summaries contain compact counts, levels, chart paths, and message IDs only. It fails if future edits add raw `bars`, `candles`, `rawBars`, `chartContext`, or OHLC-shaped arrays back into the report. The focused compact-report guard is part of the standard test suite. Generated protected-structure review artifacts remain ignored by Git.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, Discord delivery rules, or bridge behavior changed.
+Bridge impact: None. Existing read-only diagnostic data loading remains unchanged.
+Discord impact: None. This only hardens local review output and tests.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Continue using `npm run diagnostic:protected-structure-trade-review` for compact protected-structure review output.
+
+## Previous Change
+
+Date: 2026-06-13
 Task: Post protected-structure trade-review cards with charts and RAG buttons.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts.
 Reason: The trader requested the prior-week protected 15M+5M alignment review as trade-by-trade Discord cards, each with entry reference, protected 5M stop, T1/T2, one-MES risk/reward dollars, a chart, and RAG outcome buttons for learning.
