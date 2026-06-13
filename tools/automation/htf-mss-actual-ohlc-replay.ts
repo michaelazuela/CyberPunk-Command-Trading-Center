@@ -11,6 +11,7 @@ import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { summarizeActiveTimeframeMssRuleset } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { classifyActiveSetupScanWindowByEtMinutes } from '../../src/config/timeWindows';
 import { SetupType, TradeDecisionStatus, type AnalysisResult, type ChartContext, type SetupCandidate } from '../../src/types';
+import { buildReplayExecutionSummary } from './replay-execution-labels';
 
 const REPORT_DIR = resolve('tools/automation/replay-diagnostics');
 export const ACTUAL_OHLC_REPLAY_JSON = join(REPORT_DIR, 'htf-mss-june-1-actual-ohlc-replay.json');
@@ -588,8 +589,11 @@ export function buildActualOhlcReplayReport(load: HistoricalOhlcLoadResult) {
     },
     finalGateResult: {
       status: pipeline.status,
-      canExecute: effectiveCanExecute,
-      normalizedCanExecuteRaw: normalized.canExecute,
+      ...buildReplayExecutionSummary({
+        status: pipeline.status,
+        canExecute: effectiveCanExecute,
+        normalizedCanExecuteRaw: normalized.canExecute,
+      }),
       finalPlanEntry: pipeline.finalTradePlan.entry,
       finalPlanStop: pipeline.finalTradePlan.stop,
       target1: pipeline.finalTradePlan.target1,
@@ -731,7 +735,9 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     `- Candidate Detected: ${report.setupDetection.candidateDetected ? 'Yes' : 'No'}`,
     `- Setup Type: ${report.setupDetection.setupType || 'N/A'}`,
     `- Direction: ${report.setupDetection.direction || 'N/A'}`,
-    `- Final Gate Status: ${report.finalGateResult.status}`,
+    `- Raw Pipeline Status: ${report.finalGateResult.rawStatus || report.finalGateResult.status}`,
+    `- Effective Execution Status: ${report.finalGateResult.effectiveExecutionStatus}`,
+    `- Display Status: ${report.finalGateResult.displayStatus}`,
     `- canExecute: ${report.finalGateResult.canExecute}`,
     `- Entry: ${report.finalGateResult.finalPlanEntry ?? 'Not defined'}`,
     `- Stop: ${report.finalGateResult.finalPlanStop ?? 'Not defined'}`,
@@ -740,7 +746,7 @@ function renderReplayMarkdown(report: ReturnType<typeof buildActualOhlcReplayRep
     '',
     '## Safety',
     '- Candidate status does not equal executable approval.',
-    '- ApprovedTrade appears only after deterministic final gates pass.',
+    '- Raw ApprovedTrade is not executable unless effective canExecute=true.',
     '- External liquidity remains draw/management context.',
     '- T1/T2 remain app-computed R targets.',
     '- No live Discord post was sent.',

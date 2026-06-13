@@ -122,4 +122,45 @@ describe('FinalTradePlanCard HTF draw model display', () => {
     expect(screen.queryByText(/^Executable$/i)).toBeNull();
     expect(screen.queryByText(/Executable by app/i)).toBeNull();
   });
+
+  it('shows review-only wording for raw ApprovedTrade when effective canExecute is false', () => {
+    const plan = {
+      decision: 'LONG',
+      decisionLabel: null,
+      executionDecision: 'NO EXECUTABLE TRADE',
+      planningDecision: 'VALID REVIEW PLAN',
+      entry: 7407,
+      stop: 7396.75,
+      t1: 7422.5,
+      t2: 7427.5,
+      riskPoints: 10.25,
+      riskRewardT1: '1.5R',
+      riskRewardT2: '2.0R',
+      finalConfidence: 'High',
+      whyThisPlan: 'Raw pipeline status was approved, but effective execution is disabled.',
+      invalidation: 'Invalid below protected structure.',
+      source: 'app_rule_engine',
+      canExecute: false,
+      setupName: 'Failed Breakout Reversal',
+      decisionStatus: TradeDecisionStatus.ApprovedTrade,
+      noTradeReason: NoTradeReason.EntryTriggerPending,
+      hasConditionalPlans: true,
+      setupCandidates: [],
+      opportunitySelection: {
+        bestExecutableCandidate: null,
+        bestConditionalCandidate: null,
+        blockedCandidates: [],
+        finalDecision: TradeDecisionStatus.ApprovedTrade,
+        noTradeReason: NoTradeReason.EntryTriggerPending,
+      },
+      decisionAuditTrail: [],
+      rejectedAlternatives: [],
+    } as unknown as NormalizedTradePlan;
+
+    render(<FinalTradePlanCard plan={plan} />);
+
+    expect(screen.getByText(/^Review Only$/i)).toBeTruthy();
+    expect(screen.queryByText(/^Approved Trade$/i)).toBeNull();
+    expect(screen.queryByText(/^Executable$/i)).toBeNull();
+  });
 });

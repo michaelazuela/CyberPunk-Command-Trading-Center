@@ -61,9 +61,9 @@ function ValidityRow({ label, ready, detail }: { key?: React.Key; label: string;
   );
 }
 
-function formatDecisionStatus(status?: TradeDecisionStatus): string {
+function formatDecisionStatus(status?: TradeDecisionStatus, effectiveCanExecute = false): string {
   switch (status) {
-    case TradeDecisionStatus.ApprovedTrade: return 'Approved Trade';
+    case TradeDecisionStatus.ApprovedTrade: return effectiveCanExecute ? 'Approved Trade' : 'Review Only';
     case TradeDecisionStatus.ConditionalTrade: return 'Conditional Trade';
     case TradeDecisionStatus.NoTrade: return 'No Trade';
     case TradeDecisionStatus.Wait: return 'Wait';
@@ -791,8 +791,8 @@ export default function FinalTradePlanCard({
     { label: 'RAG', value: confidenceBreakdown.rag },
     { label: 'Time', value: confidenceBreakdown.timeWindow },
   ];
-  const decisionStatusLabel = formatDecisionStatus(plan.decisionStatus);
   const effectiveCanExecute = getEffectiveCanExecute(plan);
+  const decisionStatusLabel = formatDecisionStatus(plan.decisionStatus, effectiveCanExecute);
   const activePlanCandidate = selectedPlanCandidate(plan);
 
   return (

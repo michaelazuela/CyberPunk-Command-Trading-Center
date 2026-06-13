@@ -9,7 +9,9 @@ import {
   validateHistoricalBars,
   writeActualOhlcReplayArtifacts,
 } from './htf-mss-actual-ohlc-replay';
+import { buildReplayExecutionSummary, shouldRetainReplaySample } from './replay-execution-labels';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
+import { TradeDecisionStatus } from '../../src/types';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1000 };
@@ -90,6 +92,8 @@ assert.equal(actualReport.safeWording.externalLiquidityIsContextOnly, true);
 assert.equal(actualReport.safeWording.t1T2AreAppComputedRTargets, true);
 assert.equal(actualReport.finalGateResult.canExecute, false);
 assert.equal(actualReport.finalGateResult.approvedTradeOnlyAfterDeterministicGates, true);
+assert.notEqual(actualReport.finalGateResult.effectiveExecutionStatus, 'EXECUTABLE_APPROVED');
+assert.notEqual(actualReport.finalGateResult.displayStatus, 'ApprovedTrade');
 assert.ok('timeframeRanges' in actualReport);
 assert.ok('insufficientLookback' in actualReport);
 assert.ok('htfContextSufficiency' in actualReport);
@@ -137,6 +141,18 @@ writeFileSync(noOffsetPath, JSON.stringify({
 const noOffset = loadHistoricalOhlcFromJson(noOffsetPath);
 assert.equal(noOffset.ok, true);
 assert.ok(noOffset.warnings.some((item) => item.includes('treated as America/New_York')));
+
+const approvedButNotExecutable = buildReplayExecutionSummary({
+  status: TradeDecisionStatus.ApprovedTrade,
+  canExecute: false,
+  normalizedCanExecuteRaw: false,
+});
+assert.equal(approvedButNotExecutable.rawStatus, TradeDecisionStatus.ApprovedTrade);
+assert.equal(approvedButNotExecutable.effectiveExecutionStatus, 'REVIEW_ONLY_CANEXECUTE_FALSE');
+assert.equal(approvedButNotExecutable.displayStatus, 'Review only - raw ApprovedTrade but canExecute=false');
+assert.equal(shouldRetainReplaySample({ currentLength: 79, maxSamples: 80, verboseRows: false }), true);
+assert.equal(shouldRetainReplaySample({ currentLength: 80, maxSamples: 80, verboseRows: false }), false);
+assert.equal(shouldRetainReplaySample({ currentLength: 8000, maxSamples: 80, verboseRows: true }), true);
 
 const readiness = buildActualOhlcReplayReport({
   ...loaded,

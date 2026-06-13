@@ -11,6 +11,7 @@ import { summarizeActiveTimeframeMssRuleset } from '../../src/lib/activeTimefram
 import { ExecutionStatus, SetupType, TradeDecisionStatus, type AnalysisResult, type ChartContext } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, type MarketBarTimeframe } from './market-data-store';
 import { compactDiscordSummary } from './discord-alert-format';
+import { buildReplayExecutionSummary, shouldRetainReplaySample } from './replay-execution-labels';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -443,15 +444,16 @@ function buildReplayMarkdown(report: any): string {
     `Evaluation window: ${report.window.evaluateFrom} to ${report.window.evaluateTo}`,
     `Preload: ${report.window.preloadFrom} to ${report.window.toTimestamp}`,
     `Boundary: ${report.boundary}`,
+    `Runtime mode: ${report.runtimePolicy?.memoryMode || 'bounded_samples'}; retained samples: ${report.runtimePolicy?.maxSamples ?? 'N/A'}; verbose rows: ${report.runtimePolicy?.verboseRows === true ? 'yes' : 'no'}`,
     '',
     '## Summary',
     `- Active-window completed 5M bars loaded: ${report.totals.activeWindow5mBars}`,
     `- Structural 5M MSS events found: ${report.totals.structuralMssEvents}`,
     `- Completed 5M bars evaluated around MSS: ${report.totals.evaluated5mBars}`,
-    `- Final ApprovedTrade + effective canExecute: ${report.totals.finalApprovedCanExecute}`,
-    `- Scanner executable candidates before final gates: ${report.totals.scannerExecutableCandidates}`,
-    `- Conditional candidates observed: ${report.totals.conditionalCandidates}`,
-    `- Active MSS blocked executable candidates: ${report.totals.activeMssBlockedExecutableCandidates}`,
+    `- Final executable plans (raw ApprovedTrade + effective canExecute=true): ${report.totals.finalApprovedCanExecute}`,
+    `- Scanner executable candidates before final gates: ${report.totals.scannerExecutableCandidates} (${report.totals.scannerExecutableCandidateSamples ?? scannerExecutable.length} samples retained)`,
+    `- Conditional candidates observed: ${report.totals.conditionalCandidates} (${report.totals.conditionalCandidateSamples} samples retained)`,
+    `- Active MSS blocked executable candidates: ${report.totals.activeMssBlockedExecutableCandidates} (${report.totals.activeMssBlockedExecutableCandidateSamples} samples retained)`,
     ...(report.reportType === 'slim_opening_drive_fvg_replay' ? [
       `- Opening Drive candidates observed: ${report.totals.openingDriveCandidates}`,
       `- Opening Drive Human Review Ready: ${report.totals.openingDriveHumanReviewReady}`,
@@ -465,7 +467,7 @@ function buildReplayMarkdown(report: any): string {
     '## Triggered Plans',
     triggered.length
       ? '| Time | Session | Setup | Direction | Entry | Stop | T1 | T2 | canExecute |'
-      : 'No final ApprovedTrade + effective canExecute plans were found in this replay.',
+      : 'No final executable plans were found in this replay.',
     ...(triggered.length ? [
       '|---|---|---|---|---:|---:|---:|---:|---|',
       ...triggered.map((item: any) => `| ${item.timestamp} | ${item.sessionType} | ${item.finalGateResult.bestExecutableCandidate?.setupType || item.pipelineStatus} | ${item.finalGateResult.bestExecutableCandidate?.direction || 'N/A'} | ${item.finalGateResult.finalPlanEntry ?? 'N/A'} | ${item.finalGateResult.finalPlanStop ?? 'N/A'} | ${item.finalGateResult.target1 ?? 'N/A'} | ${item.finalGateResult.target2 ?? 'N/A'} | ${item.finalGateResult.canExecute} |`),
@@ -473,11 +475,11 @@ function buildReplayMarkdown(report: any): string {
     '',
     '## Scanner Executable Candidates Before Final Gates',
     scannerExecutable.length
-      ? '| Time | Session | Setup | Direction | Entry | Stop | T1 | T2 | Final Status | canExecute | Active MSS |'
+      ? '| Time | Session | Setup | Direction | Entry | Stop | T1 | T2 | Raw Status | Effective Execution | canExecute | Active MSS |'
       : 'No scanner executable candidates were found.',
     ...(scannerExecutable.length ? [
-      '|---|---|---|---|---:|---:|---:|---:|---|---|---|',
-      ...scannerExecutable.map((item: any) => `| ${item.timestamp} | ${item.sessionType} | ${item.bestExecutableCandidate?.setupType || 'N/A'} | ${item.bestExecutableCandidate?.direction || 'N/A'} | ${item.bestExecutableCandidate?.entry ?? 'N/A'} | ${item.bestExecutableCandidate?.stop ?? 'N/A'} | ${item.bestExecutableCandidate?.target1 ?? 'N/A'} | ${item.bestExecutableCandidate?.target2 ?? 'N/A'} | ${item.finalGateResult.status} | ${item.finalGateResult.canExecute} | ${item.bestExecutableCandidate?.activeTimeframeMssRuleset?.status || 'N/A'} |`),
+      '|---|---|---|---|---:|---:|---:|---:|---|---|---|---|',
+      ...scannerExecutable.map((item: any) => `| ${item.timestamp} | ${item.sessionType} | ${item.bestExecutableCandidate?.setupType || 'N/A'} | ${item.bestExecutableCandidate?.direction || 'N/A'} | ${item.bestExecutableCandidate?.entry ?? 'N/A'} | ${item.bestExecutableCandidate?.stop ?? 'N/A'} | ${item.bestExecutableCandidate?.target1 ?? 'N/A'} | ${item.bestExecutableCandidate?.target2 ?? 'N/A'} | ${item.finalGateResult.rawStatus || item.finalGateResult.status} | ${item.finalGateResult.effectiveExecutionStatus || 'N/A'} | ${item.finalGateResult.canExecute} | ${item.bestExecutableCandidate?.activeTimeframeMssRuleset?.status || 'N/A'} |`),
     ] : []),
     ...(report.reportType === 'slim_opening_drive_fvg_replay' ? [
       '',
@@ -494,6 +496,8 @@ function buildReplayMarkdown(report: any): string {
     '## Authority',
     '- Uses OHLC-derived replay context only.',
     '- Uses existing setup scanner and final trade decision pipeline.',
+    '- Raw ApprovedTrade is reported separately from effective execution; executable means effective canExecute=true.',
+    '- Default replay output retains bounded diagnostic samples to avoid Node heap pressure. Use verbose rows only when full row retention is required.',
     '- No narrative reconstruction, screenshot fallback, Discord post, bridge behavior change, or broker execution.',
   ].join('\n');
 }
@@ -509,6 +513,9 @@ async function main() {
   const postMssBars = numberArg('post-mss-bars', 6);
   const skipMarketBars = argValue('skip-market-bars') === 'true';
   const slimOpeningDrive = argValue('slim-opening-drive') === 'true';
+  const verboseRows = argValue('verbose-rows') === 'true';
+  const maxSamples = Math.max(0, Math.floor(numberArg('max-samples', slimOpeningDrive ? 80 : 80)));
+  const maxStructuralMssEvents = Math.max(0, Math.floor(numberArg('max-structural-mss-events', slimOpeningDrive ? 25 : 250)));
   const preloadFrom = `${preloadDate}T00:00:00-04:00`;
   const toTimestamp = `${evaluateTo}T16:00:00-04:00`;
   const jsonPath = resolve(argValue('json') || DEFAULT_JSON);
@@ -546,6 +553,7 @@ async function main() {
   const conditionalCandidateSamples: any[] = [];
   const activeMssBlockedExecutableCandidates: any[] = [];
   const openingDriveHumanReviewCandidates: any[] = [];
+  let scannerExecutableCandidateCount = 0;
   let openingDriveCandidateCount = 0;
   let openingDriveHumanReviewReadyCount = 0;
   let conditionalCandidateCount = 0;
@@ -588,8 +596,11 @@ async function main() {
     });
     const finalGateResult = {
       status: pipeline.status,
-      canExecute,
-      normalizedCanExecuteRaw: normalized.canExecute,
+      ...buildReplayExecutionSummary({
+        status: pipeline.status,
+        canExecute,
+        normalizedCanExecuteRaw: normalized.canExecute,
+      }),
       finalPlanEntry: pipeline.finalTradePlan.entry,
       finalPlanStop: pipeline.finalTradePlan.stop,
       target1: pipeline.finalTradePlan.target1,
@@ -605,7 +616,11 @@ async function main() {
     if (openingDriveCandidate) {
       openingDriveCandidateCount += 1;
       if (openingDriveCandidate.humanReview?.status === 'HumanReviewReady') openingDriveHumanReviewReadyCount += 1;
-      if (!slimOpeningDrive || openingDriveHumanReviewCandidates.length < 80) {
+      if (shouldRetainReplaySample({
+        currentLength: openingDriveHumanReviewCandidates.length,
+        maxSamples,
+        verboseRows,
+      })) {
         openingDriveHumanReviewCandidates.push({
           timestamp: bar.time,
           tradeDate,
@@ -662,16 +677,31 @@ async function main() {
       pipelineStatus: pipeline.status,
     };
 
-    if (scan.bestExecutableCandidate) scannerExecutableCandidates.push(row);
+    if (scan.bestExecutableCandidate) {
+      scannerExecutableCandidateCount += 1;
+      if (shouldRetainReplaySample({
+        currentLength: scannerExecutableCandidates.length,
+        maxSamples,
+        verboseRows,
+      })) scannerExecutableCandidates.push(row);
+    }
     if (scan.bestConditionalCandidate) {
       conditionalCandidateCount += 1;
-      if (!slimOpeningDrive && conditionalCandidateSamples.length < 50) conditionalCandidateSamples.push(row);
+      if (!slimOpeningDrive && shouldRetainReplaySample({
+        currentLength: conditionalCandidateSamples.length,
+        maxSamples,
+        verboseRows,
+      })) conditionalCandidateSamples.push(row);
     }
     if (pipeline.status === TradeDecisionStatus.ApprovedTrade && canExecute) triggeredPlans.push(row);
     const mssSummary = summarizeActiveTimeframeMssRuleset(scan.bestConditionalCandidate || scan.bestExecutableCandidate || null);
     if (mssSummary.affectsExecution && mssSummary.status === 'blocked') {
       activeMssBlockedExecutableCandidateCount += 1;
-      if (!slimOpeningDrive && activeMssBlockedExecutableCandidates.length < 50) activeMssBlockedExecutableCandidates.push(row);
+      if (!slimOpeningDrive && shouldRetainReplaySample({
+        currentLength: activeMssBlockedExecutableCandidates.length,
+        maxSamples,
+        verboseRows,
+      })) activeMssBlockedExecutableCandidates.push(row);
     }
   }
 
@@ -690,6 +720,14 @@ async function main() {
       postMssBars,
       bridgeChunkDays: chunkDays,
       slimOpeningDrive,
+    },
+    runtimePolicy: {
+      memoryMode: verboseRows ? 'verbose_rows' : 'bounded_samples',
+      verboseRows,
+      maxSamples,
+      maxStructuralMssEvents,
+      fullRowsRetained: verboseRows,
+      nodeHeapRecommendation: 'Use npm run diagnostic:active-mss-replay:verbose only when full diagnostic row retention is required.',
     },
     sourcePolicy: {
       readMarketBarsFirst: !skipMarketBars,
@@ -716,7 +754,8 @@ async function main() {
       evaluated5mBars: evaluationBars.length,
       openingDriveWindow5mBars: openingDriveWindowBars.length,
       finalApprovedCanExecute: triggeredPlans.length,
-      scannerExecutableCandidates: scannerExecutableCandidates.length,
+      scannerExecutableCandidates: scannerExecutableCandidateCount,
+      scannerExecutableCandidateSamples: scannerExecutableCandidates.length,
       conditionalCandidates: conditionalCandidateCount,
       conditionalCandidateSamples: conditionalCandidateSamples.length,
       activeMssBlockedExecutableCandidates: activeMssBlockedExecutableCandidateCount,
@@ -726,7 +765,7 @@ async function main() {
       openingDriveCandidateSamples: openingDriveHumanReviewCandidates.length,
       errors: errors.length,
     },
-    structuralMssEvents: slimOpeningDrive ? mssReplayWindow.structuralMssEvents.slice(0, 25) : mssReplayWindow.structuralMssEvents,
+    structuralMssEvents: verboseRows ? mssReplayWindow.structuralMssEvents : mssReplayWindow.structuralMssEvents.slice(0, maxStructuralMssEvents),
     triggeredPlans,
     scannerExecutableCandidates,
     conditionalCandidateSamples,
