@@ -93,6 +93,31 @@ tools\automation\start-discord-alerts.ps1 -DryRun -Once premarket
 
 Each job sends once per ET trading date. Local send state is stored in `tools/automation/.discord-alert-state.json`, which is ignored by git.
 
+## Scanner Message Cleanup
+
+The live NinjaTrader scanner can delete its own Discord messages after a short TTL so stale operational notices do not sit in the channel all day.
+
+Default scanner cleanup:
+
+- Enabled for scanner-owned Discord posts.
+- TTL: 15 minutes.
+- Applies only to messages posted by the configured scanner webhook while the scanner is running.
+- Does not delete Supabase/RAG records, audit JSON, or trader outcome records.
+
+Settings:
+
+```powershell
+$env:SCANNER_DISCORD_MESSAGE_TTL_MINUTES = "15"
+$env:SCANNER_DISCORD_MESSAGE_CLEANUP = "true"
+```
+
+Command-line override:
+
+```powershell
+npm run nt:scanner -- --discord-message-ttl-minutes 15
+npm run nt:scanner -- --discord-message-cleanup false
+```
+
 ## Data Windows
 
 Morning:

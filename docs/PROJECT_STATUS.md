@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-12
+Task: Add scanner Discord message cleanup setting.
+Files changed: docs/DISCORD_ALERT_AUTOMATION.md, docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: The trader requested a setting to delete stale scanner Discord messages like data-quality notices after 15 minutes so old operational messages do not clutter the channel.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. Added `SCANNER_DISCORD_MESSAGE_CLEANUP` and `SCANNER_DISCORD_MESSAGE_TTL_MINUTES`, plus CLI overrides `--discord-message-cleanup` and `--discord-message-ttl-minutes`. Scanner-owned Discord posts now request message IDs when cleanup is enabled, record expiring message receipts without storing webhook secrets, and delete expired scanner messages on later scanner cycles. Default TTL is 15 minutes.
+Trading logic changed: No. No setup definitions, rankings, approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, bridge behavior, or RAG outcome semantics changed.
+Bridge impact: None.
+Discord impact: Yes. Scanner-owned Discord messages can be removed after the configured TTL while audit JSON, delivery state, RAG records, and outcome records remain durable.
+Journal/RAG impact: No schema change. Cleanup affects Discord channel visibility only.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the supervisor so the running scanner loads the Discord cleanup setting.
+
+## Previous Change
+
+Date: 2026-06-12
 Task: Make Opening Drive FVG Continuation morning-only and add After-Lunch Drive FVG Continuation.
 Files changed: docs/PROJECT_STATUS.md, src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/config/tradeRules.ts, src/lib/gemini.ts, src/lib/geminiPromptSafety.test.ts, src/lib/ictModelLabels.ts, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/lib/setupScanner.ts, src/lib/setupScanner.test.ts, src/lib/tradeDecisionPipeline.ts, src/lib/tradeDecisionPipeline.test.ts, src/lib/tradeJournal.ts, src/types.ts, tools/automation/professional-report-language.ts.
 Reason: The trader requested Opening Drive FVG Continuation be updated to morning only and a separate after-lunch drive model be added without changing approvals or app-owned trade math.

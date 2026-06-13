@@ -20,6 +20,7 @@ import {
   evaluateCompletedFiveMinuteBarAssuranceGate,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
+  cleanupExpiredScannerDiscordMessages,
   htfHistoryCoverageReadiness,
   claimDurableActiveCampaignScannerAlert,
   loadScannerActiveCampaignLedgerConfig,
@@ -27,6 +28,7 @@ import {
   markScannerAlertDeliverySent,
   markScannerAlertDeliverySkipped,
   markDurableActiveCampaignScannerAlertSent,
+  recordScannerDiscordCleanupMessage,
   recordActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSuppressed,
   releaseDurableActiveCampaignScannerAlertClaim,
@@ -39,6 +41,8 @@ import {
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
   scannerDeskPlanRefreshKey,
+  scannerDiscordWebhookDeleteUrl,
+  scannerDiscordWebhookUrlForPost,
   scannerActiveCampaignKey,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
@@ -167,7 +171,59 @@ const scannerDataQualityNoticeConfig: ScannerConfig = {
   geminiAdvisoryFallbackEnabled: false,
   barTimestampMode: 'close',
   barTimeZone: 'eastern',
+  discordMessageCleanupEnabled: true,
+  discordMessageTtlMinutes: 15,
 };
+assert.equal(
+  scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),
+  'https://discord.com/api/webhooks/123/token?wait=true',
+);
+assert.equal(
+  scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', [{ type: 1 }], true),
+  'https://discord.com/api/webhooks/123/token?with_components=true&wait=true',
+);
+assert.equal(
+  scannerDiscordWebhookDeleteUrl('https://discord.com/api/webhooks/123/token?wait=true', 'message-123'),
+  'https://discord.com/api/webhooks/123/token/messages/message-123',
+);
+const cleanupState: any = {
+  discordCleanupMessages: {},
+};
+const scannerDataQualityNoticeCleanupConfig = {
+  ...scannerDataQualityNoticeConfig,
+  dryRun: false,
+};
+const cleanupRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'message-123',
+  },
+  kind: 'data_quality',
+  key: '2026-06-05:MES:morning:data-quality',
+  now: new Date('2026-06-05T14:00:00.000Z'),
+});
+assert.ok(cleanupRecord);
+assert.equal(cleanupRecord?.expiresAt, '2026-06-05T14:15:00.000Z');
+const previousScannerWebhook = process.env.QUANT_DESK_SCANNER_WEBHOOK_URL;
+process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
+const cleanupDeletes: string[] = [];
+const cleanupResult = await cleanupExpiredScannerDiscordMessages({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  now: new Date('2026-06-05T14:16:00.000Z'),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    cleanupDeletes.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  },
+});
+restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
+assert.deepEqual(cleanupResult, { checked: 1, deleted: 1, failed: 0, skipped: 0 });
+assert.deepEqual(cleanupDeletes, ['DELETE https://discord.com/api/webhooks/123/token/messages/message-123']);
+assert.equal(cleanupState.discordCleanupMessages[cleanupRecord!.key].deleteStatus, 'deleted');
 const dataQualityNotice = buildScannerDataQualityNoticePayload({
   tradeDate: '2026-06-05',
   session: 'morning',
@@ -1047,6 +1103,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     deskPlanRefreshSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
+    discordCleanupMessages: {},
     lastCompleted5mBySession: {},
     lastMarketMapRefreshBySession: {},
     lastHealthStatus: null,
@@ -1331,6 +1388,7 @@ try {
     sent: {},
     watchlistSent: {},
     windowStartSent: {},
+    discordCleanupMessages: {},
     lastCompleted5mBySession: {},
     lastMarketMapRefreshBySession: {},
     lastHealthStatus: null,

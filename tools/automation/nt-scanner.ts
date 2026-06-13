@@ -160,6 +160,8 @@ export interface ScannerConfig {
   geminiAdvisoryFallbackEnabled: boolean;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
+  discordMessageCleanupEnabled?: boolean;
+  discordMessageTtlMinutes?: number;
 }
 
 interface ScannerStateFile {
@@ -171,6 +173,7 @@ interface ScannerStateFile {
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
+  discordCleanupMessages: Record<string, ScannerDiscordCleanupRecord>;
   lastCompleted5mBySession: Record<string, string>;
   lastMarketMapRefreshBySession: Record<string, string>;
   lastHealthStatus: ScannerHealthStatus | null;
@@ -184,6 +187,19 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+
+export interface ScannerDiscordCleanupRecord {
+  key: string;
+  messageId: string;
+  kind: ScannerDiscordCleanupKind;
+  webhookSource: ScannerWebhookEnvKey | null;
+  postedAt: string;
+  expiresAt: string;
+  deletedAt: string | null;
+  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped';
+  lastError: string | null;
+}
 
 export interface ScannerActiveCampaignLedgerRecord {
   campaignId: string;
@@ -884,6 +900,14 @@ function boolArg(name: string, fallback: boolean): boolean {
   return fallback;
 }
 
+function boolEnv(name: string, fallback: boolean): boolean {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  if (['false', '0', 'no', 'off'].includes(value.toLowerCase())) return false;
+  if (['true', '1', 'yes', 'on'].includes(value.toLowerCase())) return true;
+  return fallback;
+}
+
 function numberArg(name: string, fallback: number): number {
   const raw = argValue(name);
   if (raw === null) return fallback;
@@ -917,6 +941,8 @@ function printHelp() {
     '  --macro-calendar false         Disable high-impact macro calendar caution.',
     '  --bar-timestamp-mode close     NinjaTrader bar timestamps are usually close times; use open if your bridge emits bar start times.',
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
+    '  --discord-message-cleanup true Delete scanner Discord messages after the configured TTL. Defaults to true.',
+    '  --discord-message-ttl-minutes 15  Age in minutes before scanner Discord messages are deleted; 0 disables cleanup.',
     '  --preflight-active-campaign-ledger  Verify Supabase campaign ledger env/table and exit.',
     '',
     'Discord webhook precedence:',
@@ -932,6 +958,8 @@ function loadConfig(): ScannerConfig {
   const barTimeZone: BridgeTimeZoneMode = ['eastern', 'central', 'pacific', 'local'].includes(timeZoneArg)
     ? (timeZoneArg as BridgeTimeZoneMode)
     : 'eastern';
+  const ttlMinutes = Math.max(0, numberArg('discord-message-ttl-minutes', Number(process.env.SCANNER_DISCORD_MESSAGE_TTL_MINUTES || process.env.QUANT_DESK_SCANNER_MESSAGE_TTL_MINUTES || 15)));
+  const cleanupEnabled = boolArg('discord-message-cleanup', boolEnv('SCANNER_DISCORD_MESSAGE_CLEANUP', true)) && ttlMinutes > 0;
   return {
     instrument: ((argValue('instrument') || 'MES') as Instrument),
     bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES',
@@ -961,6 +989,8 @@ function loadConfig(): ScannerConfig {
     geminiAdvisoryFallbackEnabled: isGeminiAdvisoryFallbackEnabled(),
     barTimestampMode: timestampMode === 'open' ? 'open' : 'close',
     barTimeZone,
+    discordMessageCleanupEnabled: cleanupEnabled,
+    discordMessageTtlMinutes: ttlMinutes,
   };
 }
 
@@ -978,6 +1008,7 @@ function emptyScannerState(): ScannerStateFile {
     deskPlanRefreshSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
+    discordCleanupMessages: {},
     lastCompleted5mBySession: {},
     lastMarketMapRefreshBySession: {},
     lastHealthStatus: null,
@@ -998,6 +1029,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         deskPlanRefreshSent: parsed.deskPlanRefreshSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
+        discordCleanupMessages: parsed.discordCleanupMessages || {},
         lastCompleted5mBySession: parsed.lastCompleted5mBySession || {},
         lastMarketMapRefreshBySession: parsed.lastMarketMapRefreshBySession || {},
         lastHealthStatus: parsed.lastHealthStatus || null,
@@ -3389,6 +3421,116 @@ class ScannerDiscordPostError extends Error {
   }
 }
 
+function scannerDiscordMessageCleanupEnabled(config: ScannerConfig): boolean {
+  return config.discordMessageCleanupEnabled !== false && (config.discordMessageTtlMinutes ?? 15) > 0;
+}
+
+function scannerDiscordMessageTtlMs(config: ScannerConfig): number {
+  return Math.max(0, (config.discordMessageTtlMinutes ?? 15) * 60_000);
+}
+
+export function scannerDiscordWebhookUrlForPost(webhookUrl: string, components: unknown[] | undefined, forceWait: boolean): string {
+  const base = discordWebhookUrlForPayload(webhookUrl, components);
+  if (!forceWait) return base;
+  const url = new URL(base);
+  url.searchParams.set('wait', 'true');
+  return url.toString();
+}
+
+export function scannerDiscordWebhookDeleteUrl(webhookUrl: string, messageId: string): string {
+  const url = new URL(webhookUrl);
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/messages/${encodeURIComponent(messageId)}`;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+export function recordScannerDiscordCleanupMessage(args: {
+  state: ScannerStateFile;
+  config: ScannerConfig;
+  receipt: ScannerDiscordPostReceipt;
+  kind: ScannerDiscordCleanupKind;
+  key: string;
+  now?: Date;
+}): ScannerDiscordCleanupRecord | null {
+  if (!scannerDiscordMessageCleanupEnabled(args.config)) return null;
+  if (args.receipt.deliveryStatus !== 'sent' || !args.receipt.discordMessageId) return null;
+  const now = args.now || new Date();
+  const postedAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + scannerDiscordMessageTtlMs(args.config)).toISOString();
+  const key = `${args.kind}:${args.key}:${args.receipt.discordMessageId}`;
+  const record: ScannerDiscordCleanupRecord = {
+    key,
+    messageId: args.receipt.discordMessageId,
+    kind: args.kind,
+    webhookSource: args.receipt.webhookSource === 'dry_run' || args.receipt.webhookSource === 'discord_disabled'
+      ? null
+      : args.receipt.webhookSource,
+    postedAt,
+    expiresAt,
+    deletedAt: null,
+    deleteStatus: 'pending',
+    lastError: null,
+  };
+  args.state.discordCleanupMessages[key] = record;
+  return record;
+}
+
+export async function cleanupExpiredScannerDiscordMessages(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  now?: Date;
+  fetchImpl?: FetchLike;
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+  const now = args.now || new Date();
+  const fetchImpl = args.fetchImpl || fetch;
+  const records = Object.values(args.state.discordCleanupMessages || {});
+  const webhook = resolveScannerDiscordWebhookUrl();
+  let checked = 0;
+  let deleted = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  if (!scannerDiscordMessageCleanupEnabled(args.config)) return { checked, deleted, failed, skipped };
+
+  for (const record of records) {
+    if (record.deleteStatus !== 'pending') continue;
+    if (Date.parse(record.expiresAt) > now.getTime()) continue;
+    checked += 1;
+    if (args.config.dryRun || !args.config.discordEnabled || !webhook.url) {
+      args.state.discordCleanupMessages[record.key] = {
+        ...record,
+        deleteStatus: 'skipped',
+        deletedAt: now.toISOString(),
+        lastError: args.config.dryRun ? 'dry_run' : !args.config.discordEnabled ? 'discord_disabled' : 'scanner webhook not configured',
+      };
+      skipped += 1;
+      continue;
+    }
+    try {
+      const response = await fetchImpl(scannerDiscordWebhookDeleteUrl(webhook.url, record.messageId), { method: 'DELETE' });
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Discord message delete failed (${response.status}): ${await response.text()}`);
+      }
+      args.state.discordCleanupMessages[record.key] = {
+        ...record,
+        deleteStatus: 'deleted',
+        deletedAt: now.toISOString(),
+        lastError: null,
+      };
+      deleted += 1;
+    } catch (error) {
+      args.state.discordCleanupMessages[record.key] = {
+        ...record,
+        deleteStatus: 'failed',
+        lastError: sanitizedError(error),
+      };
+      failed += 1;
+    }
+  }
+  return { checked, deleted, failed, skipped };
+}
+
 async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<ScannerDiscordPostReceipt> {
   validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
@@ -3410,7 +3552,7 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
     console.warn('[scanner-discord] Using legacy DISCORD_WEBHOOK_URL. Prefer QUANT_DESK_SCANNER_WEBHOOK_URL for scanner-specific Discord separation.');
   }
   await assertDiscordOutcomeEndpointSecretReady(payload.components);
-  const url = discordWebhookUrlForPayload(webhook.url, payload.components);
+  const url = scannerDiscordWebhookUrlForPost(webhook.url, payload.components, scannerDiscordMessageCleanupEnabled(config));
   const validFiles = files.filter(Boolean);
   const response = validFiles.length
     ? await (async () => {
@@ -3481,7 +3623,14 @@ async function sendScannerHealthAlertIfNeeded(args: {
   });
 
   try {
-    await postDiscord(payload, args.config);
+    const receipt = await postDiscord(payload, args.config);
+    recordScannerDiscordCleanupMessage({
+      state: args.state,
+      config: args.config,
+      receipt,
+      kind: 'health',
+      key: `health:${currentStatus}`,
+    });
     args.state.lastHealthStatus = currentStatus;
     args.state.lastHealthAlertSentAt = new Date().toISOString();
     console.log(`[scanner-health] Health alert status change: ${previousStatus || 'none'} -> ${currentStatus}`);
@@ -3612,7 +3761,14 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
 
   const payload = buildScannerDataQualityNoticePayload(args);
   try {
-    await postDiscord(payload, args.config);
+    const receipt = await postDiscord(payload, args.config);
+    recordScannerDiscordCleanupMessage({
+      state: args.state,
+      config: args.config,
+      receipt,
+      kind: 'data_quality',
+      key: noticeKey,
+    });
     args.state.dataQualityNoticeSent[noticeKey] = new Date().toISOString();
     console.log(`[scanner-data] Sent scanner data-quality notice: ${noticeKey}`);
   } catch (error) {
@@ -3708,7 +3864,14 @@ async function sendWindowStartAlert(args: {
     windowLabel: args.windowLabel,
   });
 
-  await postDiscord(payload, args.config);
+  const receipt = await postDiscord(payload, args.config);
+  recordScannerDiscordCleanupMessage({
+    state: args.state,
+    config: args.config,
+    receipt,
+    kind: 'window_start',
+    key,
+  });
   args.state.windowStartSent[key] = new Date().toISOString();
   console.log(`[scanner] Sent ${args.session} scanner window start heartbeat.`);
 }
@@ -4006,6 +4169,10 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const tradeDate = getScannerTradeDate(now);
   const stateRead = await readStateWithHealth();
   const state = stateRead.state;
+  const cleanup = await cleanupExpiredScannerDiscordMessages({ config, state, now });
+  if (cleanup.checked > 0) {
+    console.log(`[scanner-discord] Message cleanup checked=${cleanup.checked} deleted=${cleanup.deleted} skipped=${cleanup.skipped} failed=${cleanup.failed}.`);
+  }
   const marketDataConfigForGapSync = loadMarketDataConfig();
   if (marketDataConfigForGapSync) {
     const sync = await syncLocalMarketDataGapEventsToSupabase({ marketConfig: marketDataConfigForGapSync });
@@ -4499,6 +4666,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       try {
         const receipt = await postDiscord(watchlistArtifacts.payload, config, watchlistArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
+          recordScannerDiscordCleanupMessage({
+            state,
+            config,
+            receipt,
+            kind: 'watchlist',
+            key: watchlistKey,
+          });
           state.watchlistSent[watchlistKey] = { direction: watchlist.direction, sentAt: new Date().toISOString() };
           console.log(`[scanner] Sent advisory watchlist alert: ${watchlistKey} | audit=${watchlistArtifacts.auditLogPath}`);
         } else {
@@ -4664,6 +4838,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
+          recordScannerDiscordCleanupMessage({
+            state,
+            config,
+            receipt,
+            kind: 'desk_play',
+            key: deskPlayKey,
+          });
           state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
             key: deskPlayKey,
             tradeDate,
@@ -4770,6 +4951,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
+        recordScannerDiscordCleanupMessage({
+          state,
+          config,
+          receipt,
+          kind: 'trade_alert',
+          key: alertKey,
+        });
         state.sent[alertKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
         recordActiveCampaignScannerAlertSent({
           activeCampaignSent: state.activeCampaignSent,
