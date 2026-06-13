@@ -338,6 +338,8 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('localScannerEngine.ts WAIT Desk Play summaries must explicitly say no HTF-supported directional play is confirmed.');
   }
   const packageJson = readFileSafe(path.join(ROOT, 'package.json'));
+  const localScannerEngineTestPath = path.join(ROOT, 'src', 'lib', 'localScannerEngine.test.ts');
+  const localScannerEngineTestContent = readFileSafe(localScannerEngineTestPath);
   const june12ReplayProofPath = path.join(ROOT, 'tools', 'automation', 'june12-protected-structure-replay.test.ts');
   const june12ReplayProofContent = readFileSafe(june12ReplayProofPath);
   if (
@@ -359,6 +361,19 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes('changesEntryStopTargets, false')
   ) {
     fail('June 12 10:55 protected-structure replay proof must stay in npm test and prove SHORT remains visible while protected 15M/5M bullish structure headlines LONG review-only without approval drift.');
+  }
+  if (
+    !localScannerEngineTestContent.includes("assert.equal(june12FifteenMinuteRow?.currentBias, 'BULL')") ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.confirmationLine, 7411.75)') ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.protectedStructure, 7377.5)') ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FifteenMinuteRow?.biasChangeLine, 7377.5)') ||
+    !localScannerEngineTestContent.includes("assert.equal(june12FifteenMinuteRow?.biasChangeConfirmation, 'completed close+hold below')") ||
+    !localScannerEngineTestContent.includes("assert.equal(june12FiveMinuteRow?.currentBias, 'BULL')") ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.confirmationLine, 7393.25)') ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.protectedStructure, 7377.5)') ||
+    !localScannerEngineTestContent.includes('assert.equal(june12FiveMinuteRow?.biasChangeLine, 7377.5)')
+  ) {
+    fail('localScannerEngine.test.ts must keep the exact HTF protected structure bias contract: above confirmation is BULL now and changes BEAR below protected structure.');
   }
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
