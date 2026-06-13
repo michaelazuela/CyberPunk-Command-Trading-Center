@@ -269,6 +269,11 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('lifecycleItemPrimaryEligible') ||
     !ownerContent.includes('lifecycleItemHasProtectedStructureSupport') ||
     !ownerContent.includes('protectedStructureSupportDirection') ||
+    !ownerContent.includes("if (map.reliability === 'data_limited') return null") ||
+    !ownerContent.includes("row.timeframe === '15M'") ||
+    !ownerContent.includes("row.timeframe === '5M'") ||
+    !ownerContent.includes('fifteenDirection && fifteenDirection === fiveDirection') ||
+    !ownerContent.includes('lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)') ||
     !ownerContent.includes('return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item)')
   ) {
     fail('localScannerEngine.ts must prevent HTF-opposed or HTF-unsupported candidates from becoming the primary Desk Play headline except when scanner-owned protected 15M/5M structure support is resolved.');

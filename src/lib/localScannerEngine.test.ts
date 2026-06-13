@@ -1205,6 +1205,36 @@ assert.ok(!june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('No HTF
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 
+const june12DataLimitedProtectedHoldDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: june12UnsupportedShort,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: june12UnsupportedShort,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'Regression fixture: data-limited protected HTF map cannot headline a side.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: june12Lifecycle,
+  htfLiquidityDrawState: {
+    ...june12ProtectedBullishHtfState,
+    classificationReliability: 'data_limited',
+    htfContextDataLimited: true,
+    htfContextSufficiency: {
+      ...june12ProtectedBullishHtfState.htfContextSufficiency!,
+      overallStatus: 'data_limited',
+      dataLimited: true,
+      blockers: ['Regression fixture: insufficient HTF history.'],
+    },
+  },
+  currentPrice: 7433.5,
+  canExecute: false,
+});
+assert.equal(june12DataLimitedProtectedHoldDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(june12DataLimitedProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'countertrend_review');
+assert.equal(june12DataLimitedProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
+assert.equal(june12DataLimitedProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+
 const staleSupportedFlagLifecycle = {
   ...june12Lifecycle,
   bestShortPlan: june12Lifecycle.bestShortPlan
