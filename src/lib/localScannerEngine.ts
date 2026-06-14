@@ -1,6 +1,6 @@
 import { TRADE_RULES } from '../config/tradeRules';
 import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
-import { SETUP_REGISTRY, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
+import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
@@ -281,6 +281,39 @@ export interface DeskPlayHtfReactionContext {
   };
 }
 
+export interface DeskPlayApprovedModelFit {
+  sourceOfTruth: 'scanner_protected_structure_model_fit';
+  setupType: SetupType | null;
+  modelName: string | null;
+  parentModelFamily: ParentModelFamily | null;
+  fitScore: number;
+  status: 'best_fit' | 'candidate_missing' | 'not_aligned' | 'data_limited';
+  reason: string;
+  missingProof: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    createsNewModel: false;
+  };
+}
+
+export interface DeskPlayExecutableConsideration {
+  sourceOfTruth: 'scanner_executable_consideration_gate_metadata';
+  direction: 'LONG' | 'SHORT';
+  status: 'ready_for_existing_can_execute_gate' | 'review_only_missing_proof' | 'not_aligned' | 'data_limited';
+  selectedApprovedModel: SetupType | null;
+  canExecuteNow: false;
+  gateSummary: string;
+  missingGates: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+  };
+}
+
 export interface DeskPlayDirectionalBias {
   direction: 'LONG' | 'SHORT';
   state: DeskPlayBiasState;
@@ -293,6 +326,8 @@ export interface DeskPlayDirectionalBias {
   lineInSand: number | null;
   lineConfidence: DeskPlayLineConfidence;
   htfReactionContext: DeskPlayHtfReactionContext;
+  modelFit: DeskPlayApprovedModelFit;
+  executableConsideration: DeskPlayExecutableConsideration;
   nextTrigger: string | null;
   invalidation: string | null;
   reason: string;
@@ -393,6 +428,22 @@ export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
   trendConfirmation: DeskTrendConfirmation;
+  modelRouting: {
+    sourceOfTruth: 'scanner_protected_structure_model_routing';
+    primaryDirection: DeskPlayDirection;
+    bestApprovedModel: SetupType | null;
+    bestApprovedModelName: string | null;
+    longModelFit: DeskPlayApprovedModelFit;
+    shortModelFit: DeskPlayApprovedModelFit;
+    executableConsideration: DeskPlayExecutableConsideration | null;
+    routingSummary: string;
+    approvalBoundary: {
+      changesTradeApprovals: false;
+      changesCanExecute: false;
+      changesEntryStopTargets: false;
+      createsNewModel: false;
+    };
+  };
   title: string;
   summary: string;
   lineInSand: number | null;
@@ -1815,6 +1866,158 @@ function reactionStrengthFromTimeframes(timeframes: string[]): DeskPlayHtfReacti
   return 'unknown';
 }
 
+function primaryRegistryEntryForSetup(setupType: SetupType | null | undefined): SetupRegistryEntry | null {
+  if (!setupType) return null;
+  return SETUP_REGISTRY.find((entry) => entry.setupType === setupType && entry.role === 'primary_model') || null;
+}
+
+function protectedStructureFallbackModelEntry(direction: 'LONG' | 'SHORT', map: DeskHtfProtectedStructureMap): SetupRegistryEntry | null {
+  if (protectedStructureSupportDirection(map) !== direction) return null;
+  return SETUP_REGISTRY.find((entry) => entry.setupType === SetupType.IntradayMssMicroContinuation && entry.role === 'primary_model') || null;
+}
+
+function existingModelFitMissingProof(item: ScannerCandidateLifecycleTraceItem | null): string[] {
+  if (!item) return ['No scanner-owned lifecycle candidate exists for this side.'];
+  const missing = [
+    ...item.missingEvidence,
+    ...item.missingLevels,
+    item.blockReason,
+  ].filter((value): value is string => Boolean(value));
+  if (!item.hasFullPlanLevels) missing.push('Entry, protected 5M stop, T1, or T2 is missing.');
+  if (item.executionStatus !== ExecutionStatus.Executable) missing.push('Existing scanner execution status is not executable.');
+  if (!item.nextTrigger && !item.requiredTrigger) missing.push('Completed 5M trigger/retest proof is not mapped.');
+  return Array.from(new Set(missing));
+}
+
+function buildApprovedModelFit(args: {
+  direction: 'LONG' | 'SHORT';
+  item: ScannerCandidateLifecycleTraceItem | null;
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap;
+}): DeskPlayApprovedModelFit {
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    createsNewModel: false,
+  } as const;
+  if (args.htfProtectedStructureMap.reliability === 'data_limited') {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_model_fit',
+      setupType: null,
+      modelName: null,
+      parentModelFamily: null,
+      fitScore: 0,
+      status: 'data_limited',
+      reason: 'HTF protected-structure context is data-limited; model routing remains review-only.',
+      missingProof: ['HTF protected-structure context is data-limited.'],
+      approvalBoundary: boundary,
+    };
+  }
+
+  const protectedDirection = protectedStructureSupportDirection(args.htfProtectedStructureMap);
+  const aligned = protectedDirection === args.direction;
+  if (!aligned) {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_model_fit',
+      setupType: null,
+      modelName: null,
+      parentModelFamily: null,
+      fitScore: 0,
+      status: 'not_aligned',
+      reason: `${args.direction} is not supported by aligned protected 15M+5M structure this cycle.`,
+      missingProof: ['15M and 5M protected structure are not aligned for this side.'],
+      approvalBoundary: boundary,
+    };
+  }
+
+  const existingEntry = primaryRegistryEntryForSetup(args.item?.setupType || null);
+  const fallbackEntry = protectedStructureFallbackModelEntry(args.direction, args.htfProtectedStructureMap);
+  const entry = existingEntry || fallbackEntry;
+  if (!entry) {
+    return {
+      sourceOfTruth: 'scanner_protected_structure_model_fit',
+      setupType: null,
+      modelName: null,
+      parentModelFamily: null,
+      fitScore: 0,
+      status: 'candidate_missing',
+      reason: 'Protected structure is aligned, but no approved primary model route is available.',
+      missingProof: ['No approved primary model route matched the protected-structure context.'],
+      approvalBoundary: boundary,
+    };
+  }
+
+  const baseScore = args.item
+    ? lifecycleItemScore(args.item)
+    : entry.priority;
+  const fitScore = Math.max(0, Math.min(100, Math.round(baseScore + (existingEntry ? 8 : 2))));
+  const modelSource = existingEntry
+    ? 'existing scanner candidate'
+    : 'protected 15M+5M alignment routed to approved Intraday MSS Micro Continuation model';
+  return {
+    sourceOfTruth: 'scanner_protected_structure_model_fit',
+    setupType: entry.setupType,
+    modelName: entry.label,
+    parentModelFamily: entry.parentModelFamily || null,
+    fitScore,
+    status: 'best_fit',
+    reason: `${args.direction} protected-structure alignment selects ${entry.label} from ${modelSource}.`,
+    missingProof: existingModelFitMissingProof(args.item),
+    approvalBoundary: boundary,
+  };
+}
+
+function buildExecutableConsideration(args: {
+  direction: 'LONG' | 'SHORT';
+  item: ScannerCandidateLifecycleTraceItem | null;
+  modelFit: DeskPlayApprovedModelFit;
+}): DeskPlayExecutableConsideration {
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+  } as const;
+  if (args.modelFit.status === 'data_limited') {
+    return {
+      sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
+      direction: args.direction,
+      status: 'data_limited',
+      selectedApprovedModel: null,
+      canExecuteNow: false,
+      gateSummary: 'Data-limited HTF context prevents executable consideration.',
+      missingGates: args.modelFit.missingProof,
+      approvalBoundary: boundary,
+    };
+  }
+  if (args.modelFit.status !== 'best_fit') {
+    return {
+      sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
+      direction: args.direction,
+      status: 'not_aligned',
+      selectedApprovedModel: args.modelFit.setupType,
+      canExecuteNow: false,
+      gateSummary: 'Protected structure does not route this side into an approved executable model.',
+      missingGates: args.modelFit.missingProof,
+      approvalBoundary: boundary,
+    };
+  }
+  const missingGates = existingModelFitMissingProof(args.item);
+  const ready = Boolean(args.item && args.item.executionStatus === ExecutionStatus.Executable && args.item.hasFullPlanLevels && missingGates.length === 0);
+  return {
+    sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
+    direction: args.direction,
+    status: ready ? 'ready_for_existing_can_execute_gate' : 'review_only_missing_proof',
+    selectedApprovedModel: args.modelFit.setupType,
+    canExecuteNow: false,
+    gateSummary: ready
+      ? 'Approved model fit is structurally complete; existing canExecute gate remains the only executor.'
+      : 'Approved model fit is visible, but normal 5M execution gates still need proof.',
+    missingGates,
+    approvalBoundary: boundary,
+  };
+}
+
 function buildHtfReactionContext(item: ScannerCandidateLifecycleTraceItem | null): DeskPlayHtfReactionContext {
   const evidenceText = item
     ? [
@@ -1971,6 +2174,8 @@ function buildDirectionalBias(
   item: ScannerCandidateLifecycleTraceItem | null,
   primaryDirection: DeskPlayDirection,
   htfProtectedStructureMap: DeskHtfProtectedStructureMap,
+  modelFit: DeskPlayApprovedModelFit,
+  executableConsideration: DeskPlayExecutableConsideration,
 ): DeskPlayDirectionalBias {
   const state = biasStateForLifecycleItem(item, primaryDirection, htfProtectedStructureMap);
   return {
@@ -1985,6 +2190,8 @@ function buildDirectionalBias(
     lineInSand: lineForLifecycleItem(item),
     lineConfidence: buildLineConfidence(item),
     htfReactionContext: buildHtfReactionContext(item),
+    modelFit,
+    executableConsideration,
     nextTrigger: item?.nextTrigger || item?.requiredTrigger || null,
     invalidation: item?.invalidation || null,
     reason: biasReasonForLifecycleItem(item, state),
@@ -1993,6 +2200,46 @@ function buildDirectionalBias(
       ...item.missingEvidence,
       ...item.missingLevels,
     ].filter((value): value is string => Boolean(value)))).slice(0, 8) : [],
+  };
+}
+
+function buildDeskPlayModelRouting(args: {
+  primaryDirection: DeskPlayDirection;
+  longModelFit: DeskPlayApprovedModelFit;
+  shortModelFit: DeskPlayApprovedModelFit;
+  longExecutableConsideration: DeskPlayExecutableConsideration;
+  shortExecutableConsideration: DeskPlayExecutableConsideration;
+}): PrimaryDeskPlay['modelRouting'] {
+  const primaryFit = args.primaryDirection === 'LONG'
+    ? args.longModelFit
+    : args.primaryDirection === 'SHORT'
+    ? args.shortModelFit
+    : null;
+  const executableConsideration = args.primaryDirection === 'LONG'
+    ? args.longExecutableConsideration
+    : args.primaryDirection === 'SHORT'
+    ? args.shortExecutableConsideration
+    : null;
+  const routingSummary = primaryFit?.status === 'best_fit'
+    ? `${args.primaryDirection} routes to approved model ${primaryFit.modelName}; execution still requires normal canExecute gates.`
+    : args.primaryDirection === 'WAIT'
+    ? 'No protected-structure side is routed into an approved primary model as the active desk direction.'
+    : `${args.primaryDirection} has no approved executable model route this cycle.`;
+  return {
+    sourceOfTruth: 'scanner_protected_structure_model_routing',
+    primaryDirection: args.primaryDirection,
+    bestApprovedModel: primaryFit?.setupType || null,
+    bestApprovedModelName: primaryFit?.modelName || null,
+    longModelFit: args.longModelFit,
+    shortModelFit: args.shortModelFit,
+    executableConsideration,
+    routingSummary,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      createsNewModel: false,
+    },
   };
 }
 
@@ -2036,8 +2283,35 @@ function buildPrimaryDeskPlay(args: {
   const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
   const trendConfirmation = buildProtectedStructureTrendConfirmation(htfProtectedStructureMap);
   const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap);
-  const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection, htfProtectedStructureMap);
-  const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection, htfProtectedStructureMap);
+  const longModelFit = buildApprovedModelFit({
+    direction: 'LONG',
+    item: args.candidateLifecycleTrace.bestLongPlan,
+    htfProtectedStructureMap,
+  });
+  const shortModelFit = buildApprovedModelFit({
+    direction: 'SHORT',
+    item: args.candidateLifecycleTrace.bestShortPlan,
+    htfProtectedStructureMap,
+  });
+  const longExecutableConsideration = buildExecutableConsideration({
+    direction: 'LONG',
+    item: args.candidateLifecycleTrace.bestLongPlan,
+    modelFit: longModelFit,
+  });
+  const shortExecutableConsideration = buildExecutableConsideration({
+    direction: 'SHORT',
+    item: args.candidateLifecycleTrace.bestShortPlan,
+    modelFit: shortModelFit,
+  });
+  const modelRouting = buildDeskPlayModelRouting({
+    primaryDirection,
+    longModelFit,
+    shortModelFit,
+    longExecutableConsideration,
+    shortExecutableConsideration,
+  });
+  const longBias = buildDirectionalBias('LONG', args.candidateLifecycleTrace.bestLongPlan, primaryDirection, htfProtectedStructureMap, longModelFit, longExecutableConsideration);
+  const shortBias = buildDirectionalBias('SHORT', args.candidateLifecycleTrace.bestShortPlan, primaryDirection, htfProtectedStructureMap, shortModelFit, shortExecutableConsideration);
   const primaryBias = primaryDirection === 'LONG' ? longBias : primaryDirection === 'SHORT' ? shortBias : null;
   const oppositeBias = primaryDirection === 'LONG' ? shortBias : primaryDirection === 'SHORT' ? longBias : null;
   const primaryLifecycleItem = primaryDirection === 'LONG'
@@ -2136,6 +2410,7 @@ function buildPrimaryDeskPlay(args: {
     sourceOfTruth: 'scanner_primary_desk_play',
     direction: primaryDirection,
     trendConfirmation,
+    modelRouting,
     title,
     summary,
     lineInSand: selectedLine,

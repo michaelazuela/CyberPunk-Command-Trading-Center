@@ -1198,6 +1198,17 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.direction, 'LONG');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.sourceOfTruth, 'scanner_protected_structure_trend_confirmation');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.ok(june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('Desk Direction: LONG'));
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'primary');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.state, 'secondary');
@@ -1220,6 +1231,9 @@ assert.notEqual(june12ProtectedHoldDeskState.primaryDeskPlay.htfObjectiveLadder.
 assert.ok(!june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('No HTF-supported directional play'));
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesCanExecute, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalBoundary.changesCanExecute, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalBoundary.changesTradeApprovals, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.approvalBoundary.createsNewModel, false);
 
 const june12DataLimitedProtectedHoldDeskState = buildDeskState({
   state: 'Conditional',

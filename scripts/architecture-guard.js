@@ -255,6 +255,13 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('scanner_htf_reaction_context') ||
     !ownerContent.includes('scanner_htf_objective_ladder') ||
     !ownerContent.includes('scanner_htf_protected_structure_map') ||
+    !ownerContent.includes('scanner_protected_structure_model_routing') ||
+    !ownerContent.includes('scanner_protected_structure_model_fit') ||
+    !ownerContent.includes('scanner_executable_consideration_gate_metadata') ||
+    !ownerContent.includes('buildApprovedModelFit') ||
+    !ownerContent.includes('buildExecutableConsideration') ||
+    !ownerContent.includes('protectedStructureFallbackModelEntry') ||
+    !ownerContent.includes('SetupType.IntradayMssMicroContinuation') ||
     !ownerContent.includes('DeskHtfObjectiveLadder') ||
     !ownerContent.includes('DeskHtfProtectedStructureMap') ||
     !ownerContent.includes('fallbackHtfState') ||
@@ -272,7 +279,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !ownerContent.includes('changesTradeApprovals: false') ||
     !ownerContent.includes('changesCanExecute: false')
   ) {
-    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, and direction-owned HTF objective ladder scanner-owned metadata only.');
+    fail('localScannerEngine.ts must keep Desk Play line confidence, HTF reaction context, direction-owned HTF objective ladder, protected-structure model routing, and executable-consideration scanner-owned metadata only.');
   }
   if (
     !ownerContent.includes('lifecycleItemPrimaryEligible') ||
@@ -380,6 +387,12 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing')") ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation)') ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof')") ||
     !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
     !june12ReplayProofContent.includes('assert.equal(fifteenMinute?.biasChangeLine, 7377.5)') ||
     !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
@@ -468,6 +481,10 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('HTF Bias Lines') ||
     !formatterContent.includes('Desk Direction') ||
     !formatterContent.includes('scanner_protected_structure_trend_confirmation') ||
+    !formatterContent.includes('scanner_protected_structure_model_fit') ||
+    !formatterContent.includes('scanner_executable_consideration_gate_metadata') ||
+    !formatterContent.includes('Best model:') ||
+    !formatterContent.includes('Gate:') ||
     !formatterContent.includes('5M still controls execution') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||

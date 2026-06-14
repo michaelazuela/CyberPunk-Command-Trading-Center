@@ -83,6 +83,16 @@ export interface CompactDeskStateForDiscord {
       confirmation?: string;
       summary?: string;
     } | null;
+    modelRouting?: {
+      sourceOfTruth?: string;
+      primaryDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      bestApprovedModel?: string | null;
+      bestApprovedModelName?: string | null;
+      routingSummary?: string | null;
+      longModelFit?: CompactDeskPlayModelFit | null;
+      shortModelFit?: CompactDeskPlayModelFit | null;
+      executableConsideration?: CompactDeskPlayExecutableConsideration | null;
+    } | null;
     title?: string;
     summary?: string;
     lineInSand?: number | null;
@@ -160,6 +170,8 @@ export interface CompactDeskStateForDiscord {
         strength?: string | null;
         whyItMayReact?: string | null;
       } | null;
+      modelFit?: CompactDeskPlayModelFit | null;
+      executableConsideration?: CompactDeskPlayExecutableConsideration | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -184,6 +196,8 @@ export interface CompactDeskStateForDiscord {
         strength?: string | null;
         whyItMayReact?: string | null;
       } | null;
+      modelFit?: CompactDeskPlayModelFit | null;
+      executableConsideration?: CompactDeskPlayExecutableConsideration | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -198,6 +212,27 @@ interface CompactHtfObjective {
   source?: string | null;
   rMultiple?: number | null;
   instruction?: string | null;
+}
+
+interface CompactDeskPlayModelFit {
+  sourceOfTruth?: string;
+  setupType?: string | null;
+  modelName?: string | null;
+  parentModelFamily?: string | null;
+  fitScore?: number | null;
+  status?: string;
+  reason?: string;
+  missingProof?: string[];
+}
+
+interface CompactDeskPlayExecutableConsideration {
+  sourceOfTruth?: string;
+  direction?: 'LONG' | 'SHORT' | string;
+  status?: string;
+  selectedApprovedModel?: string | null;
+  canExecuteNow?: boolean;
+  gateSummary?: string;
+  missingGates?: string[];
 }
 
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
@@ -858,6 +893,40 @@ function deskPlayConfidenceLine(
   return `Confidence: ${score === null ? 'N/A' : `${score}/100`} ${label}`;
 }
 
+function deskPlayModelFitLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const bias = deskPlayBiasForDirection(play, direction);
+  const fit = bias?.modelFit || (direction === 'LONG' ? play.modelRouting?.longModelFit : play.modelRouting?.shortModelFit);
+  if (!fit || fit.sourceOfTruth !== 'scanner_protected_structure_model_fit') return null;
+  if (fit.status !== 'best_fit') return null;
+  const score = typeof fit.fitScore === 'number' && Number.isFinite(fit.fitScore)
+    ? `${Math.round(fit.fitScore)}/100`
+    : 'N/A';
+  return `Best model: ${compactLine(fit.modelName || String(fit.setupType || 'approved model'), 32)} | fit ${score}`;
+}
+
+function deskPlayExecutableGateLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const bias = deskPlayBiasForDirection(play, direction);
+  const gate = bias?.executableConsideration ||
+    (play.modelRouting?.executableConsideration?.direction === direction ? play.modelRouting.executableConsideration : null);
+  if (!gate || gate.sourceOfTruth !== 'scanner_executable_consideration_gate_metadata') return null;
+  if (gate.status === 'not_aligned' || gate.status === 'data_limited') return null;
+  const status = gate.status === 'ready_for_existing_can_execute_gate'
+    ? 'ready for normal gate'
+    : gate.status === 'review_only_missing_proof'
+    ? 'review only'
+    : gate.status || 'pending';
+  const missing = Array.isArray(gate.missingGates) && gate.missingGates.length
+    ? ` | Missing: ${compactLine(gate.missingGates[0], 46)}`
+    : '';
+  return `Gate: ${status}; canExecute unchanged${missing}`;
+}
+
 function deskPlayHtfReactionLine(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT',
@@ -1037,6 +1106,8 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
     return [
       header,
       ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
+      ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
+      ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
       ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
       'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
     ];
@@ -1044,6 +1115,8 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   return [
     header,
     ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
+    ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
+    ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
     ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
     `Entry ref: ${priceLine(levels.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
@@ -1062,8 +1135,13 @@ function deskPlayWaitMapLine(
   if (!isFinitePrice(lineInSand)) return null;
   const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
-  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)} | levels pending`;
-  return `${direction} ${triggerWord} ${priceLine(lineInSand)} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
+  const fit = deskPlayBiasForDirection(play, direction)?.modelFit ||
+    (direction === 'LONG' ? play.modelRouting?.longModelFit : play.modelRouting?.shortModelFit);
+  const model = fit?.status === 'best_fit'
+    ? ` | Model ${compactLine(fit.modelName || String(fit.setupType || 'approved'), 26)}`
+    : '';
+  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model} | levels pending`;
+  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
 }
 
 function deskPlayWaitLines(
