@@ -357,15 +357,19 @@ function checkScannerVisibilityMetadataBoundary() {
     !bridgeInstrumentResolverTestContent.includes('MES SEP26') ||
     !bridgeInstrumentResolverTestContent.includes('stale after rollover') ||
     !ninjaBridgeAddOnContent.includes('CurrentDefaultInstrument()') ||
+    !ninjaBridgeAddOnContent.includes('ActiveChartInstrument()') ||
+    !ninjaBridgeAddOnContent.includes('Application.Current') ||
+    !ninjaBridgeAddOnContent.includes('VisualTreeHelper.GetChildrenCount') ||
+    !ninjaBridgeAddOnContent.includes('NinjaTrader.Gui.Chart.ChartControl') ||
     !ninjaBridgeAddOnContent.includes('FrontMonthInstrument') ||
-    !ninjaBridgeAddOnContent.includes('{ "instrumentSource", "front_month_rollover" }') ||
+    !ninjaBridgeAddOnContent.includes('{ "instrumentSource", CurrentInstrumentSource() }') ||
     !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
     !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
     !discordSchedulerContent.includes("bridgeInstrument: 'MES'") ||
     !liveLauncherContent.includes('Enter NinjaTrader instrument or root [MES]') ||
     !liveLauncherContent.includes('set "BRIDGE_INSTRUMENT=MES"')
   ) {
-    fail('NinjaTrader contract resolution must normalize month-name contracts, reject stale same-root contracts after rollover, and advertise a front-month bridge default.');
+    fail('NinjaTrader contract resolution must detect the active chart contract when available, normalize month-name contracts, reject stale same-root contracts after rollover, and advertise the bridge instrument source.');
   }
   if (
     !tradeRulesContent.includes("direction === 'LONG' && stop >= entry") ||

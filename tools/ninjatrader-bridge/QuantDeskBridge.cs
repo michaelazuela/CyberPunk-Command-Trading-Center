@@ -17,8 +17,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Windows;
+using System.Windows.Media;
 using NinjaTrader.Cbi;
 using NinjaTrader.Data;
 using NinjaTrader.NinjaScript;
@@ -61,7 +64,189 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private static string CurrentDefaultInstrument()
         {
-            return FrontMonthInstrument(DefaultInstrumentRoot, DateTime.Now);
+            string chartInstrument = ActiveChartInstrument();
+            return string.IsNullOrWhiteSpace(chartInstrument)
+                ? FrontMonthInstrument(DefaultInstrumentRoot, DateTime.Now)
+                : chartInstrument;
+        }
+
+        private static string CurrentInstrumentSource()
+        {
+            string chartInstrument = ActiveChartInstrument();
+            return string.IsNullOrWhiteSpace(chartInstrument)
+                ? "front_month_rollover"
+                : "active_chart";
+        }
+
+        private static string ActiveChartInstrument()
+        {
+            try
+            {
+                Application application = Application.Current;
+                if (application == null)
+                    return null;
+
+                if (application.Dispatcher.CheckAccess())
+                    return ActiveChartInstrumentOnDispatcher(application);
+
+                return application.Dispatcher.Invoke(new Func<string>(() => ActiveChartInstrumentOnDispatcher(application)));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string ActiveChartInstrumentOnDispatcher(Application application)
+        {
+            if (application == null || application.Windows == null)
+                return null;
+
+            Window activeWindow = application.Windows
+                .OfType<Window>()
+                .Where(window => window != null && window.IsActive)
+                .FirstOrDefault();
+
+            string activeInstrument = InstrumentFromWindow(activeWindow);
+            if (!string.IsNullOrWhiteSpace(activeInstrument))
+                return activeInstrument;
+
+            foreach (Window window in application.Windows.OfType<Window>())
+            {
+                string instrument = InstrumentFromWindow(window);
+                if (!string.IsNullOrWhiteSpace(instrument))
+                    return instrument;
+            }
+
+            return null;
+        }
+
+        private static string InstrumentFromWindow(Window window)
+        {
+            if (window == null)
+                return null;
+
+            foreach (DependencyObject dependencyObject in VisualChildren(window))
+            {
+                if (dependencyObject == null)
+                    continue;
+
+                Type type = dependencyObject.GetType();
+                if (type.FullName != null && type.FullName.Contains("NinjaTrader.Gui.Chart.ChartControl"))
+                {
+                    string instrument = InstrumentFromObject(dependencyObject);
+                    if (!string.IsNullOrWhiteSpace(instrument))
+                        return instrument;
+                }
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<DependencyObject> VisualChildren(DependencyObject root)
+        {
+            if (root == null)
+                yield break;
+
+            int count = 0;
+            try
+            {
+                count = VisualTreeHelper.GetChildrenCount(root);
+            }
+            catch
+            {
+                yield break;
+            }
+
+            for (int index = 0; index < count; index++)
+            {
+                DependencyObject child = null;
+                try
+                {
+                    child = VisualTreeHelper.GetChild(root, index);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (child == null)
+                    continue;
+
+                yield return child;
+
+                foreach (DependencyObject descendant in VisualChildren(child))
+                    yield return descendant;
+            }
+        }
+
+        private static string InstrumentFromObject(object source)
+        {
+            if (source == null)
+                return null;
+
+            string directInstrument = ReadFullNameFromProperty(source, "Instrument");
+            if (!string.IsNullOrWhiteSpace(directInstrument))
+                return directInstrument;
+
+            object barsArray = ReadProperty(source, "BarsArray");
+            if (barsArray is IEnumerable enumerable)
+            {
+                foreach (object item in enumerable)
+                {
+                    string instrument = InstrumentFromObject(item);
+                    if (!string.IsNullOrWhiteSpace(instrument))
+                        return instrument;
+                }
+            }
+
+            object chartBars = ReadProperty(source, "ChartBars");
+            if (chartBars != null && !object.ReferenceEquals(chartBars, source))
+            {
+                string instrument = InstrumentFromObject(chartBars);
+                if (!string.IsNullOrWhiteSpace(instrument))
+                    return instrument;
+            }
+
+            object bars = ReadProperty(source, "Bars");
+            if (bars != null && !object.ReferenceEquals(bars, source))
+            {
+                string instrument = InstrumentFromObject(bars);
+                if (!string.IsNullOrWhiteSpace(instrument))
+                    return instrument;
+            }
+
+            return null;
+        }
+
+        private static string ReadFullNameFromProperty(object source, string propertyName)
+        {
+            object value = ReadProperty(source, propertyName);
+            if (value == null)
+                return null;
+
+            object fullName = ReadProperty(value, "FullName");
+            if (fullName != null && !string.IsNullOrWhiteSpace(fullName.ToString()))
+                return fullName.ToString();
+
+            string text = value.ToString();
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
+        private static object ReadProperty(object source, string propertyName)
+        {
+            if (source == null)
+                return null;
+
+            try
+            {
+                PropertyInfo property = source.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public);
+                return property == null ? null : property.GetValue(source, null);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string FrontMonthInstrument(string root, DateTime asOf)
@@ -319,11 +504,11 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.5-readonly" },
+                { "version", "0.1.6-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
                 { "defaultInstrument", CurrentDefaultInstrument() },
-                { "instrumentSource", "front_month_rollover" },
+                { "instrumentSource", CurrentInstrumentSource() },
                 { "serverTime", DateTime.Now.ToString("o") }
             };
         }

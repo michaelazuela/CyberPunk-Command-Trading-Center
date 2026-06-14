@@ -138,7 +138,8 @@ GET http://127.0.0.1:8765/positions?account=206257
 
 ## Current Limitations
 
-- The AddOn defaults to the current MES quarterly front-month using the same rollover convention as the scanner resolver.
+- The AddOn reports the open active NinjaTrader chart instrument first when NinjaTrader exposes it.
+- If no chart instrument is available, the AddOn falls back to the current MES quarterly front-month using the same rollover convention as the scanner resolver.
 - The scanner resolves stale same-root contracts from bridge `/health` or front-month rollover, so contract rollover does not require editing source code.
 - The bridge returns cached bars from NinjaTrader `BarsRequest`.
 - Cloudflare-hosted pages use Chrome Private Network Access rules when calling a local `127.0.0.1` endpoint from HTTPS. The bridge includes `Access-Control-Allow-Private-Network: true`, but some browser builds can still deny public-site access to loopback services. In that case, use local dev or the local companion server below.
@@ -261,7 +262,7 @@ http://127.0.0.1:8765/positions?account=Sim101
 
 Expected behavior:
 
-- `/health` returns `readOnly: true`.
+- `/health` returns `readOnly: true` and reports `instrumentSource: active_chart` when an open chart instrument was detected.
 - `/accounts` includes `Sim101` and, if available in your install, `206257`.
 - `/bars` returns real OHLC candles.
 - `/historical-bars` returns real OHLC candles for the requested Replay Lab date/window when NinjaTrader and the connected data provider can load that history.
@@ -269,7 +270,7 @@ Expected behavior:
 - 4H and 1H are macro/session context only. 15M is the primary liquidity target map. 5M remains execution authority.
 - `/positions` returns current positions without submitting or modifying any orders.
 
-If NinjaTrader reports a month-name contract such as `MES SEP26`, Quant Desk normalizes it to the bridge URL format `MES 09-26`. If the scanner is still configured for an expired same-root contract, it falls forward to the active quarterly front-month instead of reading stale bars.
+If NinjaTrader reports a month-name contract such as `MES SEP26`, Quant Desk normalizes it to the bridge URL format `MES 09-26`. If the scanner is still configured for an expired same-root contract, it falls forward to the active quarterly front-month instead of reading stale bars. The preferred live path is active chart -> bridge `/health.defaultInstrument` -> scanner resolver -> front-month fallback.
 
 ## Cloudflare Production E2E Check
 
