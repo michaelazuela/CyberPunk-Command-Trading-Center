@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-14
+Task: Guard protected-structure replay code against raw historical-bar array assumptions.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts, tools/supervisor/supervisor.test.ts.
+Reason: A follow-up outcome script assumed `getNinjaHistoricalBars()` returned a raw array, but the bridge helper correctly returns a wrapped historical-bars payload with `.bars`. The repo needed a reusable guard in the protected-structure review path so future replay/report code fails clearly instead of reaching `bars.filter is not a function`.
+Tests run: npx tsx tools/automation/protected-structure-trade-review.test.ts; npm run diagnostic:protected-structure-trade-review -- --no-charts --output=reports/protected-structure-review/2026-06-08-to-2026-06-12-wrapper-guard-check; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run guard:bridge-contracts.
+Result: Passed. Added `unwrapHistoricalBarsResponse()` to accept the canonical wrapped bridge payload, return an empty bar list for explicit failed bridge responses, and reject raw arrays or missing `.bars` with clear errors. The protected-structure review loader now uses this helper before merging market_bars and bridge repair bars. The supervisor heartbeat fixture was also corrected to read its isolated test heartbeat path instead of a live/default log file.
+Trading logic changed: No. This is replay/report input-contract hardening only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge add-on behavior changed.
+Bridge impact: None to the bridge contract. The report path now enforces the existing wrapped historical-bars response shape.
+Discord impact: None directly. Protected-structure review posting still uses the same review-only/RAG-button path.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Keep replay/outcome tools consuming historical bars through typed wrapped payload helpers, not ad hoc raw-array assumptions.
+
+## Previous Change
+
+Date: 2026-06-14
 Task: Tighten Phase 10L stop-quality handling so protected-structure review maps do not widen stops blindly.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts.
 Reason: The trader clarified that 10L should keep the stop behind app-owned 5M protected structure, but should not widen stops blindly or treat a fragile/tight tactical stop as high-quality. The correct desk behavior is to wait for a better pullback entry or a new protected 5M MSS structure.

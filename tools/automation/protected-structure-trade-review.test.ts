@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import {
   assertProtectedStructureReviewReportIsCompact,
   buildProtectedStructureTradeQuality,
+  unwrapHistoricalBarsResponse,
 } from './protected-structure-trade-review';
 
 assert.doesNotThrow(() => assertProtectedStructureReviewReportIsCompact({
@@ -87,6 +88,34 @@ assert.throws(
     ],
   }),
   /must not include raw OHLC bars/,
+);
+
+assert.deepEqual(
+  unwrapHistoricalBarsResponse({
+    ok: true,
+    bars: [
+      { time: '2026-06-12T11:00:00', open: 1, high: 2, low: 0, close: 1.5, volume: 10 },
+      { time: 'bad', open: 1, high: 2, low: 0, close: 1.5 },
+      { time: '2026-06-12T11:05:00', open: 1.5, high: 2, low: 1, close: 1.75, volume: 12 },
+    ],
+  }),
+  [
+    { time: '2026-06-12T11:00:00', open: 1, high: 2, low: 0, close: 1.5, volume: 10 },
+    { time: 'bad', open: 1, high: 2, low: 0, close: 1.5 },
+    { time: '2026-06-12T11:05:00', open: 1.5, high: 2, low: 1, close: 1.75, volume: 12 },
+  ],
+);
+
+assert.deepEqual(unwrapHistoricalBarsResponse({ ok: false, bars: [] }), []);
+
+assert.throws(
+  () => unwrapHistoricalBarsResponse([{ time: '2026-06-12T11:00:00', open: 1, high: 2, low: 0, close: 1.5, volume: 10 }]),
+  /raw array; expected wrapped payload/,
+);
+
+assert.throws(
+  () => unwrapHistoricalBarsResponse({ ok: true }),
+  /missing bars array/,
 );
 
 function segment(overrides: Record<string, unknown>) {

@@ -212,6 +212,20 @@ function mergeBars(...groups: NinjaBridgeBar[][]): NinjaBridgeBar[] {
   return [...byTime.values()].sort((a, b) => timeMs(a.time) - timeMs(b.time));
 }
 
+export function unwrapHistoricalBarsResponse(value: unknown, sourceLabel = 'NinjaTrader historical-bars'): NinjaBridgeBar[] {
+  if (Array.isArray(value)) {
+    throw new Error(`${sourceLabel} returned a raw array; expected wrapped payload with a bars array.`);
+  }
+  if (!isRecord(value)) {
+    throw new Error(`${sourceLabel} returned an invalid payload; expected wrapped payload with a bars array.`);
+  }
+  if (value.ok === false) return [];
+  if (!Array.isArray(value.bars)) {
+    throw new Error(`${sourceLabel} payload is missing bars array.`);
+  }
+  return value.bars.filter((bar): bar is NinjaBridgeBar => looksLikeRawOhlcBar(bar));
+}
+
 async function loadReviewBars(options: Required<Pick<TradeReviewOptions, 'bridgeInstrument' | 'timeframe' | 'marketTimeframe' | 'from' | 'to'>>): Promise<LoadedReviewBars> {
   const config = loadMarketDataConfig();
   const cached = config
@@ -231,7 +245,7 @@ async function loadReviewBars(options: Required<Pick<TradeReviewOptions, 'bridge
     to: options.to,
     limit: 20000,
   }).catch(() => ({ ok: false, bars: [] as NinjaBridgeBar[] }));
-  const bridgeBars = bridge.ok && Array.isArray(bridge.bars) ? bridge.bars : [];
+  const bridgeBars = unwrapHistoricalBarsResponse(bridge);
   const bars = mergeBars(cached, bridgeBars);
   const source = cached.length && bridgeBars.length
     ? 'market_bars_bridge_repair'

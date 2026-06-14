@@ -220,7 +220,7 @@ const logger = createSupervisorLogger(tempLogsDir);
 const afterCloseRecorderHeartbeatPath = path.join(tempLogsDir, 'after-close-recorder-heartbeat.json');
 fs.writeFileSync(afterCloseRecorderHeartbeatPath, JSON.stringify({
   status: 'warn',
-  updatedAt: '2026-06-13T01:25:20.732Z',
+  updatedAt: '2026-06-13T01:25:50.000Z',
   latestCompleted5m: '2026-06-12T17:00:00.0000000',
   warning: 'NinjaTrader bridge is reachable, but latest completed 5M candle is stale.',
 }, null, 2), 'utf8');
@@ -243,7 +243,19 @@ const afterCloseHealthState = {
   startedAt: '2026-06-13T01:20:00.000Z',
 } satisfies SupervisorState;
 const afterCloseHealth = await buildHealthReport(
-  processConfig,
+  {
+    ...processConfig,
+    childServices: [
+      ...processConfig.childServices,
+      {
+        id: 'candle-recorder',
+        label: 'Candle Recorder',
+        npmScript: 'nt:candle-recorder',
+        args: ['--heartbeat-path', afterCloseRecorderHeartbeatPath],
+        enabled: true,
+      },
+    ],
+  },
   afterCloseHealthState,
   new Date('2026-06-13T01:25:51.464Z'),
   {},
