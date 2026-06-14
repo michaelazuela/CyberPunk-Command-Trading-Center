@@ -1186,7 +1186,7 @@ function deskPlayWaitMapLine(
     ? ` | Model ${compactLine(fit.modelName || String(fit.setupType || 'approved'), 26)}`
     : '';
   const readiness = deskPlayTradeReadinessLine(play, direction);
-  const readinessText = readiness ? ` | ${readiness.replace(/^Readiness:\s*/, '')}` : '';
+  const readinessText = readiness ? ` | ${readiness.replace(/^Ready:\s*/, '')}` : '';
   if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | levels pending`;
   return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
 }

@@ -695,6 +695,7 @@ assert.ok(deskPlayDecisionMapText.includes('5M: BULL now | line 7350.25 | change
 assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
 assert.ok(deskPlayDecisionMapText.includes('EXEC CANDIDATE'));
+assert.ok(!deskPlayDecisionMapText.includes('| Ready: EXEC CANDIDATE'));
 assert.ok(deskPlayDecisionMapText.includes('Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Trigger: LONG above 7342.00 / SHORT below 7342.00; completed 5M close/retest only.'));
 assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
