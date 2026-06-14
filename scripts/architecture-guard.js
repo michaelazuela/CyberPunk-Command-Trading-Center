@@ -315,6 +315,9 @@ function checkScannerVisibilityMetadataBoundary() {
   const researchPriceActionBarsPath = path.join(ROOT, 'tools', 'automation', 'research-price-action-bars.ts');
   const discordSchedulerPath = path.join(ROOT, 'tools', 'automation', 'discord-scheduler.ts');
   const liveLauncherPath = path.join(ROOT, 'tools', 'automation', 'Start Quant Desk Live.cmd');
+  const livePowerShellLauncherPath = path.join(ROOT, 'tools', 'automation', 'start-discord-alerts.ps1');
+  const candleRecorderPath = path.join(ROOT, 'tools', 'automation', 'candle-recorder.ts');
+  const supervisorConfigPath = path.join(ROOT, 'tools', 'supervisor', 'config.ts');
   const bridgeInstrumentResolverContent = readFileSafe(bridgeInstrumentResolverPath);
   const bridgeInstrumentResolverTestContent = readFileSafe(bridgeInstrumentResolverTestPath);
   const ninjaBridgeAddOnContent = readFileSafe(ninjaBridgeAddOnPath);
@@ -323,11 +326,15 @@ function checkScannerVisibilityMetadataBoundary() {
   const researchPriceActionBarsContent = readFileSafe(researchPriceActionBarsPath);
   const discordSchedulerContent = readFileSafe(discordSchedulerPath);
   const liveLauncherContent = readFileSafe(liveLauncherPath);
+  const livePowerShellLauncherContent = readFileSafe(livePowerShellLauncherPath);
+  const candleRecorderContent = readFileSafe(candleRecorderPath);
+  const supervisorConfigContent = readFileSafe(supervisorConfigPath);
   const staleJuneContract = 'MES ' + '06-26';
   const staleBridgeClientDefault = "instrument = '" + staleJuneContract + "'";
   const staleSmokeFallback = '|| `${instrument} ' + '06-26`';
   const staleDefaultContractLiteral = `const DEFAULT_CONTRACT = '${staleJuneContract}'`;
   const staleBridgeBarsExample = 'bars?instrument=MES%20' + '06-26&timeframe=5m';
+  const staleScannerFullContractHelp = '--bridge-instrument "' + 'MES 09-26"';
   if (
     !bridgeContent.includes("barTimestampMode = 'open'") ||
     !ownerContent.includes("timestampMode: BridgeTimestampMode = 'open'") ||
@@ -377,8 +384,14 @@ function checkScannerVisibilityMetadataBoundary() {
     !ninjaBridgeAddOnContent.includes('InstrumentSnapshot instrument = CurrentInstrumentSnapshot(asOf)') ||
     !ninjaBridgeAddOnContent.includes('{ "instrumentSource", instrument.Source }') ||
     !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
+    !scannerContent.includes("bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES'") ||
+    scannerContent.includes(staleScannerFullContractHelp) ||
     !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
+    !discordSchedulerContent.includes("bridgeInstrument: argValue('bridge-instrument') || DEFAULT_CONFIG.bridgeInstrument") ||
     !researchPriceActionBarsContent.includes('resolveCurrentBridgeInstrument') ||
+    !candleRecorderContent.includes('resolveCurrentBridgeInstrument') ||
+    !candleRecorderContent.includes("process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES'") ||
+    !supervisorConfigContent.includes("const bridgeInstrument = env.SUPERVISOR_BRIDGE_INSTRUMENT?.trim() || instrument") ||
     bridgeContent.includes(staleBridgeClientDefault) ||
     bridgeHistorySmokeContent.includes(staleSmokeFallback) ||
     researchPriceActionBarsContent.includes(staleDefaultContractLiteral) ||
@@ -386,6 +399,7 @@ function checkScannerVisibilityMetadataBoundary() {
     ninjaBridgeDocsContent.includes(staleBridgeBarsExample) ||
     ninjaBridgeAddOnContent.includes(staleBridgeBarsExample) ||
     !discordSchedulerContent.includes("bridgeInstrument: 'MES'") ||
+    !livePowerShellLauncherContent.includes('[string]$BridgeInstrument = "MES"') ||
     !liveLauncherContent.includes('Enter NinjaTrader instrument or root [MES]') ||
     !liveLauncherContent.includes('set "BRIDGE_INSTRUMENT=MES"')
   ) {

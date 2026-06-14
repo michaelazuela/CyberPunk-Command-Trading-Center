@@ -945,7 +945,7 @@ function printHelp() {
     '  --once                         Run one poll cycle and exit.',
     '  --dry-run                      Print/log alert payloads instead of posting to Discord.',
     '  --instrument MES|MNQ           Logical app instrument, defaults to MES.',
-    '  --bridge-instrument "MES 09-26" NinjaTrader bridge instrument. Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover.',
+    '  --bridge-instrument "MES" NinjaTrader symbol root or contract. Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover.',
     '  --bridge-url URL               Defaults to http://127.0.0.1:8765.',
     '  --poll-seconds 60              Poll cadence, minimum 15 seconds for continuous mode.',
     '  --discord false                Disable Discord sends but keep scanner logs.',
