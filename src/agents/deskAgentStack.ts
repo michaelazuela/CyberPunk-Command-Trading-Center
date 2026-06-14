@@ -9,6 +9,7 @@ export type DeskAgentKey =
   | 'morningContinuationWatchlistAgent'
   | 'riskReviewAgent'
   | 'workflowOrchestrator'
+  | 'deskWorkflowValidationAgent'
   | 'proofLearningAgent';
 
 export type DeskAgentAuthority =
@@ -17,6 +18,7 @@ export type DeskAgentAuthority =
   | 'advisory_risk_context_only'
   | 'watchlist_context_only'
   | 'app_owned_plan_wrapper'
+  | 'workflow_validation_only'
   | 'journal_rag_learning_only'
   | 'read_only_intelligence';
 
@@ -129,6 +131,14 @@ export const DESK_AGENT_ROLE_CONTRACTS: DeskAgentRoleContract[] = [
     consumes: ['chart facts', 'analysis result', 'memory advisory', 'proof/RAG context', 'scanner-owned DeskState'],
     produces: ['fact merge', 'workflow decision wrapper', 'RAG context wrapper', 'authority snapshot', 'DeskState plan narrative with HTF reaction management'],
     mustNot: [...COMMON_MUST_NOT, 'move fact extraction into execution authority'],
+  },
+  {
+    key: 'deskWorkflowValidationAgent',
+    displayName: 'Desk Workflow Validation Agent',
+    authority: 'workflow_validation_only',
+    consumes: ['DeskState candidate keys', 'Discord report metadata', 'chart artifact status', 'RAG button status', 'HTF sufficiency state', 'model-candidate review evidence'],
+    produces: ['workflow validation findings', 'chart/RAG/HTF/data-boundary blockers', 'authority-drift warnings'],
+    mustNot: [...COMMON_MUST_NOT, 'promote model candidates', 'treat P/L as model approval', 'turn Discord outcome buttons into live approval'],
   },
   {
     key: 'proofLearningAgent',

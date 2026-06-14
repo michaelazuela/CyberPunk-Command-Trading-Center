@@ -180,6 +180,7 @@ assert.deepEqual(
     'morningContinuationWatchlistAgent',
     'riskReviewAgent',
     'workflowOrchestrator',
+    'deskWorkflowValidationAgent',
     'proofLearningAgent',
     'tradingAnalysisAgent',
   ],
@@ -192,6 +193,9 @@ assert.ok(scannerPlanRole?.produces.some((item) => item.includes('Intraday MSS w
 assert.ok(scannerPlanRole?.mustNot.some((item) => item.includes('Gemini/advisory context create Intraday MSS watches')));
 const workflowRole = handoff.roles.find((role) => role.key === 'workflowOrchestrator');
 assert.ok(workflowRole?.produces.some((item) => item.includes('DeskState plan narrative')));
+const validationRole = handoff.roles.find((role) => role.key === 'deskWorkflowValidationAgent');
+assert.equal(validationRole?.authority, 'workflow_validation_only');
+assert.ok(validationRole?.mustNot.some((item) => item.includes('promote model candidates')));
 
 const reactionObjective: TargetObjective = {
   label: 'London Session Low',
