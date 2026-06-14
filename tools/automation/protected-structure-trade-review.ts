@@ -125,9 +125,11 @@ export interface ProtectedStructureTradeQuality {
   flags: {
     tightStop: boolean;
     wideStop: boolean;
+    fragileStopStructure: boolean;
     extendedFromEntry: boolean;
     poorEntryLocation: boolean;
     betterEntryNeeded: boolean;
+    waitForBetterEntryOrNew5mStructure: boolean;
     sparseConfirmation: boolean;
     lateDayRunnerRisk: boolean;
     fridayRunnerRisk: boolean;
@@ -339,26 +341,29 @@ export function buildProtectedStructureTradeQuality(
   const extendedFromEntry = extensionR >= 0.7 || extensionPoints >= 15;
   const severeExtensionFromEntry = extensionR >= 1 || extensionPoints >= 25;
   const poorEntryLocation = extensionR >= 0.5 || extensionPoints >= 10;
-  const betterEntryNeeded = wideStop || poorEntryLocation;
   const sparseConfirmation = segment.count <= 2;
   const lateDayRunnerRisk = endMinutes >= 15 * 60 || startMinutes >= 14 * 60 + 30;
   const fridayRunnerRisk = isFriday(segment.date) && endMinutes >= 12 * 60;
   const tacticalStopInside15mStructure = fiveToFifteenStopGap > Math.max(5, levels.riskPoints * 0.25);
+  const fragileStopStructure = tightStop || tacticalStopInside15mStructure;
+  const betterEntryNeeded = wideStop || poorEntryLocation || fragileStopStructure;
+  const waitForBetterEntryOrNew5mStructure = betterEntryNeeded || extendedFromEntry;
 
   let score = 100;
-  if (tightStop) score -= 16;
+  if (tightStop) score -= 22;
   if (wideStop) score -= 14;
   if (extendedFromEntry) score -= severeExtensionFromEntry ? 35 : 25;
   else if (poorEntryLocation) score -= 10;
   if (sparseConfirmation) score -= 12;
   if (lateDayRunnerRisk) score -= 8;
   if (fridayRunnerRisk) score -= 10;
-  if (tacticalStopInside15mStructure) score -= 12;
+  if (tacticalStopInside15mStructure) score -= 16;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   const findings = [
-    tightStop ? `Tactical stop is tight at ${fmt(levels.riskPoints)} pts; use extra caution around noise/retest failure.` : null,
-    wideStop ? `Wide protected stop at ${fmt(levels.riskPoints)} pts; better entry or pullback improves risk quality.` : null,
+    fragileStopStructure ? 'Stop quality is fragile: do not widen blindly; wait for a better pullback entry or a new protected 5M structure.' : null,
+    tightStop ? `Tactical stop is tight at ${fmt(levels.riskPoints)} pts; noise/retest failure risk is elevated.` : null,
+    wideStop ? `Wide protected stop at ${fmt(levels.riskPoints)} pts; better entry or pullback improves risk quality without changing the stop rule.` : null,
     extendedFromEntry ? `First aligned close was already ${fmt(extensionPoints)} pts (${fmt(extensionR)}R) beyond entry reference; missed/chase risk is live.` : null,
     !extendedFromEntry && poorEntryLocation ? `Entry was not ideal: first aligned close was ${fmt(extensionPoints)} pts (${fmt(extensionR)}R) beyond entry reference.` : null,
     sparseConfirmation ? `Only ${segment.count} confirming 5M bars; treat as early proof, not mature campaign structure.` : null,
@@ -368,9 +373,10 @@ export function buildProtectedStructureTradeQuality(
   ].filter((value): value is string => Boolean(value));
 
   const management = [
-    betterEntryNeeded ? 'Prefer pullback/retest before treating the review map as actionable.' : 'Entry location acceptable for review if completed 5M proof/retest appears.',
+    waitForBetterEntryOrNew5mStructure ? 'Wait for a better pullback entry or a new protected 5M MSS structure; do not force execution from this review map.' : 'Entry location acceptable for review if completed 5M proof/retest appears.',
+    fragileStopStructure ? 'Stop remains behind app-owned 5M protected structure; do not widen it just to make the idea work.' : null,
     tightStop ? 'Do not use the tight 5M stop as proof of high quality by itself.' : null,
-    wideStop ? 'Reduce expectations or wait for a tighter protected 5M structure before using full risk.' : null,
+    wideStop ? 'Reduce expectations or wait for a better entry against the same protected 5M structure before using full risk.' : null,
     extendedFromEntry ? 'If price already left the line, mark it missed/review instead of chasing.' : null,
     tacticalStopInside15mStructure ? 'Respect the wider 15M protected line as the bias-failure reference.' : null,
     lateDayRunnerRisk || fridayRunnerRisk ? 'Take T1 seriously; do not require T2/runner before market close.' : null,
@@ -394,9 +400,11 @@ export function buildProtectedStructureTradeQuality(
     flags: {
       tightStop,
       wideStop,
-    extendedFromEntry,
+      fragileStopStructure,
+      extendedFromEntry,
       poorEntryLocation,
       betterEntryNeeded,
+      waitForBetterEntryOrNew5mStructure,
       sparseConfirmation,
       lateDayRunnerRisk,
       fridayRunnerRisk,

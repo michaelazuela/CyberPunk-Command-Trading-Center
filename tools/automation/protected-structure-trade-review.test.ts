@@ -32,9 +32,11 @@ assert.doesNotThrow(() => assertProtectedStructureReviewReportIsCompact({
         flags: {
           tightStop: false,
           wideStop: true,
+          fragileStopStructure: true,
           extendedFromEntry: false,
           poorEntryLocation: false,
           betterEntryNeeded: true,
+          waitForBetterEntryOrNew5mStructure: true,
           sparseConfirmation: false,
           lateDayRunnerRisk: false,
           fridayRunnerRisk: true,
@@ -117,7 +119,12 @@ const tightStop = buildProtectedStructureTradeQuality(segment({
   },
 }));
 assert.equal(tightStop.flags.tightStop, true);
+assert.equal(tightStop.flags.fragileStopStructure, true);
+assert.equal(tightStop.flags.waitForBetterEntryOrNew5mStructure, true);
 assert.ok(tightStop.findings.join(' ').includes('tight'));
+assert.ok(tightStop.findings.join(' ').includes('do not widen blindly'));
+assert.ok(tightStop.management.join(' ').includes('new protected 5M MSS structure'));
+assert.ok(tightStop.management.join(' ').includes('do not widen it'));
 
 const missedFast = buildProtectedStructureTradeQuality(segment({
   dir: 'SHORT',
@@ -132,6 +139,7 @@ const missedFast = buildProtectedStructureTradeQuality(segment({
   },
 }));
 assert.equal(missedFast.flags.extendedFromEntry, true);
+assert.equal(missedFast.flags.waitForBetterEntryOrNew5mStructure, true);
 assert.ok(missedFast.management.join(' ').includes('missed/review'));
 
 const failedSparse = buildProtectedStructureTradeQuality(segment({
@@ -149,6 +157,7 @@ const failedSparse = buildProtectedStructureTradeQuality(segment({
 }));
 assert.equal(failedSparse.flags.sparseConfirmation, true);
 assert.equal(failedSparse.flags.wideStop, true);
+assert.equal(failedSparse.flags.waitForBetterEntryOrNew5mStructure, true);
 
 const betterEntry = buildProtectedStructureTradeQuality(segment({
   date: '2026-06-11',
@@ -163,6 +172,7 @@ const betterEntry = buildProtectedStructureTradeQuality(segment({
   },
 }));
 assert.equal(betterEntry.flags.betterEntryNeeded, true);
+assert.equal(betterEntry.flags.waitForBetterEntryOrNew5mStructure, true);
 assert.equal(betterEntry.flags.lateDayRunnerRisk, true);
 
 const wrongBiasTrap = buildProtectedStructureTradeQuality(segment({
@@ -179,6 +189,8 @@ const wrongBiasTrap = buildProtectedStructureTradeQuality(segment({
   },
 }));
 assert.equal(wrongBiasTrap.flags.tacticalStopInside15mStructure, true);
+assert.equal(wrongBiasTrap.flags.fragileStopStructure, true);
+assert.equal(wrongBiasTrap.flags.waitForBetterEntryOrNew5mStructure, true);
 assert.equal(wrongBiasTrap.flags.sparseConfirmation, true);
 
 const fridayRunner = buildProtectedStructureTradeQuality(segment({
@@ -207,6 +219,9 @@ function replayQuality(id: number) {
 
 assert.equal(replayQuality(2).flags.betterEntryNeeded, true, 'June 8 long must flag entry-quality risk');
 assert.equal(replayQuality(3).flags.tightStop, true, 'June 8 short must flag tight stop');
+assert.equal(replayQuality(3).flags.fragileStopStructure, true, 'June 8 short must flag fragile stop structure');
+assert.equal(replayQuality(3).flags.waitForBetterEntryOrNew5mStructure, true, 'June 8 short must wait for better entry or new 5M structure');
+assert.ok(replayQuality(3).management.join(' ').includes('do not widen it'), 'June 8 short must reject blind stop widening');
 assert.equal(replayQuality(8).flags.extendedFromEntry, true, 'June 10 11:15 short must flag missed/chase risk');
 assert.equal(replayQuality(9).flags.extendedFromEntry, true, 'June 10 15:00 short must flag missed/chase risk');
 assert.equal(replayQuality(9).flags.lateDayRunnerRisk, true, 'June 10 15:00 short must flag late-day runner risk');

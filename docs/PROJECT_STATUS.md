@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-14
+Task: Tighten Phase 10L stop-quality handling so protected-structure review maps do not widen stops blindly.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts.
+Reason: The trader clarified that 10L should keep the stop behind app-owned 5M protected structure, but should not widen stops blindly or treat a fragile/tight tactical stop as high-quality. The correct desk behavior is to wait for a better pullback entry or a new protected 5M MSS structure.
+Tests run: npx tsx tools/automation/protected-structure-trade-review.test.ts; npm run diagnostic:protected-structure-trade-review -- --no-charts --output=reports/protected-structure-review/2026-06-08-to-2026-06-12-10l-stop-quality-check; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run guard:bridge-contracts.
+Result: Passed. Phase 10L now adds deterministic `fragileStopStructure` and `waitForBetterEntryOrNew5mStructure` flags, lowers quality for tight/fragile stop conditions, and reports: do not widen blindly; wait for a better pullback entry or a new protected 5M MSS structure. Entry, stop, T1, T2, canExecute, setup definitions, and risk rules remain unchanged.
+Trading logic changed: No. This changes review-quality metadata and trader-facing management language only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Indirect. Protected-structure review cards that use 10L quality metadata will now describe fragile stops as review/wait conditions instead of implying the stop should be widened.
+Journal/RAG impact: No schema change. Existing RAG buttons still record trader-confirmed outcomes only.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Use the updated 10L review language when assessing tight-stop trades and keep any future executable-rule changes separate from this review-quality layer.
+
+## Previous Change
+
+Date: 2026-06-14
 Task: Auto-detect active NinjaTrader chart contract for live bridge workflows.
 Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/components/SessionLab.tsx, tools/automation/Start Quant Desk Live.cmd, tools/automation/bridge-instrument-resolver.ts, tools/automation/bridge-instrument-resolver.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts, tools/ninjatrader-bridge/QuantDeskBridge.cs.
 Reason: NinjaTrader was showing `MES SEP26` while the running bridge health still reported `MES 06-26`, which could cause scanner/recorder/scheduler paths to read stale contract data after rollover unless Quant Desk detects the chart contract automatically.
