@@ -11,6 +11,7 @@ import {
   SetupType,
   type ChartCandleFact,
   type ChartContext,
+  type DecisionQualityScoreItem,
   type SetupCandidate,
 } from '../../src/types';
 import { fetchCachedMarketBars, loadMarketDataConfig, type MarketBarTimeframe } from './market-data-store';
@@ -78,6 +79,7 @@ export interface TradeReviewOptions {
 
 interface LoadedReviewBars {
   bars: NinjaBridgeBar[];
+  chartBars: NinjaBridgeBar[];
   cacheBars: number;
   bridgeBars: number;
   source: 'market_bars' | 'market_bars_bridge_repair' | 'ninjatrader_bridge' | 'missing';
@@ -103,9 +105,43 @@ interface ReviewCampaignRow {
   oneContractT2Dollars: number;
   bias5: OverlayBias;
   bias15: OverlayBias;
+  quality: ProtectedStructureTradeQuality;
   status: 'REVIEW ONLY - not execution approval';
   chart: string | null;
   discordMessageId: string | null;
+}
+
+export type ProtectedStructureTradeQualityLabel =
+  | 'A_REVIEW'
+  | 'B_REVIEW'
+  | 'CAUTION'
+  | 'LOW_QUALITY_REVIEW';
+
+export interface ProtectedStructureTradeQuality {
+  sourceOfTruth: 'phase_10l_protected_structure_trade_quality';
+  label: ProtectedStructureTradeQualityLabel;
+  score: number;
+  summary: string;
+  flags: {
+    tightStop: boolean;
+    wideStop: boolean;
+    extendedFromEntry: boolean;
+    poorEntryLocation: boolean;
+    betterEntryNeeded: boolean;
+    sparseConfirmation: boolean;
+    lateDayRunnerRisk: boolean;
+    fridayRunnerRisk: boolean;
+    tacticalStopInside15mStructure: boolean;
+  };
+  findings: string[];
+  management: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+  };
+  scorecard: DecisionQualityScoreItem[];
 }
 
 interface ReviewSourceSummary {
@@ -204,6 +240,7 @@ async function loadReviewBars(options: Required<Pick<TradeReviewOptions, 'bridge
         : 'missing';
   return {
     bars,
+    chartBars: bridgeBars.length ? mergeBars(bridgeBars) : bars,
     cacheBars: cached.length,
     bridgeBars: bridgeBars.length,
     source,
@@ -244,9 +281,143 @@ function reviewLevels(segment: OverlaySegment) {
   };
 }
 
-function chartCandlesForDate(bars: NinjaBridgeBar[], date: string): ChartCandleFact[] {
-  const start = timeMs(`${date}T09:00:00-04:00`);
-  const end = timeMs(`${date}T16:00:00-04:00`);
+function directionExtensionFromEntry(segment: OverlaySegment, entry: number): number {
+  return segment.dir === 'LONG'
+    ? segment.first.close - entry
+    : entry - segment.first.close;
+}
+
+function etMinutes(value: string): number {
+  const match = value.match(/T(\d{2}):(\d{2})/);
+  if (!match) return 0;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function isFriday(date: string): boolean {
+  return new Date(`${date}T12:00:00-04:00`).getUTCDay() === 5;
+}
+
+function qualityStatus(score: number, max: number): DecisionQualityScoreItem['status'] {
+  const ratio = max > 0 ? score / max : 0;
+  if (ratio >= 0.8) return 'strong';
+  if (ratio >= 0.55) return 'partial';
+  if (ratio > 0) return 'weak';
+  return 'blocked';
+}
+
+function scoreItem(label: string, score: number, max: number, note: string): DecisionQualityScoreItem {
+  const safeScore = Math.max(0, Math.min(max, Math.round(score)));
+  return {
+    label,
+    score: safeScore,
+    max,
+    status: qualityStatus(safeScore, max),
+    note,
+  };
+}
+
+function qualityLabelFromScore(score: number): ProtectedStructureTradeQualityLabel {
+  if (score >= 82) return 'A_REVIEW';
+  if (score >= 68) return 'B_REVIEW';
+  if (score >= 50) return 'CAUTION';
+  return 'LOW_QUALITY_REVIEW';
+}
+
+export function buildProtectedStructureTradeQuality(
+  segment: OverlaySegment,
+  levels = reviewLevels(segment),
+): ProtectedStructureTradeQuality {
+  const extensionPoints = directionExtensionFromEntry(segment, levels.entry);
+  const extensionR = levels.riskPoints > 0 ? extensionPoints / levels.riskPoints : 0;
+  const fiveToFifteenStopGap = segment.dir === 'LONG'
+    ? levels.stop - segment.first.bias15.protect
+    : segment.first.bias15.protect - levels.stop;
+  const startMinutes = etMinutes(segment.start);
+  const endMinutes = etMinutes(segment.end);
+  const tightStop = levels.riskPoints < 10;
+  const wideStop = levels.riskPoints > 25;
+  const extendedFromEntry = extensionR >= 0.7 || extensionPoints >= 15;
+  const severeExtensionFromEntry = extensionR >= 1 || extensionPoints >= 25;
+  const poorEntryLocation = extensionR >= 0.5 || extensionPoints >= 10;
+  const betterEntryNeeded = wideStop || poorEntryLocation;
+  const sparseConfirmation = segment.count <= 2;
+  const lateDayRunnerRisk = endMinutes >= 15 * 60 || startMinutes >= 14 * 60 + 30;
+  const fridayRunnerRisk = isFriday(segment.date) && endMinutes >= 12 * 60;
+  const tacticalStopInside15mStructure = fiveToFifteenStopGap > Math.max(5, levels.riskPoints * 0.25);
+
+  let score = 100;
+  if (tightStop) score -= 16;
+  if (wideStop) score -= 14;
+  if (extendedFromEntry) score -= severeExtensionFromEntry ? 35 : 25;
+  else if (poorEntryLocation) score -= 10;
+  if (sparseConfirmation) score -= 12;
+  if (lateDayRunnerRisk) score -= 8;
+  if (fridayRunnerRisk) score -= 10;
+  if (tacticalStopInside15mStructure) score -= 12;
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const findings = [
+    tightStop ? `Tactical stop is tight at ${fmt(levels.riskPoints)} pts; use extra caution around noise/retest failure.` : null,
+    wideStop ? `Wide protected stop at ${fmt(levels.riskPoints)} pts; better entry or pullback improves risk quality.` : null,
+    extendedFromEntry ? `First aligned close was already ${fmt(extensionPoints)} pts (${fmt(extensionR)}R) beyond entry reference; missed/chase risk is live.` : null,
+    !extendedFromEntry && poorEntryLocation ? `Entry was not ideal: first aligned close was ${fmt(extensionPoints)} pts (${fmt(extensionR)}R) beyond entry reference.` : null,
+    sparseConfirmation ? `Only ${segment.count} confirming 5M bars; treat as early proof, not mature campaign structure.` : null,
+    tacticalStopInside15mStructure ? `5M stop is inside wider 15M protected structure by ${fmt(fiveToFifteenStopGap)} pts; 15M failure line may matter more for bias.` : null,
+    lateDayRunnerRisk ? 'Late-day campaign: manage faster and avoid assuming full runner delivery into the close.' : null,
+    fridayRunnerRisk ? 'Friday/near-close runner risk: T2 or larger objectives may not have enough session time.' : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const management = [
+    betterEntryNeeded ? 'Prefer pullback/retest before treating the review map as actionable.' : 'Entry location acceptable for review if completed 5M proof/retest appears.',
+    tightStop ? 'Do not use the tight 5M stop as proof of high quality by itself.' : null,
+    wideStop ? 'Reduce expectations or wait for a tighter protected 5M structure before using full risk.' : null,
+    extendedFromEntry ? 'If price already left the line, mark it missed/review instead of chasing.' : null,
+    tacticalStopInside15mStructure ? 'Respect the wider 15M protected line as the bias-failure reference.' : null,
+    lateDayRunnerRisk || fridayRunnerRisk ? 'Take T1 seriously; do not require T2/runner before market close.' : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const label = qualityLabelFromScore(score);
+  const scorecard = [
+    scoreItem(`${segment.dir} Quality`, score, 100, `${label}. ${findings[0] || 'Protected 15M+5M structure is aligned.'}`),
+    scoreItem('Entry Location', Math.max(0, 25 - Math.round(Math.max(0, extensionR) * 20)), 25, `Extension from entry: ${fmt(extensionPoints)} pts / ${fmt(extensionR)}R.`),
+    scoreItem('Stop Quality', tightStop || wideStop ? 12 : 25, 25, `Risk width: ${fmt(levels.riskPoints)} pts.`),
+    scoreItem('Confirmation Depth', sparseConfirmation ? 8 : 15, 15, `${segment.count} confirming completed 5M bars.`),
+    scoreItem('Session Delivery', lateDayRunnerRisk || fridayRunnerRisk ? 8 : 15, 15, `${segment.start.slice(11, 16)}-${segment.end.slice(11, 16)} ET.`),
+    scoreItem('HTF Protection', tacticalStopInside15mStructure ? 10 : 20, 20, tacticalStopInside15mStructure ? '5M stop is inside wider 15M structure.' : '5M stop and 15M structure are compatible.'),
+  ];
+
+  return {
+    sourceOfTruth: 'phase_10l_protected_structure_trade_quality',
+    label,
+    score,
+    summary: `${label.replace(/_/g, ' ')} ${score}/100`,
+    flags: {
+      tightStop,
+      wideStop,
+    extendedFromEntry,
+      poorEntryLocation,
+      betterEntryNeeded,
+      sparseConfirmation,
+      lateDayRunnerRisk,
+      fridayRunnerRisk,
+      tacticalStopInside15mStructure,
+    },
+    findings,
+    management,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+    },
+    scorecard,
+  };
+}
+
+function chartCandlesForSegment(bars: NinjaBridgeBar[], segment: OverlaySegment): ChartCandleFact[] {
+  const campaignStart = timeMs(segment.start);
+  const start = Math.max(timeMs(`${segment.date}T09:00:00-04:00`), campaignStart - 60 * 60 * 1000);
+  const end = timeMs(`${segment.date}T16:00:00-04:00`);
   return bars
     .filter((bar) => {
       const t = timeMs(bar.time);
@@ -269,7 +440,7 @@ function chartCandlesForDate(bars: NinjaBridgeBar[], date: string): ChartCandleF
     });
 }
 
-function candidateForSegment(segment: OverlaySegment): SetupCandidate {
+function candidateForSegment(segment: OverlaySegment, quality = buildProtectedStructureTradeQuality(segment)): SetupCandidate {
   const line = lineInSand(segment);
   const levels = reviewLevels(segment);
   return {
@@ -286,8 +457,10 @@ function candidateForSegment(segment: OverlaySegment): SetupCandidate {
     target2: levels.target2,
     riskPoints: levels.riskPoints,
     modelConfidenceScore: 78,
-    decisionQualityScore: 78,
-    levelContextSummary: `${segment.dir} review map: 15M and 5M protected structure aligned.`,
+    decisionQualityScore: quality.score,
+    decisionQualityScorecard: quality.scorecard,
+    decisionQualityRecommendation: quality.management[0] || 'Review only. Wait for completed 5M proof and app-owned gates.',
+    levelContextSummary: `${segment.dir} review map: 15M and 5M protected structure aligned. Quality: ${quality.summary}.`,
     invalidation: segment.dir === 'LONG'
       ? `Changes BEAR below protected structure ${fmt(line)}.`
       : `Changes BULL above protected structure ${fmt(line)}.`,
@@ -295,8 +468,10 @@ function candidateForSegment(segment: OverlaySegment): SetupCandidate {
       `5M ${segment.first.bias5.bias} confirm ${fmt(segment.first.bias5.confirm)} / protect ${fmt(segment.first.bias5.protect)}`,
       `15M ${segment.first.bias15.bias} confirm ${fmt(segment.first.bias15.confirm)} / protect ${fmt(segment.first.bias15.protect)}`,
       `First aligned close ${fmt(segment.first.close)} at ${segment.first.time}`,
+      `Phase 10L quality: ${quality.summary}`,
+      ...quality.findings,
     ],
-    missingEvidence: ['Executable model trigger/retest still required by app gates.'],
+    missingEvidence: ['Executable model trigger/retest still required by app gates.', ...quality.management],
     executionStatus: ExecutionStatus.Conditional,
     blockReason: NoTradeReason.EntryTriggerPending,
     requiredTrigger: 'Completed 5M execution model trigger/retest; protected 5M stop; app risk/target/canExecute gates.',
@@ -349,6 +524,7 @@ function discordPayloadForRow(row: ReviewCampaignRow) {
     'Status: REVIEW ONLY - NOT EXECUTION APPROVAL',
     '',
     `${row.direction} review plan`,
+    `Quality: ${row.quality.summary}`,
     `Entry ref: ${fmt(row.entry)}`,
     `Protected 5M stop: ${fmt(row.stop)}`,
     `Risk: ${fmt(row.riskPoints)} pts / $${fmt(row.oneContractRiskDollars)} per 1 MES`,
@@ -358,6 +534,8 @@ function discordPayloadForRow(row: ReviewCampaignRow) {
     `5M: ${row.bias5.bias} confirm ${fmt(row.bias5.confirm)} / protect ${fmt(row.bias5.protect)}`,
     `15M: ${row.bias15.bias} confirm ${fmt(row.bias15.confirm)} / protect ${fmt(row.bias15.protect)}`,
     `HTF line in sand: ${fmt(row.lineInSand)}`,
+    ...(row.quality.findings.length ? ['', 'Quality flags:', ...row.quality.findings.slice(0, 3).map((item) => `- ${item}`)] : []),
+    ...(row.quality.management.length ? ['', 'Management:', ...row.quality.management.slice(0, 3).map((item) => `- ${item}`)] : []),
     '',
     'Learning buttons record trader outcome only. They do not approve trades, place orders, or change rules.',
   ].join('\n');
@@ -371,6 +549,7 @@ function discordPayloadForRow(row: ReviewCampaignRow) {
         fields: [
           { name: 'Plan', value: `Entry ${fmt(row.entry)} | Stop ${fmt(row.stop)} | T1 ${fmt(row.target1)} | T2 ${fmt(row.target2)}`, inline: false },
           { name: '1 MES', value: `Risk $${fmt(row.oneContractRiskDollars)} | T1 +$${fmt(row.oneContractT1Dollars)} | T2 +$${fmt(row.oneContractT2Dollars)}`, inline: false },
+          { name: '10L Quality', value: `${row.quality.summary}\n${row.quality.management.slice(0, 2).join('\n') || 'No added quality warnings.'}`, inline: false },
           { name: 'Boundary', value: 'Review only. canExecute unchanged. No automated orders.', inline: false },
         ],
         footer: { text: 'Quant Desk • Protected Structure Review • RAG learning buttons' },
@@ -438,7 +617,7 @@ async function postDiscordReviewRow(row: ReviewCampaignRow, dryRun: boolean): Pr
 
 function chartContextForSegment(segment: OverlaySegment, bars: NinjaBridgeBar[]): Partial<ChartContext> {
   return {
-    candles: chartCandlesForDate(bars, segment.date),
+    candles: chartCandlesForSegment(bars, segment),
     marketStructure: { trend: segment.dir === 'LONG' ? 'bullish' : 'bearish' } as any,
     multiTimeframeContext: {
       alignment: {
@@ -483,6 +662,7 @@ function markdownForReport(summary: {
       `## ${row.id}. ${row.date} ${row.direction} (${row.start.slice(11, 16)}-${row.end.slice(11, 16)} ET)`,
       `- Status: ${row.status}`,
       `- Confirmations: ${row.confirmations} completed 5M bars`,
+      `- 10L quality: ${row.quality.summary}`,
       `- First aligned close: ${fmt(row.firstClose)}`,
       `- Line in the sand: ${fmt(row.lineInSand)}`,
       `- Entry ref: ${fmt(row.entry)}`,
@@ -492,6 +672,8 @@ function markdownForReport(summary: {
       `- T2: ${fmt(row.target2)} / +$${fmt(row.oneContractT2Dollars)} per 1 MES`,
       `- 5M: ${row.bias5.bias} | confirm ${fmt(row.bias5.confirm)} | protected ${fmt(row.bias5.protect)}`,
       `- 15M: ${row.bias15.bias} | confirm ${fmt(row.bias15.confirm)} | protected ${fmt(row.bias15.protect)}`,
+      `- Quality flags: ${row.quality.findings.length ? row.quality.findings.join(' ') : 'None.'}`,
+      `- Management: ${row.quality.management.join(' ')}`,
       `- Chart: ${row.chart || 'not rendered'}`,
       `- Discord message id: ${row.discordMessageId || 'not posted'}`,
       '',
@@ -561,10 +743,11 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
     const segment = overlay.segments[index];
     const line = lineInSand(segment);
     const levels = reviewLevels(segment);
+    const quality = buildProtectedStructureTradeQuality(segment, levels);
     const chart = renderCharts
       ? await renderChartMarkup({
-        chartContext: chartContextForSegment(segment, loaded.bars),
-        candidate: candidateForSegment(segment),
+        chartContext: chartContextForSegment(segment, loaded.chartBars),
+        candidate: candidateForSegment(segment, quality),
         instrument,
         tradeDate: segment.date,
         sessionLabel: 'Morning Desk Review',
@@ -587,6 +770,7 @@ export async function generateProtectedStructureTradeReview(options: TradeReview
       ...levels,
       bias5: segment.first.bias5,
       bias15: segment.first.bias15,
+      quality,
       status: 'REVIEW ONLY - not execution approval',
       chart: chart ? path.relative(process.cwd(), chart) : null,
       discordMessageId: null,
