@@ -362,7 +362,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !ninjaBridgeAddOnContent.includes('VisualTreeHelper.GetChildrenCount') ||
     !ninjaBridgeAddOnContent.includes('NinjaTrader.Gui.Chart.ChartControl') ||
     !ninjaBridgeAddOnContent.includes('FrontMonthInstrument') ||
-    !ninjaBridgeAddOnContent.includes('{ "instrumentSource", CurrentInstrumentSource() }') ||
+    !ninjaBridgeAddOnContent.includes('CurrentInstrumentSnapshot(DateTime asOf)') ||
+    !ninjaBridgeAddOnContent.includes('InstrumentSnapshot instrument = CurrentInstrumentSnapshot(asOf)') ||
+    !ninjaBridgeAddOnContent.includes('{ "instrumentSource", instrument.Source }') ||
     !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
     !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
     !discordSchedulerContent.includes("bridgeInstrument: 'MES'") ||

@@ -103,13 +103,13 @@ function isContractStale(value: string, asOf: Date): boolean {
   return asOfDate >= rolloverDate(parts.year, parts.month);
 }
 
-function rolloverResolution(root: string, requested: string | null, asOf: Date, warning: string): BridgeInstrumentResolution {
+function rolloverResolution(root: string, requested: string | null, asOf: Date, warningForInstrument: (instrument: string) => string): BridgeInstrumentResolution {
   const instrument = frontMonthContract(root, asOf);
   return {
     instrument,
     requestedInstrument: requested || null,
     source: 'front-month-rollover',
-    warning,
+    warning: warningForInstrument(instrument),
   };
 }
 
@@ -170,11 +170,12 @@ export async function resolveCurrentBridgeInstrument(
           warning: `Bridge health defaultInstrument ${healthInstrument} does not match requested ${requestedRoot}, and configured ${requested} is stale after rollover; using active front-month contract ${instrument}.`,
         };
       }
+      const instrument = requested || fallbackContract(requestedRoot, now);
       return {
-        instrument: requested || fallbackContract(requestedRoot, now),
+        instrument,
         requestedInstrument: requested || null,
         source: requested ? 'configured-root-fallback' : 'fallback',
-        warning: `Bridge health defaultInstrument ${healthInstrument} does not match requested ${requestedRoot}; using ${requested || fallbackContract(requestedRoot, now)}.`,
+        warning: `Bridge health defaultInstrument ${healthInstrument} does not match requested ${requestedRoot}; using ${instrument}.`,
       };
     }
   } catch (error) {
@@ -201,7 +202,7 @@ export async function resolveCurrentBridgeInstrument(
         requestedRoot,
         requested,
         now,
-        `Configured bridge instrument ${requested} is stale after rollover; using active front-month contract ${frontMonthContract(requestedRoot, now)}.`,
+        (instrument) => `Configured bridge instrument ${requested} is stale after rollover; using active front-month contract ${instrument}.`,
       );
     }
     return {
@@ -212,10 +213,11 @@ export async function resolveCurrentBridgeInstrument(
     };
   }
 
+  const instrument = requested || fallbackContract(requestedRoot, now);
   return {
-    instrument: requested || fallbackContract(requestedRoot, now),
+    instrument,
     requestedInstrument: requested || null,
     source: requested ? 'configured-root-fallback' : 'fallback',
-    warning: `NinjaTrader bridge health did not provide a matching defaultInstrument; using ${requested || fallbackContract(requestedRoot, now)}.`,
+    warning: `NinjaTrader bridge health did not provide a matching defaultInstrument; using ${instrument}.`,
   };
 }

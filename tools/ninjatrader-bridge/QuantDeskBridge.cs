@@ -64,18 +64,16 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private static string CurrentDefaultInstrument()
         {
-            string chartInstrument = ActiveChartInstrument();
-            return string.IsNullOrWhiteSpace(chartInstrument)
-                ? FrontMonthInstrument(DefaultInstrumentRoot, DateTime.Now)
-                : chartInstrument;
+            return CurrentInstrumentSnapshot(DateTime.Now).Instrument;
         }
 
-        private static string CurrentInstrumentSource()
+        private static InstrumentSnapshot CurrentInstrumentSnapshot(DateTime asOf)
         {
             string chartInstrument = ActiveChartInstrument();
-            return string.IsNullOrWhiteSpace(chartInstrument)
-                ? "front_month_rollover"
-                : "active_chart";
+            if (!string.IsNullOrWhiteSpace(chartInstrument))
+                return new InstrumentSnapshot(chartInstrument, "active_chart");
+
+            return new InstrumentSnapshot(FrontMonthInstrument(DefaultInstrumentRoot, asOf), "front_month_rollover");
         }
 
         private static string ActiveChartInstrument()
@@ -500,6 +498,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private Dictionary<string, object> BuildHealth()
         {
+            DateTime asOf = DateTime.Now;
+            InstrumentSnapshot instrument = CurrentInstrumentSnapshot(asOf);
             return new Dictionary<string, object>
             {
                 { "ok", true },
@@ -507,9 +507,9 @@ namespace NinjaTrader.NinjaScript.AddOns
                 { "version", "0.1.6-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
-                { "defaultInstrument", CurrentDefaultInstrument() },
-                { "instrumentSource", CurrentInstrumentSource() },
-                { "serverTime", DateTime.Now.ToString("o") }
+                { "defaultInstrument", instrument.Instrument },
+                { "instrumentSource", instrument.Source },
+                { "serverTime", asOf.ToString("o") }
             };
         }
 
@@ -888,6 +888,18 @@ namespace NinjaTrader.NinjaScript.AddOns
             public double Low { get; set; }
             public double Close { get; set; }
             public long Volume { get; set; }
+        }
+
+        private class InstrumentSnapshot
+        {
+            public InstrumentSnapshot(string instrument, string source)
+            {
+                Instrument = instrument;
+                Source = source;
+            }
+
+            public string Instrument { get; private set; }
+            public string Source { get; private set; }
         }
 
         private static class SimpleJson

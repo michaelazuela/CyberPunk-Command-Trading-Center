@@ -77,6 +77,7 @@ const staleConfiguredContract = await resolveCurrentBridgeInstrument({
 assert.equal(staleConfiguredContract.instrument, 'MES 09-26');
 assert.equal(staleConfiguredContract.source, 'front-month-rollover');
 assert.ok(staleConfiguredContract.warning?.includes('bridge offline'));
+assert.ok(staleConfiguredContract.warning?.includes(`active front-month contract ${staleConfiguredContract.instrument}`));
 
 const mismatchedHealth = await resolveCurrentBridgeInstrument({
   bridgeUrl,
@@ -101,6 +102,19 @@ const mismatchedHealthWithStaleConfiguredContract = await resolveCurrentBridgeIn
 assert.equal(mismatchedHealthWithStaleConfiguredContract.instrument, 'MES 09-26');
 assert.equal(mismatchedHealthWithStaleConfiguredContract.source, 'front-month-rollover');
 assert.ok(mismatchedHealthWithStaleConfiguredContract.warning?.includes('does not match requested MES'));
+assert.ok(mismatchedHealthWithStaleConfiguredContract.warning?.includes(`active front-month contract ${mismatchedHealthWithStaleConfiguredContract.instrument}`));
+
+const staleConfiguredContractWithoutMatchingHealth = await resolveCurrentBridgeInstrument({
+  bridgeUrl,
+  appInstrument: 'MES',
+  requestedBridgeInstrument: 'MES 06-26',
+  asOf: afterJuneRollover,
+}, {
+  getHealth: async () => ({ ok: false, defaultInstrument: '' }),
+});
+assert.equal(staleConfiguredContractWithoutMatchingHealth.instrument, 'MES 09-26');
+assert.equal(staleConfiguredContractWithoutMatchingHealth.source, 'front-month-rollover');
+assert.ok(staleConfiguredContractWithoutMatchingHealth.warning?.includes(`active front-month contract ${staleConfiguredContractWithoutMatchingHealth.instrument}`));
 
 const healthFailure = await resolveCurrentBridgeInstrument({
   bridgeUrl,
