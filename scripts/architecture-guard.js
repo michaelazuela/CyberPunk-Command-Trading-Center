@@ -658,6 +658,32 @@ function checkCodexPatchHygienePolicy() {
   }
 }
 
+function checkSourceSearchHygiene() {
+  const ignorePath = path.join(ROOT, '.ignore');
+  if (!fs.existsSync(ignorePath)) {
+    fail('Missing .ignore source-search hygiene file. Generated replay/report artifacts must stay out of default rg searches.');
+    return;
+  }
+
+  const content = readFileSafe(ignorePath);
+  const requiredIgnoredPaths = [
+    'reports/protected-structure-review/',
+    'tools/automation/replay-diagnostics/',
+    'tools/automation/discord-audit/',
+    'tools/automation/diagnostic-reports/',
+    'tools/automation/research-reports/',
+    'tools/automation/research-outcome-reports/',
+    'tools/automation/research-validation-reports/',
+    'tools/automation/weekly-reports/',
+  ];
+
+  for (const ignoredPath of requiredIgnoredPaths) {
+    if (!content.includes(ignoredPath)) {
+      fail(`.ignore must exclude generated search-noise path: ${ignoredPath}`);
+    }
+  }
+}
+
 console.log('Running Architecture Guard Check...');
 checkCloudflareGeminiBoundary();
 checkCloudflareOpenAIBoundary();
@@ -670,6 +696,7 @@ checkScannerVisibilityMetadataBoundary();
 checkDiscordRagPersistenceSourceOfTruth();
 checkPhase10E2EHealthContracts();
 checkCodexPatchHygienePolicy();
+checkSourceSearchHygiene();
 
 if (hasError) {
   console.error('\n🚨 ERROR: Architecture guard failed.');

@@ -1,0 +1,12 @@
+# Ripgrep/source-search hygiene.
+# Generated replay and report artifacts are useful evidence, but they should not
+# pollute default source searches when tracing implementation code.
+reports/approval/
+reports/protected-structure-review/
+tools/automation/replay-diagnostics/
+tools/automation/discord-audit/
+tools/automation/diagnostic-reports/
+tools/automation/research-reports/
+tools/automation/research-outcome-reports/
+tools/automation/research-validation-reports/
+tools/automation/weekly-reports/
