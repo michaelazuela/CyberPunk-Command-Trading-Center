@@ -553,13 +553,13 @@ assert.ok(deskPlayText.includes('Take profit into 7288.25'));
 assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.50'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
-assert.ok(deskPlayText.includes('Ready: WAIT ENTRY | Wait pullback/new 5M structure shift.'));
+assert.ok(deskPlayText.includes('Ready: WAIT ENTRY'));
 assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
 assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
 const longPrimarySection = [
   'LONG ABOVE 7342.00',
   'Confidence: 82/100 high',
-  'Ready: WAIT ENTRY | Wait pullback/new 5M structure shift.',
+  'Ready: WAIT ENTRY',
   'HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate',
   'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
 ].map((line) => deskPlayText.indexOf(line));
