@@ -553,9 +553,18 @@ assert.ok(deskPlayText.includes('Take profit into 7288.25'));
 assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.50'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
-assert.ok(deskPlayText.includes('WAIT ENTRY'));
+assert.ok(deskPlayText.includes('Ready: WAIT ENTRY | Wait pullback/new 5M structure shift.'));
 assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
 assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
+const longPrimarySection = [
+  'LONG ABOVE 7342.00',
+  'Confidence: 82/100 high',
+  'Ready: WAIT ENTRY | Wait pullback/new 5M structure shift.',
+  'HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate',
+  'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
+].map((line) => deskPlayText.indexOf(line));
+assert.ok(longPrimarySection.every((index) => index >= 0), 'expected readiness inside the primary LONG Desk Play section');
+assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Play section must keep confidence, readiness, reaction, and level status in order');
 assert.ok(!deskPlayText.includes('Entry ref: 7312.00'));
 assert.ok(!deskPlayText.includes('Stop: 7271.75'));
 assert.ok(!deskPlayText.includes('Risk: 40.25 pts'));

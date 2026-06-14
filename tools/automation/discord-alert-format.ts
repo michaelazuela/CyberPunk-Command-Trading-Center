@@ -1144,13 +1144,14 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   if (!isFinitePrice(lineInSand)) return [];
   const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
+  const readiness = deskPlayTradeReadinessLine(play, direction);
   const header = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
   if (!levels) {
     return [
       header,
       ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
       ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
-      ...(deskPlayTradeReadinessLine(play, direction) ? [deskPlayTradeReadinessLine(play, direction)!] : []),
+      ...(readiness ? [readiness] : []),
       ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
       ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
       'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
@@ -1160,7 +1161,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
     header,
     ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
     ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
-    ...(deskPlayTradeReadinessLine(play, direction) ? [deskPlayTradeReadinessLine(play, direction)!] : []),
+    ...(readiness ? [readiness] : []),
     ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
     ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
     `Entry ref: ${priceLine(levels.entry)}`,
