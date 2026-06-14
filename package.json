@@ -62,11 +62,12 @@
     "test:components": "vitest run src/components src/App.test.tsx",
     "clean": "rm -rf dist",
     "guard:no-firebase": "node scripts/no-firebase-check.js",
+    "guard:bridge-contracts": "node scripts/bridge-contract-guard.js",
     "guard:legacy-rules": "node scripts/no-legacy-rules-check.js",
     "guard:architecture": "node scripts/architecture-guard.js",
     "guard:schema": "node scripts/schema-guard.js",
     "guard:active-windows": "node scripts/active-window-timestamp-guard.js",
-    "guard": "npm run guard:no-firebase && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema && npm run guard:active-windows",
+    "guard": "npm run guard:no-firebase && npm run guard:bridge-contracts && npm run guard:legacy-rules && npm run guard:architecture && npm run guard:schema && npm run guard:active-windows",
     "lint": "npm run guard && tsc --noEmit"
   },
   "dependencies": {
