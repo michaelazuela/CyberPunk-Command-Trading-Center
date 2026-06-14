@@ -706,6 +706,15 @@ assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
 assert.ok(deskPlayDecisionMapText.includes('EXEC CANDIDATE'));
 assert.ok(!deskPlayDecisionMapText.includes('| Ready: EXEC CANDIDATE'));
 assert.ok(deskPlayDecisionMapText.includes('Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
+const waitMapShortRow = [
+  'Review Map:',
+  'SHORT BELOW 7342.00',
+  'EXEC CANDIDATE',
+  'Use normal canExecute gate.',
+  'Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75',
+].map((line) => deskPlayDecisionMapText.indexOf(line));
+assert.ok(waitMapShortRow.every((index) => index >= 0), 'expected SHORT readiness and app levels inside the WAIT review map');
+assert.deepEqual([...waitMapShortRow].sort((a, b) => a - b), waitMapShortRow, 'WAIT review map must keep short line, readiness, gate note, and app levels in order');
 assert.ok(deskPlayDecisionMapText.includes('Trigger: LONG above 7342.00 / SHORT below 7342.00; completed 5M close/retest only.'));
 assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
 assert.ok(!deskPlayDecisionMapText.includes('reclaim back below t...'));
