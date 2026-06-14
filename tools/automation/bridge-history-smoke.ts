@@ -162,7 +162,7 @@ export function parseBridgeHistorySmokeArgs(args = process.argv.slice(2)): Bridg
   }
   return {
     instrument,
-    bridgeInstrument: readFlag(args, '--bridge-instrument') || `${instrument} 06-26`,
+    bridgeInstrument: readFlag(args, '--bridge-instrument') || instrument,
     date: assertDate(readFlag(args, '--date'), '--date'),
     from: assertClock(readFlag(args, '--from'), '--from'),
     to: assertClock(readFlag(args, '--to'), '--to'),

@@ -324,6 +324,8 @@ function checkScannerVisibilityMetadataBoundary() {
   const discordSchedulerContent = readFileSafe(discordSchedulerPath);
   const liveLauncherContent = readFileSafe(liveLauncherPath);
   const staleJuneContract = 'MES ' + '06-26';
+  const staleBridgeClientDefault = "instrument = '" + staleJuneContract + "'";
+  const staleSmokeFallback = '|| `${instrument} ' + '06-26`';
   const staleDefaultContractLiteral = `const DEFAULT_CONTRACT = '${staleJuneContract}'`;
   const staleBridgeBarsExample = 'bars?instrument=MES%20' + '06-26&timeframe=5m';
   if (
@@ -377,6 +379,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
     !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
     !researchPriceActionBarsContent.includes('resolveCurrentBridgeInstrument') ||
+    bridgeContent.includes(staleBridgeClientDefault) ||
+    bridgeHistorySmokeContent.includes(staleSmokeFallback) ||
     researchPriceActionBarsContent.includes(staleDefaultContractLiteral) ||
     bridgeHistorySmokeContent.includes(`for example ${staleJuneContract}`) ||
     ninjaBridgeDocsContent.includes(staleBridgeBarsExample) ||

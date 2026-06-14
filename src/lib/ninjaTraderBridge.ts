@@ -144,12 +144,12 @@ export async function getNinjaBridgeHealth(baseUrl = DEFAULT_BRIDGE_URL): Promis
   return fetchBridgeJson<NinjaBridgeHealth>('health', undefined, baseUrl);
 }
 
-export async function getNinjaBridgeSnapshot(instrument = 'MES 06-26', baseUrl = DEFAULT_BRIDGE_URL): Promise<NinjaBridgeSnapshot> {
+export async function getNinjaBridgeSnapshot(instrument?: string, baseUrl = DEFAULT_BRIDGE_URL): Promise<NinjaBridgeSnapshot> {
   return fetchBridgeJson<NinjaBridgeSnapshot>('snapshot', { instrument }, baseUrl);
 }
 
 export async function getNinjaBridgeBars(
-  instrument = 'MES 06-26',
+  instrument: string | undefined = undefined,
   timeframe: NinjaBridgeTimeframe = '5m',
   limit = 100,
   baseUrl = DEFAULT_BRIDGE_URL
@@ -158,7 +158,7 @@ export async function getNinjaBridgeBars(
 }
 
 export async function getNinjaHistoricalBars({
-  instrument = 'MES 06-26',
+  instrument,
   timeframe = '5m',
   from,
   to,
