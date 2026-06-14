@@ -576,7 +576,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     { "ok", false },
                     { "error", "historical-bars requires ISO from and to query parameters." },
-                    { "example", "/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T09:30:00-04:00&to=2026-05-15T10:10:00-04:00" }
+                    { "example", "/historical-bars?timeframe=5m&from=2026-05-15T09:30:00-04:00&to=2026-05-15T10:10:00-04:00" }
                 };
             }
 

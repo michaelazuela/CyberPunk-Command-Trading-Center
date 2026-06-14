@@ -310,13 +310,22 @@ function checkScannerVisibilityMetadataBoundary() {
   const bridgeInstrumentResolverPath = path.join(ROOT, 'tools', 'automation', 'bridge-instrument-resolver.ts');
   const bridgeInstrumentResolverTestPath = path.join(ROOT, 'tools', 'automation', 'bridge-instrument-resolver.test.ts');
   const ninjaBridgeAddOnPath = path.join(ROOT, 'tools', 'ninjatrader-bridge', 'QuantDeskBridge.cs');
+  const ninjaBridgeDocsPath = path.join(ROOT, 'docs', 'NINJATRADER_BRIDGE.md');
+  const bridgeHistorySmokePath = path.join(ROOT, 'tools', 'automation', 'bridge-history-smoke.ts');
+  const researchPriceActionBarsPath = path.join(ROOT, 'tools', 'automation', 'research-price-action-bars.ts');
   const discordSchedulerPath = path.join(ROOT, 'tools', 'automation', 'discord-scheduler.ts');
   const liveLauncherPath = path.join(ROOT, 'tools', 'automation', 'Start Quant Desk Live.cmd');
   const bridgeInstrumentResolverContent = readFileSafe(bridgeInstrumentResolverPath);
   const bridgeInstrumentResolverTestContent = readFileSafe(bridgeInstrumentResolverTestPath);
   const ninjaBridgeAddOnContent = readFileSafe(ninjaBridgeAddOnPath);
+  const ninjaBridgeDocsContent = readFileSafe(ninjaBridgeDocsPath);
+  const bridgeHistorySmokeContent = readFileSafe(bridgeHistorySmokePath);
+  const researchPriceActionBarsContent = readFileSafe(researchPriceActionBarsPath);
   const discordSchedulerContent = readFileSafe(discordSchedulerPath);
   const liveLauncherContent = readFileSafe(liveLauncherPath);
+  const staleJuneContract = 'MES ' + '06-26';
+  const staleDefaultContractLiteral = `const DEFAULT_CONTRACT = '${staleJuneContract}'`;
+  const staleBridgeBarsExample = 'bars?instrument=MES%20' + '06-26&timeframe=5m';
   if (
     !bridgeContent.includes("barTimestampMode = 'open'") ||
     !ownerContent.includes("timestampMode: BridgeTimestampMode = 'open'") ||
@@ -367,6 +376,11 @@ function checkScannerVisibilityMetadataBoundary() {
     !ninjaBridgeAddOnContent.includes('{ "instrumentSource", instrument.Source }') ||
     !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
     !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
+    !researchPriceActionBarsContent.includes('resolveCurrentBridgeInstrument') ||
+    researchPriceActionBarsContent.includes(staleDefaultContractLiteral) ||
+    bridgeHistorySmokeContent.includes(`for example ${staleJuneContract}`) ||
+    ninjaBridgeDocsContent.includes(staleBridgeBarsExample) ||
+    ninjaBridgeAddOnContent.includes(staleBridgeBarsExample) ||
     !discordSchedulerContent.includes("bridgeInstrument: 'MES'") ||
     !liveLauncherContent.includes('Enter NinjaTrader instrument or root [MES]') ||
     !liveLauncherContent.includes('set "BRIDGE_INSTRUMENT=MES"')

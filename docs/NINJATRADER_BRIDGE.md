@@ -110,23 +110,23 @@ GET http://127.0.0.1:8765/snapshot?instrument=MES%2006-26
 Bars:
 
 ```text
-GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=5m&limit=100
-GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=15m&limit=100
-GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=60m&limit=100
-GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=120m&limit=100
-GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=240m&limit=100
+GET http://127.0.0.1:8765/bars?timeframe=5m&limit=100
+GET http://127.0.0.1:8765/bars?timeframe=15m&limit=100
+GET http://127.0.0.1:8765/bars?timeframe=60m&limit=100
+GET http://127.0.0.1:8765/bars?timeframe=120m&limit=100
+GET http://127.0.0.1:8765/bars?timeframe=240m&limit=100
 GET http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=1m&limit=100
 ```
 
 Historical bars for Replay Lab:
 
 ```text
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T09:15:00-04:00&to=2026-05-15T12:00:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=15m&from=2026-05-15T00:00:00-04:00&to=2026-05-15T09:15:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=60m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=120m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=240m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
-GET http://127.0.0.1:8765/historical-bars?instrument=MES%2006-26&timeframe=5m&from=2026-05-15T12:00:00-04:00&to=2026-05-15T16:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=5m&from=2026-05-15T09:15:00-04:00&to=2026-05-15T12:00:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=15m&from=2026-05-15T00:00:00-04:00&to=2026-05-15T09:15:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=60m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=120m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=240m&from=2026-05-14T18:00:00-04:00&to=2026-05-15T09:15:00-04:00
+GET http://127.0.0.1:8765/historical-bars?timeframe=5m&from=2026-05-15T12:00:00-04:00&to=2026-05-15T16:00:00-04:00
 ```
 
 Positions:
@@ -255,8 +255,8 @@ After compiling the AddOn in NinjaTrader, open these URLs in your browser while 
 ```text
 http://127.0.0.1:8765/health
 http://127.0.0.1:8765/accounts
-http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=5m&limit=20
-http://127.0.0.1:8765/bars?instrument=MES%2006-26&timeframe=15m&limit=20
+http://127.0.0.1:8765/bars?timeframe=5m&limit=20
+http://127.0.0.1:8765/bars?timeframe=15m&limit=20
 http://127.0.0.1:8765/positions?account=Sim101
 ```
 
@@ -264,7 +264,7 @@ Expected behavior:
 
 - `/health` returns `readOnly: true` and reports `instrumentSource: active_chart` when an open chart instrument was detected.
 - `/accounts` includes `Sim101` and, if available in your install, `206257`.
-- `/bars` returns real OHLC candles.
+- `/bars` without an `instrument` query uses the active chart contract from `/health.defaultInstrument`; if no chart is available, it uses the current front-month fallback.
 - `/historical-bars` returns real OHLC candles for the requested Replay Lab date/window when NinjaTrader and the connected data provider can load that history.
 - Supported minute timeframes are `1m`, `5m`, `15m`, `60m`, `120m`, and `240m`. `1h`, `2h`, and `4h` are accepted aliases and are returned as `60m`, `120m`, and `240m`.
 - 4H and 1H are macro/session context only. 15M is the primary liquidity target map. 5M remains execution authority.

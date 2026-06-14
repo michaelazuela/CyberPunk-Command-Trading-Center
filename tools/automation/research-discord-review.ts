@@ -286,9 +286,10 @@ async function resolvePriceActionCardConfig(options: ResearchDiscordReviewCliOpt
     symbol: 'MES',
   };
   const bridgeUrl = base.bridgeUrl || 'http://127.0.0.1:8765';
-  const contractResolution = base.contractResolution || (base.bridgeInstrument
-    ? { instrument: base.bridgeInstrument, source: 'launcher-config' as const, warnings: [], bridgeUrl }
-    : await resolveActiveBridgeInstrument({ bridgeUrl }));
+  const contractResolution = base.contractResolution || await resolveActiveBridgeInstrument({
+    bridgeUrl,
+    fallbackInstrument: base.bridgeInstrument,
+  });
   return {
     config: {
       ...base,
@@ -310,7 +311,7 @@ async function buildPriceActionCardAttachment(args: {
   const renderCardWithMetadata = args.cardOptions.renderCardWithMetadata || (args.cardOptions.renderCard ? null : renderPriceActionReviewCardWithMetadata);
   const renderCard = args.cardOptions.renderCard || renderPriceActionReviewCard;
   const symbol = args.cardOptions.symbol || args.packInstrument || 'MES';
-  const resolvedContract = args.cardOptions.bridgeInstrument || args.cardOptions.contractResolution?.instrument || 'MES 06-26';
+  const resolvedContract = args.cardOptions.bridgeInstrument || args.cardOptions.contractResolution?.instrument || symbol;
   const range = args.cardOptions.dateRange;
   const baseWarnings = [...(args.cardOptions.contractResolution?.warnings || [])];
   try {

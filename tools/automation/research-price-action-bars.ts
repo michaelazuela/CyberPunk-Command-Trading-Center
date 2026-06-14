@@ -7,10 +7,11 @@ import {
   type NinjaBridgeTimeframe,
 } from '../../src/lib/ninjaTraderBridge';
 import type { PriceActionReviewBar, PriceActionReviewSampleLike } from '../../src/agents/priceActionReviewCardAgent';
+import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolutionSource } from './bridge-instrument-resolver';
 
 export type PriceActionBarsDataSource = 'cache' | 'ninjatrader' | 'mixed' | 'missing';
 export type PriceActionBarsTimeZone = 'eastern' | 'central' | 'pacific' | 'local' | string;
-export type ActiveBridgeInstrumentSource = 'bridge-health' | 'launcher-config' | 'env' | 'fallback';
+export type ActiveBridgeInstrumentSource = BridgeInstrumentResolutionSource;
 
 export interface ResearchPriceActionBarsOptions {
   symbol?: string;
@@ -76,7 +77,6 @@ export interface ActiveBridgeInstrumentDependencies {
 }
 
 const DEFAULT_SYMBOL = 'MES';
-const DEFAULT_CONTRACT = 'MES 06-26';
 const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:8765';
 
 function cleanInstrument(value: unknown): string | null {
@@ -89,34 +89,24 @@ export async function resolveActiveBridgeInstrument(
   dependencies: ActiveBridgeInstrumentDependencies = {},
 ): Promise<ActiveBridgeInstrumentResolution> {
   const bridgeUrl = options.bridgeUrl || DEFAULT_BRIDGE_URL;
-  const fallbackInstrument = options.fallbackInstrument || DEFAULT_CONTRACT;
   const env = dependencies.env || process.env;
-  const warnings: string[] = [];
-  const readHealth = dependencies.getNinjaBridgeHealth || getNinjaBridgeHealth;
-
-  try {
-    const health = await readHealth(bridgeUrl) as NinjaBridgeHealth;
-    const bridgeInstrument = cleanInstrument(health.defaultInstrument);
-    if (bridgeInstrument) {
-      return { instrument: bridgeInstrument, source: 'bridge-health', warnings, bridgeUrl };
-    }
-    warnings.push('NinjaTrader bridge health did not return defaultInstrument.');
-  } catch (error) {
-    warnings.push(`NinjaTrader bridge health check failed safely: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  const launcherInstrument = cleanInstrument(env.DEFAULT_CONTRACT);
-  if (launcherInstrument) {
-    return { instrument: launcherInstrument, source: 'launcher-config', warnings, bridgeUrl };
-  }
-
-  const envInstrument = cleanInstrument(env.NINJATRADER_BRIDGE_INSTRUMENT);
-  if (envInstrument) {
-    return { instrument: envInstrument, source: 'env', warnings, bridgeUrl };
-  }
-
-  warnings.push(`Active contract could not be detected. Falling back to ${fallbackInstrument}.`);
-  return { instrument: fallbackInstrument, source: 'fallback', warnings, bridgeUrl };
+  const requestedBridgeInstrument =
+    cleanInstrument(options.fallbackInstrument) ||
+    cleanInstrument(env.DEFAULT_CONTRACT) ||
+    cleanInstrument(env.NINJATRADER_BRIDGE_INSTRUMENT);
+  const resolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl,
+    appInstrument: DEFAULT_SYMBOL,
+    requestedBridgeInstrument,
+  }, {
+    getHealth: dependencies.getNinjaBridgeHealth,
+  });
+  return {
+    instrument: resolution.instrument,
+    source: resolution.source,
+    warnings: resolution.warning ? [resolution.warning] : [],
+    bridgeUrl,
+  };
 }
 
 function pad(value: number): string {
@@ -279,8 +269,8 @@ export async function resolveResearchPriceActionBars(
   const bridgeUrl = options.bridgeUrl || DEFAULT_BRIDGE_URL;
   const timezone = options.timezone || 'eastern';
   const warnings: string[] = [];
-  if (symbol === DEFAULT_SYMBOL && resolvedContract !== DEFAULT_CONTRACT) {
-    warnings.push(`Contract mismatch warning: symbol MES usually resolves to ${DEFAULT_CONTRACT}, but ${resolvedContract} was requested.`);
+  if (symbol === DEFAULT_SYMBOL && !resolvedContract.toUpperCase().startsWith(`${DEFAULT_SYMBOL} `)) {
+    warnings.push(`Contract mismatch warning: symbol MES is being reviewed with ${resolvedContract}. Confirm the active chart contract before using this research evidence.`);
   }
   if (!['eastern', 'America/New_York'].includes(String(timezone))) {
     warnings.push(`Timezone ambiguity: sample timestamps are treated as local research timestamps; requested timezone=${timezone}.`);

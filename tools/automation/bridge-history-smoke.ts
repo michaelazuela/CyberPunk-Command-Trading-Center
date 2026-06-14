@@ -525,8 +525,8 @@ function fixForCause(cause: BridgeHistoryLikelyCause): { recommendedFix: string;
       };
     case 'instrument_mismatch':
       return {
-        recommendedFix: 'Confirm the exact NinjaTrader instrument name, for example MES 06-26, and pass it with --bridge-instrument.',
-        safeNextStep: 'Run the smoke test against the chart instrument shown in NinjaTrader.',
+        recommendedFix: 'Open the intended NinjaTrader chart contract and confirm /health.defaultInstrument reports it; pass only the symbol root when possible.',
+        safeNextStep: 'Rerun the smoke test against the active chart contract reported by NinjaTrader /health.',
       };
     case 'unsupported_historical_endpoint':
       return {

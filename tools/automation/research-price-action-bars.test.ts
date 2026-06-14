@@ -98,8 +98,9 @@ try {
       NINJATRADER_BRIDGE_INSTRUMENT: 'MES 03-27',
     },
   });
-  assert.equal(launcherContract.instrument, 'MES 06-26');
-  assert.equal(launcherContract.source, 'launcher-config');
+  assert.equal(launcherContract.instrument, 'MES 09-26');
+  assert.equal(launcherContract.source, 'front-month-rollover');
+  assert.equal(launcherContract.warnings.some((warning) => warning.includes('stale after rollover')), true);
 
   const envContract = await resolveActiveBridgeInstrument({}, {
     getNinjaBridgeHealth: async () => {
@@ -110,16 +111,16 @@ try {
     },
   });
   assert.equal(envContract.instrument, 'MES 03-27');
-  assert.equal(envContract.source, 'env');
+  assert.equal(envContract.source, 'configured-root-fallback');
   assert.equal(envContract.warnings.some((warning) => warning.includes('bridge unavailable')), true);
 
   const fallbackContract = await resolveActiveBridgeInstrument({}, {
     getNinjaBridgeHealth: async () => ({ ok: true, readOnly: true }),
     env: {},
   });
-  assert.equal(fallbackContract.instrument, 'MES 06-26');
+  assert.equal(fallbackContract.instrument, 'MES 09-26');
   assert.equal(fallbackContract.source, 'fallback');
-  assert.equal(fallbackContract.warnings.some((warning) => warning.includes('Falling back to MES 06-26')), true);
+  assert.equal(fallbackContract.warnings.some((warning) => warning.includes('using MES 09-26')), true);
 
   const resolved = resolvePriceActionReviewWindow(sample);
   assert.equal(resolved.sampleTimestamp, '2026-01-07T10:00:00');
