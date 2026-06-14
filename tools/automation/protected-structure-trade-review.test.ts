@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   assertProtectedStructureReviewReportIsCompact,
   buildProtectedStructureTradeQuality,
@@ -194,5 +196,28 @@ const fridayRunner = buildProtectedStructureTradeQuality(segment({
 assert.equal(fridayRunner.flags.fridayRunnerRisk, true);
 assert.equal(fridayRunner.flags.wideStop, true);
 assert.ok(fridayRunner.management.join(' ').includes('T1'));
+
+const overlay = JSON.parse(readFileSync(resolve('tools/automation/replay-diagnostics/phase-10k-protected-structure-overlay-2026-06-08-to-2026-06-12.json'), 'utf8'));
+const replayQualities = overlay.segments.map((item: any) => buildProtectedStructureTradeQuality(item));
+assert.equal(replayQualities.length, 13);
+
+function replayQuality(id: number) {
+  return replayQualities[id - 1];
+}
+
+assert.equal(replayQuality(2).flags.betterEntryNeeded, true, 'June 8 long must flag entry-quality risk');
+assert.equal(replayQuality(3).flags.tightStop, true, 'June 8 short must flag tight stop');
+assert.equal(replayQuality(8).flags.extendedFromEntry, true, 'June 10 11:15 short must flag missed/chase risk');
+assert.equal(replayQuality(9).flags.extendedFromEntry, true, 'June 10 15:00 short must flag missed/chase risk');
+assert.equal(replayQuality(9).flags.lateDayRunnerRisk, true, 'June 10 15:00 short must flag late-day runner risk');
+assert.equal(replayQuality(10).flags.sparseConfirmation, true, 'June 11 short must flag sparse confirmation');
+assert.equal(replayQuality(10).flags.wideStop, true, 'June 11 short must flag wide stop');
+assert.equal(replayQuality(11).flags.betterEntryNeeded, true, 'June 11 long must flag better-entry-needed');
+assert.equal(replayQuality(12).flags.tacticalStopInside15mStructure, true, 'June 12 short must flag wider 15M structure risk');
+assert.equal(replayQuality(12).label, 'LOW_QUALITY_REVIEW');
+assert.equal(replayQuality(13).flags.fridayRunnerRisk, true, 'June 12 long must flag Friday runner risk');
+assert.equal(replayQuality(13).flags.wideStop, true, 'June 12 long must flag wide stop');
+assert.ok(replayQualities.some((item: any) => item.scorecard[0]?.label === 'LONG Quality'));
+assert.ok(replayQualities.some((item: any) => item.scorecard[0]?.label === 'SHORT Quality'));
 
 console.log('Protected structure trade-review compact report guard verified.');
