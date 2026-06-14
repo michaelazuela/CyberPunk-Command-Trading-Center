@@ -29,7 +29,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     public class QuantDeskBridge : AddOnBase
     {
         private const string BridgeName = "QuantDeskBridge";
-        private const string DefaultInstrument = "MES 06-26";
+        private const string DefaultInstrumentRoot = "MES";
         private const string TradingHoursTemplate = "CME US Index Futures ETH";
         private const int DefaultBarsBack = 450;
         private const int RecentBarsRequestTimeoutMs = 5000;
@@ -59,15 +59,48 @@ namespace NinjaTrader.NinjaScript.AddOns
             }
         }
 
+        private static string CurrentDefaultInstrument()
+        {
+            return FrontMonthInstrument(DefaultInstrumentRoot, DateTime.Now);
+        }
+
+        private static string FrontMonthInstrument(string root, DateTime asOf)
+        {
+            int year = asOf.Year;
+            int[] quarterlyMonths = new int[] { 3, 6, 9, 12 };
+            DateTime asOfDate = asOf.Date;
+
+            foreach (int month in quarterlyMonths)
+            {
+                if (asOfDate < RolloverDate(year, month))
+                    return string.Format(CultureInfo.InvariantCulture, "{0} {1:00}-{2:00}", root, month, year % 100);
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, "{0} 03-{1:00}", root, (year + 1) % 100);
+        }
+
+        private static DateTime RolloverDate(int year, int month)
+        {
+            return ThirdFriday(year, month).AddDays(-8);
+        }
+
+        private static DateTime ThirdFriday(int year, int month)
+        {
+            DateTime first = new DateTime(year, month, 1);
+            int daysToFriday = ((int)DayOfWeek.Friday - (int)first.DayOfWeek + 7) % 7;
+            return first.AddDays(daysToFriday + 14);
+        }
+
         private void StartBridge()
         {
             if (running)
                 return;
 
             running = true;
-            StartBars(DefaultInstrument, 1);
-            StartBars(DefaultInstrument, 5);
-            StartBars(DefaultInstrument, 15);
+            string defaultInstrument = CurrentDefaultInstrument();
+            StartBars(defaultInstrument, 1);
+            StartBars(defaultInstrument, 5);
+            StartBars(defaultInstrument, 15);
 
             listener = new HttpListener();
             listener.Prefixes.Add(Prefix);
@@ -259,12 +292,12 @@ namespace NinjaTrader.NinjaScript.AddOns
                 else if (path == "accounts")
                     WriteJson(context.Response, BuildAccounts());
                 else if (path == "snapshot")
-                    WriteJson(context.Response, BuildSnapshot(context.Request.QueryString["instrument"] ?? DefaultInstrument));
+                    WriteJson(context.Response, BuildSnapshot(context.Request.QueryString["instrument"] ?? CurrentDefaultInstrument()));
                 else if (path == "bars")
-                    WriteJson(context.Response, BuildBars(context.Request.QueryString["instrument"] ?? DefaultInstrument, context.Request.QueryString["timeframe"] ?? "5m", context.Request.QueryString["limit"] ?? "100"));
+                    WriteJson(context.Response, BuildBars(context.Request.QueryString["instrument"] ?? CurrentDefaultInstrument(), context.Request.QueryString["timeframe"] ?? "5m", context.Request.QueryString["limit"] ?? "100"));
                 else if (path == "historical-bars")
                     WriteJson(context.Response, BuildHistoricalBars(
-                        context.Request.QueryString["instrument"] ?? DefaultInstrument,
+                        context.Request.QueryString["instrument"] ?? CurrentDefaultInstrument(),
                         context.Request.QueryString["timeframe"] ?? "5m",
                         context.Request.QueryString["from"],
                         context.Request.QueryString["to"],
@@ -286,10 +319,11 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.3-readonly" },
+                { "version", "0.1.5-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
-                { "defaultInstrument", DefaultInstrument },
+                { "defaultInstrument", CurrentDefaultInstrument() },
+                { "instrumentSource", "front_month_rollover" },
                 { "serverTime", DateTime.Now.ToString("o") }
             };
         }

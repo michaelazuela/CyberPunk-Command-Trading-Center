@@ -352,7 +352,7 @@ export default function SessionLab({
     lunch_5m_execution: 'idle',
   });
   const [modelConfig, setModelConfig] = useState<ModelConfig>(loadModelConfig());
-  const [bridgeInstrument, setBridgeInstrument] = useState('MES 06-26');
+  const [bridgeInstrument, setBridgeInstrument] = useState('');
   const [bridgeAccount, setBridgeAccount] = useState('Sim101');
   const [bridge, setBridge] = useState<NinjaBridgeState>({
     connected: false,
@@ -457,7 +457,7 @@ export default function SessionLab({
     setBridge(current => ({ ...current, loading: true }));
     try {
       const health = await getNinjaBridgeHealth();
-      const nextInstrument = bridgeInstrument || health.defaultInstrument || (instrument === 'MNQ' ? 'MNQ 06-26' : 'MES 06-26');
+      const nextInstrument = bridgeInstrument || health.defaultInstrument || instrument;
       if (!bridgeInstrument && health.defaultInstrument) setBridgeInstrument(health.defaultInstrument);
       const priorDate = previousCalendarDate(tradeDate);
       const contextFrom = etDateTime(priorDate, '18:00');
@@ -1283,7 +1283,7 @@ export default function SessionLab({
                 onChange={event => setBridgeInstrument(event.target.value)}
                 onBlur={() => void refreshNinjaBridge()}
                 className="mt-2 w-full border border-[var(--b2)] bg-[var(--s1)] p-2 text-[11px] text-[var(--txt)]"
-                placeholder="MES 06-26"
+                placeholder="MES 09-26"
               />
             </div>
             <div className="border border-[var(--b2)] bg-[var(--bg)] p-3">

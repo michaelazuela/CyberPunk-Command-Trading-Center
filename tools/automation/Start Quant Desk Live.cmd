@@ -14,8 +14,8 @@ echo Closing either launched window stops that process.
 echo.
 
 set "BRIDGE_INSTRUMENT="
-set /p "BRIDGE_INSTRUMENT=Enter NinjaTrader instrument [MES 06-26]: "
-if "%BRIDGE_INSTRUMENT%"=="" set "BRIDGE_INSTRUMENT=MES 06-26"
+set /p "BRIDGE_INSTRUMENT=Enter NinjaTrader instrument or root [MES]: "
+if "%BRIDGE_INSTRUMENT%"=="" set "BRIDGE_INSTRUMENT=MES"
 
 echo.
 echo Using NinjaTrader instrument: %BRIDGE_INSTRUMENT%

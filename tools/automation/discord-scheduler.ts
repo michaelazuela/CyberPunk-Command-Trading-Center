@@ -52,6 +52,7 @@ import {
   resolveDiscordRagPersistenceConfig,
   upsertDiscordAlertRagPayload,
 } from './discord-rag-persistence';
+import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
 dotenv.config({ path: '.env.local', override: false, quiet: true });
@@ -80,7 +81,7 @@ const DISCORD_AUDIT_DIR = path.join(__dirname, 'discord-audit');
 
 const DEFAULT_CONFIG: SchedulerConfig = {
   instrument: 'MES',
-  bridgeInstrument: 'MES 06-26',
+  bridgeInstrument: 'MES',
   bridgeUrl: process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765',
   pollSeconds: 30,
   jobs: {
@@ -135,7 +136,7 @@ function printHelp() {
     '  --repost-rag-record ID           Repost/correct from an exact durable RAG trade_embeddings record.',
     '  --dry-run                       Build the message without posting to Discord.',
     '  --instrument MES|MNQ             Defaults to MES.',
-    '  --bridge-instrument "MES 06-26" Defaults to MES 06-26.',
+    '  --bridge-instrument "MES" Defaults to MES and resolves from bridge health/front-month rollover.',
   ].join('\n'));
 }
 
@@ -1667,6 +1668,13 @@ async function main() {
     bridgeInstrument: argValue('bridge-instrument') || DEFAULT_CONFIG.bridgeInstrument,
     bridgeUrl: argValue('bridge-url') || DEFAULT_CONFIG.bridgeUrl,
   };
+  const instrumentResolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl: config.bridgeUrl,
+    appInstrument: config.instrument,
+    requestedBridgeInstrument: config.bridgeInstrument,
+  });
+  config.bridgeInstrument = instrumentResolution.instrument;
+  if (instrumentResolution.warning) console.warn(`[discord-scheduler] ${instrumentResolution.warning}`);
   const dryRun = hasArg('dry-run');
   const once = (argValue('once') || argValue('session')) as AlertJob | null;
   const tradeDate = argValue('date') || getEtTradeDate();

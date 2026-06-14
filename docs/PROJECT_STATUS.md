@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-14
+Task: Auto-resolve NinjaTrader MES/MNQ contract rollover for live bridge workflows.
+Files changed: docs/NINJATRADER_BRIDGE.md, docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/components/SessionLab.tsx, tools/automation/Start Quant Desk Live.cmd, tools/automation/bridge-instrument-resolver.ts, tools/automation/bridge-instrument-resolver.test.ts, tools/automation/discord-scheduler.ts, tools/automation/nt-scanner.ts, tools/ninjatrader-bridge/QuantDeskBridge.cs.
+Reason: NinjaTrader was showing `MES SEP26` while the running bridge health still reported `MES 06-26`, which could cause scanner/recorder/scheduler paths to read stale contract data after rollover.
+Tests run: npx tsx tools/automation/bridge-instrument-resolver.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed. The resolver now normalizes NinjaTrader month names such as `MES SEP26` to `MES 09-26`, rejects stale same-root contracts after quarterly rollover, and falls forward to the active front-month when bridge health or config still says the expired contract. The scanner, candle recorder, Discord scheduler, manual launcher, and SessionLab defaults now avoid pinning stale June unless a non-stale explicit contract is provided.
+Trading logic changed: No. No setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, or model definitions changed.
+Bridge impact: Yes. The read-only NinjaTrader add-on default instrument and `/health.defaultInstrument` now use a front-month rollover calculation instead of a hardcoded `MES 06-26` fallback. Running NinjaTrader must recompile/reload the add-on to expose version `0.1.5-readonly`; until then the TypeScript resolver still protects scanner/recorder/scheduler by falling forward from stale `MES 06-26` to `MES 09-26`.
+Discord impact: Yes. Scheduled Discord reports now resolve the bridge instrument through the same active-contract resolver before loading bars.
+Journal/RAG impact: No schema or learning behavior changed.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Recompile the NinjaTrader add-on so `/health` reports the new front-month default directly; the live scanner path already resolves stale June to September even before recompilation.
+
+## Previous Change
+
 Date: 2026-06-13
 Task: Guard Discord RAG button signing against stale local outcome secrets.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/discord-outcome-buttons.test.ts.

@@ -307,6 +307,16 @@ function checkScannerVisibilityMetadataBoundary() {
   const tradeRulesTestContent = readFileSafe(tradeRulesTestPath);
   const setupScannerContent = readFileSafe(setupScannerPath);
   const conditionalPlanBuilderContent = readFileSafe(conditionalPlanBuilderPath);
+  const bridgeInstrumentResolverPath = path.join(ROOT, 'tools', 'automation', 'bridge-instrument-resolver.ts');
+  const bridgeInstrumentResolverTestPath = path.join(ROOT, 'tools', 'automation', 'bridge-instrument-resolver.test.ts');
+  const ninjaBridgeAddOnPath = path.join(ROOT, 'tools', 'ninjatrader-bridge', 'QuantDeskBridge.cs');
+  const discordSchedulerPath = path.join(ROOT, 'tools', 'automation', 'discord-scheduler.ts');
+  const liveLauncherPath = path.join(ROOT, 'tools', 'automation', 'Start Quant Desk Live.cmd');
+  const bridgeInstrumentResolverContent = readFileSafe(bridgeInstrumentResolverPath);
+  const bridgeInstrumentResolverTestContent = readFileSafe(bridgeInstrumentResolverTestPath);
+  const ninjaBridgeAddOnContent = readFileSafe(ninjaBridgeAddOnPath);
+  const discordSchedulerContent = readFileSafe(discordSchedulerPath);
+  const liveLauncherContent = readFileSafe(liveLauncherPath);
   if (
     !bridgeContent.includes("barTimestampMode = 'open'") ||
     !ownerContent.includes("timestampMode: BridgeTimestampMode = 'open'") ||
@@ -338,6 +348,24 @@ function checkScannerVisibilityMetadataBoundary() {
   }
   if (closeTimestampHardcodes.length) {
     fail(`Non-test scanner/replay code must not hardcode NinjaTrader close timestamp mode: ${Array.from(new Set(closeTimestampHardcodes)).join(', ')}`);
+  }
+  if (
+    !bridgeInstrumentResolverContent.includes('front-month-rollover') ||
+    !bridgeInstrumentResolverContent.includes('monthNames') ||
+    !bridgeInstrumentResolverContent.includes('Bridge health defaultInstrument') ||
+    !bridgeInstrumentResolverContent.includes('isContractStale') ||
+    !bridgeInstrumentResolverTestContent.includes('MES SEP26') ||
+    !bridgeInstrumentResolverTestContent.includes('stale after rollover') ||
+    !ninjaBridgeAddOnContent.includes('CurrentDefaultInstrument()') ||
+    !ninjaBridgeAddOnContent.includes('FrontMonthInstrument') ||
+    !ninjaBridgeAddOnContent.includes('{ "instrumentSource", "front_month_rollover" }') ||
+    !scannerContent.includes('Omitted/root/stale same-root contracts resolve from bridge /health or front-month rollover') ||
+    !discordSchedulerContent.includes('resolveCurrentBridgeInstrument') ||
+    !discordSchedulerContent.includes("bridgeInstrument: 'MES'") ||
+    !liveLauncherContent.includes('Enter NinjaTrader instrument or root [MES]') ||
+    !liveLauncherContent.includes('set "BRIDGE_INSTRUMENT=MES"')
+  ) {
+    fail('NinjaTrader contract resolution must normalize month-name contracts, reject stale same-root contracts after rollover, and advertise a front-month bridge default.');
   }
   if (
     !tradeRulesContent.includes("direction === 'LONG' && stop >= entry") ||
