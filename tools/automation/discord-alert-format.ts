@@ -957,7 +957,7 @@ function deskPlayTradeReadinessLine(
     ? 'DATA LIMITED'
     : compactLine(readiness.label || readiness.status || 'REVIEW', 20);
   const action = readiness.status === 'execution_candidate'
-    ? 'Use normal canExecute gate.'
+    ? 'Normal canExecute gate.'
     : readiness.status === 'wait_for_pullback_or_new_5m_structure'
     ? 'Wait pullback/new 5M MSS.'
     : readiness.status === 'missed_no_chase'
