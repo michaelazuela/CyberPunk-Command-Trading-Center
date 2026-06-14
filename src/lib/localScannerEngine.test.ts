@@ -1209,6 +1209,12 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setu
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.changesCanExecute, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.changesTradeApprovals, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.createsNewModel, false);
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned');
 assert.ok(june12ProtectedHoldDeskState.primaryDeskPlay.summary.includes('Desk Direction: LONG'));
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.state, 'primary');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.shortBias.state, 'secondary');

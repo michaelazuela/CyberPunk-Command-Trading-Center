@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-14
+Task: Add Phase 10M/10N trade-readiness routing for protected-structure desk plans.
+Files changed: docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/june12-protected-structure-replay.test.ts.
+Reason: Protected 15M+5M alignment and approved-model routing existed, but trader-facing output still needed a deterministic readiness layer that explains whether each side is an execution candidate, no-chase/missed, waiting for pullback or new protected 5M MSS, not aligned, blocked, or data-limited.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/june12-protected-structure-replay.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run guard:bridge-contracts.
+Result: Passed. DeskState now carries scanner-owned `scanner_trade_readiness_routing` metadata on both long and short bias objects. Discord Desk Play output prints concise readiness beside model fit and gate status, including WAIT/review-map rows. The layer is metadata only and does not approve execution or alter plan math. The scanner Desk Play fixture also stays under the preferred compact Discord length target without warnings.
+Trading logic changed: No. This adds model-readiness/visibility metadata only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Yes. Desk Play messages can now show readiness labels for both long and short routes, such as execution candidate, wait for better entry, missed/no chase, or not aligned.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Use the readiness labels during live scanner review to distinguish aligned model routes from no-chase, better-entry, blocked, not-aligned, or data-limited conditions.
+
+## Previous Change
+
+Date: 2026-06-14
 Task: Guard protected-structure replay code against raw historical-bar array assumptions.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/protected-structure-trade-review.ts, tools/automation/protected-structure-trade-review.test.ts, tools/supervisor/supervisor.test.ts.
 Reason: A follow-up outcome script assumed `getNinjaHistoricalBars()` returned a raw array, but the bridge helper correctly returns a wrapped historical-bars payload with `.bars`. The repo needed a reusable guard in the protected-structure review path so future replay/report code fails clearly instead of reaching `bars.filter is not a function`.

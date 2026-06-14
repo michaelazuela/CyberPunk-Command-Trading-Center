@@ -483,6 +483,15 @@ const deskPlayPayload = compactDiscordSummary({
           whyItMayReact: '15M imbalance retest can react if reclaim holds.',
         },
         nextTrigger: 'Entry only on retrace into bullish imbalance 7281.75-7342 after sweep, reclaim, displacement, and bullish structure shift.',
+        tradeReadiness: {
+          sourceOfTruth: 'scanner_trade_readiness_routing',
+          direction: 'LONG',
+          status: 'wait_for_pullback_or_new_5m_structure',
+          label: 'WAIT FOR BETTER ENTRY',
+          action: 'Wait for pullback/retest or new protected 5M MSS before execution consideration.',
+          reason: 'Approved model route exists, but current entry quality still needs proof.',
+          missingProof: ['Completed 5M trigger/retest proof is not mapped.'],
+        },
         reason: 'Long retest continuation remains primary.',
         blockers: ['EntryTriggerPending'],
       },
@@ -506,6 +515,15 @@ const deskPlayPayload = compactDiscordSummary({
           whyItMayReact: 'Real session liquidity where short delivery can stall or reverse.',
         },
         nextTrigger: 'Bearish Turtle Soup requires completed 5M acceptance below 7303.50.',
+        tradeReadiness: {
+          sourceOfTruth: 'scanner_trade_readiness_routing',
+          direction: 'SHORT',
+          status: 'not_aligned',
+          label: 'NOT ALIGNED',
+          action: 'Keep visible as review/context only.',
+          reason: 'SHORT is not supported by aligned protected 15M+5M structure this cycle.',
+          missingProof: ['15M and 5M protected structure are not aligned for this side.'],
+        },
         reason: 'Short is counter-HTF review only.',
         blockers: ['Active timeframe MSS ruleset found opposing completed HTF MSS on 60M, 120M.'],
       },
@@ -535,6 +553,7 @@ assert.ok(deskPlayText.includes('Take profit into 7288.25'));
 assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.50'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
+assert.ok(deskPlayText.includes('WAIT ENTRY'));
 assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
 assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
 assert.ok(!deskPlayText.includes('Entry ref: 7312.00'));
@@ -552,7 +571,7 @@ assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.0
 assert.ok(deskPlayText.includes('Invalid:'));
 assert.ok(deskPlayText.includes('Invalid: LONG fails below 7342.00'));
 assert.ok(deskPlayText.includes('Chart: watch chart attached; levels withheld until protected structure is proven.'));
-assert.ok(deskPlayText.includes('Boundary: no approval/canExecute change.'));
+assert.ok(deskPlayText.includes('Boundary: approvals unchanged.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
 assert.ok(!deskPlayText.includes('Decision Map:'));
@@ -652,6 +671,15 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
         scenarioLabel: 'Short below line in the sand',
         lineInSand: 7342,
         nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
+        tradeReadiness: {
+          sourceOfTruth: 'scanner_trade_readiness_routing',
+          direction: 'SHORT',
+          status: 'execution_candidate',
+          label: 'EXECUTION CANDIDATE',
+          action: 'Hand to the existing canExecute gate; this layer does not approve execution.',
+          reason: 'Approved model route has complete scanner-owned levels and proof metadata.',
+          missingProof: [],
+        },
         reason: 'Short review has app-owned entry/stop math available.',
         blockers: ['canExecute=false'],
       },
@@ -665,7 +693,9 @@ assert.ok(deskPlayDecisionMapText.includes('4H: BEAR now | line 7423.75 | change
 assert.ok(deskPlayDecisionMapText.includes('15M: BEAR now | line 7440.25 | changes BULL above 7440.25 | confirm close+hold above | target 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('5M: BULL now | line 7350.25 | changes BEAR below 7350.25 | confirm close+hold below | target 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
-assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00 | Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('EXEC CANDIDATE'));
+assert.ok(deskPlayDecisionMapText.includes('Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
 assert.ok(deskPlayDecisionMapText.includes('Trigger: LONG above 7342.00 / SHORT below 7342.00; completed 5M close/retest only.'));
 assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
 assert.ok(!deskPlayDecisionMapText.includes('reclaim back below t...'));
@@ -870,7 +900,7 @@ assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('Risk: 10.50 pts'));
 assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
 assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
-assert.ok(deskPlaySupportedShortText.includes('Boundary: no approval/canExecute change.'));
+assert.ok(deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
 
 const lunch = compactDiscordSummary({

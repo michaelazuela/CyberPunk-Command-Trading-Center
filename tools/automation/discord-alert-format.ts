@@ -172,6 +172,7 @@ export interface CompactDeskStateForDiscord {
       } | null;
       modelFit?: CompactDeskPlayModelFit | null;
       executableConsideration?: CompactDeskPlayExecutableConsideration | null;
+      tradeReadiness?: CompactDeskPlayTradeReadiness | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -198,6 +199,7 @@ export interface CompactDeskStateForDiscord {
       } | null;
       modelFit?: CompactDeskPlayModelFit | null;
       executableConsideration?: CompactDeskPlayExecutableConsideration | null;
+      tradeReadiness?: CompactDeskPlayTradeReadiness | null;
       nextTrigger?: string | null;
       reason?: string;
       blockers?: string[];
@@ -233,6 +235,16 @@ interface CompactDeskPlayExecutableConsideration {
   canExecuteNow?: boolean;
   gateSummary?: string;
   missingGates?: string[];
+}
+
+interface CompactDeskPlayTradeReadiness {
+  sourceOfTruth?: string;
+  direction?: 'LONG' | 'SHORT' | string;
+  status?: string;
+  label?: string;
+  action?: string;
+  reason?: string;
+  missingProof?: string[];
 }
 
 export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
@@ -927,6 +939,37 @@ function deskPlayExecutableGateLine(
   return `Gate: ${status}; canExecute unchanged${missing}`;
 }
 
+function deskPlayTradeReadinessLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+): string | null {
+  const readiness = deskPlayBiasForDirection(play, direction)?.tradeReadiness;
+  if (!readiness || readiness.sourceOfTruth !== 'scanner_trade_readiness_routing') return null;
+  const label = readiness.status === 'execution_candidate'
+    ? 'EXEC CANDIDATE'
+    : readiness.status === 'wait_for_pullback_or_new_5m_structure'
+    ? 'WAIT ENTRY'
+    : readiness.status === 'missed_no_chase'
+    ? 'NO CHASE'
+    : readiness.status === 'not_aligned'
+    ? 'NOT ALIGNED'
+    : readiness.status === 'data_limited'
+    ? 'DATA LIMITED'
+    : compactLine(readiness.label || readiness.status || 'REVIEW', 20);
+  const action = readiness.status === 'execution_candidate'
+    ? 'Use normal canExecute gate.'
+    : readiness.status === 'wait_for_pullback_or_new_5m_structure'
+    ? 'Wait pullback/new 5M MSS.'
+    : readiness.status === 'missed_no_chase'
+    ? 'No chase; wait fresh 5M.'
+    : readiness.status === 'not_aligned'
+    ? 'Review/context only.'
+    : readiness.status === 'data_limited'
+    ? 'Repair HTF data.'
+    : compactLine(readiness.action || readiness.reason || 'Wait for app-owned gates.', 48);
+  return `Ready: ${label} | ${action}`;
+}
+
 function deskPlayHtfReactionLine(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT',
@@ -1107,6 +1150,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
       header,
       ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
       ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
+      ...(deskPlayTradeReadinessLine(play, direction) ? [deskPlayTradeReadinessLine(play, direction)!] : []),
       ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
       ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
       'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
@@ -1116,6 +1160,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
     header,
     ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
     ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
+    ...(deskPlayTradeReadinessLine(play, direction) ? [deskPlayTradeReadinessLine(play, direction)!] : []),
     ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
     ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
     `Entry ref: ${priceLine(levels.entry)}`,
@@ -1140,8 +1185,10 @@ function deskPlayWaitMapLine(
   const model = fit?.status === 'best_fit'
     ? ` | Model ${compactLine(fit.modelName || String(fit.setupType || 'approved'), 26)}`
     : '';
-  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model} | levels pending`;
-  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
+  const readiness = deskPlayTradeReadinessLine(play, direction);
+  const readinessText = readiness ? ` | ${readiness.replace(/^Readiness:\s*/, '')}` : '';
+  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | levels pending`;
+  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
 }
 
 function deskPlayWaitLines(
@@ -1256,12 +1303,12 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     deskPlayInvalidationLine(args, play, direction),
     '',
     hasConditionalLevels
-      ? 'Chart: review attached; not execution approval.'
+      ? 'Chart: review attached; not approval.'
       : args.attachments.chartPlan
       ? 'Chart: watch chart attached; levels withheld until protected structure is proven.'
       : 'Chart: none.',
     '',
-    'Boundary: no approval/canExecute change.',
+    'Boundary: approvals unchanged.',
   ];
   return {
     username: 'Quant Desk',

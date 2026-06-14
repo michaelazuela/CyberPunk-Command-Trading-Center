@@ -459,6 +459,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase')") ||
+    !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(fifteenMinute?.currentBias, 'BULL')") ||
     !june12ReplayProofContent.includes('assert.equal(fifteenMinute?.biasChangeLine, 7377.5)') ||
     !june12ReplayProofContent.includes("assert.equal(fiveMinute?.currentBias, 'BULL')") ||
@@ -549,7 +552,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('scanner_protected_structure_trend_confirmation') ||
     !formatterContent.includes('scanner_protected_structure_model_fit') ||
     !formatterContent.includes('scanner_executable_consideration_gate_metadata') ||
+    !formatterContent.includes('scanner_trade_readiness_routing') ||
     !formatterContent.includes('Best model:') ||
+    !formatterContent.includes('Ready:') ||
     !formatterContent.includes('Gate:') ||
     !formatterContent.includes('5M still controls execution') ||
     !formatterContent.includes('protectedStructure') ||
@@ -560,8 +565,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
     !formatterContent.includes('strength') ||
-    !formatterContent.includes('Chart: review attached; not execution approval.') ||
-    !formatterContent.includes('Boundary: no approval/canExecute change.') ||
+    !formatterContent.includes('Chart: review attached; not approval.') ||
+    !formatterContent.includes('Boundary: approvals unchanged.') ||
     !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
   ) {
     fail('discord-alert-format.ts must keep Desk Play alerts concise with RAG buttons, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');

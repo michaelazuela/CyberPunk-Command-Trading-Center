@@ -213,6 +213,11 @@ assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOf
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.ok(deskState.primaryDeskPlay.longBias.executableConsideration.missingGates.some((gate) => /Entry|stop|T1|T2/i.test(gate)));
+assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
+assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');
+assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.changesCanExecute, false);
+assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.createsNewModel, false);
+assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned');
 assert.ok(deskState.primaryDeskPlay.summary.includes('Desk Direction: LONG'));
 assert.equal(deskState.primaryDeskPlay.longBias.state, 'primary');
 assert.equal(deskState.primaryDeskPlay.shortBias.state, 'secondary');

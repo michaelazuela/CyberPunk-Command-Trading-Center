@@ -1977,7 +1977,7 @@ try {
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Chart: review attached; not execution approval.'));
+  assert.ok(deskPlayText.includes('Chart: review attached; not approval.'));
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,

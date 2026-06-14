@@ -314,6 +314,30 @@ export interface DeskPlayExecutableConsideration {
   };
 }
 
+export interface DeskPlayTradeReadiness {
+  sourceOfTruth: 'scanner_trade_readiness_routing';
+  direction: 'LONG' | 'SHORT';
+  status:
+    | 'execution_candidate'
+    | 'wait_for_pullback_or_new_5m_structure'
+    | 'missed_no_chase'
+    | 'review_only_missing_proof'
+    | 'not_aligned'
+    | 'data_limited'
+    | 'blocked';
+  label: string;
+  action: string;
+  reason: string;
+  missingProof: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    createsNewModel: false;
+  };
+}
+
 export interface DeskPlayDirectionalBias {
   direction: 'LONG' | 'SHORT';
   state: DeskPlayBiasState;
@@ -328,6 +352,7 @@ export interface DeskPlayDirectionalBias {
   htfReactionContext: DeskPlayHtfReactionContext;
   modelFit: DeskPlayApprovedModelFit;
   executableConsideration: DeskPlayExecutableConsideration;
+  tradeReadiness: DeskPlayTradeReadiness;
   nextTrigger: string | null;
   invalidation: string | null;
   reason: string;
@@ -2169,6 +2194,111 @@ function biasReasonForLifecycleItem(item: ScannerCandidateLifecycleTraceItem | n
   return item.nextTrigger || item.requiredTrigger || item.scenarioLabel || 'Secondary scenario remains visible for line-in-the-sand planning.';
 }
 
+function lifecycleItemReadinessText(item: ScannerCandidateLifecycleTraceItem | null): string {
+  if (!item) return '';
+  return [
+    item.blockReason,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.filteredOutReason,
+    item.lineInSandReason,
+    item.targetReactionReason,
+    ...item.missingEvidence,
+    ...item.missingLevels,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function buildTradeReadiness(args: {
+  direction: 'LONG' | 'SHORT';
+  item: ScannerCandidateLifecycleTraceItem | null;
+  modelFit: DeskPlayApprovedModelFit;
+  executableConsideration: DeskPlayExecutableConsideration;
+}): DeskPlayTradeReadiness {
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    createsNewModel: false,
+  } as const;
+  const base = {
+    sourceOfTruth: 'scanner_trade_readiness_routing' as const,
+    direction: args.direction,
+    approvalBoundary: boundary,
+  };
+  if (args.modelFit.status === 'data_limited' || args.executableConsideration.status === 'data_limited') {
+    return {
+      ...base,
+      status: 'data_limited',
+      label: 'DATA LIMITED',
+      action: 'Repair HTF context before treating this as structure-confirmed.',
+      reason: 'HTF protected-structure context is data-limited.',
+      missingProof: args.executableConsideration.missingGates.length ? args.executableConsideration.missingGates : args.modelFit.missingProof,
+    };
+  }
+  if (args.modelFit.status !== 'best_fit' || args.executableConsideration.status === 'not_aligned') {
+    return {
+      ...base,
+      status: 'not_aligned',
+      label: 'NOT ALIGNED',
+      action: 'Keep visible as review/context only.',
+      reason: args.modelFit.reason || 'This side is not routed into the aligned protected-structure model.',
+      missingProof: args.modelFit.missingProof,
+    };
+  }
+  if (args.item?.executionStatus === ExecutionStatus.Blocked) {
+    return {
+      ...base,
+      status: 'blocked',
+      label: 'BLOCKED',
+      action: 'Do not treat as executable; keep the blocker visible.',
+      reason: args.item.blockReason || 'Candidate is blocked by existing scanner gates.',
+      missingProof: args.executableConsideration.missingGates,
+    };
+  }
+  const readinessText = lifecycleItemReadinessText(args.item);
+  const missedNoChase = /\b(missed|do not chase|no chase|chase|stale|already reached|left too fast|move occurred without preferred retest|preferred entry was missed)\b/i.test(readinessText);
+  const needsBetterEntry = /\b(better pullback|new protected 5m|new 5m|new retest|pullback|retest|wide protected stop|fragile|no fresh entry|preferred retest)\b/i.test(readinessText);
+  if (missedNoChase) {
+    return {
+      ...base,
+      status: 'missed_no_chase',
+      label: 'MISSED / NO CHASE',
+      action: 'Wait for a fresh pullback, retest, or new protected 5M MSS structure.',
+      reason: 'Existing scanner evidence marks chase or stale-entry risk.',
+      missingProof: args.executableConsideration.missingGates,
+    };
+  }
+  if (needsBetterEntry) {
+    return {
+      ...base,
+      status: 'wait_for_pullback_or_new_5m_structure',
+      label: 'WAIT FOR BETTER ENTRY',
+      action: 'Wait for pullback/retest or new protected 5M MSS before execution consideration.',
+      reason: 'Approved model route exists, but the current route still needs better entry quality or fresh 5M proof.',
+      missingProof: args.executableConsideration.missingGates,
+    };
+  }
+  if (args.executableConsideration.status === 'ready_for_existing_can_execute_gate') {
+    return {
+      ...base,
+      status: 'execution_candidate',
+      label: 'EXECUTION CANDIDATE',
+      action: 'Hand to the existing canExecute gate; this layer does not approve execution.',
+      reason: 'Approved model route has complete scanner-owned levels and proof metadata.',
+      missingProof: [],
+    };
+  }
+  return {
+    ...base,
+    status: 'review_only_missing_proof',
+    label: 'REVIEW ONLY',
+    action: 'Wait for completed 5M trigger/retest plus normal app-owned gates.',
+    reason: args.executableConsideration.gateSummary,
+    missingProof: args.executableConsideration.missingGates,
+  };
+}
+
 function buildDirectionalBias(
   direction: 'LONG' | 'SHORT',
   item: ScannerCandidateLifecycleTraceItem | null,
@@ -2192,6 +2322,12 @@ function buildDirectionalBias(
     htfReactionContext: buildHtfReactionContext(item),
     modelFit,
     executableConsideration,
+    tradeReadiness: buildTradeReadiness({
+      direction,
+      item,
+      modelFit,
+      executableConsideration,
+    }),
     nextTrigger: item?.nextTrigger || item?.requiredTrigger || null,
     invalidation: item?.invalidation || null,
     reason: biasReasonForLifecycleItem(item, state),
