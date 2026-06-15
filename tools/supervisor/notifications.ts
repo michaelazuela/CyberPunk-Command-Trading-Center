@@ -225,16 +225,19 @@ export function buildSupervisorNotifications(
 
   const bridge = healthCheckStatus(status, 'bridge');
   const previousBridge = previous.lastStatuses.bridge;
-  if (bridge === 'fail' && previousBridge !== 'fail') {
+  const previousBridgeFailCount = Number(previous.lastStatuses.bridge_fail_count || '0');
+  const bridgeFailCount = bridge === 'fail' ? previousBridgeFailCount + 1 : 0;
+  nextState.lastStatuses.bridge_fail_count = String(bridgeFailCount);
+  if (bridge === 'fail' && bridgeFailCount >= 2 && previousBridge !== 'fail') {
     notifications.push(notification({
       kind: 'bridge_unreachable',
       title: 'Bridge Unreachable',
-      description: 'NinjaTrader bridge health is failing or unreachable. Scanner health may block alerts until recovery.',
+      description: 'NinjaTrader bridge health failed consecutive checks. Scanner health may block alerts until recovery.',
       severity: 'fail',
       now,
     }));
   }
-  if (bridge === 'ok' && previousBridge === 'fail') {
+  if (bridge !== 'fail' && previousBridge === 'fail') {
     notifications.push(notification({
       kind: 'bridge_recovered',
       title: 'Bridge Recovered',
@@ -243,7 +246,9 @@ export function buildSupervisorNotifications(
       now,
     }));
   }
-  nextState.lastStatuses.bridge = bridge;
+  nextState.lastStatuses.bridge = bridge === 'fail'
+    ? bridgeFailCount >= 2 || previousBridge === 'fail' ? 'fail' : 'transient_fail'
+    : bridge;
 
   const bridgeCheck = healthCheck(status, 'bridge');
   const contractMismatch = Boolean((bridgeCheck?.details as any)?.contractMismatch);
@@ -630,10 +635,13 @@ export async function sendSupervisorSelfHealNotification(
   });
   const statePath = options.statePath || notificationStatePath(logsDir);
   const state = readNotificationState(statePath);
+  const webhook = options.webhookUrl === undefined ? resolveSupervisorDiscordWebhookUrl().url : options.webhookUrl;
+  if (!shouldSendCooldown(state, notificationItem.dedupeKey, now, options.staleCooldownMs ?? DEFAULT_STALE_COOLDOWN_MS)) {
+    return { sent: 0, skipped: 1, notification: notificationItem, webhookConfigured: Boolean(webhook) };
+  }
   state.lastSentAtByKey[notificationItem.dedupeKey] = now.toISOString();
   writeNotificationState(statePath, state);
 
-  const webhook = options.webhookUrl === undefined ? resolveSupervisorDiscordWebhookUrl().url : options.webhookUrl;
   if (!webhook || options.dryRun) {
     return { sent: 0, skipped: 1, notification: notificationItem, webhookConfigured: Boolean(webhook) };
   }

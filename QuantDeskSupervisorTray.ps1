@@ -165,6 +165,28 @@ function Get-SupervisorPayload {
   }
 }
 
+function Confirm-SupervisorEndpointUnavailable {
+  param(
+    [int]$Attempts = 3,
+    [int]$DelayMilliseconds = 750
+  )
+
+  for ($attempt = 1; $attempt -le $Attempts; $attempt += 1) {
+    if (Get-SupervisorPayload) {
+      Write-TrayLog -Message 'Supervisor self-heal suppressed; endpoint recovered during confirmation.' -Details @{
+        attempt = $attempt
+        attempts = $Attempts
+      }
+      return $false
+    }
+    if ($attempt -lt $Attempts) {
+      Start-Sleep -Milliseconds $DelayMilliseconds
+    }
+  }
+
+  return $true
+}
+
 function Get-TrayState {
   $payload = Get-SupervisorPayload
   if (-not $payload) {
@@ -332,6 +354,12 @@ function Invoke-SelfHealIfNeeded {
 
   $script:EndpointMissCount += 1
   if ($script:EndpointMissCount -lt $SelfHealThreshold) {
+    return
+  }
+
+  if (-not (Confirm-SupervisorEndpointUnavailable)) {
+    $script:EndpointMissCount = 0
+    $script:SelfHealInProgress = $false
     return
   }
 

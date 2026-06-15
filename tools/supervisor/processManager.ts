@@ -84,6 +84,7 @@ export function isTrackedServiceProcessRunning(
 ): boolean {
   if (!isProcessRunning(pid)) return false;
   if (process.platform !== 'win32') return true;
+  if (processes.length === 0) return true;
   const processInfo = processes.find((item) => item.pid === pid);
   return Boolean(processInfo && serviceMatchesCommandLine(service, processInfo.commandLine));
 }

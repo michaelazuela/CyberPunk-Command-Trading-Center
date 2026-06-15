@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-15
+Task: Harden supervisor self-heal and bridge Discord notifications.
+Files changed: QuantDeskSupervisorTray.ps1, tools/supervisor/notifications.ts, tools/supervisor/processManager.ts, tools/supervisor/supervisor.test.ts.
+Reason: The tray could request self-heal and send Discord warnings after brief status endpoint misses even while the supervisor was healthy, and a single transient bridge health miss could post `Bridge Unreachable` before the next check recovered.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run test; npm run lint; npm run build.
+Result: Passed. Tray self-heal now re-confirms the supervisor endpoint before starting or notifying. Supervisor self-heal Discord messages respect the standard cooldown. Bridge unreachable notifications require consecutive failed bridge checks, and recovery still posts when the bridge becomes reachable again. Supervisor child-process tracking now avoids falsely marking owned processes stopped when Windows command-line process enumeration is unavailable.
+Trading logic changed: No. This is operational supervisor/Discord health notification hardening only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, or scanner trade behavior changed.
+Bridge impact: No bridge contract change. Bridge health notifications are less noisy and require confirmed consecutive failure.
+Discord impact: Yes. Operational health Discord messages are quieter and clearer; trade alerts and RAG/outcome flows are unchanged.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Restart the tray process so the PowerShell tray script uses the new endpoint confirmation logic.
+
+## Previous Change
+
 Date: 2026-06-14
 Task: Add Phase 10M/10N trade-readiness routing for protected-structure desk plans.
 Files changed: docs/PROJECT_STATUS.md, scripts/architecture-guard.js, src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/june12-protected-structure-replay.test.ts.

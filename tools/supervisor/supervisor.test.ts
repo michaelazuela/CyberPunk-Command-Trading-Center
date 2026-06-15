@@ -17,6 +17,7 @@ import {
 import { buildPreWindowBackfillCommand, buildWindowsSafeSpawnCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
 import {
   findExternalServiceProcesses,
+  getSupervisorState,
   isProcessRunning,
   isTrackedServiceProcessRunning,
   launchEnabledServices,
@@ -35,6 +36,22 @@ async function waitForProcessExit(pid: number | null, timeoutMs = 5000): Promise
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return !isProcessRunning(pid);
+}
+
+async function waitForLaunchedService(
+  config: Parameters<typeof getSupervisorState>[0],
+  timeoutMs = 5000,
+): Promise<SupervisorState> {
+  const startedAt = Date.now();
+  let current = getSupervisorState(config);
+  while (Date.now() - startedAt <= timeoutMs) {
+    if (current.services.some((service) => service.status === 'running' || service.status === 'external_running')) {
+      return current;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    current = getSupervisorState(config);
+  }
+  return current;
 }
 
 const defaultConfig = loadSupervisorConfig({}, 'C:\\quant-desk');
@@ -162,6 +179,8 @@ assert.ok(trayScript.includes('SelfHealPausedByStop'));
 assert.ok(trayScript.includes('SupervisorStartupGraceSeconds'));
 assert.ok(trayScript.includes('Set-SupervisorStarting'));
 assert.ok(trayScript.includes('Get-SupervisorProcessFallbackStatus'));
+assert.ok(trayScript.includes('Confirm-SupervisorEndpointUnavailable'));
+assert.ok(trayScript.includes('Supervisor self-heal suppressed; endpoint recovered during confirmation.'));
 assert.ok(trayScript.includes('Supervisor startup grace expired; self-heal may retry.'));
 assert.ok(trayScript.includes('Supervisor start requested; waiting for status endpoint.'));
 assert.ok(trayScript.includes('Reconnecting'));
@@ -408,12 +427,14 @@ assert.equal(noBarsPreloadAssurance.ok, false);
 assert.deepEqual(noBarsPreloadAssurance.noBarsTimeframes, ['120m']);
 assert.equal(noBarsPreloadAssurance.stderrWarning, true);
 assert.ok(noBarsPreloadAssurance.operatorActions.some((action) => action.includes('data-limited')));
-const launchedState = launchEnabledServices(processConfig, logger);
+launchEnabledServices(processConfig, logger);
+const launchedState = await waitForLaunchedService(processConfig);
 const launchedChild = launchedState.services[0];
 assert.ok(launchedChild.status === 'running' || launchedChild.status === 'external_running');
 if (launchedChild.status === 'running') {
   assert.ok(launchedChild.pid);
   assert.equal(isProcessRunning(launchedChild.pid), true);
+  assert.equal(isTrackedServiceProcessRunning(processConfig.childServices[0], launchedChild.pid, []), true);
   assert.ok(fs.existsSync(launchedChild.stdoutLog));
   assert.ok(fs.existsSync(launchedChild.stderrLog));
   fs.appendFileSync(launchedChild.stdoutLog, `test heartbeat ${new Date().toISOString()}\n`, 'utf8');
@@ -967,6 +988,53 @@ assert.ok(readyWithoutReportPayloadText.includes('Recorder cache cycle has not c
 assert.ok(readyWithoutReportPayloadText.includes('Scanner health and market-map report lines have not appeared in the supervisor log yet.'));
 assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyWithoutReportPayloadText), false);
 
+const bridgeFailureState: SupervisorState = {
+  supervisorPid: 1,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'bridge-failure-state.json'),
+  services: [],
+};
+const transientBridgeFailureStatus = buildSupervisorStatus(defaultConfig, bridgeFailureState, {
+  status: 'fail',
+  generatedAt: fixedNow.toISOString(),
+  checks: [
+    { id: 'bridge', label: 'NinjaTrader bridge', status: 'fail', message: 'Bridge health endpoint is not reachable: timeout' },
+  ],
+}, null, fixedNow);
+const transientBridgeNotifications = buildSupervisorNotifications(
+  transientBridgeFailureStatus,
+  { lastStatuses: { bridge: 'ok' }, lastSentAtByKey: {} },
+  fixedNow,
+);
+assert.equal(transientBridgeNotifications.notifications.some((item) => item.kind === 'bridge_unreachable'), false);
+assert.equal(transientBridgeNotifications.nextState.lastStatuses.bridge, 'transient_fail');
+assert.equal(transientBridgeNotifications.nextState.lastStatuses.bridge_fail_count, '1');
+
+const confirmedBridgeFailureNotifications = buildSupervisorNotifications(
+  transientBridgeFailureStatus,
+  transientBridgeNotifications.nextState,
+  new Date(fixedNow.getTime() + 15_000),
+);
+assert.equal(confirmedBridgeFailureNotifications.notifications.some((item) => item.kind === 'bridge_unreachable'), true);
+assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge, 'fail');
+assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge_fail_count, '2');
+
+const bridgeRecoveredStatus = buildSupervisorStatus(defaultConfig, bridgeFailureState, {
+  status: 'ok',
+  generatedAt: fixedNow.toISOString(),
+  checks: [
+    { id: 'bridge', label: 'NinjaTrader bridge', status: 'ok', message: 'Bridge health endpoint is reachable.' },
+  ],
+}, null, fixedNow);
+const bridgeRecoveredNotifications = buildSupervisorNotifications(
+  bridgeRecoveredStatus,
+  confirmedBridgeFailureNotifications.nextState,
+  new Date(fixedNow.getTime() + 30_000),
+);
+assert.equal(bridgeRecoveredNotifications.notifications.some((item) => item.kind === 'bridge_recovered'), true);
+assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge, 'ok');
+assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge_fail_count, '0');
+
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,
   startedAt: fixedNow.toISOString(),
@@ -999,6 +1067,14 @@ const selfHealDryRun = await sendSupervisorSelfHealNotification(tempLogsDir, {
 assert.equal(selfHealDryRun.sent, 0);
 assert.equal(selfHealDryRun.skipped, 1);
 assert.equal(selfHealDryRun.notification.kind, 'supervisor_self_heal');
+const selfHealCooldownDryRun = await sendSupervisorSelfHealNotification(tempLogsDir, {
+  dryRun: true,
+  webhookUrl: 'https://discord.example/webhook',
+  now: new Date(fixedNow.getTime() + 60_000),
+});
+assert.equal(selfHealCooldownDryRun.sent, 0);
+assert.equal(selfHealCooldownDryRun.skipped, 1);
+assert.equal(selfHealCooldownDryRun.notification.kind, 'supervisor_self_heal');
 
 const stoppedState = stopOwnedServices(processConfig, logger);
 const stoppedChild = stoppedState.services[0];
