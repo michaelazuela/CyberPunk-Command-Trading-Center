@@ -703,6 +703,73 @@ function compactPlanLines(candidate: SetupCandidate, normalized: CompactNormaliz
   ];
 }
 
+function compactReviewPlanLines(candidate: SetupCandidate, normalized: CompactNormalizedPlan): string[] {
+  const levels = appTargetLevels(candidate, normalized);
+  const modelConfidenceScore =
+    typeof candidate.modelConfidenceScore === 'number' && Number.isFinite(candidate.modelConfidenceScore)
+      ? Math.round(candidate.modelConfidenceScore)
+      : null;
+  const htfLine = candidate.activeRuleset?.htfLineInSand?.lineInSand;
+  const riskAboveStandard =
+    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
+    (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
+  const lineLines = lineInSandLines(candidate);
+  return [
+    'Plan:',
+    ...(modelConfidenceScore !== null ? [`Confidence: ${modelConfidenceScore}/100`] : []),
+    ...(candidate.candidateState === 'MSS_HOLD_TRIGGER_PENDING' ||
+      candidate.candidateState === 'MSS_HOLD_CONFIRMED' ||
+      candidate.candidateState === 'MSS_CONTINUATION_RETEST_PENDING' ||
+      candidate.candidateState === 'OPENING_OBSERVATION_ARMED' ||
+      candidate.candidateState === 'HUMAN_REVIEW_READY'
+      ? [`Trigger State: ${candidate.candidateState}`]
+      : []),
+    ...(candidate.humanReview ? [
+      `Review: ${candidate.humanReview.status}`,
+      'Human review required. Decision-support plan only.',
+      'Trader must confirm entry before action.',
+    ] : []),
+    ...failedPlanReversalLines(candidate),
+    ...lineLines,
+    ...(!lineLines.length && isFinitePrice(htfLine) ? [
+      'Line in the Sand:',
+      `${priceLine(htfLine)} - Required structure line.`,
+    ] : []),
+    `Entry: ${priceLine(candidate.entry)} | Stop: ${priceLine(levels.stop)} | Risk: ${numberLine(candidate.riskPoints)} pts / N/A`,
+    ...(riskAboveStandard ? ['Risk exceeds standard limit. Human final decision required.'] : []),
+    ...compactTargetLadderLines(candidate, normalized),
+    ...missingProofLines(candidate),
+    '',
+    'Trigger:',
+    compactLine(candidate.requiredTrigger || candidate.nextAction || 'Wait for completed 5M trigger.', 92),
+    'No chase. Wait for completed 5M proof and protected structure. Do not chase.',
+  ];
+}
+
+function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string[] {
+  const levelTransitionLines = scannerLevelTransitionLines(args, candidate).slice(0, 3);
+  const htfCautionLines = scannerHtfCautionLines(args, candidate).slice(0, 2);
+  const riskLines = conditionalRiskLines(candidate, normalized).slice(0, 4);
+  const htfLines = compactHtfSufficiencyLines(candidate);
+  return [
+    `Status: ${statusLine(status, candidate, normalized)}`,
+    '',
+    ...(status === 'EXECUTABLE' ? compactPlanLines(candidate, normalized) : compactReviewPlanLines(candidate, normalized)),
+    '',
+    ...levelTransitionLines,
+    ...(levelTransitionLines.length ? [''] : []),
+    ...htfCautionLines,
+    ...(htfCautionLines.length ? [''] : []),
+    ...riskLines,
+    ...(riskLines.length ? [''] : []),
+    ...htfLines,
+    ...(htfLines.length ? [''] : []),
+    'Invalidation:',
+    compactLine(candidate.invalidation || normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 92),
+  ];
+}
+
 function isDeskStateWatch(args: CompactDiscordSummaryArgs, candidate: SetupCandidate | null): boolean {
   return Boolean(
     candidate &&
@@ -934,7 +1001,7 @@ function deskPlayExecutableGateLine(
     ? 'review only'
     : gate.status || 'pending';
   const missing = Array.isArray(gate.missingGates) && gate.missingGates.length
-    ? ` | Missing: ${compactLine(gate.missingGates[0], 46)}`
+    ? ` | Missing: ${compactLine(gate.missingGates[0], 30)}`
     : '';
   return `Gate: ${status}; canExecute unchanged${missing}`;
 }
@@ -981,27 +1048,22 @@ function deskPlayHtfReactionLine(
     : isFinitePrice(play.targetReactionLevel)
     ? play.targetReactionLevel
     : null;
-  const timeframes = Array.isArray(context?.sourceTimeframes) && context.sourceTimeframes.length
-    ? context.sourceTimeframes.join('/')
-    : 'HTF/session';
   const strength = compactLine(context?.strength || 'unknown', 16);
   const label = compactLine(context?.reactionLabel || play.targetReactionLabel || 'reaction area', 34);
-  const why = compactLine(context?.whyItMayReact || context?.reactionReason || play.targetReactionReason || 'Scanner-owned HTF/session context.', 74);
   if (level === null && !context?.whyItMayReact && !context?.reactionReason) return null;
-  return `HTF reaction: ${level === null ? label : `${label} ${priceLine(level)}`} | ${timeframes} | strength ${strength} | ${why}`;
+  return `React: ${level === null ? label : `${label} ${priceLine(level)}`} | strength ${strength}`;
 }
 
 function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
   const ladder = play.htfObjectiveLadder;
   if (!ladder || ladder.sourceOfTruth !== 'scanner_htf_objective_ladder') return [];
+  const reaction = ladder.reaction?.price ? `React ${priceLine(ladder.reaction.price)}` : null;
+  const nextDraw = ladder.nextDraw?.price ? `Next ${priceLine(ladder.nextDraw.price)}` : null;
+  const runner = ladder.runner?.price ? `Run ${priceLine(ladder.runner.price)}` : null;
   const lines = [
-    'HTF Runner Map',
-    `App targets: T1 ${priceLine(ladder.appTarget1 ?? null)} / T2 ${priceLine(ladder.appTarget2 ?? null)}`,
-    objectiveLine('Reaction', ladder.reaction),
-    objectiveLine('Next draw', ladder.nextDraw),
-    objectiveLine('Runner', ladder.runner),
-    objectiveLine('Extension', ladder.extension),
-    compactLine(ladder.managementInstruction || 'App T1/T2 tactical; HTF ladder is management only.', 86),
+    `App T1/T2: ${priceLine(ladder.appTarget1 ?? null)} / ${priceLine(ladder.appTarget2 ?? null)}`,
+    `HTF: ${[reaction, nextDraw, runner].filter(Boolean).join(' | ')}`,
+    'Mgmt: app T1/T2 first; runner after 5M acceptance.',
   ].filter((line): line is string => Boolean(line));
   return lines.length > 2 ? lines : [];
 }
@@ -1020,7 +1082,6 @@ function currentHtfBiasLine(args: {
   const tf = compactLine(args.timeframe || 'TF', 4);
   const protectedText = priceLine(args.protectedLevel);
   const confirmText = priceLine(args.confirmationLine);
-  const targetText = priceLine(args.target);
   const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
   const rowCurrentBias = args.rowCurrentBias || null;
 
@@ -1028,40 +1089,40 @@ function currentHtfBiasLine(args: {
     const lineText = priceLine(isFinitePrice(args.rowBiasChangeLine) ? args.rowBiasChangeLine : args.protectedLevel ?? args.confirmationLine);
     const confirmation = compactLine(args.rowBiasChangeConfirmation || 'completed close+hold', 28);
     if (rowCurrentBias === 'BULL') {
-      return `${tf}: BULL now | line ${lineText} | changes BEAR below ${lineText} | confirm ${confirmation} | target ${targetText}`;
+      return `${tf}: BULL | bear < ${lineText} | ${confirmation}`;
     }
     if (rowCurrentBias === 'BEAR') {
-      return `${tf}: BEAR now | line ${lineText} | changes BULL above ${lineText} | confirm ${confirmation} | target ${targetText}`;
+      return `${tf}: BEAR | bull > ${lineText} | ${confirmation}`;
     }
     if (rowCurrentBias === 'RANGE') {
-      return `${tf}: RANGE now | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm ${confirmation} | target ${targetText}`;
+      return `${tf}: RANGE | bull > ${confirmText} / bear < ${protectedText} | ${confirmation}`;
     }
   }
 
   if (args.rowBias === 'BULL') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
-      return `${tf}: BEAR now | line ${protectedText} | changes BULL above ${protectedText} | confirm close+hold above | target ${targetText}`;
+      return `${tf}: BEAR | bull > ${protectedText} | close+hold`;
     }
-    return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
+    return `${tf}: BULL | bear < ${protectedText} | close+hold`;
   }
   if (args.rowBias === 'BEAR') {
     if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice > args.protectedLevel) {
-      return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
+      return `${tf}: BULL | bear < ${protectedText} | close+hold`;
     }
-    return `${tf}: BEAR now | line ${protectedText} | changes BULL above ${protectedText} | confirm close+hold above | target ${targetText}`;
+    return `${tf}: BEAR | bull > ${protectedText} | close+hold`;
   }
 
   if (currentPrice !== null && isFinitePrice(args.confirmationLine) && currentPrice >= args.confirmationLine) {
-    return `${tf}: BULL now | line ${protectedText} | changes BEAR below ${protectedText} | confirm close+hold below | target ${targetText}`;
+    return `${tf}: BULL | bear < ${protectedText} | close+hold`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice <= args.protectedLevel) {
-    return `${tf}: BEAR now | line ${confirmText} | changes BULL above ${confirmText} | confirm close+hold above | target ${targetText}`;
+    return `${tf}: BEAR | bull > ${confirmText} | close+hold`;
   }
   if (currentPrice !== null && isFinitePrice(args.protectedLevel) && isFinitePrice(args.confirmationLine)) {
-    return `${tf}: RANGE now | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm close+hold | target ${targetText}`;
+    return `${tf}: RANGE | bull > ${confirmText} / bear < ${protectedText} | close+hold`;
   }
 
-  return `${tf}: Bias pending | lines ${confirmText}/${protectedText} | BULL above / BEAR below | confirm close+hold | target ${targetText}`;
+  return `${tf}: pending | bull > ${confirmText} / bear < ${protectedText} | close+hold`;
 }
 
 function deskPlayHtfProtectedStructureLines(
@@ -1092,7 +1153,7 @@ function deskPlayHtfProtectedStructureLines(
   return [
     'HTF Bias Lines',
     ...rows,
-    `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M still controls execution.`,
+    `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M executes.`,
   ];
 }
 
@@ -1107,11 +1168,9 @@ function deskPlayTrendConfirmationLines(
     ? trend.supportingTimeframes.join('+')
     : '15M+5M';
   const line = isFinitePrice(trend.lineInSand) ? ` | Line ${priceLine(trend.lineInSand)}` : '';
-  const summary = trend.summary || trend.confirmation || 'Protected-structure trend confirmation pending.';
   return [
     'Desk Direction',
     `${direction} | ${status} | ${timeframes}${line}`,
-    compactLine(summary, 140),
   ];
 }
 
@@ -1123,17 +1182,13 @@ function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LO
   const continuationLine = deskPlayTransitionLine(play, managedDirection);
   const structureWord = managedDirection === 'SHORT' ? 'support' : 'resistance';
   if (reaction.price === null && continuationLine === null && !play.countertrendWarning) return [];
+  const confidence = deskPlayConfidenceLine(play, managedDirection);
+  const continuation = continuationLine !== null
+    ? `; no fresh ${managedDirection.toLowerCase()} unless ${managedDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(continuationLine)}`
+    : '';
   return [
-    `${managedDirection}: Manage, do not press`,
-    ...(reaction.price !== null
-      ? [`${managedDirection === 'SHORT' ? 'Short' : 'Long'} ran into HTF ${structureWord}: ${priceLine(reaction.price)}`]
-      : []),
-    ...(deskPlayConfidenceLine(play, managedDirection) ? [deskPlayConfidenceLine(play, managedDirection)!] : []),
-    ...(deskPlayHtfReactionLine(play, managedDirection) ? [deskPlayHtfReactionLine(play, managedDirection)!] : []),
-    ...(reaction.price !== null ? [`Take profit into ${priceLine(reaction.price)}`] : []),
-    ...(continuationLine !== null
-      ? [`No fresh ${managedDirection.toLowerCase()} unless price accepts ${managedDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(continuationLine)}`]
-      : []),
+    `${managedDirection}: manage into HTF ${reaction.price !== null ? priceLine(reaction.price) : structureWord}${continuation}.`,
+    ...(confidence ? [confidence] : []),
   ];
 }
 
@@ -1152,8 +1207,6 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
       ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
       ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
       ...(readiness ? [readiness] : []),
-      ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
-      ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
       'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
     ];
   }
@@ -1471,8 +1524,6 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     },
   });
   assertDiscordReportDesignerIsAdvisoryOnly(designerRecommendation as unknown as Record<string, unknown>);
-  const riskLines = bestCandidate ? conditionalRiskLines(bestCandidate, args.normalized) : [];
-  const htfLines = compactHtfSufficiencyLines(bestCandidate);
   const bestLevels = bestCandidate ? appTargetLevels(bestCandidate, args.normalized) : null;
   const bestCandidateHasFullPlan = Boolean(
     bestCandidate?.entry != null &&
@@ -1481,25 +1532,10 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     bestLevels?.target2 != null
   );
   const includeMemory = designerStatus === 'EXECUTABLE' || bestCandidateHasFullPlan;
-  const levelTransitionLines = bestCandidate ? scannerLevelTransitionLines(args, bestCandidate) : [];
-  const htfCautionLines = bestCandidate ? scannerHtfCautionLines(args, bestCandidate) : [];
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
     ? [
-        `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
-        '',
-        ...compactPlanLines(bestCandidate, args.normalized),
-        '',
-        ...levelTransitionLines,
-        ...(levelTransitionLines.length ? [''] : []),
-        ...htfCautionLines,
-        ...(htfCautionLines.length ? [''] : []),
-        ...riskLines,
-        ...(riskLines.length ? [''] : []),
-        ...htfLines,
-        ...(htfLines.length ? [''] : []),
-        'Invalidation:',
-        compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 140),
+        ...compactGeneralAlertLines(args, bestCandidate, args.normalized, designerStatus),
         '',
         ...(includeMemory ? [...memoryLines(), ''] : []),
         'Action:',
@@ -1523,7 +1559,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
       ];
 
   const includeComponents = Boolean(args.components);
-  return {
+  const payload: DiscordWebhookPayload = {
     username: 'Quant Desk',
     content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation}`,
     embeds: [
@@ -1538,6 +1574,39 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     ],
     ...(includeComponents ? { components: args.components } : {}),
   };
+  const maxMainText = args.attachments.chartPlan || args.attachments.priceLevelMap ? 1550 : 1900;
+  if (bestCandidate && designerStatus !== 'NO TRADE' && designerStatus !== 'EXECUTABLE' && flattenDiscordPayloadText(payload).length > maxMainText) {
+    const shortLines = [
+      `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
+      '',
+      `Model: ${compactLine(model, 42)}`,
+      `Entry: ${priceLine(bestCandidate.entry)} | Stop: ${priceLine(bestLevels?.stop ?? null)} | Risk: ${numberLine(bestCandidate.riskPoints)} pts`,
+      `T1/T2: ${priceLine(bestLevels?.target1 ?? null)} / ${priceLine(bestLevels?.target2 ?? null)}`,
+      ...(isFinitePrice(bestCandidate.activeRuleset?.htfLineInSand?.lineInSand)
+        ? [`Line: ${priceLine(bestCandidate.activeRuleset?.htfLineInSand?.lineInSand)}`]
+        : []),
+      '',
+      'Trigger:',
+      compactLine(bestCandidate.requiredTrigger || bestCandidate.nextAction || 'Wait for completed 5M trigger.', 90),
+      'No chase. Completed 5M proof and protected structure required.',
+      '',
+      'Invalid:',
+      compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation unavailable.', 90),
+      '',
+      compactAttachmentLine(args.attachments, true),
+      'Boundary: canExecute unchanged; no automated orders.',
+    ];
+    return {
+      ...payload,
+      embeds: [
+        {
+          ...payload.embeds[0],
+          description: professionalizeReportText(shortLines.join('\n')),
+        },
+      ],
+    };
+  }
+  return payload;
 }
 
 export function morningWatchlistDiscordSummary(args: MorningWatchlistDiscordArgs): DiscordWebhookPayload {

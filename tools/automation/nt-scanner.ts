@@ -89,6 +89,7 @@ import {
   type MarketBarTimeframe,
 } from './market-data-store';
 import {
+  isSundayEveningFourHourReopenLagCovered,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
   repairMarketDataBarsWithinBaseRange,
@@ -464,16 +465,32 @@ export function scannerActiveCampaignKey(candidate: SetupCandidate | null | unde
   return typeof id === 'string' && id.trim() ? id.trim() : null;
 }
 
+export function scannerActiveCampaignKeyForTradeDate(candidate: SetupCandidate | null | undefined, tradeDate: string): string | null {
+  const campaignId = scannerActiveCampaignKey(candidate);
+  const normalizedTradeDate = typeof tradeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(tradeDate.trim())
+    ? tradeDate.trim()
+    : null;
+  if (!campaignId || !normalizedTradeDate) return campaignId;
+  const parts = campaignId.split(':');
+  if (parts.length >= 3 && /^\d{4}-\d{2}-\d{2}$/.test(parts[0] || '')) {
+    return [normalizedTradeDate, ...parts.slice(1)].join(':');
+  }
+  return `${normalizedTradeDate}:${campaignId}`;
+}
+
 export function shouldSuppressActiveCampaignScannerAlert(args: {
   activeCampaignSent?: Record<string, ScannerActiveCampaignLedgerRecord>;
   candidate?: SetupCandidate | null;
+  tradeDate?: string;
 }): {
   shouldSuppress: boolean;
   campaignId: string | null;
   reason: string | null;
   record: ScannerActiveCampaignLedgerRecord | null;
 } {
-  const campaignId = scannerActiveCampaignKey(args.candidate);
+  const campaignId = args.tradeDate
+    ? scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate)
+    : scannerActiveCampaignKey(args.candidate);
   if (!campaignId) {
     return { shouldSuppress: false, campaignId: null, reason: null, record: null };
   }
@@ -498,7 +515,7 @@ export function recordActiveCampaignScannerAlertSent(args: {
   alertKey: string;
   sentAt?: string;
 }): void {
-  const campaignId = scannerActiveCampaignKey(args.candidate);
+  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate);
   if (!campaignId) return;
   const sentAt = args.sentAt || new Date().toISOString();
   const previous = args.activeCampaignSent[campaignId];
@@ -628,7 +645,7 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
   planVersionId: string;
   fetchImpl?: FetchLike;
 }): Promise<ScannerActiveCampaignClaimResult> {
-  const campaignId = scannerActiveCampaignKey(args.candidate);
+  const campaignId = scannerActiveCampaignKeyForTradeDate(args.candidate, args.tradeDate);
   if (!campaignId) {
     return { source: 'none', claimed: true, shouldSuppress: false, campaignId: null, reason: null, durableAvailable: false };
   }
@@ -1431,11 +1448,20 @@ export function barsCoverRequestedLookback(
   const requiredSpanDays = Math.max(0, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
   const latestCompletedToleranceMs = (timeframeMinutes(timeframe) + 30) * 60_000;
   const startCoverageToleranceMs = 24 * 60 * 60_000;
+  const latestBarTime = sorted[sorted.length - 1]?.time;
+  const sundayEveningFourHourReopenLagCovered =
+    isSundayEveningFourHourReopenLagCovered(timeframe, latestBarTime, requestedTo);
+  const latestCoverageSatisfied =
+    last >= to - latestCompletedToleranceMs ||
+    sundayEveningFourHourReopenLagCovered;
+  const spanCoverageSatisfied =
+    loadedSpanDays >= requiredSpanDays ||
+    (sundayEveningFourHourReopenLagCovered && loadedSpanDays >= requiredSpanDays - 3);
   return (
     sorted.length >= SCANNER_HISTORY_MIN_BARS[timeframe] &&
     first <= from + startCoverageToleranceMs &&
-    loadedSpanDays >= requiredSpanDays &&
-    last >= to - latestCompletedToleranceMs
+    spanCoverageSatisfied &&
+    latestCoverageSatisfied
   );
 }
 
@@ -4787,7 +4813,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         source: 'blocked',
         claimed: false,
         shouldSuppress: true,
-        campaignId: scannerActiveCampaignKey(candidate),
+        campaignId: scannerActiveCampaignKeyForTradeDate(candidate, tradeDate),
         reason: `ActiveCampaign alert blocked: durable Supabase ledger is unavailable (${sanitizedError(error)}). No local-only campaign de-dup fallback is allowed.`,
         durableAvailable: false,
       };

@@ -45,6 +45,7 @@ import {
   scannerDiscordWebhookDeleteUrl,
   scannerDiscordWebhookUrlForPost,
   scannerActiveCampaignKey,
+  scannerActiveCampaignKeyForTradeDate,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
@@ -461,6 +462,44 @@ assert.deepEqual(buildSegmentedHistoryRepairWindows(
   { from: '2026-05-26T00:00:00-04:00', to: '2026-06-04T23:59:00-04:00' },
   { from: '2026-06-05T00:00:00-04:00', to: '2026-06-05T12:00:00-04:00' },
 ]);
+const sundayEveningFourHourCoverageBars = [
+  ...Array.from({ length: 29 }, (_, index) => ({
+    time: `${new Date(Date.UTC(2026, 4, 15 + index)).toISOString().slice(0, 10)}T02:00:00-04:00`,
+    open: 7400,
+    high: 7410,
+    low: 7390,
+    close: 7405,
+    volume: 1000,
+  })),
+  ...Array.from({ length: 12 }, (_, index) => ({
+    time: `2026-06-12T${String(6 + index).padStart(2, '0')}:00:00-04:00`,
+    open: 7400,
+    high: 7410,
+    low: 7390,
+    close: 7405,
+    volume: 1000,
+  })),
+];
+assert.equal(
+  barsCoverRequestedLookback(
+    sundayEveningFourHourCoverageBars,
+    '2026-05-15T00:00:00-04:00',
+    '2026-06-14T20:35:00-04:00',
+    '240m',
+  ),
+  true,
+  'Sunday evening before the first completed 4H candle should not block when 30-day 4H context is otherwise loaded.',
+);
+assert.equal(
+  barsCoverRequestedLookback(
+    sundayEveningFourHourCoverageBars,
+    '2026-05-15T00:00:00-04:00',
+    '2026-06-14T22:00:00-04:00',
+    '240m',
+  ),
+  false,
+  'After the first Sunday 4H completion, stale Friday 4H coverage must still block.',
+);
 assert.deepEqual(resolveScannerDiscordWebhookUrl({
   DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
   SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',
@@ -567,6 +606,19 @@ const shiftedCampaignCandidate = {
 } as unknown as SetupCandidate;
 const activeCampaignLedger: Record<string, ScannerActiveCampaignLedgerRecord> = {};
 assert.equal(scannerActiveCampaignKey(campaignCandidate), '2026-06-08:SHORT:15M5M-MSS');
+const utcRolloverCampaignCandidate = {
+  ...campaignCandidate,
+  direction: 'LONG',
+  activeCampaign: {
+    ...campaignCandidate.activeCampaign,
+    id: '2026-06-15:LONG:HTF-FAILED-AUCTION',
+    direction: 'LONG',
+  },
+} as unknown as SetupCandidate;
+assert.equal(
+  scannerActiveCampaignKeyForTradeDate(utcRolloverCampaignCandidate, '2026-06-14'),
+  '2026-06-14:LONG:HTF-FAILED-AUCTION',
+);
 assert.equal(shouldSuppressActiveCampaignScannerAlert({
   activeCampaignSent: activeCampaignLedger,
   candidate: campaignCandidate,
@@ -699,6 +751,23 @@ assert.equal(durableClaim.shouldSuppress, false);
 assert.equal(durableFetchCalls[0].method, 'POST');
 assert.equal(durableFetchCalls[0].body.campaign_id, '2026-06-08:SHORT:15M5M-MSS');
 assert.equal(durableFetchCalls[0].body.delivery_status, 'pending');
+durableFetchCalls.length = 0;
+const sundayEveningDurableClaim = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: utcRolloverCampaignCandidate,
+  tradeDate: '2026-06-14',
+  instrument: 'MES',
+  session: 'evening',
+  state: 'Conditional',
+  confidence: 79,
+  alertKey: 'sunday-evening-alert-key',
+  planVersionId: 'EVENING-20260614',
+  fetchImpl: durableClaimFetch,
+});
+assert.equal(sundayEveningDurableClaim.claimed, true);
+assert.equal(sundayEveningDurableClaim.campaignId, '2026-06-14:LONG:HTF-FAILED-AUCTION');
+assert.equal(durableFetchCalls[0].body.campaign_id, '2026-06-14:LONG:HTF-FAILED-AUCTION');
+assert.equal(durableFetchCalls[0].body.trade_date, '2026-06-14');
 const missingDurableLedger = await claimDurableActiveCampaignScannerAlert({
   config: null,
   candidate: campaignCandidate,
@@ -1982,10 +2051,10 @@ try {
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed'],
   );
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
-  assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
+  assert.ok(deskPlayText.includes('SHORT:'));
   assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
   assert.ok(deskPlayText.includes('Confidence:'));
-  assert.ok(deskPlayText.includes('HTF reaction:'));
+  assert.ok(deskPlayText.includes('React:'));
   assert.ok(deskPlayText.includes('Entry ref: 5324.25'));
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));

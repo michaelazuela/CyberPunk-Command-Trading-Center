@@ -48,6 +48,42 @@ function timestampMs(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function etPartsFromCandleTime(value: string | null | undefined): { weekday: string; hour: number; minute: number } {
+  const normalized = normalizeCandleTimeEt(value || '');
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return { weekday: '', hour: 0, minute: 0 };
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+  }).format(new Date(`${match[1]}T12:00:00Z`));
+  const hour = Number(match[2]);
+  const minute = Number(match[3]);
+  return {
+    weekday,
+    hour: Number.isFinite(hour) ? (hour === 24 ? 0 : hour) : 0,
+    minute: Number.isFinite(minute) ? minute : 0,
+  };
+}
+
+export function isSundayEveningFourHourReopenLagCovered(
+  timeframe: MarketBarTimeframe,
+  lastLoadedTime: string | null | undefined,
+  requestedTo: string,
+): boolean {
+  if (timeframe !== '240m') return false;
+  const requested = etPartsFromCandleTime(requestedTo);
+  if (requested.weekday !== 'Sun') return false;
+
+  const requestedMinutes = requested.hour * 60 + requested.minute;
+  const sundayOpen = 18 * 60;
+  const firstFourHourCompletion = 22 * 60;
+  if (requestedMinutes < sundayOpen || requestedMinutes >= firstFourHourCompletion) return false;
+
+  const loaded = etPartsFromCandleTime(lastLoadedTime);
+  const loadedMinutes = loaded.hour * 60 + loaded.minute;
+  return loaded.weekday === 'Fri' && loadedMinutes >= 16 * 60;
+}
+
 function hasValidOhlc(bar: NinjaBridgeBar): boolean {
   if (![bar.open, bar.high, bar.low, bar.close].every((value) => typeof value === 'number' && Number.isFinite(value))) {
     return false;
@@ -134,18 +170,25 @@ export function verifyMarketDataWindow(args: {
   const latestCompletedToleranceMs = (timeframeMinutes(args.timeframe) + 30) * 60_000;
   const startCoverageToleranceMs = (args.requiredLookbackDays > 1 ? 24 * 60 : timeframeMinutes(args.timeframe)) * 60_000;
   const internalGaps = args.requiredLookbackDays <= 1 ? countInternalGaps(sorted, args.timeframe) : 0;
+  const sundayEveningFourHourReopenLagCovered =
+    isSundayEveningFourHourReopenLagCovered(args.timeframe, last, args.requestedTo);
+  const latestCoverageSatisfied = toMs !== null && lastMs !== null && (
+    lastMs >= toMs - latestCompletedToleranceMs ||
+    sundayEveningFourHourReopenLagCovered
+  );
+  const spanCoverageSatisfied =
+    loadedSpanDays >= requiredSpanDays ||
+    (sundayEveningFourHourReopenLagCovered && loadedSpanDays >= requiredSpanDays - 3);
   const sufficient = (
     sorted.length >= args.minimumBars &&
     invalidBars === 0 &&
     duplicateTimestamps === 0 &&
     internalGaps === 0 &&
-    loadedSpanDays >= requiredSpanDays &&
+    spanCoverageSatisfied &&
     fromMs !== null &&
     firstMs !== null &&
     firstMs <= fromMs + startCoverageToleranceMs &&
-    toMs !== null &&
-    lastMs !== null &&
-    lastMs >= toMs - latestCompletedToleranceMs
+    latestCoverageSatisfied
   );
   const dataLimitationMessage = sufficient
     ? null

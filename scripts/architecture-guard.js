@@ -545,11 +545,11 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('discord-alert-format.ts must not duplicate scanner target/reaction selection. Use candidateTargetReactionObjective from localScannerEngine.ts.');
   }
   if (
-    !formatterContent.includes('Manage, do not press') ||
+    !formatterContent.includes('manage into HTF') ||
     !formatterContent.includes('Entry ref:') ||
     !formatterContent.includes('Confidence:') ||
-    !formatterContent.includes('HTF reaction:') ||
-    !formatterContent.includes('HTF Runner Map') ||
+    !formatterContent.includes('React:') ||
+    !formatterContent.includes('App T1/T2:') ||
     !formatterContent.includes('HTF Bias Lines') ||
     !formatterContent.includes('Desk Direction') ||
     !formatterContent.includes('scanner_protected_structure_trend_confirmation') ||
@@ -559,7 +559,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Best model:') ||
     !formatterContent.includes('Ready:') ||
     !formatterContent.includes('Gate:') ||
-    !formatterContent.includes('5M still controls execution') ||
+    !formatterContent.includes('5M executes.') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||
     !formatterContent.includes('App T1/T2 tactical') ||

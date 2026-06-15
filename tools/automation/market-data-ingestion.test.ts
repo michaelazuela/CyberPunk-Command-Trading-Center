@@ -70,6 +70,44 @@ assert.equal(sufficient.sufficient, true);
 assert.equal(sufficient.dataLimitation.status, 'none');
 assert.equal(sufficient.dataLimitation.canInventMissingBars, false);
 
+const sundayEveningFourHourCoverageBars = [
+  ...Array.from({ length: 29 }, (_, index) => bar(
+    `${new Date(Date.UTC(2026, 4, 15 + index)).toISOString().slice(0, 10)}T02:00:00-04:00`,
+  )),
+  ...Array.from({ length: 12 }, (_, index) => bar(
+    `2026-06-12T${String(6 + index).padStart(2, '0')}:00:00-04:00`,
+  )),
+];
+const sundayEveningFourHourWindow = verifyMarketDataWindow({
+  bars: sundayEveningFourHourCoverageBars,
+  timeframe: '240m',
+  requestedFrom: '2026-05-15T00:00:00-04:00',
+  requestedTo: '2026-06-14T20:50:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 40,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 42,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(sundayEveningFourHourWindow.sufficient, true);
+assert.equal(sundayEveningFourHourWindow.dataLimitation.status, 'none');
+
+const afterFirstSundayFourHourWindow = verifyMarketDataWindow({
+  bars: sundayEveningFourHourCoverageBars,
+  timeframe: '240m',
+  requestedFrom: '2026-05-15T00:00:00-04:00',
+  requestedTo: '2026-06-14T22:00:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 40,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 42,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(afterFirstSundayFourHourWindow.sufficient, false);
+assert.equal(afterFirstSundayFourHourWindow.dataLimitation.status, 'bridge_or_cache_incomplete');
+
 const insufficient = verifyMarketDataWindow({
   bars: liveWithGap,
   timeframe: '5m',

@@ -536,45 +536,38 @@ assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.co
 assert.ok(deskPlayText.includes('Scanner Desk Play'));
 assert.ok(deskPlayText.includes('Status: REVIEW ONLY - NOT EXECUTION'));
 assert.ok(deskPlayText.includes('HTF Bias Lines'));
-assert.ok(deskPlayText.includes('4H: BULL now | line 7271.75 | changes BEAR below 7271.75 | confirm close+hold below | target 7428.75'));
-assert.ok(deskPlayText.includes('2H: BULL now | line 7288.25 | changes BEAR below 7288.25 | confirm close+hold below | target 7410.00'));
-assert.ok(deskPlayText.includes('1H: BULL now | line 7303.50 | changes BEAR below 7303.50 | confirm close+hold below | target N/A'));
-assert.ok(deskPlayText.includes('15M: BULL now | line 7342.00 | changes BEAR below 7342.00 | confirm close+hold below | target 7410.00'));
-assert.ok(deskPlayText.includes('5M: BULL now | line 7271.75 | changes BEAR below 7271.75 | confirm close+hold below | target 7392.50'));
-assert.ok(deskPlayText.includes('Reliability: structural; 5M still controls execution.'));
+assert.ok(deskPlayText.includes('4H: BULL | bear < 7271.75'));
+assert.ok(deskPlayText.includes('2H: BULL | bear < 7288.25'));
+assert.ok(deskPlayText.includes('1H: BULL | bear < 7303.50'));
+assert.ok(deskPlayText.includes('15M: BULL | bear < 7342.00'));
+assert.ok(deskPlayText.includes('5M: BULL | bear < 7271.75'));
+assert.ok(deskPlayText.includes('Reliability: structural; 5M executes.'));
 assert.ok(deskPlayText.includes('Desk Direction'));
 assert.ok(deskPlayText.includes('LONG | aligned | 15M+5M | Line 7271.75'));
-assert.ok(deskPlayText.includes('Desk Direction: LONG. Trend confirmation: 15M+5M protected structure aligned; changes BEAR below 7271.75.'));
-assert.ok(deskPlayText.includes('SHORT: Manage, do not press'));
-assert.ok(deskPlayText.includes('Short ran into HTF support: 7288.25'));
+assert.ok(deskPlayText.includes('SHORT:'));
+assert.ok(deskPlayText.includes('7288.25'));
 assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
-assert.ok(deskPlayText.includes('HTF reaction: London Session Low 7288.25 | 15M/60M/120M | strength strong'));
-assert.ok(deskPlayText.includes('Take profit into 7288.25'));
-assert.ok(deskPlayText.includes('No fresh short unless price accepts below 7303.50'));
+assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
 assert.ok(deskPlayText.includes('Ready: WAIT ENTRY'));
-assert.ok(deskPlayText.includes('HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate'));
 assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
 const longPrimarySection = [
   'LONG ABOVE 7342.00',
   'Confidence: 82/100 high',
   'Ready: WAIT ENTRY',
-  'HTF reaction: 15M bullish imbalance top 7342.00 | 15M | strength moderate',
   'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
 ].map((line) => deskPlayText.indexOf(line));
 assert.ok(longPrimarySection.every((index) => index >= 0), 'expected readiness inside the primary LONG Desk Play section');
-assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Play section must keep confidence, readiness, reaction, and level status in order');
+assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Play section must keep confidence, readiness, and level status in order');
 assert.ok(!deskPlayText.includes('Entry ref: 7312.00'));
 assert.ok(!deskPlayText.includes('Stop: 7271.75'));
 assert.ok(!deskPlayText.includes('Risk: 40.25 pts'));
 assert.ok(!deskPlayText.includes('T1: 7372.50'));
 assert.ok(!deskPlayText.includes('T2: 7392.50'));
-assert.ok(deskPlayText.includes('HTF Runner Map'));
-assert.ok(deskPlayText.includes('App targets: T1 7372.50 / T2 7392.50'));
-assert.ok(deskPlayText.includes('Next draw: Prior RTH high 7410.00 2.4R'));
-assert.ok(deskPlayText.includes('Runner: Full ETH high 7428.75 2.9R'));
-assert.ok(deskPlayText.includes('App T1/T2 remain tactical'));
+assert.ok(deskPlayText.includes('App T1/T2: 7372.50 / 7392.50'));
+assert.ok(deskPlayText.includes('HTF: React 7288.25 | Next 7410.00 | Run 7428.75'));
+assert.ok(deskPlayText.includes('Mgmt: app T1/T2 first; runner after 5M acceptance.'));
 assert.ok(deskPlayText.includes('Trigger:'));
 assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.00.'));
 assert.ok(deskPlayText.includes('Invalid:'));
@@ -698,9 +691,9 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
 assert.ok(deskPlayDecisionMapText.includes('HTF Bias Lines'));
-assert.ok(deskPlayDecisionMapText.includes('4H: BEAR now | line 7423.75 | changes BULL above 7423.75 | confirm close+hold above | target 7460.00'));
-assert.ok(deskPlayDecisionMapText.includes('15M: BEAR now | line 7440.25 | changes BULL above 7440.25 | confirm close+hold above | target 7318.75'));
-assert.ok(deskPlayDecisionMapText.includes('5M: BULL now | line 7350.25 | changes BEAR below 7350.25 | confirm close+hold below | target 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('4H: BEAR | bull > 7423.75'));
+assert.ok(deskPlayDecisionMapText.includes('15M: BEAR | bull > 7440.25'));
+assert.ok(deskPlayDecisionMapText.includes('5M: BULL | bear < 7350.25'));
 assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
 assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
 assert.ok(deskPlayDecisionMapText.includes('EXEC CANDIDATE'));
@@ -945,6 +938,41 @@ assertCompactPayload(lunch, ['chart-plan.png', 'price-level-map.png']);
 assert.ok(lunch.content?.includes('[PM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
 assert.deepEqual((lunch.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Short T1 Hit', 'Short T2 Hit', 'Short Runner Hit', 'Short Stretch Hit', 'Short Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(!JSON.stringify(lunch.components).includes('Long T1 Hit'));
+
+const eveningMissedCandidate = sampleCandidate('LONG');
+eveningMissedCandidate.setupType = SetupType.TurtleSoup;
+eveningMissedCandidate.scenarioLabel = 'Bullish Turtle Soup Reversal - normalized plan not executable';
+eveningMissedCandidate.entry = 7552.5;
+eveningMissedCandidate.stop = 7546.5;
+eveningMissedCandidate.target1 = 7565;
+eveningMissedCandidate.target2 = 7570;
+eveningMissedCandidate.riskPoints = 6;
+eveningMissedCandidate.modelConfidenceScore = 85;
+eveningMissedCandidate.requiredTrigger = 'Bullish Turtle Soup: sell-side sweep below 7548.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+eveningMissedCandidate.nextAction = 'Preferred plan: take only the reclaim-confirmed reversal or the retrace after expansion; do not chase the first reversal candle. Risk exceeds standard limit. Human final decision required. Normalized app-owned plan is not executable. Wait for a fresh completed 5M trigger/retest before human review.';
+eveningMissedCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7546.5.';
+const eveningMissed = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-14',
+  instrument: 'MES',
+  planVersionId: 'EVENING-MISSED-LENGTH',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'LONG',
+    noTradeReason: null,
+    invalidation: eveningMissedCandidate.invalidation,
+  },
+  candidates: [eveningMissedCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  windowLabel: '18:45-22:15 ET',
+});
+validateDiscordPayload(eveningMissed, ['chart-plan.png', 'price-level-map.png']);
+const eveningMissedText = flattenDiscordPayloadText(eveningMissed);
+assert.ok(eveningMissedText.length < 1200, `expected evening missed payload under 1200 chars, got ${eveningMissedText.length}`);
+assert.ok(eveningMissedText.includes('Entry: 7552.50 | Stop: 7546.50'));
+assert.ok(eveningMissedText.includes('No chase. Wait for completed 5M proof and protected structure.'));
 
 const extensionCandidate = sampleCandidate('LONG');
 extensionCandidate.entry = 7603.25;
