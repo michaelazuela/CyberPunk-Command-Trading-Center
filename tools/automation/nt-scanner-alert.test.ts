@@ -708,6 +708,18 @@ const shiftedDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
 assert.notEqual(firstDeskPlanRefreshKey, shiftedDeskPlanRefreshKey);
 assert.ok(firstDeskPlanRefreshKey.includes('DESK_PLAN_REFRESH'));
 assert.ok(shiftedDeskPlanRefreshKey.includes('m5=BEAR:7419.25:7412.75'));
+const sundayEveningDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
+  tradeDate: '2026-06-14',
+  instrument: 'MES',
+  session: 'evening',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    activeCampaign: utcRolloverCampaignCandidate.activeCampaign,
+  },
+  latestCompleted5m: '2026-06-14T21:30:00.0000000',
+});
+assert.ok(sundayEveningDeskPlanRefreshKey.includes('2026-06-14:LONG:HTF-FAILED-AUCTION'));
+assert.ok(!sundayEveningDeskPlanRefreshKey.includes('2026-06-15:LONG:HTF-FAILED-AUCTION'));
 assert.deepEqual(loadScannerActiveCampaignLedgerConfig({
   SUPABASE_URL: 'https://project.supabase.co/rest/v1',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-test',
@@ -1829,6 +1841,8 @@ try {
       confidence: 86,
     });
     const ragInsert = ragCalls.find((call) => call.method === 'POST');
+    assert.equal(ragInsert?.body.trade_result, 'pending');
+    assert.equal(ragInsert?.body.outcome, 'no_trade');
     assert.equal(ragInsert?.body.trade_plan_json.deskState.sourceOfTruth, 'scanner_desk_state');
     assert.equal(ragInsert?.body.trade_plan_json.visibility.sourceOfTruth, 'scanner_desk_state_visibility_metadata');
     assert.equal(ragInsert?.body.trade_plan_json.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
@@ -2061,6 +2075,64 @@ try {
   assert.ok(deskPlayText.includes('T2: 5334.25'));
   assert.ok(deskPlayText.includes('Chart: review attached; approvals unchanged.'));
   assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under 1200 chars, got ${deskPlayText.length}`);
+  const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
+  process.env.SUPABASE_URL = 'https://supabase.example/rest/v1';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
+  process.env.DISCORD_RAG_USER_ID = 'user-test';
+  globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    deskPlayRagCalls.push({
+      url: String(url),
+      method: String(init?.method || 'GET'),
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+    });
+    if (String(init?.method || 'GET') === 'PATCH') {
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify([{ id: 'desk-play-rag-row-1' }]), { status: 201, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof fetch;
+  try {
+    await upsertScannerDiscordAlertRagRecord({
+      planVersionId: 'SCANNER-DESK-PLAY-RAG-FIXTURE',
+      session: 'evening',
+      tradeDate: '2026-06-14',
+      instrument: 'MES',
+      analysis: { structuredChartContext: chartContext } as any,
+      normalized: {
+        canExecute: false,
+        decisionStatus: TradeDecisionStatus.Wait,
+        decision: 'LONG',
+        noTradeReason: 'EntryTriggerPending',
+        invalidation: deskPlayCandidate.invalidation,
+        setupCandidates: [deskPlayCandidate],
+      } as any,
+      candidate: {
+        ...contextChartCandidate,
+        stop: null,
+        target1: null,
+        target2: null,
+        riskPoints: null,
+      } as SetupCandidate,
+      visibilityMetadata: deskPlayVisibility,
+      candidateLifecycleTrace: deskPlayLifecycleTrace,
+      deskState: deskPlayState,
+      confidence: 81,
+    });
+    const deskPlayRagInsert = deskPlayRagCalls.find((call) => call.method === 'POST');
+    assert.equal(deskPlayRagInsert?.body.session_type, 'evening');
+    assert.equal(deskPlayRagInsert?.body.trade_date, '2026-06-14');
+    assert.equal(deskPlayRagInsert?.body.trade_result, 'pending');
+    assert.equal(deskPlayRagInsert?.body.outcome, 'no_trade');
+    assert.equal(deskPlayRagInsert?.body.stop_price, null);
+    assert.equal(deskPlayRagInsert?.body.target_1_price, null);
+    assert.equal(deskPlayRagInsert?.body.target_2_price, null);
+    assert.equal(deskPlayRagInsert?.body.trade_plan_json.approvalBoundary.discordOutcomeApprovesTrade, false);
+    assert.equal(deskPlayRagInsert?.body.trade_plan_json.approvalBoundary.ragSaveApprovesTrade, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreOptionalEnv('SUPABASE_URL', previousSupabaseUrl);
+    restoreOptionalEnv('SUPABASE_SERVICE_ROLE_KEY', previousSupabaseServiceRoleKey);
+    restoreOptionalEnv('DISCORD_RAG_USER_ID', previousDiscordRagUserId);
+  }
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,

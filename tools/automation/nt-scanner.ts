@@ -467,6 +467,10 @@ export function scannerActiveCampaignKey(candidate: SetupCandidate | null | unde
 
 export function scannerActiveCampaignKeyForTradeDate(candidate: SetupCandidate | null | undefined, tradeDate: string): string | null {
   const campaignId = scannerActiveCampaignKey(candidate);
+  return normalizeActiveCampaignIdForTradeDate(campaignId, tradeDate);
+}
+
+function normalizeActiveCampaignIdForTradeDate(campaignId: string | null | undefined, tradeDate: string): string | null {
   const normalizedTradeDate = typeof tradeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(tradeDate.trim())
     ? tradeDate.trim()
     : null;
@@ -3011,7 +3015,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
     day_of_week: getDayOfWeek(args.tradeDate),
     instrument: args.instrument,
     trade_result: 'pending',
-    outcome: null,
+    outcome: 'no_trade',
     source: 'discord_alert',
     analysis_mode: 'live',
     setup_quality_score: 0.5,
@@ -3132,13 +3136,14 @@ export function scannerDeskPlanRefreshKey(args: {
     line: shortLifecycleFields.line ?? shortBiasFields.line,
   };
   const protected5m = play.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M') || null;
+  const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
   const parts = [
     args.tradeDate,
     args.instrument,
     args.session,
     'DESK_PLAN_REFRESH',
     args.latestCompleted5m || 'no-completed-5m',
-    args.deskState.activeCampaign?.id || 'no-campaign',
+    activeCampaignId || 'no-campaign',
     play.direction,
     `line=${deskPlanRefreshPrice(play.lineInSand)}`,
     `long=${play.longBias.state}:${deskPlanRefreshPrice(long.line)}:${deskPlanRefreshPrice(long.entry)}:${deskPlanRefreshPrice(long.stop)}:${deskPlanRefreshPrice(long.target1)}:${deskPlanRefreshPrice(long.target2)}`,
@@ -3165,12 +3170,13 @@ function scannerDeskPlanRefreshRecord(args: {
     : play.direction === 'SHORT'
     ? args.deskState.bestShortPlan
     : args.deskState.selectedCandidate || args.deskState.bestLongPlan || args.deskState.bestShortPlan;
+  const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
   return {
     fingerprint: args.key,
     tradeDate: args.tradeDate,
     instrument: args.instrument,
     session: args.session,
-    activeCampaignId: args.deskState.activeCampaign?.id || null,
+    activeCampaignId,
     direction: play.direction,
     latestCompleted5m: args.latestCompleted5m || null,
     lineInSand: play.lineInSand,

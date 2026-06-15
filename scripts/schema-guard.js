@@ -120,6 +120,12 @@ function main() {
     'grant select, insert, update on table scanner_active_campaign_alerts to authenticated',
   ]);
 
+  requireTerms(sql, 'Evening scanner session constraints', [
+    "trade_embeddings_session_type_check\n  check (session_type in ('morning','lunch','evening','replay_morning','replay_lunch','replay_evening'))",
+    "setups_session_type_check\n  check (session_type is null or session_type in ('morning','lunch','evening','replay_morning','replay_lunch','replay_evening'))",
+    "scanner_active_campaign_alerts_session_check\n  check (session in ('morning','lunch','evening','replay_morning','replay_lunch','replay_evening'))",
+  ]);
+
   if (hasError) {
     console.error('\n🚨 ERROR: Supabase schema guard failed.');
     process.exit(1);
