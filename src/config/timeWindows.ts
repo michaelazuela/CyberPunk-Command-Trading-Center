@@ -112,17 +112,22 @@ const INTRADAY_MSS_MICRO_LATE_DAY_END =
 /** Get NY time details */
 function getNYTime() {
   const now = new Date();
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now);
   const nyStr = now.toLocaleString("en-US", { timeZone: "America/New_York", hour12: false });
   // nyStr format: MM/DD/YYYY, HH:mm:ss
   const match = nyStr.match(/(\d+)\/(\d+)\/(\d+),\s+(\d+):(\d+):(\d+)/);
-  if (!match) return { hour: now.getUTCHours(), minute: now.getUTCMinutes(), isWeekend: [0, 6].includes(now.getUTCDay()) };
+  if (!match) return { hour: now.getUTCHours(), minute: now.getUTCMinutes(), weekday, isWeekendClosure: [0, 6].includes(now.getUTCDay()) };
   
   const [_, M, D, Y, h, m, s] = match;
-  const nyDate = new Date(nyStr);
+  const hour = parseInt(h, 10);
+  const minute = parseInt(m, 10);
+  const currentTime = hour * 60 + minute;
+  const eveningOpen = TIME_WINDOWS.evening.openHour * 60 + TIME_WINDOWS.evening.openMinute;
   return {
-    hour: parseInt(h, 10),
-    minute: parseInt(m, 10),
-    isWeekend: [0, 6].includes(nyDate.getDay())
+    hour,
+    minute,
+    weekday,
+    isWeekendClosure: weekday === "Sat" || (weekday === "Sun" && currentTime < eveningOpen) || (weekday === "Fri" && currentTime >= eveningOpen),
   };
 }
 
@@ -131,8 +136,8 @@ export function isWindowActive(key: WindowKey): boolean {
 }
 
 export function getWindowStatus(key: WindowKey): "active" | "too_early" | "too_late" | "weekend" {
-  const { hour, minute, isWeekend } = getNYTime();
-  if (isWeekend) return "weekend";
+  const { hour, minute, isWeekendClosure } = getNYTime();
+  if (isWeekendClosure) return "weekend";
 
   const win = TIME_WINDOWS[key];
   const currentTime = hour * 60 + minute;

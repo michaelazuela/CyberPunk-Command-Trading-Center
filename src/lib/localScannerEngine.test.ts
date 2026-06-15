@@ -91,7 +91,10 @@ const beforeEveningWindow = resolveScannerWindow(new Date('2026-05-19T18:44:00-0
 const eveningWindow = resolveScannerWindow(new Date('2026-05-19T18:45:00-04:00'));
 const lateEveningWindow = resolveScannerWindow(new Date('2026-05-19T22:14:00-04:00'));
 const eveningCloseWindow = resolveScannerWindow(new Date('2026-05-19T22:15:00-04:00'));
+const fridayEveningClosureWindow = resolveScannerWindow(new Date('2026-06-12T18:45:00-04:00'));
 const weekendWindow = resolveScannerWindow(new Date('2026-06-13T10:00:00-04:00'));
+const sundayBeforeEveningWindow = resolveScannerWindow(new Date('2026-06-14T18:44:00-04:00'));
+const sundayEveningWindow = resolveScannerWindow(new Date('2026-06-14T18:45:00-04:00'));
 
 assert.equal(openingWindow.session, 'morning');
 assert.equal(openingWindow.allowsTradePlan, true);
@@ -165,6 +168,9 @@ assert.equal(lateEveningWindow.allowsTradePlan, true);
 assert.equal(eveningCloseWindow.session, 'outside');
 assert.equal(eveningCloseWindow.allowsTradePlan, false);
 assert.equal(eveningCloseWindow.allowsMarketMapping, false);
+assert.equal(fridayEveningClosureWindow.session, 'outside');
+assert.equal(fridayEveningClosureWindow.label, 'Market Closed - Weekend');
+assert.equal(fridayEveningClosureWindow.allowsTradePlan, false);
 assert.equal(weekendWindow.session, 'outside');
 assert.equal(weekendWindow.label, 'Market Closed - Weekend');
 assert.equal(weekendWindow.allowsTradePlan, false);
@@ -173,6 +179,12 @@ assert.equal(weekendWindow.allowsMarketMapping, false);
 assert.equal(weekendWindow.allowsDeskPlan, false);
 assert.equal(scannerContextLogLabel(weekendWindow), MARKET_MAPPING_OFF_HOURS_LABEL);
 assert.equal(scannerContextState(weekendWindow), 'NoData');
+assert.equal(sundayBeforeEveningWindow.session, 'outside');
+assert.equal(sundayBeforeEveningWindow.nextWindowLabel, 'Evening Setup Scan');
+assert.equal(sundayEveningWindow.session, 'evening');
+assert.equal(sundayEveningWindow.allowsTradePlan, true);
+assert.equal(sundayEveningWindow.allowsDeskPlan, true);
+assert.equal(sundayEveningWindow.allowsMarketMapping, true);
 assert.ok(MARKET_MAPPING_COVERAGE.includes('prior day/week/month levels'));
 
 const completed = latestCompletedBar(

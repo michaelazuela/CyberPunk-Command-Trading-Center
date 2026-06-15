@@ -169,7 +169,10 @@ function etTimeParts(now: Date): { minutes: number; weekday: string } {
 
 function isAfterFinalScannerCloseOrWeekend(now: Date): boolean {
   const parts = etTimeParts(now);
-  return parts.weekday === 'Sat' || parts.weekday === 'Sun' || parts.minutes >= (22 * 60 + 15);
+  return parts.weekday === 'Sat' ||
+    (parts.weekday === 'Sun' && parts.minutes < (18 * 60 + 45)) ||
+    (parts.weekday === 'Fri' && parts.minutes >= (18 * 60 + 45)) ||
+    parts.minutes >= (22 * 60 + 15);
 }
 
 function configuredBridgeInstrument(config: SupervisorConfig): string | null {

@@ -317,6 +317,10 @@ assert.equal(
 );
 assert.equal(
   shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-05T18:45:00-04:00'))),
+  false,
+);
+assert.equal(
+  shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-14T18:45:00-04:00'))),
   true,
 );
 assert.equal(

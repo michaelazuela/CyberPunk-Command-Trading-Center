@@ -266,6 +266,39 @@ const afterCloseHealth = await buildHealthReport(
 const afterCloseHeartbeat = afterCloseHealth.checks.find((check) => check.id === 'recorder_heartbeat');
 assert.equal(afterCloseHeartbeat?.status, 'ok');
 assert.ok(afterCloseHeartbeat?.message.includes('paused after the 10:15 PM ET scanner close'));
+const sundayEveningRecorderHeartbeatPath = path.join(tempLogsDir, 'sunday-evening-recorder-heartbeat.json');
+fs.writeFileSync(sundayEveningRecorderHeartbeatPath, JSON.stringify({
+  status: 'warn',
+  updatedAt: '2026-06-15T00:25:50.000Z',
+  latestCompleted5m: '2026-06-14T20:25:00.0000000',
+  warning: 'NinjaTrader bridge is reachable, but latest completed 5M candle is stale.',
+}, null, 2), 'utf8');
+const sundayEveningHealth = await buildHealthReport(
+  {
+    ...processConfig,
+    childServices: [
+      ...processConfig.childServices,
+      {
+        id: 'candle-recorder',
+        label: 'Candle Recorder',
+        npmScript: 'nt:candle-recorder',
+        args: ['--heartbeat-path', sundayEveningRecorderHeartbeatPath],
+        enabled: true,
+      },
+    ],
+  },
+  {
+    ...afterCloseHealthState,
+    services: [{
+      ...afterCloseHealthState.services[0],
+      stdoutLog: sundayEveningRecorderHeartbeatPath,
+    }],
+  },
+  new Date('2026-06-15T00:25:51.464Z'),
+  {},
+);
+const sundayEveningHeartbeat = sundayEveningHealth.checks.find((check) => check.id === 'recorder_heartbeat');
+assert.equal(sundayEveningHeartbeat?.status, 'warn');
 const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T12:59:00.000Z'));
 assert.equal(outsideWindowBackfill.attempted, false);
 assert.equal(outsideWindowBackfill.due, false);
