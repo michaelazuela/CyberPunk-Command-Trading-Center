@@ -17,7 +17,7 @@
     "supervisor:check": "tsx tools/supervisor/index.ts check",
     "supervisor:status": "tsx tools/supervisor/index.ts status",
     "supervisor:stop": "tsx tools/supervisor/index.ts stop",
-    "supervisor:tray": "powershell -NoProfile -ExecutionPolicy Bypass -STA -File ./QuantDeskSupervisorTray.ps1",
+    "supervisor:tray": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Start-QuantDeskSupervisorTray.ps1",
     "supervisor:notify-self-heal": "tsx tools/supervisor/index.ts notify-self-heal",
     "supervisor:test-child": "tsx tools/supervisor/test-child.ts",
     "diagnostic:replay": "tsx tools/automation/diagnostic-replay.ts",
