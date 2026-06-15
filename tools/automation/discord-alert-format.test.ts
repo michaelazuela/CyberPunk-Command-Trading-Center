@@ -579,8 +579,8 @@ assert.ok(deskPlayText.includes('Trigger:'));
 assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.00.'));
 assert.ok(deskPlayText.includes('Invalid:'));
 assert.ok(deskPlayText.includes('Invalid: LONG fails below 7342.00'));
-assert.ok(deskPlayText.includes('Chart: watch chart attached; levels withheld until protected structure is proven.'));
-assert.ok(deskPlayText.includes('Boundary: approvals unchanged.'));
+assert.ok(deskPlayText.includes('Chart: watch attached; levels withheld; approvals unchanged.'));
+assert.ok(!deskPlayText.includes('Boundary: approvals unchanged.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
 assert.ok(!deskPlayText.includes('Decision Map:'));
@@ -919,7 +919,8 @@ assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('Risk: 10.50 pts'));
 assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
 assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
-assert.ok(deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
+assert.ok(deskPlaySupportedShortText.includes('Chart: review attached; approvals unchanged.'));
+assert.ok(!deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
 
 const lunch = compactDiscordSummary({

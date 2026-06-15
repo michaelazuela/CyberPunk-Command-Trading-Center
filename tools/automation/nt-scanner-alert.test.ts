@@ -1977,7 +1977,8 @@ try {
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Chart: review attached; not approval.'));
+  assert.ok(deskPlayText.includes('Chart: review attached; approvals unchanged.'));
+  assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under 1200 chars, got ${deskPlayText.length}`);
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,

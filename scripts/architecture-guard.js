@@ -565,8 +565,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
     !formatterContent.includes('strength') ||
-    !formatterContent.includes('Chart: review attached; not approval.') ||
-    !formatterContent.includes('Boundary: approvals unchanged.') ||
+    !formatterContent.includes('Chart: review attached; approvals unchanged.') ||
+    !formatterContent.includes('Chart: watch attached; levels withheld; approvals unchanged.') ||
     !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
   ) {
     fail('discord-alert-format.ts must keep Desk Play alerts concise with RAG buttons, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');

@@ -1304,12 +1304,10 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     deskPlayInvalidationLine(args, play, direction),
     '',
     hasConditionalLevels
-      ? 'Chart: review attached; not approval.'
+      ? 'Chart: review attached; approvals unchanged.'
       : args.attachments.chartPlan
-      ? 'Chart: watch chart attached; levels withheld until protected structure is proven.'
-      : 'Chart: none.',
-    '',
-    'Boundary: approvals unchanged.',
+      ? 'Chart: watch attached; levels withheld; approvals unchanged.'
+      : 'Chart: none; approvals unchanged.',
   ];
   return {
     username: 'Quant Desk',
