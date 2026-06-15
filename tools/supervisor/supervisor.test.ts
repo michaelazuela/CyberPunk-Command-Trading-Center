@@ -181,6 +181,9 @@ assert.ok(trayScript.includes('Set-SupervisorStarting'));
 assert.ok(trayScript.includes('Get-SupervisorProcessFallbackStatus'));
 assert.ok(trayScript.includes('Confirm-SupervisorEndpointUnavailable'));
 assert.ok(trayScript.includes('Supervisor self-heal suppressed; endpoint recovered during confirmation.'));
+assert.ok(trayScript.includes('[bool]$ProcessRunning = $false'));
+assert.ok(trayScript.includes('Invoke-SelfHealIfNeeded -Payload $state.Payload -ProcessRunning $state.ProcessRunning'));
+assert.ok(trayScript.includes('Supervisor initial start suppressed; process is running while endpoint reconnects.'));
 assert.ok(trayScript.includes('Supervisor startup grace expired; self-heal may retry.'));
 assert.ok(trayScript.includes('Supervisor start requested; waiting for status endpoint.'));
 assert.ok(trayScript.includes('Reconnecting'));
@@ -1010,14 +1013,25 @@ assert.equal(transientBridgeNotifications.notifications.some((item) => item.kind
 assert.equal(transientBridgeNotifications.nextState.lastStatuses.bridge, 'transient_fail');
 assert.equal(transientBridgeNotifications.nextState.lastStatuses.bridge_fail_count, '1');
 
-const confirmedBridgeFailureNotifications = buildSupervisorNotifications(
+const secondTransientBridgeNotifications = buildSupervisorNotifications(
   transientBridgeFailureStatus,
   transientBridgeNotifications.nextState,
   new Date(fixedNow.getTime() + 15_000),
 );
+assert.equal(secondTransientBridgeNotifications.notifications.some((item) => item.kind === 'bridge_unreachable'), false);
+assert.equal(secondTransientBridgeNotifications.nextState.lastStatuses.bridge, 'transient_fail');
+assert.equal(secondTransientBridgeNotifications.nextState.lastStatuses.bridge_fail_count, '2');
+assert.equal(secondTransientBridgeNotifications.nextState.lastStatuses.bridge_first_failed_at, fixedNow.toISOString());
+
+const confirmedBridgeFailureNotifications = buildSupervisorNotifications(
+  transientBridgeFailureStatus,
+  secondTransientBridgeNotifications.nextState,
+  new Date(fixedNow.getTime() + 65_000),
+);
 assert.equal(confirmedBridgeFailureNotifications.notifications.some((item) => item.kind === 'bridge_unreachable'), true);
 assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge, 'fail');
-assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge_fail_count, '2');
+assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge_fail_count, '3');
+assert.equal(confirmedBridgeFailureNotifications.nextState.lastStatuses.bridge_first_failed_at, fixedNow.toISOString());
 
 const bridgeRecoveredStatus = buildSupervisorStatus(defaultConfig, bridgeFailureState, {
   status: 'ok',
@@ -1034,6 +1048,7 @@ const bridgeRecoveredNotifications = buildSupervisorNotifications(
 assert.equal(bridgeRecoveredNotifications.notifications.some((item) => item.kind === 'bridge_recovered'), true);
 assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge, 'ok');
 assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge_fail_count, '0');
+assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge_first_failed_at, '');
 
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,

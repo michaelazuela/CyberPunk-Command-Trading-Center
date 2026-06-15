@@ -331,10 +331,16 @@ $notifyIcon.ContextMenuStrip = $menu
 function Invoke-SelfHealIfNeeded {
   param(
     [AllowNull()]
-    $Payload
+    $Payload,
+    [bool]$ProcessRunning = $false
   )
 
   if ($Payload) {
+    $script:EndpointMissCount = 0
+    $script:SelfHealInProgress = $false
+    return
+  }
+  if ($ProcessRunning) {
     $script:EndpointMissCount = 0
     $script:SelfHealInProgress = $false
     return
@@ -377,7 +383,7 @@ function Invoke-SelfHealIfNeeded {
 function Update-Tray {
   try {
     $state = Get-TrayState
-    Invoke-SelfHealIfNeeded -Payload $state.Payload
+    Invoke-SelfHealIfNeeded -Payload $state.Payload -ProcessRunning $state.ProcessRunning
     if (-not $state.Payload -and -not $SelfHealPausedByStop -and $SelfHealEnabled -and -not $NoAutoStart) {
       Start-Sleep -Milliseconds 1200
       $state = Get-TrayState
@@ -479,10 +485,17 @@ $timer.Add_Tick({
 $timer.Start()
 
 if (-not $NoAutoStart -and -not (Get-SupervisorPayload)) {
-  Write-TrayLog -Message 'Supervisor endpoint unavailable on tray startup; initial start requested.'
-  $script:SelfHealInProgress = $true
-  Set-SupervisorStarting -Reason 'initial-start'
-  Start-LocalScript -ScriptPath $StartScript -Label 'initial-start' | Out-Null
+  $startupProcessFallback = Get-SupervisorProcessFallbackStatus
+  if ($startupProcessFallback) {
+    Write-TrayLog -Message 'Supervisor initial start suppressed; process is running while endpoint reconnects.' -Details @{
+      supervisorPid = $startupProcessFallback.SupervisorPid
+    }
+  } elseif (Confirm-SupervisorEndpointUnavailable) {
+    Write-TrayLog -Message 'Supervisor endpoint unavailable on tray startup; initial start requested.'
+    $script:SelfHealInProgress = $true
+    Set-SupervisorStarting -Reason 'initial-start'
+    Start-LocalScript -ScriptPath $StartScript -Label 'initial-start' | Out-Null
+  }
 }
 
 Update-Tray

@@ -77,6 +77,7 @@ const WEBHOOK_ENV_KEYS = [
 ] as const;
 
 const DEFAULT_STALE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
+const BRIDGE_UNREACHABLE_CONFIRMATION_MS = 60_000;
 
 export function resolveSupervisorDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): { url: string | null; source: string | null } {
   for (const key of WEBHOOK_ENV_KEYS) {
@@ -227,12 +228,21 @@ export function buildSupervisorNotifications(
   const previousBridge = previous.lastStatuses.bridge;
   const previousBridgeFailCount = Number(previous.lastStatuses.bridge_fail_count || '0');
   const bridgeFailCount = bridge === 'fail' ? previousBridgeFailCount + 1 : 0;
+  const previousBridgeFirstFailedAt = previous.lastStatuses.bridge_first_failed_at || '';
+  const bridgeFirstFailedAt = bridge === 'fail'
+    ? previousBridgeFailCount > 0 && previousBridgeFirstFailedAt ? previousBridgeFirstFailedAt : now.toISOString()
+    : '';
+  const bridgeFailureAgeMs = bridgeFirstFailedAt ? now.getTime() - Date.parse(bridgeFirstFailedAt) : 0;
+  const bridgeFailureConfirmed = bridge === 'fail'
+    && bridgeFailCount >= 2
+    && bridgeFailureAgeMs >= BRIDGE_UNREACHABLE_CONFIRMATION_MS;
   nextState.lastStatuses.bridge_fail_count = String(bridgeFailCount);
-  if (bridge === 'fail' && bridgeFailCount >= 2 && previousBridge !== 'fail') {
+  nextState.lastStatuses.bridge_first_failed_at = bridgeFirstFailedAt;
+  if (bridgeFailureConfirmed && previousBridge !== 'fail') {
     notifications.push(notification({
       kind: 'bridge_unreachable',
       title: 'Bridge Unreachable',
-      description: 'NinjaTrader bridge health failed consecutive checks. Scanner health may block alerts until recovery.',
+      description: 'NinjaTrader bridge health failed consecutive checks for at least 60 seconds. Scanner health may block alerts until recovery.',
       severity: 'fail',
       now,
     }));
@@ -247,7 +257,7 @@ export function buildSupervisorNotifications(
     }));
   }
   nextState.lastStatuses.bridge = bridge === 'fail'
-    ? bridgeFailCount >= 2 || previousBridge === 'fail' ? 'fail' : 'transient_fail'
+    ? (bridgeFailureConfirmed || previousBridge === 'fail' ? 'fail' : 'transient_fail')
     : bridge;
 
   const bridgeCheck = healthCheck(status, 'bridge');
