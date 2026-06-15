@@ -8,7 +8,7 @@ import { createPlanVersionId } from '../../src/lib/planMetadata';
 import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
-import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
+import { roundToTradeTick, targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { EVENING_MARKET_MAPPING_WINDOW, MARKET_MAPPING_WINDOW } from '../../src/config/timeWindows';
 import {
   buildNinjaChartContext,
@@ -2819,6 +2819,54 @@ function isFiniteTradePrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
+function deskPlayFiveMinuteProtectedStructure(deskState: DeskState): number | null {
+  const rows = deskState.primaryDeskPlay.htfProtectedStructureMap?.rows;
+  if (!Array.isArray(rows)) return null;
+  const row = rows.find((item) => String(item.timeframe || '').toUpperCase() === '5M');
+  return isFiniteTradePrice(row?.protectedStructure) ? roundToTradeTick(row.protectedStructure) : null;
+}
+
+function deskPlayLineForDirection(deskState: DeskState, direction: 'LONG' | 'SHORT'): number | null {
+  const play = deskState.primaryDeskPlay;
+  const directionalLine = direction === 'LONG' ? play.longAbove : play.shortBelow;
+  if (isFiniteTradePrice(directionalLine)) return roundToTradeTick(directionalLine);
+  const biasLine = direction === 'LONG' ? play.longBias.lineInSand : play.shortBias.lineInSand;
+  if (isFiniteTradePrice(biasLine)) return roundToTradeTick(biasLine);
+  return isFiniteTradePrice(play.lineInSand) ? roundToTradeTick(play.lineInSand) : null;
+}
+
+function validDeskPlayPlanningLevels(
+  direction: 'LONG' | 'SHORT',
+  entryValue: number | null | undefined,
+  stopValue: number | null | undefined,
+  enforceRiskCap: boolean,
+): Pick<SetupCandidate, 'entry' | 'stop' | 'target1' | 'target2' | 'riskPoints'> | null {
+  const entry = isFiniteTradePrice(entryValue) ? roundToTradeTick(entryValue) : null;
+  const stop = isFiniteTradePrice(stopValue) ? roundToTradeTick(stopValue) : null;
+  const computed = targetsFromEntryStop(direction, entry, stop);
+  const sideIsValid = direction === 'LONG'
+    ? isFiniteTradePrice(entry) && isFiniteTradePrice(stop) && stop < entry
+    : isFiniteTradePrice(entry) && isFiniteTradePrice(stop) && stop > entry;
+  if (
+    !isFiniteTradePrice(entry) ||
+    !isFiniteTradePrice(stop) ||
+    !isFiniteTradePrice(computed.target1) ||
+    !isFiniteTradePrice(computed.target2) ||
+    !isFiniteTradePrice(computed.riskPoints) ||
+    (enforceRiskCap && computed.riskPoints > TRADE_RULES.maxRiskPoints) ||
+    !sideIsValid
+  ) {
+    return null;
+  }
+  return {
+    entry,
+    stop,
+    target1: computed.target1,
+    target2: computed.target2,
+    riskPoints: computed.riskPoints,
+  };
+}
+
 function deskPlayPlanningCandidate(args: {
   deskState: DeskState;
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
@@ -2849,22 +2897,15 @@ function deskPlayPlanningLevels(args: {
   const stop = isFiniteTradePrice(args.normalized?.stop)
     ? args.normalized.stop
     : candidate?.stop ?? null;
-  const computed = targetsFromEntryStop(direction, entry, stop);
-  if (
-    !isFiniteTradePrice(entry) ||
-    !isFiniteTradePrice(stop) ||
-    !isFiniteTradePrice(computed.target1) ||
-    !isFiniteTradePrice(computed.target2)
-  ) {
-    return { entry: null, stop: null, target1: null, target2: null, riskPoints: null };
-  }
-  return {
-    entry,
-    stop,
-    target1: computed.target1,
-    target2: computed.target2,
-    riskPoints: computed.riskPoints,
-  };
+  const normalizedLevels = validDeskPlayPlanningLevels(direction, entry, stop, false);
+  if (normalizedLevels) return normalizedLevels;
+  const reviewLevels = validDeskPlayPlanningLevels(
+    direction,
+    deskPlayLineForDirection(args.deskState, direction),
+    deskPlayFiveMinuteProtectedStructure(args.deskState),
+    true,
+  );
+  return reviewLevels || { entry: null, stop: null, target1: null, target2: null, riskPoints: null };
 }
 
 function deskPlayBiasQualityScore(bias: DeskPlayDirectionalBias): number | null {

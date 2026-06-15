@@ -551,12 +551,12 @@ assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
 assert.ok(deskPlayText.includes('Ready: WAIT ENTRY'));
-assert.ok(deskPlayText.includes('Levels withheld until scanner-owned entry and protected 5M stop proof exist.'));
+assert.ok(deskPlayText.includes('Levels withheld until a valid 5M protected-structure stop is inside risk.'));
 const longPrimarySection = [
   'LONG ABOVE 7342.00',
   'Confidence: 82/100 high',
   'Ready: WAIT ENTRY',
-  'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
+  'Levels withheld until a valid 5M protected-structure stop is inside risk.',
 ].map((line) => deskPlayText.indexOf(line));
 assert.ok(longPrimarySection.every((index) => index >= 0), 'expected readiness inside the primary LONG Desk Play section');
 assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Play section must keep confidence, readiness, and level status in order');
@@ -789,6 +789,87 @@ assert.ok(invalidDeskMapText.includes('SHORT BELOW 7437.50 | levels pending'));
 assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
 assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
+
+const projectedDeskPlayPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-14',
+  instrument: 'MES',
+  planVersionId: 'EVENING-DESK-PLAY-PROJECTED-LEVELS-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'Review only until completed trigger/retest.',
+    invalidation: null,
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: false, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Evening Setup Scan',
+  currentPrice: 7579.25,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7570,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'WAIT',
+      title: 'Evening Desk Play',
+      summary: 'Review-only two-sided map.',
+      lineInSand: 7570,
+      longAbove: 7570,
+      shortBelow: 7570,
+      nextTrigger: 'LONG above 7570.00 / SHORT below 7570.00; completed 5M close/retest only.',
+      invalidation: 'Protected structure must hold.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '5M',
+            bias: 'BULL',
+            protectedStructure: 7567.5,
+            confirmationLine: 7570,
+            target: 7575,
+            targetLabel: 'App T2 7575.00',
+            confidence: 72,
+            status: 'confirmed_mss',
+            note: 'protected 7567.50; confirm 7570.00; target 7575.00',
+          },
+        ],
+        summary: 'HTF protected structure rows are scanner-owned context only.',
+      },
+      longBias: {
+        state: 'review',
+        scenarioLabel: 'Long above line in the sand',
+        lineInSand: 7570,
+        nextTrigger: 'Completed 5M close above 7570.00, then hold retest.',
+        reason: 'LONG is the aligned review path.',
+        blockers: ['canExecute=false'],
+      },
+      shortBias: {
+        state: 'review',
+        scenarioLabel: 'Short below line in the sand',
+        lineInSand: 7570,
+        nextTrigger: 'Completed 5M close below 7570.00, then failed retest.',
+        reason: 'SHORT is context only.',
+        blockers: ['canExecute=false'],
+      },
+    },
+  },
+});
+const projectedDeskPlayText = flattenDiscordPayloadText(projectedDeskPlayPayload);
+assert.ok(projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
+assert.ok(projectedDeskPlayText.includes('Entry 7570.00-7571.00 | Stop 7567.50 | T1 7573.75 | T2 7575.00'));
+assert.ok(projectedDeskPlayText.includes('NO CHASE: retest/new 5M'));
+assert.ok(!projectedDeskPlayText.includes('LONG ABOVE 7570.00 | levels pending'));
+assert.ok(projectedDeskPlayText.length < 2000, `expected projected Desk Play payload under Discord limit, got ${projectedDeskPlayText.length}`);
 
 const waitDeskMapWithCandidate = compactDiscordSummary({
   session: 'morning',

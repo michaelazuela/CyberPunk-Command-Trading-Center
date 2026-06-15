@@ -2055,6 +2055,55 @@ try {
   assert.ok(contextChartCandidate?.decisionQualityScorecard?.some((item) => item.label === 'SHORT Quality'));
   assert.ok(contextChartCandidate?.decisionQualityRecommendation?.includes('Review planning levels only'));
   assert.ok(contextChartCandidate?.missingEvidence?.includes('Desk Play chart shows review-only app-owned planning levels.'));
+  const projectedDeskPlayState: typeof deskPlayState = {
+    ...deskPlayState,
+    primaryDeskPlay: {
+      ...deskPlayState.primaryDeskPlay,
+      direction: 'LONG' as const,
+      lineInSand: 5324.25,
+      longAbove: 5324.25,
+      longBias: {
+        ...deskPlayState.primaryDeskPlay.longBias,
+        lineInSand: 5324.25,
+      },
+      htfProtectedStructureMap: {
+        ...deskPlayState.primaryDeskPlay.htfProtectedStructureMap,
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map' as const,
+            timeframe: '5M' as const,
+            bias: 'BULL' as const,
+            currentBias: 'BULL' as const,
+            biasChangeLine: 5319.25,
+            biasChangeConfirmation: 'close+hold',
+            protectedStructure: 5319.25,
+            confirmationLine: 5324.25,
+            target: 5334.25,
+            targetLabel: 'App T2 5334.25',
+            confidence: 75,
+            status: 'confirmed_mss',
+            note: 'protected 5319.25; confirm 5324.25; target 5334.25',
+          },
+        ],
+      },
+    },
+  };
+  const projectedContextChartCandidate = candidateForDeskPlayContextChart(projectedDeskPlayState, {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'EntryTriggerPending',
+    invalidation: deskPlayCandidate.invalidation,
+    setupCandidates: [],
+  } as any);
+  assert.equal(projectedContextChartCandidate?.direction, 'LONG');
+  assert.equal(projectedContextChartCandidate?.entry, 5324.25);
+  assert.equal(projectedContextChartCandidate?.stop, 5319.25);
+  assert.equal(projectedContextChartCandidate?.target1, 5331.75);
+  assert.equal(projectedContextChartCandidate?.target2, 5334.25);
+  assert.equal(projectedContextChartCandidate?.executionStatus, ExecutionStatus.Conditional);
+  assert.ok(projectedContextChartCandidate?.decisionQualityRecommendation?.includes('Review planning levels only'));
+  assert.ok(projectedContextChartCandidate?.missingEvidence?.includes('Desk Play chart shows review-only app-owned planning levels.'));
   const deskPlayResult = await prepareLiveScannerDeskPlayAlertArtifacts({
     session: 'lunch',
     tradeDate: '2026-05-26',

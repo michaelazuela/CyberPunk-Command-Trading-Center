@@ -1,4 +1,4 @@
-import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
+import { roundToTradeTick, targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { candidateTargetReactionObjective } from '../../src/lib/localScannerEngine';
 import { NoTradeReason, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
@@ -858,11 +858,91 @@ function deskPlayCandidateForDirection(
   ) || null;
 }
 
+interface DeskPlayPlanningLevels {
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  riskPoints: number;
+  entryZoneLow: number;
+  entryZoneHigh: number;
+  source: 'normalized_candidate' | 'protected_5m_review_path';
+  noChase: boolean;
+}
+
+function deskPlayFiveMinuteProtectedStructure(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
+): number | null {
+  const rows = play?.htfProtectedStructureMap?.rows;
+  if (!Array.isArray(rows)) return null;
+  const row = rows.find((item) => String(item.timeframe || '').toUpperCase() === '5M');
+  return isFinitePrice(row?.protectedStructure) ? roundToTradeTick(row.protectedStructure) : null;
+}
+
+function deskPlayEntryZone(direction: 'LONG' | 'SHORT', entry: number, riskPoints: number): { low: number; high: number } {
+  const tick = TRADE_RULES.targetModel.tickSize;
+  const width = roundToTradeTick(Math.min(1, Math.max(tick, riskPoints * 0.4)));
+  if (direction === 'LONG') {
+    return { low: entry, high: roundToTradeTick(entry + width) };
+  }
+  return { low: roundToTradeTick(entry - width), high: entry };
+}
+
+function deskPlayValidatePlanningLevels(args: {
+  direction: 'LONG' | 'SHORT';
+  entry: number | null | undefined;
+  stop: number | null | undefined;
+  source: DeskPlayPlanningLevels['source'];
+  currentPrice?: number | null;
+}): DeskPlayPlanningLevels | null {
+  const entry = isFinitePrice(args.entry) ? roundToTradeTick(args.entry) : null;
+  const stop = isFinitePrice(args.stop) ? roundToTradeTick(args.stop) : null;
+  const computed = targetsFromEntryStop(args.direction, entry, stop);
+  const sideIsValid = args.direction === 'LONG'
+    ? isFinitePrice(entry) && isFinitePrice(stop) && stop < entry
+    : isFinitePrice(entry) && isFinitePrice(stop) && stop > entry;
+  const targetsAreValid = args.direction === 'LONG'
+    ? isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 > entry! && computed.target2 > computed.target1
+    : isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 < entry! && computed.target2 < computed.target1;
+  if (
+    !isFinitePrice(entry) ||
+    !isFinitePrice(stop) ||
+    !isFinitePrice(computed.target1) ||
+    !isFinitePrice(computed.target2) ||
+    !isFinitePrice(computed.riskPoints) ||
+    (args.source === 'protected_5m_review_path' && computed.riskPoints > TRADE_RULES.maxRiskPoints) ||
+    !sideIsValid ||
+    !targetsAreValid
+  ) {
+    return null;
+  }
+  const zone = deskPlayEntryZone(args.direction, entry, computed.riskPoints);
+  const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+  const noChase = currentPrice !== null && (
+    args.direction === 'LONG'
+      ? currentPrice > zone.high
+      : currentPrice < zone.low
+  );
+  return {
+    entry,
+    stop,
+    target1: computed.target1,
+    target2: computed.target2,
+    riskPoints: computed.riskPoints,
+    entryZoneLow: zone.low,
+    entryZoneHigh: zone.high,
+    source: args.source,
+    noChase,
+  };
+}
+
 function deskPlayDecisionMapLevels(
   normalized: CompactNormalizedPlan,
   direction: 'LONG' | 'SHORT',
   lineInSand?: number | null,
-): { entry: number; stop: number; target1: number; target2: number; riskPoints: number } | null {
+  play?: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null,
+  currentPrice?: number | null,
+): DeskPlayPlanningLevels | null {
   const candidate = deskPlayCandidateForDirection(normalized, direction);
   const normalizedMatchesDirection = normalized.decision === direction;
   const entry = normalizedMatchesDirection && isFinitePrice(normalized.entry)
@@ -871,10 +951,6 @@ function deskPlayDecisionMapLevels(
   const stop = normalizedMatchesDirection && isFinitePrice(normalized.stop)
     ? normalized.stop
     : candidate?.stop ?? null;
-  const computed = targetsFromEntryStop(direction, entry, stop);
-  const sideIsValid = direction === 'LONG'
-    ? isFinitePrice(entry) && isFinitePrice(stop) && stop < entry
-    : isFinitePrice(entry) && isFinitePrice(stop) && stop > entry;
   const tick = TRADE_RULES.targetModel.tickSize;
   const lineIsValid = !isFinitePrice(lineInSand)
     ? true
@@ -889,28 +965,24 @@ function deskPlayDecisionMapLevels(
       entry <= lineInSand &&
       stop > lineInSand &&
       lineInSand - entry <= Math.max(stop - lineInSand, tick);
-  const targetsAreValid = direction === 'LONG'
-    ? isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 > entry! && computed.target2 > computed.target1
-    : isFinitePrice(computed.target1) && isFinitePrice(computed.target2) && computed.target1 < entry! && computed.target2 < computed.target1;
-  if (
-    !isFinitePrice(entry) ||
-    !isFinitePrice(stop) ||
-    !isFinitePrice(computed.target1) ||
-    !isFinitePrice(computed.target2) ||
-    !isFinitePrice(computed.riskPoints) ||
-    !sideIsValid ||
-    !lineIsValid ||
-    !targetsAreValid
-  ) {
-    return null;
+  if (lineIsValid) {
+    const normalizedLevels = deskPlayValidatePlanningLevels({
+      direction,
+      entry,
+      stop,
+      source: 'normalized_candidate',
+      currentPrice,
+    });
+    if (normalizedLevels) return normalizedLevels;
   }
-  return {
-    entry,
-    stop,
-    target1: computed.target1,
-    target2: computed.target2,
-    riskPoints: computed.riskPoints,
-  };
+  if (!isFinitePrice(lineInSand)) return null;
+  return deskPlayValidatePlanningLevels({
+    direction,
+    entry: lineInSand,
+    stop: deskPlayFiveMinuteProtectedStructure(play),
+    source: 'protected_5m_review_path',
+    currentPrice,
+  });
 }
 
 function deskPlayReactionLevel(
@@ -1197,7 +1269,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
   if (!play) return [];
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return [];
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   const readiness = deskPlayTradeReadinessLine(play, direction);
   const header = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
@@ -1207,7 +1279,7 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
       ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
       ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
       ...(readiness ? [readiness] : []),
-      'Levels withheld until scanner-owned entry and protected 5M stop proof exist.',
+      'Levels withheld until a valid 5M protected-structure stop is inside risk.',
     ];
   }
   return [
@@ -1217,11 +1289,14 @@ function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG'
     ...(readiness ? [readiness] : []),
     ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
     ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
-    `Entry ref: ${priceLine(levels.entry)}`,
+    levels.source === 'protected_5m_review_path'
+      ? `Review path: entry ${priceLine(levels.entryZoneLow)}-${priceLine(levels.entryZoneHigh)}`
+      : `Entry ref: ${priceLine(levels.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `Risk: ${numberLine(levels.riskPoints)} pts`,
     `T1: ${priceLine(levels.target1)}`,
     `T2: ${priceLine(levels.target2)}`,
+    ...(levels.noChase ? ['No chase: wait retest/new 5M structure.'] : []),
   ];
 }
 
@@ -1232,7 +1307,7 @@ function deskPlayWaitMapLine(
 ): string | null {
   const lineInSand = deskPlayLineForDirection(play, direction);
   if (!isFinitePrice(lineInSand)) return null;
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand);
+  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   const fit = deskPlayBiasForDirection(play, direction)?.modelFit ||
     (direction === 'LONG' ? play.modelRouting?.longModelFit : play.modelRouting?.shortModelFit);
@@ -1242,7 +1317,11 @@ function deskPlayWaitMapLine(
   const readiness = deskPlayTradeReadinessLine(play, direction);
   const readinessText = readiness ? ` | ${readiness.replace(/^Ready:\s*/, '')}` : '';
   if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | levels pending`;
-  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | Entry ${priceLine(levels.entry)} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}`;
+  const entryText = levels.source === 'protected_5m_review_path'
+    ? `Entry ${priceLine(levels.entryZoneLow)}-${priceLine(levels.entryZoneHigh)}`
+    : `Entry ${priceLine(levels.entry)}`;
+  const chaseText = levels.noChase ? ' | NO CHASE: retest/new 5M' : '';
+  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | ${entryText} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}${chaseText}`;
 }
 
 function deskPlayWaitLines(
@@ -1300,7 +1379,7 @@ function deskPlayInvalidationLine(
 ): string {
   if (direction === 'LONG' || direction === 'SHORT') {
     const line = play ? deskPlayLineForDirection(play, direction) : null;
-    const levels = deskPlayDecisionMapLevels(args.normalized, direction, line);
+    const levels = deskPlayDecisionMapLevels(args.normalized, direction, line, play, args.currentPrice);
     if (levels?.stop !== null && levels?.stop !== undefined && isFinitePrice(levels.stop)) {
       return `Invalid: completed 5M ${direction === 'LONG' ? 'below' : 'above'} ${priceLine(levels.stop)}.`;
     }
@@ -1331,7 +1410,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     args.attachments.chartPlan &&
     (direction === 'LONG' || direction === 'SHORT') &&
     play &&
-    deskPlayDecisionMapLevels(args.normalized, direction, deskPlayLineForDirection(play, direction)),
+    deskPlayDecisionMapLevels(args.normalized, direction, deskPlayLineForDirection(play, direction), play, args.currentPrice),
   );
   const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
     ? priceLine(play.lineInSand)
