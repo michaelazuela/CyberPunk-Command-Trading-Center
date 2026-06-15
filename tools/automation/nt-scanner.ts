@@ -119,7 +119,7 @@ import {
   PROFESSIONAL_MODEL_TWO_LABEL,
   professionalizeReportText,
 } from './professional-report-language';
-import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
+import { resolveCurrentBridgeInstrument, type BridgeInstrumentResolution } from './bridge-instrument-resolver';
 import { etDateTime } from './et-time';
 import { isGeminiAdvisoryFallbackEnabled } from '../../src/config/geminiFallback';
 import {
@@ -468,6 +468,12 @@ export function scannerActiveCampaignKey(candidate: SetupCandidate | null | unde
 export function scannerActiveCampaignKeyForTradeDate(candidate: SetupCandidate | null | undefined, tradeDate: string): string | null {
   const campaignId = scannerActiveCampaignKey(candidate);
   return normalizeActiveCampaignIdForTradeDate(campaignId, tradeDate);
+}
+
+export function shouldLogBridgeInstrumentResolution(resolution: BridgeInstrumentResolution, configuredBridgeInstrument: string): boolean {
+  if (resolution.warning) return true;
+  if (resolution.source === 'front-month-rollover') return false;
+  return resolution.instrument !== configuredBridgeInstrument;
 }
 
 function normalizeActiveCampaignIdForTradeDate(campaignId: string | null | undefined, tradeDate: string): string | null {
@@ -4361,7 +4367,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }, {
     getHealth: async () => bridgeHealth as NinjaBridgeHealth,
   });
-  if (instrumentResolution.instrument !== config.bridgeInstrument || instrumentResolution.warning) {
+  if (shouldLogBridgeInstrumentResolution(instrumentResolution, config.bridgeInstrument)) {
     console.log(`[scanner-bridge] Active bridge instrument: ${instrumentResolution.instrument} (${instrumentResolution.source}).`);
     if (instrumentResolution.warning) console.warn(`[scanner-bridge] ${instrumentResolution.warning}`);
   }

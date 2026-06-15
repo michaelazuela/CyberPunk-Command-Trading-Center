@@ -1691,6 +1691,33 @@ assert.equal(
   'Details: Visual attachments not generated because no active plan candidate was available.'
 );
 
+const originalConsoleWarn = console.warn;
+const capturedSingleChartWarnings: string[] = [];
+console.warn = (...args: unknown[]) => {
+  capturedSingleChartWarnings.push(args.map(String).join(' '));
+};
+try {
+  validateDiscordPayload({
+    username: 'Quant Desk',
+    content: '[DESK PLAY] MES - REVIEW',
+    embeds: [{
+      title: 'Compact Trade Plan Summary',
+      description: [
+        'Status: WAIT - review only',
+        'Chart: review attached; approvals unchanged.',
+        'Decision support only. No automated orders.',
+      ].join('\n'),
+      color: 0,
+      fields: [],
+      footer: { text: 'Quant Desk' },
+      timestamp: new Date().toISOString(),
+    }],
+  }, ['desk-play-chart.png']);
+} finally {
+  console.warn = originalConsoleWarn;
+}
+assert.equal(capturedSingleChartWarnings.length, 0);
+
 assert.throws(() => validateDiscordPayload({
   username: 'Quant Desk',
   content: 'Bad payload',

@@ -62,7 +62,7 @@ const staleJuneHealth = await resolveCurrentBridgeInstrument({
 });
 assert.equal(staleJuneHealth.instrument, 'MES 09-26');
 assert.equal(staleJuneHealth.source, 'front-month-rollover');
-assert.ok(staleJuneHealth.warning?.includes('stale after rollover'));
+assert.equal(staleJuneHealth.warning, null);
 
 const staleConfiguredContract = await resolveCurrentBridgeInstrument({
   bridgeUrl,
@@ -76,6 +76,7 @@ const staleConfiguredContract = await resolveCurrentBridgeInstrument({
 });
 assert.equal(staleConfiguredContract.instrument, 'MES 09-26');
 assert.equal(staleConfiguredContract.source, 'front-month-rollover');
+assert.ok(staleConfiguredContract.warning?.includes('stale after rollover'));
 assert.ok(staleConfiguredContract.warning?.includes('bridge offline'));
 assert.ok(staleConfiguredContract.warning?.includes(`active front-month contract ${staleConfiguredContract.instrument}`));
 

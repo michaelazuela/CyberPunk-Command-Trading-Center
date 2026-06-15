@@ -138,7 +138,9 @@ export async function resolveCurrentBridgeInstrument(
           instrument,
           requestedInstrument: requested || null,
           source: 'front-month-rollover',
-          warning: `Bridge health defaultInstrument ${healthInstrument} is stale after rollover; using active front-month contract ${instrument}.`,
+          warning: shouldUseHealth
+            ? null
+            : `Bridge health defaultInstrument ${healthInstrument} is stale after rollover; using active front-month contract ${instrument}.`,
         };
       }
       if (!shouldUseHealth && requested === healthInstrument) {

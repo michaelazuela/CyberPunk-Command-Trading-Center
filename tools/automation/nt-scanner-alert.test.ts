@@ -46,6 +46,7 @@ import {
   scannerDiscordWebhookUrlForPost,
   scannerActiveCampaignKey,
   scannerActiveCampaignKeyForTradeDate,
+  shouldLogBridgeInstrumentResolution,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
   summarizeScannerHistoryCoverage,
@@ -80,6 +81,24 @@ assert.equal(normalizeScannerBarTimestampMode('close'), 'close');
 assert.equal(normalizeScannerBarTimestampMode('CLOSE'), 'close');
 assert.equal(normalizeScannerBarTimestampMode('bar-open'), 'open');
 assert.equal(normalizeScannerBarTimestampMode('bad-env-value'), 'open');
+assert.equal(shouldLogBridgeInstrumentResolution({
+  instrument: 'MES 09-26',
+  requestedInstrument: 'MES',
+  source: 'front-month-rollover',
+  warning: null,
+}, 'MES'), false);
+assert.equal(shouldLogBridgeInstrumentResolution({
+  instrument: 'MES 09-26',
+  requestedInstrument: 'MES 06-26',
+  source: 'front-month-rollover',
+  warning: 'Configured bridge instrument MES 06-26 is stale after rollover; using active front-month contract MES 09-26.',
+}, 'MES 06-26'), true);
+assert.equal(shouldLogBridgeInstrumentResolution({
+  instrument: 'MES 09-26',
+  requestedInstrument: 'MES',
+  source: 'bridge-health',
+  warning: 'Resolved root instrument MES to active bridge contract MES 09-26.',
+}, 'MES'), true);
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 

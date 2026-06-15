@@ -1745,7 +1745,7 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  const hasDeskPlaySingleChart = /watch chart attached|review (?:chart )?attached/i.test(mainText);
+  const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*review/i.test(mainText);
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }
