@@ -42,6 +42,7 @@ const delivery: DeliveryVisibilityReport = {
   scannerStatePath: 'C:\\quant-desk\\tools\\automation\\.nt-scanner-state.json',
   auditDir: 'C:\\quant-desk\\tools\\automation\\discord-audit',
   marketDataGapLedgerPath: 'C:\\quant-desk\\tools\\automation\\.market-data-gap-events.json',
+  recorderHeartbeatPath: 'C:\\quant-desk\\logs\\supervisor\\candle-recorder-heartbeat.json',
   stateReadable: true,
   stateError: null,
   lastAlert: null,

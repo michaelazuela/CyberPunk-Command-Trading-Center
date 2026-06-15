@@ -77,6 +77,17 @@ export function isProcessRunning(pid: number | null | undefined): boolean {
   }
 }
 
+export function isTrackedServiceProcessRunning(
+  service: SupervisorChildService,
+  pid: number | null | undefined,
+  processes = listNodeProcesses(),
+): boolean {
+  if (!isProcessRunning(pid)) return false;
+  if (process.platform !== 'win32') return true;
+  const processInfo = processes.find((item) => item.pid === pid);
+  return Boolean(processInfo && serviceMatchesCommandLine(service, processInfo.commandLine));
+}
+
 function serviceStateFromConfig(config: SupervisorConfig, service: SupervisorChildService): SupervisorServiceState {
   return {
     id: service.id,
@@ -95,7 +106,8 @@ function serviceStateFromConfig(config: SupervisorConfig, service: SupervisorChi
 
 function refreshState(config: SupervisorConfig, state: SupervisorState): SupervisorState {
   const byId = new Map(state.services.map((service) => [service.id, service]));
-  const external = findExternalServiceProcesses(config);
+  const processes = listNodeProcesses();
+  const external = findExternalServiceProcesses(config, processes);
   return {
     ...state,
     statePath: statePath(config.logsDir),
@@ -110,7 +122,7 @@ function refreshState(config: SupervisorConfig, state: SupervisorState): Supervi
         lastRestartAt: existing.lastRestartAt || null,
         lastRestartReason: existing.lastRestartReason || null,
         externalPids,
-        status: isProcessRunning(existing.pid)
+        status: isTrackedServiceProcessRunning(service, existing.pid, processes)
           ? 'running'
           : existing.pid
             ? 'stopped'
@@ -221,7 +233,7 @@ export function launchEnabledServices(config: SupervisorConfig, logger: Supervis
       serviceStateById.set(service.id, { ...existing, status: 'disabled', error: null });
       continue;
     }
-    if ((existing.externalPids || []).length && !isProcessRunning(existing.pid)) {
+    if ((existing.externalPids || []).length && !isTrackedServiceProcessRunning(service, existing.pid)) {
       serviceStateById.set(service.id, {
         ...existing,
         status: 'external_running',
@@ -233,7 +245,7 @@ export function launchEnabledServices(config: SupervisorConfig, logger: Supervis
       });
       continue;
     }
-    if (isProcessRunning(existing.pid)) {
+    if (isTrackedServiceProcessRunning(service, existing.pid)) {
       serviceStateById.set(service.id, { ...existing, status: 'running', error: null });
       continue;
     }
@@ -252,6 +264,7 @@ export function launchEnabledServices(config: SupervisorConfig, logger: Supervis
         windowsHide: true,
         stdio: ['ignore', stdout, stderr],
       });
+      child.unref();
       serviceStateById.set(service.id, {
         id: service.id,
         pid: child.pid || null,
@@ -356,6 +369,7 @@ function launchSingleService(
       windowsHide: true,
       stdio: ['ignore', stdout, stderr],
     });
+    child.unref();
     return {
       ...previous,
       id: service.id,
@@ -391,15 +405,31 @@ export function stopProcessTree(pid: number): void {
 export function stopOwnedServices(config: SupervisorConfig, logger?: SupervisorLogger): SupervisorState {
   const state = getSupervisorState(config);
   const stopped = state.services.map((service) => {
-    if (service.pid && isProcessRunning(service.pid)) {
+    let stopError: string | null = null;
+    const serviceConfig = config.childServices.find((item) => item.id === service.id);
+    const ownedProcessRunning = serviceConfig
+      ? isTrackedServiceProcessRunning(serviceConfig, service.pid)
+      : isProcessRunning(service.pid);
+    if (service.pid && ownedProcessRunning) {
       try {
         stopProcessTree(service.pid);
         logger?.log('info', 'Child service stopped.', { id: service.id, pid: service.pid });
       } catch (error) {
+        stopError = String(error);
         logger?.log('warn', 'Child service stop failed.', { id: service.id, pid: service.pid, error: String(error) });
       }
     }
     if (service.status === 'disabled' || service.status === 'external_running') return service;
+    const stillRunning = serviceConfig
+      ? isTrackedServiceProcessRunning(serviceConfig, service.pid)
+      : isProcessRunning(service.pid);
+    if (service.pid && stillRunning) {
+      return {
+        ...service,
+        status: 'running' as ChildRuntimeStatus,
+        error: stopError || 'Child service stop was requested, but the owned process is still running.',
+      };
+    }
     return { ...service, status: 'stopped' as ChildRuntimeStatus };
   });
   const nextState = { ...state, services: stopped };

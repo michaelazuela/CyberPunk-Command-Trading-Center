@@ -51,6 +51,7 @@ export interface DeliveryVisibilityReport {
   scannerStatePath: string;
   auditDir: string;
   marketDataGapLedgerPath: string;
+  recorderHeartbeatPath: string;
   stateReadable: boolean;
   stateError: string | null;
   lastAlert: ScannerSentRecord | null;
@@ -242,7 +243,31 @@ function latestEntry(entries: Array<{ key: string; value: string | null }>): { k
     .sort((a, b) => parseDateMs(b.value) - parseDateMs(a.value))[0] || null;
 }
 
-function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: number): string[] {
+function recorderHeartbeatFreshness(heartbeatPath: string, now: Date, staleAfterMs: number): {
+  fresh: boolean;
+  latestCompleted5m: string | null;
+} {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(heartbeatPath, 'utf8')) as Record<string, unknown>;
+    const status = stringOrNull(parsed.status);
+    const updatedAt = stringOrNull(parsed.updatedAt);
+    const updatedAtMs = parseDateMs(updatedAt);
+    const ageMs = updatedAtMs > 0 ? now.getTime() - updatedAtMs : Number.POSITIVE_INFINITY;
+    return {
+      fresh: status === 'ok' && Number.isFinite(ageMs) && ageMs <= staleAfterMs,
+      latestCompleted5m: stringOrNull(parsed.latestCompleted5m),
+    };
+  } catch {
+    return { fresh: false, latestCompleted5m: null };
+  }
+}
+
+function staleBlockers(
+  state: Record<string, unknown>,
+  now: Date,
+  staleAfterMs: number,
+  recorderHeartbeat: { fresh: boolean; latestCompleted5m: string | null },
+): string[] {
   const blockers: string[] = [];
   const scannerFreshnessWindowActive = isRthScannerFreshnessWindow(now);
   const lastHealthStatus = stringOrNull(state.lastHealthStatus);
@@ -259,7 +284,11 @@ function staleBlockers(state: Record<string, unknown>, now: Date, staleAfterMs: 
     const latestCompleted = latestEntry(lastCompleted);
     latestCompletedFresh = Boolean(latestCompleted && now.getTime() - parseDateMs(latestCompleted.value) <= staleAfterMs);
     if (latestCompleted && !latestCompletedFresh) {
-      blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
+      if (recorderHeartbeat.fresh && recorderHeartbeat.latestCompleted5m) {
+        latestCompletedFresh = true;
+      } else {
+        blockers.push(`Latest completed 5M marker is stale: ${latestCompleted.key}.`);
+      }
     }
   }
 
@@ -307,6 +336,7 @@ export function buildDeliveryVisibilityReport(args: {
   scannerStatePath?: string;
   auditDir?: string;
   marketDataGapLedgerPath?: string;
+  recorderHeartbeatPath?: string;
   now?: Date;
   staleAfterMs?: number;
   recentAuditLimit?: number;
@@ -317,6 +347,7 @@ export function buildDeliveryVisibilityReport(args: {
   const scannerStatePath = args.scannerStatePath || path.resolve(cwd, 'tools', 'automation', '.nt-scanner-state.json');
   const auditDir = args.auditDir || path.resolve(cwd, 'tools', 'automation', 'discord-audit');
   const marketDataGapLedgerPath = args.marketDataGapLedgerPath || path.resolve(cwd, 'tools', 'automation', '.market-data-gap-events.json');
+  const recorderHeartbeatPath = args.recorderHeartbeatPath || path.resolve(cwd, 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
   const recentFiles = recentAuditFiles(auditDir, now, args.recentAuditLimit ?? 8);
 
   let stateReadable = false;
@@ -347,7 +378,8 @@ export function buildDeliveryVisibilityReport(args: {
   const failedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'failed');
   const pendingDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'pending');
   const skippedDeliveries = operationalDeliveries.filter((delivery) => delivery.deliveryStatus === 'skipped');
-  const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs) : ['Scanner state file is not readable.'];
+  const heartbeatFreshness = recorderHeartbeatFreshness(recorderHeartbeatPath, now, staleAfterMs);
+  const blockers = stateReadable ? staleBlockers(state, now, staleAfterMs, heartbeatFreshness) : ['Scanner state file is not readable.'];
   const pendingGapSync = pendingMarketDataGapSyncSummary(marketDataGapLedgerPath, now, staleAfterMs);
   if (pendingGapSync.staleCount > 0) {
     blockers.push(
@@ -361,6 +393,7 @@ export function buildDeliveryVisibilityReport(args: {
     scannerStatePath,
     auditDir,
     marketDataGapLedgerPath,
+    recorderHeartbeatPath,
     stateReadable,
     stateError,
     lastAlert: sent[0] || null,

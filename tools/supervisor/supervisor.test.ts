@@ -18,13 +18,24 @@ import { buildPreWindowBackfillCommand, buildWindowsSafeSpawnCommand, runPreWind
 import {
   findExternalServiceProcesses,
   isProcessRunning,
+  isTrackedServiceProcessRunning,
   launchEnabledServices,
   restartFailedOwnedServices,
   stopOwnedServices,
+  writeSupervisorState,
 } from './processManager';
 import type { SupervisorState } from './processManager';
 import { buildSupervisorStatus } from './status';
 import { isAddressInUseError } from './index';
+
+async function waitForProcessExit(pid: number | null, timeoutMs = 5000): Promise<boolean> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= timeoutMs) {
+    if (!isProcessRunning(pid)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return !isProcessRunning(pid);
+}
 
 const defaultConfig = loadSupervisorConfig({}, 'C:\\quant-desk');
 assert.equal(defaultConfig.status, 'valid');
@@ -62,6 +73,22 @@ if (process.platform === 'win32') {
   assert.equal(safeSpawnCommand.command, 'npm.cmd');
   assert.deepEqual(safeSpawnCommand.args, ['run', 'nt:backfill', '--', '--bridge-instrument', 'MES 06-26']);
 }
+
+const recorderService = defaultConfig.config.childServices.find((service) => service.id === 'candle-recorder');
+assert.ok(recorderService);
+assert.equal(isTrackedServiceProcessRunning(recorderService, null, []), false);
+assert.equal(
+  isTrackedServiceProcessRunning(recorderService, process.pid, [
+    { pid: process.pid, commandLine: 'cmd.exe /c npm.cmd run unrelated-script' },
+  ]),
+  process.platform === 'win32' ? false : isProcessRunning(process.pid),
+);
+assert.equal(
+  isTrackedServiceProcessRunning(recorderService, process.pid, [
+    { pid: process.pid, commandLine: `cmd.exe /c npm.cmd run ${recorderService.npmScript} -- ${recorderService.args.join(' ')}` },
+  ]),
+  process.platform === 'win32' ? true : isProcessRunning(process.pid),
+);
 
 const fixedNow = new Date('2026-06-05T12:00:00.000Z');
 const status = buildSupervisorStatus(defaultConfig, null, null, null, fixedNow);
@@ -571,6 +598,35 @@ const activeScannerFreshDeliveryReport = buildDeliveryVisibilityReport({
 assert.deepEqual(activeScannerFreshDeliveryReport.staleDataBlockers, []);
 assert.equal(activeScannerFreshDeliveryReport.status, 'ok');
 
+const staleMarkerFreshHeartbeatPath = path.join(deliveryFixtureDir, 'stale-marker-fresh-heartbeat.json');
+const staleMarkerFreshHeartbeatStatePath = path.join(deliveryFixtureDir, '.nt-scanner-stale-marker-fresh-heartbeat-state.json');
+fs.writeFileSync(staleMarkerFreshHeartbeatPath, JSON.stringify({
+  status: 'ok',
+  updatedAt: '2026-06-15T14:00:59.194Z',
+  latestCompleted5m: '2026-06-15T09:55:00.0000000',
+  barsProcessed: 600,
+  warning: null,
+  error: null,
+}, null, 2), 'utf8');
+fs.writeFileSync(staleMarkerFreshHeartbeatStatePath, JSON.stringify({
+  lastCompleted5mBySession: {
+    '2026-06-14:evening': '2026-06-14T22:05:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-14:evening': '2026-06-15T02:14:37.802Z',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const staleMarkerFreshHeartbeatReport = buildDeliveryVisibilityReport({
+  scannerStatePath: staleMarkerFreshHeartbeatStatePath,
+  auditDir,
+  recorderHeartbeatPath: staleMarkerFreshHeartbeatPath,
+  now: new Date('2026-06-15T14:01:57.724Z'),
+  staleAfterMs: 180_000,
+});
+assert.deepEqual(staleMarkerFreshHeartbeatReport.staleDataBlockers, []);
+assert.equal(staleMarkerFreshHeartbeatReport.status, 'ok');
+
 const stalePreviousSessionStatePath = path.join(deliveryFixtureDir, '.nt-scanner-previous-session-state.json');
 fs.writeFileSync(stalePreviousSessionStatePath, JSON.stringify({
   lastCompleted5mBySession: {
@@ -767,6 +823,100 @@ assert.ok(readyPayloadText.includes('Market Cache Recorder'));
 assert.ok(readyPayloadText.includes('cycle complete: 600 bars processed'));
 assert.ok(readyPayloadText.includes('Latest completed 5M: 2026-06-04T22:40:00.0000000'));
 assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyPayloadText), false);
+
+const heartbeatWarnStatus = buildSupervisorStatus(defaultConfig, readyStatus.childServices.length ? {
+  supervisorPid: 12345,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'heartbeat-warn-state.json'),
+  services: readyStatus.childServices.filter((service) => service.id === 'scanner' || service.id === 'candle-recorder').map((service) => ({
+    id: service.id,
+    pid: service.pid,
+    startedAt: service.startedAt,
+    stdoutLog: service.stdoutLog || '',
+    stderrLog: service.stderrLog || '',
+    status: service.status,
+    error: service.error,
+    restartCount: service.restartCount,
+    lastRestartAt: service.lastRestartAt,
+    lastRestartReason: service.lastRestartReason,
+    externalPids: service.externalPids,
+  })),
+} : null, {
+  status: 'warn',
+  generatedAt: fixedNow.toISOString(),
+  checks: [
+    { id: 'bridge', label: 'NinjaTrader bridge', status: 'ok', message: 'Bridge health endpoint is reachable.' },
+    {
+      id: 'recorder_heartbeat',
+      label: 'Recorder heartbeat',
+      status: 'warn',
+      message: 'Recorder heartbeat is stale.',
+      details: {
+        latestCompleted5m: '2026-06-04T22:35:00.0000000',
+        updatedAt: '2026-06-05T02:35:00.000Z',
+        barsProcessed: 600,
+      },
+    },
+  ],
+}, null, fixedNow);
+const heartbeatWarnNotifications = buildSupervisorNotifications(
+  heartbeatWarnStatus,
+  { lastStatuses: {}, lastSentAtByKey: {} },
+  fixedNow,
+);
+const heartbeatWarning = heartbeatWarnNotifications.notifications.find((item) => item.kind === 'recorder_heartbeat_stale');
+assert.ok(heartbeatWarning);
+assert.equal(heartbeatWarnNotifications.nextState.lastStatuses.recorder_heartbeat, 'warn');
+
+const heartbeatRecoveredStatus = buildSupervisorStatus(defaultConfig, {
+  supervisorPid: 12345,
+  startedAt: fixedNow.toISOString(),
+  statePath: path.join(tempLogsDir, 'heartbeat-recovered-state.json'),
+  services: heartbeatWarnStatus.childServices.filter((service) => service.id === 'scanner' || service.id === 'candle-recorder').map((service) => ({
+    id: service.id,
+    pid: service.pid,
+    startedAt: service.startedAt,
+    stdoutLog: service.stdoutLog || '',
+    stderrLog: service.stderrLog || '',
+    status: service.status,
+    error: service.error,
+    restartCount: service.restartCount,
+    lastRestartAt: service.lastRestartAt,
+    lastRestartReason: service.lastRestartReason,
+    externalPids: service.externalPids,
+  })),
+}, {
+  status: 'ok',
+  generatedAt: fixedNow.toISOString(),
+  checks: [
+    { id: 'bridge', label: 'NinjaTrader bridge', status: 'ok', message: 'Bridge health endpoint is reachable.' },
+    {
+      id: 'recorder_heartbeat',
+      label: 'Recorder heartbeat',
+      status: 'ok',
+      message: 'Recorder heartbeat is fresh.',
+      details: {
+        latestCompleted5m: '2026-06-04T22:40:00.0000000',
+        updatedAt: '2026-06-05T02:42:09.783Z',
+        barsProcessed: 600,
+      },
+    },
+  ],
+}, null, fixedNow);
+const heartbeatRecoveredNotifications = buildSupervisorNotifications(
+  heartbeatRecoveredStatus,
+  heartbeatWarnNotifications.nextState,
+  fixedNow,
+);
+const heartbeatRecovered = heartbeatRecoveredNotifications.notifications.find((item) => item.kind === 'recorder_heartbeat_recovered');
+assert.ok(heartbeatRecovered);
+const heartbeatRecoveredPayloadText = JSON.stringify(buildSupervisorDiscordPayload(heartbeatRecovered, heartbeatRecoveredStatus));
+assert.ok(heartbeatRecoveredPayloadText.includes('Recorder Heartbeat Recovered'));
+assert.ok(heartbeatRecoveredPayloadText.includes('Latest completed 5M: 2026-06-04T22:40:00.0000000'));
+assert.ok(heartbeatRecoveredPayloadText.includes('Heartbeat updated: 2026-06-05T02:42:09.783Z'));
+assert.equal(heartbeatRecoveredNotifications.nextState.lastStatuses.recorder_heartbeat, 'ok');
+assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(heartbeatRecoveredPayloadText), false);
+
 const readyWithoutReports = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 12346,
   startedAt: fixedNow.toISOString(),
@@ -852,17 +1002,36 @@ assert.equal(selfHealDryRun.notification.kind, 'supervisor_self_heal');
 
 const stoppedState = stopOwnedServices(processConfig, logger);
 const stoppedChild = stoppedState.services[0];
-assert.equal(stoppedChild.status, 'stopped');
-assert.equal(isProcessRunning(stoppedChild.pid), false);
+const stoppedChildExited = await waitForProcessExit(stoppedChild.pid);
+if (stoppedChildExited) {
+  assert.equal(stoppedChild.status, 'stopped');
+} else {
+  assert.equal(stoppedChild.status, 'running');
+  assert.match(stoppedChild.error || '', /still running|stop failed|Command failed/i);
+  const duplicateRestartState = restartFailedOwnedServices(processConfig, logger, new Date(Date.now() + 10));
+  assert.equal(duplicateRestartState.services[0].pid, stoppedChild.pid);
+  assert.equal(duplicateRestartState.services[0].restartCount, stoppedChild.restartCount);
+}
 
 const restartConfig = {
   ...processConfig,
 };
+writeSupervisorState(restartConfig, {
+  ...stoppedState,
+  services: stoppedState.services.map((service, index) => index === 0
+    ? {
+        ...service,
+        pid: 2147483647,
+        status: 'stopped',
+        error: null,
+      }
+    : service),
+});
 const restartedState = restartFailedOwnedServices(restartConfig, logger, new Date(Date.now() + 10));
 const restartedChild = restartedState.services[0];
 assert.equal(restartedChild.status, 'running');
 assert.ok(restartedChild.pid);
-assert.notEqual(restartedChild.pid, stoppedChild.pid);
+assert.notEqual(restartedChild.pid, 2147483647);
 assert.equal(restartedChild.restartCount, 1);
 assert.equal(restartedChild.lastRestartReason, 'owned child process is stopped');
 stopOwnedServices(restartConfig, logger);

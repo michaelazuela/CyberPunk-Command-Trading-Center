@@ -12,6 +12,7 @@ export type SupervisorNotificationKind =
   | 'bridge_recovered'
   | 'contract_mismatch'
   | 'recorder_heartbeat_stale'
+  | 'recorder_heartbeat_recovered'
   | 'stale_5m_bars'
   | 'pre_window_backfill_failed'
   | 'pre_window_backfill_recovered'
@@ -270,6 +271,27 @@ export function buildSupervisorNotifications(
       title: 'Recorder Heartbeat Needs Attention',
       description: healthCheck(status, 'recorder_heartbeat')?.message || 'Recorder heartbeat is not fresh.',
       severity: heartbeat === 'fail' ? 'fail' : 'warn',
+      now,
+    }));
+  }
+  if (heartbeat === 'ok' && (previousHeartbeat === 'warn' || previousHeartbeat === 'fail')) {
+    const check = healthCheck(status, 'recorder_heartbeat');
+    const details = (check?.details || {}) as {
+      latestCompleted5m?: unknown;
+      updatedAt?: unknown;
+      barsProcessed?: unknown;
+    };
+    notifications.push(notification({
+      kind: 'recorder_heartbeat_recovered',
+      title: 'Recorder Heartbeat Recovered',
+      description: [
+        check?.message || 'Recorder heartbeat is fresh again.',
+        `Latest completed 5M: ${String(details.latestCompleted5m || 'unknown')}`,
+        `Heartbeat updated: ${String(details.updatedAt || 'unknown')}`,
+        `Bars processed: ${String(details.barsProcessed ?? 'unknown')}`,
+      ].join('\n'),
+      severity: 'ok',
+      dedupeKey: 'recorder_heartbeat_recovered',
       now,
     }));
   }

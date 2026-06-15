@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { SupervisorConfig } from './config';
 import type { SupervisorState } from './processManager';
-import { isProcessRunning } from './processManager';
+import { isProcessRunning, isTrackedServiceProcessRunning } from './processManager';
 
 export type SupervisorHealthLevel = 'ok' | 'warn' | 'fail';
 
@@ -280,17 +280,21 @@ export async function buildHealthReport(
 
   for (const service of state.services) {
     const required = service.status === 'running';
+    const serviceConfig = config.childServices.find((item) => item.id === service.id);
+    const ownedProcessRunning = serviceConfig
+      ? isTrackedServiceProcessRunning(serviceConfig, service.pid)
+      : isProcessRunning(service.pid);
     checks.push({
       id: `${service.id}_process`,
       label: `${service.id} process`,
-      status: service.status === 'running' && service.pid && isProcessRunning(service.pid)
+      status: service.status === 'running' && service.pid && ownedProcessRunning
         ? 'ok'
         : service.status === 'disabled'
           ? 'ok'
           : service.status === 'external_running'
             ? 'warn'
             : 'warn',
-      message: service.status === 'running' && service.pid && isProcessRunning(service.pid)
+      message: service.status === 'running' && service.pid && ownedProcessRunning
         ? 'Owned child process is running.'
         : service.status === 'disabled'
           ? 'Service is disabled.'
