@@ -18,7 +18,7 @@ export type ScannerState =
   | 'NoTrade';
 
 export type ScannerWindowQuality = 'observe_only' | 'approved' | 'strict' | 'disabled' | 'outside';
-export type ScannerSession = 'premarket' | 'morning' | 'lunch' | 'afternoon' | 'outside';
+export type ScannerSession = 'premarket' | 'morning' | 'lunch' | 'evening' | 'afternoon' | 'outside';
 export type BridgeTimestampMode = 'open' | 'close';
 export type BridgeTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
 
@@ -704,6 +704,20 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     };
   }
 
+  if (isBetween(minutes, windows.eveningExecution.startET, windows.eveningExecution.endET)) {
+    return {
+      session: 'evening',
+      label: windows.eveningExecution.label,
+      quality: 'approved',
+      enabled: windows.eveningExecution.enabled,
+      allowsTradePlan: windows.eveningExecution.enabled,
+      allowsDiscordAlert: windows.eveningExecution.enabled,
+      allowsMarketMapping,
+      allowsDeskPlan: allowsMarketMapping,
+      nextWindowLabel: null,
+    };
+  }
+
   void afternoonEnabled;
 
   return {
@@ -715,11 +729,13 @@ export function resolveScannerWindow(date = new Date(), afternoonEnabled = false
     allowsDiscordAlert: false,
     allowsMarketMapping,
     allowsDeskPlan: allowsMarketMapping,
-    nextWindowLabel:
+      nextWindowLabel:
       minutes < minutesFromClock(windows.morningExecution.startET)
         ? windows.morningExecution.label
         : minutes < minutesFromClock(windows.middayTrapReversal.startET)
           ? windows.middayTrapReversal.label
+          : minutes < minutesFromClock(windows.eveningExecution.startET)
+            ? windows.eveningExecution.label
           : null,
   };
 }
@@ -2909,7 +2925,7 @@ export function scoreScannerCandidate(
   const currentPriceAvailable = isValidPrice(currentPrice);
   const sessionWeight = window.session === 'morning' || window.session === 'premarket'
     ? SESSION_TIME_WEIGHTS.morning
-    : window.session === 'lunch'
+    : window.session === 'lunch' || window.session === 'evening'
       ? SESSION_TIME_WEIGHTS.lunch
       : window.session === 'afternoon'
         ? SESSION_TIME_WEIGHTS.afternoon
@@ -2957,7 +2973,7 @@ export function scoreScannerCandidate(
         score: 0,
         max: 10,
         status: 'blocked',
-        note: 'The scanner is outside the 9:15 AM-4:00 PM ET desk-plan window.',
+        note: 'The scanner is outside the 9:15 AM-4:00 PM ET and 6:45 PM-10:15 PM ET desk-plan windows.',
       }],
     };
   }

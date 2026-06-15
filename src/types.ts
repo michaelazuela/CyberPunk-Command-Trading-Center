@@ -1013,7 +1013,7 @@ export interface HtfLiquidityDrawCandidateState {
   fiveMinuteMssConfirmationType?: 'swing_break_with_displacement' | 'reclaim_then_break' | 'unknown';
   postShiftState?: 'post_mss_digestion' | 'retest_pending' | 'continuation_pending' | 'opposite_mss_confirmed' | 'unknown';
   fifteenMinuteConfirmationStatus?: 'confirmed' | 'potential_mss' | 'pending_confirm' | 'not_confirmed' | 'unknown';
-  activeScanWindow?: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
+  activeScanWindow?: 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'EVENING_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
   htfDrawContinuationPending: boolean;
   htfContextSufficiency?: HtfContextSufficiency;
   htfContextDataLimited?: boolean;

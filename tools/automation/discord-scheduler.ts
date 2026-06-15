@@ -1296,8 +1296,9 @@ async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartCont
             value: discordValue([
               '🔎 9:15 AM-12:00 PM ET: Morning execution scanning.',
               '🍽️ 12:00-4:00 PM ET: Lunch/PM execution scanning.',
-              '🧭 9:15 AM-4:00 PM ET: scanner active; desk plans/review maps allowed.',
-              '⏸️ Before 9:15 AM and after 4:00 PM ET: execution and desk plans paused.',
+              '🌙 6:45-10:15 PM ET: Evening execution scanning.',
+              '🧭 9:15 AM-4:00 PM ET and 6:45-10:15 PM ET: scanner active; desk plans/review maps allowed.',
+              '⏸️ Outside those windows: execution and desk plans paused.',
               `🧱 Structured levels loaded: ${levels.length}.`,
             ].join('\n')),
             inline: false,

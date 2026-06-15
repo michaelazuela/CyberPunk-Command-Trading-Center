@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
 
-export type PreWindowBackfillSession = 'morning' | 'lunch';
+export type PreWindowBackfillSession = 'morning' | 'lunch' | 'evening';
 
 export interface PreWindowBackfillRun {
   session: PreWindowBackfillSession;
@@ -100,12 +100,17 @@ function dueSession(config: SupervisorConfig, now: Date): { session: PreWindowBa
   const morningEnd = parseEtMinutes(config.preWindowBackfill.morningEndEt);
   const lunchStart = parseEtMinutes(config.preWindowBackfill.lunchStartEt);
   const lunchEnd = parseEtMinutes(config.preWindowBackfill.lunchEndEt);
+  const eveningStart = parseEtMinutes(config.preWindowBackfill.eveningStartEt);
+  const eveningEnd = parseEtMinutes(config.preWindowBackfill.eveningEndEt);
 
   if (current.minutes >= morningStart && current.minutes < morningEnd) {
     return { session: 'morning', tradeDate: current.tradeDate };
   }
   if (current.minutes >= lunchStart && current.minutes < lunchEnd) {
     return { session: 'lunch', tradeDate: current.tradeDate };
+  }
+  if (current.minutes >= eveningStart && current.minutes < eveningEnd) {
+    return { session: 'evening', tradeDate: current.tradeDate };
   }
   return null;
 }

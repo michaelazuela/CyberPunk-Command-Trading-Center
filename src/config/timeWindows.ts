@@ -28,6 +28,21 @@ export const TIME_WINDOWS = {
     ],
     sessionNote: "12:00 PM ET → 4:00 PM ET. Lunch/PM setup scan covers midday reversal, PM continuation, PM reversal, raid/reclaim/MSS.",
   },
+  evening: {
+    label: "Evening Setup Scan",
+    openHour: 18, openMinute: 45,
+    closeHour: 22, closeMinute: 15,
+    timezone: "America/New_York",
+    screenshotEndHour: 22, screenshotEndMinute: 15,
+    bestChart: "5-min MES/MNQ from 6:45 PM through 10:15 PM ET",
+    chartMustInclude: [
+      "6:45 PM ET evening setup-scan start",
+      "10:15 PM ET evening setup-scan close",
+      "ETH reopen / evening liquidity context",
+      "Prior RTH high and low extremes",
+    ],
+    sessionNote: "6:45 PM ET → 10:15 PM ET. Evening setup scan is approved scanner/execution coverage; normal completed 5M trigger, protected stop, risk, target, data, and canExecute gates still apply.",
+  },
   midnightOpen: {
     label: "Midnight Open",
     captureHour: 0, captureMinute: 0,
@@ -55,7 +70,7 @@ export const MODEL_SPECIFIC_TIME_WINDOWS = {
 } as const;
 
 export const MARKET_MAPPING_WINDOW = {
-  label: "Market Mapping Window",
+  label: "RTH Market Mapping Window",
   startHour: 9,
   startMinute: 15,
   endHour: 16,
@@ -64,8 +79,18 @@ export const MARKET_MAPPING_WINDOW = {
   note: "Scanner desk-plan and market-map coverage runs from 15 minutes before RTH open through the 4:00 PM ET market close.",
 } as const;
 
-export type WindowKey = "morning" | "lunch";
-export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
+export const EVENING_MARKET_MAPPING_WINDOW = {
+  label: "Evening Market Mapping Window",
+  startHour: 18,
+  startMinute: 45,
+  endHour: 22,
+  endMinute: 15,
+  timezone: "America/New_York",
+  note: "Scanner desk-plan and market-map coverage runs during the approved evening setup scan from 6:45 PM through 10:15 PM ET.",
+} as const;
+
+export type WindowKey = "morning" | "lunch" | "evening";
+export type ActiveSetupScanWindow = 'MORNING_SETUP_SCAN' | 'LUNCH_PM_SETUP_SCAN' | 'EVENING_SETUP_SCAN' | 'OUTSIDE_SETUP_SCAN';
 
 const MORNING_SETUP_SCAN_START = 9 * 60 + 15;
 const MORNING_SETUP_SCAN_END = 12 * 60;
@@ -73,6 +98,10 @@ const LUNCH_PM_SETUP_SCAN_START = 12 * 60;
 const LUNCH_PM_SETUP_SCAN_END = 16 * 60;
 const MARKET_MAPPING_WINDOW_START = MARKET_MAPPING_WINDOW.startHour * 60 + MARKET_MAPPING_WINDOW.startMinute;
 const MARKET_MAPPING_WINDOW_END = MARKET_MAPPING_WINDOW.endHour * 60 + MARKET_MAPPING_WINDOW.endMinute;
+const EVENING_SETUP_SCAN_START = 18 * 60 + 45;
+const EVENING_SETUP_SCAN_END = 22 * 60 + 15;
+const EVENING_MARKET_MAPPING_WINDOW_START = EVENING_MARKET_MAPPING_WINDOW.startHour * 60 + EVENING_MARKET_MAPPING_WINDOW.startMinute;
+const EVENING_MARKET_MAPPING_WINDOW_END = EVENING_MARKET_MAPPING_WINDOW.endHour * 60 + EVENING_MARKET_MAPPING_WINDOW.endMinute;
 const INTRADAY_MSS_MICRO_LATE_DAY_START =
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour * 60 +
   MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startMinute;
@@ -118,11 +147,13 @@ export function getWindowStatus(key: WindowKey): "active" | "too_early" | "too_l
 export function classifyActiveSetupScanWindowByEtMinutes(minutes: number): ActiveSetupScanWindow {
   if (minutes >= MORNING_SETUP_SCAN_START && minutes < MORNING_SETUP_SCAN_END) return 'MORNING_SETUP_SCAN';
   if (minutes >= LUNCH_PM_SETUP_SCAN_START && minutes < LUNCH_PM_SETUP_SCAN_END) return 'LUNCH_PM_SETUP_SCAN';
+  if (minutes >= EVENING_SETUP_SCAN_START && minutes < EVENING_SETUP_SCAN_END) return 'EVENING_SETUP_SCAN';
   return 'OUTSIDE_SETUP_SCAN';
 }
 
 export function isMarketMappingWindowByEtMinutes(minutes: number): boolean {
-  return minutes >= MARKET_MAPPING_WINDOW_START && minutes < MARKET_MAPPING_WINDOW_END;
+  return (minutes >= MARKET_MAPPING_WINDOW_START && minutes < MARKET_MAPPING_WINDOW_END) ||
+    (minutes >= EVENING_MARKET_MAPPING_WINDOW_START && minutes < EVENING_MARKET_MAPPING_WINDOW_END);
 }
 
 export function isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes: number): boolean {
@@ -169,9 +200,11 @@ export function getNextWindowKey(): WindowKey | null {
   const currentTime = hour * 60 + minute;
   const morningOpen = TIME_WINDOWS.morning.openHour * 60 + TIME_WINDOWS.morning.openMinute;
   const lunchOpen = TIME_WINDOWS.lunch.openHour * 60 + TIME_WINDOWS.lunch.openMinute;
+  const eveningOpen = TIME_WINDOWS.evening.openHour * 60 + TIME_WINDOWS.evening.openMinute;
 
   if (currentTime < morningOpen) return "morning";
   if (currentTime < lunchOpen) return "lunch";
+  if (currentTime < eveningOpen) return "evening";
   return null; // Next day morning
 }
 

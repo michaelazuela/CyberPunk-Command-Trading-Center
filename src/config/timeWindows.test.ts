@@ -3,6 +3,7 @@ import {
   classifyActiveSetupScanWindowByEtMinutes,
   isMarketMappingWindowByEtMinutes,
   isIntradayMssMicroContinuationLateDayReviewByEtMinutes,
+  EVENING_MARKET_MAPPING_WINDOW,
   MARKET_MAPPING_WINDOW,
   MODEL_SPECIFIC_TIME_WINDOWS,
   TIME_WINDOWS,
@@ -21,6 +22,10 @@ assert.equal(TIME_WINDOWS.lunch.openHour, 12);
 assert.equal(TIME_WINDOWS.lunch.openMinute, 0);
 assert.equal(TIME_WINDOWS.lunch.closeHour, 16);
 assert.equal(TIME_WINDOWS.lunch.closeMinute, 0);
+assert.equal(TIME_WINDOWS.evening.openHour, 18);
+assert.equal(TIME_WINDOWS.evening.openMinute, 45);
+assert.equal(TIME_WINDOWS.evening.closeHour, 22);
+assert.equal(TIME_WINDOWS.evening.closeMinute, 15);
 assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.startHour, 15);
 assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endHour, 16);
 assert.equal(MODEL_SPECIFIC_TIME_WINDOWS.intradayMssMicroContinuationLateDayReview.endMinute, 40);
@@ -28,6 +33,10 @@ assert.equal(MARKET_MAPPING_WINDOW.startHour, 9);
 assert.equal(MARKET_MAPPING_WINDOW.startMinute, 15);
 assert.equal(MARKET_MAPPING_WINDOW.endHour, 16);
 assert.equal(MARKET_MAPPING_WINDOW.endMinute, 0);
+assert.equal(EVENING_MARKET_MAPPING_WINDOW.startHour, 18);
+assert.equal(EVENING_MARKET_MAPPING_WINDOW.startMinute, 45);
+assert.equal(EVENING_MARKET_MAPPING_WINDOW.endHour, 22);
+assert.equal(EVENING_MARKET_MAPPING_WINDOW.endMinute, 15);
 
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('09:14')), 'OUTSIDE_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('09:15')), 'MORNING_SETUP_SCAN');
@@ -43,6 +52,11 @@ assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('15:29')), 'LUNCH_
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('15:30')), 'LUNCH_PM_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('15:59')), 'LUNCH_PM_SETUP_SCAN');
 assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('16:00')), 'OUTSIDE_SETUP_SCAN');
+assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('18:44')), 'OUTSIDE_SETUP_SCAN');
+assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('18:45')), 'EVENING_SETUP_SCAN');
+assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('20:00')), 'EVENING_SETUP_SCAN');
+assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('22:14')), 'EVENING_SETUP_SCAN');
+assert.equal(classifyActiveSetupScanWindowByEtMinutes(minutes('22:15')), 'OUTSIDE_SETUP_SCAN');
 assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('14:59')), false);
 assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('15:00')), true);
 assert.equal(isIntradayMssMicroContinuationLateDayReviewByEtMinutes(minutes('15:30')), true);
@@ -53,5 +67,9 @@ assert.equal(isMarketMappingWindowByEtMinutes(minutes('09:15')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('09:29')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('15:59')), true);
 assert.equal(isMarketMappingWindowByEtMinutes(minutes('16:00')), false);
+assert.equal(isMarketMappingWindowByEtMinutes(minutes('18:44')), false);
+assert.equal(isMarketMappingWindowByEtMinutes(minutes('18:45')), true);
+assert.equal(isMarketMappingWindowByEtMinutes(minutes('22:14')), true);
+assert.equal(isMarketMappingWindowByEtMinutes(minutes('22:15')), false);
 
 console.log('Active setup scan windows verified.');

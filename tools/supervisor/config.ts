@@ -37,6 +37,8 @@ export interface SupervisorPreWindowBackfillConfig {
   morningEndEt: string;
   lunchStartEt: string;
   lunchEndEt: string;
+  eveningStartEt: string;
+  eveningEndEt: string;
 }
 
 export interface SupervisorConfig {
@@ -207,6 +209,8 @@ export function loadSupervisorConfig(
         morningEndEt: env.SUPERVISOR_MORNING_BACKFILL_END_ET?.trim() || '09:15',
         lunchStartEt: env.SUPERVISOR_LUNCH_BACKFILL_START_ET?.trim() || '11:45',
         lunchEndEt: env.SUPERVISOR_LUNCH_BACKFILL_END_ET?.trim() || '12:00',
+        eveningStartEt: env.SUPERVISOR_EVENING_BACKFILL_START_ET?.trim() || '18:30',
+        eveningEndEt: env.SUPERVISOR_EVENING_BACKFILL_END_ET?.trim() || '18:45',
       },
     },
     status: errors.length ? 'invalid' : 'valid',

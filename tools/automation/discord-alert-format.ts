@@ -18,7 +18,7 @@ import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
 
-export type CompactDiscordSession = 'morning' | 'lunch';
+export type CompactDiscordSession = 'morning' | 'lunch' | 'evening';
 export type CompactDiscordInstrument = 'MES' | 'MNQ';
 
 export interface DiscordEmbedField {
@@ -317,11 +317,11 @@ function compactLine(value: string | null | undefined, maxLength = 180): string 
 }
 
 function sessionDisplayName(session: CompactDiscordSession): string {
-  return session === 'morning' ? 'Morning' : 'Lunch';
+  return session === 'morning' ? 'Morning' : session === 'evening' ? 'Evening' : 'Lunch';
 }
 
 function sessionShortLabel(session: CompactDiscordSession): string {
-  return session === 'morning' ? 'AM' : 'PM';
+  return session === 'morning' ? 'AM' : session === 'evening' ? 'EVENING' : 'PM';
 }
 
 function statusEmoji(status: string | undefined): string {

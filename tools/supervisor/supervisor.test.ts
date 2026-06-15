@@ -44,6 +44,7 @@ assert.equal(defaultConfig.config.preWindowBackfill.enabled, true);
 assert.equal(defaultConfig.config.preWindowBackfill.days, 2);
 assert.equal(defaultConfig.config.preWindowBackfill.morningStartEt, '09:00');
 assert.equal(defaultConfig.config.preWindowBackfill.lunchStartEt, '11:45');
+assert.equal(defaultConfig.config.preWindowBackfill.eveningStartEt, '18:30');
 const preloadCommand = buildHtfPreloadCommand(defaultConfig.config);
 assert.deepEqual(preloadCommand.args.slice(0, 4), ['run', 'nt:backfill', '--', '--instrument']);
 assert.ok(preloadCommand.args.includes('--days'));
@@ -205,6 +206,8 @@ const processConfig = {
     morningEndEt: '09:15',
     lunchStartEt: '11:45',
     lunchEndEt: '12:00',
+    eveningStartEt: '18:30',
+    eveningEndEt: '18:45',
   },
   childServices: [
     {
@@ -220,7 +223,7 @@ const logger = createSupervisorLogger(tempLogsDir);
 const afterCloseRecorderHeartbeatPath = path.join(tempLogsDir, 'after-close-recorder-heartbeat.json');
 fs.writeFileSync(afterCloseRecorderHeartbeatPath, JSON.stringify({
   status: 'warn',
-  updatedAt: '2026-06-13T01:25:50.000Z',
+  updatedAt: '2026-06-13T02:25:50.000Z',
   latestCompleted5m: '2026-06-12T17:00:00.0000000',
   warning: 'NinjaTrader bridge is reachable, but latest completed 5M candle is stale.',
 }, null, 2), 'utf8');
@@ -257,12 +260,12 @@ const afterCloseHealth = await buildHealthReport(
     ],
   },
   afterCloseHealthState,
-  new Date('2026-06-13T01:25:51.464Z'),
+  new Date('2026-06-13T02:25:51.464Z'),
   {},
 );
 const afterCloseHeartbeat = afterCloseHealth.checks.find((check) => check.id === 'recorder_heartbeat');
 assert.equal(afterCloseHeartbeat?.status, 'ok');
-assert.ok(afterCloseHeartbeat?.message.includes('paused after the 4:00 PM ET scanner close'));
+assert.ok(afterCloseHeartbeat?.message.includes('paused after the 10:15 PM ET scanner close'));
 const outsideWindowBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T12:59:00.000Z'));
 assert.equal(outsideWindowBackfill.attempted, false);
 assert.equal(outsideWindowBackfill.due, false);
@@ -274,6 +277,11 @@ assert.equal(dueBackfill.run?.session, 'morning');
 assert.equal(dueBackfill.run?.tradeDate, '2026-06-05');
 assert.equal(dueBackfill.run?.ok, false);
 assert.ok(fs.existsSync(dueBackfill.run?.stdoutLog || ''));
+const eveningBackfill = runPreWindowBackfillIfDue(processConfig, logger, new Date('2026-06-05T22:35:00.000Z'));
+assert.equal(eveningBackfill.enabled, true);
+assert.equal(eveningBackfill.due, true);
+assert.equal(eveningBackfill.attempted, true);
+assert.equal(eveningBackfill.run?.session, 'evening');
 const preloadCalls: Array<{ command: string; args: string[]; timeout: number }> = [];
 const preloadResult = runHtfPreloadStartup(processConfig, logger, (command, args, options) => {
   preloadCalls.push({ command, args, timeout: options.timeout });

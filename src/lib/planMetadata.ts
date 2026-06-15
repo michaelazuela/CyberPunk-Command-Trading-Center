@@ -1,6 +1,6 @@
 import { NormalizedTradePlan } from './tradePlan';
 
-export type PlanSessionKey = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+export type PlanSessionKey = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch';
 
 export interface PlanSaveReceipt {
   planVersionId: string;

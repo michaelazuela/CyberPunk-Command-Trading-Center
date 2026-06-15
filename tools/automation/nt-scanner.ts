@@ -9,7 +9,7 @@ import { buildTradeJournalRecord } from '../../src/lib/tradeJournal';
 import { buildFailedPlanReversalContextFromChartContext } from '../../src/lib/failedPlanReversalEngine';
 import { summarizeActiveTimeframeMssRuleset, type ActiveTimeframeMssRulesetAudit } from '../../src/lib/activeTimeframeMssRulesetAudit';
 import { targetsFromEntryStop, TRADE_RULES } from '../../src/config/tradeRules';
-import { MARKET_MAPPING_WINDOW } from '../../src/config/timeWindows';
+import { EVENING_MARKET_MAPPING_WINDOW, MARKET_MAPPING_WINDOW } from '../../src/config/timeWindows';
 import {
   buildNinjaChartContext,
   getNinjaBridgeBars,
@@ -133,7 +133,11 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 loadCanonicalDiscordOutcomeSecretFromEnvLocal();
 
 type Instrument = 'MES' | 'MNQ';
-type LiveSession = 'morning' | 'lunch';
+type LiveSession = 'morning' | 'lunch' | 'evening';
+type ScannerSetupSession = 'morning' | 'lunch';
+const ACTIVE_MARKET_MAPPING_WINDOWS_TEXT =
+  `${MARKET_MAPPING_WINDOW.startHour}:${String(MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${MARKET_MAPPING_WINDOW.endHour}:${String(MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET and ` +
+  `${EVENING_MARKET_MAPPING_WINDOW.startHour}:${String(EVENING_MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${EVENING_MARKET_MAPPING_WINDOW.endHour}:${String(EVENING_MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET`;
 
 export interface ScannerConfig {
   instrument: Instrument;
@@ -1370,7 +1374,7 @@ export function buildSegmentedHistoryRepairWindows(from: string, to: string, chu
 }
 
 function scannerHistoryPreloadTo(tradeDate: string, session: LiveSession, asOf?: string | Date | null): string {
-  const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : '16:00');
+  const sessionClose = etDateTime(tradeDate, session === 'morning' ? '12:00' : session === 'evening' ? '22:15' : '16:00');
   if (!asOf) return sessionClose;
 
   const rawAsOf = asOf instanceof Date ? asOf.toISOString() : asOf;
@@ -2109,9 +2113,19 @@ export async function writeScannerDecisionTapeAuditLog(args: {
 
 function mappingSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession {
   if (window.session === 'lunch') return 'lunch';
+  if (window.session === 'evening') return 'evening';
   if (window.session === 'afternoon') return 'lunch';
   if (window.nextWindowLabel?.toLowerCase().includes('midday')) return 'lunch';
   return 'morning';
+}
+
+function setupSessionForLiveSession(session: LiveSession): ScannerSetupSession {
+  return session === 'morning' ? 'morning' : 'lunch';
+}
+
+function noticeSessionForWindow(window: ReturnType<typeof resolveScannerWindow>): LiveSession | 'market_mapping' {
+  if (window.session === 'morning' || window.session === 'lunch' || window.session === 'evening') return window.session;
+  return 'market_mapping';
 }
 
 async function fetchFreshBridgeBars(config: ScannerConfig, timeframe: MarketBarTimeframe, limit = 220): Promise<NinjaBridgeBar[]> {
@@ -2602,7 +2616,7 @@ async function analysisFromBars(args: {
     bars60m: args.bars['60m'],
     bars120m: args.bars['120m'],
     bars240m: args.bars['240m'],
-    sessionType: args.session,
+    sessionType: setupSessionForLiveSession(args.session),
     instrument: args.config.instrument,
     tradeDate: args.tradeDate,
     barTimestampMode: args.config.barTimestampMode,
@@ -3824,16 +3838,19 @@ function buildWindowStartPayload(args: {
   completed5m: NinjaBridgeBar | null;
   windowLabel: string;
 }): DiscordWebhookPayload {
-  const sessionLabel = args.session === 'morning' ? 'Morning' : 'Lunch';
+  const sessionLabel = args.session === 'morning' ? 'Morning' : args.session === 'evening' ? 'Evening' : 'Lunch';
   const windowRange = args.session === 'morning'
     ? `${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET`
+    : args.session === 'evening'
+      ? `${TRADE_RULES.executionWindows.eveningExecution.startET}-${TRADE_RULES.executionWindows.eveningExecution.endET} ET`
     : `${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET`;
-  const activeDeskPlanWindow = '09:15-16:00 ET';
+  const activeDeskPlanWindow = '09:15-16:00 ET and 18:45-22:15 ET';
   const fullSchedule = [
     '⏸️ Before 09:15 ET: scanner health only; execution paused',
     `🔎 ${TRADE_RULES.executionWindows.morningExecution.startET}-${TRADE_RULES.executionWindows.morningExecution.endET} ET: Morning execution scan`,
     `🍽️ ${TRADE_RULES.executionWindows.middayTrapReversal.startET}-${TRADE_RULES.executionWindows.middayTrapReversal.endET} ET: Lunch/PM execution scan`,
-    '⏸️ After 16:00 ET: scanner health only; execution paused',
+    `🌙 ${TRADE_RULES.executionWindows.eveningExecution.startET}-${TRADE_RULES.executionWindows.eveningExecution.endET} ET: Evening execution scan`,
+    '⏸️ Outside those windows: scanner health only; execution paused',
   ].join('\n');
   return {
     username: 'Quant Desk',
@@ -4292,7 +4309,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       state,
       scannerWindow: window,
       tradeDate,
-      session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+      session: noticeSessionForWindow(window),
       windowLabel: window.label,
       currentPrice: null,
       completed5m: null,
@@ -4404,7 +4421,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         state,
         scannerWindow: window,
         tradeDate,
-        session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+        session: noticeSessionForWindow(window),
         windowLabel: window.label,
         currentPrice,
         completed5m,
@@ -4424,7 +4441,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       state,
       scannerWindow: window,
       tradeDate,
-      session: window.session === 'lunch' ? 'lunch' : window.session === 'morning' ? 'morning' : 'market_mapping',
+      session: noticeSessionForWindow(window),
       windowLabel: window.label,
       currentPrice,
       completed5m,
@@ -4459,7 +4476,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     const mappingLabel = config.scanWindows ? scannerContextLogLabel(window) : 'Market Mapping Mode';
     if (!window.allowsMarketMapping) {
       console.log(
-        `[scanner] ${mappingLabel}: ${mappingState}, market map refresh paused outside ${MARKET_MAPPING_WINDOW.startHour}:${String(MARKET_MAPPING_WINDOW.startMinute).padStart(2, '0')}-${MARKET_MAPPING_WINDOW.endHour}:${String(MARKET_MAPPING_WINDOW.endMinute).padStart(2, '0')} ET | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}`,
+        `[scanner] ${mappingLabel}: ${mappingState}, market map refresh paused outside ${ACTIVE_MARKET_MAPPING_WINDOWS_TEXT} | current ${money(currentPrice)} | completed 5M ${completed5m?.time || 'N/A'} | positions ${positionText}`,
       );
       await writeState(state);
       return;
@@ -4588,7 +4605,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       `[scanner-failed-plan-reversal] ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
     );
   }
-  let normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
+  const setupSession = setupSessionForLiveSession(session);
+  let normalized = buildAppTradePlan(analysis, { sessionType: setupSession, instrument: config.instrument, windowStatusOverride: 'active' });
   const scoringDate = analysisTimestampDate(analysis, completed5m, config);
   const scoringTimestampSource =
     analysis.structuredChartContext?.chartTimestamp ? 'chartTimestamp' :
@@ -4623,7 +4641,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       console.warn(
         `[scanner-failed-plan-reversal] Same-cycle failed app-owned plan detected: ${context.decisionState}: failed ${context.originalPlanDirection} level ${context.failedDecisionLevel ?? 'unknown'} -> ${context.oppositeDirection}; htf=${context.htfStackStatus}; 5m=${context.fiveMinuteTriggerStatus}; createsCandidate=${context.createsCandidate ? 'yes' : 'no'}; executionAuthority=no.`,
       );
-      normalized = buildAppTradePlan(analysis, { sessionType: session, instrument: config.instrument, windowStatusOverride: 'active' });
+      normalized = buildAppTradePlan(analysis, { sessionType: setupSession, instrument: config.instrument, windowStatusOverride: 'active' });
       initialSelection = selectScannerPlan({
         normalized,
         currentPrice,

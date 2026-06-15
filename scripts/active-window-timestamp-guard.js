@@ -84,7 +84,7 @@ for (const file of ACTIVE_TARGETS.flatMap((target) => collectFiles(target))) {
 if (failures.length) {
   console.error('Old setup-scan window timestamps found in active authority files:');
   failures.forEach((failure) => console.error(`- ${failure}`));
-  console.error('\nUse canonical windows: Morning 09:15-12:00 ET; Lunch/PM 12:00-16:00 ET.');
+  console.error('\nUse canonical windows: Morning 09:15-12:00 ET; Lunch/PM 12:00-16:00 ET; Evening 18:45-22:15 ET.');
   process.exit(1);
 }
 

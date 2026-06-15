@@ -167,9 +167,9 @@ function etTimeParts(now: Date): { minutes: number; weekday: string } {
   };
 }
 
-function isAfterRthScannerCloseOrWeekend(now: Date): boolean {
+function isAfterFinalScannerCloseOrWeekend(now: Date): boolean {
   const parts = etTimeParts(now);
-  return parts.weekday === 'Sat' || parts.weekday === 'Sun' || parts.minutes >= 16 * 60;
+  return parts.weekday === 'Sat' || parts.weekday === 'Sun' || parts.minutes >= (22 * 60 + 15);
 }
 
 function configuredBridgeInstrument(config: SupervisorConfig): string | null {
@@ -219,7 +219,7 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
     const ageMs = updatedAt ? now.getTime() - updatedAt.getTime() : Number.POSITIVE_INFINITY;
     const stale = !Number.isFinite(ageMs) || ageMs > config.health.logStaleAfterMs;
     const badStatus = parsed.status === 'error';
-    const afterCloseStaleBarWarning = !stale && parsed.status === 'warn' && isAfterRthScannerCloseOrWeekend(now);
+    const afterCloseStaleBarWarning = !stale && parsed.status === 'warn' && isAfterFinalScannerCloseOrWeekend(now);
     return {
       id: 'recorder_heartbeat',
       label: 'Recorder heartbeat',
@@ -229,7 +229,7 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
         : stale
           ? 'Recorder heartbeat is stale.'
           : afterCloseStaleBarWarning
-            ? `Recorder heartbeat is fresh; latest completed 5M is paused after the 4:00 PM ET scanner close (${parsed.latestCompleted5m || 'unknown'}).`
+            ? `Recorder heartbeat is fresh; latest completed 5M is paused after the 10:15 PM ET scanner close (${parsed.latestCompleted5m || 'unknown'}).`
           : parsed.status === 'warn'
             ? `Recorder heartbeat reported a warning: ${parsed.warning || 'unknown warning'}`
             : 'Recorder heartbeat is fresh.',

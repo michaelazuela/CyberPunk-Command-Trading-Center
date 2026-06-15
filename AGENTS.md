@@ -163,6 +163,7 @@ All trading windows must come from `src/config/timeWindows.ts`.
 
 - Morning Setup Scan: 9:15 AM-12:00 PM ET.
 - Lunch/PM Setup Scan: 12:00 PM-4:00 PM ET.
+- Evening Setup Scan: 6:45 PM-10:15 PM ET.
 - Required live/replay 5M setup-scan chart ranges must match those two continuous blocks.
 - Midnight Open is a core RAG feature, not temporary UI state.
 
@@ -242,12 +243,12 @@ When OHLC data is available from NinjaTrader, build the overnight session story 
 
 ## Scanner Active Desk Plan Window
 
-The local scanner may run all day, but active execution scanning, Desk Plan production, and review-map production are limited to 9:15 AM-4:00 PM ET. Outside that window, scanner health may remain online, but execution, desk-plan, and market-map refresh are paused.
+The local scanner may run all day, but active execution scanning, Desk Plan production, and review-map production are limited to 9:15 AM-4:00 PM ET and 6:45 PM-10:15 PM ET. Outside those windows, scanner health may remain online, but execution, desk-plan, and market-map refresh are paused.
 
 - The active scanner window may update bridge health, completed candles, ETH high/low, Asian high/low, London high/low, NY premarket high/low, prior day/week/month levels, 15M/60M/120M/240M liquidity, target cascade context, and review-only Desk Plan maps.
 - Desk Plan maps may show `LONG ABOVE`, `SHORT BELOW`, line in the sand, entry reference, protected 5M stop, T1/T2, HTF objective/reaction/runner context, and HTF bias lines when scanner-owned structure exists.
 - Desk Plan maps must not approve execution, place orders, loosen `canExecute`, or change entry/stop/target/risk gates.
-- 9:15 AM-4:00 PM ET is the normal execution approval window, but execution still requires completed 5M trigger, protected structure stop, actual risk, target room, valid model, and `canExecute`.
+- 9:15 AM-4:00 PM ET and 6:45 PM-10:15 PM ET are the normal execution approval windows, but execution still requires completed 5M trigger, protected structure stop, actual risk, target room, valid model, and `canExecute`.
 - Morning/Lunch plans should consume the market map built from prior days/weeks/months plus live ETH data, but execution still requires the approved window, completed 5M trigger, structure stop, actual risk, target room, and invalidation.
 
 ## Verification Before Finishing

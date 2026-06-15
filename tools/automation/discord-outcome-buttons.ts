@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-type SessionType = 'morning' | 'lunch';
+type SessionType = 'morning' | 'lunch' | 'evening';
 type Instrument = 'MES' | 'MNQ';
 type TradeDirection = 'LONG' | 'SHORT';
 type TradeResult = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';

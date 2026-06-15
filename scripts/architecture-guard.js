@@ -165,6 +165,9 @@ function checkCanonicalTimeWindowUsage() {
   if (!content.includes('Lunch/PM Setup Scan') || !content.includes('12:00 PM through 4:00 PM ET')) {
     fail('timeWindows.ts must document the canonical Lunch/PM Setup Scan window as 12:00 PM-4:00 PM ET.');
   }
+  if (!content.includes('Evening Setup Scan') || !content.includes('6:45 PM through 10:15 PM ET')) {
+    fail('timeWindows.ts must document the canonical Evening Setup Scan window as 6:45 PM-10:15 PM ET.');
+  }
 }
 
 function checkResponsibilityRegistry() {

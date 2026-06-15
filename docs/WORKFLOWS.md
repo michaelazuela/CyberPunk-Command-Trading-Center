@@ -16,6 +16,7 @@ The live sessions are:
 
 - Morning / AM.
 - Lunch / PM Review.
+- Evening.
 
 The workflow shows session chips, visible screenshot/OCR/precheck states, and an `Advanced data/model controls` disclosure for bridge, provider, cache, and diagnostic controls.
 
@@ -59,6 +60,21 @@ Expected flow:
 4. Analyze trap/reversal/continuation behavior.
 5. Build app-owned normalized trade plan.
 6. Save setup and RAG learning.
+
+## Evening
+
+Required context:
+
+- 5-minute setup-scan chart covering 6:45 PM-10:15 PM ET.
+- ETH reopen / evening liquidity context.
+- Prior RTH high/low and current overnight structure.
+
+Expected flow:
+
+1. Keep NinjaTrader bridge and recorder healthy.
+2. Let the live scanner build the Desk Plan from structured OHLC.
+3. Require the same completed 5M trigger, protected stop, risk, target, invalidation, data-quality, and `canExecute` gates before execution approval.
+4. Save Discord/RAG outcome review when a trade is taken or missed.
 
 ## Replay Lab
 

@@ -302,6 +302,17 @@ const marketCloseOutside = buildHtfLiquidityDrawState({
 });
 assert.equal(marketCloseOutside.activeScanWindow, 'OUTSIDE_SETUP_SCAN');
 
+const eveningWindowEligible = buildHtfLiquidityDrawState({
+  bars4H: sufficientHtfContext(bearishPendingBars()),
+  bars2H: sufficientHtfContext(bearishPendingBars()),
+  bars1H: sufficientHtfContext(bearishPendingBars()),
+  bars15M: sufficientHtfContext(bearishPendingBars()),
+  bars5M: sufficientHtfContext(bearishConfirmedBars()),
+  externalSellSideLiquidityTarget: 'London low / prior RTH low',
+  chartTimestamp: '2026-06-01T18:45:00',
+});
+assert.equal(eveningWindowEligible.activeScanWindow, 'EVENING_SETUP_SCAN');
+
 const missingTimeframes = buildHtfLiquidityDrawState({
   bars5M: bullishConfirmedBars(),
   externalBuySideLiquidityTarget: 'prior RTH high',

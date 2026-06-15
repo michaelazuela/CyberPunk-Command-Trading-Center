@@ -316,6 +316,10 @@ assert.equal(
   false,
 );
 assert.equal(
+  shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-05T18:45:00-04:00'))),
+  true,
+);
+assert.equal(
   shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-13T10:00:00-04:00'))),
   false,
 );
@@ -861,6 +865,9 @@ for (const timeframe of ['5m', '15m', '60m', '120m', '240m'] as const) {
 const lunchHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'lunch');
 assert.equal(lunchHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
 assert.equal(lunchHistoryPlan['5m'].to, '2026-06-02T16:00:00-04:00');
+const eveningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'evening');
+assert.equal(eveningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
+assert.equal(eveningHistoryPlan['5m'].to, '2026-06-02T22:15:00-04:00');
 
 const liveMorningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T10:05:00.0000000');
 assert.equal(liveMorningHistoryPlan['5m'].from, '2026-05-03T00:00:00-04:00');
@@ -868,6 +875,8 @@ assert.equal(liveMorningHistoryPlan['5m'].to, '2026-06-02T10:05:00-04:00');
 
 const afterMorningCloseHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'morning', '2026-06-02T12:30:00.0000000');
 assert.equal(afterMorningCloseHistoryPlan['5m'].to, '2026-06-02T12:00:00-04:00');
+const liveEveningHistoryPlan = buildScannerHistoryPreloadPlan('2026-06-02', 'evening', '2026-06-02T19:05:00.0000000');
+assert.equal(liveEveningHistoryPlan['5m'].to, '2026-06-02T19:05:00-04:00');
 
 const ethSessionCoverageBars = Array.from({ length: 6000 }, (_, index) => {
   const first = Date.parse('2026-05-03T18:05:00-04:00');

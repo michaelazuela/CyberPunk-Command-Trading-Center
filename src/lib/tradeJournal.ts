@@ -4,6 +4,7 @@ import { normalizeCandidateIctModelLabel } from './ictModelLabels';
 export type TradeJournalSession =
   | 'morning'
   | 'afternoon'
+  | 'evening'
   | 'lunch'
   | 'replay_morning'
   | 'replay_lunch';
