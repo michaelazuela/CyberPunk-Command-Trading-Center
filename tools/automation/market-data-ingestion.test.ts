@@ -108,6 +108,44 @@ const afterFirstSundayFourHourWindow = verifyMarketDataWindow({
 assert.equal(afterFirstSundayFourHourWindow.sufficient, false);
 assert.equal(afterFirstSundayFourHourWindow.dataLimitation.status, 'bridge_or_cache_incomplete');
 
+const mondayMorningClosedStartWindow = verifyMarketDataWindow({
+  bars: [
+    bar('2026-05-17T18:05:00-04:00'),
+    bar('2026-05-30T12:00:00-04:00'),
+    bar('2026-06-15T10:10:00-04:00'),
+  ],
+  timeframe: '5m',
+  requestedFrom: '2026-05-16T00:00:00-04:00',
+  requestedTo: '2026-06-15T10:10:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 3,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 3,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(mondayMorningClosedStartWindow.sufficient, true);
+assert.equal(mondayMorningClosedStartWindow.dataLimitation.status, 'none');
+
+const mondayMorningLateStartWindow = verifyMarketDataWindow({
+  bars: [
+    bar('2026-05-19T09:30:00-04:00'),
+    bar('2026-05-30T12:00:00-04:00'),
+    bar('2026-06-15T10:10:00-04:00'),
+  ],
+  timeframe: '5m',
+  requestedFrom: '2026-05-16T00:00:00-04:00',
+  requestedTo: '2026-06-15T10:10:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 3,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 3,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(mondayMorningLateStartWindow.sufficient, false);
+assert.equal(mondayMorningLateStartWindow.dataLimitation.status, 'bridge_or_cache_incomplete');
+
 const insufficient = verifyMarketDataWindow({
   bars: liveWithGap,
   timeframe: '5m',

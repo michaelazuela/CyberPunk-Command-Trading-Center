@@ -65,6 +65,44 @@ function etPartsFromCandleTime(value: string | null | undefined): { weekday: str
   };
 }
 
+function addEtDays(dateText: string, days: number): string {
+  const date = new Date(`${dateText}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function etWeekday(dateText: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+  }).format(new Date(`${dateText}T12:00:00Z`));
+}
+
+function nextSessionOpenAfterClosedStart(value: string | null | undefined): string | null {
+  const normalized = normalizeCandleTimeEt(value || '');
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const dateText = match[1];
+  const weekday = etWeekday(dateText);
+  const minutes = Number(match[2]) * 60 + Number(match[3]);
+  const dailyClose = 17 * 60;
+  const dailyOpen = 18 * 60;
+
+  if (weekday === 'Sat') {
+    return `${addEtDays(dateText, 1)}T18:00:00`;
+  }
+  if (weekday === 'Sun') {
+    return minutes < dailyOpen ? `${dateText}T18:00:00` : null;
+  }
+  if (weekday === 'Fri') {
+    return minutes >= dailyClose ? `${addEtDays(dateText, 2)}T18:00:00` : null;
+  }
+  if (minutes >= dailyClose && minutes < dailyOpen) {
+    return `${dateText}T18:00:00`;
+  }
+  return null;
+}
+
 export function isSundayEveningFourHourReopenLagCovered(
   timeframe: MarketBarTimeframe,
   lastLoadedTime: string | null | undefined,
@@ -166,9 +204,18 @@ export function verifyMarketDataWindow(args: {
   const fromMs = timestampMs(args.requestedFrom);
   const toMs = timestampMs(args.requestedTo);
   const loadedSpanDays = firstMs !== null && lastMs !== null ? (lastMs - firstMs) / (24 * 60 * 60 * 1000) : 0;
-  const requiredSpanDays = Math.max(0, args.requiredLookbackDays - 1);
+  const closedStartReopenMs = timestampMs(nextSessionOpenAfterClosedStart(args.requestedFrom));
+  const requiredSpanDays = Math.max(
+    0,
+    closedStartReopenMs !== null && toMs !== null
+      ? (toMs - closedStartReopenMs) / (24 * 60 * 60 * 1000)
+      : args.requiredLookbackDays - 1,
+  );
   const latestCompletedToleranceMs = (timeframeMinutes(args.timeframe) + 30) * 60_000;
   const startCoverageToleranceMs = (args.requiredLookbackDays > 1 ? 24 * 60 : timeframeMinutes(args.timeframe)) * 60_000;
+  const closedStartCoverageSatisfied = closedStartReopenMs !== null &&
+    firstMs !== null &&
+    firstMs <= closedStartReopenMs + latestCompletedToleranceMs;
   const internalGaps = args.requiredLookbackDays <= 1 ? countInternalGaps(sorted, args.timeframe) : 0;
   const sundayEveningFourHourReopenLagCovered =
     isSundayEveningFourHourReopenLagCovered(args.timeframe, last, args.requestedTo);
@@ -177,7 +224,7 @@ export function verifyMarketDataWindow(args: {
     sundayEveningFourHourReopenLagCovered
   );
   const spanCoverageSatisfied =
-    loadedSpanDays >= requiredSpanDays ||
+    loadedSpanDays >= requiredSpanDays - (latestCompletedToleranceMs / (24 * 60 * 60 * 1000)) ||
     (sundayEveningFourHourReopenLagCovered && loadedSpanDays >= requiredSpanDays - 3);
   const sufficient = (
     sorted.length >= args.minimumBars &&
@@ -187,7 +234,7 @@ export function verifyMarketDataWindow(args: {
     spanCoverageSatisfied &&
     fromMs !== null &&
     firstMs !== null &&
-    firstMs <= fromMs + startCoverageToleranceMs &&
+    (firstMs <= fromMs + startCoverageToleranceMs || closedStartCoverageSatisfied) &&
     latestCoverageSatisfied
   );
   const dataLimitationMessage = sufficient

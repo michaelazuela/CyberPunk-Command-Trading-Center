@@ -1343,6 +1343,7 @@ validateDiscordPayload(scannerRetestPendingPayload, ['chart-plan.png', 'price-le
 const scannerRetestPendingText = flattenDiscordPayloadText(scannerRetestPendingPayload);
 assert.ok(scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
 assert.ok(scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
+assert.ok(scannerRetestPendingText.length < 1200, `expected retest-pending scanner payload under 1200 chars, got ${scannerRetestPendingText.length}`);
 assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
 
 const dataLimitedScannerCandidate = sampleCandidate('LONG');

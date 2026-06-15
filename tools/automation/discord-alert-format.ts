@@ -1666,14 +1666,14 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         : []),
       '',
       'Trigger:',
-      compactLine(bestCandidate.requiredTrigger || bestCandidate.nextAction || 'Wait for completed 5M trigger.', 90),
-      'No chase. Completed 5M proof and protected structure required.',
+      compactLine(bestCandidate.requiredTrigger || bestCandidate.nextAction || 'Wait for completed 5M trigger.', 78),
+      'No chase. Completed 5M proof + protected structure required.',
       '',
       'Invalid:',
       compactLine(bestCandidate.invalidation || args.normalized.invalidation || 'Invalidation unavailable.', 90),
       '',
       compactAttachmentLine(args.attachments, true),
-      'Boundary: canExecute unchanged; no automated orders.',
+      'Boundary: canExecute unchanged; no orders.',
     ];
     return {
       ...payload,
