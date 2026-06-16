@@ -11,6 +11,7 @@ import { createSupervisorLogger } from './logger';
 import {
   buildSupervisorDiscordPayload,
   buildSupervisorNotifications,
+  resolveSupervisorDiscordWebhookUrl,
   sendSupervisorNotifications,
   sendSupervisorSelfHealNotification,
   supervisorDiscordWebhookDeleteUrl,
@@ -1188,6 +1189,18 @@ assert.equal(
   supervisorDiscordWebhookDeleteUrl('https://discord.com/api/webhooks/supervisor/token?wait=true', 'bridge-message-1'),
   'https://discord.com/api/webhooks/supervisor/token/messages/bridge-message-1',
 );
+assert.deepEqual(resolveSupervisorDiscordWebhookUrl({
+  QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.example/scanner',
+  SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/legacy-scanner',
+} as NodeJS.ProcessEnv), { url: null, source: null });
+assert.deepEqual(resolveSupervisorDiscordWebhookUrl({
+  QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.example/scanner',
+  QUANT_DESK_HEALTH_WEBHOOK_URL: 'https://discord.example/health',
+} as NodeJS.ProcessEnv), { url: 'https://discord.example/health', source: 'QUANT_DESK_HEALTH_WEBHOOK_URL' });
+assert.deepEqual(resolveSupervisorDiscordWebhookUrl({
+  SUPERVISOR_DISCORD_WEBHOOK_URL: 'https://discord.example/supervisor',
+  QUANT_DESK_HEALTH_WEBHOOK_URL: 'https://discord.example/health',
+} as NodeJS.ProcessEnv), { url: 'https://discord.example/supervisor', source: 'SUPERVISOR_DISCORD_WEBHOOK_URL' });
 const supervisorCleanupStatePath = path.join(tempLogsDir, 'supervisor-discord-cleanup-state.json');
 fs.writeFileSync(supervisorCleanupStatePath, JSON.stringify({
   lastStatuses: {

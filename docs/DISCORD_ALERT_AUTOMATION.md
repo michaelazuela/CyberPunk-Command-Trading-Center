@@ -17,13 +17,26 @@ Quant Desk can run a local NinjaTrader-to-Discord alert process for decision sup
 
 Cloudflare cannot reliably reach `127.0.0.1` on your trading PC. The local runner can access the NinjaTrader bridge directly, then post the finished decision-support message to Discord.
 
-## Required Secret
+## Recommended Discord Channels
 
-Set this only on your local machine:
+Keep trade decisions and operational health in separate Discord text channels:
+
+- `trade-plans`: Desk Plan, scanner trade/review plans, and outcome buttons.
+- `scanner-health`: `[SUPERVISOR]` recorder heartbeat, bridge, stale data, backfill, and recovery notices.
+- `model-research-review`: research/model review posts.
+
+Create an incoming webhook for each channel that receives automated posts. Do not reuse the trade-plan webhook for supervisor health notices.
+
+## Required Secrets
+
+Set these only on your local machine:
 
 ```powershell
-$env:DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..."
+$env:QUANT_DESK_SCANNER_WEBHOOK_URL = "https://discord.com/api/webhooks/..." # trade-plans
+$env:SUPERVISOR_DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..." # scanner-health
 ```
+
+`QUANT_DESK_HEALTH_WEBHOOK_URL` is also accepted as a supervisor/health alias. Legacy `DISCORD_WEBHOOK_URL` is still supported by older alert tools, but it should not be used for the live scanner/supervisor split.
 
 Do not commit webhook URLs.
 
@@ -77,7 +90,7 @@ Or double-click:
 tools\automation\Start Quant Desk Discord Alerts.cmd
 ```
 
-The launcher does not store your Discord webhook in the repo. If `DISCORD_WEBHOOK_URL` is not already set, it prompts for the webhook URL for that PowerShell session.
+The launcher does not store your Discord webhook in the repo. If `QUANT_DESK_SCANNER_WEBHOOK_URL`, `SCANNER_DISCORD_WEBHOOK_URL`, or legacy `DISCORD_WEBHOOK_URL` is not already set, it prompts for the scanner webhook URL for that PowerShell session. Supervisor health notices use `SUPERVISOR_DISCORD_WEBHOOK_URL` or `QUANT_DESK_HEALTH_WEBHOOK_URL` and will not fall back to the scanner trade-plan webhook.
 
 Test one alert without posting to Discord:
 
