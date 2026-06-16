@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-15
+Task: Fix supervisor tray stuck in reconnecting state.
+Files changed: QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
+Reason: The tray used PowerShell `Invoke-RestMethod` with a short timeout for `/status`, which could time out even while the Node supervisor CLI and endpoint were healthy. That left the visible tray stuck on `Reconnecting` and could trigger unnecessary self-heal attempts.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. The tray now fetches supervisor status through a bounded Node `fetch` helper with a 20-second timeout, matching the runtime stack that already reads supervisor status successfully. The launcher replaced the old tray process, and supervisor status verified `health=ok`, `delivery=ok`, scanner running, recorder running, and bridge reachable.
+Trading logic changed: No. This is supervisor tray/status polling only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Operational only. Prevents false tray reconnect/self-heal loops that can lead to noisy operational alerts.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Keep the tray polling path aligned with the Node supervisor status tooling.
+
+## Previous Change
+
+Date: 2026-06-15
 Task: Add Discord cleanup D8/D9/D10.
 Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-cleanup-verification.test.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
 Reason: Discord needed to keep the best/current trading plan visible while preventing operational notices from flooding the channel, and every true trade/review report needed durable RAG outcome buttons without forcing buttons onto watch-only or operational cleanup messages.

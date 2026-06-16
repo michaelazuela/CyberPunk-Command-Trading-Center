@@ -34,6 +34,24 @@ $EndpointMissCount = 0
 $SelfHealThreshold = 2
 $SupervisorStartupGraceSeconds = 120
 $SupervisorStartingUntil = [datetime]::MinValue
+$StatusCommandTimeoutMilliseconds = 20000
+$NodeStatusScript = @'
+const url = process.argv[1];
+const timeoutMs = Number(process.argv[2] || 7000);
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), timeoutMs);
+fetch(url, { signal: controller.signal })
+  .then(async (response) => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    process.stdout.write(await response.text());
+  })
+  .catch((error) => {
+    const message = error && error.message ? error.message : String(error);
+    console.error(message);
+    process.exit(1);
+  })
+  .finally(() => clearTimeout(timer));
+'@
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -159,8 +177,17 @@ function Start-NpmCommand {
 
 function Get-SupervisorPayload {
   try {
-    return Invoke-RestMethod -Uri $StatusUri -Method Get -TimeoutSec 2
+    $json = & node -e $NodeStatusScript $StatusUri $StatusCommandTimeoutMilliseconds 2>$null
+    if (-not $json) {
+      return $null
+    }
+    return ($json | Out-String | ConvertFrom-Json)
   } catch {
+    Write-TrayLog -Message 'Supervisor status fetch failed.' -Details @{
+      uri = $StatusUri
+      method = 'node-fetch'
+      error = $_.Exception.Message
+    }
     return $null
   }
 }
