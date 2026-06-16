@@ -65,6 +65,20 @@ globalThis.fetch = async (url, init = {}) => {
         },
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    if (String(url).includes('PLAN-DELETED-CARD')) {
+      return new Response(JSON.stringify([{
+        id: 'row-deleted-card',
+        embedding_text: 'existing embedding',
+        trade_plan_json: {
+          planVersionId: 'PLAN-DELETED-CARD',
+          discordMessage: {
+            messageId: 'deleted-message-404',
+            webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+            editAfterOutcome: true,
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify([{
       id: 'row-12345678',
       embedding_text: 'existing embedding',
@@ -79,9 +93,32 @@ globalThis.fetch = async (url, init = {}) => {
     }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   if (String(url).includes('/rest/v1/trade_embeddings?id=')) {
+    if ((init?.method || 'GET') === 'GET') {
+      return new Response(JSON.stringify([{
+        id: String(url).includes('row-already-saved')
+          ? 'row-already-saved'
+          : String(url).includes('row-deleted-card')
+            ? 'row-deleted-card'
+            : 'row-12345678',
+        trade_plan_json: {
+          existing: true,
+          discordMessage: {
+            messageId: String(url).includes('row-deleted-card') ? 'deleted-message-404' : 'discord-message-123',
+            webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+            editAfterOutcome: true,
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify([{ id: 'row-12345678' }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   if (String(url).includes('/api/webhooks/')) {
+    if ((init?.method || 'GET') === 'PATCH' && String(url).includes('/messages/deleted-message-404')) {
+      return new Response('not found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
+    if ((init?.method || 'GET') === 'POST') {
+      return new Response(JSON.stringify({ id: 'replacement-message-123' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   throw new Error(`Unexpected fetch: ${url}`);
@@ -170,10 +207,41 @@ try {
   assert.ok((await alreadySavedResponse.text()).includes('Already saved.'));
   const alreadySavedCalls = calls.slice(callsBeforeAlreadySaved);
   assert.ok(alreadySavedCalls.some((call) => String(call.url).includes('/messages/discord-message-already-saved')));
-  assert.ok(!alreadySavedCalls.some((call) => (
-    String(call.url).includes('/rest/v1/trade_embeddings?id=') ||
-    (String(call.url).endsWith('/rest/v1/trade_embeddings') && call.init.method === 'POST')
-  )), 'already-saved outcome must not patch or insert the RAG row');
+  assert.ok(!alreadySavedCalls.some((call) => String(call.url).endsWith('/rest/v1/trade_embeddings') && call.init.method === 'POST'), 'already-saved outcome must not insert a duplicate RAG row');
+  assert.ok(!alreadySavedCalls.some((call) => {
+    if (call.init.method !== 'PATCH' || !call.init.body) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcome?.updatedFrom === 'discord_button';
+  }), 'already-saved outcome must not rewrite the saved outcome');
+
+  const deletedCardToken = buildToken({ ...payload, pid: 'PLAN-DELETED-CARD', kid: keyId(secret) }, secret);
+  const deletedCardResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(deletedCardToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(deletedCardResponse.status, 200);
+  const deletedCardHtml = await deletedCardResponse.text();
+  assert.ok(deletedCardHtml.includes('locked replacement receipt posted'));
+  const deletedCardPatch = calls.find((call) => call.init.method === 'PATCH' && String(call.url).includes('/messages/deleted-message-404'));
+  assert.ok(deletedCardPatch, 'expected original deleted Discord card patch attempt');
+  const replacementPost = calls.find((call) => call.init.method === 'POST' && String(call.url).includes('/api/webhooks/') && String(call.init.body).includes('Original Discord card was no longer available'));
+  assert.ok(replacementPost, 'expected replacement locked receipt post when original card is deleted');
+  const replacementBody = JSON.parse(String(replacementPost.init.body));
+  assert.equal(replacementBody.allowed_mentions.parse.length, 0);
+  assert.ok(JSON.stringify(replacementBody.components).includes('No automated orders'));
+  assert.ok(calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-deleted-card')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcomeLock?.status === 'replacement_posted' &&
+      patch.trade_plan_json.discordOutcomeLock.replacementMessageId === 'replacement-message-123' &&
+      patch.trade_plan_json.discordOutcomeLock.approvalBoundary?.replacementReceiptApprovesTrade === false;
+  }), 'expected RAG row to record replacement lock status without changing trade approval');
 
   const runnerToken = buildToken({ ...payload, pid: 'PLAN-RUNNER-TEST', o: 'long_runner_hit', hit: 'RUNNER', kid: keyId(secret) }, secret);
   const runnerResponse = await onRequestGet({

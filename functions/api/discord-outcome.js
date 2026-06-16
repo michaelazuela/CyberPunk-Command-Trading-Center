@@ -208,6 +208,16 @@ function buildLockedOutcomeComponents(payload) {
   ];
 }
 
+function buildReplacementOutcomeMessage(payload) {
+  return [
+    '[QUANT DESK OUTCOME LOCK]',
+    `Plan: ${payload.pid}`,
+    outcomeSummary(payload),
+    'Original Discord card was no longer available, so this locked replacement receipt was posted.',
+    'Decision support only. No automated orders were placed.',
+  ].join('\n');
+}
+
 function discordWebhookUrl(context) {
   return (
     getEnv(context, 'QUANT_DESK_SCANNER_WEBHOOK_URL') ||
@@ -216,11 +226,42 @@ function discordWebhookUrl(context) {
   );
 }
 
+async function postDiscordOutcomeReplacementMessage(context, payload) {
+  const webhookUrl = discordWebhookUrl(context);
+  if (!webhookUrl) return { posted: false, reason: 'missing_discord_webhook_url', messageId: null };
+  const url = new URL(webhookUrl);
+  url.searchParams.set('wait', 'true');
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: buildReplacementOutcomeMessage(payload),
+      components: buildLockedOutcomeComponents(payload),
+      allowed_mentions: { parse: [] },
+    }),
+  });
+  if (!response.ok) {
+    return { posted: false, reason: `discord_replacement_post_failed_${response.status}`, messageId: null };
+  }
+  const body = await response.json().catch(() => null);
+  return {
+    posted: true,
+    reason: null,
+    messageId: typeof body?.id === 'string' ? body.id : null,
+  };
+}
+
 async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
   const messageId = typeof discordMessage?.messageId === 'string' ? discordMessage.messageId : '';
   const webhookUrl = discordWebhookUrl(context);
   if (!messageId || !webhookUrl) {
-    return { edited: false, reason: !messageId ? 'missing_discord_message_id' : 'missing_discord_webhook_url' };
+    return {
+      edited: false,
+      status: 'unavailable',
+      reason: !messageId ? 'missing_discord_message_id' : 'missing_discord_webhook_url',
+      replacementPosted: false,
+      replacementMessageId: null,
+    };
   }
   const url = new URL(webhookUrl);
   url.search = '';
@@ -233,9 +274,40 @@ async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
     }),
   });
   if (!response.ok) {
-    return { edited: false, reason: `discord_patch_failed_${response.status}` };
+    if (response.status === 404) {
+      const replacement = await postDiscordOutcomeReplacementMessage(context, payload);
+      if (replacement.posted) {
+        return {
+          edited: false,
+          status: 'replacement_posted',
+          reason: 'original_discord_message_not_found',
+          replacementPosted: true,
+          replacementMessageId: replacement.messageId,
+        };
+      }
+      return {
+        edited: false,
+        status: 'unavailable',
+        reason: `original_discord_message_not_found_${replacement.reason}`,
+        replacementPosted: false,
+        replacementMessageId: null,
+      };
+    }
+    return {
+      edited: false,
+      status: 'unavailable',
+      reason: `discord_patch_failed_${response.status}`,
+      replacementPosted: false,
+      replacementMessageId: null,
+    };
   }
-  return { edited: true, reason: null };
+  return {
+    edited: true,
+    status: 'locked_original',
+    reason: null,
+    replacementPosted: false,
+    replacementMessageId: null,
+  };
 }
 
 function journalResultR(existingJournalRecord, payload, tradeResult) {
@@ -357,6 +429,58 @@ async function persistOutcome(context, payload) {
   };
 }
 
+async function updateDiscordOutcomeLockStatus(context, rowId, lock, payload) {
+  const supabaseUrl = normalizeSupabaseUrl(context);
+  const serviceRoleKey = getEnv(context, 'SUPABASE_SERVICE_ROLE_KEY');
+  const userId = getEnv(context, 'DISCORD_RAG_USER_ID');
+  if (!supabaseUrl || !serviceRoleKey || !userId || !rowId) {
+    return { updated: false, reason: 'missing_supabase_lock_status_context' };
+  }
+  const headers = supabaseServiceHeaders(serviceRoleKey);
+  const lookup = await fetch(
+    `${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(rowId)}&select=id,trade_plan_json`,
+    { headers }
+  );
+  if (!lookup.ok) {
+    return { updated: false, reason: `supabase_lock_status_lookup_failed_${lookup.status}` };
+  }
+  const rows = await lookup.json().catch(() => []);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!row?.id) return { updated: false, reason: 'supabase_lock_status_row_not_found' };
+  const existingPlanJson = row.trade_plan_json && typeof row.trade_plan_json === 'object'
+    ? row.trade_plan_json
+    : {};
+  const discordMessage = existingPlanJson.discordMessage && typeof existingPlanJson.discordMessage === 'object'
+    ? existingPlanJson.discordMessage
+    : {};
+  const patch = {
+    trade_plan_json: {
+      ...existingPlanJson,
+      discordOutcomeLock: {
+        status: lock.status,
+        reason: lock.reason,
+        updatedAt: new Date().toISOString(),
+        originalMessageIdPresent: Boolean(discordMessage.messageId),
+        replacementPosted: Boolean(lock.replacementPosted),
+        replacementMessageId: lock.replacementMessageId || null,
+        outcomeCode: payload.o || null,
+        approvalBoundary: {
+          discordLockApprovesTrade: false,
+          replacementReceiptApprovesTrade: false,
+          buttonClickPlacesOrder: false,
+        },
+      },
+    },
+  };
+  const update = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(row.id)}&user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(patch),
+  });
+  if (!update.ok) return { updated: false, reason: `supabase_lock_status_update_failed_${update.status}` };
+  return { updated: true, reason: null };
+}
+
 export async function onRequestGet(context) {
   try {
     const url = new URL(context.request.url);
@@ -371,13 +495,17 @@ export async function onRequestGet(context) {
     const payload = await verifyToken(token, secrets);
     const result = await persistOutcome(context, payload);
     const lock = await lockDiscordOutcomeMessage(context, payload, result.discordMessage);
+    const lockStatus = await updateDiscordOutcomeLockStatus(context, result.rowId, lock, payload);
+    const lockStatusText = lockStatus.updated ? '' : ` RAG lock status update skipped (${lockStatus.reason}).`;
     const lockText = lock.edited
       ? 'Discord card locked.'
-      : `Discord card lock unavailable (${lock.reason}).`;
+      : lock.replacementPosted
+        ? 'Original Discord card was unavailable; locked replacement receipt posted.'
+        : `Discord card lock unavailable (${lock.reason}).`;
     if (result.alreadySaved) {
-      return html(`Already saved. ${lockText} Plan ${payload.pid}. Existing RAG row ${String(result.rowId).slice(0, 8)}.`);
+      return html(`Already saved. ${lockText}${lockStatusText} Plan ${payload.pid}. Existing RAG row ${String(result.rowId).slice(0, 8)}.`);
     }
-    return html(`Saved to RAG. ${lockText} Plan ${payload.pid}. ${outcomeSummary(payload)} Row ${String(result.rowId).slice(0, 8)}.`);
+    return html(`Saved to RAG. ${lockText}${lockStatusText} Plan ${payload.pid}. ${outcomeSummary(payload)} Row ${String(result.rowId).slice(0, 8)}.`);
   } catch (error) {
     return html(error instanceof Error ? error.message : String(error), 400);
   }
