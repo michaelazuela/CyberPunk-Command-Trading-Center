@@ -563,7 +563,8 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('confirmationLine') ||
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
-    !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
+    !formatterContent.includes('defaultOutcomeComponentsForSummary') ||
+    !formatterContent.includes('requires RAG outcome buttons')
   ) {
     fail('discord-alert-format.ts must keep Current Desk Plan alerts concise, chart-backed when levels exist, RAG-button compatible, and unchanged on approval authority.');
   }

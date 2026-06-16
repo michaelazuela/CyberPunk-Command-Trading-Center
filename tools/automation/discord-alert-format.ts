@@ -18,6 +18,7 @@ import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
 import { classifyDiscordMessageText } from './discord-message-policy';
+import { buildOutcomeComponents, loadCanonicalDiscordOutcomeSecretFromEnvLocal } from './discord-outcome-buttons';
 
 export type CompactDiscordSession = 'morning' | 'lunch' | 'evening';
 export type CompactDiscordInstrument = 'MES' | 'MNQ';
@@ -284,6 +285,20 @@ interface CompactDiscordSummaryArgs {
   statusOverride?: string | null;
   deskState?: CompactDeskStateForDiscord | null;
   currentPrice?: number | null;
+}
+
+function defaultOutcomeComponentsForSummary(
+  args: CompactDiscordSummaryArgs,
+  direction: 'LONG' | 'SHORT' | 'NO TRADE' | null | undefined,
+): unknown[] | undefined {
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal();
+  return buildOutcomeComponents({
+    planVersionId: args.planVersionId,
+    sessionType: args.session,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    direction,
+  });
 }
 
 interface MorningWatchlistDiscordArgs {
@@ -1122,6 +1137,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const sessionLabel = sessionShortLabel(args.session);
   const direction = deskPlayHeadlineDirection(play);
   const lines = deskPlayCurrentPlanLines(args, direction);
+  const components = args.components || defaultOutcomeComponentsForSummary(args, direction === 'WAIT' ? null : direction);
   return {
     username: 'Quant Desk',
     content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${direction} | ${args.tradeDate}`,
@@ -1135,7 +1151,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
         timestamp: new Date().toISOString(),
       },
     ],
-    ...(args.components?.length ? { components: args.components } : {}),
+    ...(components?.length ? { components } : {}),
   };
 }
 
@@ -1318,7 +1334,9 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         'Decision support only.',
       ];
 
-  const includeComponents = Boolean(args.components);
+  const defaultComponents = defaultOutcomeComponentsForSummary(args, designerStatus === 'NO TRADE' ? null : direction === 'LONG' || direction === 'SHORT' ? direction : null);
+  const components = args.components || defaultComponents;
+  const includeComponents = Boolean(components?.length);
   const payload: DiscordWebhookPayload = {
     username: 'Quant Desk',
     content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation}`,
@@ -1332,7 +1350,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
         timestamp: new Date().toISOString(),
       },
     ],
-    ...(includeComponents ? { components: args.components } : {}),
+    ...(includeComponents ? { components } : {}),
   };
   const maxMainText = args.attachments.chartPlan || args.attachments.priceLevelMap ? 1550 : 1900;
   if (bestCandidate && designerStatus !== 'NO TRADE' && designerStatus !== 'EXECUTABLE' && flattenDiscordPayloadText(payload).length > maxMainText) {
@@ -1514,6 +1532,9 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     /\bT2:\s*\d+\.\d{2}\b/i.test(mainText);
   if (policy.requiresChartWhenLevelsPresent && hasCurrentDeskPlanLevels && validFiles.length === 0) {
     throw new Error('Discord payload blocked: Current Desk Plan with app-owned levels requires an attached chart.');
+  }
+  if (policy.requiresRagButtons && (!payload.components || payload.components.length === 0)) {
+    throw new Error(`Discord payload blocked: ${policy.category} requires RAG outcome buttons.`);
   }
   const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*(?:review|attached)|current desk plan/i.test(mainText);
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {

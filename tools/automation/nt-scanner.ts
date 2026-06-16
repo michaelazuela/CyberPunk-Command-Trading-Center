@@ -3709,6 +3709,42 @@ export async function cleanupRecoveredScannerOperationalDiscordMessages(args: {
   return { checked, deleted, failed, skipped };
 }
 
+export async function replacePriorScannerDiscordOperationalMessages(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  kind: ScannerDiscordCleanupKind;
+  currentKey: string;
+  now?: Date;
+  fetchImpl?: FetchLike;
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+  const now = args.now || new Date();
+  if (!scannerDiscordCleanupKindIsEphemeral(args.kind)) return { checked: 0, deleted: 0, failed: 0, skipped: 0 };
+  let checked = 0;
+  let deleted = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const record of Object.values(args.state.discordCleanupMessages || {})) {
+    if (record.kind !== args.kind || record.deleteStatus !== 'pending') continue;
+    const recordKeyWithoutKindAndMessage = record.key
+      .replace(new RegExp(`^${args.kind}:`), '')
+      .replace(new RegExp(`:${record.messageId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '');
+    if (recordKeyWithoutKindAndMessage === args.currentKey) continue;
+    checked += 1;
+    const result = await deleteScannerDiscordCleanupRecord({
+      config: args.config,
+      state: args.state,
+      record,
+      now,
+      replacedBy: args.currentKey,
+      fetchImpl: args.fetchImpl,
+    });
+    if (result === 'deleted') deleted += 1;
+    else if (result === 'failed') failed += 1;
+    else skipped += 1;
+  }
+  return { checked, deleted, failed, skipped };
+}
+
 export async function cleanupExpiredScannerDiscordMessages(args: {
   config: ScannerConfig;
   state: ScannerStateFile;
@@ -3860,12 +3896,22 @@ async function sendScannerHealthAlertIfNeeded(args: {
         console.log(`[scanner-health] Purged recovered operational Discord notices: deleted=${recoveryCleanup.deleted} failed=${recoveryCleanup.failed} skipped=${recoveryCleanup.skipped}`);
       }
     }
+    const healthKey = `health:${currentStatus}`;
+    const replaceResult = await replacePriorScannerDiscordOperationalMessages({
+      state: args.state,
+      config: args.config,
+      kind: 'health',
+      currentKey: healthKey,
+    });
+    if (replaceResult.checked > 0) {
+      console.log(`[scanner-health] Replaced prior scanner health Discord notices: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
+    }
     recordScannerDiscordCleanupMessage({
       state: args.state,
       config: args.config,
       receipt,
       kind: 'health',
-      key: `health:${currentStatus}`,
+      key: healthKey,
     });
     args.state.lastHealthStatus = currentStatus;
     args.state.lastHealthAlertSentAt = new Date().toISOString();
@@ -4008,6 +4054,15 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
   const payload = buildScannerDataQualityNoticePayload(args);
   try {
     const receipt = await postDiscord(payload, args.config);
+    const replaceResult = await replacePriorScannerDiscordOperationalMessages({
+      state: args.state,
+      config: args.config,
+      kind: 'data_quality',
+      currentKey: noticeKey,
+    });
+    if (replaceResult.checked > 0) {
+      console.log(`[scanner-data] Replaced prior scanner data-quality Discord notices: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
+    }
     recordScannerDiscordCleanupMessage({
       state: args.state,
       config: args.config,
@@ -4114,6 +4169,15 @@ async function sendWindowStartAlert(args: {
   });
 
   const receipt = await postDiscord(payload, args.config);
+  const replaceResult = await replacePriorScannerDiscordOperationalMessages({
+    state: args.state,
+    config: args.config,
+    kind: 'window_start',
+    currentKey: key,
+  });
+  if (replaceResult.checked > 0) {
+    console.log(`[scanner] Replaced prior scanner window-start Discord notices: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
+  }
   recordScannerDiscordCleanupMessage({
     state: args.state,
     config: args.config,

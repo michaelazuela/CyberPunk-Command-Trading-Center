@@ -22,6 +22,7 @@ import {
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
   cleanupRecoveredScannerOperationalDiscordMessages,
+  replacePriorScannerDiscordOperationalMessages,
   htfHistoryCoverageReadiness,
   claimDurableActiveCampaignScannerAlert,
   loadScannerActiveCampaignLedgerConfig,
@@ -417,6 +418,52 @@ assert.deepEqual(recoveredDeletes, [
 assert.equal(cleanupState.discordCleanupMessages[recoveredOperationalRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages[recoveredWindowStartRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
+const olderHealthRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'health-message-old',
+  },
+  kind: 'health',
+  key: 'health:STALE',
+  now: new Date('2026-06-05T14:22:00.000Z'),
+});
+const latestHealthRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'health-message-latest',
+  },
+  kind: 'health',
+  key: 'health:READY',
+  now: new Date('2026-06-05T14:23:00.000Z'),
+});
+assert.ok(olderHealthRecord);
+assert.ok(latestHealthRecord);
+const floodControlDeletes: string[] = [];
+process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
+const floodControlResult = await replacePriorScannerDiscordOperationalMessages({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  kind: 'health',
+  currentKey: 'health:READY',
+  now: new Date('2026-06-05T14:24:00.000Z'),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    floodControlDeletes.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  },
+});
+restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
+assert.deepEqual(floodControlResult, { checked: 1, deleted: 1, failed: 0, skipped: 0 });
+assert.deepEqual(floodControlDeletes, ['DELETE https://discord.com/api/webhooks/123/token/messages/health-message-old']);
+assert.equal(cleanupState.discordCleanupMessages[olderHealthRecord!.key].deleteStatus, 'replaced');
+assert.equal(cleanupState.discordCleanupMessages[latestHealthRecord!.key].deleteStatus, 'pending');
 const dataQualityNotice = buildScannerDataQualityNoticePayload({
   tradeDate: '2026-06-05',
   session: 'morning',

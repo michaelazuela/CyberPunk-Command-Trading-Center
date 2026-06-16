@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-15
+Task: Add Discord cleanup D8/D9/D10.
+Files changed: docs/PROJECT_STATUS.md, package.json, scripts/architecture-guard.js, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/discord-cleanup-verification.test.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
+Reason: Discord needed to keep the best/current trading plan visible while preventing operational notices from flooding the channel, and every true trade/review report needed durable RAG outcome buttons without forcing buttons onto watch-only or operational cleanup messages.
+Tests run: npx tsx tools/automation/discord-cleanup-verification.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/discord-outcome-buttons.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. D8 replaces older unresolved scanner/supervisor operational Discord messages of the same category after a new post succeeds. D9 makes Current Desk Plan and trade/review reports RAG-button-required, adds default outcome buttons for scanner summary paths through the canonical outcome-secret loader, and keeps operational/watchlist messages button-free. D10 adds a deterministic cleanup verification test to the normal test suite so chart-backed current desk plans, operational notices, and watch messages keep the correct policy boundaries.
+Trading logic changed: No. This changes Discord cleanup, RAG button validation, tests, and architecture guards only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Yes. Operational notices are replace/delete-capable, true trade/review messages require RAG buttons, and watch-only messages remain visible without outcome buttons.
+Journal/RAG impact: Yes, validation now blocks buttonless current desk/trade/review report payloads before Discord send. Buttons still only record trader-confirmed outcomes and do not approve trades.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Keep trade/review posts retained, and let operational cleanup/recovery handling keep transient supervisor/scanner messages quiet.
+
+## Previous Change
+
+Date: 2026-06-15
 Task: Add Discord cleanup D1/D2/D5 first batch.
 Files changed: tools/automation/discord-message-policy.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
 Reason: Discord Desk Play messages needed a standard current-plan format, a single message policy contract for cleanup behavior, and an enforced chart attachment rule so app-owned entry/stop/T1/T2 plans cannot post without visual evidence.

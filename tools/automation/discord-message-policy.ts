@@ -1,6 +1,7 @@
 export type DiscordMessageCategory =
   | 'current_desk_plan'
   | 'trade_alert'
+  | 'watchlist'
   | 'review_learning'
   | 'daily_weekly_summary'
   | 'operational_health'
@@ -31,6 +32,14 @@ const POLICY_BY_CATEGORY: Record<DiscordMessageCategory, DiscordMessagePolicy> =
     purgeAfterMinutes: null,
     requiresChartWhenLevelsPresent: true,
     requiresRagButtons: true,
+    mayDeleteAfterRecovery: false,
+  },
+  watchlist: {
+    category: 'watchlist',
+    keepLatestOnly: true,
+    purgeAfterMinutes: null,
+    requiresChartWhenLevelsPresent: false,
+    requiresRagButtons: false,
     mayDeleteAfterRecovery: false,
   },
   review_learning: {
@@ -84,6 +93,12 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   if (normalized.includes('current desk plan') || normalized.includes('desk play')) {
     return discordMessagePolicy('current_desk_plan');
   }
+  if (normalized.includes('watchlist') || normalized.includes('watch only - no fresh entry')) {
+    return discordMessagePolicy('watchlist');
+  }
+  if (normalized.includes('[am watch]') || normalized.includes('[pm watch]') || normalized.includes('[evening watch]')) {
+    return discordMessagePolicy('watchlist');
+  }
   if (normalized.includes('scanner health') || normalized.includes('[supervisor]') || normalized.includes('bridge unreachable')) {
     return discordMessagePolicy('operational_health');
   }
@@ -101,4 +116,3 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   }
   return discordMessagePolicy('trade_alert');
 }
-

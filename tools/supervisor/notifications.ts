@@ -699,6 +699,41 @@ async function deleteRecoveredSupervisorMessages(args: {
   return { checked, deleted, failed, skipped };
 }
 
+async function deletePriorSupervisorMessageForDedupe(args: {
+  state: SupervisorNotificationState;
+  dedupeKey: string;
+  newMessageId: string;
+  webhookUrl: string;
+  now: Date;
+  fetchImpl: typeof fetch;
+}): Promise<'deleted' | 'skipped' | 'failed'> {
+  const record = args.state.postedMessages?.[args.dedupeKey];
+  if (!record || record.deleteStatus !== 'pending' || record.messageId === args.newMessageId) return 'skipped';
+  try {
+    const response = await args.fetchImpl(supervisorDiscordWebhookDeleteUrl(args.webhookUrl, record.messageId), {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Supervisor Discord message delete failed (${response.status}).`);
+    }
+    args.state.postedMessages[record.dedupeKey] = {
+      ...record,
+      deleteStatus: 'deleted',
+      deletedAt: args.now.toISOString(),
+      lastError: `replaced_by:${args.newMessageId}`,
+    };
+    return 'deleted';
+  } catch (error) {
+    args.state.postedMessages[record.dedupeKey] = {
+      ...record,
+      deleteStatus: 'failed',
+      lastError: error instanceof Error ? error.message : String(error),
+    };
+    return 'failed';
+  }
+}
+
 async function postSupervisorNotification(args: {
   webhookUrl: string;
   notification: SupervisorNotification;
@@ -747,6 +782,14 @@ export async function sendSupervisorNotifications(
       fetchImpl,
     });
     if (messageId) {
+      await deletePriorSupervisorMessageForDedupe({
+        state: nextState,
+        dedupeKey: item.dedupeKey,
+        newMessageId: messageId,
+        webhookUrl: webhook,
+        now,
+        fetchImpl,
+      });
       nextState.postedMessages[item.dedupeKey] = {
         dedupeKey: item.dedupeKey,
         kind: item.kind,
@@ -804,6 +847,14 @@ export async function sendSupervisorSelfHealNotification(
     fetchImpl: options.fetchImpl || fetch,
   });
   if (messageId) {
+    await deletePriorSupervisorMessageForDedupe({
+      state,
+      dedupeKey: notificationItem.dedupeKey,
+      newMessageId: messageId,
+      webhookUrl: webhook,
+      now,
+      fetchImpl: options.fetchImpl || fetch,
+    });
     state.postedMessages[notificationItem.dedupeKey] = {
       dedupeKey: notificationItem.dedupeKey,
       kind: notificationItem.kind,

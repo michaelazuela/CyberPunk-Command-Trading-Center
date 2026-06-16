@@ -773,6 +773,42 @@ assert.ok(pendingGapPayloadText.includes('Run npm run market-data:gaps:sync'));
 assert.ok(pendingGapPayloadText.includes('Pending gap sync: 1 (1 stale)'));
 assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(pendingGapPayloadText), false);
 
+const supervisorFloodStatePath = path.join(tempLogsDir, 'supervisor-flood-control-state.json');
+fs.writeFileSync(supervisorFloodStatePath, JSON.stringify({
+  lastStatuses: {},
+  lastSentAtByKey: {
+    market_data_gap_sync_pending: '2026-06-05T01:00:00.000Z',
+  },
+  postedMessages: {
+    market_data_gap_sync_pending: {
+      dedupeKey: 'market_data_gap_sync_pending',
+      kind: 'market_data_gap_sync_pending',
+      messageId: 'gap-sync-old-message',
+      postedAt: '2026-06-05T01:00:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+  },
+}, null, 2));
+const supervisorFloodCalls: string[] = [];
+const supervisorFloodSend = await sendSupervisorNotifications(pendingGapStatus, {
+  statePath: supervisorFloodStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  now: new Date('2026-06-05T02:51:09.681Z'),
+  staleCooldownMs: 180_000,
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorFloodCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    if ((init?.method || 'GET') === 'DELETE') return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ id: 'gap-sync-new-message' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(supervisorFloodSend.notifications.some((item) => item.kind === 'market_data_gap_sync_pending'), true);
+assert.ok(supervisorFloodCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/gap-sync-old-message'));
+const supervisorFloodState = JSON.parse(fs.readFileSync(supervisorFloodStatePath, 'utf8'));
+assert.equal(supervisorFloodState.postedMessages.market_data_gap_sync_pending.messageId, 'gap-sync-new-message');
+assert.equal(supervisorFloodState.postedMessages.market_data_gap_sync_pending.deleteStatus, 'pending');
+
 const notificationState: SupervisorNotificationState = {
   lastStatuses: {
     'service:scanner': 'running',

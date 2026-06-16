@@ -22,10 +22,13 @@ process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
 
 assert.equal(discordMessagePolicy('current_desk_plan').requiresChartWhenLevelsPresent, true);
 assert.equal(discordMessagePolicy('current_desk_plan').requiresRagButtons, true);
+assert.equal(discordMessagePolicy('watchlist').requiresRagButtons, false);
 assert.equal(discordMessagePolicy('operational_health').purgeAfterMinutes, 15);
 assert.equal(discordMessagePolicy('operational_health').mayDeleteAfterRecovery, true);
 assert.equal(classifyDiscordMessageText('[SUPERVISOR] Bridge Unreachable').category, 'operational_health');
 assert.equal(classifyDiscordMessageText('MES Current Desk Plan').category, 'current_desk_plan');
+assert.equal(classifyDiscordMessageText('[AM WATCHLIST] MES - LONG DEVELOPING').category, 'watchlist');
+assert.equal(classifyDiscordMessageText('[AM WATCH] MES - LONG WATCH FORMING').category, 'watchlist');
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
@@ -952,6 +955,13 @@ const deskPlaySupportedShortPayload = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
+  components: buildOutcomeComponents({
+    planVersionId: 'LUNCH-DESK-PLAY-SUPPORTED-SHORT-TEST',
+    sessionType: 'lunch',
+    tradeDate: '2026-06-11',
+    instrument: 'MES',
+    direction: 'SHORT',
+  }),
   deskState: {
     marketMode: 'watching',
     visibilityMode: 'HOLD_WITH_REASON',
@@ -1056,6 +1066,13 @@ const eveningMissed = compactDiscordSummary({
   attachments: { chartPlan: true, priceLevelMap: true },
   sourceLabel: 'Scanner',
   windowLabel: '18:45-22:15 ET',
+  components: buildOutcomeComponents({
+    planVersionId: 'EVENING-MISSED-LENGTH',
+    sessionType: 'evening',
+    tradeDate: '2026-06-14',
+    instrument: 'MES',
+    direction: 'LONG',
+  }),
 });
 validateDiscordPayload(eveningMissed, ['chart-plan.png', 'price-level-map.png']);
 const eveningMissedText = flattenDiscordPayloadText(eveningMissed);
@@ -1789,19 +1806,38 @@ console.warn = (...args: unknown[]) => {
 try {
   validateDiscordPayload({
     username: 'Quant Desk',
-    content: '[DESK PLAY] MES - REVIEW',
+    content: 'MES Current Desk Plan',
     embeds: [{
-      title: 'Compact Trade Plan Summary',
+      title: 'MES Current Desk Plan',
       description: [
-        'Status: WAIT - review only',
-        'Chart: review attached; approvals unchanged.',
-        'Decision support only. No automated orders.',
+        'Primary: WAIT',
+        'Bias: No HTF-supported directional play confirmed.',
+        'Line in sand: 7410.00',
+        '',
+        'LONG ABOVE 7410.00',
+        'Entry: pending',
+        'Stop: pending',
+        'T1: pending',
+        'T2: pending',
+        '',
+        'Invalid below: pending',
+        'HTF target: N/A / runner N/A',
+        '',
+        'Status: Review only until 5M trigger + canExecute.',
+        'Chart: attached.',
       ].join('\n'),
       color: 0,
       fields: [],
       footer: { text: 'Quant Desk' },
       timestamp: new Date().toISOString(),
     }],
+    components: buildOutcomeComponents({
+      planVersionId: 'CURRENT-DESK-PLAN-SINGLE-CHART-TEST',
+      sessionType: 'morning',
+      tradeDate: '2026-06-15',
+      instrument: 'MES',
+      direction: null,
+    }),
   }, ['desk-play-chart.png']);
 } finally {
   console.warn = originalConsoleWarn;
