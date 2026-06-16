@@ -57,6 +57,7 @@ import {
   twoHourCoverageDiagnostic,
   verifyScannerActiveCampaignLedgerReady,
   writeLocalMarketDataGapEvent,
+  writeScannerDiscordReceiptAuditLog,
   writeScannerDecisionTapeAuditLog,
   upsertScannerDiscordAlertRagRecord,
   normalizeScannerBarTimestampMode,
@@ -221,11 +222,41 @@ assert.equal(
   scannerDiscordWebhookDeleteUrl('https://discord.com/api/webhooks/123/token?wait=true', 'message-123'),
   'https://discord.com/api/webhooks/123/token/messages/message-123',
 );
+const receiptAuditPath = await writeScannerDiscordReceiptAuditLog({
+  kind: 'desk_play',
+  key: '2026-06-05:MES:morning:DESK_PLAN_REFRESH:test',
+  planVersionId: 'MORNING-20260605-140000-DESK-PLAY',
+  tradeDate: '2026-06-05',
+  instrument: 'MES',
+  session: 'morning',
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'desk-play-message-789',
+  },
+  postedAt: '2026-06-05T14:00:03.000Z',
+  cleanupRecordKey: 'desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:test:desk-play-message-789',
+  ragReceiptAttached: true,
+  auditDir,
+});
+assert.ok(receiptAuditPath);
+const receiptAudit = JSON.parse(await fs.readFile(receiptAuditPath, 'utf8'));
+assert.equal(receiptAudit.source, 'live-scanner-discord-receipt');
+assert.equal(receiptAudit.planVersionId, 'MORNING-20260605-140000-DESK-PLAY');
+assert.equal(receiptAudit.discordMessage.messageId, 'desk-play-message-789');
+assert.equal(receiptAudit.discordMessage.ragReceiptAttached, true);
+assert.equal(JSON.stringify(receiptAudit).includes('discord.com/api/webhooks'), false);
 const scannerDeskPlayReceiptSource = await fs.readFile(path.join(process.cwd(), 'tools/automation/nt-scanner.ts'), 'utf8');
 assert.match(
   scannerDeskPlayReceiptSource,
   /await attachDiscordMessageReceiptToRagRecord\(\{\s*planVersionId: deskPlayPlanVersionId,\s*discordMessageId: receipt\.discordMessageId,\s*webhookSource: receipt\.webhookSource,/s,
   'Desk Play Discord sends must persist the returned message id into RAG so outcome buttons can lock the card.',
+);
+assert.match(
+  scannerDeskPlayReceiptSource,
+  /await writeScannerDiscordReceiptAuditLog\(\{\s*kind: 'desk_play',\s*key: deskPlayKey,\s*planVersionId: deskPlayPlanVersionId,/s,
+  'Desk Play Discord sends must write a durable receipt audit so old RAG rows can be repaired without guessing.',
 );
 const cleanupState: any = {
   discordCleanupMessages: {},

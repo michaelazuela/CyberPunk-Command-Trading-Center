@@ -1788,6 +1788,51 @@ async function writeScannerDiscordAuditLog(args: {
   return file;
 }
 
+export async function writeScannerDiscordReceiptAuditLog(args: {
+  kind: ScannerDiscordCleanupKind;
+  key: string;
+  planVersionId: string;
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  receipt: ScannerDiscordPostReceipt;
+  postedAt: string;
+  cleanupRecordKey?: string | null;
+  ragReceiptAttached?: boolean;
+  auditDir?: string;
+}): Promise<string | null> {
+  if (args.receipt.deliveryStatus !== 'sent' || !args.receipt.discordMessageId) return null;
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  await fs.mkdir(auditDir, { recursive: true });
+  const safePlanVersionId = args.planVersionId.replace(/[^a-zA-Z0-9._-]/g, '-');
+  const file = path.join(auditDir, `discord-receipt-${safePlanVersionId}.json`);
+  await fs.writeFile(file, JSON.stringify({
+    createdAt: new Date().toISOString(),
+    source: 'live-scanner-discord-receipt',
+    kind: args.kind,
+    key: args.key,
+    planVersionId: args.planVersionId,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    discordMessage: {
+      messageId: args.receipt.discordMessageId,
+      webhookSource: args.receipt.webhookSource,
+      httpStatus: args.receipt.httpStatus,
+      postedAt: args.postedAt,
+      cleanupRecordKey: args.cleanupRecordKey || null,
+      ragReceiptAttached: Boolean(args.ragReceiptAttached),
+    },
+    recoveryUse: {
+      mayBackfillRagDiscordMessageId: true,
+      mayApproveTrade: false,
+      mayChangeTradePlan: false,
+      mayPlaceOrder: false,
+    },
+  }, null, 2));
+  return file;
+}
+
 async function writeScannerWatchlistAuditLog(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -3119,17 +3164,22 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
   planVersionId: string;
   discordMessageId: string | null;
   webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
-}): Promise<void> {
-  if (!args.discordMessageId) return;
+}): Promise<boolean> {
+  if (!args.discordMessageId) return false;
   const { config } = resolveDiscordRagPersistenceConfig();
-  if (!config) return;
-  await attachDiscordMessageReceiptToRagPayload({
-    config,
-    planVersionId: args.planVersionId,
-    discordMessageId: args.discordMessageId,
-    webhookSource: args.webhookSource,
-    warningLabel: 'Scanner Discord message receipt',
-  });
+  if (!config) return false;
+  try {
+    return await attachDiscordMessageReceiptToRagPayload({
+      config,
+      planVersionId: args.planVersionId,
+      discordMessageId: args.discordMessageId,
+      webhookSource: args.webhookSource,
+      warningLabel: 'Scanner Discord message receipt',
+    });
+  } catch (error) {
+    console.warn(`Scanner Discord message receipt update skipped safely: ${sanitizedError(error)}`);
+    return false;
+  }
 }
 
 function scannerWatchlistAlertKey(args: {
@@ -5157,20 +5207,33 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           if (recoveredOperational.checked > 0) {
             console.log(`[scanner] Purged recovered operational Discord notices after Desk Plan send: deleted=${recoveredOperational.deleted} failed=${recoveredOperational.failed} skipped=${recoveredOperational.skipped}`);
           }
-          recordScannerDiscordCleanupMessage({
+          const cleanupRecord = recordScannerDiscordCleanupMessage({
             state,
             config,
             receipt,
             kind: 'desk_play',
             key: deskPlayKey,
           });
+          let ragReceiptAttached = false;
           if (shouldPersistScannerAlertToRag(deskState)) {
-            await attachDiscordMessageReceiptToRagRecord({
+            ragReceiptAttached = await attachDiscordMessageReceiptToRagRecord({
               planVersionId: deskPlayPlanVersionId,
               discordMessageId: receipt.discordMessageId,
               webhookSource: receipt.webhookSource,
             });
           }
+          await writeScannerDiscordReceiptAuditLog({
+            kind: 'desk_play',
+            key: deskPlayKey,
+            planVersionId: deskPlayPlanVersionId,
+            tradeDate,
+            instrument: config.instrument,
+            session,
+            receipt,
+            postedAt: sentAt,
+            cleanupRecordKey: cleanupRecord?.key || null,
+            ragReceiptAttached,
+          });
           state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
             key: deskPlayKey,
             tradeDate,
@@ -5286,7 +5349,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         if (recoveredOperational.checked > 0) {
           console.log(`[scanner] Purged recovered operational Discord notices after trade alert send: deleted=${recoveredOperational.deleted} failed=${recoveredOperational.failed} skipped=${recoveredOperational.skipped}`);
         }
-        recordScannerDiscordCleanupMessage({
+        const cleanupRecord = recordScannerDiscordCleanupMessage({
           state,
           config,
           receipt,
@@ -5309,13 +5372,26 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         }).catch((ledgerError) => {
           console.warn(`[scanner-delivery] ActiveCampaign durable sent marker failed safely after Discord send: ${sanitizedError(ledgerError)}`);
         });
+        let ragReceiptAttached = false;
         if (shouldPersistScannerAlertToRag(deskState)) {
-          await attachDiscordMessageReceiptToRagRecord({
+          ragReceiptAttached = await attachDiscordMessageReceiptToRagRecord({
             planVersionId,
             discordMessageId: receipt.discordMessageId,
             webhookSource: receipt.webhookSource,
           });
         }
+        await writeScannerDiscordReceiptAuditLog({
+          kind: 'trade_alert',
+          key: alertKey,
+          planVersionId,
+          tradeDate,
+          instrument: config.instrument,
+          session,
+          receipt,
+          postedAt: sentAt,
+          cleanupRecordKey: cleanupRecord?.key || null,
+          ragReceiptAttached,
+        });
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySent(pendingDelivery, {
           sentAt,
           httpStatus: receipt.httpStatus,
