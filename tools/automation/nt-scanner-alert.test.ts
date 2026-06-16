@@ -380,11 +380,13 @@ const replacementResult = await replacePriorScannerDiscordCurrentDeskPlans({
     return new Response(null, { status: 204 });
   },
 });
-assert.deepEqual(replacementResult, { checked: 3, deleted: 3, failed: 0, skipped: 0 });
-assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].deleteStatus, 'replaced');
-assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].lastError?.includes('replaced_by:'), true);
-assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123'].deleteStatus, 'replaced');
-assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:lunch:DESK_PLAN_REFRESH:old-lunch:lunch-desk-play-message-123'].deleteStatus, 'replaced');
+assert.deepEqual(replacementResult, { checked: 3, deleted: 0, failed: 0, skipped: 0, superseded: 3 });
+assert.equal(cleanupDeletes.length, 0, 'Desk Plan replacement must retain Discord cards so outcome buttons can still lock.');
+assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].deleteStatus, 'superseded');
+assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].deletedAt, null);
+assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].lastError?.includes('message_retained_for_outcome_lock'), true);
+assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123'].deleteStatus, 'superseded');
+assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:lunch:DESK_PLAN_REFRESH:old-lunch:lunch-desk-play-message-123'].deleteStatus, 'superseded');
 assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-06:MES:morning:DESK_PLAN_REFRESH:next-day:next-day-desk-play-message-123'].deleteStatus, 'pending');
 assert.equal(cleanupState.discordCleanupMessages[replacementDeskPlanCleanupRecord!.key].deleteStatus, 'pending');
 const cleanupResult = await cleanupExpiredScannerDiscordMessages({
@@ -399,9 +401,6 @@ const cleanupResult = await cleanupExpiredScannerDiscordMessages({
 restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
 assert.deepEqual(cleanupResult, { checked: 2, deleted: 1, failed: 0, skipped: 1 });
 assert.deepEqual(cleanupDeletes, [
-  'DELETE https://discord.com/api/webhooks/123/token/messages/desk-play-message-123',
-  'DELETE https://discord.com/api/webhooks/123/token/messages/legacy-desk-play-message-123',
-  'DELETE https://discord.com/api/webhooks/123/token/messages/lunch-desk-play-message-123',
   'DELETE https://discord.com/api/webhooks/123/token/messages/message-123',
 ]);
 assert.equal(cleanupState.discordCleanupMessages[cleanupRecord!.key].deleteStatus, 'deleted');

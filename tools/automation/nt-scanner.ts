@@ -202,7 +202,7 @@ export interface ScannerDiscordCleanupRecord {
   postedAt: string;
   expiresAt: string;
   deletedAt: string | null;
-  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped' | 'replaced';
+  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped' | 'replaced' | 'superseded';
   lastError: string | null;
 }
 
@@ -3664,13 +3664,14 @@ export async function replacePriorScannerDiscordCurrentDeskPlans(args: {
   currentDeskPlanKey: string;
   now?: Date;
   fetchImpl?: FetchLike;
-}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number; superseded: number }> {
   const now = args.now || new Date();
   const currentScope = scannerCurrentDeskPlanReplacementScope(args.currentDeskPlanKey);
   let checked = 0;
   let deleted = 0;
   let failed = 0;
   let skipped = 0;
+  let superseded = 0;
   for (const record of Object.values(args.state.discordCleanupMessages || {})) {
     if (record.kind !== 'desk_play' || record.deleteStatus !== 'pending') continue;
     const recordKeyWithoutKindAndMessage = record.key
@@ -3679,19 +3680,15 @@ export async function replacePriorScannerDiscordCurrentDeskPlans(args: {
     const recordScope = scannerCurrentDeskPlanReplacementScope(recordKeyWithoutKindAndMessage);
     if (recordScope !== currentScope || recordKeyWithoutKindAndMessage === args.currentDeskPlanKey) continue;
     checked += 1;
-    const result = await deleteScannerDiscordCleanupRecord({
-      config: args.config,
-      state: args.state,
-      record,
-      now,
-      replacedBy: args.currentDeskPlanKey,
-      fetchImpl: args.fetchImpl,
-    });
-    if (result === 'deleted') deleted += 1;
-    else if (result === 'failed') failed += 1;
-    else skipped += 1;
+    args.state.discordCleanupMessages[record.key] = {
+      ...record,
+      deleteStatus: 'superseded',
+      deletedAt: null,
+      lastError: `superseded_by:${args.currentDeskPlanKey};message_retained_for_outcome_lock`,
+    };
+    superseded += 1;
   }
-  return { checked, deleted, failed, skipped };
+  return { checked, deleted, failed, skipped, superseded };
 }
 
 export async function cleanupRecoveredScannerOperationalDiscordMessages(args: {
@@ -5196,7 +5193,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             now: new Date(sentAt),
           });
           if (replaceResult.checked > 0) {
-            console.log(`[scanner] Replaced prior current Desk Plan messages: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
+            console.log(`[scanner] Superseded prior current Desk Plan messages without deleting Discord cards: superseded=${replaceResult.superseded} deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
           }
           const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
             state,
