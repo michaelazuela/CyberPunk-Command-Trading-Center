@@ -221,6 +221,12 @@ assert.equal(
   scannerDiscordWebhookDeleteUrl('https://discord.com/api/webhooks/123/token?wait=true', 'message-123'),
   'https://discord.com/api/webhooks/123/token/messages/message-123',
 );
+const scannerDeskPlayReceiptSource = await fs.readFile(path.join(process.cwd(), 'tools/automation/nt-scanner.ts'), 'utf8');
+assert.match(
+  scannerDeskPlayReceiptSource,
+  /await attachDiscordMessageReceiptToRagRecord\(\{\s*planVersionId: deskPlayPlanVersionId,\s*discordMessageId: receipt\.discordMessageId,\s*webhookSource: receipt\.webhookSource,/s,
+  'Desk Play Discord sends must persist the returned message id into RAG so outcome buttons can lock the card.',
+);
 const cleanupState: any = {
   discordCleanupMessages: {},
 };

@@ -5164,6 +5164,13 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             kind: 'desk_play',
             key: deskPlayKey,
           });
+          if (shouldPersistScannerAlertToRag(deskState)) {
+            await attachDiscordMessageReceiptToRagRecord({
+              planVersionId: deskPlayPlanVersionId,
+              discordMessageId: receipt.discordMessageId,
+              webhookSource: receipt.webhookSource,
+            });
+          }
           state.deskPlanRefreshSent[deskPlayKey] = scannerDeskPlanRefreshRecord({
             key: deskPlayKey,
             tradeDate,
