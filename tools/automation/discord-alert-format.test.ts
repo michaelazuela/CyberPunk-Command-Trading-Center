@@ -143,13 +143,19 @@ function assertCompactPayload(payload: ReturnType<typeof compactDiscordSummary>,
     assert.ok(!text.toLowerCase().includes(marker.toLowerCase()), `compact payload leaked old long-form marker: ${marker}`);
   }
   assert.ok(!/Missing rea\.\.\.|Qualified rea\.\.\.|Target casc\.\.\.|Audit det\.\.\.|Counte\.\.\.|Audit detail|\{"/i.test(text));
-  assert.ok(text.includes('Compact Trade Plan Summary'));
+  assert.ok(text.includes('Compact Trade Plan Summary') || text.includes('Current Desk Plan'));
   assert.ok(text.includes('Status:'));
-  assert.ok(text.includes('Memory:'));
-  assert.ok(text.includes('History: Neutral'));
-  assert.ok(text.includes('Warning: none'));
-  assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: Chart + Level Map attached.'));
+  if (text.includes('Current Desk Plan')) {
+    assert.ok(!text.includes('Memory:'));
+    assert.ok(!text.includes('Details:'));
+    assert.ok(!text.includes('Action:'));
+  } else {
+    assert.ok(text.includes('Memory:'));
+    assert.ok(text.includes('History: Neutral'));
+    assert.ok(text.includes('Warning: none'));
+    assert.ok(text.includes('Action:'));
+    assert.ok(text.includes('Details: Chart + Level Map attached.'));
+  }
   assert.ok(!/Memory:[\s\S]*approve/i.test(text), 'memory display must not imply approval');
 }
 
@@ -223,14 +229,24 @@ assertCompactPayload(morning, ['chart-plan.png', 'price-level-map.png']);
 assert.equal(JSON.stringify(morningCandidate), morningCandidateBefore, 'formatter must not mutate the original candidate');
 assertNoExecutablePayloadKeys(morning);
 assert.ok(morning.content?.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Risk: 4.00 pts / N/A'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Targets:'));
-assert.ok(flattenDiscordPayloadText(morning).includes('T1: 5326.00 - scale/secure'));
-assert.ok(flattenDiscordPayloadText(morning).includes('T2: 5328.00 - base exit'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Runner: 5329.00 - extension if T2 clears'));
-assert.ok(flattenDiscordPayloadText(morning).includes('HTF reaction: NY premarket high 5329.00'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Next 5M map: LONG above 5320.00 / SHORT below 5316.00.'));
-assert.ok(flattenDiscordPayloadText(morning).includes('Invalidation:'));
+const morningText = flattenDiscordPayloadText(morning);
+assert.ok(morningText.includes('MES Current Desk Plan'));
+assert.ok(morningText.includes('Primary: LONG'));
+assert.ok(morningText.includes('Line in sand: 5329.00'));
+assert.ok(morningText.includes('LONG ABOVE 5329.00'));
+assert.ok(morningText.includes('Entry: 5320.00'));
+assert.ok(morningText.includes('Stop: 5316.00'));
+assert.ok(morningText.includes('T1: 5326.00'));
+assert.ok(morningText.includes('T2: 5328.00'));
+assert.ok(morningText.includes('Invalid below: 5316.00'));
+assert.ok(morningText.includes('HTF target: 5329.00 / runner N/A'));
+assert.ok(morningText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(morningText.includes('Chart: attached.'));
+assert.ok(!morningText.includes('Targets:'));
+assert.ok(!morningText.includes('Trigger:'));
+assert.ok(!morningText.includes('HTF Runner Map:'));
+assert.ok(!morningText.includes('HTF reaction:'));
+assert.ok(!morningText.includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
 const watchCandidate = {
@@ -1077,8 +1093,15 @@ const eveningMissed = compactDiscordSummary({
 validateDiscordPayload(eveningMissed, ['chart-plan.png', 'price-level-map.png']);
 const eveningMissedText = flattenDiscordPayloadText(eveningMissed);
 assert.ok(eveningMissedText.length < 1200, `expected evening missed payload under 1200 chars, got ${eveningMissedText.length}`);
-assert.ok(eveningMissedText.includes('Entry: 7552.50 | Stop: 7546.50'));
-assert.ok(eveningMissedText.includes('No chase. Wait for completed 5M proof and protected structure.'));
+assert.ok(eveningMissedText.includes('MES Current Desk Plan'));
+assert.ok(eveningMissedText.includes('Primary: LONG'));
+assert.ok(eveningMissedText.includes('Entry: 7552.50'));
+assert.ok(eveningMissedText.includes('Stop: 7546.50'));
+assert.ok(eveningMissedText.includes('T1: 7561.50'));
+assert.ok(eveningMissedText.includes('T2: 7564.50'));
+assert.ok(eveningMissedText.includes('Status: Risk review only; standard risk gate not clean.'));
+assert.ok(!eveningMissedText.includes('Trigger:'));
+assert.ok(!eveningMissedText.includes('No chase. Wait for completed 5M proof and protected structure.'));
 
 const extensionCandidate = sampleCandidate('LONG');
 extensionCandidate.entry = 7603.25;
@@ -1113,14 +1136,16 @@ const extensionPayload = compactDiscordSummary({
 });
 validateDiscordPayload(extensionPayload, ['chart-plan.png', 'price-level-map.png']);
 const extensionText = flattenDiscordPayloadText(extensionPayload);
-assert.ok(extensionText.includes('Confidence: 98/100'));
-assert.ok(extensionText.includes('T1: 7609.75 - scale/secure'));
-assert.ok(extensionText.includes('T2: 7611.75 - base exit'));
-assert.ok(extensionText.includes('HTF Runner Map:'));
-assert.ok(extensionText.includes('Next draw: Full ETH high 7632.75'));
-assert.ok(extensionText.includes('Runner: 7620.00 - extension if T2 clears'));
-assert.ok(extensionText.includes('Extension: Full ETH high 7632.75'));
-assert.ok(extensionText.includes('Mgmt: App T1/T2 tactical; runner needs 5M acceptance beyond T2.'));
+assert.ok(extensionText.includes('MES Current Desk Plan'));
+assert.ok(extensionText.includes('Primary: LONG'));
+assert.ok(extensionText.includes('Entry: 7603.25'));
+assert.ok(extensionText.includes('Stop: 7599.00'));
+assert.ok(extensionText.includes('T1: 7609.75'));
+assert.ok(extensionText.includes('T2: 7611.75'));
+assert.ok(extensionText.includes('HTF target: 7632.75 / runner N/A'));
+assert.ok(!extensionText.includes('Confidence: 98/100'));
+assert.ok(!extensionText.includes('HTF Runner Map:'));
+assert.ok(!extensionText.includes('Mgmt: App T1/T2 tactical'));
 
 const insideLongTargetCandidate = sampleCandidate('LONG');
 insideLongTargetCandidate.entry = 7407;
@@ -1252,10 +1277,10 @@ const scannerHtfOppositionPayload = compactDiscordSummary({
   statusOverride: 'Conditional',
 });
 const scannerHtfOppositionText = flattenDiscordPayloadText(scannerHtfOppositionPayload);
-assert.ok(scannerHtfOppositionText.includes('HTF Caution:'));
-assert.ok(scannerHtfOppositionText.includes('SHORT is pressing into bullish HTF/session structure'));
-assert.ok(scannerHtfOppositionText.includes('Treat T1/T2 as management'));
-assert.ok(scannerHtfOppositionText.includes('HTF/session reaction line 7302.75'));
+assert.ok(scannerHtfOppositionText.includes('MES Current Desk Plan'));
+assert.ok(scannerHtfOppositionText.includes('Bias: SHORT into bullish HTF/session structure; manage at reaction level.'));
+assert.ok(!scannerHtfOppositionText.includes('HTF Caution:'));
+assert.ok(!scannerHtfOppositionText.includes('Treat T1/T2 as management'));
 
 const scannerReadyCandidate = sampleCandidate('LONG');
 scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
@@ -1287,12 +1312,13 @@ const scannerReadyPayload = compactDiscordSummary({
 validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
 assert.ok(scannerReadyText.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(scannerReadyText.includes('WAIT - fresh completed 5M required'));
-assert.ok(scannerReadyText.includes('Trigger State: MSS_HOLD_CONFIRMED'));
-assert.ok(scannerReadyText.includes('HTF Context:'));
-assert.ok(scannerReadyText.includes('Status: sufficient | Reliability: structural'));
-assert.ok(scannerReadyText.includes('Minimum: 30 calendar days when available'));
-assert.ok(scannerReadyText.includes('Usage: structural confirmation allowed'));
+assert.ok(scannerReadyText.includes('MES Current Desk Plan'));
+assert.ok(scannerReadyText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(scannerReadyText.includes('HTF context: sufficient; reliability structural.'));
+assert.ok(!scannerReadyText.includes('Trigger State: MSS_HOLD_CONFIRMED'));
+assert.ok(!scannerReadyText.includes('HTF Context:'));
+assert.ok(!scannerReadyText.includes('Minimum: 30 calendar days when available'));
+assert.ok(!scannerReadyText.includes('Usage: structural confirmation allowed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
 assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
@@ -1333,10 +1359,10 @@ const openingDrivePayload = compactDiscordSummary({
 });
 validateDiscordPayload(openingDrivePayload, ['chart-plan.png', 'price-level-map.png']);
 const openingDriveText = flattenDiscordPayloadText(openingDrivePayload);
-assert.ok(openingDriveText.includes('HUMAN REVIEW READY - decision-support plan only; trader confirmation required'));
-assert.ok(openingDriveText.includes('Review: HumanReviewReady'));
-assert.ok(openingDriveText.includes('Human review required. Decision-support plan only.'));
-assert.ok(openingDriveText.includes('Trader must confirm entry before action.'));
+assert.ok(openingDriveText.includes('Status: Human review only; trader confirmation + canExecute required.'));
+assert.ok(!openingDriveText.includes('Review: HumanReviewReady'));
+assert.ok(!openingDriveText.includes('Human review required. Decision-support plan only.'));
+assert.ok(!openingDriveText.includes('Trader must confirm entry before action.'));
 assert.ok(openingDriveText.includes('Entry: 7518.00'));
 assert.ok(openingDriveText.includes('Stop: 7522.00'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(openingDriveText), false);
@@ -1366,8 +1392,10 @@ const scannerRetestPendingPayload = compactDiscordSummary({
 });
 validateDiscordPayload(scannerRetestPendingPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerRetestPendingText = flattenDiscordPayloadText(scannerRetestPendingPayload);
-assert.ok(scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
-assert.ok(scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
+assert.ok(scannerRetestPendingText.includes('MES Current Desk Plan'));
+assert.ok(scannerRetestPendingText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(!scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
+assert.ok(!scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
 assert.ok(scannerRetestPendingText.length < 1200, `expected retest-pending scanner payload under 1200 chars, got ${scannerRetestPendingText.length}`);
 assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
 
@@ -1395,11 +1423,12 @@ const dataLimitedScannerPayload = compactDiscordSummary({
 });
 validateDiscordPayload(dataLimitedScannerPayload, ['chart-plan.png', 'price-level-map.png']);
 const dataLimitedScannerText = flattenDiscordPayloadText(dataLimitedScannerPayload);
-assert.ok(dataLimitedScannerText.includes('HTF Context:'));
-assert.ok(dataLimitedScannerText.includes('Status: partial | Reliability: data_limited'));
-assert.ok(dataLimitedScannerText.includes('Minimum: 30 calendar days when available'));
-assert.ok(dataLimitedScannerText.includes('Usage: context only; not structural confirmation'));
-assert.ok(dataLimitedScannerText.includes('Candidate Promotion: blocked by data-limited HTF context'));
+assert.ok(dataLimitedScannerText.includes('MES Current Desk Plan'));
+assert.ok(dataLimitedScannerText.includes('Bias: HTF data-limited; use 5M execution proof only.'));
+assert.ok(dataLimitedScannerText.includes('HTF context: insufficient; reliability data_limited.'));
+assert.ok(!dataLimitedScannerText.includes('HTF Context:'));
+assert.ok(!dataLimitedScannerText.includes('Minimum: 30 calendar days when available'));
+assert.ok(!dataLimitedScannerText.includes('Candidate Promotion: blocked by data-limited HTF context'));
 assert.equal(/HTF conflict confirmed|Bullish structure confirmed|Bearish structure confirmed|Candidate ready|structural confirmation allowed/i.test(dataLimitedScannerText), false);
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(dataLimitedScannerText), false);
 
@@ -1460,11 +1489,14 @@ const failedPlanPayload = compactDiscordSummary({
 validateDiscordPayload(failedPlanPayload, ['chart-plan.png', 'price-level-map.png']);
 const failedPlanText = flattenDiscordPayloadText(failedPlanPayload);
 assert.ok(failedPlanPayload.content?.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
-assert.ok(failedPlanText.includes('Failed Plan Reversal:'));
-assert.ok(failedPlanText.includes('State: OPPOSITE_SIDE_TRIGGER_CONFIRMED | Level: 7518.00'));
-assert.ok(failedPlanText.includes('LONG -> SHORT | HTF: full_confirmation | 5M: confirmed'));
-assert.ok(failedPlanText.includes('TF: 15M SHORT confirmed | 1H SHORT confirmed | 2H SHORT confirmed | 4H SHORT confirmed | 5M SHORT confirmed'));
-assert.ok(failedPlanText.includes('Boundary: decision support only; not execution approval.'));
+assert.ok(failedPlanText.includes('MES Current Desk Plan'));
+assert.ok(failedPlanText.includes('Primary: SHORT'));
+assert.ok(failedPlanText.includes('Entry: 7517.75'));
+assert.ok(failedPlanText.includes('Stop: 7520.75'));
+assert.ok(failedPlanText.includes('T1: 7513.25'));
+assert.ok(failedPlanText.includes('T2: 7511.75'));
+assert.ok(!failedPlanText.includes('Failed Plan Reversal:'));
+assert.ok(!failedPlanText.includes('Boundary: decision support only; not execution approval.'));
 assert.equal(/EXECUTABLE -|Trade now|Take the trade|Trade approved/i.test(failedPlanText), false);
 
 const rawConditionalCanExecutePayload = compactDiscordSummary({
@@ -1487,7 +1519,7 @@ const rawConditionalCanExecutePayload = compactDiscordSummary({
 validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
 const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
 assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
-assert.ok(rawConditionalText.includes('WAIT - fresh completed 5M required'));
+assert.ok(rawConditionalText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
 
 const riskTooWideCandidate = sampleCandidate('LONG');
@@ -1537,13 +1569,13 @@ const riskTooWidePayload = compactDiscordSummary({
 validateDiscordPayload(riskTooWidePayload, ['chart-plan.png', 'price-level-map.png']);
 assert.equal(JSON.stringify(riskTooWideCandidate), riskTooWideBefore, 'risk advisory formatter must not mutate the candidate');
 const riskTooWideText = flattenDiscordPayloadText(riskTooWidePayload);
-assert.ok(riskTooWideText.includes('Risk Advisory:'));
-assert.ok(riskTooWideText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
-assert.ok(riskTooWideText.includes('Risk State: RISK_ABOVE_STANDARD_LIMIT'));
-assert.ok(riskTooWideText.includes('Risk Score:'));
-assert.ok(riskTooWideText.includes('Risk exceeds standard limit. Human final decision required.'));
+assert.ok(riskTooWideText.includes('MES Current Desk Plan'));
+assert.ok(riskTooWideText.includes('Status: Risk review only; standard risk gate not clean.'));
+assert.ok(!riskTooWideText.includes('Risk Advisory:'));
+assert.ok(!riskTooWideText.includes('Risk Score:'));
+assert.ok(!riskTooWideText.includes('Risk exceeds standard limit. Human final decision required.'));
 assert.equal(riskTooWideText.includes('Not app-approved executable.'), false);
-assert.ok(riskTooWideText.includes('Do not chase'));
+assert.ok(!riskTooWideText.includes('Do not chase'));
 assert.ok(!/ApprovedTrade|Trade now|Entry confirmed/i.test(riskTooWideText));
 assert.ok(riskTooWidePayload.components);
 assert.deepEqual(

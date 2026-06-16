@@ -1050,6 +1050,121 @@ function deskPlayHtfTargetLine(play: NonNullable<CompactDeskStateForDiscord['pri
   return `HTF target: ${priceLine(target)} / runner ${priceLine(runner)}`;
 }
 
+function candidateBiasSummary(candidate: SetupCandidate): string {
+  const directionWord = candidate.direction === 'SHORT' ? 'bearish' : candidate.direction === 'LONG' ? 'bullish' : 'neutral';
+  const rulesetBlockers = [
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+    ...(candidate.activeRuleset?.htfLineInSand?.blockers || []),
+  ].join(' ');
+  if (/opposing.*htf|htf.*conflict|opposing completed.*mss|countertrend/i.test(rulesetBlockers)) {
+    return `${candidate.direction} into ${candidate.direction === 'SHORT' ? 'bullish' : 'bearish'} HTF/session structure; manage at reaction level.`;
+  }
+  const htfState = candidate.htfLiquidityDrawState;
+  if (htfState?.classificationReliability === 'data_limited') {
+    return 'HTF data-limited; use 5M execution proof only.';
+  }
+  const scorecardNote = candidate.decisionQualityScorecard?.find((item) =>
+    /60M|240M|HTF|higher-timeframe|structure alignment/i.test(`${item.label} ${item.note}`),
+  )?.note;
+  if (scorecardNote && !/unknown|missing|not confirmed/i.test(scorecardNote)) {
+    return compactLine(scorecardNote, 82);
+  }
+  const levelSummary = candidate.levelContextSummary;
+  if (levelSummary) return compactLine(levelSummary, 82);
+  return `${candidate.direction} ${directionWord} review from scanner-owned 5M structure.`;
+}
+
+function candidateLineInSand(candidate: SetupCandidate): number | null {
+  const htfLine = candidate.activeRuleset?.htfLineInSand?.lineInSand;
+  if (isFinitePrice(htfLine)) return htfLine;
+  const targetPlan = candidate.targetObjectivePlan;
+  const reaction = candidateTargetReactionObjective(candidate);
+  if (isFinitePrice(reaction?.price)) return reaction.price;
+  if (candidate.direction === 'LONG') {
+    return targetPlan?.nearestObstacleTarget?.price ??
+      targetPlan?.liquidityTarget1?.price ??
+      targetPlan?.nearestLiquidityTarget?.price ??
+      candidate.entry ??
+      null;
+  }
+  return targetPlan?.nearestObstacleTarget?.price ??
+    targetPlan?.liquidityTarget1?.price ??
+    targetPlan?.nearestLiquidityTarget?.price ??
+    candidate.entry ??
+    null;
+}
+
+function candidateHtfTargetLine(candidate: SetupCandidate, levels: { target1: number | null; target2: number | null }): string {
+  const targetPlan = candidate.targetObjectivePlan;
+  const targetObjective = firstMeaningfulTargetObjective(candidate.direction, levels.target2, [
+    targetPlan?.nearestLiquidityTarget,
+    targetPlan?.liquidityTarget1,
+    targetPlan?.liquidityTarget2,
+    targetPlan?.liquidityRunnerTarget,
+    targetPlan?.runnerTarget,
+  ]);
+  const runnerObjective = firstMeaningfulTargetObjective(candidate.direction, targetObjective?.price ?? levels.target2, [
+    targetPlan?.liquidityTarget2,
+    targetPlan?.liquidityRunnerTarget,
+    targetPlan?.runnerTarget,
+  ]);
+  const target = targetObjective?.price ?? candidateTargetReactionObjective(candidate)?.price ?? null;
+  const runner = runnerObjective?.price ?? null;
+  return `HTF target: ${priceLine(target)} / runner ${priceLine(runner)}`;
+}
+
+function candidateHtfContextLine(candidate: SetupCandidate): string | null {
+  const state = candidate.htfLiquidityDrawState;
+  if (!state?.htfContextSufficiency || !state.classificationReliability) return null;
+  const sufficiency = state.htfContextSufficiency.overallStatus === 'data_limited'
+    ? 'insufficient'
+    : state.htfContextSufficiency.overallStatus;
+  return `HTF context: ${sufficiency}; reliability ${state.classificationReliability}.`;
+}
+
+function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidate: SetupCandidate, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string[] {
+  const levels = appTargetLevels(candidate, normalized);
+  const direction = candidate.direction === 'SHORT' ? 'SHORT' : 'LONG';
+  const triggerWord = direction === 'SHORT' ? 'BELOW' : 'ABOVE';
+  const invalidWord = direction === 'SHORT' ? 'above' : 'below';
+  const lineInSand = candidateLineInSand(candidate) ?? candidate.entry ?? null;
+  const riskAboveStandard =
+    candidate.riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' ||
+    candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
+    candidate.blockReason === NoTradeReason.RiskTooWide ||
+    (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
+  const statusText = riskAboveStandard
+    ? 'Risk review only; standard risk gate not clean.'
+    : candidate.humanReview?.status === 'HumanReviewReady'
+    ? 'Human review only; trader confirmation + canExecute required.'
+    : status === 'EXECUTABLE'
+      ? 'Executable only while completed 5M trigger + canExecute remain true.'
+      : 'Review only until 5M trigger + canExecute.';
+  return [
+    `${args.instrument} Current Desk Plan`,
+    '',
+    `Primary: ${direction}`,
+    `Bias: ${candidateBiasSummary(candidate)}`,
+    ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
+    `Line in sand: ${priceLine(lineInSand)}`,
+    '',
+    `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+    `Entry: ${priceLine(candidate.entry)}`,
+    `Stop: ${priceLine(levels.stop)}`,
+    `T1: ${priceLine(levels.target1)}`,
+    `T2: ${priceLine(levels.target2)}`,
+    '',
+    `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
+    candidateHtfTargetLine(candidate, levels),
+    '',
+    `Status: ${statusText}`,
+    deskPlayChartStatusLine({
+      hasChart: args.attachments.chartPlan,
+      hasLevels: Boolean(candidate.entry != null && levels.stop != null && levels.target1 != null && levels.target2 != null),
+    }),
+  ];
+}
+
 function deskPlayChartStatusLine(args: {
   hasChart: boolean;
   hasLevels: boolean;
@@ -1310,16 +1425,18 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const includeMemory = designerStatus === 'EXECUTABLE' || bestCandidateHasFullPlan;
 
   const lines = bestCandidate && designerStatus !== 'NO TRADE'
-    ? [
-        ...compactGeneralAlertLines(args, bestCandidate, args.normalized, designerStatus),
-        '',
-        ...(includeMemory ? [...memoryLines(), ''] : []),
-        'Action:',
-        compactLine(designerRecommendation.actionLine, 100),
-        '',
-        compactAttachmentLine(args.attachments, true),
-        'Decision support only.',
-      ]
+    ? bestCandidateHasFullPlan
+      ? candidateCurrentDeskPlanLines(args, bestCandidate, args.normalized, designerStatus)
+      : [
+          ...compactGeneralAlertLines(args, bestCandidate, args.normalized, designerStatus),
+          '',
+          ...(includeMemory ? [...memoryLines(), ''] : []),
+          'Action:',
+          compactLine(designerRecommendation.actionLine, 100),
+          '',
+          compactAttachmentLine(args.attachments, true),
+          'Decision support only.',
+        ]
     : [
         `Reason: ${noTradeReason(bestCandidate, args.normalized)}`,
         '',
@@ -1342,7 +1459,9 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     content: `${statusEmoji(finalStatus)} ${designerRecommendation.headlineRecommendation}`,
     embeds: [
       {
-        title: 'Compact Trade Plan Summary',
+        title: bestCandidate && designerStatus !== 'NO TRADE' && bestCandidateHasFullPlan
+          ? `${args.instrument} Current Desk Plan`
+          : 'Compact Trade Plan Summary',
         description: professionalizeReportText(lines.join('\n')),
         color: statusColor(finalStatus),
         fields: [],
@@ -1353,7 +1472,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
     ...(includeComponents ? { components } : {}),
   };
   const maxMainText = args.attachments.chartPlan || args.attachments.priceLevelMap ? 1550 : 1900;
-  if (bestCandidate && designerStatus !== 'NO TRADE' && designerStatus !== 'EXECUTABLE' && flattenDiscordPayloadText(payload).length > maxMainText) {
+  if (bestCandidate && !bestCandidateHasFullPlan && designerStatus !== 'NO TRADE' && designerStatus !== 'EXECUTABLE' && flattenDiscordPayloadText(payload).length > maxMainText) {
     const shortLines = [
       `Status: ${statusLine(designerStatus, bestCandidate, args.normalized)}`,
       '',

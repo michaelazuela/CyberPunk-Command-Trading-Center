@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-16
+Task: Enforce standard Discord Current Desk Plan format for scanner candidate alerts.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/htf-mss-phase-5b-regression.test.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner candidate alerts could still use the older verbose `Plan / Targets / Trigger / Memory / Details` Discord body instead of the approved compact `MES Current Desk Plan` standard.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/htf-mss-phase-5b-regression.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Full-level scanner candidate alerts now render as `MES Current Desk Plan` with Primary, Bias, HTF context when applicable, Line in sand, direction block, Entry, Stop, T1, T2, Invalid, HTF target/runner, compact Status, and chart status. Regression tests now reject the old verbose sections for live scanner payloads and keep risk/human-review/data-limited warnings in compact status/bias lines.
+Trading logic changed: No. This changes Discord presentation and tests only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Yes. Scanner trade/review candidate alerts with complete app-owned levels now use the standard Current Desk Plan text format and keep RAG buttons/chart validation intact.
+Journal/RAG impact: No schema change. Outcome buttons remain learning/journal only and do not approve trades.
+Supabase impact: No migration added.
+Known risks: None identified after verification.
+Next recommended action: Keep chart card text aligned with the same compact desk-plan wording.
+
+## Previous Change
+
 Date: 2026-06-15
 Task: Fix supervisor tray stuck in reconnecting state.
 Files changed: QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.

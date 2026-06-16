@@ -1939,17 +1939,27 @@ try {
   const text = flattenDiscordPayloadText(result.payload);
   assert.ok(text.length < 1200, `expected live scanner compact text under 1200 chars, got ${text.length}`);
   assert.ok((result.payload.content?.length || 0) < 2000);
-  assert.ok(text.includes('Compact Trade Plan Summary'));
+  assert.ok(text.includes('MES Current Desk Plan'));
   assert.ok(text.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-  assert.ok(text.includes('Status: WAIT - fresh completed 5M required'));
-  assert.ok(text.includes('Plan:'));
-  assert.ok(text.includes('Risk: 5.00 pts / N/A'));
-  assert.ok(text.includes('Invalidation:'));
-  assert.ok(text.includes('Memory:'));
-  assert.ok(text.includes('History: Neutral'));
-  assert.ok(text.includes('Action:'));
-  assert.ok(text.includes('Details: Chart + Level Map attached.'));
-  assert.ok(!/Memory:[\s\S]*approve/i.test(text));
+  assert.ok(text.includes('Primary: LONG'));
+  assert.ok(text.includes('Line in sand:'));
+  assert.ok(text.includes('LONG ABOVE'));
+  assert.ok(text.includes('Entry:'));
+  assert.ok(text.includes('Stop:'));
+  assert.ok(text.includes('T1:'));
+  assert.ok(text.includes('T2:'));
+  assert.ok(text.includes('Invalid below:'));
+  assert.ok(text.includes('HTF target:'));
+  assert.ok(text.includes('Status: Review only until 5M trigger + canExecute.'));
+  assert.ok(text.includes('Chart: attached.'));
+  assert.ok(!text.includes('Compact Trade Plan Summary'));
+  assert.ok(!text.includes('Plan:'));
+  assert.ok(!text.includes('Targets:'));
+  assert.ok(!text.includes('Trigger:'));
+  assert.ok(!text.includes('Memory:'));
+  assert.ok(!text.includes('Action:'));
+  assert.ok(!text.includes('Details:'));
+  assert.ok(!text.includes('HTF Runner Map:'));
   const componentLabels = (result.payload.components || []).flatMap((row: any) => (row.components || []).map((component: any) => component.label));
   assert.deepEqual(componentLabels, ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
   assert.ok(!componentLabels.includes('Short Win'));
@@ -2495,10 +2505,9 @@ try {
   });
   const riskText = flattenDiscordPayloadText(riskResult.payload);
   const riskAudit = JSON.parse(await fs.readFile(riskResult.auditLogPath, 'utf8'));
-  const displayedScore = riskText.match(/Risk Score: (\d+)\/100 - ([^\n]+)/);
-  assert.ok(displayedScore, 'Discord payload must include risk score and label');
-  assert.equal(Number(displayedScore[1]), riskAudit.conditionalRiskScore.score);
-  assert.equal(displayedScore[2], riskAudit.conditionalRiskScore.label);
+  assert.ok(riskText.includes('MES Current Desk Plan'));
+  assert.ok(riskText.includes('Status: Risk review only; standard risk gate not clean.'));
+  assert.equal(/Risk Score: \d+\/100/i.test(riskText), false, 'Discord body must keep risk score out of compact desk plan text');
   assert.equal(riskAudit.conditionalRiskScore.canExecute, false);
   assert.equal(riskAudit.conditionalRiskScore.blockReason, 'RiskTooWide');
   assert.equal(riskAudit.conditionalRiskScore.score, 64);
@@ -2517,9 +2526,10 @@ try {
     (riskResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']
   );
-  assert.ok(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'));
-  assert.ok(riskText.includes('Risk exceeds standard limit. Human final decision required.'));
-  assert.ok(riskText.includes('Do not chase'));
+  assert.equal(riskText.includes('Decision: WAIT | App plan review: NO | canExecute: false'), false);
+  assert.ok(riskText.includes('Status: Risk review only; standard risk gate not clean.'));
+  assert.equal(riskText.includes('Risk exceeds standard limit. Human final decision required.'), false);
+  assert.equal(riskText.includes('Do not chase'), false);
 
   console.log(`live scanner fixture alert verified: mainText=${text.length}, files=${result.files.length}, audit=${result.auditLogPath}`);
 } finally {

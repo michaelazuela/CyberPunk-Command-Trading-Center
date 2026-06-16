@@ -123,7 +123,7 @@ assert.equal(
 );
 
 assert.equal(gates.cases.statusOverrideGuard.containsExecutableCommand, false);
-assert.ok(gates.cases.statusOverrideGuard.text.includes('WAIT'));
+assert.ok(gates.cases.statusOverrideGuard.text.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(gates.cases.statusOverrideGuard.text), false);
 
 assert.equal(gates.safety.brokerExecutionAdded, false);
