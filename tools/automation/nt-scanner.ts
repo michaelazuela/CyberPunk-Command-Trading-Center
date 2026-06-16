@@ -3595,6 +3595,11 @@ export function recordScannerDiscordCleanupMessage(args: {
   return record;
 }
 
+function scannerCurrentDeskPlanReplacementScope(deskPlanKey: string): string {
+  const parts = deskPlanKey.split(':');
+  return parts.length >= 2 ? parts.slice(0, 2).join(':') : deskPlanKey;
+}
+
 async function deleteScannerDiscordCleanupRecord(args: {
   config: ScannerConfig;
   record: ScannerDiscordCleanupRecord;
@@ -3644,10 +3649,7 @@ export async function replacePriorScannerDiscordCurrentDeskPlans(args: {
   fetchImpl?: FetchLike;
 }): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
   const now = args.now || new Date();
-  const scopeParts = args.currentDeskPlanKey.split(':');
-  const currentScope = scopeParts.length >= 4
-    ? scopeParts.slice(0, 4).join(':')
-    : args.currentDeskPlanKey;
+  const currentScope = scannerCurrentDeskPlanReplacementScope(args.currentDeskPlanKey);
   let checked = 0;
   let deleted = 0;
   let failed = 0;
@@ -3657,7 +3659,7 @@ export async function replacePriorScannerDiscordCurrentDeskPlans(args: {
     const recordKeyWithoutKindAndMessage = record.key
       .replace(/^desk_play:/, '')
       .replace(new RegExp(`:${record.messageId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '');
-    const recordScope = recordKeyWithoutKindAndMessage.split(':').slice(0, 4).join(':');
+    const recordScope = scannerCurrentDeskPlanReplacementScope(recordKeyWithoutKindAndMessage);
     if (recordScope !== currentScope || recordKeyWithoutKindAndMessage === args.currentDeskPlanKey) continue;
     checked += 1;
     const result = await deleteScannerDiscordCleanupRecord({
@@ -3683,7 +3685,7 @@ export async function cleanupRecoveredScannerOperationalDiscordMessages(args: {
   fetchImpl?: FetchLike;
 }): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
   const now = args.now || new Date();
-  const recoverableKinds = new Set(args.kinds || ['health', 'data_quality']);
+  const recoverableKinds = new Set(args.kinds || ['health', 'data_quality', 'window_start']);
   let checked = 0;
   let deleted = 0;
   let failed = 0;
@@ -3852,7 +3854,7 @@ async function sendScannerHealthAlertIfNeeded(args: {
       const recoveryCleanup = await cleanupRecoveredScannerOperationalDiscordMessages({
         state: args.state,
         config: args.config,
-        kinds: ['health', 'data_quality'],
+        kinds: ['health', 'data_quality', 'window_start'],
       });
       if (recoveryCleanup.checked > 0) {
         console.log(`[scanner-health] Purged recovered operational Discord notices: deleted=${recoveryCleanup.deleted} failed=${recoveryCleanup.failed} skipped=${recoveryCleanup.skipped}`);
@@ -5103,7 +5105,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
             state,
             config,
-            kinds: ['health', 'data_quality'],
+            kinds: ['health', 'data_quality', 'window_start'],
             now: new Date(sentAt),
           });
           if (recoveredOperational.checked > 0) {
@@ -5225,7 +5227,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
           state,
           config,
-          kinds: ['health', 'data_quality'],
+          kinds: ['health', 'data_quality', 'window_start'],
           now: new Date(sentAt),
         });
         if (recoveredOperational.checked > 0) {

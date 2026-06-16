@@ -639,7 +639,19 @@ function problemDedupeKeysForRecovery(kind: SupervisorNotificationKind): string[
   if (kind === 'recorder_recovered') return ['recorder_down'];
   if (kind === 'recorder_heartbeat_recovered') return ['recorder_heartbeat_stale'];
   if (kind === 'pre_window_backfill_recovered') return ['pre_window_backfill_failed'];
-  if (kind === 'supervisor_ready') return ['bridge_unreachable', 'scanner_down', 'recorder_down', 'recorder_heartbeat_stale', 'pre_window_backfill_failed'];
+  if (kind === 'supervisor_ready') {
+    return [
+      'bridge_unreachable',
+      'scanner_down',
+      'recorder_down',
+      'recorder_heartbeat_stale',
+      'stale_5m_bars',
+      'pre_window_backfill_failed',
+      'market_data_gap_sync_pending',
+      'contract_mismatch',
+      'supervisor_self_heal',
+    ];
+  }
   return [];
 }
 
@@ -657,7 +669,8 @@ async function deleteRecoveredSupervisorMessages(args: {
   let skipped = 0;
   if (keys.size === 0) return { checked, deleted, failed, skipped };
   for (const record of Object.values(args.state.postedMessages || {})) {
-    if (record.deleteStatus !== 'pending' || !keys.has(record.dedupeKey)) continue;
+    if (record.deleteStatus !== 'pending') continue;
+    if (!keys.has(record.dedupeKey) && !(args.notification.kind === 'supervisor_ready' && record.dedupeKey.startsWith('child_restarted:'))) continue;
     checked += 1;
     try {
       const response = await args.fetchImpl(supervisorDiscordWebhookDeleteUrl(args.webhookUrl, record.messageId), {

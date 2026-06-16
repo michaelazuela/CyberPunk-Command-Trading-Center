@@ -1193,6 +1193,21 @@ Next recommended action: Use parentModelFamily for reporting/taxonomy cleanup be
 ## Previous Change
 
 Date: 2026-06-15
+Task: Install Discord cleanup D6 and D7.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
+Reason: Keep Discord focused on one current Desk Plan per trade date/instrument and purge recovered operational notices more completely after scanner or supervisor health is proven ready.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed.
+Trading logic changed: No. This only changes Discord message cleanup/replacement behavior and supervisor notification lifecycle state.
+Bridge impact: None. Bridge data, contract resolution, timestamps, health checks, and fetch behavior were not changed.
+Journal/RAG impact: None expected. Trade alerts and review-learning posts remain protected.
+Supabase impact: None.
+Known risks: None known.
+Next recommended action: Restart scanner/supervisor services during the next live window if you want D6/D7 cleanup behavior loaded immediately.
+
+## Previous Change
+
+Date: 2026-06-15
 Task: Add Discord Desk Plan replacement cleanup and recovered operational notice cleanup.
 Files changed: docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
 Reason: Keep Discord focused on the current Desk Plan while preserving trade alerts, and remove stale bridge/recorder/data-quality notices after scanner or supervisor recovery posts prove the issue is no longer active.

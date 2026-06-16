@@ -296,6 +296,28 @@ cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_
   deleteStatus: 'pending',
   lastError: null,
 };
+cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:lunch:DESK_PLAN_REFRESH:old-lunch:lunch-desk-play-message-123'] = {
+  key: 'desk_play:2026-06-05:MES:lunch:DESK_PLAN_REFRESH:old-lunch:lunch-desk-play-message-123',
+  messageId: 'lunch-desk-play-message-123',
+  kind: 'desk_play',
+  webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+  postedAt: '2026-06-05T16:00:00.000Z',
+  expiresAt: '9999-12-31T23:59:59.999Z',
+  deletedAt: null,
+  deleteStatus: 'pending',
+  lastError: null,
+};
+cleanupState.discordCleanupMessages['desk_play:2026-06-06:MES:morning:DESK_PLAN_REFRESH:next-day:next-day-desk-play-message-123'] = {
+  key: 'desk_play:2026-06-06:MES:morning:DESK_PLAN_REFRESH:next-day:next-day-desk-play-message-123',
+  messageId: 'next-day-desk-play-message-123',
+  kind: 'desk_play',
+  webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+  postedAt: '2026-06-06T14:00:00.000Z',
+  expiresAt: '9999-12-31T23:59:59.999Z',
+  deletedAt: null,
+  deleteStatus: 'pending',
+  lastError: null,
+};
 cleanupState.discordCleanupMessages['legacy-trade-alert'] = {
   key: 'legacy-trade-alert',
   messageId: 'legacy-trade-alert-message-123',
@@ -320,10 +342,12 @@ const replacementResult = await replacePriorScannerDiscordCurrentDeskPlans({
     return new Response(null, { status: 204 });
   },
 });
-assert.deepEqual(replacementResult, { checked: 2, deleted: 2, failed: 0, skipped: 0 });
+assert.deepEqual(replacementResult, { checked: 3, deleted: 3, failed: 0, skipped: 0 });
 assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].deleteStatus, 'replaced');
 assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].lastError?.includes('replaced_by:'), true);
 assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123'].deleteStatus, 'replaced');
+assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:lunch:DESK_PLAN_REFRESH:old-lunch:lunch-desk-play-message-123'].deleteStatus, 'replaced');
+assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-06:MES:morning:DESK_PLAN_REFRESH:next-day:next-day-desk-play-message-123'].deleteStatus, 'pending');
 assert.equal(cleanupState.discordCleanupMessages[replacementDeskPlanCleanupRecord!.key].deleteStatus, 'pending');
 const cleanupResult = await cleanupExpiredScannerDiscordMessages({
   state: cleanupState,
@@ -339,6 +363,7 @@ assert.deepEqual(cleanupResult, { checked: 2, deleted: 1, failed: 0, skipped: 1 
 assert.deepEqual(cleanupDeletes, [
   'DELETE https://discord.com/api/webhooks/123/token/messages/desk-play-message-123',
   'DELETE https://discord.com/api/webhooks/123/token/messages/legacy-desk-play-message-123',
+  'DELETE https://discord.com/api/webhooks/123/token/messages/lunch-desk-play-message-123',
   'DELETE https://discord.com/api/webhooks/123/token/messages/message-123',
 ]);
 assert.equal(cleanupState.discordCleanupMessages[cleanupRecord!.key].deleteStatus, 'deleted');
@@ -358,6 +383,20 @@ const recoveredOperationalRecord = recordScannerDiscordCleanupMessage({
   now: new Date('2026-06-05T14:20:00.000Z'),
 });
 assert.ok(recoveredOperationalRecord);
+const recoveredWindowStartRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'window-start-message-456',
+  },
+  kind: 'window_start',
+  key: '2026-06-05:morning:scanner-window-start',
+  now: new Date('2026-06-05T14:20:00.000Z'),
+});
+assert.ok(recoveredWindowStartRecord);
 const recoveredDeletes: string[] = [];
 process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
 const recoveredCleanupResult = await cleanupRecoveredScannerOperationalDiscordMessages({
@@ -370,9 +409,13 @@ const recoveredCleanupResult = await cleanupRecoveredScannerOperationalDiscordMe
   },
 });
 restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
-assert.deepEqual(recoveredCleanupResult, { checked: 1, deleted: 1, failed: 0, skipped: 0 });
-assert.deepEqual(recoveredDeletes, ['DELETE https://discord.com/api/webhooks/123/token/messages/data-quality-message-456']);
+assert.deepEqual(recoveredCleanupResult, { checked: 2, deleted: 2, failed: 0, skipped: 0 });
+assert.deepEqual(recoveredDeletes, [
+  'DELETE https://discord.com/api/webhooks/123/token/messages/data-quality-message-456',
+  'DELETE https://discord.com/api/webhooks/123/token/messages/window-start-message-456',
+]);
 assert.equal(cleanupState.discordCleanupMessages[recoveredOperationalRecord!.key].deleteStatus, 'deleted');
+assert.equal(cleanupState.discordCleanupMessages[recoveredWindowStartRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
 const dataQualityNotice = buildScannerDataQualityNoticePayload({
   tradeDate: '2026-06-05',

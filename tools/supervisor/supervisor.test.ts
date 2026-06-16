@@ -862,6 +862,83 @@ assert.ok(readyPayloadText.includes('cycle complete: 600 bars processed'));
 assert.ok(readyPayloadText.includes('Latest completed 5M: 2026-06-04T22:40:00.0000000'));
 assert.equal(/Trade now|Enter now|Buy now|Sell now|Entry confirmed|Take the trade/i.test(readyPayloadText), false);
 
+const supervisorReadyCleanupStatePath = path.join(tempLogsDir, 'supervisor-ready-cleanup-state.json');
+fs.writeFileSync(supervisorReadyCleanupStatePath, JSON.stringify({
+  lastStatuses: {},
+  lastSentAtByKey: {},
+  postedMessages: {
+    stale_5m_bars: {
+      dedupeKey: 'stale_5m_bars',
+      kind: 'stale_5m_bars',
+      messageId: 'stale-5m-message-1',
+      postedAt: '2026-06-04T13:00:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+    market_data_gap_sync_pending: {
+      dedupeKey: 'market_data_gap_sync_pending',
+      kind: 'market_data_gap_sync_pending',
+      messageId: 'gap-sync-message-1',
+      postedAt: '2026-06-04T13:05:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+    contract_mismatch: {
+      dedupeKey: 'contract_mismatch',
+      kind: 'contract_mismatch',
+      messageId: 'contract-mismatch-message-1',
+      postedAt: '2026-06-04T13:10:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+    supervisor_self_heal: {
+      dedupeKey: 'supervisor_self_heal',
+      kind: 'supervisor_self_heal',
+      messageId: 'self-heal-message-1',
+      postedAt: '2026-06-04T13:15:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+    'child_restarted:scanner:1': {
+      dedupeKey: 'child_restarted:scanner:1',
+      kind: 'child_restarted',
+      messageId: 'child-restart-message-1',
+      postedAt: '2026-06-04T13:20:00.000Z',
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    },
+  },
+}, null, 2));
+const supervisorReadyCleanupCalls: string[] = [];
+const supervisorReadySend = await sendSupervisorNotifications(readyStatus, {
+  statePath: supervisorReadyCleanupStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  now: fixedNow,
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorReadyCleanupCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    if ((init?.method || 'GET') === 'DELETE') return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ id: 'supervisor-ready-message-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(supervisorReadySend.notifications.some((item) => item.kind === 'supervisor_ready'), true);
+assert.ok(supervisorReadyCleanupCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/stale-5m-message-1'));
+assert.ok(supervisorReadyCleanupCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/gap-sync-message-1'));
+assert.ok(supervisorReadyCleanupCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/contract-mismatch-message-1'));
+assert.ok(supervisorReadyCleanupCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/self-heal-message-1'));
+assert.ok(supervisorReadyCleanupCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/child-restart-message-1'));
+const supervisorReadyCleanupState = JSON.parse(fs.readFileSync(supervisorReadyCleanupStatePath, 'utf8'));
+assert.equal(supervisorReadyCleanupState.postedMessages.stale_5m_bars.deleteStatus, 'deleted');
+assert.equal(supervisorReadyCleanupState.postedMessages.market_data_gap_sync_pending.deleteStatus, 'deleted');
+assert.equal(supervisorReadyCleanupState.postedMessages.contract_mismatch.deleteStatus, 'deleted');
+assert.equal(supervisorReadyCleanupState.postedMessages.supervisor_self_heal.deleteStatus, 'deleted');
+assert.equal(supervisorReadyCleanupState.postedMessages['child_restarted:scanner:1'].deleteStatus, 'deleted');
+assert.equal(supervisorReadyCleanupState.postedMessages['supervisor_ready:12345'].deleteStatus, 'pending');
+
 const heartbeatWarnStatus = buildSupervisorStatus(defaultConfig, readyStatus.childServices.length ? {
   supervisorPid: 12345,
   startedAt: fixedNow.toISOString(),
