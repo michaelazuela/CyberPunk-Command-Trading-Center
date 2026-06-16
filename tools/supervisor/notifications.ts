@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { SupervisorStatusPayload } from './status';
+import { readEnvWithUserFallback } from './env';
 
 export type SupervisorNotificationKind =
   | 'supervisor_ready'
@@ -49,6 +50,7 @@ export interface SupervisorNotificationOptions {
   now?: Date;
   statePath?: string;
   webhookUrl?: string | null;
+  systemAlertWebhookUrl?: string | null;
   dryRun?: boolean;
   staleCooldownMs?: number;
   fetchImpl?: typeof fetch;
@@ -86,12 +88,25 @@ const WEBHOOK_ENV_KEYS = [
   'QUANT_DESK_HEALTH_WEBHOOK_URL',
 ] as const;
 
+const SYSTEM_ALERT_WEBHOOK_ENV_KEYS = [
+  'SYSTEM_ALERTS_DISCORD_WEBHOOK_URL',
+  'QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL',
+] as const;
+
 const DEFAULT_STALE_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 const BRIDGE_UNREACHABLE_CONFIRMATION_MS = 60_000;
 
 export function resolveSupervisorDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): { url: string | null; source: string | null } {
   for (const key of WEBHOOK_ENV_KEYS) {
-    const value = env[key]?.trim();
+    const value = readEnvWithUserFallback(key, env);
+    if (value) return { url: value, source: key };
+  }
+  return { url: null, source: null };
+}
+
+export function resolveSystemAlertsDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): { url: string | null; source: string | null } {
+  for (const key of SYSTEM_ALERT_WEBHOOK_ENV_KEYS) {
+    const value = readEnvWithUserFallback(key, env);
     if (value) return { url: value, source: key };
   }
   return { url: null, source: null };
@@ -656,7 +671,7 @@ function problemDedupeKeysForRecovery(kind: SupervisorNotificationKind): string[
 async function deleteRecoveredSupervisorMessages(args: {
   state: SupervisorNotificationState;
   notification: SupervisorNotification;
-  webhookUrl: string;
+  webhookUrlForDedupeKey: (dedupeKey: string) => string | null;
   now: Date;
   fetchImpl: typeof fetch;
 }): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
@@ -670,8 +685,13 @@ async function deleteRecoveredSupervisorMessages(args: {
     if (record.deleteStatus !== 'pending') continue;
     if (!keys.has(record.dedupeKey) && !(args.notification.kind === 'supervisor_ready' && record.dedupeKey.startsWith('child_restarted:'))) continue;
     checked += 1;
+    const webhookUrl = args.webhookUrlForDedupeKey(record.dedupeKey);
+    if (!webhookUrl) {
+      skipped += 1;
+      continue;
+    }
     try {
-      const response = await args.fetchImpl(supervisorDiscordWebhookDeleteUrl(args.webhookUrl, record.messageId), {
+      const response = await args.fetchImpl(supervisorDiscordWebhookDeleteUrl(webhookUrl, record.messageId), {
         method: 'DELETE',
         signal: AbortSignal.timeout(5_000),
       });
@@ -755,6 +775,26 @@ async function postSupervisorNotification(args: {
   }
 }
 
+function webhookForSupervisorNotification(args: {
+  notification: SupervisorNotification;
+  supervisorWebhook: string | null;
+  systemAlertWebhook: string | null;
+}): string | null {
+  if (args.notification.severity === 'fail') return args.systemAlertWebhook || args.supervisorWebhook;
+  return args.supervisorWebhook;
+}
+
+function webhookForDedupeKey(args: {
+  dedupeKey: string;
+  supervisorWebhook: string | null;
+  systemAlertWebhook: string | null;
+}): string | null {
+  if (args.dedupeKey === 'bridge_unreachable' || args.dedupeKey === 'scanner_down' || args.dedupeKey === 'recorder_down') {
+    return args.systemAlertWebhook || args.supervisorWebhook;
+  }
+  return args.supervisorWebhook;
+}
+
 export async function sendSupervisorNotifications(
   status: SupervisorStatusPayload,
   options: SupervisorNotificationOptions = {},
@@ -765,14 +805,23 @@ export async function sendSupervisorNotifications(
   const { notifications, nextState } = buildSupervisorNotifications(status, state, now, options.staleCooldownMs);
   writeNotificationState(statePath, nextState);
 
-  const webhook = options.webhookUrl === undefined ? resolveSupervisorDiscordWebhookUrl().url : options.webhookUrl;
-  if (!webhook || options.dryRun) {
-    return { sent: 0, skipped: notifications.length, notifications, webhookConfigured: Boolean(webhook) };
+  const supervisorWebhook = options.webhookUrl === undefined ? resolveSupervisorDiscordWebhookUrl().url : options.webhookUrl;
+  const systemAlertWebhook = options.systemAlertWebhookUrl === undefined ? resolveSystemAlertsDiscordWebhookUrl().url : options.systemAlertWebhookUrl;
+  if ((!supervisorWebhook && !systemAlertWebhook) || options.dryRun) {
+    return { sent: 0, skipped: notifications.length, notifications, webhookConfigured: Boolean(supervisorWebhook || systemAlertWebhook) };
   }
 
   const fetchImpl = options.fetchImpl || fetch;
   let sent = 0;
   for (const item of notifications) {
+    const webhook = webhookForSupervisorNotification({
+      notification: item,
+      supervisorWebhook,
+      systemAlertWebhook,
+    });
+    if (!webhook) {
+      continue;
+    }
     const messageId = await postSupervisorNotification({
       webhookUrl: webhook,
       notification: item,
@@ -802,7 +851,11 @@ export async function sendSupervisorNotifications(
       await deleteRecoveredSupervisorMessages({
         state: nextState,
         notification: item,
-        webhookUrl: webhook,
+        webhookUrlForDedupeKey: (dedupeKey) => webhookForDedupeKey({
+          dedupeKey,
+          supervisorWebhook,
+          systemAlertWebhook,
+        }),
         now,
         fetchImpl,
       });

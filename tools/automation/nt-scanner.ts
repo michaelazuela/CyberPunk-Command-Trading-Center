@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -405,9 +406,29 @@ export interface ScannerWebhookResolution {
   usingGenericFallback: boolean;
 }
 
+function readEnvWithWindowsUserFallback(key: string, env: NodeJS.ProcessEnv = process.env): string {
+  const processValue = env[key]?.trim();
+  if (processValue) return processValue;
+  if (env !== process.env || process.platform !== 'win32') return '';
+  try {
+    const escapedKey = key.replace(/'/g, "''");
+    return execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-Command',
+      `[Environment]::GetEnvironmentVariable('${escapedKey}', 'User')`,
+    ], {
+      encoding: 'utf8',
+      timeout: 2_000,
+      windowsHide: true,
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
 export function resolveScannerDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): ScannerWebhookResolution {
   for (const key of SCANNER_WEBHOOK_ENV_KEYS) {
-    const url = env[key]?.trim();
+    const url = readEnvWithWindowsUserFallback(key, env);
     if (url) {
       return {
         url,

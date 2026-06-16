@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { SupervisorConfig } from './config';
 import type { SupervisorState } from './processManager';
 import { isProcessRunning, isTrackedServiceProcessRunning } from './processManager';
+import { readEnvWithUserFallback } from './env';
 
 export type SupervisorHealthLevel = 'ok' | 'warn' | 'fail';
 
@@ -123,12 +124,14 @@ function discordConfigCheck(env: NodeJS.ProcessEnv): SupervisorHealthCheck {
   const configuredKeys = [
     'SUPERVISOR_DISCORD_WEBHOOK_URL',
     'QUANT_DESK_HEALTH_WEBHOOK_URL',
+    'SYSTEM_ALERTS_DISCORD_WEBHOOK_URL',
+    'QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL',
     'QUANT_DESK_SCANNER_WEBHOOK_URL',
     'SCANNER_DISCORD_WEBHOOK_URL',
     'DISCORD_WEBHOOK_URL',
     'DISCORD_OUTCOME_BASE_URL',
     'DISCORD_OUTCOME_SECRET',
-  ].filter((key) => Boolean(env[key]));
+  ].filter((key) => Boolean(readEnvWithUserFallback(key, env)));
 
   return {
     id: 'discord_config',

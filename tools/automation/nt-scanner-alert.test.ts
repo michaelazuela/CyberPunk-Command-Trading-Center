@@ -632,6 +632,7 @@ const readinessDataQualityIndex = scannerSource.indexOf('await sendScannerDataQu
 assert.ok(windowStartIndex > 0, 'scanner must send an active-window heartbeat in the live scan path');
 assert.ok(readinessGateIndex > windowStartIndex, 'active-window heartbeat must not be suppressed by pre-market data readiness');
 assert.ok(readinessDataQualityIndex > readinessGateIndex, 'data-readiness blockers must send a data-quality notice before returning');
+assert.ok(scannerSource.includes('readEnvWithWindowsUserFallback'), 'scanner webhook resolver must read Windows user-scope env when process env is missing');
 
 assert.deepEqual(resolveScannerDiscordWebhookUrl({}), { url: null, source: null, usingGenericFallback: false });
 assert.deepEqual(resolveScannerDiscordWebhookUrl({ DISCORD_WEBHOOK_URL: 'https://discord.example/generic' }), {

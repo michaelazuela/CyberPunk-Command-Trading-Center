@@ -22,6 +22,23 @@ Write-Host ""
 Write-Host "Keep this window open during market hours. Close it to stop alerts." -ForegroundColor Yellow
 Write-Host ""
 
+function Import-UserDiscordEnvironment {
+  foreach ($key in @(
+    'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    'SCANNER_DISCORD_WEBHOOK_URL',
+    'DISCORD_WEBHOOK_URL'
+  )) {
+    if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($key, 'Process'))) {
+      $userValue = [Environment]::GetEnvironmentVariable($key, 'User')
+      if (-not [string]::IsNullOrWhiteSpace($userValue)) {
+        [Environment]::SetEnvironmentVariable($key, $userValue, 'Process')
+      }
+    }
+  }
+}
+
+Import-UserDiscordEnvironment
+
 if (-not $DryRun -and [string]::IsNullOrWhiteSpace($env:QUANT_DESK_SCANNER_WEBHOOK_URL) -and [string]::IsNullOrWhiteSpace($env:SCANNER_DISCORD_WEBHOOK_URL) -and [string]::IsNullOrWhiteSpace($env:DISCORD_WEBHOOK_URL)) {
   $secret = Read-Host "Paste Quant Desk scanner Discord webhook URL for this session" -AsSecureString
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)

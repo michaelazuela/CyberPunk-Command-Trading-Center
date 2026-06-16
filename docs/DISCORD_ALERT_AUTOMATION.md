@@ -23,6 +23,7 @@ Keep trade decisions and operational health in separate Discord text channels:
 
 - `trade-plans`: Desk Plan, scanner trade/review plans, and outcome buttons.
 - `scanner-health`: `[SUPERVISOR]` recorder heartbeat, bridge, stale data, backfill, and recovery notices.
+- `system-alerts`: hard supervisor failures such as bridge unreachable, scanner down, or recorder down.
 - `model-research-review`: research/model review posts.
 
 Create an incoming webhook for each channel that receives automated posts. Do not reuse the trade-plan webhook for supervisor health notices.
@@ -34,9 +35,12 @@ Set these only on your local machine:
 ```powershell
 $env:QUANT_DESK_SCANNER_WEBHOOK_URL = "https://discord.com/api/webhooks/..." # trade-plans
 $env:SUPERVISOR_DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..." # scanner-health
+$env:SYSTEM_ALERTS_DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/..." # system-alerts
 ```
 
-`QUANT_DESK_HEALTH_WEBHOOK_URL` is also accepted as a supervisor/health alias. Legacy `DISCORD_WEBHOOK_URL` is still supported by older alert tools, but it should not be used for the live scanner/supervisor split.
+For durable Windows launches, store the same names at user scope with `[Environment]::SetEnvironmentVariable('NAME', 'webhook-url', 'User')`. The scanner reads `QUANT_DESK_SCANNER_WEBHOOK_URL` first from process env, then Windows user scope, so detached tray/supervisor starts do not need legacy fallback.
+
+`QUANT_DESK_HEALTH_WEBHOOK_URL` is also accepted as a supervisor/health alias. `QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL` is accepted as a system-alerts alias. Legacy `DISCORD_WEBHOOK_URL` is still supported by older alert tools, but it should not be used for the live scanner/supervisor split.
 
 Do not commit webhook URLs.
 
@@ -90,7 +94,7 @@ Or double-click:
 tools\automation\Start Quant Desk Discord Alerts.cmd
 ```
 
-The launcher does not store your Discord webhook in the repo. If `QUANT_DESK_SCANNER_WEBHOOK_URL`, `SCANNER_DISCORD_WEBHOOK_URL`, or legacy `DISCORD_WEBHOOK_URL` is not already set, it prompts for the scanner webhook URL for that PowerShell session. Supervisor health notices use `SUPERVISOR_DISCORD_WEBHOOK_URL` or `QUANT_DESK_HEALTH_WEBHOOK_URL` and will not fall back to the scanner trade-plan webhook.
+The launcher does not store your Discord webhook in the repo. It imports scanner webhook variables from Windows user scope into the process before it prompts. If `QUANT_DESK_SCANNER_WEBHOOK_URL`, `SCANNER_DISCORD_WEBHOOK_URL`, or legacy `DISCORD_WEBHOOK_URL` is still not available, it prompts for the scanner webhook URL for that PowerShell session. Supervisor health notices use `SUPERVISOR_DISCORD_WEBHOOK_URL` or `QUANT_DESK_HEALTH_WEBHOOK_URL` and will not fall back to the scanner trade-plan webhook. Hard supervisor failures use `SYSTEM_ALERTS_DISCORD_WEBHOOK_URL` or `QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL` when configured; otherwise they safely fall back to the supervisor health webhook.
 
 Test one alert without posting to Discord:
 

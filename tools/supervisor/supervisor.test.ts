@@ -11,6 +11,7 @@ import { createSupervisorLogger } from './logger';
 import {
   buildSupervisorDiscordPayload,
   buildSupervisorNotifications,
+  resolveSystemAlertsDiscordWebhookUrl,
   resolveSupervisorDiscordWebhookUrl,
   sendSupervisorNotifications,
   sendSupervisorSelfHealNotification,
@@ -171,6 +172,8 @@ const trayScriptPath = path.join(repoRoot, 'QuantDeskSupervisorTray.ps1');
 const trayScript = fs.readFileSync(trayScriptPath, 'utf8');
 const trayStartScriptPath = path.join(repoRoot, 'Start-QuantDeskSupervisorTray.ps1');
 const trayStartScript = fs.readFileSync(trayStartScriptPath, 'utf8');
+const supervisorStartScriptPath = path.join(repoRoot, 'Start-QuantDesk-Supervisor.ps1');
+const supervisorStartScript = fs.readFileSync(supervisorStartScriptPath, 'utf8');
 const trayLauncherPath = path.join(repoRoot, 'Launch-QuantDeskSupervisorTray.vbs');
 const trayLauncher = fs.readFileSync(trayLauncherPath, 'utf8');
 assert.ok(trayScript.includes('System.Windows.Forms.NotifyIcon'));
@@ -211,6 +214,11 @@ assert.equal(trayLauncher.includes('scanSetupCandidates'), false);
 assert.equal(trayLauncher.includes('canExecute'), false);
 assert.ok(trayStartScript.includes('Existing supervisor tray process replaced before launch.'));
 assert.ok(trayStartScript.includes('Supervisor tray launch requested.'));
+assert.ok(trayStartScript.includes('Import-UserDiscordEnvironment'));
+assert.ok(trayStartScript.includes('QUANT_DESK_SCANNER_WEBHOOK_URL'));
+assert.ok(trayStartScript.includes('SCANNER_DISCORD_WEBHOOK_URL'));
+assert.ok(trayStartScript.includes('SUPERVISOR_DISCORD_WEBHOOK_URL'));
+assert.ok(trayStartScript.includes('SYSTEM_ALERTS_DISCORD_WEBHOOK_URL'));
 assert.ok(trayStartScript.includes("Name -ieq 'powershell.exe'"));
 assert.ok(trayStartScript.includes('QuantDeskSupervisorTray.ps1'));
 assert.ok(trayStartScript.includes('Stop-Process -Id $process.ProcessId -Force'));
@@ -218,6 +226,14 @@ assert.ok(trayStartScript.includes('Start-Process -FilePath'));
 assert.equal(trayStartScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(trayStartScript.includes('scanSetupCandidates'), false);
 assert.equal(trayStartScript.includes('canExecute'), false);
+assert.ok(supervisorStartScript.includes('Import-UserDiscordEnvironment'));
+assert.ok(supervisorStartScript.includes('QUANT_DESK_SCANNER_WEBHOOK_URL'));
+assert.ok(supervisorStartScript.includes('SCANNER_DISCORD_WEBHOOK_URL'));
+assert.ok(supervisorStartScript.includes('SUPERVISOR_DISCORD_WEBHOOK_URL'));
+assert.ok(supervisorStartScript.includes('SYSTEM_ALERTS_DISCORD_WEBHOOK_URL'));
+assert.equal(supervisorStartScript.includes('runTradeDecisionPipeline'), false);
+assert.equal(supervisorStartScript.includes('scanSetupCandidates'), false);
+assert.equal(supervisorStartScript.includes('canExecute'), false);
 
 const supervisorDir = path.dirname(fileURLToPath(import.meta.url));
 const protectedImportPatterns = [
@@ -1207,6 +1223,16 @@ assert.deepEqual(resolveSupervisorDiscordWebhookUrl({
   SUPERVISOR_DISCORD_WEBHOOK_URL: 'https://discord.example/supervisor',
   QUANT_DESK_HEALTH_WEBHOOK_URL: 'https://discord.example/health',
 } as NodeJS.ProcessEnv), { url: 'https://discord.example/supervisor', source: 'SUPERVISOR_DISCORD_WEBHOOK_URL' });
+assert.deepEqual(resolveSystemAlertsDiscordWebhookUrl({
+  SYSTEM_ALERTS_DISCORD_WEBHOOK_URL: 'https://discord.example/system-alerts',
+  QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL: 'https://discord.example/system-alerts-alias',
+} as NodeJS.ProcessEnv), { url: 'https://discord.example/system-alerts', source: 'SYSTEM_ALERTS_DISCORD_WEBHOOK_URL' });
+assert.deepEqual(resolveSystemAlertsDiscordWebhookUrl({
+  QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL: 'https://discord.example/system-alerts-alias',
+} as NodeJS.ProcessEnv), { url: 'https://discord.example/system-alerts-alias', source: 'QUANT_DESK_SYSTEM_ALERTS_WEBHOOK_URL' });
+assert.deepEqual(resolveSystemAlertsDiscordWebhookUrl({
+  SUPERVISOR_DISCORD_WEBHOOK_URL: 'https://discord.example/supervisor',
+} as NodeJS.ProcessEnv), { url: null, source: null });
 const supervisorCleanupStatePath = path.join(tempLogsDir, 'supervisor-discord-cleanup-state.json');
 fs.writeFileSync(supervisorCleanupStatePath, JSON.stringify({
   lastStatuses: {
@@ -1221,6 +1247,7 @@ const supervisorDiscordCalls: string[] = [];
 const bridgeFailureSend = await sendSupervisorNotifications(transientBridgeFailureStatus, {
   statePath: supervisorCleanupStatePath,
   webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  systemAlertWebhookUrl: null,
   now: new Date(fixedNow.getTime() + 65_000),
   fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     supervisorDiscordCalls.push(`${init?.method || 'GET'} ${String(input)}`);
@@ -1231,6 +1258,7 @@ assert.equal(bridgeFailureSend.notifications.some((item) => item.kind === 'bridg
 const bridgeRecoveredSend = await sendSupervisorNotifications(bridgeRecoveredStatus, {
   statePath: supervisorCleanupStatePath,
   webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  systemAlertWebhookUrl: null,
   now: new Date(fixedNow.getTime() + 95_000),
   fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     supervisorDiscordCalls.push(`${init?.method || 'GET'} ${String(input)}`);
@@ -1244,6 +1272,48 @@ assert.ok(supervisorDiscordCalls.includes('DELETE https://discord.com/api/webhoo
 const supervisorCleanupState = JSON.parse(fs.readFileSync(supervisorCleanupStatePath, 'utf8'));
 assert.equal(supervisorCleanupState.postedMessages.bridge_unreachable.deleteStatus, 'deleted');
 assert.equal(supervisorCleanupState.postedMessages.bridge_recovered.deleteStatus, 'pending');
+
+const supervisorSystemAlertStatePath = path.join(tempLogsDir, 'supervisor-system-alert-routing-state.json');
+fs.writeFileSync(supervisorSystemAlertStatePath, JSON.stringify({
+  lastStatuses: {
+    bridge: 'transient_fail',
+    bridge_fail_count: '2',
+    bridge_first_failed_at: fixedNow.toISOString(),
+  },
+  lastSentAtByKey: {},
+  postedMessages: {},
+}, null, 2));
+const supervisorSystemAlertCalls: string[] = [];
+const systemAlertBridgeFailureSend = await sendSupervisorNotifications(transientBridgeFailureStatus, {
+  statePath: supervisorSystemAlertStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  systemAlertWebhookUrl: 'https://discord.com/api/webhooks/system-alerts/token',
+  now: new Date(fixedNow.getTime() + 65_000),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorSystemAlertCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(JSON.stringify({ id: 'system-alert-bridge-message-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(systemAlertBridgeFailureSend.notifications.some((item) => item.kind === 'bridge_unreachable'), true);
+assert.ok(supervisorSystemAlertCalls.includes('POST https://discord.com/api/webhooks/system-alerts/token?wait=true'));
+assert.equal(supervisorSystemAlertCalls.includes('POST https://discord.com/api/webhooks/supervisor/token?wait=true'), false);
+const systemAlertBridgeRecoveredSend = await sendSupervisorNotifications(bridgeRecoveredStatus, {
+  statePath: supervisorSystemAlertStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  systemAlertWebhookUrl: 'https://discord.com/api/webhooks/system-alerts/token',
+  now: new Date(fixedNow.getTime() + 95_000),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorSystemAlertCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    if ((init?.method || 'GET') === 'DELETE') return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ id: 'supervisor-recovered-message-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(systemAlertBridgeRecoveredSend.notifications.some((item) => item.kind === 'bridge_recovered'), true);
+assert.ok(supervisorSystemAlertCalls.includes('POST https://discord.com/api/webhooks/supervisor/token?wait=true'));
+assert.ok(supervisorSystemAlertCalls.includes('DELETE https://discord.com/api/webhooks/system-alerts/token/messages/system-alert-bridge-message-1'));
+const supervisorSystemAlertState = JSON.parse(fs.readFileSync(supervisorSystemAlertStatePath, 'utf8'));
+assert.equal(supervisorSystemAlertState.postedMessages.bridge_unreachable.deleteStatus, 'deleted');
+assert.equal(supervisorSystemAlertState.postedMessages.bridge_recovered.deleteStatus, 'pending');
 
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,
