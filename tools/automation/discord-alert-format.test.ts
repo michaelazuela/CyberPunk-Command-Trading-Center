@@ -10,6 +10,7 @@ import {
   validateDiscordPayload,
 } from './discord-alert-format';
 import { buildOutcomeComponents } from './discord-outcome-buttons';
+import { classifyDiscordMessageText, discordMessagePolicy } from './discord-message-policy';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate } from '../../src/types';
 import { evaluateScannerHealth } from '../../src/agents/scannerHealthAgent';
 import type { HtfLiquidityDrawState } from '../../src/lib/htfLiquidityDrawEngine';
@@ -18,6 +19,13 @@ const previousOutcomeBaseUrl = process.env.DISCORD_OUTCOME_BASE_URL;
 const previousOutcomeSecret = process.env.DISCORD_OUTCOME_SECRET;
 process.env.DISCORD_OUTCOME_BASE_URL = 'https://quant-desk.example';
 process.env.DISCORD_OUTCOME_SECRET = 'test-secret';
+
+assert.equal(discordMessagePolicy('current_desk_plan').requiresChartWhenLevelsPresent, true);
+assert.equal(discordMessagePolicy('current_desk_plan').requiresRagButtons, true);
+assert.equal(discordMessagePolicy('operational_health').purgeAfterMinutes, 15);
+assert.equal(discordMessagePolicy('operational_health').mayDeleteAfterRecovery, true);
+assert.equal(classifyDiscordMessageText('[SUPERVISOR] Bridge Unreachable').category, 'operational_health');
+assert.equal(classifyDiscordMessageText('MES Current Desk Plan').category, 'current_desk_plan');
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {
@@ -533,51 +541,38 @@ const deskPlayPayload = compactDiscordSummary({
 const deskPlayText = flattenDiscordPayloadText(deskPlayPayload);
 assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
 assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
-assert.ok(deskPlayText.includes('Scanner Desk Play'));
-assert.ok(deskPlayText.includes('Status: REVIEW ONLY - NOT EXECUTION'));
-assert.ok(deskPlayText.includes('HTF Bias Lines'));
-assert.ok(deskPlayText.includes('4H: BULL | bear < 7271.75'));
-assert.ok(deskPlayText.includes('2H: BULL | bear < 7288.25'));
-assert.ok(deskPlayText.includes('1H: BULL | bear < 7303.50'));
-assert.ok(deskPlayText.includes('15M: BULL | bear < 7342.00'));
-assert.ok(deskPlayText.includes('5M: BULL | bear < 7271.75'));
-assert.ok(deskPlayText.includes('Reliability: structural; 5M executes.'));
-assert.ok(deskPlayText.includes('Desk Direction'));
-assert.ok(deskPlayText.includes('LONG | aligned | 15M+5M | Line 7271.75'));
-assert.ok(deskPlayText.includes('SHORT:'));
-assert.ok(deskPlayText.includes('7288.25'));
-assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
-assert.ok(deskPlayText.includes('Confidence: 58/100 medium'));
+assert.ok(deskPlayText.includes('MES Current Desk Plan'));
+assert.ok(deskPlayText.includes('Primary: LONG'));
+assert.ok(deskPlayText.includes('Bias: 15M + 5M bullish, 1H supportive'));
+assert.ok(deskPlayText.includes('Line in sand: 7342.00'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
-assert.ok(deskPlayText.includes('Confidence: 82/100 high'));
-assert.ok(deskPlayText.includes('Ready: WAIT ENTRY'));
-assert.ok(deskPlayText.includes('Levels withheld until a valid 5M protected-structure stop is inside risk.'));
+assert.ok(deskPlayText.includes('Entry: pending'));
+assert.ok(deskPlayText.includes('Stop: pending'));
+assert.ok(deskPlayText.includes('T1: pending'));
+assert.ok(deskPlayText.includes('T2: pending'));
 const longPrimarySection = [
+  'Primary: LONG',
+  'Line in sand: 7342.00',
   'LONG ABOVE 7342.00',
-  'Confidence: 82/100 high',
-  'Ready: WAIT ENTRY',
-  'Levels withheld until a valid 5M protected-structure stop is inside risk.',
+  'Entry: pending',
+  'Status: Review only until 5M trigger + canExecute.',
 ].map((line) => deskPlayText.indexOf(line));
-assert.ok(longPrimarySection.every((index) => index >= 0), 'expected readiness inside the primary LONG Desk Play section');
-assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Play section must keep confidence, readiness, and level status in order');
+assert.ok(longPrimarySection.every((index) => index >= 0), 'expected compact LONG Desk Plan section');
+assert.deepEqual([...longPrimarySection].sort((a, b) => a - b), longPrimarySection, 'primary LONG Desk Plan must keep bias, line, levels, and status in order');
 assert.ok(!deskPlayText.includes('Entry ref: 7312.00'));
 assert.ok(!deskPlayText.includes('Stop: 7271.75'));
 assert.ok(!deskPlayText.includes('Risk: 40.25 pts'));
 assert.ok(!deskPlayText.includes('T1: 7372.50'));
 assert.ok(!deskPlayText.includes('T2: 7392.50'));
-assert.ok(deskPlayText.includes('App T1/T2: 7372.50 / 7392.50'));
-assert.ok(deskPlayText.includes('HTF: React 7288.25 | Next 7410.00 | Run 7428.75'));
-assert.ok(deskPlayText.includes('Mgmt: app T1/T2 first; runner after 5M acceptance.'));
-assert.ok(deskPlayText.includes('Trigger:'));
-assert.ok(deskPlayText.includes('Trigger: completed 5M close/retest above 7342.00.'));
-assert.ok(deskPlayText.includes('Invalid:'));
-assert.ok(deskPlayText.includes('Invalid: LONG fails below 7342.00'));
-assert.ok(deskPlayText.includes('Chart: watch attached; levels withheld; approvals unchanged.'));
+assert.ok(deskPlayText.includes('HTF target: 7410.00 / runner 7428.75'));
+assert.ok(deskPlayText.includes('Chart: attached; levels pending.'));
 assert.ok(!deskPlayText.includes('Boundary: approvals unchanged.'));
 assert.ok(!deskPlayText.includes('Current Play:'));
 assert.ok(!deskPlayText.includes('HTF/Structure:'));
 assert.ok(!deskPlayText.includes('Decision Map:'));
 assert.ok(!deskPlayText.includes('Level Transition:'));
+assert.ok(!deskPlayText.includes('HTF Bias Lines'));
+assert.ok(!deskPlayText.includes('Desk Direction'));
 assert.ok(/Long T1 Hit|Long Stopped|Scratch|Missed/.test(JSON.stringify(deskPlayPayload)));
 
 const decisionMapShortCandidate = sampleCandidate('SHORT');
@@ -690,28 +685,27 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
 });
 const deskPlayDecisionMapText = flattenDiscordPayloadText(deskPlayDecisionMapPayload);
 assert.ok(deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT'));
-assert.ok(deskPlayDecisionMapText.includes('HTF Bias Lines'));
-assert.ok(deskPlayDecisionMapText.includes('4H: BEAR | bull > 7423.75'));
-assert.ok(deskPlayDecisionMapText.includes('15M: BEAR | bull > 7440.25'));
-assert.ok(deskPlayDecisionMapText.includes('5M: BULL | bear < 7350.25'));
-assert.ok(deskPlayDecisionMapText.includes('Review Map:'));
-assert.ok(deskPlayDecisionMapText.includes('SHORT BELOW 7342.00'));
-assert.ok(deskPlayDecisionMapText.includes('EXEC CANDIDATE'));
-assert.ok(!deskPlayDecisionMapText.includes('| Ready: EXEC CANDIDATE'));
-assert.ok(deskPlayDecisionMapText.includes('Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
+assert.ok(deskPlayDecisionMapText.includes('MES Current Desk Plan'));
+assert.ok(deskPlayDecisionMapText.includes('Primary: WAIT'));
+assert.ok(deskPlayDecisionMapText.includes('Bias:'));
+assert.ok(deskPlayDecisionMapText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
+assert.ok(deskPlayDecisionMapText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(deskPlayDecisionMapText.includes('Chart: not attached; waiting on app-owned levels.'));
+assert.ok(!deskPlayDecisionMapText.includes('HTF Bias Lines'));
+assert.ok(!deskPlayDecisionMapText.includes('Review Map:'));
+assert.ok(!deskPlayDecisionMapText.includes('Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75'));
 const waitMapShortRow = [
-  'Review Map:',
-  'SHORT BELOW 7342.00',
-  'EXEC CANDIDATE',
-  'Normal canExecute gate.',
-  'Entry 7339.75 | Stop 7350.25 | T1 7324.00 | T2 7318.75',
+  'Primary: WAIT',
+  'Line in sand: 7342.00',
+  'No active LONG/SHORT plan with complete app-owned levels.',
+  'Status: Review only until 5M trigger + canExecute.',
 ].map((line) => deskPlayDecisionMapText.indexOf(line));
-assert.ok(waitMapShortRow.every((index) => index >= 0), 'expected SHORT readiness and app levels inside the WAIT review map');
-assert.deepEqual([...waitMapShortRow].sort((a, b) => a - b), waitMapShortRow, 'WAIT review map must keep short line, readiness, gate note, and app levels in order');
-assert.ok(deskPlayDecisionMapText.includes('Trigger: LONG above 7342.00 / SHORT below 7342.00; completed 5M close/retest only.'));
+assert.ok(waitMapShortRow.every((index) => index >= 0), 'expected concise WAIT Desk Plan');
+assert.deepEqual([...waitMapShortRow].sort((a, b) => a - b), waitMapShortRow, 'WAIT Desk Plan must keep primary, line, plan state, and status in order');
 assert.ok(!deskPlayDecisionMapText.includes('Bearish Failed Breakout Reversal'));
 assert.ok(!deskPlayDecisionMapText.includes('reclaim back below t...'));
-assert.ok(deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));
+assert.ok(!deskPlayDecisionMapText.includes('Need: protected 5M shift + canExecute.'));
 assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play is confirmed'), false);
 assert.equal(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'), false);
 assert.ok(!deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
@@ -784,8 +778,9 @@ const invalidDeskMapPayload = compactDiscordSummary({
   },
 });
 const invalidDeskMapText = flattenDiscordPayloadText(invalidDeskMapPayload);
-assert.ok(invalidDeskMapText.includes('LONG ABOVE 7410.00 | levels pending'));
-assert.ok(invalidDeskMapText.includes('SHORT BELOW 7437.50 | levels pending'));
+assert.ok(invalidDeskMapText.includes('Primary: WAIT'));
+assert.ok(invalidDeskMapText.includes('Line in sand: 7437.50'));
+assert.ok(invalidDeskMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
 assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
@@ -865,9 +860,12 @@ const projectedDeskPlayPayload = compactDiscordSummary({
   },
 });
 const projectedDeskPlayText = flattenDiscordPayloadText(projectedDeskPlayPayload);
-assert.ok(projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
-assert.ok(projectedDeskPlayText.includes('Entry 7570.00-7571.00 | Stop 7567.50 | T1 7573.75 | T2 7575.00'));
-assert.ok(projectedDeskPlayText.includes('NO CHASE: retest/new 5M'));
+assert.ok(projectedDeskPlayText.includes('Primary: WAIT'));
+assert.ok(projectedDeskPlayText.includes('Line in sand: 7570.00'));
+assert.ok(projectedDeskPlayText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
+assert.ok(!projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
+assert.ok(!projectedDeskPlayText.includes('Entry 7570.00-7571.00 | Stop 7567.50 | T1 7573.75 | T2 7575.00'));
+assert.ok(!projectedDeskPlayText.includes('NO CHASE: retest/new 5M'));
 assert.ok(!projectedDeskPlayText.includes('LONG ABOVE 7570.00 | levels pending'));
 assert.ok(projectedDeskPlayText.length < 2000, `expected projected Desk Play payload under Discord limit, got ${projectedDeskPlayText.length}`);
 
@@ -931,10 +929,11 @@ const waitDeskMapWithCandidate = compactDiscordSummary({
 const waitDeskMapWithCandidateText = flattenDiscordPayloadText(waitDeskMapWithCandidate);
 assert.ok(waitDeskMapWithCandidate.content?.includes('[AM DESK PLAY] MES - WAIT'));
 assert.ok(!waitDeskMapWithCandidate.content?.includes('[AM REVIEW] MES - LONG'));
-assert.ok(waitDeskMapWithCandidateText.includes('Review Map:'));
-assert.ok(waitDeskMapWithCandidateText.includes('LONG ABOVE 7407.25'));
-assert.ok(waitDeskMapWithCandidateText.includes('SHORT BELOW 7400.00'));
-assert.ok(waitDeskMapWithCandidateText.includes('Need: protected 5M shift + canExecute.'));
+assert.ok(waitDeskMapWithCandidateText.includes('Primary: WAIT'));
+assert.ok(waitDeskMapWithCandidateText.includes('Line in sand: 7407.25'));
+assert.ok(waitDeskMapWithCandidateText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
+assert.ok(waitDeskMapWithCandidateText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(!waitDeskMapWithCandidateText.includes('Review Map:'));
 
 const deskPlaySupportedShortPayload = compactDiscordSummary({
   session: 'lunch',
@@ -987,15 +986,24 @@ const deskPlaySupportedShortPayload = compactDiscordSummary({
 });
 const deskPlaySupportedShortText = flattenDiscordPayloadText(deskPlaySupportedShortPayload);
 assert.ok(deskPlaySupportedShortPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
+assert.ok(deskPlaySupportedShortText.includes('MES Current Desk Plan'));
+assert.ok(deskPlaySupportedShortText.includes('Primary: SHORT'));
+assert.ok(deskPlaySupportedShortText.includes('Line in sand: 7342.00'));
 assert.ok(deskPlaySupportedShortText.includes('SHORT BELOW 7342.00'));
-assert.ok(deskPlaySupportedShortText.includes('Entry ref: 7339.75'));
+assert.ok(deskPlaySupportedShortText.includes('Entry: 7339.75'));
 assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
-assert.ok(deskPlaySupportedShortText.includes('Risk: 10.50 pts'));
 assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
 assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
-assert.ok(deskPlaySupportedShortText.includes('Chart: review attached; approvals unchanged.'));
+assert.ok(deskPlaySupportedShortText.includes('Invalid above: 7350.25'));
+assert.ok(deskPlaySupportedShortText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(deskPlaySupportedShortText.includes('Chart: attached.'));
 assert.ok(!deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
+assert.throws(
+  () => validateDiscordPayload(deskPlaySupportedShortPayload, []),
+  /Current Desk Plan with app-owned levels requires an attached chart/,
+);
+validateDiscordPayload(deskPlaySupportedShortPayload, ['desk-plan-chart.png']);
 
 const lunch = compactDiscordSummary({
   session: 'lunch',

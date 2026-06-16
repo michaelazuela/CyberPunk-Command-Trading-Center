@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-15
+Task: Add Discord cleanup D1/D2/D5 first batch.
+Files changed: tools/automation/discord-message-policy.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts.
+Reason: Discord Desk Play messages needed a standard current-plan format, a single message policy contract for cleanup behavior, and an enforced chart attachment rule so app-owned entry/stop/T1/T2 plans cannot post without visual evidence.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit.
+Result: Passed. Added Discord message categories/policies for current desk plans, trade alerts, review learning, summaries, operational health, data-quality, and diagnostics. Operational/data-quality/diagnostic policies are marked cleanup-eligible after 15 minutes/recovery, while trade and review messages remain retained. Scanner Desk Play output now uses the compact `MES Current Desk Plan` format with `Primary`, `Bias`, `Line in sand`, side-specific `LONG ABOVE`/`SHORT BELOW`, `Entry`, `Stop`, `T1`, `T2`, invalidation, HTF target/runner, and the standard review-only status. The obsolete verbose Desk Play formatter helpers were removed. Validation now blocks a Current Desk Plan that has app-owned levels but no attached chart file.
+Trading logic changed: No. This changes Discord policy/formatting/validation only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bridge behavior changed.
+Bridge impact: None.
+Discord impact: Yes. Desk Play messages are shorter, standardized, chart-backed when complete levels exist, and operational cleanup policy metadata is centralized for the next cleanup phases.
+Journal/RAG impact: No behavior change. Current Desk Plans and review posts are still expected to carry RAG buttons when delivered through the existing scanner paths.
+Supabase impact: No migration added.
+Known risks: None identified after focused verification.
+Next recommended action: Install the remaining Discord cleanup phases to implement actual purge/update behavior using the new message policy contract.
+
+## Previous Change
+
+Date: 2026-06-15
 Task: Harden supervisor self-heal and bridge Discord notifications.
 Files changed: Launch-QuantDeskSupervisorTray.vbs, Start-QuantDeskSupervisorTray.ps1, QuantDeskSupervisorTray.ps1, package.json, tools/supervisor/notifications.ts, tools/supervisor/processManager.ts, tools/supervisor/supervisor.test.ts.
 Reason: The tray could request self-heal and send Discord warnings after brief status endpoint misses even while the supervisor was healthy, and a single transient bridge health miss could post `Bridge Unreachable` before the next check recovered.

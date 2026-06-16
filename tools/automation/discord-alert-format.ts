@@ -17,6 +17,7 @@ import { formatCompactHtfContextSufficiencyLines } from '../../src/lib/htfLiquid
 import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
+import { classifyDiscordMessageText } from './discord-message-policy';
 
 export type CompactDiscordSession = 'morning' | 'lunch' | 'evening';
 export type CompactDiscordInstrument = 'MES' | 'MNQ';
@@ -985,415 +986,129 @@ function deskPlayDecisionMapLevels(
   });
 }
 
-function deskPlayReactionLevel(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-): { price: number | null; label: string | null } {
-  const transition = play.levelTransition;
-  const price = isFinitePrice(transition?.targetReactionLevel)
-    ? transition.targetReactionLevel
-    : isFinitePrice(play.targetReactionLevel)
-    ? play.targetReactionLevel
-    : null;
-  return {
-    price,
-    label: transition?.targetReactionLabel || play.targetReactionLabel || null,
-  };
-}
-
-function deskPlayTransitionLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): number | null {
-  const transition = play.levelTransition;
-  if (direction === 'LONG') {
-    return isFinitePrice(transition?.longAbove)
-      ? transition.longAbove
-      : isFinitePrice(play.longAbove)
-      ? play.longAbove
-      : null;
-  }
-  return isFinitePrice(transition?.shortBelow)
-    ? transition.shortBelow
-    : isFinitePrice(play.shortBelow)
-    ? play.shortBelow
-    : null;
-}
-
-function deskPlayBiasForDirection(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-) {
-  return direction === 'LONG' ? play.longBias : play.shortBias;
-}
-
-function deskPlayConfidenceLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
-  const bias = deskPlayBiasForDirection(play, direction);
-  const score = typeof bias?.lineConfidence?.score === 'number' && Number.isFinite(bias.lineConfidence.score)
-    ? Math.round(bias.lineConfidence.score)
-    : typeof bias?.decisionQualityScore === 'number' && Number.isFinite(bias.decisionQualityScore)
-    ? Math.round(bias.decisionQualityScore)
-    : typeof bias?.modelConfidenceScore === 'number' && Number.isFinite(bias.modelConfidenceScore)
-    ? Math.round(bias.modelConfidenceScore)
-    : typeof bias?.rankScore === 'number' && Number.isFinite(bias.rankScore)
-    ? Math.round(bias.rankScore)
-    : null;
-  const label = compactLine(bias?.lineConfidence?.label || (score === null ? 'unavailable' : score >= 75 ? 'high' : score >= 55 ? 'medium' : 'low'), 18);
-  return `Confidence: ${score === null ? 'N/A' : `${score}/100`} ${label}`;
-}
-
-function deskPlayModelFitLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
-  const bias = deskPlayBiasForDirection(play, direction);
-  const fit = bias?.modelFit || (direction === 'LONG' ? play.modelRouting?.longModelFit : play.modelRouting?.shortModelFit);
-  if (!fit || fit.sourceOfTruth !== 'scanner_protected_structure_model_fit') return null;
-  if (fit.status !== 'best_fit') return null;
-  const score = typeof fit.fitScore === 'number' && Number.isFinite(fit.fitScore)
-    ? `${Math.round(fit.fitScore)}/100`
-    : 'N/A';
-  return `Best model: ${compactLine(fit.modelName || String(fit.setupType || 'approved model'), 32)} | fit ${score}`;
-}
-
-function deskPlayExecutableGateLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
-  const bias = deskPlayBiasForDirection(play, direction);
-  const gate = bias?.executableConsideration ||
-    (play.modelRouting?.executableConsideration?.direction === direction ? play.modelRouting.executableConsideration : null);
-  if (!gate || gate.sourceOfTruth !== 'scanner_executable_consideration_gate_metadata') return null;
-  if (gate.status === 'not_aligned' || gate.status === 'data_limited') return null;
-  const status = gate.status === 'ready_for_existing_can_execute_gate'
-    ? 'ready for normal gate'
-    : gate.status === 'review_only_missing_proof'
-    ? 'review only'
-    : gate.status || 'pending';
-  const missing = Array.isArray(gate.missingGates) && gate.missingGates.length
-    ? ` | Missing: ${compactLine(gate.missingGates[0], 30)}`
-    : '';
-  return `Gate: ${status}; canExecute unchanged${missing}`;
-}
-
-function deskPlayTradeReadinessLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
-  const readiness = deskPlayBiasForDirection(play, direction)?.tradeReadiness;
-  if (!readiness || readiness.sourceOfTruth !== 'scanner_trade_readiness_routing') return null;
-  const label = readiness.status === 'execution_candidate'
-    ? 'EXEC CANDIDATE'
-    : readiness.status === 'wait_for_pullback_or_new_5m_structure'
-    ? 'WAIT ENTRY'
-    : readiness.status === 'missed_no_chase'
-    ? 'NO CHASE'
-    : readiness.status === 'not_aligned'
-    ? 'NOT ALIGNED'
-    : readiness.status === 'data_limited'
-    ? 'DATA LIMITED'
-    : compactLine(readiness.label || readiness.status || 'REVIEW', 20);
-  const action = readiness.status === 'execution_candidate'
-    ? 'Normal canExecute gate.'
-    : readiness.status === 'wait_for_pullback_or_new_5m_structure'
-    ? 'Wait pullback/new 5M MSS.'
-    : readiness.status === 'missed_no_chase'
-    ? 'No chase; wait fresh 5M.'
-    : readiness.status === 'not_aligned'
-    ? 'Review/context only.'
-    : readiness.status === 'data_limited'
-    ? 'Repair HTF data.'
-    : compactLine(readiness.action || readiness.reason || 'Wait for app-owned gates.', 48);
-  return `Ready: ${label} | ${action}`;
-}
-
-function deskPlayHtfReactionLine(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
-  const bias = deskPlayBiasForDirection(play, direction);
-  const context = bias?.htfReactionContext;
-  const level = isFinitePrice(context?.reactionLevel)
-    ? context.reactionLevel
-    : isFinitePrice(play.targetReactionLevel)
-    ? play.targetReactionLevel
-    : null;
-  const strength = compactLine(context?.strength || 'unknown', 16);
-  const label = compactLine(context?.reactionLabel || play.targetReactionLabel || 'reaction area', 34);
-  if (level === null && !context?.whyItMayReact && !context?.reactionReason) return null;
-  return `React: ${level === null ? label : `${label} ${priceLine(level)}`} | strength ${strength}`;
-}
-
-function deskPlayHtfObjectiveLadderLines(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string[] {
-  const ladder = play.htfObjectiveLadder;
-  if (!ladder || ladder.sourceOfTruth !== 'scanner_htf_objective_ladder') return [];
-  const reaction = ladder.reaction?.price ? `React ${priceLine(ladder.reaction.price)}` : null;
-  const nextDraw = ladder.nextDraw?.price ? `Next ${priceLine(ladder.nextDraw.price)}` : null;
-  const runner = ladder.runner?.price ? `Run ${priceLine(ladder.runner.price)}` : null;
-  const lines = [
-    `App T1/T2: ${priceLine(ladder.appTarget1 ?? null)} / ${priceLine(ladder.appTarget2 ?? null)}`,
-    `HTF: ${[reaction, nextDraw, runner].filter(Boolean).join(' | ')}`,
-    'Mgmt: app T1/T2 first; runner after 5M acceptance.',
-  ].filter((line): line is string => Boolean(line));
-  return lines.length > 2 ? lines : [];
-}
-
-function currentHtfBiasLine(args: {
-  timeframe: string;
-  rowBias: string | null | undefined;
-  rowCurrentBias?: string | null;
-  rowBiasChangeLine?: number | null;
-  rowBiasChangeConfirmation?: string | null;
-  protectedLevel: number | null;
-  confirmationLine: number | null;
-  target: number | null;
-  currentPrice: number | null | undefined;
-}): string {
-  const tf = compactLine(args.timeframe || 'TF', 4);
-  const protectedText = priceLine(args.protectedLevel);
-  const confirmText = priceLine(args.confirmationLine);
-  const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
-  const rowCurrentBias = args.rowCurrentBias || null;
-
-  if (currentPrice === null && rowCurrentBias && rowCurrentBias !== 'UNKNOWN') {
-    const lineText = priceLine(isFinitePrice(args.rowBiasChangeLine) ? args.rowBiasChangeLine : args.protectedLevel ?? args.confirmationLine);
-    const confirmation = compactLine(args.rowBiasChangeConfirmation || 'completed close+hold', 28);
-    if (rowCurrentBias === 'BULL') {
-      return `${tf}: BULL | bear < ${lineText} | ${confirmation}`;
-    }
-    if (rowCurrentBias === 'BEAR') {
-      return `${tf}: BEAR | bull > ${lineText} | ${confirmation}`;
-    }
-    if (rowCurrentBias === 'RANGE') {
-      return `${tf}: RANGE | bull > ${confirmText} / bear < ${protectedText} | ${confirmation}`;
-    }
-  }
-
-  if (args.rowBias === 'BULL') {
-    if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice < args.protectedLevel) {
-      return `${tf}: BEAR | bull > ${protectedText} | close+hold`;
-    }
-    return `${tf}: BULL | bear < ${protectedText} | close+hold`;
-  }
-  if (args.rowBias === 'BEAR') {
-    if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice > args.protectedLevel) {
-      return `${tf}: BULL | bear < ${protectedText} | close+hold`;
-    }
-    return `${tf}: BEAR | bull > ${protectedText} | close+hold`;
-  }
-
-  if (currentPrice !== null && isFinitePrice(args.confirmationLine) && currentPrice >= args.confirmationLine) {
-    return `${tf}: BULL | bear < ${protectedText} | close+hold`;
-  }
-  if (currentPrice !== null && isFinitePrice(args.protectedLevel) && currentPrice <= args.protectedLevel) {
-    return `${tf}: BEAR | bull > ${confirmText} | close+hold`;
-  }
-  if (currentPrice !== null && isFinitePrice(args.protectedLevel) && isFinitePrice(args.confirmationLine)) {
-    return `${tf}: RANGE | bull > ${confirmText} / bear < ${protectedText} | close+hold`;
-  }
-
-  return `${tf}: pending | bull > ${confirmText} / bear < ${protectedText} | close+hold`;
-}
-
-function deskPlayHtfProtectedStructureLines(
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+function resolveDeskPlayRowBias(
+  row: NonNullable<NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>['htfProtectedStructureMap']>['rows'][number],
   currentPrice?: number | null,
-): string[] {
-  const map = play.htfProtectedStructureMap;
-  if (!map || map.sourceOfTruth !== 'scanner_htf_protected_structure_map' || !Array.isArray(map.rows) || map.rows.length === 0) {
-    return [];
-  }
-  const order = new Map([['4H', 0], ['2H', 1], ['1H', 2], ['15M', 3], ['5M', 4]]);
-  const rows = [...map.rows]
-    .sort((a, b) => (order.get(String(a.timeframe)) ?? 99) - (order.get(String(b.timeframe)) ?? 99))
-    .slice(0, 5)
-    .map((row) => {
-      return currentHtfBiasLine({
-        timeframe: row.timeframe || 'TF',
-        rowBias: row.bias,
-        rowCurrentBias: row.currentBias,
-        rowBiasChangeLine: row.biasChangeLine,
-        rowBiasChangeConfirmation: row.biasChangeConfirmation,
-        protectedLevel: isFinitePrice(row.protectedStructure) ? row.protectedStructure : null,
-        confirmationLine: isFinitePrice(row.confirmationLine) ? row.confirmationLine : null,
-        target: isFinitePrice(row.target) ? row.target : null,
-        currentPrice,
-      });
-    });
-  return [
-    'HTF Bias Lines',
-    ...rows,
-    `Reliability: ${compactLine(map.reliability || 'unknown', 16)}; 5M executes.`,
-  ];
+): 'BULL' | 'BEAR' | 'RANGE' | 'UNKNOWN' {
+  if (row.currentBias === 'BULL' || row.currentBias === 'BEAR' || row.currentBias === 'RANGE') return row.currentBias;
+  if (row.bias === 'BULL' || row.bias === 'BEAR') return row.bias;
+  const price = isFinitePrice(currentPrice) ? currentPrice : null;
+  if (price !== null && isFinitePrice(row.confirmationLine) && price >= row.confirmationLine) return 'BULL';
+  if (price !== null && isFinitePrice(row.protectedStructure) && price <= row.protectedStructure) return 'BEAR';
+  if (isFinitePrice(row.protectedStructure) && isFinitePrice(row.confirmationLine)) return 'RANGE';
+  return 'UNKNOWN';
 }
 
-function deskPlayTrendConfirmationLines(
+function deskPlayBiasSummary(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-): string[] {
-  const trend = play.trendConfirmation;
-  if (!trend || trend.sourceOfTruth !== 'scanner_protected_structure_trend_confirmation') return [];
-  const direction = trend.direction === 'LONG' || trend.direction === 'SHORT' ? trend.direction : 'WAIT';
-  const status = trend.status || 'unknown';
-  const timeframes = Array.isArray(trend.supportingTimeframes) && trend.supportingTimeframes.length
-    ? trend.supportingTimeframes.join('+')
-    : '15M+5M';
-  const line = isFinitePrice(trend.lineInSand) ? ` | Line ${priceLine(trend.lineInSand)}` : '';
-  return [
-    'Desk Direction',
-    `${direction} | ${status} | ${timeframes}${line}`,
-  ];
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+  currentPrice?: number | null,
+): string {
+  const rows = play.htfProtectedStructureMap?.rows || [];
+  const expected = direction === 'SHORT' ? 'BEAR' : direction === 'LONG' ? 'BULL' : null;
+  if (!expected) return compactLine(play.htfProtectedStructureMap?.summary || play.summary || 'No current directional bias confirmed.', 96);
+  const label = expected === 'BULL' ? 'bullish' : 'bearish';
+  const rowByTimeframe = new Map(rows.map((row) => [String(row.timeframe || '').toUpperCase(), row]));
+  const aligned = ['15M', '5M'].filter((tf) => {
+    const row = rowByTimeframe.get(tf);
+    return row ? resolveDeskPlayRowBias(row, currentPrice) === expected : false;
+  });
+  const parts: string[] = [];
+  if (aligned.length === 2) {
+    parts.push(`15M + 5M ${label}`);
+  } else if (aligned.length === 1) {
+    parts.push(`${aligned[0]} ${label}`);
+  }
+  const oneHour = rowByTimeframe.get('1H');
+  if (oneHour && resolveDeskPlayRowBias(oneHour, currentPrice) === expected) {
+    parts.push('1H supportive');
+  }
+  if (parts.length) return parts.join(', ');
+  const trendSummary = play.trendConfirmation?.summary || play.trendConfirmation?.confirmation || play.summary;
+  return compactLine(trendSummary || `${direction} review map; HTF support not fully aligned.`, 96);
 }
 
-function deskPlayManagementLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
-  const play = args.deskState?.primaryDeskPlay;
-  if (!play) return [];
-  const managedDirection = direction === 'LONG' ? 'SHORT' : 'LONG';
-  const reaction = deskPlayReactionLevel(play);
-  const continuationLine = deskPlayTransitionLine(play, managedDirection);
-  const structureWord = managedDirection === 'SHORT' ? 'support' : 'resistance';
-  if (reaction.price === null && continuationLine === null && !play.countertrendWarning) return [];
-  const confidence = deskPlayConfidenceLine(play, managedDirection);
-  const continuation = continuationLine !== null
-    ? `; no fresh ${managedDirection.toLowerCase()} unless ${managedDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(continuationLine)}`
-    : '';
-  return [
-    `${managedDirection}: manage into HTF ${reaction.price !== null ? priceLine(reaction.price) : structureWord}${continuation}.`,
-    ...(confidence ? [confidence] : []),
-  ];
+function deskPlayHtfTargetLine(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string {
+  const ladder = play.htfObjectiveLadder;
+  const target = ladder?.nextDraw?.price ?? ladder?.reaction?.price ?? ladder?.appTarget1 ?? null;
+  const runner = ladder?.runner?.price ?? ladder?.extension?.price ?? null;
+  return `HTF target: ${priceLine(target)} / runner ${priceLine(runner)}`;
 }
 
-function deskPlayPrimaryLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): string[] {
+function deskPlayChartStatusLine(args: {
+  hasChart: boolean;
+  hasLevels: boolean;
+}): string {
+  if (args.hasChart && args.hasLevels) return 'Chart: attached.';
+  if (args.hasChart) return 'Chart: attached; levels pending.';
+  if (args.hasLevels) return 'Chart: missing; app-owned levels require chart before Discord post.';
+  return 'Chart: not attached; waiting on app-owned levels.';
+}
+
+function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
-  if (!play) return [];
-  const lineInSand = deskPlayLineForDirection(play, direction);
-  if (!isFinitePrice(lineInSand)) return [];
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
-  const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
-  const readiness = deskPlayTradeReadinessLine(play, direction);
-  const header = `${direction} ${triggerWord} ${priceLine(lineInSand)}`;
-  if (!levels) {
+  if (!play) {
     return [
-      header,
-      ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
-      ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
-      ...(readiness ? [readiness] : []),
-      'Levels withheld until a valid 5M protected-structure stop is inside risk.',
+      `${args.instrument} Current Desk Plan`,
+      '',
+      'Primary: WAIT',
+      'Bias: No DeskState play available.',
+      'Line in sand: N/A',
+      '',
+      'Status: Review only until 5M trigger + canExecute.',
+      deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
     ];
   }
-  return [
-    header,
-    ...(deskPlayConfidenceLine(play, direction) ? [deskPlayConfidenceLine(play, direction)!] : []),
-    ...(deskPlayModelFitLine(play, direction) ? [deskPlayModelFitLine(play, direction)!] : []),
-    ...(readiness ? [readiness] : []),
-    ...(deskPlayExecutableGateLine(play, direction) ? [deskPlayExecutableGateLine(play, direction)!] : []),
-    ...(deskPlayHtfReactionLine(play, direction) ? [deskPlayHtfReactionLine(play, direction)!] : []),
-    levels.source === 'protected_5m_review_path'
-      ? `Review path: entry ${priceLine(levels.entryZoneLow)}-${priceLine(levels.entryZoneHigh)}`
-      : `Entry ref: ${priceLine(levels.entry)}`,
-    `Stop: ${priceLine(levels.stop)}`,
-    `Risk: ${numberLine(levels.riskPoints)} pts`,
-    `T1: ${priceLine(levels.target1)}`,
-    `T2: ${priceLine(levels.target2)}`,
-    ...(levels.noChase ? ['No chase: wait retest/new 5M structure.'] : []),
-  ];
-}
-
-function deskPlayWaitMapLine(
-  args: CompactDiscordSummaryArgs,
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-  direction: 'LONG' | 'SHORT',
-): string | null {
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return [
+      `${args.instrument} Current Desk Plan`,
+      '',
+      'Primary: WAIT',
+      `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
+      `Line in sand: ${priceLine(play.lineInSand)}`,
+      '',
+      'No active LONG/SHORT plan with complete app-owned levels.',
+      '',
+      'Status: Review only until 5M trigger + canExecute.',
+      deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
+    ];
+  }
   const lineInSand = deskPlayLineForDirection(play, direction);
-  if (!isFinitePrice(lineInSand)) return null;
   const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
-  const fit = deskPlayBiasForDirection(play, direction)?.modelFit ||
-    (direction === 'LONG' ? play.modelRouting?.longModelFit : play.modelRouting?.shortModelFit);
-  const model = fit?.status === 'best_fit'
-    ? ` | Model ${compactLine(fit.modelName || String(fit.setupType || 'approved'), 26)}`
-    : '';
-  const readiness = deskPlayTradeReadinessLine(play, direction);
-  const readinessText = readiness ? ` | ${readiness.replace(/^Ready:\s*/, '')}` : '';
-  if (!levels) return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | levels pending`;
-  const entryText = levels.source === 'protected_5m_review_path'
-    ? `Entry ${priceLine(levels.entryZoneLow)}-${priceLine(levels.entryZoneHigh)}`
-    : `Entry ${priceLine(levels.entry)}`;
-  const chaseText = levels.noChase ? ' | NO CHASE: retest/new 5M' : '';
-  return `${direction} ${triggerWord} ${priceLine(lineInSand)}${model}${readinessText} | ${entryText} | Stop ${priceLine(levels.stop)} | T1 ${priceLine(levels.target1)} | T2 ${priceLine(levels.target2)}${chaseText}`;
-}
-
-function deskPlayWaitLines(
-  args: CompactDiscordSummaryArgs,
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
-): string[] {
-  const reaction = deskPlayReactionLevel(play);
-  const warningDirection = play.countertrendWarning?.match(/\b(LONG|SHORT)\b/)?.[1] || null;
-  const opposingStructure = play.countertrendWarning?.match(/\b(bullish|bearish)\s+HTF\/session structure/i)?.[1] || null;
-  const caution = reaction.price !== null
-    ? `Caution: ${warningDirection || 'Trade'} into ${opposingStructure ? `${opposingStructure} ` : ''}HTF ${priceLine(reaction.price)}. Stop pressing.`
-    : play.countertrendWarning
-    ? `Caution: ${compactLine(play.countertrendWarning, 86)}`
-    : null;
-  const mapLines = [
-    deskPlayWaitMapLine(args, play, 'LONG'),
-    deskPlayWaitMapLine(args, play, 'SHORT'),
-  ].filter((line): line is string => Boolean(line));
-  const lines = [
-    'Review Map:',
-    ...mapLines,
-    caution,
-    'Need: protected 5M shift + canExecute.',
+  const invalidWord = direction === 'LONG' ? 'below' : 'above';
+  const sideLines = levels
+    ? [
+        `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+        `Entry: ${priceLine(levels.entry)}`,
+        `Stop: ${priceLine(levels.stop)}`,
+        `T1: ${priceLine(levels.target1)}`,
+        `T2: ${priceLine(levels.target2)}`,
+        '',
+        `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
+      ]
+    : [
+        `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+        'Entry: pending',
+        'Stop: pending',
+        'T1: pending',
+        'T2: pending',
+        '',
+        `Invalid ${invalidWord}: pending`,
+      ];
+  return [
+    `${args.instrument} Current Desk Plan`,
+    '',
+    `Primary: ${direction}`,
+    `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
+    `Line in sand: ${priceLine(lineInSand)}`,
+    '',
+    ...sideLines,
+    deskPlayHtfTargetLine(play),
+    '',
+    'Status: Review only until 5M trigger + canExecute.',
+    deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: Boolean(levels) }),
   ];
-  return lines.filter((line): line is string => Boolean(line));
-}
-
-function deskPlayTriggerLine(
-  args: CompactDiscordSummaryArgs,
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
-  direction: 'LONG' | 'SHORT' | 'WAIT',
-): string {
-  if (!play) return 'Trigger: completed 5M proof + retest/hold.';
-  if (direction === 'LONG' || direction === 'SHORT') {
-    const line = deskPlayLineForDirection(play, direction);
-    if (isFinitePrice(line)) {
-      return `Trigger: completed 5M close/retest ${direction === 'LONG' ? 'above' : 'below'} ${priceLine(line)}.`;
-    }
-  }
-  const longLine = deskPlayLineForDirection(play, 'LONG');
-  const shortLine = deskPlayLineForDirection(play, 'SHORT');
-  const parts = [
-    isFinitePrice(longLine) ? `LONG above ${priceLine(longLine)}` : null,
-    isFinitePrice(shortLine) ? `SHORT below ${priceLine(shortLine)}` : null,
-  ].filter((part): part is string => Boolean(part));
-  return parts.length
-    ? `Trigger: ${parts.join(' / ')}; completed 5M close/retest only.`
-    : `Trigger: ${compactLine(args.deskState?.nextTrigger || 'completed 5M proof + retest/hold.', 64)}`;
-}
-
-function deskPlayInvalidationLine(
-  args: CompactDiscordSummaryArgs,
-  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
-  direction: 'LONG' | 'SHORT' | 'WAIT',
-): string {
-  if (direction === 'LONG' || direction === 'SHORT') {
-    const line = play ? deskPlayLineForDirection(play, direction) : null;
-    const levels = deskPlayDecisionMapLevels(args.normalized, direction, line, play, args.currentPrice);
-    if (levels?.stop !== null && levels?.stop !== undefined && isFinitePrice(levels.stop)) {
-      return `Invalid: completed 5M ${direction === 'LONG' ? 'below' : 'above'} ${priceLine(levels.stop)}.`;
-    }
-  }
-  if (play) {
-    const longLine = deskPlayLineForDirection(play, 'LONG');
-    const shortLine = deskPlayLineForDirection(play, 'SHORT');
-    const parts = [
-      isFinitePrice(longLine) ? `LONG fails below ${priceLine(longLine)}` : null,
-      isFinitePrice(shortLine) ? `SHORT fails above ${priceLine(shortLine)}` : null,
-    ].filter((part): part is string => Boolean(part));
-    if (parts.length) return `Invalid: ${parts.join(' / ')}.`;
-  }
-  return `Invalid: ${compactLine(args.deskState?.invalidation || 'protected 5M structure fails.', 64)}`;
 }
 
 function deskPlayHeadlineDirection(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined): 'LONG' | 'SHORT' | 'WAIT' {
@@ -1406,47 +1121,13 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
   const direction = deskPlayHeadlineDirection(play);
-  const hasConditionalLevels = Boolean(
-    args.attachments.chartPlan &&
-    (direction === 'LONG' || direction === 'SHORT') &&
-    play &&
-    deskPlayDecisionMapLevels(args.normalized, direction, deskPlayLineForDirection(play, direction), play, args.currentPrice),
-  );
-  const line = typeof play?.lineInSand === 'number' && Number.isFinite(play.lineInSand)
-    ? priceLine(play.lineInSand)
-    : 'N/A';
-  const lines = [
-    `[${sessionLabel} DESK PLAY] ${args.instrument} - ${direction}`,
-    'Status: REVIEW ONLY - NOT EXECUTION',
-    '',
-    ...(play ? deskPlayHtfProtectedStructureLines(play, args.currentPrice) : []),
-    ...(play ? [''] : []),
-    ...(play ? deskPlayTrendConfirmationLines(play) : []),
-    ...(play ? [''] : []),
-    ...(direction === 'LONG' || direction === 'SHORT'
-      ? deskPlayManagementLines(args, direction)
-      : play
-      ? deskPlayWaitLines(args, play)
-      : [`Line in the sand: ${line}`]),
-    ...(play && (direction === 'LONG' || direction === 'SHORT') ? ['', ...deskPlayPrimaryLines(args, direction)] : []),
-    ...(play && direction !== 'WAIT' ? ['', ...deskPlayHtfObjectiveLadderLines(play)] : []),
-    '',
-    deskPlayTriggerLine(args, play, direction),
-    '',
-    deskPlayInvalidationLine(args, play, direction),
-    '',
-    hasConditionalLevels
-      ? 'Chart: review attached; approvals unchanged.'
-      : args.attachments.chartPlan
-      ? 'Chart: watch attached; levels withheld; approvals unchanged.'
-      : 'Chart: none; approvals unchanged.',
-  ];
+  const lines = deskPlayCurrentPlanLines(args, direction);
   return {
     username: 'Quant Desk',
     content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${direction} | ${args.tradeDate}`,
     embeds: [
       {
-        title: 'Scanner Desk Play',
+        title: `${args.instrument} Current Desk Plan`,
         description: professionalizeReportText(lines.join('\n')),
         color: direction === 'LONG' ? 0x00a86b : direction === 'SHORT' ? 0xff6d00 : 0xffa000,
         fields: [],
@@ -1800,6 +1481,7 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     throw new Error(`Discord payload blocked: content is ${contentLength} characters, above the 2000 character limit.`);
   }
   const mainText = flattenDiscordPayloadText(payload);
+  const policy = classifyDiscordMessageText(mainText);
   if (mainText.length > 2000) {
     throw new Error(`Discord payload blocked: compact alert text is ${mainText.length} characters, above the 2000 character limit.`);
   }
@@ -1824,7 +1506,16 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
     }
   }
   const validFiles = files.filter(Boolean);
-  const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*review/i.test(mainText);
+  const hasCurrentDeskPlanLevels =
+    policy.category === 'current_desk_plan' &&
+    /\bEntry:\s*\d+\.\d{2}\b/i.test(mainText) &&
+    /\bStop:\s*\d+\.\d{2}\b/i.test(mainText) &&
+    /\bT1:\s*\d+\.\d{2}\b/i.test(mainText) &&
+    /\bT2:\s*\d+\.\d{2}\b/i.test(mainText);
+  if (policy.requiresChartWhenLevelsPresent && hasCurrentDeskPlanLevels && validFiles.length === 0) {
+    throw new Error('Discord payload blocked: Current Desk Plan with app-owned levels requires an attached chart.');
+  }
+  const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*(?:review|attached)|current desk plan/i.test(mainText);
   if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
     console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
   }

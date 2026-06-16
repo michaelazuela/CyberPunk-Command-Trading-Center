@@ -545,36 +545,34 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('discord-alert-format.ts must not duplicate scanner target/reaction selection. Use candidateTargetReactionObjective from localScannerEngine.ts.');
   }
   if (
-    !formatterContent.includes('manage into HTF') ||
-    !formatterContent.includes('Entry ref:') ||
-    !formatterContent.includes('Confidence:') ||
-    !formatterContent.includes('React:') ||
-    !formatterContent.includes('App T1/T2:') ||
-    !formatterContent.includes('HTF Bias Lines') ||
-    !formatterContent.includes('Desk Direction') ||
-    !formatterContent.includes('scanner_protected_structure_trend_confirmation') ||
-    !formatterContent.includes('scanner_protected_structure_model_fit') ||
-    !formatterContent.includes('scanner_executable_consideration_gate_metadata') ||
-    !formatterContent.includes('scanner_trade_readiness_routing') ||
-    !formatterContent.includes('Best model:') ||
-    !formatterContent.includes('Ready:') ||
-    !formatterContent.includes('Gate:') ||
-    !formatterContent.includes('5M executes.') ||
+    !formatterContent.includes('Current Desk Plan') ||
+    !formatterContent.includes('Primary:') ||
+    !formatterContent.includes('Bias:') ||
+    !formatterContent.includes('Line in sand:') ||
+    !formatterContent.includes('Entry:') ||
+    !formatterContent.includes('Stop:') ||
+    !formatterContent.includes('T1:') ||
+    !formatterContent.includes('T2:') ||
+    !formatterContent.includes('Invalid') ||
+    !formatterContent.includes('HTF target:') ||
+    !formatterContent.includes('Status: Review only until 5M trigger + canExecute.') ||
+    !formatterContent.includes('Chart: attached.') ||
+    !formatterContent.includes('Current Desk Plan with app-owned levels requires an attached chart') ||
+    !formatterContent.includes('classifyDiscordMessageText') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||
-    !formatterContent.includes('App T1/T2 tactical') ||
-    !formatterContent.includes('Review Map:') ||
-    !formatterContent.includes('Need: protected 5M shift + canExecute.') ||
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
-    !formatterContent.includes('strength') ||
-    !formatterContent.includes('Chart: review attached; approvals unchanged.') ||
-    !formatterContent.includes('Chart: watch attached; levels withheld; approvals unchanged.') ||
     !formatterContent.includes("...(args.components?.length ? { components: args.components } : {})")
   ) {
-    fail('discord-alert-format.ts must keep Desk Play alerts concise with RAG buttons, line confidence, HTF reaction strength, review chart status, and unchanged approval boundary.');
+    fail('discord-alert-format.ts must keep Current Desk Plan alerts concise, chart-backed when levels exist, RAG-button compatible, and unchanged on approval authority.');
   }
-  if (formatterContent.includes('conditional Desk Plan attached') || formatterContent.includes('watch/context chart attached')) {
+  if (
+    formatterContent.includes('conditional Desk Plan attached') ||
+    formatterContent.includes('watch/context chart attached') ||
+    formatterContent.includes('Chart: review attached; approvals unchanged.') ||
+    formatterContent.includes('Chart: watch attached; levels withheld; approvals unchanged.')
+  ) {
     fail('discord-alert-format.ts must not preserve obsolete Desk Play chart wording.');
   }
 

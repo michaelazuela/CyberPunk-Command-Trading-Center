@@ -2133,15 +2133,17 @@ try {
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed'],
   );
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
-  assert.ok(deskPlayText.includes('SHORT:'));
+  assert.ok(deskPlayText.includes('MES Current Desk Plan'));
+  assert.ok(deskPlayText.includes('Primary: LONG'));
+  assert.ok(deskPlayText.includes('Bias:'));
+  assert.ok(deskPlayText.includes('Line in sand: 5324.25'));
   assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
-  assert.ok(deskPlayText.includes('Confidence:'));
-  assert.ok(deskPlayText.includes('React:'));
-  assert.ok(deskPlayText.includes('Entry ref: 5324.25'));
+  assert.ok(deskPlayText.includes('Entry: 5324.25'));
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Chart: review attached; approvals unchanged.'));
+  assert.ok(deskPlayText.includes('Status: Review only until 5M trigger + canExecute.'));
+  assert.ok(deskPlayText.includes('Chart: attached.'));
   assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under 1200 chars, got ${deskPlayText.length}`);
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
   process.env.SUPABASE_URL = 'https://supabase.example/rest/v1';
