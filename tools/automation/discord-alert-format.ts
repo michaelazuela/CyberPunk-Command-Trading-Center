@@ -261,6 +261,7 @@ export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
   'X Tags',
   'Do not execute from the card alone',
   'Target Cascade',
+  'HTF Runner Map:',
   'Overall score',
   'Alert qualification',
   'Quant Desk • Local Scanner',
@@ -485,25 +486,21 @@ function compactTargetLadderLines(candidate: SetupCandidate, normalized: Compact
     targetPlan?.liquidityRunnerTarget,
     targetPlan?.runnerTarget,
   ]);
-  const nextDrawLine = targetObjectiveLine('Next draw', nextDrawObjective);
   const runnerLine = targetObjectiveLine('Runner', runnerObjective) ||
     (runner ? `Runner: ${priceLine(runner)} - extension if T2 clears` : null);
   const extensionLine = targetObjectiveLine('Extension', extensionObjective) ||
     (stretch ? `Extension: ${priceLine(stretch)} - trail only if structure keeps delivering` : null);
-  const htfRunnerMapLines = [
-    nextDrawLine,
-    runnerLine,
-    extensionLine && extensionLine !== runnerLine ? extensionLine : null,
-  ].filter((line): line is string => Boolean(line));
+  const htfTargetLine = nextDrawObjective || runnerObjective || runner
+    ? `HTF target: ${priceLine(nextDrawObjective?.price ?? null)} / runner ${priceLine(runnerObjective?.price ?? runner ?? null)}`
+    : null;
   return [
     'Targets:',
     `T1: ${priceLine(appTargets.target1)} - scale/secure`,
     `T2: ${priceLine(appTargets.target2)} - base exit`,
-    ...(htfRunnerMapLines.length
+    ...(htfTargetLine
       ? [
-          'HTF Runner Map:',
-          ...htfRunnerMapLines,
-          'Mgmt: App T1/T2 tactical; runner needs 5M acceptance beyond T2.',
+          htfTargetLine,
+          ...(extensionLine && extensionLine !== runnerLine ? [extensionLine] : []),
         ]
       : []),
   ];
@@ -587,12 +584,42 @@ function isExplicitReviewCandidate(candidate: SetupCandidate | null): boolean {
   );
 }
 
+function candidateDiscordHtfPublishIssue(candidate: SetupCandidate | null): 'opposed' | 'unconfirmed' | 'data_limited' | null {
+  if (!candidate) return null;
+  if (candidate.htfLiquidityDrawState?.classificationReliability === 'data_limited') return 'data_limited';
+  const text = [
+    ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+    ...(candidate.activeRuleset?.htfLineInSand?.blockers || []),
+    ...(candidate.missingEvidence || []),
+    ...(candidate.evidence || []),
+    candidate.blockReason,
+    candidate.requiredTrigger,
+    candidate.nextAction,
+    candidate.levelContextSummary,
+    candidate.decisionQualityScorecard?.map((item) => `${item.label} ${item.note}`).join(' '),
+  ]
+    .filter(Boolean)
+    .join(' ');
+  if (
+    /opposing completed HTF MSS|opposing.*HTF|counter-HTF|countertrend|pressing into .*HTF\/session structure|No completed .*MSS support/i.test(text)
+  ) {
+    return 'opposed';
+  }
+  if (
+    /completed HTF support is not confirmed|HTF support (?:is )?not confirmed|HTF is caution\/context only|not headline this as the active play until HTF support/i.test(text)
+  ) {
+    return 'unconfirmed';
+  }
+  return null;
+}
+
 function reportStatus(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, override?: string | null): DiscordDecisionStatus {
   const effectiveCanExecute = getEffectiveCanExecute(normalized);
-  if (effectiveCanExecute) return 'EXECUTABLE';
+  const htfPublishIssue = candidateDiscordHtfPublishIssue(candidate);
+  if (effectiveCanExecute && !htfPublishIssue) return 'EXECUTABLE';
   if (normalized.decision === 'NO TRADE' && !candidate) return 'NO TRADE';
   const status = compactSessionDecisionLabel(candidate, normalized, override).toLowerCase();
-  if (status.includes('approved') || status.includes('executable')) return effectiveCanExecute ? 'EXECUTABLE' : 'CONDITIONAL';
+  if (status.includes('approved') || status.includes('executable')) return effectiveCanExecute && !htfPublishIssue ? 'EXECUTABLE' : 'CONDITIONAL';
   if (status.includes('blocked') || status.includes('no trade') || status.includes('notrade')) return 'NO TRADE';
   if (isExplicitReviewCandidate(candidate) && status.includes('conditional')) return 'CONDITIONAL';
   if (normalized.decisionStatus === TradeDecisionStatus.NoTrade || normalized.decisionStatus === TradeDecisionStatus.OutsideRules) return 'NO TRADE';
@@ -603,6 +630,7 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
+  if (status === 'CONDITIONAL' && candidateDiscordHtfPublishIssue(candidate)) return 'WAIT - HTF support required before Discord execution alert';
   if (status === 'CONDITIONAL') return 'WAIT - fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
   return 'WAIT - app-owned pipeline has not approved execution';
@@ -1133,7 +1161,14 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     candidate.riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL' ||
     candidate.blockReason === NoTradeReason.RiskTooWide ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
-  const statusText = riskAboveStandard
+  const htfPublishIssue = candidateDiscordHtfPublishIssue(candidate);
+  const statusText = htfPublishIssue === 'opposed'
+    ? 'Review only; HTF opposes this side.'
+    : htfPublishIssue === 'unconfirmed'
+    ? 'Review only; HTF support not confirmed.'
+    : htfPublishIssue === 'data_limited'
+    ? 'Review only; HTF context is data-limited.'
+    : riskAboveStandard
     ? 'Risk review only; standard risk gate not clean.'
     : candidate.humanReview?.status === 'HumanReviewReady'
     ? 'Human review only; trader confirmation + canExecute required.'
@@ -1368,14 +1403,16 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   }
   const effectiveCanExecute = getEffectiveCanExecute(args.normalized);
   const requestedStatus = args.statusOverride || args.normalized.decisionStatus || (effectiveCanExecute ? TradeDecisionStatus.ApprovedTrade : TradeDecisionStatus.Wait);
-  const finalStatus = !effectiveCanExecute && (requestedStatus === TradeDecisionStatus.ApprovedTrade || requestedStatus === 'Approved' || requestedStatus === 'Executable')
-    ? TradeDecisionStatus.Wait
-    : isExplicitReviewCandidate(bestCandidate) && requestedStatus === TradeDecisionStatus.NoTrade
-      ? TradeDecisionStatus.ConditionalTrade
-    : requestedStatus;
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
   const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);
+  const finalStatus = designerStatus === 'EXECUTABLE'
+    ? requestedStatus
+    : designerStatus === 'NO TRADE'
+      ? TradeDecisionStatus.NoTrade
+      : isExplicitReviewCandidate(bestCandidate) && requestedStatus === TradeDecisionStatus.NoTrade
+        ? TradeDecisionStatus.ConditionalTrade
+        : TradeDecisionStatus.Wait;
   const model = bestCandidate ? professionalCandidateModelLabel(bestCandidate) : 'No registered active model candidate';
   const reportKind = designerStatus === 'EXECUTABLE' ? 'PLAN' : 'REVIEW';
   const sessionLabel = sessionShortLabel(args.session);

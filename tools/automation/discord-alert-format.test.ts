@@ -1282,6 +1282,37 @@ assert.ok(scannerHtfOppositionText.includes('Bias: SHORT into bullish HTF/sessio
 assert.ok(!scannerHtfOppositionText.includes('HTF Caution:'));
 assert.ok(!scannerHtfOppositionText.includes('Treat T1/T2 as management'));
 
+const scannerHtfOppositionExecutableCandidate = sampleCandidate('SHORT');
+scannerHtfOppositionExecutableCandidate.activeRuleset = scannerHtfOppositionCandidate.activeRuleset;
+scannerHtfOppositionExecutableCandidate.executionStatus = ExecutionStatus.Executable;
+const scannerHtfOppositionExecutablePayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-16',
+  instrument: 'MES',
+  planVersionId: 'SCANNER-HTF-OPPOSITION-EXECUTABLE',
+  normalized: {
+    canExecute: true,
+    decisionStatus: TradeDecisionStatus.ApprovedTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [scannerHtfOppositionExecutableCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+});
+validateDiscordPayload(scannerHtfOppositionExecutablePayload, ['chart-plan.png', 'price-level-map.png']);
+const scannerHtfOppositionExecutableText = flattenDiscordPayloadText(scannerHtfOppositionExecutablePayload);
+assert.ok(scannerHtfOppositionExecutablePayload.content?.startsWith('🟡 '));
+assert.ok(scannerHtfOppositionExecutablePayload.content?.includes('[AM REVIEW] MES - SHORT CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(scannerHtfOppositionExecutableText.includes('MES Current Desk Plan'));
+assert.ok(scannerHtfOppositionExecutableText.includes('Status: Review only; HTF opposes this side.'));
+assert.ok(!scannerHtfOppositionExecutableText.includes('Status: EXECUTABLE'));
+assert.ok(!scannerHtfOppositionExecutableText.includes('Executable only while completed 5M trigger + canExecute remain true.'));
+assert.ok(!scannerHtfOppositionExecutableText.includes('Plan:'));
+assert.ok(!scannerHtfOppositionExecutableText.includes('HTF Runner Map:'));
+assert.ok(!scannerHtfOppositionExecutableText.includes('Memory:'));
+
 const scannerReadyCandidate = sampleCandidate('LONG');
 scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
 scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
