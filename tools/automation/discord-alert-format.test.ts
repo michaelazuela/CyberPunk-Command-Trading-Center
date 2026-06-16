@@ -558,11 +558,11 @@ const deskPlayPayload = compactDiscordSummary({
   },
 });
 const deskPlayText = flattenDiscordPayloadText(deskPlayPayload);
-assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - LONG'));
+assert.ok(deskPlayPayload.content?.includes('[PM DESK PLAY] MES - WAIT / LONG REVIEW'));
 assert.deepEqual((deskPlayPayload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 assert.ok(deskPlayText.includes('MES Current Desk Plan'));
-assert.ok(deskPlayText.includes('Primary: LONG'));
-assert.ok(deskPlayText.includes('Bias: 15M + 5M bullish, 1H supportive'));
+assert.ok(deskPlayText.includes('Primary: WAIT / LONG REVIEW'));
+assert.ok(deskPlayText.includes('Bias: HTF protected structure rows are scanner-owned context only.'));
 assert.ok(deskPlayText.includes('Line in sand: 7342.00'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Entry: pending'));
@@ -570,7 +570,7 @@ assert.ok(deskPlayText.includes('Stop: pending'));
 assert.ok(deskPlayText.includes('T1: pending'));
 assert.ok(deskPlayText.includes('T2: pending'));
 const longPrimarySection = [
-  'Primary: LONG',
+  'Primary: WAIT / LONG REVIEW',
   'Line in sand: 7342.00',
   'LONG ABOVE 7342.00',
   'Entry: pending',
@@ -1032,6 +1032,126 @@ assert.throws(
   /Current Desk Plan with app-owned levels requires an attached chart/,
 );
 validateDiscordPayload(deskPlaySupportedShortPayload, ['desk-plan-chart.png']);
+
+const deskPlayPendingShortMapPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-16',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-DESK-PLAY-PENDING-SHORT-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Short map only; protected 5M stop and app targets are incomplete.',
+    invalidation: null,
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7600,
+    nextTrigger: 'Completed 5M close and hold below 7600.00 required before short review can build levels.',
+    invalidation: null,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT map below line in the sand',
+      summary: 'SHORT is primary map context, but execution levels are incomplete.',
+      lineInSand: 7600,
+      longAbove: 7610,
+      shortBelow: 7600,
+      nextTrigger: 'Completed 5M close and hold below 7600.00 required before short review can build levels.',
+      invalidation: null,
+      noChase: 'No chase. Wait for completed 5M proof and protected structure.',
+      htfConflict: true,
+      countertrendWarning: 'Review only.',
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        summary: 'HTF map only.',
+        rows: [
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '4H',
+            bias: 'BEAR',
+            currentBias: 'BEAR',
+            biasChangeLine: 7684,
+            protectedStructure: 7641,
+            confirmationLine: 7684,
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '2H',
+            bias: 'CONFLICT',
+            currentBias: 'RANGE',
+            biasChangeLine: 7651.5,
+            protectedStructure: 7591,
+            confirmationLine: 7651.5,
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '1H',
+            bias: 'BULL',
+            currentBias: 'BULL',
+            biasChangeLine: 7437.25,
+            protectedStructure: 7437.25,
+            confirmationLine: 7513.5,
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '15M',
+            bias: 'BEAR',
+            currentBias: 'BEAR',
+            biasChangeLine: 7627.5,
+            protectedStructure: 7617.25,
+            confirmationLine: 7627.5,
+          },
+          {
+            sourceOfTruth: 'scanner_htf_protected_structure_map',
+            timeframe: '5M',
+            bias: 'BEAR',
+            currentBias: 'BEAR',
+            biasChangeLine: 7627.5,
+            protectedStructure: 7619.25,
+            confirmationLine: 7627.5,
+          },
+        ],
+      },
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Short below 7600 map',
+        lineInSand: 7600,
+        nextTrigger: 'Completed 5M close and hold below 7600.00 required before short review can build levels.',
+        reason: 'Short side is the primary map, but not a complete plan.',
+        blockers: ['Entry, protected 5M stop, T1, or T2 is missing.'],
+      },
+      longBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Long above 7610 review',
+        lineInSand: 7610,
+        nextTrigger: 'Only review after completed 5M reclaim.',
+        reason: 'Opposite side remains context only.',
+        blockers: ['Countertrend review only.'],
+      },
+    },
+  },
+});
+const pendingShortMapText = flattenDiscordPayloadText(deskPlayPendingShortMapPayload);
+assert.ok(deskPlayPendingShortMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT / SHORT REVIEW'));
+assert.ok(!deskPlayPendingShortMapPayload.content?.includes('MES - SHORT |'));
+assert.ok(pendingShortMapText.includes('Primary: WAIT / SHORT REVIEW'));
+assert.ok(pendingShortMapText.includes('2H: RANGE; bull above 7651.50 / bear below 7591.00'));
+assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
+assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
+assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);
+assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
+assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 
 const lunch = compactDiscordSummary({
   session: 'lunch',

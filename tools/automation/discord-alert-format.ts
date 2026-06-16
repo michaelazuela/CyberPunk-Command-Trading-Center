@@ -1095,6 +1095,9 @@ function deskPlayHtfLineRows(
     const row = byTimeframe.get(timeframe);
     if (!row) return `${timeframe}: UNKNOWN; changes at N/A`;
     const bias = resolveDeskPlayRowBias(row, currentPrice);
+    if (bias === 'RANGE' && isFinitePrice(row.confirmationLine) && isFinitePrice(row.protectedStructure)) {
+      return `${timeframe}: RANGE; bull above ${priceLine(row.confirmationLine)} / bear below ${priceLine(row.protectedStructure)}`;
+    }
     const changeLine = isFinitePrice(row.biasChangeLine)
       ? row.biasChangeLine
       : isFinitePrice(row.protectedStructure)
@@ -1293,7 +1296,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return [
       `${args.instrument} Current Desk Plan`,
       '',
-      'Primary: WAIT',
+      `Primary: ${deskPlayPrimaryLabel(play, direction)}`,
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       `Line in sand: ${priceLine(play.lineInSand)}`,
       '',
@@ -1305,6 +1308,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...waitSideLinesFor('SHORT'),
       '',
       'No active LONG/SHORT plan with complete app-owned levels.',
+      deskPlayHtfTargetLine(play),
+      deskPlayRunnerLine(play),
       '',
       'Status: Review only until 5M trigger + canExecute.',
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
@@ -1338,21 +1343,43 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   ];
 }
 
-function deskPlayHeadlineDirection(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined): 'LONG' | 'SHORT' | 'WAIT' {
+function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT'): boolean {
+  const play = args.deskState?.primaryDeskPlay;
+  if (!play) return false;
+  const line = deskPlayLineForDirection(play, direction);
+  return Boolean(deskPlayDecisionMapLevels(args.normalized, direction, line, play, args.currentPrice));
+}
+
+function deskPlayHeadlineDirection(args: CompactDiscordSummaryArgs): 'LONG' | 'SHORT' | 'WAIT' {
+  const play = args.deskState?.primaryDeskPlay;
   if (!play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return 'WAIT';
   const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
-  return bias?.state === 'primary' ? play.direction : 'WAIT';
+  if (bias?.state !== 'primary') return 'WAIT';
+  return deskPlayHasCompletePlanningLevels(args, play.direction) ? play.direction : 'WAIT';
+}
+
+function deskPlayPrimaryLabel(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string {
+  if (direction === 'LONG' || direction === 'SHORT') return direction;
+  if (play?.direction === 'LONG' || play?.direction === 'SHORT') {
+    const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
+    if (bias?.state === 'primary') return `WAIT / ${play.direction} REVIEW`;
+  }
+  return 'WAIT';
 }
 
 function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): DiscordWebhookPayload {
   const play = args.deskState?.primaryDeskPlay;
   const sessionLabel = sessionShortLabel(args.session);
-  const direction = deskPlayHeadlineDirection(play);
+  const direction = deskPlayHeadlineDirection(args);
   const lines = deskPlayCurrentPlanLines(args, direction);
   const components = args.components || defaultOutcomeComponentsForSummary(args, direction === 'WAIT' ? null : direction);
+  const headline = deskPlayPrimaryLabel(play, direction);
   return {
     username: 'Quant Desk',
-    content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${direction} | ${args.tradeDate}`,
+    content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${headline} | ${args.tradeDate}`,
     embeds: [
       {
         title: `${args.instrument} Current Desk Plan`,
