@@ -1458,7 +1458,7 @@ export function barsCoverRequestedLookback(
   const from = barTimeMs(requestedFrom);
   const to = barTimeMs(requestedTo);
   if (first === null || last === null || from === null || to === null) return false;
-  const loadedSpanDays = (last - first) / (24 * 60 * 60 * 1000);
+  const loadedSpanDays = (last - first + timeframeMinutes(timeframe) * 60_000) / (24 * 60 * 60 * 1000);
   const requiredSpanDays = Math.max(0, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
   const latestCompletedToleranceMs = (timeframeMinutes(timeframe) + 30) * 60_000;
   const startCoverageToleranceMs = 24 * 60 * 60_000;
@@ -4710,23 +4710,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     return;
   }
 
-  let preloadedLookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
-  if (shouldRunPreMarketDataReadinessGate(config, window)) {
-    const gateResult = await runPreMarketDataReadinessBackfillGate({
-      config,
-      tradeDate,
-      window,
-      completedFiveMinuteBarAssurance: completed5mAssurance,
-      completed5m,
-    });
-    preloadedLookLeft = gateResult.lookLeft;
-    if (!gateResult.report.canEnterTradePlanningMode && window.allowsTradePlan) {
-      console.warn('[scanner-data] Setup scan blocked by Pre-Market Data Readiness + Backfill Gate. This is a data-quality blocker, not a no-setup conclusion.');
-      await writeState(state);
-      return;
-    }
-  }
-
   if (!window.allowsDeskPlan || !config.scanWindows) {
     const mappingState = scannerContextState(window);
     const mappingLabel = config.scanWindows ? scannerContextLogLabel(window) : 'Market Mapping Mode';
@@ -4749,7 +4732,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     console.log(`[scanner] ${window.label}: NoData, no completed 5M candle available.`);
     return;
   }
-  const sameCompletedCandle = state.lastCompleted5mBySession[sessionKey] === completed5m.time;
 
   try {
     await sendWindowStartAlert({
@@ -4765,6 +4747,39 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   } catch (error) {
     console.warn(`[scanner] ${session} window start heartbeat skipped: ${formatError(error)}`);
   }
+
+  let preloadedLookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
+  if (shouldRunPreMarketDataReadinessGate(config, window)) {
+    const gateResult = await runPreMarketDataReadinessBackfillGate({
+      config,
+      tradeDate,
+      window,
+      completedFiveMinuteBarAssurance: completed5mAssurance,
+      completed5m,
+    });
+    preloadedLookLeft = gateResult.lookLeft;
+    if (!gateResult.report.canEnterTradePlanningMode && window.allowsTradePlan) {
+      const gateSummary = summarizePreMarketDataReadinessBackfillGate(gateResult.report);
+      console.warn('[scanner-data] Setup scan blocked by Pre-Market Data Readiness + Backfill Gate. This is a data-quality blocker, not a no-setup conclusion.');
+      await sendScannerDataQualityNoticeIfNeeded({
+        config,
+        state,
+        scannerWindow: window,
+        tradeDate,
+        session,
+        windowLabel: window.label,
+        currentPrice,
+        completed5m,
+        completedFiveMinuteBarAssurance: completed5mAssurance,
+        reason: `${gateSummary} ${gateResult.report.sourceSummary}`,
+        manualRun: config.once,
+      });
+      await writeState(state);
+      return;
+    }
+  }
+
+  const sameCompletedCandle = state.lastCompleted5mBySession[sessionKey] === completed5m.time;
 
   const lookLeft = preloadedLookLeft || (await fetchLookLeftContext(config, tradeDate, session, completed5m.time).catch((error) => {
     console.warn(`[scanner] 30-day scanner history preload unavailable: ${formatError(error)}`);

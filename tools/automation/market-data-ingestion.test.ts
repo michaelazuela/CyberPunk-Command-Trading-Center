@@ -12,6 +12,16 @@ function bar(time: string, open = 7410, high = 7412, low = 7408, close = 7411): 
   return { time, open, high, low, close, volume: 1000 };
 }
 
+function evenlySpacedBars(start: string, end: string, count: number): NinjaBridgeBar[] {
+  const startMs = Date.parse(start);
+  const endMs = Date.parse(end);
+  const stepMs = count > 1 ? (endMs - startMs) / (count - 1) : 0;
+  return Array.from({ length: count }, (_, index) => {
+    const iso = new Date(startMs + stepMs * index).toISOString().slice(0, 19);
+    return bar(iso);
+  });
+}
+
 const liveWithGap = [
   bar('2026-06-09T13:10:00-04:00'),
   bar('2026-06-09T13:15:00-04:00'),
@@ -126,6 +136,40 @@ const mondayMorningClosedStartWindow = verifyMarketDataWindow({
 });
 assert.equal(mondayMorningClosedStartWindow.sufficient, true);
 assert.equal(mondayMorningClosedStartWindow.dataLimitation.status, 'none');
+
+const liveTuesdayMorningHtfWindows = [
+  {
+    timeframe: '60m' as const,
+    bars: evenlySpacedBars('2026-05-17T19:00:00Z', '2026-06-16T09:00:00Z', 494),
+    minimumBars: 120,
+  },
+  {
+    timeframe: '120m' as const,
+    bars: evenlySpacedBars('2026-05-17T20:00:00Z', '2026-06-16T08:00:00Z', 257),
+    minimumBars: 80,
+  },
+  {
+    timeframe: '240m' as const,
+    bars: evenlySpacedBars('2026-05-17T22:00:00Z', '2026-06-16T06:00:00Z', 128),
+    minimumBars: 40,
+  },
+];
+for (const fixture of liveTuesdayMorningHtfWindows) {
+  const verified = verifyMarketDataWindow({
+    bars: fixture.bars,
+    timeframe: fixture.timeframe,
+    requestedFrom: '2026-05-17T00:00:00-04:00',
+    requestedTo: '2026-06-16T09:50:00-04:00',
+    requiredLookbackDays: 30,
+    minimumBars: fixture.minimumBars,
+    source: 'market_bars',
+    cacheBars: fixture.bars.length,
+    bridgeRepairBars: 0,
+    bridgeInstrument: 'MES 09-26',
+  });
+  assert.equal(verified.sufficient, true, `${fixture.timeframe} live Tuesday morning HTF cache should be sufficient`);
+  assert.equal(verified.dataLimitation.status, 'none');
+}
 
 const mondayMorningLateStartWindow = verifyMarketDataWindow({
   bars: [

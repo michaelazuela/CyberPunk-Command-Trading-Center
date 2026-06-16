@@ -203,7 +203,8 @@ export function verifyMarketDataWindow(args: {
   const lastMs = timestampMs(last);
   const fromMs = timestampMs(args.requestedFrom);
   const toMs = timestampMs(args.requestedTo);
-  const loadedSpanDays = firstMs !== null && lastMs !== null ? (lastMs - firstMs) / (24 * 60 * 60 * 1000) : 0;
+  const timeframeMs = timeframeMinutes(args.timeframe) * 60_000;
+  const loadedSpanDays = firstMs !== null && lastMs !== null ? (lastMs - firstMs + timeframeMs) / (24 * 60 * 60 * 1000) : 0;
   const closedStartReopenMs = timestampMs(nextSessionOpenAfterClosedStart(args.requestedFrom));
   const requiredSpanDays = Math.max(
     0,
