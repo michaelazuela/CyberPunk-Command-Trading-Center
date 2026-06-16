@@ -886,9 +886,38 @@ const shiftedDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
   },
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
+const sameCandleShiftedDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      lineInSand: 7412.75,
+      entry: 7410.25,
+      stop: 7419.25,
+      target1: 7396.75,
+      target2: 7392.25,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7412.75,
+      shortBias: { state: 'primary', lineInSand: 7412.75 },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', protectedStructure: 7419.25, confirmationLine: 7412.75 },
+        ],
+      },
+    },
+  },
+  latestCompleted5m: '2026-06-08T15:35:00.0000000',
+});
+assert.equal(firstDeskPlanRefreshKey, sameCandleShiftedDeskPlanRefreshKey);
 assert.notEqual(firstDeskPlanRefreshKey, shiftedDeskPlanRefreshKey);
 assert.ok(firstDeskPlanRefreshKey.includes('DESK_PLAN_REFRESH'));
-assert.ok(shiftedDeskPlanRefreshKey.includes('m5=BEAR:7419.25:7412.75'));
+assert.ok(shiftedDeskPlanRefreshKey.includes('m5=BEAR'));
+assert.ok(!shiftedDeskPlanRefreshKey.includes('7419.25:7412.75'));
 const sundayEveningDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
   tradeDate: '2026-06-14',
   instrument: 'MES',

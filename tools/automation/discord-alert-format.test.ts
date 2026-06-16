@@ -881,8 +881,10 @@ const projectedDeskPlayPayload = compactDiscordSummary({
 const projectedDeskPlayText = flattenDiscordPayloadText(projectedDeskPlayPayload);
 assert.ok(projectedDeskPlayText.includes('Primary: WAIT'));
 assert.ok(projectedDeskPlayText.includes('Line in sand: 7570.00'));
+assert.ok(projectedDeskPlayText.includes('HTF Lines:'));
+assert.ok(projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
+assert.ok(projectedDeskPlayText.includes('SHORT BELOW 7570.00'));
 assert.ok(projectedDeskPlayText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
-assert.ok(!projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
 assert.ok(!projectedDeskPlayText.includes('Entry 7570.00-7571.00 | Stop 7567.50 | T1 7573.75 | T2 7575.00'));
 assert.ok(!projectedDeskPlayText.includes('NO CHASE: retest/new 5M'));
 assert.ok(!projectedDeskPlayText.includes('LONG ABOVE 7570.00 | levels pending'));

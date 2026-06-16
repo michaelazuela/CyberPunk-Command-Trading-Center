@@ -3146,26 +3146,6 @@ function deskPlanRefreshPrice(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'none';
 }
 
-function deskPlanRefreshBiasFields(bias: DeskPlayDirectionalBias) {
-  return {
-    line: bias.lineInSand,
-    entry: null,
-    stop: null,
-    target1: null,
-    target2: null,
-  };
-}
-
-function deskPlanRefreshLifecycleFields(item: DeskState['bestLongPlan'] | DeskState['bestShortPlan'] | DeskState['selectedCandidate']) {
-  return {
-    line: item?.lineInSand ?? null,
-    entry: item?.entry ?? null,
-    stop: item?.stop ?? null,
-    target1: item?.target1 ?? null,
-    target2: item?.target2 ?? null,
-  };
-}
-
 export function scannerDeskPlanRefreshKey(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -3174,18 +3154,6 @@ export function scannerDeskPlanRefreshKey(args: {
   latestCompleted5m?: string | null;
 }): string {
   const play = args.deskState.primaryDeskPlay;
-  const longBiasFields = deskPlanRefreshBiasFields(play.longBias);
-  const shortBiasFields = deskPlanRefreshBiasFields(play.shortBias);
-  const longLifecycleFields = deskPlanRefreshLifecycleFields(args.deskState.bestLongPlan);
-  const shortLifecycleFields = deskPlanRefreshLifecycleFields(args.deskState.bestShortPlan);
-  const long = {
-    ...longLifecycleFields,
-    line: longLifecycleFields.line ?? longBiasFields.line,
-  };
-  const short = {
-    ...shortLifecycleFields,
-    line: shortLifecycleFields.line ?? shortBiasFields.line,
-  };
   const protected5m = play.htfProtectedStructureMap.rows.find((row) => row.timeframe === '5M') || null;
   const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
   const parts = [
@@ -3196,12 +3164,11 @@ export function scannerDeskPlanRefreshKey(args: {
     args.latestCompleted5m || 'no-completed-5m',
     activeCampaignId || 'no-campaign',
     play.direction,
-    `line=${deskPlanRefreshPrice(play.lineInSand)}`,
-    `long=${play.longBias.state}:${deskPlanRefreshPrice(long.line)}:${deskPlanRefreshPrice(long.entry)}:${deskPlanRefreshPrice(long.stop)}:${deskPlanRefreshPrice(long.target1)}:${deskPlanRefreshPrice(long.target2)}`,
-    `short=${play.shortBias.state}:${deskPlanRefreshPrice(short.line)}:${deskPlanRefreshPrice(short.entry)}:${deskPlanRefreshPrice(short.stop)}:${deskPlanRefreshPrice(short.target1)}:${deskPlanRefreshPrice(short.target2)}`,
-    `reaction=${deskPlanRefreshPrice(play.targetReactionLevel)}`,
-    `runner=${deskPlanRefreshPrice(play.htfObjectiveLadder.runner?.price)}`,
-    `m5=${protected5m?.bias || 'none'}:${deskPlanRefreshPrice(protected5m?.protectedStructure)}:${deskPlanRefreshPrice(protected5m?.confirmationLine)}`,
+    `visibility=${args.deskState.visibilityMode || 'unknown'}:${args.deskState.discordAction || 'unknown'}`,
+    `quality=${args.deskState.htfContextStatus || 'unknown'}:${args.deskState.dataQualityStatus || 'unknown'}`,
+    `long=${play.longBias.state}`,
+    `short=${play.shortBias.state}`,
+    `m5=${protected5m?.bias || 'none'}`,
   ];
   return parts.join(':');
 }

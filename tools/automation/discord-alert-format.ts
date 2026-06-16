@@ -1078,6 +1078,33 @@ function deskPlayHtfTargetLine(play: NonNullable<CompactDeskStateForDiscord['pri
   return `HTF target: ${priceLine(target)} / runner ${priceLine(runner)}`;
 }
 
+function deskPlayRunnerLine(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): string {
+  const ladder = play.htfObjectiveLadder;
+  const runner = ladder?.runner?.price ?? ladder?.extension?.price ?? null;
+  return `Runner: ${priceLine(runner)}`;
+}
+
+function deskPlayHtfLineRows(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  currentPrice?: number | null,
+): string[] {
+  const rows = play.htfProtectedStructureMap?.rows || [];
+  const byTimeframe = new Map(rows.map((row) => [String(row.timeframe || '').toUpperCase(), row]));
+  return ['4H', '2H', '1H', '15M', '5M'].map((timeframe) => {
+    const row = byTimeframe.get(timeframe);
+    if (!row) return `${timeframe}: UNKNOWN; changes at N/A`;
+    const bias = resolveDeskPlayRowBias(row, currentPrice);
+    const changeLine = isFinitePrice(row.biasChangeLine)
+      ? row.biasChangeLine
+      : isFinitePrice(row.protectedStructure)
+      ? row.protectedStructure
+      : isFinitePrice(row.confirmationLine)
+      ? row.confirmationLine
+      : null;
+    return `${timeframe}: ${bias}; changes at ${priceLine(changeLine)}`;
+  });
+}
+
 function candidateBiasSummary(candidate: SetupCandidate): string {
   const directionWord = candidate.direction === 'SHORT' ? 'bearish' : candidate.direction === 'LONG' ? 'bullish' : 'neutral';
   const rulesetBlockers = [
@@ -1224,13 +1251,57 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
     ];
   }
+  const sideLinesFor = (side: 'LONG' | 'SHORT'): { lines: string[]; hasLevels: boolean } => {
+    const line = deskPlayLineForDirection(play, side);
+    const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
+    const triggerWord = side === 'LONG' ? 'ABOVE' : 'BELOW';
+    if (!levels) {
+      return {
+        hasLevels: false,
+        lines: [
+          `${side} ${triggerWord} ${priceLine(line)}`,
+          'Entry: pending',
+          'Stop: pending',
+          'T1: pending',
+          'T2: pending',
+        ],
+      };
+    }
+    return {
+      hasLevels: true,
+      lines: [
+        `${side} ${triggerWord} ${priceLine(line)}`,
+        `Entry: ${priceLine(levels.entry)}`,
+        `Stop: ${priceLine(levels.stop)}`,
+        `T1: ${priceLine(levels.target1)}`,
+        `T2: ${priceLine(levels.target2)}`,
+      ],
+    };
+  };
   if (direction !== 'LONG' && direction !== 'SHORT') {
+    const waitSideLinesFor = (side: 'LONG' | 'SHORT'): string[] => {
+      const line = deskPlayLineForDirection(play, side);
+      return [
+        `${side} ${side === 'LONG' ? 'ABOVE' : 'BELOW'} ${priceLine(line)}`,
+        'Entry: pending',
+        'Stop: pending',
+        'T1: pending',
+        'T2: pending',
+      ];
+    };
     return [
       `${args.instrument} Current Desk Plan`,
       '',
       'Primary: WAIT',
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       `Line in sand: ${priceLine(play.lineInSand)}`,
+      '',
+      'HTF Lines:',
+      ...deskPlayHtfLineRows(play, args.currentPrice),
+      '',
+      ...waitSideLinesFor('LONG'),
+      '',
+      ...waitSideLinesFor('SHORT'),
       '',
       'No active LONG/SHORT plan with complete app-owned levels.',
       '',
@@ -1239,28 +1310,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ];
   }
   const lineInSand = deskPlayLineForDirection(play, direction);
-  const levels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
-  const triggerWord = direction === 'LONG' ? 'ABOVE' : 'BELOW';
   const invalidWord = direction === 'LONG' ? 'below' : 'above';
-  const sideLines = levels
-    ? [
-        `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
-        `Entry: ${priceLine(levels.entry)}`,
-        `Stop: ${priceLine(levels.stop)}`,
-        `T1: ${priceLine(levels.target1)}`,
-        `T2: ${priceLine(levels.target2)}`,
-        '',
-        `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
-      ]
-    : [
-        `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
-        'Entry: pending',
-        'Stop: pending',
-        'T1: pending',
-        'T2: pending',
-        '',
-        `Invalid ${invalidWord}: pending`,
-      ];
+  const primary = sideLinesFor(direction);
+  const opposite = sideLinesFor(direction === 'LONG' ? 'SHORT' : 'LONG');
+  const primaryLevels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   return [
     `${args.instrument} Current Desk Plan`,
     '',
@@ -1268,11 +1321,19 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     `Line in sand: ${priceLine(lineInSand)}`,
     '',
-    ...sideLines,
+    'HTF Lines:',
+    ...deskPlayHtfLineRows(play, args.currentPrice),
+    '',
+    ...primary.lines,
+    '',
+    ...opposite.lines,
+    '',
+    `Invalid ${invalidWord}: ${primaryLevels ? priceLine(primaryLevels.stop) : 'pending'}`,
     deskPlayHtfTargetLine(play),
+    deskPlayRunnerLine(play),
     '',
     'Status: Review only until 5M trigger + canExecute.',
-    deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: Boolean(levels) }),
+    deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: primary.hasLevels || opposite.hasLevels }),
   ];
 }
 
