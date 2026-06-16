@@ -470,6 +470,12 @@ assert.ok(health.checks.some((check) => (
   && (launchedChild.status === 'running' ? check.status === 'ok' : check.status === 'warn')
 )));
 assert.ok(health.checks.some((check) => check.id === 'discord_config' && check.status === 'warn'));
+const healthDiscordConfig = await buildHealthReport(processConfig, launchedState, new Date(), {
+  SUPERVISOR_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner-health',
+} as NodeJS.ProcessEnv);
+const healthDiscordConfigCheck = healthDiscordConfig.checks.find((check) => check.id === 'discord_config');
+assert.equal(healthDiscordConfigCheck?.status, 'ok');
+assert.deepEqual(healthDiscordConfigCheck?.details?.configuredKeys, ['SUPERVISOR_DISCORD_WEBHOOK_URL']);
 
 if (launchedChild.pid) {
   const external = findExternalServiceProcesses(processConfig, [

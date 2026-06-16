@@ -121,6 +121,8 @@ export async function checkBridgeHealth(bridgeUrl: string, configuredBridgeInstr
 
 function discordConfigCheck(env: NodeJS.ProcessEnv): SupervisorHealthCheck {
   const configuredKeys = [
+    'SUPERVISOR_DISCORD_WEBHOOK_URL',
+    'QUANT_DESK_HEALTH_WEBHOOK_URL',
     'QUANT_DESK_SCANNER_WEBHOOK_URL',
     'SCANNER_DISCORD_WEBHOOK_URL',
     'DISCORD_WEBHOOK_URL',
