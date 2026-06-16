@@ -291,6 +291,69 @@ assert.equal(htfOpposedShortDoesNotSuppressLong.stateForAlert, 'Missed');
 assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.direction, 'LONG');
 assert.equal(htfOpposedShortDoesNotSuppressLong.candidate?.setupType, SetupType.SweepMssFvgRetrace);
 
+const highQualityLowerRankMicroContinuation = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation SHORT',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'HUMAN_REVIEW_READY',
+  entry: 7612.75,
+  stop: 7638,
+  target1: 7573.5,
+  target2: 7562.25,
+  riskPoints: 25.25,
+  rankScore: 255,
+  decisionQualityScore: 84,
+  modelConfidenceScore: 100,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Completed 5M close below the line, then failed retest.',
+  nextAction: 'Review only until completed 5M retest confirms.',
+  evidence: [
+    'Bearish 15M MSS confirmed from NinjaTrader OHLC timeframe evidence.',
+    'Bearish 5M MSS confirmed from NinjaTrader OHLC timeframe evidence.',
+  ],
+});
+const strongerRankedHtfBackedReview = candidate({
+  setupType: SetupType.AfterLunchDriveFvgContinuation,
+  scenarioLabel: 'After Lunch Drive FVG Continuation SHORT',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  candidateState: 'HUMAN_REVIEW_READY',
+  entry: 7612.75,
+  stop: 7622.75,
+  target1: 7597.75,
+  target2: 7592.75,
+  riskPoints: 10,
+  rankScore: 256,
+  decisionQualityScore: 78,
+  modelConfidenceScore: 100,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Completed 5M close below the FVG line, then failed retest.',
+  nextAction: 'Review only until completed 5M retest confirms.',
+  evidence: [
+    'Bearish 15M MSS confirmed from NinjaTrader OHLC timeframe evidence.',
+    'Bearish 5M MSS confirmed from NinjaTrader OHLC timeframe evidence.',
+    'Structured HTF support backs the short review.',
+  ],
+});
+const strongestRankedReviewSelection = selectScannerPlan({
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [highQualityLowerRankMicroContinuation, strongerRankedHtfBackedReview],
+  } as any,
+  currentPrice: 7613.5,
+  latestCompletedBar: { high: 7617, low: 7608 },
+});
+assert.equal(strongestRankedReviewSelection.stateForAlert, 'TriggerPending');
+assert.equal(strongestRankedReviewSelection.candidate, strongerRankedHtfBackedReview);
+assert.equal(strongestRankedReviewSelection.candidate?.setupType, SetupType.AfterLunchDriveFvgContinuation);
+assert.equal(strongestRankedReviewSelection.candidate?.rankScore, 256);
+assert.equal(strongestRankedReviewSelection.candidate?.decisionQualityScore, 78);
+
 const pendingDeskPlayCandidate = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
   scenarioLabel: 'LONG desk play pullback into imbalance',

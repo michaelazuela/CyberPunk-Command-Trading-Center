@@ -621,7 +621,7 @@ const deskPlayDecisionMapPayload = compactDiscordSummary({
   deskState: {
     marketMode: 'watching',
     visibilityMode: 'HOLD_WITH_REASON',
-    discordAction: 'hold',
+    discordAction: 'post_review',
     lineInSand: 7342,
     nextTrigger: 'Bearish Failed Breakout Reversal: buy-side sweep above 7437.5, reclaim back below the swept high, then reject on the retest.',
     invalidation: 'Completed 5M reclaim above protected structure cancels the short review.',

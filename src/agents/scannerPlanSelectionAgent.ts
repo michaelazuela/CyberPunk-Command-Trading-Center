@@ -56,6 +56,16 @@ function candidatePrioritySort(a: SetupCandidate, b: SetupCandidate): number {
   return (b.decisionQualityScore || b.rankScore || b.priority || 0) - (a.decisionQualityScore || a.rankScore || a.priority || 0);
 }
 
+function candidateDeskReviewStrengthSort(a: SetupCandidate, b: SetupCandidate): number {
+  const rankDiff = (b.rankScore ?? 0) - (a.rankScore ?? 0);
+  if (rankDiff !== 0) return rankDiff;
+  const confidenceDiff = (b.modelConfidenceScore ?? 0) - (a.modelConfidenceScore ?? 0);
+  if (confidenceDiff !== 0) return confidenceDiff;
+  const qualityDiff = (b.decisionQualityScore ?? 0) - (a.decisionQualityScore ?? 0);
+  if (qualityDiff !== 0) return qualityDiff;
+  return (b.priority ?? 0) - (a.priority ?? 0);
+}
+
 function candidateHasOpposingHtfConflict(candidate: SetupCandidate): boolean {
   const text = [
     ...(candidate.missingEvidence || []),
@@ -150,7 +160,7 @@ function freshCandidateFromFallbackPool(
       const bFull = hasFullPlanLevels(b);
       if (aFull !== bFull) return aFull ? -1 : 1;
 
-      return candidatePrioritySort(a, b);
+      return candidateDeskReviewStrengthSort(a, b);
     });
 
   return candidates[0] || null;
@@ -197,7 +207,7 @@ function freshOppositeEarlyMoveCandidateFromFallbackPool(
       const bFull = hasFullPlanLevels(b);
       if (aFull !== bFull) return aFull ? -1 : 1;
 
-      return candidatePrioritySort(a, b);
+      return candidateDeskReviewStrengthSort(a, b);
     });
 
   return candidates[0] || null;
@@ -215,7 +225,12 @@ function humanReviewCandidateFromFallbackPool(
       candidate.candidateState === 'HUMAN_REVIEW_READY' ||
       candidate.humanReview?.discordTradePlanEligible === true
     )
-    .sort(candidatePrioritySort)[0] || null;
+    .sort((a, b) => {
+      const aHtfConflict = candidateHasOpposingHtfConflict(a);
+      const bHtfConflict = candidateHasOpposingHtfConflict(b);
+      if (aHtfConflict !== bHtfConflict) return aHtfConflict ? 1 : -1;
+      return candidateDeskReviewStrengthSort(a, b);
+    })[0] || null;
 }
 
 function earlyMoveReviewAppliesToCandidate(normalized: NormalizedTradePlan, candidate: SetupCandidate | null): boolean {
