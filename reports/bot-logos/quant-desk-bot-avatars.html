@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Quant Desk Bot Avatars</title>
+  <style>
+    :root {
+      --bg: #05080d;
+      --cyan: #32d8ff;
+      --green: #42f5a1;
+      --orange: #ffad3d;
+      --red: #ff4f58;
+      --gold: #ffd166;
+      --white: #eef8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      gap: 48px;
+      align-items: center;
+      justify-content: center;
+      background: #020407;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    .avatar {
+      position: relative;
+      width: 512px;
+      height: 512px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 52px;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(50,216,255,0.18), transparent 48%),
+        linear-gradient(145deg, #0b1822 0%, var(--bg) 74%);
+      box-shadow:
+        0 0 0 2px rgba(50,216,255,0.30) inset,
+        0 0 62px rgba(50,216,255,0.17) inset,
+        0 20px 70px rgba(0,0,0,0.48);
+    }
+
+    .avatar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(50,216,255,0.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50,216,255,0.10) 1px, transparent 1px);
+      background-size: 28px 28px;
+      opacity: 0.56;
+      mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+    }
+
+    .avatar svg {
+      position: relative;
+      width: 420px;
+      height: 420px;
+      overflow: visible;
+    }
+
+    .label-text {
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-weight: 950;
+      letter-spacing: 0;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .stroke-cyan { stroke: var(--cyan); }
+    .stroke-green { stroke: var(--green); }
+    .stroke-orange { stroke: var(--orange); }
+    .stroke-red { stroke: var(--red); }
+    .stroke-gold { stroke: var(--gold); }
+    .fill-green { fill: var(--green); }
+    .fill-red { fill: var(--red); }
+    .fill-white { fill: var(--white); }
+    .muted-stroke { stroke: rgba(238,248,255,0.18); }
+    .thin { stroke-width: 4; }
+    .med { stroke-width: 8; }
+    .heavy { stroke-width: 16; }
+    .round { stroke-linecap: round; stroke-linejoin: round; }
+    .no-fill { fill: none; }
+    .soft { opacity: 0.38; }
+    .mid { opacity: 0.66; }
+  </style>
+</head>
+<body>
+  <article class="avatar" id="avatar-quant-desk-ops" aria-label="quant-desk-ops avatar">
+    <svg viewBox="0 0 700 700">
+      <defs>
+        <filter id="qdo-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="7" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <linearGradient id="qdo-grad" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#32d8ff" />
+          <stop offset="1" stop-color="#42f5a1" />
+        </linearGradient>
+      </defs>
+      <circle cx="350" cy="350" r="286" class="no-fill muted-stroke thin" />
+      <circle cx="350" cy="350" r="226" class="no-fill stroke-cyan med round soft" />
+      <path d="M350 74 L404 182 L523 205 L438 290 L459 410 L350 354 L241 410 L262 290 L177 205 L296 182 Z" fill="rgba(50,216,255,0.10)" stroke="url(#qdo-grad)" stroke-width="10" filter="url(#qdo-glow)" />
+      <path d="M176 350 H524 M350 176 V524" class="no-fill stroke-cyan thin round mid" />
+      <path d="M248 450 H452 M248 250 H452 M250 248 V452 M450 248 V452" class="no-fill muted-stroke thin" />
+      <g filter="url(#qdo-glow)">
+        <rect x="268" y="328" width="26" height="86" rx="8" class="fill-green" />
+        <line x1="281" y1="296" x2="281" y2="446" class="stroke-green thin round" />
+        <rect x="323" y="266" width="26" height="122" rx="8" fill="#32d8ff" />
+        <line x1="336" y1="232" x2="336" y2="420" class="stroke-cyan thin round" />
+        <rect x="378" y="304" width="26" height="104" rx="8" fill="#ffd166" />
+        <line x1="391" y1="270" x2="391" y2="448" class="stroke-gold thin round" />
+      </g>
+      <circle cx="350" cy="350" r="82" fill="#07131d" stroke="url(#qdo-grad)" stroke-width="10" filter="url(#qdo-glow)" />
+      <text x="350" y="356" class="label-text fill-white" font-size="94">QDO</text>
+    </svg>
+  </article>
+
+  <article class="avatar" id="avatar-scanner-health" aria-label="scanner-health avatar">
+    <svg viewBox="0 0 700 700">
+      <defs>
+        <filter id="sh-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="7" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <linearGradient id="sh-grad" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#42f5a1" />
+          <stop offset="1" stop-color="#32d8ff" />
+        </linearGradient>
+      </defs>
+      <circle cx="350" cy="350" r="286" class="no-fill muted-stroke thin" />
+      <path d="M350 100 L548 182 V330 C548 466 465 560 350 606 C235 560 152 466 152 330 V182 Z" fill="rgba(66,245,161,0.10)" stroke="url(#sh-grad)" stroke-width="12" filter="url(#sh-glow)" />
+      <path d="M206 350 H268 L302 286 L356 454 L404 330 H494" class="no-fill stroke-green heavy round" filter="url(#sh-glow)" />
+      <path d="M206 424 C262 468 312 490 350 490 C388 490 438 468 494 424" class="no-fill stroke-cyan med round mid" />
+      <path d="M226 238 H474 M226 278 H474 M226 318 H474" class="no-fill muted-stroke thin soft" />
+      <circle cx="350" cy="350" r="82" fill="#07131d" stroke="url(#sh-grad)" stroke-width="10" filter="url(#sh-glow)" />
+      <text x="350" y="356" class="label-text fill-white" font-size="112">SH</text>
+      <circle cx="540" cy="156" r="28" class="fill-green" filter="url(#sh-glow)" />
+    </svg>
+  </article>
+
+  <article class="avatar" id="avatar-system-alerts" aria-label="system-alerts avatar">
+    <svg viewBox="0 0 700 700">
+      <defs>
+        <filter id="sa-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <linearGradient id="sa-grad" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stop-color="#ff4f58" />
+          <stop offset="1" stop-color="#ffad3d" />
+        </linearGradient>
+      </defs>
+      <circle cx="350" cy="350" r="286" class="no-fill muted-stroke thin" />
+      <path d="M350 112 L598 552 H102 Z" fill="rgba(255,79,88,0.10)" stroke="url(#sa-grad)" stroke-width="14" stroke-linejoin="round" filter="url(#sa-glow)" />
+      <path d="M350 238 V390" class="stroke-orange heavy round" filter="url(#sa-glow)" />
+      <circle cx="350" cy="462" r="20" class="fill-red" filter="url(#sa-glow)" />
+      <path d="M176 520 H524 M220 462 H480 M264 404 H436" class="no-fill muted-stroke thin soft" />
+      <path d="M188 304 C238 258 296 232 350 232 C404 232 462 258 512 304" class="no-fill stroke-red med round mid" />
+      <path d="M218 254 C258 218 304 198 350 198 C396 198 442 218 482 254" class="no-fill stroke-orange med round soft" />
+      <circle cx="350" cy="350" r="88" fill="#07131d" stroke="url(#sa-grad)" stroke-width="10" filter="url(#sa-glow)" />
+      <text x="350" y="356" class="label-text fill-white" font-size="114">SA</text>
+    </svg>
+  </article>
+</body>
+</html>
