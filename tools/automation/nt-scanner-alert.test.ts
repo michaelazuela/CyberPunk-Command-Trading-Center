@@ -21,6 +21,7 @@ import {
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
+  cleanupRecoveredScannerOperationalDiscordMessages,
   htfHistoryCoverageReadiness,
   claimDurableActiveCampaignScannerAlert,
   loadScannerActiveCampaignLedgerConfig,
@@ -29,6 +30,7 @@ import {
   markScannerAlertDeliverySkipped,
   markDurableActiveCampaignScannerAlertSent,
   recordScannerDiscordCleanupMessage,
+  replacePriorScannerDiscordCurrentDeskPlans,
   recordActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSuppressed,
   releaseDurableActiveCampaignScannerAlertClaim,
@@ -250,8 +252,21 @@ const protectedDeskPlayCleanupRecord = recordScannerDiscordCleanupMessage({
     discordMessageId: 'desk-play-message-123',
   },
   kind: 'desk_play',
-  key: '2026-06-05:MES:morning:desk-play',
+  key: '2026-06-05:MES:morning:DESK_PLAN_REFRESH:old',
   now: new Date('2026-06-05T14:00:00.000Z'),
+});
+const replacementDeskPlanCleanupRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'desk-play-message-456',
+  },
+  kind: 'desk_play',
+  key: '2026-06-05:MES:morning:DESK_PLAN_REFRESH:latest',
+  now: new Date('2026-06-05T14:05:00.000Z'),
 });
 const protectedTradeAlertCleanupRecord = recordScannerDiscordCleanupMessage({
   state: cleanupState,
@@ -266,10 +281,12 @@ const protectedTradeAlertCleanupRecord = recordScannerDiscordCleanupMessage({
   key: '2026-06-05:MES:morning:trade-alert',
   now: new Date('2026-06-05T14:00:00.000Z'),
 });
-assert.equal(protectedDeskPlayCleanupRecord, null);
+assert.ok(protectedDeskPlayCleanupRecord);
+assert.equal(protectedDeskPlayCleanupRecord?.expiresAt, '9999-12-31T23:59:59.999Z');
+assert.ok(replacementDeskPlanCleanupRecord);
 assert.equal(protectedTradeAlertCleanupRecord, null);
-cleanupState.discordCleanupMessages['legacy-desk-play'] = {
-  key: 'legacy-desk-play',
+cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123'] = {
+  key: 'desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123',
   messageId: 'legacy-desk-play-message-123',
   kind: 'desk_play',
   webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
@@ -293,6 +310,21 @@ cleanupState.discordCleanupMessages['legacy-trade-alert'] = {
 const previousScannerWebhook = process.env.QUANT_DESK_SCANNER_WEBHOOK_URL;
 process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
 const cleanupDeletes: string[] = [];
+const replacementResult = await replacePriorScannerDiscordCurrentDeskPlans({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  currentDeskPlanKey: '2026-06-05:MES:morning:DESK_PLAN_REFRESH:latest',
+  now: new Date('2026-06-05T14:06:00.000Z'),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    cleanupDeletes.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  },
+});
+assert.deepEqual(replacementResult, { checked: 2, deleted: 2, failed: 0, skipped: 0 });
+assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].deleteStatus, 'replaced');
+assert.equal(cleanupState.discordCleanupMessages[protectedDeskPlayCleanupRecord!.key].lastError?.includes('replaced_by:'), true);
+assert.equal(cleanupState.discordCleanupMessages['desk_play:2026-06-05:MES:morning:DESK_PLAN_REFRESH:legacy:legacy-desk-play-message-123'].deleteStatus, 'replaced');
+assert.equal(cleanupState.discordCleanupMessages[replacementDeskPlanCleanupRecord!.key].deleteStatus, 'pending');
 const cleanupResult = await cleanupExpiredScannerDiscordMessages({
   state: cleanupState,
   config: scannerDataQualityNoticeCleanupConfig,
@@ -303,13 +335,45 @@ const cleanupResult = await cleanupExpiredScannerDiscordMessages({
   },
 });
 restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
-assert.deepEqual(cleanupResult, { checked: 3, deleted: 1, failed: 0, skipped: 2 });
-assert.deepEqual(cleanupDeletes, ['DELETE https://discord.com/api/webhooks/123/token/messages/message-123']);
+assert.deepEqual(cleanupResult, { checked: 2, deleted: 1, failed: 0, skipped: 1 });
+assert.deepEqual(cleanupDeletes, [
+  'DELETE https://discord.com/api/webhooks/123/token/messages/desk-play-message-123',
+  'DELETE https://discord.com/api/webhooks/123/token/messages/legacy-desk-play-message-123',
+  'DELETE https://discord.com/api/webhooks/123/token/messages/message-123',
+]);
 assert.equal(cleanupState.discordCleanupMessages[cleanupRecord!.key].deleteStatus, 'deleted');
-assert.equal(cleanupState.discordCleanupMessages['legacy-desk-play'].deleteStatus, 'skipped');
-assert.equal(cleanupState.discordCleanupMessages['legacy-desk-play'].lastError, 'protected_message_kind_not_ephemeral');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].lastError, 'protected_message_kind_not_ephemeral');
+const recoveredOperationalRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'data-quality-message-456',
+  },
+  kind: 'data_quality',
+  key: '2026-06-05:MES:morning:data-quality:recovered-fixture',
+  now: new Date('2026-06-05T14:20:00.000Z'),
+});
+assert.ok(recoveredOperationalRecord);
+const recoveredDeletes: string[] = [];
+process.env.QUANT_DESK_SCANNER_WEBHOOK_URL = 'https://discord.com/api/webhooks/123/token';
+const recoveredCleanupResult = await cleanupRecoveredScannerOperationalDiscordMessages({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  now: new Date('2026-06-05T14:21:00.000Z'),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    recoveredDeletes.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  },
+});
+restoreOptionalEnv('QUANT_DESK_SCANNER_WEBHOOK_URL', previousScannerWebhook);
+assert.deepEqual(recoveredCleanupResult, { checked: 1, deleted: 1, failed: 0, skipped: 0 });
+assert.deepEqual(recoveredDeletes, ['DELETE https://discord.com/api/webhooks/123/token/messages/data-quality-message-456']);
+assert.equal(cleanupState.discordCleanupMessages[recoveredOperationalRecord!.key].deleteStatus, 'deleted');
+assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
 const dataQualityNotice = buildScannerDataQualityNoticePayload({
   tradeDate: '2026-06-05',
   session: 'morning',

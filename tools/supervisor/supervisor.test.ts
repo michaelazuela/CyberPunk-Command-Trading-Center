@@ -11,7 +11,10 @@ import { createSupervisorLogger } from './logger';
 import {
   buildSupervisorDiscordPayload,
   buildSupervisorNotifications,
+  sendSupervisorNotifications,
   sendSupervisorSelfHealNotification,
+  supervisorDiscordWebhookDeleteUrl,
+  supervisorDiscordWebhookPostUrl,
   type SupervisorNotificationState,
 } from './notifications';
 import { buildPreWindowBackfillCommand, buildWindowsSafeSpawnCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
@@ -1060,6 +1063,51 @@ assert.equal(bridgeRecoveredNotifications.notifications.some((item) => item.kind
 assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge, 'ok');
 assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge_fail_count, '0');
 assert.equal(bridgeRecoveredNotifications.nextState.lastStatuses.bridge_first_failed_at, '');
+assert.equal(
+  supervisorDiscordWebhookPostUrl('https://discord.com/api/webhooks/supervisor/token'),
+  'https://discord.com/api/webhooks/supervisor/token?wait=true',
+);
+assert.equal(
+  supervisorDiscordWebhookDeleteUrl('https://discord.com/api/webhooks/supervisor/token?wait=true', 'bridge-message-1'),
+  'https://discord.com/api/webhooks/supervisor/token/messages/bridge-message-1',
+);
+const supervisorCleanupStatePath = path.join(tempLogsDir, 'supervisor-discord-cleanup-state.json');
+fs.writeFileSync(supervisorCleanupStatePath, JSON.stringify({
+  lastStatuses: {
+    bridge: 'transient_fail',
+    bridge_fail_count: '2',
+    bridge_first_failed_at: fixedNow.toISOString(),
+  },
+  lastSentAtByKey: {},
+  postedMessages: {},
+}, null, 2));
+const supervisorDiscordCalls: string[] = [];
+const bridgeFailureSend = await sendSupervisorNotifications(transientBridgeFailureStatus, {
+  statePath: supervisorCleanupStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  now: new Date(fixedNow.getTime() + 65_000),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorDiscordCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(JSON.stringify({ id: 'bridge-message-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(bridgeFailureSend.notifications.some((item) => item.kind === 'bridge_unreachable'), true);
+const bridgeRecoveredSend = await sendSupervisorNotifications(bridgeRecoveredStatus, {
+  statePath: supervisorCleanupStatePath,
+  webhookUrl: 'https://discord.com/api/webhooks/supervisor/token',
+  now: new Date(fixedNow.getTime() + 95_000),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    supervisorDiscordCalls.push(`${init?.method || 'GET'} ${String(input)}`);
+    if ((init?.method || 'GET') === 'DELETE') return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ id: 'bridge-message-2' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  },
+});
+assert.equal(bridgeRecoveredSend.notifications.some((item) => item.kind === 'bridge_recovered'), true);
+assert.ok(supervisorDiscordCalls.includes('POST https://discord.com/api/webhooks/supervisor/token?wait=true'));
+assert.ok(supervisorDiscordCalls.includes('DELETE https://discord.com/api/webhooks/supervisor/token/messages/bridge-message-1'));
+const supervisorCleanupState = JSON.parse(fs.readFileSync(supervisorCleanupStatePath, 'utf8'));
+assert.equal(supervisorCleanupState.postedMessages.bridge_unreachable.deleteStatus, 'deleted');
+assert.equal(supervisorCleanupState.postedMessages.bridge_recovered.deleteStatus, 'pending');
 
 const downStatus = buildSupervisorStatus(defaultConfig, {
   supervisorPid: 1,

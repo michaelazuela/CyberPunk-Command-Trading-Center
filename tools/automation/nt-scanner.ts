@@ -202,7 +202,7 @@ export interface ScannerDiscordCleanupRecord {
   postedAt: string;
   expiresAt: string;
   deletedAt: string | null;
-  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped';
+  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped' | 'replaced';
   lastError: string | null;
 }
 
@@ -214,6 +214,10 @@ const SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS = new Set<ScannerDiscordCleanupKin
 
 function scannerDiscordCleanupKindIsEphemeral(kind: ScannerDiscordCleanupKind): boolean {
   return SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS.has(kind);
+}
+
+function scannerDiscordCleanupKindIsTracked(kind: ScannerDiscordCleanupKind): boolean {
+  return scannerDiscordCleanupKindIsEphemeral(kind) || kind === 'desk_play';
 }
 
 export interface ScannerActiveCampaignLedgerRecord {
@@ -3566,11 +3570,13 @@ export function recordScannerDiscordCleanupMessage(args: {
   now?: Date;
 }): ScannerDiscordCleanupRecord | null {
   if (!scannerDiscordMessageCleanupEnabled(args.config)) return null;
-  if (!scannerDiscordCleanupKindIsEphemeral(args.kind)) return null;
+  if (!scannerDiscordCleanupKindIsTracked(args.kind)) return null;
   if (args.receipt.deliveryStatus !== 'sent' || !args.receipt.discordMessageId) return null;
   const now = args.now || new Date();
   const postedAt = now.toISOString();
-  const expiresAt = new Date(now.getTime() + scannerDiscordMessageTtlMs(args.config)).toISOString();
+  const expiresAt = scannerDiscordCleanupKindIsEphemeral(args.kind)
+    ? new Date(now.getTime() + scannerDiscordMessageTtlMs(args.config)).toISOString()
+    : '9999-12-31T23:59:59.999Z';
   const key = `${args.kind}:${args.key}:${args.receipt.discordMessageId}`;
   const record: ScannerDiscordCleanupRecord = {
     key,
@@ -3589,6 +3595,118 @@ export function recordScannerDiscordCleanupMessage(args: {
   return record;
 }
 
+async function deleteScannerDiscordCleanupRecord(args: {
+  config: ScannerConfig;
+  record: ScannerDiscordCleanupRecord;
+  state: ScannerStateFile;
+  now: Date;
+  replacedBy?: string | null;
+  fetchImpl?: FetchLike;
+}): Promise<'deleted' | 'skipped' | 'failed'> {
+  const fetchImpl = args.fetchImpl || fetch;
+  const webhook = resolveScannerDiscordWebhookUrl();
+  if (args.config.dryRun || !args.config.discordEnabled || !webhook.url) {
+    args.state.discordCleanupMessages[args.record.key] = {
+      ...args.record,
+      deleteStatus: 'skipped',
+      deletedAt: args.now.toISOString(),
+      lastError: args.config.dryRun ? 'dry_run' : !args.config.discordEnabled ? 'discord_disabled' : 'scanner webhook not configured',
+    };
+    return 'skipped';
+  }
+  try {
+    const response = await fetchImpl(scannerDiscordWebhookDeleteUrl(webhook.url, args.record.messageId), { method: 'DELETE' });
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Discord message delete failed (${response.status}): ${await response.text()}`);
+    }
+    args.state.discordCleanupMessages[args.record.key] = {
+      ...args.record,
+      deleteStatus: args.replacedBy ? 'replaced' : 'deleted',
+      deletedAt: args.now.toISOString(),
+      lastError: args.replacedBy ? `replaced_by:${args.replacedBy}` : null,
+    };
+    return 'deleted';
+  } catch (error) {
+    args.state.discordCleanupMessages[args.record.key] = {
+      ...args.record,
+      deleteStatus: 'failed',
+      lastError: sanitizedError(error),
+    };
+    return 'failed';
+  }
+}
+
+export async function replacePriorScannerDiscordCurrentDeskPlans(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  currentDeskPlanKey: string;
+  now?: Date;
+  fetchImpl?: FetchLike;
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+  const now = args.now || new Date();
+  const scopeParts = args.currentDeskPlanKey.split(':');
+  const currentScope = scopeParts.length >= 4
+    ? scopeParts.slice(0, 4).join(':')
+    : args.currentDeskPlanKey;
+  let checked = 0;
+  let deleted = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const record of Object.values(args.state.discordCleanupMessages || {})) {
+    if (record.kind !== 'desk_play' || record.deleteStatus !== 'pending') continue;
+    const recordKeyWithoutKindAndMessage = record.key
+      .replace(/^desk_play:/, '')
+      .replace(new RegExp(`:${record.messageId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '');
+    const recordScope = recordKeyWithoutKindAndMessage.split(':').slice(0, 4).join(':');
+    if (recordScope !== currentScope || recordKeyWithoutKindAndMessage === args.currentDeskPlanKey) continue;
+    checked += 1;
+    const result = await deleteScannerDiscordCleanupRecord({
+      config: args.config,
+      state: args.state,
+      record,
+      now,
+      replacedBy: args.currentDeskPlanKey,
+      fetchImpl: args.fetchImpl,
+    });
+    if (result === 'deleted') deleted += 1;
+    else if (result === 'failed') failed += 1;
+    else skipped += 1;
+  }
+  return { checked, deleted, failed, skipped };
+}
+
+export async function cleanupRecoveredScannerOperationalDiscordMessages(args: {
+  config: ScannerConfig;
+  state: ScannerStateFile;
+  kinds?: ScannerDiscordCleanupKind[];
+  now?: Date;
+  fetchImpl?: FetchLike;
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+  const now = args.now || new Date();
+  const recoverableKinds = new Set(args.kinds || ['health', 'data_quality']);
+  let checked = 0;
+  let deleted = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const record of Object.values(args.state.discordCleanupMessages || {})) {
+    if (record.deleteStatus !== 'pending') continue;
+    if (!recoverableKinds.has(record.kind)) continue;
+    if (!scannerDiscordCleanupKindIsEphemeral(record.kind)) continue;
+    checked += 1;
+    const result = await deleteScannerDiscordCleanupRecord({
+      config: args.config,
+      state: args.state,
+      record,
+      now,
+      fetchImpl: args.fetchImpl,
+    });
+    if (result === 'deleted') deleted += 1;
+    else if (result === 'failed') failed += 1;
+    else skipped += 1;
+  }
+  return { checked, deleted, failed, skipped };
+}
+
 export async function cleanupExpiredScannerDiscordMessages(args: {
   config: ScannerConfig;
   state: ScannerStateFile;
@@ -3598,7 +3716,6 @@ export async function cleanupExpiredScannerDiscordMessages(args: {
   const now = args.now || new Date();
   const fetchImpl = args.fetchImpl || fetch;
   const records = Object.values(args.state.discordCleanupMessages || {});
-  const webhook = resolveScannerDiscordWebhookUrl();
   let checked = 0;
   let deleted = 0;
   let failed = 0;
@@ -3620,35 +3737,19 @@ export async function cleanupExpiredScannerDiscordMessages(args: {
       skipped += 1;
       continue;
     }
-    if (args.config.dryRun || !args.config.discordEnabled || !webhook.url) {
-      args.state.discordCleanupMessages[record.key] = {
-        ...record,
-        deleteStatus: 'skipped',
-        deletedAt: now.toISOString(),
-        lastError: args.config.dryRun ? 'dry_run' : !args.config.discordEnabled ? 'discord_disabled' : 'scanner webhook not configured',
-      };
-      skipped += 1;
-      continue;
-    }
-    try {
-      const response = await fetchImpl(scannerDiscordWebhookDeleteUrl(webhook.url, record.messageId), { method: 'DELETE' });
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Discord message delete failed (${response.status}): ${await response.text()}`);
-      }
-      args.state.discordCleanupMessages[record.key] = {
-        ...record,
-        deleteStatus: 'deleted',
-        deletedAt: now.toISOString(),
-        lastError: null,
-      };
+    const result = await deleteScannerDiscordCleanupRecord({
+      config: args.config,
+      state: args.state,
+      record,
+      now,
+      fetchImpl,
+    });
+    if (result === 'deleted') {
       deleted += 1;
-    } catch (error) {
-      args.state.discordCleanupMessages[record.key] = {
-        ...record,
-        deleteStatus: 'failed',
-        lastError: sanitizedError(error),
-      };
+    } else if (result === 'failed') {
       failed += 1;
+    } else {
+      skipped += 1;
     }
   }
   return { checked, deleted, failed, skipped };
@@ -3747,6 +3848,16 @@ async function sendScannerHealthAlertIfNeeded(args: {
 
   try {
     const receipt = await postDiscord(payload, args.config);
+    if (currentStatus === 'READY') {
+      const recoveryCleanup = await cleanupRecoveredScannerOperationalDiscordMessages({
+        state: args.state,
+        config: args.config,
+        kinds: ['health', 'data_quality'],
+      });
+      if (recoveryCleanup.checked > 0) {
+        console.log(`[scanner-health] Purged recovered operational Discord notices: deleted=${recoveryCleanup.deleted} failed=${recoveryCleanup.failed} skipped=${recoveryCleanup.skipped}`);
+      }
+    }
     recordScannerDiscordCleanupMessage({
       state: args.state,
       config: args.config,
@@ -4980,6 +5091,24 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
+          const replaceResult = await replacePriorScannerDiscordCurrentDeskPlans({
+            state,
+            config,
+            currentDeskPlanKey: deskPlayKey,
+            now: new Date(sentAt),
+          });
+          if (replaceResult.checked > 0) {
+            console.log(`[scanner] Replaced prior current Desk Plan messages: deleted=${replaceResult.deleted} failed=${replaceResult.failed} skipped=${replaceResult.skipped}`);
+          }
+          const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
+            state,
+            config,
+            kinds: ['health', 'data_quality'],
+            now: new Date(sentAt),
+          });
+          if (recoveredOperational.checked > 0) {
+            console.log(`[scanner] Purged recovered operational Discord notices after Desk Plan send: deleted=${recoveredOperational.deleted} failed=${recoveredOperational.failed} skipped=${recoveredOperational.skipped}`);
+          }
           recordScannerDiscordCleanupMessage({
             state,
             config,
@@ -5093,6 +5222,15 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
+        const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
+          state,
+          config,
+          kinds: ['health', 'data_quality'],
+          now: new Date(sentAt),
+        });
+        if (recoveredOperational.checked > 0) {
+          console.log(`[scanner] Purged recovered operational Discord notices after trade alert send: deleted=${recoveredOperational.deleted} failed=${recoveredOperational.failed} skipped=${recoveredOperational.skipped}`);
+        }
         recordScannerDiscordCleanupMessage({
           state,
           config,

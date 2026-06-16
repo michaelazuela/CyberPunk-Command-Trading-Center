@@ -1192,6 +1192,21 @@ Next recommended action: Use parentModelFamily for reporting/taxonomy cleanup be
 
 ## Previous Change
 
+Date: 2026-06-15
+Task: Add Discord Desk Plan replacement cleanup and recovered operational notice cleanup.
+Files changed: docs/PROJECT_STATUS.md, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.
+Reason: Keep Discord focused on the current Desk Plan while preserving trade alerts, and remove stale bridge/recorder/data-quality notices after scanner or supervisor recovery posts prove the issue is no longer active.
+Tests run: npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema.
+Result: Passed.
+Trading logic changed: No. This change only affects Discord message lifecycle tracking/deletion and supervisor notification state.
+Bridge impact: None. Bridge reads, contract resolution, and health classification were not changed.
+Journal/RAG impact: None expected.
+Supabase impact: None.
+Known risks: None known.
+Next recommended action: Restart scanner/supervisor services during the next live window if you want the new cleanup behavior loaded immediately.
+
+## Previous Change
+
 Date: 2026-06-05
 Task: Make Quant Desk Supervisor desktop launch stealth, enrich operational Discord reports, and clear stale prior-session status risk.
 Files changed: Launch-QuantDeskSupervisorTray.vbs, docs/PROJECT_STATUS.md, tools/supervisor/deliveryVisibility.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts.

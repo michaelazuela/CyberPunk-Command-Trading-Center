@@ -29,9 +29,20 @@ export interface SupervisorNotification {
   timestamp: string;
 }
 
+export interface SupervisorPostedMessageRecord {
+  dedupeKey: string;
+  kind: SupervisorNotificationKind;
+  messageId: string;
+  postedAt: string;
+  deletedAt: string | null;
+  deleteStatus: 'pending' | 'deleted' | 'failed' | 'skipped';
+  lastError: string | null;
+}
+
 export interface SupervisorNotificationState {
   lastStatuses: Record<string, string>;
   lastSentAtByKey: Record<string, string>;
+  postedMessages?: Record<string, SupervisorPostedMessageRecord>;
 }
 
 export interface SupervisorNotificationOptions {
@@ -40,6 +51,7 @@ export interface SupervisorNotificationOptions {
   webhookUrl?: string | null;
   dryRun?: boolean;
   staleCooldownMs?: number;
+  fetchImpl?: typeof fetch;
 }
 
 interface DiscordEmbedField {
@@ -93,9 +105,14 @@ export function notificationStatePath(logsDir: string): string {
 
 export function readNotificationState(filePath: string): SupervisorNotificationState {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as SupervisorNotificationState;
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Partial<SupervisorNotificationState>;
+    return {
+      lastStatuses: parsed.lastStatuses || {},
+      lastSentAtByKey: parsed.lastSentAtByKey || {},
+      postedMessages: parsed.postedMessages || {},
+    };
   } catch {
-    return { lastStatuses: {}, lastSentAtByKey: {} };
+    return { lastStatuses: {}, lastSentAtByKey: {}, postedMessages: {} };
   }
 }
 
@@ -171,6 +188,7 @@ export function buildSupervisorNotifications(
   const nextState: SupervisorNotificationState = {
     lastStatuses: { ...previous.lastStatuses },
     lastSentAtByKey: { ...previous.lastSentAtByKey },
+    postedMessages: { ...(previous.postedMessages || {}) },
   };
 
   if (
@@ -601,6 +619,96 @@ export function buildSupervisorDiscordPayload(
   };
 }
 
+export function supervisorDiscordWebhookPostUrl(webhookUrl: string): string {
+  const url = new URL(webhookUrl);
+  url.searchParams.set('wait', 'true');
+  return url.toString();
+}
+
+export function supervisorDiscordWebhookDeleteUrl(webhookUrl: string, messageId: string): string {
+  const url = new URL(webhookUrl);
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/messages/${encodeURIComponent(messageId)}`;
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+function problemDedupeKeysForRecovery(kind: SupervisorNotificationKind): string[] {
+  if (kind === 'bridge_recovered') return ['bridge_unreachable'];
+  if (kind === 'scanner_recovered') return ['scanner_down'];
+  if (kind === 'recorder_recovered') return ['recorder_down'];
+  if (kind === 'recorder_heartbeat_recovered') return ['recorder_heartbeat_stale'];
+  if (kind === 'pre_window_backfill_recovered') return ['pre_window_backfill_failed'];
+  if (kind === 'supervisor_ready') return ['bridge_unreachable', 'scanner_down', 'recorder_down', 'recorder_heartbeat_stale', 'pre_window_backfill_failed'];
+  return [];
+}
+
+async function deleteRecoveredSupervisorMessages(args: {
+  state: SupervisorNotificationState;
+  notification: SupervisorNotification;
+  webhookUrl: string;
+  now: Date;
+  fetchImpl: typeof fetch;
+}): Promise<{ checked: number; deleted: number; failed: number; skipped: number }> {
+  const keys = new Set(problemDedupeKeysForRecovery(args.notification.kind));
+  let checked = 0;
+  let deleted = 0;
+  let failed = 0;
+  let skipped = 0;
+  if (keys.size === 0) return { checked, deleted, failed, skipped };
+  for (const record of Object.values(args.state.postedMessages || {})) {
+    if (record.deleteStatus !== 'pending' || !keys.has(record.dedupeKey)) continue;
+    checked += 1;
+    try {
+      const response = await args.fetchImpl(supervisorDiscordWebhookDeleteUrl(args.webhookUrl, record.messageId), {
+        method: 'DELETE',
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Supervisor Discord message delete failed (${response.status}).`);
+      }
+      args.state.postedMessages[record.dedupeKey] = {
+        ...record,
+        deleteStatus: 'deleted',
+        deletedAt: args.now.toISOString(),
+        lastError: null,
+      };
+      deleted += 1;
+    } catch (error) {
+      args.state.postedMessages[record.dedupeKey] = {
+        ...record,
+        deleteStatus: 'failed',
+        lastError: error instanceof Error ? error.message : String(error),
+      };
+      failed += 1;
+    }
+  }
+  return { checked, deleted, failed, skipped };
+}
+
+async function postSupervisorNotification(args: {
+  webhookUrl: string;
+  notification: SupervisorNotification;
+  status?: SupervisorStatusPayload;
+  fetchImpl: typeof fetch;
+}): Promise<string | null> {
+  const response = await args.fetchImpl(supervisorDiscordWebhookPostUrl(args.webhookUrl), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildSupervisorDiscordPayload(args.notification, args.status)),
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (!response.ok) throw new Error(`Supervisor Discord notification failed (${response.status}).`);
+  const bodyText = await response.text().catch(() => '');
+  if (!bodyText.trim()) return null;
+  try {
+    const parsed = JSON.parse(bodyText);
+    return typeof parsed?.id === 'string' ? parsed.id : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function sendSupervisorNotifications(
   status: SupervisorStatusPayload,
   options: SupervisorNotificationOptions = {},
@@ -616,17 +724,38 @@ export async function sendSupervisorNotifications(
     return { sent: 0, skipped: notifications.length, notifications, webhookConfigured: Boolean(webhook) };
   }
 
+  const fetchImpl = options.fetchImpl || fetch;
   let sent = 0;
   for (const item of notifications) {
-    const response = await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildSupervisorDiscordPayload(item, status)),
-      signal: AbortSignal.timeout(5_000),
+    const messageId = await postSupervisorNotification({
+      webhookUrl: webhook,
+      notification: item,
+      status,
+      fetchImpl,
     });
-    if (!response.ok) throw new Error(`Supervisor Discord notification failed (${response.status}).`);
+    if (messageId) {
+      nextState.postedMessages[item.dedupeKey] = {
+        dedupeKey: item.dedupeKey,
+        kind: item.kind,
+        messageId,
+        postedAt: now.toISOString(),
+        deletedAt: null,
+        deleteStatus: 'pending',
+        lastError: null,
+      };
+    }
+    if (messageId) {
+      await deleteRecoveredSupervisorMessages({
+        state: nextState,
+        notification: item,
+        webhookUrl: webhook,
+        now,
+        fetchImpl,
+      });
+    }
     sent += 1;
   }
+  writeNotificationState(statePath, nextState);
 
   return { sent, skipped: notifications.length - sent, notifications, webhookConfigured: true };
 }
@@ -656,12 +785,22 @@ export async function sendSupervisorSelfHealNotification(
     return { sent: 0, skipped: 1, notification: notificationItem, webhookConfigured: Boolean(webhook) };
   }
 
-  const response = await fetch(webhook, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildSupervisorDiscordPayload(notificationItem)),
-    signal: AbortSignal.timeout(5_000),
+  const messageId = await postSupervisorNotification({
+    webhookUrl: webhook,
+    notification: notificationItem,
+    fetchImpl: options.fetchImpl || fetch,
   });
-  if (!response.ok) throw new Error(`Supervisor self-heal Discord notification failed (${response.status}).`);
+  if (messageId) {
+    state.postedMessages[notificationItem.dedupeKey] = {
+      dedupeKey: notificationItem.dedupeKey,
+      kind: notificationItem.kind,
+      messageId,
+      postedAt: now.toISOString(),
+      deletedAt: null,
+      deleteStatus: 'pending',
+      lastError: null,
+    };
+    writeNotificationState(statePath, state);
+  }
   return { sent: 1, skipped: 0, notification: notificationItem, webhookConfigured: true };
 }
