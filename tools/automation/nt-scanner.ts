@@ -199,7 +199,7 @@ export interface ScannerDiscordCleanupRecord {
   key: string;
   messageId: string;
   kind: ScannerDiscordCleanupKind;
-  webhookSource: ScannerWebhookEnvKey | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | null;
   postedAt: string;
   expiresAt: string;
   deletedAt: string | null;
@@ -309,7 +309,7 @@ export interface ScannerAlertDeliveryRecord {
     } | null;
   };
   deliveryStatus: ScannerAlertDeliveryStatus;
-  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
   httpStatus: number | null;
   discordMessageId: string | null;
   error: string | null;
@@ -336,8 +336,11 @@ const SCANNER_HISTORY_MIN_BARS: Record<MarketBarTimeframe, number> = {
   '240m': 40,
 };
 const SCANNER_WEBHOOK_ENV_KEYS = ['QUANT_DESK_SCANNER_WEBHOOK_URL', 'SCANNER_DISCORD_WEBHOOK_URL', 'DISCORD_WEBHOOK_URL'] as const;
+const SCANNER_OPERATIONAL_WEBHOOK_ENV_KEYS = ['SUPERVISOR_DISCORD_WEBHOOK_URL', 'QUANT_DESK_HEALTH_WEBHOOK_URL'] as const;
 
 type ScannerWebhookEnvKey = typeof SCANNER_WEBHOOK_ENV_KEYS[number];
+type ScannerOperationalWebhookEnvKey = typeof SCANNER_OPERATIONAL_WEBHOOK_ENV_KEYS[number];
+type ScannerDiscordWebhookEnvKey = ScannerWebhookEnvKey | ScannerOperationalWebhookEnvKey;
 
 export type ScannerHistoryCoverageSource =
   MarketDataWindowSource;
@@ -402,7 +405,7 @@ export interface ScannerPreMarketDataReadinessBackfillGateReport {
 
 export interface ScannerWebhookResolution {
   url: string | null;
-  source: ScannerWebhookEnvKey | null;
+  source: ScannerDiscordWebhookEnvKey | null;
   usingGenericFallback: boolean;
 }
 
@@ -438,6 +441,28 @@ export function resolveScannerDiscordWebhookUrl(env: NodeJS.ProcessEnv = process
     }
   }
   return { url: null, source: null, usingGenericFallback: false };
+}
+
+export function resolveScannerOperationalDiscordWebhookUrl(env: NodeJS.ProcessEnv = process.env): ScannerWebhookResolution {
+  for (const key of SCANNER_OPERATIONAL_WEBHOOK_ENV_KEYS) {
+    const url = readEnvWithWindowsUserFallback(key, env);
+    if (url) {
+      return {
+        url,
+        source: key,
+        usingGenericFallback: false,
+      };
+    }
+  }
+  return { url: null, source: null, usingGenericFallback: false };
+}
+
+function resolveScannerDiscordWebhookUrlBySource(source: ScannerDiscordWebhookEnvKey | null): ScannerWebhookResolution {
+  if (source === 'SUPERVISOR_DISCORD_WEBHOOK_URL' || source === 'QUANT_DESK_HEALTH_WEBHOOK_URL') {
+    const url = readEnvWithWindowsUserFallback(source);
+    return { url: url || null, source, usingGenericFallback: false };
+  }
+  return resolveScannerDiscordWebhookUrl();
 }
 
 function sanitizedError(error: unknown): string {
@@ -868,7 +893,7 @@ export function createPendingScannerAlertDeliveryRecord(args: {
   state: ScannerState;
   confidence: number;
   candidate: SetupCandidate | null;
-  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
   auditLogPath: string | null;
   attemptedAt?: string;
   stale?: boolean;
@@ -3184,7 +3209,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
 async function attachDiscordMessageReceiptToRagRecord(args: {
   planVersionId: string;
   discordMessageId: string | null;
-  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
 }): Promise<boolean> {
   if (!args.discordMessageId) return false;
   const { config } = resolveDiscordRagPersistenceConfig();
@@ -3558,16 +3583,16 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
 
 interface ScannerDiscordPostReceipt {
   deliveryStatus: 'sent' | 'skipped';
-  webhookSource: ScannerWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
   httpStatus: number | null;
   discordMessageId: string | null;
 }
 
 class ScannerDiscordPostError extends Error {
   httpStatus: number | null;
-  webhookSource: ScannerWebhookEnvKey | null;
+  webhookSource: ScannerDiscordWebhookEnvKey | null;
 
-  constructor(message: string, args: { httpStatus?: number | null; webhookSource?: ScannerWebhookEnvKey | null } = {}) {
+  constructor(message: string, args: { httpStatus?: number | null; webhookSource?: ScannerDiscordWebhookEnvKey | null } = {}) {
     super(message);
     this.name = 'ScannerDiscordPostError';
     this.httpStatus = args.httpStatus ?? null;
@@ -3647,7 +3672,7 @@ async function deleteScannerDiscordCleanupRecord(args: {
   fetchImpl?: FetchLike;
 }): Promise<'deleted' | 'skipped' | 'failed'> {
   const fetchImpl = args.fetchImpl || fetch;
-  const webhook = resolveScannerDiscordWebhookUrl();
+  const webhook = resolveScannerDiscordWebhookUrlBySource(args.record.webhookSource);
   if (args.config.dryRun || !args.config.discordEnabled || !webhook.url) {
     args.state.discordCleanupMessages[args.record.key] = {
       ...args.record,
@@ -3828,7 +3853,12 @@ export async function cleanupExpiredScannerDiscordMessages(args: {
   return { checked, deleted, failed, skipped };
 }
 
-async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig, files: string[] = []): Promise<ScannerDiscordPostReceipt> {
+async function postDiscord(
+  payload: DiscordWebhookPayload,
+  config: ScannerConfig,
+  files: string[] = [],
+  webhookOverride?: ScannerWebhookResolution,
+): Promise<ScannerDiscordPostReceipt> {
   validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
     console.log(JSON.stringify({ ...payload, chartMarkupFiles: files }, null, 2));
@@ -3839,7 +3869,7 @@ async function postDiscord(payload: DiscordWebhookPayload, config: ScannerConfig
       discordMessageId: null,
     };
   }
-  const webhook = resolveScannerDiscordWebhookUrl();
+  const webhook = webhookOverride || resolveScannerDiscordWebhookUrl();
   if (!webhook.url) {
     throw new ScannerDiscordPostError('QUANT_DESK_SCANNER_WEBHOOK_URL or SCANNER_DISCORD_WEBHOOK_URL is required unless --dry-run or --discord false is used.', {
       webhookSource: webhook.source,
@@ -3990,7 +4020,9 @@ export function buildScannerDataQualityNoticePayload(args: {
     ? 'Market Mapping'
     : args.session === 'morning'
       ? 'Morning'
-      : 'Lunch';
+      : args.session === 'lunch'
+        ? 'Lunch'
+        : 'Evening';
   const latest = args.completedFiveMinuteBarAssurance.latestCompletedTime || args.completed5m?.time || null;
   const expected = args.completedFiveMinuteBarAssurance.expectedCompletedTime || null;
   const recovery = (args.completedFiveMinuteBarAssurance.recoverySteps || []).slice(0, 3);
@@ -4080,15 +4112,15 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
     return;
   }
 
-  const webhook = resolveScannerDiscordWebhookUrl();
+  const webhook = resolveScannerOperationalDiscordWebhookUrl();
   if (!args.config.dryRun && !webhook.url) {
-    console.warn(`[scanner-data] Discord data-quality notice skipped because scanner Discord webhook is not configured: ${noticeKey}`);
+    console.warn(`[scanner-data] Discord data-quality notice skipped because scanner-health Discord webhook is not configured: ${noticeKey}`);
     return;
   }
 
   const payload = buildScannerDataQualityNoticePayload(args);
   try {
-    const receipt = await postDiscord(payload, args.config);
+    const receipt = await postDiscord(payload, args.config, [], webhook);
     const replaceResult = await replacePriorScannerDiscordOperationalMessages({
       state: args.state,
       config: args.config,

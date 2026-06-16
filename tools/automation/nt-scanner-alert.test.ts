@@ -41,6 +41,7 @@ import {
   prepareLiveScannerDiscordAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
+  resolveScannerOperationalDiscordWebhookUrl,
   shouldSendScannerDataQualityNoticeForWindow,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
@@ -454,6 +455,36 @@ assert.deepEqual(recoveredDeletes, [
 assert.equal(cleanupState.discordCleanupMessages[recoveredOperationalRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages[recoveredWindowStartRecord!.key].deleteStatus, 'deleted');
 assert.equal(cleanupState.discordCleanupMessages['legacy-trade-alert'].deleteStatus, 'skipped');
+const scannerHealthDataQualityRecord = recordScannerDiscordCleanupMessage({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  receipt: {
+    deliveryStatus: 'sent',
+    webhookSource: 'SUPERVISOR_DISCORD_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'scanner-health-data-quality-message-789',
+  },
+  kind: 'data_quality',
+  key: '2026-06-05:MES:morning:data-quality:scanner-health-fixture',
+  now: new Date('2026-06-05T14:22:00.000Z'),
+});
+assert.ok(scannerHealthDataQualityRecord);
+const previousSupervisorWebhook = process.env.SUPERVISOR_DISCORD_WEBHOOK_URL;
+process.env.SUPERVISOR_DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/scanner-health/token';
+const scannerHealthDeletes: string[] = [];
+const scannerHealthCleanupResult = await cleanupExpiredScannerDiscordMessages({
+  state: cleanupState,
+  config: scannerDataQualityNoticeCleanupConfig,
+  now: new Date('2026-06-05T14:38:00.000Z'),
+  fetchImpl: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    scannerHealthDeletes.push(`${init?.method || 'GET'} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  },
+});
+restoreOptionalEnv('SUPERVISOR_DISCORD_WEBHOOK_URL', previousSupervisorWebhook);
+assert.equal(scannerHealthCleanupResult.deleted >= 1, true);
+assert.ok(scannerHealthDeletes.includes('DELETE https://discord.com/api/webhooks/scanner-health/token/messages/scanner-health-data-quality-message-789'));
+assert.equal(cleanupState.discordCleanupMessages[scannerHealthDataQualityRecord!.key].deleteStatus, 'deleted');
 const olderHealthRecord = recordScannerDiscordCleanupMessage({
   state: cleanupState,
   config: scannerDataQualityNoticeCleanupConfig,
@@ -517,6 +548,20 @@ assert.ok(dataQualityText.includes('Latest completed 5M'));
 assert.ok(dataQualityText.includes('Expected completed 5M near'));
 assert.ok(dataQualityText.includes('No entries, stops, targets, approvals, or outcome buttons were created'));
 assert.equal(dataQualityNotice.components, undefined);
+const eveningDataQualityNotice = buildScannerDataQualityNoticePayload({
+  tradeDate: '2026-06-16',
+  session: 'evening',
+  config: scannerDataQualityNoticeConfig,
+  windowLabel: 'Evening Setup Scan',
+  currentPrice: 7591.75,
+  completed5m: { time: '2026-06-16T19:35:00.0000000', open: 7590, high: 7592, low: 7589, close: 7591.75, volume: 1000 },
+  completedFiveMinuteBarAssurance: completed5mAssuranceStale,
+  reason: completed5mAssuranceStale.message,
+  manualRun: false,
+});
+assert.ok(flattenDiscordPayloadText(eveningDataQualityNotice).includes('Scanner Data-Quality Blocker - Evening'));
+assert.ok(flattenDiscordPayloadText(eveningDataQualityNotice).includes('Quant Desk Scanner Data-Quality Notice - Evening'));
+assert.equal(flattenDiscordPayloadText(eveningDataQualityNotice).includes('Scanner Data-Quality Blocker - Lunch'), false);
 assert.equal(
   shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-05T10:00:00-04:00'))),
   true,
@@ -646,6 +691,21 @@ assert.deepEqual(resolveScannerDiscordWebhookUrl({
 }), {
   url: 'https://discord.example/scanner',
   source: 'SCANNER_DISCORD_WEBHOOK_URL',
+  usingGenericFallback: false,
+});
+assert.deepEqual(resolveScannerOperationalDiscordWebhookUrl({
+  SUPERVISOR_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner-health',
+  QUANT_DESK_HEALTH_WEBHOOK_URL: 'https://discord.example/health-alias',
+}), {
+  url: 'https://discord.example/scanner-health',
+  source: 'SUPERVISOR_DISCORD_WEBHOOK_URL',
+  usingGenericFallback: false,
+});
+assert.deepEqual(resolveScannerOperationalDiscordWebhookUrl({
+  QUANT_DESK_HEALTH_WEBHOOK_URL: 'https://discord.example/health-alias',
+}), {
+  url: 'https://discord.example/health-alias',
+  source: 'QUANT_DESK_HEALTH_WEBHOOK_URL',
   usingGenericFallback: false,
 });
 
