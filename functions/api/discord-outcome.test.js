@@ -45,6 +45,26 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
   if (String(url).includes('/rest/v1/trade_embeddings?plan_version_id=')) {
+    if (String(url).includes('PLAN-ALREADY-SAVED')) {
+      return new Response(JSON.stringify([{
+        id: 'row-already-saved',
+        embedding_text: 'existing embedding',
+        trade_plan_json: {
+          planVersionId: 'PLAN-ALREADY-SAVED',
+          discordMessage: {
+            messageId: 'discord-message-already-saved',
+            webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+            editAfterOutcome: true,
+          },
+          discordOutcome: {
+            updatedFrom: 'discord_button',
+            outcomeCode: 'long_t2_hit',
+            targetHit: 'T2',
+            tradeResult: 'win',
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify([{
       id: 'row-12345678',
       embedding_text: 'existing embedding',
@@ -116,6 +136,44 @@ try {
   assert.ok(buttons.every((button) => button.disabled === true), 'locked buttons must be disabled');
   assert.ok(buttons.some((button) => button.label === 'LONG T2 saved'));
   assert.ok(JSON.stringify(body).includes('No automated orders'));
+  const secretKeyToken = buildToken({ ...payload, pid: 'PLAN-SECRET-KEY-HEADERS', kid: keyId(secret) }, secret);
+  await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(secretKeyToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_server_key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  const secretKeyLookup = calls.find((call) =>
+    String(call.url).includes('/rest/v1/trade_embeddings?plan_version_id=eq.PLAN-SECRET-KEY-HEADERS')
+  );
+  assert.ok(secretKeyLookup, 'expected Supabase lookup with sb_secret key');
+  assert.equal(secretKeyLookup.init.headers.Authorization, undefined);
+  assert.equal(secretKeyLookup.init.headers.apikey, 'sb_secret_server_key');
+
+  const callsBeforeAlreadySaved = calls.length;
+  const alreadySavedToken = buildToken({ ...payload, pid: 'PLAN-ALREADY-SAVED', kid: keyId(secret) }, secret);
+  const alreadySavedResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(alreadySavedToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(alreadySavedResponse.status, 200);
+  assert.ok((await alreadySavedResponse.text()).includes('Already saved.'));
+  const alreadySavedCalls = calls.slice(callsBeforeAlreadySaved);
+  assert.ok(alreadySavedCalls.some((call) => String(call.url).includes('/messages/discord-message-already-saved')));
+  assert.ok(!alreadySavedCalls.some((call) => (
+    String(call.url).includes('/rest/v1/trade_embeddings?id=') ||
+    (String(call.url).endsWith('/rest/v1/trade_embeddings') && call.init.method === 'POST')
+  )), 'already-saved outcome must not patch or insert the RAG row');
 
   const runnerToken = buildToken({ ...payload, pid: 'PLAN-RUNNER-TEST', o: 'long_runner_hit', hit: 'RUNNER', kid: keyId(secret) }, secret);
   const runnerResponse = await onRequestGet({

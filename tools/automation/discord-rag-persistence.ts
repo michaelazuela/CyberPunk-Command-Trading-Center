@@ -30,12 +30,15 @@ export function resolveDiscordRagPersistenceConfig(env: NodeJS.ProcessEnv = proc
 }
 
 export function discordRagServiceHeaders(serviceRoleKey: string): Record<string, string> {
-  return {
+  const headers: Record<string, string> = {
     apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
     'Content-Type': 'application/json',
     Prefer: 'return=representation',
   };
+  if (!serviceRoleKey.startsWith('sb_secret_')) {
+    headers.Authorization = `Bearer ${serviceRoleKey}`;
+  }
+  return headers;
 }
 
 export async function upsertDiscordAlertRagPayload(args: {

@@ -40,6 +40,18 @@ function getEnv(context, name) {
   return context.env?.[name] || '';
 }
 
+function supabaseServiceHeaders(serviceRoleKey) {
+  const headers = {
+    apikey: serviceRoleKey,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+  if (!String(serviceRoleKey || '').startsWith('sb_secret_')) {
+    headers.Authorization = `Bearer ${serviceRoleKey}`;
+  }
+  return headers;
+}
+
 function normalizeOutcomeSecret(secret) {
   return String(secret || '').trim().replace(/^["']|["']$/g, '').trim();
 }
@@ -258,14 +270,19 @@ async function persistOutcome(context, payload) {
     throw new Error('Missing Cloudflare environment. Set SUPABASE_URL or VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID.');
   }
 
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json',
-    Prefer: 'return=representation',
-  };
+  const headers = supabaseServiceHeaders(serviceRoleKey);
   const existing = await selectExistingRecord(context, payload, headers);
   const tradeResult = normalizeTradeResult(payload.tr);
+  const existingPlanJson = existing?.trade_plan_json && typeof existing.trade_plan_json === 'object'
+    ? existing.trade_plan_json
+    : {};
+  if (existingPlanJson.discordOutcome?.updatedFrom === 'discord_button') {
+    return {
+      rowId: existing?.id || payload.pid,
+      discordMessage: existingPlanJson.discordMessage || null,
+      alreadySaved: true,
+    };
+  }
   const outcomePatch = {
     tradeTaken: Boolean(payload.tt),
     direction: payload.dir || 'NONE',
@@ -280,9 +297,6 @@ async function persistOutcome(context, payload) {
       ragSaveApprovesTradeRetroactively: false,
     },
   };
-  const existingPlanJson = existing?.trade_plan_json && typeof existing.trade_plan_json === 'object'
-    ? existing.trade_plan_json
-    : {};
   const existingJournalRecord = existingPlanJson.journalRecord && typeof existingPlanJson.journalRecord === 'object'
     ? existingPlanJson.journalRecord
     : null;
@@ -323,7 +337,7 @@ async function persistOutcome(context, payload) {
       body: JSON.stringify(patchPayload),
     });
     if (!response.ok) throw new Error(`Supabase outcome update failed (${response.status}): ${await response.text()}`);
-    return { rowId: existing.id, discordMessage: tradePlanJson.discordMessage || null };
+    return { rowId: existing.id, discordMessage: tradePlanJson.discordMessage || null, alreadySaved: false };
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
@@ -339,6 +353,7 @@ async function persistOutcome(context, payload) {
   return {
     rowId: Array.isArray(rows) && rows[0]?.id ? rows[0].id : payload.pid,
     discordMessage: tradePlanJson.discordMessage || null,
+    alreadySaved: false,
   };
 }
 
@@ -359,6 +374,9 @@ export async function onRequestGet(context) {
     const lockText = lock.edited
       ? 'Discord card locked.'
       : `Discord card lock unavailable (${lock.reason}).`;
+    if (result.alreadySaved) {
+      return html(`Already saved. ${lockText} Plan ${payload.pid}. Existing RAG row ${String(result.rowId).slice(0, 8)}.`);
+    }
     return html(`Saved to RAG. ${lockText} Plan ${payload.pid}. ${outcomeSummary(payload)} Row ${String(result.rowId).slice(0, 8)}.`);
   } catch (error) {
     return html(error instanceof Error ? error.message : String(error), 400);

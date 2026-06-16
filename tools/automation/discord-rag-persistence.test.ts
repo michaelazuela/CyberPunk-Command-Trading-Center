@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   attachDiscordMessageReceiptToRagPayload,
+  discordRagServiceHeaders,
   normalizeSupabaseRestUrl,
   resolveDiscordRagPersistenceConfig,
   upsertDiscordAlertRagPayload,
@@ -27,6 +28,9 @@ assert.deepEqual(resolved, {
 const missing = resolveDiscordRagPersistenceConfig({} as NodeJS.ProcessEnv);
 assert.equal(missing.config, null);
 assert.deepEqual(missing.missing, ['SUPABASE_URL or VITE_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'DISCORD_RAG_USER_ID']);
+assert.equal(discordRagServiceHeaders('legacy-service-role-jwt').Authorization, 'Bearer legacy-service-role-jwt');
+assert.equal(discordRagServiceHeaders('sb_secret_server_key').Authorization, undefined);
+assert.equal(discordRagServiceHeaders('sb_secret_server_key').apikey, 'sb_secret_server_key');
 
 const config: DiscordRagPersistenceConfig = {
   supabaseUrl: 'https://project.supabase.co',
