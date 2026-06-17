@@ -549,6 +549,15 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Primary:') ||
     !formatterContent.includes('Bias:') ||
     !formatterContent.includes('Line in sand:') ||
+    !formatterContent.includes('Map Side:') ||
+    !formatterContent.includes('Map Role:') ||
+    !formatterContent.includes('Opposing Side:') ||
+    !formatterContent.includes('Opposing Role:') ||
+    !formatterContent.includes('Conflict:') ||
+    !formatterContent.includes('Readiness:') ||
+    !formatterContent.includes('context only - not direction') ||
+    !formatterContent.includes('watch only - do not execute') ||
+    !formatterContent.includes('review map - levels pending') ||
     !formatterContent.includes('Entry:') ||
     !formatterContent.includes('Stop:') ||
     !formatterContent.includes('T1:') ||

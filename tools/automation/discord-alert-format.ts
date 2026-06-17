@@ -1109,6 +1109,42 @@ function deskPlayHtfLineRows(
   });
 }
 
+function deskPlayQualityLabel(score: number | null | undefined): string {
+  if (typeof score !== 'number' || !Number.isFinite(score)) return 'unavailable';
+  if (score >= 75) return 'high';
+  if (score >= 55) return 'medium';
+  if (score > 0) return 'low';
+  return 'unavailable';
+}
+
+function deskPlaySideStrength(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  side: 'LONG' | 'SHORT',
+): string {
+  const sideBias = side === 'LONG' ? play.longBias : play.shortBias;
+  const score = sideBias?.decisionQualityScore ?? sideBias?.rankScore ?? sideBias?.modelConfidenceScore ?? null;
+  return `${side} ${typeof score === 'number' && Number.isFinite(score) ? `${Math.round(score)}/100` : 'N/A'} ${deskPlayQualityLabel(score)}`;
+}
+
+function deskPlayConflictSummary(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  side: 'LONG' | 'SHORT' | 'WAIT',
+  reviewReason?: string | null,
+): string {
+  const reliability = String(play.htfProtectedStructureMap?.reliability || '').toLowerCase();
+  if (reliability === 'data_limited') return 'HTF data-limited; context only';
+  if (reviewReason) return reviewReason;
+  if (play.htfConflict || play.countertrendWarning) return 'parent context opposes map';
+  if (side === 'WAIT') return 'no confirmed active side';
+  return 'none flagged';
+}
+
+function deskPlayReadinessStatus(reviewOnly: boolean, hasLevels: boolean): string {
+  if (reviewOnly) return 'watch only - do not execute';
+  if (!hasLevels) return 'review map - levels pending';
+  return 'review map - wait';
+}
+
 function candidateBiasSummary(candidate: SetupCandidate): string {
   const directionWord = candidate.direction === 'SHORT' ? 'bearish' : candidate.direction === 'LONG' ? 'bullish' : 'neutral';
   const rulesetBlockers = [
@@ -1321,9 +1357,25 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ],
     };
   };
+  const readinessLinesFor = (
+    mapSide: 'LONG' | 'SHORT' | 'WAIT',
+    safety: { reviewOnly: boolean; reason: string | null },
+    hasLevels: boolean,
+  ): string[] => {
+    const opposingSide = mapSide === 'LONG' ? 'SHORT' : 'LONG';
+    return [
+      `Map Side: ${mapSide === 'WAIT' ? 'WAIT N/A' : deskPlaySideStrength(play, mapSide)}`,
+      `Map Role: ${mapSide === 'WAIT' ? 'no active directional map' : 'chart map under review'}`,
+      `Opposing Side: ${mapSide === 'WAIT' ? 'N/A' : deskPlaySideStrength(play, opposingSide)}`,
+      `Opposing Role: ${mapSide === 'WAIT' ? 'context unavailable' : 'context only - not direction'}`,
+      `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
+      `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels)}`,
+    ];
+  };
   if (direction !== 'LONG' && direction !== 'SHORT') {
     const longWait = sideLinesFor('LONG');
     const shortWait = sideLinesFor('SHORT');
+    const waitMapSide = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : 'WAIT';
     const waitPrimarySafety = play.direction === 'LONG' || play.direction === 'SHORT'
       ? sidePresentationSafety(play.direction)
       : { reviewOnly: false, reason: null };
@@ -1337,6 +1389,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       `Primary: ${deskPlayPrimaryLabel(play, direction)}`,
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       `Line in sand: ${priceLine(play.lineInSand)}`,
+      ...readinessLinesFor(waitMapSide, waitPrimarySafety, longWait.hasLevels || shortWait.hasLevels),
       '',
       'HTF Lines:',
       ...deskPlayHtfLineRows(play, args.currentPrice),
@@ -1368,6 +1421,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Primary: ${direction}`,
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     `Line in sand: ${priceLine(lineInSand)}`,
+    ...readinessLinesFor(direction, primarySafety, primary.hasLevels || opposite.hasLevels),
     '',
     'HTF Lines:',
     ...deskPlayHtfLineRows(play, args.currentPrice),

@@ -564,6 +564,12 @@ assert.ok(deskPlayText.includes('MES Current Desk Plan'));
 assert.ok(deskPlayText.includes('Primary: WAIT / LONG REVIEW'));
 assert.ok(deskPlayText.includes('Bias: HTF protected structure rows are scanner-owned context only.'));
 assert.ok(deskPlayText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayText.includes('Map Side: LONG 82/100 high'));
+assert.ok(deskPlayText.includes('Map Role: chart map under review'));
+assert.ok(deskPlayText.includes('Opposing Side: SHORT 58/100 medium'));
+assert.ok(deskPlayText.includes('Opposing Role: context only - not direction'));
+assert.ok(deskPlayText.includes('Conflict: parent context opposes map'));
+assert.ok(deskPlayText.includes('Readiness: review map - levels pending'));
 assert.ok(deskPlayText.includes('LONG ABOVE 7342.00'));
 assert.ok(deskPlayText.includes('Entry: pending'));
 assert.ok(deskPlayText.includes('Stop: pending'));
@@ -708,6 +714,11 @@ assert.ok(deskPlayDecisionMapText.includes('MES Current Desk Plan'));
 assert.ok(deskPlayDecisionMapText.includes('Primary: WAIT'));
 assert.ok(deskPlayDecisionMapText.includes('Bias:'));
 assert.ok(deskPlayDecisionMapText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayDecisionMapText.includes('Map Side: SHORT N/A unavailable'));
+assert.ok(deskPlayDecisionMapText.includes('Map Role: chart map under review'));
+assert.ok(deskPlayDecisionMapText.includes('Opposing Side: LONG N/A unavailable'));
+assert.ok(deskPlayDecisionMapText.includes('Opposing Role: context only - not direction'));
+assert.ok(deskPlayDecisionMapText.includes('Readiness: review map - wait'));
 assert.ok(deskPlayDecisionMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(deskPlayDecisionMapText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(deskPlayDecisionMapText.includes('Chart: not attached; waiting on app-owned levels.'));
@@ -881,6 +892,11 @@ const projectedDeskPlayPayload = compactDiscordSummary({
 const projectedDeskPlayText = flattenDiscordPayloadText(projectedDeskPlayPayload);
 assert.ok(projectedDeskPlayText.includes('Primary: WAIT'));
 assert.ok(projectedDeskPlayText.includes('Line in sand: 7570.00'));
+assert.ok(projectedDeskPlayText.includes('Map Side: WAIT N/A'));
+assert.ok(projectedDeskPlayText.includes('Map Role: no active directional map'));
+assert.ok(projectedDeskPlayText.includes('Opposing Side: N/A'));
+assert.ok(projectedDeskPlayText.includes('Opposing Role: context unavailable'));
+assert.ok(projectedDeskPlayText.includes('Conflict: no confirmed active side'));
 assert.ok(projectedDeskPlayText.includes('HTF Lines:'));
 assert.ok(projectedDeskPlayText.includes('LONG ABOVE 7570.00'));
 assert.ok(projectedDeskPlayText.includes('SHORT BELOW 7570.00'));
@@ -1017,6 +1033,12 @@ assert.ok(deskPlaySupportedShortPayload.content?.includes('[PM DESK PLAY] MES - 
 assert.ok(deskPlaySupportedShortText.includes('MES Current Desk Plan'));
 assert.ok(deskPlaySupportedShortText.includes('Primary: SHORT'));
 assert.ok(deskPlaySupportedShortText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlaySupportedShortText.includes('Map Side: SHORT N/A unavailable'));
+assert.ok(deskPlaySupportedShortText.includes('Map Role: chart map under review'));
+assert.ok(deskPlaySupportedShortText.includes('Opposing Side: LONG N/A unavailable'));
+assert.ok(deskPlaySupportedShortText.includes('Opposing Role: context only - not direction'));
+assert.ok(deskPlaySupportedShortText.includes('Conflict: none flagged'));
+assert.ok(deskPlaySupportedShortText.includes('Readiness: review map - wait'));
 assert.ok(deskPlaySupportedShortText.includes('SHORT BELOW 7342.00'));
 assert.ok(deskPlaySupportedShortText.includes('Entry: 7339.75'));
 assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
@@ -1073,7 +1095,7 @@ const deskPlayPendingShortMapPayload = compactDiscordSummary({
       discordEligible: true,
       htfProtectedStructureMap: {
         sourceOfTruth: 'scanner_htf_protected_structure_map',
-        reliability: 'structural',
+        reliability: 'data_limited',
         summary: 'HTF map only.',
         rows: [
           {
@@ -1146,6 +1168,10 @@ const pendingShortMapText = flattenDiscordPayloadText(deskPlayPendingShortMapPay
 assert.ok(deskPlayPendingShortMapPayload.content?.includes('[PM DESK PLAY] MES - WAIT / SHORT REVIEW'));
 assert.ok(!deskPlayPendingShortMapPayload.content?.includes('MES - SHORT |'));
 assert.ok(pendingShortMapText.includes('Primary: WAIT / SHORT REVIEW'));
+assert.ok(pendingShortMapText.includes('Map Side: SHORT N/A unavailable'));
+assert.ok(pendingShortMapText.includes('Opposing Side: LONG N/A unavailable'));
+assert.ok(pendingShortMapText.includes('Conflict: HTF data-limited; context only'));
+assert.ok(pendingShortMapText.includes('Readiness: review map - levels pending'));
 assert.ok(pendingShortMapText.includes('2H: RANGE; bull above 7651.50 / bear below 7591.00'));
 assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
 assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
@@ -1224,6 +1250,12 @@ const deskPlayWideReviewPayload = compactDiscordSummary({
 });
 const deskPlayWideReviewText = flattenDiscordPayloadText(deskPlayWideReviewPayload);
 assert.ok(deskPlayWideReviewText.includes('MES Current Desk Plan'));
+assert.ok(deskPlayWideReviewText.includes('Map Side: SHORT 44/100 low'));
+assert.ok(deskPlayWideReviewText.includes('Map Role: chart map under review'));
+assert.ok(deskPlayWideReviewText.includes('Opposing Side: LONG N/A unavailable'));
+assert.ok(deskPlayWideReviewText.includes('Opposing Role: context only - not direction'));
+assert.ok(deskPlayWideReviewText.includes('Conflict: side quality is low'));
+assert.ok(deskPlayWideReviewText.includes('Readiness: watch only - do not execute'));
 assert.ok(deskPlayWideReviewText.includes('SHORT BELOW 7591.00'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Review levels only - not an executable trade plan.'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Reference entry: 7581.25'), deskPlayWideReviewText);
