@@ -1256,7 +1256,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
     `Next trigger: ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
     `Invalidation: ${compactInstruction(candidate.invalidation, `invalid ${invalidWord} ${priceLine(levels.stop)}.`)}`,
-    `Stand down: ${compactInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
+    `Stand down: ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
     `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
     `Entry: ${priceLine(candidate.entry)}`,
@@ -1304,6 +1304,10 @@ function compactInstruction(value: string | null | undefined, fallback: string):
   return cleaned || fallback;
 }
 
+function standDownInstruction(value: string | null | undefined, fallback: string): string {
+  return compactInstruction(value, fallback).replace(/^invalid\s+if\s+/i, '');
+}
+
 function deskPlayStandDownLine(args: {
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
   deskState?: CompactDeskStateForDiscord;
@@ -1318,7 +1322,7 @@ function deskPlayStandDownLine(args: {
   if (bias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down: move is missed/no-chase until fresh completed 5M proof forms.';
   if (bias?.tradeReadiness?.status === 'blocked') return `Stand down: ${compactInstruction(bias.tradeReadiness.reason, 'primary side is blocked.')}`;
   const invalidation = args.play.invalidation || args.deskState?.invalidation || null;
-  if (invalidation) return `Stand down: ${compactInstruction(invalidation, 'primary invalidation is active.')}`;
+  if (invalidation) return `Stand down: ${standDownInstruction(invalidation, 'primary invalidation is active.')}`;
   if (typeof args.lineInSand === 'number') {
     return args.direction === 'LONG'
       ? `Stand down: completed acceptance below ${priceLine(args.lineInSand)}.`

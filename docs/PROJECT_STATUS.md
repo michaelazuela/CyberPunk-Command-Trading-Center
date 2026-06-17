@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-17
+Task: Normalize Phase C stand-down wording after live-tape audit.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: The June 17 bar-by-bar audit showed the new Phase C `Stand down` line could inherit source invalidation text that already began with `Invalid if`, producing awkward trader-facing text such as `Stand down: Invalid if ...`.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Stand-down wording now strips a leading `Invalid if` while preserving the source invalidation as the separate `Invalidation` line.
+Trading logic changed: No. This is Discord presentation text only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bar-close handling changed.
+Bridge impact: None.
+Discord impact: Yes. Trader-facing stand-down text is clearer and no longer nests invalidation phrasing inside the stand-down label.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known in Phase C presentation after this audit fix. Scanner Discord remains intentionally disabled in local supervisor config until monitored re-enable.
+Next recommended action: Re-enable scanner Discord for monitored observation with Phases A/B/C active. Move to Phase D only if the observed main play itself is selected incorrectly.
+
+## Previous Change
+
+Date: 2026-06-17
 Task: Install Phase C one-main-play Discord workflow.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: After Phase B filtering, Discord still needed trader-facing language and lifecycle memory built around one current main play. Phase C makes the Current Desk Plan state the overall play, next trigger, invalidation, and stand-down condition, and treats changes to those instructions as meaningful updates even when price levels are unchanged.
