@@ -536,12 +536,13 @@ try {
   assert.ok(failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
   assert.ok(failedShortReviewHtml.includes('Action: no execution'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
-  assert.ok(failedShortReviewHtml.includes('Primary Map: <tspan fill="#f8fafc">SHORT 44/100 low</tspan>'));
-  assert.ok(failedShortReviewHtml.includes('Opposing Context: <tspan fill="#f8fafc">LONG 98/100 high</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Map Side: <tspan fill="#f8fafc">SHORT 44/100 low</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Map Role: <tspan fill="#f8fafc">chart map under review</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Opposing Side: <tspan fill="#f8fafc">LONG 98/100 high</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Opposing Role: <tspan fill="#f8fafc">context only - not direction</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Conflict: <tspan fill="#f97316">parent context opposes map</tspan>'));
   assert.ok(failedShortReviewHtml.includes('Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan>'));
-  assert.ok(failedShortReviewHtml.includes('Trigger: <tspan fill="#f8fafc">no execution</tspan>'));
-  assert.ok(failedShortReviewHtml.includes('Risk: <tspan fill="#f8fafc">19.25 pts review</tspan>'));
-  assert.ok(failedShortReviewHtml.includes('Targets: <tspan fill="#f8fafc">T1/T2 available</tspan>'));
+  assert.ok(failedShortReviewHtml.includes('Readiness: <tspan fill="#f8fafc">watch only - do not execute</tspan>'));
   assert.ok(failedShortReviewHtml.includes('HTF Context: <tspan fill="#f8fafc">LONG</tspan>'));
   assert.ok(failedShortReviewHtml.includes('do not execute this side'));
   const morningTradePlanHtml = buildChartMarkupHtmlForTest({

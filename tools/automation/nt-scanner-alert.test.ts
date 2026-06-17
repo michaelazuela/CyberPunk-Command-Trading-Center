@@ -2520,12 +2520,13 @@ try {
   assert.ok(deskPlayChartHtml.includes('REVIEW LEVELS'));
   assert.ok(deskPlayChartHtml.includes('DESK READINESS'));
   assert.ok(deskPlayChartHtml.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL'));
-  assert.ok(deskPlayChartHtml.includes('Primary Map: <tspan fill="#f8fafc">'));
-  assert.ok(deskPlayChartHtml.includes('Opposing Context: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('Map Side: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('Map Role: <tspan fill="#f8fafc">chart map under review</tspan>'));
+  assert.ok(deskPlayChartHtml.includes('Opposing Side: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('Opposing Role: <tspan fill="#f8fafc">context only - not direction</tspan>'));
+  assert.ok(deskPlayChartHtml.includes('Conflict: <tspan fill="'));
   assert.ok(deskPlayChartHtml.includes('Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan>'));
-  assert.ok(deskPlayChartHtml.includes('Trigger: <tspan fill="#f8fafc">'));
-  assert.ok(deskPlayChartHtml.includes('Risk: <tspan fill="#f8fafc">'));
-  assert.ok(deskPlayChartHtml.includes('Targets: <tspan fill="#f8fafc">'));
+  assert.ok(deskPlayChartHtml.includes('Readiness: <tspan fill="#f8fafc">'));
   assert.ok(deskPlayChartHtml.includes('HTF Context: <tspan fill="#f8fafc">'));
   assert.ok(!deskPlayChartHtml.includes('Confidence: <tspan fill="#f8fafc">'));
   assert.ok(deskPlayChartHtml.includes('Next: <tspan fill="#f8fafc">completed 5M proof</tspan>'));

@@ -588,12 +588,13 @@ function checkScannerVisibilityMetadataBoundary() {
       !chartRendererContent.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL') ||
       !chartRendererContent.includes('renderDeskPlayMetricChip') ||
       !chartRendererContent.includes('deskPlaySideQuality') ||
-      !chartRendererContent.includes('Primary Map: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan>') ||
-      !chartRendererContent.includes('Opposing Context: <tspan fill="#f8fafc">${readiness.opposingSide} ${readiness.opposingStrength}</tspan>') ||
+      !chartRendererContent.includes('Map Side: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan>') ||
+      !chartRendererContent.includes('Map Role: <tspan fill="#f8fafc">${escapeHtml(readiness.primaryRole)}</tspan>') ||
+      !chartRendererContent.includes('Opposing Side: <tspan fill="#f8fafc">${readiness.opposingSide} ${readiness.opposingStrength}</tspan>') ||
+      !chartRendererContent.includes('Opposing Role: <tspan fill="#f8fafc">${escapeHtml(readiness.opposingRole)}</tspan>') ||
+      !chartRendererContent.includes('Conflict: <tspan fill="${unsafeReview ? \'#f97316\' : \'#f8fafc\'}">${escapeHtml(readiness.conflict)}</tspan>') ||
       !chartRendererContent.includes('Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan>') ||
-      !chartRendererContent.includes('Trigger: <tspan fill="#f8fafc">${readiness.trigger}</tspan>') ||
-      !chartRendererContent.includes('Risk: <tspan fill="#f8fafc">${readiness.risk}</tspan>') ||
-      !chartRendererContent.includes('Targets: <tspan fill="#f8fafc">${readiness.targets}</tspan>') ||
+      !chartRendererContent.includes('Readiness: <tspan fill="#f8fafc">${escapeHtml(readiness.status)}</tspan>') ||
       !chartRendererContent.includes('HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan>') ||
       !chartRendererContent.includes('HTF Runner') ||
       !chartRendererContent.includes('HTF RUNNER') ||

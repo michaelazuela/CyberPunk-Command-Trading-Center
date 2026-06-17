@@ -541,16 +541,19 @@ function deskPlayReadinessContext(model: PlanRenderModel): {
   opposingSide: 'LONG' | 'SHORT';
   primaryStrength: string;
   opposingStrength: string;
-  trigger: string;
-  risk: string;
-  targets: string;
+  primaryRole: string;
+  opposingRole: string;
+  conflict: string;
   htf: string;
+  status: string;
 } {
   const primarySide = model.direction;
   const opposingSide = primarySide === 'LONG' ? 'SHORT' : 'LONG';
   const primaryQuality = primarySide === 'LONG' ? model.longQuality : model.shortQuality;
   const opposingQuality = opposingSide === 'LONG' ? model.longQuality : model.shortQuality;
-  const hasTargets = isPrice(model.t1) && isPrice(model.t2);
+  const unsafeReview = deskPlayUnsafeReview(model);
+  const structureOpposes = deskPlayStructureOpposes(model);
+  const primaryRatio = deskPlayQualityRatio(primaryQuality);
   const context = `${model.contextBias}`.toUpperCase();
   const trend = `${model.trendBias}`.toUpperCase();
   const htf = !context || context === 'UNKNOWN'
@@ -558,15 +561,21 @@ function deskPlayReadinessContext(model: PlanRenderModel): {
     : context === trend
       ? context
       : `mixed ${context}/${trend || 'UNKNOWN'}`;
+  const conflict = structureOpposes
+    ? 'parent context opposes map'
+    : primaryRatio !== null && primaryRatio < 0.55
+      ? 'map quality below readiness'
+      : 'none flagged';
   return {
     primarySide,
     opposingSide,
     primaryStrength: qualityDisplay(primaryQuality),
     opposingStrength: qualityDisplay(opposingQuality),
-    trigger: deskPlayUnsafeReview(model) ? 'no execution' : '5M proof pending',
-    risk: isPrice(model.risk) ? `${model.risk.toFixed(2)} pts review` : 'pending',
-    targets: hasTargets ? 'T1/T2 available' : 'pending',
+    primaryRole: 'chart map under review',
+    opposingRole: 'context only - not direction',
+    conflict,
     htf,
+    status: unsafeReview ? 'watch only - do not execute' : 'review map - wait',
   };
 }
 
@@ -606,14 +615,15 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
     <rect x="24" y="486" width="392" height="234" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
     <text x="38" y="515" class="alert-title" fill="#38bdf8">DESK READINESS</text>
     <line x1="38" y1="527" x2="402" y2="527" stroke="#38bdf8" stroke-opacity=".34" />
-    <text x="38" y="548" class="small">Primary Map: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan></text>
-    <text x="38" y="570" class="small">Opposing Context: <tspan fill="#f8fafc">${readiness.opposingSide} ${readiness.opposingStrength}</tspan></text>
-    <text x="38" y="592" class="small">Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan></text>
-    <text x="38" y="614" class="small">Trigger: <tspan fill="#f8fafc">${readiness.trigger}</tspan></text>
-    <text x="38" y="636" class="small">Risk: <tspan fill="#f8fafc">${readiness.risk}</tspan></text>
-    <text x="38" y="658" class="small">Targets: <tspan fill="#f8fafc">${readiness.targets}</tspan></text>
-    <text x="38" y="680" class="small">HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan></text>
-    <text x="38" y="702" class="small">Next: <tspan fill="#f8fafc">${unsafeReview ? 'do not execute this side' : hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
+    <text x="38" y="546" class="small">Map Side: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan></text>
+    <text x="38" y="566" class="small">Map Role: <tspan fill="#f8fafc">${escapeHtml(readiness.primaryRole)}</tspan></text>
+    <text x="38" y="586" class="small">Opposing Side: <tspan fill="#f8fafc">${readiness.opposingSide} ${readiness.opposingStrength}</tspan></text>
+    <text x="38" y="606" class="small">Opposing Role: <tspan fill="#f8fafc">${escapeHtml(readiness.opposingRole)}</tspan></text>
+    <text x="38" y="626" class="small">Conflict: <tspan fill="${unsafeReview ? '#f97316' : '#f8fafc'}">${escapeHtml(readiness.conflict)}</tspan></text>
+    <text x="38" y="646" class="small">Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan></text>
+    <text x="38" y="666" class="small">Readiness: <tspan fill="#f8fafc">${escapeHtml(readiness.status)}</tspan></text>
+    <text x="38" y="686" class="small">HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan></text>
+    <text x="38" y="706" class="small">Next: <tspan fill="#f8fafc">${unsafeReview ? 'do not execute this side' : hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
   `;
 }
 
