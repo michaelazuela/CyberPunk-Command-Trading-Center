@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-17
+Task: Suppress evening 120M-only data-quality Discord noise.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: After scanner Discord was re-enabled, the evening scanner posted repeated operational data-quality notices because the 120M context lagged while completed 5M, 15M, 60M, and 240M context were usable. This was correct as a local HTF-context blocker but too noisy for trader-facing Discord.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Evening `completed5m=ready, insufficient=120m` data-readiness notices now remain local logs instead of Discord posts. Real completed-5M/current-bar blockers and non-evening 120M data-quality notices remain eligible for Discord.
+Trading logic changed: No. This is Discord operational-notice filtering only; scanner local blockers, HTF sufficiency handling, setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, and bar-close handling are unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Reduces evening operational notice noise after re-enabling scanner Discord.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: A persistent evening 120M gap still blocks HTF promotion locally; it just no longer posts repetitive Discord notices when 5M is current.
+Next recommended action: Keep scanner Discord enabled under observation. If true 5M/current-data blockers post, fix the data feed; if wrong main plays post, evaluate Phase D.
+
+## Previous Change
+
+Date: 2026-06-17
 Task: Normalize Phase C stand-down wording after live-tape audit.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: The June 17 bar-by-bar audit showed the new Phase C `Stand down` line could inherit source invalidation text that already began with `Invalid if`, producing awkward trader-facing text such as `Stand down: Invalid if ...`.

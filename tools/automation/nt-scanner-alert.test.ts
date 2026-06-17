@@ -44,6 +44,7 @@ import {
   resolveScannerDiscordWebhookUrl,
   resolveScannerOperationalDiscordWebhookUrl,
   shouldSendScannerDataQualityNoticeForWindow,
+  shouldSuppressScannerDataQualityNoticeForReason,
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
   scannerDeskPlanRefreshKey,
@@ -581,6 +582,27 @@ assert.equal(
 );
 assert.equal(
   shouldSendScannerDataQualityNoticeForWindow(resolveScannerWindow(new Date('2026-06-13T10:00:00-04:00'))),
+  false,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'evening',
+    reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=ready, insufficient=120m. Real cache/bridge backfill was attempted where available.',
+  }),
+  true,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'lunch',
+    reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=ready, insufficient=120m. Real cache/bridge backfill was attempted where available.',
+  }),
+  false,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'evening',
+    reason: completed5mAssuranceStale.message,
+  }),
   false,
 );
 assert.equal(scannerDataQualityNoticeKey({

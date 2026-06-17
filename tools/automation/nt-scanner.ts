@@ -4341,6 +4341,15 @@ export function shouldSendScannerDataQualityNoticeForWindow(window: ReturnType<t
   return window.allowsDeskPlan && window.allowsMarketMapping;
 }
 
+export function shouldSuppressScannerDataQualityNoticeForReason(args: {
+  session: LiveSession | 'market_mapping';
+  reason: string;
+}): boolean {
+  const reason = args.reason.replace(/\s+/g, ' ').trim();
+  return args.session === 'evening' &&
+    /DATA_NOT_READY: completed5m=ready, insufficient=120m\b/i.test(reason);
+}
+
 async function sendScannerDataQualityNoticeIfNeeded(args: {
   config: ScannerConfig;
   state: ScannerStateFile;
@@ -4356,6 +4365,10 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
 }): Promise<void> {
   if (!shouldSendScannerDataQualityNoticeForWindow(args.scannerWindow)) {
     console.log(`[scanner-data] Data-quality notice skipped because scanner desk-plan window is inactive: ${args.scannerWindow.label}`);
+    return;
+  }
+  if (shouldSuppressScannerDataQualityNoticeForReason({ session: args.session, reason: args.reason })) {
+    console.log(`[scanner-data] Data-quality notice kept local because evening 120m-only HTF readiness is not a trader-facing Discord blocker: ${args.reason}`);
     return;
   }
 
