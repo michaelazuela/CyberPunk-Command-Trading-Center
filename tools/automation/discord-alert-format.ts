@@ -1004,12 +1004,12 @@ function deskPlayDecisionMapLevels(
       isFinitePrice(stop) &&
       entry >= lineInSand &&
       stop < lineInSand &&
-      entry - lineInSand <= Math.max(lineInSand - stop, tick)
+      entry - lineInSand <= Math.max(entry - stop, tick)
     : isFinitePrice(entry) &&
       isFinitePrice(stop) &&
       entry <= lineInSand &&
       stop > lineInSand &&
-      lineInSand - entry <= Math.max(stop - lineInSand, tick);
+      lineInSand - entry <= Math.max(stop - entry, tick);
   if (lineIsValid) {
     const normalizedLevels = deskPlayValidatePlanningLevels({
       direction,
@@ -1241,6 +1241,10 @@ function deskPlayChartStatusLine(args: {
   return 'Chart: not attached; waiting on app-owned levels.';
 }
 
+function hardBlockedDeskState(value: string): boolean {
+  return /(^|[_\s-])(blocked|failed|not_aligned)([_\s-]|$)/i.test(value);
+}
+
 function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
   const play = args.deskState?.primaryDeskPlay;
   if (!play) {
@@ -1255,10 +1259,31 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
     ];
   }
+  const sidePresentationSafety = (side: 'LONG' | 'SHORT'): { reviewOnly: boolean; reason: string | null } => {
+    const sideBias = side === 'LONG' ? play.longBias : play.shortBias;
+    const sideScore = sideBias?.decisionQualityScore ?? null;
+    const rows = play.htfProtectedStructureMap?.rows || [];
+    const opposingRows = rows.filter((row) => {
+      const bias = resolveDeskPlayRowBias(row, args.currentPrice);
+      return (side === 'LONG' && bias === 'BEAR') || (side === 'SHORT' && bias === 'BULL');
+    }).length;
+    const trendDirection = play.trendConfirmation?.direction;
+    const trendOpposes = (side === 'LONG' && trendDirection === 'SHORT') || (side === 'SHORT' && trendDirection === 'LONG');
+    const lowQuality = typeof sideScore === 'number' && sideScore < 55;
+    const htfOpposes = trendOpposes || (rows.length > 0 && opposingRows > rows.length / 2);
+    const reviewOnly = args.deskState?.canExecute !== true && (lowQuality || htfOpposes);
+    const reason = htfOpposes
+      ? 'HTF/structure opposes this side'
+      : lowQuality
+        ? 'side quality is low'
+        : null;
+    return { reviewOnly, reason };
+  };
   const sideLinesFor = (side: 'LONG' | 'SHORT'): { lines: string[]; hasLevels: boolean } => {
     const line = deskPlayLineForDirection(play, side);
     const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
     const triggerWord = side === 'LONG' ? 'ABOVE' : 'BELOW';
+    const safety = sidePresentationSafety(side);
     if (!levels) {
       return {
         hasLevels: false,
@@ -1268,6 +1293,20 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           'Stop: pending',
           'T1: pending',
           'T2: pending',
+        ],
+      };
+    }
+    if (safety.reviewOnly) {
+      return {
+        hasLevels: true,
+        lines: [
+          `${side} ${triggerWord} ${priceLine(line)}`,
+          'Review levels only - not an executable trade plan.',
+          `Reference entry: ${priceLine(levels.entry)}`,
+          `Reference stop: ${priceLine(levels.stop)}`,
+          `Reference T1: ${priceLine(levels.target1)}`,
+          `Reference T2: ${priceLine(levels.target2)}`,
+          ...(safety.reason ? [`Reason: ${safety.reason}.`] : []),
         ],
       };
     }
@@ -1283,16 +1322,15 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     };
   };
   if (direction !== 'LONG' && direction !== 'SHORT') {
-    const waitSideLinesFor = (side: 'LONG' | 'SHORT'): string[] => {
-      const line = deskPlayLineForDirection(play, side);
-      return [
-        `${side} ${side === 'LONG' ? 'ABOVE' : 'BELOW'} ${priceLine(line)}`,
-        'Entry: pending',
-        'Stop: pending',
-        'T1: pending',
-        'T2: pending',
-      ];
-    };
+    const longWait = sideLinesFor('LONG');
+    const shortWait = sideLinesFor('SHORT');
+    const waitPrimarySafety = play.direction === 'LONG' || play.direction === 'SHORT'
+      ? sidePresentationSafety(play.direction)
+      : { reviewOnly: false, reason: null };
+    const waitStatusLine = waitPrimarySafety.reviewOnly
+      ? `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      : 'Status: Review only until 5M trigger + canExecute.';
+    const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
     return [
       `${args.instrument} Current Desk Plan`,
       '',
@@ -1303,16 +1341,16 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       'HTF Lines:',
       ...deskPlayHtfLineRows(play, args.currentPrice),
       '',
-      ...waitSideLinesFor('LONG'),
+      ...longWait.lines,
       '',
-      ...waitSideLinesFor('SHORT'),
+      ...shortWait.lines,
       '',
       'No active LONG/SHORT plan with complete app-owned levels.',
       deskPlayHtfTargetLine(play),
       deskPlayRunnerLine(play),
       '',
-      'Status: Review only until 5M trigger + canExecute.',
-      deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
+      waitStatusLine,
+      deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: waitHasReferenceLevels }),
     ];
   }
   const lineInSand = deskPlayLineForDirection(play, direction);
@@ -1320,6 +1358,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   const primary = sideLinesFor(direction);
   const opposite = sideLinesFor(direction === 'LONG' ? 'SHORT' : 'LONG');
   const primaryLevels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
+  const primarySafety = sidePresentationSafety(direction);
+  const statusLine = primarySafety.reviewOnly
+    ? `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+    : 'Status: Review only until 5M trigger + canExecute.';
   return [
     `${args.instrument} Current Desk Plan`,
     '',
@@ -1338,7 +1380,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     deskPlayHtfTargetLine(play),
     deskPlayRunnerLine(play),
     '',
-    'Status: Review only until 5M trigger + canExecute.',
+    statusLine,
     deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: primary.hasLevels || opposite.hasLevels }),
   ];
 }
@@ -1365,6 +1407,8 @@ function deskPlayPrimaryLabel(
   if (direction === 'LONG' || direction === 'SHORT') return direction;
   if (play?.direction === 'LONG' || play?.direction === 'SHORT') {
     const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
+    const stateText = `${bias?.state || ''} ${bias?.tradeReadiness?.status || ''} ${bias?.executableConsideration?.status || ''}`;
+    if (hardBlockedDeskState(stateText)) return `WAIT / ${play.direction} FAILED`;
     if (bias?.state === 'primary') return `WAIT / ${play.direction} REVIEW`;
   }
   return 'WAIT';

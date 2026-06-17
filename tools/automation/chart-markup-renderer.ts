@@ -518,6 +518,24 @@ function qualityDisplay(item: DecisionQualityScoreItem | null): string {
   return `${Math.round(item.score)}/${max} ${qualityLabel(item)}`;
 }
 
+function deskPlayQualityRatio(item: DecisionQualityScoreItem | null): number | null {
+  if (!item || item.max <= 0) return null;
+  return item.score / item.max;
+}
+
+function deskPlayStructureOpposes(model: PlanRenderModel): boolean {
+  const context = `${model.contextBias} ${model.trendBias}`.toUpperCase();
+  if (model.direction === 'SHORT') return /\bLONG\b|\bBULL/.test(context);
+  return /\bSHORT\b|\bBEAR/.test(context);
+}
+
+function deskPlayUnsafeReview(model: PlanRenderModel): boolean {
+  if (model.renderMode !== 'desk_play_context') return false;
+  const sideQuality = model.direction === 'LONG' ? model.longQuality : model.shortQuality;
+  const ratio = deskPlayQualityRatio(sideQuality);
+  return deskPlayStructureOpposes(model) || (ratio !== null && ratio < 0.55);
+}
+
 function renderAlertQuality(candidate: SetupCandidate): string {
   const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
   const items = alertQualityBreakdown(candidate);
@@ -548,6 +566,7 @@ function renderAlertQuality(candidate: SetupCandidate): string {
 
 function renderWatchContextNotice(model: PlanRenderModel): string {
   const hasDeskPlayLevels = isPrice(model.entry) && isPrice(model.stop) && isPrice(model.t1) && isPrice(model.t2);
+  const unsafeReview = deskPlayUnsafeReview(model);
   return `
     <rect x="24" y="486" width="392" height="168" rx="7" fill="#020807" stroke="#38bdf8" stroke-width="1.5" opacity=".96" />
     <text x="38" y="515" class="alert-title" fill="#38bdf8">ALERT QUALITY</text>
@@ -556,7 +575,7 @@ function renderWatchContextNotice(model: PlanRenderModel): string {
     <text x="38" y="576" class="small">SHORT Quality: <tspan fill="#f8fafc">${qualityDisplay(model.shortQuality)}</tspan></text>
     <text x="38" y="600" class="small">canExecute: <tspan fill="#facc15">false</tspan></text>
     <text x="38" y="622" class="small">Levels: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan></text>
-    <text x="38" y="638" class="small">Next: <tspan fill="#f8fafc">${hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
+    <text x="38" y="638" class="small">Next: <tspan fill="#f8fafc">${unsafeReview ? 'do not execute this side' : hasDeskPlayLevels ? 'completed 5M proof' : 'protected 5M stop required'}</tspan></text>
   `;
 }
 
@@ -599,19 +618,23 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
       ? '#062315'
       : '#261406';
   const prefix = sessionPlanPrefix(input.sessionLabel);
+  const unsafeDeskReview = deskPlayUnsafeReview(model);
+  const oppositeDirection = model.direction === 'SHORT' ? 'LONG' : 'SHORT';
   const title = isDeskPlayContext
-    ? `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
+    ? unsafeDeskReview
+      ? `[${prefix} PREP] ${input.instrument} - ${model.direction} FAILED`
+      : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
     : `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
-  const badge = isDeskPlayContext ? 'REVIEW ONLY' : status;
+  const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status;
   const action = isDeskPlayContext
-    ? hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
+    ? unsafeDeskReview ? 'Action: no execution' : hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
     : actionStateLine(status);
   return `
     <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? 'Desk Map - Review Levels' : model.model, 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : 'Desk Map - Review Levels' : model.model, 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }

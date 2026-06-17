@@ -1153,6 +1153,88 @@ assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);
 assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 
+const deskPlayWideReviewCandidate = sampleCandidate('SHORT');
+deskPlayWideReviewCandidate.setupType = SetupType.IntradayMssMicroContinuation;
+deskPlayWideReviewCandidate.entry = 7581.25;
+deskPlayWideReviewCandidate.stop = 7600.5;
+deskPlayWideReviewCandidate.target1 = 7552.5;
+deskPlayWideReviewCandidate.target2 = 7542.75;
+deskPlayWideReviewCandidate.riskPoints = 19.25;
+deskPlayWideReviewCandidate.executionStatus = ExecutionStatus.Conditional;
+deskPlayWideReviewCandidate.blockReason = null;
+deskPlayWideReviewCandidate.requiredTrigger = 'Completed 5M close below 7591.00 required before short continuation is active.';
+deskPlayWideReviewCandidate.invalidation = 'Invalid if price reclaims above the protected 5M MSS swing stop near 7600.50.';
+const deskPlayWideReviewPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-17',
+  instrument: 'MES',
+  planVersionId: 'MORNING-WIDE-REVIEW-DESK-PLAY',
+  normalized: { ...normalized, decision: 'SHORT', setupCandidates: [deskPlayWideReviewCandidate] },
+  candidates: [deskPlayWideReviewCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Morning',
+  windowLabel: '09:15-12:00 ET',
+  currentPrice: 7597.75,
+  deskState: {
+    marketMode: 'human_review_ready',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7591,
+    nextTrigger: 'Completed 5M close below 7591.00 required before short continuation is active.',
+    invalidation: 'Invalid if price reclaims above the protected 5M MSS swing stop near 7600.50.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT desk map',
+      summary: 'Short side is the primary review map.',
+      lineInSand: 7591,
+      longAbove: 7610,
+      shortBelow: 7591,
+      targetReactionLevel: 7580,
+      targetReactionLabel: 'Reaction level',
+      targetReactionReason: 'Nearby reaction context.',
+      nextTrigger: 'Completed 5M close below 7591.00 required before short continuation is active.',
+      invalidation: 'Invalid if price reclaims above the protected 5M MSS swing stop near 7600.50.',
+      noChase: 'No chase. Wait for completed 5M proof.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', currentBias: 'BEAR', biasChangeLine: 7627.5, protectedStructure: 7600.5 },
+        ],
+      },
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Intraday MSS Micro Continuation',
+        decisionQualityScore: 44,
+        lineInSand: 7591,
+        reason: 'Short review levels are scanner-owned.',
+        blockers: ['canExecute=false'],
+      },
+      longBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Countertrend long review',
+        lineInSand: 7610,
+        reason: 'Opposite side context only.',
+        blockers: ['Countertrend review only.'],
+      },
+    },
+  },
+});
+const deskPlayWideReviewText = flattenDiscordPayloadText(deskPlayWideReviewPayload);
+assert.ok(deskPlayWideReviewText.includes('MES Current Desk Plan'));
+assert.ok(deskPlayWideReviewText.includes('SHORT BELOW 7591.00'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Review levels only - not an executable trade plan.'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Reference entry: 7581.25'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Reference stop: 7600.50'));
+assert.ok(deskPlayWideReviewText.includes('Reference T1: 7552.50'));
+assert.ok(deskPlayWideReviewText.includes('Reference T2: 7542.75'));
+assert.ok(deskPlayWideReviewText.includes('Reason: side quality is low.'));
+assert.ok(deskPlayWideReviewText.includes('Status: Review levels only - not executable; side quality is low. Wait for completed 5M trigger + canExecute.'));
+assert.ok(deskPlayWideReviewPayload.content?.includes('[AM DESK PLAY] MES - SHORT'));
+assert.ok(deskPlayWideReviewText.includes('Chart: attached.'));
+
 const lunch = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-05-26',

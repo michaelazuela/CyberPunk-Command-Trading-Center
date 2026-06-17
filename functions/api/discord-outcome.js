@@ -184,25 +184,35 @@ function outcomeLockLabel(payload) {
   return 'Outcome saved';
 }
 
-function disabledButton(label, customId) {
+function outcomeLockUrl(context) {
+  const base = (
+    getEnv(context, 'DISCORD_OUTCOME_BASE_URL') ||
+    getEnv(context, 'APP_URL') ||
+    getEnv(context, 'VITE_AUTH_REDIRECT_URL') ||
+    'https://discord.com'
+  ).replace(/\/$/, '');
+  return `${base}/api/discord-outcome?locked=1`;
+}
+
+function disabledButton(label, url) {
   return {
     type: 2,
-    style: 2,
+    style: 5,
     label,
-    custom_id: customId.slice(0, 100),
+    url,
     disabled: true,
   };
 }
 
-function buildLockedOutcomeComponents(payload) {
-  const planId = String(payload.pid || 'plan').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
+function buildLockedOutcomeComponents(context, payload) {
+  const lockedUrl = outcomeLockUrl(context);
   return [
     {
       type: 1,
       components: [
-        disabledButton(outcomeLockLabel(payload), `rag_saved_${planId}`),
-        disabledButton('RAG submitted', `rag_submitted_${planId}`),
-        disabledButton('No automated orders', `decision_support_${planId}`),
+        disabledButton(outcomeLockLabel(payload), lockedUrl),
+        disabledButton('RAG submitted', lockedUrl),
+        disabledButton('No automated orders', lockedUrl),
       ],
     },
   ];
@@ -218,7 +228,12 @@ function buildReplacementOutcomeMessage(payload) {
   ].join('\n');
 }
 
-function discordWebhookUrl(context) {
+function discordWebhookUrl(context, source) {
+  const sourceKey = typeof source === 'string' ? source : '';
+  if (sourceKey) {
+    const sourceUrl = getEnv(context, sourceKey);
+    if (sourceUrl) return sourceUrl;
+  }
   return (
     getEnv(context, 'QUANT_DESK_SCANNER_WEBHOOK_URL') ||
     getEnv(context, 'SCANNER_DISCORD_WEBHOOK_URL') ||
@@ -226,17 +241,18 @@ function discordWebhookUrl(context) {
   );
 }
 
-async function postDiscordOutcomeReplacementMessage(context, payload) {
-  const webhookUrl = discordWebhookUrl(context);
+async function postDiscordOutcomeReplacementMessage(context, payload, webhookSource) {
+  const webhookUrl = discordWebhookUrl(context, webhookSource);
   if (!webhookUrl) return { posted: false, reason: 'missing_discord_webhook_url', messageId: null };
   const url = new URL(webhookUrl);
   url.searchParams.set('wait', 'true');
+  url.searchParams.set('with_components', 'true');
   const response = await fetch(url.toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       content: buildReplacementOutcomeMessage(payload),
-      components: buildLockedOutcomeComponents(payload),
+      components: buildLockedOutcomeComponents(context, payload),
       allowed_mentions: { parse: [] },
     }),
   });
@@ -253,7 +269,8 @@ async function postDiscordOutcomeReplacementMessage(context, payload) {
 
 async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
   const messageId = typeof discordMessage?.messageId === 'string' ? discordMessage.messageId : '';
-  const webhookUrl = discordWebhookUrl(context);
+  const webhookSource = typeof discordMessage?.webhookSource === 'string' ? discordMessage.webhookSource : null;
+  const webhookUrl = discordWebhookUrl(context, webhookSource);
   if (!messageId || !webhookUrl) {
     return {
       edited: false,
@@ -264,18 +281,19 @@ async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
     };
   }
   const url = new URL(webhookUrl);
-  url.search = '';
   url.pathname = `${url.pathname.replace(/\/$/, '')}/messages/${encodeURIComponent(messageId)}`;
+  url.search = '';
+  url.searchParams.set('with_components', 'true');
   const response = await fetch(url.toString(), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      components: buildLockedOutcomeComponents(payload),
+      components: buildLockedOutcomeComponents(context, payload),
     }),
   });
   if (!response.ok) {
     if (response.status === 404) {
-      const replacement = await postDiscordOutcomeReplacementMessage(context, payload);
+      const replacement = await postDiscordOutcomeReplacementMessage(context, payload, webhookSource);
       if (replacement.posted) {
         return {
           edited: false,
@@ -486,6 +504,9 @@ export async function onRequestGet(context) {
     const url = new URL(context.request.url);
     if (url.searchParams.get('keycheck') === '1') {
       return keyCheckResponse(context);
+    }
+    if (url.searchParams.get('locked') === '1') {
+      return html('This Discord outcome card is already locked. RAG submission was recorded as decision-support learning only.');
     }
     const token = url.searchParams.get('t');
     const secrets = outcomeSecrets(context);

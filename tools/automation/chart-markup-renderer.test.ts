@@ -508,6 +508,34 @@ try {
     renderMode: 'desk_play_context',
   });
   assert.ok(deskReviewHtml.includes('>16:00<'), 'desk-review charts must not clip campaigns at noon');
+  const failedShortReviewHtml = buildChartMarkupHtmlForTest({
+    chartContext: chartContext,
+    candidate: {
+      ...candidate,
+      direction: 'SHORT',
+      entry: 7581.25,
+      stop: 7600.5,
+      target1: 7552.5,
+      target2: 7542.75,
+      riskPoints: 19.25,
+      decisionQualityScore: 44,
+      decisionQualityScorecard: [
+        { label: 'LONG Quality', score: 98, max: 100, status: 'strong', note: 'high' },
+        { label: 'SHORT Quality', score: 44, max: 100, status: 'weak', note: 'low' },
+      ],
+    },
+    instrument: 'MES',
+    tradeDate: '2026-06-17',
+    sessionLabel: 'Morning Desk Review',
+    renderMode: 'desk_play_context',
+    contextLine: 7591,
+    contextLabel: 'Line in the sand',
+  });
+  assert.ok(failedShortReviewHtml.includes('SHORT FAILED'));
+  assert.ok(failedShortReviewHtml.includes('WATCH ONLY'));
+  assert.ok(failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
+  assert.ok(failedShortReviewHtml.includes('Action: no execution'));
+  assert.ok(failedShortReviewHtml.includes('do not execute this side'));
   const morningTradePlanHtml = buildChartMarkupHtmlForTest({
     chartContext: { ...chartContext, candles: fullDeskReviewCandles },
     candidate,
