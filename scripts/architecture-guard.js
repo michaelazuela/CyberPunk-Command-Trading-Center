@@ -584,27 +584,33 @@ function checkScannerVisibilityMetadataBoundary() {
     !chartRendererContent.includes('Action: wait for completed 5M proof') ||
     !chartRendererContent.includes('REVIEW LEVELS') ||
     !chartRendererContent.includes('REVIEW ENTRY ZONE') ||
-    !chartRendererContent.includes('ALERT QUALITY') ||
-    !chartRendererContent.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL') ||
-    !chartRendererContent.includes('renderDeskPlayMetricChip') ||
-    !chartRendererContent.includes('deskPlaySideQuality') ||
-    !chartRendererContent.includes('LONG Quality: <tspan fill="#f8fafc">${qualityDisplay(model.longQuality)}</tspan>') ||
-    !chartRendererContent.includes('SHORT Quality: <tspan fill="#f8fafc">${qualityDisplay(model.shortQuality)}</tspan>') ||
-    !chartRendererContent.includes('HTF Runner') ||
-    !chartRendererContent.includes('HTF RUNNER') ||
-    !chartRendererContent.includes("Levels: <tspan fill=\"#f8fafc\">${hasDeskPlayLevels ? 'review planning only' : 'not available'}</tspan>") ||
-    !chartRendererContent.includes('completed 5M proof')
-  ) {
-    fail('chart-markup-renderer.ts must label Desk Play chart artifacts as prep/review-only with two-sided quality and separated level chips.');
-  }
+      !chartRendererContent.includes('DESK READINESS') ||
+      !chartRendererContent.includes('PREP / REVIEW ONLY - NOT EXECUTION APPROVAL') ||
+      !chartRendererContent.includes('renderDeskPlayMetricChip') ||
+      !chartRendererContent.includes('deskPlaySideQuality') ||
+      !chartRendererContent.includes('Primary Map: <tspan fill="#f8fafc">${readiness.primarySide} ${readiness.primaryStrength}</tspan>') ||
+      !chartRendererContent.includes('Opposing Context: <tspan fill="#f8fafc">${readiness.opposingSide} ${readiness.opposingStrength}</tspan>') ||
+      !chartRendererContent.includes('Execution: <tspan fill="#facc15">Review only / canExecute=false</tspan>') ||
+      !chartRendererContent.includes('Trigger: <tspan fill="#f8fafc">${readiness.trigger}</tspan>') ||
+      !chartRendererContent.includes('Risk: <tspan fill="#f8fafc">${readiness.risk}</tspan>') ||
+      !chartRendererContent.includes('Targets: <tspan fill="#f8fafc">${readiness.targets}</tspan>') ||
+      !chartRendererContent.includes('HTF Context: <tspan fill="#f8fafc">${escapeHtml(readiness.htf)}</tspan>') ||
+      !chartRendererContent.includes('HTF Runner') ||
+      !chartRendererContent.includes('HTF RUNNER') ||
+      !chartRendererContent.includes('completed 5M proof')
+    ) {
+      fail('chart-markup-renderer.ts must label Desk Play chart artifacts as prep/review-only with two-sided quality and separated level chips.');
+    }
   if (
     chartRendererContent.includes('Desk Play - Conditional Levels') ||
     chartRendererContent.includes('Desk Play - Review Levels') ||
     chartRendererContent.includes('trigger + canExecute') ||
     chartRendererContent.includes('trigger + approval gates') ||
     chartRendererContent.includes('conditional planning only') ||
-    chartRendererContent.includes('Trade levels:') ||
-    chartRendererContent.includes('CONDITIONAL LEVELS') ||
+      chartRendererContent.includes('Trade levels:') ||
+      chartRendererContent.includes('LONG Quality: <tspan fill="#f8fafc">') ||
+      chartRendererContent.includes('SHORT Quality: <tspan fill="#f8fafc">') ||
+      chartRendererContent.includes('CONDITIONAL LEVELS') ||
     chartRendererContent.includes('CONDITIONAL ENTRY ZONE') ||
     chartRendererContent.includes('CONDITIONAL DESK PLAN ONLY') ||
     chartRendererContent.includes('REVIEW DESK PLAN ONLY')
