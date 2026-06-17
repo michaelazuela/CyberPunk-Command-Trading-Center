@@ -233,6 +233,10 @@ const morningText = flattenDiscordPayloadText(morning);
 assert.ok(morningText.includes('MES Current Desk Plan'));
 assert.ok(morningText.includes('Primary: LONG'));
 assert.ok(morningText.includes('Line in sand: 5329.00'));
+assert.ok(morningText.includes('Overall play: LONG above 5329.00.'));
+assert.ok(morningText.includes('Next trigger:'));
+assert.ok(morningText.includes('Invalidation:'));
+assert.ok(morningText.includes('Stand down:'));
 assert.ok(morningText.includes('LONG ABOVE 5329.00'));
 assert.ok(morningText.includes('Entry: 5320.00'));
 assert.ok(morningText.includes('Stop: 5316.00'));
@@ -246,7 +250,6 @@ assert.ok(!morningText.includes('Targets:'));
 assert.ok(!morningText.includes('Trigger:'));
 assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
-assert.ok(!morningText.includes('Invalidation:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
 const watchCandidate = {
@@ -564,6 +567,10 @@ assert.ok(deskPlayText.includes('MES Current Desk Plan'));
 assert.ok(deskPlayText.includes('Primary: WAIT / LONG REVIEW'));
 assert.ok(deskPlayText.includes('Bias: HTF protected structure rows are scanner-owned context only.'));
 assert.ok(deskPlayText.includes('Line in sand: 7342.00'));
+assert.ok(deskPlayText.includes('Overall play: LONG above 7342.00.'));
+assert.ok(deskPlayText.includes('Next trigger:'));
+assert.ok(deskPlayText.includes('Invalidation:'));
+assert.ok(deskPlayText.includes('Stand down:'));
 assert.ok(deskPlayText.includes('Map Side: LONG 82/100 high'));
 assert.ok(deskPlayText.includes('Map Role: chart map under review'));
 assert.ok(deskPlayText.includes('Opposing Side: SHORT 58/100 medium'));
@@ -1660,10 +1667,11 @@ const scannerRetestPendingPayload = compactDiscordSummary({
 validateDiscordPayload(scannerRetestPendingPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerRetestPendingText = flattenDiscordPayloadText(scannerRetestPendingPayload);
 assert.ok(scannerRetestPendingText.includes('MES Current Desk Plan'));
+assert.ok(scannerRetestPendingText.includes('Next trigger:'));
+assert.ok(scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
 assert.ok(scannerRetestPendingText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(!scannerRetestPendingText.includes('Trigger State: MSS_CONTINUATION_RETEST_PENDING'));
-assert.ok(!scannerRetestPendingText.includes('completed 5M retest/rejection below the decision level'));
-assert.ok(scannerRetestPendingText.length < 1200, `expected retest-pending scanner payload under 1200 chars, got ${scannerRetestPendingText.length}`);
+assert.ok(scannerRetestPendingText.length < 1400, `expected retest-pending scanner payload under 1400 chars, got ${scannerRetestPendingText.length}`);
 assert.equal(/EXECUTABLE -|Trade now|Entry confirmed|Take the trade|Enter now|Sell now|Trade approved/i.test(scannerRetestPendingText), false);
 
 const dataLimitedScannerCandidate = sampleCandidate('LONG');

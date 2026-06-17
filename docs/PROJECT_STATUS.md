@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-17
+Task: Install Phase C one-main-play Discord workflow.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: After Phase B filtering, Discord still needed trader-facing language and lifecycle memory built around one current main play. Phase C makes the Current Desk Plan state the overall play, next trigger, invalidation, and stand-down condition, and treats changes to those instructions as meaningful updates even when price levels are unchanged.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run supervisor:status; direct `/status` timing.
+Result: Passed. Current Desk Plan cards now show `Overall play`, `Next trigger`, `Invalidation`, and `Stand down` near the top of the message. Desk Play refresh records now include a normalized `mainPlayFingerprint` covering direction, campaign, levels, next trigger, invalidation, stand-down instruction, and readiness. Duplicate suppression now suppresses unchanged main-play state while allowing a new Discord update when trader instructions meaningfully change.
+Trading logic changed: No. This is Discord presentation and Desk Play delivery lifecycle only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bar-close handling changed.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth; no bridge contract or candle handling changed.
+Discord impact: Yes. The channel now has the structure for one main play and meaningful-update cadence.
+Journal/RAG impact: No schema change. RAG payloads carry the same DeskState plus clearer rendered Discord text and receipt behavior.
+Supabase impact: No migration added.
+Known risks: Scanner Discord remains intentionally disabled in local supervisor config until re-enabled for observed live validation.
+Next recommended action: Phase D only if live observation still shows wrong main-play selection. Otherwise re-enable scanner Discord for monitored paper/live observation with Phase A/B/C protections active.
+
+## Previous Change
+
+Date: 2026-06-17
 Task: Install Phase B Discord Desk Play suppression and dedupe filters.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/config.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
 Reason: Live scanner Desk Play refreshes were overposting review maps and stale/unchanged levels. Phase B needed a delivery-only policy that suppresses duplicate unchanged Desk Play refreshes, low-quality maps, stale data, and levels already passed or invalidated before a Discord post is attempted.

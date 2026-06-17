@@ -252,6 +252,11 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   target1: number | null;
   target2: number | null;
   targetReactionLevel: number | null;
+  nextTrigger: string | null;
+  invalidation: string | null;
+  standDown: string | null;
+  readiness: string | null;
+  mainPlayFingerprint: string;
   sentAt: string;
 }
 
@@ -3259,6 +3264,58 @@ function deskPlanRefreshPrice(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'none';
 }
 
+function normalizeDeskPlayInstructionText(value: string | null | undefined): string {
+  return (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function scannerDeskPlayPrimaryBias(deskState: DeskState): DeskPlayDirectionalBias | null {
+  const direction = deskState.primaryDeskPlay.direction;
+  if (direction === 'LONG') return deskState.primaryDeskPlay.longBias;
+  if (direction === 'SHORT') return deskState.primaryDeskPlay.shortBias;
+  return null;
+}
+
+function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | null {
+  const play = deskState.primaryDeskPlay;
+  const primaryBias = scannerDeskPlayPrimaryBias(deskState);
+  if (play.direction !== 'LONG' && play.direction !== 'SHORT') return 'Stand down until one primary side is confirmed by scanner-owned DeskState.';
+  if (deskState.dataQualityStatus === 'data_limited') return 'Stand down until data quality recovers.';
+  if (deskState.htfContextStatus === 'insufficient') return 'Stand down until HTF context is sufficient.';
+  if (primaryBias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down; the move is missed/no-chase until a fresh completed 5M setup forms.';
+  if (primaryBias?.tradeReadiness?.status === 'blocked') return primaryBias.tradeReadiness.reason || 'Stand down while the primary side is blocked.';
+  if (play.invalidation) return play.invalidation;
+  if (deskState.invalidation) return deskState.invalidation;
+  const line = play.lineInSand ?? primaryBias?.lineInSand ?? null;
+  if (typeof line === 'number') {
+    return play.direction === 'LONG'
+      ? `Stand down if price accepts below ${line.toFixed(2)}.`
+      : `Stand down if price accepts above ${line.toFixed(2)}.`;
+  }
+  return 'Stand down if the primary side loses completed 5M proof or canExecute remains false.';
+}
+
+function scannerDeskPlayMainPlayFingerprint(args: {
+  record: Omit<ScannerDeskPlanRefreshLedgerRecord, 'mainPlayFingerprint'>;
+}): string {
+  const record = args.record;
+  return [
+    record.activeCampaignId || 'no-campaign',
+    record.direction,
+    deskPlanRefreshPrice(record.lineInSand),
+    deskPlanRefreshPrice(record.longLine),
+    deskPlanRefreshPrice(record.shortLine),
+    deskPlanRefreshPrice(record.entry),
+    deskPlanRefreshPrice(record.stop),
+    deskPlanRefreshPrice(record.target1),
+    deskPlanRefreshPrice(record.target2),
+    deskPlanRefreshPrice(record.targetReactionLevel),
+    normalizeDeskPlayInstructionText(record.nextTrigger),
+    normalizeDeskPlayInstructionText(record.invalidation),
+    normalizeDeskPlayInstructionText(record.standDown),
+    normalizeDeskPlayInstructionText(record.readiness),
+  ].join('|');
+}
+
 export function scannerDeskPlanRefreshKey(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -3302,7 +3359,8 @@ function scannerDeskPlanRefreshRecord(args: {
     ? args.deskState.bestShortPlan
     : args.deskState.selectedCandidate || args.deskState.bestLongPlan || args.deskState.bestShortPlan;
   const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
-  return {
+  const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
+  const recordWithoutFingerprint = {
     fingerprint: args.key,
     tradeDate: args.tradeDate,
     instrument: args.instrument,
@@ -3318,7 +3376,15 @@ function scannerDeskPlanRefreshRecord(args: {
     target1: primaryLifecycle?.target1 ?? null,
     target2: primaryLifecycle?.target2 ?? null,
     targetReactionLevel: play.targetReactionLevel,
+    nextTrigger: play.nextTrigger || args.deskState.nextTrigger || primaryLifecycle?.nextTrigger || primaryLifecycle?.requiredTrigger || null,
+    invalidation: play.invalidation || args.deskState.invalidation || primaryLifecycle?.invalidation || null,
+    standDown: scannerDeskPlayStandDownInstruction(args.deskState),
+    readiness: primaryBias?.tradeReadiness?.status || null,
     sentAt: args.sentAt,
+  };
+  return {
+    ...recordWithoutFingerprint,
+    mainPlayFingerprint: scannerDeskPlayMainPlayFingerprint({ record: recordWithoutFingerprint }),
   };
 }
 
@@ -3357,13 +3423,6 @@ function scannerDeskPlayPrimaryLifecycle(deskState: DeskState): ScannerCandidate
   return deskState.selectedCandidate;
 }
 
-function scannerDeskPlayPrimaryBias(deskState: DeskState): DeskPlayDirectionalBias | null {
-  const direction = deskState.primaryDeskPlay.direction;
-  if (direction === 'LONG') return deskState.primaryDeskPlay.longBias;
-  if (direction === 'SHORT') return deskState.primaryDeskPlay.shortBias;
-  return null;
-}
-
 function priceMateriallyEqual(a: number | null, b: number | null, tolerance = 0.01): boolean {
   if (a === null || b === null) return a === b;
   return Math.abs(a - b) <= tolerance;
@@ -3373,6 +3432,9 @@ function scannerDeskPlanRefreshMateriallyMatches(
   previous: ScannerDeskPlanRefreshLedgerRecord,
   current: ScannerDeskPlanRefreshLedgerRecord,
 ): boolean {
+  if (previous.mainPlayFingerprint || current.mainPlayFingerprint) {
+    return previous.mainPlayFingerprint === current.mainPlayFingerprint;
+  }
   return previous.activeCampaignId === current.activeCampaignId &&
     previous.direction === current.direction &&
     priceMateriallyEqual(previous.lineInSand, current.lineInSand) &&
@@ -3382,7 +3444,11 @@ function scannerDeskPlanRefreshMateriallyMatches(
     priceMateriallyEqual(previous.stop, current.stop) &&
     priceMateriallyEqual(previous.target1, current.target1) &&
     priceMateriallyEqual(previous.target2, current.target2) &&
-    priceMateriallyEqual(previous.targetReactionLevel, current.targetReactionLevel);
+    priceMateriallyEqual(previous.targetReactionLevel, current.targetReactionLevel) &&
+    normalizeDeskPlayInstructionText(previous.nextTrigger) === normalizeDeskPlayInstructionText(current.nextTrigger) &&
+    normalizeDeskPlayInstructionText(previous.invalidation) === normalizeDeskPlayInstructionText(current.invalidation) &&
+    normalizeDeskPlayInstructionText(previous.standDown) === normalizeDeskPlayInstructionText(current.standDown) &&
+    normalizeDeskPlayInstructionText(previous.readiness) === normalizeDeskPlayInstructionText(current.readiness);
 }
 
 function latestDeskPlanRefreshRecord(args: {

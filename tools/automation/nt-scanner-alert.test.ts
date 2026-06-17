@@ -1051,6 +1051,26 @@ const previousDeskPlanRefreshRecord = {
   target1: 7405.38,
   target2: 7401.5,
   targetReactionLevel: 7405,
+  nextTrigger: null,
+  invalidation: null,
+  standDown: 'Stand down if price accepts above 7416.50.',
+  readiness: null,
+  mainPlayFingerprint: [
+    '2026-06-08:SHORT:15M5M-MSS',
+    'SHORT',
+    '7416.50',
+    'none',
+    '7416.50',
+    '7412.75',
+    '7424.75',
+    '7405.38',
+    '7401.50',
+    '7405.00',
+    '',
+    '',
+    'stand down if price accepts above 7416.50.',
+    '',
+  ].join('|'),
   sentAt: '2026-06-08T15:35:30.000Z',
 } as const;
 const duplicateDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
@@ -1069,6 +1089,24 @@ assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
 assert.equal(duplicateDeskPlaySuppression.previousFingerprint, firstDeskPlanRefreshKey);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const changedInstructionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      nextTrigger: 'Only update if completed 5M accepts below 7416.50 and rejects the retest.',
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(changedInstructionDeskPlaySuppression.shouldPost, true);
+assert.equal(changedInstructionDeskPlaySuppression.category, 'post');
 const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -2539,6 +2577,10 @@ try {
   assert.ok(deskPlayText.includes('Primary: LONG'));
   assert.ok(deskPlayText.includes('Bias:'));
   assert.ok(deskPlayText.includes('Line in sand: 5324.25'));
+  assert.ok(deskPlayText.includes('Overall play: LONG above 5324.25.'));
+  assert.ok(deskPlayText.includes('Next trigger:'));
+  assert.ok(deskPlayText.includes('Invalidation:'));
+  assert.ok(deskPlayText.includes('Stand down:'));
   assert.ok(deskPlayText.includes('LONG ABOVE 5324.25'));
   assert.ok(deskPlayText.includes('Entry: 5324.25'));
   assert.ok(deskPlayText.includes('Stop: 5319.25'));

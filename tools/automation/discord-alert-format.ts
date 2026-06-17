@@ -1050,7 +1050,11 @@ function deskPlayBiasSummary(
 ): string {
   const rows = play.htfProtectedStructureMap?.rows || [];
   const expected = direction === 'SHORT' ? 'BEAR' : direction === 'LONG' ? 'BULL' : null;
-  if (!expected) return compactLine(play.htfProtectedStructureMap?.summary || play.summary || 'No current directional bias confirmed.', 96);
+  if (!expected) {
+    return rows.length
+      ? 'HTF protected structure rows are scanner-owned context only.'
+      : 'No current directional bias confirmed.';
+  }
   const label = expected === 'BULL' ? 'bullish' : 'bearish';
   const rowByTimeframe = new Map(rows.map((row) => [String(row.timeframe || '').toUpperCase(), row]));
   const aligned = ['15M', '5M'].filter((tf) => {
@@ -1068,7 +1072,7 @@ function deskPlayBiasSummary(
     parts.push('1H supportive');
   }
   if (parts.length) return parts.join(', ');
-  const trendSummary = play.trendConfirmation?.summary || play.trendConfirmation?.confirmation || play.summary;
+  const trendSummary = play.trendConfirmation?.summary || play.trendConfirmation?.confirmation || null;
   return compactLine(trendSummary || `${direction} review map; HTF support not fully aligned.`, 96);
 }
 
@@ -1249,6 +1253,10 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Bias: ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
     `Line in sand: ${priceLine(lineInSand)}`,
+    `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
+    `Next trigger: ${compactInstruction(candidate.requiredTrigger || candidate.nextAction, `completed 5M acceptance ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`)}`,
+    `Invalidation: ${compactInstruction(candidate.invalidation, `invalid ${invalidWord} ${priceLine(levels.stop)}.`)}`,
+    `Stand down: ${compactInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
     `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
     `Entry: ${priceLine(candidate.entry)}`,
@@ -1279,6 +1287,79 @@ function deskPlayChartStatusLine(args: {
 
 function hardBlockedDeskState(value: string): boolean {
   return /(^|[_\s-])(blocked|failed|not_aligned)([_\s-]|$)/i.test(value);
+}
+
+function deskPlayBiasForDirection(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT',
+) {
+  return direction === 'LONG' ? play.longBias : play.shortBias;
+}
+
+function compactInstruction(value: string | null | undefined, fallback: string): string {
+  const cleaned = (value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^[A-Z][A-Za-z0-9\s/+&-]{6,90}:\s+/, '');
+  return cleaned || fallback;
+}
+
+function deskPlayStandDownLine(args: {
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
+  deskState?: CompactDeskStateForDiscord;
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  lineInSand: number | null;
+}): string {
+  const bias = args.direction === 'LONG' || args.direction === 'SHORT'
+    ? deskPlayBiasForDirection(args.play, args.direction)
+    : null;
+  if (args.direction === 'WAIT') return 'Stand down: no single primary side is active.';
+  if (args.deskState?.dataQualityStatus === 'data_limited') return 'Stand down: data quality is limited.';
+  if (bias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down: move is missed/no-chase until fresh completed 5M proof forms.';
+  if (bias?.tradeReadiness?.status === 'blocked') return `Stand down: ${compactInstruction(bias.tradeReadiness.reason, 'primary side is blocked.')}`;
+  const invalidation = args.play.invalidation || args.deskState?.invalidation || null;
+  if (invalidation) return `Stand down: ${compactInstruction(invalidation, 'primary invalidation is active.')}`;
+  if (typeof args.lineInSand === 'number') {
+    return args.direction === 'LONG'
+      ? `Stand down: completed acceptance below ${priceLine(args.lineInSand)}.`
+      : `Stand down: completed acceptance above ${priceLine(args.lineInSand)}.`;
+  }
+  return 'Stand down: completed 5M proof is missing or canExecute remains false.';
+}
+
+function deskPlayMainInstructionLines(args: {
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>;
+  deskState?: CompactDeskStateForDiscord;
+  direction: 'LONG' | 'SHORT' | 'WAIT';
+  lineInSand: number | null;
+}): string[] {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') {
+    const activeSide = args.play.direction === 'LONG' || args.play.direction === 'SHORT' ? args.play.direction : null;
+    const activeBias = activeSide ? deskPlayBiasForDirection(args.play, activeSide) : null;
+    const waitTrigger = activeBias?.tradeReadiness?.action ||
+      activeBias?.tradeReadiness?.reason ||
+      args.play.nextTrigger ||
+      args.deskState?.nextTrigger;
+    return [
+      'Overall play: WAIT.',
+      `Next trigger: ${compactInstruction(waitTrigger, 'wait for one primary side with completed 5M proof.')}`,
+      'Invalidation: N/A until a primary side is active.',
+      deskPlayStandDownLine(args),
+    ];
+  }
+  const triggerWord = args.direction === 'LONG' ? 'above' : 'below';
+  const nextTrigger = args.play.nextTrigger || args.deskState?.nextTrigger || `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`;
+  const invalidation = args.play.invalidation || args.deskState?.invalidation || (
+    args.direction === 'LONG'
+      ? `completed acceptance below ${priceLine(args.lineInSand)}.`
+      : `completed acceptance above ${priceLine(args.lineInSand)}.`
+  );
+  return [
+    `Overall play: ${args.direction} ${triggerWord} ${priceLine(args.lineInSand)}.`,
+    `Next trigger: ${compactInstruction(nextTrigger, `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`)}`,
+    `Invalidation: ${compactInstruction(invalidation, 'primary invalidation is not available.')}`,
+    deskPlayStandDownLine(args),
+  ];
 }
 
 function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
@@ -1389,6 +1470,12 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       `Primary: ${deskPlayPrimaryLabel(play, direction)}`,
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       `Line in sand: ${priceLine(play.lineInSand)}`,
+      ...deskPlayMainInstructionLines({
+        play,
+        deskState: args.deskState,
+        direction: waitMapSide,
+        lineInSand: play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
+      }),
       ...readinessLinesFor(waitMapSide, waitPrimarySafety, longWait.hasLevels || shortWait.hasLevels),
       '',
       'HTF Lines:',
@@ -1421,6 +1508,12 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Primary: ${direction}`,
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     `Line in sand: ${priceLine(lineInSand)}`,
+    ...deskPlayMainInstructionLines({
+      play,
+      deskState: args.deskState,
+      direction,
+      lineInSand,
+    }),
     ...readinessLinesFor(direction, primarySafety, primary.hasLevels || opposite.hasLevels),
     '',
     'HTF Lines:',
