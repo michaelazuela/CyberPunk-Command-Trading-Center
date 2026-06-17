@@ -43,6 +43,7 @@ import {
   type BridgeTimestampMode,
   type DeskPlayDirectionalBias,
   type ScannerConfidenceBreakdown,
+  type ScannerCandidateLifecycleTraceItem,
   type ScannerCandidateLifecycleTrace,
   type DeskState,
   type ScannerState,
@@ -252,6 +253,22 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   target2: number | null;
   targetReactionLevel: number | null;
   sentAt: string;
+}
+
+export type ScannerDeskPlayDiscordSuppressionCategory =
+  | 'post'
+  | 'stale_data'
+  | 'low_quality_map'
+  | 'stale_levels'
+  | 'duplicate_refresh';
+
+export interface ScannerDeskPlayDiscordSuppressionDecision {
+  shouldPost: boolean;
+  category: ScannerDeskPlayDiscordSuppressionCategory;
+  reason: string;
+  previousFingerprint: string | null;
+  changesTradingLogic: false;
+  changesCanExecute: false;
 }
 
 export interface ScannerActiveCampaignDurableLedgerConfig {
@@ -3305,6 +3322,186 @@ function scannerDeskPlanRefreshRecord(args: {
   };
 }
 
+function scannerDeskPlaySuppressionPost(
+  reason = 'Desk Play refresh is eligible for Discord.',
+): ScannerDeskPlayDiscordSuppressionDecision {
+  return {
+    shouldPost: true,
+    category: 'post',
+    reason,
+    previousFingerprint: null,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+  };
+}
+
+function scannerDeskPlaySuppressionBlocked(
+  category: Exclude<ScannerDeskPlayDiscordSuppressionCategory, 'post'>,
+  reason: string,
+  previousFingerprint: string | null = null,
+): ScannerDeskPlayDiscordSuppressionDecision {
+  return {
+    shouldPost: false,
+    category,
+    reason,
+    previousFingerprint,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+  };
+}
+
+function scannerDeskPlayPrimaryLifecycle(deskState: DeskState): ScannerCandidateLifecycleTraceItem | null {
+  const direction = deskState.primaryDeskPlay.direction;
+  if (direction === 'LONG') return deskState.bestLongPlan;
+  if (direction === 'SHORT') return deskState.bestShortPlan;
+  return deskState.selectedCandidate;
+}
+
+function scannerDeskPlayPrimaryBias(deskState: DeskState): DeskPlayDirectionalBias | null {
+  const direction = deskState.primaryDeskPlay.direction;
+  if (direction === 'LONG') return deskState.primaryDeskPlay.longBias;
+  if (direction === 'SHORT') return deskState.primaryDeskPlay.shortBias;
+  return null;
+}
+
+function priceMateriallyEqual(a: number | null, b: number | null, tolerance = 0.01): boolean {
+  if (a === null || b === null) return a === b;
+  return Math.abs(a - b) <= tolerance;
+}
+
+function scannerDeskPlanRefreshMateriallyMatches(
+  previous: ScannerDeskPlanRefreshLedgerRecord,
+  current: ScannerDeskPlanRefreshLedgerRecord,
+): boolean {
+  return previous.activeCampaignId === current.activeCampaignId &&
+    previous.direction === current.direction &&
+    priceMateriallyEqual(previous.lineInSand, current.lineInSand) &&
+    priceMateriallyEqual(previous.longLine, current.longLine) &&
+    priceMateriallyEqual(previous.shortLine, current.shortLine) &&
+    priceMateriallyEqual(previous.entry, current.entry) &&
+    priceMateriallyEqual(previous.stop, current.stop) &&
+    priceMateriallyEqual(previous.target1, current.target1) &&
+    priceMateriallyEqual(previous.target2, current.target2) &&
+    priceMateriallyEqual(previous.targetReactionLevel, current.targetReactionLevel);
+}
+
+function latestDeskPlanRefreshRecord(args: {
+  sent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+}): ScannerDeskPlanRefreshLedgerRecord | null {
+  return Object.values(args.sent)
+    .filter((record) =>
+      record.tradeDate === args.tradeDate &&
+      record.instrument === args.instrument &&
+      record.session === args.session
+    )
+    .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0] || null;
+}
+
+function scannerDeskPlayStaleLevelReason(args: {
+  deskState: DeskState;
+  currentPrice: number | null;
+}): string | null {
+  const currentPrice = args.currentPrice;
+  if (typeof currentPrice !== 'number' || !Number.isFinite(currentPrice)) return null;
+  const direction = args.deskState.primaryDeskPlay.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const primary = scannerDeskPlayPrimaryLifecycle(args.deskState);
+  const line = args.deskState.primaryDeskPlay.lineInSand ?? primary?.lineInSand ?? null;
+  const stop = primary?.stop ?? null;
+  const target1 = primary?.target1 ?? null;
+  const target2 = primary?.target2 ?? null;
+  const reaction = args.deskState.primaryDeskPlay.targetReactionLevel ?? primary?.targetReactionLevel ?? null;
+  const buffer = 0.25;
+
+  if (direction === 'LONG') {
+    if (typeof stop === 'number' && currentPrice <= stop + buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is at/below protected stop ${stop.toFixed(2)}.`;
+    if (typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below line in the sand ${line.toFixed(2)}.`;
+    if (typeof target2 === 'number' && currentPrice >= target2 - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
+    if (typeof target1 === 'number' && currentPrice >= target1 - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
+    if (typeof reaction === 'number' && currentPrice >= reaction - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
+  } else {
+    if (typeof stop === 'number' && currentPrice >= stop - buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is at/above protected stop ${stop.toFixed(2)}.`;
+    if (typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above line in the sand ${line.toFixed(2)}.`;
+    if (typeof target2 === 'number' && currentPrice <= target2 + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
+    if (typeof target1 === 'number' && currentPrice <= target1 + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
+    if (typeof reaction === 'number' && currentPrice <= reaction + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
+  }
+  return null;
+}
+
+export function evaluateScannerDeskPlayDiscordSuppression(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  deskPlayKey: string;
+  deskState: DeskState;
+  deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
+  currentPrice: number | null;
+  latestCompleted5m?: string | null;
+  staleReason?: string | null;
+  now?: Date;
+}): ScannerDeskPlayDiscordSuppressionDecision {
+  if (args.staleReason) {
+    return scannerDeskPlaySuppressionBlocked('stale_data', `Desk Play suppressed because completed 5M data is stale: ${args.staleReason}`);
+  }
+  if (args.deskState.canExecute) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
+  }
+  if (args.deskState.dataQualityStatus === 'data_limited') {
+    return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited.');
+  }
+  if (args.deskState.htfContextStatus === 'insufficient') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient for a trader-facing map.');
+  }
+  const play = args.deskState.primaryDeskPlay;
+  if (play.direction === 'WAIT') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because no single primary side is confirmed; keep as internal watch/review only.');
+  }
+  const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
+  const readiness = primaryBias?.tradeReadiness?.status || null;
+  if (primaryBias && primaryBias.state !== 'primary') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
+  }
+  if (readiness === 'data_limited' || readiness === 'not_aligned' || readiness === 'blocked' || readiness === 'missed_no_chase') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
+  }
+  const staleLevelReason = scannerDeskPlayStaleLevelReason({
+    deskState: args.deskState,
+    currentPrice: args.currentPrice,
+  });
+  if (staleLevelReason) {
+    return scannerDeskPlaySuppressionBlocked('stale_levels', staleLevelReason);
+  }
+
+  const currentRecord = scannerDeskPlanRefreshRecord({
+    key: args.deskPlayKey,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    deskState: args.deskState,
+    latestCompleted5m: args.latestCompleted5m,
+    sentAt: (args.now || new Date()).toISOString(),
+  });
+  const previousRecord = latestDeskPlanRefreshRecord({
+    sent: args.deskPlanRefreshSent,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+  });
+  if (previousRecord && scannerDeskPlanRefreshMateriallyMatches(previousRecord, currentRecord)) {
+    return scannerDeskPlaySuppressionBlocked(
+      'duplicate_refresh',
+      'Desk Play suppressed because primary side, campaign, line, entry, stop, targets, and reaction level are unchanged from the latest posted Desk Play.',
+      previousRecord.fingerprint,
+    );
+  }
+
+  return scannerDeskPlaySuppressionPost();
+}
+
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
   const parsed = parseBridgeTime(bar.time, mode);
   if (!parsed) return null;
@@ -5200,7 +5397,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       deskState,
       latestCompleted5m: completed5m.time,
     });
-    if (!state.deskPlanRefreshSent[deskPlayKey]) {
+    const deskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+      tradeDate,
+      instrument: config.instrument,
+      session: window.session,
+      deskPlayKey,
+      deskState,
+      deskPlanRefreshSent: state.deskPlanRefreshSent,
+      currentPrice,
+      latestCompleted5m: completed5m.time,
+      staleReason: stale.reason,
+    });
+    if (!deskPlaySuppression.shouldPost) {
+      console.log(`[scanner] Desk Play refresh suppressed (${deskPlaySuppression.category}): ${deskPlaySuppression.reason}${deskPlaySuppression.previousFingerprint ? ` | previous=${deskPlaySuppression.previousFingerprint}` : ''}`);
+    } else if (!state.deskPlanRefreshSent[deskPlayKey]) {
       const deskPlayPlanVersionId = `${planVersionId}-DESK-PLAY`;
       try {
         const deskPlayArtifacts = await prepareLiveScannerDeskPlayAlertArtifacts({

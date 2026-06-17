@@ -163,6 +163,17 @@ assert.ok(serviceFilteredConfig.config.childServices.find((service) => service.i
 assert.equal(serviceFilteredConfig.config.health.restartEnabled, true);
 assert.equal(serviceFilteredConfig.config.health.maxRestartAttempts, 3);
 
+const scannerDiscordDisabledConfig = loadSupervisorConfig(
+  {
+    SUPERVISOR_SCANNER_DISCORD_ENABLED: 'false',
+  },
+  'C:\\quant-desk',
+);
+const scannerDiscordDisabledService = scannerDiscordDisabledConfig.config.childServices.find((service) => service.id === 'scanner');
+assert.ok(scannerDiscordDisabledService);
+assert.deepEqual(scannerDiscordDisabledService.args.slice(-2), ['--discord', 'false']);
+assert.equal(scannerDiscordDisabledService.args.includes('--instrument'), true);
+
 const statusSource = await import('./status');
 assert.equal('runTradeDecisionPipeline' in statusSource, false);
 assert.equal('scanSetupCandidates' in statusSource, false);

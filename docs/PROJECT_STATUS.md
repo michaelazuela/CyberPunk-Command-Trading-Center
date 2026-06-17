@@ -2,6 +2,38 @@
 
 ## Latest Change
 
+Date: 2026-06-17
+Task: Install Phase B Discord Desk Play suppression and dedupe filters.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/supervisor/config.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner Desk Play refreshes were overposting review maps and stale/unchanged levels. Phase B needed a delivery-only policy that suppresses duplicate unchanged Desk Play refreshes, low-quality maps, stale data, and levels already passed or invalidated before a Discord post is attempted.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run supervisor:status; direct `/status` timing.
+Result: Passed. Desk Play refreshes now pass through an exported Phase B policy before chart rendering, RAG pending save, receipt writing, or Discord posting. The policy suppresses stale completed-5M data, data-limited/insufficient maps, WAIT maps without a single primary side, non-primary/blocked/not-aligned/missed-no-chase readiness states, review levels already invalidated or target-passed by current price, and materially unchanged refreshes from the latest posted Desk Play. Supervisor status remains fast and scanner Discord remains operationally disabled through Phase A while Phase B is installed.
+Trading logic changed: No. This is Discord Desk Play delivery filtering only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bar-close handling changed.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth; no bridge contract or candle handling changed.
+Discord impact: Yes. Non-executable Desk Play Discord refreshes are filtered before delivery. Full scanner trade-alert approval paths are not changed.
+Journal/RAG impact: No schema change. Suppressed Desk Play refreshes do not create new RAG pending records or Discord receipt audit files; existing RAG/outcome button behavior is unchanged.
+Supabase impact: No migration added.
+Known risks: Scanner Discord is still intentionally paused by Phase A config until the desk chooses to re-enable posting for observation.
+Next recommended action: Phase C next: design the trader-facing "one main play + update only on meaningful state change" workflow, then re-enable scanner Discord under observation.
+
+## Previous Change
+
+Date: 2026-06-17
+Task: Deploy Phase A scanner Discord suppression and harden supervisor status.
+Files changed: tools/supervisor/config.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner Desk Play refreshes were flooding Discord while Phase B/C suppression design is still pending, and the supervisor `/status` endpoint could hang because it performed fresh live health checks inside the HTTP request path.
+Tests run: npx tsx tools/supervisor/supervisor.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run supervisor:status; direct `/status` request timing.
+Result: Passed. `SUPERVISOR_SCANNER_DISCORD_ENABLED=false` routes the scanner through the existing `--discord false` dry-run/log-only path while leaving scanner analysis and decision tapes running. `/status` now returns cached monitor health/delivery reports instead of doing fresh bridge health work per request, and monitor checks no longer overlap. Supervisor restarted with scanner and recorder running; scanner logs show Desk Play updates skipped as `discord_disabled`; no new Discord receipt files were created after suppression.
+Trading logic changed: No. This is supervisor config/status and Discord delivery suppression only; no setup definitions, rankings, execution approvals, canExecute, entry rules, stop rules, target rules, risk gates, model definitions, scanner selection, or bar-close handling changed.
+Bridge impact: No bridge contract change. Bridge health is still checked by the background supervisor monitor, not by each status request.
+Discord impact: Yes. Scanner Discord posting is disabled operationally through supervisor config; scanner continues writing logs/decision tapes for audit.
+Journal/RAG impact: None. Outcome buttons and learning records are unchanged; suppressed scanner posts simply do not reach Discord.
+Supabase impact: No migration added.
+Known risks: Discord scanner posts remain intentionally paused until Phase B/C suppression rules are implemented and approved.
+Next recommended action: Phase B first: implement Discord suppression/dedupe/stale-level filtering so the channel can be re-enabled safely before the larger one-main-play redesign.
+
+## Previous Change
+
 Date: 2026-06-16
 Task: Enforce standard Discord Current Desk Plan format for scanner candidate alerts.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/htf-mss-phase-5b-regression.test.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

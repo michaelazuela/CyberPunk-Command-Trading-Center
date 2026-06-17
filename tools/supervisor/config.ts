@@ -71,6 +71,11 @@ function csvIncludes(raw: string | undefined, serviceId: string, fallback: boole
   return requested.includes(serviceId);
 }
 
+function boolEnv(raw: string | undefined, fallback: boolean): boolean {
+  if (!raw) return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+}
+
 export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env): SupervisorChildService[] {
   const instrument = env.SUPERVISOR_INSTRUMENT?.trim() || 'MES';
   const bridgeInstrument = env.SUPERVISOR_BRIDGE_INSTRUMENT?.trim() || instrument;
@@ -78,6 +83,7 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
   const pollSeconds = env.SUPERVISOR_POLL_SECONDS?.trim() || '60';
   const barTimeZone = env.SUPERVISOR_BAR_TIME_ZONE?.trim() || 'eastern';
   const enabledServices = env.SUPERVISOR_SERVICES;
+  const scannerDiscordEnabled = boolEnv(env.SUPERVISOR_SCANNER_DISCORD_ENABLED, true);
 
   return [
     {
@@ -110,6 +116,7 @@ export function buildDefaultChildServices(env: NodeJS.ProcessEnv = process.env):
         '--bridge-url', bridgeUrl,
         '--poll-seconds', pollSeconds,
         '--bar-time-zone', barTimeZone,
+        ...(scannerDiscordEnabled ? [] : ['--discord', 'false']),
       ],
       enabled: csvIncludes(enabledServices, 'scanner', true),
     },
@@ -131,11 +138,6 @@ function numberEnv(raw: string | undefined, fallback: number, name: string, erro
     return fallback;
   }
   return value;
-}
-
-function boolEnv(raw: string | undefined, fallback: boolean): boolean {
-  if (!raw) return fallback;
-  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
 }
 
 function parsePort(raw: string | undefined): { port: number; error: string | null } {

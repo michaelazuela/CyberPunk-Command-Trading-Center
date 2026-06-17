@@ -108,30 +108,57 @@ export function startSupervisor(): http.Server {
   });
   let supervisorState = withCurrentSupervisorPid(getSupervisorState(configResult.config));
   let lastHealthReport = null as Awaited<ReturnType<typeof buildHealthReport>> | null;
+  let lastDeliveryReport = null as ReturnType<typeof buildDeliveryVisibilityReport> | null;
+  let lastPreWindowBackfill = null as ReturnType<typeof runPreWindowBackfillIfDue> | null;
   let monitorTimer: NodeJS.Timeout | null = null;
+  let monitorInFlight = false;
 
   const monitor = async () => {
-    supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
-    const preWindowBackfill = runPreWindowBackfillIfDue(configResult.config, logger);
-    lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
-    const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
-    const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery, new Date(), preWindowBackfill);
-    const notificationResult = await sendSupervisorNotifications(status);
-    logger.log(lastHealthReport.status === 'fail' ? 'warn' : 'info', 'Supervisor health checked.', {
-      status: lastHealthReport.status,
-      preWindowBackfill: preWindowBackfill.reason,
-      notificationsSent: notificationResult.sent,
-      notificationsSkipped: notificationResult.skipped,
-      notificationKinds: notificationResult.notifications.map((item) => item.kind),
-    });
+    if (monitorInFlight) {
+      logger.log('warn', 'Supervisor monitor skipped; previous monitor check is still running.');
+      return;
+    }
+    monitorInFlight = true;
+    try {
+      supervisorState = withCurrentSupervisorPid(restartFailedOwnedServices(configResult.config, logger));
+      lastPreWindowBackfill = runPreWindowBackfillIfDue(configResult.config, logger);
+      lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
+      lastDeliveryReport = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
+      const status = buildSupervisorStatus(
+        configResult,
+        supervisorState,
+        lastHealthReport,
+        lastDeliveryReport,
+        new Date(),
+        lastPreWindowBackfill,
+      );
+      const notificationResult = await sendSupervisorNotifications(status);
+      logger.log(lastHealthReport.status === 'fail' ? 'warn' : 'info', 'Supervisor health checked.', {
+        status: lastHealthReport.status,
+        preWindowBackfill: lastPreWindowBackfill.reason,
+        notificationsSent: notificationResult.sent,
+        notificationsSkipped: notificationResult.skipped,
+        notificationKinds: notificationResult.notifications.map((item) => item.kind),
+      });
+    } finally {
+      monitorInFlight = false;
+    }
   };
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${configResult.config.host}:${configResult.config.port}`);
     if (request.method === 'GET' && url.pathname === configResult.config.statusPath) {
       supervisorState = withCurrentSupervisorPid(getSupervisorState(configResult.config));
-      lastHealthReport = await buildHealthReport(configResult.config, supervisorState);
-      const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
-      const status = buildSupervisorStatus(configResult, supervisorState, lastHealthReport, delivery);
+      if (!lastDeliveryReport) {
+        lastDeliveryReport = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
+      }
+      const status = buildSupervisorStatus(
+        configResult,
+        supervisorState,
+        lastHealthReport,
+        lastDeliveryReport,
+        new Date(),
+        lastPreWindowBackfill,
+      );
       logger.log('info', 'Status requested.', { path: url.pathname, configStatus: status.config.status });
       response.writeHead(configResult.status === 'valid' ? 200 : 500, {
         'Content-Type': 'application/json',

@@ -18,6 +18,7 @@ import {
   appOwnedFailedPlanEventsFromScannerState,
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
+  evaluateScannerDeskPlayDiscordSuppression,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
@@ -1027,6 +1028,109 @@ const sundayEveningDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
 });
 assert.ok(sundayEveningDeskPlanRefreshKey.includes('2026-06-14:LONG:HTF-FAILED-AUCTION'));
 assert.ok(!sundayEveningDeskPlanRefreshKey.includes('2026-06-15:LONG:HTF-FAILED-AUCTION'));
+const repeatedBaseDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskState: baseDeskPlanRefreshState,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+const previousDeskPlanRefreshRecord = {
+  fingerprint: firstDeskPlanRefreshKey,
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  activeCampaignId: '2026-06-08:SHORT:15M5M-MSS',
+  direction: 'SHORT',
+  latestCompleted5m: '2026-06-08T15:35:00.0000000',
+  lineInSand: 7416.5,
+  longLine: null,
+  shortLine: 7416.5,
+  entry: 7412.75,
+  stop: 7424.75,
+  target1: 7405.38,
+  target2: 7401.5,
+  targetReactionLevel: 7405,
+  sentAt: '2026-06-08T15:35:30.000Z',
+} as const;
+const duplicateDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: baseDeskPlanRefreshState,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:40:30.000Z'),
+});
+assert.equal(duplicateDeskPlaySuppression.shouldPost, false);
+assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
+assert.equal(duplicateDeskPlaySuppression.previousFingerprint, firstDeskPlanRefreshKey);
+assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      lineInSand: 7412.75,
+      entry: 7410.25,
+      stop: 7419.25,
+      target1: 7396.75,
+      target2: 7392.25,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7412.75,
+      shortBias: { state: 'primary', lineInSand: 7412.75 },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', protectedStructure: 7419.25, confirmationLine: 7412.75 },
+        ],
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7408,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(shiftedDeskPlaySuppression.shouldPost, true);
+assert.equal(shiftedDeskPlaySuppression.category, 'post');
+const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: baseDeskPlanRefreshState,
+  deskPlanRefreshSent: {},
+  currentPrice: 7405.25,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(staleTargetDeskPlaySuppression.shouldPost, false);
+assert.equal(staleTargetDeskPlaySuppression.category, 'stale_levels');
+assert.match(staleTargetDeskPlaySuppression.reason, /already reached\/passed T1/);
+const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'WAIT',
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+});
+assert.equal(waitDeskPlaySuppression.shouldPost, false);
+assert.equal(waitDeskPlaySuppression.category, 'low_quality_map');
 assert.deepEqual(loadScannerActiveCampaignLedgerConfig({
   SUPABASE_URL: 'https://project.supabase.co/rest/v1',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-test',
