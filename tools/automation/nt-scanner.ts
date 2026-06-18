@@ -4347,8 +4347,16 @@ export function shouldSuppressScannerDataQualityNoticeForReason(args: {
   reason: string;
 }): boolean {
   const reason = args.reason.replace(/\s+/g, ' ').trim();
-  return args.session === 'evening' &&
-    /DATA_NOT_READY: completed5m=ready, insufficient=120m\b/i.test(reason);
+  if (args.session !== 'evening') return false;
+  if (!/DATA_NOT_READY: completed5m=ready\b/i.test(reason)) return false;
+  const insufficientMatch = reason.match(/\binsufficient=([0-9a-z,\s]+?)(?:\.|\s+Real\b|\s+Boundary\b|$)/i);
+  if (!insufficientMatch) return false;
+  const insufficientTimeframes = insufficientMatch[1]
+    .split(',')
+    .map((timeframe) => timeframe.trim().toLowerCase())
+    .filter(Boolean);
+  return insufficientTimeframes.length > 0 &&
+    insufficientTimeframes.every((timeframe) => timeframe === '15m' || timeframe === '60m' || timeframe === '120m' || timeframe === '240m');
 }
 
 async function sendScannerDataQualityNoticeIfNeeded(args: {
@@ -4369,7 +4377,7 @@ async function sendScannerDataQualityNoticeIfNeeded(args: {
     return;
   }
   if (shouldSuppressScannerDataQualityNoticeForReason({ session: args.session, reason: args.reason })) {
-    console.log(`[scanner-data] Data-quality notice kept local because evening 120m-only HTF readiness is not a trader-facing Discord blocker: ${args.reason}`);
+    console.log(`[scanner-data] Data-quality notice kept local because evening HTF-only readiness is not a trader-facing Discord blocker while completed 5M is ready: ${args.reason}`);
     return;
   }
 

@@ -593,6 +593,20 @@ assert.equal(
 );
 assert.equal(
   shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'evening',
+    reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=ready, insufficient=240m. Real cache/bridge backfill was attempted where available.',
+  }),
+  true,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'evening',
+    reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=ready, insufficient=120m,240m. Real cache/bridge backfill was attempted where available.',
+  }),
+  true,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
     session: 'lunch',
     reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=ready, insufficient=120m. Real cache/bridge backfill was attempted where available.',
   }),
@@ -602,6 +616,13 @@ assert.equal(
   shouldSuppressScannerDataQualityNoticeForReason({
     session: 'evening',
     reason: completed5mAssuranceStale.message,
+  }),
+  false,
+);
+assert.equal(
+  shouldSuppressScannerDataQualityNoticeForReason({
+    session: 'evening',
+    reason: 'Pre-Market Data Readiness + Backfill Gate DATA_NOT_READY: completed5m=blocked, insufficient=5m,240m. Real cache/bridge backfill was attempted where available.',
   }),
   false,
 );

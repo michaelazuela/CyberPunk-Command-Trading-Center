@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-17
+Task: Suppress evening HTF-only data-quality Discord notices.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: After Discord was re-enabled, the evening scanner correctly kept completed 5M ready but posted operational data-quality notices when only 240M HTF context lagged. That is a local HTF-promotion blocker, not a trader-facing Discord alert.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Evening `completed5m=ready` HTF-only readiness blockers now remain local for 15M/60M/120M/240M-only gaps instead of posting data-quality Discord notices.
+Trading logic changed: No. This is Discord operational-notice filtering only; HTF sufficiency remains enforced locally, and setup selection, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, and bar-close handling are unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Evening `completed5m=ready` HTF-only readiness blockers remain local logs instead of Discord posts.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: A true completed-5M blocker can still post, by design, because that means execution evidence is not usable.
+Next recommended action: Keep scanner Discord enabled under observation. Treat any future Discord data-quality notice as actionable only if completed 5M is blocked/missing; otherwise extend the presentation filter without touching execution gates.
+
+## Previous Change
+
+Date: 2026-06-17
 Task: Clarify scanner Desk Play stale-report suppression language.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Live scanner logs classified missed/no-chase setup suppression as `stale_data` and said completed 5M data was stale, even when the recorder and market_bars were healthy. That made left-behind plans look like operational data staleness.
