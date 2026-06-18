@@ -558,6 +558,9 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('context only - not direction') ||
     !formatterContent.includes('watch only - do not execute') ||
     !formatterContent.includes('review map - levels pending') ||
+    !formatterContent.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase') ||
+    !formatterContent.includes('needs 5M proof, stop, risk, canExecute') ||
+    !formatterContent.includes('No chase') ||
     !formatterContent.includes('Entry:') ||
     !formatterContent.includes('Stop:') ||
     !formatterContent.includes('T1:') ||

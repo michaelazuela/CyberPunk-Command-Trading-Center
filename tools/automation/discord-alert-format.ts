@@ -1089,6 +1089,13 @@ function deskPlayRunnerLine(play: NonNullable<CompactDeskStateForDiscord['primar
   return `Runner: ${priceLine(runner)}`;
 }
 
+function deskPlayBottomLineLine(direction: 'LONG' | 'SHORT' | 'WAIT'): string {
+  if (direction === 'WAIT') {
+    return 'Bottom line: HTF map only; 5M proof + canExecute. No chase';
+  }
+  return `Bottom line: HTF frames ${direction}; needs 5M proof, stop, risk, canExecute. No chase`;
+}
+
 function deskPlayHtfLineRows(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   currentPrice?: number | null,
@@ -1492,6 +1499,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       'No active LONG/SHORT plan with complete app-owned levels.',
       deskPlayHtfTargetLine(play),
       deskPlayRunnerLine(play),
+      deskPlayBottomLineLine(direction),
       '',
       waitStatusLine,
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: waitHasReferenceLevels }),
@@ -1530,6 +1538,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Invalid ${invalidWord}: ${primaryLevels ? priceLine(primaryLevels.stop) : 'pending'}`,
     deskPlayHtfTargetLine(play),
     deskPlayRunnerLine(play),
+    deskPlayBottomLineLine(direction),
     '',
     statusLine,
     deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: primary.hasLevels || opposite.hasLevels }),
