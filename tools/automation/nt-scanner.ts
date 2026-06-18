@@ -263,8 +263,9 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
 export type ScannerDeskPlayDiscordSuppressionCategory =
   | 'post'
   | 'stale_data'
+  | 'missed_no_chase'
   | 'low_quality_map'
-  | 'stale_levels'
+  | 'passed_or_invalidated_levels'
   | 'duplicate_refresh';
 
 export interface ScannerDeskPlayDiscordSuppressionDecision {
@@ -3485,15 +3486,15 @@ function scannerDeskPlayStaleLevelReason(args: {
   if (direction === 'LONG') {
     if (typeof stop === 'number' && currentPrice <= stop + buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is at/below protected stop ${stop.toFixed(2)}.`;
     if (typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below line in the sand ${line.toFixed(2)}.`;
-    if (typeof target2 === 'number' && currentPrice >= target2 - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
-    if (typeof target1 === 'number' && currentPrice >= target1 - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
-    if (typeof reaction === 'number' && currentPrice >= reaction - buffer) return `LONG review map stale: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
+    if (typeof target2 === 'number' && currentPrice >= target2 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
+    if (typeof target1 === 'number' && currentPrice >= target1 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
+    if (typeof reaction === 'number' && currentPrice >= reaction - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
   } else {
     if (typeof stop === 'number' && currentPrice >= stop - buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is at/above protected stop ${stop.toFixed(2)}.`;
     if (typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above line in the sand ${line.toFixed(2)}.`;
-    if (typeof target2 === 'number' && currentPrice <= target2 + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
-    if (typeof target1 === 'number' && currentPrice <= target1 + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
-    if (typeof reaction === 'number' && currentPrice <= reaction + buffer) return `SHORT review map stale: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
+    if (typeof target2 === 'number' && currentPrice <= target2 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
+    if (typeof target1 === 'number' && currentPrice <= target1 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
+    if (typeof reaction === 'number' && currentPrice <= reaction + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
   }
   return null;
 }
@@ -3511,7 +3512,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   now?: Date;
 }): ScannerDeskPlayDiscordSuppressionDecision {
   if (args.staleReason) {
-    return scannerDeskPlaySuppressionBlocked('stale_data', `Desk Play suppressed because completed 5M data is stale: ${args.staleReason}`);
+    return scannerDeskPlaySuppressionBlocked('missed_no_chase', `Desk Play kept local because the selected setup is missed/no-chase: ${args.staleReason}`);
   }
   if (args.deskState.canExecute) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
@@ -3539,7 +3540,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     currentPrice: args.currentPrice,
   });
   if (staleLevelReason) {
-    return scannerDeskPlaySuppressionBlocked('stale_levels', staleLevelReason);
+    return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);
   }
 
   const currentRecord = scannerDeskPlanRefreshRecord({

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-17
+Task: Clarify scanner Desk Play stale-report suppression language.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner logs classified missed/no-chase setup suppression as `stale_data` and said completed 5M data was stale, even when the recorder and market_bars were healthy. That made left-behind plans look like operational data staleness.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Missed/no-chase Desk Play suppression now uses `missed_no_chase`; review maps with already-passed targets use `passed_or_invalidated_levels`; neither path says completed 5M market data is stale.
+Trading logic changed: No. This is Discord Desk Play suppression classification and audit/log wording only; scanner setup selection, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, and bar-close handling are unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Missed/no-chase and already-passed review maps remain suppressed, but they are no longer labeled as stale completed-5M data.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Keep scanner Discord enabled under observation. If a Discord message still appears stale to the trader, compare the receipt ID to the suppression category and fix the remaining presentation/cadence path without touching execution logic.
+
+## Previous Change
+
+Date: 2026-06-17
 Task: Suppress evening 120M-only data-quality Discord noise.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: After scanner Discord was re-enabled, the evening scanner posted repeated operational data-quality notices because the 120M context lagged while completed 5M, 15M, 60M, and 240M context were usable. This was correct as a local HTF-context blocker but too noisy for trader-facing Discord.

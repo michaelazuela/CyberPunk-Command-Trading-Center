@@ -1172,8 +1172,24 @@ const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
 assert.equal(staleTargetDeskPlaySuppression.shouldPost, false);
-assert.equal(staleTargetDeskPlaySuppression.category, 'stale_levels');
+assert.equal(staleTargetDeskPlaySuppression.category, 'passed_or_invalidated_levels');
 assert.match(staleTargetDeskPlaySuppression.reason, /already reached\/passed T1/);
+assert.doesNotMatch(staleTargetDeskPlaySuppression.reason, /stale/i);
+const missedNoChaseDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: baseDeskPlanRefreshState,
+  deskPlanRefreshSent: {},
+  currentPrice: 7415,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  staleReason: 'Preferred entry was missed before the alert. Do not chase.',
+});
+assert.equal(missedNoChaseDeskPlaySuppression.shouldPost, false);
+assert.equal(missedNoChaseDeskPlaySuppression.category, 'missed_no_chase');
+assert.match(missedNoChaseDeskPlaySuppression.reason, /missed\/no-chase/);
+assert.doesNotMatch(missedNoChaseDeskPlaySuppression.reason, /completed 5M data is stale/i);
 const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
