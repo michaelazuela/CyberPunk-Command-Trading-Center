@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-18
+Task: Add all-trading-time HTF tactical campaign watch delivery.
+Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live desk needed all-trading-time language and a Discord delivery path for HTF-backed tactical campaigns when 1H/2H/4H support plus app-owned 5M lifecycle evidence exists, without pretending the plan is executable.
+Tests run: npx tsx tools/automation/live-desk-observer.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; replayed tools/automation/discord-audit/scanner-decision-tape-2026-06-18-MES-lunch.json against the new policy.
+Result: Passed. Observer reports now say Live Trading Time Observer, not lunch observer. Desk Play suppression now permits non-executable tactical campaign watch cards when a primary LONG/SHORT map has aligned 1H/2H/4H context and either aligned 5M protected structure or app-owned 5M candidate lifecycle evidence. The June 18 afternoon short campaign now becomes Discord-eligible from 13:45-14:20 ET, including the 14:05 HTF displacement/MSS short watch.
+Trading logic changed: No. This is Discord/observer delivery and cadence metadata only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close handling are unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. HTF tactical campaign watches can post as review/watch desk maps, while executable trade approval still requires the existing app-owned canExecute path.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: One new Desk Play refresh may post after deployment because prior ledger records do not have the new tactical campaign fingerprint; unchanged repeats should suppress after the new receipt is recorded.
+Next recommended action: Observe the next full RTH active desk window and confirm tactical campaign watches post as review-only maps, not executable trade alerts.
+
+## Previous Change
+
 Date: 2026-06-17
 Task: Suppress evening HTF-only data-quality Discord notices.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

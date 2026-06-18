@@ -257,6 +257,7 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   invalidation: string | null;
   standDown: string | null;
   readiness: string | null;
+  tacticalCampaignFingerprint?: string | null;
   mainPlayFingerprint: string;
   sentAt: string;
 }
@@ -266,6 +267,7 @@ export type ScannerDeskPlayDiscordSuppressionCategory =
   | 'stale_data'
   | 'missed_no_chase'
   | 'low_quality_map'
+  | 'tactical_campaign_watch'
   | 'passed_or_invalidated_levels'
   | 'duplicate_refresh';
 
@@ -274,6 +276,24 @@ export interface ScannerDeskPlayDiscordSuppressionDecision {
   category: ScannerDeskPlayDiscordSuppressionCategory;
   reason: string;
   previousFingerprint: string | null;
+  changesTradingLogic: false;
+  changesCanExecute: false;
+}
+
+export interface ScannerTacticalCampaignMap {
+  eligible: boolean;
+  direction: 'LONG' | 'SHORT' | null;
+  supportingTimeframes: string[];
+  executionTimeframeAligned: boolean;
+  readiness: string | null;
+  lineInSand: number | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  nextTrigger: string | null;
+  executionEvidenceSource: 'protected_structure_5m' | 'candidate_lifecycle_5m' | null;
+  reason: string;
   changesTradingLogic: false;
   changesCanExecute: false;
 }
@@ -3277,6 +3297,105 @@ function scannerDeskPlayPrimaryBias(deskState: DeskState): DeskPlayDirectionalBi
   return null;
 }
 
+function htfRowSupportsDirection(
+  row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
+  direction: 'LONG' | 'SHORT',
+): boolean {
+  const expected = direction === 'LONG' ? 'BULL' : 'BEAR';
+  return row.currentBias === expected || row.bias === expected;
+}
+
+function lifecycleItemShowsFiveMinuteTacticalShift(
+  item: ScannerCandidateLifecycleTraceItem | null,
+  direction: 'LONG' | 'SHORT',
+): boolean {
+  if (!item || item.direction !== direction) return false;
+  const setupTypes = new Set<SetupType>([
+    SetupType.HtfDisplacementMssContinuation,
+    SetupType.HtfDisplacementFvgContinuation,
+    SetupType.IntradayMssMicroContinuation,
+    SetupType.TurtleSoup,
+  ]);
+  if (!setupTypes.has(item.setupType)) return false;
+  const proofText = [
+    item.candidateState,
+    item.nextTrigger,
+    item.requiredTrigger,
+    item.lineInSandReason,
+    ...item.missingEvidence,
+  ].filter(Boolean).join(' ');
+  return /5M|MSS|displacement|retest|rejection|close-through|close below|close above|sweep|reclaim/i.test(proofText);
+}
+
+export function scannerTacticalCampaignMapFromDeskState(args: {
+  deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): ScannerTacticalCampaignMap {
+  const play = args.deskState.primaryDeskPlay;
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
+  const planningLevels = deskPlayPlanningLevels({ deskState: args.deskState, normalized: args.normalized });
+  const base = {
+    eligible: false,
+    direction,
+    supportingTimeframes: [] as string[],
+    executionTimeframeAligned: false,
+    readiness: primaryBias?.tradeReadiness?.status || null,
+    lineInSand: play.lineInSand,
+    entry: planningLevels.entry ?? null,
+    stop: planningLevels.stop ?? null,
+    target1: planningLevels.target1 ?? null,
+    target2: planningLevels.target2 ?? null,
+    nextTrigger: play.nextTrigger || args.deskState.nextTrigger || primaryBias?.nextTrigger || null,
+    executionEvidenceSource: null as ScannerTacticalCampaignMap['executionEvidenceSource'],
+    changesTradingLogic: false as const,
+    changesCanExecute: false as const,
+  };
+
+  if (!direction) {
+    return { ...base, reason: 'No primary LONG/SHORT DeskState campaign is active.' };
+  }
+  if (args.deskState.canExecute) {
+    return { ...base, reason: 'Executable plans use the trade-alert path, not the tactical campaign watch path.' };
+  }
+  if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') {
+    return { ...base, reason: 'HTF campaign watch blocked because scanner context is data-limited or insufficient.' };
+  }
+  if (primaryBias && primaryBias.state !== 'primary') {
+    return { ...base, reason: `${direction} is ${primaryBias.state}, not the primary tactical desk side.` };
+  }
+
+  const rows = play.htfProtectedStructureMap?.rows || [];
+  const supportingTimeframes = rows
+    .filter((row) => (row.timeframe === '4H' || row.timeframe === '2H' || row.timeframe === '1H') && htfRowSupportsDirection(row, direction))
+    .map((row) => row.timeframe);
+  const protectedFiveMinuteAligned = rows.some((row) => row.timeframe === '5M' && htfRowSupportsDirection(row, direction));
+  const lifecycleFiveMinuteAligned = lifecycleItemShowsFiveMinuteTacticalShift(scannerDeskPlayPrimaryLifecycle(args.deskState), direction);
+  const executionTimeframeAligned = protectedFiveMinuteAligned || lifecycleFiveMinuteAligned;
+  const campaignMap = {
+    ...base,
+    supportingTimeframes: Array.from(new Set(supportingTimeframes)),
+    executionTimeframeAligned,
+    executionEvidenceSource: protectedFiveMinuteAligned
+      ? 'protected_structure_5m' as const
+      : lifecycleFiveMinuteAligned
+        ? 'candidate_lifecycle_5m' as const
+        : null,
+  };
+  if (!campaignMap.supportingTimeframes.length) {
+    return { ...campaignMap, reason: `${direction} tactical campaign watch blocked because no aligned 1H/2H/4H protected-structure row is present.` };
+  }
+  if (!executionTimeframeAligned) {
+    return { ...campaignMap, reason: `${direction} tactical campaign watch blocked because 5M protected-structure row is not aligned.` };
+  }
+
+  return {
+    ...campaignMap,
+    eligible: true,
+    reason: `${direction} tactical campaign watch eligible from ${campaignMap.supportingTimeframes.join('/')} support plus ${campaignMap.executionEvidenceSource === 'candidate_lifecycle_5m' ? 'app-owned 5M candidate lifecycle evidence' : 'aligned completed 5M structure'}. Execution remains blocked until app-owned canExecute is true.`,
+  };
+}
+
 function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | null {
   const play = deskState.primaryDeskPlay;
   const primaryBias = scannerDeskPlayPrimaryBias(deskState);
@@ -3315,6 +3434,24 @@ function scannerDeskPlayMainPlayFingerprint(args: {
     normalizeDeskPlayInstructionText(record.invalidation),
     normalizeDeskPlayInstructionText(record.standDown),
     normalizeDeskPlayInstructionText(record.readiness),
+  ].join('|');
+}
+
+function scannerTacticalCampaignFingerprint(map: ScannerTacticalCampaignMap): string | null {
+  if (!map.direction) return null;
+  return [
+    `eligible=${map.eligible ? 'yes' : 'no'}`,
+    `side=${map.direction}`,
+    `htf=${map.supportingTimeframes.join(',') || 'none'}`,
+    `m5=${map.executionTimeframeAligned ? 'aligned' : 'not_aligned'}`,
+    `m5source=${map.executionEvidenceSource || 'none'}`,
+    `readiness=${normalizeDeskPlayInstructionText(map.readiness) || 'none'}`,
+    `line=${deskPlanRefreshPrice(map.lineInSand)}`,
+    `entry=${deskPlanRefreshPrice(map.entry)}`,
+    `stop=${deskPlanRefreshPrice(map.stop)}`,
+    `t1=${deskPlanRefreshPrice(map.target1)}`,
+    `t2=${deskPlanRefreshPrice(map.target2)}`,
+    `trigger=${normalizeDeskPlayInstructionText(map.nextTrigger) || 'none'}`,
   ].join('|');
 }
 
@@ -3382,6 +3519,7 @@ function scannerDeskPlanRefreshRecord(args: {
     invalidation: play.invalidation || args.deskState.invalidation || primaryLifecycle?.invalidation || null,
     standDown: scannerDeskPlayStandDownInstruction(args.deskState),
     readiness: primaryBias?.tradeReadiness?.status || null,
+    tacticalCampaignFingerprint: scannerTacticalCampaignFingerprint(scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState })),
     sentAt: args.sentAt,
   };
   return {
@@ -3435,7 +3573,8 @@ function scannerDeskPlanRefreshMateriallyMatches(
   current: ScannerDeskPlanRefreshLedgerRecord,
 ): boolean {
   if (previous.mainPlayFingerprint || current.mainPlayFingerprint) {
-    return previous.mainPlayFingerprint === current.mainPlayFingerprint;
+    return previous.mainPlayFingerprint === current.mainPlayFingerprint &&
+      (previous.tacticalCampaignFingerprint || null) === (current.tacticalCampaignFingerprint || null);
   }
   return previous.activeCampaignId === current.activeCampaignId &&
     previous.direction === current.direction &&
@@ -3512,7 +3651,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   staleReason?: string | null;
   now?: Date;
 }): ScannerDeskPlayDiscordSuppressionDecision {
-  if (args.staleReason) {
+  if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason)) {
     return scannerDeskPlaySuppressionBlocked('missed_no_chase', `Desk Play kept local because the selected setup is missed/no-chase: ${args.staleReason}`);
   }
   if (args.deskState.canExecute) {
@@ -3530,11 +3669,15 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   }
   const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
   const readiness = primaryBias?.tradeReadiness?.status || null;
+  const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState });
   if (primaryBias && primaryBias.state !== 'primary') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
   }
-  if (readiness === 'data_limited' || readiness === 'not_aligned' || readiness === 'blocked' || readiness === 'missed_no_chase') {
+  if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
+  }
+  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
   }
   const staleLevelReason = scannerDeskPlayStaleLevelReason({
     deskState: args.deskState,
@@ -3567,7 +3710,9 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     );
   }
 
-  return scannerDeskPlaySuppressionPost();
+  return scannerDeskPlaySuppressionPost(tacticalCampaignMap.eligible
+    ? `Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`
+    : 'Desk Play refresh is eligible for Discord.');
 }
 
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {

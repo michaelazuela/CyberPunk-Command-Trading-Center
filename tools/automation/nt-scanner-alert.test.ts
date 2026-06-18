@@ -56,6 +56,7 @@ import {
   shouldLogBridgeInstrumentResolution,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
+  scannerTacticalCampaignMapFromDeskState,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
@@ -1041,11 +1042,89 @@ const baseDeskPlanRefreshState = {
     htfObjectiveLadder: { runner: { price: 7394.5 } },
     htfProtectedStructureMap: {
       rows: [
+        { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+        { timeframe: '2H', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7350, confirmationLine: 7416.5 },
+        { timeframe: '1H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7432, confirmationLine: 7416.5 },
         { timeframe: '5M', bias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7416.5 },
       ],
     },
   },
 } as any;
+const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({
+  deskState: baseDeskPlanRefreshState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'SHORT',
+    noTradeReason: 'EntryTriggerPending',
+    setupCandidates: [{
+      direction: 'SHORT',
+      entry: 7412.75,
+      stop: 7424.75,
+      target1: 7405.38,
+      target2: 7401.5,
+      riskPoints: 12,
+    }],
+  } as any,
+});
+assert.equal(tacticalCampaignMap.eligible, true);
+assert.deepEqual(tacticalCampaignMap.supportingTimeframes, ['4H', '1H']);
+assert.equal(tacticalCampaignMap.executionTimeframeAligned, true);
+assert.equal(tacticalCampaignMap.executionEvidenceSource, 'protected_structure_5m');
+assert.equal(tacticalCampaignMap.direction, 'SHORT');
+assert.equal(tacticalCampaignMap.lineInSand, 7416.5);
+assert.equal(tacticalCampaignMap.entry, 7412.75);
+assert.equal(tacticalCampaignMap.stop, 7424.75);
+assert.equal(tacticalCampaignMap.changesTradingLogic, false);
+assert.equal(tacticalCampaignMap.changesCanExecute, false);
+assert.match(tacticalCampaignMap.reason, /4H\/1H support plus aligned completed 5M structure/);
+const tacticalCampaignWithoutFiveMinute = scannerTacticalCampaignMapFromDeskState({
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+          { timeframe: '2H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7440, confirmationLine: 7416.5 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7402, confirmationLine: 7416.5 },
+        ],
+      },
+    },
+  } as any,
+});
+assert.equal(tacticalCampaignWithoutFiveMinute.eligible, false);
+assert.deepEqual(tacticalCampaignWithoutFiveMinute.supportingTimeframes, ['4H', '2H']);
+assert.equal(tacticalCampaignWithoutFiveMinute.executionTimeframeAligned, false);
+assert.equal(tacticalCampaignWithoutFiveMinute.executionEvidenceSource, null);
+assert.match(tacticalCampaignWithoutFiveMinute.reason, /5M protected-structure row is not aligned/);
+const tacticalCampaignFromLifecycle = scannerTacticalCampaignMapFromDeskState({
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      setupType: SetupType.HtfDisplacementMssContinuation,
+      direction: 'SHORT',
+      candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+      requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
+      missingEvidence: ['Wait for completed 5M retest/rejection.'],
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7402, confirmationLine: 7416.5 },
+        ],
+      },
+    },
+  } as any,
+});
+assert.equal(tacticalCampaignFromLifecycle.eligible, true);
+assert.deepEqual(tacticalCampaignFromLifecycle.supportingTimeframes, ['4H']);
+assert.equal(tacticalCampaignFromLifecycle.executionTimeframeAligned, true);
+assert.equal(tacticalCampaignFromLifecycle.executionEvidenceSource, 'candidate_lifecycle_5m');
+assert.match(tacticalCampaignFromLifecycle.reason, /app-owned 5M candidate lifecycle evidence/);
 const firstDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -1151,6 +1230,20 @@ const previousDeskPlanRefreshRecord = {
   invalidation: null,
   standDown: 'Stand down if price accepts above 7416.50.',
   readiness: null,
+  tacticalCampaignFingerprint: [
+    'eligible=yes',
+    'side=SHORT',
+    'htf=4H,1H',
+    'm5=aligned',
+    'm5source=protected_structure_5m',
+    'readiness=none',
+    'line=7416.50',
+    'entry=none',
+    'stop=none',
+    't1=none',
+    't2=none',
+    'trigger=none',
+  ].join('|'),
   mainPlayFingerprint: [
     '2026-06-08:SHORT:15M5M-MSS',
     'SHORT',
@@ -1185,6 +1278,36 @@ assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
 assert.equal(duplicateDeskPlaySuppression.previousFingerprint, firstDeskPlanRefreshKey);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const priorFourHourOnlyDeskPlanRefreshRecord = {
+  ...previousDeskPlanRefreshRecord,
+  tacticalCampaignFingerprint: [
+    'eligible=yes',
+    'side=SHORT',
+    'htf=4H',
+    'm5=aligned',
+    'm5source=protected_structure_5m',
+    'readiness=none',
+    'line=7416.50',
+    'entry=none',
+    'stop=none',
+    't1=none',
+    't2=none',
+    'trigger=none',
+  ].join('|'),
+};
+const newHtfSupportDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: baseDeskPlanRefreshState,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: priorFourHourOnlyDeskPlanRefreshRecord },
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:40:30.000Z'),
+});
+assert.equal(newHtfSupportDeskPlaySuppression.shouldPost, true);
+assert.equal(newHtfSupportDeskPlaySuppression.category, 'post');
 const changedInstructionDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -1235,6 +1358,94 @@ const shiftedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
 });
 assert.equal(shiftedDeskPlaySuppression.shouldPost, true);
 assert.equal(shiftedDeskPlaySuppression.category, 'post');
+const tacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(tacticalNotAlignedDeskPlaySuppression.shouldPost, true);
+assert.equal(tacticalNotAlignedDeskPlaySuppression.category, 'post');
+assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /Tactical campaign watch is eligible/);
+assert.match(tacticalNotAlignedDeskPlaySuppression.reason, /4H\/1H support plus aligned completed 5M structure/);
+const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7402, confirmationLine: 7416.5 },
+        ],
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, false);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
+assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /5M protected-structure row is not aligned/);
+const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      setupType: SetupType.HtfDisplacementMssContinuation,
+      direction: 'SHORT',
+      candidateState: 'MSS_CONTINUATION_RETEST_PENDING',
+      requiredTrigger: 'Completed 5M close-through/retest below 7416.50 required before short continuation can execute.',
+      missingEvidence: ['Wait for completed 5M retest/rejection.'],
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7402, confirmationLine: 7416.5 },
+        ],
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  staleReason: 'Completed 5M close below 7416.50 required before short continuation is active.',
+});
+assert.equal(tacticalRequiredTriggerDeskPlaySuppression.shouldPost, true);
+assert.equal(tacticalRequiredTriggerDeskPlaySuppression.category, 'post');
+assert.match(tacticalRequiredTriggerDeskPlaySuppression.reason, /app-owned 5M candidate lifecycle evidence/);
 const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',

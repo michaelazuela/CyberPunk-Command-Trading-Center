@@ -108,7 +108,9 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.discordSends, 1);
 assert.equal(report.summary.staleOrNoChaseFlags, 1);
 assert.equal(report.summary.candidateDeskConflicts, 1);
-assert.match(report.bottomLine, /Research-only bottom line/);
+assert.match(report.bottomLine, /Research-only all-trading-time bottom line/);
+assert.match(report.markdown, /# Live Trading Time Observer - MES 2026-06-18/);
+assert.match(report.markdown, /Active desk coverage: RTH 09:15-16:00 ET/);
 assert.match(report.markdown, /No chase/);
 assert.match(report.markdown, /Selected LONG conflicts with primary desk map SHORT/);
 

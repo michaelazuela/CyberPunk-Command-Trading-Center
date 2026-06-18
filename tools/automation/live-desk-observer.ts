@@ -216,7 +216,7 @@ function summarizeLatest(summary: LiveDeskObserverReport['summary']): string {
   if (!summary.latestCompleted5m) return 'No completed 5M events found in the scanner decision tape.';
   const side = summary.latestDeskPrimary || 'WAIT';
   const line = summary.latestLineInSand === null ? 'N/A' : formatNumber(summary.latestLineInSand);
-  return `Research-only bottom line: latest completed 5M is ${formatTime(summary.latestCompleted5m)} ET. Primary desk map is ${side}; line in sand ${line}. Do not chase old levels; wait for fresh completed 5M proof and app-owned canExecute.`;
+  return `Research-only all-trading-time bottom line: latest completed 5M is ${formatTime(summary.latestCompleted5m)} ET. Primary desk map is ${side}; line in sand ${line}. Do not chase old levels; wait for fresh completed 5M proof and app-owned canExecute.`;
 }
 
 function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): string[] {
@@ -232,9 +232,11 @@ function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): strin
 
 function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
   const lines = [
-    `# Live Desk Observer - ${report.instrument} ${report.tradeDate} ${report.session}`,
+    `# Live Trading Time Observer - ${report.instrument} ${report.tradeDate}`,
     '',
-    'Research-only observer. This report reads scanner decision tape output and does not post Discord, change scanner state, approve trades, or change trading logic.',
+    `Research-only all-trading-time observer. This report reads the scanner decision tape source bucket "${report.session}" and does not post Discord, change scanner state, approve trades, or change trading logic.`,
+    '',
+    'Active desk coverage: RTH 09:15-16:00 ET and evening 18:45-22:15 ET when enabled.',
     '',
     '## Bottom Line',
     report.bottomLine,
