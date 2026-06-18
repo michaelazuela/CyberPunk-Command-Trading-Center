@@ -19,6 +19,7 @@ import {
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
   evaluateScannerDeskPlayDiscordSuppression,
+  evaluateScannerReversalWatchDiscordSuppression,
   evaluateScannerPrimaryAlertPublishingGate,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
@@ -41,6 +42,7 @@ import {
   candidateForNormalizedVisualAuthority,
   prepareLiveScannerDeskPlayAlertArtifacts,
   prepareLiveScannerDiscordAlertArtifacts,
+  prepareLiveScannerReversalWatchAlertArtifacts,
   prepareLiveScannerWatchlistAlertArtifacts,
   resolveScannerDiscordWebhookUrl,
   resolveScannerOperationalDiscordWebhookUrl,
@@ -49,6 +51,8 @@ import {
   SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   scannerDataQualityNoticeKey,
   scannerDeskPlanRefreshKey,
+  scannerReversalWatchKey,
+  scannerReversalWatchRecord,
   scannerDiscordWebhookDeleteUrl,
   scannerDiscordWebhookUrlForPost,
   scannerActiveCampaignKey,
@@ -56,6 +60,8 @@ import {
   shouldLogBridgeInstrumentResolution,
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
+  buildScannerReversalWatchLines,
+  classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
@@ -1125,6 +1131,241 @@ assert.deepEqual(tacticalCampaignFromLifecycle.supportingTimeframes, ['4H']);
 assert.equal(tacticalCampaignFromLifecycle.executionTimeframeAligned, true);
 assert.equal(tacticalCampaignFromLifecycle.executionEvidenceSource, 'candidate_lifecycle_5m');
 assert.match(tacticalCampaignFromLifecycle.reason, /app-owned 5M candidate lifecycle evidence/);
+const shortExhaustionLongWatchState = {
+  ...baseDeskPlanRefreshState,
+  bestLongPlan: {
+    setupType: SetupType.TurtleSoup,
+    direction: 'LONG',
+    lineInSand: 7411,
+    entry: 7411,
+    stop: 7404,
+    target1: 7421.5,
+    target2: 7425,
+    targetReactionLevel: 7421.5,
+    targetReactionLabel: 'Round Number 7420',
+  },
+  primaryDeskPlay: {
+    ...baseDeskPlanRefreshState.primaryDeskPlay,
+    longAbove: 7411,
+    longBias: { state: 'secondary', lineInSand: 7411 },
+    htfProtectedStructureMap: {
+      rows: [
+        { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7450, confirmationLine: 7416.5 },
+        { timeframe: '2H', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7350, confirmationLine: 7416.5 },
+        { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7404, confirmationLine: 7411 },
+      ],
+    },
+  },
+} as any;
+const longWatchLines = buildScannerReversalWatchLines({
+  deskState: shortExhaustionLongWatchState,
+  completed5m: { time: '2026-06-08T15:15:00.0000000', open: 7410, high: 7412, low: 7404.75, close: 7408, volume: 1000 },
+  currentPrice: 7408,
+});
+assert.equal(longWatchLines.eligible, true);
+assert.equal(longWatchLines.exhaustedSide, 'SHORT');
+assert.equal(longWatchLines.watchDirection, 'LONG');
+assert.equal(longWatchLines.reactionZoneLow, 7401.5);
+assert.equal(longWatchLines.reactionZoneHigh, 7405.5);
+assert.equal(longWatchLines.triggerLine, 7411);
+assert.equal(longWatchLines.invalidLine, 7404);
+assert.equal(longWatchLines.noChaseLine, 7421.5);
+assert.match(longWatchLines.reclaimRule || '', /Completed 5M candle body close above 7411.00/);
+assert.match(longWatchLines.retestRule || '', /Later completed 5M retest\/hold close above 7411.00/);
+assert.equal(longWatchLines.approvalBoundary.changesCanExecute, false);
+assert.equal(longWatchLines.approvalBoundary.changesEntryStopTargets, false);
+assert.match(longWatchLines.reason, /SHORT campaign reached mapped reaction zone/);
+const longWatchForming = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:20:00.0000000', open: 7408, high: 7410.75, low: 7406, close: 7410.5, volume: 1000 },
+});
+assert.equal(longWatchForming.state, 'forming');
+assert.equal(longWatchForming.reclaimConfirmed, false);
+assert.match(longWatchForming.reason, /Waiting for completed 5M body close above 7411.00/);
+const longWatchActive = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:25:00.0000000', open: 7410.5, high: 7413, low: 7410.25, close: 7412, volume: 1000 },
+  completed5mHistory: [
+    { time: '2026-06-08T15:20:00.0000000', open: 7408, high: 7410.75, low: 7406, close: 7410.5, volume: 1000 },
+    { time: '2026-06-08T15:25:00.0000000', open: 7410.5, high: 7413, low: 7410.25, close: 7412, volume: 1000 },
+  ],
+});
+assert.equal(longWatchActive.state, 'watch_active');
+assert.equal(longWatchActive.reclaimConfirmed, true);
+assert.equal(longWatchActive.retestHoldConfirmed, false);
+const longWatchValidated = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:30:00.0000000', open: 7412, high: 7414, low: 7410.75, close: 7413, volume: 1000 },
+  completed5mHistory: [
+    { time: '2026-06-08T15:20:00.0000000', open: 7408, high: 7410.75, low: 7406, close: 7410.5, volume: 1000 },
+    { time: '2026-06-08T15:25:00.0000000', open: 7410.5, high: 7413, low: 7410.25, close: 7412, volume: 1000 },
+    { time: '2026-06-08T15:30:00.0000000', open: 7412, high: 7414, low: 7410.75, close: 7413, volume: 1000 },
+  ],
+});
+assert.equal(longWatchValidated.state, 'direction_validated');
+assert.equal(longWatchValidated.retestHoldConfirmed, true);
+const longWatchStalled = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:40:00.0000000', open: 7412, high: 7414, low: 7411.5, close: 7412.5, volume: 1000 },
+  completed5mHistory: [
+    { time: '2026-06-08T15:25:00.0000000', open: 7410.5, high: 7413, low: 7410.25, close: 7412, volume: 1000 },
+    { time: '2026-06-08T15:30:00.0000000', open: 7412, high: 7414, low: 7411.5, close: 7412.25, volume: 1000 },
+    { time: '2026-06-08T15:35:00.0000000', open: 7412.25, high: 7414, low: 7411.5, close: 7412.5, volume: 1000 },
+    { time: '2026-06-08T15:40:00.0000000', open: 7412, high: 7414, low: 7411.5, close: 7412.5, volume: 1000 },
+  ],
+});
+assert.equal(longWatchStalled.state, 'stalled');
+const longWatchInvalid = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:45:00.0000000', open: 7412, high: 7412.5, low: 7402, close: 7403.75, volume: 1000 },
+});
+assert.equal(longWatchInvalid.state, 'invalidated');
+const longWatchNoChase = classifyScannerReversalWatchState({
+  lines: longWatchLines,
+  completed5m: { time: '2026-06-08T15:45:00.0000000', open: 7418, high: 7422, low: 7417.5, close: 7421.5, volume: 1000 },
+});
+assert.equal(longWatchNoChase.state, 'no_chase');
+const formingReversalSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:20:00.0000000',
+  lines: longWatchLines,
+  state: longWatchForming,
+  reversalWatchSent: {},
+});
+assert.equal(formingReversalSuppression.shouldPost, false);
+assert.equal(formingReversalSuppression.category, 'forming');
+const activeReversalKey = scannerReversalWatchKey({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:25:00.0000000',
+  lines: longWatchLines,
+  state: longWatchActive,
+});
+assert.match(activeReversalKey, /REVERSAL_WATCH/);
+const activeReversalSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:25:00.0000000',
+  lines: longWatchLines,
+  state: longWatchActive,
+  reversalWatchSent: {},
+});
+assert.equal(activeReversalSuppression.shouldPost, true);
+assert.equal(activeReversalSuppression.category, 'post');
+const coldNoChaseReversalSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:45:00.0000000',
+  lines: longWatchLines,
+  state: longWatchNoChase,
+  reversalWatchSent: {},
+});
+assert.equal(coldNoChaseReversalSuppression.shouldPost, false);
+assert.equal(coldNoChaseReversalSuppression.category, 'not_ready');
+const activeReversalRecord = scannerReversalWatchRecord({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:25:00.0000000',
+  lines: longWatchLines,
+  state: longWatchActive,
+  sentAt: '2026-06-08T19:25:01.000Z',
+});
+const duplicateReversalSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:25:00.0000000',
+  lines: longWatchLines,
+  state: longWatchActive,
+  reversalWatchSent: { [activeReversalKey]: activeReversalRecord },
+});
+assert.equal(duplicateReversalSuppression.shouldPost, false);
+assert.equal(duplicateReversalSuppression.category, 'duplicate_refresh');
+const reversalArtifactDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-reversal-watch-'));
+const reversalArtifacts = await prepareLiveScannerReversalWatchAlertArtifacts({
+  session: 'lunch',
+  tradeDate: '2026-06-08',
+  config: { instrument: 'MES' },
+  chartContext: {
+    candles: [
+      { index: 0, timestamp: '2026-06-08T15:10:00.0000000', open: 7412, high: 7413, low: 7405, close: 7408 },
+      { index: 1, timestamp: '2026-06-08T15:15:00.0000000', open: 7408, high: 7412, low: 7404.75, close: 7408 },
+      { index: 2, timestamp: '2026-06-08T15:20:00.0000000', open: 7408, high: 7410.75, low: 7406, close: 7410.5 },
+      { index: 3, timestamp: '2026-06-08T15:25:00.0000000', open: 7410.5, high: 7413, low: 7410.25, close: 7412 },
+      { index: 4, timestamp: '2026-06-08T15:30:00.0000000', open: 7412, high: 7414, low: 7410.75, close: 7413 },
+    ],
+  } as any,
+  currentPrice: 7412,
+  windowLabel: 'Lunch/PM Setup Scan',
+  lines: longWatchLines,
+  state: longWatchActive,
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-08-MES-lunch.json'),
+  outputDir: reversalArtifactDir,
+});
+assert.equal(reversalArtifacts.files.length, 1);
+assert.match(reversalArtifacts.payload.content || '', /REVERSAL WATCH/);
+const reversalPayloadText = flattenDiscordPayloadText(reversalArtifacts.payload);
+assert.match(reversalPayloadText, /Execution: NOT APPROVED/);
+assert.match(reversalPayloadText, /LONG ABOVE: 7411.00/);
+assert.match(reversalPayloadText, /Invalid below: 7404.00/);
+assert.match(reversalPayloadText, /No chase above: 7421.50/);
+assert.match(reversalPayloadText, /does not change canExecute/);
+const longExhaustionShortWatchState = {
+  ...baseDeskPlanRefreshState,
+  activeCampaign: null,
+  bestLongPlan: {
+    lineInSand: 7422,
+    entry: 7420,
+    stop: 7410,
+    target1: 7428,
+    target2: 7432,
+    targetReactionLevel: 7430,
+    targetReactionLabel: 'HTF resistance',
+  },
+  bestShortPlan: {
+    setupType: SetupType.TurtleSoup,
+    direction: 'SHORT',
+    lineInSand: 7424,
+    entry: 7424,
+    stop: 7431,
+    target1: 7413.5,
+    target2: 7410,
+    targetReactionLevel: 7413.5,
+  },
+  primaryDeskPlay: {
+    ...baseDeskPlanRefreshState.primaryDeskPlay,
+    direction: 'LONG',
+    lineInSand: 7422,
+    targetReactionLevel: 7430,
+    longBias: { state: 'primary', lineInSand: 7422 },
+    shortBias: { state: 'secondary', lineInSand: 7424 },
+    shortBelow: 7424,
+    htfProtectedStructureMap: {
+      rows: [
+        { timeframe: '1H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7431, confirmationLine: 7424 },
+        { timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7431, confirmationLine: 7424 },
+      ],
+    },
+  },
+} as any;
+const shortWatchLines = buildScannerReversalWatchLines({
+  deskState: longExhaustionShortWatchState,
+  completed5m: { time: '2026-06-08T11:15:00.0000000', open: 7426, high: 7430.25, low: 7425, close: 7427, volume: 1000 },
+  currentPrice: 7427,
+});
+assert.equal(shortWatchLines.eligible, true);
+assert.equal(shortWatchLines.exhaustedSide, 'LONG');
+assert.equal(shortWatchLines.watchDirection, 'SHORT');
+assert.equal(shortWatchLines.triggerLine, 7424);
+assert.equal(shortWatchLines.invalidLine, 7431);
+assert.equal(shortWatchLines.noChaseLine, 7413.5);
+assert.match(shortWatchLines.reclaimRule || '', /Completed 5M candle body close below 7424.00/);
 const firstDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -1875,6 +2116,9 @@ assert.equal(tapeEvent.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate
 assert.equal(tapeEvent.candidateLifecycleTrace.candidateCount, 0);
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false);
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.reason, 'TriggerPending is logged locally as developing context.');
+assert.equal(tapeEvent.reversalWatch.lines.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_lines');
+assert.equal(tapeEvent.reversalWatch.state.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_state');
+assert.equal(tapeEvent.reversalWatch.state.approvalBoundary.changesCanExecute, false);
 assert.equal(tapeEvent.deskState.sourceOfTruth, 'scanner_desk_state');
 assert.equal(tapeEvent.deskState.marketMode, 'watching');
 assert.equal(tapeEvent.deskState.visibilityMode, tapeEvent.visibility.visibilityMode);
@@ -2045,6 +2289,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     watchlistSent: {},
     deskPlaySent: {},
     deskPlanRefreshSent: {},
+    reversalWatchSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},

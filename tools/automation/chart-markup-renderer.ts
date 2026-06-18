@@ -25,6 +25,40 @@ export interface ChartMarkupRenderInput {
   filePrefix?: string;
 }
 
+export interface ReversalWatchChartRenderInput {
+  chartContext: Partial<ChartContext> | null;
+  instrument: string;
+  tradeDate: string;
+  sessionLabel: string;
+  currentPrice?: number | null;
+  lines: {
+    eligible: boolean;
+    exhaustedSide: 'LONG' | 'SHORT' | null;
+    watchDirection: 'LONG' | 'SHORT' | null;
+    reactionZoneLow: number | null;
+    reactionZoneHigh: number | null;
+    reactionLabel?: string | null;
+    triggerLine: number | null;
+    strongerTriggerLine?: number | null;
+    invalidLine: number | null;
+    noChaseLine: number | null;
+    reclaimRule?: string | null;
+    retestRule?: string | null;
+    invalidationRule?: string | null;
+    noChaseRule?: string | null;
+    reason: string;
+  };
+  state: {
+    state: string;
+    reason: string;
+    reclaimConfirmed?: boolean;
+    retestHoldConfirmed?: boolean;
+    barsSinceReclaim?: number | null;
+  };
+  outputDir?: string;
+  filePrefix?: string;
+}
+
 function isPrice(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -1432,6 +1466,160 @@ export function buildPriceLevelMapHtmlForTest(input: ChartMarkupRenderInput): st
   return buildLevelMapHtml(input);
 }
 
+function reversalWatchStateLabel(state: string): string {
+  if (state === 'direction_validated') return 'VALIDATED';
+  if (state === 'watch_active') return 'WATCH ACTIVE';
+  if (state === 'no_chase') return 'NO CHASE';
+  if (state === 'invalidated') return 'INVALIDATED';
+  if (state === 'stalled') return 'STALLED';
+  if (state === 'forming') return 'FORMING';
+  return 'UNAVAILABLE';
+}
+
+function reversalWatchStateColor(state: string): string {
+  if (state === 'direction_validated') return '#22c55e';
+  if (state === 'watch_active') return '#38bdf8';
+  if (state === 'no_chase' || state === 'stalled') return '#f97316';
+  if (state === 'invalidated') return '#ef4444';
+  return '#facc15';
+}
+
+function buildReversalWatchChartHtml(input: ReversalWatchChartRenderInput): string {
+  const candles = candlesForVisualWindow(validCandles(input.chartContext), input.sessionLabel, 'desk_play_context');
+  if (candles.length < 3) {
+    throw new Error('Reversal watch chart requires at least 3 valid candles.');
+  }
+  const direction = input.lines.watchDirection || 'LONG';
+  const isLong = direction === 'LONG';
+  const triggerLabel = direction === 'LONG' ? 'LONG ABOVE' : 'SHORT BELOW';
+  const accent = isLong ? '#38ff88' : '#ff8a1c';
+  const exhausted = input.lines.exhaustedSide || 'UNKNOWN';
+  const stateColor = reversalWatchStateColor(input.state.state);
+  const prices = [
+    ...candles.flatMap((candle) => [candle.high, candle.low]),
+    input.currentPrice,
+    input.lines.reactionZoneLow,
+    input.lines.reactionZoneHigh,
+    input.lines.triggerLine,
+    input.lines.strongerTriggerLine,
+    input.lines.invalidLine,
+    input.lines.noChaseLine,
+  ].filter(isPrice);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const range = Math.max(2, maxPrice - minPrice);
+  const pad = Math.max(1.5, range * 0.12);
+  const low = minPrice - pad;
+  const high = maxPrice + pad;
+  const map = { left: 450, top: 146, right: 1368, bottom: 914 };
+  const width = APPROVED_RENDER_WIDTH;
+  const height = APPROVED_RENDER_HEIGHT;
+  const chartWidth = map.right - map.left;
+  const xStep = chartWidth / Math.max(1, candles.length - 1);
+  const y = (price: number) => map.top + ((high - price) / (high - low)) * (map.bottom - map.top);
+  const candleRows = candles.map((candle, index) => renderCandle(candle, map.left + index * xStep, y)).join('');
+  const reactionLow = input.lines.reactionZoneLow;
+  const reactionHigh = input.lines.reactionZoneHigh;
+  const reactionZone = isPrice(reactionLow) && isPrice(reactionHigh)
+    ? `<rect x="${map.left}" y="${y(Math.max(reactionLow, reactionHigh))}" width="${chartWidth}" height="${Math.max(12, Math.abs(y(reactionLow) - y(reactionHigh)))}" fill="${accent}" opacity=".16" />
+       <text x="${map.left + 24}" y="${y(Math.max(reactionLow, reactionHigh)) - 12}" class="zone-label" fill="${accent}">${escapeHtml(compact(input.lines.reactionLabel || 'Reaction zone', 30))}</text>`
+    : '';
+  const lines = renderManagedLines([
+    { label: `${direction} TRIGGER`, price: input.lines.triggerLine, color: '#38bdf8', width: 3 },
+    { label: 'STRONGER', price: input.lines.strongerTriggerLine, color: '#8b5cf6', dash: '8 8' },
+    { label: 'INVALID', price: input.lines.invalidLine, color: '#ef4444', width: 3 },
+    { label: 'NO CHASE', price: input.lines.noChaseLine, color: '#facc15', dash: '10 7', width: 2.5 },
+    { label: 'CURRENT', price: input.currentPrice, color: '#f8fafc', dash: '4 6' },
+  ], y, { lineStart: map.left, lineEnd: map.right - 8, text: 1312, pill: 1406 });
+  const timeLabels = candles
+    .filter((_, index) => index === 0 || index === candles.length - 1 || index % Math.max(1, Math.round(candles.length / 5)) === 0)
+    .map((candle, index) => {
+      const candleIndex = candles.indexOf(candle);
+      const minutes = minutesFromTimestamp(candle.timestamp);
+      const label = minutes === null ? String(candleIndex + 1) : `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+      return `<text x="${map.left + candleIndex * xStep}" y="946" text-anchor="${index === 0 ? 'start' : 'middle'}" class="axis">${escapeHtml(label)}</text>`;
+    }).join('');
+  const chartRuleText = (kind: 'reclaim' | 'retest' | 'invalid' | 'no_chase'): string => {
+    if (kind === 'reclaim') return isPrice(input.lines.triggerLine)
+      ? `Body close ${isLong ? '>' : '<'} ${money(input.lines.triggerLine)}.`
+      : 'Completed 5M body close required.';
+    if (kind === 'retest') return isPrice(input.lines.triggerLine)
+      ? `Retest holds ${isLong ? '>' : '<'} ${money(input.lines.triggerLine)}.`
+      : 'Later retest/hold required.';
+    if (kind === 'invalid') return isPrice(input.lines.invalidLine)
+      ? `5M close ${isLong ? '<' : '>'} ${money(input.lines.invalidLine)}.`
+      : 'Invalidation unavailable.';
+    return isPrice(input.lines.noChaseLine)
+      ? `No chase ${isLong ? '>' : '<'} ${money(input.lines.noChaseLine)}.`
+      : 'No-chase line unavailable.';
+  };
+  const rule = (label: string, value: string, yPos = 0) => value
+    ? `<text x="42" y="${yPos}" class="side-copy"><tspan fill="#94a3b8">${escapeHtml(label)}:</tspan> ${escapeHtml(value)}</text>`
+    : '';
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body { margin: 0; width: ${width}px; height: ${height}px; background: #030807; font-family: Arial, Helvetica, sans-serif; }
+    .wrap { width: ${width}px; height: ${height}px; background: radial-gradient(circle at 70% 30%, rgba(56,189,248,.11), transparent 34%), #030807; color: #f8fafc; }
+    .title { font-size: 38px; font-weight: 950; fill: #f8fafc; letter-spacing: 0; }
+    .subtitle { font-size: 24px; font-weight: 900; fill: ${accent}; }
+    .badge { font-size: 21px; font-weight: 950; fill: #020403; }
+    .side-title { font-size: 25px; font-weight: 950; fill: #f8fafc; }
+    .side-copy { font-size: 20px; font-weight: 780; fill: #f8fafc; }
+    .axis { font-size: 20px; fill: #e2e8f0; font-weight: 850; }
+    .line-label { font-size: 21px; font-weight: 950; }
+    .price-pill { font-size: 23px; font-weight: 950; fill: #ffffff; }
+    .zone-label { font-size: 25px; font-weight: 950; }
+    .footer { font-size: 20px; fill: #e2e8f0; font-weight: 750; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="${width}" height="${height}" fill="transparent" />
+  ${Array.from({ length: 10 }, (_, index) => `<line x1="${map.left + index * (chartWidth / 9)}" y1="${map.top}" x2="${map.left + index * (chartWidth / 9)}" y2="${map.bottom}" stroke="#10231f" stroke-width="1" />`).join('')}
+  ${Array.from({ length: 8 }, (_, index) => `<line x1="${map.left}" y1="${map.top + index * ((map.bottom - map.top) / 7)}" x2="${map.right}" y2="${map.top + index * ((map.bottom - map.top) / 7)}" stroke="#10231f" stroke-width="1" />`).join('')}
+  ${renderDirectionLogo(isLong).replace('translate(470 29)', 'translate(28 28)')}
+  <rect x="118" y="28" width="1388" height="104" rx="12" fill="${isLong ? '#052315' : '#261406'}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
+  <text x="148" y="72" class="title">${escapeHtml(input.instrument)} - ${escapeHtml(exhausted)} EXHAUSTING / ${direction} WATCH</text>
+  <text x="148" y="108" class="subtitle">Completed 5M reclaim/retest map - decision support only</text>
+  <rect x="1258" y="46" width="196" height="42" rx="21" fill="${stateColor}" opacity=".96" />
+  <text x="1356" y="74" text-anchor="middle" class="badge">${escapeHtml(reversalWatchStateLabel(input.state.state))}</text>
+  <rect x="24" y="154" width="392" height="278" rx="8" fill="#020807" stroke="${accent}" stroke-width="1.8" opacity=".96" />
+  <text x="42" y="190" class="side-title">TACTICAL WATCH</text>
+  <line x1="42" y1="204" x2="398" y2="204" stroke="${accent}" stroke-opacity=".38" />
+  <text x="42" y="232" class="side-copy"><tspan fill="#94a3b8">Reaction:</tspan> ${isPrice(reactionLow) && isPrice(reactionHigh) ? `${money(reactionLow)}-${money(reactionHigh)}` : 'N/A'}</text>
+  <text x="42" y="262" class="side-copy"><tspan fill="#94a3b8">${triggerLabel}:</tspan> ${money(input.lines.triggerLine)}</text>
+  <text x="42" y="292" class="side-copy"><tspan fill="#94a3b8">Invalid:</tspan> ${money(input.lines.invalidLine)}</text>
+  <text x="42" y="322" class="side-copy"><tspan fill="#94a3b8">No chase:</tspan> ${money(input.lines.noChaseLine)}</text>
+  <text x="42" y="352" class="side-copy"><tspan fill="#94a3b8">Current:</tspan> ${money(input.currentPrice)}</text>
+  <text x="42" y="390" class="side-copy"><tspan fill="#94a3b8">Status:</tspan> ${escapeHtml(reversalWatchStateLabel(input.state.state))}</text>
+  <rect x="24" y="456" width="392" height="236" rx="8" fill="#020807" stroke="#38bdf8" stroke-width="1.6" opacity=".96" />
+  <text x="42" y="492" class="side-title">5M RULES</text>
+  <line x1="42" y1="506" x2="398" y2="506" stroke="#38bdf8" stroke-opacity=".34" />
+  ${rule('Reclaim', chartRuleText('reclaim'), 536)}
+  ${rule('Retest', chartRuleText('retest'), 586)}
+  ${rule('Invalidation', chartRuleText('invalid'), 636)}
+  ${rule('No chase', chartRuleText('no_chase'), 670)}
+  <rect x="${map.left}" y="${map.top}" width="${chartWidth}" height="${map.bottom - map.top}" rx="12" fill="#020706" stroke="#164e63" stroke-width="2" opacity=".95" />
+  ${reactionZone}
+  ${candleRows}
+  ${lines}
+  ${timeLabels}
+  <rect x="16" y="960" width="1504" height="52" rx="9" fill="#070b0f" stroke="#64748b" />
+  <text x="768" y="993" text-anchor="middle" class="footer">Decision Support Only • No automated orders • 5M execution approval still requires app-owned canExecute</text>
+</svg>
+</div>
+</body>
+</html>`;
+}
+
+export function buildReversalWatchChartHtmlForTest(input: ReversalWatchChartRenderInput): string {
+  return buildReversalWatchChartHtml(input);
+}
+
 export async function verifyApprovedDailyTradePlanRender(outputPath: string): Promise<{ ok: true } | { ok: false; reason: string }> {
   return validatePngFile(outputPath, {
     expectedWidth: APPROVED_RENDER_WIDTH,
@@ -1473,5 +1661,22 @@ export async function renderPriceLevelMap(input: ChartMarkupRenderInput): Promis
     expectedHeight: APPROVED_RENDER_HEIGHT,
     minBytes: 50_000,
     failureLabel: 'Approved price level map render',
+  });
+}
+
+export async function renderReversalWatchChart(input: ReversalWatchChartRenderInput): Promise<string | null> {
+  if (!input.lines.eligible || !input.lines.watchDirection || !input.chartContext?.candles?.length) return null;
+  const outputDir = input.outputDir || DEFAULT_OUTPUT_DIR;
+  const safePrefix = (input.filePrefix || `${input.tradeDate}-${input.sessionLabel}-${input.lines.watchDirection}-reversal-watch`).replace(/[^a-z0-9_-]+/gi, '-');
+  const outputPath = path.join(outputDir, `${safePrefix}-${Date.now()}.png`);
+  const html = buildReversalWatchChartHtml(input);
+  return renderHtmlToApprovedPng({
+    html,
+    outputPath,
+    viewport: { width: APPROVED_RENDER_WIDTH, height: APPROVED_RENDER_HEIGHT },
+    expectedWidth: APPROVED_RENDER_WIDTH,
+    expectedHeight: APPROVED_RENDER_HEIGHT,
+    minBytes: 50_000,
+    failureLabel: 'Approved reversal watch chart render',
   });
 }

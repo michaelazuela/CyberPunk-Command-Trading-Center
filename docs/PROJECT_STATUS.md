@@ -3,6 +3,38 @@
 ## Latest Change
 
 Date: 2026-06-18
+Task: Install reversal-watch Discord card, chart, and cadence phases.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/chart-markup-renderer.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needs a clear trader-facing signal when a prior LONG or SHORT campaign has reached its reaction zone and the next best read is an opposite-side completed-5M reversal watch, without flooding Discord with cold invalidations, stale maps, or fake executable plans.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/live-desk-observer.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; replayed tools/automation/discord-audit/scanner-decision-tape-2026-06-18-MES-lunch.json from lunch through close; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The scanner can now post a dedicated Tactical Reversal Watch Discord card with a rendered chart showing reaction zone, trigger line, invalidation line, no-chase line, current price, and completed-5M rule language. The card is classified as a watch message, has no outcome buttons, and is not an execution approval. Cadence now suppresses forming states, cold invalidated/no-chase states, and duplicate fingerprints; terminal states only post as follow-up after a prior active/validated watch. The June 18 lunch replay produced two posts from 12:00-16:00 ET: a 12:55 validated SHORT watch and a 13:15 invalidation follow-up; later cold invalidated/no-chase states stayed local.
+Trading logic changed: No. This is Discord presentation, chart rendering, audit metadata, and cadence only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Reversal-watch states can now post as watch-only cards, while broad Desk Play refreshes stand down for the cycle when a reversal-watch card is sent.
+Journal/RAG impact: No schema change and no trade-outcome buttons on reversal-watch cards.
+Supabase impact: No migration added.
+Known risks: None known after tests and the June 18 lunch-to-close replay.
+Next recommended action: Observe the next live RTH session to confirm the watch card cadence feels trader-useful and that executable trade alerts remain limited to the app-owned canExecute path.
+
+## Previous Change
+
+Date: 2026-06-18
+Task: Install reversal-watch line builder and state metadata phases.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live desk needs to recognize when a LONG or SHORT campaign has reached its target/reaction zone and the next best desk read is an opposite-side reversal watch with explicit completed-5M reclaim, retest, invalidation, and no-chase lines.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/live-desk-observer.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The scanner now builds symmetric campaign-exhaustion reversal-watch metadata for SHORT exhaustion into LONG watch and LONG exhaustion into SHORT watch. The decision tape records reversal-watch lines and state for audit only, including reaction zone, trigger line, completed-5M reclaim rule, retest/hold rule, invalidation line, no-chase line, and state values such as forming, watch_active, direction_validated, stalled, invalidated, and no_chase.
+Trading logic changed: No. This is metadata/audit state only; no setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, Discord posting, or bar-close handling changed.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: None yet. Phases 3-4 will add Discord card/chart/cadence after this metadata is audited.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known. The new decision-tape fields are additive and audit-only.
+Next recommended action: Install Phases 3-4 together: reversal-watch Discord card, chart render, and dedupe/cadence.
+
+## Previous Change
+
+Date: 2026-06-18
 Task: Add all-trading-time HTF tactical campaign watch delivery.
 Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The live desk needed all-trading-time language and a Discord delivery path for HTF-backed tactical campaigns when 1H/2H/4H support plus app-owned 5M lifecycle evidence exists, without pretending the plan is executable.

@@ -93,7 +93,12 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   if (normalized.includes('current desk plan') || normalized.includes('desk play')) {
     return discordMessagePolicy('current_desk_plan');
   }
-  if (normalized.includes('watchlist') || normalized.includes('watch only - no fresh entry')) {
+  if (
+    normalized.includes('watchlist') ||
+    normalized.includes('watch only - no fresh entry') ||
+    normalized.includes('reversal watch') ||
+    normalized.includes('tactical watch')
+  ) {
     return discordMessagePolicy('watchlist');
   }
   if (normalized.includes('[am watch]') || normalized.includes('[pm watch]') || normalized.includes('[evening watch]')) {

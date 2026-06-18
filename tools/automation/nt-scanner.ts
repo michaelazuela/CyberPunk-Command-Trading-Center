@@ -100,7 +100,7 @@ import {
   type MarketDataWindowSource,
 } from './market-data-ingestion';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
-import { renderChartMarkup, renderPriceLevelMap } from './chart-markup-renderer';
+import { renderChartMarkup, renderPriceLevelMap, renderReversalWatchChart } from './chart-markup-renderer';
 import { buildDiscordTradePlanVisualProvenance } from './discord-visual-contract';
 import {
   compactDiscordSummary,
@@ -179,6 +179,7 @@ interface ScannerStateFile {
   watchlistSent: Record<string, { direction: string; sentAt: string }>;
   deskPlaySent: Record<string, { direction: string; lineInSand: number | null; sentAt: string }>;
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
+  reversalWatchSent: Record<string, ScannerReversalWatchLedgerRecord>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   discordCleanupMessages: Record<string, ScannerDiscordCleanupRecord>;
@@ -195,7 +196,7 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
-export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
 
 export interface ScannerDiscordCleanupRecord {
   key: string;
@@ -262,6 +263,43 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   sentAt: string;
 }
 
+export interface ScannerReversalWatchLedgerRecord {
+  fingerprint: string;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  exhaustedSide: ScannerReversalWatchDirection | null;
+  watchDirection: ScannerReversalWatchDirection | null;
+  state: ScannerReversalWatchState;
+  latestCompleted5m: string | null;
+  reactionZoneLow: number | null;
+  reactionZoneHigh: number | null;
+  triggerLine: number | null;
+  strongerTriggerLine: number | null;
+  invalidLine: number | null;
+  noChaseLine: number | null;
+  reclaimConfirmed: boolean;
+  retestHoldConfirmed: boolean;
+  barsSinceReclaim: number | null;
+  sentAt: string;
+}
+
+export type ScannerReversalWatchDiscordSuppressionCategory =
+  | 'post'
+  | 'not_ready'
+  | 'forming'
+  | 'stale_data'
+  | 'duplicate_refresh';
+
+export interface ScannerReversalWatchDiscordSuppressionDecision {
+  shouldPost: boolean;
+  category: ScannerReversalWatchDiscordSuppressionCategory;
+  reason: string;
+  previousFingerprint: string | null;
+  changesTradingLogic: false;
+  changesCanExecute: false;
+}
+
 export type ScannerDeskPlayDiscordSuppressionCategory =
   | 'post'
   | 'stale_data'
@@ -296,6 +334,60 @@ export interface ScannerTacticalCampaignMap {
   reason: string;
   changesTradingLogic: false;
   changesCanExecute: false;
+}
+
+export type ScannerReversalWatchDirection = 'LONG' | 'SHORT';
+export type ScannerReversalWatchState =
+  | 'unavailable'
+  | 'forming'
+  | 'watch_active'
+  | 'direction_validated'
+  | 'stalled'
+  | 'invalidated'
+  | 'no_chase';
+
+export interface ScannerReversalWatchLines {
+  sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_lines';
+  eligible: boolean;
+  exhaustedSide: ScannerReversalWatchDirection | null;
+  watchDirection: ScannerReversalWatchDirection | null;
+  reactionZoneLow: number | null;
+  reactionZoneHigh: number | null;
+  reactionLabel: string | null;
+  triggerLine: number | null;
+  strongerTriggerLine: number | null;
+  invalidLine: number | null;
+  noChaseLine: number | null;
+  reclaimRule: string | null;
+  retestRule: string | null;
+  invalidationRule: string | null;
+  noChaseRule: string | null;
+  reason: string;
+  sourceFields: string[];
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    createsNewModel: false;
+  };
+}
+
+export interface ScannerReversalWatchStateResult {
+  sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_state';
+  state: ScannerReversalWatchState;
+  watchDirection: ScannerReversalWatchDirection | null;
+  completed5mTime: string | null;
+  reclaimConfirmed: boolean;
+  retestHoldConfirmed: boolean;
+  barsSinceReclaim: number | null;
+  reason: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+  };
 }
 
 export interface ScannerActiveCampaignDurableLedgerConfig {
@@ -1147,6 +1239,7 @@ function emptyScannerState(): ScannerStateFile {
     watchlistSent: {},
     deskPlaySent: {},
     deskPlanRefreshSent: {},
+    reversalWatchSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -1168,6 +1261,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         watchlistSent: parsed.watchlistSent || {},
         deskPlaySent: parsed.deskPlaySent || {},
         deskPlanRefreshSent: parsed.deskPlanRefreshSent || {},
+        reversalWatchSent: parsed.reversalWatchSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         discordCleanupMessages: parsed.discordCleanupMessages || {},
@@ -1986,6 +2080,40 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function scannerCompletedBarsFromChartContext(chartContext: unknown): NinjaBridgeBar[] {
+  return asArray(asRecord(chartContext)?.candles)
+    .map((raw) => {
+      const record = asRecord(raw);
+      const time = typeof record?.time === 'string'
+        ? record.time
+        : typeof record?.timestamp === 'string'
+          ? record.timestamp
+          : null;
+      const open = record?.open;
+      const high = record?.high;
+      const low = record?.low;
+      const close = record?.close;
+      if (
+        !time ||
+        typeof open !== 'number' ||
+        typeof high !== 'number' ||
+        typeof low !== 'number' ||
+        typeof close !== 'number'
+      ) {
+        return null;
+      }
+      return {
+        time,
+        open,
+        high,
+        low,
+        close,
+        volume: typeof record.volume === 'number' ? record.volume : undefined,
+      } as NinjaBridgeBar;
+    })
+    .filter((bar): bar is NinjaBridgeBar => Boolean(bar));
+}
+
 function stringField(record: Record<string, unknown> | null, keys: string[]): string | null {
   if (!record) return null;
   for (const key of keys) {
@@ -2204,6 +2332,17 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
+  const reversalWatchLines = buildScannerReversalWatchLines({
+    deskState,
+    completed5m: args.completed5m,
+    currentPrice: args.currentPrice,
+  });
+  const reversalWatchState = classifyScannerReversalWatchState({
+    lines: reversalWatchLines,
+    completed5m: args.completed5m,
+    completed5mHistory: scannerCompletedBarsFromChartContext(args.chartContext),
+    currentPrice: args.currentPrice,
+  });
   const event = {
     recordedAt: new Date().toISOString(),
     mode: args.dryRun ? 'dry_run' : 'live',
@@ -2234,6 +2373,10 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     visibility: visibilityMetadata,
     candidateLifecycleTrace,
     deskState,
+    reversalWatch: {
+      lines: reversalWatchLines,
+      state: reversalWatchState,
+    },
     reviewStatus: args.scannerReviewStatus || null,
     staleReason: args.staleReason,
     confidence: args.confidence,
@@ -3396,6 +3539,268 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   };
 }
 
+function scannerOppositeDirection(direction: ScannerReversalWatchDirection): ScannerReversalWatchDirection {
+  return direction === 'LONG' ? 'SHORT' : 'LONG';
+}
+
+function roundNullableTradePrice(value: unknown): number | null {
+  return isFiniteTradePrice(value) ? roundToTradeTick(value) : null;
+}
+
+function scannerLifecycleForDirection(
+  deskState: DeskState,
+  direction: ScannerReversalWatchDirection,
+): ScannerCandidateLifecycleTraceItem | null {
+  return direction === 'LONG' ? deskState.bestLongPlan : deskState.bestShortPlan;
+}
+
+function scannerFiveMinuteProtectedLine(
+  deskState: DeskState,
+  direction: ScannerReversalWatchDirection,
+): number | null {
+  const row = (deskState.primaryDeskPlay.htfProtectedStructureMap?.rows || [])
+    .find((item) => item.timeframe === '5M' && htfRowSupportsDirection(item, direction));
+  return roundNullableTradePrice(row?.protectedStructure);
+}
+
+function reversalWatchRuleText(
+  direction: ScannerReversalWatchDirection,
+  kind: 'reclaim' | 'retest' | 'invalid' | 'no_chase',
+  line: number,
+): string {
+  const price = line.toFixed(2);
+  if (direction === 'LONG') {
+    if (kind === 'reclaim') return `Completed 5M candle body close above ${price}. Wicks do not confirm reclaim.`;
+    if (kind === 'retest') return `Later completed 5M retest/hold close above ${price}.`;
+    if (kind === 'invalid') return `Completed 5M close below ${price} invalidates the long reversal watch.`;
+    return `No chase above ${price}; wait for a fresh pullback/retest instead.`;
+  }
+  if (kind === 'reclaim') return `Completed 5M candle body close below ${price}. Wicks do not confirm reclaim.`;
+  if (kind === 'retest') return `Later completed 5M retest/hold close below ${price}.`;
+  if (kind === 'invalid') return `Completed 5M close above ${price} invalidates the short reversal watch.`;
+  return `No chase below ${price}; wait for a fresh pullback/retest instead.`;
+}
+
+function scannerReversalWatchBoundary() {
+  return {
+    changesTradeApprovals: false as const,
+    changesCanExecute: false as const,
+    changesEntryStopTargets: false as const,
+    changesRiskRules: false as const,
+  };
+}
+
+export function buildScannerReversalWatchLines(args: {
+  deskState: DeskState;
+  completed5m?: NinjaBridgeBar | null;
+  currentPrice?: number | null;
+}): ScannerReversalWatchLines {
+  const approvalBoundary = {
+    ...scannerReversalWatchBoundary(),
+    createsNewModel: false as const,
+  };
+  const play = args.deskState.primaryDeskPlay;
+  const exhaustedSide = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  const watchDirection = exhaustedSide ? scannerOppositeDirection(exhaustedSide) : null;
+  const sourceFields: string[] = [];
+  const empty = (reason: string): ScannerReversalWatchLines => ({
+    sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_lines',
+    eligible: false,
+    exhaustedSide,
+    watchDirection,
+    reactionZoneLow: null,
+    reactionZoneHigh: null,
+    reactionLabel: null,
+    triggerLine: null,
+    strongerTriggerLine: null,
+    invalidLine: null,
+    noChaseLine: null,
+    reclaimRule: null,
+    retestRule: null,
+    invalidationRule: null,
+    noChaseRule: null,
+    reason,
+    sourceFields,
+    approvalBoundary,
+  });
+
+  if (!exhaustedSide || !watchDirection) return empty('No active LONG/SHORT campaign is available for reversal-watch line building.');
+  if (args.deskState.canExecute) return empty('Executable plans use the trade-alert path; reversal-watch lines stay review metadata only.');
+
+  const exhausted = scannerLifecycleForDirection(args.deskState, exhaustedSide);
+  const watch = scannerLifecycleForDirection(args.deskState, watchDirection);
+  const reactionCandidates = [
+    roundNullableTradePrice(exhausted?.targetReactionLevel),
+    roundNullableTradePrice(args.deskState.primaryDeskPlay.targetReactionLevel),
+    roundNullableTradePrice(exhausted?.target1),
+    roundNullableTradePrice(exhausted?.target2),
+  ].filter((value): value is number => value !== null);
+  const reactionZoneLow = reactionCandidates.length ? Math.min(...reactionCandidates) : null;
+  const reactionZoneHigh = reactionCandidates.length ? Math.max(...reactionCandidates) : null;
+  if (reactionZoneLow === null || reactionZoneHigh === null) return empty('No app-owned target/reaction zone is available for campaign exhaustion.');
+  sourceFields.push('exhausted.targetReactionLevel/target1/target2');
+
+  const barLow = roundNullableTradePrice(args.completed5m?.low);
+  const barHigh = roundNullableTradePrice(args.completed5m?.high);
+  const currentPrice = roundNullableTradePrice(args.currentPrice);
+  const reactionTouched = exhaustedSide === 'SHORT'
+    ? [barLow, currentPrice].some((value) => value !== null && value <= reactionZoneHigh + 0.25)
+    : [barHigh, currentPrice].some((value) => value !== null && value >= reactionZoneLow - 0.25);
+  if (!reactionTouched) {
+    return {
+      ...empty(`The ${exhaustedSide} campaign has not reached its mapped target/reaction zone yet.`),
+      reactionZoneLow,
+      reactionZoneHigh,
+      reactionLabel: exhausted?.targetReactionLabel || play.targetReactionLabel || null,
+      sourceFields,
+    };
+  }
+
+  const triggerLine = watchDirection === 'LONG'
+    ? roundNullableTradePrice(play.longAbove) ?? roundNullableTradePrice(play.longBias.lineInSand) ?? roundNullableTradePrice(watch?.lineInSand)
+    : roundNullableTradePrice(play.shortBelow) ?? roundNullableTradePrice(play.shortBias.lineInSand) ?? roundNullableTradePrice(watch?.lineInSand);
+  const strongerTriggerLine = roundNullableTradePrice(watch?.lineInSand);
+  const invalidLine = scannerFiveMinuteProtectedLine(args.deskState, watchDirection) ??
+    roundNullableTradePrice(watch?.stop) ??
+    (watchDirection === 'LONG' ? reactionZoneLow : reactionZoneHigh);
+  const noChaseLine = roundNullableTradePrice(watch?.target1) ??
+    roundNullableTradePrice(watch?.targetReactionLevel) ??
+    (watchDirection === 'LONG' ? roundNullableTradePrice(play.lineInSand) : roundNullableTradePrice(play.lineInSand));
+
+  if (triggerLine !== null) sourceFields.push(watchDirection === 'LONG' ? 'primaryDeskPlay.longAbove/longBias.lineInSand' : 'primaryDeskPlay.shortBelow/shortBias.lineInSand');
+  if (invalidLine !== null) sourceFields.push('5M protectedStructure or watch.stop or reaction zone');
+  if (noChaseLine !== null) sourceFields.push('watch.target1/targetReactionLevel or primary line');
+
+  const missing = [
+    triggerLine === null ? 'trigger line' : null,
+    invalidLine === null ? 'invalidation line' : null,
+    noChaseLine === null ? 'no-chase line' : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return {
+    sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_lines',
+    eligible: missing.length === 0,
+    exhaustedSide,
+    watchDirection,
+    reactionZoneLow,
+    reactionZoneHigh,
+    reactionLabel: exhausted?.targetReactionLabel || play.targetReactionLabel || null,
+    triggerLine,
+    strongerTriggerLine,
+    invalidLine,
+    noChaseLine,
+    reclaimRule: triggerLine === null ? null : reversalWatchRuleText(watchDirection, 'reclaim', triggerLine),
+    retestRule: triggerLine === null ? null : reversalWatchRuleText(watchDirection, 'retest', triggerLine),
+    invalidationRule: invalidLine === null ? null : reversalWatchRuleText(watchDirection, 'invalid', invalidLine),
+    noChaseRule: noChaseLine === null ? null : reversalWatchRuleText(watchDirection, 'no_chase', noChaseLine),
+    reason: missing.length
+      ? `Campaign exhaustion reaction was found, but ${missing.join(', ')} is missing.`
+      : `${exhaustedSide} campaign reached mapped reaction zone ${reactionZoneLow.toFixed(2)}-${reactionZoneHigh.toFixed(2)}; ${watchDirection} reversal watch lines are available. Reclaim requires a completed 5M body close, not a wick.`,
+    sourceFields: Array.from(new Set(sourceFields)),
+    approvalBoundary,
+  };
+}
+
+function scannerBarClosesThroughLine(
+  direction: ScannerReversalWatchDirection,
+  bar: NinjaBridgeBar,
+  line: number,
+): boolean {
+  return direction === 'LONG' ? bar.close > line : bar.close < line;
+}
+
+function scannerBarRetestsAndHoldsLine(
+  direction: ScannerReversalWatchDirection,
+  bar: NinjaBridgeBar,
+  line: number,
+): boolean {
+  return direction === 'LONG'
+    ? bar.low <= line + 0.25 && bar.close > line
+    : bar.high >= line - 0.25 && bar.close < line;
+}
+
+export function classifyScannerReversalWatchState(args: {
+  lines: ScannerReversalWatchLines;
+  completed5m?: NinjaBridgeBar | null;
+  completed5mHistory?: NinjaBridgeBar[];
+  currentPrice?: number | null;
+}): ScannerReversalWatchStateResult {
+  const approvalBoundary = scannerReversalWatchBoundary();
+  const line = args.lines.triggerLine;
+  const direction = args.lines.watchDirection;
+  const completed = args.completed5m || null;
+  const unavailable = (reason: string): ScannerReversalWatchStateResult => ({
+    sourceOfTruth: 'scanner_campaign_exhaustion_reversal_watch_state',
+    state: 'unavailable',
+    watchDirection: direction,
+    completed5mTime: completed?.time || null,
+    reclaimConfirmed: false,
+    retestHoldConfirmed: false,
+    barsSinceReclaim: null,
+    reason,
+    approvalBoundary,
+  });
+  if (!args.lines.eligible || !direction || line === null) return unavailable(args.lines.reason);
+  if (!completed) return unavailable('No completed 5M bar is available for reversal-watch state classification.');
+
+  const close = completed.close;
+  const currentPrice = roundNullableTradePrice(args.currentPrice);
+  const invalid = args.lines.invalidLine;
+  const noChase = args.lines.noChaseLine;
+  if (invalid !== null && (direction === 'LONG' ? close < invalid : close > invalid)) {
+    return {
+      ...unavailable(`Completed 5M close ${close.toFixed(2)} invalidated the ${direction} reversal watch at ${invalid.toFixed(2)}.`),
+      state: 'invalidated',
+    };
+  }
+  if (noChase !== null && [close, currentPrice].some((value) => value !== null && (direction === 'LONG' ? value >= noChase : value <= noChase))) {
+    return {
+      ...unavailable(`${direction} reversal watch is no-chase at/through ${noChase.toFixed(2)}.`),
+      state: 'no_chase',
+    };
+  }
+
+  const history = (args.completed5mHistory || [])
+    .filter((bar) => typeof bar?.close === 'number')
+    .concat(args.completed5mHistory?.some((bar) => bar.time === completed.time) ? [] : [completed]);
+  const reclaimIndex = history.findIndex((bar) => scannerBarClosesThroughLine(direction, bar, line));
+  const reclaimConfirmed = reclaimIndex >= 0 && scannerBarClosesThroughLine(direction, completed, line);
+  if (!reclaimConfirmed) {
+    return {
+      ...unavailable(`Waiting for completed 5M body close ${direction === 'LONG' ? 'above' : 'below'} ${line.toFixed(2)}.`),
+      state: 'forming',
+    };
+  }
+
+  const barsSinceReclaim = Math.max(0, history.length - 1 - reclaimIndex);
+  const retestHoldConfirmed = reclaimIndex >= 0 && history
+    .slice(reclaimIndex + 1)
+    .some((bar) => scannerBarRetestsAndHoldsLine(direction, bar, line));
+  if (retestHoldConfirmed) {
+    return {
+      ...unavailable(`${direction} reversal watch direction validated: completed 5M reclaim and later retest/hold close confirmed at ${line.toFixed(2)}.`),
+      state: 'direction_validated',
+      reclaimConfirmed: true,
+      retestHoldConfirmed: true,
+      barsSinceReclaim,
+    };
+  }
+  if (barsSinceReclaim >= 3) {
+    return {
+      ...unavailable(`${direction} reversal watch stalled: three completed 5M bars passed after reclaim without a retest/hold validation.`),
+      state: 'stalled',
+      reclaimConfirmed: true,
+      barsSinceReclaim,
+    };
+  }
+  return {
+    ...unavailable(`${direction} reversal watch active: completed 5M reclaim close confirmed; waiting for later retest/hold close.`),
+    state: 'watch_active',
+    reclaimConfirmed: true,
+    barsSinceReclaim,
+  };
+}
+
 function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | null {
   const play = deskState.primaryDeskPlay;
   const primaryBias = scannerDeskPlayPrimaryBias(deskState);
@@ -3715,6 +4120,187 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     : 'Desk Play refresh is eligible for Discord.');
 }
 
+function scannerReversalWatchSuppressionPost(
+  reason = 'Reversal watch is eligible for Discord.',
+): ScannerReversalWatchDiscordSuppressionDecision {
+  return {
+    shouldPost: true,
+    category: 'post',
+    reason,
+    previousFingerprint: null,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+  };
+}
+
+function scannerReversalWatchSuppressionBlocked(
+  category: Exclude<ScannerReversalWatchDiscordSuppressionCategory, 'post'>,
+  reason: string,
+  previousFingerprint: string | null = null,
+): ScannerReversalWatchDiscordSuppressionDecision {
+  return {
+    shouldPost: false,
+    category,
+    reason,
+    previousFingerprint,
+    changesTradingLogic: false,
+    changesCanExecute: false,
+  };
+}
+
+export function scannerReversalWatchKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  latestCompleted5m?: string | null;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+}): string {
+  return [
+    args.tradeDate,
+    args.instrument,
+    args.session,
+    'REVERSAL_WATCH',
+    args.latestCompleted5m || 'no-completed-5m',
+    args.lines.exhaustedSide || 'no-exhausted-side',
+    args.lines.watchDirection || 'no-watch-side',
+    args.state.state,
+  ].join(':');
+}
+
+function scannerReversalWatchFingerprint(args: {
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+}): string {
+  const lines = args.lines;
+  const state = args.state;
+  return [
+    `eligible=${lines.eligible ? 'yes' : 'no'}`,
+    `exhausted=${lines.exhaustedSide || 'none'}`,
+    `watch=${lines.watchDirection || 'none'}`,
+    `state=${state.state}`,
+    `reaction=${deskPlanRefreshPrice(lines.reactionZoneLow)}-${deskPlanRefreshPrice(lines.reactionZoneHigh)}`,
+    `trigger=${deskPlanRefreshPrice(lines.triggerLine)}`,
+    `stronger=${deskPlanRefreshPrice(lines.strongerTriggerLine)}`,
+    `invalid=${deskPlanRefreshPrice(lines.invalidLine)}`,
+    `noChase=${deskPlanRefreshPrice(lines.noChaseLine)}`,
+    `reclaim=${state.reclaimConfirmed ? 'yes' : 'no'}`,
+    `retest=${state.retestHoldConfirmed ? 'yes' : 'no'}`,
+  ].join('|');
+}
+
+export function scannerReversalWatchRecord(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  latestCompleted5m?: string | null;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+  sentAt: string;
+}): ScannerReversalWatchLedgerRecord {
+  return {
+    fingerprint: scannerReversalWatchFingerprint({ lines: args.lines, state: args.state }),
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    exhaustedSide: args.lines.exhaustedSide,
+    watchDirection: args.lines.watchDirection,
+    state: args.state.state,
+    latestCompleted5m: args.latestCompleted5m || null,
+    reactionZoneLow: args.lines.reactionZoneLow,
+    reactionZoneHigh: args.lines.reactionZoneHigh,
+    triggerLine: args.lines.triggerLine,
+    strongerTriggerLine: args.lines.strongerTriggerLine,
+    invalidLine: args.lines.invalidLine,
+    noChaseLine: args.lines.noChaseLine,
+    reclaimConfirmed: args.state.reclaimConfirmed,
+    retestHoldConfirmed: args.state.retestHoldConfirmed,
+    barsSinceReclaim: args.state.barsSinceReclaim,
+    sentAt: args.sentAt,
+  };
+}
+
+function latestReversalWatchRecord(args: {
+  sent: Record<string, ScannerReversalWatchLedgerRecord>;
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  watchDirection: ScannerReversalWatchDirection | null;
+}): ScannerReversalWatchLedgerRecord | null {
+  return Object.values(args.sent || {})
+    .filter((record) =>
+      record.tradeDate === args.tradeDate &&
+      record.instrument === args.instrument &&
+      record.session === args.session &&
+      record.watchDirection === args.watchDirection
+    )
+    .sort((a, b) => {
+      const sentDelta = new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime();
+      if (sentDelta !== 0) return sentDelta;
+      return String(b.latestCompleted5m || '').localeCompare(String(a.latestCompleted5m || ''));
+    })[0] || null;
+}
+
+export function evaluateScannerReversalWatchDiscordSuppression(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: string;
+  latestCompleted5m?: string | null;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+  reversalWatchSent: Record<string, ScannerReversalWatchLedgerRecord>;
+  staleReason?: string | null;
+  now?: Date;
+}): ScannerReversalWatchDiscordSuppressionDecision {
+  if (args.staleReason && /stale|missing|invalid|data/i.test(args.staleReason)) {
+    return scannerReversalWatchSuppressionBlocked('stale_data', `Reversal watch kept local because scanner data is not clean: ${args.staleReason}`);
+  }
+  if (!args.lines.eligible || !args.lines.watchDirection) {
+    return scannerReversalWatchSuppressionBlocked('not_ready', `Reversal watch kept local: ${args.lines.reason}`);
+  }
+  if (args.state.state === 'unavailable') {
+    return scannerReversalWatchSuppressionBlocked('not_ready', `Reversal watch kept local: ${args.state.reason}`);
+  }
+  if (args.state.state === 'forming') {
+    return scannerReversalWatchSuppressionBlocked('forming', args.state.reason);
+  }
+  const previous = latestReversalWatchRecord({
+    sent: args.reversalWatchSent,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    watchDirection: args.lines.watchDirection,
+  });
+  if (
+    (args.state.state === 'invalidated' || args.state.state === 'no_chase' || args.state.state === 'stalled') &&
+    previous?.state !== 'watch_active' &&
+    previous?.state !== 'direction_validated'
+  ) {
+    return scannerReversalWatchSuppressionBlocked(
+      'not_ready',
+      `${args.state.state.replace(/_/g, ' ')} kept local because no active ${args.lines.watchDirection} reversal watch was previously posted.`,
+      previous?.fingerprint || null,
+    );
+  }
+  const current = scannerReversalWatchRecord({
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: args.session,
+    latestCompleted5m: args.latestCompleted5m,
+    lines: args.lines,
+    state: args.state,
+    sentAt: (args.now || new Date()).toISOString(),
+  });
+  if (previous?.fingerprint === current.fingerprint) {
+    return scannerReversalWatchSuppressionBlocked(
+      'duplicate_refresh',
+      'Reversal watch suppressed because side, state, trigger, invalidation, no-chase, and reaction zone are unchanged.',
+      previous.fingerprint,
+    );
+  }
+  return scannerReversalWatchSuppressionPost(args.state.reason);
+}
+
 function bridgeBarEtDate(bar: NinjaBridgeBar, mode: BridgeTimeZoneMode): string | null {
   const parsed = parseBridgeTime(bar.time, mode);
   if (!parsed) return null;
@@ -3986,6 +4572,126 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
       auditLogPath: args.decisionTapePath,
     },
     deskState: args.deskState,
+  });
+  validateDiscordPayload(payload, files);
+  return { payload, files, chartMarkup };
+}
+
+function scannerDiscordLine(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+function compactScannerDiscordText(value: string | null | undefined, max = 260): string {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'N/A';
+  return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
+}
+
+function buildScannerReversalWatchDiscordPayload(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  windowLabel: string;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+  currentPrice: number | null;
+  chartMarkup: string | null;
+  decisionTapePath: string;
+}): DiscordWebhookPayload {
+  const direction = args.lines.watchDirection || 'WAIT';
+  const exhausted = args.lines.exhaustedSide || 'UNKNOWN';
+  const reaction = args.lines.reactionZoneLow !== null && args.lines.reactionZoneHigh !== null
+    ? `${scannerDiscordLine(args.lines.reactionZoneLow)}-${scannerDiscordLine(args.lines.reactionZoneHigh)}`
+    : 'N/A';
+  const directionLineLabel = direction === 'SHORT' ? 'SHORT BELOW' : direction === 'LONG' ? 'LONG ABOVE' : 'WATCH LINE';
+  const status = args.state.state.replace(/_/g, ' ').toUpperCase();
+  const title = `${args.instrument} Tactical Reversal Watch`;
+  const content = `[${args.session.toUpperCase()} REVERSAL WATCH] ${args.instrument} - ${exhausted} EXHAUSTING / ${direction} WATCH | ${args.tradeDate}`;
+  return {
+    username: 'Quant Desk',
+    content,
+    embeds: [{
+      title,
+      color: args.state.state === 'direction_validated' ? 0x22c55e : args.state.state === 'watch_active' ? 0x38bdf8 : args.state.state === 'invalidated' ? 0xef4444 : 0xf97316,
+      description: [
+        `Primary: ${exhausted} campaign exhaustion / ${direction} reversal watch`,
+        'Execution: NOT APPROVED - this is a completed 5M watch map only.',
+        `Status: ${status}`,
+        `Reaction zone: ${reaction}`,
+        `${directionLineLabel}: ${scannerDiscordLine(args.lines.triggerLine)}`,
+        `Invalid ${direction === 'LONG' ? 'below' : direction === 'SHORT' ? 'above' : 'at'}: ${scannerDiscordLine(args.lines.invalidLine)}`,
+        `No chase ${direction === 'LONG' ? 'above' : direction === 'SHORT' ? 'below' : 'at'}: ${scannerDiscordLine(args.lines.noChaseLine)}`,
+        `Current: ${scannerDiscordLine(args.currentPrice)}`,
+      ].join('\n'),
+      fields: [
+        {
+          name: '5M Trigger Rule',
+          value: compactScannerDiscordText(args.lines.reclaimRule),
+          inline: false,
+        },
+        {
+          name: 'Retest / Hold Rule',
+          value: compactScannerDiscordText(args.lines.retestRule),
+          inline: false,
+        },
+        {
+          name: 'Bottom Line',
+          value: compactScannerDiscordText(`${args.state.reason} This does not change canExecute; app-owned 5M trigger, stop, risk, target room, model, and session gates still control execution approval.`),
+          inline: false,
+        },
+        {
+          name: 'Attachments',
+          value: [
+            args.chartMarkup ? 'Chart: attached tactical watch map.' : 'Chart: unavailable; using text map only.',
+            args.decisionTapePath ? `Decision tape: ${args.decisionTapePath}` : 'Decision tape: N/A',
+          ].join('\n'),
+          inline: false,
+        },
+      ],
+      footer: { text: 'Quant Desk • Tactical Reversal Watch • Not execution approval' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+export async function prepareLiveScannerReversalWatchAlertArtifacts(args: {
+  session: LiveSession;
+  tradeDate: string;
+  config: Pick<ScannerConfig, 'instrument'>;
+  chartContext: AnalysisResult['structuredChartContext'] | null | undefined;
+  currentPrice: number | null;
+  windowLabel: string;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+  decisionTapePath: string;
+  outputDir?: string;
+}): Promise<{
+  payload: DiscordWebhookPayload;
+  files: string[];
+  chartMarkup: string | null;
+}> {
+  const chartMarkup = await renderReversalWatchChart({
+    chartContext: args.chartContext || null,
+    instrument: args.config.instrument,
+    tradeDate: args.tradeDate,
+    sessionLabel: args.session,
+    currentPrice: args.currentPrice,
+    lines: args.lines,
+    state: args.state,
+    outputDir: args.outputDir,
+    filePrefix: `scanner-reversal-watch-${args.session}-${args.tradeDate}-${args.config.instrument}`,
+  });
+  const files = [chartMarkup].filter((file): file is string => Boolean(file));
+  const payload = buildScannerReversalWatchDiscordPayload({
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    session: args.session,
+    windowLabel: args.windowLabel,
+    lines: args.lines,
+    state: args.state,
+    currentPrice: args.currentPrice,
+    chartMarkup,
+    decisionTapePath: args.decisionTapePath,
   });
   validateDiscordPayload(payload, files);
   return { payload, files, chartMarkup };
@@ -5716,7 +6422,91 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
 
-  if (!alertDecision.shouldSend && window.allowsDiscordAlert && deskState.primaryDeskPlay.discordEligible) {
+  let reversalWatchPosted = false;
+  if (!alertDecision.shouldSend && window.allowsDiscordAlert) {
+    const reversalWatchLines = buildScannerReversalWatchLines({
+      deskState,
+      completed5m,
+      currentPrice,
+    });
+    const reversalWatchState = classifyScannerReversalWatchState({
+      lines: reversalWatchLines,
+      completed5m,
+      completed5mHistory: scannerCompletedBarsFromChartContext(analysis.structuredChartContext || null),
+      currentPrice,
+    });
+    const reversalWatchKey = scannerReversalWatchKey({
+      tradeDate,
+      instrument: config.instrument,
+      session: window.session,
+      latestCompleted5m: completed5m.time,
+      lines: reversalWatchLines,
+      state: reversalWatchState,
+    });
+    const reversalWatchSuppression = evaluateScannerReversalWatchDiscordSuppression({
+      tradeDate,
+      instrument: config.instrument,
+      session: window.session,
+      latestCompleted5m: completed5m.time,
+      lines: reversalWatchLines,
+      state: reversalWatchState,
+      reversalWatchSent: state.reversalWatchSent,
+      staleReason: stale.reason,
+    });
+    if (!reversalWatchSuppression.shouldPost) {
+      console.log(`[scanner] Reversal watch suppressed (${reversalWatchSuppression.category}): ${reversalWatchSuppression.reason}${reversalWatchSuppression.previousFingerprint ? ` | previous=${reversalWatchSuppression.previousFingerprint}` : ''}`);
+    } else if (!state.reversalWatchSent[reversalWatchKey]) {
+      try {
+        const reversalArtifacts = await prepareLiveScannerReversalWatchAlertArtifacts({
+          session,
+          tradeDate,
+          config,
+          chartContext: analysis.structuredChartContext || null,
+          currentPrice,
+          windowLabel: window.label,
+          lines: reversalWatchLines,
+          state: reversalWatchState,
+          decisionTapePath,
+        });
+        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files);
+        if (receipt.deliveryStatus === 'sent') {
+          const sentAt = new Date().toISOString();
+          state.reversalWatchSent[reversalWatchKey] = scannerReversalWatchRecord({
+            tradeDate,
+            instrument: config.instrument,
+            session: window.session,
+            latestCompleted5m: completed5m.time,
+            lines: reversalWatchLines,
+            state: reversalWatchState,
+            sentAt,
+          });
+          state.sent[reversalWatchKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+          await writeScannerDiscordReceiptAuditLog({
+            kind: 'reversal_watch',
+            key: reversalWatchKey,
+            planVersionId: `${planVersionId}-REVERSAL-WATCH`,
+            tradeDate,
+            instrument: config.instrument,
+            session,
+            receipt,
+            postedAt: sentAt,
+            cleanupRecordKey: null,
+            ragReceiptAttached: false,
+          });
+          reversalWatchPosted = true;
+          console.log(`[scanner] Sent Reversal Watch update: ${reversalWatchKey}`);
+        } else {
+          console.log(`[scanner] Reversal Watch update skipped (${receipt.webhookSource || 'unknown'}): ${reversalWatchKey}`);
+        }
+      } catch (error) {
+        console.warn(`[scanner] Reversal Watch delivery failed safely; scanner will continue evaluating Desk Play/trade alerts: ${sanitizedError(error)}`);
+      }
+    } else {
+      console.log(`[scanner] Reversal Watch already sent for ${reversalWatchKey}.`);
+    }
+  }
+
+  if (!reversalWatchPosted && !alertDecision.shouldSend && window.allowsDiscordAlert && deskState.primaryDeskPlay.discordEligible) {
     const deskPlayKey = scannerDeskPlanRefreshKey({
       tradeDate,
       instrument: config.instrument,
