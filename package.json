@@ -30,6 +30,7 @@
     "diagnostic:active-mss-replay:verbose": "node --max-old-space-size=8192 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --allow-heavy-replay=true --verbose-rows=true --max-samples=500",
     "diagnostic:failed-plan-reversal-phase8": "tsx tools/automation/failed-plan-reversal-phase8-audit.ts",
     "weekly:report": "tsx tools/automation/weekly-trading-report.ts",
+    "live:desk-observer": "tsx tools/automation/live-desk-observer.ts",
     "research:backfill": "tsx tools/automation/research-backfill.ts",
     "research:sample-review": "tsx tools/automation/research-sample-review.ts",
     "research:human-review": "tsx tools/automation/research-human-review.ts",

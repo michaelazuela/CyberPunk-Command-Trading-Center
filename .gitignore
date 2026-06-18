@@ -29,4 +29,5 @@ tools/automation/research-validation-reports/
 tools/automation/research-review-packs/*
 !tools/automation/research-review-packs/latest-review-pack.json
 tools/automation/weekly-reports/
+tools/automation/live-desk-observer-reports/
 tools/automation/.weekly-trading-report-state.json

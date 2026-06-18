@@ -45,6 +45,7 @@ import {
   type ScannerConfidenceBreakdown,
   type ScannerCandidateLifecycleTraceItem,
   type ScannerCandidateLifecycleTrace,
+  type ScannerAlertDecision,
   type DeskState,
   type ScannerState,
   type ScannerThresholds,
@@ -4342,6 +4343,60 @@ export function shouldSendScannerDataQualityNoticeForWindow(window: ReturnType<t
   return window.allowsDeskPlan && window.allowsMarketMapping;
 }
 
+function candidateReadinessStatus(deskState: DeskState, candidate?: SetupCandidate | null): string | null {
+  const direction = candidate?.direction;
+  const play = deskState.primaryDeskPlay;
+  const bias = direction === 'LONG'
+    ? play.longBias
+    : direction === 'SHORT'
+      ? play.shortBias
+      : null;
+  const readiness = bias && typeof bias === 'object' && 'tradeReadiness' in bias
+    ? (bias as { tradeReadiness?: { status?: string | null } | null }).tradeReadiness
+    : null;
+  return readiness?.status || null;
+}
+
+export function evaluateScannerPrimaryAlertPublishingGate(args: {
+  alertDecision: ScannerAlertDecision;
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalizedCanExecute?: boolean | null;
+  state: ScannerState;
+  staleReason?: string | null;
+  scannerReviewStatus?: string | null;
+}): ScannerAlertDecision {
+  if (!args.alertDecision.shouldSend) return args.alertDecision;
+
+  const reasons: string[] = [];
+  const play = args.deskState.primaryDeskPlay;
+  const candidateDirection = args.candidate?.direction || null;
+  const primaryDirection = play.direction;
+  const readinessStatus = candidateReadinessStatus(args.deskState, args.candidate);
+  const staleText = `${args.staleReason || ''} ${args.scannerReviewStatus || ''}`.trim();
+
+  if (!args.normalizedCanExecute) reasons.push('canExecute=false');
+  if (primaryDirection === 'WAIT') reasons.push('DeskState primary=WAIT');
+  if (candidateDirection && primaryDirection !== 'WAIT' && candidateDirection !== primaryDirection) {
+    reasons.push(`candidate side ${candidateDirection} conflicts with DeskState ${primaryDirection}`);
+  }
+  if (readinessStatus && readinessStatus !== 'ready' && readinessStatus !== 'aligned') {
+    reasons.push(`readiness=${readinessStatus}`);
+  }
+  if (play.htfConflict) reasons.push('HTF/protected structure conflict');
+  if (args.state === 'Missed') reasons.push('state=Missed');
+  if (/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText)) {
+    reasons.push('stale/no-chase review state');
+  }
+
+  if (!reasons.length) return args.alertDecision;
+
+  return {
+    shouldSend: false,
+    reason: `Primary trade-card suppressed by DeskState/readiness gate: ${Array.from(new Set(reasons)).join('; ')}. Publish as Current Desk Plan/review map only if eligible.`,
+  };
+}
+
 export function shouldSuppressScannerDataQualityNoticeForReason(args: {
   session: LiveSession | 'market_mapping';
   reason: string;
@@ -5423,7 +5478,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       };
     }
   }
-  const visibilityMetadata = classifyScannerVisibility({
+  let visibilityMetadata = classifyScannerVisibility({
     state: stateForAlert,
     candidate,
     window,
@@ -5431,7 +5486,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     canExecute: Boolean(normalized.canExecute),
     staleReason: stale.reason,
   });
-  const candidateLifecycleTrace = buildCandidateLifecycleTrace({
+  let candidateLifecycleTrace = buildCandidateLifecycleTrace({
     candidates: normalized.setupCandidates || [],
     selectedCandidate: candidate,
     state: stateForAlert,
@@ -5440,7 +5495,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     canExecute: Boolean(normalized.canExecute),
     staleReason: stale.reason,
   });
-  const deskState = buildDeskState({
+  let deskState = buildDeskState({
     state: stateForAlert,
     candidate,
     visibilityMetadata,
@@ -5450,6 +5505,45 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     currentPrice,
     canExecute: Boolean(normalized.canExecute),
   });
+  const deskStateGatedAlertDecision = evaluateScannerPrimaryAlertPublishingGate({
+    alertDecision,
+    deskState,
+    candidate,
+    normalizedCanExecute: Boolean(normalized.canExecute),
+    state: stateForAlert,
+    staleReason: stale.reason,
+    scannerReviewStatus: selection.reviewStatus,
+  });
+  if (deskStateGatedAlertDecision.shouldSend !== alertDecision.shouldSend || deskStateGatedAlertDecision.reason !== alertDecision.reason) {
+    alertDecision = deskStateGatedAlertDecision;
+    visibilityMetadata = classifyScannerVisibility({
+      state: stateForAlert,
+      candidate,
+      window,
+      alertDecision,
+      canExecute: Boolean(normalized.canExecute),
+      staleReason: stale.reason,
+    });
+    candidateLifecycleTrace = buildCandidateLifecycleTrace({
+      candidates: normalized.setupCandidates || [],
+      selectedCandidate: candidate,
+      state: stateForAlert,
+      window,
+      alertDecision,
+      canExecute: Boolean(normalized.canExecute),
+      staleReason: stale.reason,
+    });
+    deskState = buildDeskState({
+      state: stateForAlert,
+      candidate,
+      visibilityMetadata,
+      candidateLifecycleTrace,
+      targetCascade,
+      htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
+      currentPrice,
+      canExecute: Boolean(normalized.canExecute),
+    });
+  }
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
     tradeDate,

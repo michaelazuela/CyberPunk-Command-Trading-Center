@@ -653,6 +653,14 @@ function actionStateLine(status: ReturnType<typeof planDisplayStatus>): string {
   return 'Action: wait for 5M trigger';
 }
 
+function planHeadlineMode(status: ReturnType<typeof planDisplayStatus>): 'PLAN' | 'REVIEW' {
+  return status === 'EXECUTABLE' ? 'PLAN' : 'REVIEW';
+}
+
+function planHeadlineStatus(status: ReturnType<typeof planDisplayStatus>): string {
+  return status === 'EXECUTABLE' ? status : `${status} / NO FRESH ENTRY`;
+}
+
 function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRenderModel): string {
   const status = planDisplayStatus(model);
   const accent = model.isLong ? '#4ade80' : '#fb923c';
@@ -672,8 +680,8 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     ? unsafeDeskReview
       ? `[${prefix} PREP] ${input.instrument} - ${model.direction} FAILED`
       : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
-    : `[${prefix} PLAN] ${input.instrument} - ${model.direction} ${status}`;
-  const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status;
+    : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction} ${planHeadlineStatus(status)}`;
+  const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status === 'EXECUTABLE' ? status : 'REVIEW ONLY';
   const action = isDeskPlayContext
     ? unsafeDeskReview ? 'Action: no execution' : hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
     : actionStateLine(status);
@@ -1117,6 +1125,8 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   const markerAnchors = buildMarkerAnchors(plan, xStep, plot.left, y);
   const visibleTimeLabels = renderTimeAxisLabels(candles, xStep, plot.left, plot.right);
   const isDeskPlayContext = plan.renderMode === 'desk_play_context';
+  const displayPlanStatus = planDisplayStatus(plan);
+  const scoreLabel = displayPlanStatus === 'EXECUTABLE' ? 'Score' : 'Quality';
   const hasDeskPlayLevels = isDeskPlayContext && isPrice(plan.entry) && isPrice(stop) && isPrice(t1) && isPrice(t2);
   const entryZone = (!isDeskPlayContext || hasDeskPlayLevels) && isPrice(entryLow) && isPrice(entryHigh)
     ? `<rect x="758" y="${y(entryHigh)}" width="${plot.right - 758}" height="${Math.max(8, y(entryLow) - y(entryHigh))}" fill="${isLong ? '#22c55e' : '#f97316'}" opacity="0.27" stroke="${isLong ? '#4ade80' : '#fb923c'}" />
@@ -1224,7 +1234,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <line x1="14" y1="78" x2="442" y2="78" stroke="#334155" />
   <rect x="32" y="94" width="160" height="30" rx="15" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
   <text x="112" y="115" text-anchor="middle" class="status-badge">${escapeHtml(plan.displayStatus)}</text>
-  <text x="210" y="115" class="panel-text">Score: <tspan fill="#facc15">${score == null ? 'N/A' : `${Math.round(score)}/100`}</tspan></text>
+  <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${score == null ? 'N/A' : `${Math.round(score)}/100`}</tspan></text>
   <text x="32" y="150" class="panel-text">Model: <tspan fill="#4ade80">${escapeHtml(compact(model, 31))}</tspan></text>
   <line x1="32" y1="170" x2="424" y2="170" stroke="#334155" />
   <text x="32" y="196" class="context-mini">Higher TF: <tspan class="context-value">${escapeHtml(String(contextBias))}</tspan></text>
@@ -1387,10 +1397,10 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   ${Array.from({ length: 8 }, (_, index) => `<line x1="112" y1="${214 + index * 76}" x2="1424" y2="${214 + index * 76}" stroke="#12201c" stroke-width="1" />`).join('')}
   ${renderDirectionLogo(isLong).replace('translate(470 29)', 'translate(112 42)')}
   <rect x="202" y="32" width="1284" height="108" rx="12" fill="${isLong ? '#062315' : '#261406'}" stroke="${accent}" stroke-width="2.3" opacity=".97" />
-  <text x="232" y="76" class="title">[${prefix} PLAN] ${escapeHtml(input.instrument)} - ${plan.direction} ${status}</text>
+  <text x="232" y="76" class="title">[${prefix} ${planHeadlineMode(status)}] ${escapeHtml(input.instrument)} - ${plan.direction} ${planHeadlineStatus(status)}</text>
   <text x="232" y="112" class="subtitle">${escapeHtml(compact(plan.model, 54))}</text>
   <rect x="1122" y="48" width="180" height="42" rx="21" fill="${statusColor(status)}" opacity=".94" />
-  <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status)}</text>
+  <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status === 'EXECUTABLE' ? status : 'REVIEW ONLY')}</text>
   <rect x="1320" y="48" width="132" height="42" rx="21" fill="#e2e8f0" opacity=".94" />
   <text x="1386" y="76" text-anchor="middle" class="header-pill">${money(current)}</text>
   <text x="1122" y="116" class="action-copy">${escapeHtml(actionStateLine(status))}</text>

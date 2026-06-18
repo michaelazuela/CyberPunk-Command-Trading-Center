@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
+import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   barsCoverRequestedLookback,
@@ -19,6 +19,7 @@ import {
   createPendingScannerAlertDeliveryRecord,
   evaluateCompletedFiveMinuteBarAssuranceGate,
   evaluateScannerDeskPlayDiscordSuppression,
+  evaluateScannerPrimaryAlertPublishingGate,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
@@ -213,6 +214,58 @@ const scannerDataQualityNoticeConfig: ScannerConfig = {
   discordMessageCleanupEnabled: true,
   discordMessageTtlMinutes: 15,
 };
+
+const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  alertDecision: { shouldSend: true, reason: 'High-Quality Trade Plan qualified for Discord.' },
+  candidate: {
+    setupType: SetupType.TurtleSoup,
+    scenarioLabel: 'Bearish Turtle Soup Reversal',
+    direction: 'SHORT',
+    detectedStatus: SetupCandidateStatus.Conditional,
+    executionStatus: ExecutionStatus.Conditional,
+    confidence: 'High',
+    priority: 92,
+    entry: 7557.5,
+    stop: 7582,
+    target1: 7520.75,
+    target2: 7508.5,
+    riskPoints: 24.5,
+    invalidation: 'Invalid if price trades above 7582.',
+    entryClarity: 90,
+    stopClarity: 90,
+    targetClarity: 90,
+    levelContextScore: 18,
+    evidence: ['Buy-side sweep candidate'],
+    missingEvidence: ['15M and 5M protected structure are not aligned for this side.'],
+    blockReason: null,
+    requiredTrigger: 'Completed 5M proof below/retest around 7557.50.',
+    nextAction: 'Review only; no chase.',
+    reducedRiskPlan: null,
+  } as SetupCandidate,
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'WAIT',
+      htfConflict: true,
+      longBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      shortBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as DeskState,
+  normalizedCanExecute: false,
+  state: 'Approved',
+  staleReason: null,
+  scannerReviewStatus: null,
+});
+assert.equal(reviewOnlyPrimaryAlertGate.shouldSend, false);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState\/readiness gate/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute=false/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState primary=WAIT/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /readiness=not_aligned/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /HTF\/protected structure conflict/);
+
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),
   'https://discord.com/api/webhooks/123/token?wait=true',
@@ -2774,7 +2827,7 @@ try {
     tradeDate: '2026-05-26',
     sessionLabel: 'morning',
   });
-  assert.ok(demotedChartHtml.includes('[AM PLAN] MES - LONG CONDITIONAL'));
+  assert.ok(demotedChartHtml.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
   assert.equal(/LONG EXECUTABLE|>EXECUTABLE</i.test(demotedChartHtml), false);
 
   const riskTooWideCandidate: SetupCandidate = {
