@@ -1480,6 +1480,25 @@ const duplicateReversalSuppression = evaluateScannerReversalWatchDiscordSuppress
 });
 assert.equal(duplicateReversalSuppression.shouldPost, false);
 assert.equal(duplicateReversalSuppression.category, 'duplicate_refresh');
+const sameStateShiftedLineReversalSuppression = evaluateScannerReversalWatchDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  latestCompleted5m: '2026-06-08T15:30:00.0000000',
+  lines: {
+    ...longWatchLines,
+    reactionZoneLow: 7401.75,
+    reactionZoneHigh: 7405.75,
+    triggerLine: 7411.25,
+    invalidLine: 7404.25,
+    noChaseLine: 7421.75,
+  },
+  state: longWatchActive,
+  reversalWatchSent: { [activeReversalKey]: activeReversalRecord },
+});
+assert.equal(sameStateShiftedLineReversalSuppression.shouldPost, false);
+assert.equal(sameStateShiftedLineReversalSuppression.category, 'duplicate_refresh');
+assert.match(sameStateShiftedLineReversalSuppression.reason, /action state/);
 const reversalArtifactDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-reversal-watch-'));
 const reversalArtifacts = await prepareLiveScannerReversalWatchAlertArtifacts({
   session: 'lunch',
@@ -1678,6 +1697,26 @@ const previousDeskPlanRefreshRecord = {
     't2=none',
     'trigger=none',
   ].join('|'),
+  materialCadenceFingerprint: [
+    'direction=SHORT',
+    'primaryBias=primary',
+    'readiness=none',
+    'visibility=unknown',
+    'discordAction=unknown',
+    'htfContext=unknown',
+    'dataQuality=unknown',
+    'candidateState=none',
+    'candidateDirection=none',
+    'nextTrigger=none',
+    'invalidation=none',
+    'standDown=stand down if price accepts above 7416.50.',
+    'tacticalEligible=yes',
+    'tacticalSide=SHORT',
+    'tacticalHtf=1H,4H',
+    'tacticalM5=aligned',
+    'tacticalM5Source=protected_structure_5m',
+    'protectedRows=1H=BEAR=7416.50,2H=BULL=7416.50,4H=BEAR=7416.50,5M=BEAR=7416.50',
+  ].join('|'),
   mainPlayFingerprint: [
     '2026-06-08:SHORT:15M5M-MSS',
     'SHORT',
@@ -1709,11 +1748,53 @@ const duplicateDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
 });
 assert.equal(duplicateDeskPlaySuppression.shouldPost, false);
 assert.equal(duplicateDeskPlaySuppression.category, 'duplicate_refresh');
-assert.equal(duplicateDeskPlaySuppression.previousFingerprint, firstDeskPlanRefreshKey);
+assert.match(duplicateDeskPlaySuppression.previousFingerprint || '', /direction=SHORT/);
 assert.equal(duplicateDeskPlaySuppression.changesTradingLogic, false);
 assert.equal(duplicateDeskPlaySuppression.changesCanExecute, false);
+const sameStateShiftedLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: repeatedBaseDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      ...baseDeskPlanRefreshState.bestShortPlan,
+      entry: 7412.5,
+      target1: 7405.25,
+      target2: 7401.25,
+    },
+  } as any,
+  deskPlanRefreshSent: { [firstDeskPlanRefreshKey]: previousDeskPlanRefreshRecord },
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+  now: new Date('2026-06-08T15:41:30.000Z'),
+});
+assert.equal(sameStateShiftedLevelsDeskPlaySuppression.shouldPost, false);
+assert.equal(sameStateShiftedLevelsDeskPlaySuppression.category, 'duplicate_refresh');
+assert.match(sameStateShiftedLevelsDeskPlaySuppression.reason, /primary side, readiness, HTF support/);
 const priorFourHourOnlyDeskPlanRefreshRecord = {
   ...previousDeskPlanRefreshRecord,
+  materialCadenceFingerprint: [
+    'direction=SHORT',
+    'primaryBias=primary',
+    'readiness=none',
+    'visibility=unknown',
+    'discordAction=unknown',
+    'htfContext=unknown',
+    'dataQuality=unknown',
+    'candidateState=none',
+    'candidateDirection=none',
+    'nextTrigger=none',
+    'invalidation=none',
+    'standDown=stand down if price accepts above 7416.50.',
+    'tacticalEligible=yes',
+    'tacticalSide=SHORT',
+    'tacticalHtf=4H',
+    'tacticalM5=aligned',
+    'tacticalM5Source=protected_structure_5m',
+    'protectedRows=1H=BEAR=7416.50,2H=BULL=7416.50,4H=BEAR=7416.50,5M=BEAR=7416.50',
+  ].join('|'),
   tacticalCampaignFingerprint: [
     'eligible=yes',
     'side=SHORT',

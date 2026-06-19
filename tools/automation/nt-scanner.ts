@@ -263,6 +263,7 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   readiness: string | null;
   tacticalCampaignFingerprint?: string | null;
   mainPlayFingerprint: string;
+  materialCadenceFingerprint?: string | null;
   sentAt: string;
 }
 
@@ -284,6 +285,7 @@ export interface ScannerReversalWatchLedgerRecord {
   reclaimConfirmed: boolean;
   retestHoldConfirmed: boolean;
   barsSinceReclaim: number | null;
+  materialCadenceFingerprint?: string | null;
   sentAt: string;
 }
 
@@ -3866,6 +3868,44 @@ function scannerDeskPlayMainPlayFingerprint(args: {
   ].join('|');
 }
 
+function scannerDeskPlayMaterialCadenceFingerprint(args: {
+  deskState: DeskState;
+  tacticalCampaignMap: ScannerTacticalCampaignMap;
+}): string {
+  const deskState = args.deskState;
+  const play = deskState.primaryDeskPlay;
+  const primaryBias = scannerDeskPlayPrimaryBias(deskState);
+  const primaryLifecycle = scannerDeskPlayPrimaryLifecycle(deskState);
+  const protectedRows = play.htfProtectedStructureMap.rows
+    .map((row) => [
+      row.timeframe,
+      row.currentBias || row.bias || 'UNKNOWN',
+      deskPlanRefreshPrice(roundNullableTradePrice(row.confirmationLine) ?? roundNullableTradePrice(row.biasChangeLine) ?? null),
+    ].join('='))
+    .sort()
+    .join(',');
+  return [
+    `direction=${play.direction}`,
+    `primaryBias=${primaryBias?.state || 'none'}`,
+    `readiness=${primaryBias?.tradeReadiness?.status || 'none'}`,
+    `visibility=${deskState.visibilityMode || 'unknown'}`,
+    `discordAction=${deskState.discordAction || 'unknown'}`,
+    `htfContext=${deskState.htfContextStatus || 'unknown'}`,
+    `dataQuality=${deskState.dataQualityStatus || 'unknown'}`,
+    `candidateState=${primaryLifecycle?.candidateState || 'none'}`,
+    `candidateDirection=${primaryLifecycle?.direction || 'none'}`,
+    `nextTrigger=${normalizeDeskPlayInstructionText(play.nextTrigger || deskState.nextTrigger || primaryLifecycle?.nextTrigger || primaryLifecycle?.requiredTrigger || null) || 'none'}`,
+    `invalidation=${normalizeDeskPlayInstructionText(play.invalidation || deskState.invalidation || primaryLifecycle?.invalidation || null) || 'none'}`,
+    `standDown=${normalizeDeskPlayInstructionText(scannerDeskPlayStandDownInstruction(deskState)) || 'none'}`,
+    `tacticalEligible=${args.tacticalCampaignMap.eligible ? 'yes' : 'no'}`,
+    `tacticalSide=${args.tacticalCampaignMap.direction || 'none'}`,
+    `tacticalHtf=${args.tacticalCampaignMap.supportingTimeframes.slice().sort().join(',') || 'none'}`,
+    `tacticalM5=${args.tacticalCampaignMap.executionTimeframeAligned ? 'aligned' : 'not_aligned'}`,
+    `tacticalM5Source=${args.tacticalCampaignMap.executionEvidenceSource || 'none'}`,
+    `protectedRows=${protectedRows || 'none'}`,
+  ].join('|');
+}
+
 function scannerTacticalCampaignFingerprint(map: ScannerTacticalCampaignMap): string | null {
   if (!map.direction) return null;
   return [
@@ -3928,6 +3968,7 @@ function scannerDeskPlanRefreshRecord(args: {
     : args.deskState.selectedCandidate || args.deskState.bestLongPlan || args.deskState.bestShortPlan;
   const activeCampaignId = normalizeActiveCampaignIdForTradeDate(args.deskState.activeCampaign?.id, args.tradeDate);
   const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
+  const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState });
   const recordWithoutFingerprint = {
     fingerprint: args.key,
     tradeDate: args.tradeDate,
@@ -3948,7 +3989,11 @@ function scannerDeskPlanRefreshRecord(args: {
     invalidation: play.invalidation || args.deskState.invalidation || primaryLifecycle?.invalidation || null,
     standDown: scannerDeskPlayStandDownInstruction(args.deskState),
     readiness: primaryBias?.tradeReadiness?.status || null,
-    tacticalCampaignFingerprint: scannerTacticalCampaignFingerprint(scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState })),
+    tacticalCampaignFingerprint: scannerTacticalCampaignFingerprint(tacticalCampaignMap),
+    materialCadenceFingerprint: scannerDeskPlayMaterialCadenceFingerprint({
+      deskState: args.deskState,
+      tacticalCampaignMap,
+    }),
     sentAt: args.sentAt,
   };
   return {
@@ -4405,6 +4450,9 @@ function scannerDeskPlanRefreshMateriallyMatches(
   previous: ScannerDeskPlanRefreshLedgerRecord,
   current: ScannerDeskPlanRefreshLedgerRecord,
 ): boolean {
+  if (previous.materialCadenceFingerprint && current.materialCadenceFingerprint) {
+    return previous.materialCadenceFingerprint === current.materialCadenceFingerprint;
+  }
   if (previous.mainPlayFingerprint || current.mainPlayFingerprint) {
     return previous.mainPlayFingerprint === current.mainPlayFingerprint &&
       (previous.tacticalCampaignFingerprint || null) === (current.tacticalCampaignFingerprint || null);
@@ -4538,8 +4586,8 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (previousRecord && scannerDeskPlanRefreshMateriallyMatches(previousRecord, currentRecord)) {
     return scannerDeskPlaySuppressionBlocked(
       'duplicate_refresh',
-      'Desk Play suppressed because primary side, campaign, line, entry, stop, targets, and reaction level are unchanged from the latest posted Desk Play.',
-      previousRecord.fingerprint,
+      'Desk Play suppressed because primary side, readiness, HTF support/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
+      previousRecord.materialCadenceFingerprint || previousRecord.fingerprint,
     );
   }
 
@@ -4617,6 +4665,23 @@ function scannerReversalWatchFingerprint(args: {
   ].join('|');
 }
 
+function scannerReversalWatchMaterialCadenceFingerprint(args: {
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+}): string {
+  const lines = args.lines;
+  const state = args.state;
+  return [
+    `eligible=${lines.eligible ? 'yes' : 'no'}`,
+    `exhausted=${lines.exhaustedSide || 'none'}`,
+    `watch=${lines.watchDirection || 'none'}`,
+    `state=${state.state}`,
+    `reclaim=${state.reclaimConfirmed ? 'yes' : 'no'}`,
+    `retest=${state.retestHoldConfirmed ? 'yes' : 'no'}`,
+    `barsSinceReclaim=${state.barsSinceReclaim ?? 'none'}`,
+  ].join('|');
+}
+
 export function scannerReversalWatchRecord(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -4644,6 +4709,10 @@ export function scannerReversalWatchRecord(args: {
     reclaimConfirmed: args.state.reclaimConfirmed,
     retestHoldConfirmed: args.state.retestHoldConfirmed,
     barsSinceReclaim: args.state.barsSinceReclaim,
+    materialCadenceFingerprint: scannerReversalWatchMaterialCadenceFingerprint({
+      lines: args.lines,
+      state: args.state,
+    }),
     sentAt: args.sentAt,
   };
 }
@@ -4719,11 +4788,13 @@ export function evaluateScannerReversalWatchDiscordSuppression(args: {
     state: args.state,
     sentAt: (args.now || new Date()).toISOString(),
   });
-  if (previous?.fingerprint === current.fingerprint) {
+  const previousMaterial = previous?.materialCadenceFingerprint || null;
+  const currentMaterial = current.materialCadenceFingerprint || null;
+  if (previous?.fingerprint === current.fingerprint || (previousMaterial && previousMaterial === currentMaterial)) {
     return scannerReversalWatchSuppressionBlocked(
       'duplicate_refresh',
-      'Reversal watch suppressed because side, state, trigger, invalidation, no-chase, and reaction zone are unchanged.',
-      previous.fingerprint,
+      'Reversal watch suppressed because side, action state, reclaim, and retest status are unchanged.',
+      previousMaterial || previous.fingerprint,
     );
   }
   return scannerReversalWatchSuppressionPost(args.state.reason);

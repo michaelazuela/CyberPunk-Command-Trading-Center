@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add Phase 1 secondary Discord cadence consolidation for Desk Play and Reversal Watch.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The receipt-family audit showed secondary Desk Play/Reversal Watch reports could create perceived Discord flooding even when the trader-facing state had not materially changed.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The scanner now stores optional material cadence fingerprints for Desk Play and Reversal Watch ledgers and suppresses duplicate secondary posts when side/readiness/HTF support/action state remains unchanged.
+Trading logic changed: No. This only changes Discord post suppression for secondary report families; setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None.
+Discord impact: Reduced repeat Desk Play/Reversal Watch posts when the material trader-facing state has not changed.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Phase 2 should run the scanner family audit after live scanner cycles and confirm Desk Play/Reversal Watch receipts no longer show under-five-minute repeats for unchanged material state.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add read-only Scanner Discord family Phase 2 audit.
 Files changed: tools/automation/scanner-discord-family-audit.ts, tools/automation/scanner-discord-family-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Phase 1 proved the primary trade-card path was suppressed, so the remaining Discord flood concern needed a separate read-only audit of secondary report families and receipt cadence.
