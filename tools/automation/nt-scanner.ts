@@ -181,6 +181,7 @@ interface ScannerStateFile {
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   reversalWatchSent: Record<string, ScannerReversalWatchLedgerRecord>;
   morningHtfDeskMapSent: Record<string, ScannerMorningHtfDeskMapLedgerRecord>;
+  endOfDayMarketRecapSent: Record<string, ScannerEndOfDayMarketRecapLedgerRecord>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   discordCleanupMessages: Record<string, ScannerDiscordCleanupRecord>;
@@ -197,7 +198,7 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
-export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
 
 export interface ScannerDiscordCleanupRecord {
   key: string;
@@ -293,6 +294,15 @@ export interface ScannerMorningHtfDeskMapLedgerRecord {
   primary: string;
   latestCompleted5m: string | null;
   keyBattleArea: string;
+  sentAt: string;
+}
+
+export interface ScannerEndOfDayMarketRecapLedgerRecord {
+  fingerprint: string;
+  tradeDate: string;
+  instrument: Instrument;
+  latestCompleted5m: string | null;
+  rthRange: string;
   sentAt: string;
 }
 
@@ -1253,6 +1263,7 @@ function emptyScannerState(): ScannerStateFile {
     deskPlanRefreshSent: {},
     reversalWatchSent: {},
     morningHtfDeskMapSent: {},
+    endOfDayMarketRecapSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -1276,6 +1287,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         deskPlanRefreshSent: parsed.deskPlanRefreshSent || {},
         reversalWatchSent: parsed.reversalWatchSent || {},
         morningHtfDeskMapSent: parsed.morningHtfDeskMapSent || {},
+        endOfDayMarketRecapSent: parsed.endOfDayMarketRecapSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         discordCleanupMessages: parsed.discordCleanupMessages || {},
@@ -4068,6 +4080,289 @@ export function shouldSendScannerMorningHtfDeskMap(args: {
   return !args.sent[scannerMorningHtfDeskMapKey({ tradeDate: args.tradeDate, instrument: args.instrument })];
 }
 
+function scannerEndOfDayMarketRecapKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+}): string {
+  return `${args.tradeDate}:${args.instrument}:end_of_day_market_recap`;
+}
+
+function scannerEndOfDayMarketRecapWindowOpen(now: Date): boolean {
+  const minutes = toEtMinutes(now);
+  return minutes >= 16 * 60 + 5 && minutes < 18 * 60 + 45;
+}
+
+function latestCompletedFiveMinuteIsRthCloseReady(completed5m: NinjaBridgeBar | null, barTimeZone: BridgeTimeZoneMode): boolean {
+  if (!completed5m) return false;
+  const parsed = parseBridgeTime(completed5m.time, barTimeZone);
+  if (!parsed) return false;
+  const minutes = toEtMinutes(parsed);
+  return minutes >= 15 * 60 + 55 && minutes <= 16 * 60 + 5;
+}
+
+export function shouldSendScannerEndOfDayMarketRecap(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  now: Date;
+  completed5m: NinjaBridgeBar | null;
+  barTimeZone: BridgeTimeZoneMode;
+  sent: Record<string, ScannerEndOfDayMarketRecapLedgerRecord>;
+}): boolean {
+  if (!scannerEndOfDayMarketRecapWindowOpen(args.now)) return false;
+  if (!latestCompletedFiveMinuteIsRthCloseReady(args.completed5m, args.barTimeZone)) return false;
+  return !args.sent[scannerEndOfDayMarketRecapKey({ tradeDate: args.tradeDate, instrument: args.instrument })];
+}
+
+function scannerRthBarsForTradeDate(args: {
+  bars5m: NinjaBridgeBar[];
+  tradeDate: string;
+  barTimeZone: BridgeTimeZoneMode;
+}): NinjaBridgeBar[] {
+  return args.bars5m
+    .filter((bar) => {
+      if (bridgeBarEtDate(bar, args.barTimeZone) !== args.tradeDate) return false;
+      const parsed = parseBridgeTime(bar.time, args.barTimeZone);
+      if (!parsed) return false;
+      const minutes = toEtMinutes(parsed);
+      return minutes >= 9 * 60 + 15 && minutes <= 15 * 60 + 55;
+    })
+    .sort((a, b) => (parseBridgeTime(a.time, args.barTimeZone)?.getTime() || 0) - (parseBridgeTime(b.time, args.barTimeZone)?.getTime() || 0));
+}
+
+function scannerRangeSummary(bars: NinjaBridgeBar[]): {
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number | null;
+  rangePoints: number | null;
+  direction: 'up' | 'down' | 'flat' | 'unknown';
+  mainExpansionLeg: string;
+  rthRange: string;
+} {
+  if (!bars.length) {
+    return {
+      open: null,
+      high: null,
+      low: null,
+      close: null,
+      rangePoints: null,
+      direction: 'unknown',
+      mainExpansionLeg: 'RTH range unavailable from completed 5M bars.',
+      rthRange: 'N/A',
+    };
+  }
+  const open = bars[0].open;
+  const close = bars[bars.length - 1].close;
+  const high = Math.max(...bars.map((bar) => bar.high));
+  const low = Math.min(...bars.map((bar) => bar.low));
+  const rangePoints = high - low;
+  const direction = close > open ? 'up' : close < open ? 'down' : 'flat';
+  return {
+    open,
+    high,
+    low,
+    close,
+    rangePoints,
+    direction,
+    mainExpansionLeg: `${direction.toUpperCase()} session: open ${open.toFixed(2)} -> close ${close.toFixed(2)}; high ${high.toFixed(2)}, low ${low.toFixed(2)}, range ${rangePoints.toFixed(2)} pts.`,
+    rthRange: `${low.toFixed(2)}-${high.toFixed(2)}`,
+  };
+}
+
+function scannerDecisionTapePath(tradeDate: string, instrument: Instrument, session: LiveSession): string {
+  return path.join(DISCORD_AUDIT_DIR, `scanner-decision-tape-${tradeDate}-${instrument}-${session}.json`);
+}
+
+async function readScannerDecisionTapeEvents(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  sessions?: LiveSession[];
+  auditDir?: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const sessions = args.sessions || ['morning', 'lunch'];
+  const events: Array<Record<string, unknown>> = [];
+  for (const session of sessions) {
+    const file = args.auditDir
+      ? path.join(args.auditDir, `scanner-decision-tape-${args.tradeDate}-${args.instrument}-${session}.json`)
+      : scannerDecisionTapePath(args.tradeDate, args.instrument, session);
+    try {
+      const parsed = JSON.parse(await fs.readFile(file, 'utf8')) as Record<string, unknown>;
+      const tapeEvents = asRecord(parsed.events) || {};
+      events.push(...Object.values(tapeEvents).map((event) => asRecord(event)).filter((event): event is Record<string, unknown> => Boolean(event)));
+    } catch {
+      // Missing decision tapes are common early in development or after a restart; recap will report what is unavailable.
+    }
+  }
+  return events.sort((a, b) => {
+    const aTime = Date.parse(String(a.time || a.recordedAt || ''));
+    const bTime = Date.parse(String(b.time || b.recordedAt || ''));
+    return (Number.isFinite(aTime) ? aTime : 0) - (Number.isFinite(bTime) ? bTime : 0);
+  });
+}
+
+function scannerEventDeskState(event: Record<string, unknown>): DeskState | null {
+  return (asRecord(event.deskState) as unknown as DeskState | null) || null;
+}
+
+function scannerEventReversalWatch(event: Record<string, unknown>): Record<string, unknown> | null {
+  return asRecord(event.reversalWatch) || null;
+}
+
+function scannerEventPlan(event: Record<string, unknown>): Record<string, unknown> | null {
+  return asRecord(event.plan) || null;
+}
+
+function scannerEventTime(event: Record<string, unknown>): string {
+  return String(event.time || event.recordedAt || 'N/A');
+}
+
+function firstScannerEventWithSide(events: Array<Record<string, unknown>>, side: 'LONG' | 'SHORT'): Record<string, unknown> | null {
+  return events.find((event) => scannerEventDeskState(event)?.primaryDeskPlay?.direction === side) || null;
+}
+
+function firstExecutableScannerEvent(events: Array<Record<string, unknown>>): Record<string, unknown> | null {
+  return events.find((event) => {
+    const plan = scannerEventPlan(event);
+    return plan?.canExecute === true || String(plan?.decisionStatus || '').toLowerCase().includes('approved');
+  }) || null;
+}
+
+function firstValidatedReversalWatchEvent(events: Array<Record<string, unknown>>): Record<string, unknown> | null {
+  return events.find((event) => {
+    const state = asRecord(scannerEventReversalWatch(event)?.state);
+    return state?.state === 'direction_validated';
+  }) || null;
+}
+
+function latestNoChaseLine(events: Array<Record<string, unknown>>): string {
+  const reversed = [...events].reverse();
+  for (const event of reversed) {
+    const lines = asRecord(scannerEventReversalWatch(event)?.lines);
+    const value = Number(lines?.noChaseLine);
+    if (Number.isFinite(value)) return value.toFixed(2);
+  }
+  return 'N/A';
+}
+
+function scannerDeskStateKeyBattleArea(deskState: DeskState | null): string {
+  return deskState ? scannerMorningHtfDeskMapKeyBattleArea(deskState) : 'N/A';
+}
+
+function scannerOpeningHtfRead(deskState: DeskState | null): string {
+  const rows = deskState?.primaryDeskPlay?.htfProtectedStructureMap?.rows || [];
+  if (!rows.length) return 'HTF rows unavailable from decision tape.';
+  return ['4H', '2H', '1H', '15M', '5M']
+    .map((timeframe) => rows.find((row) => row.timeframe === timeframe))
+    .filter((row): row is DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number] => Boolean(row))
+    .map((row) => `${scannerHtfBiasEmoji(row.currentBias || row.bias)} ${row.timeframe} ${String(row.currentBias || row.bias || 'UNKNOWN').toUpperCase()}`)
+    .join(', ');
+}
+
+function scannerKeyBattleOutcome(args: {
+  range: ReturnType<typeof scannerRangeSummary>;
+  keyBattleArea: string;
+}): string {
+  const match = args.keyBattleArea.match(/(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))?/);
+  if (!match || args.range.close === null) return 'Key battle area unavailable from opening map.';
+  const low = Number(match[1]);
+  const high = Number(match[2] || match[1]);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return 'Key battle area unavailable from opening map.';
+  if (args.range.close > high) return `Closed above ${args.keyBattleArea}; bulls controlled the final location.`;
+  if (args.range.close < low) return `Closed below ${args.keyBattleArea}; bears controlled the final location.`;
+  return `Closed inside ${args.keyBattleArea}; battle area remained unresolved at RTH close.`;
+}
+
+export async function buildScannerEndOfDayMarketRecapPayload(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  bars5m: NinjaBridgeBar[];
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+  barTimeZone: BridgeTimeZoneMode;
+  auditDir?: string;
+}): Promise<{ payload: DiscordWebhookPayload; record: ScannerEndOfDayMarketRecapLedgerRecord }> {
+  const events = await readScannerDecisionTapeEvents({
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    sessions: ['morning', 'lunch'],
+    auditDir: args.auditDir,
+  });
+  const rthBars = scannerRthBarsForTradeDate({
+    bars5m: args.bars5m,
+    tradeDate: args.tradeDate,
+    barTimeZone: args.barTimeZone,
+  });
+  const range = scannerRangeSummary(rthBars);
+  const openingDeskState = scannerEventDeskState(events[0] || {}) || null;
+  const openingPrimary = openingDeskState?.primaryDeskPlay?.direction || 'WAIT';
+  const keyBattleArea = scannerDeskStateKeyBattleArea(openingDeskState);
+  const executableEvent = firstExecutableScannerEvent(events);
+  const validatedReversal = firstValidatedReversalWatchEvent(events);
+  const bestEvent = executableEvent || validatedReversal;
+  const bestEventPlan = bestEvent ? scannerEventPlan(bestEvent) : null;
+  const bestDirection = String(bestEventPlan?.decision || scannerEventDeskState(bestEvent || {})?.primaryDeskPlay?.direction || 'N/A').toUpperCase();
+  const longEvent = firstScannerEventWithSide(events, 'LONG');
+  const shortEvent = firstScannerEventWithSide(events, 'SHORT');
+  const bottomLine = bestEvent
+    ? `Best recorded clean side was ${bestDirection} after scanner-owned evidence at ${scannerEventTime(bestEvent)}. Recap only; not a trade alert.`
+    : 'No clean app-approved trade was recorded in the recap data. WAIT / no-trade remains a valid desk outcome.';
+  const description = [
+    `Opening Desk Map:`,
+    `Primary: ${scannerPrimaryDeskEmoji(openingPrimary)}`,
+    `Key battle area: ${keyBattleArea}`,
+    `HTF read: ${scannerOpeningHtfRead(openingDeskState)}`,
+    '',
+    `What Price Did:`,
+    `- Reclaimed/failed/rejected key battle area: ${scannerKeyBattleOutcome({ range, keyBattleArea })}`,
+    `- Main expansion leg: ${range.mainExpansionLeg}`,
+    `- Best clean 5M trigger: ${bestEvent ? `${bestDirection} evidence at ${scannerEventTime(bestEvent)}` : 'None recorded as app-approved in decision tape.'}`,
+    `- No-chase zone: ${latestNoChaseLine(events)}`,
+    '',
+    `Desk Read Review:`,
+    `- Morning ${openingPrimary} was ${openingPrimary === 'WAIT' ? 'the opening map state' : 'the opening primary side'}; review against the closing location above.`,
+    `- LONG side became valid when: ${longEvent ? scannerEventTime(longEvent) : 'No primary LONG desk event recorded.'}`,
+    `- SHORT side became valid when: ${shortEvent ? scannerEventTime(shortEvent) : 'No primary SHORT desk event recorded.'}`,
+    `- Missed/avoided trade lesson: use completed 5M proof, invalidation, and no-chase boundaries before acting.`,
+    '',
+    `Execution Boundary:`,
+    `No automated orders. Recap is review/learning only.`,
+    '',
+    `Bottom Line:`,
+    bottomLine,
+  ].join('\n');
+  const payload: DiscordWebhookPayload = {
+    username: 'Quant Desk',
+    content: `📘 ${args.instrument} End-of-Day Market Recap - ${args.tradeDate}`,
+    embeds: [{
+      title: `${args.instrument} End-of-Day Market Recap - ${args.tradeDate}`,
+      color: 0x38bdf8,
+      description,
+      fields: [],
+      footer: { text: 'Quant Desk • End-of-day learning recap • Not execution approval' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+  const fingerprint = [
+    args.tradeDate,
+    args.instrument,
+    `latest=${args.completed5m?.time || 'none'}`,
+    `range=${range.rthRange}`,
+    `events=${events.length}`,
+    `bottom=${bottomLine}`,
+  ].join('|');
+  return {
+    payload,
+    record: {
+      fingerprint,
+      tradeDate: args.tradeDate,
+      instrument: args.instrument,
+      latestCompleted5m: args.completed5m?.time || null,
+      rthRange: range.rthRange,
+      sentAt: new Date().toISOString(),
+    },
+  };
+}
+
 function scannerDeskPlaySuppressionPost(
   reason = 'Desk Play refresh is eligible for Discord.',
 ): ScannerDeskPlayDiscordSuppressionDecision {
@@ -6170,6 +6465,53 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await writeState(state);
     console.log(`[scanner] NoData: ${bridgeFreshness.reason}`);
     return;
+  }
+
+  if (shouldSendScannerEndOfDayMarketRecap({
+    tradeDate,
+    instrument: config.instrument,
+    now,
+    completed5m,
+    barTimeZone: config.barTimeZone,
+    sent: state.endOfDayMarketRecapSent,
+  })) {
+    const recapKey = scannerEndOfDayMarketRecapKey({ tradeDate, instrument: config.instrument });
+    try {
+      const recap = await buildScannerEndOfDayMarketRecapPayload({
+        tradeDate,
+        instrument: config.instrument,
+        bars5m: liveBars['5m'] || [],
+        completed5m,
+        currentPrice,
+        barTimeZone: config.barTimeZone,
+      });
+      validateDiscordPayload(recap.payload, []);
+      const receipt = await postDiscord(recap.payload, config);
+      if (receipt.deliveryStatus === 'sent') {
+        const sentAt = new Date().toISOString();
+        state.endOfDayMarketRecapSent[recapKey] = {
+          ...recap.record,
+          sentAt,
+        };
+        await writeScannerDiscordReceiptAuditLog({
+          kind: 'end_of_day_market_recap',
+          key: recapKey,
+          planVersionId: `${tradeDate}-${config.instrument}-END-OF-DAY-RECAP`,
+          tradeDate,
+          instrument: config.instrument,
+          session: 'lunch',
+          receipt,
+          postedAt: sentAt,
+          cleanupRecordKey: null,
+          ragReceiptAttached: false,
+        });
+        console.log(`[scanner] Sent End-of-Day Market Recap: ${recapKey}`);
+      } else {
+        console.log(`[scanner] End-of-Day Market Recap skipped (${receipt.webhookSource || 'unknown'}): ${recapKey}`);
+      }
+    } catch (error) {
+      console.warn(`[scanner] End-of-Day Market Recap delivery failed safely; scanner will continue normal processing: ${sanitizedError(error)}`);
+    }
   }
 
   if (!window.allowsDeskPlan || !config.scanWindows) {

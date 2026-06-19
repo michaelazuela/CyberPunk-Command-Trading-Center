@@ -116,7 +116,7 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
   if (normalized.includes('rag') || normalized.includes('learning')) {
     return discordMessagePolicy('review_learning');
   }
-  if (normalized.includes('weekly') || normalized.includes('daily summary')) {
+  if (normalized.includes('end-of-day market recap') || normalized.includes('end of day market recap') || normalized.includes('weekly') || normalized.includes('daily summary')) {
     return discordMessagePolicy('daily_weekly_summary');
   }
   if (normalized.includes('debug') || normalized.includes('diagnostic')) {

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add end-of-day market recap reporting phase.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: The desk needs a separate learning/reporting recap after RTH close that explains what price did versus the morning HTF map without creating a new trade alert or executable plan.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Scanner can now post one End-of-Day Market Recap between 4:05 PM and 6:45 PM ET when the final RTH completed 5M bar is available. The recap includes Opening Desk Map, What Price Did, Desk Read Review, Execution Boundary, and Bottom Line sections, with no outcome buttons and no execution approval.
+Trading logic changed: No. This is reporting/learning cadence only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None. Recap reads completed 5M bars and local scanner decision tapes; NinjaTrader/market_bars remain source of truth.
+Discord impact: Yes. End-of-Day Market Recap is classified as a daily/summary report, not a trade alert.
+Journal/RAG impact: No schema change. This phase does not write trade-outcome buttons or approve trades.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart scanner after deployment so the recap sender is active for the next RTH close.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add disciplined trading emojis to Current Desk Plan Discord format.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The Current Desk Plan format needed the same fast-read bull/bear/range/wait language as the Morning HTF Desk Map without changing any trade decision behavior.

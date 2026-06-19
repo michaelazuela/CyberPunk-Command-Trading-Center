@@ -29,6 +29,7 @@ assert.equal(classifyDiscordMessageText('[SUPERVISOR] Bridge Unreachable').categ
 assert.equal(classifyDiscordMessageText('MES Current Desk Plan').category, 'current_desk_plan');
 assert.equal(classifyDiscordMessageText('[AM WATCHLIST] MES - LONG DEVELOPING').category, 'watchlist');
 assert.equal(classifyDiscordMessageText('[AM WATCH] MES - LONG WATCH FORMING').category, 'watchlist');
+assert.equal(classifyDiscordMessageText('MES End-of-Day Market Recap - 2026-06-19').category, 'daily_weekly_summary');
 
 function sampleCandidate(direction: 'LONG' | 'SHORT' = 'LONG'): SetupCandidate {
   return {

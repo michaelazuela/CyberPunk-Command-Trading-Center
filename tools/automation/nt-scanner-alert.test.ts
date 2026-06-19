@@ -62,9 +62,11 @@ import {
   shouldSuppressActiveCampaignScannerAlert,
   buildScannerReversalWatchLines,
   buildScannerMorningHtfDeskMapPayload,
+  buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
   shouldSendScannerMorningHtfDeskMap,
+  shouldSendScannerEndOfDayMarketRecap,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
@@ -1152,6 +1154,101 @@ assert.match(morningMapText, /🐂 2H: BULL/);
 assert.match(morningMapText, /⚖️ 15M: RANGE/);
 assert.match(morningMapText, /5M remains execution authority/);
 assert.equal(morningMapPayload.components, undefined);
+const eodCompleted5m = { time: '2026-06-19T15:55:00.0000000', open: 7570, high: 7572, low: 7568, close: 7571, volume: 1000 };
+assert.equal(shouldSendScannerEndOfDayMarketRecap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  now: new Date('2026-06-19T16:05:00-04:00'),
+  completed5m: eodCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {},
+}), true);
+assert.equal(shouldSendScannerEndOfDayMarketRecap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  now: new Date('2026-06-19T16:04:00-04:00'),
+  completed5m: eodCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {},
+}), false);
+assert.equal(shouldSendScannerEndOfDayMarketRecap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  now: new Date('2026-06-19T16:05:00-04:00'),
+  completed5m: eodCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {
+    '2026-06-19:MES:end_of_day_market_recap': {
+      fingerprint: 'already-sent',
+      tradeDate: '2026-06-19',
+      instrument: 'MES',
+      latestCompleted5m: eodCompleted5m.time,
+      rthRange: '7558.00-7581.00',
+      sentAt: '2026-06-19T20:05:00.000Z',
+    },
+  },
+}), false);
+const eodAuditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'scanner-eod-recap-'));
+await fs.writeFile(path.join(eodAuditDir, 'scanner-decision-tape-2026-06-19-MES-morning.json'), JSON.stringify({
+  events: {
+    '2026-06-19T09:20:00.0000000': {
+      time: '2026-06-19T09:20:00.0000000',
+      deskState: morningHtfDeskMapState,
+      plan: { decision: 'NO TRADE', decisionStatus: 'Wait', canExecute: false },
+      reversalWatch: { state: { state: 'forming' }, lines: { noChaseLine: null } },
+    },
+  },
+}, null, 2));
+await fs.writeFile(path.join(eodAuditDir, 'scanner-decision-tape-2026-06-19-MES-lunch.json'), JSON.stringify({
+  events: {
+    '2026-06-19T13:05:00.0000000': {
+      time: '2026-06-19T13:05:00.0000000',
+      deskState: {
+        ...morningHtfDeskMapState,
+        primaryDeskPlay: {
+          ...morningHtfDeskMapState.primaryDeskPlay,
+          direction: 'SHORT',
+        },
+      },
+      plan: { decision: 'SHORT', decisionStatus: 'Wait', canExecute: false },
+      reversalWatch: { state: { state: 'direction_validated' }, lines: { noChaseLine: 7542.25 } },
+    },
+  },
+}, null, 2));
+const eodBars = Array.from({ length: 81 }, (_, index) => {
+  const minutes = 9 * 60 + 15 + index * 5;
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const base = 7560 + index * 0.15;
+  return {
+    time: `2026-06-19T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00.0000000`,
+    open: base,
+    high: base + 2,
+    low: base - 2,
+    close: base + 0.75,
+    volume: 1000,
+  };
+});
+const eodRecap = await buildScannerEndOfDayMarketRecapPayload({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  bars5m: eodBars,
+  completed5m: eodCompleted5m,
+  currentPrice: 7571,
+  barTimeZone: 'eastern',
+  auditDir: eodAuditDir,
+});
+const eodText = flattenDiscordPayloadText(eodRecap.payload);
+assert.match(eodRecap.payload.content || '', /MES End-of-Day Market Recap - 2026-06-19/);
+assert.match(eodText, /Opening Desk Map:/);
+assert.match(eodText, /Primary: 🛑 WAIT/);
+assert.match(eodText, /What Price Did:/);
+assert.match(eodText, /Desk Read Review:/);
+assert.match(eodText, /Execution Boundary:/);
+assert.match(eodText, /No automated orders\. Recap is review\/learning only\./);
+assert.match(eodText, /Bottom Line:/);
+assert.match(eodText, /Best recorded clean side was SHORT/);
+assert.equal(eodRecap.payload.components, undefined);
 const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({
   deskState: baseDeskPlanRefreshState,
   normalized: {
@@ -2387,6 +2484,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     deskPlanRefreshSent: {},
     reversalWatchSent: {},
     morningHtfDeskMapSent: {},
+    endOfDayMarketRecapSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
