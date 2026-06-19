@@ -94,6 +94,9 @@ export function classifyDiscordMessageText(text: string): DiscordMessagePolicy {
     return discordMessagePolicy('current_desk_plan');
   }
   if (
+    normalized.includes('morning htf desk map') ||
+    normalized.includes('morning high timeframe desk map') ||
+    normalized.includes('htf desk map') ||
     normalized.includes('watchlist') ||
     normalized.includes('watch only - no fresh entry') ||
     normalized.includes('reversal watch') ||

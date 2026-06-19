@@ -1043,6 +1043,37 @@ function resolveDeskPlayRowBias(
   return 'UNKNOWN';
 }
 
+function biasEmoji(bias: 'BULL' | 'BEAR' | 'RANGE' | 'UNKNOWN' | string | null | undefined): string {
+  const normalized = String(bias || '').toUpperCase();
+  if (normalized === 'BULL' || normalized === 'BULLISH') return '🐂';
+  if (normalized === 'BEAR' || normalized === 'BEARISH') return '🐻';
+  if (normalized === 'RANGE') return '⚖️';
+  return '▫️';
+}
+
+function sideEmoji(side: 'LONG' | 'SHORT' | 'WAIT' | string | null | undefined): string {
+  const normalized = String(side || '').toUpperCase();
+  if (normalized === 'LONG') return '🐂';
+  if (normalized === 'SHORT') return '🐻';
+  if (normalized === 'WAIT') return '🛑';
+  return '▫️';
+}
+
+function primaryPlanLabel(label: string): string {
+  const trimmed = label.trim();
+  if (trimmed === 'LONG') return `${sideEmoji('LONG')} LONG`;
+  if (trimmed === 'SHORT') return `${sideEmoji('SHORT')} SHORT`;
+  if (trimmed === 'WAIT') return `${sideEmoji('WAIT')} WAIT`;
+  return trimmed
+    .replace(/^WAIT\b/, `${sideEmoji('WAIT')} WAIT`)
+    .replace(/\bLONG\b/, `${sideEmoji('LONG')} LONG`)
+    .replace(/\bSHORT\b/, `${sideEmoji('SHORT')} SHORT`);
+}
+
+function sideBreakoutLabel(side: 'LONG' | 'SHORT', triggerWord: 'ABOVE' | 'BELOW', line: number | null): string {
+  return `${sideEmoji(side)} ${side} ${triggerWord} ${priceLine(line)}`;
+}
+
 function deskPlayBiasSummary(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -1052,7 +1083,7 @@ function deskPlayBiasSummary(
   const expected = direction === 'SHORT' ? 'BEAR' : direction === 'LONG' ? 'BULL' : null;
   if (!expected) {
     return rows.length
-      ? 'HTF protected structure rows are scanner-owned context only.'
+      ? '🧭 HTF protected structure rows are scanner-owned context only.'
       : 'No current directional bias confirmed.';
   }
   const label = expected === 'BULL' ? 'bullish' : 'bearish';
@@ -1063,13 +1094,13 @@ function deskPlayBiasSummary(
   });
   const parts: string[] = [];
   if (aligned.length === 2) {
-    parts.push(`15M + 5M ${label}`);
+    parts.push(`${biasEmoji(expected)} 15M + 5M ${label}`);
   } else if (aligned.length === 1) {
-    parts.push(`${aligned[0]} ${label}`);
+    parts.push(`${biasEmoji(expected)} ${aligned[0]} ${label}`);
   }
   const oneHour = rowByTimeframe.get('1H');
   if (oneHour && resolveDeskPlayRowBias(oneHour, currentPrice) === expected) {
-    parts.push('1H supportive');
+    parts.push(`${biasEmoji(expected)} 1H supportive`);
   }
   if (parts.length) return parts.join(', ');
   const trendSummary = play.trendConfirmation?.summary || play.trendConfirmation?.confirmation || null;
@@ -1104,10 +1135,10 @@ function deskPlayHtfLineRows(
   const byTimeframe = new Map(rows.map((row) => [String(row.timeframe || '').toUpperCase(), row]));
   return ['4H', '2H', '1H', '15M', '5M'].map((timeframe) => {
     const row = byTimeframe.get(timeframe);
-    if (!row) return `${timeframe}: UNKNOWN; changes at N/A`;
+    if (!row) return `${biasEmoji('UNKNOWN')} ${timeframe}: UNKNOWN; changes at N/A`;
     const bias = resolveDeskPlayRowBias(row, currentPrice);
     if (bias === 'RANGE' && isFinitePrice(row.confirmationLine) && isFinitePrice(row.protectedStructure)) {
-      return `${timeframe}: RANGE; bull above ${priceLine(row.confirmationLine)} / bear below ${priceLine(row.protectedStructure)}`;
+      return `${biasEmoji(bias)} ${timeframe}: RANGE; bull above ${priceLine(row.confirmationLine)} / bear below ${priceLine(row.protectedStructure)}`;
     }
     const changeLine = isFinitePrice(row.biasChangeLine)
       ? row.biasChangeLine
@@ -1116,7 +1147,7 @@ function deskPlayHtfLineRows(
       : isFinitePrice(row.confirmationLine)
       ? row.confirmationLine
       : null;
-    return `${timeframe}: ${bias}; changes at ${priceLine(changeLine)}`;
+    return `${biasEmoji(bias)} ${timeframe}: ${bias}; changes at ${priceLine(changeLine)}`;
   });
 }
 
@@ -1256,8 +1287,8 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
   return [
     `${args.instrument} Current Desk Plan`,
     '',
-    `Primary: ${direction}`,
-    `Bias: ${candidateBiasSummary(candidate)}`,
+    `Primary: ${primaryPlanLabel(direction)}`,
+    `Bias: ${biasEmoji(direction === 'LONG' ? 'BULL' : 'BEAR')} ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
     `Line in sand: ${priceLine(lineInSand)}`,
     `Overall play: ${direction} ${triggerWord.toLowerCase()} ${priceLine(lineInSand)}.`,
@@ -1265,7 +1296,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Invalidation: ${compactInstruction(candidate.invalidation, `invalid ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     `Stand down: ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
-    `${direction} ${triggerWord} ${priceLine(lineInSand)}`,
+    sideBreakoutLabel(direction, triggerWord, lineInSand),
     `Entry: ${priceLine(candidate.entry)}`,
     `Stop: ${priceLine(levels.stop)}`,
     `T1: ${priceLine(levels.target1)}`,
@@ -1379,7 +1410,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return [
       `${args.instrument} Current Desk Plan`,
       '',
-      'Primary: WAIT',
+      `Primary: ${primaryPlanLabel('WAIT')}`,
       'Bias: No DeskState play available.',
       'Line in sand: N/A',
       '',
@@ -1416,7 +1447,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       return {
         hasLevels: false,
         lines: [
-          `${side} ${triggerWord} ${priceLine(line)}`,
+          sideBreakoutLabel(side, triggerWord, line),
           'Entry: pending',
           'Stop: pending',
           'T1: pending',
@@ -1428,7 +1459,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       return {
         hasLevels: true,
         lines: [
-          `${side} ${triggerWord} ${priceLine(line)}`,
+          sideBreakoutLabel(side, triggerWord, line),
           'Review levels only - not an executable trade plan.',
           `Reference entry: ${priceLine(levels.entry)}`,
           `Reference stop: ${priceLine(levels.stop)}`,
@@ -1441,7 +1472,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return {
       hasLevels: true,
       lines: [
-        `${side} ${triggerWord} ${priceLine(line)}`,
+        sideBreakoutLabel(side, triggerWord, line),
         `Entry: ${priceLine(levels.entry)}`,
         `Stop: ${priceLine(levels.stop)}`,
         `T1: ${priceLine(levels.target1)}`,
@@ -1457,9 +1488,9 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const opposingSide = mapSide === 'LONG' ? 'SHORT' : 'LONG';
     return [
       `Map Side: ${mapSide === 'WAIT' ? 'WAIT N/A' : deskPlaySideStrength(play, mapSide)}`,
-      `Map Role: ${mapSide === 'WAIT' ? 'no active directional map' : 'chart map under review'}`,
+      `Map Role: ${mapSide === 'WAIT' ? 'no active directional map' : 'review map'}`,
       `Opposing Side: ${mapSide === 'WAIT' ? 'N/A' : deskPlaySideStrength(play, opposingSide)}`,
-      `Opposing Role: ${mapSide === 'WAIT' ? 'context unavailable' : 'context only - not direction'}`,
+      `Opposing Role: ${mapSide === 'WAIT' ? 'context unavailable' : 'context only'}`,
       `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
       `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels)}`,
     ];
@@ -1478,7 +1509,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return [
       `${args.instrument} Current Desk Plan`,
       '',
-      `Primary: ${deskPlayPrimaryLabel(play, direction)}`,
+      `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       `Line in sand: ${priceLine(play.lineInSand)}`,
       ...deskPlayMainInstructionLines({
@@ -1517,7 +1548,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   return [
     `${args.instrument} Current Desk Plan`,
     '',
-    `Primary: ${direction}`,
+    `Primary: ${primaryPlanLabel(direction)}`,
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     `Line in sand: ${priceLine(lineInSand)}`,
     ...deskPlayMainInstructionLines({

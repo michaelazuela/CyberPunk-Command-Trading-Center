@@ -61,8 +61,10 @@ import {
   shouldPersistScannerAlertToRag,
   shouldSuppressActiveCampaignScannerAlert,
   buildScannerReversalWatchLines,
+  buildScannerMorningHtfDeskMapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
+  shouldSendScannerMorningHtfDeskMap,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
@@ -1056,6 +1058,100 @@ const baseDeskPlanRefreshState = {
     },
   },
 } as any;
+const morningHtfDeskMapState = {
+  ...baseDeskPlanRefreshState,
+  activeCampaign: null,
+  htfContextStatus: 'sufficient',
+  dataQualityStatus: 'ready',
+  bestShortPlan: null,
+  primaryDeskPlay: {
+    ...baseDeskPlanRefreshState.primaryDeskPlay,
+    direction: 'WAIT',
+    lineInSand: null,
+    longAbove: 7566.5,
+    shortBelow: 7561.75,
+    longBias: {
+      state: 'secondary',
+      lineInSand: 7566.5,
+      tradeReadiness: { status: 'not_aligned' },
+    },
+    shortBias: {
+      state: 'secondary',
+      lineInSand: 7561.75,
+      tradeReadiness: { status: 'not_aligned' },
+    },
+    htfProtectedStructureMap: {
+      rows: [
+        { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', biasChangeLine: 7684, protectedStructure: 7684, confirmationLine: 7684, biasChangeConfirmation: 'completed close+hold' },
+        { timeframe: '2H', bias: 'BULL', currentBias: 'BULL', biasChangeLine: 7437.25, protectedStructure: 7437.25, confirmationLine: 7437.25, biasChangeConfirmation: 'completed close+hold' },
+        { timeframe: '1H', bias: 'BULL', currentBias: 'BULL', biasChangeLine: 7437.25, protectedStructure: 7437.25, confirmationLine: 7437.25, biasChangeConfirmation: 'completed close+hold' },
+        { timeframe: '15M', bias: 'RANGE', currentBias: 'RANGE', biasChangeLine: 7564.5, protectedStructure: 7564.5, confirmationLine: 7564.5, biasChangeConfirmation: 'completed close+hold' },
+        { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', biasChangeLine: 7521.5, protectedStructure: 7521.5, confirmationLine: 7521.5, biasChangeConfirmation: 'completed close+hold' },
+      ],
+    },
+  },
+} as any;
+const morningMapCompleted5m = { time: '2026-06-19T09:20:00.0000000', open: 7562, high: 7566, low: 7560, close: 7564, volume: 1000 };
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  completed5m: morningMapCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {},
+}), true);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'lunch',
+  completed5m: morningMapCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {},
+}), false);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  completed5m: { ...morningMapCompleted5m, time: '2026-06-19T09:15:00.0000000' },
+  barTimeZone: 'eastern',
+  sent: {},
+}), false);
+assert.equal(shouldSendScannerMorningHtfDeskMap({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  completed5m: morningMapCompleted5m,
+  barTimeZone: 'eastern',
+  sent: {
+    '2026-06-19:MES:morning:MORNING_HTF_DESK_MAP': {
+      fingerprint: 'already-sent',
+      tradeDate: '2026-06-19',
+      instrument: 'MES',
+      session: 'morning',
+      primary: 'WAIT',
+      latestCompleted5m: morningMapCompleted5m.time,
+      keyBattleArea: '7561.75-7566.50',
+      sentAt: '2026-06-19T13:20:02.000Z',
+    },
+  },
+}), false);
+const morningMapPayload = buildScannerMorningHtfDeskMapPayload({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  deskState: morningHtfDeskMapState,
+  completed5m: morningMapCompleted5m,
+  currentPrice: 7563.75,
+});
+const morningMapText = flattenDiscordPayloadText(morningMapPayload);
+assert.match(morningMapPayload.content || '', /MES Morning HTF Desk Map - 2026-06-19/);
+assert.match(morningMapText, /MES Morning High Timeframe Desk Map - 2026-06-19/);
+assert.match(morningMapText, /Primary: 🛑 WAIT/);
+assert.match(morningMapText, /Key battle area: 7561.75-7566.50/);
+assert.match(morningMapText, /🐻 4H: BEAR/);
+assert.match(morningMapText, /🐂 2H: BULL/);
+assert.match(morningMapText, /⚖️ 15M: RANGE/);
+assert.match(morningMapText, /5M remains execution authority/);
+assert.equal(morningMapPayload.components, undefined);
 const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({
   deskState: baseDeskPlanRefreshState,
   normalized: {
@@ -2290,6 +2386,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     deskPlaySent: {},
     deskPlanRefreshSent: {},
     reversalWatchSent: {},
+    morningHtfDeskMapSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -2777,7 +2874,7 @@ try {
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('MES Current Desk Plan'));
   assert.ok(text.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-  assert.ok(text.includes('Primary: LONG'));
+  assert.ok(text.includes('Primary: 🐂 LONG'));
   assert.ok(text.includes('Line in sand:'));
   assert.ok(text.includes('LONG ABOVE'));
   assert.ok(text.includes('Entry:'));
@@ -3142,7 +3239,7 @@ try {
   );
   assert.ok(deskPlayText.includes('[PM DESK PLAY] MES - LONG'));
   assert.ok(deskPlayText.includes('MES Current Desk Plan'));
-  assert.ok(deskPlayText.includes('Primary: LONG'));
+  assert.ok(deskPlayText.includes('Primary: 🐂 LONG'));
   assert.ok(deskPlayText.includes('Bias:'));
   assert.ok(deskPlayText.includes('Line in sand: 5324.25'));
   assert.ok(deskPlayText.includes('Overall play: LONG above 5324.25.'));

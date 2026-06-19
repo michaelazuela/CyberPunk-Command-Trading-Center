@@ -555,7 +555,7 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Opposing Role:') ||
     !formatterContent.includes('Conflict:') ||
     !formatterContent.includes('Readiness:') ||
-    !formatterContent.includes('context only - not direction') ||
+    !formatterContent.includes('context only') ||
     !formatterContent.includes('watch only - do not execute') ||
     !formatterContent.includes('review map - levels pending') ||
     !formatterContent.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase') ||

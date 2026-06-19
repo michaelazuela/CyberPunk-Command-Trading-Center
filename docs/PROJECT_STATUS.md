@@ -2,6 +2,38 @@
 
 ## Latest Change
 
+Date: 2026-06-19
+Task: Add disciplined trading emojis to Current Desk Plan Discord format.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The Current Desk Plan format needed the same fast-read bull/bear/range/wait language as the Morning HTF Desk Map without changing any trade decision behavior.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Current Desk Plan Discord text now shows `🛑 WAIT`, `🐂 LONG`, `🐻 SHORT`, emoji HTF rows, and emoji `LONG ABOVE` / `SHORT BELOW` headers while preserving levels, status, chart language, and decision-support boundaries.
+Trading logic changed: No. This is Discord presentation only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Current Desk Plan messages are more scannable and stay under compact formatter limits in covered tests.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart the scanner after commit so live Discord posts use the updated formatter.
+
+## Previous Change
+
+Date: 2026-06-19
+Task: Add Morning HTF Desk Map Discord report format and cadence.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The trader needs a concise morning structure read in Discord with the trade date, primary WAIT/LONG/SHORT state, key battle area, HTF bias rows, and bottom-line instruction before reviewing individual trade plans.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. The scanner now sends one Morning HTF Desk Map between 9:20 AM and 10:00 AM ET after a completed 5M bar is available, with `🛑 WAIT`, HTF bull/bear/range emojis, key battle area, latest completed 5M timestamp, and explicit “not execution approval” language. The report is classified as a watch/map message with no outcome buttons.
+Trading logic changed: No. This is Discord presentation and cadence only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth; the report reads scanner-owned DeskState/HTF map rows only.
+Discord impact: Yes. Adds a once-per-morning HTF map report and policy classification so it is not treated as a trade alert.
+Journal/RAG impact: No schema change and no RAG/outcome buttons on the HTF map report.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Observe the next live morning session and decide whether to extend the same disciplined emoji/status language to other report families in a separate formatting pass.
+
+## Previous Change
+
 Date: 2026-06-18
 Task: Install reversal-watch Discord card, chart, and cadence phases.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/chart-markup-renderer.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

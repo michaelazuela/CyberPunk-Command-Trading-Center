@@ -180,6 +180,7 @@ interface ScannerStateFile {
   deskPlaySent: Record<string, { direction: string; lineInSand: number | null; sentAt: string }>;
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   reversalWatchSent: Record<string, ScannerReversalWatchLedgerRecord>;
+  morningHtfDeskMapSent: Record<string, ScannerMorningHtfDeskMapLedgerRecord>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   discordCleanupMessages: Record<string, ScannerDiscordCleanupRecord>;
@@ -196,7 +197,7 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
-export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
 
 export interface ScannerDiscordCleanupRecord {
   key: string;
@@ -281,6 +282,17 @@ export interface ScannerReversalWatchLedgerRecord {
   reclaimConfirmed: boolean;
   retestHoldConfirmed: boolean;
   barsSinceReclaim: number | null;
+  sentAt: string;
+}
+
+export interface ScannerMorningHtfDeskMapLedgerRecord {
+  fingerprint: string;
+  tradeDate: string;
+  instrument: Instrument;
+  session: 'morning';
+  primary: string;
+  latestCompleted5m: string | null;
+  keyBattleArea: string;
   sentAt: string;
 }
 
@@ -1240,6 +1252,7 @@ function emptyScannerState(): ScannerStateFile {
     deskPlaySent: {},
     deskPlanRefreshSent: {},
     reversalWatchSent: {},
+    morningHtfDeskMapSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -1262,6 +1275,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         deskPlaySent: parsed.deskPlaySent || {},
         deskPlanRefreshSent: parsed.deskPlanRefreshSent || {},
         reversalWatchSent: parsed.reversalWatchSent || {},
+        morningHtfDeskMapSent: parsed.morningHtfDeskMapSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         discordCleanupMessages: parsed.discordCleanupMessages || {},
@@ -3933,6 +3947,127 @@ function scannerDeskPlanRefreshRecord(args: {
   };
 }
 
+function scannerMorningHtfDeskMapKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+}): string {
+  return `${args.tradeDate}:${args.instrument}:morning:MORNING_HTF_DESK_MAP`;
+}
+
+function scannerHtfBiasEmoji(bias: string | null | undefined): string {
+  const normalized = String(bias || '').toUpperCase();
+  if (normalized === 'BULL') return '🐂';
+  if (normalized === 'BEAR') return '🐻';
+  if (normalized === 'RANGE') return '⚖️';
+  return '▫️';
+}
+
+function scannerPrimaryDeskEmoji(primary: string | null | undefined): string {
+  const normalized = String(primary || '').toUpperCase();
+  if (normalized === 'LONG') return '🐂 LONG';
+  if (normalized === 'SHORT') return '🐻 SHORT';
+  return '🛑 WAIT';
+}
+
+function scannerHtfRowChangeSide(
+  row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
+): string {
+  const bias = String(row.currentBias || row.bias || '').toUpperCase();
+  if (bias === 'BULL') return 'below';
+  if (bias === 'BEAR') return 'above';
+  return 'around';
+}
+
+function scannerHtfRowLine(
+  row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
+): number | null {
+  return roundNullableTradePrice(row.biasChangeLine) ??
+    roundNullableTradePrice(row.confirmationLine) ??
+    roundNullableTradePrice(row.protectedStructure);
+}
+
+function scannerHtfStructureLine(
+  row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
+): string {
+  const bias = String(row.currentBias || row.bias || 'UNKNOWN').toUpperCase();
+  const line = scannerHtfRowLine(row);
+  const confirmation = row.biasChangeConfirmation || 'completed close+hold';
+  if (line === null) return `${scannerHtfBiasEmoji(bias)} ${row.timeframe}: ${bias} | change line unavailable`;
+  return `${scannerHtfBiasEmoji(bias)} ${row.timeframe}: ${bias} | flips ${scannerHtfRowChangeSide(row)} ${line.toFixed(2)} on ${confirmation}`;
+}
+
+function scannerMorningHtfDeskMapKeyBattleArea(deskState: DeskState): string {
+  const play = deskState.primaryDeskPlay;
+  const fifteenMinute = play.htfProtectedStructureMap.rows.find((row) => row.timeframe === '15M') || null;
+  const tactical = [
+    roundNullableTradePrice(play.lineInSand),
+    roundNullableTradePrice(play.longAbove),
+    roundNullableTradePrice(play.shortBelow),
+    fifteenMinute ? scannerHtfRowLine(fifteenMinute) : null,
+  ].filter((value): value is number => value !== null);
+  const unique = Array.from(new Set(tactical.map((value) => value.toFixed(2)))).map(Number);
+  if (!unique.length) return 'N/A';
+  if (unique.length === 1) return unique[0].toFixed(2);
+  const low = Math.min(...unique);
+  const high = Math.max(...unique);
+  return `${low.toFixed(2)}-${high.toFixed(2)}`;
+}
+
+function scannerMorningHtfDeskMapFingerprint(args: {
+  deskState: DeskState;
+  keyBattleArea: string;
+}): string {
+  const play = args.deskState.primaryDeskPlay;
+  const rowParts = play.htfProtectedStructureMap.rows.map((row) => [
+    row.timeframe,
+    row.currentBias || row.bias || 'UNKNOWN',
+    deskPlanRefreshPrice(scannerHtfRowLine(row)),
+  ].join('='));
+  return [
+    `primary=${play.direction}`,
+    `keyBattle=${args.keyBattleArea}`,
+    `htf=${rowParts.join(',')}`,
+    `context=${args.deskState.htfContextStatus || 'unknown'}:${args.deskState.dataQualityStatus || 'unknown'}`,
+  ].join('|');
+}
+
+function scannerMorningHtfDeskMapRecord(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  deskState: DeskState;
+  latestCompleted5m?: string | null;
+  sentAt: string;
+}): ScannerMorningHtfDeskMapLedgerRecord {
+  const keyBattleArea = scannerMorningHtfDeskMapKeyBattleArea(args.deskState);
+  return {
+    fingerprint: scannerMorningHtfDeskMapFingerprint({ deskState: args.deskState, keyBattleArea }),
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    session: 'morning',
+    primary: args.deskState.primaryDeskPlay.direction,
+    latestCompleted5m: args.latestCompleted5m || null,
+    keyBattleArea,
+    sentAt: args.sentAt,
+  };
+}
+
+export function shouldSendScannerMorningHtfDeskMap(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  completed5m: NinjaBridgeBar | null;
+  barTimeZone: BridgeTimeZoneMode;
+  sent: Record<string, ScannerMorningHtfDeskMapLedgerRecord>;
+}): boolean {
+  if (args.session !== 'morning') return false;
+  if (!args.completed5m) return false;
+  const parsed = parseBridgeTime(args.completed5m.time, args.barTimeZone);
+  if (!parsed) return false;
+  const minutes = toEtMinutes(parsed);
+  if (minutes < 9 * 60 + 20 || minutes > 10 * 60) return false;
+  return !args.sent[scannerMorningHtfDeskMapKey({ tradeDate: args.tradeDate, instrument: args.instrument })];
+}
+
 function scannerDeskPlaySuppressionPost(
   reason = 'Desk Play refresh is eligible for Discord.',
 ): ScannerDeskPlayDiscordSuppressionDecision {
@@ -4579,6 +4714,75 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
 
 function scannerDiscordLine(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+}
+
+export function buildScannerMorningHtfDeskMapPayload(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  deskState: DeskState;
+  completed5m: NinjaBridgeBar | null;
+  currentPrice: number | null;
+}): DiscordWebhookPayload {
+  const play = args.deskState.primaryDeskPlay;
+  const primary = scannerPrimaryDeskEmoji(play.direction);
+  const keyBattleArea = scannerMorningHtfDeskMapKeyBattleArea(args.deskState);
+  const htfRows = play.htfProtectedStructureMap.rows
+    .filter((row) => ['4H', '2H', '1H', '15M', '5M'].includes(row.timeframe))
+    .sort((a, b) => {
+      const order = ['4H', '2H', '1H', '15M', '5M'];
+      return order.indexOf(a.timeframe) - order.indexOf(b.timeframe);
+    });
+  const longReadiness = play.longBias.tradeReadiness?.status || 'review';
+  const shortReadiness = play.shortBias.tradeReadiness?.status || 'review';
+  const htfStatus = args.deskState.htfContextStatus || 'unknown';
+  const dataQuality = args.deskState.dataQualityStatus || 'unknown';
+  const primaryReason = play.direction === 'WAIT'
+    ? 'No single primary side is active. Wait for completed 5M proof and clean map alignment.'
+    : `${play.direction} is the current desk map side, but execution still requires app-owned 5M trigger, stop, risk, target room, model, session, and canExecute gates.`;
+  const tacticalMeaning = [
+    `Macro read: ${htfStatus === 'sufficient' ? 'HTF context is sufficient for map reading.' : `HTF context status is ${htfStatus}; treat as context only if data-limited.`}`,
+    `Long: ${longReadiness}.`,
+    `Short: ${shortReadiness}.`,
+    `Execution: no Discord map approves a trade; 5M remains execution authority.`,
+  ].join('\n');
+  const bottomLine = play.direction === 'WAIT'
+    ? `Wait. Key battle area is ${keyBattleArea}. A completed close+hold through the tactical line improves one side; failure/rejection keeps the opposite side on review until the scanner-owned 5M gate confirms.`
+    : `${play.direction} map is active around ${scannerDiscordLine(play.lineInSand)}. Do not chase; wait for completed 5M confirmation and app-owned canExecute.`;
+
+  return {
+    username: 'Quant Desk',
+    content: `📊 ${args.instrument} Morning HTF Desk Map - ${args.tradeDate}`,
+    embeds: [{
+      title: `${args.instrument} Morning High Timeframe Desk Map - ${args.tradeDate}`,
+      color: play.direction === 'LONG' ? 0x22c55e : play.direction === 'SHORT' ? 0xef4444 : 0xf97316,
+      description: [
+        `Primary: ${primary}`,
+        `Current: ${scannerDiscordLine(args.currentPrice)}`,
+        `Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
+        `Key battle area: ${keyBattleArea}`,
+        `Reason: ${primaryReason}`,
+      ].join('\n'),
+      fields: [
+        {
+          name: 'HTF Structure',
+          value: htfRows.length ? htfRows.map(scannerHtfStructureLine).join('\n') : 'No scanner-owned HTF rows are available.',
+          inline: false,
+        },
+        {
+          name: 'Desk Read',
+          value: tacticalMeaning,
+          inline: false,
+        },
+        {
+          name: 'Bottom Line',
+          value: bottomLine,
+          inline: false,
+        },
+      ],
+      footer: { text: `Quant Desk • Morning HTF map only • Data ${dataQuality} • Not execution approval` },
+      timestamp: new Date().toISOString(),
+    }],
+  };
 }
 
 function compactScannerDiscordText(value: string | null | undefined, max = 260): string {
@@ -6421,6 +6625,54 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
 
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
+
+  if (window.allowsDiscordAlert && shouldSendScannerMorningHtfDeskMap({
+    tradeDate,
+    instrument: config.instrument,
+    session,
+    completed5m,
+    barTimeZone: config.barTimeZone,
+    sent: state.morningHtfDeskMapSent,
+  })) {
+    const morningMapKey = scannerMorningHtfDeskMapKey({ tradeDate, instrument: config.instrument });
+    try {
+      const payload = buildScannerMorningHtfDeskMapPayload({
+        tradeDate,
+        instrument: config.instrument,
+        deskState,
+        completed5m,
+        currentPrice,
+      });
+      const receipt = await postDiscord(payload, config);
+      if (receipt.deliveryStatus === 'sent') {
+        const sentAt = new Date().toISOString();
+        state.morningHtfDeskMapSent[morningMapKey] = scannerMorningHtfDeskMapRecord({
+          tradeDate,
+          instrument: config.instrument,
+          deskState,
+          latestCompleted5m: completed5m.time,
+          sentAt,
+        });
+        await writeScannerDiscordReceiptAuditLog({
+          kind: 'morning_htf_desk_map',
+          key: morningMapKey,
+          planVersionId: `${planVersionId}-MORNING-HTF-DESK-MAP`,
+          tradeDate,
+          instrument: config.instrument,
+          session,
+          receipt,
+          postedAt: sentAt,
+          cleanupRecordKey: null,
+          ragReceiptAttached: false,
+        });
+        console.log(`[scanner] Sent Morning HTF Desk Map: ${morningMapKey}`);
+      } else {
+        console.log(`[scanner] Morning HTF Desk Map skipped (${receipt.webhookSource || 'unknown'}): ${morningMapKey}`);
+      }
+    } catch (error) {
+      console.warn(`[scanner] Morning HTF Desk Map delivery failed safely; scanner will continue evaluating watch and trade alerts: ${sanitizedError(error)}`);
+    }
+  }
 
   let reversalWatchPosted = false;
   if (!alertDecision.shouldSend && window.allowsDiscordAlert) {
