@@ -57,6 +57,15 @@ The next non-Docker runtime work should make the existing Windows-local process 
 5. Keep logs under `logs/supervisor`.
 6. Keep generated audit/state files out of Git.
 
+Implemented local permanence layer:
+
+- `Install-QuantDesk-StartupTask.ps1` installs a current-user Windows Scheduled Task named `Quant Desk Local Supervisor`.
+- `Uninstall-QuantDesk-StartupTask.ps1` removes that startup task.
+- The startup task launches the tray/supervisor wrapper, not scanner child commands directly.
+- The supervisor remains the owner of scanner and candle-recorder processes.
+- The task uses `MultipleInstances IgnoreNew` so Windows logon does not stack duplicate startup tasks.
+- The task runs at limited privilege for the current interactive Windows user.
+
 ## Required Runtime Inputs
 
 The isolated runtime still needs the same external systems:
