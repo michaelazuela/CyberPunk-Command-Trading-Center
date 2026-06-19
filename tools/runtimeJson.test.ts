@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  cleanupRuntimeJsonTempFilesSync,
   readRuntimeJson,
   readRuntimeJsonSync,
   writeRuntimeJsonAtomic,
@@ -72,6 +73,45 @@ try {
   );
   assert.equal(missingWithValidator.source, 'missing');
   assert.equal(missingWithValidator.validationStatus, 'not_checked');
+
+  const cleanupDir = path.join(tempDir, 'cleanup');
+  fs.mkdirSync(cleanupDir, { recursive: true });
+  const oldTemp = path.join(cleanupDir, 'state.json.tmp-123-456-abcdef');
+  const youngTemp = path.join(cleanupDir, 'young.json.tmp-123-456-fedcba');
+  const ignored = path.join(cleanupDir, 'state.json.tmp-not-a-runtime-file');
+  fs.writeFileSync(oldTemp, '{}', 'utf8');
+  fs.writeFileSync(youngTemp, '{}', 'utf8');
+  fs.writeFileSync(ignored, '{}', 'utf8');
+  const now = new Date('2026-06-19T12:00:00.000Z');
+  const oldDate = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const youngDate = new Date(now.getTime() - 30 * 1000);
+  fs.utimesSync(oldTemp, oldDate, oldDate);
+  fs.utimesSync(youngTemp, youngDate, youngDate);
+  fs.utimesSync(ignored, oldDate, oldDate);
+
+  const previewCleanup = cleanupRuntimeJsonTempFilesSync({
+    dirs: [cleanupDir],
+    olderThanMs: 60 * 60 * 1000,
+    now,
+    dryRun: true,
+  });
+  assert.equal(previewCleanup.dryRun, true);
+  assert.equal(previewCleanup.matched.length, 1);
+  assert.equal(previewCleanup.matched[0].removed, false);
+  assert.equal(fs.existsSync(oldTemp), true);
+  assert.equal(fs.existsSync(youngTemp), true);
+  assert.equal(fs.existsSync(ignored), true);
+
+  const appliedCleanup = cleanupRuntimeJsonTempFilesSync({
+    dirs: [cleanupDir],
+    olderThanMs: 60 * 60 * 1000,
+    now,
+    dryRun: false,
+  });
+  assert.equal(appliedCleanup.removedCount, 1);
+  assert.equal(fs.existsSync(oldTemp), false);
+  assert.equal(fs.existsSync(youngTemp), true);
+  assert.equal(fs.existsSync(ignored), true);
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

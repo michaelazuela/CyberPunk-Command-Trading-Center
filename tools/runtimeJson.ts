@@ -6,6 +6,22 @@ export type RuntimeJsonReadSource = 'primary' | 'backup' | 'missing' | 'invalid'
 export type RuntimeJsonValidationStatus = 'valid' | 'invalid' | 'not_checked';
 export type RuntimeJsonValidator<T> = (value: T) => string | null;
 
+export interface RuntimeJsonTempCleanupEntry {
+  filePath: string;
+  ageMs: number;
+  removed: boolean;
+  error: string | null;
+}
+
+export interface RuntimeJsonTempCleanupResult {
+  dryRun: boolean;
+  olderThanMs: number;
+  scannedDirs: string[];
+  matched: RuntimeJsonTempCleanupEntry[];
+  removedCount: number;
+  errorCount: number;
+}
+
 export interface RuntimeJsonReadResult<T> {
   value: T | null;
   source: RuntimeJsonReadSource;
@@ -20,6 +36,10 @@ function backupPath(filePath: string): string {
 
 function tempPath(filePath: string): string {
   return `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function isRuntimeJsonTempFile(fileName: string): boolean {
+  return /\.json\.tmp-\d+-\d+-[a-f0-9]+$/i.test(fileName);
 }
 
 function formatError(error: unknown): string {
@@ -141,4 +161,53 @@ export async function writeRuntimeJsonAtomic(filePath: string, value: unknown): 
     if (!isMissingFileError(error)) throw error;
   }
   await fsp.rename(tmp, filePath);
+}
+
+export function cleanupRuntimeJsonTempFilesSync(args: {
+  dirs: string[];
+  olderThanMs: number;
+  now?: Date;
+  dryRun?: boolean;
+}): RuntimeJsonTempCleanupResult {
+  const now = args.now || new Date();
+  const dryRun = args.dryRun !== false;
+  const scannedDirs = [...new Set(args.dirs.map((dir) => path.resolve(dir)))];
+  const matched: RuntimeJsonTempCleanupEntry[] = [];
+
+  for (const dir of scannedDirs) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !isRuntimeJsonTempFile(entry.name)) continue;
+      const filePath = path.join(dir, entry.name);
+      try {
+        const stat = fs.statSync(filePath);
+        const ageMs = Math.max(0, now.getTime() - stat.mtimeMs);
+        if (ageMs < args.olderThanMs) continue;
+        if (!dryRun) fs.rmSync(filePath, { force: true });
+        matched.push({ filePath, ageMs: Math.round(ageMs), removed: !dryRun, error: null });
+      } catch (error) {
+        matched.push({
+          filePath,
+          ageMs: 0,
+          removed: false,
+          error: formatError(error),
+        });
+      }
+    }
+  }
+
+  return {
+    dryRun,
+    olderThanMs: args.olderThanMs,
+    scannedDirs,
+    matched,
+    removedCount: matched.filter((item) => item.removed).length,
+    errorCount: matched.filter((item) => item.error).length,
+  };
 }

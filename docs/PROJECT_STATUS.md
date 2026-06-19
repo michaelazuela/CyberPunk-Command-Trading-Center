@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add runtime JSON temp cleanup and operator health bundles.
+Files changed: tools/runtimeJson.ts, tools/runtimeJson.test.ts, tools/supervisor/runtimeJsonCleanup.ts, tools/supervisor/runtimeJsonCleanup.test.ts, Export-QuantDesk-HealthBundle.ps1, tools/supervisor/healthBundleScript.test.ts, package.json, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
+Reason: The local runtime needed a safe way to clean stale atomic-write temp files and a one-command troubleshooting bundle that captures supervisor status, runtime audit, duplicate-cleanup preview, JSON-cleanup preview, and operator status output.
+Tests run: npx tsx tools/runtimeJson.test.ts; npx tsx tools/supervisor/runtimeJsonCleanup.test.ts; npx tsx tools/supervisor/healthBundleScript.test.ts; npm run supervisor:cleanup-json; npm run supervisor:health-bundle; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Runtime JSON temp cleanup is preview-first and only deletes matching old `*.json.tmp-<pid>-<timestamp>-<hex>` files when explicitly run with `-- --apply`. The health bundle saves read-only diagnostics under ignored `logs/supervisor/health-bundles/<timestamp>`.
+Trading logic changed: No. This is local runtime maintenance and troubleshooting only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord cadence, and bar-close confirmation remain unchanged.
+Bridge impact: None. The health bundle reads existing status/audit output and does not change bridge behavior or market-data handling.
+Discord impact: None. No Discord posting behavior changed.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Decide whether to add a small `Open-QuantDesk-Logs.ps1` helper or pause runtime hardening and return to scanner behavior/audit work.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add runtime JSON state validation and recovery visibility.
 Files changed: tools/runtimeJson.ts, tools/runtimeJson.test.ts, tools/supervisor/runtimeAudit.ts, tools/supervisor/runtimeAudit.test.ts, tools/supervisor/statusScript.test.ts, Status-QuantDesk.ps1, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
 Reason: The local runtime already used atomic JSON writes and `.bak` fallback, but operator status needed to show when state was recovered from backup, malformed, missing, or failing a basic expected-shape check.

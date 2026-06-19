@@ -18,6 +18,8 @@
     "supervisor:status": "tsx tools/supervisor/index.ts status",
     "supervisor:audit": "tsx tools/supervisor/runtimeAudit.ts",
     "supervisor:repair": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Repair-QuantDesk-Runtime.ps1",
+    "supervisor:cleanup-json": "tsx tools/supervisor/runtimeJsonCleanup.ts",
+    "supervisor:health-bundle": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Export-QuantDesk-HealthBundle.ps1",
     "supervisor:stop": "tsx tools/supervisor/index.ts stop",
     "supervisor:tray": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Start-QuantDeskSupervisorTray.ps1",
     "supervisor:notify-self-heal": "tsx tools/supervisor/index.ts notify-self-heal",

@@ -91,6 +91,16 @@ Implemented operator-facing status summary:
 - If recorder heartbeat is stale or warning, the status output labels it as data freshness/bridge health, not duplicate process ownership.
 - The status command is read-only. It does not stop processes, start processes, repair state, post Discord messages, change scanner behavior, change trading logic, or change canExecute.
 
+Implemented runtime JSON temp cleanup and health bundles:
+
+- `npm run supervisor:cleanup-json` previews old runtime JSON `*.tmp-*` files left behind by failed atomic writes.
+- Cleanup only matches runtime JSON temp names such as `state.json.tmp-<pid>-<timestamp>-<hex>`.
+- Preview mode is the default. `-- --apply` is required before any temp file is deleted.
+- Cleanup scans only known runtime locations by default: `logs/supervisor`, `tools/automation`, and `tools/automation/discord-audit`.
+- `Export-QuantDesk-HealthBundle.ps1` and `npm run supervisor:health-bundle` save troubleshooting output under ignored `logs/supervisor/health-bundles/<timestamp>`.
+- The health bundle captures supervisor status, runtime audit JSON, duplicate cleanup preview, runtime JSON cleanup preview, `Status-QuantDesk.ps1` output, and a manifest.
+- The health bundle is read-only. It does not apply cleanup, stop processes, start processes, post Discord messages, change scanner behavior, change trading logic, or change canExecute.
+
 ## Required Runtime Inputs
 
 The isolated runtime still needs the same external systems:
@@ -113,13 +123,14 @@ Implemented first-pass hardening:
 - Last-known-good `.bak` files for rewritten runtime JSON.
 - Safe reads that recover from `.bak` when primary JSON is corrupt.
 - Supervisor/scanner local state, notification state, pre-window backfill state, recorder heartbeat, local market-data gap ledger, and scanner audit/decision-tape writes use the safe JSON path.
+- Runtime JSON state validation and `.bak` recovery are visible in `npm run supervisor:audit` and `Status-QuantDesk.ps1`.
+- Old runtime JSON temp-file cleanup is available through preview-first `npm run supervisor:cleanup-json`.
 - Preserve Supabase as the durable record for journal/RAG outcomes.
 
 Recommended later hardening:
 
-- Add schema validation around each local state file.
-- Add cleanup for old `*.tmp-*` files after failed writes.
-- Add operator-facing status when a `.bak` recovery occurred.
+- Tighten per-file schema validators as local state contracts stabilize.
+- Add an operator-facing support workflow that can attach a health bundle to a GitHub issue or support note when requested.
 
 ## Boundary
 
