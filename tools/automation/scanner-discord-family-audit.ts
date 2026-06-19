@@ -20,6 +20,7 @@ interface ScannerDiscordFamilyAuditOptions {
   instrument: string;
   auditDir: string;
   outDir: string;
+  since: string | null;
   json: boolean;
 }
 
@@ -58,6 +59,7 @@ export interface ScannerDiscordFamilyAuditReport {
   instrument: string;
   auditDir: string;
   outDir: string;
+  since: string | null;
   receiptCount: number;
   summaries: ScannerDiscordFamilySummary[];
   rows: ScannerDiscordFamilyReceiptRow[];
@@ -107,6 +109,7 @@ export function parseScannerDiscordFamilyAuditArgs(args = process.argv.slice(2))
     instrument: (readFlag(args, '--instrument') || 'MES').toUpperCase(),
     auditDir: readFlag(args, '--audit-dir') || DEFAULT_AUDIT_DIR,
     outDir: readFlag(args, '--out-dir') || DEFAULT_OUT_DIR,
+    since: readFlag(args, '--since'),
     json: hasFlag(args, '--json'),
   };
 }
@@ -131,6 +134,13 @@ function parseMs(value: string | null): number {
   if (!value) return 0;
   const ms = new Date(value).getTime();
   return Number.isFinite(ms) ? ms : 0;
+}
+
+function validSinceMs(value: string | null): number | null {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  if (!Number.isFinite(ms)) throw new Error(`--since must be a valid date/time. Received: ${value}`);
+  return ms;
 }
 
 function familyRole(kind: ScannerDiscordFamily): string {
@@ -267,6 +277,7 @@ function markdownFor(report: Omit<ScannerDiscordFamilyAuditReport, 'markdown'>):
     `# Scanner Discord Family Phase 2 Audit - ${report.instrument} ${report.tradeDate}`,
     '',
     'Read-only receipt-family audit. This report does not post Discord, change scanner state, change Discord cadence, approve execution, or change trading logic.',
+    ...(report.since ? ['', `Since filter: ${report.since}`] : []),
     '',
     '## Summary By Family',
     '| Kind | Session | Count | First | Last | Min spacing min | <5m bursts | Unique cadence keys |',
@@ -294,6 +305,7 @@ function markdownFor(report: Omit<ScannerDiscordFamilyAuditReport, 'markdown'>):
 
 export async function buildScannerDiscordFamilyAuditReport(options: ScannerDiscordFamilyAuditOptions): Promise<ScannerDiscordFamilyAuditReport> {
   const rows: ScannerDiscordFamilyReceiptRow[] = [];
+  const sinceMs = validSinceMs(options.since);
   if (existsSync(options.auditDir)) {
     const entries = await fs.readdir(options.auditDir, { withFileTypes: true });
     for (const entry of entries) {
@@ -303,6 +315,7 @@ export async function buildScannerDiscordFamilyAuditReport(options: ScannerDisco
       const row = receiptRow(entry.name, parsed);
       if (!row) continue;
       if (row.tradeDate !== options.tradeDate || row.instrument !== options.instrument) continue;
+      if (sinceMs !== null && parseMs(row.postedAt) < sinceMs) continue;
       rows.push(row);
     }
   }
@@ -315,6 +328,7 @@ export async function buildScannerDiscordFamilyAuditReport(options: ScannerDisco
     instrument: options.instrument,
     auditDir: options.auditDir,
     outDir: options.outDir,
+    since: options.since,
     receiptCount: rows.length,
     summaries,
     rows,
@@ -344,7 +358,7 @@ async function main() {
   await fs.writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
   await fs.writeFile(mdPath, report.markdown);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, receiptCount: report.receiptCount, summaries: report.summaries, findings: report.findings }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, since: report.since, receiptCount: report.receiptCount, summaries: report.summaries, findings: report.findings }, null, 2)}\n`);
   } else {
     console.log(`Scanner Discord family Phase 2 audit written: ${mdPath}`);
     console.log(`Receipts reviewed: ${report.receiptCount}`);

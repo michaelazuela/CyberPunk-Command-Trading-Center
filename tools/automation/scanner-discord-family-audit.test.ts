@@ -59,6 +59,7 @@ const report = await buildScannerDiscordFamilyAuditReport({
   instrument: 'MES',
   auditDir,
   outDir: path.join(tmp, 'out'),
+  since: null,
   json: false,
 });
 
@@ -78,5 +79,21 @@ assert.ok(report.findings.some((finding) => finding.includes('under-five-minute'
 assert.match(report.markdown, /Scanner Discord Family Phase 2 Audit/);
 assert.match(report.markdown, /Read-only receipt-family audit/);
 assert.equal(JSON.stringify(report).includes('discord.com/api/webhooks'), false);
+
+const sinceReport = await buildScannerDiscordFamilyAuditReport({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  auditDir,
+  outDir: path.join(tmp, 'out-since'),
+  since: '2026-06-19T16:05:00.000Z',
+  json: false,
+});
+
+assert.equal(sinceReport.since, '2026-06-19T16:05:00.000Z');
+assert.equal(sinceReport.receiptCount, 1);
+assert.equal(sinceReport.rows[0].kind, 'reversal_watch');
+assert.equal(sinceReport.authority.changesDiscordCadence, false);
+assert.match(sinceReport.markdown, /Since filter: 2026-06-19T16:05:00.000Z/);
+assert.equal(sinceReport.findings.some((finding) => finding.includes('under-five-minute')), false);
 
 fs.rmSync(tmp, { recursive: true, force: true });

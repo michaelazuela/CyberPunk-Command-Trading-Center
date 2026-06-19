@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add post-deploy since-filter support to the Scanner Discord family audit.
+Files changed: tools/automation/scanner-discord-family-audit.ts, tools/automation/scanner-discord-family-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live verification phase needed to separate old pre-fix Desk Play/Reversal Watch receipts from post-restart receipts after the secondary Discord cadence guard was installed.
+Tests run: npx tsx tools/automation/scanner-discord-family-audit.test.ts; npm run diagnostic:scanner-discord-family-audit -- --trade-date 2026-06-19 --instrument MES --since 2026-06-19T23:28:24.000Z --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The audit now accepts an optional --since timestamp and filters receipt rows by Discord postedAt so post-deploy cadence can be evaluated without old same-day receipts polluting the result.
+Trading logic changed: No. This is read-only diagnostic filtering only; setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord send logic, and bar-close confirmation remain unchanged.
+Bridge impact: None.
+Discord impact: None. The audit does not post Discord or change cadence.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Live cadence proof is data-limited until NinjaTrader provides a fresh completed 5M bar; the post-restart audit showed zero new receipt rows because the scanner was safely blocked on stale bridge data.
+Next recommended action: Phase 2 should rerun this since-filtered audit after valid live bridge data is restored and a few normal scanner cycles complete.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add Phase 1 secondary Discord cadence consolidation for Desk Play and Reversal Watch.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The receipt-family audit showed secondary Desk Play/Reversal Watch reports could create perceived Discord flooding even when the trader-facing state had not materially changed.

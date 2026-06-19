@@ -16,6 +16,7 @@ tools/automation/Session
 tools/automation/Supabase
 tools/automation/.discord-alert-state.json
 tools/automation/.nt-scanner-state.json
+tools/automation/.nt-scanner-state.json.bak
 tools/automation/.market-data-gap-events.json
 tools/automation/.macro-calendar-cache.json
 tools/automation/discord-report-state.json
