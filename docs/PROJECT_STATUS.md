@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add runtime JSON state validation and recovery visibility.
+Files changed: tools/runtimeJson.ts, tools/runtimeJson.test.ts, tools/supervisor/runtimeAudit.ts, tools/supervisor/runtimeAudit.test.ts, tools/supervisor/statusScript.test.ts, Status-QuantDesk.ps1, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
+Reason: The local runtime already used atomic JSON writes and `.bak` fallback, but operator status needed to show when state was recovered from backup, malformed, missing, or failing a basic expected-shape check.
+Tests run: npx tsx tools/runtimeJson.test.ts; npx tsx tools/supervisor/runtimeAudit.test.ts; npx tsx tools/supervisor/statusScript.test.ts; npm run supervisor:audit; powershell -NoProfile -ExecutionPolicy Bypass -File .\Status-QuantDesk.ps1; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Runtime JSON reads now support optional validators and preserve backup fallback. Runtime audit reports supervisor state, scanner state, recorder heartbeat, market-data gap ledger, and notification state health. Status output now shows runtime JSON health and warns when a file is recovered from `.bak`, invalid, or missing when required.
+Trading logic changed: No. This is local runtime state validation and operator visibility only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord cadence, and bar-close confirmation remain unchanged.
+Bridge impact: No contract change. Recorder heartbeat shape is checked only for local status reporting.
+Discord impact: None. No Discord posting behavior changed.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Add old temp-file cleanup for failed atomic writes, then consider a one-command operator health bundle that saves audit/status output for troubleshooting.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Harden local runtime audit, duplicate cleanup, and operator status.
 Files changed: Repair-QuantDesk-Runtime.ps1, Status-QuantDesk.ps1, tools/supervisor/runtimeAudit.ts, tools/supervisor/runtimeAudit.test.ts, tools/supervisor/runtimeRepairScript.test.ts, tools/supervisor/statusScript.test.ts, package.json, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
 Reason: The local Windows runtime needs a safer permanent operating layer that can prove supervisor ownership, detect duplicate scanner/recorder processes, preview cleanup before applying it, and explain live status without confusing data freshness warnings with duplicate-process risk.

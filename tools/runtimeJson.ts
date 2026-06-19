@@ -3,11 +3,15 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 
 export type RuntimeJsonReadSource = 'primary' | 'backup' | 'missing' | 'invalid';
+export type RuntimeJsonValidationStatus = 'valid' | 'invalid' | 'not_checked';
+export type RuntimeJsonValidator<T> = (value: T) => string | null;
 
 export interface RuntimeJsonReadResult<T> {
   value: T | null;
   source: RuntimeJsonReadSource;
   error: string | null;
+  validationStatus: RuntimeJsonValidationStatus;
+  validationError: string | null;
 }
 
 function backupPath(filePath: string): string {
@@ -30,49 +34,66 @@ function isIgnorableSyncError(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'EPERM');
 }
 
-export function readRuntimeJsonSync<T>(filePath: string): RuntimeJsonReadResult<T> {
-  try {
+function checkedValue<T>(
+  value: T,
+  source: RuntimeJsonReadSource,
+  readError: string | null,
+  validate?: RuntimeJsonValidator<T>,
+): RuntimeJsonReadResult<T> {
+  const validationError = validate ? validate(value) : null;
+  if (validationError) {
     return {
-      value: JSON.parse(fs.readFileSync(filePath, 'utf8')) as T,
-      source: 'primary',
-      error: null,
+      value: null,
+      source: 'invalid',
+      error: validationError,
+      validationStatus: 'invalid',
+      validationError,
     };
+  }
+  return {
+    value,
+    source,
+    error: readError,
+    validationStatus: validate ? 'valid' : 'not_checked',
+    validationError: null,
+  };
+}
+
+export function readRuntimeJsonSync<T>(filePath: string, validate?: RuntimeJsonValidator<T>): RuntimeJsonReadResult<T> {
+  try {
+    const primary = checkedValue(JSON.parse(fs.readFileSync(filePath, 'utf8')) as T, 'primary', null, validate);
+    if (primary.validationStatus === 'invalid') throw new Error(primary.validationError || 'Runtime JSON schema validation failed.');
+    return primary;
   } catch (primaryError) {
     try {
-      return {
-        value: JSON.parse(fs.readFileSync(backupPath(filePath), 'utf8')) as T,
-        source: 'backup',
-        error: formatError(primaryError),
-      };
+      return checkedValue(JSON.parse(fs.readFileSync(backupPath(filePath), 'utf8')) as T, 'backup', formatError(primaryError), validate);
     } catch {
       return {
         value: null,
         source: isMissingFileError(primaryError) ? 'missing' : 'invalid',
         error: isMissingFileError(primaryError) ? null : formatError(primaryError),
+        validationStatus: isMissingFileError(primaryError) || !validate ? 'not_checked' : 'invalid',
+        validationError: validate && !isMissingFileError(primaryError) ? formatError(primaryError) : null,
       };
     }
   }
 }
 
-export async function readRuntimeJson<T>(filePath: string): Promise<RuntimeJsonReadResult<T>> {
+export async function readRuntimeJson<T>(filePath: string, validate?: RuntimeJsonValidator<T>): Promise<RuntimeJsonReadResult<T>> {
   try {
-    return {
-      value: JSON.parse(await fsp.readFile(filePath, 'utf8')) as T,
-      source: 'primary',
-      error: null,
-    };
+    const primary = checkedValue(JSON.parse(await fsp.readFile(filePath, 'utf8')) as T, 'primary', null, validate);
+    if (primary.validationStatus === 'invalid') throw new Error(primary.validationError || 'Runtime JSON schema validation failed.');
+    return primary;
   } catch (primaryError) {
     try {
-      return {
-        value: JSON.parse(await fsp.readFile(backupPath(filePath), 'utf8')) as T,
-        source: 'backup',
-        error: formatError(primaryError),
-      };
+      return checkedValue(JSON.parse(await fsp.readFile(backupPath(filePath), 'utf8')) as T, 'backup', formatError(primaryError), validate);
     } catch {
       return {
         value: null,
         source: isMissingFileError(primaryError) ? 'missing' : 'invalid',
         error: isMissingFileError(primaryError) ? null : formatError(primaryError),
+        validationStatus: isMissingFileError(primaryError) || !validate ? 'not_checked' : 'invalid',
+        validationError: validate && !isMissingFileError(primaryError) ? formatError(primaryError) : null,
       };
     }
   }

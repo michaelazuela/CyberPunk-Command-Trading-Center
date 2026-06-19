@@ -13,6 +13,11 @@ const plan = fs.readFileSync(planPath, 'utf8');
 
 assert.ok(source.includes('buildSupervisorRuntimeAudit'));
 assert.ok(source.includes('duplicateProcessesDetected'));
+assert.ok(source.includes('runtimeJsonState'));
+assert.ok(source.includes('runtimeJsonHealthy'));
+assert.ok(source.includes('validateSupervisorState'));
+assert.ok(source.includes('validateRecorderHeartbeat'));
+assert.ok(source.includes('readRuntimeJsonSync<unknown>'));
 assert.ok(source.includes('StartupTaskAudit'));
 assert.ok(source.includes('MultipleInstances'));
 assert.ok(source.includes('readOnly: true'));
@@ -28,5 +33,6 @@ assert.equal(source.includes('npm run nt:scanner'), false);
 
 assert.ok(packageJson.includes('"supervisor:audit": "tsx tools/supervisor/runtimeAudit.ts"'));
 assert.ok(plan.includes('npm run supervisor:audit'));
+assert.ok(plan.includes('Runtime JSON state files are checked'));
 
 console.log('Runtime audit source contract verified.');

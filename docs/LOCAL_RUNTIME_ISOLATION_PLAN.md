@@ -85,6 +85,8 @@ Implemented operator-facing status summary:
 
 - `Status-QuantDesk.ps1` now prints the normal supervisor status plus a readable runtime ownership summary from `npm run supervisor:audit`.
 - The summary shows supervisor state, startup-task health, bridge reachability, duplicate scanner/recorder status, owned process-tree counts, and external duplicate PID counts.
+- Runtime JSON state files are checked for parseability, simple expected shape, backup recovery, and missing required files.
+- JSON state warnings identify whether a file was recovered from `.bak`, failed validation, failed parsing, or is missing.
 - If duplicates are detected, the status output points to the preview-first cleanup path: `npm run supervisor:repair`.
 - If recorder heartbeat is stale or warning, the status output labels it as data freshness/bridge health, not duplicate process ownership.
 - The status command is read-only. It does not stop processes, start processes, repair state, post Discord messages, change scanner behavior, change trading logic, or change canExecute.

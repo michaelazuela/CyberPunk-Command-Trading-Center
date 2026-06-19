@@ -25,6 +25,7 @@ try {
   Write-Host "Startup task: $(if ($audit.startupTask.healthy) { 'healthy' } else { 'needs attention' }) state=$($audit.startupTask.state)"
   Write-Host "Bridge: $(if ($audit.summary.bridgeReachable) { 'reachable' } else { 'not reachable' })"
   Write-Host "Duplicate scanner/recorder processes: $(if ($audit.summary.duplicateProcessesDetected) { 'detected' } else { 'none detected' })"
+  Write-Host "Runtime JSON state: $(if ($audit.summary.runtimeJsonHealthy) { 'healthy' } else { 'needs attention' })"
 
   foreach ($service in @($audit.services)) {
     if (@('scanner', 'candle-recorder') -notcontains [string]$service.id) {
@@ -33,6 +34,22 @@ try {
     $external = @($service.externalPids)
     $ownedTree = @($service.processTreePids)
     Write-Host " - $($service.id): status=$($service.status), ownedPid=$($service.ownedPid), ownedTreePids=$($ownedTree.Count), externalDuplicatePids=$($external.Count)"
+  }
+
+  foreach ($stateFile in @($audit.runtimeJsonState)) {
+    if ($stateFile.status -eq 'ok') {
+      continue
+    }
+    $reason = if ($stateFile.recoveredFromBackup) {
+      'recovered from .bak'
+    } elseif ($stateFile.validationError) {
+      $stateFile.validationError
+    } elseif ($stateFile.error) {
+      $stateFile.error
+    } else {
+      "source=$($stateFile.source)"
+    }
+    Write-Warning "Runtime JSON $($stateFile.label) is $($stateFile.status): $reason"
   }
 
   if ($audit.summary.duplicateProcessesDetected) {

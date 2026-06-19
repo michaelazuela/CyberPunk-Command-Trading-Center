@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { readRuntimeJsonSync, type RuntimeJsonReadResult, type RuntimeJsonValidator } from '../runtimeJson';
 import { loadSupervisorConfig } from './config';
 import { buildHealthReport, type SupervisorHealthLevel } from './health';
 import { getSupervisorState, isProcessRunning, type SupervisorState } from './processManager';
@@ -44,6 +45,19 @@ export interface RuntimeServiceAudit {
   stderrLog: string | null;
 }
 
+export interface RuntimeJsonStateAudit {
+  id: string;
+  label: string;
+  filePath: string;
+  required: boolean;
+  status: 'ok' | 'warn' | 'fail';
+  source: RuntimeJsonReadResult<unknown>['source'];
+  validationStatus: RuntimeJsonReadResult<unknown>['validationStatus'];
+  recoveredFromBackup: boolean;
+  error: string | null;
+  validationError: string | null;
+}
+
 export interface SupervisorRuntimeAudit {
   generatedAt: string;
   supervisor: {
@@ -60,11 +74,13 @@ export interface SupervisorRuntimeAudit {
     scannerStateStatus: string | null;
     recorderHeartbeatStatus: string | null;
   };
+  runtimeJsonState: RuntimeJsonStateAudit[];
   summary: {
     status: 'ok' | 'warn' | 'fail';
     duplicateProcessesDetected: boolean;
     startupTaskHealthy: boolean;
     bridgeReachable: boolean;
+    runtimeJsonHealthy: boolean;
     recommendedAction: string;
   };
   boundaries: {
@@ -198,14 +214,117 @@ function healthStatusById(state: SupervisorRuntimeAudit['health'], key: keyof Su
   return state[key] === undefined ? null : String(state[key]);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function validateObject(value: unknown): string | null {
+  return isRecord(value) ? null : 'Expected a JSON object.';
+}
+
+function validateArray(value: unknown): string | null {
+  return Array.isArray(value) ? null : 'Expected a JSON array.';
+}
+
+function validateSupervisorState(value: unknown): string | null {
+  if (!isRecord(value)) return 'Expected supervisor state object.';
+  if (typeof value.supervisorPid !== 'number') return 'supervisorPid must be a number.';
+  if (!Array.isArray(value.services)) return 'services must be an array.';
+  return null;
+}
+
+function validateRecorderHeartbeat(value: unknown): string | null {
+  if (!isRecord(value)) return 'Expected recorder heartbeat object.';
+  if (value.status !== 'ok' && value.status !== 'warn' && value.status !== 'error') return 'status must be ok, warn, or error.';
+  if (typeof value.updatedAt !== 'string') return 'updatedAt must be a string.';
+  return null;
+}
+
+function runtimeJsonStateAudit(args: {
+  id: string;
+  label: string;
+  filePath: string;
+  required: boolean;
+  validate: RuntimeJsonValidator<unknown>;
+}): RuntimeJsonStateAudit {
+  const read = readRuntimeJsonSync<unknown>(args.filePath, args.validate);
+  const missingRequired = read.source === 'missing' && args.required;
+  const status: RuntimeJsonStateAudit['status'] =
+    read.source === 'invalid' || read.validationStatus === 'invalid'
+      ? 'fail'
+      : missingRequired || read.source === 'backup'
+        ? 'warn'
+        : 'ok';
+  return {
+    id: args.id,
+    label: args.label,
+    filePath: args.filePath,
+    required: args.required,
+    status,
+    source: read.source,
+    validationStatus: read.validationStatus,
+    recoveredFromBackup: read.source === 'backup',
+    error: read.error,
+    validationError: read.validationError,
+  };
+}
+
+function buildRuntimeJsonStateAudit(logsDir: string): RuntimeJsonStateAudit[] {
+  const cwd = process.cwd();
+  return [
+    runtimeJsonStateAudit({
+      id: 'supervisor_state',
+      label: 'Supervisor state',
+      filePath: path.join(logsDir, 'supervisor-state.json'),
+      required: true,
+      validate: validateSupervisorState,
+    }),
+    runtimeJsonStateAudit({
+      id: 'scanner_state',
+      label: 'Scanner state',
+      filePath: path.resolve(cwd, 'tools', 'automation', '.nt-scanner-state.json'),
+      required: true,
+      validate: validateObject,
+    }),
+    runtimeJsonStateAudit({
+      id: 'recorder_heartbeat',
+      label: 'Recorder heartbeat',
+      filePath: path.resolve(cwd, 'logs', 'supervisor', 'candle-recorder-heartbeat.json'),
+      required: true,
+      validate: validateRecorderHeartbeat,
+    }),
+    runtimeJsonStateAudit({
+      id: 'market_data_gap_ledger',
+      label: 'Market data gap ledger',
+      filePath: path.resolve(cwd, 'tools', 'automation', '.market-data-gap-events.json'),
+      required: false,
+      validate: validateArray,
+    }),
+    runtimeJsonStateAudit({
+      id: 'supervisor_notifications',
+      label: 'Supervisor notifications',
+      filePath: path.join(logsDir, 'supervisor-notifications-state.json'),
+      required: false,
+      validate: validateObject,
+    }),
+  ];
+}
+
 function summaryStatus(args: {
   healthStatus: SupervisorHealthLevel;
   duplicateProcessesDetected: boolean;
   startupTaskHealthy: boolean;
   bridgeReachable: boolean;
+  runtimeJsonState: RuntimeJsonStateAudit[];
 }): SupervisorRuntimeAudit['summary']['status'] {
+  if (args.runtimeJsonState.some((item) => item.status === 'fail')) return 'fail';
   if (args.healthStatus === 'fail' || !args.bridgeReachable) return 'fail';
-  if (args.healthStatus === 'warn' || args.duplicateProcessesDetected || !args.startupTaskHealthy) return 'warn';
+  if (
+    args.runtimeJsonState.some((item) => item.status === 'warn') ||
+    args.healthStatus === 'warn' ||
+    args.duplicateProcessesDetected ||
+    !args.startupTaskHealthy
+  ) return 'warn';
   return 'ok';
 }
 
@@ -242,11 +361,14 @@ export async function buildSupervisorRuntimeAudit(now = new Date()): Promise<Sup
   };
   const duplicateProcessesDetected = services.some((service) => service.duplicateRisk);
   const bridgeReachable = bridgeStatus === 'ok';
+  const runtimeJsonState = buildRuntimeJsonStateAudit(config.logsDir);
+  const runtimeJsonHealthy = runtimeJsonState.every((item) => item.status === 'ok');
   const status = summaryStatus({
     healthStatus: health.status,
     duplicateProcessesDetected,
     startupTaskHealthy: startupTask.healthy,
     bridgeReachable,
+    runtimeJsonState,
   });
   return {
     generatedAt: now.toISOString(),
@@ -259,13 +381,17 @@ export async function buildSupervisorRuntimeAudit(now = new Date()): Promise<Sup
     services,
     startupTask,
     health: healthSummary,
+    runtimeJsonState,
     summary: {
       status,
       duplicateProcessesDetected,
       startupTaskHealthy: startupTask.healthy,
       bridgeReachable,
+      runtimeJsonHealthy,
       recommendedAction: status === 'ok'
         ? 'No action needed.'
+        : !runtimeJsonHealthy
+          ? 'Review runtime JSON state health; invalid files may require restoring from backup or restarting the local supervisor.'
         : duplicateProcessesDetected
           ? 'Run the next repair phase after review; this audit is read-only and did not stop duplicate processes.'
           : !startupTask.healthy
