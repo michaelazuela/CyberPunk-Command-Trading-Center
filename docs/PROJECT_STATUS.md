@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add read-only Scanner Discord family Phase 2 audit.
+Files changed: tools/automation/scanner-discord-family-audit.ts, tools/automation/scanner-discord-family-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Phase 1 proved the primary trade-card path was suppressed, so the remaining Discord flood concern needed a separate read-only audit of secondary report families and receipt cadence.
+Tests run: npx tsx tools/automation/scanner-discord-family-audit.test.ts; npm run diagnostic:scanner-discord-family-audit -- --trade-date 2026-06-19 --instrument MES --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The audit reads durable Discord receipt files, classifies report families by kind/session, reports counts, first/last post time, minimum spacing, under-five-minute bursts, unique cadence keys, webhook/http/message-id presence, and findings for Desk Play/Reversal Watch noise review.
+Trading logic changed: No. This is read-only Discord receipt/cadence audit tooling; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord cadence, and bar-close confirmation remain unchanged.
+Bridge impact: None. The audit reads local Discord receipt audit files only.
+Discord impact: None. The audit does not post Discord or change delivery behavior.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Phase 3 should inspect the highest-volume/noisiest family from the receipt audit and propose suppression/consolidation rules without touching trade logic.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add read-only scanner behavior Phase 1 audit.
 Files changed: tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The desk needs a clean post/suppress evidence table from scanner decision tapes before changing Discord cadence or stale-plan behavior.
