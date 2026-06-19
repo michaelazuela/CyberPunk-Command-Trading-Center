@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import type { SupervisorChildService, SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
 
@@ -54,17 +55,12 @@ function spawnCommandArgs(args: string[]): { file: string; args: string[] } {
 
 export function readSupervisorState(logsDir: string): SupervisorState | null {
   const filePath = statePath(logsDir);
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as SupervisorState;
-  } catch {
-    return null;
-  }
+  const result = readRuntimeJsonSync<SupervisorState>(filePath);
+  return result.value;
 }
 
 export function writeSupervisorState(config: SupervisorConfig, state: SupervisorState): void {
-  fs.mkdirSync(config.logsDir, { recursive: true });
-  fs.writeFileSync(statePath(config.logsDir), JSON.stringify({ ...state, statePath: statePath(config.logsDir) }, null, 2), 'utf8');
+  writeRuntimeJsonAtomicSync(statePath(config.logsDir), { ...state, statePath: statePath(config.logsDir) });
 }
 
 export function isProcessRunning(pid: number | null | undefined): boolean {

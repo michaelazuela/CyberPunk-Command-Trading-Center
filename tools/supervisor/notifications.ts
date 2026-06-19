@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import type { SupervisorStatusPayload } from './status';
 import { readEnvWithUserFallback } from './env';
 
@@ -117,21 +118,19 @@ export function notificationStatePath(logsDir: string): string {
 }
 
 export function readNotificationState(filePath: string): SupervisorNotificationState {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Partial<SupervisorNotificationState>;
-    return {
-      lastStatuses: parsed.lastStatuses || {},
-      lastSentAtByKey: parsed.lastSentAtByKey || {},
-      postedMessages: parsed.postedMessages || {},
-    };
-  } catch {
+  const parsed = readRuntimeJsonSync<Partial<SupervisorNotificationState>>(filePath).value;
+  if (!parsed) {
     return { lastStatuses: {}, lastSentAtByKey: {}, postedMessages: {} };
   }
+  return {
+    lastStatuses: parsed.lastStatuses || {},
+    lastSentAtByKey: parsed.lastSentAtByKey || {},
+    postedMessages: parsed.postedMessages || {},
+  };
 }
 
 export function writeNotificationState(filePath: string, state: SupervisorNotificationState): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+  writeRuntimeJsonAtomicSync(filePath, state);
 }
 
 function serviceStatus(status: SupervisorStatusPayload, id: string): string {

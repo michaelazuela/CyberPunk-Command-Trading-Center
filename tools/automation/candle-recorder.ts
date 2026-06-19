@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
+import { writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
 import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
@@ -63,8 +64,7 @@ function defaultHeartbeatPath(): string {
 }
 
 function writeHeartbeat(filePath: string, heartbeat: RecorderHeartbeat): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(heartbeat, null, 2), 'utf8');
+  writeRuntimeJsonAtomicSync(filePath, heartbeat);
 }
 
 function timeframeMinutes(timeframe: MarketBarTimeframe): number {

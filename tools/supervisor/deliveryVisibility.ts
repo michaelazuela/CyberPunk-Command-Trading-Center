@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRuntimeJsonSync } from '../runtimeJson';
 
 export type ScannerDeliveryStatus = 'sent' | 'failed' | 'pending' | 'skipped' | 'unknown';
 
@@ -247,19 +248,18 @@ function recorderHeartbeatFreshness(heartbeatPath: string, now: Date, staleAfter
   fresh: boolean;
   latestCompleted5m: string | null;
 } {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(heartbeatPath, 'utf8')) as Record<string, unknown>;
-    const status = stringOrNull(parsed.status);
-    const updatedAt = stringOrNull(parsed.updatedAt);
-    const updatedAtMs = parseDateMs(updatedAt);
-    const ageMs = updatedAtMs > 0 ? now.getTime() - updatedAtMs : Number.POSITIVE_INFINITY;
-    return {
-      fresh: status === 'ok' && Number.isFinite(ageMs) && ageMs <= staleAfterMs,
-      latestCompleted5m: stringOrNull(parsed.latestCompleted5m),
-    };
-  } catch {
+  const parsed = readRuntimeJsonSync<Record<string, unknown>>(heartbeatPath).value;
+  if (!parsed) {
     return { fresh: false, latestCompleted5m: null };
   }
+  const status = stringOrNull(parsed.status);
+  const updatedAt = stringOrNull(parsed.updatedAt);
+  const updatedAtMs = parseDateMs(updatedAt);
+  const ageMs = updatedAtMs > 0 ? now.getTime() - updatedAtMs : Number.POSITIVE_INFINITY;
+  return {
+    fresh: status === 'ok' && Number.isFinite(ageMs) && ageMs <= staleAfterMs,
+    latestCompleted5m: stringOrNull(parsed.latestCompleted5m),
+  };
 }
 
 function staleBlockers(
@@ -307,12 +307,8 @@ function staleBlockers(
 
 function pendingMarketDataGapSyncSummary(ledgerPath: string, now: Date, staleAfterMs: number): DeliveryVisibilityReport['pendingMarketDataGapSync'] {
   let records: Array<Record<string, unknown>> = [];
-  try {
-    const parsed = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as unknown;
-    records = Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object')) : [];
-  } catch {
-    records = [];
-  }
+  const parsed = readRuntimeJsonSync<unknown>(ledgerPath).value;
+  records = Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object')) : [];
 
   const pending = records.filter((record) => record.syncStatus === 'pending_supabase_sync');
   const pendingTimes = pending
@@ -354,11 +350,13 @@ export function buildDeliveryVisibilityReport(args: {
   let stateError: string | null = null;
   let state: Record<string, unknown> = {};
 
-  try {
-    state = JSON.parse(fs.readFileSync(scannerStatePath, 'utf8')) as Record<string, unknown>;
+  const stateRead = readRuntimeJsonSync<Record<string, unknown>>(scannerStatePath);
+  if (stateRead.value) {
+    state = stateRead.value;
     stateReadable = true;
-  } catch (error) {
-    stateError = error instanceof Error ? error.message : String(error);
+    stateError = stateRead.source === 'backup' ? `Recovered from backup after primary read failed: ${stateRead.error || 'unknown error'}` : null;
+  } else {
+    stateError = stateRead.error;
   }
 
   const sent = sortByRecentDate(

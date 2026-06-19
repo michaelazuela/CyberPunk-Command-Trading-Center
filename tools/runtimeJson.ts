@@ -1,0 +1,123 @@
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+
+export type RuntimeJsonReadSource = 'primary' | 'backup' | 'missing' | 'invalid';
+
+export interface RuntimeJsonReadResult<T> {
+  value: T | null;
+  source: RuntimeJsonReadSource;
+  error: string | null;
+}
+
+function backupPath(filePath: string): string {
+  return `${filePath}.bak`;
+}
+
+function tempPath(filePath: string): string {
+  return `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'ENOENT');
+}
+
+function isIgnorableSyncError(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && (error as { code?: unknown }).code === 'EPERM');
+}
+
+export function readRuntimeJsonSync<T>(filePath: string): RuntimeJsonReadResult<T> {
+  try {
+    return {
+      value: JSON.parse(fs.readFileSync(filePath, 'utf8')) as T,
+      source: 'primary',
+      error: null,
+    };
+  } catch (primaryError) {
+    try {
+      return {
+        value: JSON.parse(fs.readFileSync(backupPath(filePath), 'utf8')) as T,
+        source: 'backup',
+        error: formatError(primaryError),
+      };
+    } catch {
+      return {
+        value: null,
+        source: isMissingFileError(primaryError) ? 'missing' : 'invalid',
+        error: isMissingFileError(primaryError) ? null : formatError(primaryError),
+      };
+    }
+  }
+}
+
+export async function readRuntimeJson<T>(filePath: string): Promise<RuntimeJsonReadResult<T>> {
+  try {
+    return {
+      value: JSON.parse(await fsp.readFile(filePath, 'utf8')) as T,
+      source: 'primary',
+      error: null,
+    };
+  } catch (primaryError) {
+    try {
+      return {
+        value: JSON.parse(await fsp.readFile(backupPath(filePath), 'utf8')) as T,
+        source: 'backup',
+        error: formatError(primaryError),
+      };
+    } catch {
+      return {
+        value: null,
+        source: isMissingFileError(primaryError) ? 'missing' : 'invalid',
+        error: isMissingFileError(primaryError) ? null : formatError(primaryError),
+      };
+    }
+  }
+}
+
+export function writeRuntimeJsonAtomicSync(filePath: string, value: unknown): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tmp = tempPath(filePath);
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  fs.writeFileSync(tmp, payload, 'utf8');
+  const handle = fs.openSync(tmp, 'r');
+  try {
+    try {
+      fs.fsyncSync(handle);
+    } catch (error) {
+      if (!isIgnorableSyncError(error)) throw error;
+    }
+  } finally {
+    fs.closeSync(handle);
+  }
+  if (fs.existsSync(filePath)) {
+    fs.copyFileSync(filePath, backupPath(filePath));
+  }
+  fs.renameSync(tmp, filePath);
+}
+
+export async function writeRuntimeJsonAtomic(filePath: string, value: unknown): Promise<void> {
+  await fsp.mkdir(path.dirname(filePath), { recursive: true });
+  const tmp = tempPath(filePath);
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  const handle = await fsp.open(tmp, 'w');
+  try {
+    await handle.writeFile(payload, 'utf8');
+    try {
+      await handle.sync();
+    } catch (error) {
+      if (!isIgnorableSyncError(error)) throw error;
+    }
+  } finally {
+    await handle.close();
+  }
+  try {
+    await fsp.copyFile(filePath, backupPath(filePath));
+  } catch (error) {
+    if (!isMissingFileError(error)) throw error;
+  }
+  await fsp.rename(tmp, filePath);
+}

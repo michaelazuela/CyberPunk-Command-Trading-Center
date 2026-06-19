@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readRuntimeJson, writeRuntimeJsonAtomic } from '../runtimeJson';
 import { buildAppTradePlan } from '../../src/lib/planEngine';
 import { getEffectiveCanExecute } from '../../src/lib/effectiveExecution';
 import { createPlanVersionId } from '../../src/lib/planMetadata';
@@ -1275,8 +1276,9 @@ function emptyScannerState(): ScannerStateFile {
 }
 
 async function readStateWithHealth(): Promise<ScannerStateReadResult> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(STATE_FILE, 'utf8')) as Partial<ScannerStateFile>;
+  const result = await readRuntimeJson<Partial<ScannerStateFile>>(STATE_FILE);
+  const parsed = result.value;
+  if (parsed) {
     return {
       state: {
         sent: parsed.sent || {},
@@ -1296,21 +1298,23 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         lastHealthStatus: parsed.lastHealthStatus || null,
         lastHealthAlertSentAt: parsed.lastHealthAlertSentAt || null,
       },
-      health: { status: 'ok', message: 'Scanner state file is readable.' },
-    };
-  } catch (error) {
-    const message = formatError(error);
-    const isMissing = typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'ENOENT';
-    return {
-      state: emptyScannerState(),
       health: {
-        status: isMissing ? 'missing_initialized' : 'corrupt',
-        message: isMissing
-          ? 'Scanner state file was missing and initialized safely.'
-          : `Scanner state file could not be read; using an empty in-memory state for this cycle: ${message}`,
+        status: 'ok',
+        message: result.source === 'backup'
+          ? 'Scanner state file recovered from last-known-good backup.'
+          : 'Scanner state file is readable.',
       },
     };
   }
+  return {
+    state: emptyScannerState(),
+    health: {
+      status: result.source === 'missing' ? 'missing_initialized' : 'corrupt',
+      message: result.source === 'missing'
+        ? 'Scanner state file was missing and initialized safely.'
+        : `Scanner state file could not be read; using an empty in-memory state for this cycle: ${result.error || 'invalid JSON'}`,
+    },
+  };
 }
 
 async function readState(): Promise<ScannerStateFile> {
@@ -1318,7 +1322,7 @@ async function readState(): Promise<ScannerStateFile> {
 }
 
 async function writeState(state: ScannerStateFile): Promise<void> {
-  await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  await writeRuntimeJsonAtomic(STATE_FILE, state);
 }
 
 type LocalMarketDataGapEventRecord = MarketDataGapEventRecord & {
@@ -1347,12 +1351,8 @@ export async function writeLocalMarketDataGapEvent(args: {
   const ledgerPath = args.ledgerPath || MARKET_DATA_GAP_FALLBACK_LEDGER;
   const key = marketDataGapEventKey(args.record);
   let records: LocalMarketDataGapEventRecord[] = [];
-  try {
-    const parsed = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as unknown;
-    records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
-  } catch {
-    records = [];
-  }
+  const parsed = (await readRuntimeJson<unknown>(ledgerPath)).value;
+  records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
   const localRecord: LocalMarketDataGapEventRecord = {
     ...args.record,
     localRecordedAt: new Date().toISOString(),
@@ -1365,8 +1365,7 @@ export async function writeLocalMarketDataGapEvent(args: {
   } else {
     records.push(localRecord);
   }
-  await fs.mkdir(path.dirname(ledgerPath), { recursive: true });
-  await fs.writeFile(ledgerPath, `${JSON.stringify(records, null, 2)}\n`, 'utf8');
+  await writeRuntimeJsonAtomic(ledgerPath, records);
   return { path: ledgerPath, key, records: records.length };
 }
 
@@ -1377,12 +1376,11 @@ export async function syncLocalMarketDataGapEventsToSupabase(args: {
 }): Promise<{ path: string; attempted: number; synced: number; failed: number }> {
   const ledgerPath = args.ledgerPath || MARKET_DATA_GAP_FALLBACK_LEDGER;
   let records: LocalMarketDataGapEventRecord[] = [];
-  try {
-    const parsed = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as unknown;
-    records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
-  } catch {
+  const parsed = (await readRuntimeJson<unknown>(ledgerPath)).value;
+  if (!parsed) {
     return { path: ledgerPath, attempted: 0, synced: 0, failed: 0 };
   }
+  records = Array.isArray(parsed) ? parsed.filter((item): item is LocalMarketDataGapEventRecord => Boolean(item && typeof item === 'object')) : [];
 
   const upsert = args.upsert || upsertMarketDataGapEvent;
   let attempted = 0;
@@ -1426,7 +1424,7 @@ export async function syncLocalMarketDataGapEventsToSupabase(args: {
   }
 
   if (attempted > 0) {
-    await fs.writeFile(ledgerPath, `${JSON.stringify(records, null, 2)}\n`, 'utf8');
+    await writeRuntimeJsonAtomic(ledgerPath, records);
   }
   return { path: ledgerPath, attempted, synced, failed };
 }
@@ -1501,7 +1499,7 @@ export async function findMissedExecutableScannerDeliveries(args: {
     const auditFile = path.join(auditDir, name);
     let audit: any;
     try {
-      audit = JSON.parse(await fs.readFile(auditFile, 'utf8'));
+      audit = (await readRuntimeJson(auditFile)).value;
     } catch {
       continue;
     }
@@ -1876,7 +1874,7 @@ async function verifyScannerAuditWrite(args: {
 }): Promise<void> {
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(await fs.readFile(args.file, 'utf8')) as Record<string, unknown>;
+    parsed = (await readRuntimeJson<Record<string, unknown>>(args.file)).value || {};
   } catch (error) {
     throw new Error(`Scanner audit write verification failed for ${args.file}: ${formatError(error)}`);
   }
@@ -1989,7 +1987,7 @@ async function writeScannerDiscordAuditLog(args: {
       ...(args.chartMarkup && args.levelMap ? buildDiscordTradePlanVisualProvenance(args.planVersionId) : {}),
     },
   }).value;
-  await fs.writeFile(file, JSON.stringify(auditPayload, null, 2));
+  await writeRuntimeJsonAtomic(file, auditPayload);
   await verifyScannerAuditWrite({
     file,
     expectedSource: 'live-scanner',
@@ -2016,7 +2014,7 @@ export async function writeScannerDiscordReceiptAuditLog(args: {
   await fs.mkdir(auditDir, { recursive: true });
   const safePlanVersionId = args.planVersionId.replace(/[^a-zA-Z0-9._-]/g, '-');
   const file = path.join(auditDir, `discord-receipt-${safePlanVersionId}.json`);
-  await fs.writeFile(file, JSON.stringify({
+  await writeRuntimeJsonAtomic(file, {
     createdAt: new Date().toISOString(),
     source: 'live-scanner-discord-receipt',
     kind: args.kind,
@@ -2039,7 +2037,7 @@ export async function writeScannerDiscordReceiptAuditLog(args: {
       mayChangeTradePlan: false,
       mayPlaceOrder: false,
     },
-  }, null, 2));
+  });
   return file;
 }
 
@@ -2059,7 +2057,7 @@ async function writeScannerWatchlistAuditLog(args: {
   await fs.mkdir(auditDir, { recursive: true });
   const safeKey = args.watchlistKey.replace(/[^a-zA-Z0-9._-]/g, '-');
   const file = path.join(auditDir, `watchlist-${safeKey}.json`);
-  await fs.writeFile(file, JSON.stringify({
+  await writeRuntimeJsonAtomic(file, {
     createdAt: new Date().toISOString(),
     source: 'live-scanner-watchlist',
     tradeDate: args.tradeDate,
@@ -2088,7 +2086,7 @@ async function writeScannerWatchlistAuditLog(args: {
       supabaseRagWriteAttempted: false,
       reason: 'Existing RAG persistence is trade/setup-oriented; Phase 7C stores watchlist context in audit JSON only to avoid trade-memory contamination.',
     },
-  }, null, 2));
+  });
   await verifyScannerAuditWrite({
     file,
     expectedSource: 'live-scanner-watchlist',
@@ -2328,7 +2326,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   const eventKey = args.completed5m?.time || args.planVersionId;
   let existing: Record<string, unknown> | null = null;
   try {
-    existing = JSON.parse(await fs.readFile(file, 'utf8')) as Record<string, unknown>;
+    existing = (await readRuntimeJson<Record<string, unknown>>(file)).value;
   } catch {
     existing = null;
   }
@@ -2446,7 +2444,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     eventCount: Object.keys(events).length,
     events,
   }).value;
-  await fs.writeFile(file, JSON.stringify(tapePayload, null, 2));
+  await writeRuntimeJsonAtomic(file, tapePayload);
   await verifyScannerAuditWrite({
     file,
     expectedSource: 'scanner_decision_event_tape',
@@ -2851,7 +2849,7 @@ export async function appOwnedFailedPlanEventsFromScannerAudits(args: {
     if (!name.endsWith('.json') || !name.startsWith(`scanner-${args.session}-${args.tradeDate}-${args.instrument}-`)) continue;
     let audit: any;
     try {
-      audit = JSON.parse(await fs.readFile(path.join(auditDir, name), 'utf8'));
+      audit = (await readRuntimeJson(path.join(auditDir, name))).value;
     } catch {
       continue;
     }
@@ -4186,7 +4184,7 @@ async function readScannerDecisionTapeEvents(args: {
       ? path.join(args.auditDir, `scanner-decision-tape-${args.tradeDate}-${args.instrument}-${session}.json`)
       : scannerDecisionTapePath(args.tradeDate, args.instrument, session);
     try {
-      const parsed = JSON.parse(await fs.readFile(file, 'utf8')) as Record<string, unknown>;
+      const parsed = (await readRuntimeJson<Record<string, unknown>>(file)).value || {};
       const tapeEvents = asRecord(parsed.events) || {};
       events.push(...Object.values(tapeEvents).map((event) => asRecord(event)).filter((event): event is Record<string, unknown> => Boolean(event)));
     } catch {

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRuntimeJsonSync, writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import type { SupervisorConfig } from './config';
 import type { SupervisorLogger } from './logger';
 
@@ -53,16 +54,11 @@ function statePath(logsDir: string): string {
 }
 
 export function readPreWindowBackfillState(logsDir: string): PreWindowBackfillState {
-  try {
-    return JSON.parse(fs.readFileSync(statePath(logsDir), 'utf8')) as PreWindowBackfillState;
-  } catch {
-    return { runs: {} };
-  }
+  return readRuntimeJsonSync<PreWindowBackfillState>(statePath(logsDir)).value || { runs: {} };
 }
 
 function writePreWindowBackfillState(logsDir: string, state: PreWindowBackfillState): void {
-  fs.mkdirSync(logsDir, { recursive: true });
-  fs.writeFileSync(statePath(logsDir), JSON.stringify(state, null, 2), 'utf8');
+  writeRuntimeJsonAtomicSync(statePath(logsDir), state);
 }
 
 function scannerArg(config: SupervisorConfig, name: string, fallback: string): string {

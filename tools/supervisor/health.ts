@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { readRuntimeJsonSync } from '../runtimeJson';
 import type { SupervisorConfig } from './config';
 import type { SupervisorState } from './processManager';
 import { isProcessRunning, isTrackedServiceProcessRunning } from './processManager';
@@ -213,16 +214,16 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
   const heartbeatPath = heartbeatArgIndex >= 0 && recorder?.args[heartbeatArgIndex + 1]
     ? recorder.args[heartbeatArgIndex + 1]
     : path.resolve(process.cwd(), 'logs', 'supervisor', 'candle-recorder-heartbeat.json');
-  try {
-    const raw = fs.readFileSync(heartbeatPath, 'utf8');
-    const parsed = JSON.parse(raw) as {
-      status?: 'ok' | 'warn' | 'error';
-      updatedAt?: string;
-      latestCompleted5m?: string | null;
-      barsProcessed?: number;
-      warning?: string | null;
-      error?: string | null;
-    };
+  const read = readRuntimeJsonSync<{
+    status?: 'ok' | 'warn' | 'error';
+    updatedAt?: string;
+    latestCompleted5m?: string | null;
+    barsProcessed?: number;
+    warning?: string | null;
+    error?: string | null;
+  }>(heartbeatPath);
+  const parsed = read.value;
+  if (parsed) {
     const updatedAt = parsed.updatedAt ? new Date(parsed.updatedAt) : null;
     const ageMs = updatedAt ? now.getTime() - updatedAt.getTime() : Number.POSITIVE_INFINITY;
     const stale = !Number.isFinite(ageMs) || ageMs > config.health.logStaleAfterMs;
@@ -243,21 +244,21 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
             : 'Recorder heartbeat is fresh.',
       details: {
         heartbeatPath,
+        recoveredFromBackup: read.source === 'backup',
         updatedAt: parsed.updatedAt || null,
         ageMs: Number.isFinite(ageMs) ? Math.round(ageMs) : null,
         latestCompleted5m: parsed.latestCompleted5m || null,
         barsProcessed: parsed.barsProcessed ?? null,
       },
     };
-  } catch {
-    return {
-      id: 'recorder_heartbeat',
-      label: 'Recorder heartbeat',
-      status: 'warn',
-      message: 'Recorder heartbeat file is not available yet.',
-      details: { heartbeatPath },
-    };
   }
+  return {
+    id: 'recorder_heartbeat',
+    label: 'Recorder heartbeat',
+    status: 'warn',
+    message: 'Recorder heartbeat file is not available yet.',
+    details: { heartbeatPath, error: read.error },
+  };
 }
 
 export async function buildHealthReport(
