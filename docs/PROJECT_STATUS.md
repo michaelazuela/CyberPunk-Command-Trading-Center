@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Add read-only scanner behavior Phase 1 audit.
+Files changed: tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needs a clean post/suppress evidence table from scanner decision tapes before changing Discord cadence or stale-plan behavior.
+Tests run: npx tsx tools/automation/scanner-behavior-audit.test.ts; npm run diagnostic:scanner-behavior-audit -- --trade-date 2026-06-19 --instrument MES --sessions all --json; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. The audit reads existing decision tapes, reports completed 5M rows, selected candidate, DeskState primary side, canExecute, visibility mode, Discord post/suppress decision, reason, stale/no-chase flags, duplicate suppressions, and candidate-vs-DeskState conflicts. It writes JSON/Markdown under ignored diagnostic reports.
+Trading logic changed: No. This is read-only audit tooling; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord cadence, and bar-close confirmation remain unchanged.
+Bridge impact: None. The audit reads local scanner decision tapes only.
+Discord impact: None. The audit does not post Discord or change delivery behavior.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Phase 2 should classify each current-rule post by report family and cadence gate so we can decide which family is still too noisy.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add runtime JSON temp cleanup and operator health bundles.
 Files changed: tools/runtimeJson.ts, tools/runtimeJson.test.ts, tools/supervisor/runtimeJsonCleanup.ts, tools/supervisor/runtimeJsonCleanup.test.ts, Export-QuantDesk-HealthBundle.ps1, tools/supervisor/healthBundleScript.test.ts, package.json, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
 Reason: The local runtime needed a safe way to clean stale atomic-write temp files and a one-command troubleshooting bundle that captures supervisor status, runtime audit, duplicate-cleanup preview, JSON-cleanup preview, and operator status output.
