@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-19
+Task: Harden local runtime audit, duplicate cleanup, and operator status.
+Files changed: Repair-QuantDesk-Runtime.ps1, Status-QuantDesk.ps1, tools/supervisor/runtimeAudit.ts, tools/supervisor/runtimeAudit.test.ts, tools/supervisor/runtimeRepairScript.test.ts, tools/supervisor/statusScript.test.ts, package.json, docs/LOCAL_RUNTIME_ISOLATION_PLAN.md, docs/PROJECT_STATUS.md.
+Reason: The local Windows runtime needs a safer permanent operating layer that can prove supervisor ownership, detect duplicate scanner/recorder processes, preview cleanup before applying it, and explain live status without confusing data freshness warnings with duplicate-process risk.
+Tests run: npx tsx tools/supervisor/runtimeAudit.test.ts; npx tsx tools/supervisor/runtimeRepairScript.test.ts; npx tsx tools/supervisor/statusScript.test.ts; npm run supervisor:audit; npm run supervisor:repair; powershell -NoProfile -ExecutionPolicy Bypass -File .\Status-QuantDesk.ps1; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Runtime audit is read-only, the repair command defaults to preview and only targets external duplicate scanner/recorder PIDs, and the status command now shows supervisor ownership, startup-task health, bridge reachability, duplicate status, owned process-tree counts, and stale recorder heartbeat as a separate data freshness warning.
+Trading logic changed: No. This is local runtime hardening and operator visibility only; setup definitions, ranking, execution approvals, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, Discord cadence, and bar-close confirmation remain unchanged.
+Bridge impact: No contract change. The status output reports bridge reachability and recorder heartbeat freshness but does not change bridge reads or market-data handling.
+Discord impact: None. No Discord posting behavior changed.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification. Current live status still warns that the recorder heartbeat has a stale latest completed 5M candle, which is an operational data freshness issue, not duplicate process ownership.
+Next recommended action: Add schema validation and explicit recovery reporting for local runtime JSON state files.
+
+## Previous Change
+
+Date: 2026-06-19
 Task: Add end-of-day market recap reporting phase.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-message-policy.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: The desk needs a separate learning/reporting recap after RTH close that explains what price did versus the morning HTF map without creating a new trade alert or executable plan.

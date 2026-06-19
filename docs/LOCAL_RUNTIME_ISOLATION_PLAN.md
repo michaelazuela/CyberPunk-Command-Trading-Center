@@ -66,6 +66,29 @@ Implemented local permanence layer:
 - The task uses `MultipleInstances IgnoreNew` so Windows logon does not stack duplicate startup tasks.
 - The task runs at limited privilege for the current interactive Windows user.
 
+Implemented read-only runtime diagnostics:
+
+- `npm run supervisor:audit` prints a process ownership audit.
+- The audit reports supervisor PID, service-owned PIDs, child process-tree PIDs, external duplicate PIDs, startup task health, bridge health, scanner state freshness, and recorder heartbeat status.
+- The audit is read-only. It does not stop processes, start processes, repair state, post Discord messages, change scanner behavior, change trading logic, or change canExecute.
+
+Implemented safer duplicate cleanup:
+
+- `Repair-QuantDesk-Runtime.ps1` and `npm run supervisor:repair` provide the Phase 2 cleanup path.
+- Preview mode is the default. It reports external duplicate scanner/recorder PIDs without stopping anything.
+- `-Apply` is required before any process can be stopped.
+- The cleanup target is limited to external duplicate scanner/recorder processes reported by the runtime audit.
+- Supervisor-owned process-tree PIDs are explicitly protected and skipped.
+- The cleanup does not start services, restart services, post Discord messages, repair JSON state, change scanner behavior, change trading logic, or change canExecute.
+
+Implemented operator-facing status summary:
+
+- `Status-QuantDesk.ps1` now prints the normal supervisor status plus a readable runtime ownership summary from `npm run supervisor:audit`.
+- The summary shows supervisor state, startup-task health, bridge reachability, duplicate scanner/recorder status, owned process-tree counts, and external duplicate PID counts.
+- If duplicates are detected, the status output points to the preview-first cleanup path: `npm run supervisor:repair`.
+- If recorder heartbeat is stale or warning, the status output labels it as data freshness/bridge health, not duplicate process ownership.
+- The status command is read-only. It does not stop processes, start processes, repair state, post Discord messages, change scanner behavior, change trading logic, or change canExecute.
+
 ## Required Runtime Inputs
 
 The isolated runtime still needs the same external systems:
