@@ -71,9 +71,9 @@ namespace NinjaTrader.NinjaScript.AddOns
         {
             string chartInstrument = ActiveChartInstrument();
             if (!string.IsNullOrWhiteSpace(chartInstrument))
-                return new InstrumentSnapshot(chartInstrument, "active_chart");
+                return new InstrumentSnapshot(NormalizeInstrumentName(chartInstrument), "active_chart", chartInstrument);
 
-            return new InstrumentSnapshot(FrontMonthInstrument(DefaultInstrumentRoot, asOf), "front_month_rollover");
+            return new InstrumentSnapshot(FrontMonthInstrument(DefaultInstrumentRoot, asOf), "front_month_rollover", null);
         }
 
         private static string ActiveChartInstrument()
@@ -229,6 +229,63 @@ namespace NinjaTrader.NinjaScript.AddOns
 
             string text = value.ToString();
             return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
+        private static string NormalizeInstrumentName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            string clean = value.Trim().TrimStart('/').ToUpperInvariant();
+            clean = System.Text.RegularExpressions.Regex.Replace(clean, @"\s+", " ");
+
+            Dictionary<string, string> monthCodes = new Dictionary<string, string>
+            {
+                { "JAN", "01" },
+                { "FEB", "02" },
+                { "MAR", "03" },
+                { "APR", "04" },
+                { "MAY", "05" },
+                { "JUN", "06" },
+                { "JUL", "07" },
+                { "AUG", "08" },
+                { "SEP", "09" },
+                { "OCT", "10" },
+                { "NOV", "11" },
+                { "DEC", "12" }
+            };
+
+            System.Text.RegularExpressions.Match monthNameMatch = System.Text.RegularExpressions.Regex.Match(
+                clean,
+                @"^(MES|MNQ|ES|NQ)\s+([A-Z]{3})\s*-?\s*(\d{2})$");
+            if (monthNameMatch.Success && monthCodes.ContainsKey(monthNameMatch.Groups[2].Value))
+            {
+                return string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0} {1}-{2}",
+                    monthNameMatch.Groups[1].Value,
+                    monthCodes[monthNameMatch.Groups[2].Value],
+                    monthNameMatch.Groups[3].Value);
+            }
+
+            System.Text.RegularExpressions.Match numericMonthMatch = System.Text.RegularExpressions.Regex.Match(
+                clean,
+                @"^(MES|MNQ|ES|NQ)\s+(\d{1,2})\s*-?\s*(\d{2})$");
+            if (numericMonthMatch.Success)
+            {
+                int month;
+                if (int.TryParse(numericMonthMatch.Groups[2].Value, out month))
+                {
+                    return string.Format(
+                        CultureInfo.InvariantCulture,
+                        "{0} {1:00}-{2}",
+                        numericMonthMatch.Groups[1].Value,
+                        month,
+                        numericMonthMatch.Groups[3].Value);
+                }
+            }
+
+            return clean;
         }
 
         private static object ReadProperty(object source, string propertyName)
@@ -504,11 +561,12 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.6-readonly" },
+                { "version", "0.1.7-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
                 { "defaultInstrument", instrument.Instrument },
                 { "instrumentSource", instrument.Source },
+                { "rawDefaultInstrument", instrument.RawInstrument },
                 { "serverTime", asOf.ToString("o") }
             };
         }
@@ -892,14 +950,16 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private class InstrumentSnapshot
         {
-            public InstrumentSnapshot(string instrument, string source)
+            public InstrumentSnapshot(string instrument, string source, string rawInstrument)
             {
                 Instrument = instrument;
                 Source = source;
+                RawInstrument = rawInstrument;
             }
 
             public string Instrument { get; private set; }
             public string Source { get; private set; }
+            public string RawInstrument { get; private set; }
         }
 
         private static class SimpleJson

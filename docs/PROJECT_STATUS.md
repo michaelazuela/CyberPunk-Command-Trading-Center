@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-21
+Task: Normalize NinjaTrader bridge active-chart contract reporting.
+Files changed: tools/ninjatrader-bridge/QuantDeskBridge.cs, docs/PROJECT_STATUS.md.
+Reason: NinjaTrader was visibly on `MES SEP26`, but the live `/health` endpoint still reported stale `MES 06-26` from an older compiled bridge. The bridge source now normalizes month-name chart instruments such as `MES SEP26` to `MES 09-26` and exposes `rawDefaultInstrument` for debugging what NinjaTrader reported.
+Tests run: npx tsx tools/automation/bridge-instrument-resolver.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Updated bridge source was also copied to `C:\Users\Mike\Documents\NinjaTrader 8\bin\Custom\AddOns\QuantDeskBridge.cs`. The running NinjaTrader bridge still reports `0.1.4-readonly` until the NinjaScript AddOn is compiled/reloaded.
+Trading logic changed: No. This is bridge health metadata normalization only; bars, timestamps, setup definitions, ranking, canExecute, entries, stops, targets, risk gates, and Discord cadence remain unchanged.
+Bridge impact: `/health.defaultInstrument` will report the normalized active chart contract after NinjaTrader compiles/reloads the updated AddOn; `/health.rawDefaultInstrument` keeps the raw chart value for troubleshooting.
+Discord impact: None.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Live `/health` will keep showing `MES 06-26` and `0.1.4-readonly` until NinjaTrader recompiles/reloads the AddOn. Scanner/recorder are already resolving and reading `MES 09-26` current bars.
+Next recommended action: Compile NinjaScript in NinjaTrader, then verify `/health.version` is `0.1.7-readonly` and `/health.defaultInstrument` is `MES 09-26`.
+
+## Previous Change
+
 Date: 2026-06-19
 Task: Add post-deploy since-filter support to the Scanner Discord family audit.
 Files changed: tools/automation/scanner-discord-family-audit.ts, tools/automation/scanner-discord-family-audit.test.ts, docs/PROJECT_STATUS.md.
