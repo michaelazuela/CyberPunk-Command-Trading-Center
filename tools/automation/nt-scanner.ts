@@ -387,6 +387,11 @@ export interface ScannerReversalWatchLines {
   retestRule: string | null;
   invalidationRule: string | null;
   noChaseRule: string | null;
+  referenceEntry: number | null;
+  referenceStop: number | null;
+  referenceTarget1: number | null;
+  referenceTarget2: number | null;
+  referenceReason: string | null;
   reason: string;
   sourceFields: string[];
   approvalBoundary: {
@@ -3645,6 +3650,11 @@ export function buildScannerReversalWatchLines(args: {
     retestRule: null,
     invalidationRule: null,
     noChaseRule: null,
+    referenceEntry: null,
+    referenceStop: null,
+    referenceTarget1: null,
+    referenceTarget2: null,
+    referenceReason: null,
     reason,
     sourceFields,
     approvalBoundary,
@@ -3696,6 +3706,14 @@ export function buildScannerReversalWatchLines(args: {
   if (triggerLine !== null) sourceFields.push(watchDirection === 'LONG' ? 'primaryDeskPlay.longAbove/longBias.lineInSand' : 'primaryDeskPlay.shortBelow/shortBias.lineInSand');
   if (invalidLine !== null) sourceFields.push('5M protectedStructure or watch.stop or reaction zone');
   if (noChaseLine !== null) sourceFields.push('watch.target1/targetReactionLevel or primary line');
+  const referenceEntry = roundNullableTradePrice(watch?.entry);
+  const referenceStop = roundNullableTradePrice(watch?.stop);
+  const referenceTarget1 = roundNullableTradePrice(watch?.target1);
+  const referenceTarget2 = roundNullableTradePrice(watch?.target2);
+  const referenceReason = [referenceEntry, referenceStop, referenceTarget1, referenceTarget2].some((value) => value !== null)
+    ? 'Reference levels only from the existing opposite-side lifecycle. Reversal Watch does not approve execution; canExecute and normal app-owned gates still control.'
+    : null;
+  if (referenceReason) sourceFields.push('opposite-side lifecycle reference levels');
 
   const missing = [
     triggerLine === null ? 'trigger line' : null,
@@ -3719,6 +3737,11 @@ export function buildScannerReversalWatchLines(args: {
     retestRule: triggerLine === null ? null : reversalWatchRuleText(watchDirection, 'retest', triggerLine),
     invalidationRule: invalidLine === null ? null : reversalWatchRuleText(watchDirection, 'invalid', invalidLine),
     noChaseRule: noChaseLine === null ? null : reversalWatchRuleText(watchDirection, 'no_chase', noChaseLine),
+    referenceEntry,
+    referenceStop,
+    referenceTarget1,
+    referenceTarget2,
+    referenceReason,
     reason: missing.length
       ? `Campaign exhaustion reaction was found, but ${missing.join(', ')} is missing.`
       : `${exhaustedSide} campaign reached mapped reaction zone ${reactionZoneLow.toFixed(2)}-${reactionZoneHigh.toFixed(2)}; ${watchDirection} reversal watch lines are available. Reclaim requires a completed 5M body close, not a wick.`,
@@ -5200,6 +5223,18 @@ function buildScannerReversalWatchDiscordPayload(args: {
         {
           name: 'Retest / Hold Rule',
           value: compactScannerDiscordText(args.lines.retestRule),
+          inline: false,
+        },
+        {
+          name: 'Reference Levels Only',
+          value: compactScannerDiscordText([
+            'Not execution approval.',
+            `Reference entry: ${scannerDiscordLine(args.lines.referenceEntry)}`,
+            `Reference stop: ${scannerDiscordLine(args.lines.referenceStop)}`,
+            `Reference T1: ${scannerDiscordLine(args.lines.referenceTarget1)}`,
+            `Reference T2: ${scannerDiscordLine(args.lines.referenceTarget2)}`,
+            `Reason not executable: ${args.lines.referenceReason || 'No app-owned opposite-side lifecycle reference levels are available; normal canExecute gates still control.'}`,
+          ].join('\n'), 520),
           inline: false,
         },
         {

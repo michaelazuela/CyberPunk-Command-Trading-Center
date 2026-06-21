@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-21
+Task: Add reference-only levels to Tactical Reversal Watch Discord cards.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Tactical Reversal Watch cards showed trigger, invalidation, and no-chase map lines, but did not show the existing app-owned opposite-side lifecycle reference entry/stop/T1/T2 levels, which made the trader ask why levels visible elsewhere were absent.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Reversal Watch lines now carry optional reference entry, stop, T1, and T2 from the existing opposite-side lifecycle. Discord renders them under `Reference Levels Only` with explicit `Not execution approval` and `Reason not executable` language.
+Trading logic changed: No. This is display-only Discord reference context; setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, and bar-close confirmation remain unchanged.
+Bridge impact: None.
+Discord impact: Tactical Reversal Watch cards are clearer while preserving the non-executable boundary and no outcome-button behavior.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Watch the next live Reversal Watch post and confirm the reference levels reduce ambiguity without making the card look like execution approval.
+
+## Previous Change
+
+Date: 2026-06-21
 Task: Normalize NinjaTrader bridge active-chart contract reporting.
 Files changed: tools/ninjatrader-bridge/QuantDeskBridge.cs, docs/PROJECT_STATUS.md.
 Reason: NinjaTrader was visibly on `MES SEP26`, but the live `/health` endpoint still reported stale `MES 06-26` from an older compiled bridge. The bridge source now normalizes month-name chart instruments such as `MES SEP26` to `MES 09-26` and exposes `rawDefaultInstrument` for debugging what NinjaTrader reported.

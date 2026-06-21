@@ -1363,6 +1363,11 @@ assert.equal(longWatchLines.reactionZoneHigh, 7405.5);
 assert.equal(longWatchLines.triggerLine, 7411);
 assert.equal(longWatchLines.invalidLine, 7404);
 assert.equal(longWatchLines.noChaseLine, 7421.5);
+assert.equal(longWatchLines.referenceEntry, 7411);
+assert.equal(longWatchLines.referenceStop, 7404);
+assert.equal(longWatchLines.referenceTarget1, 7421.5);
+assert.equal(longWatchLines.referenceTarget2, 7425);
+assert.match(longWatchLines.referenceReason || '', /Reference levels only/);
 assert.match(longWatchLines.reclaimRule || '', /Completed 5M candle body close above 7411.00/);
 assert.match(longWatchLines.retestRule || '', /Later completed 5M retest\/hold close above 7411.00/);
 assert.equal(longWatchLines.approvalBoundary.changesCanExecute, false);
@@ -1527,6 +1532,12 @@ assert.match(reversalPayloadText, /Execution: NOT APPROVED/);
 assert.match(reversalPayloadText, /LONG ABOVE: 7411.00/);
 assert.match(reversalPayloadText, /Invalid below: 7404.00/);
 assert.match(reversalPayloadText, /No chase above: 7421.50/);
+assert.match(reversalPayloadText, /Reference Levels Only/);
+assert.match(reversalPayloadText, /Reference entry: 7411.00/);
+assert.match(reversalPayloadText, /Reference stop: 7404.00/);
+assert.match(reversalPayloadText, /Reference T1: 7421.50/);
+assert.match(reversalPayloadText, /Reference T2: 7425.00/);
+assert.match(reversalPayloadText, /Reason not executable: Reference levels only/);
 assert.match(reversalPayloadText, /does not change canExecute/);
 const longExhaustionShortWatchState = {
   ...baseDeskPlanRefreshState,
@@ -1577,6 +1588,11 @@ assert.equal(shortWatchLines.watchDirection, 'SHORT');
 assert.equal(shortWatchLines.triggerLine, 7424);
 assert.equal(shortWatchLines.invalidLine, 7431);
 assert.equal(shortWatchLines.noChaseLine, 7413.5);
+assert.equal(shortWatchLines.referenceEntry, 7424);
+assert.equal(shortWatchLines.referenceStop, 7431);
+assert.equal(shortWatchLines.referenceTarget1, 7413.5);
+assert.equal(shortWatchLines.referenceTarget2, 7410);
+assert.match(shortWatchLines.referenceReason || '', /not approve execution/);
 assert.match(shortWatchLines.reclaimRule || '', /Completed 5M candle body close below 7424.00/);
 const firstDeskPlanRefreshKey = scannerDeskPlanRefreshKey({
   tradeDate: '2026-06-08',
