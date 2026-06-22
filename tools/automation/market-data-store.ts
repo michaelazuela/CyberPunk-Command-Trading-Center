@@ -344,3 +344,79 @@ export async function fetchCachedMarketBars({
     volume: Number(row.volume || 0),
   })), timeframe);
 }
+
+export async function fetchRawCachedMarketBars({
+  instrument,
+  timeframe,
+  from,
+  to,
+  config,
+  limit = 5000,
+}: {
+  instrument: string;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  config: MarketDataConfig;
+  limit?: number;
+}): Promise<NinjaBridgeBar[]> {
+  const supabase = createMarketDataClient(config);
+  const fromEt = normalizeCandleTimeEt(from);
+  const toEt = normalizeCandleTimeEt(to);
+  const rows: any[] = [];
+  for (const range of marketDataCachePageRanges(limit)) {
+    const { data, error } = await supabase
+      .from('market_bars')
+      .select('candle_time_et, open, high, low, close, volume')
+      .eq('user_id', config.userId)
+      .eq('bridge_instrument', instrument)
+      .eq('timeframe', timeframe)
+      .gte('candle_time_et', fromEt)
+      .lte('candle_time_et', toEt)
+      .order('candle_time_et', { ascending: true })
+      .range(range.from, range.to);
+
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < (range.to - range.from + 1)) break;
+  }
+
+  return rows.map((row: any) => ({
+    time: String(row.candle_time_et),
+    open: Number(row.open),
+    high: Number(row.high),
+    low: Number(row.low),
+    close: Number(row.close),
+    volume: Number(row.volume || 0),
+  }));
+}
+
+export async function deleteMarketBarsRange({
+  instrument,
+  timeframe,
+  from,
+  to,
+  config,
+}: {
+  instrument: string;
+  timeframe: MarketBarTimeframe;
+  from: string;
+  to: string;
+  config: MarketDataConfig;
+}): Promise<{ deleted: number | null }> {
+  const supabase = createMarketDataClient(config);
+  const fromEt = normalizeCandleTimeEt(from);
+  const toEt = normalizeCandleTimeEt(to);
+  const { count, error } = await supabase
+    .from('market_bars')
+    .delete({ count: 'exact' })
+    .eq('user_id', config.userId)
+    .eq('bridge_instrument', instrument)
+    .eq('timeframe', timeframe)
+    .gte('candle_time_et', fromEt)
+    .lte('candle_time_et', toEt);
+
+  if (error) throw error;
+  return { deleted: count ?? null };
+}
