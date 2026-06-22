@@ -613,7 +613,7 @@ function deskPlayReadinessContext(model: PlanRenderModel): {
   };
 }
 
-function renderAlertQuality(candidate: SetupCandidate): string {
+function renderAlertQuality(candidate: SetupCandidate, yOffset = 486): string {
   const score = candidate.decisionQualityScore ?? candidate.rankScore ?? null;
   const items = alertQualityBreakdown(candidate);
   const row = (item: DecisionQualityScoreItem, x: number, y: number) => {
@@ -627,17 +627,17 @@ function renderAlertQuality(candidate: SetupCandidate): string {
     `;
   };
   return `
-    <rect x="24" y="486" width="392" height="132" rx="7" fill="#020807" stroke="#d5c018" stroke-width="1.5" opacity=".96" />
-    <text x="38" y="513" class="alert-title">ALERT QUALITY</text>
-    <text x="402" y="513" text-anchor="end" class="alert-total">${score == null ? 'N/A' : `${Math.round(score)}/100`}</text>
-    <line x1="38" y1="525" x2="402" y2="525" stroke="#d5c018" stroke-opacity=".28" />
-    <text x="38" y="541" class="alert-sub">Score supports the read. Validation still controls status.</text>
-    ${row(items[0], 38, 565)}
-    ${row(items[1], 38, 586)}
-    ${row(items[2], 38, 607)}
-    ${row(items[3], 232, 565)}
-    ${row(items[4], 232, 586)}
-    ${row(items[5], 232, 607)}
+    <rect x="24" y="${yOffset}" width="392" height="132" rx="7" fill="#020807" stroke="#d5c018" stroke-width="1.5" opacity=".96" />
+    <text x="38" y="${yOffset + 27}" class="alert-title">ALERT QUALITY</text>
+    <text x="402" y="${yOffset + 27}" text-anchor="end" class="alert-total">${score == null ? 'N/A' : `${Math.round(score)}/100`}</text>
+    <line x1="38" y1="${yOffset + 39}" x2="402" y2="${yOffset + 39}" stroke="#d5c018" stroke-opacity=".28" />
+    <text x="38" y="${yOffset + 55}" class="alert-sub">Score supports the read. Validation still controls status.</text>
+    ${row(items[0], 38, yOffset + 79)}
+    ${row(items[1], 38, yOffset + 100)}
+    ${row(items[2], 38, yOffset + 121)}
+    ${row(items[3], 232, yOffset + 79)}
+    ${row(items[4], 232, yOffset + 100)}
+    ${row(items[5], 232, yOffset + 121)}
   `;
 }
 
@@ -1275,7 +1275,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <text x="236" y="196" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
   <text x="32" y="222" class="context-mini">Narrative: <tspan class="context-value">${escapeHtml(narrative)}</tspan></text>
   ${renderRiskSummary(plan)}
-  ${isDeskPlayContext ? renderWatchContextNotice(plan) : renderAlertQuality(candidate)}
+  ${isDeskPlayContext ? `${renderWatchContextNotice(plan)}${renderAlertQuality(candidate, 734)}` : renderAlertQuality(candidate)}
   ${renderDirectionLogo(isLong)}
   ${renderValidationNotice(plan)}
   ${renderNarrativeMarkers(isLong, markerAnchors)}

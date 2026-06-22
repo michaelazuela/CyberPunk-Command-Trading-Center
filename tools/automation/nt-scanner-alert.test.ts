@@ -76,6 +76,7 @@ import {
   writeScannerDiscordReceiptAuditLog,
   writeScannerDecisionTapeAuditLog,
   upsertScannerDiscordAlertRagRecord,
+  upsertScannerReversalWatchRagRecord,
   normalizeScannerBarTimestampMode,
   type ScannerActiveCampaignDurableLedgerConfig,
   type ScannerActiveCampaignLedgerRecord,
@@ -1557,23 +1558,91 @@ const reversalArtifacts = await prepareLiveScannerReversalWatchAlertArtifacts({
   lines: longWatchLines,
   state: longWatchActive,
   decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-08-MES-lunch.json'),
+  planVersionId: 'LUNCH-20260608-REVERSAL-WATCH',
   outputDir: reversalArtifactDir,
 });
 assert.equal(reversalArtifacts.files.length, 1);
-assert.match(reversalArtifacts.payload.content || '', /REVERSAL WATCH/);
+assert.match(reversalArtifacts.payload.content || '', /🎯 MES Tactical Reversal Watch - Lunch/);
 const reversalPayloadText = flattenDiscordPayloadText(reversalArtifacts.payload);
-assert.match(reversalPayloadText, /Execution: NOT APPROVED/);
-assert.match(reversalPayloadText, /LONG ABOVE: 7411.00/);
-assert.match(reversalPayloadText, /Invalid below: 7404.00/);
-assert.match(reversalPayloadText, /No chase above: 7421.50/);
-assert.match(reversalPayloadText, /Reference Levels Only/);
-assert.match(reversalPayloadText, /Sniper watch: 1M timing only; 5M close\/hold required\./);
-assert.match(reversalPayloadText, /Reference entry: 7411.00/);
-assert.match(reversalPayloadText, /Reference stop: 7404.00/);
-assert.match(reversalPayloadText, /Reference T1: 7421.50/);
-assert.match(reversalPayloadText, /Reference T2: 7425.00/);
-assert.match(reversalPayloadText, /Reason not executable: Reference levels only/);
-assert.match(reversalPayloadText, /does not change canExecute/);
+assert.match(reversalPayloadText, /🎯 MES Tactical Reversal Watch/);
+assert.match(reversalPayloadText, /🐻 Primary: SHORT campaign exhaustion \/ 🐂 LONG reversal watch/);
+assert.match(reversalPayloadText, /⚠️ Execution: NOT APPROVED/);
+assert.match(reversalPayloadText, /📌 Status: 👀 Watch Active/);
+assert.match(reversalPayloadText, /🐂 LONG ABOVE: 7411.00/);
+assert.match(reversalPayloadText, /🛑 Invalid Below: 7404.00/);
+assert.match(reversalPayloadText, /🚫 No Chase Above: 7421.50/);
+assert.match(reversalPayloadText, /📋 Watch Plan Levels \(Reference Only\)/);
+assert.match(reversalPayloadText, /🧭 Line in sand: 🐂 LONG ABOVE 7411.00/);
+assert.match(reversalPayloadText, /🔬 1M may refine; completed 5M close\/hold required\./);
+assert.match(reversalPayloadText, /📍 Entry ref: 7411.00 \| 🛑 Stop ref: 7404.00/);
+assert.match(reversalPayloadText, /🎯 T1 7421.50 \| 🎯 T2 7425.00/);
+assert.match(reversalPayloadText, /🧾 Blocker: Reference levels only/);
+assert.match(reversalPayloadText, /No canExecute change/);
+assert.ok(reversalPayloadText.length < 1200, `reversal watch Discord text too long: ${reversalPayloadText.length}`);
+const reversalWatchButtonLabels = (reversalArtifacts.payload.components || []).flatMap((row: any) =>
+  (row.components || []).map((component: any) => component.label),
+);
+assert.deepEqual(reversalWatchButtonLabels, ['Watch Worked', 'Worked After Invalid', 'Watch Failed', 'Stale When Posted', 'No Trigger', 'Needs Review']);
+const reversalWatchButtonPayloads = (reversalArtifacts.payload.components || [])
+  .flatMap((row: any) => row.components || [])
+  .map((component: any) => {
+    const token = new URL(component.url).searchParams.get('t');
+    assert.ok(token);
+    return JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString('utf8'));
+  });
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => payload.ft === 'watch_feedback'));
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => payload.tr === 'no_trade'));
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => payload.tt === false));
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => payload.pp === false));
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => payload.pid === 'LUNCH-20260608-REVERSAL-WATCH'));
+assert.ok(reversalWatchButtonPayloads.every((payload: any) => !('canExecute' in payload)));
+process.env.SUPABASE_URL = 'https://supabase.example';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';
+process.env.DISCORD_RAG_USER_ID = 'user-test';
+const reversalWatchRagCalls: Array<{ method: string; url: string; body: any }> = [];
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  reversalWatchRagCalls.push({
+    method: init?.method || 'GET',
+    url: String(input),
+    body: init?.body ? JSON.parse(String(init.body)) : null,
+  });
+  if ((init?.method || 'GET') === 'PATCH') {
+    return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  return new Response(JSON.stringify([{ id: 'reversal-watch-rag-row' }]), { status: 201, headers: { 'Content-Type': 'application/json' } });
+}) as typeof fetch;
+try {
+  await upsertScannerReversalWatchRagRecord({
+    planVersionId: 'LUNCH-20260608-REVERSAL-WATCH',
+    session: 'lunch',
+    tradeDate: '2026-06-08',
+    instrument: 'MES',
+    lines: longWatchLines,
+    state: longWatchActive,
+    currentPrice: 7412,
+    chartMarkup: reversalArtifacts.chartMarkup,
+    decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-08-MES-lunch.json'),
+    latestCompleted5m: '2026-06-08T15:30:00.0000000',
+  });
+} finally {
+  globalThis.fetch = originalFetch;
+  restoreOptionalEnv('SUPABASE_URL', previousSupabaseUrl);
+  restoreOptionalEnv('SUPABASE_SERVICE_ROLE_KEY', previousSupabaseServiceRoleKey);
+  restoreOptionalEnv('DISCORD_RAG_USER_ID', previousDiscordRagUserId);
+}
+assert.equal(reversalWatchRagCalls.length, 2);
+assert.equal(reversalWatchRagCalls[0].method, 'PATCH');
+assert.equal(reversalWatchRagCalls[1].method, 'POST');
+const reversalWatchRagPayload = reversalWatchRagCalls[1].body;
+assert.equal(reversalWatchRagPayload.source, 'discord_reversal_watch');
+assert.equal(reversalWatchRagPayload.outcome, 'watch_feedback_pending');
+assert.equal(reversalWatchRagPayload.trade_plan_json.discordWatchFeedbackButtons, true);
+assert.equal(reversalWatchRagPayload.trade_plan_json.researchTrack, 'tactical_reversal_watch');
+assert.equal(reversalWatchRagPayload.trade_plan_json.researchOutcomeFeedback.status, 'pending');
+assert.equal(reversalWatchRagPayload.trade_plan_json.researchOutcomeFeedback.researchUseOnly, true);
+assert.equal(reversalWatchRagPayload.trade_plan_json.approvalBoundary.discordWatchFeedbackApprovesTrade, false);
+assert.equal(reversalWatchRagPayload.trade_plan_json.approvalBoundary.researchFeedbackChangesCanExecute, false);
+assert.equal(reversalWatchRagPayload.trade_plan_json.approvalBoundary.buttonClickPlacesOrder, false);
 const longExhaustionShortWatchState = {
   ...baseDeskPlanRefreshState,
   activeCampaign: null,

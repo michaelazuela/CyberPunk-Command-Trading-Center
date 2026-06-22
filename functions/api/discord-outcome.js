@@ -81,6 +81,10 @@ async function keyCheckResponse(context) {
     activeKeyId,
     acceptedKeyIds: [activeKeyId, ...previousKeyIds].filter(Boolean),
     boundary: 'decision_support_only_no_automated_orders',
+    capabilities: {
+      tradeOutcomeButtons: true,
+      watchFeedbackResearch: true,
+    },
   }), {
     status: activeKeyId ? 200 : 500,
     headers: {
@@ -166,13 +170,28 @@ function normalizeTradeResult(value) {
 }
 
 function outcomeSummary(payload) {
+  if (payload.ft === 'watch_feedback') {
+    return `Tactical watch feedback marked ${watchFeedbackLabel(payload.wf).toUpperCase()}.`;
+  }
   if (payload.tt) {
     return `${payload.dir} trade marked ${payload.tr.toUpperCase()} (${payload.hit || 'NONE'}).`;
   }
   return payload.tr === 'missed_trade' ? 'Trade marked MISSED.' : 'Trade marked NOT TAKEN.';
 }
 
+function watchFeedbackLabel(value) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'watch_worked') return 'Watch worked';
+  if (normalized === 'worked_after_invalidation') return 'Worked after invalidation';
+  if (normalized === 'watch_failed') return 'Watch failed';
+  if (normalized === 'stale_when_posted') return 'Stale when posted';
+  if (normalized === 'no_trigger') return 'No trigger';
+  if (normalized === 'needs_review') return 'Needs review';
+  return 'Watch feedback';
+}
+
 function outcomeLockLabel(payload) {
+  if (payload.ft === 'watch_feedback') return `${watchFeedbackLabel(payload.wf)} saved`;
   if (payload.hit === 'T1') return `${payload.dir || ''} T1 saved`.trim();
   if (payload.hit === 'T2') return `${payload.dir || ''} T2 saved`.trim();
   if (payload.hit === 'RUNNER') return `${payload.dir || ''} runner saved`.trim();
@@ -352,7 +371,133 @@ async function selectExistingRecord(context, payload, headers) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
+async function persistWatchFeedback(context, payload) {
+  const supabaseUrl = normalizeSupabaseUrl(context);
+  const serviceRoleKey = getEnv(context, 'SUPABASE_SERVICE_ROLE_KEY');
+  const userId = getEnv(context, 'DISCORD_RAG_USER_ID');
+  if (!supabaseUrl || !serviceRoleKey || !userId) {
+    throw new Error('Missing Cloudflare environment. Set SUPABASE_URL or VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DISCORD_RAG_USER_ID.');
+  }
+
+  const headers = supabaseServiceHeaders(serviceRoleKey);
+  const existing = await selectExistingRecord(context, payload, headers);
+  const existingPlanJson = existing?.trade_plan_json && typeof existing.trade_plan_json === 'object'
+    ? existing.trade_plan_json
+    : {};
+  if (existingPlanJson.discordWatchFeedback?.updatedFrom === 'discord_watch_feedback_button') {
+    return {
+      rowId: existing?.id || payload.pid,
+      discordMessage: existingPlanJson.discordMessage || null,
+      alreadySaved: true,
+    };
+  }
+
+  const feedbackLabel = watchFeedbackLabel(payload.wf);
+  const updatedAt = new Date().toISOString();
+  const feedbackPatch = {
+    feedbackCode: payload.wf || payload.o || null,
+    feedbackLabel,
+    watchType: 'tactical_reversal_watch',
+    watchStateAtPost: payload.wst || null,
+    direction: payload.dir || 'NONE',
+    updatedFrom: 'discord_watch_feedback_button',
+    updatedAt,
+    approvalBoundary: {
+      watchFeedbackApprovesTrade: false,
+      researchFeedbackChangesCanExecute: false,
+      buttonClickPlacesOrder: false,
+    },
+  };
+  const researchPatch = {
+    status: 'submitted',
+    source: 'discord_watch_feedback_button',
+    researchTrack: 'tactical_reversal_watch',
+    researchUseOnly: true,
+    feedbackCode: feedbackPatch.feedbackCode,
+    feedbackLabel,
+    updatedAt,
+    notes: [
+      `Trader feedback: ${feedbackLabel}.`,
+      'Interpret as watch-quality/lifecycle research evidence only, not as execution approval.',
+    ].join(' '),
+    approvalBoundary: {
+      researchFeedbackApprovesTrade: false,
+      researchFeedbackChangesCanExecute: false,
+      researchFeedbackChangesRules: false,
+    },
+  };
+  const existingJournalRecord = existingPlanJson.journalRecord && typeof existingPlanJson.journalRecord === 'object'
+    ? existingPlanJson.journalRecord
+    : null;
+  const journalRecord = existingJournalRecord
+    ? {
+        ...existingJournalRecord,
+        outcome: 'watch_feedback',
+        discordAlertId: payload.pid,
+        notes: `Discord watch feedback button: ${feedbackLabel}. Research/learning only.`,
+      }
+    : {
+        outcome: 'watch_feedback',
+        discordAlertId: payload.pid,
+        notes: `Discord watch feedback button: ${feedbackLabel}. Research/learning only.`,
+      };
+  const tradePlanJson = {
+    ...existingPlanJson,
+    discordWatchFeedback: feedbackPatch,
+    researchOutcomeFeedback: researchPatch,
+    journalRecord,
+    approvalBoundary: {
+      ...(existingPlanJson.approvalBoundary && typeof existingPlanJson.approvalBoundary === 'object' ? existingPlanJson.approvalBoundary : {}),
+      discordWatchFeedbackApprovesTrade: false,
+      researchFeedbackChangesCanExecute: false,
+      buttonClickPlacesOrder: false,
+    },
+  };
+  const patchPayload = {
+    user_id: userId,
+    session_type: payload.s,
+    trade_date: payload.d,
+    day_of_week: payload.dow || new Date(`${payload.d}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long' }),
+    instrument: payload.i,
+    trade_result: 'no_trade',
+    outcome: payload.wf || payload.o || 'watch_feedback',
+    source: 'discord_watch_feedback',
+    analysis_mode: 'live',
+    plan_version_id: payload.pid,
+    trade_plan_json: tradePlanJson,
+    embedding_text: existing?.embedding_text || `Tactical Reversal Watch feedback for ${payload.s} ${payload.i} ${payload.d}. ${feedbackLabel}. Research/learning only.`,
+    notes: `Discord watch feedback button: ${feedbackLabel}. Research/learning only.`,
+  };
+
+  if (existing?.id) {
+    const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings?id=eq.${encodeURIComponent(existing.id)}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(patchPayload),
+    });
+    if (!response.ok) throw new Error(`Supabase watch feedback update failed (${response.status}): ${await response.text()}`);
+    return { rowId: existing.id, discordMessage: tradePlanJson.discordMessage || null, alreadySaved: false };
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/trade_embeddings`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      ...patchPayload,
+      setup_quality_score: 0.5,
+    }),
+  });
+  if (!response.ok) throw new Error(`Supabase watch feedback insert failed (${response.status}): ${await response.text()}`);
+  const rows = await response.json().catch(() => []);
+  return {
+    rowId: Array.isArray(rows) && rows[0]?.id ? rows[0].id : payload.pid,
+    discordMessage: tradePlanJson.discordMessage || null,
+    alreadySaved: false,
+  };
+}
+
 async function persistOutcome(context, payload) {
+  if (payload.ft === 'watch_feedback') return persistWatchFeedback(context, payload);
   const supabaseUrl = normalizeSupabaseUrl(context);
   const serviceRoleKey = getEnv(context, 'SUPABASE_SERVICE_ROLE_KEY');
   const userId = getEnv(context, 'DISCORD_RAG_USER_ID');

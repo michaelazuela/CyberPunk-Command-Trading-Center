@@ -6,6 +6,7 @@ type Instrument = 'MES' | 'MNQ';
 type TradeDirection = 'LONG' | 'SHORT';
 type TradeResult = 'win' | 'loss' | 'scratch' | 'no_trade' | 'missed_trade';
 type TargetHit = 'T1' | 'T2' | 'RUNNER' | 'STRETCH' | 'NEAREST_LIQUIDITY' | 'STOP' | 'NONE';
+type WatchFeedbackCode = 'watch_worked' | 'worked_after_invalidation' | 'watch_failed' | 'stale_when_posted' | 'no_trigger' | 'needs_review';
 
 export interface DiscordLinkButton {
   type: 2;
@@ -28,6 +29,15 @@ export interface OutcomeButtonArgs {
   direction: TradeDirection | 'NO TRADE' | null | undefined;
 }
 
+export interface WatchFeedbackButtonArgs {
+  planVersionId: string;
+  sessionType: SessionType;
+  tradeDate: string;
+  instrument: Instrument;
+  watchDirection: TradeDirection | null | undefined;
+  watchState: string;
+}
+
 export interface DiscordOutcomeEndpointSecretCheck {
   ok: boolean;
   configured: boolean;
@@ -35,6 +45,10 @@ export interface DiscordOutcomeEndpointSecretCheck {
   acceptedKeyIds: string[];
   localKeyId: string | null;
   endpointUrl: string;
+  capabilities: {
+    tradeOutcomeButtons: boolean;
+    watchFeedbackResearch: boolean;
+  };
 }
 
 function getDayOfWeek(tradeDate: string): string {
@@ -137,7 +151,26 @@ export async function checkDiscordOutcomeEndpointSecret(
     acceptedKeyIds,
     localKeyId,
     endpointUrl,
+    capabilities: {
+      tradeOutcomeButtons: body?.capabilities?.tradeOutcomeButtons === true,
+      watchFeedbackResearch: body?.capabilities?.watchFeedbackResearch === true,
+    },
   };
+}
+
+function payloadsFromOutcomeComponents(components?: unknown[]): any[] {
+  if (!Array.isArray(components)) return [];
+  return components.flatMap((row: any) => Array.isArray(row?.components) ? row.components : [])
+    .map((component: any) => {
+      try {
+        const token = new URL(String(component?.url || '')).searchParams.get('t');
+        const encodedPayload = token?.split('.')[0];
+        return encodedPayload ? JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 }
 
 export async function assertDiscordOutcomeEndpointSecretReady(
@@ -155,6 +188,15 @@ export async function assertDiscordOutcomeEndpointSecretReady(
       'No Discord card was sent. No automated orders were placed.',
     ].join(' '));
   }
+  const payloads = payloadsFromOutcomeComponents(components);
+  if (payloads.some((payload) => payload.ft === 'watch_feedback') && !check.capabilities.watchFeedbackResearch) {
+    throw new Error([
+      'Discord watch feedback buttons blocked before posting.',
+      `Endpoint ${check.endpointUrl} does not advertise watchFeedbackResearch support.`,
+      'Deploy the Cloudflare Pages function before posting Tactical Watch research buttons.',
+      'No Discord card was sent. No automated orders were placed.',
+    ].join(' '));
+  }
 }
 
 function signOutcomePayload(encodedPayload: string): string | null {
@@ -169,6 +211,9 @@ function buildOutcomeUrl(args: Omit<OutcomeButtonArgs, 'direction'> & {
   tradeTaken: boolean;
   direction: TradeDirection | 'NONE';
   targetHit: TargetHit;
+  feedbackType?: 'trade_outcome' | 'watch_feedback';
+  watchFeedback?: WatchFeedbackCode;
+  watchState?: string;
 }): string | null {
   const baseUrl = getOutcomeBaseUrl();
   if (!baseUrl) return null;
@@ -186,6 +231,9 @@ function buildOutcomeUrl(args: Omit<OutcomeButtonArgs, 'direction'> & {
     dir: args.direction,
     hit: args.targetHit,
     pp: args.tradeTaken,
+    ft: args.feedbackType || 'trade_outcome',
+    ...(args.watchFeedback ? { wf: args.watchFeedback } : {}),
+    ...(args.watchState ? { wst: args.watchState } : {}),
     kid: discordOutcomeSecretKeyId(process.env.DISCORD_OUTCOME_SECRET),
   };
   const encodedPayload = base64Url(JSON.stringify(payload));
@@ -269,6 +317,54 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
         outcomeButton('Scratch', '⚪', scratch),
         outcomeButton('No Trade', '🚫', noTrade),
         outcomeButton('Missed', '⏭️', missed),
+      ],
+    },
+  ];
+}
+
+export function buildWatchFeedbackComponents(args: WatchFeedbackButtonArgs): DiscordActionRow[] | undefined {
+  const direction = args.watchDirection === 'LONG' || args.watchDirection === 'SHORT' ? args.watchDirection : 'NONE';
+  const makeUrl = (outcome: WatchFeedbackCode) => buildOutcomeUrl({
+    planVersionId: args.planVersionId,
+    sessionType: args.sessionType,
+    tradeDate: args.tradeDate,
+    instrument: args.instrument,
+    outcome,
+    tradeResult: 'no_trade',
+    tradeTaken: false,
+    direction,
+    targetHit: 'NONE',
+    feedbackType: 'watch_feedback',
+    watchFeedback: outcome,
+    watchState: args.watchState,
+  });
+  const worked = makeUrl('watch_worked');
+  const afterInvalidation = makeUrl('worked_after_invalidation');
+  const failed = makeUrl('watch_failed');
+  const stale = makeUrl('stale_when_posted');
+  const noTrigger = makeUrl('no_trigger');
+  const review = makeUrl('needs_review');
+  if (!worked || !afterInvalidation || !failed || !stale || !noTrigger || !review) {
+    if (!isTestProcess()) {
+      console.warn('Watch feedback buttons skipped: DISCORD_OUTCOME_BASE_URL or signing secret not configured.');
+    }
+    return undefined;
+  }
+  return [
+    {
+      type: 1,
+      components: [
+        outcomeButton('Watch Worked', '✅', worked),
+        outcomeButton('Worked After Invalid', '🟡', afterInvalidation),
+        outcomeButton('Watch Failed', '❌', failed),
+      ],
+    },
+    {
+      type: 1,
+      components: [
+        outcomeButton('Stale When Posted', '⏱️', stale),
+        outcomeButton('No Trigger', '🚫', noTrigger),
+        outcomeButton('Needs Review', '📝', review),
       ],
     },
   ];

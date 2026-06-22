@@ -537,6 +537,14 @@ try {
   assert.ok(failedShortReviewHtml.includes('LONG Watch - Not A Trade Plan'));
   assert.ok(failedShortReviewHtml.includes('Action: no execution'));
   assert.ok(failedShortReviewHtml.includes('DESK READINESS'));
+  assert.ok(failedShortReviewHtml.includes('ALERT QUALITY'));
+  assert.ok(failedShortReviewHtml.includes('44/100'));
+  assert.ok(failedShortReviewHtml.includes('Structure'));
+  assert.ok(failedShortReviewHtml.includes('Model'));
+  assert.ok(failedShortReviewHtml.includes('Trigger'));
+  assert.ok(failedShortReviewHtml.includes('Risk'));
+  assert.ok(failedShortReviewHtml.includes('Targets'));
+  assert.ok(failedShortReviewHtml.includes('Conditions'));
   assert.ok(failedShortReviewHtml.includes('Map Side: <tspan fill="#f8fafc">SHORT 44/100 low</tspan>'));
   assert.ok(failedShortReviewHtml.includes('Map Role: <tspan fill="#f8fafc">chart map under review</tspan>'));
   assert.ok(failedShortReviewHtml.includes('Opposing Side: <tspan fill="#f8fafc">LONG 98/100 high</tspan>'));

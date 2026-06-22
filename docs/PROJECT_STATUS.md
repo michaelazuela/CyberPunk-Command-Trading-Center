@@ -3,6 +3,54 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Add Tactical Reversal Watch learning and research feedback buttons.
+Files changed: tools/automation/discord-outcome-buttons.ts, tools/automation/discord-outcome-buttons.test.ts, functions/api/discord-outcome.js, functions/api/discord-outcome.test.js, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Tactical Reversal Watch posts need trader feedback buttons for cases where a watch map worked, failed, was stale, or worked after invalidation, and that feedback must be saved as learning plus research evidence without changing trade approval.
+Tests run: npx tsx tools/automation/discord-outcome-buttons.test.ts; node --test functions/api/discord-outcome.test.js; npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Tactical Reversal Watch posts now include watch-quality feedback buttons, seed a RAG/research record, attach the Discord message receipt for card locking, and persist submitted feedback as `discordWatchFeedback` plus `researchOutcomeFeedback`. The local posting preflight blocks watch-feedback buttons unless the deployed Cloudflare outcome endpoint advertises `watchFeedbackResearch` support.
+Trading logic changed: No. This is Discord feedback and persistence only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Tactical Reversal Watch messages can now show learning/research buttons: Watch Worked, Worked After Invalid, Watch Failed, Stale When Posted, No Trigger, and Needs Review.
+Journal/RAG impact: Yes. Existing `trade_embeddings` rows are seeded/updated with watch feedback and research-only outcome metadata; no schema migration added.
+Supabase impact: Uses existing `trade_embeddings` fields only; no migration added.
+Known risks: None known.
+Next recommended action: Restart the scanner so future live Tactical Reversal Watch posts include the learning/research feedback buttons.
+
+## Previous Change
+
+Date: 2026-06-22
+Task: Restore Alert Quality panel on Desk Map chart renders.
+Files changed: tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, docs/PROJECT_STATUS.md.
+Reason: Desk Map / Review Only chart images were showing Desk Readiness but no longer showed the Alert Quality scorecard with Structure, Model, Trigger, Risk, Targets, and Conditions.
+Tests run: npx tsx tools/automation/chart-markup-renderer.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; rendered QA PNG at reports/qa/desk-map-alert-quality-qa-1782138719610.png and inspected it visually; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Desk Map chart renders now keep Desk Readiness and add the Alert Quality scorecard below it without covering candles, price labels, time labels, or the footer.
+Trading logic changed: No. This is chart rendering/presentation only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, RAG save behavior, or bridge behavior.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Future Discord chart card attachments for Desk Map / Review Only renders include the Alert Quality breakdown again.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Restart the scanner so future live Discord chart attachments use the restored Alert Quality panel.
+
+## Previous Change
+
+Date: 2026-06-22
+Task: Normalize Tactical Reversal Watch Discord format.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Current Desk Plan and Morning HTF Desk Map had the disciplined emoji/status Discord style, but Tactical Reversal Watch still used plain labels and did not make entry reference, stop, T1, and T2 prominent enough for trader review.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; visual QA on rendered reversal-watch PNG; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; git diff --check.
+Result: Passed. Tactical Reversal Watch Discord text now matches the emoji/status style used by the other scanner reports and shows a compact `Watch Plan Levels (Reference Only)` block with line in the sand, entry ref, stop ref, T1, and T2.
+Trading logic changed: No. This is Discord presentation text only; it does not change reversal-watch state detection, setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, chart rendering, or Discord cadence.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: Yes. Tactical Reversal Watch messages now use emoji title/content, primary/status/level lines, field headers, and a visible `Watch Plan Levels (Reference Only)` block with line in the sand, entry ref, stop ref, T1, and T2 while preserving the watch-only boundary.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Restart the scanner after deployment so future live Tactical Reversal Watch posts use the normalized format.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Add Phase 3 read-only research case review.
 Files changed: tools/automation/research-desk-case-review.ts, tools/automation/research-desk-case-review.test.ts, tools/automation/research-desk-evidence-table.ts, tools/automation/research-desk-evidence-table.test.ts, Open-QuantDesk-ResearchReview.ps1, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Phase 2 identified ready-for-deeper-review rows; Phase 3 needs to inspect those rows case by case, flag missing evidence/blockers, and prevent generated research meta-reports from being re-ingested as evidence.

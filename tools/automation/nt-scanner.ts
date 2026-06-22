@@ -116,6 +116,7 @@ import {
 import {
   assertDiscordOutcomeEndpointSecretReady,
   buildOutcomeComponents,
+  buildWatchFeedbackComponents,
   discordWebhookUrlForPayload,
   loadCanonicalDiscordOutcomeSecretFromEnvLocal,
 } from './discord-outcome-buttons';
@@ -3551,6 +3552,107 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
   });
 }
 
+export async function upsertScannerReversalWatchRagRecord(args: {
+  planVersionId: string;
+  session: LiveSession;
+  tradeDate: string;
+  instrument: Instrument;
+  lines: ScannerReversalWatchLines;
+  state: ScannerReversalWatchStateResult;
+  currentPrice: number | null;
+  chartMarkup: string | null;
+  decisionTapePath: string;
+  latestCompleted5m: string | null;
+}): Promise<void> {
+  const { config, missing } = resolveDiscordRagPersistenceConfig();
+  if (!config) {
+    console.warn(`Scanner Reversal Watch RAG/research seed skipped. Set ${missing.join(', ')} to let watch feedback buttons update RAG and research.`);
+    return;
+  }
+
+  const direction = args.lines.watchDirection === 'LONG' || args.lines.watchDirection === 'SHORT'
+    ? args.lines.watchDirection
+    : null;
+  const referenceRiskPoints = isFiniteTradePrice(args.lines.referenceEntry) && isFiniteTradePrice(args.lines.referenceStop)
+    ? Math.abs(args.lines.referenceEntry - args.lines.referenceStop)
+    : null;
+  const embeddingText = [
+    `Tactical Reversal Watch pending trader feedback for ${args.session} ${args.instrument} on ${args.tradeDate}.`,
+    `Watch direction: ${direction || 'N/A'}; state at post: ${args.state.state}.`,
+    `Line in sand: ${args.lines.triggerLine ?? 'N/A'}; invalid: ${args.lines.invalidLine ?? 'N/A'}; no chase: ${args.lines.noChaseLine ?? 'N/A'}.`,
+    'Feedback buttons record learning and research evidence only. They do not approve execution, change canExecute, or place orders.',
+  ].join(' ');
+
+  const payload = {
+    session_type: args.session,
+    trade_date: args.tradeDate,
+    day_of_week: getDayOfWeek(args.tradeDate),
+    instrument: args.instrument,
+    trade_result: 'pending',
+    outcome: 'watch_feedback_pending',
+    source: 'discord_reversal_watch',
+    analysis_mode: 'live',
+    setup_quality_score: 0.5,
+    entry_price: args.lines.referenceEntry ?? args.lines.triggerLine ?? null,
+    stop_price: args.lines.referenceStop ?? args.lines.invalidLine ?? null,
+    target_1_price: args.lines.referenceTarget1 ?? null,
+    target_2_price: args.lines.referenceTarget2 ?? null,
+    risk_points: referenceRiskPoints,
+    embedding_text: embeddingText,
+    trade_plan_json: {
+      planVersionId: args.planVersionId,
+      discordWatchFeedbackButtons: true,
+      watchType: 'tactical_reversal_watch',
+      researchTrack: 'tactical_reversal_watch',
+      researchOutcomeFeedback: {
+        status: 'pending',
+        source: 'discord_watch_feedback_button',
+        researchUseOnly: true,
+        feedbackCode: null,
+        feedbackLabel: null,
+      },
+      reversalWatch: {
+        tradeDate: args.tradeDate,
+        session: args.session,
+        instrument: args.instrument,
+        latestCompleted5m: args.latestCompleted5m,
+        currentPrice: args.currentPrice,
+        state: args.state,
+        lines: args.lines,
+        chartMarkup: args.chartMarkup,
+        decisionTapePath: args.decisionTapePath,
+      },
+      journalRecord: {
+        dateTime: new Date().toISOString(),
+        instrument: args.instrument,
+        session: args.session,
+        modelType: 'Tactical Reversal Watch',
+        setupTags: ['tactical_reversal_watch', 'watch_only', 'research_feedback_pending'],
+        direction,
+        plannedR: null,
+        outcome: 'pending',
+        discordAlertId: args.planVersionId,
+        notes: 'Tactical Reversal Watch posted. Awaiting trader feedback button for learning/research only.',
+      },
+      approvalBoundary: {
+        discordWatchFeedbackApprovesTrade: false,
+        researchFeedbackChangesCanExecute: false,
+        buttonClickPlacesOrder: false,
+        changesEntryStopTargets: false,
+        changesRiskRules: false,
+      },
+    },
+    notes: 'Tactical Reversal Watch posted. Awaiting trader feedback button for learning/research only.',
+  };
+
+  await upsertDiscordAlertRagPayload({
+    config,
+    planVersionId: args.planVersionId,
+    payload,
+    errorLabel: 'Scanner Reversal Watch RAG/research seed',
+  });
+}
+
 async function attachDiscordMessageReceiptToRagRecord(args: {
   planVersionId: string;
   discordMessageId: string | null;
@@ -5324,7 +5426,22 @@ function compactScannerDiscordText(value: string | null | undefined, max = 260):
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
 }
 
+function scannerReversalWatchDirectionEmoji(direction: string | null | undefined): string {
+  if (direction === 'LONG') return '🐂';
+  if (direction === 'SHORT') return '🐻';
+  return '🛑';
+}
+
+function scannerReversalWatchStatusLabel(state: ScannerReversalWatchStateResult['state']): string {
+  if (state === 'direction_validated') return '✅ Direction Validated';
+  if (state === 'watch_active') return '👀 Watch Active';
+  if (state === 'invalidated') return '🛑 Invalidated';
+  if (state === 'no_chase') return '🚫 No Chase';
+  return '⚠️ Forming';
+}
+
 function buildScannerReversalWatchDiscordPayload(args: {
+  planVersionId: string;
   tradeDate: string;
   instrument: Instrument;
   session: LiveSession;
@@ -5341,9 +5458,14 @@ function buildScannerReversalWatchDiscordPayload(args: {
     ? `${scannerDiscordLine(args.lines.reactionZoneLow)}-${scannerDiscordLine(args.lines.reactionZoneHigh)}`
     : 'N/A';
   const directionLineLabel = direction === 'SHORT' ? 'SHORT BELOW' : direction === 'LONG' ? 'LONG ABOVE' : 'WATCH LINE';
-  const status = args.state.state.replace(/_/g, ' ').toUpperCase();
-  const title = `${args.instrument} Tactical Reversal Watch`;
-  const content = `[${args.session.toUpperCase()} REVERSAL WATCH] ${args.instrument} - ${exhausted} EXHAUSTING / ${direction} WATCH | ${args.tradeDate}`;
+  const status = scannerReversalWatchStatusLabel(args.state.state);
+  const directionEmoji = scannerReversalWatchDirectionEmoji(direction);
+  const exhaustedEmoji = scannerReversalWatchDirectionEmoji(exhausted);
+  const invalidLabel = direction === 'LONG' ? 'Invalid Below' : direction === 'SHORT' ? 'Invalid Above' : 'Invalid At';
+  const noChaseLabel = direction === 'LONG' ? 'No Chase Above' : direction === 'SHORT' ? 'No Chase Below' : 'No Chase At';
+  const title = `🎯 ${args.instrument} Tactical Reversal Watch`;
+  const sessionLabel = args.session === 'morning' ? 'Morning' : args.session === 'evening' ? 'Evening' : 'Lunch';
+  const content = `# 🎯 ${args.instrument} Tactical Reversal Watch - ${sessionLabel}`;
   return {
     username: 'Quant Desk',
     content,
@@ -5351,56 +5473,55 @@ function buildScannerReversalWatchDiscordPayload(args: {
       title,
       color: args.state.state === 'direction_validated' ? 0x22c55e : args.state.state === 'watch_active' ? 0x38bdf8 : args.state.state === 'invalidated' ? 0xef4444 : 0xf97316,
       description: [
-        `Primary: ${exhausted} campaign exhaustion / ${direction} reversal watch`,
-        'Execution: NOT APPROVED - this is a completed 5M watch map only.',
-        `Status: ${status}`,
-        `Reaction zone: ${reaction}`,
-        `${directionLineLabel}: ${scannerDiscordLine(args.lines.triggerLine)}`,
-        `Invalid ${direction === 'LONG' ? 'below' : direction === 'SHORT' ? 'above' : 'at'}: ${scannerDiscordLine(args.lines.invalidLine)}`,
-        `No chase ${direction === 'LONG' ? 'above' : direction === 'SHORT' ? 'below' : 'at'}: ${scannerDiscordLine(args.lines.noChaseLine)}`,
-        `Current: ${scannerDiscordLine(args.currentPrice)}`,
+        `${exhaustedEmoji} Primary: ${exhausted} campaign exhaustion / ${directionEmoji} ${direction} reversal watch`,
+        '⚠️ Execution: NOT APPROVED - completed 5M watch map only.',
+        `📌 Status: ${status}`,
+        `📍 Reaction Zone: ${reaction}`,
+        `${directionEmoji} ${directionLineLabel}: ${scannerDiscordLine(args.lines.triggerLine)}`,
+        `🛑 ${invalidLabel}: ${scannerDiscordLine(args.lines.invalidLine)}`,
+        `🚫 ${noChaseLabel}: ${scannerDiscordLine(args.lines.noChaseLine)}`,
+        `💵 Current: ${scannerDiscordLine(args.currentPrice)}`,
       ].join('\n'),
       fields: [
         {
-          name: '5M Trigger Rule',
+          name: '🕯️ 5M Trigger Rule',
           value: compactScannerDiscordText(args.lines.reclaimRule),
           inline: false,
         },
         {
-          name: 'Retest / Hold Rule',
+          name: '🔁 Retest / Hold Rule',
           value: compactScannerDiscordText(args.lines.retestRule),
           inline: false,
         },
         {
-          name: 'Reference Levels Only',
+          name: '📋 Watch Plan Levels (Reference Only)',
           value: compactScannerDiscordText([
-            'Not execution approval.',
-            'Sniper watch: 1M timing only; 5M close/hold required.',
-            `Reference entry: ${scannerDiscordLine(args.lines.referenceEntry)}`,
-            `Reference stop: ${scannerDiscordLine(args.lines.referenceStop)}`,
-            `Reference T1: ${scannerDiscordLine(args.lines.referenceTarget1)}`,
-            `Reference T2: ${scannerDiscordLine(args.lines.referenceTarget2)}`,
-            `Reason not executable: ${args.lines.referenceReason || 'No app-owned opposite-side lifecycle reference levels are available; normal canExecute gates still control.'}`,
-          ].join('\n'), 520),
+            `🧭 Line in sand: ${directionEmoji} ${directionLineLabel} ${scannerDiscordLine(args.lines.triggerLine)}`,
+            `📍 Entry ref: ${scannerDiscordLine(args.lines.referenceEntry)} | 🛑 Stop ref: ${scannerDiscordLine(args.lines.referenceStop)}`,
+            `🎯 T1 ${scannerDiscordLine(args.lines.referenceTarget1)} | 🎯 T2 ${scannerDiscordLine(args.lines.referenceTarget2)}`,
+            '⚠️ Reference only - not execution approval.',
+            '🔬 1M may refine; completed 5M close/hold required.',
+            `🧾 Blocker: ${args.lines.referenceReason || 'No executable app-owned reference levels; normal canExecute gates still control.'}`,
+          ].join('\n'), 460),
           inline: false,
         },
         {
-          name: 'Bottom Line',
-          value: compactScannerDiscordText(`${args.state.reason} This does not change canExecute; app-owned 5M trigger, stop, risk, target room, model, and session gates still control execution approval.`),
-          inline: false,
-        },
-        {
-          name: 'Attachments',
-          value: [
-            args.chartMarkup ? 'Chart: attached tactical watch map.' : 'Chart: unavailable; using text map only.',
-            args.decisionTapePath ? `Decision tape: ${args.decisionTapePath}` : 'Decision tape: N/A',
-          ].join('\n'),
+          name: '🧾 Bottom Line',
+          value: compactScannerDiscordText(`${args.state.reason} No canExecute change; app-owned 5M trigger, stop, risk, targets, model, and session gates still control.`, 180),
           inline: false,
         },
       ],
       footer: { text: 'Quant Desk • Tactical Reversal Watch • Not execution approval' },
       timestamp: new Date().toISOString(),
     }],
+    components: buildWatchFeedbackComponents({
+      planVersionId: args.planVersionId,
+      sessionType: args.session,
+      tradeDate: args.tradeDate,
+      instrument: args.instrument,
+      watchDirection: args.lines.watchDirection,
+      watchState: args.state.state,
+    }),
   };
 }
 
@@ -5414,6 +5535,7 @@ export async function prepareLiveScannerReversalWatchAlertArtifacts(args: {
   lines: ScannerReversalWatchLines;
   state: ScannerReversalWatchStateResult;
   decisionTapePath: string;
+  planVersionId: string;
   outputDir?: string;
 }): Promise<{
   payload: DiscordWebhookPayload;
@@ -5433,6 +5555,7 @@ export async function prepareLiveScannerReversalWatchAlertArtifacts(args: {
   });
   const files = [chartMarkup].filter((file): file is string => Boolean(file));
   const payload = buildScannerReversalWatchDiscordPayload({
+    planVersionId: args.planVersionId,
     tradeDate: args.tradeDate,
     instrument: args.config.instrument,
     session: args.session,
@@ -7339,6 +7462,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       console.log(`[scanner] Reversal watch suppressed (${reversalWatchSuppression.category}): ${reversalWatchSuppression.reason}${reversalWatchSuppression.previousFingerprint ? ` | previous=${reversalWatchSuppression.previousFingerprint}` : ''}`);
     } else if (!state.reversalWatchSent[reversalWatchKey]) {
       try {
+        const reversalWatchPlanVersionId = `${planVersionId}-REVERSAL-WATCH`;
         const reversalArtifacts = await prepareLiveScannerReversalWatchAlertArtifacts({
           session,
           tradeDate,
@@ -7349,6 +7473,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           lines: reversalWatchLines,
           state: reversalWatchState,
           decisionTapePath,
+          planVersionId: reversalWatchPlanVersionId,
         });
         const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files);
         if (receipt.deliveryStatus === 'sent') {
@@ -7363,17 +7488,39 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             sentAt,
           });
           state.sent[reversalWatchKey] = { state: stateForAlert, confidence: confidence.score, sentAt };
+          let ragReceiptAttached = false;
+          try {
+            await upsertScannerReversalWatchRagRecord({
+              planVersionId: reversalWatchPlanVersionId,
+              session,
+              tradeDate,
+              instrument: config.instrument,
+              lines: reversalWatchLines,
+              state: reversalWatchState,
+              currentPrice,
+              chartMarkup: reversalArtifacts.chartMarkup,
+              decisionTapePath,
+              latestCompleted5m: completed5m.time,
+            });
+            ragReceiptAttached = await attachDiscordMessageReceiptToRagRecord({
+              planVersionId: reversalWatchPlanVersionId,
+              discordMessageId: receipt.discordMessageId,
+              webhookSource: receipt.webhookSource,
+            });
+          } catch (error) {
+            console.warn(`[scanner] Reversal Watch RAG/research seed skipped safely: ${sanitizedError(error)}`);
+          }
           await writeScannerDiscordReceiptAuditLog({
             kind: 'reversal_watch',
             key: reversalWatchKey,
-            planVersionId: `${planVersionId}-REVERSAL-WATCH`,
+            planVersionId: reversalWatchPlanVersionId,
             tradeDate,
             instrument: config.instrument,
             session,
             receipt,
             postedAt: sentAt,
             cleanupRecordKey: null,
-            ragReceiptAttached: false,
+            ragReceiptAttached,
           });
           reversalWatchPosted = true;
           console.log(`[scanner] Sent Reversal Watch update: ${reversalWatchKey}`);

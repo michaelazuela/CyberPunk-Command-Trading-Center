@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   assertDiscordOutcomeEndpointSecretReady,
   buildOutcomeComponents,
+  buildWatchFeedbackComponents,
   checkDiscordOutcomeEndpointSecret,
   discordOutcomeSecretKeyId,
   discordWebhookUrlForPayload,
@@ -112,6 +113,32 @@ try {
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook?wait=true', longComponents), 'https://discord.example/webhook?wait=true&with_components=true');
   assert.equal(discordWebhookUrlForPayload('https://discord.example/webhook', undefined), 'https://discord.example/webhook');
 
+  const watchComponents = buildWatchFeedbackComponents({
+    ...baseArgs,
+    planVersionId: 'PLAN-WATCH-TEST',
+    watchDirection: 'SHORT',
+    watchState: 'invalidated',
+  });
+  assert.deepEqual(labels(watchComponents), ['Watch Worked', 'Worked After Invalid', 'Watch Failed', 'Stale When Posted', 'No Trigger', 'Needs Review']);
+  assert.ok(urls(watchComponents).every((url) => url.startsWith('https://quant-desk.example/api/discord-outcome?t=')));
+  assert.ok(urls(watchComponents).every((url) => url.length <= 512), 'Watch feedback URLs must stay within Discord link limits.');
+  const watchPayloads = urls(watchComponents).map(decodeOutcomePayload);
+  assert.ok(watchPayloads.every((payload) => payload.ft === 'watch_feedback'));
+  assert.ok(watchPayloads.every((payload) => payload.tr === 'no_trade'));
+  assert.ok(watchPayloads.every((payload) => payload.tt === false));
+  assert.ok(watchPayloads.every((payload) => payload.pp === false));
+  assert.ok(watchPayloads.every((payload) => payload.dir === 'SHORT'));
+  assert.ok(watchPayloads.every((payload) => payload.hit === 'NONE'));
+  assert.ok(watchPayloads.every((payload) => payload.wst === 'invalidated'));
+  assert.equal(watchPayloads[0].wf, 'watch_worked');
+  assert.equal(watchPayloads[1].wf, 'worked_after_invalidation');
+  assert.equal(watchPayloads[3].wf, 'stale_when_posted');
+  assert.ok(watchPayloads.every((payload) => !('entry' in payload)));
+  assert.ok(watchPayloads.every((payload) => !('stop' in payload)));
+  assert.ok(watchPayloads.every((payload) => !('target' in payload)));
+  assert.ok(watchPayloads.every((payload) => !('riskPoints' in payload)));
+  assert.ok(watchPayloads.every((payload) => !('canExecute' in payload)));
+
   const matchingFetch = (async (url: string | URL | Request) => {
     assert.equal(String(url), 'https://quant-desk.example/api/discord-outcome?keycheck=1');
     return new Response(JSON.stringify({
@@ -119,6 +146,10 @@ try {
       configured: true,
       activeKeyId: discordOutcomeSecretKeyId('test-secret'),
       acceptedKeyIds: [discordOutcomeSecretKeyId('test-secret')],
+      capabilities: {
+        tradeOutcomeButtons: true,
+        watchFeedbackResearch: true,
+      },
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }) as typeof fetch;
   const matchingCheck = await checkDiscordOutcomeEndpointSecret(matchingFetch);
@@ -131,12 +162,31 @@ try {
     configured: true,
     activeKeyId: discordOutcomeSecretKeyId('different-secret'),
     acceptedKeyIds: [discordOutcomeSecretKeyId('different-secret')],
+    capabilities: {
+      tradeOutcomeButtons: true,
+      watchFeedbackResearch: true,
+    },
   }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
   await assert.rejects(
     () => assertDiscordOutcomeEndpointSecretReady(longComponents, mismatchedFetch),
     /blocked before posting.*does not match deployed active key id/i,
   );
   await assert.doesNotReject(() => assertDiscordOutcomeEndpointSecretReady(undefined, mismatchedFetch));
+  const oldEndpointFetch = (async () => new Response(JSON.stringify({
+    ok: true,
+    configured: true,
+    activeKeyId: discordOutcomeSecretKeyId('test-secret'),
+    acceptedKeyIds: [discordOutcomeSecretKeyId('test-secret')],
+    capabilities: {
+      tradeOutcomeButtons: true,
+      watchFeedbackResearch: false,
+    },
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
+  await assert.doesNotReject(() => assertDiscordOutcomeEndpointSecretReady(longComponents, oldEndpointFetch));
+  await assert.rejects(
+    () => assertDiscordOutcomeEndpointSecretReady(watchComponents, oldEndpointFetch),
+    /watch feedback buttons blocked.*watchFeedbackResearch/i,
+  );
 
   for (const filePath of runtimeOutcomeButtonFiles()) {
     const source = fs.readFileSync(filePath, 'utf8');

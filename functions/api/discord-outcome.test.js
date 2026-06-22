@@ -107,6 +107,29 @@ globalThis.fetch = async (url, init = {}) => {
         },
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    if (String(url).includes('PLAN-WATCH-FEEDBACK')) {
+      return new Response(JSON.stringify([{
+        id: 'row-watch-feedback',
+        embedding_text: 'existing tactical watch embedding',
+        trade_plan_json: {
+          planVersionId: 'PLAN-WATCH-FEEDBACK',
+          discordWatchFeedbackButtons: true,
+          researchTrack: 'tactical_reversal_watch',
+          researchOutcomeFeedback: {
+            status: 'pending',
+            researchUseOnly: true,
+          },
+          discordMessage: {
+            messageId: 'discord-message-watch-feedback',
+            webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+            editAfterOutcome: true,
+          },
+          approvalBoundary: {
+            discordWatchFeedbackApprovesTrade: false,
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response(JSON.stringify([{
       id: 'row-12345678',
       embedding_text: 'existing embedding',
@@ -179,6 +202,7 @@ try {
   assert.equal(keyCheck.activeKeyId, keyId(secret));
   assert.deepEqual(keyCheck.acceptedKeyIds, [keyId(secret), keyId('old-secret')]);
   assert.equal(keyCheck.boundary, 'decision_support_only_no_automated_orders');
+  assert.equal(keyCheck.capabilities.watchFeedbackResearch, true);
   assert.equal(JSON.stringify(keyCheck).includes(secret), false);
 
   const missingKeyCheckResponse = await onRequestGet({
@@ -399,6 +423,57 @@ try {
     },
   });
   assert.equal(quotedSecretResponse.status, 200);
+
+  const watchFeedbackToken = buildToken({
+    ...payload,
+    pid: 'PLAN-WATCH-FEEDBACK',
+    o: 'worked_after_invalidation',
+    tr: 'no_trade',
+    tt: false,
+    dir: 'SHORT',
+    hit: 'NONE',
+    pp: false,
+    ft: 'watch_feedback',
+    wf: 'worked_after_invalidation',
+    wst: 'invalidated',
+    kid: keyId(secret),
+  }, secret);
+  const watchFeedbackResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(watchFeedbackToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(watchFeedbackResponse.status, 200);
+  const watchFeedbackHtml = await watchFeedbackResponse.text();
+  assert.ok(watchFeedbackHtml.includes('Tactical watch feedback marked WORKED AFTER INVALIDATION.'));
+  assert.ok(watchFeedbackHtml.includes('Saved to RAG.'));
+  assert.ok(calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-watch-feedback')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.source === 'discord_watch_feedback' &&
+      patch.outcome === 'worked_after_invalidation' &&
+      patch.trade_result === 'no_trade' &&
+      patch.trade_plan_json?.discordWatchFeedback?.feedbackCode === 'worked_after_invalidation' &&
+      patch.trade_plan_json.discordWatchFeedback.feedbackLabel === 'Worked after invalidation' &&
+      patch.trade_plan_json.discordWatchFeedback.approvalBoundary?.watchFeedbackApprovesTrade === false &&
+      patch.trade_plan_json.researchOutcomeFeedback?.researchTrack === 'tactical_reversal_watch' &&
+      patch.trade_plan_json.researchOutcomeFeedback.researchUseOnly === true &&
+      patch.trade_plan_json.researchOutcomeFeedback.approvalBoundary?.researchFeedbackApprovesTrade === false &&
+      patch.trade_plan_json.approvalBoundary?.researchFeedbackChangesCanExecute === false &&
+      patch.trade_plan_json.approvalBoundary?.buttonClickPlacesOrder === false;
+  }), 'expected watch feedback click to update RAG with research-only outcome evidence');
+  assert.ok(calls.some((call) =>
+    call.init.method === 'PATCH' &&
+    String(call.url).includes('/api/webhooks/webhook-id/') &&
+    String(call.url).includes('/messages/discord-message-watch-feedback') &&
+    String(call.url).includes('with_components=true') &&
+    String(call.init.body).includes('Worked after invalidation saved')
+  ), 'expected watch feedback click to lock the original Tactical Watch card');
 
   const invalidSecretResponse = await onRequestGet({
     request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(token)}`),
