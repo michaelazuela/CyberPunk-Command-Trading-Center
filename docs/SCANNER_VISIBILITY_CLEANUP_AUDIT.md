@@ -16,6 +16,18 @@ Latest Install 6 update: 2026-06-22
 
 Latest Install 7 update: 2026-06-22
 
+Latest Install 8 update: 2026-06-22
+
+## Phase 11B Live Discord Send Boundary Guard
+
+Install 8 wired the Phase 11A policy into scanner-owned live Discord trade/DeskState posts.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `tools/automation/nt-scanner.ts` / `postDiscord` | The common Discord sender is used by operational health/data-quality notices and scanner-owned trade/DeskState posts, so a blanket DeskState guard would block the wrong class of messages. | Added optional `liveSendBoundary` enforcement to `postDiscord`; dry-run and `--discord false` remain log-only/skipped, and operational notices do not pass the scanner trade/DeskState boundary. | Send-boundary-only change. It does not change setup selection, ranking, `canExecute`, entries, stops, targets, risk, or bridge reads. |
+| `tools/automation/nt-scanner.ts` / scanner trade/DeskState post paths | Live scanner trade/DeskState posts need a final operational preflight before a webhook POST. | Added `buildScannerLiveDiscordSendBoundaryReport` and wired it into Morning HTF Desk Map, Tactical Reversal Watch, Current Desk Plan, and primary scanner alert sends after the decision tape/audit path exists. | Live posts require READY health, bridge/5M/HTF/DeskState/audit/payload/webhook readiness, plus `--live-discord-policy-confirmed` or `QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED=true`. |
+| Tests and architecture guard | Phase 11B needed proof that the guard blocks unconfirmed live sends without creating trade authority. | Added scanner delivery tests for unconfirmed and confirmed live-boundary reports; architecture guard now requires the Phase 11B builder, enforcement hook, confirmation flag, and call-site wiring. | Tests assert no `canExecute` change and no trade approval creation. |
+
 ## Phase 11A Live Discord Post Eligibility Policy
 
 Install 7 added the live Discord rollout policy contract before wiring any live-send guard.

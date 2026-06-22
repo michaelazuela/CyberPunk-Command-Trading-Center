@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 8 Phase 11B live Discord send-boundary guard.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Phase 11A defined live-post eligibility; Phase 11B wires that policy into scanner-owned live Discord trade/DeskState sends as an operational guard before webhook POST.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Scanner-owned live Morning HTF Desk Map, Tactical Reversal Watch, Current Desk Plan, and primary scanner alert posts now build a Phase 11B send-boundary report after the decision tape/audit path exists. Live sends require READY health, resolved bridge, fresh completed 5M, HTF context present, DeskState/visibility metadata, audit/tape paths, validated payload, configured webhook, and explicit `--live-discord-policy-confirmed` or `QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED=true`. Dry-run behavior and operational health/data-quality notices remain unchanged.
+Trading logic changed: No intended change. This is Discord send-boundary enforcement only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: Yes. Live scanner trade/DeskState posts are blocked unless the Phase 11A rollout checklist is explicitly confirmed. Dry-run/log-only behavior is unchanged.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: After Phase 11B passes and is committed, proceed to Phase 11C: deterministic rollout checklist, controlled live-post smoke protocol, receipt verification, and rollback steps.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 7 Phase 11A live Discord post eligibility policy.
 Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts, scripts/architecture-guard.js, package.json, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Live Discord enablement needs an explicit readiness checklist before any future phase removes dry-run suppression or wires policy into the send boundary.

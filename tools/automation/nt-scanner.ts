@@ -55,6 +55,10 @@ import {
   type TargetCascadeResult,
   type TradeDecisionMapAudit,
 } from '../../src/lib/localScannerEngine';
+import {
+  evaluateLiveDiscordPostEligibility,
+  type LiveDiscordEligibilityReport,
+} from '../../src/lib/liveDiscordPostEligibility';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
 import { scoreConditionalCandidateRiskForDisplay } from '../../src/agents/conditionalCandidateRiskAgent';
 import {
@@ -175,6 +179,7 @@ export interface ScannerConfig {
   barTimeZone: BridgeTimeZoneMode;
   discordMessageCleanupEnabled?: boolean;
   discordMessageTtlMinutes?: number;
+  liveDiscordPolicyConfirmed?: boolean;
 }
 
 interface ScannerStateFile {
@@ -204,6 +209,7 @@ interface ScannerStateReadResult {
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
 export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+export type ScannerDiscordDeliverySource = ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | 'phase11_boundary' | null;
 
 export interface ScannerDiscordCleanupRecord {
   key: string;
@@ -502,7 +508,7 @@ export interface ScannerAlertDeliveryRecord {
     } | null;
   };
   deliveryStatus: ScannerAlertDeliveryStatus;
-  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordDeliverySource;
   httpStatus: number | null;
   discordMessageId: string | null;
   error: string | null;
@@ -1086,7 +1092,7 @@ export function createPendingScannerAlertDeliveryRecord(args: {
   state: ScannerState;
   confidence: number;
   candidate: SetupCandidate | null;
-  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordDeliverySource;
   auditLogPath: string | null;
   attemptedAt?: string;
   stale?: boolean;
@@ -1153,7 +1159,7 @@ export function markScannerAlertDeliveryFailed(
 
 export function markScannerAlertDeliverySkipped(
   record: ScannerAlertDeliveryRecord,
-  args: { reason: string; webhookSource: 'dry_run' | 'discord_disabled' },
+  args: { reason: string; webhookSource: 'dry_run' | 'discord_disabled' | 'phase11_boundary' },
 ): ScannerAlertDeliveryRecord {
   return {
     ...record,
@@ -1233,6 +1239,7 @@ function printHelp() {
     '  --bar-time-zone eastern        Timezone for NinjaTrader bar timestamps without offsets: eastern, central, pacific, or local.',
     '  --discord-message-cleanup true Delete scanner Discord messages after the configured TTL. Defaults to true.',
     '  --discord-message-ttl-minutes 15  Age in minutes before scanner Discord messages are deleted; 0 disables cleanup.',
+    '  --live-discord-policy-confirmed  Confirms Phase 11A dry-scan/replay checklist before live scanner trade/DeskState posts.',
     '  --preflight-active-campaign-ledger  Verify Supabase campaign ledger env/table and exit.',
     '',
     'Discord webhook precedence:',
@@ -1250,6 +1257,7 @@ function loadConfig(): ScannerConfig {
     : 'eastern';
   const ttlMinutes = Math.max(0, numberArg('discord-message-ttl-minutes', Number(process.env.SCANNER_DISCORD_MESSAGE_TTL_MINUTES || process.env.QUANT_DESK_SCANNER_MESSAGE_TTL_MINUTES || 15)));
   const cleanupEnabled = boolArg('discord-message-cleanup', boolEnv('SCANNER_DISCORD_MESSAGE_CLEANUP', true)) && ttlMinutes > 0;
+  const liveDiscordPolicyConfirmed = hasArg('live-discord-policy-confirmed') || boolEnv('QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED', false);
   return {
     instrument: ((argValue('instrument') || 'MES') as Instrument),
     bridgeInstrument: argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES',
@@ -1281,6 +1289,7 @@ function loadConfig(): ScannerConfig {
     barTimeZone,
     discordMessageCleanupEnabled: cleanupEnabled,
     discordMessageTtlMinutes: ttlMinutes,
+    liveDiscordPolicyConfirmed,
   };
 }
 
@@ -3667,7 +3676,7 @@ export async function upsertScannerReversalWatchRagRecord(args: {
 async function attachDiscordMessageReceiptToRagRecord(args: {
   planVersionId: string;
   discordMessageId: string | null;
-  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordDeliverySource;
 }): Promise<boolean> {
   if (!args.discordMessageId) return false;
   const { config } = resolveDiscordRagPersistenceConfig();
@@ -3677,7 +3686,7 @@ async function attachDiscordMessageReceiptToRagRecord(args: {
       config,
       planVersionId: args.planVersionId,
       discordMessageId: args.discordMessageId,
-      webhookSource: args.webhookSource,
+      webhookSource: realDiscordWebhookSource(args.webhookSource),
       warningLabel: 'Scanner Discord message receipt',
     });
   } catch (error) {
@@ -5586,7 +5595,7 @@ export async function prepareLiveScannerReversalWatchAlertArtifacts(args: {
 
 interface ScannerDiscordPostReceipt {
   deliveryStatus: 'sent' | 'skipped';
-  webhookSource: ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | null;
+  webhookSource: ScannerDiscordDeliverySource;
   httpStatus: number | null;
   discordMessageId: string | null;
 }
@@ -5611,6 +5620,11 @@ function scannerDiscordMessageTtlMs(config: ScannerConfig): number {
   return Math.max(0, (config.discordMessageTtlMinutes ?? 15) * 60_000);
 }
 
+function realDiscordWebhookSource(source: ScannerDiscordDeliverySource): ScannerDiscordWebhookEnvKey | null {
+  if (source === 'dry_run' || source === 'discord_disabled' || source === 'phase11_boundary') return null;
+  return source;
+}
+
 export function scannerDiscordWebhookUrlForPost(webhookUrl: string, components: unknown[] | undefined, forceWait: boolean): string {
   const base = discordWebhookUrlForPayload(webhookUrl, components);
   if (!forceWait) return base;
@@ -5625,6 +5639,47 @@ export function scannerDiscordWebhookDeleteUrl(webhookUrl: string, messageId: st
   url.search = '';
   url.hash = '';
   return url.toString();
+}
+
+export function buildScannerLiveDiscordSendBoundaryReport(args: {
+  config: Pick<ScannerConfig, 'dryRun' | 'liveDiscordPolicyConfirmed'>;
+  healthReport: ScannerHealthReport;
+  bridgeConnected: boolean;
+  bridgeInstrumentResolved: boolean;
+  completedFiveMinuteFresh: boolean;
+  htfContextPresent: boolean;
+  deskState: DeskState | null;
+  decisionTapePath: string | null;
+  auditPath: string | null;
+  discordPayloadValidated: boolean;
+  webhookConfigured: boolean;
+}): LiveDiscordEligibilityReport {
+  return evaluateLiveDiscordPostEligibility({
+    scannerHealth: args.healthReport,
+    bridgeConnected: args.bridgeConnected,
+    bridgeInstrumentResolved: args.bridgeInstrumentResolved,
+    completedFiveMinuteFresh: args.completedFiveMinuteFresh,
+    htfContextPresent: args.htfContextPresent,
+    deskState: args.deskState,
+    decisionTapeWritable: Boolean(args.decisionTapePath),
+    auditPath: args.auditPath,
+    discordPayloadValidated: args.discordPayloadValidated,
+    discordPayloadHasVisibilityMetadata: args.deskState?.visibilityMetadata?.sourceOfTruth === 'scanner_desk_state_visibility_metadata',
+    discordWebhookConfigured: args.webhookConfigured,
+    dryRun: args.config.dryRun,
+    freshDryScanObserved: Boolean(args.config.liveDiscordPolicyConfirmed),
+    diagnosticReplayPassed: Boolean(args.config.liveDiscordPolicyConfirmed),
+  });
+}
+
+function scannerLiveDiscordSendBoundarySkipReceipt(report: LiveDiscordEligibilityReport | null | undefined): ScannerDiscordPostReceipt | null {
+  if (!report || report.eligible) return null;
+  return {
+    deliveryStatus: 'skipped',
+    webhookSource: 'phase11_boundary',
+    httpStatus: null,
+    discordMessageId: null,
+  };
 }
 
 export function recordScannerDiscordCleanupMessage(args: {
@@ -5648,9 +5703,7 @@ export function recordScannerDiscordCleanupMessage(args: {
     key,
     messageId: args.receipt.discordMessageId,
     kind: args.kind,
-    webhookSource: args.receipt.webhookSource === 'dry_run' || args.receipt.webhookSource === 'discord_disabled'
-      ? null
-      : args.receipt.webhookSource,
+    webhookSource: realDiscordWebhookSource(args.receipt.webhookSource),
     postedAt,
     expiresAt,
     deletedAt: null,
@@ -5861,6 +5914,7 @@ async function postDiscord(
   config: ScannerConfig,
   files: string[] = [],
   webhookOverride?: ScannerWebhookResolution,
+  liveSendBoundary?: LiveDiscordEligibilityReport,
 ): Promise<ScannerDiscordPostReceipt> {
   validateDiscordPayload(payload, files);
   if (config.dryRun || !config.discordEnabled) {
@@ -5871,6 +5925,11 @@ async function postDiscord(
       httpStatus: null,
       discordMessageId: null,
     };
+  }
+  const boundarySkipReceipt = scannerLiveDiscordSendBoundarySkipReceipt(liveSendBoundary);
+  if (boundarySkipReceipt) {
+    console.warn(`[scanner-discord] Phase 11B live Discord send boundary blocked scanner post: ${liveSendBoundary?.blockers.join(' | ')}`);
+    return boundarySkipReceipt;
   }
   const webhook = webhookOverride || resolveScannerDiscordWebhookUrl();
   if (!webhook.url) {
@@ -7392,6 +7451,19 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
 
   console.log(`[scanner] ${session} ${completed5m.time}: ${stateForAlert} confidence ${confidence.score}/100 | ${sameCompletedCandle ? 'same completed 5M, refreshed live plan | ' : ''}${alertDecision.reason} | decision tape=${decisionTapePath}`);
   state.lastCompleted5mBySession[sessionKey] = completed5m.time;
+  const liveDiscordSendBoundary = (auditPath: string | null): LiveDiscordEligibilityReport => buildScannerLiveDiscordSendBoundaryReport({
+    config,
+    healthReport,
+    bridgeConnected: healthOk,
+    bridgeInstrumentResolved: Boolean(config.bridgeInstrument),
+    completedFiveMinuteFresh: completed5mAssurance.status === 'ready' && !bridgeFreshness.stale,
+    htfContextPresent: deskState.htfContextStatus !== 'insufficient' && deskState.dataQualityStatus !== 'data_limited',
+    deskState,
+    decisionTapePath,
+    auditPath,
+    discordPayloadValidated: true,
+    webhookConfigured: Boolean(resolveScannerDiscordWebhookUrl().url),
+  });
 
   if (window.allowsDiscordAlert && shouldSendScannerMorningHtfDeskMap({
     tradeDate,
@@ -7410,7 +7482,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         completed5m,
         currentPrice,
       });
-      const receipt = await postDiscord(payload, config);
+      const receipt = await postDiscord(payload, config, [], undefined, liveDiscordSendBoundary(decisionTapePath));
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         state.morningHtfDeskMapSent[morningMapKey] = scannerMorningHtfDeskMapRecord({
@@ -7489,7 +7561,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           decisionTapePath,
           planVersionId: reversalWatchPlanVersionId,
         });
-        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files);
+        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files, undefined, liveDiscordSendBoundary(decisionTapePath));
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           state.reversalWatchSent[reversalWatchKey] = scannerReversalWatchRecord({
@@ -7588,7 +7660,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           deskState,
           decisionTapePath,
         });
-        if (shouldPersistScannerAlertToRag(deskState)) {
+        const deskPlayLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
+        if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || deskPlayLiveBoundary.eligible)) {
           try {
             await upsertScannerDiscordAlertRagRecord({
               planVersionId: deskPlayPlanVersionId,
@@ -7607,7 +7680,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
             console.warn(`Scanner Desk Play RAG pending save failed safely: ${sanitizedError(error)}`);
           }
         }
-        const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files);
+        const receipt = await postDiscord(deskPlayArtifacts.payload, config, deskPlayArtifacts.files, undefined, deskPlayLiveBoundary);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           const replaceResult = await replacePriorScannerDiscordCurrentDeskPlans({
@@ -7720,7 +7793,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       candidateLifecycleTrace,
       deskState,
     });
-    if (shouldPersistScannerAlertToRag(deskState)) {
+    const alertLiveBoundary = liveDiscordSendBoundary(alertArtifacts.auditLogPath);
+    if (shouldPersistScannerAlertToRag(deskState) && (config.dryRun || !config.discordEnabled || alertLiveBoundary.eligible)) {
       try {
         await upsertScannerDiscordAlertRagRecord({
           planVersionId,
@@ -7758,7 +7832,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     await writeState(state);
 
     try {
-      const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files);
+      const receipt = await postDiscord(alertArtifacts.payload, config, alertArtifacts.files, undefined, alertLiveBoundary);
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         const recoveredOperational = await cleanupRecoveredScannerOperationalDiscordMessages({
@@ -7822,7 +7896,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       } else {
         state.alertDeliveries[alertKey] = markScannerAlertDeliverySkipped(pendingDelivery, {
           reason: `Discord delivery skipped: ${receipt.webhookSource || 'unknown'}.`,
-          webhookSource: receipt.webhookSource === 'discord_disabled' ? 'discord_disabled' : 'dry_run',
+          webhookSource: receipt.webhookSource === 'discord_disabled'
+            ? 'discord_disabled'
+            : receipt.webhookSource === 'phase11_boundary'
+              ? 'phase11_boundary'
+              : 'dry_run',
         });
         await releaseDurableActiveCampaignScannerAlertClaim({
           config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,

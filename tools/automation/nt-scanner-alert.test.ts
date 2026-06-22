@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
+import type { ScannerHealthReport } from '../../src/agents/scannerHealthAgent';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
   barsCoverRequestedLookback,
@@ -62,6 +63,7 @@ import {
   shouldSuppressActiveCampaignScannerAlert,
   buildScannerReversalWatchLines,
   buildScannerMorningHtfDeskMapPayload,
+  buildScannerLiveDiscordSendBoundaryReport,
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
@@ -3013,6 +3015,110 @@ assert.equal(staleFailedDelivery.retryEligible, false);
 const skippedDelivery = markScannerAlertDeliverySkipped(pendingDelivery, { reason: 'dry-run', webhookSource: 'dry_run' });
 assert.equal(skippedDelivery.deliveryStatus, 'skipped');
 assert.equal(skippedDelivery.retryEligible, false);
+const phase11SkippedDelivery = markScannerAlertDeliverySkipped(pendingDelivery, { reason: 'Phase 11B boundary', webhookSource: 'phase11_boundary' });
+assert.equal(phase11SkippedDelivery.deliveryStatus, 'skipped');
+assert.equal(phase11SkippedDelivery.webhookSource, 'phase11_boundary');
+assert.equal(phase11SkippedDelivery.retryEligible, false);
+
+function scannerReadyHealthFixture(): ScannerHealthReport {
+  return {
+    status: 'READY',
+    ready: true,
+    canTrustAlerts: true,
+    checks: [],
+    blockingReasons: [],
+    warnings: [],
+    summary: 'READY: fixture',
+    recommendedAction: 'Fixture.',
+    approvalBoundary: {
+      healthApprovesTrade: false,
+      healthChangesRules: false,
+      healthCreatesEntry: false,
+      healthCreatesTargets: false,
+      healthOverridesScanner: false,
+      healthOverridesRisk: false,
+    },
+  };
+}
+
+function phase11BoundaryDeskStateFixture(): DeskState {
+  const visibilityMetadata: ScannerVisibilityMetadata = {
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    visibilityMode: 'POST_WATCH',
+    discordAction: 'post_watch',
+    suppressionReason: null,
+    nextTrigger: null,
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: false,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: [],
+  };
+  return buildDeskState({
+    state: 'Watching',
+    candidate,
+    visibilityMetadata,
+    candidateLifecycleTrace: buildCandidateLifecycleTrace({
+      candidates: [candidate],
+      selectedCandidate: candidate,
+      state: 'Watching',
+      alertDecision: { shouldSend: true, reason: 'Phase 11B fixture.' },
+      canExecute: false,
+    }),
+    canExecute: false,
+  });
+}
+
+const liveBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: false,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: phase11BoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-02-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-02-MES-PHASE11B.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(liveBoundaryWithoutChecklist.eligible, false);
+assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('fresh dry scan')));
+assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('Diagnostic replay')));
+assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
+assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
+
+const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: phase11BoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-02-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-02-MES-PHASE11B.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(liveBoundaryWithChecklist.eligible, true);
+assert.equal(liveBoundaryWithChecklist.blockers.length, 0);
 
 try {
   await fs.mkdir(auditDir, { recursive: true });

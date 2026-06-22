@@ -828,6 +828,35 @@ function checkPhase11LiveDiscordEligibilityPolicy() {
   ) {
     fail('responsibilityRegistry.ts must identify Phase 11A live Discord eligibility policy as policy-only ownership metadata.');
   }
+
+  const scannerPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner.ts');
+  const scannerContent = readFileSafe(scannerPath);
+  for (const requiredPhrase of [
+    'buildScannerLiveDiscordSendBoundaryReport',
+    'scannerLiveDiscordSendBoundarySkipReceipt',
+    'liveDiscordPolicyConfirmed',
+    'QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED',
+    'Phase 11B live Discord send boundary blocked scanner post',
+    'phase11_boundary',
+    'liveDiscordSendBoundary(decisionTapePath)',
+    'liveDiscordSendBoundary(alertArtifacts.auditLogPath)',
+  ]) {
+    if (!scannerContent.includes(requiredPhrase)) {
+      fail(`nt-scanner.ts is missing Phase 11B live-send boundary phrase: ${requiredPhrase}`);
+    }
+  }
+
+  const scannerAlertTestPath = path.join(ROOT, 'tools', 'automation', 'nt-scanner-alert.test.ts');
+  const scannerAlertTestContent = readFileSafe(scannerAlertTestPath);
+  if (
+    !scannerAlertTestContent.includes('liveBoundaryWithoutChecklist') ||
+    !scannerAlertTestContent.includes('liveBoundaryWithChecklist') ||
+    !scannerAlertTestContent.includes('fresh dry scan') ||
+    !scannerAlertTestContent.includes('Diagnostic replay') ||
+    !scannerAlertTestContent.includes('createsTradeApproval, false')
+  ) {
+    fail('nt-scanner-alert.test.ts must cover Phase 11B live Discord send-boundary checklist enforcement and no-approval-change flags.');
+  }
 }
 
 function checkCodexPatchHygienePolicy() {
