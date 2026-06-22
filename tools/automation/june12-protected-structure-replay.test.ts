@@ -203,6 +203,7 @@ assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG');
 assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
 assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
 assert.equal(deskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
+assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
 assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
@@ -211,6 +212,7 @@ assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_a
 assert.equal(deskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
+assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.ok(deskState.primaryDeskPlay.longBias.executableConsideration.missingGates.some((gate) => /Entry|stop|T1|T2/i.test(gate)));
 assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');

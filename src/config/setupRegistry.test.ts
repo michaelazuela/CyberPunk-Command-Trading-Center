@@ -1,4 +1,6 @@
 import {
+  APPROVED_SETUP_TYPES,
+  REGISTERED_SETUP_TYPES,
   SETUP_REGISTRY,
   getAllowedSetupRegistry,
   getDeprecatedSetupRegistry,
@@ -28,6 +30,9 @@ function assertExactSet(actual: Set<SetupType>, expected: SetupType[], label: st
   assert(actual.size === expected.length, `${label} expected ${expected.length} entries but found ${actual.size}`);
   assertContainsAll(actual, expected, label);
 }
+
+assertExactSet(setupTypes(SETUP_REGISTRY), REGISTERED_SETUP_TYPES, 'registered setup types');
+assert(APPROVED_SETUP_TYPES === REGISTERED_SETUP_TYPES, 'deprecated approved setup types export must remain a compatibility alias');
 
 const primaryExpected = [
   SetupType.SweepMssFvgRetrace,

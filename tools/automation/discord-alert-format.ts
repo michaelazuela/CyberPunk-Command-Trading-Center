@@ -89,7 +89,11 @@ export interface CompactDeskStateForDiscord {
     modelRouting?: {
       sourceOfTruth?: string;
       primaryDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      bestActiveModel?: string | null;
+      bestActiveModelName?: string | null;
+      /** @deprecated Use bestActiveModel. */
       bestApprovedModel?: string | null;
+      /** @deprecated Use bestActiveModelName. */
       bestApprovedModelName?: string | null;
       routingSummary?: string | null;
       longModelFit?: CompactDeskPlayModelFit | null;
@@ -234,6 +238,8 @@ interface CompactDeskPlayExecutableConsideration {
   sourceOfTruth?: string;
   direction?: 'LONG' | 'SHORT' | string;
   status?: string;
+  selectedRegisteredModel?: string | null;
+  /** @deprecated Use selectedRegisteredModel. */
   selectedApprovedModel?: string | null;
   canExecuteNow?: boolean;
   gateSummary?: string;
@@ -823,6 +829,12 @@ function isDeskStateWatch(args: CompactDiscordSummaryArgs, candidate: SetupCandi
   );
 }
 
+function completedFiveMinuteProofLine(trigger: string): string {
+  return /completed 5m/i.test(trigger)
+    ? 'Required proof: completed 5M trigger, protected structure stop, target room, and normal app-owned gates.'
+    : 'Required proof: completed 5M confirmation first, then protected structure stop, target room, and normal app-owned gates.';
+}
+
 function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: SetupCandidate): DiscordWebhookPayload {
   const direction = candidate.direction === 'SHORT' ? 'SHORT' : candidate.direction === 'LONG' ? 'LONG' : 'NO TRADE';
   const sessionLabel = sessionShortLabel(args.session);
@@ -852,6 +864,8 @@ function scannerWatchDiscordSummary(args: CompactDiscordSummaryArgs, candidate: 
     `Reason: ${reason}`,
     `Invalidation: ${invalidation}`,
     '',
+    completedFiveMinuteProofLine(trigger),
+    'Boundary: canExecute=false. This watch does not approve execution.',
     'No chase. Wait for completed 5M proof, protected structure stop, target room, and normal app-owned gates.',
     'No entry, stop, T1, T2, or outcome buttons are included in this watch alert.',
     'Decision support only. No automated orders.',

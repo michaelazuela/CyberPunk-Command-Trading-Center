@@ -229,14 +229,14 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!scannerContent.includes('visibilityMetadata') || !scannerContent.includes('visibility: visibilityMetadata')) {
     fail('nt-scanner.ts must persist visibility metadata into scanner audit outputs.');
   }
-  if (!scannerContent.includes('candidateLifecycleTrace') || !scannerContent.includes('deskState')) {
-    fail('nt-scanner.ts must persist scanner-owned candidateLifecycleTrace and deskState into scanner audit outputs.');
+  if (!scannerContent.includes('candidateLifecycleTrace') || !scannerContent.includes('tradeDecisionMapAudit') || !scannerContent.includes('deskState')) {
+    fail('nt-scanner.ts must persist scanner-owned tradeDecisionMapAudit, candidateLifecycleTrace, and deskState into scanner audit outputs.');
   }
   if (!scannerContent.includes('shouldPersistScannerAlertToRag') || !scannerContent.includes("discordAction !== 'post_watch'")) {
     fail('nt-scanner.ts must keep watch-only DeskState alerts out of pending trade/outcome RAG persistence.');
   }
-  if (!scannerContent.includes('trade_plan_json') || !scannerContent.includes('visibility: args.visibilityMetadata') || !scannerContent.includes('deskState: args.deskState')) {
-    fail('nt-scanner.ts must persist DeskState visibility metadata into plan/review RAG trade_plan_json.');
+  if (!scannerContent.includes('trade_plan_json') || !scannerContent.includes('visibility: args.visibilityMetadata') || !scannerContent.includes('tradeDecisionMapAudit') || !scannerContent.includes('deskState: args.deskState')) {
+    fail('nt-scanner.ts must persist DeskState visibility metadata and trade-decision map audit into plan/review RAG trade_plan_json.');
   }
   if (!scannerContent.includes('buildScannerDataQualityNoticePayload') || !scannerContent.includes('sendScannerDataQualityNoticeIfNeeded') || !scannerContent.includes('No trade alert was posted')) {
     fail('nt-scanner.ts must surface stale/missing completed 5M data as a Discord data-quality notice instead of silently falling through Market Mapping.');
@@ -457,11 +457,13 @@ function checkScannerVisibilityMetadataBoundary() {
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.direction, 'LONG')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.trendConfirmation.status, 'aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing')") ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation)') ||
     !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.modelRouting.shortModelFit.status, 'not_aligned')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof')") ||
+    !june12ReplayProofContent.includes('assert.equal(deskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation)') ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase')") ||
     !june12ReplayProofContent.includes("assert.equal(deskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned')") ||

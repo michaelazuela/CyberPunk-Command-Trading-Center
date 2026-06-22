@@ -27,6 +27,7 @@ import {
   buildCandidateLifecycleTrace,
   buildDeskState,
   buildTargetCascade,
+  buildTradeDecisionMapAudit,
   classifyScannerVisibility,
   DEFAULT_SCANNER_RISK_GUARDS,
   getScannerTradeDate,
@@ -52,6 +53,7 @@ import {
   type ScannerThresholds,
   type ScannerVisibilityMetadata,
   type TargetCascadeResult,
+  type TradeDecisionMapAudit,
 } from '../../src/lib/localScannerEngine';
 import { selectScannerPlan } from '../../src/agents/scannerPlanSelectionAgent';
 import { scoreConditionalCandidateRiskForDisplay } from '../../src/agents/conditionalCandidateRiskAgent';
@@ -1946,6 +1948,7 @@ async function writeScannerDiscordAuditLog(args: {
   alertReason: string;
   visibilityMetadata?: ScannerVisibilityMetadata;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  tradeDecisionMapAudit?: TradeDecisionMapAudit;
   deskState?: DeskState;
   chartMarkup: string | null;
   levelMap: string | null;
@@ -1973,6 +1976,7 @@ async function writeScannerDiscordAuditLog(args: {
     canExecute: Boolean(args.normalized.canExecute),
     staleReason: args.staleReason,
   });
+  const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
   const deskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
@@ -2006,6 +2010,7 @@ async function writeScannerDiscordAuditLog(args: {
     scannerAuditWarnings: args.scannerAuditWarnings || [],
     visibility: visibilityMetadata,
     candidateLifecycleTrace,
+    tradeDecisionMapAudit,
     deskState,
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
@@ -2345,6 +2350,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
   alertDecision: { shouldSend: boolean; reason: string };
   visibilityMetadata?: ScannerVisibilityMetadata;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  tradeDecisionMapAudit?: TradeDecisionMapAudit;
   targetCascade?: TargetCascadeResult | null;
   deskState?: DeskState;
   planVersionId: string;
@@ -2378,6 +2384,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     canExecute: Boolean(args.normalized.canExecute),
     staleReason: args.staleReason,
   });
+  const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
   const deskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
@@ -2428,6 +2435,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     scannerState: args.state,
     visibility: visibilityMetadata,
     candidateLifecycleTrace,
+    tradeDecisionMapAudit,
     deskState,
     reversalWatch: {
       lines: reversalWatchLines,
@@ -3466,6 +3474,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
   candidate: SetupCandidate | null;
   visibilityMetadata?: ScannerVisibilityMetadata | null;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace | null;
+  tradeDecisionMapAudit?: TradeDecisionMapAudit | null;
   deskState?: DeskState | null;
   confidence: number;
 }): Promise<void> {
@@ -3488,6 +3497,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
     discordAlertId: args.planVersionId,
     notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
   });
+  const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
   const sniperTriggerWatch = scannerSniperTriggerWatchMetadata({
     deskState: args.deskState,
     normalized: args.normalized,
@@ -3525,6 +3535,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
       setupCandidates: args.candidate ? [args.candidate] : [],
       visibility: args.visibilityMetadata || null,
       candidateLifecycleTrace: args.candidateLifecycleTrace || null,
+      tradeDecisionMapAudit,
       deskState: args.deskState || null,
       sniperTriggerWatch,
       targetObjectives: args.analysis.structuredChartContext?.targetObjectives || [],
@@ -5176,6 +5187,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
   alertReason: string;
   visibilityMetadata?: ScannerVisibilityMetadata;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
+  tradeDecisionMapAudit?: TradeDecisionMapAudit;
   deskState?: DeskState;
   planVersionId: string;
   outputDir?: string;
@@ -5202,6 +5214,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     canExecute: Boolean(args.normalized.canExecute),
     staleReason: args.staleReason,
   });
+  const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
   const deskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
@@ -5252,6 +5265,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     alertReason: args.alertReason,
     visibilityMetadata,
     candidateLifecycleTrace,
+    tradeDecisionMapAudit,
     deskState,
     chartMarkup,
     levelMap,

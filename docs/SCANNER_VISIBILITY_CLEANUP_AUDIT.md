@@ -2,6 +2,12 @@
 
 Date: 2026-06-10
 
+Latest Install 1 update: 2026-06-22
+
+Latest Install 2 update: 2026-06-22
+
+Latest Install 3 update: 2026-06-22
+
 ## Phase 8.45 Audit
 
 Scope inspected:
@@ -15,6 +21,16 @@ Scope inspected:
 - `src/config/setupRegistry.ts`
 - `src/config/responsibilityRegistry.ts`
 - `scripts/architecture-guard.js`
+- `docs/PROJECT_STATUS.md`
+
+### 2026-06-22 Install 1 Follow-Up
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `src/lib/localScannerEngine.ts` / DeskState model routing | DeskState metadata still exposed `bestApprovedModel` / `selectedApprovedModel` names, which can imply execution approval even though the values are diagnostic routing metadata only. | Added `bestActiveModel`, `bestActiveModelName`, and `selectedRegisteredModel` as precise source-of-truth fields while keeping the old names as deprecated audit-compatibility aliases. Reworded routing summaries from `approved model` to `active model` / `execution-eligible active model`. | Metadata/text-only change. Existing selection, ranking, DeskState construction, `canExecute`, entries, stops, targets, risk gates, and bridge behavior are unchanged. |
+| `tools/automation/discord-alert-format.ts` / compact DeskState type | Formatter type accepted only legacy model-routing names. | Added optional precise fields so Discord can consume DeskState metadata without treating model registration as approval. | Type-only change. Formatter output and Discord hard blockers unchanged. |
+| `src/config/setupRegistry.ts` / setup type catalog | `APPROVED_SETUP_TYPES` named the full registry catalog as if registration were execution approval. | Added `REGISTERED_SETUP_TYPES`; kept `APPROVED_SETUP_TYPES` as a deprecated compatibility alias. | Returned setup list is identical. No setup definitions, active sessions, priorities, or scanner accessors changed. |
+| `scripts/architecture-guard.js` / DeskState guard | Guard protected legacy `bestApprovedModel` checks but did not require precise authority fields. | Added guard checks for `bestActiveModel` and `selectedRegisteredModel` regression assertions. | Guard-only change. No runtime behavior changed. |
 
 ### Removed Or Reworded
 
@@ -32,6 +48,7 @@ Scope inspected:
 | `tools/automation/discord-alert-format.ts` status mapping | It independently maps status to compact Discord wording, but this is formatting behavior with test coverage and can still consume scanner visibility metadata in a later UI/Discord phase. No deletion in Phase 8.45. |
 | Deprecated setup registry entries | Deprecated entries are already excluded from `getPrimarySetupRegistry`. They remain as supporting compatibility metadata and tests assert legacy labels normalize to generic ICT setup. No active deletion. |
 | Replay diagnostics under `tools/automation/replay-diagnostics` | Historical artifacts contain old status language, but they are immutable diagnostics, not live scanner behavior. No cleanup required. |
+| Historical research docs and generated research artifacts with `approved model/setup` phrasing | They describe research taxonomy or immutable generated samples, not live scanner/Discord authority. | Deferred to avoid rewriting historical evidence and test fixtures unrelated to live DeskState visibility. |
 
 ## Phase 8.5 Authority Language
 
@@ -87,3 +104,56 @@ No changes were made to:
 - `canExecute`
 - bridge behavior
 - Discord hard blockers
+
+## Install 2: Phase 9A-9C Source-Of-Truth Propagation
+
+Scope:
+
+- Phase 9A: Trade Decision Map Audit
+- Phase 9B: Candidate Lifecycle Trace
+- Phase 9C: Active Desk State
+
+### Added
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `tools/automation/nt-scanner.ts` / Discord audit writer | Live scanner audit JSON already carried visibility metadata, candidate lifecycle trace, and DeskState, but not the Phase 9A trade-decision map audit. | Added `tradeDecisionMapAudit` to scanner Discord audit JSON using `buildTradeDecisionMapAudit()`. | Metadata/audit-only. No candidate selection, ranking, posting gate, or canExecute behavior changed. |
+| `tools/automation/nt-scanner.ts` / decision tape writer | Decision tape could explain the selected cycle lifecycle, but did not include the registry-level map that explains all model authority boundaries. | Added `tradeDecisionMapAudit` to each decision-tape event. | Audit-only. Existing event state and Discord decision are unchanged. |
+| `tools/automation/nt-scanner.ts` / RAG pending record | RAG stored visibility, lifecycle trace, and DeskState, but lacked the model map needed to interpret authority boundaries later. | Added `tradeDecisionMapAudit` to `trade_plan_json`. | Persistence metadata only. No schema migration; uses existing JSON field. |
+| `scripts/architecture-guard.js` | Guard required visibility/lifecycle/DeskState persistence but not the trade-decision map. | Guard now requires `tradeDecisionMapAudit` in scanner audit/RAG source-of-truth paths. | Guard-only. |
+
+### Deferred
+
+| Candidate | Reason |
+| --- | --- |
+| Changing Discord watch cadence or posting more watch cards | Belongs to later Discord watch-alert phases. Install 2 only propagates source-of-truth metadata. |
+| Changing candidate ranking or long/short selection | Would affect scanner behavior and requires a separately approved phase. |
+| Removing legacy audit compatibility fields | Stored audit/RAG records and tests still read them. Removal is not needed for source-of-truth cleanup. |
+
+### Install 2 Impact
+
+- Trading logic changed: No.
+- Scanner behavior changed: No.
+- Discord behavior changed: No runtime/cadence change.
+- Bridge behavior changed: No.
+
+## Install 3: Phase 9D Discord Watch Alert Hardening
+
+Scope:
+
+- Phase 9D: Discord Watch Alerts
+
+### Added
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `tools/automation/discord-alert-format.ts` / `scannerWatchDiscordSummary` | Watch cards already rendered from DeskState, but the proof boundary could be clearer for all watch states. | Added explicit completed-5M proof wording and `canExecute=false` boundary text to watch-only cards. | Presentation-only. No posting gate, candidate selection, RAG save, canExecute, or trade approval behavior changed. |
+| `tools/automation/nt-scanner-alert.test.ts` / watch fixture | Watch fixture covered no levels/no buttons, but did not assert the stronger proof boundary or Install 2 trade map in watch audits. | Added assertions for completed-5M proof text, `canExecute=false`, no levels/buttons, no RAG persistence, and `tradeDecisionMapAudit` in watch audit JSON. | Test-only reinforcement across Install 1, 2, and 3. |
+
+### Install 3 Impact
+
+- Trading logic changed: No.
+- Scanner behavior changed: No.
+- Discord behavior changed: Yes, watch-only card wording is clearer.
+- Bridge behavior changed: No.
+- RAG behavior changed: No; watch-only alerts remain out of pending trade/outcome RAG persistence.

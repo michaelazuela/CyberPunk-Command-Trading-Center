@@ -3,6 +3,54 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 3 Discord Watch Alert hardening.
+Files changed: tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9D requires watch alerts to be Discord-ready without creating execution approval. Watch cards now state the completed-5M proof boundary and `canExecute=false` explicitly while preserving no levels, no outcome buttons, and no pending RAG save for watch-only alerts.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Watch-only Discord text is clearer and tests now assert integration with Install 1 visibility metadata and Install 2 trade-decision map audit.
+Trading logic changed: No. This is watch-card wording and test coverage only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: Yes. Watch-only cards now explicitly show completed-5M proof requirements and `canExecute=false`.
+Journal/RAG impact: No behavior change. Watch-only alerts remain excluded from pending trade/outcome RAG persistence.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Commit Install 1-3 together, then review whether Install 4 should start Phase 9E Watch-To-Plan Promotion.
+
+## Previous Change
+
+Date: 2026-06-22
+Task: Install 2 source-of-truth propagation for Phase 9A-9C.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Carry the scanner-owned Trade Decision Map Audit alongside existing Candidate Lifecycle Trace and DeskState metadata so scanner audits, decision tape, Discord/RAG records, and future UI consumers share the same authority map without changing trade approvals.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Scanner Discord audit JSON, decision tape events, and RAG `trade_plan_json` now include `tradeDecisionMapAudit` generated from `buildTradeDecisionMapAudit()`.
+Trading logic changed: No. This is source-of-truth metadata propagation only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, Discord cadence, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence change. Existing Discord audit/RAG metadata becomes more complete; no new Discord hard blocker was added.
+Journal/RAG impact: Yes, metadata only inside existing JSON payloads. No schema migration added.
+Supabase impact: Uses existing `trade_embeddings.trade_plan_json`; no migration added.
+Known risks: None known.
+Next recommended action: Review this Install 2 report before considering Install 3.
+
+## Previous Change
+
+Date: 2026-06-22
+Task: Install 1 Foundation Cleanup follow-up for DeskState authority metadata.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, tools/automation/discord-alert-format.ts, tools/automation/june12-protected-structure-replay.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Complete the Phase 8.45-8.6 cleanup pass by making DeskState/model-routing metadata use precise authority terms while preserving existing scanner, Discord, RAG, bridge, and canExecute behavior.
+Tests run: npx tsx src/config/setupRegistry.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/june12-protected-structure-replay.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Added `bestActiveModel`, `bestActiveModelName`, `selectedRegisteredModel`, and `REGISTERED_SETUP_TYPES` as precise metadata names while retaining deprecated compatibility aliases for stored audits/tests.
+Trading logic changed: No. This is metadata, docs, tests, and guard coverage only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None. NinjaTrader/market_bars OHLC remains source of truth.
+Discord impact: No runtime behavior change. Formatter typing can now consume precise DeskState authority fields; no new Discord hard blocker or cadence change was added.
+Journal/RAG impact: No schema change. Existing audit/RAG compatibility aliases remain.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Review this Install 1 report before considering Install 2.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Add Tactical Reversal Watch learning and research feedback buttons.
 Files changed: tools/automation/discord-outcome-buttons.ts, tools/automation/discord-outcome-buttons.test.ts, functions/api/discord-outcome.js, functions/api/discord-outcome.test.js, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Tactical Reversal Watch posts need trader feedback buttons for cases where a watch map worked, failed, was stale, or worked after invalidation, and that feedback must be saved as learning plus research evidence without changing trade approval.

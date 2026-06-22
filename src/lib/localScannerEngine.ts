@@ -302,6 +302,10 @@ export interface DeskPlayExecutableConsideration {
   sourceOfTruth: 'scanner_executable_consideration_gate_metadata';
   direction: 'LONG' | 'SHORT';
   status: 'ready_for_existing_can_execute_gate' | 'review_only_missing_proof' | 'not_aligned' | 'data_limited';
+  selectedRegisteredModel: SetupType | null;
+  /**
+   * @deprecated Use selectedRegisteredModel. Kept for stored audit compatibility.
+   */
   selectedApprovedModel: SetupType | null;
   canExecuteNow: false;
   gateSummary: string;
@@ -456,7 +460,15 @@ export interface PrimaryDeskPlay {
   modelRouting: {
     sourceOfTruth: 'scanner_protected_structure_model_routing';
     primaryDirection: DeskPlayDirection;
+    bestActiveModel: SetupType | null;
+    bestActiveModelName: string | null;
+    /**
+     * @deprecated Use bestActiveModel. Kept for stored audit compatibility.
+     */
     bestApprovedModel: SetupType | null;
+    /**
+     * @deprecated Use bestActiveModelName. Kept for stored audit compatibility.
+     */
     bestApprovedModelName: string | null;
     longModelFit: DeskPlayApprovedModelFit;
     shortModelFit: DeskPlayApprovedModelFit;
@@ -2030,6 +2042,7 @@ function buildExecutableConsideration(args: {
       sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
       direction: args.direction,
       status: 'data_limited',
+      selectedRegisteredModel: null,
       selectedApprovedModel: null,
       canExecuteNow: false,
       gateSummary: 'Data-limited HTF context prevents executable consideration.',
@@ -2042,9 +2055,10 @@ function buildExecutableConsideration(args: {
       sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
       direction: args.direction,
       status: 'not_aligned',
+      selectedRegisteredModel: args.modelFit.setupType,
       selectedApprovedModel: args.modelFit.setupType,
       canExecuteNow: false,
-      gateSummary: 'Protected structure does not route this side into an approved executable model.',
+      gateSummary: 'Protected structure does not route this side into an active execution-eligible model.',
       missingGates: args.modelFit.missingProof,
       approvalBoundary: boundary,
     };
@@ -2055,11 +2069,12 @@ function buildExecutableConsideration(args: {
     sourceOfTruth: 'scanner_executable_consideration_gate_metadata',
     direction: args.direction,
     status: ready ? 'ready_for_existing_can_execute_gate' : 'review_only_missing_proof',
+    selectedRegisteredModel: args.modelFit.setupType,
     selectedApprovedModel: args.modelFit.setupType,
     canExecuteNow: false,
     gateSummary: ready
-      ? 'Approved model fit is structurally complete; existing canExecute gate remains the only executor.'
-      : 'Approved model fit is visible, but normal 5M execution gates still need proof.',
+      ? 'Active model fit is structurally complete; existing canExecute gate remains the only executor.'
+      : 'Active model fit is visible, but normal 5M execution gates still need proof.',
     missingGates,
     approvalBoundary: boundary,
   };
@@ -2379,13 +2394,15 @@ function buildDeskPlayModelRouting(args: {
     ? args.shortExecutableConsideration
     : null;
   const routingSummary = primaryFit?.status === 'best_fit'
-    ? `${args.primaryDirection} routes to approved model ${primaryFit.modelName}; execution still requires normal canExecute gates.`
+    ? `${args.primaryDirection} routes to active model ${primaryFit.modelName}; execution still requires normal canExecute gates.`
     : args.primaryDirection === 'WAIT'
-    ? 'No protected-structure side is routed into an approved primary model as the active desk direction.'
-    : `${args.primaryDirection} has no approved executable model route this cycle.`;
+    ? 'No protected-structure side is routed into an active primary model as the active desk direction.'
+    : `${args.primaryDirection} has no execution-eligible active model route this cycle.`;
   return {
     sourceOfTruth: 'scanner_protected_structure_model_routing',
     primaryDirection: args.primaryDirection,
+    bestActiveModel: primaryFit?.setupType || null,
+    bestActiveModelName: primaryFit?.modelName || null,
     bestApprovedModel: primaryFit?.setupType || null,
     bestApprovedModelName: primaryFit?.modelName || null,
     longModelFit: args.longModelFit,

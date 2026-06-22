@@ -2574,6 +2574,9 @@ assert.equal(tapeEvent.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate
 assert.equal(tapeEvent.candidateLifecycleTrace.candidateCount, 0);
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.shouldSend, false);
 assert.equal(tapeEvent.candidateLifecycleTrace.discordDecision.reason, 'TriggerPending is logged locally as developing context.');
+assert.equal(tapeEvent.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
+assert.equal(tapeEvent.tradeDecisionMapAudit.tradingLogicChanged, false);
+assert.ok(tapeEvent.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === SetupType.TurtleSoup));
 assert.equal(tapeEvent.reversalWatch.lines.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_lines');
 assert.equal(tapeEvent.reversalWatch.state.sourceOfTruth, 'scanner_campaign_exhaustion_reversal_watch_state');
 assert.equal(tapeEvent.reversalWatch.state.approvalBoundary.changesCanExecute, false);
@@ -3277,6 +3280,9 @@ try {
   assert.equal(audit.candidateLifecycleTrace.candidateCount, 1);
   assert.equal(audit.candidateLifecycleTrace.selectedCandidate.setupType, candidate.setupType);
   assert.equal(audit.candidateLifecycleTrace.discordDecision.shouldSend, true);
+  assert.equal(audit.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
+  assert.equal(audit.tradeDecisionMapAudit.tradingLogicChanged, false);
+  assert.ok(audit.tradeDecisionMapAudit.entries.some((entry: any) => entry.setupType === candidate.setupType));
   assert.equal(audit.deskState.sourceOfTruth, 'scanner_desk_state');
   assert.equal(audit.deskState.marketMode, 'conditional');
   assert.equal(audit.deskState.visibilityMode, audit.visibility.visibilityMode);
@@ -3324,6 +3330,7 @@ try {
       candidate,
       visibilityMetadata: audit.visibility,
       candidateLifecycleTrace: audit.candidateLifecycleTrace,
+      tradeDecisionMapAudit: audit.tradeDecisionMapAudit,
       deskState: audit.deskState,
       confidence: 86,
     });
@@ -3333,6 +3340,8 @@ try {
     assert.equal(ragInsert?.body.trade_plan_json.deskState.sourceOfTruth, 'scanner_desk_state');
     assert.equal(ragInsert?.body.trade_plan_json.visibility.sourceOfTruth, 'scanner_desk_state_visibility_metadata');
     assert.equal(ragInsert?.body.trade_plan_json.candidateLifecycleTrace.sourceOfTruth, 'scanner_candidate_lifecycle_trace');
+    assert.equal(ragInsert?.body.trade_plan_json.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
+    assert.equal(ragInsert?.body.trade_plan_json.tradeDecisionMapAudit.tradingLogicChanged, false);
     assert.equal(ragInsert?.body.trade_plan_json.approvalBoundary.discordOutcomeApprovesTrade, false);
   } finally {
     globalThis.fetch = originalFetch;
@@ -3448,6 +3457,9 @@ try {
   assert.equal(watchResult.payload.components, undefined);
   assert.ok(watchText.includes('[AM WATCH] MES - SHORT WATCH FORMING'));
   assert.ok(watchText.includes('WATCH - NOT EXECUTION APPROVAL'));
+  assert.ok(watchText.includes('Required proof: completed 5M trigger, protected structure stop, target room, and normal app-owned gates.'));
+  assert.ok(watchText.includes('Boundary: canExecute=false. This watch does not approve execution.'));
+  assert.ok(watchText.includes('No entry, stop, T1, T2, or outcome buttons are included in this watch alert.'));
   assert.ok(!/^Entry:/m.test(watchText));
   assert.ok(!/^Stop:/m.test(watchText));
   assert.ok(!/^T1:/m.test(watchText));
@@ -3458,6 +3470,8 @@ try {
   assert.equal(watchAudit.deskState.canExecute, false);
   assert.equal(watchAudit.deskState.promotion.currentStage, 'watch');
   assert.equal(watchAudit.deskState.promotion.nextStage, 'conditional');
+  assert.equal(watchAudit.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
+  assert.equal(watchAudit.tradeDecisionMapAudit.tradingLogicChanged, false);
   assert.equal(shouldPersistScannerAlertToRag(watchAudit.deskState), false);
 
   const deskPlayVisibility: ScannerVisibilityMetadata = {

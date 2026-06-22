@@ -1233,6 +1233,7 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.dire
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.trendConfirmation.status, 'aligned');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.sourceOfTruth, 'scanner_protected_structure_model_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.primaryDirection, 'LONG');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestActiveModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.bestApprovedModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.sourceOfTruth, 'scanner_protected_structure_model_fit');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.longModelFit.status, 'best_fit');
@@ -1241,6 +1242,7 @@ assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.modelRouting.shortMode
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.modelFit.setupType, SetupType.IntradayMssMicroContinuation);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.sourceOfTruth, 'scanner_executable_consideration_gate_metadata');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.status, 'review_only_missing_proof');
+assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.selectedRegisteredModel, SetupType.IntradayMssMicroContinuation);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.executableConsideration.canExecuteNow, false);
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.sourceOfTruth, 'scanner_trade_readiness_routing');
 assert.equal(june12ProtectedHoldDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'missed_no_chase');

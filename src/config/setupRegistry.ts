@@ -532,7 +532,13 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
   },
 ];
 
-export const APPROVED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);
+export const REGISTERED_SETUP_TYPES = SETUP_REGISTRY.map((entry) => entry.setupType);
+
+/**
+ * @deprecated Use REGISTERED_SETUP_TYPES. The registry lists known setup metadata;
+ * execution approval still belongs to the deterministic trade decision pipeline.
+ */
+export const APPROVED_SETUP_TYPES = REGISTERED_SETUP_TYPES;
 
 export function getPrimarySetupRegistry(sessionType: SetupSession): SetupRegistryEntry[] {
   return SETUP_REGISTRY.filter((entry) => entry.role === 'primary_model' && entry.allowedSessions.includes(sessionType));
