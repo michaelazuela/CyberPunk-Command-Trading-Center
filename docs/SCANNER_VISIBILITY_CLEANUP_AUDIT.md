@@ -18,6 +18,17 @@ Latest Install 7 update: 2026-06-22
 
 Latest Install 8 update: 2026-06-22
 
+Latest Install 9 update: 2026-06-22
+
+## Phase 11C Live Discord Rollout Checklist
+
+Install 9 added an operator checklist for the first controlled live Discord smoke after Phase 11B.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `tools/automation/live-discord-rollout.ts` / `buildLiveDiscordRolloutChecklist` | Phase 11B had the send-boundary guard, but the dry-scan, replay, one-shot live confirmation, receipt review, and rollback steps were still procedural knowledge. | Added a deterministic CLI checklist that prints the exact dry-run scanner command, diagnostic replay command, controlled `--live-discord-policy-confirmed` command, receipt verification steps, and rollback steps. | Read-only rollout tool. It does not post Discord, start scanners, change scanner behavior, change bridge behavior, change trading logic, change `canExecute`, or create trade approval. |
+| `tools/automation/live-discord-rollout.test.ts` and architecture guard | The rollout command needs to remain an operator-control surface, not a hidden live-post path. | Added tests and guard phrases requiring the Phase 11C source-of-truth marker, live confirmation flag, dry-run/replay/receipt/rollback steps, and no-authority-change boundary. | Tests assert `postsDiscord: false`, `changesTradingLogic: false`, `changesScannerBehavior: false`, `changesDiscordSendBehavior: false`, `changesBridgeBehavior: false`, and `changesCanExecute: false`. |
+
 ## Phase 11B Live Discord Send Boundary Guard
 
 Install 8 wired the Phase 11A policy into scanner-owned live Discord trade/DeskState posts.

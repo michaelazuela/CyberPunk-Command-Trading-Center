@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 9 Phase 11C live Discord rollout checklist.
+Files changed: tools/automation/live-discord-rollout.ts, tools/automation/live-discord-rollout.test.ts, package.json, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Phase 11B blocks unconfirmed live scanner trade/DeskState posts; Phase 11C adds the deterministic operator checklist for dry scan, diagnostic replay, controlled live-post confirmation, receipt verification, and rollback.
+Tests run: npx tsx tools/automation/live-discord-rollout.test.ts; npm run guard:architecture; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. The rollout tool is read-only and prints the command contract for an operator-controlled smoke; it does not run the scanner, post Discord, or set confirmation environment variables.
+Trading logic changed: No intended change. This is rollout tooling, tests, guard coverage, and docs only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence/send change. Phase 11C does not enable live posts; it prints the controlled command that still requires explicit operator use of `--live-discord-policy-confirmed`.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Use `npm run nt:live-discord-rollout -- --date YYYY-MM-DD --instrument MES --session lunch --bridge-instrument "MES 09-26" --from 12:00 --to 15:50 --pretty` during the selected active window to generate the dry-scan, replay, controlled one-shot live-post, receipt verification, and rollback commands. Execute the live command only after the dry scan and replay evidence pass and the operator explicitly approves the one live post.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 8 Phase 11B live Discord send-boundary guard.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Phase 11A defined live-post eligibility; Phase 11B wires that policy into scanner-owned live Discord trade/DeskState sends as an operational guard before webhook POST.

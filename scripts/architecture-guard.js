@@ -857,6 +857,39 @@ function checkPhase11LiveDiscordEligibilityPolicy() {
   ) {
     fail('nt-scanner-alert.test.ts must cover Phase 11B live Discord send-boundary checklist enforcement and no-approval-change flags.');
   }
+
+  const rolloutPath = path.join(ROOT, 'tools', 'automation', 'live-discord-rollout.ts');
+  const rolloutContent = readFileSafe(rolloutPath);
+  for (const requiredPhrase of [
+    'phase_11c_live_discord_rollout_checklist',
+    'buildLiveDiscordRolloutChecklist',
+    'dryRunValidationCommand',
+    'diagnosticReplayCommand',
+    'livePostCommand',
+    'receiptVerificationSteps',
+    'rollbackSteps',
+    '--live-discord-policy-confirmed',
+    'QUANT_DESK_LIVE_DISCORD_POLICY_CONFIRMED',
+    'postsDiscord: false',
+    'changesTradingLogic: false',
+    'changesCanExecute: false',
+  ]) {
+    if (!rolloutContent.includes(requiredPhrase)) {
+      fail(`live-discord-rollout.ts is missing Phase 11C rollout checklist phrase: ${requiredPhrase}`);
+    }
+  }
+
+  const packagePath = path.join(ROOT, 'package.json');
+  const packageContent = readFileSafe(packagePath);
+  const rolloutTestPath = path.join(ROOT, 'tools', 'automation', 'live-discord-rollout.test.ts');
+  const rolloutTestContent = readFileSafe(rolloutTestPath);
+  if (
+    !packageContent.includes('"nt:live-discord-rollout"') ||
+    !packageContent.includes('tools/automation/live-discord-rollout.test.ts') ||
+    !rolloutTestContent.includes('phase_11c_live_discord_rollout_checklist')
+  ) {
+    fail('Phase 11C rollout checklist must be wired into package scripts, npm test, and direct tests.');
+  }
 }
 
 function checkCodexPatchHygienePolicy() {
