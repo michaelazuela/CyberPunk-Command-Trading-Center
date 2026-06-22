@@ -2,7 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 export type LiveDiscordRolloutInstrument = 'MES' | 'MNQ';
-export type LiveDiscordRolloutSession = 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+export type LiveDiscordRolloutSession = 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch';
 
 export interface LiveDiscordRolloutOptions {
   date: string;
@@ -42,7 +42,7 @@ export interface ParsedLiveDiscordRolloutCli {
 }
 
 const DEFAULT_AUDIT_DIR = 'tools/automation/discord-audit';
-const VALID_SESSIONS = new Set<LiveDiscordRolloutSession>(['morning', 'lunch', 'replay_morning', 'replay_lunch']);
+const VALID_SESSIONS = new Set<LiveDiscordRolloutSession>(['morning', 'lunch', 'evening', 'replay_morning', 'replay_lunch']);
 const VALID_INSTRUMENTS = new Set<LiveDiscordRolloutInstrument>(['MES', 'MNQ']);
 
 function shellQuote(value: string): string {
@@ -93,7 +93,7 @@ export function parseLiveDiscordRolloutArgs(args: string[]): ParsedLiveDiscordRo
   validateTime('from', from);
   validateTime('to', to);
   if (!VALID_SESSIONS.has(session)) {
-    throw new Error(`Invalid --session ${session}. Use morning, lunch, replay_morning, or replay_lunch.`);
+    throw new Error(`Invalid --session ${session}. Use morning, lunch, evening, replay_morning, or replay_lunch.`);
   }
   if (!VALID_INSTRUMENTS.has(instrument)) {
     throw new Error(`Invalid --instrument ${instrument}. Use MES or MNQ.`);
@@ -205,7 +205,7 @@ export function liveDiscordRolloutUsage(): string {
     '',
     'Required:',
     '  --date YYYY-MM-DD',
-    '  --session morning|lunch|replay_morning|replay_lunch',
+    '  --session morning|lunch|evening|replay_morning|replay_lunch',
     '  --bridge-instrument "MES 09-26"',
     '  --from HH:mm',
     '  --to HH:mm',

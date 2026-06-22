@@ -59,4 +59,17 @@ assert.match(formatted, /phase_11c_live_discord_rollout_checklist/);
 assert.match(formatted, /"postsDiscord": false/);
 assert.match(formatted, /"changesCanExecute": false/);
 
+const eveningChecklist = buildLiveDiscordRolloutChecklist({
+  date: '2026-06-22',
+  instrument: 'MES',
+  session: 'evening',
+  bridgeInstrument: 'MES 09-26',
+  from: '18:45',
+  to: '19:05',
+  auditDir: 'tools/automation/discord-audit',
+});
+assert.match(eveningChecklist.diagnosticReplayCommand, /--session evening/);
+assert.match(eveningChecklist.dryRunValidationCommand, /--dry-run/);
+assert.match(eveningChecklist.livePostCommand, /--live-discord-policy-confirmed/);
+
 console.log('live-discord-rollout tests passed');

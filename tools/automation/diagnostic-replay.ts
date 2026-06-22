@@ -73,8 +73,8 @@ export function parseDiagnosticReplayArgs(args = process.argv.slice(2)): Diagnos
   const instrument = requireOption(readFlag(args, '--instrument'), '--instrument').toUpperCase();
   if (instrument !== 'MES' && instrument !== 'MNQ') throw new Error('--instrument must be MES or MNQ.');
   const session = (readFlag(args, '--session') || 'morning').toLowerCase();
-  if (session !== 'morning' && session !== 'lunch' && session !== 'replay_morning' && session !== 'replay_lunch') {
-    throw new Error('--session must be morning, lunch, replay_morning, or replay_lunch.');
+  if (session !== 'morning' && session !== 'lunch' && session !== 'evening' && session !== 'replay_morning' && session !== 'replay_lunch') {
+    throw new Error('--session must be morning, lunch, evening, replay_morning, or replay_lunch.');
   }
   const direction = (readFlag(args, '--direction') || 'AUTO').toUpperCase();
   if (direction !== 'LONG' && direction !== 'SHORT' && direction !== 'AUTO') {

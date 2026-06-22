@@ -64,7 +64,7 @@ export interface DiagnosticScannerAuditEvent {
 export interface BridgeDiagnosticReplayInput {
   tradeDate: string;
   instrument: 'MES' | 'MNQ' | string;
-  session: 'morning' | 'lunch' | 'replay_morning' | 'replay_lunch';
+  session: 'morning' | 'lunch' | 'evening' | 'replay_morning' | 'replay_lunch';
   bars5m: NinjaBridgeBar[];
   bars5mContext?: NinjaBridgeBar[];
   bars15m: NinjaBridgeBar[];
