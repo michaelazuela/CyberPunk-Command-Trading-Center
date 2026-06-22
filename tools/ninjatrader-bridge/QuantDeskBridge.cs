@@ -561,7 +561,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 { "ok", true },
                 { "name", BridgeName },
-                { "version", "0.1.7-readonly" },
+                { "version", "0.1.8-readonly" },
                 { "ninjaTraderVersion", Core.Globals.ProductVersion },
                 { "readOnly", true },
                 { "defaultInstrument", instrument.Instrument },
@@ -866,10 +866,16 @@ namespace NinjaTrader.NinjaScript.AddOns
         private static int ParseTimeframe(string value)
         {
             string raw = (value ?? "5m").Trim().ToLowerInvariant();
+            if (raw.StartsWith("hour"))
+            {
+                int hourAlias;
+                if (int.TryParse(raw.Replace("hour", ""), out hourAlias) && (hourAlias == 1 || hourAlias == 2 || hourAlias == 4))
+                    return hourAlias * 60;
+            }
             if (raw.EndsWith("h"))
             {
                 int hours;
-                if (int.TryParse(raw.Replace("h", ""), out hours) && (hours == 1 || hours == 4))
+                if (int.TryParse(raw.Replace("h", ""), out hours) && (hours == 1 || hours == 2 || hours == 4))
                     return hours * 60;
             }
 
@@ -877,7 +883,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             int minutes;
             if (!int.TryParse(clean, out minutes))
                 minutes = 5;
-            if (minutes != 1 && minutes != 5 && minutes != 15 && minutes != 60 && minutes != 240)
+            if (minutes != 1 && minutes != 5 && minutes != 15 && minutes != 60 && minutes != 120 && minutes != 240)
                 minutes = 5;
             return minutes;
         }
