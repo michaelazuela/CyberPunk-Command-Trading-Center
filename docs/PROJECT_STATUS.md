@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-21
+Task: Add Phase 3 research-only Sniper Watch audit.
+Files changed: tools/automation/sniper-watch-research-audit.ts, tools/automation/sniper-watch-research-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needs to study whether review-only line-in-the-sand reference plans with discretionary 1M timing and completed 5M confirmation are worth promoting later, without changing live scanner execution rules.
+Tests run: npx tsx tools/automation/sniper-watch-research-audit.test.ts; npm run diagnostic:sniper-watch-research-audit -- --trade-date 2026-06-21 --instrument MES --sessions all --json.
+Result: Passed. The audit reads scanner decision tapes, consolidates duplicate reference-level refreshes, reports unique non-executable sniper-watch opportunities, completed 5M confirmations, T1/T2/stop/unresolved outcomes, and clearly states that 1M evidence is not available in decision tapes.
+Trading logic changed: No. This is read-only research tooling; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, or RAG save behavior.
+Bridge impact: None. The audit reads local scanner decision tapes only.
+Discord impact: None. The audit does not post Discord.
+Journal/RAG impact: No schema change and no writes. This is diagnostic output only.
+Supabase impact: No migration added.
+Known risks: The audit cannot verify the discretionary 1M close because scanner decision tapes do not store 1M bars; it only studies the completed 5M confirmation/outcome leg.
+Next recommended action: Review the generated report and decide whether Phase 4 should add optional 1M OHLC capture for research only, or keep sniper-watch study limited to 5M confirmation and manual journal notes.
+
+## Previous Change
+
+Date: 2026-06-21
 Task: Add review-only Line-in-the-Sand Sniper Watch tracking and Discord wording.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: The trader successfully used scanner line-in-the-sand reference levels with discretionary 1M timing and completed 5M confirmation, and wants that workflow visible and learnable without turning it into app execution approval.
