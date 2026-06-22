@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-22
+Task: Add Phase 1 read-only Quant Desk research inventory and tray entrypoint.
+Files changed: tools/automation/research-desk-inventory.ts, tools/automation/research-desk-inventory.test.ts, Open-QuantDesk-ResearchReview.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: The desk needs a one-click/read-only way to see where all current research stands before deciding what deserves deeper evidence review or future promotion discussion.
+Tests run: npx tsx tools/automation/research-desk-inventory.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npm run research:desk-review -- --json.
+Result: Passed. The inventory scans local research/report artifacts, summarizes families/report types/status buckets/latest artifacts, writes Markdown/JSON under ignored `tools/automation/research-reports`, and the supervisor tray now includes `Open Research Status` to launch the report helper.
+Trading logic changed: No. This is read-only research inventory and operator UI convenience only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, RAG save behavior, or bridge behavior.
+Bridge impact: None.
+Discord impact: None. The inventory and tray helper do not post Discord.
+Journal/RAG impact: No schema change and no Supabase writes.
+Supabase impact: No migration added.
+Known risks: The Phase 1 inventory uses keyword/status heuristics and shallow metadata sampling only. It identifies where to review next; it does not prove or reject a model.
+Next recommended action: Phase 2 should build an evidence table for the promising artifacts with sample size, T1/T2/stop/no-confirmation counts, best/worst conditions, authority impact, and promotion risk.
+
+## Previous Change
+
 Date: 2026-06-21
 Task: Add Phase 3 research-only Sniper Watch audit.
 Files changed: tools/automation/sniper-watch-research-audit.ts, tools/automation/sniper-watch-research-audit.test.ts, package.json, docs/PROJECT_STATUS.md.
