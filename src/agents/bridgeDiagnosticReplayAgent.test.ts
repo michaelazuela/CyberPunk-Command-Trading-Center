@@ -209,7 +209,11 @@ assert.equal(replayWithDeskState.deskStateReplayValidation.sourceOfTruth, 'scann
 assert.equal(replayWithDeskState.deskStateReplayValidation.cycleCount, 2);
 assert.equal(replayWithDeskState.deskStateReplayValidation.watchAppearedBeforePlan, true);
 assert.equal(replayWithDeskState.deskStateReplayValidation.promotionPathObserved, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.watchToPlanPromotionProofed, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.canExecuteBoundaryPreserved, true);
 assert.equal(replayWithDeskState.deskStateReplayValidation.discordRagUiAligned, true);
+assert.equal(replayWithDeskState.deskStateReplayValidation.promotionBoundary.changesTradeApprovals, false);
+assert.equal(replayWithDeskState.deskStateReplayValidation.promotionBoundary.changesCanExecute, false);
 assert.equal(replayWithDeskState.deskStateReplayValidation.authority.replayValidationApprovesTrade, false);
 
 const june11LongBias = candidate({

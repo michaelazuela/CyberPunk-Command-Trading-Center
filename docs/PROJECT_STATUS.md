@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 4 Phase 9E Watch-To-Plan Promotion guardrails.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/nt-scanner-alert.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Make watch-to-plan continuity explicit and replay-verifiable without changing approvals. DeskState promotion metadata now states required proof, blockers, no-chase/protected-5M expectations, and the no-authority-change boundary.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. DeskState promotion metadata now carries proof requirements and approval-boundary diagnostics; replay validation checks watch-to-plan proof metadata and `canExecute` boundary preservation.
+Trading logic changed: No intended change. This is scanner-owned metadata, replay validation, tests, guard, and docs only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, Discord cadence, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence change. Discord/RAG/UI consumers can inspect richer DeskState promotion metadata.
+Journal/RAG impact: Metadata shape only inside existing DeskState JSON; no schema migration added.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Proceed to Phase 9F Replay Validation as a research/replay-only install before trusting the full watch-to-plan command path live.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 3 Discord Watch Alert hardening.
 Files changed: tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Phase 9D requires watch alerts to be Discord-ready without creating execution approval. Watch cards now state the completed-5M proof boundary and `canExecute=false` explicitly while preserving no levels, no outcome buttons, and no pending RAG save for watch-only alerts.

@@ -2585,6 +2585,8 @@ assert.equal(tapeEvent.deskState.marketMode, 'watching');
 assert.equal(tapeEvent.deskState.visibilityMode, tapeEvent.visibility.visibilityMode);
 assert.equal(tapeEvent.deskState.canExecute, false);
 assert.equal(tapeEvent.deskState.promotion.sourceOfTruth, 'scanner_desk_state_promotion_path');
+assert.equal(tapeEvent.deskState.promotion.approvalBoundary.changesTradeApprovals, false);
+assert.equal(tapeEvent.deskState.promotion.approvalBoundary.changesCanExecute, false);
 assert.equal(tapeEvent.deskState.promotion.canPromoteNow, false);
 assert.equal(tapeEvent.failedPlanReversal.present, true);
 assert.equal(tapeEvent.failedPlanReversal.state, 'OPPOSITE_SIDE_RETEST_PENDING');
@@ -3290,6 +3292,8 @@ try {
   assert.equal(audit.deskState.selectedCandidate.setupType, candidate.setupType);
   assert.equal(audit.deskState.promotion.currentStage, 'conditional');
   assert.equal(audit.deskState.promotion.nextStage, 'human_review_ready');
+  assert.equal(audit.deskState.promotion.promotionReadiness, 'conditional_waiting_for_review_proof');
+  assert.ok(audit.deskState.promotion.requiredProof.includes('Completed 5M hold/retest proof before human-review plan promotion.'));
   assert.equal(shouldPersistScannerAlertToRag(audit.deskState), true);
   assert.equal(audit.attachments.chartMarkup, result.chartMarkup);
   assert.equal(audit.attachments.priceLevelMap, result.levelMap);
@@ -3470,6 +3474,9 @@ try {
   assert.equal(watchAudit.deskState.canExecute, false);
   assert.equal(watchAudit.deskState.promotion.currentStage, 'watch');
   assert.equal(watchAudit.deskState.promotion.nextStage, 'conditional');
+  assert.equal(watchAudit.deskState.promotion.promotionReadiness, 'watch_waiting_for_completed_5m');
+  assert.ok(watchAudit.deskState.promotion.requiredProof.includes('Completed 5M trigger or retest proof.'));
+  assert.equal(watchAudit.deskState.promotion.approvalBoundary.changesEntryStopTargets, false);
   assert.equal(watchAudit.tradeDecisionMapAudit.sourceOfTruth, 'setup_registry_trade_decision_map_audit');
   assert.equal(watchAudit.tradeDecisionMapAudit.tradingLogicChanged, false);
   assert.equal(shouldPersistScannerAlertToRag(watchAudit.deskState), false);

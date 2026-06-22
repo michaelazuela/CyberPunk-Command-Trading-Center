@@ -243,13 +243,31 @@ export type DeskStatePromotionStage =
   | 'posted_plan'
   | 'no_trade';
 
+export type DeskStatePromotionReadiness =
+  | 'market_mapping_only'
+  | 'watch_waiting_for_completed_5m'
+  | 'conditional_waiting_for_review_proof'
+  | 'human_review_ready_waiting_for_existing_plan_gate'
+  | 'posted_plan_existing_gate_only'
+  | 'blocked_or_no_trade';
+
 export interface DeskStatePromotionPath {
   sourceOfTruth: 'scanner_desk_state_promotion_path';
   currentStage: DeskStatePromotionStage;
   nextStage: DeskStatePromotionStage | null;
+  promotionReadiness: DeskStatePromotionReadiness;
   promotionTrigger: string | null;
+  requiredProof: string[];
   missingProof: string[];
+  blockedBy: string[];
   canPromoteNow: false;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+  };
   notes: string[];
 }
 
@@ -536,9 +554,18 @@ export interface DeskStateReplayValidation {
   cycleCount: number;
   watchAppearedBeforePlan: boolean;
   promotionPathObserved: boolean;
+  watchToPlanPromotionProofed: boolean;
+  canExecuteBoundaryPreserved: boolean;
   noChasePreserved: boolean;
   singleSourceOfTruthPresent: boolean;
   discordRagUiAligned: boolean;
+  promotionBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesBridgeBehavior: false;
+  };
   findings: string[];
   authority: {
     replayValidationApprovesTrade: false;
@@ -1787,6 +1814,47 @@ function nextPromotionStage(stage: DeskStatePromotionStage): DeskStatePromotionS
   return null;
 }
 
+function promotionReadinessFromStage(stage: DeskStatePromotionStage): DeskStatePromotionReadiness {
+  if (stage === 'market_mapping') return 'market_mapping_only';
+  if (stage === 'watch') return 'watch_waiting_for_completed_5m';
+  if (stage === 'conditional') return 'conditional_waiting_for_review_proof';
+  if (stage === 'human_review_ready') return 'human_review_ready_waiting_for_existing_plan_gate';
+  if (stage === 'posted_plan') return 'posted_plan_existing_gate_only';
+  return 'blocked_or_no_trade';
+}
+
+function requiredPromotionProofForStage(stage: DeskStatePromotionStage): string[] {
+  if (stage === 'watch') {
+    return [
+      'Completed 5M trigger or retest proof.',
+      'Protected 5M structure stop.',
+      'App-owned target room and invalidation proof.',
+      'No-chase check when price is extended.',
+    ];
+  }
+  if (stage === 'conditional') {
+    return [
+      'Confirmed entry, protected stop, T1, and T2 from the app-owned pipeline.',
+      'Completed 5M hold/retest proof before human-review plan promotion.',
+      'Normal session, risk, model, invalidation, and canExecute gates remain unchanged.',
+    ];
+  }
+  if (stage === 'human_review_ready') {
+    return [
+      'Existing trade decision pipeline must approve any posted plan.',
+      'canExecute remains false unless the existing deterministic gates already allowed it.',
+    ];
+  }
+  if (stage === 'posted_plan') {
+    return [
+      'Posted plan must already have passed existing app-owned execution approval.',
+    ];
+  }
+  return [
+    'Meaningful structured evidence must remain visible as watch, conditional, review, hold, no-trade, or data-quality blocker.',
+  ];
+}
+
 function buildDeskStatePromotionPath(args: {
   marketMode: DeskStateMarketMode;
   visibilityMetadata: ScannerVisibilityMetadata;
@@ -1800,6 +1868,7 @@ function buildDeskStatePromotionPath(args: {
     canExecute: args.canExecute,
   });
   const nextStage = nextPromotionStage(currentStage);
+  const requiredProof = requiredPromotionProofForStage(currentStage);
   const missingProof = Array.from(new Set([
     ...args.candidateLifecycleTrace.missingProofSummary,
     ...(args.candidate?.missingEvidence || []),
@@ -1818,9 +1887,19 @@ function buildDeskStatePromotionPath(args: {
     sourceOfTruth: 'scanner_desk_state_promotion_path',
     currentStage,
     nextStage,
+    promotionReadiness: promotionReadinessFromStage(currentStage),
     promotionTrigger,
+    requiredProof,
     missingProof,
+    blockedBy: missingProof.length > 0 ? missingProof : requiredProof,
     canPromoteNow: false,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
     notes: [
       'Promotion path is descriptive only; the existing scanner, trade decision pipeline, and canExecute gates remain the only approval path.',
       'Watch-to-plan continuity requires completed 5M proof, protected structure stop, target room, invalidation, and normal app-owned gates.',
@@ -2693,10 +2772,27 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
   const promotionPathObserved = states.some((state) => state.promotion.currentStage === 'watch' && state.promotion.nextStage === 'conditional') &&
     states.some((state) => state.promotion.currentStage === 'conditional' || state.promotion.currentStage === 'human_review_ready' || state.promotion.currentStage === 'posted_plan');
   const hasDeskStateCycles = states.length > 0;
+  const watchToPlanPromotionProofed = hasDeskStateCycles && states.every((state) =>
+    Array.isArray(state.promotion.requiredProof) &&
+    state.promotion.requiredProof.length > 0 &&
+    Array.isArray(state.promotion.blockedBy) &&
+    state.promotion.blockedBy.length > 0 &&
+    state.promotion.canPromoteNow === false
+  );
+  const canExecuteBoundaryPreserved = hasDeskStateCycles && states.every((state) =>
+    state.canExecute === state.visibilityMetadata.authority.canExecute &&
+    state.promotion.approvalBoundary?.changesTradeApprovals === false &&
+    state.promotion.approvalBoundary?.changesCanExecute === false &&
+    state.promotion.approvalBoundary?.changesEntryStopTargets === false &&
+    state.promotion.approvalBoundary?.changesRiskRules === false &&
+    state.promotion.approvalBoundary?.changesBridgeBehavior === false
+  );
   const noChasePreserved = hasDeskStateCycles && states.every((state) => {
     const text = [
       state.nextTrigger,
       state.promotion.promotionTrigger,
+      ...state.promotion.requiredProof,
+      ...state.promotion.blockedBy,
       ...state.promotion.missingProof,
       ...state.promotion.notes,
       ...state.notes,
@@ -2721,6 +2817,12 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
     promotionPathObserved
       ? 'Watch-to-plan promotion path was observable in DeskState snapshots.'
       : 'Replay did not observe a continuous watch-to-plan promotion path.',
+    watchToPlanPromotionProofed
+      ? 'Promotion snapshots carried required proof, blocker metadata, and canPromoteNow=false.'
+      : 'One or more promotion snapshots lacked proof/blocker metadata or changed canPromoteNow.',
+    canExecuteBoundaryPreserved
+      ? 'Promotion metadata preserved canExecute and no-approval-change boundaries across replay snapshots.'
+      : 'Promotion metadata diverged from canExecute or approval-boundary constraints.',
     noChasePreserved
       ? 'No-chase/completed-5M/protected-structure language was preserved in non-executable states.'
       : 'At least one non-executable DeskState lacked no-chase, completed-5M, or protected-structure language.',
@@ -2737,9 +2839,18 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
     cycleCount: states.length,
     watchAppearedBeforePlan,
     promotionPathObserved,
+    watchToPlanPromotionProofed,
+    canExecuteBoundaryPreserved,
     noChasePreserved,
     singleSourceOfTruthPresent,
     discordRagUiAligned,
+    promotionBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesBridgeBehavior: false,
+    },
     findings,
     authority: {
       replayValidationApprovesTrade: false,

@@ -666,6 +666,19 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!replayContent.includes('deskStateReplayValidation') || !replayContent.includes('validateDeskStateReplayPath')) {
     fail('bridgeDiagnosticReplayAgent.ts must include scanner DeskState replay validation.');
   }
+
+  const localScannerEnginePath = path.join(ROOT, 'src', 'lib', 'localScannerEngine.ts');
+  const localScannerEngineContent = readFileSafe(localScannerEnginePath);
+  if (
+    !localScannerEngineContent.includes('watchToPlanPromotionProofed') ||
+    !localScannerEngineContent.includes('canExecuteBoundaryPreserved') ||
+    !localScannerEngineContent.includes('promotionReadiness') ||
+    !localScannerEngineContent.includes('requiredPromotionProofForStage') ||
+    !localScannerEngineContent.includes('changesEntryStopTargets: false') ||
+    !localScannerEngineContent.includes('changesBridgeBehavior: false')
+  ) {
+    fail('localScannerEngine.ts must preserve Phase 9E watch-to-plan promotion proof metadata and no-authority-change boundaries.');
+  }
 }
 
 function checkDiscordRagPersistenceSourceOfTruth() {

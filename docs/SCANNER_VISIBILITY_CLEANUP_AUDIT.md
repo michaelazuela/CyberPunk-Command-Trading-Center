@@ -8,6 +8,18 @@ Latest Install 2 update: 2026-06-22
 
 Latest Install 3 update: 2026-06-22
 
+Latest Install 4 update: 2026-06-22
+
+## Phase 9E Watch-To-Plan Promotion
+
+Install 4 added scanner-owned promotion proof metadata without changing approval behavior.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `src/lib/localScannerEngine.ts` / `DeskStatePromotionPath` | The existing promotion path showed stage continuity, but did not explicitly state the proof boundary that prevents watch metadata from becoming a full plan. | Added `promotionReadiness`, `requiredProof`, `blockedBy`, and an `approvalBoundary` that records no change to trade approvals, `canExecute`, entry/stop/target rules, risk rules, or bridge behavior. | Metadata only. `canPromoteNow` remains `false`; existing scanner selection, `canExecute`, entries, stops, targets, risk gates, model definitions, and bridge behavior are unchanged. |
+| `src/lib/localScannerEngine.ts` / `validateDeskStateReplayPath` | Replay validation could observe watch-to-plan stages, but did not fail if promotion proof metadata or no-authority-change boundaries disappeared. | Added `watchToPlanPromotionProofed`, `canExecuteBoundaryPreserved`, and `promotionBoundary` validation. | Replay-only validation. It does not approve trades or change live scanner decisions. |
+| Tests and architecture guard | Phase 9E fields needed regression coverage. | Added assertions in scanner, replay, and live-audit tests; architecture guard now requires the Phase 9E proof fields. | Tests assert scanner-owned metadata and no-authority-change flags. |
+
 ## Phase 8.45 Audit
 
 Scope inspected:
