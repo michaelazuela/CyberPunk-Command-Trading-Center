@@ -165,6 +165,27 @@ const sundayEveningFourHourWindow = verifyMarketDataWindow({
 assert.equal(sundayEveningFourHourWindow.sufficient, true);
 assert.equal(sundayEveningFourHourWindow.dataLimitation.status, 'none');
 
+const sundayEveningFridayOpenTimestampBars = [
+  ...Array.from({ length: 40 }, (_, index) => bar(
+    new Date(Date.parse('2026-05-22T02:00:00-04:00') + index * 16 * 60 * 60 * 1000).toISOString(),
+  )),
+  bar('2026-06-19T13:00:00-04:00'),
+];
+const sundayEveningFridayOpenTimestampWindow = verifyMarketDataWindow({
+  bars: sundayEveningFridayOpenTimestampBars,
+  timeframe: '240m',
+  requestedFrom: '2026-05-22T00:00:00-04:00',
+  requestedTo: '2026-06-21T20:25:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 40,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 41,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(sundayEveningFridayOpenTimestampWindow.sufficient, true);
+assert.equal(sundayEveningFridayOpenTimestampWindow.dataLimitation.status, 'none');
+
 const afterFirstSundayFourHourWindow = verifyMarketDataWindow({
   bars: sundayEveningFourHourCoverageBars,
   timeframe: '240m',

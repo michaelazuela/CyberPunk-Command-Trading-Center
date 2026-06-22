@@ -134,7 +134,9 @@ export function isSundayEveningFourHourReopenLagCovered(
 
   const loaded = etPartsFromCandleTime(lastLoadedTime);
   const loadedMinutes = loaded.hour * 60 + loaded.minute;
-  return loaded.weekday === 'Fri' && loadedMinutes >= 16 * 60;
+  // NinjaTrader timestamps 4H bars by bar open; Friday's 13:00 ET bar covers into the 17:00 ET close.
+  const finalFridayFourHourOpen = 13 * 60;
+  return loaded.weekday === 'Fri' && loadedMinutes >= finalFridayFourHourOpen;
 }
 
 function hasValidOhlc(bar: NinjaBridgeBar): boolean {
