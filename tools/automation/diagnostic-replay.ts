@@ -18,10 +18,12 @@ import { SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS } from './nt-scanner';
 
 type BarTimestampMode = 'open' | 'close';
 type BarTimeZoneMode = 'eastern' | 'central' | 'pacific' | 'local';
+type DiagnosticReplaySession = BridgeDiagnosticReplayInput['session'];
 
 export interface DiagnosticReplayCliOptions {
   date: string;
   instrument: 'MES' | 'MNQ';
+  session: DiagnosticReplaySession;
   bridgeInstrument: string;
   from: string;
   to: string;
@@ -70,6 +72,10 @@ export function parseDiagnosticReplayArgs(args = process.argv.slice(2)): Diagnos
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('--date must use YYYY-MM-DD format.');
   const instrument = requireOption(readFlag(args, '--instrument'), '--instrument').toUpperCase();
   if (instrument !== 'MES' && instrument !== 'MNQ') throw new Error('--instrument must be MES or MNQ.');
+  const session = (readFlag(args, '--session') || 'morning').toLowerCase();
+  if (session !== 'morning' && session !== 'lunch' && session !== 'replay_morning' && session !== 'replay_lunch') {
+    throw new Error('--session must be morning, lunch, replay_morning, or replay_lunch.');
+  }
   const direction = (readFlag(args, '--direction') || 'AUTO').toUpperCase();
   if (direction !== 'LONG' && direction !== 'SHORT' && direction !== 'AUTO') {
     throw new Error('--direction must be LONG, SHORT, or AUTO.');
@@ -85,6 +91,7 @@ export function parseDiagnosticReplayArgs(args = process.argv.slice(2)): Diagnos
   return {
     date,
     instrument,
+    session,
     bridgeInstrument: requireOption(readFlag(args, '--bridge-instrument'), '--bridge-instrument'),
     from: assertClock(requireOption(readFlag(args, '--from'), '--from'), '--from'),
     to: assertClock(requireOption(readFlag(args, '--to'), '--to'), '--to'),
@@ -170,7 +177,7 @@ async function buildReplayInput(options: DiagnosticReplayCliOptions): Promise<Br
   return {
     tradeDate: options.date,
     instrument: options.instrument,
-    session: 'morning',
+    session: options.session,
     bars5m,
     bars5mContext,
     bars15m,

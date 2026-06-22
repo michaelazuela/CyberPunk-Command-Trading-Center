@@ -38,6 +38,7 @@ export interface DiagnosticGateReview {
 
 export interface DiagnosticScannerAuditEvent {
   alertTimestamp: string | null;
+  marketTimestamp?: string | null;
   tradeDate: string | null;
   instrument: string | null;
   session: string | null;
@@ -779,11 +780,30 @@ function newPlanRecommendation(classification: BridgeDiagnosticClassification) {
   };
 }
 
+function clockMinutes(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function clockMinutesFromTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const match = value.match(/T(\d{2}):(\d{2})/);
+  if (match) return Number(match[1]) * 60 + Number(match[2]);
+  return clockMinutes(value);
+}
+
 function matchingAuditEvents(input: BridgeDiagnosticReplayInput): DiagnosticScannerAuditEvent[] {
+  const fromMinutes = clockMinutes(input.replayWindow.from);
+  const toMinutes = clockMinutes(input.replayWindow.to);
   return [...(input.scannerAuditEvents || [])].filter((event) => {
     if (event.tradeDate && event.tradeDate !== input.tradeDate) return false;
     if (event.instrument && event.instrument.toUpperCase() !== String(input.instrument).toUpperCase()) return false;
     if (event.session && !String(event.session).toLowerCase().includes(input.session.replace('replay_', ''))) return false;
+    const eventMinutes = clockMinutesFromTimestamp(event.marketTimestamp || null);
+    if (eventMinutes !== null && fromMinutes !== null && eventMinutes < fromMinutes) return false;
+    if (eventMinutes !== null && toMinutes !== null && eventMinutes > toMinutes) return false;
     return true;
   });
 }

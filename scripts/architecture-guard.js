@@ -678,6 +678,23 @@ function checkScannerVisibilityMetadataBoundary() {
     fail('bridgeDiagnosticReplayAgent.ts must preserve Phase 9F replay validation checks and diagnostic-only authority boundaries.');
   }
 
+  const scannerAuditImportPath = path.join(ROOT, 'tools', 'automation', 'scanner-audit-import.ts');
+  const scannerAuditImportContent = readFileSafe(scannerAuditImportPath);
+  if (
+    !scannerAuditImportContent.includes('scanner_decision_event_tape') ||
+    !scannerAuditImportContent.includes('expandAuditJson') ||
+    !scannerAuditImportContent.includes('normalizeDeskStateForReplay') ||
+    !scannerAuditImportContent.includes('requiredPromotionProofForStage') ||
+    !scannerAuditImportContent.includes('marketTimestamp: event.time') ||
+    !scannerAuditImportContent.includes('changesBridgeBehavior: false')
+  ) {
+    fail('scanner-audit-import.ts must flatten decision tapes and normalize historical DeskState promotion metadata for replay diagnostics.');
+  }
+
+  if (!replayContent.includes('clockMinutesFromTimestamp') || !replayContent.includes('event.marketTimestamp')) {
+    fail('bridgeDiagnosticReplayAgent.ts must filter decision-tape audit events by replay-window market timestamp when available.');
+  }
+
   const localScannerEnginePath = path.join(ROOT, 'src', 'lib', 'localScannerEngine.ts');
   const localScannerEngineContent = readFileSafe(localScannerEnginePath);
   if (

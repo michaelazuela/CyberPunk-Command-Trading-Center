@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 6 Phase 10 production readiness for Phase 9F audit replay.
+Files changed: tools/automation/scanner-audit-import.ts, tools/automation/diagnostic-replay.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Live dry-scan review showed generated lunch decision tapes need direct importer support: the tape stores keyed events, same-day history can contain mixed Phase 9E promotion schema, and replay should honor the requested market-time window.
+Tests run: npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsc --noEmit; npm run diagnostic:replay -- --date 2026-06-22 --instrument MES --session lunch --bridge-instrument "MES 09-26" --from 12:00 --to 14:10 --direction AUTO --audit-dir tools/automation/discord-audit --pretty; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Diagnostic replay now loads generated decision-tape audit history directly, normalizes historical DeskState promotion metadata in memory, honors the requested replay window, and reports Phase 9F pass for the generated 2026-06-22 MES lunch dry-scan tape from 12:00-14:10 ET.
+Trading logic changed: No intended change. This is audit import, diagnostic replay CLI, tests, guard, and docs only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, Discord cadence, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence change.
+Journal/RAG impact: No schema or persistence change. Existing audit files are not rewritten.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: After commit, perform one fresh active-window dry scan and run `diagnostic:replay -- --session <active-session>` directly against the generated tape as the final operational smoke check before any live Discord enablement discussion.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 5 Phase 9F Replay Validation verdict.
 Files changed: src/agents/bridgeDiagnosticReplayAgent.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/diagnostic-replay.ts, scripts/architecture-guard.js, docs/SCANNER_DESK_STATE_PHASE_9_AUDIT.md, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Phase 9F needs a research/replay-only verdict that answers whether watch-to-plan visibility worked before trusting the command path live.

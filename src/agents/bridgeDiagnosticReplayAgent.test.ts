@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { NinjaBridgeBar } from '../lib/ninjaTraderBridge';
 import { buildCandidateLifecycleTrace, buildDeskState, classifyScannerVisibility } from '../lib/localScannerEngine';
 import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupCandidateStatus, SetupType } from '../types';
 import { runBridgeDiagnosticReplay, type BridgeDiagnosticReplayInput } from './bridgeDiagnosticReplayAgent';
 import { parseDiagnosticReplayArgs } from '../../tools/automation/diagnostic-replay';
-import { normalizeScannerAuditRecord } from '../../tools/automation/scanner-audit-import';
+import { loadScannerAuditHistory, normalizeScannerAuditRecord } from '../../tools/automation/scanner-audit-import';
 
 function bar(time: string, open: number, high: number, low: number, close: number): NinjaBridgeBar {
   return { time, open, high, low, close, volume: 1000 };
@@ -249,6 +252,61 @@ const replayWithExplainedNoTrade = runBridgeDiagnosticReplay(input({
 assert.equal(replayWithExplainedNoTrade.phase9FReplayValidation.checks.noTradeExplainedClearly.status, 'pass');
 assert.match(replayWithExplainedNoTrade.phase9FReplayValidation.checks.noTradeExplainedClearly.summary, /explicit reason/);
 
+function legacyPromotionDeskState(state: ReturnType<typeof deskStateFor>) {
+  const clone = JSON.parse(JSON.stringify(state));
+  delete clone.promotion.promotionReadiness;
+  delete clone.promotion.requiredProof;
+  delete clone.promotion.blockedBy;
+  delete clone.promotion.approvalBoundary;
+  return clone;
+}
+
+const mixedTapeDir = await mkdtemp(join(tmpdir(), 'scanner-decision-tape-import-'));
+await writeFile(join(mixedTapeDir, 'scanner-decision-tape-2026-05-29-MES-lunch.json'), `${JSON.stringify({
+  reportType: 'scanner_decision_event_tape',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  session: 'lunch',
+  events: {
+    '2026-05-29T11:55:00.0000000': {
+      recordedAt: '2026-05-29T15:56:00Z',
+      time: '2026-05-29T11:55:00.0000000',
+      scannerState: 'Conditional',
+      deskState: legacyPromotionDeskState(deskStateFor('Conditional', conditionalCandidateForReplay)),
+      discord: { shouldSend: true, sendOrSuppressReason: 'Pre-window review fixture.' },
+    },
+    '2026-05-29T12:00:00.0000000': {
+      recordedAt: '2026-05-29T16:01:00Z',
+      time: '2026-05-29T12:00:00.0000000',
+      scannerState: 'TriggerPending',
+      deskState: legacyPromotionDeskState(deskStateFor('Watching', watchCandidateForReplay)),
+      discord: { shouldSend: true, sendOrSuppressReason: 'Decision tape watch fixture.' },
+    },
+    '2026-05-29T12:05:00.0000000': {
+      recordedAt: '2026-05-29T16:06:00Z',
+      time: '2026-05-29T12:05:00.0000000',
+      scannerState: 'Conditional',
+      deskState: legacyPromotionDeskState(deskStateFor('Conditional', conditionalCandidateForReplay)),
+      discord: { shouldSend: true, sendOrSuppressReason: 'Decision tape review fixture.' },
+    },
+  },
+}, null, 2)}\n`, 'utf8');
+const mixedTapeHistory = await loadScannerAuditHistory(mixedTapeDir);
+assert.equal(mixedTapeHistory.events.length, 3);
+assert.equal(mixedTapeHistory.events[0].session, 'lunch');
+assert.equal(mixedTapeHistory.events[0].marketTimestamp, '2026-05-29T11:55:00.0000000');
+assert.equal(mixedTapeHistory.events[1].deskState?.promotion.requiredProof.length, 4);
+assert.equal(mixedTapeHistory.events[1].deskState?.promotion.approvalBoundary.changesCanExecute, false);
+assert.match(mixedTapeHistory.events[1].originalFilePath, /#2026-05-29T12:00:00\.0000000$/);
+const replayFromMixedTape = runBridgeDiagnosticReplay(input({
+  session: 'lunch',
+  replayWindow: { from: '12:00', to: '12:10' },
+  scannerAuditEvents: mixedTapeHistory.events,
+}));
+assert.equal(replayFromMixedTape.phase9FReplayValidation.status, 'pass');
+assert.equal(replayFromMixedTape.deskStateReplayValidation.watchToPlanPromotionProofed, true);
+assert.equal(replayFromMixedTape.phase9FReplayValidation.authority.replayChangesScannerBehavior, false);
+
 const june11LongBias = candidate({
   setupType: SetupType.SweepMssFvgRetrace,
   scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
@@ -466,6 +524,7 @@ assert.equal(JSON.stringify(immutableReport).includes('"canExecute":true'), fals
 const parsed = parseDiagnosticReplayArgs([
   '--date', '2026-05-28',
   '--instrument', 'MES',
+  '--session', 'lunch',
   '--bridge-instrument', 'MES 06-26',
   '--from', '10:00',
   '--to', '12:00',
@@ -477,6 +536,7 @@ const parsed = parseDiagnosticReplayArgs([
 ]);
 assert.equal(parsed.date, '2026-05-28');
 assert.equal(parsed.instrument, 'MES');
+assert.equal(parsed.session, 'lunch');
 assert.equal(parsed.bridgeInstrument, 'MES 06-26');
 assert.equal(parsed.from, '10:00');
 assert.equal(parsed.to, '12:00');

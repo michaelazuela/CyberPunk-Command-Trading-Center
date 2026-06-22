@@ -12,6 +12,19 @@ Latest Install 4 update: 2026-06-22
 
 Latest Install 5 update: 2026-06-22
 
+Latest Install 6 update: 2026-06-22
+
+## Phase 10 Production Readiness
+
+Install 6 made Phase 9F replay validation work against generated decision-tape audit history without manual flattening.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `tools/automation/scanner-audit-import.ts` / audit history loader | `scanner_decision_event_tape` files store events under an `events` object, but the importer treated the tape wrapper as one audit record. Phase 9F therefore missed generated DeskState snapshots unless a manual script flattened the tape. | Added decision-tape flattening so each tape entry becomes a diagnostic audit event with inherited trade date, instrument, session, timestamp, Discord decision, and DeskState. | Diagnostic/audit-read-only change. It does not rewrite audit files, send Discord, or affect scanner decisions. |
+| `tools/automation/scanner-audit-import.ts` / historical DeskState replay import | Same-day tapes may contain historical DeskState snapshots from before Phase 9E added `requiredProof`, `blockedBy`, `promotionReadiness`, and `approvalBoundary`. Strict replay could crash or false-fail on mixed-schema history. | Added replay-only DeskState promotion normalization for historical snapshots. | Compatibility-only change. Normalization happens in memory for diagnostics and preserves no-approval-change boundaries. |
+| `tools/automation/diagnostic-replay.ts` / CLI options | Diagnostic replay defaulted to morning session, so lunch tapes required custom scripts to validate. | Added `--session morning|lunch|replay_morning|replay_lunch`. | CLI-only change. No live scanner or trade behavior changed. |
+| `src/agents/bridgeDiagnosticReplayAgent.ts` / audit matching | Flattened decision tapes can contain earlier same-day states before the requested replay window. | Added replay-window filtering when a decision-tape market timestamp is available. | Diagnostic-only change. It prevents mid-campaign pre-window states from false-failing Phase 9F. |
+
 ## Phase 9F Replay Validation
 
 Install 5 added a research/replay-only Phase 9F verdict without changing scanner behavior.
