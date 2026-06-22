@@ -861,6 +861,7 @@ assert.ok(dataLimitedDeskPlayText.includes('MES Current Desk Plan'));
 assert.ok(dataLimitedDeskPlayText.includes('Primary: 🐻 SHORT'));
 assert.ok(dataLimitedDeskPlayText.includes('SHORT BELOW 7525.00'));
 assert.ok(dataLimitedDeskPlayText.includes('Reference levels only - not execution approval.'));
+assert.ok(dataLimitedDeskPlayText.includes('Sniper watch: 1M timing only; 5M close/hold required.'));
 assert.ok(dataLimitedDeskPlayText.includes('Reference entry: 7525.00'));
 assert.ok(dataLimitedDeskPlayText.includes('Reference stop: 7533.00'));
 assert.ok(dataLimitedDeskPlayText.includes('Reference T1: 7513.00'));

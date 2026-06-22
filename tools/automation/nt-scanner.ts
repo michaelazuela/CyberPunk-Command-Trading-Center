@@ -362,6 +362,29 @@ export interface ScannerTacticalCampaignMap {
   changesCanExecute: false;
 }
 
+export interface ScannerSniperTriggerWatchMetadata {
+  label: 'Line-in-the-Sand Sniper Watch';
+  eligible: boolean;
+  status: 'research_only_discretionary';
+  direction: 'LONG' | 'SHORT' | null;
+  lineInSand: number | null;
+  referenceEntry: number | null;
+  referenceStop: number | null;
+  referenceTarget1: number | null;
+  referenceTarget2: number | null;
+  oneMinuteTimingRule: string;
+  fiveMinuteConfirmationRule: string;
+  reason: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    createsNewModel: false;
+    oneMinuteApprovesExecution: false;
+  };
+}
+
 export type ScannerReversalWatchDirection = 'LONG' | 'SHORT';
 export type ScannerReversalWatchState =
   | 'unavailable'
@@ -3357,6 +3380,81 @@ export function candidateForDeskPlayContextChart(
   };
 }
 
+export function scannerSniperTriggerWatchMetadata(args: {
+  deskState?: DeskState | null;
+  normalized: ReturnType<typeof buildAppTradePlan>;
+  candidate: SetupCandidate | null;
+}): ScannerSniperTriggerWatchMetadata {
+  const direction = args.deskState?.primaryDeskPlay.direction === 'LONG' || args.deskState?.primaryDeskPlay.direction === 'SHORT'
+    ? args.deskState.primaryDeskPlay.direction
+    : args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+      ? args.candidate.direction
+      : null;
+  const lineInSand = direction && args.deskState
+    ? deskPlayLineForDirection(args.deskState, direction)
+    : null;
+  const referenceEntry = isFiniteTradePrice(args.normalized.entry)
+    ? roundToTradeTick(args.normalized.entry)
+    : isFiniteTradePrice(args.candidate?.entry)
+      ? roundToTradeTick(args.candidate.entry)
+      : lineInSand;
+  const referenceStop = isFiniteTradePrice(args.normalized.stop)
+    ? roundToTradeTick(args.normalized.stop)
+    : isFiniteTradePrice(args.candidate?.stop)
+      ? roundToTradeTick(args.candidate.stop)
+      : null;
+  const referenceTarget1 = isFiniteTradePrice(args.normalized.t1)
+    ? roundToTradeTick(args.normalized.t1)
+    : isFiniteTradePrice(args.candidate?.target1)
+      ? roundToTradeTick(args.candidate.target1)
+      : null;
+  const referenceTarget2 = isFiniteTradePrice(args.normalized.t2)
+    ? roundToTradeTick(args.normalized.t2)
+    : isFiniteTradePrice(args.candidate?.target2)
+      ? roundToTradeTick(args.candidate.target2)
+      : null;
+  const hasReferenceLevels = Boolean(
+    direction &&
+    isFiniteTradePrice(referenceEntry) &&
+    isFiniteTradePrice(referenceStop) &&
+    isFiniteTradePrice(referenceTarget1) &&
+    isFiniteTradePrice(referenceTarget2)
+  );
+  const executable = getEffectiveCanExecute(args.normalized) || args.deskState?.canExecute === true;
+  const eligible = hasReferenceLevels && !executable;
+  const through = direction === 'SHORT' ? 'below' : 'above';
+  return {
+    label: 'Line-in-the-Sand Sniper Watch',
+    eligible,
+    status: 'research_only_discretionary',
+    direction,
+    lineInSand: isFiniteTradePrice(lineInSand) ? roundToTradeTick(lineInSand) : referenceEntry,
+    referenceEntry: isFiniteTradePrice(referenceEntry) ? referenceEntry : null,
+    referenceStop: isFiniteTradePrice(referenceStop) ? referenceStop : null,
+    referenceTarget1: isFiniteTradePrice(referenceTarget1) ? referenceTarget1 : null,
+    referenceTarget2: isFiniteTradePrice(referenceTarget2) ? referenceTarget2 : null,
+    oneMinuteTimingRule: direction
+      ? `Optional trader timing only: 1M body close ${through} the line may be logged for research, but it never approves execution.`
+      : 'Optional trader timing only: 1M evidence may be logged for research, but it never approves execution.',
+    fiveMinuteConfirmationRule: direction
+      ? `Required before discretionary action review: completed 5M body close/hold ${through} the same line.`
+      : 'Required before discretionary action review: completed 5M body close/hold through the same line.',
+    reason: eligible
+      ? 'Non-executable scanner plan has complete reference levels and may be studied as a discretionary line-in-the-sand sniper watch.'
+      : executable
+        ? 'Executable scanner plans use the normal app-owned trade path, not the sniper-watch research tag.'
+        : 'Sniper-watch research tag unavailable because direction or complete reference levels are missing.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      createsNewModel: false,
+      oneMinuteApprovesExecution: false,
+    },
+  };
+}
+
 export async function upsertScannerDiscordAlertRagRecord(args: {
   planVersionId: string;
   session: LiveSession;
@@ -3389,6 +3487,11 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
     discordAlertId: args.planVersionId,
     notes: 'Scanner Discord alert created. Awaiting trader outcome button.',
   });
+  const sniperTriggerWatch = scannerSniperTriggerWatchMetadata({
+    deskState: args.deskState,
+    normalized: args.normalized,
+    candidate: args.candidate,
+  });
   const payload = {
     session_type: args.session,
     trade_date: args.tradeDate,
@@ -3408,8 +3511,11 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
       `Scanner Discord alert pending outcome for ${args.session} ${args.instrument} on ${args.tradeDate}.`,
       `Plan: ${args.normalized.decisionLabel || args.normalized.decision} ${args.normalized.setupName || args.candidate?.setupType || ''}.`,
       `Journal model: ${journalRecord.modelType}. Tags: ${journalRecord.setupTags.join(', ') || 'none'}. Planned R: ${journalRecord.plannedR ?? 'pending'}.`,
+      sniperTriggerWatch.eligible
+        ? `Research tag: ${sniperTriggerWatch.label}. 1M timing is discretionary only; completed 5M close/hold remains required.`
+        : null,
       'Outcome buttons record trader-confirmed review only; no automated orders are placed.',
-    ].join(' '),
+    ].filter(Boolean).join(' '),
     trade_plan_json: {
       planVersionId: args.planVersionId,
       discordOutcomeButtons: true,
@@ -3419,6 +3525,7 @@ export async function upsertScannerDiscordAlertRagRecord(args: {
       visibility: args.visibilityMetadata || null,
       candidateLifecycleTrace: args.candidateLifecycleTrace || null,
       deskState: args.deskState || null,
+      sniperTriggerWatch,
       targetObjectives: args.analysis.structuredChartContext?.targetObjectives || [],
       outcome: {
         tradeTaken: null,
@@ -5268,6 +5375,7 @@ function buildScannerReversalWatchDiscordPayload(args: {
           name: 'Reference Levels Only',
           value: compactScannerDiscordText([
             'Not execution approval.',
+            'Sniper watch: 1M timing only; 5M close/hold required.',
             `Reference entry: ${scannerDiscordLine(args.lines.referenceEntry)}`,
             `Reference stop: ${scannerDiscordLine(args.lines.referenceStop)}`,
             `Reference T1: ${scannerDiscordLine(args.lines.referenceTarget1)}`,

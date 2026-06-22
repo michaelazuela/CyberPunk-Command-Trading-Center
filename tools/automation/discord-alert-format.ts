@@ -1304,6 +1304,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     sideBreakoutLabel(direction, triggerWord, lineInSand),
     ...(referenceOnly ? [
       'Reference levels only - not execution approval.',
+      'Sniper watch: 1M timing only; 5M close/hold required.',
       `Reference entry: ${priceLine(candidate.entry)}`,
       `Reference stop: ${priceLine(levels.stop)}`,
       `Reference T1: ${priceLine(levels.target1)}`,
@@ -1478,6 +1479,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         lines: [
           sideBreakoutLabel(side, triggerWord, line),
           'Review levels only - not an executable trade plan.',
+          'Sniper watch: 1M timing only; 5M close/hold required.',
           `Reference entry: ${priceLine(levels.entry)}`,
           `Reference stop: ${priceLine(levels.stop)}`,
           `Reference T1: ${priceLine(levels.target1)}`,

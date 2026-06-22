@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-21
+Task: Add review-only Line-in-the-Sand Sniper Watch tracking and Discord wording.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: The trader successfully used scanner line-in-the-sand reference levels with discretionary 1M timing and completed 5M confirmation, and wants that workflow visible and learnable without turning it into app execution approval.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run nt:scanner -- --once --dry-run.
+Result: Passed. Non-executable scanner RAG records now include `Line-in-the-Sand Sniper Watch` metadata when complete reference levels exist, with explicit 1M timing/5M confirmation and approval-boundary fields. Discord review-only level blocks now show a compact `Sniper watch: 1M timing only; 5M close/hold required.` line.
+Trading logic changed: No. This is review-only metadata and wording. It does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, or Discord approval authority.
+Bridge impact: None.
+Discord impact: Review-only Current Desk Plan and Tactical Reversal Watch level blocks are clearer while remaining explicitly non-executable.
+Journal/RAG impact: No schema change. Existing `trade_plan_json` stores optional sniper-watch research metadata for later outcome study.
+Supabase impact: No migration added.
+Known risks: None known after verification. The scanner alert suite still prints a non-failing pre-existing compact-text warning for one fixture being above the preferred 1200-character target.
+Next recommended action: Phase 3 should be research-only replay/audit of these sniper-watch cases before any discussion of formal model promotion.
+
+## Previous Change
+
+Date: 2026-06-21
 Task: Add reference-only levels to Tactical Reversal Watch Discord cards.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Tactical Reversal Watch cards showed trigger, invalidation, and no-chase map lines, but did not show the existing app-owned opposite-side lifecycle reference entry/stop/T1/T2 levels, which made the trader ask why levels visible elsewhere were absent.

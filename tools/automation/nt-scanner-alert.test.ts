@@ -65,6 +65,7 @@ import {
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
+  scannerSniperTriggerWatchMetadata,
   shouldSendScannerMorningHtfDeskMap,
   shouldSendScannerEndOfDayMarketRecap,
   summarizeScannerHistoryCoverage,
@@ -1373,6 +1374,39 @@ assert.match(longWatchLines.retestRule || '', /Later completed 5M retest\/hold c
 assert.equal(longWatchLines.approvalBoundary.changesCanExecute, false);
 assert.equal(longWatchLines.approvalBoundary.changesEntryStopTargets, false);
 assert.match(longWatchLines.reason, /SHORT campaign reached mapped reaction zone/);
+const longSniperWatch = scannerSniperTriggerWatchMetadata({
+  deskState: {
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      lineInSand: 7533.75,
+      longAbove: 7533.75,
+      shortBelow: 7525,
+      longBias: { lineInSand: 7533.75 },
+      shortBias: { lineInSand: 7525 },
+    },
+  } as any,
+  normalized: {
+    entry: 7533.75,
+    stop: 7525.75,
+    t1: 7550,
+    t2: 7553.75,
+    canExecute: false,
+  } as any,
+  candidate: null,
+});
+assert.equal(longSniperWatch.eligible, true);
+assert.equal(longSniperWatch.label, 'Line-in-the-Sand Sniper Watch');
+assert.equal(longSniperWatch.direction, 'LONG');
+assert.equal(longSniperWatch.lineInSand, 7533.75);
+assert.equal(longSniperWatch.referenceEntry, 7533.75);
+assert.equal(longSniperWatch.referenceStop, 7525.75);
+assert.equal(longSniperWatch.referenceTarget1, 7550);
+assert.equal(longSniperWatch.referenceTarget2, 7553.75);
+assert.match(longSniperWatch.oneMinuteTimingRule, /1M body close above/);
+assert.match(longSniperWatch.fiveMinuteConfirmationRule, /completed 5M body close\/hold above/);
+assert.equal(longSniperWatch.approvalBoundary.changesCanExecute, false);
+assert.equal(longSniperWatch.approvalBoundary.oneMinuteApprovesExecution, false);
 const longWatchForming = classifyScannerReversalWatchState({
   lines: longWatchLines,
   completed5m: { time: '2026-06-08T15:20:00.0000000', open: 7408, high: 7410.75, low: 7406, close: 7410.5, volume: 1000 },
@@ -1533,6 +1567,7 @@ assert.match(reversalPayloadText, /LONG ABOVE: 7411.00/);
 assert.match(reversalPayloadText, /Invalid below: 7404.00/);
 assert.match(reversalPayloadText, /No chase above: 7421.50/);
 assert.match(reversalPayloadText, /Reference Levels Only/);
+assert.match(reversalPayloadText, /Sniper watch: 1M timing only; 5M close\/hold required\./);
 assert.match(reversalPayloadText, /Reference entry: 7411.00/);
 assert.match(reversalPayloadText, /Reference stop: 7404.00/);
 assert.match(reversalPayloadText, /Reference T1: 7421.50/);
