@@ -79,7 +79,7 @@ function input(overrides: Partial<BridgeDiagnosticReplayInput> = {}): BridgeDiag
   };
 }
 
-function deskStateFor(state: 'Watching' | 'Conditional', setupCandidate: SetupCandidate) {
+function deskStateFor(state: 'Watching' | 'Conditional' | 'Blocked', setupCandidate: SetupCandidate) {
   const visibility = classifyScannerVisibility({
     state,
     candidate: setupCandidate,
@@ -215,6 +215,39 @@ assert.equal(replayWithDeskState.deskStateReplayValidation.discordRagUiAligned, 
 assert.equal(replayWithDeskState.deskStateReplayValidation.promotionBoundary.changesTradeApprovals, false);
 assert.equal(replayWithDeskState.deskStateReplayValidation.promotionBoundary.changesCanExecute, false);
 assert.equal(replayWithDeskState.deskStateReplayValidation.authority.replayValidationApprovesTrade, false);
+assert.equal(replayWithDeskState.phase9FReplayValidation.sourceOfTruth, 'bridge_diagnostic_phase9f_replay_validation');
+assert.equal(replayWithDeskState.phase9FReplayValidation.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.watchAppearedBeforeMove.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.lineInSandMatchedMarketStructure.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.planPromotedCorrectly.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.noChasePreserved.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.noTradeExplainedClearly.status, 'not_applicable');
+assert.equal(replayWithDeskState.phase9FReplayValidation.checks.discordRagUiReflectSameDeskState.status, 'pass');
+assert.equal(replayWithDeskState.phase9FReplayValidation.authority.replayApprovesTrade, false);
+assert.equal(replayWithDeskState.phase9FReplayValidation.authority.replayChangesCanExecute, false);
+assert.equal(replayWithDeskState.phase9FReplayValidation.authority.replayChangesScannerBehavior, false);
+
+const blockedReplayCandidate = candidate({
+  executionStatus: ExecutionStatus.Blocked,
+  blockReason: NoTradeReason.RiskTooWide,
+  missingEvidence: ['Risk exceeds normal app-owned gate.'],
+  requiredTrigger: 'Hold with reason: risk gate blocks execution; no trade until protected 5M structure improves.',
+});
+const blockedReplayEvent = normalizeScannerAuditRecord({
+  createdAt: '2026-05-29T14:11:00Z',
+  source: 'live-scanner',
+  tradeDate: '2026-05-29',
+  instrument: 'MES',
+  session: 'morning',
+  state: 'Blocked',
+  candidate: blockedReplayCandidate,
+  deskState: deskStateFor('Blocked', blockedReplayCandidate),
+}, 'C:/tmp/scanner-blocked-audit.json');
+const replayWithExplainedNoTrade = runBridgeDiagnosticReplay(input({
+  scannerAuditEvents: [blockedReplayEvent],
+}));
+assert.equal(replayWithExplainedNoTrade.phase9FReplayValidation.checks.noTradeExplainedClearly.status, 'pass');
+assert.match(replayWithExplainedNoTrade.phase9FReplayValidation.checks.noTradeExplainedClearly.summary, /explicit reason/);
 
 const june11LongBias = candidate({
   setupType: SetupType.SweepMssFvgRetrace,

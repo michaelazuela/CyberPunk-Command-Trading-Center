@@ -10,6 +10,18 @@ Latest Install 3 update: 2026-06-22
 
 Latest Install 4 update: 2026-06-22
 
+Latest Install 5 update: 2026-06-22
+
+## Phase 9F Replay Validation
+
+Install 5 added a research/replay-only Phase 9F verdict without changing scanner behavior.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `src/agents/bridgeDiagnosticReplayAgent.ts` / diagnostic report | Replay output had DeskState validation, but the Phase 9F handoff questions were not summarized as a single verdict. | Added `phase9FReplayValidation` with checks for watch-before-move/path, scanner-owned line metadata, promotion correctness, no-chase preservation, explained no-trade states, and Discord/RAG/UI alignment. | Diagnostic-only output. The authority boundary states no trade approval, no rule change, no `canExecute` change, no scanner behavior change, no Discord behavior change, and no bridge behavior change. |
+| `tools/automation/diagnostic-replay.ts` / pretty output | CLI output did not surface the Phase 9F verdict. | Added a compact Phase 9F line to the pretty report. | Reporting-only change. No scanner, bridge, Discord send, or persistence behavior changed. |
+| Tests and architecture guard | Phase 9F verdict needed regression coverage. | Added diagnostic replay assertions for a passing watch-to-plan path and explained no-trade state; architecture guard now requires Phase 9F fields and authority flags. | Tests assert diagnostic-only boundaries. |
+
 ## Phase 9E Watch-To-Plan Promotion
 
 Install 4 added scanner-owned promotion proof metadata without changing approval behavior.

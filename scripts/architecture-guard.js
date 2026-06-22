@@ -666,6 +666,17 @@ function checkScannerVisibilityMetadataBoundary() {
   if (!replayContent.includes('deskStateReplayValidation') || !replayContent.includes('validateDeskStateReplayPath')) {
     fail('bridgeDiagnosticReplayAgent.ts must include scanner DeskState replay validation.');
   }
+  if (
+    !replayContent.includes('phase9FReplayValidation') ||
+    !replayContent.includes('bridge_diagnostic_phase9f_replay_validation') ||
+    !replayContent.includes('watchAppearedBeforeMove') ||
+    !replayContent.includes('lineInSandMatchedMarketStructure') ||
+    !replayContent.includes('discordRagUiReflectSameDeskState') ||
+    !replayContent.includes('replayChangesScannerBehavior: false') ||
+    !replayContent.includes('replayChangesBridgeBehavior: false')
+  ) {
+    fail('bridgeDiagnosticReplayAgent.ts must preserve Phase 9F replay validation checks and diagnostic-only authority boundaries.');
+  }
 
   const localScannerEnginePath = path.join(ROOT, 'src', 'lib', 'localScannerEngine.ts');
   const localScannerEngineContent = readFileSafe(localScannerEnginePath);

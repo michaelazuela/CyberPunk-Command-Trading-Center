@@ -81,7 +81,7 @@ Plan/review RAG records now carry `visibility`, `candidateLifecycleTrace`, and `
 
 ## Phase 9F: Replay Validation
 
-Owner: `src/lib/localScannerEngine.ts` via `validateDeskStateReplayPath`.
+Owner: `src/lib/localScannerEngine.ts` via `validateDeskStateReplayPath` and `src/agents/bridgeDiagnosticReplayAgent.ts` via `phase9FReplayValidation`.
 
 Diagnostic replay now carries DeskState snapshots from scanner audit JSON and reports whether replay observed:
 
@@ -94,6 +94,17 @@ Diagnostic replay now carries DeskState snapshots from scanner audit JSON and re
 Replay validation is diagnostic only. It does not approve trades, change rules, or change `canExecute`.
 
 If replay has no DeskState snapshots, source-of-truth and consumer-alignment checks report false rather than treating an empty audit set as aligned.
+
+Install 5 added a Phase 9F replay verdict to diagnostic reports. The verdict answers the handoff questions directly:
+
+- did a watch appear before the move/path?
+- did scanner-owned line-in-the-sand metadata exist?
+- did promotion validate through DeskState?
+- was no-chase language preserved?
+- were hold/no-trade/data-quality states explained when present?
+- did Discord/RAG/UI-facing visibility metadata reflect the same DeskState?
+
+The verdict keeps an explicit diagnostic-only authority boundary: it cannot approve trades, change rules, change `canExecute`, change scanner behavior, change Discord behavior, or change bridge behavior.
 
 ## Deferred
 

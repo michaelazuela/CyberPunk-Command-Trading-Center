@@ -201,6 +201,7 @@ function formatPretty(report: ReturnType<typeof runBridgeDiagnosticReplay>): str
     `Scanner: ${report.scannerAlertReview.reason}`,
     `Scanner audit: ${report.scannerAuditContext.scannerAuditStatus} - ${report.scannerAuditContext.summary}`,
     `DeskState replay: cycles=${report.deskStateReplayValidation.cycleCount}; watchBeforePlan=${report.deskStateReplayValidation.watchAppearedBeforePlan}; promotionPath=${report.deskStateReplayValidation.promotionPathObserved}; aligned=${report.deskStateReplayValidation.discordRagUiAligned}`,
+    `Phase 9F replay: ${report.phase9FReplayValidation.status}; watch=${report.phase9FReplayValidation.checks.watchAppearedBeforeMove.status}; line=${report.phase9FReplayValidation.checks.lineInSandMatchedMarketStructure.status}; promotion=${report.phase9FReplayValidation.checks.planPromotedCorrectly.status}; noChase=${report.phase9FReplayValidation.checks.noChasePreserved.status}; noTrade=${report.phase9FReplayValidation.checks.noTradeExplainedClearly.status}; aligned=${report.phase9FReplayValidation.checks.discordRagUiReflectSameDeskState.status}`,
     `Timeframe MSS Evidence: ${report.timeframeMssEvidenceDiagnostics.timeframes.map((item) => `${item.timeframe} ${item.status} ${item.direction} break=${item.breaksStructure} completed=${item.completedBarStatus}`).join('; ')}`,
     `Active MSS Ruleset: ${report.activeTimeframeMssRulesetDiagnostics.summary}`,
     `Recommendation: ${report.newPlanRecommendation.recommendationType} - ${report.newPlanRecommendation.reason}`,

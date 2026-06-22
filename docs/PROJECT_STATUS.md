@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 5 Phase 9F Replay Validation verdict.
+Files changed: src/agents/bridgeDiagnosticReplayAgent.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/diagnostic-replay.ts, scripts/architecture-guard.js, docs/SCANNER_DESK_STATE_PHASE_9_AUDIT.md, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9F needs a research/replay-only verdict that answers whether watch-to-plan visibility worked before trusting the command path live.
+Tests run: npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts; npx tsx src/lib/localScannerEngine.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Diagnostic replay reports now include `phase9FReplayValidation`, with checks for watch-before-move/path, scanner-owned line metadata, promotion correctness, no-chase preservation, explained no-trade states, and Discord/RAG/UI alignment.
+Trading logic changed: No intended change. This is diagnostic replay output, tests, guard, and docs only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, Discord cadence, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence change. The diagnostic CLI can now print the Phase 9F replay verdict.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Run a live dry-scan observation during an active window and inspect the Phase 9F verdict from generated scanner audit history before considering Phase 9 command-path work complete for live use.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 4 Phase 9E Watch-To-Plan Promotion guardrails.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/nt-scanner-alert.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Make watch-to-plan continuity explicit and replay-verifiable without changing approvals. DeskState promotion metadata now states required proof, blockers, no-chase/protected-5M expectations, and the no-authority-change boundary.

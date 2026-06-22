@@ -85,6 +85,35 @@ export interface BridgeDiagnosticReplayInput {
   suspectedMoveWindow?: { from: string; to: string } | null;
 }
 
+export type Phase9FReplayCheckStatus = 'pass' | 'fail' | 'not_applicable';
+
+export interface Phase9FReplayCheck {
+  status: Phase9FReplayCheckStatus;
+  summary: string;
+}
+
+export interface Phase9FReplayValidation {
+  sourceOfTruth: 'bridge_diagnostic_phase9f_replay_validation';
+  status: 'pass' | 'fail' | 'insufficient_replay_data';
+  checks: {
+    watchAppearedBeforeMove: Phase9FReplayCheck;
+    lineInSandMatchedMarketStructure: Phase9FReplayCheck;
+    planPromotedCorrectly: Phase9FReplayCheck;
+    noChasePreserved: Phase9FReplayCheck;
+    noTradeExplainedClearly: Phase9FReplayCheck;
+    discordRagUiReflectSameDeskState: Phase9FReplayCheck;
+  };
+  findings: string[];
+  authority: {
+    replayApprovesTrade: false;
+    replayChangesRules: false;
+    replayChangesCanExecute: false;
+    replayChangesScannerBehavior: false;
+    replayChangesDiscordBehavior: false;
+    replayChangesBridgeBehavior: false;
+  };
+}
+
 export interface BridgeDiagnosticReplayReport {
   finalClassification: BridgeDiagnosticClassification;
   classificationLabel: string;
@@ -126,6 +155,7 @@ export interface BridgeDiagnosticReplayReport {
     warnings: string[];
   };
   deskStateReplayValidation: DeskStateReplayValidation;
+  phase9FReplayValidation: Phase9FReplayValidation;
   tradePlanFeasibility: {
     applicable: boolean;
     candidateEntryTrigger: number | null;
@@ -773,6 +803,97 @@ function auditSummary(classification: BridgeDiagnosticClassification, events: Di
   return `scannerAuditStatus: present. Events found: trade=${tradeEvents.length}, watchlist=${watchlistEvents.length}, health=${healthEvents.length}. Audit context is supporting evidence only.`;
 }
 
+function phase9FCheck(status: Phase9FReplayCheckStatus, summary: string): Phase9FReplayCheck {
+  return { status, summary };
+}
+
+function deskStateHasLineInSand(state: DeskState): boolean {
+  return [
+    state.lineInSand,
+    state.primaryDeskPlay.lineInSand,
+    state.primaryDeskPlay.longAbove,
+    state.primaryDeskPlay.shortBelow,
+  ].some((value) => typeof value === 'number' && Number.isFinite(value));
+}
+
+function deskStateExplainsNoTradeState(state: DeskState): boolean {
+  const text = [
+    state.suppressionReason,
+    state.nextTrigger,
+    state.invalidation,
+    state.promotion.promotionTrigger,
+    ...state.promotion.missingProof,
+    ...state.promotion.blockedBy,
+    ...state.notes,
+  ].filter(Boolean).join(' ');
+  return text.trim().length > 0;
+}
+
+function buildPhase9FReplayValidation(args: {
+  deskStates: DeskState[];
+  deskStateReplayValidation: DeskStateReplayValidation;
+  moveObserved: boolean;
+}): Phase9FReplayValidation {
+  const states = [...args.deskStates];
+  const hasDeskStates = states.length > 0;
+  const noTradeStates = states.filter((state) =>
+    state.visibilityMode === 'HOLD_WITH_REASON' ||
+    state.visibilityMode === 'NO_TRADE_WITH_REASON' ||
+    state.visibilityMode === 'DATA_QUALITY_BLOCKER' ||
+    state.promotion.currentStage === 'no_trade'
+  );
+
+  const checks: Phase9FReplayValidation['checks'] = {
+    watchAppearedBeforeMove: !hasDeskStates
+      ? phase9FCheck('fail', 'No DeskState snapshots were available for replay validation.')
+      : !args.moveObserved
+        ? phase9FCheck('not_applicable', 'Replay did not include a measurable move/target outcome; watch-before-move could not be proven.')
+        : args.deskStateReplayValidation.watchAppearedBeforePlan
+          ? phase9FCheck('pass', 'A scanner-owned watch snapshot appeared before plan/review promotion in the replay path.')
+          : phase9FCheck('fail', 'Replay did not show a scanner-owned watch before the later move or plan/review state.'),
+    lineInSandMatchedMarketStructure: !hasDeskStates
+      ? phase9FCheck('fail', 'No DeskState snapshots were available to inspect line-in-the-sand metadata.')
+      : states.some(deskStateHasLineInSand)
+        ? phase9FCheck('pass', 'Replay snapshots carried scanner-owned line-in-the-sand or directional battle-line metadata.')
+        : phase9FCheck('fail', 'Replay snapshots did not expose a scanner-owned line in the sand for the command path.'),
+    planPromotedCorrectly: args.deskStateReplayValidation.promotionPathObserved && args.deskStateReplayValidation.watchToPlanPromotionProofed
+      ? phase9FCheck('pass', 'DeskState replay observed watch-to-plan continuity with proof/blocker metadata and canPromoteNow=false.')
+      : phase9FCheck('fail', 'DeskState replay did not prove watch-to-plan continuity with Phase 9E proof metadata.'),
+    noChasePreserved: args.deskStateReplayValidation.noChasePreserved
+      ? phase9FCheck('pass', 'Non-executable replay states preserved no-chase, completed-5M, or protected-structure language.')
+      : phase9FCheck('fail', 'At least one non-executable replay state lacked no-chase/completed-5M/protected-structure language.'),
+    noTradeExplainedClearly: noTradeStates.length === 0
+      ? phase9FCheck('not_applicable', 'Replay path did not include a hold, no-trade, or data-quality blocker DeskState.')
+      : noTradeStates.every(deskStateExplainsNoTradeState)
+        ? phase9FCheck('pass', 'Every hold/no-trade/data-quality replay state carried an explicit reason or next condition.')
+        : phase9FCheck('fail', 'At least one hold/no-trade/data-quality replay state lacked a clear reason.'),
+    discordRagUiReflectSameDeskState: args.deskStateReplayValidation.singleSourceOfTruthPresent && args.deskStateReplayValidation.discordRagUiAligned
+      ? phase9FCheck('pass', 'DeskState, visibility metadata, lifecycle trace, and Discord/RAG/UI-facing fields stayed aligned.')
+      : phase9FCheck('fail', 'DeskState source-of-truth or visibility/Discord/canExecute alignment diverged in replay.'),
+  };
+  const checkValues = Object.values(checks);
+  const status = !hasDeskStates
+    ? 'insufficient_replay_data'
+    : checkValues.some((check) => check.status === 'fail')
+      ? 'fail'
+      : 'pass';
+
+  return {
+    sourceOfTruth: 'bridge_diagnostic_phase9f_replay_validation',
+    status,
+    checks,
+    findings: checkValues.map((check) => check.summary),
+    authority: {
+      replayApprovesTrade: false,
+      replayChangesRules: false,
+      replayChangesCanExecute: false,
+      replayChangesScannerBehavior: false,
+      replayChangesDiscordBehavior: false,
+      replayChangesBridgeBehavior: false,
+    },
+  };
+}
+
 export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): BridgeDiagnosticReplayReport {
   const bars5m = sortedBars(input.bars5m);
   const bars15m = sortedBars(input.bars15m);
@@ -810,11 +931,15 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
   const planApplicable = finalClassification === 'A_VALID_APPROVED_NO_ALERT' || finalClassification === 'B_APPROVED_ALREADY_TRIGGERED';
   const recommendation = newPlanRecommendation(finalClassification);
   const auditEvents = matchingAuditEvents(input);
-  const deskStateReplayValidation = validateDeskStateReplayPath(
-    auditEvents
-      .map((event) => event.deskState)
-      .filter((state): state is DeskState => Boolean(state))
-  );
+  const deskStates = auditEvents
+    .map((event) => event.deskState)
+    .filter((state): state is DeskState => Boolean(state));
+  const deskStateReplayValidation = validateDeskStateReplayPath(deskStates);
+  const phase9FReplayValidation = buildPhase9FReplayValidation({
+    deskStates,
+    deskStateReplayValidation,
+    moveObserved: Boolean(fiveMinuteDisplacement || confirmationBarTime || targetReview.t1Hit || targetReview.t2Hit || targetReview.stopHitBeforeTargets),
+  });
 
   return {
     finalClassification,
@@ -860,6 +985,7 @@ export function runBridgeDiagnosticReplay(input: BridgeDiagnosticReplayInput): B
       warnings: auditEvents.flatMap((event) => event.auditWarnings || []),
     },
     deskStateReplayValidation,
+    phase9FReplayValidation,
     tradePlanFeasibility: {
       applicable: planApplicable,
       candidateEntryTrigger: planApplicable ? approvedCandidate?.entry ?? null : null,
