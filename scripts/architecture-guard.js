@@ -786,6 +786,50 @@ function checkPhase10E2EHealthContracts() {
   }
 }
 
+function checkPhase11LiveDiscordEligibilityPolicy() {
+  const policyPath = path.join(ROOT, 'src', 'lib', 'liveDiscordPostEligibility.ts');
+  if (!fs.existsSync(policyPath)) {
+    fail('Missing Phase 11A live Discord eligibility policy at src/lib/liveDiscordPostEligibility.ts.');
+    return;
+  }
+
+  const policyContent = readFileSafe(policyPath);
+  for (const requiredPhrase of [
+    'phase_11a_live_discord_post_eligibility_policy',
+    'evaluateLiveDiscordPostEligibility',
+    'scanner_health_ready',
+    'bridge_instrument_resolved',
+    'completed_5m_fresh',
+    'htf_context_present',
+    'desk_state_present',
+    'decision_tape_writable',
+    'discord_payload_visibility_metadata_present',
+    'fresh_dry_scan_observed',
+    'diagnostic_replay_passed',
+    'changesTradingLogic: false',
+    'changesScannerBehavior: false',
+    'changesDiscordSendBehavior: false',
+    'changesBridgeBehavior: false',
+    'changesCanExecute: false',
+    'createsTradeApproval: false',
+    'Phase 11B may wire this policy to the send boundary after review',
+  ]) {
+    if (!policyContent.includes(requiredPhrase)) {
+      fail(`liveDiscordPostEligibility.ts is missing Phase 11A boundary phrase: ${requiredPhrase}`);
+    }
+  }
+
+  const registryPath = path.join(ROOT, 'src', 'config', 'responsibilityRegistry.ts');
+  const registryContent = readFileSafe(registryPath);
+  if (
+    !registryContent.includes("key: 'live_discord_post_eligibility_policy'") ||
+    !registryContent.includes('src/lib/liveDiscordPostEligibility.ts') ||
+    !registryContent.includes('does not enable live sends')
+  ) {
+    fail('responsibilityRegistry.ts must identify Phase 11A live Discord eligibility policy as policy-only ownership metadata.');
+  }
+}
+
 function checkCodexPatchHygienePolicy() {
   const rulesPath = path.join(ROOT, 'docs', 'CODEX_RULES.md');
   if (!fs.existsSync(rulesPath)) {
@@ -847,6 +891,7 @@ checkResponsibilityRegistry();
 checkScannerVisibilityMetadataBoundary();
 checkDiscordRagPersistenceSourceOfTruth();
 checkPhase10E2EHealthContracts();
+checkPhase11LiveDiscordEligibilityPolicy();
 checkCodexPatchHygienePolicy();
 checkSourceSearchHygiene();
 

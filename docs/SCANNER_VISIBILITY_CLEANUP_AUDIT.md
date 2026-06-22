@@ -14,6 +14,18 @@ Latest Install 5 update: 2026-06-22
 
 Latest Install 6 update: 2026-06-22
 
+Latest Install 7 update: 2026-06-22
+
+## Phase 11A Live Discord Post Eligibility Policy
+
+Install 7 added the live Discord rollout policy contract before wiring any live-send guard.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `src/lib/liveDiscordPostEligibility.ts` / `evaluateLiveDiscordPostEligibility` | Live Discord enablement needed a deterministic checklist before dry-run suppression can be removed. | Added a standalone eligibility report requiring READY scanner health, connected/resolved bridge, fresh completed 5M, required HTF context, scanner-owned DeskState/visibility metadata, writable decision tape, audit path, validated Discord payload with visibility metadata, configured webhook, dry-run disabled, fresh dry scan observed, and diagnostic replay passed. | Policy-only. The module is not wired into the live sender in Phase 11A and states no change to trading logic, scanner behavior, Discord send behavior, bridge behavior, `canExecute`, or trade approval. |
+| `src/config/responsibilityRegistry.ts` / ownership metadata | The live-post policy needed a source-of-truth owner so scanner/scheduler/formatter do not reimplement competing readiness checks. | Added `live_discord_post_eligibility_policy` pointing to `src/lib/liveDiscordPostEligibility.ts`. | Metadata-only ownership. It documents that Phase 11B may wire the policy later after review. |
+| Tests and architecture guard | The policy boundary needed regression coverage before any send-boundary work. | Added direct policy tests and architecture guard checks for required eligibility conditions and authority-boundary flags. | Tests assert the policy can report not eligible without approving trades or changing `canExecute`. |
+
 ## Phase 10 Production Readiness
 
 Install 6 made Phase 9F replay validation work against generated decision-tape audit history without manual flattening.

@@ -11,6 +11,7 @@ for (const key of [
   'trade_decision_pipeline',
   'discord_alert_rag_persistence',
   'discord_alert_formatting',
+  'live_discord_post_eligibility_policy',
   'gemini_advisory_fallback',
 ]) {
   assert.ok(byKey.has(key), `Missing responsibility owner: ${key}`);
@@ -51,6 +52,15 @@ assert.ok(
 assert.ok(
   byKey.get('discord_alert_rag_persistence')?.mustNotReimplementIn.includes('tools/automation/discord-scheduler.ts'),
   'Scheduler must consume the shared Discord RAG persistence owner.',
+);
+assert.equal(byKey.get('live_discord_post_eligibility_policy')?.owner, 'src/lib/liveDiscordPostEligibility.ts');
+assert.ok(
+  byKey.get('live_discord_post_eligibility_policy')?.protects.includes('does not enable live sends'),
+  'Phase 11A live Discord eligibility policy must remain policy-only.',
+);
+assert.ok(
+  byKey.get('live_discord_post_eligibility_policy')?.protects.includes('change canExecute'),
+  'Phase 11A live Discord eligibility policy must not change canExecute.',
 );
 
 console.log('Responsibility registry verified.');

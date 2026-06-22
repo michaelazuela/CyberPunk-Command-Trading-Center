@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install 7 Phase 11A live Discord post eligibility policy.
+Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, src/config/responsibilityRegistry.ts, src/config/responsibilityRegistry.test.ts, scripts/architecture-guard.js, package.json, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: Live Discord enablement needs an explicit readiness checklist before any future phase removes dry-run suppression or wires policy into the send boundary.
+Tests run: npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsx src/config/responsibilityRegistry.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Phase 11A adds a standalone policy-only eligibility report requiring READY scanner health, connected/resolved bridge, fresh completed 5M, required HTF context, scanner-owned DeskState/visibility metadata, writable decision tape, audit path, validated Discord payload with visibility metadata, configured webhook, dry-run intentionally disabled, fresh dry scan observed, and diagnostic replay passed.
+Trading logic changed: No intended change. This is a dormant policy contract, test coverage, guard coverage, responsibility metadata, and docs only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, Discord cadence, Discord send behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: No runtime/cadence/send change. Phase 11A does not enable live posts and is not wired into the sender.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: After Phase 11A passes and is committed, review Phase 11B to decide whether to wire this policy into the Discord send boundary as an operational guard without changing trade approvals.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 6 Phase 10 production readiness for Phase 9F audit replay.
 Files changed: tools/automation/scanner-audit-import.ts, tools/automation/diagnostic-replay.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Live dry-scan review showed generated lunch decision tapes need direct importer support: the tape stores keyed events, same-day history can contain mixed Phase 9E promotion schema, and replay should honor the requested market-time window.

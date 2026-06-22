@@ -83,6 +83,15 @@ export const RESPONSIBILITY_REGISTRY: ResponsibilityOwner[] = [
     protects: 'Prevents local Discord status text from flattening conditional candidates into no-trade output.',
   },
   {
+    key: 'live_discord_post_eligibility_policy',
+    authority: 'alert_format_authority',
+    owner: 'src/lib/liveDiscordPostEligibility.ts',
+    sharedEntryPoint: 'src/lib/liveDiscordPostEligibility.ts',
+    consumers: ['Phase 11 live Discord rollout review', 'future Discord send-boundary guard'],
+    mustNotReimplementIn: ['tools/automation/nt-scanner.ts', 'tools/automation/discord-scheduler.ts', 'tools/automation/discord-alert-format.ts'],
+    protects: 'Defines the live-post readiness checklist before Discord dry-run suppression is removed; it does not enable live sends, approve trades, change scanner behavior, change bridge behavior, or change canExecute.',
+  },
+  {
     key: 'gemini_advisory_fallback',
     authority: 'advisory_only',
     owner: 'src/config/geminiFallback.ts',
