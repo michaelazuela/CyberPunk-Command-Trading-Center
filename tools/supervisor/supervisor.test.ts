@@ -224,6 +224,8 @@ const researchReviewScriptPath = path.join(repoRoot, 'Open-QuantDesk-ResearchRev
 const researchReviewScript = fs.readFileSync(researchReviewScriptPath, 'utf8');
 assert.ok(researchReviewScript.includes('npm run research:desk-review -- --json'));
 assert.ok(researchReviewScript.includes('research-reports'));
+assert.ok(researchReviewScript.includes("desk-research-inventory-*.html"));
+assert.equal(researchReviewScript.includes("desk-research-inventory-*.md"), false);
 assert.ok(researchReviewScript.includes('postsDiscord = $false'));
 assert.ok(researchReviewScript.includes('writesSupabase = $false'));
 assert.ok(researchReviewScript.includes('changesTradingLogic = $false'));

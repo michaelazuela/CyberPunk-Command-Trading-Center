@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Make the tray research status open an HTML report by default.
+Files changed: tools/automation/research-desk-inventory.ts, tools/automation/research-desk-inventory.test.ts, Open-QuantDesk-ResearchReview.ps1, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
+Reason: The operator review should open in a readable browser view from the Windows tray instead of relying on the OS Markdown file association.
+Tests run: npx tsx tools/automation/research-desk-inventory.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npm run research:desk-review -- --json.
+Result: Passed. The inventory command writes HTML alongside Markdown/JSON, returns `htmlPath` in JSON mode, and the tray helper opens the newest HTML inventory report.
+Trading logic changed: No. This is operator reporting only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, RAG save behavior, or bridge behavior.
+Bridge impact: None.
+Discord impact: None. The inventory and tray helper do not post Discord.
+Journal/RAG impact: No schema change and no Supabase writes.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Use the tray item to open the HTML status report, then decide whether Phase 2 should build the evidence table for promising artifacts.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Add Phase 1 read-only Quant Desk research inventory and tray entrypoint.
 Files changed: tools/automation/research-desk-inventory.ts, tools/automation/research-desk-inventory.test.ts, Open-QuantDesk-ResearchReview.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: The desk needs a one-click/read-only way to see where all current research stands before deciding what deserves deeper evidence review or future promotion discussion.

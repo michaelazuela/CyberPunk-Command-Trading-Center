@@ -50,5 +50,8 @@ assert.ok(report.families.find((family) => family.family === 'research_reports')
 assert.match(report.markdown, /Quant Desk Research Inventory/);
 assert.match(report.markdown, /Read-only Phase 1 inventory\/audit/);
 assert.match(report.markdown, /Next phase should convert selected promising artifacts into an evidence table/);
+assert.match(report.html, /Quant Desk Research Status/);
+assert.match(report.html, /Phase 1 inventory is complete/);
+assert.match(report.html, /Posts Discord: false/);
 
 fs.rmSync(tmp, { recursive: true, force: true });

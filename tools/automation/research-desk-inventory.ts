@@ -59,6 +59,7 @@ export interface ResearchDeskInventoryReport {
     createsNewModel: false;
   };
   markdown: string;
+  html: string;
 }
 
 interface ResearchDeskInventoryOptions {
@@ -230,7 +231,7 @@ async function summarizeFamily(options: ResearchDeskInventoryOptions, family: ty
   };
 }
 
-function findingsFor(report: Omit<ResearchDeskInventoryReport, 'markdown' | 'findings'>): string[] {
+function findingsFor(report: Omit<ResearchDeskInventoryReport, 'markdown' | 'html' | 'findings'>): string[] {
   const findings: string[] = [];
   if (report.summary.filesReviewed === 0) {
     findings.push('No research artifacts were found in the configured research/report folders.');
@@ -251,7 +252,7 @@ function findingsFor(report: Omit<ResearchDeskInventoryReport, 'markdown' | 'fin
   return findings;
 }
 
-function markdownFor(report: Omit<ResearchDeskInventoryReport, 'markdown'>): string {
+function markdownFor(report: Omit<ResearchDeskInventoryReport, 'markdown' | 'html'>): string {
   const lines = [
     `# Quant Desk Research Inventory - ${report.generatedAt.slice(0, 10)}`,
     '',
@@ -307,6 +308,102 @@ function markdownFor(report: Omit<ResearchDeskInventoryReport, 'markdown'>): str
   return `${lines.join('\n')}\n`;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function htmlFor(report: Omit<ResearchDeskInventoryReport, 'markdown' | 'html'>): string {
+  const familyRows = report.families.map((family) => {
+    const reportTypes = Object.entries(family.reportTypes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([key, value]) => `${key} (${value})`)
+      .join(', ') || 'N/A';
+    const statuses = Object.entries(family.statuses)
+      .filter(([, value]) => value > 0)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ') || 'none';
+    return [
+      '<tr>',
+      `<td>${escapeHtml(family.family)}</td>`,
+      `<td class="num">${family.files}</td>`,
+      `<td class="num">${family.jsonFiles}</td>`,
+      `<td class="num">${family.markdownFiles}</td>`,
+      `<td>${escapeHtml(family.latestModifiedAt || 'N/A')}</td>`,
+      `<td>${escapeHtml(reportTypes)}</td>`,
+      `<td>${escapeHtml(statuses)}</td>`,
+      '</tr>',
+    ].join('');
+  });
+  const priorityItems = report.families
+    .filter((family) => family.statuses.promising > 0)
+    .sort((a, b) => b.statuses.promising - a.statuses.promising)
+    .slice(0, 8)
+    .map((family) => `<li><strong>${escapeHtml(family.family)}</strong>: ${family.statuses.promising} promising artifact(s)</li>`);
+  const findings = report.findings.map((finding) => `<li>${escapeHtml(finding)}</li>`);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quant Desk Research Status</title>
+<style>
+  :root { color-scheme: dark; --bg:#07100f; --panel:#101a1c; --line:#254146; --text:#eef8f6; --muted:#a8c0c2; --green:#36e07f; --amber:#ffd23f; --red:#ff5b5b; --blue:#55c7ff; }
+  body { margin:0; font-family: Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1120px; margin:0 auto; padding:34px 28px 56px; }
+  h1 { margin:0 0 6px; font-size:30px; }
+  h2 { margin:28px 0 12px; font-size:19px; color:var(--blue); }
+  p, li { color:var(--muted); line-height:1.5; }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:22px; }
+  .banner { border:1px solid var(--line); background:linear-gradient(90deg, rgba(54,224,127,.13), rgba(85,199,255,.08)); padding:16px 18px; border-radius:8px; margin:20px 0; }
+  .banner strong, strong { color:var(--text); }
+  .grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin:18px 0; }
+  .card { border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:14px; }
+  .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+  .value { font-size:28px; font-weight:800; margin-top:4px; }
+  .green { color:var(--green); } .red { color:var(--red); } .blue { color:var(--blue); }
+  table { width:100%; border-collapse:collapse; border:1px solid var(--line); background:var(--panel); border-radius:8px; overflow:hidden; }
+  th, td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; font-size:13px; }
+  th { color:var(--blue); background:#0c1719; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .footer { margin-top:30px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; }
+</style>
+</head>
+<body><main>
+<h1>Quant Desk Research Status</h1>
+<div class="meta">Generated: ${escapeHtml(report.generatedAt)} | Source: read-only local research inventory</div>
+<div class="banner"><strong>Bottom line:</strong> Phase 1 inventory is complete. This is not production evidence yet. Use Phase 2 to turn promising artifacts into an evidence table before changing scanner behavior.</div>
+<div class="grid">
+  <div class="card"><div class="label">Families Reviewed</div><div class="value blue">${report.summary.familiesReviewed}</div></div>
+  <div class="card"><div class="label">Files Reviewed</div><div class="value">${report.summary.filesReviewed}</div></div>
+  <div class="card"><div class="label">Promising</div><div class="value green">${report.summary.promisingArtifacts}</div></div>
+  <div class="card"><div class="label">Weak / Rejected</div><div class="value red">${report.summary.weakOrRejectedArtifacts}</div></div>
+</div>
+<h2>Findings</h2>
+<ul>${findings.join('\n')}</ul>
+<h2>Priority Buckets</h2>
+<ul>${priorityItems.length ? priorityItems.join('\n') : '<li>No promising artifacts found in this inventory.</li>'}</ul>
+<h2>Research Families</h2>
+<table><thead><tr><th>Family</th><th class="num">Files</th><th class="num">JSON</th><th class="num">Markdown</th><th>Latest</th><th>Main Report Types</th><th>Status Mix</th></tr></thead><tbody>
+${familyRows.join('\n')}
+</tbody></table>
+<h2>Authority Boundary</h2>
+<ul>
+  <li>Read-only: true</li>
+  <li>Posts Discord: false</li>
+  <li>Writes Supabase: false</li>
+  <li>Changes scanner state: false</li>
+  <li>Changes trading logic / canExecute / entries / stops / targets: false</li>
+</ul>
+<div class="footer">Decision support only. This report is research inventory, not trade approval or model promotion.</div>
+</main></body></html>
+`;
+}
+
 export async function buildResearchDeskInventoryReport(options: ResearchDeskInventoryOptions): Promise<ResearchDeskInventoryReport> {
   const families = await Promise.all(RESEARCH_FAMILIES.map((family) => summarizeFamily(options, family)));
   const summary = {
@@ -341,9 +438,11 @@ export async function buildResearchDeskInventoryReport(options: ResearchDeskInve
     ...baseReport,
     findings: findingsFor(baseReport),
   };
+  const markdown = markdownFor(withFindings);
   return {
     ...withFindings,
-    markdown: markdownFor(withFindings),
+    markdown,
+    html: htmlFor(withFindings),
   };
 }
 
@@ -355,12 +454,14 @@ async function main() {
   const base = `desk-research-inventory-${stamp}`;
   const jsonPath = path.join(options.outDir, `${base}.json`);
   const mdPath = path.join(options.outDir, `${base}.md`);
+  const htmlPath = path.join(options.outDir, `${base}.html`);
   await fs.writeFile(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
   await fs.writeFile(mdPath, report.markdown);
+  await fs.writeFile(htmlPath, report.html);
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, summary: report.summary, findings: report.findings }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ jsonPath, mdPath, htmlPath, summary: report.summary, findings: report.findings }, null, 2)}\n`);
   } else {
-    console.log(`Research inventory written: ${mdPath}`);
+    console.log(`Research inventory written: ${htmlPath}`);
     console.log(`Files reviewed: ${report.summary.filesReviewed}; promising: ${report.summary.promisingArtifacts}; needs-more-data: ${report.summary.needsMoreDataArtifacts}`);
   }
 }

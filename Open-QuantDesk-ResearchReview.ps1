@@ -45,13 +45,13 @@ if ($exitCode -ne 0) {
   throw "Research inventory failed with exit code $exitCode."
 }
 
-$latestReport = Get-ChildItem -Path $ResearchReportDir -Filter 'desk-research-inventory-*.md' |
+$latestReport = Get-ChildItem -Path $ResearchReportDir -Filter 'desk-research-inventory-*.html' |
   Sort-Object LastWriteTime -Descending |
   Select-Object -First 1
 
 if (-not $latestReport) {
-  Write-ResearchReviewLog -Message 'Research inventory completed but no Markdown report was found.'
-  throw 'Research inventory completed but no Markdown report was found.'
+  Write-ResearchReviewLog -Message 'Research inventory completed but no HTML report was found.'
+  throw 'Research inventory completed but no HTML report was found.'
 }
 
 Write-ResearchReviewLog -Message 'Research inventory completed and opened.' -Details @{
