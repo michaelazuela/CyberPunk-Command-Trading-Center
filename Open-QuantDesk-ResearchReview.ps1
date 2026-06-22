@@ -31,30 +31,30 @@ function Write-ResearchReviewLog {
   Add-Content -Path $LogPath -Value ($entry | ConvertTo-Json -Compress -Depth 5)
 }
 
-Write-ResearchReviewLog -Message 'Research inventory requested from operator helper.'
+Write-ResearchReviewLog -Message 'Research case review requested from operator helper.'
 
-$command = 'npm run research:desk-review -- --json'
+$command = 'npm run research:desk-case-review -- --json'
 $output = & cmd.exe /d /c $command 2>&1
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
-  Write-ResearchReviewLog -Message 'Research inventory failed.' -Details @{
+  Write-ResearchReviewLog -Message 'Research case review failed.' -Details @{
     exitCode = $exitCode
     output = ($output | Out-String)
   }
-  throw "Research inventory failed with exit code $exitCode."
+  throw "Research case review failed with exit code $exitCode."
 }
 
-$latestReport = Get-ChildItem -Path $ResearchReportDir -Filter 'desk-research-inventory-*.html' |
+$latestReport = Get-ChildItem -Path $ResearchReportDir -Filter 'desk-research-case-review-*.html' |
   Sort-Object LastWriteTime -Descending |
   Select-Object -First 1
 
 if (-not $latestReport) {
-  Write-ResearchReviewLog -Message 'Research inventory completed but no HTML report was found.'
-  throw 'Research inventory completed but no HTML report was found.'
+  Write-ResearchReviewLog -Message 'Research case review completed but no HTML report was found.'
+  throw 'Research case review completed but no HTML report was found.'
 }
 
-Write-ResearchReviewLog -Message 'Research inventory completed and opened.' -Details @{
+Write-ResearchReviewLog -Message 'Research case review completed and opened.' -Details @{
   report = $latestReport.FullName
 }
 

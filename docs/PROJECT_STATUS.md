@@ -3,6 +3,38 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Add Phase 3 read-only research case review.
+Files changed: tools/automation/research-desk-case-review.ts, tools/automation/research-desk-case-review.test.ts, tools/automation/research-desk-evidence-table.ts, tools/automation/research-desk-evidence-table.test.ts, Open-QuantDesk-ResearchReview.ps1, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Phase 2 identified ready-for-deeper-review rows; Phase 3 needs to inspect those rows case by case, flag missing evidence/blockers, and prevent generated research meta-reports from being re-ingested as evidence.
+Tests run: npx tsx tools/automation/research-desk-evidence-table.test.ts; npx tsx tools/automation/research-desk-case-review.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npm run research:desk-evidence -- --json; npm run research:desk-case-review -- --json.
+Result: Passed. The new case-review report reads Phase 2 ready rows, opens source artifacts, summarizes strengths/blockers/missing evidence, writes HTML/Markdown/JSON, and keeps the tray `Open Research Status` pointed at the Phase 3 HTML report. Latest Phase 2 run reviewed 697 artifacts and produced 1 ready-for-deeper-review row, 40 needs-more-data rows, and 484 keep-out-of-scanner rows. Latest Phase 3 run reviewed 1 ready row and marked it manual-validation-required before any promotion discussion.
+Trading logic changed: No. This is read-only research reporting only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, RAG save behavior, or bridge behavior.
+Bridge impact: None.
+Discord impact: None. The case-review report and tray helper do not post Discord or change Discord cadence.
+Journal/RAG impact: No schema change and no Supabase writes.
+Supabase impact: No migration added.
+Known risks: None known. Phase 3 found no case clean enough for scanner/Discord promotion discussion yet.
+Next recommended action: Use the Phase 3 HTML review to decide whether any candidate deserves manual replay expansion; do not discuss live scanner/Discord behavior until that manual replay evidence is complete.
+
+## Previous Change
+
+Date: 2026-06-22
+Task: Add Phase 2 read-only research evidence table and tray review output.
+Files changed: tools/automation/research-desk-evidence-table.ts, tools/automation/research-desk-evidence-table.test.ts, Open-QuantDesk-ResearchReview.ps1, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Phase 1 sorted the research pile; Phase 2 needs to turn promising artifacts into a machine-readable evidence table before any scanner behavior or Discord behavior is considered.
+Tests run: npx tsx tools/automation/research-desk-evidence-table.test.ts; npx tsx tools/automation/research-desk-inventory.test.ts; npx tsx tools/supervisor/supervisor.test.ts; npm run research:desk-evidence -- --json.
+Result: Passed. The new evidence table extracts sample/outcome counts when available, excludes generated research meta-reports from re-ingestion, marks promotion risk, writes HTML/Markdown/JSON, and keeps the tray `Open Research Status` pointed at the Phase 2 HTML report. Latest run reviewed 697 artifacts and produced 2 ready-for-deeper-review rows, 39 needs-more-data rows, and 484 keep-out-of-scanner rows.
+Trading logic changed: No. This is read-only research reporting only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, Discord cadence, RAG save behavior, or bridge behavior.
+Bridge impact: None.
+Discord impact: None. The evidence table and tray helper do not post Discord.
+Journal/RAG impact: No schema change and no Supabase writes.
+Supabase impact: No migration added.
+Known risks: None known. The evidence table uses machine-readable fields and text heuristics for triage only; it does not prove model readiness by itself.
+Next recommended action: Phase 3 should deep-review the ready-for-deeper-review rows case by case before any live scanner or Discord behavior change is discussed.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Make the tray research status open an HTML report by default.
 Files changed: tools/automation/research-desk-inventory.ts, tools/automation/research-desk-inventory.test.ts, Open-QuantDesk-ResearchReview.ps1, tools/supervisor/supervisor.test.ts, docs/PROJECT_STATUS.md.
 Reason: The operator review should open in a readable browser view from the Windows tray instead of relying on the OS Markdown file association.
