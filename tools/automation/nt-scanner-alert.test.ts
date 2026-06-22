@@ -1977,6 +1977,70 @@ const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscor
 assert.equal(tacticalRequiredTriggerDeskPlaySuppression.shouldPost, true);
 assert.equal(tacticalRequiredTriggerDeskPlaySuppression.category, 'post');
 assert.match(tacticalRequiredTriggerDeskPlaySuppression.reason, /app-owned 5M candidate lifecycle evidence/);
+const dataLimitedReferenceDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+    canExecute: false,
+  } as DeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'HTF readiness gate is data-limited; review levels only.',
+    invalidation: null,
+    setupCandidates: [{ ...baseDeskPlanRefreshState.bestShortPlan, direction: 'SHORT' }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(dataLimitedReferenceDeskPlaySuppression.shouldPost, true);
+assert.equal(dataLimitedReferenceDeskPlaySuppression.category, 'post');
+assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference map is eligible/);
+assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference entry\/stop\/T1\/T2/);
+const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-08',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+    canExecute: false,
+    bestShortPlan: null,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      shortBelow: null,
+      lineInSand: null,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: null,
+      },
+      htfProtectedStructureMap: { rows: [] },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'HTF readiness gate is data-limited and levels are unavailable.',
+    invalidation: null,
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7410,
+  latestCompleted5m: '2026-06-08T15:40:00.0000000',
+});
+assert.equal(dataLimitedNoLevelDeskPlaySuppression.shouldPost, false);
+assert.equal(dataLimitedNoLevelDeskPlaySuppression.category, 'stale_data');
+assert.match(dataLimitedNoLevelDeskPlaySuppression.reason, /data-limited and no complete app-owned reference levels/);
 const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',

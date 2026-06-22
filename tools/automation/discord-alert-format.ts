@@ -74,6 +74,7 @@ export interface CompactDeskStateForDiscord {
   invalidation?: string | null;
   canExecute?: boolean;
   dataQualityStatus?: string;
+  htfContextStatus?: string;
   primaryDeskPlay?: {
     direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
     trendConfirmation?: {
@@ -1271,11 +1272,15 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     candidate.blockReason === NoTradeReason.RiskTooWide ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   const htfPublishIssue = candidateDiscordHtfPublishIssue(candidate);
+  const dataLimitedIssue = htfPublishIssue === 'data_limited' ||
+    args.deskState?.dataQualityStatus === 'data_limited' ||
+    args.deskState?.htfContextStatus === 'insufficient';
+  const referenceOnly = dataLimitedIssue && status !== 'EXECUTABLE';
   const statusText = htfPublishIssue === 'opposed'
     ? 'Review only; HTF opposes this side.'
     : htfPublishIssue === 'unconfirmed'
     ? 'Review only; HTF support not confirmed.'
-    : htfPublishIssue === 'data_limited'
+    : dataLimitedIssue
     ? 'Review only; HTF context is data-limited.'
     : riskAboveStandard
     ? 'Risk review only; standard risk gate not clean.'
@@ -1297,10 +1302,19 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Stand down: ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
     sideBreakoutLabel(direction, triggerWord, lineInSand),
-    `Entry: ${priceLine(candidate.entry)}`,
-    `Stop: ${priceLine(levels.stop)}`,
-    `T1: ${priceLine(levels.target1)}`,
-    `T2: ${priceLine(levels.target2)}`,
+    ...(referenceOnly ? [
+      'Reference levels only - not execution approval.',
+      `Reference entry: ${priceLine(candidate.entry)}`,
+      `Reference stop: ${priceLine(levels.stop)}`,
+      `Reference T1: ${priceLine(levels.target1)}`,
+      `Reference T2: ${priceLine(levels.target2)}`,
+      'Reason not executable: HTF/data context is limited; canExecute remains false.',
+    ] : [
+      `Entry: ${priceLine(candidate.entry)}`,
+      `Stop: ${priceLine(levels.stop)}`,
+      `T1: ${priceLine(levels.target1)}`,
+      `T2: ${priceLine(levels.target2)}`,
+    ]),
     '',
     `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
     candidateHtfTargetLine(candidate, levels),
@@ -1430,9 +1444,12 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const trendOpposes = (side === 'LONG' && trendDirection === 'SHORT') || (side === 'SHORT' && trendDirection === 'LONG');
     const lowQuality = typeof sideScore === 'number' && sideScore < 55;
     const htfOpposes = trendOpposes || (rows.length > 0 && opposingRows > rows.length / 2);
-    const reviewOnly = args.deskState?.canExecute !== true && (lowQuality || htfOpposes);
+    const dataLimited = args.deskState?.dataQualityStatus === 'data_limited' || args.deskState?.htfContextStatus === 'insufficient';
+    const reviewOnly = args.deskState?.canExecute !== true && (dataLimited || lowQuality || htfOpposes);
     const reason = htfOpposes
       ? 'HTF/structure opposes this side'
+      : dataLimited
+        ? 'HTF/data context is limited; execution promotion is blocked'
       : lowQuality
         ? 'side quality is low'
         : null;

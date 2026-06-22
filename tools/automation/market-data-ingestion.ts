@@ -21,6 +21,7 @@ export interface MarketDataWindowVerification {
   sufficient: boolean;
   invalidBars: number;
   duplicateTimestamps: number;
+  timeframeIntervalMismatches: number;
   warning: string | null;
   dataLimitation: {
     status: 'none' | 'bridge_or_cache_incomplete';
@@ -46,6 +47,20 @@ function normalizedTimestamp(value: string | null | undefined): string {
 function timestampMs(value: string | null | undefined): number | null {
   const parsed = Date.parse(normalizedTimestamp(value));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function minuteOfDay(value: string | null | undefined): number | null {
+  const match = normalizedTimestamp(value).match(/T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe: MarketBarTimeframe): boolean {
+  const minute = minuteOfDay(value);
+  if (minute === null) return false;
+  const minutes = timeframeMinutes(timeframe);
+  if (minutes >= 60) return minute % 60 === 0;
+  return minute % minutes === 0;
 }
 
 function etPartsFromCandleTime(value: string | null | undefined): { weekday: string; hour: number; minute: number } {
@@ -142,6 +157,25 @@ function countInternalGaps(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe
   return gaps;
 }
 
+export function countTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
+  const expectedMs = timeframeMinutes(timeframe) * 60_000;
+  const minimumAllowedMs = expectedMs * 0.4;
+  let mismatches = bars.filter((bar) => !isAlignedToTimeframeMinute(bar.time, timeframe)).length;
+  const sorted = mergeMarketDataBars(bars, []);
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = timestampMs(sorted[index - 1]?.time);
+    const current = timestampMs(sorted[index]?.time);
+    if (previous === null || current === null) continue;
+    const delta = current - previous;
+    if (delta > 0 && delta < minimumAllowedMs) mismatches += 1;
+  }
+  return mismatches;
+}
+
+export function barsMatchRequestedTimeframe(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): boolean {
+  return countTimeframeIntervalMismatches(bars, timeframe) === 0;
+}
+
 export function mergeMarketDataBars(primary: NinjaBridgeBar[], fallback: NinjaBridgeBar[]): NinjaBridgeBar[] {
   const byTime = new Map<string, { bar: NinjaBridgeBar; index: number; priority: number }>();
   const add = (bar: NinjaBridgeBar, priority: number, index: number) => {
@@ -197,6 +231,7 @@ export function verifyMarketDataWindow(args: {
   const invalidBars = args.bars.length - sorted.length;
   const normalizedInputTimes = args.bars.map((bar) => normalizedTimestamp(bar.time)).filter(Boolean);
   const duplicateTimestamps = normalizedInputTimes.length - new Set(normalizedInputTimes).size;
+  const timeframeIntervalMismatches = countTimeframeIntervalMismatches(sorted, args.timeframe);
   const first = sorted[0]?.time || null;
   const last = sorted[sorted.length - 1]?.time || null;
   const firstMs = timestampMs(first);
@@ -231,6 +266,7 @@ export function verifyMarketDataWindow(args: {
     sorted.length >= args.minimumBars &&
     invalidBars === 0 &&
     duplicateTimestamps === 0 &&
+    timeframeIntervalMismatches === 0 &&
     internalGaps === 0 &&
     spanCoverageSatisfied &&
     fromMs !== null &&
@@ -243,7 +279,7 @@ export function verifyMarketDataWindow(args: {
     : `Requested ${args.timeframe} bars remain incomplete after market_bars preload and NinjaTrader repair. The scanner cannot invent missing NinjaTrader bars; HTF promotion is blocked for this timeframe.`;
   const warning = sufficient
     ? null
-    : `Market-data ingestion insufficient for ${args.timeframe}: required ${args.requiredLookbackDays} calendar days from ${args.requestedFrom} to ${args.requestedTo}; loaded ${sorted.length} valid bars from ${first || 'N/A'} to ${last || 'N/A'}; invalid=${invalidBars}; duplicates=${duplicateTimestamps}; internalGaps=${internalGaps}.`;
+    : `Market-data ingestion insufficient for ${args.timeframe}: required ${args.requiredLookbackDays} calendar days from ${args.requestedFrom} to ${args.requestedTo}; loaded ${sorted.length} valid bars from ${first || 'N/A'} to ${last || 'N/A'}; invalid=${invalidBars}; duplicates=${duplicateTimestamps}; timeframeIntervalMismatches=${timeframeIntervalMismatches}; internalGaps=${internalGaps}.`;
 
   return {
     timeframe: args.timeframe,
@@ -259,6 +295,7 @@ export function verifyMarketDataWindow(args: {
     sufficient,
     invalidBars,
     duplicateTimestamps,
+    timeframeIntervalMismatches,
     warning,
     dataLimitation: {
       status: sufficient ? 'none' : 'bridge_or_cache_incomplete',

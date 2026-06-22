@@ -182,15 +182,19 @@ async function recordOnce({
       console.warn(`[market-cache] ${timeframe}: no bars returned from bridge.`);
       continue;
     }
-    const result = await upsertMarketBars({
-      bars,
-      instrument,
-      bridgeInstrument,
-      timeframe,
-      config,
-    });
-    total += result.upserted;
-    console.log(`[market-cache] ${timeframe}: upserted ${result.upserted} bars.`);
+    try {
+      const result = await upsertMarketBars({
+        bars,
+        instrument,
+        bridgeInstrument,
+        timeframe,
+        config,
+      });
+      total += result.upserted;
+      console.log(`[market-cache] ${timeframe}: upserted ${result.upserted} bars.`);
+    } catch (error) {
+      console.warn(`[market-cache] ${timeframe}: upsert skipped: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   return { total, latestCompleted5m: latest5m?.time || null, warning: null };
 }

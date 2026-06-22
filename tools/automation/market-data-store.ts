@@ -44,6 +44,8 @@ export interface MarketDataGapEventRecord {
   metadata: Record<string, unknown>;
 }
 
+const MARKET_BARS_CACHE_PAGE_SIZE = 1000;
+
 function cleanSupabaseUrl(value: string): string {
   return value.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
 }
@@ -77,6 +79,64 @@ function hasValidOhlcShape(bar: NinjaBridgeBar): boolean {
     return false;
   }
   return bar.high >= Math.max(bar.open, bar.close, bar.low) && bar.low <= Math.min(bar.open, bar.close, bar.high);
+}
+
+function timeframeMinutes(timeframe: MarketBarTimeframe): number {
+  if (timeframe === '60m') return 60;
+  if (timeframe === '120m') return 120;
+  if (timeframe === '240m') return 240;
+  return Number(timeframe.replace('m', '')) || 5;
+}
+
+function marketBarTimeMs(value: string | null | undefined): number | null {
+  const parsed = Date.parse(normalizeCandleTimeEt(String(value || '')));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function marketBarMinuteOfDay(value: string | null | undefined): number | null {
+  const match = normalizeCandleTimeEt(String(value || '')).match(/T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe: MarketBarTimeframe): boolean {
+  const minuteOfDay = marketBarMinuteOfDay(value);
+  if (minuteOfDay === null) return false;
+  const minutes = timeframeMinutes(timeframe);
+  if (minutes >= 60) return minuteOfDay % 60 === 0;
+  return minuteOfDay % minutes === 0;
+}
+
+export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
+  const expectedMs = timeframeMinutes(timeframe) * 60_000;
+  const minimumAllowedMs = expectedMs * 0.4;
+  const sorted = bars
+    .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
+    .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null)
+    .sort((a, b) => a.ms - b.ms);
+  let mismatches = sorted.filter((item) => !isAlignedToTimeframeMinute(item.bar.time, timeframe)).length;
+  for (let index = 1; index < sorted.length; index += 1) {
+    const delta = sorted[index].ms - sorted[index - 1].ms;
+    if (delta > 0 && delta < minimumAllowedMs) mismatches += 1;
+  }
+  return mismatches;
+}
+
+export function filterBarsToRequestedTimeframe(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): NinjaBridgeBar[] {
+  const expectedMs = timeframeMinutes(timeframe) * 60_000;
+  const minimumAllowedMs = expectedMs * 0.4;
+  const sorted = bars
+    .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
+    .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null && isAlignedToTimeframeMinute(item.bar.time, timeframe))
+    .sort((a, b) => a.ms - b.ms);
+  const kept: Array<{ bar: NinjaBridgeBar; ms: number }> = [];
+  for (const item of sorted) {
+    const previous = kept[kept.length - 1];
+    if (!previous || item.ms - previous.ms >= minimumAllowedMs || item.ms - previous.ms <= 0) {
+      kept.push(item);
+    }
+  }
+  return kept.map((item) => item.bar);
 }
 
 export function toMarketBarRecords({
@@ -127,6 +187,10 @@ export async function upsertMarketBars({
   timeframe: MarketBarTimeframe;
   config: MarketDataConfig;
 }): Promise<{ upserted: number }> {
+  const intervalMismatches = countMarketBarTimeframeIntervalMismatches(bars, timeframe);
+  if (intervalMismatches > 0) {
+    throw new Error(`Refusing to upsert ${bridgeInstrument} ${timeframe} market_bars: ${intervalMismatches} candle interval(s) are smaller than the requested timeframe.`);
+  }
   const records = toMarketBarRecords({
     bars,
     userId: config.userId,
@@ -224,6 +288,16 @@ export async function upsertMarketDataGapEvent({
   return { upserted: 1 };
 }
 
+export function marketDataCachePageRanges(limit: number, pageSize = MARKET_BARS_CACHE_PAGE_SIZE): Array<{ from: number; to: number }> {
+  const safeLimit = Math.max(0, Math.trunc(Number(limit) || 0));
+  const safePageSize = Math.max(1, Math.trunc(Number(pageSize) || MARKET_BARS_CACHE_PAGE_SIZE));
+  const ranges: Array<{ from: number; to: number }> = [];
+  for (let from = 0; from < safeLimit; from += safePageSize) {
+    ranges.push({ from, to: Math.min(from + safePageSize - 1, safeLimit - 1) });
+  }
+  return ranges;
+}
+
 export async function fetchCachedMarketBars({
   instrument,
   timeframe,
@@ -242,24 +316,31 @@ export async function fetchCachedMarketBars({
   const supabase = createMarketDataClient(config);
   const fromEt = normalizeCandleTimeEt(from);
   const toEt = normalizeCandleTimeEt(to);
-  const { data, error } = await supabase
-    .from('market_bars')
-    .select('candle_time_et, open, high, low, close, volume')
-    .eq('user_id', config.userId)
-    .eq('bridge_instrument', instrument)
-    .eq('timeframe', timeframe)
-    .gte('candle_time_et', fromEt)
-    .lte('candle_time_et', toEt)
-    .order('candle_time_et', { ascending: true })
-    .limit(limit);
+  const rows: any[] = [];
+  for (const range of marketDataCachePageRanges(limit)) {
+    const { data, error } = await supabase
+      .from('market_bars')
+      .select('candle_time_et, open, high, low, close, volume')
+      .eq('user_id', config.userId)
+      .eq('bridge_instrument', instrument)
+      .eq('timeframe', timeframe)
+      .gte('candle_time_et', fromEt)
+      .lte('candle_time_et', toEt)
+      .order('candle_time_et', { ascending: true })
+      .range(range.from, range.to);
 
-  if (error) throw error;
-  return (data || []).map((row: any) => ({
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < (range.to - range.from + 1)) break;
+  }
+
+  return filterBarsToRequestedTimeframe(rows.map((row: any) => ({
     time: String(row.candle_time_et),
     open: Number(row.open),
     high: Number(row.high),
     low: Number(row.low),
     close: Number(row.close),
     volume: Number(row.volume || 0),
-  }));
+  })), timeframe);
 }

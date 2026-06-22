@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import {
+  countTimeframeIntervalMismatches,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
   repairMarketDataBarsWithinBaseRange,
   verifyMarketDataWindow,
 } from './market-data-ingestion';
-import { normalizeCandleTimeEt, toMarketBarRecords, toMarketDataGapEventRecord } from './market-data-store';
+import {
+  countMarketBarTimeframeIntervalMismatches,
+  filterBarsToRequestedTimeframe,
+  marketDataCachePageRanges,
+  normalizeCandleTimeEt,
+  toMarketBarRecords,
+  toMarketDataGapEventRecord,
+} from './market-data-store';
 import type { NinjaBridgeBar } from '../../src/lib/ninjaTraderBridge';
 
 function bar(time: string, open = 7410, high = 7412, low = 7408, close = 7411): NinjaBridgeBar {
@@ -18,6 +26,14 @@ function evenlySpacedBars(start: string, end: string, count: number): NinjaBridg
   const stepMs = count > 1 ? (endMs - startMs) / (count - 1) : 0;
   return Array.from({ length: count }, (_, index) => {
     const iso = new Date(startMs + stepMs * index).toISOString().slice(0, 19);
+    return bar(iso);
+  });
+}
+
+function intervalBars(start: string, minutes: number, count: number): NinjaBridgeBar[] {
+  const startMs = Date.parse(start);
+  return Array.from({ length: count }, (_, index) => {
+    const iso = new Date(startMs + index * minutes * 60_000).toISOString();
     return bar(iso);
   });
 }
@@ -64,6 +80,39 @@ assert.equal(marketDataSourceFromCounts(10, 0), 'market_bars');
 assert.equal(marketDataSourceFromCounts(0, 2), 'bridge_repair');
 assert.equal(marketDataSourceFromCounts(0, 0), 'missing');
 
+assert.deepEqual(marketDataCachePageRanges(2500), [
+  { from: 0, to: 999 },
+  { from: 1000, to: 1999 },
+  { from: 2000, to: 2499 },
+]);
+assert.deepEqual(marketDataCachePageRanges(0), []);
+assert.equal(countTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T18:05:00-04:00'),
+  bar('2026-06-21T18:10:00-04:00'),
+], '120m') > 0, true);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T18:05:00-04:00'),
+], '120m') > 0, true);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T19:45:00-04:00'),
+], '120m') > 0, true);
+const filteredTwoHourCache = filterBarsToRequestedTimeframe([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T18:05:00-04:00'),
+  bar('2026-06-21T18:10:00-04:00'),
+  bar('2026-06-21T19:45:00-04:00'),
+  bar('2026-06-21T20:00:00-04:00'),
+  bar('2026-06-21T20:05:00-04:00'),
+], '120m');
+assert.deepEqual(filteredTwoHourCache.map((item) => item.time), [
+  '2026-06-21T18:00:00-04:00',
+  '2026-06-21T20:00:00-04:00',
+]);
+assert.equal(countMarketBarTimeframeIntervalMismatches(filteredTwoHourCache, '120m'), 0);
+
 const sufficient = verifyMarketDataWindow({
   bars: repaired,
   timeframe: '5m',
@@ -80,14 +129,27 @@ assert.equal(sufficient.sufficient, true);
 assert.equal(sufficient.dataLimitation.status, 'none');
 assert.equal(sufficient.dataLimitation.canInventMissingBars, false);
 
-const sundayEveningFourHourCoverageBars = [
-  ...Array.from({ length: 29 }, (_, index) => bar(
-    `${new Date(Date.UTC(2026, 4, 15 + index)).toISOString().slice(0, 10)}T02:00:00-04:00`,
+const malformedTwoHourBridgeRepair = verifyMarketDataWindow({
+  bars: Array.from({ length: 81 }, (_, index) => bar(
+    `2026-06-21T${String(Math.floor(index / 12)).padStart(2, '0')}:${String((index % 12) * 5).padStart(2, '0')}:00-04:00`,
   )),
-  ...Array.from({ length: 12 }, (_, index) => bar(
-    `2026-06-12T${String(6 + index).padStart(2, '0')}:00:00-04:00`,
-  )),
-];
+  timeframe: '120m',
+  requestedFrom: '2026-06-21T00:00:00-04:00',
+  requestedTo: '2026-06-21T06:40:00-04:00',
+  requiredLookbackDays: 1,
+  minimumBars: 80,
+  source: 'bridge_repair',
+  cacheBars: 0,
+  bridgeRepairBars: 81,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(malformedTwoHourBridgeRepair.sufficient, false);
+assert.equal(malformedTwoHourBridgeRepair.timeframeIntervalMismatches > 0, true);
+assert.match(malformedTwoHourBridgeRepair.warning || '', /timeframeIntervalMismatches=/);
+
+const sundayEveningFourHourCoverageBars = Array.from({ length: 41 }, (_, index) => bar(
+  new Date(Date.parse('2026-05-13T22:00:00Z') + index * 18 * 60 * 60 * 1000).toISOString(),
+));
 const sundayEveningFourHourWindow = verifyMarketDataWindow({
   bars: sundayEveningFourHourCoverageBars,
   timeframe: '240m',
@@ -140,17 +202,17 @@ assert.equal(mondayMorningClosedStartWindow.dataLimitation.status, 'none');
 const liveTuesdayMorningHtfWindows = [
   {
     timeframe: '60m' as const,
-    bars: evenlySpacedBars('2026-05-17T19:00:00Z', '2026-06-16T09:00:00Z', 494),
+    bars: intervalBars('2026-05-17T19:00:00-04:00', 60, 711),
     minimumBars: 120,
   },
   {
     timeframe: '120m' as const,
-    bars: evenlySpacedBars('2026-05-17T20:00:00Z', '2026-06-16T08:00:00Z', 257),
+    bars: intervalBars('2026-05-17T20:00:00-04:00', 120, 355),
     minimumBars: 80,
   },
   {
     timeframe: '240m' as const,
-    bars: evenlySpacedBars('2026-05-17T22:00:00Z', '2026-06-16T06:00:00Z', 128),
+    bars: intervalBars('2026-05-17T22:00:00-04:00', 240, 178),
     minimumBars: 40,
   },
 ];

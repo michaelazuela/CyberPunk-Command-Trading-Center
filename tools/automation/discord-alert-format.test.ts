@@ -752,6 +752,124 @@ assert.equal(deskPlayDecisionMapText.includes('No HTF-supported directional play
 assert.equal(deskPlayDecisionMapText.includes('Status: review-only map; no HTF-supported active play.'), false);
 assert.ok(!deskPlayDecisionMapPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
 
+const dataLimitedReferenceCandidate = sampleCandidate('SHORT');
+dataLimitedReferenceCandidate.entry = 7525;
+dataLimitedReferenceCandidate.stop = 7533;
+dataLimitedReferenceCandidate.target1 = null;
+dataLimitedReferenceCandidate.target2 = null;
+dataLimitedReferenceCandidate.riskPoints = null;
+dataLimitedReferenceCandidate.activeRuleset = {
+  ...dataLimitedReferenceCandidate.activeRuleset,
+  htfLineInSand: {
+    ...(dataLimitedReferenceCandidate.activeRuleset?.htfLineInSand || {}),
+    applied: true,
+    status: 'passed',
+    required: 'completed_5m_or_15m_close_beyond_htf_line',
+    appliesToAllModels: true,
+    affectsExecution: false,
+    direction: 'SHORT',
+    lineInSand: 7525,
+    lineReason: 'Reference 5M short trigger line.',
+    obstacleType: 'support',
+    obstacleSource: 'app',
+    requiredClose: 'Completed 5M close below 7525.00.',
+    evidence: ['Reference 5M short trigger line.'],
+    blockers: [],
+  },
+};
+const dataLimitedDeskPlayPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-21',
+  instrument: 'MES',
+  planVersionId: 'EVENING-DATA-LIMITED-REFERENCE-MAP-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'HTF readiness gate is data-limited; review levels only.',
+    invalidation: null,
+    setupCandidates: [dataLimitedReferenceCandidate],
+  },
+  candidates: [dataLimitedReferenceCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Evening Setup Scan',
+  currentPrice: 7526,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'post_review',
+    lineInSand: 7525,
+    nextTrigger: 'Completed 5M close below 7525.00, then retest/hold.',
+    invalidation: 'Completed 5M reclaim above 7533.00 cancels the short review map.',
+    canExecute: false,
+    htfContextStatus: 'insufficient',
+    dataQualityStatus: 'data_limited',
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT review below line in the sand',
+      summary: 'Short review remains reference-only while HTF data is limited.',
+      lineInSand: 7525,
+      longAbove: 7538.25,
+      shortBelow: 7525,
+      nextTrigger: 'Completed 5M close below 7525.00, then retest/hold.',
+      invalidation: 'Completed 5M reclaim above 7533.00 cancels the short review map.',
+      noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',
+      htfConflict: false,
+      countertrendWarning: null,
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'data_limited',
+        rows: [
+          { sourceOfTruth: 'scanner_htf_protected_structure_map', timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7533, confirmationLine: 7525, target: 7509, targetLabel: 'Reference T2 7509.00', confidence: 70, status: 'confirmed_mss', note: '5M reference structure only' },
+        ],
+        summary: 'HTF data-limited; context only.',
+      },
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Short reference map',
+        decisionQualityScore: 72,
+        lineInSand: 7525,
+        lineConfidence: { score: 72, label: 'medium', reason: 'Completed 5M reference line is available.' },
+        nextTrigger: 'Completed 5M close below 7525.00, then retest/hold.',
+        tradeReadiness: {
+          sourceOfTruth: 'scanner_trade_readiness_routing',
+          direction: 'SHORT',
+          status: 'data_limited',
+          label: 'DATA LIMITED',
+          action: 'Show reference map only.',
+          reason: 'HTF promotion blocked while 4H context is incomplete.',
+          missingProof: ['4H structured OHLC context is incomplete.'],
+        },
+        reason: 'Short reference map is visible, not executable.',
+        blockers: ['HTF data-limited'],
+      },
+      longBias: {
+        state: 'secondary',
+        scenarioLabel: 'Long reclaim reference',
+        decisionQualityScore: 45,
+        lineInSand: 7538.25,
+        reason: 'Long requires reclaim.',
+        blockers: ['No completed 5M reclaim.'],
+      },
+    },
+  },
+});
+const dataLimitedDeskPlayText = flattenDiscordPayloadText(dataLimitedDeskPlayPayload);
+assert.ok(dataLimitedDeskPlayText.includes('MES Current Desk Plan'));
+assert.ok(dataLimitedDeskPlayText.includes('Primary: 🐻 SHORT'));
+assert.ok(dataLimitedDeskPlayText.includes('SHORT BELOW 7525.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Reference levels only - not execution approval.'));
+assert.ok(dataLimitedDeskPlayText.includes('Reference entry: 7525.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Reference stop: 7533.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Reference T1: 7513.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Reference T2: 7509.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Reason not executable: HTF/data context is limited; canExecute remains false.'));
+assert.ok(dataLimitedDeskPlayText.includes('Status: Review only; HTF context is data-limited.'));
+assert.ok(!/^Entry: pending$/m.test(dataLimitedDeskPlayText));
+assert.ok(!/^Stop: pending$/m.test(dataLimitedDeskPlayText));
+
 const detachedLongCandidate = sampleCandidate('LONG');
 detachedLongCandidate.entry = 7426.5;
 detachedLongCandidate.stop = 7408.25;

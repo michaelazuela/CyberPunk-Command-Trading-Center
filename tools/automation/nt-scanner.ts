@@ -93,6 +93,7 @@ import {
   type MarketBarTimeframe,
 } from './market-data-store';
 import {
+  barsMatchRequestedTimeframe,
   isSundayEveningFourHourReopenLagCovered,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
@@ -2553,6 +2554,17 @@ export async function fetchSegmentedBridgeHistoryRepair(args: {
   return mergeBars([], bars);
 }
 
+function scannerHistoryRepairBarsForTimeframe(
+  timeframe: MarketBarTimeframe,
+  bars: NinjaBridgeBar[],
+  source: string,
+): NinjaBridgeBar[] {
+  if (!bars.length) return [];
+  if (barsMatchRequestedTimeframe(bars, timeframe)) return bars;
+  console.warn(`[scanner-history] ${timeframe}: ${source} returned bars that do not match requested timeframe spacing; ignoring repair bars to avoid poisoning HTF context.`);
+  return [];
+}
+
 async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const bars = await fetchFreshBridgeBars(config, timeframe, 220);
@@ -2612,7 +2624,11 @@ async function fetchScannerHistoryFrame(args: {
         limit: args.limit,
         baseUrl: args.config.bridgeUrl,
       });
-      repaired = historical.ok ? historical.bars || [] : [];
+      repaired = scannerHistoryRepairBarsForTimeframe(
+        args.timeframe,
+        historical.ok ? historical.bars || [] : [],
+        'bridge self-heal',
+      );
       if (!repaired.length) {
         console.warn(`[scanner-history] ${args.timeframe}: bridge self-heal returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
       } else if (marketConfig) {
@@ -2635,13 +2651,17 @@ async function fetchScannerHistoryFrame(args: {
 
   let bars = mergeBars(repaired, cached);
   if (!barsCoverRequestedLookback(bars, args.from, args.to, args.timeframe)) {
-    const segmented = await fetchSegmentedBridgeHistoryRepair({
-      config: args.config,
-      timeframe: args.timeframe,
-      from: args.from,
-      to: args.to,
-      limit: args.limit,
-    });
+    const segmented = scannerHistoryRepairBarsForTimeframe(
+      args.timeframe,
+      await fetchSegmentedBridgeHistoryRepair({
+        config: args.config,
+        timeframe: args.timeframe,
+        from: args.from,
+        to: args.to,
+        limit: args.limit,
+      }),
+      'segmented bridge repair',
+    );
     if (segmented.length) {
       repaired = mergeBars(segmented, repaired);
       bars = mergeBars(repaired, cached);
@@ -3533,7 +3553,10 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
     return { ...base, reason: 'Executable plans use the trade-alert path, not the tactical campaign watch path.' };
   }
   if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') {
-    return { ...base, reason: 'HTF campaign watch blocked because scanner context is data-limited or insufficient.' };
+    return {
+      ...base,
+      reason: 'HTF campaign promotion blocked because scanner context is data-limited or insufficient; review-map reference levels only.',
+    };
   }
   if (primaryBias && primaryBias.state !== 'primary') {
     return { ...base, reason: `${direction} is ${primaryBias.state}, not the primary tactical desk side.` };
@@ -4549,6 +4572,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   session: string;
   deskPlayKey: string;
   deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
   deskPlanRefreshSent: Record<string, ScannerDeskPlanRefreshLedgerRecord>;
   currentPrice: number | null;
   latestCompleted5m?: string | null;
@@ -4561,11 +4585,23 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (args.deskState.canExecute) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
   }
+  const referenceLevels = deskPlayPlanningLevels({
+    deskState: args.deskState,
+    normalized: args.normalized,
+  });
+  const hasReferenceLevels = isFiniteTradePrice(referenceLevels.entry) &&
+    isFiniteTradePrice(referenceLevels.stop) &&
+    isFiniteTradePrice(referenceLevels.target1) &&
+    isFiniteTradePrice(referenceLevels.target2);
   if (args.deskState.dataQualityStatus === 'data_limited') {
-    return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited.');
+    if (!hasReferenceLevels) {
+      return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited and no complete app-owned reference levels are available.');
+    }
   }
   if (args.deskState.htfContextStatus === 'insufficient') {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient for a trader-facing map.');
+    if (!hasReferenceLevels) {
+      return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient and no complete app-owned reference levels are available.');
+    }
   }
   const play = args.deskState.primaryDeskPlay;
   if (play.direction === 'WAIT') {
@@ -4573,7 +4609,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   }
   const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
   const readiness = primaryBias?.tradeReadiness?.status || null;
-  const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState });
+  const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState, normalized: args.normalized });
   if (primaryBias && primaryBias.state !== 'primary') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
   }
@@ -4614,9 +4650,12 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     );
   }
 
-  return scannerDeskPlaySuppressionPost(tacticalCampaignMap.eligible
-    ? `Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`
-    : 'Desk Play refresh is eligible for Discord.');
+  const dataLimitedReview = args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient';
+  return scannerDeskPlaySuppressionPost(dataLimitedReview
+    ? 'Desk Play reference map is eligible for Discord as review-only because completed 5M is ready and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.'
+    : tacticalCampaignMap.eligible
+      ? `Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`
+      : 'Desk Play refresh is eligible for Discord.');
 }
 
 function scannerReversalWatchSuppressionPost(
@@ -6657,6 +6696,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
 
   let preloadedLookLeft: Awaited<ReturnType<typeof fetchLookLeftContext>> | null = null;
+  let tradePlanningDataQualityBlocker: string | null = null;
   if (shouldRunPreMarketDataReadinessGate(config, window)) {
     const gateResult = await runPreMarketDataReadinessBackfillGate({
       config,
@@ -6683,7 +6723,11 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         manualRun: config.once,
       });
       await writeState(state);
-      return;
+      if (!gateResult.report.completedFiveMinuteReady) {
+        return;
+      }
+      tradePlanningDataQualityBlocker = `${gateSummary} ${gateResult.report.sourceSummary}`;
+      console.warn('[scanner-data] Continuing with review-map evaluation only. Execution alerts remain blocked until the readiness gate is fully ready.');
     }
   }
 
@@ -6939,6 +6983,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     duplicate: Boolean(existing),
     stateImproved: false,
   });
+  if (tradePlanningDataQualityBlocker) {
+    alertDecision = {
+      shouldSend: false,
+      reason: 'Primary trade-card suppressed because the readiness gate is data-limited; review-map Discord output may post reference levels only.',
+    };
+  }
   const durableLedgerConfig = loadScannerActiveCampaignLedgerConfig();
   let activeCampaignClaim: ScannerActiveCampaignClaimResult = {
     source: 'none',
@@ -6984,7 +7034,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidate,
     window,
     alertDecision,
-    canExecute: Boolean(normalized.canExecute),
+    canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     staleReason: stale.reason,
   });
   let candidateLifecycleTrace = buildCandidateLifecycleTrace({
@@ -6993,7 +7043,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     state: stateForAlert,
     window,
     alertDecision,
-    canExecute: Boolean(normalized.canExecute),
+    canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     staleReason: stale.reason,
   });
   let deskState = buildDeskState({
@@ -7004,13 +7054,26 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     targetCascade,
     htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
     currentPrice,
-    canExecute: Boolean(normalized.canExecute),
+    canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
   });
+  if (tradePlanningDataQualityBlocker) {
+    deskState = {
+      ...deskState,
+      htfContextStatus: 'insufficient',
+      dataQualityStatus: 'data_limited',
+      canExecute: false,
+      suppressionReason: tradePlanningDataQualityBlocker,
+      notes: [
+        ...deskState.notes,
+        'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only reference levels when app-owned levels exist.',
+      ],
+    };
+  }
   const deskStateGatedAlertDecision = evaluateScannerPrimaryAlertPublishingGate({
     alertDecision,
     deskState,
     candidate,
-    normalizedCanExecute: Boolean(normalized.canExecute),
+    normalizedCanExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     state: stateForAlert,
     staleReason: stale.reason,
     scannerReviewStatus: selection.reviewStatus,
@@ -7022,7 +7085,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       candidate,
       window,
       alertDecision,
-      canExecute: Boolean(normalized.canExecute),
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
       staleReason: stale.reason,
     });
     candidateLifecycleTrace = buildCandidateLifecycleTrace({
@@ -7031,7 +7094,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       state: stateForAlert,
       window,
       alertDecision,
-      canExecute: Boolean(normalized.canExecute),
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
       staleReason: stale.reason,
     });
     deskState = buildDeskState({
@@ -7042,8 +7105,21 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       targetCascade,
       htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
       currentPrice,
-      canExecute: Boolean(normalized.canExecute),
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     });
+    if (tradePlanningDataQualityBlocker) {
+      deskState = {
+        ...deskState,
+        htfContextStatus: 'insufficient',
+        dataQualityStatus: 'data_limited',
+        canExecute: false,
+        suppressionReason: tradePlanningDataQualityBlocker,
+        notes: [
+          ...deskState.notes,
+          'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only reference levels when app-owned levels exist.',
+        ],
+      };
+    }
   }
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
@@ -7219,6 +7295,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       deskPlayKey,
       deskState,
       deskPlanRefreshSent: state.deskPlanRefreshSent,
+      normalized,
       currentPrice,
       latestCompleted5m: completed5m.time,
       staleReason: stale.reason,
