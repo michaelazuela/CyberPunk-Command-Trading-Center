@@ -1457,6 +1457,17 @@ const fvgDecisionZoneCandidate = candidate({
   target1: 7564,
   target2: 7556,
   evidence: ['HTF MSS support in campaign direction: 60M.', 'FVG line in the sand mapped.'],
+  tacticalZone: {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: 'SHORT',
+    lower: 7589,
+    upper: 7593,
+    midpoint: 7591,
+    label: '60M bearish FVG / imbalance zone',
+    sourceTimeframe: '60M',
+    confidence: 'High',
+    evidence: '60M bearish FVG / imbalance zone from structured OHLC facts.',
+  },
   activeRuleset: {
     htfLineInSand: {
       applied: true,
@@ -1508,10 +1519,11 @@ assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalB
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesEntryStopTargets, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.sourceOfTruth, 'scanner_active_tactical_zone');
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.direction, 'SHORT');
-assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.lower, 7591);
-assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.upper, 7591);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.lower, 7589);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.upper, 7593);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.state, 'waiting_retest');
 assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.nextTrigger.includes('completed 5M hold/reject below'));
+assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.reason.includes('structured OHLC facts'));
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesCanExecute, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesTradeApprovals, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesEntryStopTargets, false);

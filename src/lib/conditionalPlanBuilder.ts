@@ -6,6 +6,7 @@ import {
   SetupCandidate,
   SetupCandidateStatus,
   SetupType,
+  TacticalZoneBounds,
 } from '../types';
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 
@@ -46,6 +47,7 @@ interface OpeningRangeContinuationReference {
 interface ImbalancePullbackReference {
   direction: Exclude<Direction, 'NO TRADE'>;
   zoneLabel: string;
+  tacticalZone: TacticalZoneBounds;
   entry: number;
   stop: number;
   reference: number;
@@ -56,6 +58,7 @@ interface ImbalancePullbackReference {
 interface IctModelOneReference {
   direction: Exclude<Direction, 'NO TRADE'>;
   zoneLabel: string;
+  tacticalZone: TacticalZoneBounds;
   entry: number;
   stop: number;
   target1: number;
@@ -100,6 +103,28 @@ function roundToTick(price: number): number {
 function riskPoints(entry: number | null, stop: number | null): number | null {
   if (!isPrice(entry) || !isPrice(stop)) return null;
   return roundToTick(Math.abs(entry - stop));
+}
+
+function tacticalZoneFromFvg(
+  zone: { direction: Exclude<Direction, 'NO TRADE'>; lower?: number | null; upper?: number | null; midpoint?: number | null; formedAt?: string | null; formedCandleIndex?: number | null; confidence?: TacticalZoneBounds['confidence'] },
+  label: string,
+): TacticalZoneBounds | null {
+  if (!isPrice(zone.lower) || !isPrice(zone.upper)) return null;
+  const lower = roundToTick(Math.min(zone.lower, zone.upper));
+  const upper = roundToTick(Math.max(zone.lower, zone.upper));
+  return {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: zone.direction,
+    lower,
+    upper,
+    midpoint: roundToTick(zone.midpoint ?? (lower + upper) / 2),
+    label,
+    sourceTimeframe: '5M',
+    formedAt: zone.formedAt ?? null,
+    formedCandleIndex: typeof zone.formedCandleIndex === 'number' ? zone.formedCandleIndex : null,
+    confidence: zone.confidence,
+    evidence: `${label} from structured OHLC FVG facts.`,
+  };
 }
 
 function hasDirectionallyValidStop(direction: Direction, entry: number | null, stop: number | null): boolean {
@@ -312,6 +337,8 @@ function detectImbalancePullback(chartContext: ChartContext): ImbalancePullbackR
   const lower = roundToTick(zone.lower as number);
   const upper = roundToTick(zone.upper as number);
   const midpoint = roundToTick(zone.midpoint ?? (upper + lower) / 2);
+  const tacticalZone = tacticalZoneFromFvg(zone, `${lower}-${upper} Imbalance Zone`);
+  if (!tacticalZone) return null;
   const recent = candles.slice(-6);
 
   if (zone.direction === 'LONG') {
@@ -325,6 +352,7 @@ function detectImbalancePullback(chartContext: ChartContext): ImbalancePullbackR
     return {
       direction: 'LONG',
       zoneLabel: `${lower}-${upper} Imbalance Zone`,
+      tacticalZone,
       reference: midpoint,
       entry: roundToTick(entryReference + tick),
       stop: roundToTick(protectedLow - tick),
@@ -343,6 +371,7 @@ function detectImbalancePullback(chartContext: ChartContext): ImbalancePullbackR
   return {
     direction: 'SHORT',
     zoneLabel: `${lower}-${upper} Imbalance Zone`,
+    tacticalZone,
     reference: midpoint,
     entry: roundToTick(entryReference - tick),
     stop: roundToTick(protectedHigh + tick),
@@ -603,6 +632,8 @@ function detectIctModelOne(chartContext: ChartContext): IctModelOneReference | n
 
     const lower = roundToTick(Math.min(zone.lower as number, zone.upper as number));
     const upper = roundToTick(Math.max(zone.lower as number, zone.upper as number));
+    const tacticalZone = tacticalZoneFromFvg(zone, `${lower}-${upper} Imbalance Zone`);
+    if (!tacticalZone) continue;
     const midpoint = roundToTick(zone.midpoint ?? (lower + upper) / 2);
     const formedIndex = typeof zone.formedCandleIndex === 'number' ? zone.formedCandleIndex : -1;
     const retraceCandle = candles.find((candle) => candle.index > formedIndex && candleTouchesZone(candle, lower, upper));
@@ -629,6 +660,7 @@ function detectIctModelOne(chartContext: ChartContext): IctModelOneReference | n
     candidates.push({
       direction,
       zoneLabel: `${lower}-${upper} Imbalance Zone`,
+      tacticalZone,
       entry: roundToTick(entry),
       stop,
       target1,
@@ -807,6 +839,7 @@ function makeCandidate(input: {
   hasTrigger?: boolean;
   target1Override?: number | null;
   target2Override?: number | null;
+  tacticalZone?: TacticalZoneBounds | null;
 }): SetupCandidate {
   const structureStop = isPrice(input.stop) ? roundToTick(input.stop) : null;
   const stopIsDirectionallyValid = hasDirectionallyValidStop(input.direction, input.entry, structureStop);
@@ -839,6 +872,7 @@ function makeCandidate(input: {
   return {
     setupType: input.setupType,
     scenarioLabel: input.scenarioLabel ?? null,
+    tacticalZone: input.tacticalZone ?? null,
     direction: input.direction,
     detectedStatus: SetupCandidateStatus.Conditional,
     confidence: input.confidence || 'Medium',
@@ -949,6 +983,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
       priority: 98,
       confidence: 'High',
       evidence: ictModelOne.evidence,
+      tacticalZone: ictModelOne.tacticalZone,
       requiredTrigger: ictModelOne.trigger,
       nextAction: 'Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed.',
       invalidation: ictModelOne.invalidation,
@@ -1082,6 +1117,7 @@ function buildMorningPlans(chartContext: ChartContext): SetupCandidate[] {
         'Morning builder detected an imbalance pullback planning path.',
         `Imbalance reference: ${imbalancePullback.zoneLabel}.`,
       ],
+      tacticalZone: imbalancePullback.tacticalZone,
       requiredTrigger: imbalancePullback.trigger,
       nextAction: 'Wait for continuation away from the imbalance retest; do not enter on a blind touch.',
       invalidation: imbalancePullback.invalidation,
@@ -1178,6 +1214,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
       priority: 98,
       confidence: 'High',
       evidence: ictModelOne.evidence,
+      tacticalZone: ictModelOne.tacticalZone,
       missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning context is incomplete; keep this as conditional only.'],
       requiredTrigger: ictModelOne.trigger,
       nextAction: 'Preferred plan: execute only from the imbalance retrace after sweep, reclaim, displacement, and structure shift are confirmed.',
@@ -1312,6 +1349,7 @@ function buildLunchPlans(chartContext: ChartContext): SetupCandidate[] {
         `Imbalance reference: ${imbalancePullback.zoneLabel}.`,
         hasCompletedMorningContext ? 'Completed Morning range context is available.' : 'Completed Morning range context is not complete.',
       ],
+      tacticalZone: imbalancePullback.tacticalZone,
       missingEvidence: hasCompletedMorningContext ? [] : ['Completed Morning range context is missing.'],
       missingLevels: hasCompletedMorningContext ? [] : [
         missingLevel('morningHigh', 'Completed Morning high/low', 'Needed to validate Lunch imbalance pullback context.', 'context', 'morning_context'),

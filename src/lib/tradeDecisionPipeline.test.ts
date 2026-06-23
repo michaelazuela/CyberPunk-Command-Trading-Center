@@ -2395,6 +2395,11 @@ const tests: Array<[string, () => void]> = [
     assert.equal(modelOne.entry, 100);
     assert.equal(modelOne.stop, 95.75);
     assert.equal(modelOne.target1, 110);
+    assert.equal(modelOne.tacticalZone?.sourceOfTruth, 'ohlc_fvg_zone');
+    assert.equal(modelOne.tacticalZone?.direction, 'LONG');
+    assert.equal(modelOne.tacticalZone?.lower, 99);
+    assert.equal(modelOne.tacticalZone?.upper, 101);
+    assert.equal(modelOne.tacticalZone?.sourceTimeframe, '5M');
     assert.ok((modelOne.target1! - modelOne.entry!) / modelOne.riskPoints! >= 2);
     assert.ok(modelOne.evidence.some((item) => item.includes('Minimum 2.0R')));
     assert.ok(modelOne.evidence.some((item) => item.includes('Breaker/FVG confluence')));

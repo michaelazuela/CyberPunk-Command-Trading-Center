@@ -1079,6 +1079,20 @@ export interface ReducedRiskPlan {
   reasoning: string;
 }
 
+export interface TacticalZoneBounds {
+  sourceOfTruth: 'ohlc_fvg_zone' | 'ohlc_imbalance_zone' | 'ohlc_retest_zone' | 'scanner_structured_zone';
+  direction: 'LONG' | 'SHORT';
+  lower: number;
+  upper: number;
+  midpoint?: number | null;
+  label: string;
+  sourceTimeframe: '5M' | '15M' | '60M' | '120M' | '240M' | 'unknown';
+  formedAt?: string | null;
+  formedCandleIndex?: number | null;
+  confidence?: ReadConfidence;
+  evidence: string;
+}
+
 export type MissingLevelKey =
   | 'triggerCandleHigh'
   | 'triggerCandleLow'
@@ -1120,6 +1134,7 @@ export interface SetupCandidate {
   activeCampaign?: ActiveCampaign;
   htfLiquidityDrawState?: HtfLiquidityDrawCandidateState;
   failedPlanReversal?: FailedPlanReversalContext;
+  tacticalZone?: TacticalZoneBounds | null;
   humanReview?: {
     status: 'OpeningObservationArmed' | 'AfterLunchDriveArmed' | 'HumanReviewReady';
     canExecute: false;

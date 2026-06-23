@@ -1,7 +1,7 @@
 import { TRADE_RULES } from '../config/tradeRules';
 import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
-import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TargetObjective, TradeDecisionStatus } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 export type ScannerState =
@@ -198,6 +198,7 @@ export interface ScannerCandidateLifecycleTraceItem {
   invalidation: string | null;
   lineInSand: number | null;
   lineInSandReason: string | null;
+  tacticalZone: TacticalZoneBounds | null;
   targetReactionLevel: number | null;
   targetReactionLabel: string | null;
   targetReactionReason: string | null;
@@ -1860,6 +1861,7 @@ export function buildCandidateLifecycleTrace(args: {
       invalidation: candidate.invalidation || null,
       lineInSand,
       lineInSandReason: candidate.activeRuleset?.htfLineInSand?.lineReason ?? null,
+      tacticalZone: candidate.tacticalZone ?? null,
       targetReactionLevel: targetReaction?.price ?? null,
       targetReactionLabel: targetReaction?.label ?? null,
       targetReactionReason: targetReaction?.reason ?? null,
@@ -2539,12 +2541,23 @@ function activeTacticalZoneState(args: {
 function buildActiveTacticalZone(args: {
   direction: DeskPlayDirection;
   activeLine: DeskActiveTacticalLine;
+  tacticalZone?: TacticalZoneBounds | null;
   fvgDecisionZone: DeskFvgDecisionZone | null;
   nextTrigger: string | null;
   currentPrice?: number | null;
 }): DeskActiveTacticalZone | null {
   if (args.direction !== 'LONG' && args.direction !== 'SHORT') return null;
-  const range = extractFirstPriceRange(args.nextTrigger);
+  const structuredZone = args.tacticalZone?.direction === args.direction &&
+    numericOrNull(args.tacticalZone.lower) !== null &&
+    numericOrNull(args.tacticalZone.upper) !== null
+    ? args.tacticalZone
+    : null;
+  const range = structuredZone
+    ? {
+        lower: Math.min(structuredZone.lower, structuredZone.upper),
+        upper: Math.max(structuredZone.lower, structuredZone.upper),
+      }
+    : extractFirstPriceRange(args.nextTrigger);
   const fvgLine = args.fvgDecisionZone?.direction === args.direction
     ? numericOrNull(args.fvgDecisionZone.lineInSand)
     : null;
@@ -2554,8 +2567,14 @@ function buildActiveTacticalZone(args: {
   if (lower === null || upper === null) return null;
 
   const direction = args.direction;
-  const sourceTimeframe = range ? '5M' : args.fvgDecisionZone?.sourceTimeframe || 'unknown';
-  const zoneLabel = range
+  const sourceTimeframe = structuredZone
+    ? structuredZone.sourceTimeframe
+    : range
+    ? '5M'
+    : args.fvgDecisionZone?.sourceTimeframe || 'unknown';
+  const zoneLabel = structuredZone
+    ? structuredZone.label
+    : range
     ? `${sourceTimeframe} tactical pullback / retest zone`
     : args.fvgDecisionZone?.zoneLabel || 'Tactical decision zone';
   const state = activeTacticalZoneState({
@@ -2581,7 +2600,9 @@ function buildActiveTacticalZone(args: {
     zoneLabel,
     sourceTimeframe,
     state,
-    reason: migrated
+    reason: structuredZone
+      ? `${structuredZone.evidence} Fresh tactical decision area is ${zoneText}.`
+      : migrated
       ? `Fresh tactical decision area migrated from active line ${lineText} to ${zoneText} from scanner-owned trigger/zone context.`
       : `Fresh tactical decision area is anchored at ${zoneText}.`,
     nextTrigger: `Active tactical zone ${zoneText}: completed 5M ${triggerWord} the zone required before fresh execution consideration.`,
@@ -2961,6 +2982,7 @@ function buildPrimaryDeskPlay(args: {
   const activeTacticalZone = buildActiveTacticalZone({
     direction: primaryDirection,
     activeLine: activeTacticalLine,
+    tacticalZone: primaryLifecycleItem?.tacticalZone || selectedLifecycleItem?.tacticalZone || args.candidate?.tacticalZone || null,
     fvgDecisionZone,
     nextTrigger,
     currentPrice: args.currentPrice,
