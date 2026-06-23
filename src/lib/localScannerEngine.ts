@@ -1,7 +1,7 @@
 import { TRADE_RULES } from '../config/tradeRules';
 import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
-import { ExecutionStatus, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TradeDecisionStatus } from '../types';
+import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 export type ScannerState =
@@ -2695,22 +2695,151 @@ function htfParentZoneFromTacticalZone(args: {
   };
 }
 
+function htfFvgTimeframeLabel(timeframe: TimeframeFactSet['timeframe']): DeskHtfFvgParentZone['timeframe'] | null {
+  if (timeframe === '15m') return '15M';
+  if (timeframe === '1h') return '60M';
+  if (timeframe === '2h') return '120M';
+  if (timeframe === '4h') return '240M';
+  return null;
+}
+
+function htfFvgTimeframePriority(timeframe: DeskHtfFvgParentZone['timeframe']): number {
+  if (timeframe === '15M') return 0;
+  if (timeframe === '60M') return 1;
+  if (timeframe === '120M') return 2;
+  return 3;
+}
+
+function htfParentZoneFromFvgFact(args: {
+  direction?: 'LONG' | 'SHORT' | null;
+  timeframe: TimeframeFactSet['timeframe'];
+  zone: FvgZoneFact;
+  currentPrice?: number | null;
+}): DeskHtfFvgParentZone | null {
+  const timeframe = htfFvgTimeframeLabel(args.timeframe);
+  if (!timeframe) return null;
+  if (args.zone.direction !== 'LONG' && args.zone.direction !== 'SHORT') return null;
+  if (args.direction && args.zone.direction !== args.direction) return null;
+  const lower = numericOrNull(args.zone.lower);
+  const upper = numericOrNull(args.zone.upper);
+  if (lower === null || upper === null) return null;
+  if (typeof args.zone.filledPercent === 'number' && args.zone.filledPercent >= 100 && !args.zone.reclaimed) return null;
+  const low = Math.min(lower, upper);
+  const high = Math.max(lower, upper);
+  const direction = args.zone.direction;
+  const midpoint = numericOrNull(args.zone.midpoint) ?? (low + high) / 2;
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+    direction,
+    timeframe,
+    lower: low,
+    upper: high,
+    midpoint,
+    label: `${timeframe} ${direction === 'LONG' ? 'bullish' : 'bearish'} FVG parent zone`,
+    state: activeTacticalZoneState({
+      direction,
+      lower: low,
+      upper: high,
+      currentPrice: args.currentPrice,
+    }),
+    evidence: `${timeframe} ${direction === 'LONG' ? 'bullish' : 'bearish'} FVG from structured OHLC facts${args.zone.formedAt ? ` formed ${args.zone.formedAt}` : ''}.`,
+  };
+}
+
+function htfFvgParentZonesFromChartContext(args: {
+  chartContext?: Partial<ChartContext> | null;
+  direction?: 'LONG' | 'SHORT' | null;
+  currentPrice?: number | null;
+}): DeskHtfFvgParentZone[] {
+  const mtf = args.chartContext?.multiTimeframeContext;
+  if (!mtf) return [];
+  const sets = [
+    mtf.fifteenMinute,
+    mtf.oneHour,
+    mtf.twoHour,
+    mtf.fourHour,
+  ].filter((set): set is TimeframeFactSet => Boolean(set));
+  return sets.flatMap((set) =>
+    (set.fvgZones || [])
+      .map((zone) => htfParentZoneFromFvgFact({
+        direction: args.direction,
+        timeframe: set.timeframe,
+        zone,
+        currentPrice: args.currentPrice,
+      }))
+      .filter((zone): zone is DeskHtfFvgParentZone => Boolean(zone))
+  );
+}
+
+function priceDistanceFromZone(zone: DeskHtfFvgParentZone, price: number | null): number {
+  if (price === null) return 9999;
+  if (price >= zone.lower && price <= zone.upper) return 0;
+  return Math.min(Math.abs(price - zone.lower), Math.abs(price - zone.upper));
+}
+
+function selectActiveHtfFvgParentZone(args: {
+  chartContext?: Partial<ChartContext> | null;
+  direction?: 'LONG' | 'SHORT' | null;
+  currentPrice?: number | null;
+  lineInSand?: number | null;
+}): DeskHtfFvgParentZone | null {
+  const currentPrice = numericOrNull(args.currentPrice);
+  const lineInSand = numericOrNull(args.lineInSand);
+  const zones = htfFvgParentZonesFromChartContext({
+    chartContext: args.chartContext,
+    direction: args.direction,
+    currentPrice,
+  });
+  if (!zones.length) return null;
+  return zones
+    .map((zone) => {
+      const priceDistance = priceDistanceFromZone(zone, currentPrice);
+      const lineDistance = lineInSand === null ? 0 : priceDistanceFromZone(zone, lineInSand);
+      const stateScore = zone.state === 'in_zone'
+        ? -6
+        : zone.state === 'holding' || zone.state === 'waiting_retest'
+        ? 0
+        : zone.state === 'moved_away'
+        ? 12
+        : 4;
+      return {
+        zone,
+        score: (priceDistance * 2) + lineDistance + htfFvgTimeframePriority(zone.timeframe) + stateScore,
+      };
+    })
+    .sort((a, b) => a.score - b.score || htfFvgTimeframePriority(a.zone.timeframe) - htfFvgTimeframePriority(b.zone.timeframe))[0]?.zone || null;
+}
+
 function buildHtfFvgCascade(args: {
   direction: DeskPlayDirection;
   activeTacticalZone?: DeskActiveTacticalZone | null;
   tacticalZone?: TacticalZoneBounds | null;
   primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null;
+  longLifecycleItem?: ScannerCandidateLifecycleTraceItem | null;
+  shortLifecycleItem?: ScannerCandidateLifecycleTraceItem | null;
   candidate?: SetupCandidate | null;
   nextTrigger: string | null;
   currentPrice?: number | null;
+  lineInSand?: number | null;
+  chartContext?: Partial<ChartContext> | null;
 }): DeskHtfFvgCascade | null {
-  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return null;
-  const direction = args.direction;
-  const parentZone = htfParentZoneFromTacticalZone({
-    direction,
-    tacticalZone: args.tacticalZone,
+  const requestedDirection = args.direction === 'LONG' || args.direction === 'SHORT' ? args.direction : null;
+  const tacticalParentZone = requestedDirection
+    ? htfParentZoneFromTacticalZone({
+        direction: requestedDirection,
+        tacticalZone: args.tacticalZone,
+        currentPrice: args.currentPrice,
+      })
+    : null;
+  const chartParentZone = tacticalParentZone ? null : selectActiveHtfFvgParentZone({
+    chartContext: args.chartContext,
+    direction: requestedDirection,
     currentPrice: args.currentPrice,
+    lineInSand: args.lineInSand,
   });
+  const parentZone = tacticalParentZone || chartParentZone;
+  const direction = requestedDirection || parentZone?.direction || null;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
   const nativeFiveMinuteZone = args.activeTacticalZone?.direction === direction &&
     args.activeTacticalZone.sourceTimeframe === '5M'
     ? args.activeTacticalZone
@@ -2723,12 +2852,16 @@ function buildHtfFvgCascade(args: {
   const triggerNeeded = nativeFiveMinuteZone?.nextTrigger ||
     args.nextTrigger ||
     (parentZone
-      ? `Use ${parentZone.timeframe} parent FVG ${parentZone.lower.toFixed(2)}-${parentZone.upper.toFixed(2)} as the map; wait for completed 5M MSS/reclaim/hold inside or around that zone.`
+      ? `Use ${parentZone.timeframe} parent FVG ${parentZone.lower.toFixed(2)}-${parentZone.upper.toFixed(2)} as the map; wait for completed 5M MSS/reclaim/hold ${direction === 'LONG' ? 'above' : 'below'} the active line or inside/around that zone.`
       : 'Wait for completed 5M proof inside the active parent zone.');
-  const entry = numericOrNull(args.primaryLifecycleItem?.entry) ?? numericOrNull(args.candidate?.entry);
-  const stop = numericOrNull(args.primaryLifecycleItem?.stop) ?? numericOrNull(args.candidate?.stop);
-  const target1 = numericOrNull(args.primaryLifecycleItem?.target1) ?? numericOrNull(args.candidate?.target1);
-  const target2 = numericOrNull(args.primaryLifecycleItem?.target2) ?? numericOrNull(args.candidate?.target2);
+  const lifecycleItem = args.primaryLifecycleItem ||
+    (direction === 'LONG' ? args.longLifecycleItem : args.shortLifecycleItem) ||
+    null;
+  const candidateMatchesDirection = args.candidate?.direction === direction;
+  const entry = numericOrNull(lifecycleItem?.entry) ?? (candidateMatchesDirection ? numericOrNull(args.candidate?.entry) : null);
+  const stop = numericOrNull(lifecycleItem?.stop) ?? (candidateMatchesDirection ? numericOrNull(args.candidate?.stop) : null);
+  const target1 = numericOrNull(lifecycleItem?.target1) ?? (candidateMatchesDirection ? numericOrNull(args.candidate?.target1) : null);
+  const target2 = numericOrNull(lifecycleItem?.target2) ?? (candidateMatchesDirection ? numericOrNull(args.candidate?.target2) : null);
   const childExecutionZone: DeskHtfFvgChildExecutionZone = {
     sourceOfTruth: 'scanner_htf_fvg_child_execution_zone',
     direction,
@@ -3022,6 +3155,7 @@ function buildPrimaryDeskPlay(args: {
   htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
   currentPrice?: number | null;
   canExecute: boolean;
+  chartContext?: Partial<ChartContext> | null;
 }): PrimaryDeskPlay {
   const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
   const trendConfirmation = buildProtectedStructureTrendConfirmation(htfProtectedStructureMap);
@@ -3148,9 +3282,13 @@ function buildPrimaryDeskPlay(args: {
     activeTacticalZone,
     tacticalZone: activeTacticalZoneSource,
     primaryLifecycleItem,
+    longLifecycleItem: args.candidateLifecycleTrace.bestLongPlan,
+    shortLifecycleItem: args.candidateLifecycleTrace.bestShortPlan,
     candidate: args.candidate,
     nextTrigger,
     currentPrice: args.currentPrice,
+    lineInSand: activeTacticalLine.activeLine ?? selectedLine,
+    chartContext: args.chartContext,
   });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
@@ -3222,6 +3360,7 @@ export function buildDeskState(args: {
   htfLiquidityDrawState?: SetupCandidate['htfLiquidityDrawState'] | null;
   currentPrice?: number | null;
   canExecute?: boolean;
+  chartContext?: Partial<ChartContext> | null;
 }): DeskState {
   const candidate = args.candidate || null;
   const marketMode = marketModeFromDeskVisibility({
@@ -3243,6 +3382,7 @@ export function buildDeskState(args: {
     htfLiquidityDrawState: args.htfLiquidityDrawState,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.canExecute),
+    chartContext: args.chartContext,
   });
   return {
     sourceOfTruth: 'scanner_desk_state',

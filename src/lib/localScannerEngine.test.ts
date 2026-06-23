@@ -25,7 +25,7 @@ import { actualResultRFromExit, buildTradeJournalRecord } from './tradeJournal';
 import { normalizeIctModelLabel, normalizeCandidateIctModelLabel } from './ictModelLabels';
 import { buildAppTradePlan } from './planEngine';
 import { buildNinjaChartContext } from './ninjaTraderBridge';
-import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type SetupCandidate, type TargetObjective } from '../types';
+import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate, type TargetObjective } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
 
 function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
@@ -1546,6 +1546,196 @@ assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBou
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesEntryStopTargets, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesRiskRules, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.createsNewModel, false);
+
+const waitWithParentHtfFvgCandidate = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: '15M parent FVG reaction with 5M proof pending',
+  direction: 'LONG',
+  priority: 72,
+  rankScore: 72,
+  decisionQualityScore: 62,
+  entry: 7453.75,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  missingEvidence: ['opposing HTF context still requires completed 5M proof.'],
+  nextAction: 'Wait for completed 5M close and hold above 7454.50.',
+  requiredTrigger: 'Completed 5M close and hold above 7454.50.',
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: true,
+      direction: 'LONG',
+      lineInSand: 7454.5,
+      lineReason: '7454.50 is the active 15M confirmation line.',
+      requiredClose: 'Completed 5M close above 7454.50 required before long continuation is active.',
+      obstacleType: 'imbalance_zone',
+      obstacleSource: 'ninjatrader',
+      evidence: ['15M FVG reaction is mapped.'],
+      blockers: ['Waiting for completed 5M acceptance above 7454.50.'],
+    },
+  },
+});
+const waitWithParentHtfFvgLifecycle = buildCandidateLifecycleTrace({
+  candidates: [waitWithParentHtfFvgCandidate],
+  selectedCandidate: waitWithParentHtfFvgCandidate,
+  state: 'Conditional',
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'WAIT map fixture.' },
+  canExecute: false,
+});
+const waitWithParentHtfFvgChartContext = {
+  multiTimeframeContext: {
+    source: 'ninjatrader_bridge',
+    authority: 'ohlc_facts_only',
+    fifteenMinute: {
+      timeframe: '15m',
+      role: 'liquidity_map',
+      barCount: 120,
+      high: 7480,
+      low: 7420,
+      open: 7440,
+      close: 7453.5,
+      midpoint: 7450,
+      rangePoints: 60,
+      trend: 'balanced',
+      candles: [],
+      fvgZones: [
+        {
+          direction: 'LONG',
+          lower: 7448,
+          upper: 7454.5,
+          midpoint: 7451.25,
+          formedAt: '2026-06-23T13:45:00.000-04:00',
+          confidence: 'High',
+        },
+      ],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    oneHour: {
+      timeframe: '1h',
+      role: 'session_structure',
+      barCount: 60,
+      high: 7580,
+      low: 7420,
+      open: 7500,
+      close: 7453.5,
+      midpoint: 7500,
+      rangePoints: 160,
+      trend: 'bearish',
+      candles: [],
+      fvgZones: [],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    fourHour: {
+      timeframe: '4h',
+      role: 'macro_context',
+      barCount: 30,
+      high: 7580,
+      low: 7420,
+      open: 7540,
+      close: 7453.5,
+      midpoint: 7500,
+      rangePoints: 160,
+      trend: 'bearish',
+      candles: [],
+      fvgZones: [],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    fiveMinute: {
+      timeframe: '5m',
+      role: 'execution',
+      barCount: 120,
+      high: 7480,
+      low: 7420,
+      open: 7452,
+      close: 7453.5,
+      midpoint: 7450,
+      rangePoints: 60,
+      trend: 'balanced',
+      candles: [],
+      fvgZones: [],
+      liquiditySweeps: [],
+      reclaimEvents: [],
+      failedBreakEvents: [],
+      displacementCandles: [],
+      structuralLevels: [],
+      confidence: 'High',
+      notes: [],
+    },
+    alignment: {
+      macroBias: 'SHORT',
+      sessionBias: 'SHORT',
+      liquidityBias: 'NEUTRAL',
+      executionBias: 'NEUTRAL',
+      alignedDirection: 'CONFLICTED',
+      conflicts: ['Higher timeframe resistance remains overhead.'],
+      notes: [],
+    },
+    targetMap: {
+      nearestUpsideLiquidity: null,
+      majorUpsideLiquidity: null,
+      nearestDownsideLiquidity: null,
+      majorDownsideLiquidity: null,
+      levelsToWatch: [],
+    },
+    rules: {
+      higherTimeframesApproveTrades: false,
+      fiveMinuteExecutionRequired: true,
+      aiMayOverwriteOhlcFacts: false,
+    },
+    notes: [],
+  },
+} as Partial<ChartContext>;
+const waitWithParentHtfFvgDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: waitWithParentHtfFvgCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: waitWithParentHtfFvgCandidate,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'WAIT map fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: waitWithParentHtfFvgLifecycle,
+  currentPrice: 7453.5,
+  canExecute: false,
+  chartContext: waitWithParentHtfFvgChartContext,
+});
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.sourceOfTruth, 'scanner_htf_fvg_cascade_parent_zone_routing');
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.direction, 'LONG');
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.timeframe, '15M');
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.lower, 7448);
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.upper, 7454.5);
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.state, 'in_zone');
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.source, 'parent_htf_zone_with_5m_trigger');
+assert.ok(/completed 5M/i.test(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.triggerNeeded || ''));
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesCanExecute, false);
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(waitWithParentHtfFvgDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesEntryStopTargets, false);
 
 const cycleLevelHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
   source: 'ninjatrader_ohlc',

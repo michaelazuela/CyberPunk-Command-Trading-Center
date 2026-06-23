@@ -1484,6 +1484,107 @@ assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);
 assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 
+const waitWithActiveParentFvgPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  planVersionId: 'WAIT-ACTIVE-HTF-FVG-CASCADE',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Wait for completed 5M proof above the active line.',
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch/PM Setup Scan',
+  currentPrice: 7453.5,
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7454.5,
+    nextTrigger: 'Completed 5M close and hold above 7454.50 required before long review can build.',
+    invalidation: null,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'WAIT',
+      title: 'WAIT - desk play not confirmed',
+      summary: 'No HTF-supported directional play is confirmed yet.',
+      lineInSand: 7454.5,
+      longAbove: 7454.5,
+      shortBelow: 7450,
+      htfFvgCascade: {
+        sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing',
+        direction: 'LONG',
+        parentZone: {
+          sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+          direction: 'LONG',
+          timeframe: '15M',
+          lower: 7448,
+          upper: 7454.5,
+          midpoint: 7451.25,
+          label: '15M bullish FVG parent zone',
+          state: 'in_zone',
+          evidence: '15M bullish FVG from structured OHLC facts.',
+        },
+        childExecutionZone: {
+          sourceOfTruth: 'scanner_htf_fvg_child_execution_zone',
+          direction: 'LONG',
+          timeframe: '5M',
+          source: 'parent_htf_zone_with_5m_trigger',
+          lower: 7448,
+          upper: 7454.5,
+          anchorLine: 7451.25,
+          entry: null,
+          stop: null,
+          target1: null,
+          target2: null,
+          triggerNeeded: 'Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.',
+        },
+        routingSummary: 'HTF-first routing: 15M parent FVG frames the map; completed 5M proof supplies execution.',
+        standDown: 'Stand down on completed 5M acceptance below parent zone 7448.00.',
+      },
+      nextTrigger: 'Completed 5M close and hold above 7454.50 required before long review can build.',
+      invalidation: null,
+      noChase: 'No chase. Wait for completed 5M proof and protected structure.',
+      htfConflict: true,
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        summary: 'HTF map only.',
+        rows: [],
+      },
+      longBias: {
+        state: 'countertrend_review',
+        scenarioLabel: 'Long above active 15M FVG line',
+        lineInSand: 7454.5,
+        nextTrigger: 'Completed 5M close and hold above 7454.50 required before long review can build.',
+        reason: 'Long side is visible as review-only while primary remains WAIT.',
+        blockers: ['HTF conflict still present.'],
+      },
+      shortBias: {
+        state: 'secondary',
+        scenarioLabel: 'Short below 7450 context',
+        lineInSand: 7450,
+        nextTrigger: 'Completed 5M close below 7450.00 required.',
+        reason: 'Opposite side remains context only.',
+        blockers: [],
+      },
+    },
+  },
+});
+const waitWithActiveParentFvgText = flattenDiscordPayloadText(waitWithActiveParentFvgPayload);
+assert.ok(waitWithActiveParentFvgText.includes('Primary: 🛑 WAIT'));
+assert.ok(waitWithActiveParentFvgText.includes('HTF FVG Cascade:'));
+assert.ok(waitWithActiveParentFvgText.includes('Parent FVG: 15M 7448.00-7454.50'));
+assert.ok(waitWithActiveParentFvgText.includes('5M route: parent zone + 5M trigger 7448.00-7454.50.'));
+assert.ok(waitWithActiveParentFvgText.includes('Trigger: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
+assert.ok(waitWithActiveParentFvgText.includes('Stand down on completed 5M acceptance below parent zone 7448.00.'));
+
 const deskPlayWideReviewCandidate = sampleCandidate('SHORT');
 deskPlayWideReviewCandidate.setupType = SetupType.IntradayMssMicroContinuation;
 deskPlayWideReviewCandidate.entry = 7581.25;

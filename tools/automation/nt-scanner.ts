@@ -1963,6 +1963,7 @@ async function writeScannerDiscordAuditLog(args: {
   historyCoverage?: ScannerHistoryCoverageRecord[];
   targetCascade: TargetCascadeResult;
   alertReason: string;
+  chartContext?: Partial<ChartContext> | null;
   visibilityMetadata?: ScannerVisibilityMetadata;
   candidateLifecycleTrace?: ScannerCandidateLifecycleTrace;
   tradeDecisionMapAudit?: TradeDecisionMapAudit;
@@ -2000,6 +2001,7 @@ async function writeScannerDiscordAuditLog(args: {
     visibilityMetadata,
     candidateLifecycleTrace,
     targetCascade: args.targetCascade,
+    chartContext: args.chartContext || null,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
@@ -2409,6 +2411,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidateLifecycleTrace,
     targetCascade: args.targetCascade,
     htfLiquidityDrawState: (asRecord(args.chartContext)?.htfLiquidityDrawState || null) as SetupCandidate['htfLiquidityDrawState'] | null,
+    chartContext: args.chartContext as Partial<ChartContext> | null,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
@@ -5293,6 +5296,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     candidateLifecycleTrace,
     targetCascade: args.targetCascade,
     htfLiquidityDrawState: args.chartContext?.htfLiquidityDrawState || null,
+    chartContext: args.chartContext || null,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
@@ -5334,6 +5338,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     historyCoverage: args.historyCoverage,
     targetCascade: args.targetCascade,
     alertReason: args.alertReason,
+    chartContext: args.chartContext || null,
     visibilityMetadata,
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
@@ -7593,6 +7598,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidateLifecycleTrace,
     targetCascade,
     htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
+    chartContext: analysis.structuredChartContext || null,
     currentPrice,
     canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
   });
@@ -7644,6 +7650,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       candidateLifecycleTrace,
       targetCascade,
       htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
+      chartContext: analysis.structuredChartContext || null,
       currentPrice,
       canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     });

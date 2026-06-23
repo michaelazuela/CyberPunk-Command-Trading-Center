@@ -1573,8 +1573,13 @@ function deskPlayHtfFvgCascadeLines(
   direction: 'LONG' | 'SHORT' | 'WAIT',
 ): string[] {
   const cascade = play.htfFvgCascade;
-  if (direction !== 'LONG' && direction !== 'SHORT') return [];
-  if (!cascade || cascade.direction !== direction) return [];
+  const displayDirection = direction === 'LONG' || direction === 'SHORT'
+    ? direction
+    : cascade?.direction === 'LONG' || cascade?.direction === 'SHORT'
+    ? cascade.direction
+    : null;
+  if (!displayDirection) return [];
+  if (!cascade || cascade.direction !== displayDirection) return [];
   const parent = cascade.parentZone;
   const child = cascade.childExecutionZone;
   if (!parent && !child) return [];
