@@ -1527,6 +1527,25 @@ assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.reason.in
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesCanExecute, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesTradeApprovals, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.sourceOfTruth, 'scanner_htf_fvg_cascade_parent_zone_routing');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.direction, 'SHORT');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.timeframe, '60M');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.lower, 7589);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.upper, 7593);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.parentZone?.state, 'waiting_retest');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.source, 'parent_htf_zone_with_5m_trigger');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.timeframe, '5M');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.lower, 7589);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.upper, 7593);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.entry, 7588);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.childExecutionZone?.stop, 7604);
+assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.routingSummary.includes('HTF-first routing'));
+assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.standDown.includes('completed 5M acceptance above parent zone'));
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesCanExecute, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.changesRiskRules, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.htfFvgCascade?.approvalBoundary.createsNewModel, false);
 
 const cycleLevelHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
   source: 'ninjatrader_ohlc',

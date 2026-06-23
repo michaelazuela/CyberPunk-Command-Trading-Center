@@ -159,6 +159,37 @@ export interface CompactDeskStateForDiscord {
       managementInstruction?: string | null;
       noChase?: string | null;
     } | null;
+    htfFvgCascade?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | string;
+      parentZone?: {
+        sourceOfTruth?: string;
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        midpoint?: number | null;
+        label?: string | null;
+        state?: string | null;
+        evidence?: string | null;
+      } | null;
+      childExecutionZone?: {
+        sourceOfTruth?: string;
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        source?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        anchorLine?: number | null;
+        entry?: number | null;
+        stop?: number | null;
+        target1?: number | null;
+        target2?: number | null;
+        triggerNeeded?: string | null;
+      } | null;
+      routingSummary?: string | null;
+      standDown?: string | null;
+    } | null;
     htfObjectiveLadder?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
@@ -1530,6 +1561,39 @@ function deskPlayActiveTacticalZoneLines(
   ];
 }
 
+function zoneRangeLine(lower: number | null | undefined, upper: number | null | undefined): string {
+  if (!isFinitePrice(lower) || !isFinitePrice(upper)) return 'N/A';
+  return Math.abs((lower as number) - (upper as number)) < 0.0001
+    ? priceLine(lower)
+    : `${priceLine(lower)}-${priceLine(upper)}`;
+}
+
+function deskPlayHtfFvgCascadeLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const cascade = play.htfFvgCascade;
+  if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  if (!cascade || cascade.direction !== direction) return [];
+  const parent = cascade.parentZone;
+  const child = cascade.childExecutionZone;
+  if (!parent && !child) return [];
+  const parentLine = parent
+    ? `Parent FVG: ${compactLine(parent.timeframe || 'HTF', 8)} ${zoneRangeLine(parent.lower, parent.upper)} (${compactLine(parent.label || 'parent imbalance', 44)}; ${compactLine(String(parent.state || 'watch').replace(/_/g, ' '), 20)})`
+    : 'Parent FVG: none mapped; using native 5M tactical zone.';
+  const childLine = child
+    ? `5M route: ${child.source === 'native_5m_fvg' ? 'native 5M FVG' : 'parent zone + 5M trigger'} ${zoneRangeLine(child.lower, child.upper)}.`
+    : '5M route: wait for completed 5M trigger inside/around parent zone.';
+  const trigger = compactInstruction(child?.triggerNeeded || cascade.routingSummary, 'wait for completed 5M proof inside/around the parent zone.');
+  return [
+    'HTF FVG Cascade:',
+    parentLine,
+    childLine,
+    `Trigger: ${trigger}`,
+    compactLine(cascade.standDown || 'Stand down if parent zone fails on completed 5M proof.', 108),
+  ];
+}
+
 function deskPlayHtfRegimeLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -1709,6 +1773,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
+      ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
       ...deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
@@ -1751,6 +1816,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
     ...deskPlayActiveTacticalZoneLines(play, direction),
+    ...deskPlayHtfFvgCascadeLines(play, direction),
     ...deskPlayMainInstructionLines({
       play,
       deskState: args.deskState,

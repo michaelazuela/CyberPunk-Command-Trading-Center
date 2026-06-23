@@ -426,6 +426,49 @@ export interface DeskFvgDecisionZone {
   };
 }
 
+export interface DeskHtfFvgParentZone {
+  sourceOfTruth: 'scanner_htf_fvg_parent_zone';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  timeframe: '15M' | '60M' | '120M' | '240M';
+  lower: number;
+  upper: number;
+  midpoint: number | null;
+  label: string;
+  state: DeskActiveTacticalZoneState;
+  evidence: string;
+}
+
+export interface DeskHtfFvgChildExecutionZone {
+  sourceOfTruth: 'scanner_htf_fvg_child_execution_zone';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  timeframe: '5M';
+  source: 'native_5m_fvg' | 'parent_htf_zone_with_5m_trigger';
+  lower: number | null;
+  upper: number | null;
+  anchorLine: number | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  triggerNeeded: string;
+}
+
+export interface DeskHtfFvgCascade {
+  sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  parentZone: DeskHtfFvgParentZone | null;
+  childExecutionZone: DeskHtfFvgChildExecutionZone | null;
+  routingSummary: string;
+  standDown: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    createsNewModel: false;
+  };
+}
+
 export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
 
 export interface DeskHtfObjective {
@@ -586,6 +629,7 @@ export interface PrimaryDeskPlay {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   fvgDecisionZone?: DeskFvgDecisionZone | null;
+  htfFvgCascade?: DeskHtfFvgCascade | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   nextTrigger: string | null;
@@ -2616,6 +2660,117 @@ function buildActiveTacticalZone(args: {
   };
 }
 
+function timeframeIsHtfFvgParent(timeframe: TacticalZoneBounds['sourceTimeframe'] | null | undefined): timeframe is DeskHtfFvgParentZone['timeframe'] {
+  return timeframe === '15M' || timeframe === '60M' || timeframe === '120M' || timeframe === '240M';
+}
+
+function htfParentZoneFromTacticalZone(args: {
+  direction: DeskPlayDirection;
+  tacticalZone?: TacticalZoneBounds | null;
+  currentPrice?: number | null;
+}): DeskHtfFvgParentZone | null {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return null;
+  const zone = args.tacticalZone;
+  if (!zone || zone.direction !== args.direction || !timeframeIsHtfFvgParent(zone.sourceTimeframe)) return null;
+  const lower = numericOrNull(zone.lower);
+  const upper = numericOrNull(zone.upper);
+  if (lower === null || upper === null) return null;
+  const low = Math.min(lower, upper);
+  const high = Math.max(lower, upper);
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+    direction: args.direction,
+    timeframe: zone.sourceTimeframe,
+    lower: low,
+    upper: high,
+    midpoint: numericOrNull(zone.midpoint),
+    label: zone.label,
+    state: activeTacticalZoneState({
+      direction: args.direction,
+      lower: low,
+      upper: high,
+      currentPrice: args.currentPrice,
+    }),
+    evidence: zone.evidence,
+  };
+}
+
+function buildHtfFvgCascade(args: {
+  direction: DeskPlayDirection;
+  activeTacticalZone?: DeskActiveTacticalZone | null;
+  tacticalZone?: TacticalZoneBounds | null;
+  primaryLifecycleItem?: ScannerCandidateLifecycleTraceItem | null;
+  candidate?: SetupCandidate | null;
+  nextTrigger: string | null;
+  currentPrice?: number | null;
+}): DeskHtfFvgCascade | null {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return null;
+  const direction = args.direction;
+  const parentZone = htfParentZoneFromTacticalZone({
+    direction,
+    tacticalZone: args.tacticalZone,
+    currentPrice: args.currentPrice,
+  });
+  const nativeFiveMinuteZone = args.activeTacticalZone?.direction === direction &&
+    args.activeTacticalZone.sourceTimeframe === '5M'
+    ? args.activeTacticalZone
+    : null;
+  if (!parentZone && !nativeFiveMinuteZone) return null;
+
+  const childSource = nativeFiveMinuteZone ? 'native_5m_fvg' as const : 'parent_htf_zone_with_5m_trigger' as const;
+  const childLower = nativeFiveMinuteZone?.lower ?? parentZone?.lower ?? null;
+  const childUpper = nativeFiveMinuteZone?.upper ?? parentZone?.upper ?? null;
+  const triggerNeeded = nativeFiveMinuteZone?.nextTrigger ||
+    args.nextTrigger ||
+    (parentZone
+      ? `Use ${parentZone.timeframe} parent FVG ${parentZone.lower.toFixed(2)}-${parentZone.upper.toFixed(2)} as the map; wait for completed 5M MSS/reclaim/hold inside or around that zone.`
+      : 'Wait for completed 5M proof inside the active parent zone.');
+  const entry = numericOrNull(args.primaryLifecycleItem?.entry) ?? numericOrNull(args.candidate?.entry);
+  const stop = numericOrNull(args.primaryLifecycleItem?.stop) ?? numericOrNull(args.candidate?.stop);
+  const target1 = numericOrNull(args.primaryLifecycleItem?.target1) ?? numericOrNull(args.candidate?.target1);
+  const target2 = numericOrNull(args.primaryLifecycleItem?.target2) ?? numericOrNull(args.candidate?.target2);
+  const childExecutionZone: DeskHtfFvgChildExecutionZone = {
+    sourceOfTruth: 'scanner_htf_fvg_child_execution_zone',
+    direction,
+    timeframe: '5M',
+    source: childSource,
+    lower: childLower,
+    upper: childUpper,
+    anchorLine: nativeFiveMinuteZone?.anchorLine ?? parentZone?.midpoint ?? null,
+    entry,
+    stop,
+    target1,
+    target2,
+    triggerNeeded,
+  };
+  const parentText = parentZone
+    ? `${parentZone.timeframe} parent FVG ${parentZone.lower.toFixed(2)}-${parentZone.upper.toFixed(2)}`
+    : 'native 5M FVG';
+  const childText = childSource === 'native_5m_fvg'
+    ? `native 5M zone ${childLower !== null && childUpper !== null ? `${childLower.toFixed(2)}-${childUpper.toFixed(2)}` : 'mapped'}`
+    : 'parent HTF zone with completed 5M trigger';
+  const standDown = parentZone
+    ? direction === 'LONG'
+      ? `Stand down on completed 5M acceptance below parent zone ${parentZone.lower.toFixed(2)}.`
+      : `Stand down on completed 5M acceptance above parent zone ${parentZone.upper.toFixed(2)}.`
+    : nativeFiveMinuteZone?.standDown || 'Stand down if the active 5M zone fails on completed candle proof.';
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing',
+    direction,
+    parentZone,
+    childExecutionZone,
+    routingSummary: `HTF-first routing: ${parentText} frames the map; ${childText} supplies the 5M execution route. Execution still requires app-owned 5M trigger, protected stop, risk, target room, model, session, and canExecute gates.`,
+    standDown,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 function lifecycleItemHasProtectedStructureSupport(
   item: ScannerCandidateLifecycleTraceItem | null | undefined,
   map: DeskHtfProtectedStructureMap,
@@ -2979,11 +3134,21 @@ function buildPrimaryDeskPlay(args: {
     shortBelow: shortBias.lineInSand,
   });
   const fvgDecisionZone = buildFvgDecisionZone(args.candidate, args.currentPrice);
+  const activeTacticalZoneSource = primaryLifecycleItem?.tacticalZone || selectedLifecycleItem?.tacticalZone || args.candidate?.tacticalZone || null;
   const activeTacticalZone = buildActiveTacticalZone({
     direction: primaryDirection,
     activeLine: activeTacticalLine,
-    tacticalZone: primaryLifecycleItem?.tacticalZone || selectedLifecycleItem?.tacticalZone || args.candidate?.tacticalZone || null,
+    tacticalZone: activeTacticalZoneSource,
     fvgDecisionZone,
+    nextTrigger,
+    currentPrice: args.currentPrice,
+  });
+  const htfFvgCascade = buildHtfFvgCascade({
+    direction: primaryDirection,
+    activeTacticalZone,
+    tacticalZone: activeTacticalZoneSource,
+    primaryLifecycleItem,
+    candidate: args.candidate,
     nextTrigger,
     currentPrice: args.currentPrice,
   });
@@ -3025,6 +3190,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionReason,
     levelTransition,
     fvgDecisionZone,
+    htfFvgCascade,
     htfObjectiveLadder,
     htfProtectedStructureMap,
     nextTrigger,

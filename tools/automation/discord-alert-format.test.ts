@@ -1351,6 +1351,37 @@ const deskPlayPendingShortMapPayload = compactDiscordSummary({
         managementInstruction: 'FVG is a reaction/management zone only. It does not approve execution without completed 5M proof and canExecute.',
         noChase: 'No chase inside or beyond the FVG. Wait for completed 5M close/hold/retest proof.',
       },
+      htfFvgCascade: {
+        sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing',
+        direction: 'SHORT',
+        parentZone: {
+          sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+          direction: 'SHORT',
+          timeframe: '60M',
+          lower: 7596,
+          upper: 7604,
+          midpoint: 7600,
+          label: '60M bearish FVG parent zone',
+          state: 'retest_required',
+          evidence: '60M bearish FVG from structured OHLC facts.',
+        },
+        childExecutionZone: {
+          sourceOfTruth: 'scanner_htf_fvg_child_execution_zone',
+          direction: 'SHORT',
+          timeframe: '5M',
+          source: 'parent_htf_zone_with_5m_trigger',
+          lower: 7596,
+          upper: 7604,
+          anchorLine: 7600,
+          entry: null,
+          stop: null,
+          target1: null,
+          target2: null,
+          triggerNeeded: 'Use the 60M parent FVG; wait for completed 5M rejection below 7600.00.',
+        },
+        routingSummary: 'HTF-first routing: 60M parent FVG frames the map; completed 5M proof supplies execution.',
+        standDown: 'Stand down on completed 5M acceptance above parent zone 7604.00.',
+      },
       nextTrigger: 'Completed 5M close and hold below 7600.00 required before short review can build levels.',
       invalidation: null,
       noChase: 'No chase. Wait for completed 5M proof and protected structure.',
@@ -1442,6 +1473,11 @@ assert.ok(pendingShortMapText.includes('60M FVG / imbalance decision zone: 7600.
 assert.ok(pendingShortMapText.includes('Hold: Short context needs completed 5M hold/rejection below 7600.00.'));
 assert.ok(pendingShortMapText.includes('Fold: completed acceptance above 7600.00 turns this FVG into support/long management context.'));
 assert.ok(pendingShortMapText.includes('FVG is a reaction/management zone only.'));
+assert.ok(pendingShortMapText.includes('HTF FVG Cascade:'));
+assert.ok(pendingShortMapText.includes('Parent FVG: 60M 7596.00-7604.00'));
+assert.ok(pendingShortMapText.includes('5M route: parent zone + 5M trigger 7596.00-7604.00.'));
+assert.ok(pendingShortMapText.includes('Trigger: Use the 60M parent FVG; wait for completed 5M rejection below 7600.00.'));
+assert.ok(pendingShortMapText.includes('Stand down on completed 5M acceptance above parent zone 7604.00.'));
 assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
 assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
 assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);
