@@ -2006,6 +2006,12 @@ const tests: Array<[string, () => void]> = [
     assert.ok(micro.evidence.some((item) => item.includes('15:00-16:40 ET')));
     assert.equal(micro.entry, 7417);
     assert.equal(micro.stop, 7424.75);
+    assert.equal(micro.tacticalZone?.sourceOfTruth, 'ohlc_fvg_zone');
+    assert.equal(micro.tacticalZone?.direction, 'SHORT');
+    assert.equal(micro.tacticalZone?.lower, 7418.5);
+    assert.equal(micro.tacticalZone?.upper, 7424.25);
+    assert.equal(micro.tacticalZone?.sourceTimeframe, '5M');
+    assert.ok(micro.tacticalZone?.evidence.includes('structured NinjaTrader/OHLC FVG facts'));
     assert.equal(micro.activeRuleset?.htfLineInSand?.lineInSand, 7415.5);
     assert.equal(micro.activeRuleset?.htfLineInSand?.status, 'blocked');
     assert.equal(micro.activeCampaign?.status, 'active');
@@ -3889,6 +3895,11 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
     assert.equal(candidate.entry, 7586.5);
     assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.tacticalZone?.sourceOfTruth, 'ohlc_fvg_zone');
+    assert.equal(candidate.tacticalZone?.direction, 'SHORT');
+    assert.equal(candidate.tacticalZone?.lower, 7584);
+    assert.equal(candidate.tacticalZone?.upper, 7589);
+    assert.equal(candidate.tacticalZone?.sourceTimeframe, '5M');
     assert.equal(candidate.target1, 7581.25);
     assert.equal(candidate.target2, 7579.5);
     assert.notEqual(result.bestExecutableCandidate?.setupType, SetupType.OpeningDriveFvgContinuation);
@@ -3922,6 +3933,9 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.candidateState, 'HUMAN_REVIEW_READY');
     assert.equal(candidate.executionStatus, ExecutionStatus.Conditional);
     assert.equal(candidate.humanReview?.requiresTraderConfirmation, true);
+    assert.equal(candidate.tacticalZone?.direction, 'LONG');
+    assert.equal(candidate.tacticalZone?.lower, 7600.5);
+    assert.equal(candidate.tacticalZone?.upper, 7603.5);
     assert.ok(candidate.evidence.some((item) => item.includes('Directional bias: LONG')));
   }],
 
@@ -4087,6 +4101,11 @@ const tests: Array<[string, () => void]> = [
     assert.equal(candidate.humanReview?.discordTradePlanEligible, true);
     assert.equal(candidate.entry, 7586.5);
     assert.equal(candidate.stop, 7590);
+    assert.equal(candidate.tacticalZone?.sourceOfTruth, 'ohlc_fvg_zone');
+    assert.equal(candidate.tacticalZone?.direction, 'SHORT');
+    assert.equal(candidate.tacticalZone?.lower, 7584);
+    assert.equal(candidate.tacticalZone?.upper, 7589);
+    assert.equal(candidate.tacticalZone?.label, 'After-Lunch Drive 5M FVG / imbalance zone: 7584.00-7589.00');
     assert.equal(candidate.target1, 7581.25);
     assert.equal(candidate.target2, 7579.5);
     assert.ok(candidate.requiredTrigger?.includes('12:30-13:30 ET'));

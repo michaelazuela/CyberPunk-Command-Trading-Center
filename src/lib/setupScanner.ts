@@ -8,6 +8,7 @@ import {
   SetupCandidate,
   SetupCandidateStatus,
   SetupType,
+  TacticalZoneBounds,
   TargetObjective,
   TimeframeMssEvidence,
   TradingPlanCandidateState,
@@ -3008,6 +3009,32 @@ function directionalFvgZone(chartContext: ChartContext, direction: Direction) {
     })[0] || null;
 }
 
+function tacticalZoneFromDirectionalFvg(
+  zone: ReturnType<typeof directionalFvgZone>,
+  direction: Exclude<Direction, 'NO TRADE'>,
+  labelPrefix = '5M FVG / imbalance zone',
+): TacticalZoneBounds | null {
+  if (!zone) return null;
+  const lower = parsePrice(zone.lower);
+  const upper = parsePrice(zone.upper);
+  if (lower === null || upper === null) return null;
+  const low = roundToTick(Math.min(lower, upper));
+  const high = roundToTick(Math.max(lower, upper));
+  return {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction,
+    lower: low,
+    upper: high,
+    midpoint: roundToTick(parsePrice(zone.midpoint) ?? (low + high) / 2),
+    label: `${labelPrefix}: ${formatLinePrice(low)}-${formatLinePrice(high)}`,
+    sourceTimeframe: '5M',
+    formedAt: zone.formedAt ?? null,
+    formedCandleIndex: typeof zone.formedCandleIndex === 'number' ? zone.formedCandleIndex : null,
+    confidence: zone.confidence,
+    evidence: `${labelPrefix} promoted from structured NinjaTrader/OHLC FVG facts.`,
+  };
+}
+
 function fvgRetestEvidence(chartContext: ChartContext, direction: Direction, zone: ReturnType<typeof directionalFvgZone>): {
   confirmed: boolean;
   reason: string;
@@ -3168,6 +3195,7 @@ function buildSessionDriveFvgContinuationCandidate(
   const riskNote = riskAdvisoryNote(risk);
   const dirLabel = directionLabel(direction);
   const zoneLabel = `${parsePrice(fvg.lower)}-${parsePrice(fvg.upper)}`;
+  const tacticalZone = tacticalZoneFromDirectionalFvg(fvg, direction, `${phase.phaseLabel} 5M FVG / imbalance zone`);
   const missingEvidence = Array.from(new Set([
     ...htfGate.missingEvidence,
     ...(!reviewWindow ? [`${phase.phaseLabel} FVG candidate is armed during ${phase.armWindowLabel}; human-review plan waits for ${phase.reviewWindowLabel} review window.`] : []),
@@ -3184,6 +3212,7 @@ function buildSessionDriveFvgContinuationCandidate(
     scenarioLabel: registry.label,
     candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : phase.armedState,
     pathway: phase.pathway,
+    tacticalZone,
     humanReview: {
       status: humanReviewReady ? 'HumanReviewReady' : phase.armedStatus,
       canExecute: false,
@@ -3534,6 +3563,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
   const lower = fvg ? parsePrice(fvg.lower) : null;
   const upper = fvg ? parsePrice(fvg.upper) : null;
   const zoneLabel = lower !== null && upper !== null ? `${formatLinePrice(lower)}-${formatLinePrice(upper)}` : 'not required for close-through trigger';
+  const tacticalZone = fvg ? tacticalZoneFromDirectionalFvg(fvg, direction, 'Intraday MSS 5M FVG / imbalance zone') : null;
   const decisionLevelLabel = retest.decisionLevel !== null ? formatLinePrice(retest.decisionLevel) : null;
   const isCloseThroughTrigger = retest.source === 'mss_close_through_retest';
   const missingEvidence = Array.from(new Set([
@@ -3550,6 +3580,7 @@ function buildIntradayMssMicroContinuationCandidate(input: SetupScannerInput): S
     scenarioLabel: registry.label,
     candidateState: humanReviewReady ? 'HUMAN_REVIEW_READY' : 'MSS_CONTINUATION_RETEST_PENDING',
     pathway: 'intraday_mss_micro_continuation',
+    tacticalZone,
     humanReview: {
       status: humanReviewReady ? 'HumanReviewReady' : 'OpeningObservationArmed',
       canExecute: false,
