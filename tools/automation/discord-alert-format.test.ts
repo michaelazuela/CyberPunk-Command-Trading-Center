@@ -1222,6 +1222,12 @@ assert.ok(waitDeskMapWithCandidateText.includes('No active LONG/SHORT plan with 
 assert.ok(waitDeskMapWithCandidateText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(!waitDeskMapWithCandidateText.includes('Review Map:'));
 
+const supportedShortCandidate = {
+  ...decisionMapShortCandidate,
+  target1: 7324,
+  target2: 7318.75,
+  decisionQualityScore: 93,
+} as SetupCandidate;
 const deskPlaySupportedShortPayload = compactDiscordSummary({
   session: 'lunch',
   tradeDate: '2026-06-11',
@@ -1233,9 +1239,9 @@ const deskPlaySupportedShortPayload = compactDiscordSummary({
     decision: 'NO TRADE',
     noTradeReason: 'Review only until completed trigger/retest.',
     invalidation: null,
-    setupCandidates: [decisionMapShortCandidate],
+    setupCandidates: [supportedShortCandidate],
   },
-  candidates: [decisionMapShortCandidate],
+  candidates: [supportedShortCandidate],
   attachments: { chartPlan: true, priceLevelMap: false },
   sourceLabel: 'Scanner',
   windowLabel: 'Lunch/PM Setup Scan',
@@ -1270,6 +1276,7 @@ const deskPlaySupportedShortPayload = compactDiscordSummary({
       shortBias: {
         state: 'primary',
         scenarioLabel: 'Short below line in the sand',
+        decisionQualityScore: 93,
         lineInSand: 7342,
         nextTrigger: 'Completed 5M close below 7342.00, then failed retest.',
         reason: 'Short review has explicit completed HTF support and app-owned entry/stop math available.',
@@ -1282,21 +1289,23 @@ const deskPlaySupportedShortText = flattenDiscordPayloadText(deskPlaySupportedSh
 assert.ok(deskPlaySupportedShortPayload.content?.includes('[PM DESK PLAY] MES - SHORT'));
 assert.ok(deskPlaySupportedShortText.includes('MES Current Desk Plan'));
 assert.ok(deskPlaySupportedShortText.includes('Primary: 🐻 SHORT'));
+assert.ok(deskPlaySupportedShortText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
 assert.ok(deskPlaySupportedShortText.includes('Line in sand: 7342.00'));
-assert.ok(deskPlaySupportedShortText.includes('Map Side: SHORT N/A unavailable'));
+assert.ok(deskPlaySupportedShortText.includes('Map Side: SHORT 93/100 high'));
 assert.ok(deskPlaySupportedShortText.includes('Map Role: review map'));
 assert.ok(deskPlaySupportedShortText.includes('Opposing Side: LONG N/A unavailable'));
 assert.ok(deskPlaySupportedShortText.includes('Opposing Role: context only'));
 assert.ok(deskPlaySupportedShortText.includes('Conflict: none flagged'));
-assert.ok(deskPlaySupportedShortText.includes('Readiness: review map - wait'));
+assert.ok(deskPlaySupportedShortText.includes('Readiness: high-confidence conditional - wait for 5M proof'));
 assert.ok(deskPlaySupportedShortText.includes('SHORT BELOW 7342.00'));
+assert.ok(deskPlaySupportedShortText.includes('High-confidence conditional trade plan - not execution approval.'));
 assert.ok(deskPlaySupportedShortText.includes('Entry: 7339.75'));
 assert.ok(deskPlaySupportedShortText.includes('Stop: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('T1: 7324.00'));
 assert.ok(deskPlaySupportedShortText.includes('T2: 7318.75'));
 assert.ok(deskPlaySupportedShortText.includes('Invalid above: 7350.25'));
 assert.ok(deskPlaySupportedShortText.includes('Bottom line: HTF frames SHORT; needs 5M proof, stop, risk, canExecute. No chase'));
-assert.ok(deskPlaySupportedShortText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(deskPlaySupportedShortText.includes('Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'));
 assert.ok(deskPlaySupportedShortText.includes('Chart: attached.'));
 assert.ok(!deskPlaySupportedShortText.includes('Boundary: approvals unchanged.'));
 assert.ok(!/EXECUTABLE -|Trade now/i.test(deskPlaySupportedShortText));
@@ -1961,6 +1970,7 @@ scannerReadyCandidate.setupType = SetupType.HtfDrawContinuationAfterRaid;
 scannerReadyCandidate.scenarioLabel = 'HTF Draw Continuation After Raid/Reclaim';
 scannerReadyCandidate.executionStatus = ExecutionStatus.Executable;
 scannerReadyCandidate.candidateState = 'MSS_HOLD_CONFIRMED';
+scannerReadyCandidate.decisionQualityScore = 93;
 scannerReadyCandidate.evidence = [
   'HTF Draw Continuation After Raid/Reclaim candidate detected. Execution still requires deterministic entry, stop, target, risk, and final pipeline gates.',
 ];
@@ -1985,9 +1995,10 @@ const scannerReadyPayload = compactDiscordSummary({
 });
 validateDiscordPayload(scannerReadyPayload, ['chart-plan.png', 'price-level-map.png']);
 const scannerReadyText = flattenDiscordPayloadText(scannerReadyPayload);
-assert.ok(scannerReadyText.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+assert.ok(scannerReadyText.includes('[AM REVIEW] MES - LONG HIGH-CONFIDENCE CONDITIONAL'));
 assert.ok(scannerReadyText.includes('MES Current Desk Plan'));
-assert.ok(scannerReadyText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(scannerReadyText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
+assert.ok(scannerReadyText.includes('Status: High-confidence conditional trade plan; completed 5M proof + canExecute still required.'));
 assert.ok(scannerReadyText.includes('HTF context: sufficient; reliability structural.'));
 assert.ok(!scannerReadyText.includes('Trigger State: MSS_HOLD_CONFIRMED'));
 assert.ok(!scannerReadyText.includes('HTF Context:'));
@@ -2194,7 +2205,8 @@ const rawConditionalCanExecutePayload = compactDiscordSummary({
 validateDiscordPayload(rawConditionalCanExecutePayload, ['chart-plan.png', 'price-level-map.png']);
 const rawConditionalText = flattenDiscordPayloadText(rawConditionalCanExecutePayload);
 assert.ok(rawConditionalCanExecutePayload.content?.startsWith('🟡'), 'ConditionalTrade with raw canExecute=true must remain yellow/non-executable');
-assert.ok(rawConditionalText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(rawConditionalText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
+assert.ok(rawConditionalText.includes('Status: High-confidence conditional trade plan; completed 5M proof + canExecute still required.'));
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(rawConditionalText), false);
 
 const riskTooWideCandidate = sampleCandidate('LONG');

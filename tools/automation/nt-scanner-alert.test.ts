@@ -3625,8 +3625,9 @@ try {
   assert.ok(text.length < 1200, `expected live scanner compact text under 1200 chars, got ${text.length}`);
   assert.ok((result.payload.content?.length || 0) < 2000);
   assert.ok(text.includes('MES Current Desk Plan'));
-  assert.ok(text.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+  assert.ok(text.includes('[AM REVIEW] MES - LONG HIGH-CONFIDENCE CONDITIONAL'));
   assert.ok(text.includes('Primary: 🐂 LONG'));
+  assert.ok(text.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
   assert.ok(text.includes('Line in sand:'));
   assert.ok(text.includes('LONG ABOVE'));
   assert.ok(text.includes('Entry:'));
@@ -3635,7 +3636,7 @@ try {
   assert.ok(text.includes('T2:'));
   assert.ok(text.includes('Invalid below:'));
   assert.ok(text.includes('HTF target:'));
-  assert.ok(text.includes('Status: Review only until 5M trigger + canExecute.'));
+  assert.ok(text.includes('Status: High-confidence conditional trade plan; completed 5M proof + canExecute still required.'));
   assert.ok(text.includes('Chart: attached.'));
   assert.ok(!text.includes('Compact Trade Plan Summary'));
   assert.ok(!text.includes('Plan:'));
@@ -4019,9 +4020,10 @@ try {
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Status: Review only until 5M trigger + canExecute.'));
+  assert.ok(deskPlayText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
+  assert.ok(deskPlayText.includes('Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'));
   assert.ok(deskPlayText.includes('Chart: attached.'));
-  assert.ok(deskPlayText.length < 1200, `expected Desk Play payload under 1200 chars, got ${deskPlayText.length}`);
+  assert.ok(deskPlayText.length < 1550, `expected Desk Play payload under Discord chart-card limit, got ${deskPlayText.length}`);
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
   process.env.SUPABASE_URL = 'https://supabase.example/rest/v1';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test';

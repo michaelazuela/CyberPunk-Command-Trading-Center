@@ -708,10 +708,37 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
+  if (isHighConfidenceConditionalCandidate(candidate, normalized)) return 'HIGH-CONFIDENCE CONDITIONAL TRADE PLAN - completed 5M proof + canExecute still required';
   if (status === 'CONDITIONAL' && candidateDiscordHtfPublishIssue(candidate)) return 'WAIT - HTF support required before Discord execution alert';
   if (status === 'CONDITIONAL') return 'WAIT - fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
   return 'WAIT - app-owned pipeline has not approved execution';
+}
+
+function candidateQualityScore(candidate: SetupCandidate | null): number | null {
+  const score = candidate?.decisionQualityScore ?? candidate?.modelConfidenceScore ?? null;
+  return typeof score === 'number' && Number.isFinite(score) ? score : null;
+}
+
+function isHighConfidenceConditionalCandidate(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): boolean {
+  if (!candidate || getEffectiveCanExecute(normalized)) return false;
+  const levels = appTargetLevels(candidate, normalized);
+  const hasFullPlan = isFinitePrice(candidate.entry) &&
+    isFinitePrice(levels.stop) &&
+    isFinitePrice(levels.target1) &&
+    isFinitePrice(levels.target2);
+  const score = candidateQualityScore(candidate);
+  return hasFullPlan && typeof score === 'number' && score >= 85;
+}
+
+function discordPromotionDecisionLine(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
+  if (status === 'EXECUTABLE') return 'Decision class: TRUE EXECUTION APPROVED - app-owned canExecute=true.';
+  if (isHighConfidenceConditionalCandidate(candidate, normalized)) {
+    return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.';
+  }
+  if (candidate?.humanReview?.status === 'HumanReviewReady') return 'Decision class: HUMAN REVIEW READY - trader confirmation + canExecute required.';
+  if (status === 'CONDITIONAL') return 'Decision class: CONDITIONAL REVIEW - wait for completed 5M proof + canExecute.';
+  return 'Decision class: WAIT - no executable approval.';
 }
 
 function compactActionText(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
@@ -1311,7 +1338,7 @@ function deskPlayConflictSummary(
 }
 
 function deskPlayReadinessStatus(reviewOnly: boolean, hasLevels: boolean, highConfidenceConditional = false): string {
-  if (reviewOnly && highConfidenceConditional) return 'high-confidence conditional - wait for 5M proof';
+  if (highConfidenceConditional) return 'high-confidence conditional - wait for 5M proof';
   if (reviewOnly) return 'watch only - do not execute';
   if (!hasLevels) return 'review map - levels pending';
   return 'review map - wait';
@@ -1401,6 +1428,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     candidate.blockReason === NoTradeReason.RiskTooWide ||
     (typeof candidate.riskPoints === 'number' && candidate.riskPoints > TRADE_RULES.maxRiskPoints);
   const htfPublishIssue = candidateDiscordHtfPublishIssue(candidate);
+  const highConfidenceConditional = isHighConfidenceConditionalCandidate(candidate, normalized);
   const dataLimitedIssue = htfPublishIssue === 'data_limited' ||
     args.deskState?.dataQualityStatus === 'data_limited' ||
     args.deskState?.htfContextStatus === 'insufficient';
@@ -1415,6 +1443,8 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     ? 'Risk review only; standard risk gate not clean.'
     : candidate.humanReview?.status === 'HumanReviewReady'
     ? 'Human review only; trader confirmation + canExecute required.'
+    : highConfidenceConditional
+    ? 'High-confidence conditional trade plan; completed 5M proof + canExecute still required.'
     : status === 'EXECUTABLE'
       ? 'Executable only while completed 5M trigger + canExecute remain true.'
       : 'Review only until 5M trigger + canExecute.';
@@ -1422,6 +1452,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `${args.instrument} Current Desk Plan`,
     '',
     `Primary: ${primaryPlanLabel(direction)}`,
+    discordPromotionDecisionLine(candidate, normalized, status),
     `Bias: ${biasEmoji(direction === 'LONG' ? 'BULL' : 'BEAR')} ${candidateBiasSummary(candidate)}`,
     ...(candidateHtfContextLine(candidate) ? [candidateHtfContextLine(candidate)!] : []),
     `Line in sand: ${priceLine(lineInSand)}`,
@@ -1701,6 +1732,16 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         : null;
     return { reviewOnly, reason, highConfidenceConditional };
   };
+  const deskPlayDecisionClassLine = (
+    safety: { reviewOnly: boolean; reason: string | null; highConfidenceConditional: boolean },
+  ): string => {
+    if (args.deskState?.canExecute === true) return 'Decision class: TRUE EXECUTION APPROVED - app-owned canExecute=true.';
+    if (safety.highConfidenceConditional) {
+      return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.';
+    }
+    if (safety.reviewOnly) return 'Decision class: REVIEW ONLY - wait for completed 5M proof + canExecute.';
+    return 'Decision class: WAIT - no executable approval.';
+  };
   const sideLinesFor = (side: 'LONG' | 'SHORT'): { lines: string[]; hasLevels: boolean } => {
     const line = deskPlayLineForDirection(play, side);
     const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
@@ -1715,6 +1756,21 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           'Stop: pending',
           'T1: pending',
           'T2: pending',
+        ],
+      };
+    }
+    if (safety.highConfidenceConditional) {
+      return {
+        hasLevels: true,
+        lines: [
+          sideBreakoutLabel(side, triggerWord, line),
+          'High-confidence conditional trade plan - not execution approval.',
+          'Execution gate: completed 5M proof + canExecute still required.',
+          `Entry: ${priceLine(levels.entry)}`,
+          `Stop: ${priceLine(levels.stop)}`,
+          `T1: ${priceLine(levels.target1)}`,
+          `T2: ${priceLine(levels.target2)}`,
+          ...(safety.reason ? [`Caution: ${safety.reason}.`] : []),
         ],
       };
     }
@@ -1776,12 +1832,15 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ? waitPrimarySafety.highConfidenceConditional
         ? `Status: High-confidence conditional trade plan; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
         : `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      : waitPrimarySafety.highConfidenceConditional
+        ? 'Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'
       : 'Status: Review only until 5M trigger + canExecute.';
     const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
     return [
       `${args.instrument} Current Desk Plan`,
       '',
       `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
+      deskPlayDecisionClassLine(waitPrimarySafety),
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
       ...deskPlayHtfRegimeLines(play, waitMapSide),
       ...deskPlayLineDisplayLines(
@@ -1826,11 +1885,14 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ? primarySafety.highConfidenceConditional
       ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
       : `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+    : primarySafety.highConfidenceConditional
+      ? 'Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'
     : 'Status: Review only until 5M trigger + canExecute.';
   return [
     `${args.instrument} Current Desk Plan`,
     '',
     `Primary: ${primaryPlanLabel(direction)}`,
+    deskPlayDecisionClassLine(primarySafety),
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
@@ -2016,6 +2078,7 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const direction = compactTradeDirection(bestCandidate, args.normalized);
   const decision = compactSessionDecisionLabel(bestCandidate, args.normalized, args.decisionOverride);
   const designerStatus = reportStatus(bestCandidate, args.normalized, args.statusOverride || args.decisionOverride);
+  const highConfidenceConditional = isHighConfidenceConditionalCandidate(bestCandidate, args.normalized);
   const finalStatus = designerStatus === 'EXECUTABLE'
     ? requestedStatus
     : designerStatus === 'NO TRADE'
@@ -2029,6 +2092,8 @@ export function compactDiscordSummary(args: CompactDiscordSummaryArgs): DiscordW
   const headlineDirection = designerStatus === 'NO TRADE' ? 'NO TRADE' : direction;
   const safeDecision = designerStatus === 'EXECUTABLE'
     ? decision.toUpperCase()
+    : highConfidenceConditional
+      ? 'HIGH-CONFIDENCE CONDITIONAL'
     : designerStatus === 'CONDITIONAL'
       ? 'CONDITIONAL / NO FRESH ENTRY'
       : designerStatus;
