@@ -515,11 +515,42 @@ export interface DeskActiveTacticalLine {
   };
 }
 
+export type DeskActiveTacticalZoneState =
+  | 'waiting_retest'
+  | 'in_zone'
+  | 'holding'
+  | 'accepted_through'
+  | 'moved_away'
+  | 'unknown';
+
+export interface DeskActiveTacticalZone {
+  sourceOfTruth: 'scanner_active_tactical_zone';
+  direction: DeskPlayDirection;
+  lower: number | null;
+  upper: number | null;
+  anchorLine: number | null;
+  migratedFromLine: number | null;
+  migrated: boolean;
+  zoneLabel: string;
+  sourceTimeframe: '5M' | '15M' | '60M' | '120M' | '240M' | 'unknown';
+  state: DeskActiveTacticalZoneState;
+  reason: string;
+  nextTrigger: string;
+  standDown: string;
+  noChase: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
   trendConfirmation: DeskTrendConfirmation;
   activeTacticalLine: DeskActiveTacticalLine;
+  activeTacticalZone?: DeskActiveTacticalZone | null;
   modelRouting: {
     sourceOfTruth: 'scanner_protected_structure_model_routing';
     primaryDirection: DeskPlayDirection;
@@ -2472,6 +2503,98 @@ function buildActiveTacticalLine(args: {
   };
 }
 
+function extractFirstPriceRange(text: string | null | undefined): { lower: number; upper: number } | null {
+  const source = String(text || '');
+  const match = source.match(/(?:from|zone|area|between)?\s*(\d{3,5}(?:\.\d+)?)\s*(?:-|to|through)\s*(\d{3,5}(?:\.\d+)?)/i);
+  if (!match) return null;
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
+  return {
+    lower: Math.min(first, second),
+    upper: Math.max(first, second),
+  };
+}
+
+function activeTacticalZoneState(args: {
+  direction: 'LONG' | 'SHORT';
+  lower: number;
+  upper: number;
+  currentPrice?: number | null;
+}): DeskActiveTacticalZoneState {
+  const price = numericOrNull(args.currentPrice);
+  if (price === null) return 'unknown';
+  const noChaseDistance = 8;
+  if (price >= args.lower && price <= args.upper) return 'in_zone';
+  if (args.direction === 'LONG') {
+    if (price > args.upper + noChaseDistance) return 'moved_away';
+    if (price > args.upper) return 'holding';
+    return 'waiting_retest';
+  }
+  if (price < args.lower - noChaseDistance) return 'moved_away';
+  if (price < args.lower) return 'holding';
+  return 'waiting_retest';
+}
+
+function buildActiveTacticalZone(args: {
+  direction: DeskPlayDirection;
+  activeLine: DeskActiveTacticalLine;
+  fvgDecisionZone: DeskFvgDecisionZone | null;
+  nextTrigger: string | null;
+  currentPrice?: number | null;
+}): DeskActiveTacticalZone | null {
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') return null;
+  const range = extractFirstPriceRange(args.nextTrigger);
+  const fvgLine = args.fvgDecisionZone?.direction === args.direction
+    ? numericOrNull(args.fvgDecisionZone.lineInSand)
+    : null;
+  const activeLine = numericOrNull(args.activeLine.activeLine);
+  const lower = range?.lower ?? fvgLine ?? null;
+  const upper = range?.upper ?? fvgLine ?? null;
+  if (lower === null || upper === null) return null;
+
+  const direction = args.direction;
+  const sourceTimeframe = range ? '5M' : args.fvgDecisionZone?.sourceTimeframe || 'unknown';
+  const zoneLabel = range
+    ? `${sourceTimeframe} tactical pullback / retest zone`
+    : args.fvgDecisionZone?.zoneLabel || 'Tactical decision zone';
+  const state = activeTacticalZoneState({
+    direction,
+    lower,
+    upper,
+    currentPrice: args.currentPrice,
+  });
+  const zoneText = lower === upper ? lower.toFixed(2) : `${lower.toFixed(2)}-${upper.toFixed(2)}`;
+  const lineText = activeLine !== null ? activeLine.toFixed(2) : 'N/A';
+  const triggerWord = direction === 'LONG' ? 'hold/reclaim above' : 'hold/reject below';
+  const standDownWord = direction === 'LONG' ? 'below' : 'above';
+  const migrated = activeLine !== null && (Math.abs(lower - activeLine) >= 0.25 || Math.abs(upper - activeLine) >= 0.25);
+
+  return {
+    sourceOfTruth: 'scanner_active_tactical_zone',
+    direction,
+    lower,
+    upper,
+    anchorLine: activeLine,
+    migratedFromLine: activeLine,
+    migrated,
+    zoneLabel,
+    sourceTimeframe,
+    state,
+    reason: migrated
+      ? `Fresh tactical decision area migrated from active line ${lineText} to ${zoneText} from scanner-owned trigger/zone context.`
+      : `Fresh tactical decision area is anchored at ${zoneText}.`,
+    nextTrigger: `Active tactical zone ${zoneText}: completed 5M ${triggerWord} the zone required before fresh execution consideration.`,
+    standDown: `Fresh ${direction} stand down on completed 5M acceptance ${standDownWord} ${direction === 'LONG' ? lower.toFixed(2) : upper.toFixed(2)}.`,
+    noChase: `No chase away from ${zoneText}. If price has already expanded beyond the zone, treat as management-only until a fresh completed 5M setup forms.`,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
 function lifecycleItemHasProtectedStructureSupport(
   item: ScannerCandidateLifecycleTraceItem | null | undefined,
   map: DeskHtfProtectedStructureMap,
@@ -2776,6 +2899,10 @@ function buildPrimaryDeskPlay(args: {
     selectedLifecycleItem?.lineInSand ??
     args.candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
     null;
+  const nextTrigger = primaryBias?.nextTrigger ||
+    args.visibilityMetadata.nextTrigger ||
+    args.candidateLifecycleTrace.nextTrigger ||
+    null;
   const activeTacticalLine = buildActiveTacticalLine({
     direction: primaryDirection,
     originalLine: selectedLine,
@@ -2831,6 +2958,13 @@ function buildPrimaryDeskPlay(args: {
     shortBelow: shortBias.lineInSand,
   });
   const fvgDecisionZone = buildFvgDecisionZone(args.candidate, args.currentPrice);
+  const activeTacticalZone = buildActiveTacticalZone({
+    direction: primaryDirection,
+    activeLine: activeTacticalLine,
+    fvgDecisionZone,
+    nextTrigger,
+    currentPrice: args.currentPrice,
+  });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
@@ -2838,10 +2972,6 @@ function buildPrimaryDeskPlay(args: {
     targetReaction,
     htfProtectedStructureMap,
   });
-  const nextTrigger = primaryBias?.nextTrigger ||
-    args.visibilityMetadata.nextTrigger ||
-    args.candidateLifecycleTrace.nextTrigger ||
-    null;
   const invalidation = primaryBias?.invalidation || args.candidate?.invalidation || null;
   const waitWithStructuredEvidence = primaryDirection === 'WAIT' && Boolean(selectedLifecycleItem);
   const discordEligible = Boolean(
@@ -2861,6 +2991,7 @@ function buildPrimaryDeskPlay(args: {
     direction: primaryDirection,
     trendConfirmation,
     activeTacticalLine,
+    activeTacticalZone,
     modelRouting,
     title,
     summary,

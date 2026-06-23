@@ -996,6 +996,22 @@ const pullbackReferenceDeskMapPayload = compactDiscordSummary({
         nextTrigger: 'Use 7454.50 as the active tactical line: completed 5M hold/retest above that line is required before fresh execution consideration.',
         standDown: 'Stand down from fresh LONG entries if completed 5M acceptance returns below 7454.50; manage any earlier plan separately.',
       },
+      activeTacticalZone: {
+        sourceOfTruth: 'scanner_active_tactical_zone',
+        direction: 'LONG',
+        lower: 7466.25,
+        upper: 7470.75,
+        anchorLine: 7454.5,
+        migratedFromLine: 7454.5,
+        migrated: true,
+        zoneLabel: '5M tactical pullback / retest zone',
+        sourceTimeframe: '5M',
+        state: 'moved_away',
+        reason: 'Fresh tactical decision area migrated from active line 7454.50 to 7466.25-7470.75 from scanner-owned trigger/zone context.',
+        nextTrigger: 'Active tactical zone 7466.25-7470.75: completed 5M hold/reclaim above the zone required before fresh execution consideration.',
+        standDown: 'Fresh LONG stand down on completed 5M acceptance below 7466.25.',
+        noChase: 'No chase away from 7466.25-7470.75. If price has already expanded beyond the zone, treat as management-only until a fresh completed 5M setup forms.',
+      },
       longAbove: 7436.25,
       shortBelow: null,
       nextTrigger: 'Wait for completed 5M hold/retest above 7436.25.',
@@ -1034,8 +1050,12 @@ const pullbackReferenceDeskMapPayload = compactDiscordSummary({
 const pullbackReferenceDeskMapText = flattenDiscordPayloadText(pullbackReferenceDeskMapPayload);
 assert.ok(pullbackReferenceDeskMapText.includes('Original campaign line: 7436.25'));
 assert.ok(pullbackReferenceDeskMapText.includes('Active tactical line: 7454.50'));
+assert.ok(pullbackReferenceDeskMapText.includes('Active tactical zone: 7466.25-7470.75'));
+assert.ok(pullbackReferenceDeskMapText.includes('Zone migration: 7454.50 -> 7466.25-7470.75; fresh decision area, not execution approval.'));
+assert.ok(pullbackReferenceDeskMapText.includes('Zone no chase: No chase away from 7466.25-7470.75.'));
 assert.ok(pullbackReferenceDeskMapText.includes('HTF regime: 4H BEAR / 2H BEAR / 1H RANGE / 15M BULL / 5M BULL'));
 assert.ok(pullbackReferenceDeskMapText.includes('Overall play: LONG above 7454.50.'));
+assert.ok(pullbackReferenceDeskMapText.includes('Next trigger: Active tactical zone 7466.25-7470.75'));
 assert.ok(pullbackReferenceDeskMapText.includes('LONG ABOVE 7454.50'));
 assert.ok(pullbackReferenceDeskMapText.includes('Status: Review only until 5M trigger + canExecute.'));
 assert.ok(pullbackReferenceDeskMapText.includes('Entry: 7432.50'));

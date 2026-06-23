@@ -1506,6 +1506,15 @@ assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.managementIn
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesCanExecute, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesTradeApprovals, false);
 assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.sourceOfTruth, 'scanner_active_tactical_zone');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.direction, 'SHORT');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.lower, 7591);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.upper, 7591);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.state, 'waiting_retest');
+assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.nextTrigger.includes('completed 5M hold/reject below'));
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesCanExecute, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.activeTacticalZone?.approvalBoundary.changesEntryStopTargets, false);
 
 const cycleLevelHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
   source: 'ninjatrader_ohlc',

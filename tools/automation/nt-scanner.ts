@@ -263,6 +263,9 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   latestCompleted5m: string | null;
   lineInSand: number | null;
   activeTacticalLine: number | null;
+  activeTacticalZoneLow?: number | null;
+  activeTacticalZoneHigh?: number | null;
+  activeTacticalZoneState?: string | null;
   longLine: number | null;
   shortLine: number | null;
   entry: number | null;
@@ -4115,6 +4118,7 @@ function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | nul
   if (deskState.htfContextStatus === 'insufficient') return 'Stand down until HTF context is sufficient.';
   if (primaryBias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down; the move is missed/no-chase until a fresh completed 5M setup forms.';
   if (primaryBias?.tradeReadiness?.status === 'blocked') return primaryBias.tradeReadiness.reason || 'Stand down while the primary side is blocked.';
+  if (play.activeTacticalZone?.standDown) return play.activeTacticalZone.standDown;
   if (play.activeTacticalLine?.standDown) return play.activeTacticalLine.standDown;
   if (play.invalidation) return play.invalidation;
   if (deskState.invalidation) return deskState.invalidation;
@@ -4136,6 +4140,9 @@ function scannerDeskPlayMainPlayFingerprint(args: {
     record.direction,
     deskPlanRefreshPrice(record.lineInSand),
     deskPlanRefreshPrice(record.activeTacticalLine),
+    deskPlanRefreshPrice(record.activeTacticalZoneLow),
+    deskPlanRefreshPrice(record.activeTacticalZoneHigh),
+    normalizeDeskPlayInstructionText(record.activeTacticalZoneState),
     deskPlanRefreshPrice(record.longLine),
     deskPlanRefreshPrice(record.shortLine),
     deskPlanRefreshPrice(record.entry),
@@ -4178,6 +4185,10 @@ function scannerDeskPlayMaterialCadenceFingerprint(args: {
     `candidateDirection=${primaryLifecycle?.direction || 'none'}`,
     `activeLine=${deskPlanRefreshPrice(play.activeTacticalLine?.activeLine ?? null)}`,
     `activeLineMigrated=${play.activeTacticalLine?.migrated ? 'yes' : 'no'}`,
+    `activeZoneLow=${deskPlanRefreshPrice(play.activeTacticalZone?.lower ?? null)}`,
+    `activeZoneHigh=${deskPlanRefreshPrice(play.activeTacticalZone?.upper ?? null)}`,
+    `activeZoneState=${normalizeDeskPlayInstructionText(play.activeTacticalZone?.state || null) || 'none'}`,
+    `activeZoneTrigger=${normalizeDeskPlayInstructionText(play.activeTacticalZone?.nextTrigger || null) || 'none'}`,
     `nextTrigger=${normalizeDeskPlayInstructionText(play.nextTrigger || deskState.nextTrigger || primaryLifecycle?.nextTrigger || primaryLifecycle?.requiredTrigger || null) || 'none'}`,
     `invalidation=${normalizeDeskPlayInstructionText(play.invalidation || deskState.invalidation || primaryLifecycle?.invalidation || null) || 'none'}`,
     `standDown=${normalizeDeskPlayInstructionText(scannerDeskPlayStandDownInstruction(deskState)) || 'none'}`,
@@ -4263,6 +4274,9 @@ function scannerDeskPlanRefreshRecord(args: {
     latestCompleted5m: args.latestCompleted5m || null,
     lineInSand: play.lineInSand,
     activeTacticalLine: play.activeTacticalLine?.activeLine ?? null,
+    activeTacticalZoneLow: play.activeTacticalZone?.lower ?? null,
+    activeTacticalZoneHigh: play.activeTacticalZone?.upper ?? null,
+    activeTacticalZoneState: play.activeTacticalZone?.state ?? null,
     longLine: play.longBias.lineInSand,
     shortLine: play.shortBias.lineInSand,
     entry: primaryLifecycle?.entry ?? null,
@@ -4731,12 +4745,26 @@ function priceMateriallyEqual(a: number | null, b: number | null, tolerance = 0.
   return Math.abs(a - b) <= tolerance;
 }
 
+function normalizeDeskPlanMaterialCadenceFingerprint(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value
+    .split('|')
+    .filter((part) => ![
+      'activeZoneLow=none',
+      'activeZoneHigh=none',
+      'activeZoneState=none',
+      'activeZoneTrigger=none',
+    ].includes(part))
+    .join('|');
+}
+
 function scannerDeskPlanRefreshMateriallyMatches(
   previous: ScannerDeskPlanRefreshLedgerRecord,
   current: ScannerDeskPlanRefreshLedgerRecord,
 ): boolean {
   if (previous.materialCadenceFingerprint && current.materialCadenceFingerprint) {
-    return previous.materialCadenceFingerprint === current.materialCadenceFingerprint;
+    return normalizeDeskPlanMaterialCadenceFingerprint(previous.materialCadenceFingerprint) ===
+      normalizeDeskPlanMaterialCadenceFingerprint(current.materialCadenceFingerprint);
   }
   if (previous.mainPlayFingerprint || current.mainPlayFingerprint) {
     return previous.mainPlayFingerprint === current.mainPlayFingerprint &&
@@ -4745,6 +4773,10 @@ function scannerDeskPlanRefreshMateriallyMatches(
   return previous.activeCampaignId === current.activeCampaignId &&
     previous.direction === current.direction &&
     priceMateriallyEqual(previous.lineInSand, current.lineInSand) &&
+    priceMateriallyEqual(previous.activeTacticalLine, current.activeTacticalLine) &&
+    priceMateriallyEqual(previous.activeTacticalZoneLow ?? null, current.activeTacticalZoneLow ?? null) &&
+    priceMateriallyEqual(previous.activeTacticalZoneHigh ?? null, current.activeTacticalZoneHigh ?? null) &&
+    normalizeDeskPlayInstructionText(previous.activeTacticalZoneState) === normalizeDeskPlayInstructionText(current.activeTacticalZoneState) &&
     priceMateriallyEqual(previous.longLine, current.longLine) &&
     priceMateriallyEqual(previous.shortLine, current.shortLine) &&
     priceMateriallyEqual(previous.entry, current.entry) &&
@@ -4783,7 +4815,11 @@ function scannerDeskPlayStaleLevelReason(args: {
   const direction = args.deskState.primaryDeskPlay.direction;
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
   const primary = scannerDeskPlayPrimaryLifecycle(args.deskState);
-  const line = args.deskState.primaryDeskPlay.lineInSand ?? primary?.lineInSand ?? null;
+  const activeZone = args.deskState.primaryDeskPlay.activeTacticalZone || null;
+  const line = args.deskState.primaryDeskPlay.activeTacticalLine?.activeLine ??
+    args.deskState.primaryDeskPlay.lineInSand ??
+    primary?.lineInSand ??
+    null;
   const stop = primary?.stop ?? args.referenceLevels?.stop ?? null;
   const target1 = primary?.target1 ?? args.referenceLevels?.target1 ?? null;
   const target2 = primary?.target2 ?? args.referenceLevels?.target2 ?? null;
@@ -4792,13 +4828,27 @@ function scannerDeskPlayStaleLevelReason(args: {
 
   if (direction === 'LONG') {
     if (typeof stop === 'number' && currentPrice <= stop + buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is at/below protected stop ${stop.toFixed(2)}.`;
-    if (typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below line in the sand ${line.toFixed(2)}.`;
+    if (typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below active tactical line ${line.toFixed(2)}.`;
+    if (activeZone?.direction === 'LONG' &&
+      typeof activeZone.upper === 'number' &&
+      activeZone.state === 'moved_away' &&
+      currentPrice > activeZone.upper + 0.25
+    ) {
+      return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZone.lower?.toFixed(2) || 'N/A'}-${activeZone.upper.toFixed(2)}.`;
+    }
     if (typeof target2 === 'number' && currentPrice >= target2 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
     if (typeof target1 === 'number' && currentPrice >= target1 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
     if (typeof reaction === 'number' && currentPrice >= reaction - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
   } else {
     if (typeof stop === 'number' && currentPrice >= stop - buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is at/above protected stop ${stop.toFixed(2)}.`;
-    if (typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above line in the sand ${line.toFixed(2)}.`;
+    if (typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above active tactical line ${line.toFixed(2)}.`;
+    if (activeZone?.direction === 'SHORT' &&
+      typeof activeZone.lower === 'number' &&
+      activeZone.state === 'moved_away' &&
+      currentPrice < activeZone.lower - 0.25
+    ) {
+      return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper?.toFixed(2) || 'N/A'}.`;
+    }
     if (typeof target2 === 'number' && currentPrice <= target2 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
     if (typeof target1 === 'number' && currentPrice <= target1 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
     if (typeof reaction === 'number' && currentPrice <= reaction + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;

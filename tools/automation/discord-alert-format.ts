@@ -97,6 +97,22 @@ export interface CompactDeskStateForDiscord {
       nextTrigger?: string | null;
       standDown?: string | null;
     } | null;
+    activeTacticalZone?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      lower?: number | null;
+      upper?: number | null;
+      anchorLine?: number | null;
+      migratedFromLine?: number | null;
+      migrated?: boolean;
+      zoneLabel?: string | null;
+      sourceTimeframe?: string | null;
+      state?: string | null;
+      reason?: string | null;
+      nextTrigger?: string | null;
+      standDown?: string | null;
+      noChase?: string | null;
+    } | null;
     modelRouting?: {
       sourceOfTruth?: string;
       primaryDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
@@ -1455,6 +1471,9 @@ function deskPlayStandDownLine(args: {
   if (args.deskState?.dataQualityStatus === 'data_limited') return 'Stand down: data quality is limited.';
   if (bias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down: move is missed/no-chase until fresh completed 5M proof forms.';
   if (bias?.tradeReadiness?.status === 'blocked') return `Stand down: ${compactInstruction(bias.tradeReadiness.reason, 'primary side is blocked.')}`;
+  if (args.play.activeTacticalZone?.direction === args.direction && args.play.activeTacticalZone.standDown) {
+    return `Stand down: ${standDownInstruction(args.play.activeTacticalZone.standDown, 'active tactical zone failed.')}`;
+  }
   if (args.play.activeTacticalLine?.direction === args.direction && args.play.activeTacticalLine.migrated && args.play.activeTacticalLine.standDown) {
     return `Stand down: ${standDownInstruction(args.play.activeTacticalLine.standDown, 'active tactical line failed.')}`;
   }
@@ -1487,6 +1506,28 @@ function deskPlayLineDisplayLines(
     ];
   }
   return [`Line in sand: ${priceLine(activeLine)}`];
+}
+
+function deskPlayActiveTacticalZoneLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const zone = play.activeTacticalZone;
+  if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  if (!zone || zone.direction !== direction || !isFinitePrice(zone.lower) || !isFinitePrice(zone.upper)) return [];
+  const lower = zone.lower as number;
+  const upper = zone.upper as number;
+  const zoneText = Math.abs(lower - upper) < 0.0001 ? priceLine(lower) : `${priceLine(lower)}-${priceLine(upper)}`;
+  const state = compactLine(String(zone.state || 'watch').replace(/_/g, ' '), 24);
+  const label = compactLine(zone.zoneLabel || 'tactical decision zone', 52);
+  return [
+    `Active tactical zone: ${zoneText} (${label}; ${state})`,
+    ...(zone.migrated && isFinitePrice(zone.migratedFromLine)
+      ? [`Zone migration: ${priceLine(zone.migratedFromLine)} -> ${zoneText}; fresh decision area, not execution approval.`]
+      : []),
+    `Zone trigger: ${compactInstruction(zone.nextTrigger, 'completed 5M hold/retest through the active tactical zone.')}`,
+    `Zone no chase: ${compactInstruction(zone.noChase, 'do not chase away from the active tactical zone.')}`,
+  ];
 }
 
 function deskPlayHtfRegimeLines(
@@ -1533,7 +1574,10 @@ function deskPlayMainInstructionLines(args: {
   const activeLine = args.play.activeTacticalLine?.direction === args.direction && args.play.activeTacticalLine.migrated
     ? args.play.activeTacticalLine
     : null;
-  const nextTrigger = activeLine?.nextTrigger || args.play.nextTrigger || args.deskState?.nextTrigger || `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`;
+  const activeZone = args.play.activeTacticalZone?.direction === args.direction
+    ? args.play.activeTacticalZone
+    : null;
+  const nextTrigger = activeZone?.nextTrigger || activeLine?.nextTrigger || args.play.nextTrigger || args.deskState?.nextTrigger || `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`;
   const invalidation = args.play.invalidation || args.deskState?.invalidation || (
     args.direction === 'LONG'
       ? `completed acceptance below ${priceLine(args.lineInSand)}.`
@@ -1664,6 +1708,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         waitMapSide,
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
+      ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
@@ -1705,6 +1750,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
+    ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayMainInstructionLines({
       play,
       deskState: args.deskState,
