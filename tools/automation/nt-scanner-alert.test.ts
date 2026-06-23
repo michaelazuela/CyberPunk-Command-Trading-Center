@@ -64,12 +64,14 @@ import {
   buildScannerReversalWatchLines,
   buildScannerMorningHtfDeskMapPayload,
   buildScannerLiveDiscordSendBoundaryReport,
+  buildScannerLiveHoldNoticePayload,
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
   scannerSniperTriggerWatchMetadata,
   shouldSendScannerMorningHtfDeskMap,
   shouldSendScannerEndOfDayMarketRecap,
+  scannerLiveDiscordHoldNoticeEligible,
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
@@ -2757,6 +2759,7 @@ const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
     reversalWatchSent: {},
     morningHtfDeskMapSent: {},
     endOfDayMarketRecapSent: {},
+    liveHoldNoticeSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -3119,6 +3122,60 @@ const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
 });
 assert.equal(liveBoundaryWithChecklist.eligible, true);
 assert.equal(liveBoundaryWithChecklist.blockers.length, 0);
+assert.equal(scannerLiveDiscordHoldNoticeEligible(liveBoundaryWithoutChecklist), false);
+
+const heldDeskState = {
+  ...phase11BoundaryDeskStateFixture(),
+  visibilityMode: 'HOLD_WITH_REASON',
+  discordAction: 'hold',
+  suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+  visibilityMetadata: {
+    ...phase11BoundaryDeskStateFixture().visibilityMetadata,
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+    holdWithReason: 'No fresh entry remains. Wait for a new completed 5M retest/hold.',
+  },
+} satisfies DeskState;
+const heldBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: true,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: heldDeskState,
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-02-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-02-MES-PHASE11E-HOLD.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(heldBoundaryWithChecklist.eligible, false);
+assert.equal(scannerLiveDiscordHoldNoticeEligible(heldBoundaryWithChecklist), true);
+assert.ok(heldBoundaryWithChecklist.blockers.some((item) => item.includes('missed/no-chase')));
+const holdNoticePayload = buildScannerLiveHoldNoticePayload({
+  tradeDate: '2026-06-02',
+  session: 'morning',
+  config: scannerDataQualityNoticeConfig,
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7612.25,
+  completed5m: { time: '2026-06-02T10:05:00-04:00', open: 7601, high: 7613, low: 7600, close: 7612.25, volume: 1000 },
+  deskState: heldDeskState,
+  reason: heldDeskState.suppressionReason || 'Held.',
+  boundary: heldBoundaryWithChecklist,
+  postKind: 'desk_play',
+});
+const holdNoticeText = flattenDiscordPayloadText(holdNoticePayload);
+assert.match(holdNoticeText, /Scanner Hold/);
+assert.match(holdNoticeText, /missed_no_chase/);
+assert.match(holdNoticeText, /canExecute: false/);
+assert.match(holdNoticeText, /Line in the sand/);
+for (const bannedText of BANNED_ACTIVE_DISCORD_ALERT_TEXT) {
+  assert.ok(!holdNoticeText.includes(bannedText), `hold notice should not include banned active alert text: ${bannedText}`);
+}
 
 try {
   await fs.mkdir(auditDir, { recursive: true });

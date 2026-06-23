@@ -10,6 +10,8 @@ export type LiveDiscordEligibilityCheckKey =
   | 'desk_state_present'
   | 'desk_state_visibility_metadata_present'
   | 'desk_state_approval_boundary_preserved'
+  | 'desk_state_live_post_actionable'
+  | 'desk_state_not_operationally_suppressed'
   | 'decision_tape_writable'
   | 'audit_path_present'
   | 'discord_payload_validated'
@@ -79,6 +81,52 @@ function deskStateBoundaryPreserved(deskState: DeskState | null): boolean {
   );
 }
 
+const LIVE_POST_ACTIONS = new Set(['post_plan', 'post_review', 'post_conditional', 'post_watch']);
+const LIVE_POST_VISIBILITY_MODES = new Set(['POST_PLAN', 'POST_REVIEW', 'POST_CONDITIONAL', 'POST_WATCH']);
+
+function deskStateLivePostActionable(deskState: DeskState | null): boolean {
+  return Boolean(
+    deskState &&
+    LIVE_POST_ACTIONS.has(deskState.discordAction) &&
+    LIVE_POST_VISIBILITY_MODES.has(deskState.visibilityMode) &&
+    deskState.visibilityMetadata &&
+    deskState.visibilityMetadata.discordAction === deskState.discordAction &&
+    deskState.visibilityMetadata.visibilityMode === deskState.visibilityMode,
+  );
+}
+
+function collectDeskStateSuppressionText(deskState: DeskState | null): string {
+  if (!deskState) return '';
+  return [
+    deskState.suppressionReason,
+    deskState.visibilityMetadata?.suppressionReason,
+    deskState.visibilityMetadata?.holdWithReason,
+    deskState.visibilityMetadata?.noTradeWithReason,
+    deskState.visibilityMetadata?.dataQualityBlocker,
+    deskState.promotion?.blockedBy?.join(' | '),
+    deskState.selectedCandidate?.filteredOutReason,
+    deskState.bestLongPlan?.filteredOutReason,
+    deskState.bestShortPlan?.filteredOutReason,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+}
+
+function deskStateOperationallySuppressed(deskState: DeskState | null): boolean {
+  if (!deskState) return true;
+  if (deskState.discordAction === 'hold' || deskState.discordAction === 'no_trade') return true;
+  if (
+    deskState.visibilityMode === 'HOLD_WITH_REASON' ||
+    deskState.visibilityMode === 'NO_TRADE_WITH_REASON' ||
+    deskState.visibilityMode === 'DATA_QUALITY_BLOCKER'
+  ) {
+    return true;
+  }
+  if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return true;
+  const text = collectDeskStateSuppressionText(deskState);
+  return /\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(text);
+}
+
 export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibilityInput): LiveDiscordEligibilityReport {
   const checks: LiveDiscordEligibilityCheck[] = [
     check(
@@ -107,6 +155,16 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
       deskStateBoundaryPreserved(input.deskState),
       'DeskState approval boundaries must state no changes to approvals, canExecute, entry/stop/targets, risk, or bridge behavior.',
     ),
+    check(
+      'desk_state_live_post_actionable',
+      deskStateLivePostActionable(input.deskState),
+      'DeskState must be a scanner-owned POST_PLAN, POST_REVIEW, POST_CONDITIONAL, or POST_WATCH action before live Discord posting.',
+    ),
+    check(
+      'desk_state_not_operationally_suppressed',
+      !deskStateOperationallySuppressed(input.deskState),
+      'DeskState must not be held for duplicate ledger, missed/no-chase, stale/chasing, already-reached target, data-quality, hold, or no-trade reasons.',
+    ),
     check('decision_tape_writable', input.decisionTapeWritable, 'Decision tape must be writable.'),
     check('audit_path_present', Boolean(input.auditPath), 'Discord/scanner audit path must be available.'),
     check('discord_payload_validated', input.discordPayloadValidated, 'Discord payload must pass formatter validation.'),
@@ -129,9 +187,10 @@ export function evaluateLiveDiscordPostEligibility(input: LiveDiscordEligibility
     checks,
     blockers,
     notes: [
-      'Phase 11A is a policy contract only; it does not enable live Discord sends.',
+      'Phase 11A/11E is a policy contract only; it does not create scanner candidates or approve trades.',
       'Eligibility does not approve trades, alter scanner ranking, or change canExecute.',
       'Phase 11B may wire this policy to the send boundary after review.',
+      'Phase 11E only allows live scanner posts when the existing DeskState is fresh, actionable, non-duplicate, and not missed/no-chase.',
     ],
     authorityBoundary: {
       changesTradingLogic: false,

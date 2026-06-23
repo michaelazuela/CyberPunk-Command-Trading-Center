@@ -192,6 +192,7 @@ interface ScannerStateFile {
   reversalWatchSent: Record<string, ScannerReversalWatchLedgerRecord>;
   morningHtfDeskMapSent: Record<string, ScannerMorningHtfDeskMapLedgerRecord>;
   endOfDayMarketRecapSent: Record<string, ScannerEndOfDayMarketRecapLedgerRecord>;
+  liveHoldNoticeSent: Record<string, string>;
   windowStartSent: Record<string, string>;
   dataQualityNoticeSent: Record<string, string>;
   discordCleanupMessages: Record<string, ScannerDiscordCleanupRecord>;
@@ -208,7 +209,7 @@ interface ScannerStateReadResult {
 
 export type ScannerAlertDeliveryStatus = 'pending' | 'sent' | 'failed' | 'skipped' | 'failed_stale_no_retry';
 export type ScannerActiveCampaignResetPolicy = 'trade_date_direction_campaign';
-export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality';
+export type ScannerDiscordCleanupKind = 'trade_alert' | 'desk_play' | 'reversal_watch' | 'morning_htf_desk_map' | 'end_of_day_market_recap' | 'watchlist' | 'window_start' | 'health' | 'data_quality' | 'live_hold_notice';
 export type ScannerDiscordDeliverySource = ScannerDiscordWebhookEnvKey | 'dry_run' | 'discord_disabled' | 'phase11_boundary' | null;
 
 export interface ScannerDiscordCleanupRecord {
@@ -227,6 +228,7 @@ const SCANNER_DISCORD_EPHEMERAL_CLEANUP_KINDS = new Set<ScannerDiscordCleanupKin
   'health',
   'data_quality',
   'window_start',
+  'live_hold_notice',
 ]);
 
 function scannerDiscordCleanupKindIsEphemeral(kind: ScannerDiscordCleanupKind): boolean {
@@ -1308,6 +1310,7 @@ function emptyScannerState(): ScannerStateFile {
     reversalWatchSent: {},
     morningHtfDeskMapSent: {},
     endOfDayMarketRecapSent: {},
+    liveHoldNoticeSent: {},
     windowStartSent: {},
     dataQualityNoticeSent: {},
     discordCleanupMessages: {},
@@ -1333,6 +1336,7 @@ async function readStateWithHealth(): Promise<ScannerStateReadResult> {
         reversalWatchSent: parsed.reversalWatchSent || {},
         morningHtfDeskMapSent: parsed.morningHtfDeskMapSent || {},
         endOfDayMarketRecapSent: parsed.endOfDayMarketRecapSent || {},
+        liveHoldNoticeSent: parsed.liveHoldNoticeSent || {},
         windowStartSent: parsed.windowStartSent || {},
         dataQualityNoticeSent: parsed.dataQualityNoticeSent || {},
         discordCleanupMessages: parsed.discordCleanupMessages || {},
@@ -5682,6 +5686,178 @@ function scannerLiveDiscordSendBoundarySkipReceipt(report: LiveDiscordEligibilit
   };
 }
 
+function scannerLiveDiscordBoundaryFailedKeys(report: LiveDiscordEligibilityReport | null | undefined): string[] {
+  return (report?.checks || []).filter((item) => !item.passed).map((item) => item.key);
+}
+
+export function scannerLiveDiscordHoldNoticeEligible(report: LiveDiscordEligibilityReport | null | undefined): boolean {
+  if (!report || report.eligible) return false;
+  const failed = scannerLiveDiscordBoundaryFailedKeys(report);
+  if (!failed.length) return false;
+  const deskStateKeys = new Set(['desk_state_live_post_actionable', 'desk_state_not_operationally_suppressed']);
+  return failed.every((key) => deskStateKeys.has(key));
+}
+
+function scannerDeskStateHoldReason(deskState: DeskState): string {
+  const reasons = [
+    deskState.suppressionReason,
+    deskState.visibilityMetadata?.suppressionReason,
+    deskState.visibilityMetadata?.holdWithReason,
+    deskState.visibilityMetadata?.noTradeWithReason,
+    deskState.visibilityMetadata?.dataQualityBlocker,
+    deskState.promotion?.blockedBy?.join(' | '),
+    deskState.nextTrigger ? `Next trigger: ${deskState.nextTrigger}` : null,
+  ].filter(Boolean);
+  return reasons.length
+    ? [...new Set(reasons.map((item) => String(item).trim()).filter(Boolean))].join(' | ')
+    : 'Scanner held the post because DeskState is not a fresh live Discord plan.';
+}
+
+function scannerLiveHoldNoticeKey(args: {
+  tradeDate: string;
+  instrument: Instrument;
+  session: LiveSession;
+  completed5m: NinjaBridgeBar | null;
+  deskState: DeskState;
+  reason: string;
+}): string {
+  return [
+    args.tradeDate,
+    args.instrument,
+    args.session,
+    'live-hold',
+    args.completed5m?.time || 'no-completed-5m',
+    args.deskState.visibilityMode || 'unknown',
+    args.deskState.discordAction || 'unknown',
+    args.reason.replace(/\s+/g, ' ').slice(0, 160),
+  ].join('|');
+}
+
+export function buildScannerLiveHoldNoticePayload(args: {
+  tradeDate: string;
+  session: LiveSession;
+  config: ScannerConfig;
+  windowLabel: string;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  deskState: DeskState;
+  reason: string;
+  boundary: LiveDiscordEligibilityReport;
+  postKind: ScannerDiscordCleanupKind;
+}): DiscordWebhookPayload {
+  const play = args.deskState.primaryDeskPlay;
+  const failedChecks = scannerLiveDiscordBoundaryFailedKeys(args.boundary);
+  return {
+    username: 'Quant Desk',
+    content: `# Quant Desk Scanner Hold - ${args.config.instrument} ${args.session.toUpperCase()}\nNo live trade plan was posted. The scanner held the setup and logged the reason below.`,
+    embeds: [
+      {
+        title: `Scanner Held ${play.direction === 'WAIT' ? 'Desk Plan' : `${play.direction} Plan`}`,
+        description: 'This is a visibility notice only. It is not a trade approval, not an entry, and not an outcome button card.',
+        color: 0xf59e0b,
+        fields: [
+          {
+            name: 'Held Reason',
+            value: clip(args.reason, 900),
+            inline: false,
+          },
+          {
+            name: 'Desk State',
+            value: clip([
+              `Visibility: ${args.deskState.visibilityMode}`,
+              `Discord action: ${args.deskState.discordAction}`,
+              `Market mode: ${args.deskState.marketMode}`,
+              `canExecute: ${args.deskState.canExecute ? 'true' : 'false'}`,
+              `Post kind held: ${args.postKind}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: 'Line / Next Condition',
+            value: clip([
+              `Line in the sand: ${money(play.lineInSand ?? args.deskState.lineInSand)}`,
+              `Next trigger: ${play.nextTrigger || args.deskState.nextTrigger || 'N/A'}`,
+              `Invalidation: ${play.invalidation || args.deskState.invalidation || 'N/A'}`,
+              `No chase: ${play.noChase || 'N/A'}`,
+            ].join('\n')),
+            inline: false,
+          },
+          {
+            name: 'Run Context',
+            value: clip([
+              `Trade date: ${args.tradeDate}`,
+              `Window: ${args.windowLabel}`,
+              `Latest completed 5M: ${args.completed5m?.time || 'N/A'}`,
+              `Current price: ${money(args.currentPrice)}`,
+              `Boundary checks held: ${failedChecks.join(', ') || 'N/A'}`,
+            ].join('\n')),
+            inline: false,
+          },
+        ],
+        footer: { text: 'Quant Desk - Scanner hold notice - no execution authority' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
+async function sendScannerLiveHoldNoticeIfNeeded(args: {
+  state: ScannerStateFile;
+  config: ScannerConfig;
+  tradeDate: string;
+  session: LiveSession;
+  windowLabel: string;
+  currentPrice: number | null;
+  completed5m: NinjaBridgeBar | null;
+  deskState: DeskState;
+  boundary: LiveDiscordEligibilityReport;
+  postKind: ScannerDiscordCleanupKind;
+}): Promise<void> {
+  if (!scannerLiveDiscordHoldNoticeEligible(args.boundary)) return;
+  const reason = scannerDeskStateHoldReason(args.deskState);
+  const key = scannerLiveHoldNoticeKey({
+    tradeDate: args.tradeDate,
+    instrument: args.config.instrument,
+    session: args.session,
+    completed5m: args.completed5m,
+    deskState: args.deskState,
+    reason,
+  });
+  if (args.state.liveHoldNoticeSent[key]) {
+    console.log(`[scanner-discord] Live hold notice already posted for ${key}.`);
+    return;
+  }
+  try {
+    const payload = buildScannerLiveHoldNoticePayload({
+      tradeDate: args.tradeDate,
+      session: args.session,
+      config: args.config,
+      windowLabel: args.windowLabel,
+      currentPrice: args.currentPrice,
+      completed5m: args.completed5m,
+      deskState: args.deskState,
+      reason,
+      boundary: args.boundary,
+      postKind: args.postKind,
+    });
+    const receipt = await postDiscord(payload, args.config);
+    if (receipt.deliveryStatus === 'sent') {
+      const sentAt = new Date().toISOString();
+      args.state.liveHoldNoticeSent[key] = sentAt;
+      recordScannerDiscordCleanupMessage({
+        state: args.state,
+        config: args.config,
+        receipt,
+        kind: 'live_hold_notice',
+        key,
+      });
+      console.log(`[scanner-discord] Sent live hold notice: ${key}`);
+    }
+  } catch (error) {
+    console.warn(`[scanner-discord] Live hold notice failed safely; scanner will continue: ${sanitizedError(error)}`);
+  }
+}
+
 export function recordScannerDiscordCleanupMessage(args: {
   state: ScannerStateFile;
   config: ScannerConfig;
@@ -7482,7 +7658,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         completed5m,
         currentPrice,
       });
-      const receipt = await postDiscord(payload, config, [], undefined, liveDiscordSendBoundary(decisionTapePath));
+      const morningMapLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
+      const receipt = await postDiscord(payload, config, [], undefined, morningMapLiveBoundary);
       if (receipt.deliveryStatus === 'sent') {
         const sentAt = new Date().toISOString();
         state.morningHtfDeskMapSent[morningMapKey] = scannerMorningHtfDeskMapRecord({
@@ -7507,6 +7684,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         console.log(`[scanner] Sent Morning HTF Desk Map: ${morningMapKey}`);
       } else {
         console.log(`[scanner] Morning HTF Desk Map skipped (${receipt.webhookSource || 'unknown'}): ${morningMapKey}`);
+        if (receipt.webhookSource === 'phase11_boundary') {
+          await sendScannerLiveHoldNoticeIfNeeded({
+            state,
+            config,
+            tradeDate,
+            session,
+            windowLabel: window.label,
+            currentPrice,
+            completed5m,
+            deskState,
+            boundary: morningMapLiveBoundary,
+            postKind: 'morning_htf_desk_map',
+          });
+        }
       }
     } catch (error) {
       console.warn(`[scanner] Morning HTF Desk Map delivery failed safely; scanner will continue evaluating watch and trade alerts: ${sanitizedError(error)}`);
@@ -7561,7 +7752,8 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           decisionTapePath,
           planVersionId: reversalWatchPlanVersionId,
         });
-        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files, undefined, liveDiscordSendBoundary(decisionTapePath));
+        const reversalLiveBoundary = liveDiscordSendBoundary(decisionTapePath);
+        const receipt = await postDiscord(reversalArtifacts.payload, config, reversalArtifacts.files, undefined, reversalLiveBoundary);
         if (receipt.deliveryStatus === 'sent') {
           const sentAt = new Date().toISOString();
           state.reversalWatchSent[reversalWatchKey] = scannerReversalWatchRecord({
@@ -7612,6 +7804,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           console.log(`[scanner] Sent Reversal Watch update: ${reversalWatchKey}`);
         } else {
           console.log(`[scanner] Reversal Watch update skipped (${receipt.webhookSource || 'unknown'}): ${reversalWatchKey}`);
+          if (receipt.webhookSource === 'phase11_boundary') {
+            await sendScannerLiveHoldNoticeIfNeeded({
+              state,
+              config,
+              tradeDate,
+              session,
+              windowLabel: window.label,
+              currentPrice,
+              completed5m,
+              deskState,
+              boundary: reversalLiveBoundary,
+              postKind: 'reversal_watch',
+            });
+          }
         }
       } catch (error) {
         console.warn(`[scanner] Reversal Watch delivery failed safely; scanner will continue evaluating Desk Play/trade alerts: ${sanitizedError(error)}`);
@@ -7746,6 +7952,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
           console.log(`[scanner] Sent Desk Play update: ${deskPlayKey}`);
         } else {
           console.log(`[scanner] Desk Play update skipped (${receipt.webhookSource || 'unknown'}): ${deskPlayKey}`);
+          if (receipt.webhookSource === 'phase11_boundary') {
+            await sendScannerLiveHoldNoticeIfNeeded({
+              state,
+              config,
+              tradeDate,
+              session,
+              windowLabel: window.label,
+              currentPrice,
+              completed5m,
+              deskState,
+              boundary: deskPlayLiveBoundary,
+              postKind: 'desk_play',
+            });
+          }
         }
       } catch (error) {
         console.warn(`[scanner] Desk Play delivery failed safely; scanner will continue evaluating trade alerts: ${sanitizedError(error)}`);
@@ -7902,6 +8122,20 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
               ? 'phase11_boundary'
               : 'dry_run',
         });
+        if (receipt.webhookSource === 'phase11_boundary') {
+          await sendScannerLiveHoldNoticeIfNeeded({
+            state,
+            config,
+            tradeDate,
+            session,
+            windowLabel: window.label,
+            currentPrice,
+            completed5m,
+            deskState,
+            boundary: alertLiveBoundary,
+            postKind: 'trade_alert',
+          });
+        }
         await releaseDurableActiveCampaignScannerAlertClaim({
           config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
           campaignId: activeCampaignClaim.campaignId,

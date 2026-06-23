@@ -183,4 +183,49 @@ assert.ok(missingDeskStateBlocked.blockers.some((item) => item.includes('DeskSta
 assert.equal(missingDeskStateBlocked.authorityBoundary.changesCanExecute, false);
 assert.equal(missingDeskStateBlocked.authorityBoundary.createsTradeApproval, false);
 
+const duplicateLedgerBlocked = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    suppressionReason: 'ActiveCampaign duplicate suppressed by durable Supabase ledger.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      suppressionReason: 'ActiveCampaign duplicate suppressed by durable Supabase ledger.',
+    },
+  },
+}));
+assert.equal(duplicateLedgerBlocked.eligible, false);
+assert.ok(duplicateLedgerBlocked.blockers.some((item) => item.includes('duplicate ledger')));
+assert.equal(duplicateLedgerBlocked.authorityBoundary.createsTradeApproval, false);
+
+const missedNoChaseBlocked = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      suppressionReason: 'missed_no_chase: T1 was already reached before alert generation.',
+    },
+  },
+}));
+assert.equal(missedNoChaseBlocked.eligible, false);
+assert.ok(missedNoChaseBlocked.blockers.some((item) => item.includes('missed/no-chase')));
+
+const heldDeskStateBlocked = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    suppressionReason: 'Structured evidence is visible, but no fresh trigger is available.',
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'HOLD_WITH_REASON',
+      discordAction: 'hold',
+      holdWithReason: 'Structured evidence is visible, but no fresh trigger is available.',
+    },
+  },
+}));
+assert.equal(heldDeskStateBlocked.eligible, false);
+assert.ok(heldDeskStateBlocked.blockers.some((item) => item.includes('POST_PLAN')));
+assert.ok(heldDeskStateBlocked.blockers.some((item) => item.includes('hold')));
+
 console.log('liveDiscordPostEligibility tests passed');

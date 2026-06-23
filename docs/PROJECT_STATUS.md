@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install Phase 11E automatic live Discord posting preflight and hold notices.
+Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
+Reason: The scanner needs one final live-post preflight that only allows scanner-owned fresh DeskState posts through Discord while holding duplicate, missed/no-chase, stale, already-reached, data-quality, hold, or no-trade states; when a market/trade-state hold occurs, Discord should show the held reason instead of staying silent.
+Tests run: npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. Phase 11E extends the existing live Discord eligibility boundary with actionable DeskState and operational-suppression checks. The scanner already routes Morning HTF Desk Map, Tactical Reversal Watch, Current Desk Plan, and primary scanner alert posts through this boundary. Boundary-held market/trade states can now send a rate-limited Discord Scanner Hold notice with the exact held reason, line/next condition, run context, and `canExecute=false` boundary.
+Trading logic changed: No intended change. This is live Discord send-boundary filtering only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: Yes. Live scanner trade/DeskState posts are held unless DeskState is POST_PLAN, POST_REVIEW, POST_CONDITIONAL, or POST_WATCH and is not duplicate, missed/no-chase, stale/chasing, already past target, data-limited, hold, or no-trade. If the only failed live-boundary checks are DeskState action/suppression checks, the scanner posts one ephemeral Scanner Hold notice per completed 5M/reason so the trader sees why no trade plan was posted.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known in code after verification. Operationally, Discord still only posts trade plans when the scanner has a fresh non-duplicate candidate inside an active scanner window; held notices are informational and do not create trade authority.
+Next recommended action: Run the final verification suite, then observe the next active-window fresh setup. The supervisor should post only when the scanner produces a fresh non-duplicate candidate; otherwise it should hold with a logged reason.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install HTF FVG decision-zone Discord alerts.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/DESK_STATE_PHASE_HANDOFF.md, docs/PROJECT_STATUS.md.
 Reason: The desk needs FVG reaction-zone visibility in Discord without turning HTF FVGs into standalone trade approvals.

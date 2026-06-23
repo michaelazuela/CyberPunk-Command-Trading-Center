@@ -20,6 +20,19 @@ Latest Install 8 update: 2026-06-22
 
 Latest Install 9 update: 2026-06-22
 
+Latest Install 11 update: 2026-06-22
+
+## Phase 11E Automatic Live Discord Posting Preflight
+
+Install 11 extends the live send-boundary policy so supervisor-driven scanner posts only reach Discord when the scanner has a fresh actionable DeskState.
+
+| File / Function | Finding | Action | Evidence |
+| --- | --- | --- | --- |
+| `src/lib/liveDiscordPostEligibility.ts` / `evaluateLiveDiscordPostEligibility` | Phase 11B proved operational readiness, but a live send still needed an explicit DeskState freshness/actionability check so duplicate, missed/no-chase, stale, already-reached, data-quality, hold, or no-trade states could not look like live plans. | Added `desk_state_live_post_actionable` and `desk_state_not_operationally_suppressed` checks. Live posts require `POST_PLAN`, `POST_REVIEW`, `POST_CONDITIONAL`, or `POST_WATCH` with matching scanner visibility metadata, and block duplicate ledger, missed/no-chase, stale/chasing, already-reached target, data-quality, hold, and no-trade reasons. | Send-boundary-only change. It does not change setup definitions, candidate selection, ranking, entries, stops, targets, risk, bridge reads, `canExecute`, or trade approval. |
+| Existing Phase 11B scanner wiring | The scanner already routed Morning HTF Desk Map, Tactical Reversal Watch, Current Desk Plan, and primary scanner alert posts through `buildScannerLiveDiscordSendBoundaryReport`. | Phase 11E is inherited at those send sites through the existing boundary. Operational notices that do not pass the scanner trade/DeskState boundary remain outside this policy. | Discord live-post filtering only. Dry-run remains log-only, and no candidate is created by the preflight. |
+| `tools/automation/nt-scanner.ts` / Scanner Hold notice | A held trade/DeskState post could be logged locally but invisible in Discord, forcing manual follow-up to learn why no plan posted. | Added a rate-limited `live_hold_notice` Discord notice when the live boundary is blocked only by DeskState action/suppression checks. The notice names the exact held reason, line/next condition, run context, and `canExecute=false`. | Operational visibility only. The notice has no outcome buttons, no trade approval, no entry authority, and no candidate creation. Infrastructure blockers such as missing webhook or unconfirmed live policy do not create market hold notices. |
+| Tests | The policy needed regression proof for duplicate durable ledger, missed/no-chase/T1 already reached, held/no-trade DeskState cases, and the new hold-notice payload. | Added targeted tests proving those states are ineligible, the hold notice shows the reason without active-alert language, and unconfirmed live policy remains ineligible for a hold notice. | Test-only coverage. |
+
 ## Phase 11C Live Discord Rollout Checklist
 
 Install 9 added an operator checklist for the first controlled live Discord smoke after Phase 11B.
