@@ -434,6 +434,73 @@ assert.ok(watchAlertDecision.reason.includes('watch qualified'));
 const triggerPendingWatchDecision = shouldSendScannerAlert({ state: 'TriggerPending', confidence: 65, window: morningWindow, candidate: strongCandidate });
 assert.equal(triggerPendingWatchDecision.shouldSend, true);
 assert.ok(triggerPendingWatchDecision.reason.includes('Watch only'));
+const highQualityTriggerPendingShort = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  entry: 7445.75,
+  stop: 7452.5,
+  target1: 7435.75,
+  target2: 7432.25,
+  riskPoints: 6.75,
+  rankScore: 227,
+  decisionQualityScore: 93,
+  evidence: ['Liquidity sweep, reclaim, displacement, bearish MSS, and FVG retrace are present.'],
+  missingEvidence: ['Completed 5M trigger/retest proof still required.'],
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7445-7446.5 after sweep, reclaim, displacement, and bearish structure shift.',
+  tacticalZone: {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: 'SHORT',
+    lower: 7445,
+    upper: 7446.5,
+    midpoint: 7445.75,
+    label: '7445-7446.5 Imbalance Zone',
+    sourceTimeframe: '5M',
+    confidence: 'High',
+    evidence: '7445-7446.5 Imbalance Zone from structured OHLC FVG facts.',
+  },
+});
+const highQualityTriggerPendingAlert = shouldSendScannerAlert({
+  state: 'TriggerPending',
+  confidence: 0,
+  window: morningWindow,
+  candidate: highQualityTriggerPendingShort,
+});
+assert.equal(highQualityTriggerPendingAlert.shouldSend, true);
+assert.match(highQualityTriggerPendingAlert.reason, /High-quality conditional review map qualified/);
+assert.match(highQualityTriggerPendingAlert.reason, /canExecute still control execution/);
+const highQualityTriggerPendingVisibility = classifyScannerVisibility({
+  state: 'TriggerPending',
+  candidate: highQualityTriggerPendingShort,
+  window: morningWindow,
+  alertDecision: highQualityTriggerPendingAlert,
+  canExecute: false,
+});
+assert.equal(highQualityTriggerPendingVisibility.visibilityMode, 'POST_CONDITIONAL');
+assert.equal(highQualityTriggerPendingVisibility.discordAction, 'post_conditional');
+const highQualityTriggerPendingTrace = buildCandidateLifecycleTrace({
+  candidates: [highQualityTriggerPendingShort],
+  selectedCandidate: highQualityTriggerPendingShort,
+  state: 'TriggerPending',
+  window: morningWindow,
+  alertDecision: highQualityTriggerPendingAlert,
+  canExecute: false,
+});
+const highQualityTriggerPendingDeskState = buildDeskState({
+  state: 'TriggerPending',
+  candidate: highQualityTriggerPendingShort,
+  visibilityMetadata: highQualityTriggerPendingVisibility,
+  candidateLifecycleTrace: highQualityTriggerPendingTrace,
+  currentPrice: 7445.5,
+  canExecute: false,
+});
+assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.direction, 'SHORT');
+assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBias.state, 'primary');
+assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBelow, 7445);
+assert.equal(highQualityTriggerPendingDeskState.canExecute, false);
 assert.equal(
   shouldSendScannerAlert({ state: 'MarketMapping', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
   false

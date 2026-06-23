@@ -47,6 +47,8 @@ export const MARKET_MAPPING_COVERAGE = [
   'target cascade',
 ] as const;
 
+const HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE = 85;
+
 export interface ScannerThresholds {
   conditional: number;
   executable: number;
@@ -1062,6 +1064,26 @@ function hasFullPlanLevels(candidate: SetupCandidate | null | undefined): boolea
   );
 }
 
+function candidateDecisionQuality(candidate: SetupCandidate | null | undefined): number | null {
+  const raw = candidate?.decisionQualityScore ?? candidate?.modelConfidenceScore ?? null;
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
+
+function isHighQualityConditionalReviewCandidate(candidate: SetupCandidate | null | undefined): boolean {
+  const score = candidateDecisionQuality(candidate);
+  return Boolean(
+    candidate &&
+    (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+    hasFullPlanLevels(candidate) &&
+    hasMeaningfulStructuredEvidence(candidate) &&
+    score !== null &&
+    score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE &&
+    !candidateHasHtfConflict(candidate)
+  );
+}
+
 function hasMeaningfulStructuredEvidence(candidate: SetupCandidate | null | undefined): boolean {
   if (!candidate) return false;
   return Boolean(
@@ -1155,8 +1177,8 @@ export function classifyScannerVisibility(args: {
     visibilityMode = candidate?.humanReview ? 'POST_REVIEW' : hasFullPlanLevels(candidate) ? 'POST_CONDITIONAL' : 'POST_WATCH';
     discordAction = candidate?.humanReview ? 'post_review' : hasFullPlanLevels(candidate) ? 'post_conditional' : 'post_watch';
   } else if (state === 'TriggerPending' || state === 'Watching') {
-    visibilityMode = 'POST_WATCH';
-    discordAction = 'post_watch';
+    visibilityMode = isHighQualityConditionalReviewCandidate(candidate) ? 'POST_CONDITIONAL' : 'POST_WATCH';
+    discordAction = isHighQualityConditionalReviewCandidate(candidate) ? 'post_conditional' : 'post_watch';
   } else if (state === 'Blocked' || state === 'Missed') {
     visibilityMode = 'HOLD_WITH_REASON';
     discordAction = 'hold';
@@ -1826,6 +1848,22 @@ function lifecycleItemScore(item: ScannerCandidateLifecycleTraceItem | null | un
   if (/Outside active setup scan window/i.test(item.missingEvidence.join(' '))) score -= 6;
   if (/Minimum 2\.0R unavailable|TargetsUnavailable/i.test(item.missingEvidence.join(' '))) score -= 4;
   return score;
+}
+
+function lifecycleItemIsHighQualityConditionalReview(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  if (!item) return false;
+  const score = item.decisionQualityScore ?? item.modelConfidenceScore ?? null;
+  return Boolean(
+    (item.direction === 'LONG' || item.direction === 'SHORT') &&
+    item.executionStatus === ExecutionStatus.Conditional &&
+    item.blockReason === NoTradeReason.EntryTriggerPending &&
+    item.hasFullPlanLevels &&
+    typeof score === 'number' &&
+    Number.isFinite(score) &&
+    score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE &&
+    !lifecycleItemHasHtfConflict(item) &&
+    (item.tacticalZone || item.nextTrigger || item.requiredTrigger)
+  );
 }
 
 function filteredOutReasonForLifecycle(args: {
@@ -3125,6 +3163,7 @@ function lifecycleItemPrimaryEligible(
 ): boolean {
   if (!item) return false;
   if (lifecycleItemHasProtectedStructureSupport(item, htfProtectedStructureMap)) return true;
+  if (lifecycleItemIsHighQualityConditionalReview(item)) return true;
   return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item);
 }
 
@@ -4119,6 +4158,12 @@ export function shouldSendScannerAlert(args: {
     return { shouldSend: false, reason: `${args.state} is logged locally but not sent to Discord by default.` };
   }
   if (args.state === 'TriggerPending') {
+    if (isHighQualityConditionalReviewCandidate(args.candidate)) {
+      return {
+        shouldSend: true,
+        reason: 'High-quality conditional review map qualified for Discord: app-owned entry, stop, targets, and line/zone context are present. Completed 5M proof and canExecute still control execution.',
+      };
+    }
     return args.candidate && args.confidence >= thresholds.conditional
       ? { shouldSend: true, reason: 'TriggerPending watch qualified for Discord: completed 5M proof is still pending. Watch only; no execution approval.' }
       : { shouldSend: false, reason: 'TriggerPending is logged locally as developing context until watch alert quality is met.' };

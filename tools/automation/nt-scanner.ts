@@ -4859,6 +4859,65 @@ function scannerDeskPlayStaleLevelReason(args: {
   return null;
 }
 
+const HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE = 85;
+
+function highQualityConditionalReviewCandidate(args: {
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+  direction?: 'LONG' | 'SHORT' | 'WAIT' | string | null;
+}): SetupCandidate | null {
+  const preferredDirection = args.direction === 'LONG' || args.direction === 'SHORT' ? args.direction : null;
+  return (args.normalized?.setupCandidates || [])
+    .filter((candidate) => candidate.direction === 'LONG' || candidate.direction === 'SHORT')
+    .filter((candidate) => !preferredDirection || candidate.direction === preferredDirection)
+    .filter((candidate) =>
+      candidate.executionStatus === ExecutionStatus.Conditional &&
+      candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+      isFiniteTradePrice(candidate.entry) &&
+      isFiniteTradePrice(candidate.stop) &&
+      isFiniteTradePrice(candidate.target1) &&
+      isFiniteTradePrice(candidate.target2)
+    )
+    .filter((candidate) => {
+      const score = candidate.decisionQualityScore ?? candidate.modelConfidenceScore ?? null;
+      return typeof score === 'number' && Number.isFinite(score) && score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE;
+    })
+    .filter((candidate) => {
+      const text = [
+        ...(candidate.missingEvidence || []),
+        ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
+        candidate.activeCampaign?.htfRelationship === 'conflict' ? 'active campaign HTF conflict' : null,
+      ].filter(Boolean).join(' ');
+      return !/opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss/i.test(text);
+    })
+    .sort((a, b) => {
+      const aScore = a.decisionQualityScore ?? a.modelConfidenceScore ?? 0;
+      const bScore = b.decisionQualityScore ?? b.modelConfidenceScore ?? 0;
+      return bScore - aScore;
+    })[0] || null;
+}
+
+function highQualityConditionalReviewStaleReason(candidate: SetupCandidate | null, currentPrice: number | null): string | null {
+  if (!candidate || !isFiniteTradePrice(currentPrice)) return null;
+  const buffer = 0.25;
+  if (candidate.direction === 'LONG') {
+    if (isFiniteTradePrice(candidate.stop) && currentPrice <= candidate.stop + buffer) {
+      return `LONG high-quality review map invalidated: current price ${currentPrice.toFixed(2)} is at/below stop ${candidate.stop.toFixed(2)}.`;
+    }
+    if (isFiniteTradePrice(candidate.target1) && currentPrice >= candidate.target1 - buffer) {
+      return `LONG high-quality review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${candidate.target1.toFixed(2)}.`;
+    }
+  }
+  if (candidate.direction === 'SHORT') {
+    if (isFiniteTradePrice(candidate.stop) && currentPrice >= candidate.stop - buffer) {
+      return `SHORT high-quality review map invalidated: current price ${currentPrice.toFixed(2)} is at/above stop ${candidate.stop.toFixed(2)}.`;
+    }
+    if (isFiniteTradePrice(candidate.target1) && currentPrice <= candidate.target1 + buffer) {
+      return `SHORT high-quality review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${candidate.target1.toFixed(2)}.`;
+    }
+  }
+  return null;
+}
+
 export function evaluateScannerDeskPlayDiscordSuppression(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -4897,7 +4956,21 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     }
   }
   const play = args.deskState.primaryDeskPlay;
+  const highQualityReviewCandidate = highQualityConditionalReviewCandidate({
+    normalized: args.normalized,
+    direction: play.direction,
+  }) || highQualityConditionalReviewCandidate({ normalized: args.normalized });
+  const highQualityReviewStaleReason = highQualityConditionalReviewStaleReason(highQualityReviewCandidate, args.currentPrice);
+  if (highQualityReviewStaleReason) {
+    return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', highQualityReviewStaleReason);
+  }
   if (play.direction === 'WAIT') {
+    if (highQualityReviewCandidate) {
+      const reviewScore = highQualityReviewCandidate.decisionQualityScore ?? highQualityReviewCandidate.modelConfidenceScore ?? null;
+      return scannerDeskPlaySuppressionPost(
+        `${highQualityReviewCandidate.direction} high-quality conditional review map is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and completed 5M proof/canExecute still control execution.`,
+      );
+    }
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because no single primary side is confirmed; keep as internal watch/review only.');
   }
   const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
@@ -4909,7 +4982,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
   }
-  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible) {
+  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
   }
   const staleLevelReason = scannerDeskPlayStaleLevelReason({

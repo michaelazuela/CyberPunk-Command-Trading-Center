@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { ExecutionStatus, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
+import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
 import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import type { ScannerHealthReport } from '../../src/agents/scannerHealthAgent';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
@@ -2242,6 +2242,66 @@ assert.equal(missedNoChaseDeskPlaySuppression.shouldPost, false);
 assert.equal(missedNoChaseDeskPlaySuppression.category, 'missed_no_chase');
 assert.match(missedNoChaseDeskPlaySuppression.reason, /missed\/no-chase/);
 assert.doesNotMatch(missedNoChaseDeskPlaySuppression.reason, /completed 5M data is stale/i);
+const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: '2026-06-23:MES:lunch:DESK_PLAN_REFRESH:2026-06-23T15:25:00.0000000:no-campaign:WAIT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    activeCampaign: { id: '2026-06-23:LONG:HTF-FAILED-AUCTION' },
+    bestShortPlan: {
+      setupType: SetupType.SweepMssFvgRetrace,
+      direction: 'SHORT',
+      entry: 7445.75,
+      stop: 7452.5,
+      target1: 7429.25,
+      target2: 7428.75,
+      riskPoints: 6.75,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'WAIT',
+      lineInSand: null,
+      longBias: { state: 'secondary', lineInSand: null },
+      shortBias: { state: 'secondary', lineInSand: 7445, tradeReadiness: { status: 'not_aligned' } },
+      htfConflict: true,
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [{
+      setupType: SetupType.SweepMssFvgRetrace,
+      scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7445.75,
+      stop: 7452.5,
+      target1: 7429.25,
+      target2: 7428.75,
+      riskPoints: 6.75,
+      rankScore: 227,
+      decisionQualityScore: 93,
+      evidence: ['Sweep/reclaim, displacement, MSS, and 5M FVG retrace are present.'],
+      missingEvidence: ['Completed 5M trigger/retest proof still required.'],
+      requiredTrigger: 'Entry only on retrace into bearish imbalance 7445-7446.5 after sweep, reclaim, displacement, and bearish structure shift.',
+      nextAction: 'Wait for completed 5M proof; do not chase after T1.',
+      reducedRiskPlan: null,
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7445.5,
+  latestCompleted5m: '2026-06-23T15:25:00.0000000',
+});
+assert.equal(waitHighQualityConditionalDeskPlaySuppression.shouldPost, true);
+assert.equal(waitHighQualityConditionalDeskPlaySuppression.category, 'post');
+assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /SHORT high-quality conditional review map is eligible/);
+assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /completed 5M proof\/canExecute still control execution/);
 const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
