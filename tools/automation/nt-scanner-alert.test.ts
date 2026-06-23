@@ -1373,7 +1373,7 @@ assert.equal(longWatchLines.referenceEntry, 7411);
 assert.equal(longWatchLines.referenceStop, 7404);
 assert.equal(longWatchLines.referenceTarget1, 7421.5);
 assert.equal(longWatchLines.referenceTarget2, 7425);
-assert.match(longWatchLines.referenceReason || '', /Reference levels only/);
+assert.match(longWatchLines.referenceReason || '', /tactical levels only/);
 assert.match(longWatchLines.reclaimRule || '', /Completed 5M candle body close above 7411.00/);
 assert.match(longWatchLines.retestRule || '', /Later completed 5M retest\/hold close above 7411.00/);
 assert.equal(longWatchLines.approvalBoundary.changesCanExecute, false);
@@ -1580,7 +1580,7 @@ assert.match(reversalPayloadText, /🧭 Line in sand: 🐂 LONG ABOVE 7411.00/);
 assert.match(reversalPayloadText, /🔬 1M may refine; completed 5M close\/hold required\./);
 assert.match(reversalPayloadText, /📍 Entry ref: 7411.00 \| 🛑 Stop ref: 7404.00/);
 assert.match(reversalPayloadText, /🎯 T1 7421.50 \| 🎯 T2 7425.00/);
-assert.match(reversalPayloadText, /🧾 Blocker: Reference levels only/);
+assert.match(reversalPayloadText, /🧾 Blocker: tactical levels only/);
 assert.match(reversalPayloadText, /No canExecute change/);
 assert.ok(reversalPayloadText.length < 1200, `reversal watch Discord text too long: ${reversalPayloadText.length}`);
 const reversalWatchButtonLabels = (reversalArtifacts.payload.components || []).flatMap((row: any) =>
@@ -1796,6 +1796,7 @@ const previousDeskPlanRefreshRecord = {
   direction: 'SHORT',
   latestCompleted5m: '2026-06-08T15:35:00.0000000',
   lineInSand: 7416.5,
+  activeTacticalLine: null,
   longLine: null,
   shortLine: 7416.5,
   entry: 7412.75,
@@ -1831,6 +1832,8 @@ const previousDeskPlanRefreshRecord = {
     'dataQuality=unknown',
     'candidateState=none',
     'candidateDirection=none',
+    'activeLine=none',
+    'activeLineMigrated=no',
     'nextTrigger=none',
     'invalidation=none',
     'standDown=stand down if price accepts above 7416.50.',
@@ -1845,6 +1848,7 @@ const previousDeskPlanRefreshRecord = {
     '2026-06-08:SHORT:15M5M-MSS',
     'SHORT',
     '7416.50',
+    'none',
     'none',
     '7416.50',
     '7412.75',
@@ -1909,6 +1913,8 @@ const priorFourHourOnlyDeskPlanRefreshRecord = {
     'dataQuality=unknown',
     'candidateState=none',
     'candidateDirection=none',
+    'activeLine=none',
+    'activeLineMigrated=no',
     'nextTrigger=none',
     'invalidation=none',
     'standDown=stand down if price accepts above 7416.50.',
@@ -2148,7 +2154,7 @@ const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSupp
 });
 assert.equal(dataLimitedNoLevelDeskPlaySuppression.shouldPost, false);
 assert.equal(dataLimitedNoLevelDeskPlaySuppression.category, 'stale_data');
-assert.match(dataLimitedNoLevelDeskPlaySuppression.reason, /data-limited and no complete app-owned reference levels/);
+assert.match(dataLimitedNoLevelDeskPlaySuppression.reason, /data-limited and no complete app-owned tactical levels/);
 const staleTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -2163,6 +2169,64 @@ assert.equal(staleTargetDeskPlaySuppression.shouldPost, false);
 assert.equal(staleTargetDeskPlaySuppression.category, 'passed_or_invalidated_levels');
 assert.match(staleTargetDeskPlaySuppression.reason, /already reached\/passed T1/);
 assert.doesNotMatch(staleTargetDeskPlaySuppression.reason, /stale/i);
+const staleReferenceTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: '2026-06-23:MES:morning:DESK_PLAN_REFRESH:2026-06-23T09:45:00.0000000',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    activeCampaign: { id: '2026-06-23:LONG:HTF-FAILED-AUCTION' },
+    bestShortPlan: null,
+    bestLongPlan: {
+      direction: 'LONG',
+      lineInSand: 7436.25,
+      entry: 7442.5,
+      stop: null,
+      target1: null,
+      target2: null,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'LONG',
+      lineInSand: 7436.25,
+      longAbove: 7436.25,
+      shortBelow: null,
+      targetReactionLevel: null,
+      longBias: { state: 'primary', lineInSand: 7436.25, tradeReadiness: { status: 'wait_for_pullback_or_new_5m_structure' } },
+      shortBias: { state: 'not_present', lineInSand: null },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'CONFLICT', currentBias: 'BULL', protectedStructure: 7423.5, confirmationLine: 7436.25 },
+        ],
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: 'Review only until completed 5M proof.',
+    invalidation: null,
+    setupCandidates: [{
+      direction: 'LONG',
+      setupType: SetupType.TurtleSoup,
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      entry: 7429.5,
+      stop: 7423.5,
+      target1: 7442,
+      target2: 7446.75,
+      riskPoints: 6,
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7462.5,
+  latestCompleted5m: '2026-06-23T09:45:00.0000000',
+});
+assert.equal(staleReferenceTargetDeskPlaySuppression.shouldPost, false);
+assert.equal(staleReferenceTargetDeskPlaySuppression.category, 'passed_or_invalidated_levels');
+assert.match(staleReferenceTargetDeskPlaySuppression.reason, /already reached\/passed T2 7441\.50/);
 const missedNoChaseDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',

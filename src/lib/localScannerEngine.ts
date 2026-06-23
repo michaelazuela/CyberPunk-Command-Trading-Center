@@ -498,10 +498,28 @@ export interface DeskTrendConfirmation {
   };
 }
 
+export interface DeskActiveTacticalLine {
+  sourceOfTruth: 'scanner_active_tactical_line';
+  direction: DeskPlayDirection;
+  originalLine: number | null;
+  activeLine: number | null;
+  migrated: boolean;
+  supportingTimeframes: Array<'15M' | '5M'>;
+  reason: string;
+  nextTrigger: string;
+  standDown: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
   trendConfirmation: DeskTrendConfirmation;
+  activeTacticalLine: DeskActiveTacticalLine;
   modelRouting: {
     sourceOfTruth: 'scanner_protected_structure_model_routing';
     primaryDirection: DeskPlayDirection;
@@ -2383,6 +2401,77 @@ function buildProtectedStructureTrendConfirmation(map: DeskHtfProtectedStructure
   };
 }
 
+function tacticalLineDirectionMatches(row: DeskHtfProtectedStructureRow, direction: 'LONG' | 'SHORT'): boolean {
+  const expected = direction === 'LONG' ? 'BULL' : 'BEAR';
+  return row.currentBias === expected || row.bias === expected;
+}
+
+function buildActiveTacticalLine(args: {
+  direction: DeskPlayDirection;
+  originalLine: number | null;
+  htfProtectedStructureMap: DeskHtfProtectedStructureMap;
+}): DeskActiveTacticalLine {
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+  } as const;
+  if (args.direction !== 'LONG' && args.direction !== 'SHORT') {
+    return {
+      sourceOfTruth: 'scanner_active_tactical_line',
+      direction: 'WAIT',
+      originalLine: args.originalLine,
+      activeLine: args.originalLine,
+      migrated: false,
+      supportingTimeframes: [],
+      reason: 'No primary side is active, so no tactical line migration is available.',
+      nextTrigger: 'Wait for 15M+5M structure alignment and completed 5M proof.',
+      standDown: 'Stand down until one primary side is active.',
+      approvalBoundary: boundary,
+    };
+  }
+
+  const tacticalDirection: 'LONG' | 'SHORT' = args.direction;
+  const rows = args.htfProtectedStructureMap.rows
+    .filter((row): row is DeskHtfProtectedStructureRow & { timeframe: '15M' | '5M' } =>
+      (row.timeframe === '15M' || row.timeframe === '5M') &&
+      tacticalLineDirectionMatches(row, tacticalDirection) &&
+      typeof row.confirmationLine === 'number' &&
+      Number.isFinite(row.confirmationLine)
+    );
+  const activeLine = rows.length
+    ? tacticalDirection === 'LONG'
+      ? Math.max(...rows.map((row) => row.confirmationLine as number))
+      : Math.min(...rows.map((row) => row.confirmationLine as number))
+    : args.originalLine;
+  const migrated = typeof activeLine === 'number' &&
+    typeof args.originalLine === 'number' &&
+    Number.isFinite(activeLine) &&
+    Number.isFinite(args.originalLine) &&
+    Math.abs(activeLine - args.originalLine) >= 0.25;
+  const supportingTimeframes = rows.map((row) => row.timeframe);
+  const lineText = typeof activeLine === 'number' && Number.isFinite(activeLine) ? activeLine.toFixed(2) : 'N/A';
+  const originalText = typeof args.originalLine === 'number' && Number.isFinite(args.originalLine) ? args.originalLine.toFixed(2) : 'N/A';
+  const directionWord = args.direction === 'LONG' ? 'above' : 'below';
+  const standDownWord = args.direction === 'LONG' ? 'below' : 'above';
+  const structureText = supportingTimeframes.length ? supportingTimeframes.join('+') : 'current 5M/15M';
+
+  return {
+    sourceOfTruth: 'scanner_active_tactical_line',
+    direction: args.direction,
+    originalLine: args.originalLine,
+    activeLine: typeof activeLine === 'number' && Number.isFinite(activeLine) ? activeLine : null,
+    migrated,
+    supportingTimeframes,
+    reason: migrated
+      ? `Active line migrated ${originalText} -> ${lineText} via ${structureText} structure.`
+      : `Active line remains ${lineText}; no stronger ${structureText} line has replaced it.`,
+    nextTrigger: `Active line ${lineText}: completed 5M hold/retest ${directionWord} required before fresh execution consideration.`,
+    standDown: `Fresh ${args.direction} stand down on completed 5M acceptance ${standDownWord} ${lineText}.`,
+    approvalBoundary: boundary,
+  };
+}
+
 function lifecycleItemHasProtectedStructureSupport(
   item: ScannerCandidateLifecycleTraceItem | null | undefined,
   map: DeskHtfProtectedStructureMap,
@@ -2687,6 +2776,11 @@ function buildPrimaryDeskPlay(args: {
     selectedLifecycleItem?.lineInSand ??
     args.candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
     null;
+  const activeTacticalLine = buildActiveTacticalLine({
+    direction: primaryDirection,
+    originalLine: selectedLine,
+    htfProtectedStructureMap,
+  });
   const htfConflict = lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestLongPlan) ||
     lifecycleItemHasHtfConflict(args.candidateLifecycleTrace.bestShortPlan);
   const countertrendWarning = htfManagementWarningForLifecycleItem(primaryLifecycleItem) ||
@@ -2766,6 +2860,7 @@ function buildPrimaryDeskPlay(args: {
     sourceOfTruth: 'scanner_primary_desk_play',
     direction: primaryDirection,
     trendConfirmation,
+    activeTacticalLine,
     modelRouting,
     title,
     summary,

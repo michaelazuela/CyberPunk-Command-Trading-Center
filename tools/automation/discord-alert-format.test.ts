@@ -822,7 +822,7 @@ const dataLimitedDeskPlayPayload = compactDiscordSummary({
         sourceOfTruth: 'scanner_htf_protected_structure_map',
         reliability: 'data_limited',
         rows: [
-          { sourceOfTruth: 'scanner_htf_protected_structure_map', timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7533, confirmationLine: 7525, target: 7509, targetLabel: 'Reference T2 7509.00', confidence: 70, status: 'confirmed_mss', note: '5M reference structure only' },
+          { sourceOfTruth: 'scanner_htf_protected_structure_map', timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7533, confirmationLine: 7525, target: 7509, targetLabel: 'Tactical T2 7509.00', confidence: 70, status: 'confirmed_mss', note: '5M tactical structure only' },
         ],
         summary: 'HTF data-limited; context only.',
       },
@@ -860,12 +860,12 @@ const dataLimitedDeskPlayText = flattenDiscordPayloadText(dataLimitedDeskPlayPay
 assert.ok(dataLimitedDeskPlayText.includes('MES Current Desk Plan'));
 assert.ok(dataLimitedDeskPlayText.includes('Primary: 🐻 SHORT'));
 assert.ok(dataLimitedDeskPlayText.includes('SHORT BELOW 7525.00'));
-assert.ok(dataLimitedDeskPlayText.includes('Reference levels only - not execution approval.'));
+assert.ok(dataLimitedDeskPlayText.includes('Tactical levels - not execution approval.'));
 assert.ok(dataLimitedDeskPlayText.includes('Sniper watch: 1M timing only; 5M close/hold required.'));
-assert.ok(dataLimitedDeskPlayText.includes('Reference entry: 7525.00'));
-assert.ok(dataLimitedDeskPlayText.includes('Reference stop: 7533.00'));
-assert.ok(dataLimitedDeskPlayText.includes('Reference T1: 7513.00'));
-assert.ok(dataLimitedDeskPlayText.includes('Reference T2: 7509.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Entry: 7525.00'));
+assert.ok(dataLimitedDeskPlayText.includes('Stop: 7533.00'));
+assert.ok(dataLimitedDeskPlayText.includes('T1: 7513.00'));
+assert.ok(dataLimitedDeskPlayText.includes('T2: 7509.00'));
 assert.ok(dataLimitedDeskPlayText.includes('Reason not executable: HTF/data context is limited; canExecute remains false.'));
 assert.ok(dataLimitedDeskPlayText.includes('Status: Review only; HTF context is data-limited.'));
 assert.ok(!/^Entry: pending$/m.test(dataLimitedDeskPlayText));
@@ -945,6 +945,105 @@ assert.ok(invalidDeskMapText.includes('No active LONG/SHORT plan with complete a
 assert.ok(!invalidDeskMapText.includes('LONG ABOVE 7410.00 | Entry 7426.50'));
 assert.ok(!invalidDeskMapText.includes('SHORT BELOW 7437.50 | Entry 7441.00'));
 assert.ok(!invalidDeskMapText.includes('Stop 7433.00 | T1 7429.00 | T2 7425.00'));
+
+const pullbackReviewCandidate = sampleCandidate('LONG');
+pullbackReviewCandidate.setupType = SetupType.TurtleSoup;
+pullbackReviewCandidate.entry = 7432.5;
+pullbackReviewCandidate.stop = 7414.75;
+pullbackReviewCandidate.target1 = 7470;
+pullbackReviewCandidate.target2 = 7480;
+pullbackReviewCandidate.riskPoints = 17.75;
+const pullbackReferenceDeskMapPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  planVersionId: 'MORNING-DESK-PLAY-PULLBACK-REFERENCE-LEVELS',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'LONG',
+    noTradeReason: 'Review only until completed 5M proof.',
+    invalidation: null,
+    entry: pullbackReviewCandidate.entry,
+    stop: pullbackReviewCandidate.stop,
+    t1: pullbackReviewCandidate.target1,
+    t2: pullbackReviewCandidate.target2,
+    setupCandidates: [pullbackReviewCandidate],
+  },
+  candidates: [pullbackReviewCandidate],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7462.5,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7436.25,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG desk play',
+      summary: 'Desk Direction: LONG. Opposing parent structure keeps this review-only.',
+      lineInSand: 7436.25,
+      activeTacticalLine: {
+        direction: 'LONG',
+        originalLine: 7436.25,
+        activeLine: 7454.5,
+        migrated: true,
+        supportingTimeframes: ['15M', '5M'],
+        reason: 'Active tactical line migrated from original campaign line 7436.25 to 7454.50 using 15M+5M protected-structure confirmation.',
+        nextTrigger: 'Use 7454.50 as the active tactical line: completed 5M hold/retest above that line is required before fresh execution consideration.',
+        standDown: 'Stand down from fresh LONG entries if completed 5M acceptance returns below 7454.50; manage any earlier plan separately.',
+      },
+      longAbove: 7436.25,
+      shortBelow: null,
+      nextTrigger: 'Wait for completed 5M hold/retest above 7436.25.',
+      invalidation: 'Stand down if price accepts back below 7436.25.',
+      htfConflict: true,
+      countertrendWarning: 'Parent context opposes map.',
+      discordEligible: true,
+      longBias: {
+        state: 'primary',
+        scenarioLabel: 'Long failed auction review',
+        decisionQualityScore: 59,
+        lineInSand: 7436.25,
+        reason: 'Structured review levels are visible, but HTF context opposes.',
+        blockers: ['canExecute=false'],
+      },
+      shortBias: {
+        state: 'not_present',
+        scenarioLabel: null,
+        decisionQualityScore: null,
+        lineInSand: null,
+        reason: 'No short candidate is present.',
+        blockers: [],
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7520.5, confirmationLine: 7583 },
+          { timeframe: '2H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7513.25, confirmationLine: 7568.5 },
+          { timeframe: '1H', bias: 'CONFLICT', currentBias: 'RANGE', protectedStructure: 7437.25, confirmationLine: 7513.5 },
+          { timeframe: '15M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7423.75, confirmationLine: 7454.5 },
+          { timeframe: '5M', bias: 'CONFLICT', currentBias: 'BULL', protectedStructure: 7414.75, confirmationLine: 7436.25 },
+        ],
+      },
+    },
+  },
+});
+const pullbackReferenceDeskMapText = flattenDiscordPayloadText(pullbackReferenceDeskMapPayload);
+assert.ok(pullbackReferenceDeskMapText.includes('Original campaign line: 7436.25'));
+assert.ok(pullbackReferenceDeskMapText.includes('Active tactical line: 7454.50'));
+assert.ok(pullbackReferenceDeskMapText.includes('HTF regime: 4H BEAR / 2H BEAR / 1H RANGE / 15M BULL / 5M BULL'));
+assert.ok(pullbackReferenceDeskMapText.includes('Overall play: LONG above 7454.50.'));
+assert.ok(pullbackReferenceDeskMapText.includes('LONG ABOVE 7454.50'));
+assert.ok(pullbackReferenceDeskMapText.includes('Status: Review only until 5M trigger + canExecute.'));
+assert.ok(pullbackReferenceDeskMapText.includes('Entry: 7432.50'));
+assert.ok(pullbackReferenceDeskMapText.includes('Stop: 7414.75'));
+assert.ok(pullbackReferenceDeskMapText.includes('T1: 7459.25'));
+assert.ok(pullbackReferenceDeskMapText.includes('T2: 7468.00'));
+assert.ok(!pullbackReferenceDeskMapText.includes('LONG ABOVE 7436.25\nEntry: pending'));
+assert.ok(!pullbackReferenceDeskMapText.includes('Chart: attached; levels pending.'));
 
 const projectedDeskPlayPayload = compactDiscordSummary({
   session: 'evening',
@@ -1408,10 +1507,10 @@ assert.ok(deskPlayWideReviewText.includes('Conflict: side quality is low'));
 assert.ok(deskPlayWideReviewText.includes('Readiness: watch only - do not execute'));
 assert.ok(deskPlayWideReviewText.includes('SHORT BELOW 7591.00'), deskPlayWideReviewText);
 assert.ok(deskPlayWideReviewText.includes('Review levels only - not an executable trade plan.'), deskPlayWideReviewText);
-assert.ok(deskPlayWideReviewText.includes('Reference entry: 7581.25'), deskPlayWideReviewText);
-assert.ok(deskPlayWideReviewText.includes('Reference stop: 7600.50'));
-assert.ok(deskPlayWideReviewText.includes('Reference T1: 7552.50'));
-assert.ok(deskPlayWideReviewText.includes('Reference T2: 7542.75'));
+assert.ok(deskPlayWideReviewText.includes('Entry: 7581.25'), deskPlayWideReviewText);
+assert.ok(deskPlayWideReviewText.includes('Stop: 7600.50'));
+assert.ok(deskPlayWideReviewText.includes('T1: 7552.50'));
+assert.ok(deskPlayWideReviewText.includes('T2: 7542.75'));
 assert.ok(deskPlayWideReviewText.includes('Reason: side quality is low.'));
 assert.ok(deskPlayWideReviewText.includes('Bottom line: HTF frames SHORT; needs 5M proof, stop, risk, canExecute. No chase'));
 assert.ok(deskPlayWideReviewText.includes('Status: Review levels only - not executable; side quality is low. Wait for completed 5M trigger + canExecute.'));

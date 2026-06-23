@@ -86,6 +86,17 @@ export interface CompactDeskStateForDiscord {
       confirmation?: string;
       summary?: string;
     } | null;
+    activeTacticalLine?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      originalLine?: number | null;
+      activeLine?: number | null;
+      migrated?: boolean;
+      supportingTimeframes?: string[];
+      reason?: string | null;
+      nextTrigger?: string | null;
+      standDown?: string | null;
+    } | null;
     modelRouting?: {
       sourceOfTruth?: string;
       primaryDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
@@ -913,10 +924,23 @@ function deskPlayLineForDirection(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT',
 ): number | null {
+  const activeLine = play.activeTacticalLine;
+  if (
+    activeLine?.direction === direction &&
+    isFinitePrice(activeLine.activeLine)
+  ) {
+    return activeLine.activeLine;
+  }
   const directionalLine = direction === 'LONG' ? play.longAbove : play.shortBelow;
   if (isFinitePrice(directionalLine)) return directionalLine;
   const biasLineInSand = direction === 'LONG' ? play.longBias?.lineInSand : play.shortBias?.lineInSand;
   if (isFinitePrice(biasLineInSand)) return biasLineInSand;
+  return isFinitePrice(play.lineInSand) ? play.lineInSand : null;
+}
+
+function deskPlayOriginalLine(play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>): number | null {
+  const activeLine = play.activeTacticalLine;
+  if (isFinitePrice(activeLine?.originalLine)) return activeLine!.originalLine!;
   return isFinitePrice(play.lineInSand) ? play.lineInSand : null;
 }
 
@@ -1024,6 +1048,16 @@ function deskPlayDecisionMapLevels(
   const stop = normalizedMatchesDirection && isFinitePrice(normalized.stop)
     ? normalized.stop
     : candidate?.stop ?? null;
+  const topLevelLevels = normalizedMatchesDirection
+    ? deskPlayValidatePlanningLevels({
+        direction,
+        entry: normalized.entry,
+        stop: normalized.stop,
+        source: 'normalized_candidate',
+        currentPrice,
+      })
+    : null;
+  if (topLevelLevels) return topLevelLevels;
   const tick = TRADE_RULES.targetModel.tickSize;
   const lineIsValid = !isFinitePrice(lineInSand)
     ? true
@@ -1350,12 +1384,12 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     '',
     sideBreakoutLabel(direction, triggerWord, lineInSand),
     ...(referenceOnly ? [
-      'Reference levels only - not execution approval.',
+      'Tactical levels - not execution approval.',
       'Sniper watch: 1M timing only; 5M close/hold required.',
-      `Reference entry: ${priceLine(candidate.entry)}`,
-      `Reference stop: ${priceLine(levels.stop)}`,
-      `Reference T1: ${priceLine(levels.target1)}`,
-      `Reference T2: ${priceLine(levels.target2)}`,
+      `Entry: ${priceLine(candidate.entry)}`,
+      `Stop: ${priceLine(levels.stop)}`,
+      `T1: ${priceLine(levels.target1)}`,
+      `T2: ${priceLine(levels.target2)}`,
       'Reason not executable: HTF/data context is limited; canExecute remains false.',
     ] : [
       `Entry: ${priceLine(candidate.entry)}`,
@@ -1421,6 +1455,9 @@ function deskPlayStandDownLine(args: {
   if (args.deskState?.dataQualityStatus === 'data_limited') return 'Stand down: data quality is limited.';
   if (bias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down: move is missed/no-chase until fresh completed 5M proof forms.';
   if (bias?.tradeReadiness?.status === 'blocked') return `Stand down: ${compactInstruction(bias.tradeReadiness.reason, 'primary side is blocked.')}`;
+  if (args.play.activeTacticalLine?.direction === args.direction && args.play.activeTacticalLine.migrated && args.play.activeTacticalLine.standDown) {
+    return `Stand down: ${standDownInstruction(args.play.activeTacticalLine.standDown, 'active tactical line failed.')}`;
+  }
   const invalidation = args.play.invalidation || args.deskState?.invalidation || null;
   if (invalidation) return `Stand down: ${standDownInstruction(invalidation, 'primary invalidation is active.')}`;
   if (typeof args.lineInSand === 'number') {
@@ -1429,6 +1466,47 @@ function deskPlayStandDownLine(args: {
       : `Stand down: completed acceptance above ${priceLine(args.lineInSand)}.`;
   }
   return 'Stand down: completed 5M proof is missing or canExecute remains false.';
+}
+
+function deskPlayLineDisplayLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+  activeLine: number | null,
+): string[] {
+  if (direction !== 'LONG' && direction !== 'SHORT') return [`Line in sand: ${priceLine(activeLine)}`];
+  const active = play.activeTacticalLine;
+  const originalLine = deskPlayOriginalLine(play);
+  if (active?.direction === direction && active.migrated && isFinitePrice(active.activeLine)) {
+    const timeframes = Array.isArray(active.supportingTimeframes) && active.supportingTimeframes.length
+      ? active.supportingTimeframes.join('+')
+      : '5M/15M';
+    return [
+      `Original campaign line: ${priceLine(originalLine)}`,
+      `Active tactical line: ${priceLine(active.activeLine)}`,
+      `Line migration: ${priceLine(originalLine)} -> ${priceLine(active.activeLine)} via ${timeframes} structure.`,
+    ];
+  }
+  return [`Line in sand: ${priceLine(activeLine)}`];
+}
+
+function deskPlayHtfRegimeLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  const active = play.activeTacticalLine;
+  if (!(active?.direction === direction && active.migrated)) return [];
+  const rows = play.htfProtectedStructureMap?.rows || [];
+  const order = ['4H', '2H', '1H', '15M', '5M'];
+  const byTf = new Map(rows.map((row) => [String(row.timeframe || '').toUpperCase(), row]));
+  const regime = order
+    .map((tf) => {
+      const row = byTf.get(tf);
+      const bias = row ? resolveDeskPlayRowBias(row) : 'UNKNOWN';
+      return `${tf} ${bias}`;
+    })
+    .join(' / ');
+  return [`HTF regime: ${regime}`];
 }
 
 function deskPlayMainInstructionLines(args: {
@@ -1452,7 +1530,10 @@ function deskPlayMainInstructionLines(args: {
     ];
   }
   const triggerWord = args.direction === 'LONG' ? 'above' : 'below';
-  const nextTrigger = args.play.nextTrigger || args.deskState?.nextTrigger || `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`;
+  const activeLine = args.play.activeTacticalLine?.direction === args.direction && args.play.activeTacticalLine.migrated
+    ? args.play.activeTacticalLine
+    : null;
+  const nextTrigger = activeLine?.nextTrigger || args.play.nextTrigger || args.deskState?.nextTrigger || `completed 5M acceptance ${triggerWord} ${priceLine(args.lineInSand)}.`;
   const invalidation = args.play.invalidation || args.deskState?.invalidation || (
     args.direction === 'LONG'
       ? `completed acceptance below ${priceLine(args.lineInSand)}.`
@@ -1527,10 +1608,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           sideBreakoutLabel(side, triggerWord, line),
           'Review levels only - not an executable trade plan.',
           'Sniper watch: 1M timing only; 5M close/hold required.',
-          `Reference entry: ${priceLine(levels.entry)}`,
-          `Reference stop: ${priceLine(levels.stop)}`,
-          `Reference T1: ${priceLine(levels.target1)}`,
-          `Reference T2: ${priceLine(levels.target2)}`,
+          `Entry: ${priceLine(levels.entry)}`,
+          `Stop: ${priceLine(levels.stop)}`,
+          `T1: ${priceLine(levels.target1)}`,
+          `T2: ${priceLine(levels.target2)}`,
           ...(safety.reason ? [`Reason: ${safety.reason}.`] : []),
         ],
       };
@@ -1577,7 +1658,12 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       '',
       `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
       `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
-      `Line in sand: ${priceLine(play.lineInSand)}`,
+      ...deskPlayHtfRegimeLines(play, waitMapSide),
+      ...deskPlayLineDisplayLines(
+        play,
+        waitMapSide,
+        play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
+      ),
       ...deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
@@ -1617,7 +1703,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     '',
     `Primary: ${primaryPlanLabel(direction)}`,
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
-    `Line in sand: ${priceLine(lineInSand)}`,
+    ...deskPlayHtfRegimeLines(play, direction),
+    ...deskPlayLineDisplayLines(play, direction, lineInSand),
     ...deskPlayMainInstructionLines({
       play,
       deskState: args.deskState,

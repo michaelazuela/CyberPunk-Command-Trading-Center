@@ -262,6 +262,7 @@ export interface ScannerDeskPlanRefreshLedgerRecord {
   direction: string;
   latestCompleted5m: string | null;
   lineInSand: number | null;
+  activeTacticalLine: number | null;
   longLine: number | null;
   shortLine: number | null;
   entry: number | null;
@@ -3462,10 +3463,10 @@ export function scannerSniperTriggerWatchMetadata(args: {
       ? `Required before discretionary action review: completed 5M body close/hold ${through} the same line.`
       : 'Required before discretionary action review: completed 5M body close/hold through the same line.',
     reason: eligible
-      ? 'Non-executable scanner plan has complete reference levels and may be studied as a discretionary line-in-the-sand sniper watch.'
+      ? 'Non-executable scanner plan has complete tactical levels and may be studied as a discretionary line-in-the-sand sniper watch.'
       : executable
         ? 'Executable scanner plans use the normal app-owned trade path, not the sniper-watch research tag.'
-        : 'Sniper-watch research tag unavailable because direction or complete reference levels are missing.',
+        : 'Sniper-watch research tag unavailable because direction or complete tactical levels are missing.',
     approvalBoundary: {
       changesTradeApprovals: false,
       changesCanExecute: false,
@@ -3788,7 +3789,7 @@ export function scannerTacticalCampaignMapFromDeskState(args: {
   if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') {
     return {
       ...base,
-      reason: 'HTF campaign promotion blocked because scanner context is data-limited or insufficient; review-map reference levels only.',
+      reason: 'HTF campaign promotion blocked because scanner context is data-limited or insufficient; review-map tactical levels only.',
     };
   }
   if (primaryBias && primaryBias.state !== 'primary') {
@@ -3967,9 +3968,9 @@ export function buildScannerReversalWatchLines(args: {
   const referenceTarget1 = roundNullableTradePrice(watch?.target1);
   const referenceTarget2 = roundNullableTradePrice(watch?.target2);
   const referenceReason = [referenceEntry, referenceStop, referenceTarget1, referenceTarget2].some((value) => value !== null)
-    ? 'Reference levels only from the existing opposite-side lifecycle. Reversal Watch does not approve execution; canExecute and normal app-owned gates still control.'
+    ? 'tactical levels only from the existing opposite-side lifecycle. Reversal Watch does not approve execution; canExecute and normal app-owned gates still control.'
     : null;
-  if (referenceReason) sourceFields.push('opposite-side lifecycle reference levels');
+  if (referenceReason) sourceFields.push('opposite-side lifecycle tactical levels');
 
   const missing = [
     triggerLine === null ? 'trigger line' : null,
@@ -4114,6 +4115,7 @@ function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | nul
   if (deskState.htfContextStatus === 'insufficient') return 'Stand down until HTF context is sufficient.';
   if (primaryBias?.tradeReadiness?.status === 'missed_no_chase') return 'Stand down; the move is missed/no-chase until a fresh completed 5M setup forms.';
   if (primaryBias?.tradeReadiness?.status === 'blocked') return primaryBias.tradeReadiness.reason || 'Stand down while the primary side is blocked.';
+  if (play.activeTacticalLine?.standDown) return play.activeTacticalLine.standDown;
   if (play.invalidation) return play.invalidation;
   if (deskState.invalidation) return deskState.invalidation;
   const line = play.lineInSand ?? primaryBias?.lineInSand ?? null;
@@ -4133,6 +4135,7 @@ function scannerDeskPlayMainPlayFingerprint(args: {
     record.activeCampaignId || 'no-campaign',
     record.direction,
     deskPlanRefreshPrice(record.lineInSand),
+    deskPlanRefreshPrice(record.activeTacticalLine),
     deskPlanRefreshPrice(record.longLine),
     deskPlanRefreshPrice(record.shortLine),
     deskPlanRefreshPrice(record.entry),
@@ -4173,6 +4176,8 @@ function scannerDeskPlayMaterialCadenceFingerprint(args: {
     `dataQuality=${deskState.dataQualityStatus || 'unknown'}`,
     `candidateState=${primaryLifecycle?.candidateState || 'none'}`,
     `candidateDirection=${primaryLifecycle?.direction || 'none'}`,
+    `activeLine=${deskPlanRefreshPrice(play.activeTacticalLine?.activeLine ?? null)}`,
+    `activeLineMigrated=${play.activeTacticalLine?.migrated ? 'yes' : 'no'}`,
     `nextTrigger=${normalizeDeskPlayInstructionText(play.nextTrigger || deskState.nextTrigger || primaryLifecycle?.nextTrigger || primaryLifecycle?.requiredTrigger || null) || 'none'}`,
     `invalidation=${normalizeDeskPlayInstructionText(play.invalidation || deskState.invalidation || primaryLifecycle?.invalidation || null) || 'none'}`,
     `standDown=${normalizeDeskPlayInstructionText(scannerDeskPlayStandDownInstruction(deskState)) || 'none'}`,
@@ -4257,6 +4262,7 @@ function scannerDeskPlanRefreshRecord(args: {
     direction: play.direction,
     latestCompleted5m: args.latestCompleted5m || null,
     lineInSand: play.lineInSand,
+    activeTacticalLine: play.activeTacticalLine?.activeLine ?? null,
     longLine: play.longBias.lineInSand,
     shortLine: play.shortBias.lineInSand,
     entry: primaryLifecycle?.entry ?? null,
@@ -4770,6 +4776,7 @@ function latestDeskPlanRefreshRecord(args: {
 function scannerDeskPlayStaleLevelReason(args: {
   deskState: DeskState;
   currentPrice: number | null;
+  referenceLevels?: Pick<SetupCandidate, 'entry' | 'stop' | 'target1' | 'target2' | 'riskPoints'> | null;
 }): string | null {
   const currentPrice = args.currentPrice;
   if (typeof currentPrice !== 'number' || !Number.isFinite(currentPrice)) return null;
@@ -4777,9 +4784,9 @@ function scannerDeskPlayStaleLevelReason(args: {
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
   const primary = scannerDeskPlayPrimaryLifecycle(args.deskState);
   const line = args.deskState.primaryDeskPlay.lineInSand ?? primary?.lineInSand ?? null;
-  const stop = primary?.stop ?? null;
-  const target1 = primary?.target1 ?? null;
-  const target2 = primary?.target2 ?? null;
+  const stop = primary?.stop ?? args.referenceLevels?.stop ?? null;
+  const target1 = primary?.target1 ?? args.referenceLevels?.target1 ?? null;
+  const target2 = primary?.target2 ?? args.referenceLevels?.target2 ?? null;
   const reaction = args.deskState.primaryDeskPlay.targetReactionLevel ?? primary?.targetReactionLevel ?? null;
   const buffer = 0.25;
 
@@ -4828,12 +4835,12 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.target2);
   if (args.deskState.dataQualityStatus === 'data_limited') {
     if (!hasReferenceLevels) {
-      return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited and no complete app-owned reference levels are available.');
+      return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited and no complete app-owned tactical levels are available.');
     }
   }
   if (args.deskState.htfContextStatus === 'insufficient') {
     if (!hasReferenceLevels) {
-      return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient and no complete app-owned reference levels are available.');
+      return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient and no complete app-owned tactical levels are available.');
     }
   }
   const play = args.deskState.primaryDeskPlay;
@@ -4855,6 +4862,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   const staleLevelReason = scannerDeskPlayStaleLevelReason({
     deskState: args.deskState,
     currentPrice: args.currentPrice,
+    referenceLevels,
   });
   if (staleLevelReason) {
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);
@@ -5327,6 +5335,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
 }> {
   const contextCandidate = candidateForDeskPlayContextChart(args.deskState, args.normalized);
   const play = args.deskState.primaryDeskPlay;
+  const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
         chartContext: args.chartContext || null,
@@ -5335,8 +5344,8 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
         tradeDate: args.tradeDate,
         sessionLabel: args.session,
         renderMode: 'desk_play_context',
-        contextLine: play.lineInSand,
-        contextLabel: 'Line in the sand',
+        contextLine: chartContextLine,
+        contextLabel: play.activeTacticalLine?.migrated ? 'Active tactical line' : 'Line in the sand',
         outputDir: args.outputDir,
         filePrefix: `scanner-desk-play-${args.session}-${args.tradeDate}-${args.config.instrument}`,
       })
@@ -5345,6 +5354,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   const normalizedForPayload = contextCandidate
     ? {
         ...args.normalized,
+        decision: contextCandidate.direction,
         entry: contextCandidate.entry ?? args.normalized.entry ?? null,
         stop: contextCandidate.stop ?? args.normalized.stop ?? null,
         t1: contextCandidate.target1 ?? args.normalized.t1 ?? null,
@@ -5528,7 +5538,7 @@ function buildScannerReversalWatchDiscordPayload(args: {
             `🎯 T1 ${scannerDiscordLine(args.lines.referenceTarget1)} | 🎯 T2 ${scannerDiscordLine(args.lines.referenceTarget2)}`,
             '⚠️ Reference only - not execution approval.',
             '🔬 1M may refine; completed 5M close/hold required.',
-            `🧾 Blocker: ${args.lines.referenceReason || 'No executable app-owned reference levels; normal canExecute gates still control.'}`,
+            `🧾 Blocker: ${args.lines.referenceReason || 'No executable app-owned tactical levels; normal canExecute gates still control.'}`,
           ].join('\n'), 460),
           inline: false,
         },
@@ -7466,7 +7476,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   if (tradePlanningDataQualityBlocker) {
     alertDecision = {
       shouldSend: false,
-      reason: 'Primary trade-card suppressed because the readiness gate is data-limited; review-map Discord output may post reference levels only.',
+      reason: 'Primary trade-card suppressed because the readiness gate is data-limited; review-map Discord output may post tactical levels only.',
     };
   }
   const durableLedgerConfig = loadScannerActiveCampaignLedgerConfig();
@@ -7545,7 +7555,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       suppressionReason: tradePlanningDataQualityBlocker,
       notes: [
         ...deskState.notes,
-        'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only reference levels when app-owned levels exist.',
+        'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only tactical levels when app-owned levels exist.',
       ],
     };
   }
@@ -7596,7 +7606,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
         suppressionReason: tradePlanningDataQualityBlocker,
         notes: [
           ...deskState.notes,
-          'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only reference levels when app-owned levels exist.',
+          'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only tactical levels when app-owned levels exist.',
         ],
       };
     }
