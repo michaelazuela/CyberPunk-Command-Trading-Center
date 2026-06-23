@@ -56,8 +56,11 @@ export interface DeliveryVisibilityReport {
   stateReadable: boolean;
   stateError: string | null;
   lastAlert: ScannerSentRecord | null;
+  activeTradeDate: string | null;
   lastDelivery: ScannerDeliveryRecord | null;
   lastDiscordSend: ScannerDeliveryRecord | null;
+  lastHistoricalDelivery: ScannerDeliveryRecord | null;
+  lastHistoricalDiscordSend: ScannerDeliveryRecord | null;
   failedDeliveries: ScannerDeliveryRecord[];
   pendingDeliveries: ScannerDeliveryRecord[];
   skippedDeliveries: ScannerDeliveryRecord[];
@@ -109,6 +112,10 @@ function parseTradeDateMs(value: string | null): number {
 
 function tradeDateFromKey(key: string): string | null {
   return key.match(/^(\d{4}-\d{2}-\d{2})[:|]/)?.[1] || null;
+}
+
+function deliveryTradeDate(delivery: ScannerDeliveryRecord): string | null {
+  return delivery.tradeDate || tradeDateFromKey(delivery.alertKey);
 }
 
 function latestTradeDate(state: Record<string, unknown>, now: Date): string | null {
@@ -368,6 +375,13 @@ export function buildDeliveryVisibilityReport(args: {
     (item) => item.sentAt || item.attemptedAt,
   );
   const operationalDeliveries = deliveries.filter((delivery) => !isDryRunDelivery(delivery));
+  const activeTradeDate = latestTradeDate(state, now);
+  const currentOperationalDeliveries = operationalDeliveries.filter((delivery) => {
+    if (delivery.stale === true) return false;
+    if (delivery.deliveryStatus === 'skipped') return false;
+    if (!activeTradeDate) return false;
+    return deliveryTradeDate(delivery) === activeTradeDate;
+  });
   const watchlists = sortByRecentDate(
     Object.entries(asRecord(state.watchlistSent)).map(([key, value]) => toWatchlist(key, value)),
     (item) => item.sentAt,
@@ -395,8 +409,11 @@ export function buildDeliveryVisibilityReport(args: {
     stateReadable,
     stateError,
     lastAlert: sent[0] || null,
-    lastDelivery: operationalDeliveries[0] || null,
-    lastDiscordSend: operationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
+    activeTradeDate,
+    lastDelivery: currentOperationalDeliveries[0] || null,
+    lastDiscordSend: currentOperationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
+    lastHistoricalDelivery: operationalDeliveries[0] || null,
+    lastHistoricalDiscordSend: operationalDeliveries.find((delivery) => delivery.deliveryStatus === 'sent' && Boolean(delivery.discordMessageId)) || null,
     failedDeliveries,
     pendingDeliveries,
     skippedDeliveries,

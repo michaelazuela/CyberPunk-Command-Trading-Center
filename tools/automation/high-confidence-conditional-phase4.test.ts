@@ -406,9 +406,11 @@ async function validateDeliveryVisibility(rootDir: string, delivered: Array<{
   assert.equal(report.pendingDeliveries.length, 0);
   assert.equal(report.skippedDeliveries.length, 0);
   assert.deepEqual(report.staleDataBlockers, []);
+  assert.equal(report.activeTradeDate, '2026-06-23');
   assert.equal(report.lastDelivery?.deliveryStatus, 'sent');
   assert.equal(report.lastDelivery?.webhookSource, 'QUANT_DESK_SCANNER_WEBHOOK_URL');
   assert.ok(report.lastDiscordSend?.discordMessageId?.startsWith('phase4-dry-run-'));
+  assert.equal(report.lastHistoricalDelivery?.deliveryStatus, 'sent');
   assert.ok(report.lastAlert?.alertKey.includes('|MES|'));
   assert.ok(report.recentAuditFiles.length >= delivered.length);
   assert.equal(JSON.stringify(report).includes('"canExecute":true'), false, 'supervisor visibility must not leak executable internals');

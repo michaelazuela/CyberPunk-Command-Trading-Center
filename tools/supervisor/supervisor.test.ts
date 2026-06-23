@@ -671,7 +671,56 @@ const dryRunDeliveryReport = buildDeliveryVisibilityReport({
 assert.equal(dryRunDeliveryReport.status, 'ok');
 assert.equal(dryRunDeliveryReport.lastDelivery?.webhookSource, 'QUANT_DESK_SCANNER_WEBHOOK_URL');
 assert.equal(dryRunDeliveryReport.lastDelivery?.deliveryStatus, 'sent');
+assert.equal(dryRunDeliveryReport.lastHistoricalDelivery?.deliveryStatus, 'sent');
 assert.equal(dryRunDeliveryReport.skippedDeliveries.length, 0);
+
+const staleHistoricalDeliveryStatePath = path.join(deliveryFixtureDir, '.nt-scanner-stale-historical-delivery-state.json');
+fs.writeFileSync(staleHistoricalDeliveryStatePath, JSON.stringify({
+  sent: {
+    '2026-06-23:MES:morning:DESK_PLAN_REFRESH:2026-06-23T10:05:00.0000000:LONG': {
+      state: 'Conditional',
+      confidence: 80,
+      sentAt: '2026-06-23T14:13:15.655Z',
+    },
+  },
+  alertDeliveries: {
+    '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed': {
+      alertKey: '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed',
+      planVersionId: 'EVENING-20260618-000759',
+      instrument: 'MES',
+      tradeDate: '2026-06-18',
+      session: 'evening',
+      state: 'Missed',
+      confidence: 77,
+      deliveryStatus: 'sent',
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+      httpStatus: 200,
+      discordMessageId: 'discord-old',
+      attemptedAt: '2026-06-19T00:08:00.751Z',
+      sentAt: '2026-06-19T00:08:01.899Z',
+      stale: true,
+      retryEligible: false,
+    },
+  },
+  lastCompleted5mBySession: {
+    '2026-06-23:evening': '2026-06-23T19:05:00.0000000',
+  },
+  lastMarketMapRefreshBySession: {
+    '2026-06-23:evening': '2026-06-23T19:05:00.0000000',
+  },
+  lastHealthStatus: 'READY',
+}, null, 2), 'utf8');
+const staleHistoricalDeliveryReport = buildDeliveryVisibilityReport({
+  scannerStatePath: staleHistoricalDeliveryStatePath,
+  auditDir,
+  now: new Date('2026-06-23T23:15:00.000Z'),
+  staleAfterMs: 180_000,
+});
+assert.equal(staleHistoricalDeliveryReport.activeTradeDate, '2026-06-23');
+assert.equal(staleHistoricalDeliveryReport.lastDelivery, null);
+assert.equal(staleHistoricalDeliveryReport.lastDiscordSend, null);
+assert.equal(staleHistoricalDeliveryReport.lastHistoricalDelivery?.alertKey, '2026-06-18|MES|evening|SHORT|TurtleSoup|7575|Missed');
+assert.equal(staleHistoricalDeliveryReport.lastHistoricalDiscordSend?.discordMessageId, 'discord-old');
 
 const activeScannerFreshStatePath = path.join(deliveryFixtureDir, '.nt-scanner-active-fresh-state.json');
 fs.writeFileSync(activeScannerFreshStatePath, JSON.stringify({
