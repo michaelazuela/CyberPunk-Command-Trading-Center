@@ -6486,11 +6486,17 @@ function candidateReadinessStatus(deskState: DeskState, candidate?: SetupCandida
 
 function isHighQualityConditionalPrimaryAlertCandidate(candidate?: SetupCandidate | null): boolean {
   const score = candidate?.decisionQualityScore ?? candidate?.modelConfidenceScore ?? null;
+  const executionStatusEligible =
+    candidate?.executionStatus === ExecutionStatus.Conditional ||
+    candidate?.executionStatus === ExecutionStatus.Executable;
+  const blockerEligible =
+    candidate?.executionStatus === ExecutionStatus.Executable ||
+    candidate?.blockReason === NoTradeReason.EntryTriggerPending;
   return Boolean(
     candidate &&
     (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
-    candidate.executionStatus === ExecutionStatus.Conditional &&
-    candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+    executionStatusEligible &&
+    blockerEligible &&
     isFiniteTradePrice(candidate.entry) &&
     isFiniteTradePrice(candidate.stop) &&
     isFiniteTradePrice(candidate.target1) &&
