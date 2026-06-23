@@ -708,7 +708,7 @@ function reportStatus(candidate: SetupCandidate | null, normalized: CompactNorma
 function statusLine(status: DiscordDecisionStatus, candidate: SetupCandidate | null, normalized: CompactNormalizedPlan): string {
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'HUMAN REVIEW READY - decision-support plan only; trader confirmation required';
   if (status === 'EXECUTABLE') return 'EXECUTABLE - verify completed 5M trigger before trader action';
-  if (isHighConfidenceConditionalCandidate(candidate, normalized)) return 'HIGH-CONFIDENCE CONDITIONAL TRADE PLAN - completed 5M proof + canExecute still required';
+  if (isHighConfidenceConditionalCandidate(candidate, normalized)) return 'HIGH-CONFIDENCE CONDITIONAL TRADE PLAN - armed after named completed 5M condition';
   if (status === 'CONDITIONAL' && candidateDiscordHtfPublishIssue(candidate)) return 'WAIT - HTF support required before Discord execution alert';
   if (status === 'CONDITIONAL') return 'WAIT - fresh completed 5M required';
   if (status === 'NO TRADE') return `NO TRADE - ${normalized.noTradeReason || candidate?.blockReason || 'no active executable plan'}`;
@@ -734,7 +734,7 @@ function isHighConfidenceConditionalCandidate(candidate: SetupCandidate | null, 
 function discordPromotionDecisionLine(candidate: SetupCandidate | null, normalized: CompactNormalizedPlan, status: DiscordDecisionStatus): string {
   if (status === 'EXECUTABLE') return 'Decision class: TRUE EXECUTION APPROVED - app-owned canExecute=true.';
   if (isHighConfidenceConditionalCandidate(candidate, normalized)) {
-    return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.';
+    return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.';
   }
   if (candidate?.humanReview?.status === 'HumanReviewReady') return 'Decision class: HUMAN REVIEW READY - trader confirmation + canExecute required.';
   if (status === 'CONDITIONAL') return 'Decision class: CONDITIONAL REVIEW - wait for completed 5M proof + canExecute.';
@@ -1446,7 +1446,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     : candidate.humanReview?.status === 'HumanReviewReady'
     ? 'Human review only; trader confirmation + canExecute required.'
     : highConfidenceConditional
-    ? 'High-confidence conditional trade plan; completed 5M proof + canExecute still required.'
+    ? 'High-confidence conditional trade plan; armed after the named completed 5M condition.'
     : status === 'EXECUTABLE'
       ? 'Executable only while completed 5M trigger + canExecute remain true.'
       : 'Review only until 5M trigger + canExecute.';
@@ -1741,7 +1741,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   ): string => {
     if (args.deskState?.canExecute === true) return 'Decision class: TRUE EXECUTION APPROVED - app-owned canExecute=true.';
     if (safety.highConfidenceConditional) {
-      return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.';
+      return 'Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.';
     }
     if (safety.reviewOnly) return 'Decision class: REVIEW ONLY - wait for completed 5M proof + canExecute.';
     return 'Decision class: WAIT - no executable approval.';
@@ -1773,8 +1773,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         hasLevels: true,
         lines: [
           sideBreakoutLabel(side, triggerWord, line),
-          'High-confidence conditional trade plan - not execution approval.',
-          'Execution gate: completed 5M proof + canExecute still required.',
+          'High-confidence conditional trade plan - wait on the named completed 5M condition.',
+          'Execution gate: armed only after that condition closes; not early-entry approval.',
           `Entry: ${priceLine(levels.entry)}`,
           `Stop: ${priceLine(levels.stop)}`,
           `T1: ${priceLine(levels.target1)}`,
@@ -1785,10 +1785,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     }
     if (safety.reviewOnly) {
       const reviewLabel = safety.highConfidenceConditional
-        ? 'High-confidence conditional trade plan - not execution approval.'
+        ? 'High-confidence conditional trade plan - wait on the named completed 5M condition.'
         : 'Review levels only - not an executable trade plan.';
       const proofLabel = safety.highConfidenceConditional
-        ? 'Execution gate: completed 5M proof + canExecute still required.'
+        ? 'Execution gate: armed only after that condition closes; not early-entry approval.'
         : 'Sniper watch: 1M timing only; 5M close/hold required.';
       return {
         hasLevels: true,
@@ -1838,10 +1838,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       : { reviewOnly: false, reason: null, highConfidenceConditional: false };
     const waitStatusLine = waitPrimarySafety.reviewOnly
       ? waitPrimarySafety.highConfidenceConditional
-        ? `Status: High-confidence conditional trade plan; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+        ? `Status: High-confidence conditional trade plan; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Armed only after the named completed 5M condition.`
         : `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
       : waitPrimarySafety.highConfidenceConditional
-        ? 'Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'
+        ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
       : 'Status: Review only until 5M trigger + canExecute.';
     const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
     const waitHtfRows = deskPlayHtfLineRows(play, args.currentPrice);
@@ -1895,10 +1895,10 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   const usefulHtfRows = htfRows.some((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row)) ? htfRows : [];
   const statusLine = primarySafety.reviewOnly
     ? primarySafety.highConfidenceConditional
-      ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Armed only after the named completed 5M condition.`
       : `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
     : primarySafety.highConfidenceConditional
-      ? 'Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'
+      ? 'Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'
     : 'Status: Review only until 5M trigger + canExecute.';
   return [
     `${args.instrument} Current Desk Plan`,

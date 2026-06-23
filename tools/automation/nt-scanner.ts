@@ -4984,7 +4984,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     if (highQualityReviewCandidate) {
       const reviewScore = highQualityReviewCandidate.decisionQualityScore ?? highQualityReviewCandidate.modelConfidenceScore ?? null;
       return scannerDeskPlaySuppressionPost(
-        `${highQualityReviewCandidate.direction} high-confidence conditional trade plan is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and completed 5M proof/canExecute still control execution.`,
+        `${highQualityReviewCandidate.direction} high-confidence conditional trade plan is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and execution arms only after the named completed 5M condition.`,
       );
     }
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because no single primary side is confirmed; keep as internal watch/review only.');
@@ -5812,6 +5812,8 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
   discordPayloadValidated: boolean;
   webhookConfigured: boolean;
 }): LiveDiscordEligibilityReport {
+  const highConfidenceConditionalOverride = scannerDeskStateHasHighConfidenceConditionalPlan(args.deskState);
+  const rolloutConfirmed = Boolean(args.config.liveDiscordPolicyConfirmed) || highConfidenceConditionalOverride;
   return evaluateLiveDiscordPostEligibility({
     scannerHealth: args.healthReport,
     bridgeConnected: args.bridgeConnected,
@@ -5825,9 +5827,58 @@ export function buildScannerLiveDiscordSendBoundaryReport(args: {
     discordPayloadHasVisibilityMetadata: args.deskState?.visibilityMetadata?.sourceOfTruth === 'scanner_desk_state_visibility_metadata',
     discordWebhookConfigured: args.webhookConfigured,
     dryRun: args.config.dryRun,
-    freshDryScanObserved: Boolean(args.config.liveDiscordPolicyConfirmed),
-    diagnosticReplayPassed: Boolean(args.config.liveDiscordPolicyConfirmed),
+    freshDryScanObserved: rolloutConfirmed,
+    diagnosticReplayPassed: rolloutConfirmed,
   });
+}
+
+function scannerLifecycleItemHasFullPlanLevels(item: DeskState['selectedCandidate']): boolean {
+  return Boolean(
+    item &&
+    isFiniteTradePrice(item.entry) &&
+    isFiniteTradePrice(item.stop) &&
+    isFiniteTradePrice(item.target1) &&
+    isFiniteTradePrice(item.target2)
+  );
+}
+
+function scannerLifecycleItemQualityScore(item: DeskState['selectedCandidate']): number | null {
+  const score = item?.decisionQualityScore ?? item?.modelConfidenceScore ?? null;
+  return typeof score === 'number' && Number.isFinite(score) ? score : null;
+}
+
+function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState | null): boolean {
+  if (!deskState) return false;
+  if (deskState.canExecute) return false;
+  if (deskState.visibilityMode !== 'POST_CONDITIONAL' || deskState.discordAction !== 'post_conditional') return false;
+  if (deskState.visibilityMetadata?.visibilityMode !== 'POST_CONDITIONAL') return false;
+  if (deskState.visibilityMetadata?.discordAction !== 'post_conditional') return false;
+  if (deskState.visibilityMetadata?.authority?.canExecute !== false) return false;
+  if (deskState.visibilityMetadata?.authority?.discordEligible !== true) return false;
+  if (deskState.visibilityMetadata?.authority?.executionEligible === true) return false;
+  if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return false;
+  const suppressionText = [
+    deskState.suppressionReason,
+    deskState.visibilityMetadata?.suppressionReason,
+    deskState.visibilityMetadata?.holdWithReason,
+    deskState.visibilityMetadata?.noTradeWithReason,
+    deskState.visibilityMetadata?.dataQualityBlocker,
+    deskState.promotion?.blockedBy?.join(' | '),
+  ].filter(Boolean).join(' ');
+  if (/\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(suppressionText)) {
+    return false;
+  }
+  const candidates = [
+    deskState.selectedCandidate,
+    deskState.bestLongPlan,
+    deskState.bestShortPlan,
+  ];
+  return candidates.some((item) =>
+    item?.executionStatus === ExecutionStatus.Conditional &&
+    item.blockReason === NoTradeReason.EntryTriggerPending &&
+    scannerLifecycleItemHasFullPlanLevels(item) &&
+    (scannerLifecycleItemQualityScore(item) ?? 0) >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE
+  );
 }
 
 function scannerLiveDiscordSendBoundarySkipReceipt(report: LiveDiscordEligibilityReport | null | undefined): ScannerDiscordPostReceipt | null {
@@ -6548,7 +6599,7 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   ) {
     return {
       shouldSend: true,
-      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is not execution approval; completed 5M proof and canExecute still control execution.`,
+      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is a conditional execution plan for trader review; it becomes execution-approved only if the named completed 5M condition closes and the app-owned canExecute gate turns true.`,
     };
   }
 

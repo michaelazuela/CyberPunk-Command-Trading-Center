@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-23
+Task: Fix high-confidence conditional Discord boundary routing and execution-status wording.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner audits showed high-confidence POST_CONDITIONAL plans with complete levels could still be skipped by the Phase 11 rollout boundary even when the active scanner window was live. The trader-facing wording also made `canExecute=false` read like the plan was dead instead of a conditional plan waiting on the named completed 5M condition.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsx src/lib/liveDiscordPostEligibility.test.ts; 3x focused verification loop across those three tests; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. High-confidence POST_CONDITIONAL DeskState with full app-owned levels, score at/above threshold, no stale/no-chase suppression, and `canExecute=false` preserved may now pass the live Discord boundary without the old rollout-confirmation blockers. Ordinary watch/hold/no-trade/stale posts still obey the existing boundary. Discord text now says high-confidence conditional plans are armed only after the named completed 5M condition instead of implying the setup is irrelevant because `canExecute` is false.
+Trading logic changed: No. This changes Discord send-boundary routing and presentation wording only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, or the app-owned `canExecute` calculation.
+Bridge impact: None.
+Discord impact: Yes. Fresh high-confidence conditional trade plans with complete levels should no longer be silently held only because the Phase 11 rollout checklist flag is absent. They still publish as conditional, not execution-approved.
+Journal/RAG impact: No schema change. Existing RAG persistence remains tied to the same alert/DeskState paths.
+Supabase impact: No migration added.
+Known risks: None known after verification. Operationally, stale/no-chase, duplicate ledger, data-quality, hold, and no-trade states remain blocked from live Discord sends.
+Next recommended action: Restart the scanner so the live process picks up the boundary fix, then observe the next active-window high-confidence conditional event to confirm Discord posts it as a conditional plan with chart and levels.
+
+## Previous Change
+
 Date: 2026-06-22
 Task: Install Phase 11E automatic live Discord posting preflight and hold notices.
 Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.

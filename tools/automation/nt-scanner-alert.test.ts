@@ -280,8 +280,8 @@ const reviewOnlyPrimaryAlertGateFixture: Parameters<typeof evaluateScannerPrimar
 const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate(reviewOnlyPrimaryAlertGateFixture);
 assert.equal(reviewOnlyPrimaryAlertGate.shouldSend, true);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
-assert.match(reviewOnlyPrimaryAlertGate.reason, /not execution approval/);
-assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute still control execution/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /conditional execution plan for trader review/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /app-owned canExecute gate turns true/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute=false/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState primary=WAIT/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /readiness=not_aligned/);
@@ -2408,7 +2408,7 @@ const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDis
 assert.equal(waitHighQualityConditionalDeskPlaySuppression.shouldPost, true);
 assert.equal(waitHighQualityConditionalDeskPlaySuppression.category, 'post');
 assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /SHORT high-confidence conditional trade plan is eligible/);
-assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /completed 5M proof\/canExecute still control execution/);
+assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /execution arms only after the named completed 5M condition/);
 const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
@@ -3313,6 +3313,50 @@ function phase11BoundaryDeskStateFixture(): DeskState {
   });
 }
 
+function highConfidenceConditionalBoundaryDeskStateFixture(): DeskState {
+  const highConfidenceCandidate: SetupCandidate = {
+    ...candidate,
+    executionStatus: ExecutionStatus.Conditional,
+    blockReason: NoTradeReason.EntryTriggerPending,
+    decisionQualityScore: 93,
+  };
+  const visibilityMetadata: ScannerVisibilityMetadata = {
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    suppressionReason: null,
+    nextTrigger: 'Wait for the named completed 5M condition.',
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: true,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: [],
+  };
+  return buildDeskState({
+    state: 'TriggerPending',
+    candidate: highConfidenceCandidate,
+    visibilityMetadata,
+    candidateLifecycleTrace: buildCandidateLifecycleTrace({
+      candidates: [highConfidenceCandidate],
+      selectedCandidate: highConfidenceCandidate,
+      state: 'TriggerPending',
+      alertDecision: { shouldSend: true, reason: 'High-confidence conditional fixture.' },
+      canExecute: false,
+    }),
+    canExecute: false,
+  });
+}
+
 const liveBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
     dryRun: false,
@@ -3334,6 +3378,27 @@ assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('fr
 assert.ok(liveBoundaryWithoutChecklist.blockers.some((item) => item.includes('Diagnostic replay')));
 assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(liveBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
+
+const highConfidenceConditionalBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: false,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: highConfidenceConditionalBoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-02-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-02-MES-HIGH-CONFIDENCE-CONDITIONAL.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.eligible, true);
+assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.blockers.length, 0);
+assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
+assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
 
 const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
@@ -3637,7 +3702,7 @@ try {
   assert.ok(text.includes('MES Current Desk Plan'));
   assert.ok(text.includes('[AM REVIEW] MES - LONG HIGH-CONFIDENCE CONDITIONAL'));
   assert.ok(text.includes('Primary: 🐂 LONG'));
-  assert.ok(text.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
+  assert.ok(text.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
   assert.ok(text.includes('Line in sand:'));
   assert.ok(text.includes('LONG ABOVE'));
   assert.ok(text.includes('Entry:'));
@@ -3646,7 +3711,7 @@ try {
   assert.ok(text.includes('T2:'));
   assert.ok(text.includes('Invalid below:'));
   assert.ok(text.includes('HTF target:'));
-  assert.ok(text.includes('Status: High-confidence conditional trade plan; completed 5M proof + canExecute still required.'));
+  assert.ok(text.includes('Status: High-confidence conditional trade plan; armed after the named completed 5M condition.'));
   assert.ok(text.includes('Chart: attached.'));
   assert.ok(!text.includes('Compact Trade Plan Summary'));
   assert.ok(!text.includes('Plan:'));
@@ -4030,8 +4095,8 @@ try {
   assert.ok(deskPlayText.includes('Stop: 5319.25'));
   assert.ok(deskPlayText.includes('T1: 5331.75'));
   assert.ok(deskPlayText.includes('T2: 5334.25'));
-  assert.ok(deskPlayText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; not execution approval.'));
-  assert.ok(deskPlayText.includes('Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'));
+  assert.ok(deskPlayText.includes('Decision class: HIGH-CONFIDENCE CONDITIONAL - publish prominently; execution arms only after the named completed 5M condition.'));
+  assert.ok(deskPlayText.includes('Status: High-confidence conditional trade plan; armed only after the named completed 5M condition.'));
   assert.ok(deskPlayText.includes('Chart: attached.'));
   assert.ok(deskPlayText.length < 1550, `expected Desk Play payload under Discord chart-card limit, got ${deskPlayText.length}`);
   const deskPlayRagCalls: Array<{ url: string; method: string; body: any }> = [];
