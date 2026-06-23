@@ -1310,7 +1310,8 @@ function deskPlayConflictSummary(
   return 'none flagged';
 }
 
-function deskPlayReadinessStatus(reviewOnly: boolean, hasLevels: boolean): string {
+function deskPlayReadinessStatus(reviewOnly: boolean, hasLevels: boolean, highConfidenceConditional = false): string {
+  if (reviewOnly && highConfidenceConditional) return 'high-confidence conditional - wait for 5M proof';
   if (reviewOnly) return 'watch only - do not execute';
   if (!hasLevels) return 'review map - levels pending';
   return 'review map - wait';
@@ -1674,7 +1675,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: false }),
     ];
   }
-  const sidePresentationSafety = (side: 'LONG' | 'SHORT'): { reviewOnly: boolean; reason: string | null } => {
+  const sidePresentationSafety = (side: 'LONG' | 'SHORT'): { reviewOnly: boolean; reason: string | null; highConfidenceConditional: boolean } => {
     const sideBias = side === 'LONG' ? play.longBias : play.shortBias;
     const sideScore = sideBias?.decisionQualityScore ?? null;
     const rows = play.htfProtectedStructureMap?.rows || [];
@@ -1688,6 +1689,9 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const htfOpposes = trendOpposes || (rows.length > 0 && opposingRows > rows.length / 2);
     const dataLimited = args.deskState?.dataQualityStatus === 'data_limited' || args.deskState?.htfContextStatus === 'insufficient';
     const reviewOnly = args.deskState?.canExecute !== true && (dataLimited || lowQuality || htfOpposes);
+    const highConfidenceConditional = args.deskState?.canExecute !== true &&
+      typeof sideScore === 'number' &&
+      sideScore >= 85;
     const reason = htfOpposes
       ? 'HTF/structure opposes this side'
       : dataLimited
@@ -1695,7 +1699,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       : lowQuality
         ? 'side quality is low'
         : null;
-    return { reviewOnly, reason };
+    return { reviewOnly, reason, highConfidenceConditional };
   };
   const sideLinesFor = (side: 'LONG' | 'SHORT'): { lines: string[]; hasLevels: boolean } => {
     const line = deskPlayLineForDirection(play, side);
@@ -1715,12 +1719,18 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       };
     }
     if (safety.reviewOnly) {
+      const reviewLabel = safety.highConfidenceConditional
+        ? 'High-confidence conditional trade plan - not execution approval.'
+        : 'Review levels only - not an executable trade plan.';
+      const proofLabel = safety.highConfidenceConditional
+        ? 'Execution gate: completed 5M proof + canExecute still required.'
+        : 'Sniper watch: 1M timing only; 5M close/hold required.';
       return {
         hasLevels: true,
         lines: [
           sideBreakoutLabel(side, triggerWord, line),
-          'Review levels only - not an executable trade plan.',
-          'Sniper watch: 1M timing only; 5M close/hold required.',
+          reviewLabel,
+          proofLabel,
           `Entry: ${priceLine(levels.entry)}`,
           `Stop: ${priceLine(levels.stop)}`,
           `T1: ${priceLine(levels.target1)}`,
@@ -1742,7 +1752,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   };
   const readinessLinesFor = (
     mapSide: 'LONG' | 'SHORT' | 'WAIT',
-    safety: { reviewOnly: boolean; reason: string | null },
+    safety: { reviewOnly: boolean; reason: string | null; highConfidenceConditional: boolean },
     hasLevels: boolean,
   ): string[] => {
     const opposingSide = mapSide === 'LONG' ? 'SHORT' : 'LONG';
@@ -1752,7 +1762,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       `Opposing Side: ${mapSide === 'WAIT' ? 'N/A' : deskPlaySideStrength(play, opposingSide)}`,
       `Opposing Role: ${mapSide === 'WAIT' ? 'context unavailable' : 'context only'}`,
       `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
-      `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels)}`,
+      `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
     ];
   };
   if (direction !== 'LONG' && direction !== 'SHORT') {
@@ -1761,9 +1771,11 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const waitMapSide = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : 'WAIT';
     const waitPrimarySafety = play.direction === 'LONG' || play.direction === 'SHORT'
       ? sidePresentationSafety(play.direction)
-      : { reviewOnly: false, reason: null };
+      : { reviewOnly: false, reason: null, highConfidenceConditional: false };
     const waitStatusLine = waitPrimarySafety.reviewOnly
-      ? `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      ? waitPrimarySafety.highConfidenceConditional
+        ? `Status: High-confidence conditional trade plan; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+        : `Status: Review levels only - not executable; ${waitPrimarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
       : 'Status: Review only until 5M trigger + canExecute.';
     const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
     return [
@@ -1811,7 +1823,9 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   const primaryLevels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   const primarySafety = sidePresentationSafety(direction);
   const statusLine = primarySafety.reviewOnly
-    ? `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+    ? primarySafety.highConfidenceConditional
+      ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
+      : `Status: Review levels only - not executable; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
     : 'Status: Review only until 5M trigger + canExecute.';
   return [
     `${args.instrument} Current Desk Plan`,

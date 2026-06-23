@@ -4828,29 +4828,45 @@ function scannerDeskPlayStaleLevelReason(args: {
   const target2 = primary?.target2 ?? args.referenceLevels?.target2 ?? null;
   const reaction = args.deskState.primaryDeskPlay.targetReactionLevel ?? primary?.targetReactionLevel ?? null;
   const buffer = 0.25;
+  const zoneLower = typeof activeZone?.lower === 'number' && Number.isFinite(activeZone.lower) ? activeZone.lower : null;
+  const zoneUpper = typeof activeZone?.upper === 'number' && Number.isFinite(activeZone.upper) ? activeZone.upper : null;
+  const insideActiveZone = activeZone?.direction === direction &&
+    zoneLower !== null &&
+    zoneUpper !== null &&
+    currentPrice >= zoneLower - buffer &&
+    currentPrice <= zoneUpper + buffer;
+  const activeZoneLabel = zoneLower !== null && zoneUpper !== null
+    ? `${zoneLower.toFixed(2)}-${zoneUpper.toFixed(2)}`
+    : null;
 
   if (direction === 'LONG') {
     if (typeof stop === 'number' && currentPrice <= stop + buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is at/below protected stop ${stop.toFixed(2)}.`;
-    if (typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below active tactical line ${line.toFixed(2)}.`;
+    if (activeZone?.direction === 'LONG' && zoneLower !== null && currentPrice < zoneLower - buffer) {
+      return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is below active tactical zone ${activeZoneLabel || 'N/A'}.`;
+    }
+    if (!insideActiveZone && typeof line === 'number' && currentPrice < line - buffer) return `LONG review map invalidated: current price ${currentPrice.toFixed(2)} is back below active tactical line ${line.toFixed(2)}.`;
     if (activeZone?.direction === 'LONG' &&
-      typeof activeZone.upper === 'number' &&
+      zoneUpper !== null &&
       activeZone.state === 'moved_away' &&
-      currentPrice > activeZone.upper + 0.25
+      currentPrice > zoneUpper + buffer
     ) {
-      return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZone.lower?.toFixed(2) || 'N/A'}-${activeZone.upper.toFixed(2)}.`;
+      return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZoneLabel || 'N/A'}.`;
     }
     if (typeof target2 === 'number' && currentPrice >= target2 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
     if (typeof target1 === 'number' && currentPrice >= target1 - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
     if (typeof reaction === 'number' && currentPrice >= reaction - buffer) return `LONG review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed reaction level ${reaction.toFixed(2)}.`;
   } else {
     if (typeof stop === 'number' && currentPrice >= stop - buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is at/above protected stop ${stop.toFixed(2)}.`;
-    if (typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above active tactical line ${line.toFixed(2)}.`;
+    if (activeZone?.direction === 'SHORT' && zoneUpper !== null && currentPrice > zoneUpper + buffer) {
+      return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is above active tactical zone ${activeZoneLabel || 'N/A'}.`;
+    }
+    if (!insideActiveZone && typeof line === 'number' && currentPrice > line + buffer) return `SHORT review map invalidated: current price ${currentPrice.toFixed(2)} is back above active tactical line ${line.toFixed(2)}.`;
     if (activeZone?.direction === 'SHORT' &&
-      typeof activeZone.lower === 'number' &&
+      zoneLower !== null &&
       activeZone.state === 'moved_away' &&
-      currentPrice < activeZone.lower - 0.25
+      currentPrice < zoneLower - buffer
     ) {
-      return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper?.toFixed(2) || 'N/A'}.`;
+      return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already moved away from active tactical zone ${activeZoneLabel || 'N/A'}.`;
     }
     if (typeof target2 === 'number' && currentPrice <= target2 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T2 ${target2.toFixed(2)}.`;
     if (typeof target1 === 'number' && currentPrice <= target1 + buffer) return `SHORT review map kept local: current price ${currentPrice.toFixed(2)} already reached/passed T1 ${target1.toFixed(2)}.`;
@@ -4968,7 +4984,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     if (highQualityReviewCandidate) {
       const reviewScore = highQualityReviewCandidate.decisionQualityScore ?? highQualityReviewCandidate.modelConfidenceScore ?? null;
       return scannerDeskPlaySuppressionPost(
-        `${highQualityReviewCandidate.direction} high-quality conditional review map is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and completed 5M proof/canExecute still control execution.`,
+        `${highQualityReviewCandidate.direction} high-confidence conditional trade plan is eligible: app-owned entry/stop/T1/T2 are present, decision quality is ${reviewScore}, and completed 5M proof/canExecute still control execution.`,
       );
     }
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because no single primary side is confirmed; keep as internal watch/review only.');

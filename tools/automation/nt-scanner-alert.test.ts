@@ -2169,6 +2169,103 @@ assert.equal(staleTargetDeskPlaySuppression.shouldPost, false);
 assert.equal(staleTargetDeskPlaySuppression.category, 'passed_or_invalidated_levels');
 assert.match(staleTargetDeskPlaySuppression.reason, /already reached\/passed T1/);
 assert.doesNotMatch(staleTargetDeskPlaySuppression.reason, /stale/i);
+const insideShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: '2026-06-23:MES:lunch:DESK_PLAN_REFRESH:2026-06-23T15:25:00.0000000:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      lineInSand: 7445,
+      entry: 7445.75,
+      stop: 7452.5,
+      target1: 7435.75,
+      target2: 7432.25,
+      riskPoints: 6.75,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'SHORT',
+      lineInSand: 7445,
+      shortBelow: 7445,
+      activeTacticalLine: {
+        direction: 'SHORT',
+        activeLine: 7445,
+        migrated: true,
+        migratedFromLine: 7440,
+      },
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7445,
+        upper: 7446.5,
+        state: 'in_zone',
+        zoneLabel: 'bearish imbalance retest',
+        nextTrigger: 'Completed 5M hold/reject inside 7445.00-7446.50.',
+        noChase: 'Do not chase below T1.',
+      },
+      shortBias: {
+        state: 'primary',
+        lineInSand: 7445,
+        decisionQualityScore: 93,
+        tradeReadiness: { status: 'wait_for_completed_5m_proof' },
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7445.5,
+  latestCompleted5m: '2026-06-23T15:25:00.0000000',
+});
+assert.equal(insideShortTacticalZoneDeskPlaySuppression.shouldPost, true);
+assert.equal(insideShortTacticalZoneDeskPlaySuppression.category, 'post');
+const aboveShortTacticalZoneDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-23',
+  instrument: 'MES',
+  session: 'lunch',
+  deskPlayKey: '2026-06-23:MES:lunch:DESK_PLAN_REFRESH:2026-06-23T15:20:00.0000000:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    bestShortPlan: {
+      lineInSand: 7445,
+      entry: 7445.75,
+      stop: 7452.5,
+      target1: 7435.75,
+      target2: 7432.25,
+      riskPoints: 6.75,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'SHORT',
+      lineInSand: 7445,
+      shortBelow: 7445,
+      activeTacticalLine: {
+        direction: 'SHORT',
+        activeLine: 7445,
+        migrated: true,
+        migratedFromLine: 7440,
+      },
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7445,
+        upper: 7446.5,
+        state: 'waiting_retest',
+        zoneLabel: 'bearish imbalance retest',
+      },
+      shortBias: {
+        state: 'primary',
+        lineInSand: 7445,
+        decisionQualityScore: 93,
+        tradeReadiness: { status: 'wait_for_completed_5m_proof' },
+      },
+    },
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7447.25,
+  latestCompleted5m: '2026-06-23T15:20:00.0000000',
+});
+assert.equal(aboveShortTacticalZoneDeskPlaySuppression.shouldPost, false);
+assert.equal(aboveShortTacticalZoneDeskPlaySuppression.category, 'passed_or_invalidated_levels');
+assert.match(aboveShortTacticalZoneDeskPlaySuppression.reason, /above active tactical zone 7445\.00-7446\.50/);
 const staleReferenceTargetDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-23',
   instrument: 'MES',
@@ -2300,7 +2397,7 @@ const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDis
 });
 assert.equal(waitHighQualityConditionalDeskPlaySuppression.shouldPost, true);
 assert.equal(waitHighQualityConditionalDeskPlaySuppression.category, 'post');
-assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /SHORT high-quality conditional review map is eligible/);
+assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /SHORT high-confidence conditional trade plan is eligible/);
 assert.match(waitHighQualityConditionalDeskPlaySuppression.reason, /completed 5M proof\/canExecute still control execution/);
 const waitDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
