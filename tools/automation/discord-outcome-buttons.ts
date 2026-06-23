@@ -99,9 +99,13 @@ export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(
   if (!fs.existsSync(envLocalPath)) {
     return { loaded: false, keyId: previousKeyId, previousKeyId, source: 'process.env' };
   }
-  const line = fs.readFileSync(envLocalPath, 'utf8')
-    .split(/\r?\n/)
-    .find((entry) => entry.trim().startsWith('DISCORD_OUTCOME_SECRET='));
+  const entries = fs.readFileSync(envLocalPath, 'utf8').split(/\r?\n/);
+  const outcomeBaseUrlLine = entries.find((entry) => entry.trim().startsWith('DISCORD_OUTCOME_BASE_URL='));
+  const outcomeBaseUrl = normalizeDiscordOutcomeSecret(outcomeBaseUrlLine?.slice('DISCORD_OUTCOME_BASE_URL='.length));
+  if (outcomeBaseUrl && !process.env.DISCORD_OUTCOME_BASE_URL) {
+    process.env.DISCORD_OUTCOME_BASE_URL = outcomeBaseUrl;
+  }
+  const line = entries.find((entry) => entry.trim().startsWith('DISCORD_OUTCOME_SECRET='));
   const value = normalizeDiscordOutcomeSecret(line?.slice('DISCORD_OUTCOME_SECRET='.length));
   if (!value) {
     return { loaded: false, keyId: previousKeyId, previousKeyId, source: 'process.env' };
@@ -112,6 +116,11 @@ export function loadCanonicalDiscordOutcomeSecretFromEnvLocal(
     console.warn(`[discord-outcome] DISCORD_OUTCOME_SECRET from .env.local is overriding a different process environment key id (${previousKeyId} -> ${keyId}).`);
   }
   return { loaded: true, keyId, previousKeyId, source: '.env.local' };
+}
+
+function ensureCanonicalDiscordOutcomeEnvLoaded(): void {
+  if (isTestProcess()) return;
+  loadCanonicalDiscordOutcomeSecretFromEnvLocal(process.cwd(), { warnOnOverride: true });
 }
 
 export async function checkDiscordOutcomeEndpointSecret(
@@ -253,6 +262,7 @@ function outcomeButton(label: string, emoji: string, url: string): DiscordLinkBu
 }
 
 export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRow[] | undefined {
+  ensureCanonicalDiscordOutcomeEnvLoaded();
   const makeUrl = (
     outcome: string,
     tradeResult: TradeResult,
@@ -323,6 +333,7 @@ export function buildOutcomeComponents(args: OutcomeButtonArgs): DiscordActionRo
 }
 
 export function buildWatchFeedbackComponents(args: WatchFeedbackButtonArgs): DiscordActionRow[] | undefined {
+  ensureCanonicalDiscordOutcomeEnvLoaded();
   const direction = args.watchDirection === 'LONG' || args.watchDirection === 'SHORT' ? args.watchDirection : 'NONE';
   const makeUrl = (outcome: WatchFeedbackCode) => buildOutcomeUrl({
     planVersionId: args.planVersionId,
