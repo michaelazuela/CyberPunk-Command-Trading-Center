@@ -6484,6 +6484,23 @@ function candidateReadinessStatus(deskState: DeskState, candidate?: SetupCandida
   return readiness?.status || null;
 }
 
+function isHighQualityConditionalPrimaryAlertCandidate(candidate?: SetupCandidate | null): boolean {
+  const score = candidate?.decisionQualityScore ?? candidate?.modelConfidenceScore ?? null;
+  return Boolean(
+    candidate &&
+    (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+    candidate.executionStatus === ExecutionStatus.Conditional &&
+    candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+    isFiniteTradePrice(candidate.entry) &&
+    isFiniteTradePrice(candidate.stop) &&
+    isFiniteTradePrice(candidate.target1) &&
+    isFiniteTradePrice(candidate.target2) &&
+    typeof score === 'number' &&
+    Number.isFinite(score) &&
+    score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE
+  );
+}
+
 export function evaluateScannerPrimaryAlertPublishingGate(args: {
   alertDecision: ScannerAlertDecision;
   deskState: DeskState;
@@ -6517,6 +6534,17 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   }
 
   if (!reasons.length) return args.alertDecision;
+
+  if (
+    isHighQualityConditionalPrimaryAlertCandidate(args.candidate) &&
+    args.state !== 'Missed' &&
+    !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText)
+  ) {
+    return {
+      shouldSend: true,
+      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is not execution approval; completed 5M proof and canExecute still control execution.`,
+    };
+  }
 
   return {
     shouldSend: false,

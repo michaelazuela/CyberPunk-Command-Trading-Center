@@ -232,7 +232,7 @@ const scannerDataQualityNoticeConfig: ScannerConfig = {
   discordMessageTtlMinutes: 15,
 };
 
-const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+const reviewOnlyPrimaryAlertGateFixture: Parameters<typeof evaluateScannerPrimaryAlertPublishingGate>[0] = {
   alertDecision: { shouldSend: true, reason: 'High-Quality Trade Plan qualified for Discord.' },
   candidate: {
     setupType: SetupType.TurtleSoup,
@@ -242,6 +242,7 @@ const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
     executionStatus: ExecutionStatus.Conditional,
     confidence: 'High',
     priority: 92,
+    decisionQualityScore: 93,
     entry: 7557.5,
     stop: 7582,
     target1: 7520.75,
@@ -254,7 +255,7 @@ const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
     levelContextScore: 18,
     evidence: ['Buy-side sweep candidate'],
     missingEvidence: ['15M and 5M protected structure are not aligned for this side.'],
-    blockReason: null,
+    blockReason: NoTradeReason.EntryTriggerPending,
     requiredTrigger: 'Completed 5M proof below/retest around 7557.50.',
     nextAction: 'Review only; no chase.',
     reducedRiskPlan: null,
@@ -275,13 +276,22 @@ const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
   state: 'Approved',
   staleReason: null,
   scannerReviewStatus: null,
-});
-assert.equal(reviewOnlyPrimaryAlertGate.shouldSend, false);
-assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState\/readiness gate/);
+};
+const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate(reviewOnlyPrimaryAlertGateFixture);
+assert.equal(reviewOnlyPrimaryAlertGate.shouldSend, true);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /not execution approval/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute still control execution/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute=false/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState primary=WAIT/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /readiness=not_aligned/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /HTF\/protected structure conflict/);
+const staleHighQualityPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  staleReason: 'no chase: T1 already reached before alert generation',
+});
+assert.equal(staleHighQualityPrimaryAlertGate.shouldSend, false);
+assert.match(staleHighQualityPrimaryAlertGate.reason, /stale\/no-chase review state/);
 
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),
