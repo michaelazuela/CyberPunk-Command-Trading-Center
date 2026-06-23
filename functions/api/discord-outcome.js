@@ -291,6 +291,25 @@ async function lockDiscordOutcomeMessage(context, payload, discordMessage) {
   const webhookSource = typeof discordMessage?.webhookSource === 'string' ? discordMessage.webhookSource : null;
   const webhookUrl = discordWebhookUrl(context, webhookSource);
   if (!messageId || !webhookUrl) {
+    if (!messageId && webhookUrl) {
+      const replacement = await postDiscordOutcomeReplacementMessage(context, payload, webhookSource);
+      if (replacement.posted) {
+        return {
+          edited: false,
+          status: 'replacement_posted',
+          reason: 'missing_original_discord_message_id',
+          replacementPosted: true,
+          replacementMessageId: replacement.messageId,
+        };
+      }
+      return {
+        edited: false,
+        status: 'unavailable',
+        reason: `missing_discord_message_id_${replacement.reason}`,
+        replacementPosted: false,
+        replacementMessageId: null,
+      };
+    }
     return {
       edited: false,
       status: 'unavailable',

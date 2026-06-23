@@ -45,7 +45,7 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
   if (String(url).includes('/rest/v1/trade_embeddings?plan_version_id=')) {
-    if (String(url).includes('PLAN-ALREADY-SAVED')) {
+    if (String(url).includes('PLAN-ALREADY-SAVED') && !String(url).includes('PLAN-ALREADY-SAVED-MISSING-MESSAGE')) {
       return new Response(JSON.stringify([{
         id: 'row-already-saved',
         embedding_text: 'existing embedding',
@@ -59,6 +59,21 @@ globalThis.fetch = async (url, init = {}) => {
           discordOutcome: {
             updatedFrom: 'discord_button',
             outcomeCode: 'long_t2_hit',
+            targetHit: 'T2',
+            tradeResult: 'win',
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (String(url).includes('PLAN-ALREADY-SAVED-MISSING-MESSAGE')) {
+      return new Response(JSON.stringify([{
+        id: 'row-already-saved-missing-message',
+        embedding_text: 'existing embedding missing message id',
+        trade_plan_json: {
+          planVersionId: 'PLAN-ALREADY-SAVED-MISSING-MESSAGE',
+          discordOutcome: {
+            updatedFrom: 'discord_button',
+            outcomeCode: 'short_t2_hit',
             targetHit: 'T2',
             tradeResult: 'win',
           },
@@ -147,7 +162,9 @@ globalThis.fetch = async (url, init = {}) => {
     if ((init?.method || 'GET') === 'GET') {
       return new Response(JSON.stringify([{
         id: String(url).includes('row-already-saved')
-          ? 'row-already-saved'
+          ? String(url).includes('row-already-saved-missing-message')
+            ? 'row-already-saved-missing-message'
+            : 'row-already-saved'
           : String(url).includes('row-deleted-card')
             ? 'row-deleted-card'
             : String(url).includes('row-patch-fail')
@@ -157,17 +174,21 @@ globalThis.fetch = async (url, init = {}) => {
                 : 'row-12345678',
         trade_plan_json: {
           existing: true,
-          discordMessage: {
-            messageId: String(url).includes('row-deleted-card')
-              ? 'deleted-message-404'
-              : String(url).includes('row-patch-fail')
-                ? 'discord-message-patch-fail'
-                : String(url).includes('row-source-webhook')
-                  ? 'discord-message-source-webhook'
-                  : 'discord-message-123',
-            webhookSource: String(url).includes('row-source-webhook') ? 'SCANNER_DISCORD_WEBHOOK_URL' : 'QUANT_DESK_SCANNER_WEBHOOK_URL',
-            editAfterOutcome: true,
-          },
+          ...(String(url).includes('row-already-saved-missing-message')
+            ? {}
+            : {
+                discordMessage: {
+                  messageId: String(url).includes('row-deleted-card')
+                    ? 'deleted-message-404'
+                    : String(url).includes('row-patch-fail')
+                      ? 'discord-message-patch-fail'
+                      : String(url).includes('row-source-webhook')
+                        ? 'discord-message-source-webhook'
+                        : 'discord-message-123',
+                  webhookSource: String(url).includes('row-source-webhook') ? 'SCANNER_DISCORD_WEBHOOK_URL' : 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+                  editAfterOutcome: true,
+                },
+              }),
         },
       }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
@@ -287,6 +308,40 @@ try {
     const patch = JSON.parse(String(call.init.body));
     return patch.trade_plan_json?.discordOutcome?.updatedFrom === 'discord_button';
   }), 'already-saved outcome must not rewrite the saved outcome');
+
+  const alreadySavedMissingMessageCallsBefore = calls.length;
+  const alreadySavedMissingMessageToken = buildToken({
+    ...payload,
+    pid: 'PLAN-ALREADY-SAVED-MISSING-MESSAGE',
+    dir: 'SHORT',
+    o: 'short_t2_hit',
+    kid: keyId(secret),
+  }, secret);
+  const alreadySavedMissingMessageResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(alreadySavedMissingMessageToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(alreadySavedMissingMessageResponse.status, 200);
+  const alreadySavedMissingMessageHtml = await alreadySavedMissingMessageResponse.text();
+  assert.ok(alreadySavedMissingMessageHtml.includes('Already saved.'));
+  assert.ok(alreadySavedMissingMessageHtml.includes('locked replacement receipt posted'));
+  assert.ok(!alreadySavedMissingMessageHtml.includes('missing_discord_message_id'));
+  const alreadySavedMissingMessageCalls = calls.slice(alreadySavedMissingMessageCallsBefore);
+  assert.ok(alreadySavedMissingMessageCalls.some((call) => call.init.method === 'POST' && String(call.url).includes('/api/webhooks/')));
+  assert.ok(alreadySavedMissingMessageCalls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-already-saved-missing-message')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcomeLock?.status === 'replacement_posted' &&
+      patch.trade_plan_json.discordOutcomeLock.reason === 'missing_original_discord_message_id' &&
+      patch.trade_plan_json.discordOutcomeLock.originalMessageIdPresent === false &&
+      patch.trade_plan_json.discordOutcomeLock.approvalBoundary?.replacementReceiptApprovesTrade === false;
+  }), 'expected already-saved missing-message row to record replacement lock status');
 
   const deletedCardToken = buildToken({ ...payload, pid: 'PLAN-DELETED-CARD', kid: keyId(secret) }, secret);
   const deletedCardResponse = await onRequestGet({
