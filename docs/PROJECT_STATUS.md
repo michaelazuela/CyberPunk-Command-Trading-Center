@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-22
+Task: Install HTF FVG decision-zone Discord alerts.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/DESK_STATE_PHASE_HANDOFF.md, docs/PROJECT_STATUS.md.
+Reason: The desk needs FVG reaction-zone visibility in Discord without turning HTF FVGs into standalone trade approvals.
+Tests run: npx tsx src/lib/localScannerEngine.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npx tsc --noEmit; npm run test; npm run lint; npm run build; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; git diff --check.
+Result: Passed. DeskState now carries scanner-owned FVG decision-zone metadata when the active line in the sand is already an FVG/imbalance line, and Current Desk Plan Discord output shows a compact `FVG Decision Zone` block with why/hold/fold/no-chase language.
+Trading logic changed: No intended change. This adds scanner-owned FVG decision-zone metadata and Discord wording only; it does not change setup definitions, ranking, canExecute, entries, stops, targets, risk gates, model definitions, scanner selection, bar-close confirmation, bridge behavior, or live trade approval.
+Bridge impact: None.
+Discord impact: Yes. Existing Current Desk Plan / DeskState Discord output can now show a compact `FVG Decision Zone` block when the scanner already has a structured FVG/imbalance line in the sand.
+Journal/RAG impact: No schema or persistence change.
+Supabase impact: No migration added.
+Known risks: None known. Existing live-post Phase 11B/11C policy still controls whether live Discord sends are allowed.
+Next recommended action: Use the next live dry scan to confirm the FVG Decision Zone wording appears on an actual scanner-owned FVG/imbalance line before enabling any broader FVG alert cadence.
+
+## Previous Change
+
+Date: 2026-06-22
 Task: Install 9 Phase 11C live Discord rollout checklist.
 Files changed: tools/automation/live-discord-rollout.ts, tools/automation/live-discord-rollout.test.ts, package.json, scripts/architecture-guard.js, docs/SCANNER_VISIBILITY_CLEANUP_AUDIT.md, docs/PROJECT_STATUS.md.
 Reason: Phase 11B blocks unconfirmed live scanner trade/DeskState posts; Phase 11C adds the deterministic operator checklist for dry scan, diagnostic replay, controlled live-post confirmation, receipt verification, and rollback.

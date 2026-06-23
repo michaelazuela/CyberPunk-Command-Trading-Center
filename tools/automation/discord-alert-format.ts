@@ -119,6 +119,19 @@ export interface CompactDeskStateForDiscord {
       targetManagementInstruction?: string;
       nextStructureInstruction?: string;
     } | null;
+    fvgDecisionZone?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | string;
+      lineInSand?: number | null;
+      zoneLabel?: string | null;
+      sourceTimeframe?: string | null;
+      state?: string | null;
+      whyItMatters?: string | null;
+      holdCondition?: string | null;
+      foldCondition?: string | null;
+      managementInstruction?: string | null;
+      noChase?: string | null;
+    } | null;
     htfObjectiveLadder?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
@@ -1166,6 +1179,26 @@ function deskPlayHtfLineRows(
   });
 }
 
+function deskPlayFvgDecisionZoneLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+): string[] {
+  const zone = play.fvgDecisionZone;
+  if (!zone || !isFinitePrice(zone.lineInSand)) return [];
+  const label = compactLine(zone.zoneLabel || 'FVG / imbalance decision zone', 44);
+  const state = compactLine(String(zone.state || 'watch').replace(/_/g, ' '), 24);
+  const hold = compactLine(String(zone.holdCondition || 'Completed 5M hold/retest required.').replace(/^Hold:\s*/i, ''), 96);
+  const fold = compactLine(String(zone.foldCondition || 'Completed acceptance through the zone changes management context.').replace(/^Fold:\s*/i, ''), 96);
+  return [
+    'FVG Decision Zone:',
+    `${label}: ${priceLine(zone.lineInSand)} (${state})`,
+    `Why: ${compactLine(zone.whyItMatters || 'Scanner-owned FVG/imbalance line in the sand.', 108)}`,
+    `Hold: ${hold}`,
+    `Fold: ${fold}`,
+    compactLine(zone.managementInstruction || 'FVG is context/management only; 5M proof and canExecute still control.', 118),
+    compactLine(zone.noChase || 'No chase. Wait for completed 5M proof.', 96),
+  ];
+}
+
 function deskPlayQualityLabel(score: number | null | undefined): string {
   if (typeof score !== 'number' || !Number.isFinite(score)) return 'unavailable';
   if (score >= 75) return 'high';
@@ -1555,6 +1588,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       '',
       'HTF Lines:',
       ...deskPlayHtfLineRows(play, args.currentPrice),
+      ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
       '',
       ...longWait.lines,
       '',
@@ -1594,6 +1628,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     '',
     'HTF Lines:',
     ...deskPlayHtfLineRows(play, args.currentPrice),
+    ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
     '',
     ...primary.lines,
     '',

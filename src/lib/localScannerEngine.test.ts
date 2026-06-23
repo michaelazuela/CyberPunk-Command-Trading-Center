@@ -1449,6 +1449,64 @@ assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.runner?.
 assert.ok(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.managementInstruction.includes('App T1/T2 remain tactical'));
 assert.equal(targetPlanOnlyDeskState.primaryDeskPlay.htfObjectiveLadder.approvalBoundary.changesEntryStopTargets, false);
 
+const fvgDecisionZoneCandidate = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  direction: 'SHORT',
+  entry: 7588,
+  stop: 7604,
+  target1: 7564,
+  target2: 7556,
+  evidence: ['HTF MSS support in campaign direction: 60M.', 'FVG line in the sand mapped.'],
+  activeRuleset: {
+    htfLineInSand: {
+      applied: true,
+      status: 'blocked',
+      required: 'completed_5m_or_15m_close_beyond_htf_line',
+      appliesToAllModels: true,
+      affectsExecution: true,
+      direction: 'SHORT',
+      lineInSand: 7591,
+      lineReason: '7591.00 matters because it is the 60M bearish FVG lower boundary.',
+      requiredClose: 'Completed 5M close below 7591.00 required before short continuation is active.',
+      obstacleType: 'imbalance_zone',
+      obstacleSource: 'app',
+      evidence: ['60M bearish FVG lower boundary is mapped.'],
+      blockers: ['Waiting for completed 5M acceptance below the FVG boundary.'],
+    },
+  },
+});
+const fvgDecisionZoneLifecycle = buildCandidateLifecycleTrace({
+  candidates: [fvgDecisionZoneCandidate],
+  selectedCandidate: fvgDecisionZoneCandidate,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: { shouldSend: false, reason: 'FVG decision zone fixture.' },
+  canExecute: false,
+});
+const fvgDecisionZoneDeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: fvgDecisionZoneCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Conditional',
+    candidate: fvgDecisionZoneCandidate,
+    window: morningWindow,
+    alertDecision: { shouldSend: false, reason: 'FVG decision zone fixture.' },
+    canExecute: false,
+  }),
+  candidateLifecycleTrace: fvgDecisionZoneLifecycle,
+  currentPrice: 7594,
+  canExecute: false,
+});
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.sourceOfTruth, 'scanner_htf_fvg_decision_zone');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.sourceTimeframe, '60M');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.direction, 'SHORT');
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.lineInSand, 7591);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.state, 'accepted_through');
+assert.ok(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.managementInstruction.includes('does not approve execution'));
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesCanExecute, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(fvgDecisionZoneDeskState.primaryDeskPlay.fvgDecisionZone?.approvalBoundary.changesEntryStopTargets, false);
+
 const cycleLevelHtfState: NonNullable<SetupCandidate['htfLiquidityDrawState']> = {
   source: 'ninjatrader_ohlc',
   authority: 'ohlc_facts_only',

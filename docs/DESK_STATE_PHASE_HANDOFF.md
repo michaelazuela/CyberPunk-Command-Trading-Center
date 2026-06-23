@@ -42,6 +42,50 @@ The next phases should reduce that risk by creating one source of truth for trad
 - No bridge behavior changes.
 - No new Discord hard blockers.
 - No silent hard stops when meaningful structured OHLC evidence exists.
+- Any current trade plan, HTF read, target-validity answer, or Discord status answer shall use the mandatory Current Trade Report structure from `docs/CODEX_RULES.md`.
+
+## Mandatory Current Trade Report
+
+Every current trade answer shall break down the state the same way:
+
+1. Decision:
+   - Trade / watch / no fresh entry / no trade.
+   - Direction.
+   - `canExecute`.
+   - Human-review-only status.
+2. Current price and candle:
+   - latest completed 5M candle timestamp and close.
+   - current bridge price when available.
+   - completed-bar status.
+3. Trade plan:
+   - entry, stop, risk, T1, T2, invalidation.
+   - if no fresh plan exists, separate current no-entry state from historical/reference plan levels.
+4. HTF story:
+   - 15M, 60M, 120M, 240M.
+   - support, conflict, caution, and data sufficiency.
+5. Line in the sand:
+   - exact level.
+   - why it matters.
+   - required completed candle close/retest.
+   - what happens above and below.
+6. Target and management:
+   - whether T1/T2 remain valid for the original plan.
+   - whether each level is a fresh-entry target, management target, reaction zone, or historical target.
+   - next objective and runner condition when available.
+7. No-chase / fresh-entry status:
+   - fresh entry available or missed.
+   - new proof required if missed.
+8. Discord status:
+   - posted, suppressed, held local, or not eligible.
+   - exact suppression reason when available.
+
+Important distinction:
+
+```text
+Original T1/T2 may remain valid for the original plan.
+Current fresh-entry state may still be no-chase.
+Those two facts must be reported separately.
+```
 
 ## Phase 8.45: Obsolete And Dirty Code Cleanup Audit
 
@@ -370,6 +414,28 @@ Prove the new command path before trusting it live.
 
 No, research/replay only.
 
+## Phase 9H: HTF FVG Decision-Zone Alerts
+
+### Goal
+
+Make Discord name important 15M/60M/120M/240M FVG or imbalance decision zones when the scanner already has a structured FVG/imbalance line in the sand.
+
+### Rules
+
+- FVG zones are reaction, obstacle, target-management, hold/fold, and continuation-gate context.
+- FVG zones are not standalone trade approvals.
+- FVG zones do not change `canExecute`.
+- FVG zones do not replace completed 5M trigger, protected structure stop, risk, invalidation, target room, or session gates.
+- Discord shall name the line, why it matters, the hold condition, the fold condition, and no-chase instruction.
+
+### Installed behavior
+
+`DeskState.primaryDeskPlay.fvgDecisionZone` is populated only when the active scanner-owned line in the sand is already tagged as an FVG/imbalance line. Current Desk Plan Discord output can then show a compact `FVG Decision Zone` block.
+
+### Trading logic impact
+
+No intended execution approval change. Discord visibility wording changes only.
+
 ## Recommended Implementation Order
 
 1. Phase 8.45: Obsolete And Dirty Code Cleanup Audit
@@ -383,6 +449,7 @@ No, research/replay only.
 9. Phase 9D: Discord Watch Alerts
 10. Phase 9E: Watch-To-Plan Promotion
 11. Phase 9F: Replay Validation
+12. Phase 9H: HTF FVG Decision-Zone Alerts
 
 ## New Chat Starter Prompt
 

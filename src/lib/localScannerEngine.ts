@@ -398,6 +398,33 @@ export interface DeskLevelTransitionMap {
   };
 }
 
+export type DeskFvgDecisionZoneState =
+  | 'watch'
+  | 'holding'
+  | 'accepted_through'
+  | 'retest_required'
+  | 'unknown';
+
+export interface DeskFvgDecisionZone {
+  sourceOfTruth: 'scanner_htf_fvg_decision_zone';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lineInSand: number;
+  zoneLabel: string;
+  zoneSource: 'active_ruleset_htf_line_in_sand';
+  sourceTimeframe: '15M' | '60M' | '120M' | '240M' | 'unknown';
+  state: DeskFvgDecisionZoneState;
+  whyItMatters: string;
+  holdCondition: string;
+  foldCondition: string;
+  managementInstruction: string;
+  noChase: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+  };
+}
+
 export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
 
 export interface DeskHtfObjective {
@@ -508,6 +535,7 @@ export interface PrimaryDeskPlay {
   targetReactionLabel: string | null;
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
+  fvgDecisionZone?: DeskFvgDecisionZone | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   nextTrigger: string | null;
@@ -1216,6 +1244,79 @@ function buildLevelTransitionMap(args: {
     nextStructureInstruction: nextLines
       ? `After a protected completed 5M market-structure shift, use ${nextLines} as the next line-in-the-sand map.`
       : 'No next 5M shift line is mapped yet; wait for protected structure before planning the opposite side.',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+    },
+  };
+}
+
+function fvgDecisionZoneTimeframe(reason: string | null | undefined): DeskFvgDecisionZone['sourceTimeframe'] {
+  const text = String(reason || '').toUpperCase();
+  if (/\b240M\b|\b4H\b/.test(text)) return '240M';
+  if (/\b120M\b|\b2H\b/.test(text)) return '120M';
+  if (/\b60M\b|\b1H\b/.test(text)) return '60M';
+  if (/\b15M\b/.test(text)) return '15M';
+  return 'unknown';
+}
+
+function fvgDecisionZoneState(args: {
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lineInSand: number;
+  currentPrice?: number | null;
+  ruleStatus: NonNullable<NonNullable<SetupCandidate['activeRuleset']>['htfLineInSand']>['status'];
+}): DeskFvgDecisionZoneState {
+  const price = numericOrNull(args.currentPrice);
+  if (price === null) return 'unknown';
+  if (args.direction === 'LONG') {
+    if (price >= args.lineInSand) return args.ruleStatus === 'passed' ? 'holding' : 'retest_required';
+    return 'accepted_through';
+  }
+  if (price <= args.lineInSand) return args.ruleStatus === 'passed' ? 'holding' : 'retest_required';
+  return 'accepted_through';
+}
+
+function buildFvgDecisionZone(
+  candidate: SetupCandidate | null,
+  currentPrice?: number | null,
+): DeskFvgDecisionZone | null {
+  const rule = candidate?.activeRuleset?.htfLineInSand;
+  if (!rule || candidate?.direction !== 'LONG' && candidate?.direction !== 'SHORT') return null;
+  if (numericOrNull(rule.lineInSand) === null) return null;
+  const reasonText = `${rule.lineReason || ''} ${rule.requiredClose || ''} ${rule.obstacleType || ''}`;
+  const isFvgLine = rule.obstacleType === 'imbalance_zone' || /FVG|fair value gap|imbalance/i.test(reasonText);
+  if (!isFvgLine) return null;
+  const direction = candidate.direction;
+  const lineInSand = rule.lineInSand as number;
+  const sourceTimeframe = fvgDecisionZoneTimeframe(rule.lineReason || rule.requiredClose);
+  const zoneLabel = sourceTimeframe === 'unknown'
+    ? 'FVG / imbalance decision zone'
+    : `${sourceTimeframe} FVG / imbalance decision zone`;
+  const holdCondition = direction === 'LONG'
+    ? `Long context needs completed 5M hold/reclaim above ${lineInSand.toFixed(2)}.`
+    : `Short context needs completed 5M hold/rejection below ${lineInSand.toFixed(2)}.`;
+  const foldCondition = direction === 'LONG'
+    ? `Fold: completed acceptance below ${lineInSand.toFixed(2)} turns this FVG into resistance/short management context.`
+    : `Fold: completed acceptance above ${lineInSand.toFixed(2)} turns this FVG into support/long management context.`;
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_decision_zone',
+    direction,
+    lineInSand,
+    zoneLabel,
+    zoneSource: 'active_ruleset_htf_line_in_sand',
+    sourceTimeframe,
+    state: fvgDecisionZoneState({
+      direction,
+      lineInSand,
+      currentPrice,
+      ruleStatus: rule.status,
+    }),
+    whyItMatters: rule.lineReason || `${zoneLabel} selected by the scanner as the active line in the sand.`,
+    holdCondition,
+    foldCondition,
+    managementInstruction: 'FVG is a reaction/management zone only. It can frame the story, obstacle, target, hold, or fold condition, but it does not approve execution without completed 5M proof and normal canExecute gates.',
+    noChase: 'No chase inside or beyond the FVG. Wait for completed 5M close/hold/retest proof.',
     approvalBoundary: {
       changesTradeApprovals: false,
       changesCanExecute: false,
@@ -2635,6 +2736,7 @@ function buildPrimaryDeskPlay(args: {
     longAbove: longBias.lineInSand,
     shortBelow: shortBias.lineInSand,
   });
+  const fvgDecisionZone = buildFvgDecisionZone(args.candidate, args.currentPrice);
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
@@ -2674,6 +2776,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionLabel,
     targetReactionReason,
     levelTransition,
+    fvgDecisionZone,
     htfObjectiveLadder,
     htfProtectedStructureMap,
     nextTrigger,

@@ -1219,6 +1219,19 @@ const deskPlayPendingShortMapPayload = compactDiscordSummary({
       lineInSand: 7600,
       longAbove: 7610,
       shortBelow: 7600,
+      fvgDecisionZone: {
+        sourceOfTruth: 'scanner_htf_fvg_decision_zone',
+        direction: 'SHORT',
+        lineInSand: 7600,
+        zoneLabel: '60M FVG / imbalance decision zone',
+        sourceTimeframe: '60M',
+        state: 'retest_required',
+        whyItMatters: '7600.00 matters because it is the 60M bearish FVG lower boundary and active short line in the sand.',
+        holdCondition: 'Short context needs completed 5M hold/rejection below 7600.00.',
+        foldCondition: 'Fold: completed acceptance above 7600.00 turns this FVG into support/long management context.',
+        managementInstruction: 'FVG is a reaction/management zone only. It does not approve execution without completed 5M proof and canExecute.',
+        noChase: 'No chase inside or beyond the FVG. Wait for completed 5M close/hold/retest proof.',
+      },
       nextTrigger: 'Completed 5M close and hold below 7600.00 required before short review can build levels.',
       invalidation: null,
       noChase: 'No chase. Wait for completed 5M proof and protected structure.',
@@ -1305,6 +1318,11 @@ assert.ok(pendingShortMapText.includes('Opposing Side: LONG N/A unavailable'));
 assert.ok(pendingShortMapText.includes('Conflict: HTF data-limited; context only'));
 assert.ok(pendingShortMapText.includes('Readiness: review map - levels pending'));
 assert.ok(pendingShortMapText.includes('⚖️ 2H: RANGE; bull above 7651.50 / bear below 7591.00'));
+assert.ok(pendingShortMapText.includes('FVG Decision Zone:'));
+assert.ok(pendingShortMapText.includes('60M FVG / imbalance decision zone: 7600.00 (retest required)'));
+assert.ok(pendingShortMapText.includes('Hold: Short context needs completed 5M hold/rejection below 7600.00.'));
+assert.ok(pendingShortMapText.includes('Fold: completed acceptance above 7600.00 turns this FVG into support/long management context.'));
+assert.ok(pendingShortMapText.includes('FVG is a reaction/management zone only.'));
 assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
 assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
 assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);

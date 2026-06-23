@@ -156,6 +156,45 @@ If reliability is `data_limited`, the output must state that HTF is context only
 
 Data-limited output must not say HTF conflict confirmed, bullish structure confirmed, bearish structure confirmed, candidate ready, or anything equivalent.
 
+### Mandatory Current Trade Report Contract
+
+When the user asks for the current trade plan, current market read, HTF read, Discord plan status, target validity, or whether a trade is still valid, Codex shall answer in the same structured report format every time.
+
+The report shall include:
+
+1. Decision:
+   * Trade / watch / no fresh entry / no trade.
+   * Direction.
+   * `canExecute` status.
+   * Human-review-only status.
+2. Current price and candle:
+   * Latest completed 5M candle timestamp and close.
+   * Current bridge price when available.
+   * Candle completion status.
+3. Trade plan:
+   * Entry, stop, risk, T1, T2, and invalidation.
+   * If no fresh plan exists, state that clearly and show only historical/reference levels as context.
+4. HTF story:
+   * 15M, 60M, 120M, and 240M read.
+   * Support, conflict, caution, and data sufficiency.
+5. Line in the sand:
+   * Exact level.
+   * Why it matters.
+   * Required completed candle close or retest condition.
+   * What happens above and below.
+6. Target and management:
+   * Whether T1/T2 are still valid for the original plan.
+   * Whether each level is a fresh-entry target, management target, reaction zone, or historical target.
+   * Next objective and runner condition when available.
+7. No-chase / fresh-entry status:
+   * Whether a fresh entry remains.
+   * If missed, what new proof is required.
+8. Discord status:
+   * Posted / suppressed / held local / not eligible.
+   * Exact suppression reason when available.
+
+Codex must not collapse these distinctions. A target can remain valid for an earlier plan while the current fresh-entry state is no-chase. In that case, Codex shall explicitly say the target is still valid as management or historical context, and separately say whether a new entry is available.
+
 ---
 
 ## Before Editing Code

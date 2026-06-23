@@ -43,5 +43,11 @@ export function professionalizeReportText(value?: string | null): string {
     .replace(/Fair value gap/gi, 'Price imbalance')
     .replace(/fair value gap/gi, 'price imbalance')
     .replace(/\bFVG\b/g, 'imbalance')
+    .replace(/imbalance Decision Zone/g, 'FVG Decision Zone')
+    .replace(/Price imbalance \/ imbalance decision zone/g, 'FVG / imbalance decision zone')
+    .replace(/imbalance \/ imbalance decision zone/g, 'FVG / imbalance decision zone')
+    .replace(/imbalance is a reaction\/management zone only/g, 'FVG is a reaction/management zone only')
+    .replace(/this imbalance into/g, 'this FVG into')
+    .replace(/beyond the imbalance/g, 'beyond the FVG')
     .replace(/\bMSS\b/g, 'structure shift');
 }
