@@ -4160,7 +4160,7 @@ try {
     tradeDate: '2026-05-26',
     sessionLabel: 'morning',
   });
-  assert.ok(demotedChartHtml.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+  assert.ok(demotedChartHtml.includes('[AM REVIEW] MES - LONG'));
   assert.equal(/LONG EXECUTABLE|>EXECUTABLE</i.test(demotedChartHtml), false);
 
   const riskTooWideCandidate: SetupCandidate = {

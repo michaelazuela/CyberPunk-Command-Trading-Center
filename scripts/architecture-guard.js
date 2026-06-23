@@ -552,12 +552,11 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('Bias:') ||
     !formatterContent.includes('Line in sand:') ||
     !formatterContent.includes('Map Side:') ||
-    !formatterContent.includes('Map Role:') ||
-    !formatterContent.includes('Opposing Side:') ||
-    !formatterContent.includes('Opposing Role:') ||
+    !formatterContent.includes('suppressPendingLevels') ||
+    !formatterContent.includes("discordAction === 'post_conditional'") ||
     !formatterContent.includes('Conflict:') ||
     !formatterContent.includes('Readiness:') ||
-    !formatterContent.includes('context only') ||
+    !formatterContent.includes('Decision support only. No automated orders.') ||
     !formatterContent.includes('watch only - do not execute') ||
     !formatterContent.includes('review map - levels pending') ||
     !formatterContent.includes('Bottom line: HTF map only; 5M proof + canExecute. No chase') ||

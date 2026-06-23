@@ -38,6 +38,8 @@
     "phase1:high-confidence-conditional": "tsx tools/automation/high-confidence-conditional-phase1.test.ts --phase=all",
     "phase2:setup-matrix": "tsx tools/automation/high-confidence-conditional-phase2.test.ts",
     "phase2:high-confidence-conditional": "tsx tools/automation/high-confidence-conditional-phase2.test.ts",
+    "phase3:live-supervisor": "tsx tools/automation/high-confidence-conditional-phase3.test.ts --loops=2",
+    "phase3:high-confidence-conditional": "tsx tools/automation/high-confidence-conditional-phase3.test.ts --loops=2",
     "diagnostic:sniper-watch-research-audit": "tsx tools/automation/sniper-watch-research-audit.ts",
     "diagnostic:active-mss-replay:lean": "node --max-old-space-size=4096 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --slim-opening-drive=true --max-samples=80",
     "diagnostic:active-mss-replay:heavy": "node --max-old-space-size=8192 --import tsx tools/automation/thirty-day-active-mss-plan-replay.ts --allow-heavy-replay=true",

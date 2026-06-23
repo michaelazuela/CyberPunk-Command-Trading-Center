@@ -914,6 +914,8 @@ function compactGeneralAlertLines(args: CompactDiscordSummaryArgs, candidate: Se
     ...(riskLines.length ? [''] : []),
     ...htfLines,
     ...(htfLines.length ? [''] : []),
+    'Decision support only. No automated orders.',
+    '',
     'Invalidation:',
     compactLine(candidate.invalidation || normalized.invalidation || 'Invalidation not available. Do not act without protected structure.', 92),
   ];
@@ -1480,6 +1482,8 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
     candidateHtfTargetLine(candidate, levels),
     '',
+    'Decision support only. No automated orders.',
+    '',
     `Status: ${statusText}`,
     deskPlayChartStatusLine({
       hasChart: args.attachments.chartPlan,
@@ -1742,7 +1746,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     if (safety.reviewOnly) return 'Decision class: REVIEW ONLY - wait for completed 5M proof + canExecute.';
     return 'Decision class: WAIT - no executable approval.';
   };
-  const sideLinesFor = (side: 'LONG' | 'SHORT'): { lines: string[]; hasLevels: boolean } => {
+  const sideLinesFor = (side: 'LONG' | 'SHORT', options: { suppressPendingLevels?: boolean } = {}): { lines: string[]; hasLevels: boolean } => {
     const line = deskPlayLineForDirection(play, side);
     const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
     const triggerWord = side === 'LONG' ? 'ABOVE' : 'BELOW';
@@ -1750,13 +1754,18 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     if (!levels) {
       return {
         hasLevels: false,
-        lines: [
-          sideBreakoutLabel(side, triggerWord, line),
-          'Entry: pending',
-          'Stop: pending',
-          'T1: pending',
-          'T2: pending',
-        ],
+        lines: options.suppressPendingLevels
+          ? [
+              sideBreakoutLabel(side, triggerWord, line),
+              'No complete app-owned plan on this side.',
+            ]
+          : [
+              sideBreakoutLabel(side, triggerWord, line),
+              'Entry: pending',
+              'Stop: pending',
+              'T1: pending',
+              'T2: pending',
+            ],
       };
     }
     if (safety.highConfidenceConditional) {
@@ -1811,12 +1820,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     safety: { reviewOnly: boolean; reason: string | null; highConfidenceConditional: boolean },
     hasLevels: boolean,
   ): string[] => {
-    const opposingSide = mapSide === 'LONG' ? 'SHORT' : 'LONG';
     return [
       `Map Side: ${mapSide === 'WAIT' ? 'WAIT N/A' : deskPlaySideStrength(play, mapSide)}`,
-      `Map Role: ${mapSide === 'WAIT' ? 'no active directional map' : 'review map'}`,
-      `Opposing Side: ${mapSide === 'WAIT' ? 'N/A' : deskPlaySideStrength(play, opposingSide)}`,
-      `Opposing Role: ${mapSide === 'WAIT' ? 'context unavailable' : 'context only'}`,
       `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
       `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
     ];
@@ -1824,6 +1829,9 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   if (direction !== 'LONG' && direction !== 'SHORT') {
     const longWait = sideLinesFor('LONG');
     const shortWait = sideLinesFor('SHORT');
+    const waitHasOneCompleteSide = longWait.hasLevels !== shortWait.hasLevels;
+    const longWaitDisplay = waitHasOneCompleteSide && !longWait.hasLevels ? sideLinesFor('LONG', { suppressPendingLevels: true }) : longWait;
+    const shortWaitDisplay = waitHasOneCompleteSide && !shortWait.hasLevels ? sideLinesFor('SHORT', { suppressPendingLevels: true }) : shortWait;
     const waitMapSide = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : 'WAIT';
     const waitPrimarySafety = play.direction === 'LONG' || play.direction === 'SHORT'
       ? sidePresentationSafety(play.direction)
@@ -1836,6 +1844,8 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         ? 'Status: High-confidence conditional trade plan; wait for completed 5M trigger + canExecute.'
       : 'Status: Review only until 5M trigger + canExecute.';
     const waitHasReferenceLevels = waitPrimarySafety.reviewOnly && (longWait.hasLevels || shortWait.hasLevels);
+    const waitHtfRows = deskPlayHtfLineRows(play, args.currentPrice);
+    const waitUsefulHtfRows = waitHtfRows.some((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row)) ? waitHtfRows : [];
     return [
       `${args.instrument} Current Desk Plan`,
       '',
@@ -1858,19 +1868,19 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       }),
       ...readinessLinesFor(waitMapSide, waitPrimarySafety, longWait.hasLevels || shortWait.hasLevels),
       '',
-      'HTF Lines:',
-      ...deskPlayHtfLineRows(play, args.currentPrice),
+      ...(waitUsefulHtfRows.length ? ['HTF Lines:', ...waitUsefulHtfRows] : []),
       ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
       '',
-      ...longWait.lines,
+      ...longWaitDisplay.lines,
       '',
-      ...shortWait.lines,
+      ...shortWaitDisplay.lines,
       '',
       'No active LONG/SHORT plan with complete app-owned levels.',
       deskPlayHtfTargetLine(play),
       deskPlayRunnerLine(play),
       deskPlayBottomLineLine(direction),
       '',
+      'Decision support only. No automated orders.',
       waitStatusLine,
       deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: waitHasReferenceLevels }),
     ];
@@ -1878,9 +1888,11 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
   const lineInSand = deskPlayLineForDirection(play, direction);
   const invalidWord = direction === 'LONG' ? 'below' : 'above';
   const primary = sideLinesFor(direction);
-  const opposite = sideLinesFor(direction === 'LONG' ? 'SHORT' : 'LONG');
+  const opposite = sideLinesFor(direction === 'LONG' ? 'SHORT' : 'LONG', { suppressPendingLevels: primary.hasLevels });
   const primaryLevels = deskPlayDecisionMapLevels(args.normalized, direction, lineInSand, play, args.currentPrice);
   const primarySafety = sidePresentationSafety(direction);
+  const htfRows = deskPlayHtfLineRows(play, args.currentPrice);
+  const usefulHtfRows = htfRows.some((row) => !/UNKNOWN;\s*changes at N\/A/i.test(row)) ? htfRows : [];
   const statusLine = primarySafety.reviewOnly
     ? primarySafety.highConfidenceConditional
       ? `Status: High-confidence conditional trade plan; ${primarySafety.reason || 'completed 5M proof missing'}. Wait for completed 5M trigger + canExecute.`
@@ -1904,10 +1916,9 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       direction,
       lineInSand,
     }),
-    ...readinessLinesFor(direction, primarySafety, primary.hasLevels || opposite.hasLevels),
+    ...(primarySafety.highConfidenceConditional ? [] : readinessLinesFor(direction, primarySafety, primary.hasLevels || opposite.hasLevels)),
     '',
-    'HTF Lines:',
-    ...deskPlayHtfLineRows(play, args.currentPrice),
+    ...(usefulHtfRows.length ? ['HTF Lines:', ...usefulHtfRows] : []),
     ...(deskPlayFvgDecisionZoneLines(play).length ? ['', ...deskPlayFvgDecisionZoneLines(play)] : []),
     '',
     ...primary.lines,
@@ -1919,6 +1930,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     deskPlayRunnerLine(play),
     deskPlayBottomLineLine(direction),
     '',
+    'Decision support only. No automated orders.',
     statusLine,
     deskPlayChartStatusLine({ hasChart: args.attachments.chartPlan, hasLevels: primary.hasLevels || opposite.hasLevels }),
   ];
@@ -1933,10 +1945,23 @@ function deskPlayHasCompletePlanningLevels(args: CompactDiscordSummaryArgs, dire
 
 function deskPlayHeadlineDirection(args: CompactDiscordSummaryArgs): 'LONG' | 'SHORT' | 'WAIT' {
   const play = args.deskState?.primaryDeskPlay;
-  if (!play || (play.direction !== 'LONG' && play.direction !== 'SHORT')) return 'WAIT';
+  if (!play) return 'WAIT';
+  if (play.direction !== 'LONG' && play.direction !== 'SHORT') {
+    const promotedCandidate = args.deskState?.discordAction === 'post_conditional'
+      ? args.candidates.find((candidate) => (
+          (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
+          isHighConfidenceConditionalCandidate(candidate, args.normalized) &&
+          deskPlayHasCompletePlanningLevels(args, candidate.direction)
+        ))
+      : null;
+    return promotedCandidate?.direction === 'LONG' || promotedCandidate?.direction === 'SHORT' ? promotedCandidate.direction : 'WAIT';
+  }
   const bias = play.direction === 'LONG' ? play.longBias : play.shortBias;
-  if (bias?.state !== 'primary') return 'WAIT';
-  return deskPlayHasCompletePlanningLevels(args, play.direction) ? play.direction : 'WAIT';
+  const hasCompleteLevels = deskPlayHasCompletePlanningLevels(args, play.direction);
+  if (bias?.state !== 'primary') {
+    return args.deskState?.discordAction === 'post_conditional' && hasCompleteLevels ? play.direction : 'WAIT';
+  }
+  return hasCompleteLevels ? play.direction : 'WAIT';
 }
 
 function deskPlayPrimaryLabel(

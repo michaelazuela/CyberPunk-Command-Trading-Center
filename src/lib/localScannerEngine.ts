@@ -1071,11 +1071,17 @@ function candidateDecisionQuality(candidate: SetupCandidate | null | undefined):
 
 function isHighQualityConditionalReviewCandidate(candidate: SetupCandidate | null | undefined): boolean {
   const score = candidateDecisionQuality(candidate);
+  const executionStatusEligible =
+    candidate?.executionStatus === ExecutionStatus.Conditional ||
+    candidate?.executionStatus === ExecutionStatus.Executable;
+  const blockerEligible =
+    candidate?.executionStatus === ExecutionStatus.Executable ||
+    candidate?.blockReason === NoTradeReason.EntryTriggerPending;
   return Boolean(
     candidate &&
     (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
-    candidate.executionStatus === ExecutionStatus.Conditional &&
-    candidate.blockReason === NoTradeReason.EntryTriggerPending &&
+    executionStatusEligible &&
+    blockerEligible &&
     hasFullPlanLevels(candidate) &&
     hasMeaningfulStructuredEvidence(candidate) &&
     score !== null &&

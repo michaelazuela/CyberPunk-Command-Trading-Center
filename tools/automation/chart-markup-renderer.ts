@@ -714,14 +714,14 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     ? unsafeDeskReview
       ? `[${prefix} PREP] ${input.instrument} - ${model.direction} FAILED`
       : `[${prefix} PREP] ${input.instrument} - ${model.direction} DESK MAP`
-    : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction} ${planHeadlineStatus(status)}`;
+    : `[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${model.direction}`;
   const badge = isDeskPlayContext ? unsafeDeskReview ? 'WATCH ONLY' : 'REVIEW ONLY' : status === 'EXECUTABLE' ? status : 'REVIEW ONLY';
   const action = isDeskPlayContext
     ? unsafeDeskReview ? 'Action: no execution' : hasDeskPlayLevels ? 'Action: wait for completed 5M proof' : 'Action: wait for protected 5M stop'
     : actionStateLine(status);
   return `
     <rect x="462" y="20" width="1054" height="100" rx="10" fill="${headerFill}" stroke="${accent}" stroke-width="2.4" opacity=".97" />
-    <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(title)}</text>
+    <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(compact(title, 34))}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
     <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : 'Desk Map - Review Levels' : model.model, 42))}</text>
@@ -1431,7 +1431,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   ${Array.from({ length: 8 }, (_, index) => `<line x1="112" y1="${214 + index * 76}" x2="1424" y2="${214 + index * 76}" stroke="#12201c" stroke-width="1" />`).join('')}
   ${renderDirectionLogo(isLong).replace('translate(470 29)', 'translate(112 42)')}
   <rect x="202" y="32" width="1284" height="108" rx="12" fill="${isLong ? '#062315' : '#261406'}" stroke="${accent}" stroke-width="2.3" opacity=".97" />
-  <text x="232" y="76" class="title">[${prefix} ${planHeadlineMode(status)}] ${escapeHtml(input.instrument)} - ${plan.direction} ${planHeadlineStatus(status)}</text>
+  <text x="232" y="76" class="title">${escapeHtml(compact(`[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${plan.direction}`, 30))}</text>
   <text x="232" y="112" class="subtitle">${escapeHtml(compact(plan.model, 54))}</text>
   <rect x="1122" y="48" width="180" height="42" rx="21" fill="${statusColor(status)}" opacity=".94" />
   <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status === 'EXECUTABLE' ? status : 'REVIEW ONLY')}</text>
