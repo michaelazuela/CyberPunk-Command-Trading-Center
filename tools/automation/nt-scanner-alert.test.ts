@@ -902,6 +902,47 @@ assert.equal(
   false,
   'After the first Sunday 4H completion, stale Friday 4H coverage must still block.',
 );
+const scannerCoverageBarsEnding = (end: string, minutes: number, count: number) => {
+  const endMs = Date.parse(end);
+  const startMs = endMs - Math.max(0, count - 1) * minutes * 60_000;
+  return Array.from({ length: count }, (_, index) => ({
+    time: new Date(startMs + index * minutes * 60_000).toISOString(),
+    open: 7400,
+    high: 7410,
+    low: 7390,
+    close: 7405,
+    volume: 1000,
+  }));
+};
+const scannerOpenTimestampCoverageFixtures = [
+  { timeframe: '5m' as const, minutes: 5, count: 8700, insideLast: '2026-06-23T19:10:00-04:00', outsideLast: '2026-06-23T19:00:00-04:00' },
+  { timeframe: '15m' as const, minutes: 15, count: 2900, insideLast: '2026-06-23T19:00:00-04:00', outsideLast: '2026-06-23T18:30:00-04:00' },
+  { timeframe: '60m' as const, minutes: 60, count: 730, insideLast: '2026-06-23T18:00:00-04:00', outsideLast: '2026-06-23T17:00:00-04:00' },
+  { timeframe: '120m' as const, minutes: 120, count: 365, insideLast: '2026-06-23T17:00:00-04:00', outsideLast: '2026-06-23T15:00:00-04:00' },
+  { timeframe: '240m' as const, minutes: 240, count: 183, insideLast: '2026-06-23T17:00:00-04:00', outsideLast: '2026-06-23T11:00:00-04:00' },
+];
+for (const fixture of scannerOpenTimestampCoverageFixtures) {
+  assert.equal(
+    barsCoverRequestedLookback(
+      scannerCoverageBarsEnding(fixture.insideLast, fixture.minutes, fixture.count),
+      '2026-05-24T00:00:00-04:00',
+      '2026-06-23T19:45:00-04:00',
+      fixture.timeframe,
+    ),
+    true,
+    `${fixture.timeframe} scanner preload coverage should accept the latest completed open-timestamp bar.`,
+  );
+  assert.equal(
+    barsCoverRequestedLookback(
+      scannerCoverageBarsEnding(fixture.outsideLast, fixture.minutes, fixture.count),
+      '2026-05-24T00:00:00-04:00',
+      '2026-06-23T19:45:00-04:00',
+      fixture.timeframe,
+    ),
+    false,
+    `${fixture.timeframe} scanner preload coverage should still reject genuinely stale history.`,
+  );
+}
 assert.deepEqual(resolveScannerDiscordWebhookUrl({
   DISCORD_WEBHOOK_URL: 'https://discord.example/generic',
   SCANNER_DISCORD_WEBHOOK_URL: 'https://discord.example/scanner',

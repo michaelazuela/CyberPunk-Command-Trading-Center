@@ -40,6 +40,10 @@ function timeframeMinutes(timeframe: MarketBarTimeframe): number {
   return Number(timeframe.replace('m', '')) || 5;
 }
 
+export function latestOpenTimestampCoverageToleranceMs(timeframe: MarketBarTimeframe): number {
+  return (timeframeMinutes(timeframe) * 2 + 30) * 60_000;
+}
+
 function normalizedTimestamp(value: string | null | undefined): string {
   return normalizeCandleTimeEt(String(value || ''));
 }
@@ -249,7 +253,7 @@ export function verifyMarketDataWindow(args: {
       ? (toMs - closedStartReopenMs) / (24 * 60 * 60 * 1000)
       : args.requiredLookbackDays - 1,
   );
-  const latestCompletedToleranceMs = (timeframeMinutes(args.timeframe) + 30) * 60_000;
+  const latestCompletedToleranceMs = latestOpenTimestampCoverageToleranceMs(args.timeframe);
   const startCoverageToleranceMs = (args.requiredLookbackDays > 1 ? 24 * 60 : timeframeMinutes(args.timeframe)) * 60_000;
   const closedStartCoverageSatisfied = closedStartReopenMs !== null &&
     firstMs !== null &&

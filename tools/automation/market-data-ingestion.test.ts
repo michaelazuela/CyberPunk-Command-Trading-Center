@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   countTimeframeIntervalMismatches,
+  latestOpenTimestampCoverageToleranceMs,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
   repairMarketDataBarsWithinBaseRange,
@@ -32,6 +33,15 @@ function evenlySpacedBars(start: string, end: string, count: number): NinjaBridg
 
 function intervalBars(start: string, minutes: number, count: number): NinjaBridgeBar[] {
   const startMs = Date.parse(start);
+  return Array.from({ length: count }, (_, index) => {
+    const iso = new Date(startMs + index * minutes * 60_000).toISOString();
+    return bar(iso);
+  });
+}
+
+function intervalBarsEnding(end: string, minutes: number, count: number): NinjaBridgeBar[] {
+  const endMs = Date.parse(end);
+  const startMs = endMs - Math.max(0, count - 1) * minutes * 60_000;
   return Array.from({ length: count }, (_, index) => {
     const iso = new Date(startMs + index * minutes * 60_000).toISOString();
     return bar(iso);
@@ -252,6 +262,48 @@ for (const fixture of liveTuesdayMorningHtfWindows) {
   });
   assert.equal(verified.sufficient, true, `${fixture.timeframe} live Tuesday morning HTF cache should be sufficient`);
   assert.equal(verified.dataLimitation.status, 'none');
+}
+
+const openTimestampCoverageFixtures = [
+  { timeframe: '5m' as const, minutes: 5, minimumBars: 500, count: 8700, insideLast: '2026-06-23T19:10:00-04:00', outsideLast: '2026-06-23T19:00:00-04:00' },
+  { timeframe: '15m' as const, minutes: 15, minimumBars: 500, count: 2900, insideLast: '2026-06-23T19:00:00-04:00', outsideLast: '2026-06-23T18:30:00-04:00' },
+  { timeframe: '60m' as const, minutes: 60, minimumBars: 120, count: 730, insideLast: '2026-06-23T18:00:00-04:00', outsideLast: '2026-06-23T17:00:00-04:00' },
+  { timeframe: '120m' as const, minutes: 120, minimumBars: 80, count: 365, insideLast: '2026-06-23T17:00:00-04:00', outsideLast: '2026-06-23T15:00:00-04:00' },
+  { timeframe: '240m' as const, minutes: 240, minimumBars: 40, count: 183, insideLast: '2026-06-23T17:00:00-04:00', outsideLast: '2026-06-23T11:00:00-04:00' },
+];
+for (const fixture of openTimestampCoverageFixtures) {
+  assert.equal(
+    latestOpenTimestampCoverageToleranceMs(fixture.timeframe),
+    (fixture.minutes * 2 + 30) * 60_000,
+    `${fixture.timeframe} should use the shared open-timestamp coverage tolerance`,
+  );
+  const insideWindow = verifyMarketDataWindow({
+    bars: intervalBarsEnding(fixture.insideLast, fixture.minutes, fixture.count),
+    timeframe: fixture.timeframe,
+    requestedFrom: '2026-05-24T00:00:00-04:00',
+    requestedTo: '2026-06-23T19:45:00-04:00',
+    requiredLookbackDays: 30,
+    minimumBars: fixture.minimumBars,
+    source: 'market_bars_bridge_repair',
+    cacheBars: fixture.count,
+    bridgeRepairBars: 10,
+    bridgeInstrument: 'MES 09-26',
+  });
+  assert.equal(insideWindow.sufficient, true, `${fixture.timeframe} open-timestamp latest bar should satisfy history coverage`);
+
+  const outsideWindow = verifyMarketDataWindow({
+    bars: intervalBarsEnding(fixture.outsideLast, fixture.minutes, fixture.count),
+    timeframe: fixture.timeframe,
+    requestedFrom: '2026-05-24T00:00:00-04:00',
+    requestedTo: '2026-06-23T19:45:00-04:00',
+    requiredLookbackDays: 30,
+    minimumBars: fixture.minimumBars,
+    source: 'market_bars_bridge_repair',
+    cacheBars: fixture.count,
+    bridgeRepairBars: 10,
+    bridgeInstrument: 'MES 09-26',
+  });
+  assert.equal(outsideWindow.sufficient, false, `${fixture.timeframe} stale latest bar should still fail history coverage`);
 }
 
 const mondayMorningLateStartWindow = verifyMarketDataWindow({

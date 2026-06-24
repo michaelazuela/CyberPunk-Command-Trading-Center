@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-23
+Task: Clean up cross-timeframe scanner history reliability for open-timestamped OHLC bars.
+Files changed: tools/automation/market-data-ingestion.ts, tools/automation/market-data-ingestion.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Live scanner coverage showed 120M history could be falsely marked data-limited while 240M passed with the same latest timestamp. The scanner was judging higher-timeframe bar-open timestamps against a narrower latest-bar tolerance, which created a 120M reliability backdoor instead of a true missing-history defect.
+Tests run: npx tsx tools/automation/market-data-ingestion.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; 3x loopback verification across both focused tests; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Focused tests, the 3x loopback, required guards, lint, and build passed. Coverage was verified across all wired timeframes: 5M, 15M, 60M, 120M, and 240M. The verifier now applies one shared open-timestamp coverage tolerance instead of an accidental 120M-specific failure mode.
+Trading logic changed: No. This changes scanner history sufficiency classification and repair gating only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, or `canExecute`.
+Bridge impact: Yes, limited to data-quality classification. The scanner still reads `market_bars` first, still repairs from NinjaTrader, still rejects malformed/misaligned/stale history, and still reports true gaps as data-quality defects.
+Discord impact: Indirect only. False 120M data-limited suppression should be reduced when the latest valid 120M open-timestamped candle is current for its timeframe. True stale/missing history remains blocked.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart/observe scanner so live coverage records reflect the repaired sufficiency rule.
+
+## Previous Change
+
+Date: 2026-06-23
 Task: Fix high-confidence conditional Discord boundary routing and execution-status wording.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: Live scanner audits showed high-confidence POST_CONDITIONAL plans with complete levels could still be skipped by the Phase 11 rollout boundary even when the active scanner window was live. The trader-facing wording also made `canExecute=false` read like the plan was dead instead of a conditional plan waiting on the named completed 5M condition.

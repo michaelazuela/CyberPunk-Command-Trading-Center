@@ -101,6 +101,7 @@ import {
 import {
   barsMatchRequestedTimeframe,
   isSundayEveningFourHourReopenLagCovered,
+  latestOpenTimestampCoverageToleranceMs,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
   repairMarketDataBarsWithinBaseRange,
@@ -1719,7 +1720,7 @@ export function barsCoverRequestedLookback(
   if (first === null || last === null || from === null || to === null) return false;
   const loadedSpanDays = (last - first + timeframeMinutes(timeframe) * 60_000) / (24 * 60 * 60 * 1000);
   const requiredSpanDays = Math.max(0, SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS - 1);
-  const latestCompletedToleranceMs = (timeframeMinutes(timeframe) + 30) * 60_000;
+  const latestCompletedToleranceMs = latestOpenTimestampCoverageToleranceMs(timeframe);
   const startCoverageToleranceMs = 24 * 60 * 60_000;
   const latestBarTime = sorted[sorted.length - 1]?.time;
   const sundayEveningFourHourReopenLagCovered =
