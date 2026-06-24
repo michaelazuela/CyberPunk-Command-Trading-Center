@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Phase 5 HTF FVG live-observer drift contract.
+Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 1-3 now produce full-window HTF FVG inventory, lifecycle state, and active reaction line routing. Phase 5 hardens the live/replay observation checklist so active HTF FVG routing cannot be called ready unless routing, memory, cascade parent zone, and optional delivery/persistence payloads agree on the same active parent zone and line.
+Tests run: `npx tsx tools/automation/live-desk-observer.test.ts`; `npx tsx tools/automation/scanner-behavior-audit.test.ts`; `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`; `npx tsx src/lib/htfFvgFullWindowInventory.test.ts`; `npx tsx src/lib/htfFvgLifecycle.test.ts`; `npx tsx src/lib/htfFvgReactionMemory.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; real-tape dry run with `npx tsx tools/automation/live-desk-observer.ts --trade-date 2026-06-24 --instrument MES --session lunch --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The observer now reports Phase 5 contract events/failures, blocks Discord sign-off when active HTF FVG routing has missing or inconsistent machine-readable memory/cascade fields, and still reports old June 24 tapes as `not_evaluable` because they predate the routing fields.
+Trading logic changed: No. This is observer/checklist reporting only. It does not change setup definitions, ranking, candidate creation, entry, stop, target, risk, invalidation, bar-close handling, bridge behavior, Discord send cadence, or canExecute.
+Bridge impact: None. It reads existing scanner decision tape metadata only.
+Discord impact: No direct send behavior change. Observer sign-off now blocks when Phase 5 detects drift across routing/memory/cascade or optional payload/persistence text.
+Journal/RAG impact: No schema change. The observer only validates optional persisted payload text when such fields are present in the tape.
+Supabase impact: No migration added.
+Known risks: None known after verification. Existing 2026-06-24 tapes remain not evaluable until a fresh scanner run records the new routing fields.
+Next recommended action: Restart/rerun the scanner with the current build and use the live observer to confirm fresh tapes show Phase 4/5 ready before treating Discord sign-off as complete.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Correct live observer Phase 4 sign-off status for old-format tapes.
 Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
 Reason: The live observer previously reported `discordSignoffStatus=ready` when no Phase 4 failures were present, even if the scanner tape did not contain `htfFvgReactionRouting` fields at all. That made old-format tapes look ready when the Phase 4 live-format path was actually not evaluable.

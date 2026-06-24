@@ -28,6 +28,8 @@ interface ObserverObservation {
   htfFvgReactionRoutingStatus: string;
   htfFvgReactionRoutingDirection: string;
   htfFvgReactionPhase4Enforcement: 'pass' | 'fail' | 'not_applicable';
+  htfFvgPhase5ContractStatus: 'pass' | 'fail' | 'not_applicable';
+  htfFvgPhase5Issues: string[];
   lineInSand: number | null;
   canExecute: boolean | null;
   discordAction: string;
@@ -61,6 +63,8 @@ interface LiveDeskObserverReport {
     htfFvgReactionRoutingConflicts: number;
     htfFvgReactionBoundaryDrift: number;
     phase4EnforcementFailures: number;
+    htfFvgPhase5ContractEvents: number;
+    htfFvgPhase5ContractFailures: number;
     discordSignoffStatus: 'ready' | 'blocked' | 'not_evaluable';
     belowScoreSuppressions: number;
     latestCompleted5m: string | null;
@@ -156,6 +160,10 @@ function boolValue(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function samePrice(a: number | null, b: number | null): boolean {
+  return a !== null && b !== null && Math.abs(a - b) < 0.01;
+}
+
 function directionalValue(value: unknown): 'LONG' | 'SHORT' | null {
   return value === 'LONG' || value === 'SHORT' ? value : null;
 }
@@ -185,7 +193,104 @@ function selectedLevels(selected: Record<string, unknown>): string {
   ].join(', ');
 }
 
-function observerFlagsFor(event: Record<string, unknown>, selected: Record<string, unknown>, primary: Record<string, unknown>): string[] {
+function collectText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(collectText).filter(Boolean).join('\n');
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).map(collectText).filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+function optionalTextContains(args: {
+  container: unknown;
+  label: string;
+  expected: string | null;
+  issues: string[];
+}) {
+  if (!args.expected) return;
+  const text = collectText(args.container);
+  if (!text.trim()) return;
+  if (!text.includes(args.expected)) {
+    args.issues.push(`${args.label} text does not include "${args.expected}".`);
+  }
+}
+
+function phase5ContractFor(event: Record<string, unknown>, primary: Record<string, unknown>): {
+  status: ObserverObservation['htfFvgPhase5ContractStatus'];
+  issues: string[];
+} {
+  const routing = asRecord(primary.htfFvgReactionRouting);
+  const routedDirection = directionalValue(routing.direction);
+  if (routing.status !== 'routed_active_reaction' || !routedDirection) {
+    return { status: 'not_applicable', issues: [] };
+  }
+
+  const issues: string[] = [];
+  const lineInSand = numberValue(routing.lineInSand);
+  const lineLabel = stringValue(routing.lineLabel, '');
+  const lifecycleState = stringValue(routing.lifecycleState, '');
+  const standDown = stringValue(routing.standDown, '');
+  if (lineInSand === null) issues.push('routing.lineInSand is missing for active HTF FVG reaction.');
+  if (!lineLabel) issues.push('routing.lineLabel is missing for active HTF FVG reaction.');
+  if (!lifecycleState) issues.push('routing.lifecycleState is missing for active HTF FVG reaction.');
+  if (!standDown) issues.push('routing.standDown is missing for active HTF FVG reaction.');
+
+  const memory = asRecord(primary.htfFvgReactionMemory);
+  const activeReaction = asRecord(memory.activeReaction);
+  const activeDirection = directionalValue(activeReaction.direction);
+  const activeLower = numberValue(activeReaction.lower);
+  const activeUpper = numberValue(activeReaction.upper);
+  const activeTimeframe = stringValue(activeReaction.timeframe, '');
+  if (!activeDirection) {
+    issues.push('htfFvgReactionMemory.activeReaction is missing for active routing.');
+  } else {
+    if (activeDirection !== routedDirection) issues.push(`memory active direction ${activeDirection} does not match routing ${routedDirection}.`);
+    const expectedLine = routedDirection === 'SHORT' ? activeLower : activeUpper;
+    if (!samePrice(lineInSand, expectedLine)) {
+      issues.push(`routing line ${formatNumber(lineInSand)} does not match ${routedDirection} memory parent boundary ${formatNumber(expectedLine)}.`);
+    }
+    if (lineLabel && activeTimeframe && activeLower !== null && activeUpper !== null) {
+      const expectedZoneText = `${activeTimeframe} parent FVG ${activeLower.toFixed(2)}-${activeUpper.toFixed(2)}`;
+      if (!lineLabel.includes(expectedZoneText)) {
+        issues.push(`routing line label does not include memory parent zone "${expectedZoneText}".`);
+      }
+    }
+    if (lifecycleState && String(asRecord(activeReaction.lifecycle).state || '') !== lifecycleState) {
+      issues.push(`routing lifecycle ${lifecycleState} does not match memory lifecycle ${String(asRecord(activeReaction.lifecycle).state || 'missing')}.`);
+    }
+  }
+
+  const cascadeParent = asRecord(asRecord(primary.htfFvgCascade).parentZone);
+  const cascadeDirection = directionalValue(cascadeParent.direction);
+  const cascadeLower = numberValue(cascadeParent.lower);
+  const cascadeUpper = numberValue(cascadeParent.upper);
+  const cascadeTimeframe = stringValue(cascadeParent.timeframe, '');
+  if (!cascadeDirection) {
+    issues.push('htfFvgCascade.parentZone is missing for active HTF FVG reaction routing.');
+  } else {
+    if (cascadeDirection !== routedDirection) issues.push(`cascade parent direction ${cascadeDirection} does not match routing ${routedDirection}.`);
+    if (activeLower !== null && !samePrice(cascadeLower, activeLower)) issues.push(`cascade lower ${formatNumber(cascadeLower)} does not match memory lower ${formatNumber(activeLower)}.`);
+    if (activeUpper !== null && !samePrice(cascadeUpper, activeUpper)) issues.push(`cascade upper ${formatNumber(cascadeUpper)} does not match memory upper ${formatNumber(activeUpper)}.`);
+    if (activeTimeframe && cascadeTimeframe && cascadeTimeframe !== activeTimeframe) {
+      issues.push(`cascade timeframe ${cascadeTimeframe} does not match memory timeframe ${activeTimeframe}.`);
+    }
+  }
+
+  optionalTextContains({ container: asRecord(event.discord).payload, label: 'Discord payload', expected: lineLabel || null, issues });
+  optionalTextContains({ container: asRecord(event.attachments).chartMarkup, label: 'Chart payload', expected: lineInSand === null ? null : lineInSand.toFixed(2), issues });
+  optionalTextContains({ container: asRecord(event.attachments).priceLevelMap, label: 'Level-map payload', expected: lineInSand === null ? null : lineInSand.toFixed(2), issues });
+  optionalTextContains({ container: asRecord(asRecord(event.rag).trade_plan_json), label: 'RAG trade_plan_json', expected: lineLabel || null, issues });
+  optionalTextContains({ container: asRecord(event.trade_plan_json), label: 'trade_plan_json', expected: lineLabel || null, issues });
+
+  return {
+    status: issues.length ? 'fail' : 'pass',
+    issues,
+  };
+}
+
+function observerFlagsFor(event: Record<string, unknown>, selected: Record<string, unknown>, primary: Record<string, unknown>, phase5Status: ObserverObservation['htfFvgPhase5ContractStatus']): string[] {
   const flags: string[] = [];
   const discord = asRecord(event.discord);
   const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
@@ -222,6 +327,8 @@ function observerFlagsFor(event: Record<string, unknown>, selected: Record<strin
     ].some((value) => value !== false);
     if (boundaryChanged) flags.push('htf_fvg_reaction_boundary_drift');
   }
+  if (phase5Status === 'pass') flags.push('htf_fvg_phase5_contract_pass');
+  if (phase5Status === 'fail') flags.push('htf_fvg_phase5_contract_fail');
   if (canExecute === false) flags.push('not_executable');
   return flags;
 }
@@ -235,6 +342,9 @@ function traderReadFor(event: Record<string, unknown>, selected: Record<string, 
   const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
   const routedDirection = stringValue(htfFvgReactionRouting.direction, 'N/A');
 
+  if (flags.includes('htf_fvg_phase5_contract_fail')) {
+    return 'Discord sign-off blocked. Active HTF FVG reaction routing failed the Phase 5 contract across DeskState, memory, cascade, or optional delivery/persistence payloads.';
+  }
   if (flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')) {
     return `Discord sign-off blocked. Active HTF FVG reaction routing says ${routedDirection}, but primary/selected/campaign metadata or approval boundary drifted; review before Discord delivery.`;
   }
@@ -253,7 +363,7 @@ function traderReadFor(event: Record<string, unknown>, selected: Record<string, 
 
 function summarizeLatest(summary: LiveDeskObserverReport['summary']): string {
   if (summary.discordSignoffStatus === 'blocked') {
-    return `Discord sign-off blocked: ${summary.phase4EnforcementFailures} Phase 4 HTF FVG reaction routing enforcement failure(s) require review before delivery. This observer is research-only and does not change canExecute.`;
+    return `Discord sign-off blocked: ${summary.phase4EnforcementFailures} Phase 4 enforcement failure(s) and ${summary.htfFvgPhase5ContractFailures} Phase 5 contract failure(s) require review before delivery. This observer is research-only and does not change canExecute.`;
   }
   if (summary.discordSignoffStatus === 'not_evaluable') {
     return 'Discord sign-off not evaluable: this decision tape has no HTF FVG reaction routing fields, so Phase 4 routing enforcement cannot prove the live-format path yet.';
@@ -271,6 +381,7 @@ function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): strin
   if (summary.candidateDeskConflicts > 0) items.push('Review candidate-vs-DeskState language: when the selected setup conflicts with the primary map, Discord should say review-only first.');
   if (summary.discordSignoffStatus === 'not_evaluable') items.push('Do not treat this as Phase 4-ready. Regenerate the scanner tape after the current scanner build is running so HTF FVG reaction routing fields are present.');
   if (summary.phase4EnforcementFailures > 0) items.push('Block Discord sign-off until active HTF FVG reaction routing agrees with primary DeskState, selected candidate/campaign metadata, and communication-only approval boundaries.');
+  if (summary.htfFvgPhase5ContractFailures > 0) items.push('Block Discord sign-off until HTF FVG reaction routing, memory, cascade parent zone, and optional Discord/chart/RAG payloads agree on the same active parent zone and line.');
   if (summary.htfFvgReactionBoundaryDrift > 0) items.push('Review HTF FVG reaction routing boundary drift immediately; this routing must not change execution approval, canExecute, ranking, risk, entries, stops, or targets.');
   if (summary.belowScoreSuppressions > 0) items.push('Review whether suppressed high-context ideas should be consolidated into one map update instead of creating trader noise.');
   if (!items.length) items.push('No immediate alert-behavior problem detected from the available tape; continue collecting the full session before changing rules.');
@@ -301,6 +412,8 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
     `- HTF FVG reaction routing conflicts: ${report.summary.htfFvgReactionRoutingConflicts}`,
     `- HTF FVG reaction boundary drift: ${report.summary.htfFvgReactionBoundaryDrift}`,
     `- Phase 4 enforcement failures: ${report.summary.phase4EnforcementFailures}`,
+    `- Phase 5 contract events: ${report.summary.htfFvgPhase5ContractEvents}`,
+    `- Phase 5 contract failures: ${report.summary.htfFvgPhase5ContractFailures}`,
     `- Discord sign-off status: ${report.summary.discordSignoffStatus}`,
     `- Below-score suppressions: ${report.summary.belowScoreSuppressions}`,
     '',
@@ -308,8 +421,8 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
     ...report.consultingFocus.map((item) => `- ${item}`),
     '',
     '## Bar-By-Bar Observer Notes',
-    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | HTF FVG Route | Phase 4 | Line | canExecute | Discord | Flags | Trader read |',
-    '| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
+    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | HTF FVG Route | Phase 4 | Phase 5 | Line | canExecute | Discord | Flags | Trader read |',
+    '| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
     ...report.observations.map((item) => [
       formatTime(item.completed5m),
       formatNumber(item.close),
@@ -322,6 +435,9 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
         ? 'N/A'
         : `${item.htfFvgReactionRoutingDirection} ${item.htfFvgReactionRoutingStatus}`.replace(/\|/g, '/'),
       item.htfFvgReactionPhase4Enforcement,
+      item.htfFvgPhase5ContractStatus === 'fail'
+        ? `fail: ${item.htfFvgPhase5Issues.join('; ').replace(/\|/g, '/')}`
+        : item.htfFvgPhase5ContractStatus,
       formatNumber(item.lineInSand),
       item.canExecute === null ? 'N/A' : String(item.canExecute),
       item.discordAction,
@@ -356,7 +472,8 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
     const plan = asRecord(event.plan);
     const discord = asRecord(event.discord);
-    const flags = observerFlagsFor(event, selected, primary);
+    const phase5Contract = phase5ContractFor(event, primary);
+    const flags = observerFlagsFor(event, selected, primary, phase5Contract.status);
     const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
       ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')
         ? 'fail'
@@ -374,6 +491,8 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
       htfFvgReactionRoutingStatus: stringValue(htfFvgReactionRouting.status),
       htfFvgReactionRoutingDirection: stringValue(htfFvgReactionRouting.direction),
       htfFvgReactionPhase4Enforcement,
+      htfFvgPhase5ContractStatus: phase5Contract.status,
+      htfFvgPhase5Issues: phase5Contract.issues,
       lineInSand: numberValue(primary.lineInSand),
       canExecute: boolValue(plan.canExecute),
       discordAction: discord.shouldSend === true
@@ -386,6 +505,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
 
   const latest = observations[observations.length - 1] || null;
   const phase4EnforcementFailures = observations.filter((item) => item.htfFvgReactionPhase4Enforcement === 'fail').length;
+  const htfFvgPhase5ContractFailures = observations.filter((item) => item.htfFvgPhase5ContractStatus === 'fail').length;
   const htfFvgReactionRoutingFieldEvents = observations.filter((item) => item.hasHtfFvgReactionRoutingField).length;
   const summary: LiveDeskObserverReport['summary'] = {
     discordSends: observations.filter((item) => item.observerFlags.includes('discord_send')).length,
@@ -402,8 +522,12 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     ))).length,
     htfFvgReactionBoundaryDrift: observations.filter((item) => item.observerFlags.includes('htf_fvg_reaction_boundary_drift')).length,
     phase4EnforcementFailures,
+    htfFvgPhase5ContractEvents: observations.filter((item) => item.htfFvgPhase5ContractStatus !== 'not_applicable').length,
+    htfFvgPhase5ContractFailures,
     discordSignoffStatus: phase4EnforcementFailures > 0
       ? 'blocked'
+      : htfFvgPhase5ContractFailures > 0
+        ? 'blocked'
       : htfFvgReactionRoutingFieldEvents > 0
         ? 'ready'
         : 'not_evaluable',
