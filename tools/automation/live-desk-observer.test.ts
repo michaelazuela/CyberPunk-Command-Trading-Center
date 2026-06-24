@@ -123,6 +123,7 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.discordSends, 1);
 assert.equal(report.summary.staleOrNoChaseFlags, 1);
 assert.equal(report.summary.candidateDeskConflicts, 1);
+assert.equal(report.summary.htfFvgReactionRoutingFieldEvents, 1);
 assert.equal(report.summary.htfFvgReactionRoutingEvents, 1);
 assert.equal(report.summary.htfFvgReactionRoutingConflicts, 1);
 assert.equal(report.summary.htfFvgReactionBoundaryDrift, 0);
@@ -138,5 +139,63 @@ assert.match(report.markdown, /Active desk coverage: RTH 09:15-16:00 ET/);
 assert.match(report.markdown, /No chase/);
 assert.match(report.markdown, /Discord sign-off status: blocked/);
 assert.match(report.markdown, /Block Discord sign-off until active HTF FVG reaction routing agrees/);
+
+fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-17-MES-morning.json'), JSON.stringify({
+  reportType: 'scanner_decision_tape',
+  tradeDate: '2026-06-17',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-17T09:35:00.0000000': {
+      completed5m: {
+        time: '2026-06-17T09:35:00.0000000',
+        open: 7577,
+        high: 7581.75,
+        low: 7557.25,
+        close: 7557.5,
+      },
+      currentPrice: 7558,
+      scannerState: 'Watching',
+      setupCandidateStatus: {
+        selected: {
+          setupType: 'TurtleSoup',
+          direction: 'SHORT',
+          executionStatus: 'Watching',
+        },
+      },
+      plan: {
+        canExecute: false,
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          lineInSand: 7553.25,
+        },
+      },
+      discord: {
+        shouldSend: false,
+        sendOrSuppressReason: 'Duplicate alert suppressed for same setup/reference/direction/state.',
+      },
+    },
+  },
+}));
+
+const oldFormatReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-17',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+});
+
+assert.equal(oldFormatReport.summary.htfFvgReactionRoutingFieldEvents, 0);
+assert.equal(oldFormatReport.summary.htfFvgReactionRoutingEvents, 0);
+assert.equal(oldFormatReport.summary.phase4EnforcementFailures, 0);
+assert.equal(oldFormatReport.summary.discordSignoffStatus, 'not_evaluable');
+assert.match(oldFormatReport.bottomLine, /Discord sign-off not evaluable/);
+assert.match(oldFormatReport.markdown, /Discord sign-off status: not_evaluable/);
 
 fs.rmSync(tmp, { recursive: true, force: true });

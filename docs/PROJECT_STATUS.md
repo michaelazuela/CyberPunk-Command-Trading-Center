@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Correct live observer Phase 4 sign-off status for old-format tapes.
+Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live observer previously reported `discordSignoffStatus=ready` when no Phase 4 failures were present, even if the scanner tape did not contain `htfFvgReactionRouting` fields at all. That made old-format tapes look ready when the Phase 4 live-format path was actually not evaluable.
+Tests run: `npx tsx tools/automation/live-desk-observer.test.ts`; real-tape dry run with `npx tsx tools/automation/live-desk-observer.ts --trade-date 2026-06-24 --instrument MES --session lunch --json`; 3x loop verification with `npx tsx tools/automation/live-desk-observer.test.ts`, `npx tsx tools/automation/scanner-behavior-audit.test.ts`, `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`, `npx tsx src/lib/htfFvgReactionMemory.test.ts`, and `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. Old-format scanner tapes without `htfFvgReactionRouting` now report `discordSignoffStatus=not_evaluable` instead of `ready`. Fresh tapes can report `ready` only after the routing field exists and no Phase 4 failures are present; active routing conflicts still report `blocked`.
+Trading logic changed: No. This is observer/checklist reporting only. It does not change setup definitions, ranking, candidate creation, entry, stop, target, risk, invalidation, bar-close handling, bridge behavior, Discord send cadence, or canExecute.
+Bridge impact: None. It reads existing scanner decision tape metadata only.
+Discord impact: No direct send behavior change. Observer sign-off now distinguishes `ready`, `blocked`, and `not_evaluable`.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart or rerun the scanner with the current build and confirm fresh tapes show `htfFvgReactionRoutingFieldEvents > 0` before using Phase 4 sign-off as ready.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Wire Phase 4 HTF FVG routing enforcement into live-observation sign-off.
 Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 4 replay-audit enforcement caught active HTF FVG reaction routing drift after the fact, but the standard live/replay observation checklist also needed to surface that drift as a Discord sign-off blocker before review/delivery.
