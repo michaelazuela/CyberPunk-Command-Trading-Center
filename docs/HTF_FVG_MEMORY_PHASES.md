@@ -14,6 +14,7 @@ Purpose: prevent full-window higher-timeframe fair value gap context from drifti
 - Classify full-window parent zones as active, partially mitigated, rejected, accepted through, inverted, or data-limited.
 - Use completed OHLC only.
 - Report insufficient HTF history as data quality, not as a no-setup conclusion.
+- Keep lifecycle-dead zones visible for audit, but do not allow `accepted_through`, `inverted`, or `data_limited` parent zones to become the routed active reaction zone.
 
 ## Phase 3: Nearest Active Reaction Routing
 

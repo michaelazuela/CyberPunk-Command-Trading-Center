@@ -203,6 +203,8 @@ const parent60Mid = memory.parentZones.find((zone) =>
 );
 assert.ok(parent60Mid, 'expected 60M mid parent FVG');
 assert.equal(parent60Mid.state, 'rejected');
+assert.equal(parent60Mid.lifecycle.state, 'accepted_through');
+assert.equal(parent60Mid.lifecycle.acceptedThroughAt, '2026-06-24T11:00:00.0000000');
 assert.equal(parent60Mid.latestReaction?.timestamp, '2026-06-24T13:00:00.0000000');
 assert.equal(parent60Mid.latestReaction?.close, 7452.75);
 
@@ -215,15 +217,15 @@ assert.ok(fifteenMinuteShelf, 'expected 15M bearish reaction shelf');
 assert.equal(fifteenMinuteShelf.state, 'rejected');
 assert.equal(fifteenMinuteShelf.latestReaction?.timestamp, '2026-06-24T12:45:00.0000000');
 
-assert.equal(memory.activeReaction?.timeframe, '60M');
-assert.equal(memory.activeReaction?.lower, 7472.25);
-assert.equal(memory.activeReaction?.upper, 7481.75);
+assert.equal(memory.activeReaction?.timeframe, '15M');
 assert.equal(memory.activeReaction?.state, 'rejected');
+assert.notEqual(memory.activeReaction?.lifecycle.state, 'accepted_through');
+assert.notEqual(memory.activeReaction?.lifecycle.state, 'inverted');
 assert.equal(memory.childConfirmation?.state, 'child_fvg_confirmed');
 assert.equal(memory.childConfirmation?.lower, 7476);
 assert.equal(memory.childConfirmation?.upper, 7476.5);
 assert.equal(memory.childConfirmation?.midpoint, 7476.25);
-assert.match(memory.summary, /Nearest active rejection zone: 60M SHORT parent FVG 7472\.25-7481\.75/);
+assert.match(memory.summary, /Nearest active rejection zone: 15M SHORT parent FVG/);
 assert.match(memory.summary, /child_fvg_confirmed/);
 assert.match(memory.parentStackSummary, /Parent stack:/);
 assert.match(memory.parentStackSummary, /60M 7488\.25-7496\.50 rejected/);

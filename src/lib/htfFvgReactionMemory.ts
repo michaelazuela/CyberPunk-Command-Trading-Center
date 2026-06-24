@@ -10,6 +10,27 @@ export type HtfFvgReactionState =
   | 'inside_zone'
   | 'data_limited';
 
+export type HtfFvgLifecycleState =
+  | 'active_untested'
+  | 'active_retested'
+  | 'partially_mitigated'
+  | 'rejected'
+  | 'accepted_through'
+  | 'inverted'
+  | 'data_limited';
+
+export interface HtfFvgLifecycle {
+  sourceOfTruth: 'scanner_htf_parent_fvg_lifecycle';
+  state: HtfFvgLifecycleState;
+  touchCount: number;
+  firstTouchAt: string | null;
+  latestTouchAt: string | null;
+  acceptedThroughAt: string | null;
+  invertedAt: string | null;
+  deepestMitigationPercent: number | null;
+  evidence: string[];
+}
+
 export interface HtfFvgReactionEvent {
   sourceOfTruth: 'scanner_htf_parent_fvg_reaction_event';
   timeframe: HtfFvgReactionTimeframe;
@@ -29,6 +50,7 @@ export interface HtfFvgReactionZoneMemory {
   formedAt: string | null;
   confidence: FvgZoneFact['confidence'];
   latestReaction: HtfFvgReactionEvent | null;
+  lifecycle: HtfFvgLifecycle;
   state: HtfFvgReactionState;
   evidence: string[];
 }
@@ -87,6 +109,10 @@ function candleTimestamp(candle: ChartCandleFact): string | null {
   return candle.timestamp || null;
 }
 
+function maybeCandleTimestamp(candle: ChartCandleFact | null | undefined): string | null {
+  return candle?.timestamp || null;
+}
+
 function candleAfterZoneFormation(candle: ChartCandleFact, zone: FvgZoneFact): boolean {
   if (!zone.formedAt || !candle.timestamp) return true;
   return candle.timestamp > zone.formedAt;
@@ -104,6 +130,96 @@ function reactionStateForClose(direction: HtfFvgReactionDirection, close: number
   if (close >= lower && close <= upper) return 'inside_zone';
   if (direction === 'SHORT') return close < lower ? 'rejected' : 'accepted_through';
   return close > upper ? 'rejected' : 'accepted_through';
+}
+
+function clamp(value: number, lower: number, upper: number): number {
+  return Math.max(lower, Math.min(upper, value));
+}
+
+function mitigationPercent(direction: HtfFvgReactionDirection, candle: ChartCandleFact, lower: number, upper: number): number | null {
+  const height = upper - lower;
+  if (height <= 0) return null;
+  if (direction === 'LONG') {
+    const low = numericOrNull(candle.low);
+    if (low === null || low > upper) return null;
+    const mitigatedPrice = clamp(low, lower, upper);
+    return Math.round(((upper - mitigatedPrice) / height) * 100);
+  }
+  const high = numericOrNull(candle.high);
+  if (high === null || high < lower) return null;
+  const mitigatedPrice = clamp(high, lower, upper);
+  return Math.round(((mitigatedPrice - lower) / height) * 100);
+}
+
+function closeAcceptedThrough(direction: HtfFvgReactionDirection, candle: ChartCandleFact, lower: number, upper: number): boolean {
+  const close = numericOrNull(candle.close);
+  if (close === null) return false;
+  return direction === 'LONG' ? close < lower : close > upper;
+}
+
+function closeRejectedFromZone(direction: HtfFvgReactionDirection, candle: ChartCandleFact, lower: number, upper: number): boolean {
+  const close = numericOrNull(candle.close);
+  if (close === null) return false;
+  return direction === 'LONG' ? close > upper : close < lower;
+}
+
+function closeInsideZone(candle: ChartCandleFact, lower: number, upper: number): boolean {
+  const close = numericOrNull(candle.close);
+  return close !== null && close >= lower && close <= upper;
+}
+
+function buildLifecycle(args: {
+  timeframe: HtfFvgReactionTimeframe;
+  direction: HtfFvgReactionDirection;
+  zone: FvgZoneFact;
+  lower: number;
+  upper: number;
+  candles: ChartCandleFact[];
+}): HtfFvgLifecycle {
+  const touched = args.candles
+    .filter((candle) => candleAfterZoneFormation(candle, args.zone))
+    .filter((candle) => candleTouchesZone(candle, args.lower, args.upper));
+  const accepted = touched.find((candle) => closeAcceptedThrough(args.direction, candle, args.lower, args.upper)) || null;
+  const afterAccepted = accepted
+    ? touched.filter((candle) => candleTimestamp(candle) !== null && candleTimestamp(candle)! > (candleTimestamp(accepted) || ''))
+    : [];
+  const inverted = afterAccepted.find((candle) => closeRejectedFromZone(args.direction === 'LONG' ? 'SHORT' : 'LONG', candle, args.lower, args.upper)) || null;
+  const latest = touched[touched.length - 1] || null;
+  const deepestMitigationPercent = touched.reduce<number | null>((max, candle) => {
+    const percent = mitigationPercent(args.direction, candle, args.lower, args.upper);
+    if (percent === null) return max;
+    return max === null ? percent : Math.max(max, percent);
+  }, null);
+  const state: HtfFvgLifecycleState = !touched.length
+    ? 'active_untested'
+    : inverted
+    ? 'inverted'
+    : accepted
+    ? 'accepted_through'
+    : latest && closeRejectedFromZone(args.direction, latest, args.lower, args.upper)
+    ? 'rejected'
+    : latest && closeInsideZone(latest, args.lower, args.upper)
+    ? 'partially_mitigated'
+    : 'active_retested';
+  const zoneText = `${args.lower.toFixed(2)}-${args.upper.toFixed(2)}`;
+  return {
+    sourceOfTruth: 'scanner_htf_parent_fvg_lifecycle',
+    state,
+    touchCount: touched.length,
+    firstTouchAt: maybeCandleTimestamp(touched[0]),
+    latestTouchAt: maybeCandleTimestamp(latest),
+    acceptedThroughAt: maybeCandleTimestamp(accepted),
+    invertedAt: maybeCandleTimestamp(inverted),
+    deepestMitigationPercent,
+    evidence: [
+      `${args.timeframe} ${args.direction} parent FVG ${zoneText} lifecycle state=${state}.`,
+      touched.length
+        ? `Touches=${touched.length}; deepest mitigation=${deepestMitigationPercent ?? 'N/A'}%; latest touch=${maybeCandleTimestamp(latest) || 'N/A'}.`
+        : 'No completed OHLC touch after formation; zone remains active and untested.',
+      accepted ? `Accepted through at ${maybeCandleTimestamp(accepted) || 'N/A'} by completed close.` : 'No completed close accepted through this parent zone.',
+      inverted ? `Inversion detected at ${maybeCandleTimestamp(inverted) || 'N/A'} after acceptance through.` : 'No inversion detected after acceptance.',
+    ],
+  };
 }
 
 function buildReactionEvent(args: {
@@ -145,6 +261,14 @@ function buildParentZoneMemory(args: {
   const low = Math.min(lower, upper);
   const high = Math.max(lower, upper);
   const midpoint = numericOrNull(args.zone.midpoint) ?? (low + high) / 2;
+  const lifecycle = buildLifecycle({
+    timeframe: args.timeframe,
+    direction: args.zone.direction,
+    zone: args.zone,
+    lower: low,
+    upper: high,
+    candles: args.candles,
+  });
   const latestReaction = buildReactionEvent({
     timeframe: args.timeframe,
     direction: args.zone.direction,
@@ -164,10 +288,12 @@ function buildParentZoneMemory(args: {
     formedAt: args.zone.formedAt || null,
     confidence: args.zone.confidence,
     latestReaction,
+    lifecycle,
     state: latestReaction?.state || 'untested',
     evidence: [
       `${args.timeframe} ${args.zone.direction} parent FVG ${zoneText}${args.zone.formedAt ? ` formed ${args.zone.formedAt}` : ''}.`,
       latestReaction?.evidence || `No later OHLC retest recorded for ${args.timeframe} parent FVG ${zoneText}.`,
+      ...lifecycle.evidence,
     ],
   };
 }
@@ -233,6 +359,9 @@ function parentSets(context: ChartContext['multiTimeframeContext']): Array<{
 }
 
 function activeReactionScore(zone: HtfFvgReactionZoneMemory): number {
+  if (zone.lifecycle.state === 'accepted_through' || zone.lifecycle.state === 'inverted' || zone.lifecycle.state === 'data_limited') {
+    return -1000;
+  }
   const stateScore = zone.state === 'rejected'
     ? 100
     : zone.state === 'inside_zone'
@@ -265,6 +394,7 @@ function distanceToZone(anchor: number | null, zone: HtfFvgReactionZoneMemory): 
 }
 
 function activeReactionDisplayScore(zone: HtfFvgReactionZoneMemory): number {
+  if (zone.lifecycle.state === 'accepted_through' || zone.lifecycle.state === 'inverted' || zone.lifecycle.state === 'data_limited') return 0;
   if (zone.state === 'rejected') return 4;
   if (zone.state === 'inside_zone') return 3;
   if (zone.state === 'retested') return 2;
@@ -278,11 +408,12 @@ function selectActiveReaction(
 ): HtfFvgReactionZoneMemory | null {
   return parentZones
     .filter((zone) => zone.state !== 'accepted_through')
+    .filter((zone) => zone.lifecycle.state !== 'accepted_through' && zone.lifecycle.state !== 'inverted' && zone.lifecycle.state !== 'data_limited')
     .sort((a, b) => (
       activeReactionDisplayScore(b) - activeReactionDisplayScore(a) ||
       distanceToZone(anchorPrice, a) - distanceToZone(anchorPrice, b) ||
-      timestampMs(b.latestReaction?.timestamp) - timestampMs(a.latestReaction?.timestamp) ||
-      htfPriority(b.timeframe) - htfPriority(a.timeframe)
+      htfPriority(b.timeframe) - htfPriority(a.timeframe) ||
+      timestampMs(b.latestReaction?.timestamp) - timestampMs(a.latestReaction?.timestamp)
     ))[0] || null;
 }
 
@@ -294,6 +425,7 @@ function parentStackSummary(
   const stack = parentZones
     .filter((zone) => !direction || zone.direction === direction)
     .filter((zone) => zone.state !== 'accepted_through')
+    .filter((zone) => zone.lifecycle.state !== 'accepted_through' && zone.lifecycle.state !== 'inverted' && zone.lifecycle.state !== 'data_limited')
     .sort((a, b) => (
       activeReactionDisplayScore(b) - activeReactionDisplayScore(a) ||
       htfPriority(b.timeframe) - htfPriority(a.timeframe) ||
