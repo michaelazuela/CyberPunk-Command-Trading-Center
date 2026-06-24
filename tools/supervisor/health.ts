@@ -181,6 +181,11 @@ function isAfterFinalScannerCloseOrWeekend(now: Date): boolean {
     parts.minutes >= (22 * 60 + 15);
 }
 
+export function isFuturesDailyMaintenanceBreak(now: Date): boolean {
+  const parts = etTimeParts(now);
+  return parts.minutes >= (17 * 60) && parts.minutes < (18 * 60);
+}
+
 function configuredBridgeInstrument(config: SupervisorConfig): string | null {
   const scanner = config.childServices.find((service) => service.id === 'scanner');
   const bridgeInstrumentIndex = scanner?.args.indexOf('--bridge-instrument') ?? -1;
@@ -228,15 +233,19 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
     const ageMs = updatedAt ? now.getTime() - updatedAt.getTime() : Number.POSITIVE_INFINITY;
     const stale = !Number.isFinite(ageMs) || ageMs > config.health.logStaleAfterMs;
     const badStatus = parsed.status === 'error';
+    const maintenanceBreakStaleBarWarning = !stale && parsed.status === 'warn' && isFuturesDailyMaintenanceBreak(now);
     const afterCloseStaleBarWarning = !stale && parsed.status === 'warn' && isAfterFinalScannerCloseOrWeekend(now);
+    const expectedPausedLatest5mWarning = maintenanceBreakStaleBarWarning || afterCloseStaleBarWarning;
     return {
       id: 'recorder_heartbeat',
       label: 'Recorder heartbeat',
-      status: badStatus ? 'fail' : stale || (parsed.status === 'warn' && !afterCloseStaleBarWarning) ? 'warn' : 'ok',
+      status: badStatus ? 'fail' : stale || (parsed.status === 'warn' && !expectedPausedLatest5mWarning) ? 'warn' : 'ok',
       message: badStatus
         ? `Recorder heartbeat reported an error: ${parsed.error || 'unknown error'}`
         : stale
           ? 'Recorder heartbeat is stale.'
+          : maintenanceBreakStaleBarWarning
+            ? `Recorder heartbeat is fresh; latest completed 5M is paused during the 5:00-6:00 PM ET futures maintenance break (${parsed.latestCompleted5m || 'unknown'}).`
           : afterCloseStaleBarWarning
             ? `Recorder heartbeat is fresh; latest completed 5M is paused after the 10:15 PM ET scanner close (${parsed.latestCompleted5m || 'unknown'}).`
           : parsed.status === 'warn'
@@ -249,6 +258,11 @@ function recorderHeartbeatCheck(config: SupervisorConfig, now: Date): Supervisor
         ageMs: Number.isFinite(ageMs) ? Math.round(ageMs) : null,
         latestCompleted5m: parsed.latestCompleted5m || null,
         barsProcessed: parsed.barsProcessed ?? null,
+        expectedMarketPause: maintenanceBreakStaleBarWarning
+          ? 'futures_maintenance_break'
+          : afterCloseStaleBarWarning
+            ? 'scanner_closed'
+            : null,
       },
     };
   }
