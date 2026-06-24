@@ -181,13 +181,15 @@ function auditFlags(args: {
 }): string[] {
   const flags: string[] = [];
   const text = `${args.currentRuleReason} ${args.staleReason || ''} ${args.visibilityMode}`;
+  const staleOrNoChase = /stale|no chase|already|T1 was already reached/i.test(text);
   if (args.currentRuleExpectedDiscordPost) flags.push('current_rules_expect_post');
   if (args.canExecute === false) flags.push('canExecute_false');
   if (/POST_REVIEW|POST_WATCH|review|watch/i.test(args.visibilityMode)) flags.push('review_or_watch');
-  if (/stale|no chase|already|T1 was already reached/i.test(text)) flags.push('stale_or_no_chase');
+  if (staleOrNoChase) flags.push('stale_or_no_chase');
   if (/duplicate|dedupe/i.test(text)) flags.push('duplicate_suppression');
   if (/DATA_QUALITY|data quality|not usable/i.test(text)) flags.push('data_quality');
   if (
+    !staleOrNoChase &&
     args.selectedDirection !== 'N/A' &&
     args.deskPrimary !== 'N/A' &&
     args.deskPrimary !== 'WAIT' &&
@@ -200,7 +202,7 @@ function auditFlags(args: {
   if (activeRouting) {
     flags.push('htf_fvg_reaction_routing_active');
     if (args.deskPrimary !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
-    if (args.selectedDirection !== 'N/A' && args.selectedDirection !== routedDirection) {
+    if (!staleOrNoChase && args.selectedDirection !== 'N/A' && args.selectedDirection !== routedDirection) {
       flags.push('htf_fvg_reaction_selected_conflict');
     }
     if (args.activeCampaignDirection !== 'N/A' && args.activeCampaignDirection !== routedDirection) {

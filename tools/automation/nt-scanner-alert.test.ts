@@ -313,6 +313,37 @@ const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingG
 assert.equal(priceAwayFromZonePrimaryAlertGate.shouldSend, false);
 assert.match(priceAwayFromZonePrimaryAlertGate.reason, /current price 7470\.50 is above active tactical zone 7429\.25-7431\.50/);
 assert.doesNotMatch(priceAwayFromZonePrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
+const oppositeHtfRoutingPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  candidate: {
+    ...reviewOnlyPrimaryAlertGateFixture.candidate!,
+    direction: 'LONG',
+    entry: 7470.75,
+    stop: 7467,
+    target1: 7480,
+    target2: 7490,
+  },
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      htfConflict: true,
+      htfFvgReactionRouting: {
+        status: 'routed_active_reaction',
+        direction: 'SHORT',
+      },
+      longBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      shortBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as DeskState,
+  staleReason: 'Bullish Turtle Soup: sell-side sweep below 7468, reclaim back above the swept low.',
+});
+assert.equal(oppositeHtfRoutingPrimaryAlertGate.shouldSend, false);
+assert.match(oppositeHtfRoutingPrimaryAlertGate.reason, /candidate side LONG conflicts with active HTF FVG routing SHORT/);
+assert.doesNotMatch(oppositeHtfRoutingPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
 
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),

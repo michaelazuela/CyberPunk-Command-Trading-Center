@@ -234,6 +234,35 @@ export interface CompactDeskStateForDiscord {
       routingSummary?: string | null;
       standDown?: string | null;
     } | null;
+    freshReentryWatch?: {
+      sourceOfTruth?: string;
+      eligible?: boolean;
+      direction?: 'LONG' | 'SHORT' | string;
+      lineInSand?: number | null;
+      requiredProof?: string | null;
+      reason?: string | null;
+      staleEntryReason?: string | null;
+      oldEntry?: number | null;
+      oldStop?: number | null;
+      oldTarget1?: number | null;
+      oldTarget2?: number | null;
+      parentZone?: {
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        state?: string | null;
+      } | null;
+      childZone?: {
+        lower?: number | null;
+        upper?: number | null;
+        entry?: number | null;
+        stop?: number | null;
+        target1?: number | null;
+        target2?: number | null;
+      } | null;
+      nextStep?: string | null;
+      levelsStatus?: string | null;
+    } | null;
     htfObjectiveLadder?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
@@ -1752,6 +1781,33 @@ function deskPlayHtfFvgReactionMemoryLines(
   ];
 }
 
+function deskPlayFreshReentryWatchLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const watch = play.freshReentryWatch;
+  const displayDirection = direction === 'LONG' || direction === 'SHORT' ? direction : null;
+  if (!displayDirection || !watch?.eligible || watch.direction !== displayDirection || !isFinitePrice(watch.lineInSand)) return [];
+  const line = watch.lineInSand as number;
+  const parent = watch.parentZone;
+  const parentLine = parent && isFinitePrice(parent.lower) && isFinitePrice(parent.upper)
+    ? `Parent FVG still active: ${compactLine(parent.timeframe || 'HTF', 8)} ${zoneRangeLine(parent.lower, parent.upper)} (${compactLine(String(parent.state || 'mapped').replace(/_/g, ' '), 18)}).`
+    : null;
+  const oldLevels = isFinitePrice(watch.oldEntry) || isFinitePrice(watch.oldStop) || isFinitePrice(watch.oldTarget1) || isFinitePrice(watch.oldTarget2)
+    ? `Old missed levels: entry ${priceLine(watch.oldEntry)}, stop ${priceLine(watch.oldStop)}, T1 ${priceLine(watch.oldTarget1)}, T2 ${priceLine(watch.oldTarget2)} - management/history only.`
+    : null;
+  return [
+    'Fresh Re-entry Watch:',
+    `${displayDirection} watch line: ${priceLine(line)}.`,
+    `Required proof: ${compactInstruction(watch.requiredProof, `completed 5M close/hold ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(line)}.`)}`,
+    'Fresh entry/stop/T1/T2: pending new 5M structure; do not reuse old missed levels.',
+    ...(parentLine ? [parentLine] : []),
+    ...(oldLevels ? [oldLevels] : []),
+    `Why: ${compactInstruction(watch.reason, 'old entry is missed, but HTF reaction remains active.')}`,
+    `Next: ${compactInstruction(watch.nextStep, 'wait for fresh deterministic app-owned levels after completed 5M proof.')}`,
+  ];
+}
+
 function deskPlayHtfRegimeLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2014,6 +2070,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
       ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
+      ...deskPlayFreshReentryWatchLines(play, waitMapSide),
       ...deskPlayMainInstructionLines({
         play,
         deskState: args.deskState,
@@ -2065,6 +2122,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
     ...deskPlayHtfFvgCascadeLines(play, direction),
+    ...deskPlayFreshReentryWatchLines(play, direction),
     ...deskPlayMainInstructionLines({
       play,
       deskState: args.deskState,
@@ -2229,6 +2287,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ? deskPlayHtfFvgCascadeLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayFreshReentryWatchLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? [
           `Map Side: ${deskPlaySideStrength(play, displayDirection)}`,
           `Conflict: ${deskPlayConflictSummary(play, displayDirection)}`,
@@ -2316,6 +2377,12 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       : []),
     ...(activeReaction && isFinitePrice(activeReaction.lower) && isFinitePrice(activeReaction.upper)
       ? [`HTF FVG Reaction Memory: ${activeReaction.timeframe || 'HTF'} ${priceLine(activeReaction.lower)}-${priceLine(activeReaction.upper)} ${String(activeReaction.state || 'mapped').replace(/_/g, ' ')}; 5M ${String(childConfirmation?.state || 'waiting').replace(/_/g, ' ')}.`]
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT') && play.freshReentryWatch?.eligible
+      ? [
+          `Fresh Re-entry Watch: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(play.freshReentryWatch.lineInSand)}.`,
+          `Fresh levels: pending new 5M structure; old levels are management/history only.`,
+        ]
       : []),
     `Line in sand: ${priceLine(lineInSand)}`,
     sideLine,

@@ -491,6 +491,32 @@ export interface DeskHtfFvgReactionRouting {
   };
 }
 
+export interface DeskFreshReentryWatch {
+  sourceOfTruth: 'scanner_fresh_tactical_reentry_watch';
+  eligible: boolean;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lineInSand: number;
+  requiredProof: string;
+  reason: string;
+  staleEntryReason: string | null;
+  oldEntry: number | null;
+  oldStop: number | null;
+  oldTarget1: number | null;
+  oldTarget2: number | null;
+  parentZone: DeskHtfFvgParentZone | null;
+  childZone: DeskHtfFvgChildExecutionZone | null;
+  nextStep: string;
+  levelsStatus: 'pending_fresh_structure';
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    createsNewModel: false;
+  };
+}
+
 export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
 
 export interface DeskHtfObjective {
@@ -654,6 +680,7 @@ export interface PrimaryDeskPlay {
   htfFvgReactionMemory?: HtfFvgReactionMemory | null;
   htfFvgReactionRouting?: DeskHtfFvgReactionRouting | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
+  freshReentryWatch?: DeskFreshReentryWatch | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   nextTrigger: string | null;
@@ -3368,6 +3395,64 @@ function buildHtfFvgReactionRouting(args: {
   };
 }
 
+function missedOrNoChaseText(value: string | null | undefined): boolean {
+  return /\b(missed|no[-\s]?chase|already\s+triggered|already\s+reached|passed\s+T1|preferred\s+entry|preferred\s+retest|move\s+occurred\s+without)\b/i.test(value || '');
+}
+
+function buildFreshReentryWatch(args: {
+  primaryDirection: DeskPlayDirection;
+  activeTacticalLine: DeskActiveTacticalLine;
+  selectedLifecycleItem: ScannerCandidateLifecycleTraceItem | null;
+  primaryLifecycleItem: ScannerCandidateLifecycleTraceItem | null;
+  primaryBias: DeskPlayDirectionalBias | null;
+  htfFvgReactionRouting: DeskHtfFvgReactionRouting;
+  htfFvgCascade: DeskHtfFvgCascade | null;
+  visibilityMetadata: ScannerVisibilityMetadata;
+}): DeskFreshReentryWatch | null {
+  if (args.primaryDirection !== 'LONG' && args.primaryDirection !== 'SHORT') return null;
+  if (args.htfFvgReactionRouting.status !== 'routed_active_reaction') return null;
+  if (args.htfFvgReactionRouting.direction !== args.primaryDirection) return null;
+  const lineInSand = numericOrNull(args.activeTacticalLine.activeLine) ??
+    numericOrNull(args.htfFvgReactionRouting.lineInSand);
+  if (lineInSand === null) return null;
+  const item = args.primaryLifecycleItem || args.selectedLifecycleItem;
+  const staleEntryReason = [
+    args.visibilityMetadata.holdWithReason,
+    args.visibilityMetadata.suppressionReason,
+    item?.filteredOutReason,
+    args.primaryBias?.tradeReadiness?.reason,
+    args.primaryBias?.tradeReadiness?.action,
+  ].find(missedOrNoChaseText) || null;
+  if (!staleEntryReason && args.primaryBias?.tradeReadiness?.status !== 'missed_no_chase') return null;
+  const directionWord = args.primaryDirection === 'LONG' ? 'above' : 'below';
+  const requiredProof = `Completed 5M close/hold ${directionWord} ${lineInSand.toFixed(2)} with fresh protected 5M structure.`;
+  return {
+    sourceOfTruth: 'scanner_fresh_tactical_reentry_watch',
+    eligible: true,
+    direction: args.primaryDirection,
+    lineInSand,
+    requiredProof,
+    reason: 'Old entry is missed/no-chase while HTF parent FVG reaction remains active; monitor the tactical line for a new, separately built 5M re-entry package.',
+    staleEntryReason,
+    oldEntry: numericOrNull(item?.entry),
+    oldStop: numericOrNull(item?.stop),
+    oldTarget1: numericOrNull(item?.target1),
+    oldTarget2: numericOrNull(item?.target2),
+    parentZone: args.htfFvgCascade?.parentZone || null,
+    childZone: args.htfFvgCascade?.childExecutionZone || null,
+    nextStep: 'If the required completed 5M proof appears, build a fresh deterministic entry/stop/T1/T2 from new 5M structure. Until then, old levels remain management/history only.',
+    levelsStatus: 'pending_fresh_structure',
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 function buildPrimaryDeskPlay(args: {
   candidate: SetupCandidate | null;
   visibilityMetadata: ScannerVisibilityMetadata;
@@ -3522,6 +3607,16 @@ function buildPrimaryDeskPlay(args: {
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     memory: htfFvgReactionMemory,
   });
+  const freshReentryWatch = buildFreshReentryWatch({
+    primaryDirection,
+    activeTacticalLine,
+    selectedLifecycleItem,
+    primaryLifecycleItem,
+    primaryBias,
+    htfFvgReactionRouting,
+    htfFvgCascade,
+    visibilityMetadata: args.visibilityMetadata,
+  });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
@@ -3563,6 +3658,7 @@ function buildPrimaryDeskPlay(args: {
     htfFvgReactionMemory,
     htfFvgReactionRouting,
     htfFvgCascade,
+    freshReentryWatch,
     htfObjectiveLadder,
     htfProtectedStructureMap,
     nextTrigger,

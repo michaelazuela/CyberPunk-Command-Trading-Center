@@ -1790,6 +1790,51 @@ assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.a
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.changesRiskRules, false);
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.createsNewModel, false);
 
+const missedHtfReactionVisibility = classifyScannerVisibility({
+  state: 'Missed',
+  candidate: routedHtfReactionCandidate,
+  window: noonLunchPmWindow,
+  alertDecision: { shouldSend: false, reason: 'Missed/no-chase fixture.' },
+  canExecute: false,
+  staleReason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
+});
+const missedHtfReactionDeskState = buildDeskState({
+  state: 'Missed',
+  candidate: routedHtfReactionCandidate,
+  visibilityMetadata: missedHtfReactionVisibility,
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [routedHtfReactionCandidate],
+    selectedCandidate: {
+      ...routedHtfReactionCandidate,
+      missingEvidence: [
+        ...routedHtfReactionCandidate.missingEvidence,
+        'No chase: old entry already moved into target context.',
+      ],
+    },
+    state: 'Missed',
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Missed/no-chase fixture.' },
+    staleReason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
+    canExecute: false,
+  }),
+  currentPrice: 7564,
+  canExecute: false,
+  chartContext: routedHtfReactionChartContext,
+});
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.sourceOfTruth, 'scanner_fresh_tactical_reentry_watch');
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.eligible, true);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.direction, 'SHORT');
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.lineInSand, 7596);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.levelsStatus, 'pending_fresh_structure');
+assert.ok(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.requiredProof.includes('Completed 5M close/hold below 7596.00'));
+assert.ok(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.nextStep.includes('build a fresh deterministic entry/stop/T1/T2'));
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesCanExecute, false);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesEntryStopTargets, false);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesRiskRules, false);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesRanking, false);
+assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.createsNewModel, false);
+
 const waitWithParentHtfFvgCandidate = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,
   scenarioLabel: '15M parent FVG reaction with 5M proof pending',

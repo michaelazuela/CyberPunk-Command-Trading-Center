@@ -1791,6 +1791,155 @@ assert.ok(waitWithActiveParentFvgText.includes('5M route: parent zone + 5M trigg
 assert.ok(waitWithActiveParentFvgText.includes('Trigger: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
 assert.ok(waitWithActiveParentFvgText.includes('Stand down on completed 5M acceptance below parent zone 7448.00.'));
 
+const freshReentryWatchPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-24',
+  instrument: 'MES',
+  planVersionId: 'EVENING-FRESH-REENTRY-WATCH',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'NO TRADE',
+    noTradeReason: 'Old entry missed; wait for fresh completed 5M proof below the active line.',
+    setupCandidates: [],
+  },
+  candidates: [],
+  attachments: { chartPlan: true, priceLevelMap: false },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Evening Setup Scan',
+  currentPrice: 7467.5,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'HOLD_WITH_REASON',
+    discordAction: 'hold',
+    lineInSand: 7464,
+    nextTrigger: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
+    invalidation: 'Invalid if price accepts above 7487.00.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT desk play',
+      summary: 'Short remains primary while HTF parent FVG reaction holds.',
+      lineInSand: 7464,
+      shortBelow: 7464,
+      longAbove: null,
+      nextTrigger: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
+      invalidation: 'Invalid if price accepts above 7487.00.',
+      noChase: 'No chase old entry.',
+      htfConflict: true,
+      discordEligible: true,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        summary: 'HTF map only.',
+        rows: [],
+      },
+      activeTacticalLine: {
+        direction: 'SHORT',
+        activeLine: 7464,
+        originalLine: 7482.25,
+        migrated: true,
+        supportingTimeframes: ['5M'],
+        reason: 'Active line migrated to current 5M structure.',
+        nextTrigger: 'Active line 7464.00: completed 5M hold/retest below required before fresh execution consideration.',
+        standDown: 'Fresh SHORT stand down on completed 5M acceptance above 7464.00.',
+      },
+      htfFvgReactionMemory: {
+        activeReaction: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'rejected',
+          latestReaction: {
+            timestamp: '2026-06-24T22:00:00',
+            state: 'rejected',
+            close: 7467.5,
+          },
+        },
+        childConfirmation: {
+          direction: 'SHORT',
+          timeframe: '5M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'child_fvg_confirmed',
+        },
+      },
+      htfFvgReactionRouting: {
+        direction: 'SHORT',
+        status: 'routed_active_reaction',
+        lineInSand: 7472.25,
+        lineLabel: 'SHORT BELOW 7472.25 from 240M parent FVG 7472.25-7512.00',
+        lifecycleState: 'rejected',
+        standDown: 'Stand down on completed 5M acceptance above parent zone 7512.00.',
+        reason: 'SHORT routed from active HTF parent FVG reaction.',
+      },
+      htfFvgCascade: {
+        direction: 'SHORT',
+        parentZone: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'holding',
+        },
+        childExecutionZone: {
+          direction: 'SHORT',
+          timeframe: '5M',
+          source: 'parent_htf_zone_with_5m_trigger',
+          lower: 7472.25,
+          upper: 7512,
+          entry: 7477.75,
+          stop: 7487,
+          target1: 7464,
+          target2: 7459.25,
+          triggerNeeded: 'Bearish Turtle Soup trigger already moved into target context.',
+        },
+        routingSummary: 'HTF-first routing: 240M parent FVG frames the map.',
+        standDown: 'Stand down on completed 5M acceptance above parent zone 7512.00.',
+      },
+      freshReentryWatch: {
+        eligible: true,
+        direction: 'SHORT',
+        lineInSand: 7464,
+        requiredProof: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
+        reason: 'Old entry is missed/no-chase while HTF parent FVG reaction remains active.',
+        staleEntryReason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
+        oldEntry: 7477.75,
+        oldStop: 7487,
+        oldTarget1: 7464,
+        oldTarget2: 7459.25,
+        parentZone: {
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'holding',
+        },
+        nextStep: 'If the required completed 5M proof appears, build a fresh deterministic entry/stop/T1/T2 from new 5M structure.',
+        levelsStatus: 'pending_fresh_structure',
+      },
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'Missed TurtleSoup short with fresh re-entry watch',
+        lineInSand: 7464,
+        nextTrigger: 'Completed 5M close/hold below 7464.00 with fresh protected 5M structure.',
+        reason: 'Fresh line watch after old entry missed.',
+        blockers: ['No chase old entry.'],
+      },
+      longBias: {
+        state: 'not_present',
+        blockers: [],
+      },
+    },
+  },
+});
+const freshReentryWatchText = flattenDiscordPayloadText(freshReentryWatchPayload);
+assert.ok(freshReentryWatchText.includes('Fresh Re-entry Watch:'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('SHORT watch line: 7464.00.'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Required proof: Completed 5M close/hold below 7464.00 with fresh protected 5M structure.'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Fresh entry/stop/T1/T2: pending new 5M structure; do not reuse old missed levels.'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Old missed levels: entry 7477.75, stop 7487.00, T1 7464.00, T2 7459.25 - management/history only.'), freshReentryWatchText);
+
 const deskPlayWideReviewCandidate = sampleCandidate('SHORT');
 deskPlayWideReviewCandidate.setupType = SetupType.IntradayMssMicroContinuation;
 deskPlayWideReviewCandidate.entry = 7581.25;

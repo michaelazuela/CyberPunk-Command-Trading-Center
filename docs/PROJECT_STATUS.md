@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Install Phase 1/2 fresh tactical re-entry watch diagnostics and Discord presentation.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Missed/no-chase entries with active HTF FVG reaction needed a clear trader-facing watch state: old levels are management/history only, while a fresh completed 5M line acceptance must build new deterministic levels before any execution consideration. Live loopback also exposed an opposite-side high-confidence conditional Discord bypass against active HTF FVG routing, so the Discord gate now blocks that communication risk.
+Tests run: `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-desk-observer.test.ts`; `npx tsx tools/automation/scanner-behavior-audit.test.ts`; `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`; `npx tsx src/lib/htfFvgReactionMemory.test.ts`; `npx tsx src/lib/liveDiscordPostEligibility.test.ts`; real-tape dry runs with `npx tsx tools/automation/scanner-behavior-audit.ts --trade-date 2026-06-24 --instrument MES --sessions evening --json` and `npx tsx tools/automation/live-desk-observer.ts --trade-date 2026-06-24 --instrument MES --session evening --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. Phase 1 adds read-only `freshReentryWatch` metadata with approval boundaries preserved. Phase 2 shows Fresh Re-entry Watch lines in Discord Desk Play text and labels old missed levels as management/history only. Real-tape observer is ready with 0 candidate/DeskState conflicts, 0 HTF FVG routing conflicts, 0 Phase 4 failures, and 0 Phase 5 failures.
+Trading logic changed: No. This does not create setup candidates, approve trades, change ranking, alter entries/stops/targets/risk/invalidation, change bar-close handling, or loosen canExecute. Discord high-confidence conditional publication is now blocked when candidate side conflicts with active HTF FVG routing.
+Bridge impact: None. Existing scanner-owned OHLC/routing metadata is consumed only for visibility.
+Discord impact: Yes. Desk Play can explain fresh re-entry watch state, and opposite-side high-confidence conditional cards cannot publish against active HTF FVG routing.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Phase 3 should add the approved deterministic re-entry candidate builder only after explicit trading-logic approval.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Phase 5 HTF FVG live-observer drift contract.
 Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 1-3 now produce full-window HTF FVG inventory, lifecycle state, and active reaction line routing. Phase 5 hardens the live/replay observation checklist so active HTF FVG routing cannot be called ready unless routing, memory, cascade parent zone, and optional delivery/persistence payloads agree on the same active parent zone and line.

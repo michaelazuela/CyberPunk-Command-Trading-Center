@@ -6578,6 +6578,9 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   const play = args.deskState.primaryDeskPlay;
   const candidateDirection = args.candidate?.direction || null;
   const primaryDirection = play.direction;
+  const htfFvgRoutedDirection = play.htfFvgReactionRouting?.status === 'routed_active_reaction'
+    ? play.htfFvgReactionRouting.direction
+    : null;
   const readinessStatus = candidateReadinessStatus(args.deskState, args.candidate);
   const staleText = `${args.staleReason || ''} ${args.scannerReviewStatus || ''}`.trim();
 
@@ -6585,6 +6588,13 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   if (primaryDirection === 'WAIT') reasons.push('DeskState primary=WAIT');
   if (candidateDirection && primaryDirection !== 'WAIT' && candidateDirection !== primaryDirection) {
     reasons.push(`candidate side ${candidateDirection} conflicts with DeskState ${primaryDirection}`);
+  }
+  if (
+    candidateDirection &&
+    (htfFvgRoutedDirection === 'LONG' || htfFvgRoutedDirection === 'SHORT') &&
+    candidateDirection !== htfFvgRoutedDirection
+  ) {
+    reasons.push(`candidate side ${candidateDirection} conflicts with active HTF FVG routing ${htfFvgRoutedDirection}`);
   }
   if (readinessStatus && readinessStatus !== 'ready' && readinessStatus !== 'aligned') {
     reasons.push(`readiness=${readinessStatus}`);
@@ -6621,6 +6631,7 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     isHighQualityConditionalPrimaryAlertCandidate(args.candidate) &&
     args.state !== 'Missed' &&
     !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText) &&
+    !reasons.some((reason) => /conflicts with active HTF FVG routing/i.test(reason)) &&
     !reasons.some((reason) => /current price .* active tactical zone/i.test(reason))
   ) {
     return {

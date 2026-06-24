@@ -303,18 +303,19 @@ function observerFlagsFor(event: Record<string, unknown>, selected: Record<strin
   const activeCampaignDirection = stringValue(activeCampaign.direction, '');
   const routedDirection = directionalValue(htfFvgReactionRouting.direction);
   const canExecute = boolValue(asRecord(event.plan).canExecute);
+  const staleOrNoChase = /already|stale|no chase|T1 was already reached/i.test(`${staleReason} ${reviewStatus}`);
 
   if (discord.shouldSend === true) flags.push('discord_send');
   if (/duplicate/i.test(sendReason)) flags.push('dedupe_suppressed');
   if (/below 80 score/i.test(sendReason)) flags.push('below_score_threshold');
-  if (/already|stale|no chase|T1 was already reached/i.test(`${staleReason} ${reviewStatus}`)) flags.push('stale_or_no_chase');
-  if (selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection) {
+  if (staleOrNoChase) flags.push('stale_or_no_chase');
+  if (!staleOrNoChase && selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection) {
     flags.push('candidate_desk_side_conflict');
   }
   if (htfFvgReactionRouting.status === 'routed_active_reaction' && routedDirection) {
     flags.push('htf_fvg_reaction_routing_active');
     if (primaryDirection !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
-    if (selectedDirection && selectedDirection !== routedDirection) flags.push('htf_fvg_reaction_selected_conflict');
+    if (!staleOrNoChase && selectedDirection && selectedDirection !== routedDirection) flags.push('htf_fvg_reaction_selected_conflict');
     if (activeCampaignDirection && activeCampaignDirection !== routedDirection) flags.push('htf_fvg_reaction_campaign_conflict');
     const boundary = asRecord(htfFvgReactionRouting.approvalBoundary);
     const boundaryChanged = [

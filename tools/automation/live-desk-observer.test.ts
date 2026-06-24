@@ -416,4 +416,105 @@ assert.equal(phase5ReadyReport.summary.discordSignoffStatus, 'ready');
 assert.equal(phase5ReadyReport.observations[0].htfFvgReactionPhase4Enforcement, 'pass');
 assert.equal(phase5ReadyReport.observations[0].htfFvgPhase5ContractStatus, 'pass');
 
+fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-20-MES-morning.json'), JSON.stringify({
+  reportType: 'scanner_decision_tape',
+  tradeDate: '2026-06-20',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-20T09:35:00.0000000': {
+      completed5m: {
+        time: '2026-06-20T09:35:00.0000000',
+        open: 7465,
+        high: 7472,
+        low: 7460,
+        close: 7468,
+      },
+      currentPrice: 7468.25,
+      scannerState: 'Missed',
+      setupCandidateStatus: {
+        selected: {
+          setupType: 'TurtleSoup',
+          direction: 'SHORT',
+          executionStatus: 'Conditional',
+          entry: 7477.75,
+          stop: 7487,
+          target1: 7464,
+          target2: 7459.25,
+        },
+      },
+      plan: {
+        canExecute: false,
+      },
+      candidateLifecycleTrace: {
+        activeCampaign: null,
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'LONG',
+          lineInSand: 7468,
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'LONG',
+            lineInSand: 7417.25,
+            lineLabel: 'LONG ABOVE 7417.25 from 15M parent FVG 7410.00-7417.25',
+            lifecycleState: 'rejected',
+            standDown: 'Stand down on completed 5M acceptance below parent zone 7410.00.',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+          htfFvgReactionMemory: {
+            activeReaction: {
+              direction: 'LONG',
+              timeframe: '15M',
+              lower: 7410,
+              upper: 7417.25,
+              lifecycle: { state: 'rejected' },
+            },
+          },
+          htfFvgCascade: {
+            parentZone: {
+              direction: 'LONG',
+              timeframe: '15M',
+              lower: 7410,
+              upper: 7417.25,
+            },
+          },
+        },
+      },
+      reviewStatus: 'already_triggered_no_fresh_entry',
+      staleReason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
+      discord: {
+        shouldSend: false,
+        sendOrSuppressReason: 'Missed setup below educational alert threshold.',
+      },
+    },
+  },
+}));
+
+const staleSelectedResidueReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-20',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+});
+
+assert.equal(staleSelectedResidueReport.summary.staleOrNoChaseFlags, 1);
+assert.equal(staleSelectedResidueReport.summary.candidateDeskConflicts, 0);
+assert.equal(staleSelectedResidueReport.summary.htfFvgReactionRoutingConflicts, 0);
+assert.equal(staleSelectedResidueReport.summary.phase4EnforcementFailures, 0);
+assert.equal(staleSelectedResidueReport.summary.discordSignoffStatus, 'ready');
+assert.equal(staleSelectedResidueReport.observations[0].htfFvgReactionPhase4Enforcement, 'pass');
+assert.equal(staleSelectedResidueReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_conflict'), false);
+
 fs.rmSync(tmp, { recursive: true, force: true });
