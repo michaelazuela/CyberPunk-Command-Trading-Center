@@ -52,6 +52,7 @@ export interface HtfFvgReactionMemory {
   activeReaction: HtfFvgReactionZoneMemory | null;
   childConfirmation: HtfFvgChildConfirmationMemory | null;
   summary: string;
+  parentStackSummary: string;
   approvalBoundary: {
     changesTradeApprovals: false;
     changesCanExecute: false;
@@ -244,6 +245,68 @@ function activeReactionScore(zone: HtfFvgReactionZoneMemory): number {
   return stateScore + htfPriority(zone.timeframe);
 }
 
+function timestampMs(value: string | null | undefined): number {
+  if (!value) return 0;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function currentPriceFromContext(context: ChartContext['multiTimeframeContext']): number | null {
+  const close = numericOrNull(context.fiveMinute?.close);
+  if (close !== null) return close;
+  const candles = context.fiveMinute?.candles || [];
+  return numericOrNull(candles[candles.length - 1]?.close);
+}
+
+function distanceToZone(anchor: number | null, zone: HtfFvgReactionZoneMemory): number {
+  if (anchor === null) return Number.POSITIVE_INFINITY;
+  if (anchor >= zone.lower && anchor <= zone.upper) return 0;
+  return Math.min(Math.abs(anchor - zone.lower), Math.abs(anchor - zone.upper));
+}
+
+function activeReactionDisplayScore(zone: HtfFvgReactionZoneMemory): number {
+  if (zone.state === 'rejected') return 4;
+  if (zone.state === 'inside_zone') return 3;
+  if (zone.state === 'retested') return 2;
+  if (zone.state === 'untested') return 1;
+  return 0;
+}
+
+function selectActiveReaction(
+  parentZones: HtfFvgReactionZoneMemory[],
+  anchorPrice: number | null,
+): HtfFvgReactionZoneMemory | null {
+  return parentZones
+    .filter((zone) => zone.state !== 'accepted_through')
+    .sort((a, b) => (
+      activeReactionDisplayScore(b) - activeReactionDisplayScore(a) ||
+      distanceToZone(anchorPrice, a) - distanceToZone(anchorPrice, b) ||
+      timestampMs(b.latestReaction?.timestamp) - timestampMs(a.latestReaction?.timestamp) ||
+      htfPriority(b.timeframe) - htfPriority(a.timeframe)
+    ))[0] || null;
+}
+
+function parentStackSummary(
+  parentZones: HtfFvgReactionZoneMemory[],
+  direction: HtfFvgReactionDirection | null,
+  anchorPrice: number | null,
+): string {
+  const stack = parentZones
+    .filter((zone) => !direction || zone.direction === direction)
+    .filter((zone) => zone.state !== 'accepted_through')
+    .sort((a, b) => (
+      activeReactionDisplayScore(b) - activeReactionDisplayScore(a) ||
+      htfPriority(b.timeframe) - htfPriority(a.timeframe) ||
+      distanceToZone(anchorPrice, a) - distanceToZone(anchorPrice, b) ||
+      timestampMs(b.latestReaction?.timestamp) - timestampMs(a.latestReaction?.timestamp)
+    ))
+    .slice(0, 5)
+    .map((zone) => `${zone.timeframe} ${zone.lower.toFixed(2)}-${zone.upper.toFixed(2)} ${zone.state}`);
+  return stack.length
+    ? `Parent stack: ${stack.join(' / ')}.`
+    : 'Parent stack: no active same-side HTF parent FVG zones.';
+}
+
 export function buildHtfFvgReactionMemory(args: {
   chartContext?: Partial<ChartContext> | null;
   direction?: HtfFvgReactionDirection | null;
@@ -251,23 +314,30 @@ export function buildHtfFvgReactionMemory(args: {
   const context = args.chartContext?.multiTimeframeContext;
   if (!context) return null;
   const requestedDirection = args.direction === 'LONG' || args.direction === 'SHORT' ? args.direction : null;
+  const currentPrice = currentPriceFromContext(context);
   const parentZones = parentSets(context)
     .flatMap(({ timeframe, set }) =>
-      (set.fvgZones || [])
+      (set.fullWindowFvgZones?.length ? set.fullWindowFvgZones : set.fvgZones || [])
         .filter((zone) => !requestedDirection || zone.direction === requestedDirection)
-        .map((zone) => buildParentZoneMemory({ timeframe, zone, candles: set.candles || [] }))
+        .map((zone) => buildParentZoneMemory({ timeframe, zone, candles: set.fullWindowCandles?.length ? set.fullWindowCandles : set.candles || [] }))
         .filter((zone): zone is HtfFvgReactionZoneMemory => Boolean(zone))
     )
     .sort((a, b) => activeReactionScore(b) - activeReactionScore(a) || htfPriority(b.timeframe) - htfPriority(a.timeframe));
   if (!parentZones.length) return null;
-  const activeReaction = parentZones.find((zone) => zone.state !== 'accepted_through') || null;
-  const direction = requestedDirection || activeReaction?.direction || null;
+  const preliminaryActiveReaction = selectActiveReaction(parentZones, currentPrice);
+  const direction = requestedDirection || preliminaryActiveReaction?.direction || null;
   const childConfirmation = buildChildConfirmation({
     direction,
     fiveMinute: context.fiveMinute,
   });
+  const anchorPrice = numericOrNull(childConfirmation?.midpoint) ?? currentPrice;
+  const activeReaction = selectActiveReaction(
+    direction ? parentZones.filter((zone) => zone.direction === direction) : parentZones,
+    anchorPrice,
+  );
+  const stackSummary = parentStackSummary(parentZones, direction, anchorPrice);
   const summary = activeReaction
-    ? `${activeReaction.timeframe} ${activeReaction.direction} parent FVG ${activeReaction.lower.toFixed(2)}-${activeReaction.upper.toFixed(2)} is ${activeReaction.state}; ${childConfirmation?.state || 'no 5M child memory'}.`
+    ? `Nearest active rejection zone: ${activeReaction.timeframe} ${activeReaction.direction} parent FVG ${activeReaction.lower.toFixed(2)}-${activeReaction.upper.toFixed(2)} is ${activeReaction.state}; ${childConfirmation?.state || 'no 5M child memory'}. ${stackSummary}`
     : 'No active HTF parent FVG reaction memory.';
   return {
     sourceOfTruth: 'scanner_htf_parent_fvg_reaction_memory',
@@ -276,6 +346,7 @@ export function buildHtfFvgReactionMemory(args: {
     activeReaction,
     childConfirmation,
     summary,
+    parentStackSummary: stackSummary,
     approvalBoundary: {
       changesTradeApprovals: false,
       changesCanExecute: false,

@@ -446,6 +446,8 @@ export interface TimeframeFactSet {
   trend: 'bullish' | 'bearish' | 'balanced' | 'unknown';
   candles: ChartCandleFact[];
   fvgZones: FvgZoneFact[];
+  fullWindowCandles?: ChartCandleFact[];
+  fullWindowFvgZones?: FvgZoneFact[];
   liquiditySweeps: LiquidityEventFact[];
   reclaimEvents: ReclaimEventFact[];
   failedBreakEvents: FailedBreakEventFact[];

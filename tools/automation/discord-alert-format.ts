@@ -191,6 +191,7 @@ export interface CompactDeskStateForDiscord {
         evidence?: string[];
       } | null;
       summary?: string | null;
+      parentStackSummary?: string | null;
     } | null;
     htfFvgReactionRouting?: {
       sourceOfTruth?: string;
@@ -1680,11 +1681,15 @@ function deskPlayHtfFvgReactionMemoryLines(
   const routeLine = routing?.status === 'routed_active_reaction'
     ? `Routing: ${displayDirection} surfaced from HTF parent reaction + 5M child proof.`
     : `Routing: ${compactLine(routing?.reason || memory?.summary || 'HTF FVG memory is context only.', 96)}`;
+  const stackLine = memory?.parentStackSummary
+    ? compactLine(memory.parentStackSummary, 118)
+    : null;
   return [
     'HTF FVG Reaction Memory:',
     parentLine,
     `Reaction: ${reactionState}${active.latestReaction?.timestamp ? ` at ${compactLine(active.latestReaction.timestamp, 28)}` : ''}`,
     childLine,
+    ...(stackLine ? [stackLine] : []),
     routeLine,
     'Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.',
   ];

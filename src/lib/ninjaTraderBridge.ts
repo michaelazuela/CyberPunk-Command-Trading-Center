@@ -466,7 +466,7 @@ function detectDisplacementCandles(candles: ChartCandleFact[], fvgZones: FvgZone
 const FVG_IMPULSE_BODY_MULTIPLE = 1.25;
 const FVG_IMPULSE_RANGE_MULTIPLE = 1.25;
 
-function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
+function detectFvgZones(candles: ChartCandleFact[], limit: number | null = 8): FvgZoneFact[] {
   const zones: FvgZoneFact[] = [];
   const readable = candles.filter((candle) =>
     typeof candle.open === 'number' &&
@@ -550,7 +550,7 @@ function detectFvgZones(candles: ChartCandleFact[]): FvgZoneFact[] {
       });
     }
   }
-  return zones.slice(-8);
+  return limit === null ? zones : zones.slice(-limit);
 }
 
 function detectLiquidityAndReclaims(candles: ChartCandleFact[]): {
@@ -715,7 +715,9 @@ function buildTimeframeFactSet({
 }): TimeframeFactSet {
   const valid = bars.filter(bar => isPrice(bar.open) && isPrice(bar.high) && isPrice(bar.low) && isPrice(bar.close));
   const candles = toCandleFacts(valid, timeframe === '5m' ? 60 : 80);
+  const fullWindowCandles = timeframe === '5m' ? candles : toCandleFacts(valid, valid.length);
   const fvgZones = detectFvgZones(candles);
+  const fullWindowFvgZones = timeframe === '5m' ? fvgZones : detectFvgZones(fullWindowCandles, null);
   const liquidityFacts = detectLiquidityAndReclaims(candles);
   const displacementCandles = detectDisplacementCandles(candles, fvgZones);
   const summary = summarizeBars(valid);
@@ -725,6 +727,8 @@ function buildTimeframeFactSet({
     ...summary,
     candles,
     fvgZones,
+    fullWindowCandles,
+    fullWindowFvgZones,
     liquiditySweeps: liquidityFacts.liquiditySweeps,
     reclaimEvents: liquidityFacts.reclaimEvents,
     failedBreakEvents: liquidityFacts.failedBreakEvents,
