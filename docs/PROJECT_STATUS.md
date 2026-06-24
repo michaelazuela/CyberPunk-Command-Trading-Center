@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Phase 2 structured HTF parent FVG reaction memory.
+Files changed: src/lib/htfFvgReactionMemory.ts, src/lib/htfFvgReactionMemory.test.ts, src/lib/localScannerEngine.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 1 proved the June 24 missed short had an older 60M bearish parent FVG reaction, 15M rejection, and 5M child FVG proof. Phase 2 stores that relationship as machine-readable scanner metadata so HTF parent-zone retest/rejection, stale accepted-through zones, and 5M child confirmation are available without parsing Discord text, chart text, screenshots, or narrative.
+Tests run: 3x loop verification with `npx tsx src/lib/htfFvgReactionMemory.test.ts`, `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`, and `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The new memory helper records 60M and 15M parent FVG reaction state from structured OHLC facts, marks the June 24 SHORT parent zones as rejected, records the initial 5M child FVG confirmation, and keeps accepted-through opposite-side FVGs visible as stale memory without promoting them as active reaction context.
+Trading logic changed: No. This is scanner context metadata only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, Discord suppression/routing, bridge behavior, or canExecute.
+Bridge impact: None. It consumes existing `multiTimeframeContext` OHLC/FVG facts only.
+Discord impact: None direct. Discord can consume this field in a later phase, but Phase 2 does not change formatting or send cadence.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification. Existing scanner alert fixture warnings still print for preferred compact length and one-image fixture coverage; they are non-blocking and pre-existing.
+Next recommended action: Phase 3 should use this reaction memory for communication/routing: when active HTF parent FVG rejection plus 5M child confirmation exists, promote the correct conditional plan earlier in DeskState/Discord while preserving canExecute and all execution gates.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Phase 1 HTF FVG reaction replay proof for the June 24 missed short.
 Files changed: tools/automation/htf-fvg-reaction-phase1.test.ts, docs/PROJECT_STATUS.md.
 Reason: The missed afternoon short needed a mechanical, OHLC-backed replay proof before changing runtime behavior. The proof locks down that the left-side 60M bearish FVG stack existed, the June 24 retest/rejection occurred, 15M rejected the same shelf, 5M produced a child bearish FVG and close below the short line, and the scanner tape later showed SHORT desk structure while selected/campaign state drifted back toward LONG.

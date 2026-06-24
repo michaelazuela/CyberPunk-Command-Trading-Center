@@ -3,6 +3,7 @@ import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
 import type { NinjaBridgeBar } from './ninjaTraderBridge';
+import { buildHtfFvgReactionMemory, type HtfFvgReactionMemory } from './htfFvgReactionMemory';
 
 export type ScannerState =
   | 'NoData'
@@ -631,6 +632,7 @@ export interface PrimaryDeskPlay {
   targetReactionReason: string | null;
   levelTransition: DeskLevelTransitionMap | null;
   fvgDecisionZone?: DeskFvgDecisionZone | null;
+  htfFvgReactionMemory?: HtfFvgReactionMemory | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
@@ -3335,6 +3337,10 @@ function buildPrimaryDeskPlay(args: {
     lineInSand: activeTacticalLine.activeLine ?? selectedLine,
     chartContext: args.chartContext,
   });
+  const htfFvgReactionMemory = buildHtfFvgReactionMemory({
+    chartContext: args.chartContext,
+    direction: primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null,
+  });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
@@ -3373,6 +3379,7 @@ function buildPrimaryDeskPlay(args: {
     targetReactionReason,
     levelTransition,
     fvgDecisionZone,
+    htfFvgReactionMemory,
     htfFvgCascade,
     htfObjectiveLadder,
     htfProtectedStructureMap,
