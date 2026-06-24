@@ -172,6 +172,70 @@ function assertNoExecutablePayloadKeys(value: unknown) {
   visit(value);
 }
 
+function currentDeskPlanPayload(description: string, components: unknown[] | null = buildOutcomeComponents({
+  planVersionId: 'ARTIFACT-LINT-TEST',
+  sessionType: 'morning',
+  tradeDate: '2026-06-24',
+  instrument: 'MES',
+  direction: 'LONG',
+})) {
+  return {
+    username: 'Quant Desk',
+    content: '🟢 MES Current Desk Plan',
+    embeds: [
+      {
+        title: 'MES Current Desk Plan',
+        description,
+        color: 0x22c55e,
+        fields: [],
+        footer: { text: 'Quant Desk • Current Desk Plan • Decision support only' },
+        timestamp: '2026-06-24T14:25:00.000Z',
+      },
+    ],
+    ...(components ? { components } : {}),
+  };
+}
+
+const completeLevelDescription = [
+  'Primary: 🐂 LONG',
+  'Decision class: HIGH-CONFIDENCE CONDITIONAL - execution arms only after the named completed 5M condition.',
+  'Line in sand: 7451.50',
+  'Entry: 7450.50',
+  'Stop: 7436.75',
+  'T1: 7471.25',
+  'T2: 7478.00',
+  'Next trigger: completed 5M close above 7451.50.',
+  'Invalidation: below 7436.75.',
+  'Chart: attached.',
+  'Decision support only.',
+].join('\n');
+
+validateDiscordPayload(currentDeskPlanPayload(completeLevelDescription), ['desk-plan-chart.png']);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(completeLevelDescription), []),
+  /requires an attached chart/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(completeLevelDescription, null), ['desk-plan-chart.png']),
+  /requires RAG outcome buttons/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nEntry: pending`), ['desk-plan-chart.png']),
+  /Entry: pending is stale/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nAction: Action wait for completed 5M proof.`), ['desk-plan-chart.png']),
+  /duplicate Action label/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\nInvalid: Invalid if 7436.75 fails.`), ['desk-plan-chart.png']),
+  /duplicate Invalid label/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\n${'x'.repeat(1500)}`), ['desk-plan-chart.png']),
+  /keep image-backed trade alerts under 1600/,
+);
+
 const normalized = {
   canExecute: false,
   decisionStatus: TradeDecisionStatus.ConditionalTrade,

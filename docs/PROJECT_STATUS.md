@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Discord artifact lint hardening for trade-plan delivery.
+Files changed: tools/automation/discord-artifact-lint.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, scripts/architecture-guard.js, docs/PROJECT_STATUS.md.
+Reason: Live Discord/chart delivery drift showed that duplicated labels, stale `pending` text mixed with complete levels, missing required charts, missing RAG buttons, and oversized image-backed payloads need a single hard gate before Discord delivery.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsc --noEmit --pretty false; npm run guard:architecture.
+Result: Focused tests and architecture guard passed. Discord delivery validation now calls a centralized artifact lint contract that blocks duplicate `Action`/`Invalid`/level labels, stale pending level text when complete Entry/Stop/T1/T2 are present, current desk plans with complete levels but no chart, current desk plans without RAG buttons, old long-form scanner text leaks, truncation artifacts, and oversized payloads. Architecture guard now requires the centralized lint owner so these checks cannot drift back into scattered formatter code.
+Trading logic changed: No. This is Discord presentation/delivery validation only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation values, bar-close handling, scanner selection, bridge behavior, or canExecute.
+Bridge impact: None.
+Discord impact: Yes. Broken trade-plan artifacts now fail before Discord instead of posting confusing text.
+Journal/RAG impact: No schema change. Existing RAG buttons are enforced for current desk plan/trade alert categories by the delivery lint.
+Supabase impact: No migration added.
+Known risks: None known after full verification.
+Next recommended action: Add replay fixture tests from real scanner audit records so the lint contract is proven against full scanner artifacts, not only synthetic payloads.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Normalize chart level-map action and invalidation labels.
 Files changed: tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, docs/PROJECT_STATUS.md.
 Reason: The live Discord chart level map was readable and posted correctly, but the action footer rendered duplicated labels such as `Action: Action...`, and the invalidation footer could render `Invalid: Invalid if...`.

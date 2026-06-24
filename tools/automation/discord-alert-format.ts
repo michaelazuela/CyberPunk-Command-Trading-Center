@@ -17,8 +17,10 @@ import { formatCompactHtfContextSufficiencyLines } from '../../src/lib/htfLiquid
 import type { ScannerHealthReport, ScannerHealthStatus } from '../../src/agents/scannerHealthAgent';
 import type { MorningContinuationWatchlistResult } from '../../src/agents/morningContinuationWatchlistAgent';
 import { professionalCandidateModelLabel, professionalizeReportText } from './professional-report-language';
-import { classifyDiscordMessageText } from './discord-message-policy';
 import { buildOutcomeComponents, loadCanonicalDiscordOutcomeSecretFromEnvLocal } from './discord-outcome-buttons';
+import { assertDiscordArtifactsPassLint } from './discord-artifact-lint';
+
+export { BANNED_ACTIVE_DISCORD_ALERT_TEXT } from './discord-artifact-lint';
 
 export type CompactDiscordSession = 'morning' | 'lunch' | 'evening';
 export type CompactDiscordInstrument = 'MES' | 'MNQ';
@@ -326,27 +328,6 @@ interface CompactDeskPlayTradeReadiness {
   reason?: string;
   missingProof?: string[];
 }
-
-export const BANNED_ACTIVE_DISCORD_ALERT_TEXT = [
-  'Local Scanner Trading Card',
-  'Trade State',
-  'Execution Plan',
-  'Invalidation / No Chase',
-  'Alert Quality',
-  'Score breakdown',
-  'Qualified reasons',
-  'Missing reasons',
-  'X Tags',
-  'Do not execute from the card alone',
-  'Target Cascade',
-  'HTF Runner Map:',
-  'Overall score',
-  'Alert qualification',
-  'Quant Desk • Local Scanner',
-  'Read-only bridge',
-] as const;
-
-const OLD_REPORT_TRUNCATION_ARTIFACT = /\b(?:Missing rea|Qualified rea|Target casc|Audit det|Counte|Counter)\.\.\./i;
 
 interface CompactDiscordSummaryArgs {
   session: CompactDiscordSession;
@@ -2516,26 +2497,8 @@ export function flattenDiscordPayloadText(payload: DiscordWebhookPayload): strin
 }
 
 export function validateDiscordPayload(payload: DiscordWebhookPayload, files: string[] = []): void {
-  const contentLength = payload.content?.length || 0;
-  if (contentLength > 2000) {
-    throw new Error(`Discord payload blocked: content is ${contentLength} characters, above the 2000 character limit.`);
-  }
   const mainText = flattenDiscordPayloadText(payload);
-  const policy = classifyDiscordMessageText(mainText);
-  if (mainText.length > 2000) {
-    throw new Error(`Discord payload blocked: compact alert text is ${mainText.length} characters, above the 2000 character limit.`);
-  }
-  if (OLD_REPORT_TRUNCATION_ARTIFACT.test(mainText)) {
-    throw new Error('Discord payload blocked: truncation artifact detected in main alert text.');
-  }
-  const loweredMainText = mainText.toLowerCase();
-  const leakedOldSection = BANNED_ACTIVE_DISCORD_ALERT_TEXT.find((marker) => loweredMainText.includes(marker.toLowerCase()));
-  if (leakedOldSection) {
-    throw new Error(`Discord payload blocked: old long-form scanner card section leaked into compact alert text (${leakedOldSection}).`);
-  }
-  if (/\bAudit detail/i.test(mainText)) {
-    throw new Error('Discord payload blocked: audit-only detail leaked into compact alert text.');
-  }
+  assertDiscordArtifactsPassLint({ payload, text: mainText, files });
   for (const embed of payload.embeds) {
     if (embed.title.length > 256) throw new Error('Discord payload blocked: embed title exceeds 256 characters.');
     if ((embed.description || '').length > 4096) throw new Error('Discord payload blocked: embed description exceeds 4096 characters.');
@@ -2544,28 +2507,5 @@ export function validateDiscordPayload(payload: DiscordWebhookPayload, files: st
       if (field.name.length > 256) throw new Error('Discord payload blocked: embed field name exceeds 256 characters.');
       if (field.value.length > 1024) throw new Error('Discord payload blocked: embed field value exceeds 1024 characters.');
     }
-  }
-  const validFiles = files.filter(Boolean);
-  const hasCurrentDeskPlanLevels =
-    policy.category === 'current_desk_plan' &&
-    /\bEntry:\s*\d+\.\d{2}\b/i.test(mainText) &&
-    /\bStop:\s*\d+\.\d{2}\b/i.test(mainText) &&
-    /\bT1:\s*\d+\.\d{2}\b/i.test(mainText) &&
-    /\bT2:\s*\d+\.\d{2}\b/i.test(mainText);
-  if (policy.requiresChartWhenLevelsPresent && hasCurrentDeskPlanLevels && validFiles.length === 0) {
-    throw new Error('Discord payload blocked: Current Desk Plan with app-owned levels requires an attached chart.');
-  }
-  if (policy.requiresRagButtons && (!payload.components || payload.components.length === 0)) {
-    throw new Error(`Discord payload blocked: ${policy.category} requires RAG outcome buttons.`);
-  }
-  const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*(?:review|attached)|current desk plan/i.test(mainText);
-  if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
-    console.warn('Discord payload warning: only one trade-plan image attachment is present. Expected Chart Plan + Price Level Map when a candidate exists.');
-  }
-  if (validFiles.length > 0 && mainText.length > 1600) {
-    throw new Error(`Discord payload blocked: trade-plan compact alert text is ${mainText.length} characters; keep image-backed trade alerts under 1600.`);
-  }
-  if (mainText.length > 1200) {
-    console.warn(`Discord payload warning: compact alert text is ${mainText.length} characters; preferred normal output is under 1200.`);
   }
 }

@@ -529,6 +529,8 @@ function checkScannerVisibilityMetadataBoundary() {
 
   const formatterPath = path.join(ROOT, 'tools', 'automation', 'discord-alert-format.ts');
   const formatterContent = readFileSafe(formatterPath);
+  const discordArtifactLintPath = path.join(ROOT, 'tools', 'automation', 'discord-artifact-lint.ts');
+  const discordArtifactLintContent = readFileSafe(discordArtifactLintPath);
   if (!formatterContent.includes('WATCH FORMING') || !formatterContent.includes('post_watch')) {
     fail('discord-alert-format.ts must render scanner DeskState post_watch alerts as watch-only output.');
   }
@@ -570,14 +572,18 @@ function checkScannerVisibilityMetadataBoundary() {
     !formatterContent.includes('HTF target:') ||
     !formatterContent.includes('Status: Review only until 5M trigger + canExecute.') ||
     !formatterContent.includes('Chart: attached.') ||
-    !formatterContent.includes('Current Desk Plan with app-owned levels requires an attached chart') ||
-    !formatterContent.includes('classifyDiscordMessageText') ||
+    !formatterContent.includes('assertDiscordArtifactsPassLint') ||
     !formatterContent.includes('protectedStructure') ||
     !formatterContent.includes('confirmationLine') ||
     !formatterContent.includes('objectiveExtendsBeyondAppTarget') ||
     !formatterContent.includes('firstMeaningfulTargetObjective') ||
     !formatterContent.includes('defaultOutcomeComponentsForSummary') ||
-    !formatterContent.includes('requires RAG outcome buttons')
+    !discordArtifactLintContent.includes('Current Desk Plan with app-owned levels requires an attached chart') ||
+    !discordArtifactLintContent.includes('classifyDiscordMessageText') ||
+    !discordArtifactLintContent.includes('requires RAG outcome buttons') ||
+    !discordArtifactLintContent.includes('duplicate Action label') ||
+    !discordArtifactLintContent.includes('is stale because complete app-owned levels are present') ||
+    !discordArtifactLintContent.includes('keep image-backed trade alerts under 1600')
   ) {
     fail('discord-alert-format.ts must keep Current Desk Plan alerts concise, chart-backed when levels exist, RAG-button compatible, and unchanged on approval authority.');
   }
