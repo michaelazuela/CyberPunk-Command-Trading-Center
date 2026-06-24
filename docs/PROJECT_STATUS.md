@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Wire Phase 4 HTF FVG routing enforcement into live-observation sign-off.
+Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 4 replay-audit enforcement caught active HTF FVG reaction routing drift after the fact, but the standard live/replay observation checklist also needed to surface that drift as a Discord sign-off blocker before review/delivery.
+Tests run: 3x loop verification with `npx tsx tools/automation/live-desk-observer.test.ts`, `npx tsx tools/automation/scanner-behavior-audit.test.ts`, `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`, `npx tsx src/lib/htfFvgReactionMemory.test.ts`, and `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`; live-observer dry run with `npx tsx tools/automation/live-desk-observer.ts --trade-date 2026-06-24 --instrument MES --session lunch --json`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The live observer now marks active HTF FVG reaction routing rows, reports Phase 4 pass/fail status bar-by-bar, blocks Discord sign-off when selected/campaign/primary side or routing approval-boundary metadata conflicts, and keeps the report research-only.
+Trading logic changed: No. This is research-only live-observer/checklist reporting. It does not change setup definitions, ranking, candidate creation, entry, stop, target, risk, invalidation, bar-close handling, bridge behavior, Discord send cadence, or canExecute.
+Bridge impact: None. It reads existing scanner decision tape metadata only.
+Discord impact: No direct send behavior change. The observer now reports `discordSignoffStatus=blocked` when active HTF FVG reaction routing conflicts with selected/campaign/primary metadata or communication-only approval boundaries.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Use the live observer after scanner restarts so fresh scanner tapes with `htfFvgReactionRouting` prove the sign-off path is active on live-format data.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Phase 4 HTF FVG reaction routing replay-audit enforcement.
 Files changed: tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 3 routed trader-facing DeskState/Discord from active HTF parent FVG reaction memory when same-side 5M child confirmation and complete levels exist. Phase 4 adds a replay-audit enforcement layer so future scanner decision tapes flag any active HTF FVG reaction route that conflicts with primary DeskState, selected candidate side, active campaign side, or its communication-only approval boundary.

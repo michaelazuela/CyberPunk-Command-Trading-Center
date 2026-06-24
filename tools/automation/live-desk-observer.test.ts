@@ -76,10 +76,25 @@ fs.writeFileSync(tapePath, JSON.stringify({
       plan: {
         canExecute: false,
       },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'LONG' },
+      },
       deskState: {
         primaryDeskPlay: {
           direction: 'SHORT',
           lineInSand: 7545.5,
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
         },
       },
       discord: {
@@ -108,10 +123,20 @@ assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.discordSends, 1);
 assert.equal(report.summary.staleOrNoChaseFlags, 1);
 assert.equal(report.summary.candidateDeskConflicts, 1);
-assert.match(report.bottomLine, /Research-only all-trading-time bottom line/);
+assert.equal(report.summary.htfFvgReactionRoutingEvents, 1);
+assert.equal(report.summary.htfFvgReactionRoutingConflicts, 1);
+assert.equal(report.summary.htfFvgReactionBoundaryDrift, 0);
+assert.equal(report.summary.phase4EnforcementFailures, 1);
+assert.equal(report.summary.discordSignoffStatus, 'blocked');
+assert.equal(report.observations[1].htfFvgReactionRoutingDirection, 'SHORT');
+assert.equal(report.observations[1].htfFvgReactionPhase4Enforcement, 'fail');
+assert.ok(report.observations[1].observerFlags.includes('htf_fvg_reaction_selected_conflict'));
+assert.ok(report.observations[1].observerFlags.includes('htf_fvg_reaction_campaign_conflict'));
+assert.match(report.bottomLine, /Discord sign-off blocked/);
 assert.match(report.markdown, /# Live Trading Time Observer - MES 2026-06-18/);
 assert.match(report.markdown, /Active desk coverage: RTH 09:15-16:00 ET/);
 assert.match(report.markdown, /No chase/);
-assert.match(report.markdown, /Selected LONG conflicts with primary desk map SHORT/);
+assert.match(report.markdown, /Discord sign-off status: blocked/);
+assert.match(report.markdown, /Block Discord sign-off until active HTF FVG reaction routing agrees/);
 
 fs.rmSync(tmp, { recursive: true, force: true });

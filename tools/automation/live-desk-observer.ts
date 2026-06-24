@@ -24,6 +24,9 @@ interface ObserverObservation {
   selected: string;
   selectedLevels: string;
   deskPrimary: string;
+  htfFvgReactionRoutingStatus: string;
+  htfFvgReactionRoutingDirection: string;
+  htfFvgReactionPhase4Enforcement: 'pass' | 'fail' | 'not_applicable';
   lineInSand: number | null;
   canExecute: boolean | null;
   discordAction: string;
@@ -52,6 +55,11 @@ interface LiveDeskObserverReport {
     duplicateSuppressions: number;
     staleOrNoChaseFlags: number;
     candidateDeskConflicts: number;
+    htfFvgReactionRoutingEvents: number;
+    htfFvgReactionRoutingConflicts: number;
+    htfFvgReactionBoundaryDrift: number;
+    phase4EnforcementFailures: number;
+    discordSignoffStatus: 'ready' | 'blocked';
     belowScoreSuppressions: number;
     latestCompleted5m: string | null;
     latestDeskPrimary: string;
@@ -146,6 +154,10 @@ function boolValue(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function directionalValue(value: unknown): 'LONG' | 'SHORT' | null {
+  return value === 'LONG' || value === 'SHORT' ? value : null;
+}
+
 function formatTime(value: string): string {
   const match = value.match(/T(\d{2}:\d{2})/);
   return match?.[1] || value;
@@ -174,11 +186,15 @@ function selectedLevels(selected: Record<string, unknown>): string {
 function observerFlagsFor(event: Record<string, unknown>, selected: Record<string, unknown>, primary: Record<string, unknown>): string[] {
   const flags: string[] = [];
   const discord = asRecord(event.discord);
+  const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
+  const activeCampaign = asRecord(asRecord(event.candidateLifecycleTrace).activeCampaign);
   const sendReason = stringValue(discord.sendOrSuppressReason, '');
   const staleReason = stringValue(event.staleReason, '');
   const reviewStatus = stringValue(event.reviewStatus, '');
   const selectedDirection = stringValue(selected.direction, '');
   const primaryDirection = stringValue(primary.direction, '');
+  const activeCampaignDirection = stringValue(activeCampaign.direction, '');
+  const routedDirection = directionalValue(htfFvgReactionRouting.direction);
   const canExecute = boolValue(asRecord(event.plan).canExecute);
 
   if (discord.shouldSend === true) flags.push('discord_send');
@@ -187,6 +203,22 @@ function observerFlagsFor(event: Record<string, unknown>, selected: Record<strin
   if (/already|stale|no chase|T1 was already reached/i.test(`${staleReason} ${reviewStatus}`)) flags.push('stale_or_no_chase');
   if (selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection) {
     flags.push('candidate_desk_side_conflict');
+  }
+  if (htfFvgReactionRouting.status === 'routed_active_reaction' && routedDirection) {
+    flags.push('htf_fvg_reaction_routing_active');
+    if (primaryDirection !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
+    if (selectedDirection && selectedDirection !== routedDirection) flags.push('htf_fvg_reaction_selected_conflict');
+    if (activeCampaignDirection && activeCampaignDirection !== routedDirection) flags.push('htf_fvg_reaction_campaign_conflict');
+    const boundary = asRecord(htfFvgReactionRouting.approvalBoundary);
+    const boundaryChanged = [
+      boundary.changesTradeApprovals,
+      boundary.changesCanExecute,
+      boundary.changesEntryStopTargets,
+      boundary.changesRiskRules,
+      boundary.changesRanking,
+      boundary.createsNewModel,
+    ].some((value) => value !== false);
+    if (boundaryChanged) flags.push('htf_fvg_reaction_boundary_drift');
   }
   if (canExecute === false) flags.push('not_executable');
   return flags;
@@ -198,7 +230,12 @@ function traderReadFor(event: Record<string, unknown>, selected: Record<string, 
   const primaryDirection = stringValue(primary.direction, 'WAIT');
   const requiredTrigger = stringValue(selected.requiredTrigger, '');
   const staleReason = stringValue(event.staleReason, '');
+  const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
+  const routedDirection = stringValue(htfFvgReactionRouting.direction, 'N/A');
 
+  if (flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')) {
+    return `Discord sign-off blocked. Active HTF FVG reaction routing says ${routedDirection}, but primary/selected/campaign metadata or approval boundary drifted; review before Discord delivery.`;
+  }
   if (flags.includes('stale_or_no_chase')) {
     return `No chase. ${staleReason || 'The move was already mature when the tape recorded it.'}`;
   }
@@ -213,6 +250,9 @@ function traderReadFor(event: Record<string, unknown>, selected: Record<string, 
 }
 
 function summarizeLatest(summary: LiveDeskObserverReport['summary']): string {
+  if (summary.discordSignoffStatus === 'blocked') {
+    return `Discord sign-off blocked: ${summary.phase4EnforcementFailures} Phase 4 HTF FVG reaction routing enforcement failure(s) require review before delivery. This observer is research-only and does not change canExecute.`;
+  }
   if (!summary.latestCompleted5m) return 'No completed 5M events found in the scanner decision tape.';
   const side = summary.latestDeskPrimary || 'WAIT';
   const line = summary.latestLineInSand === null ? 'N/A' : formatNumber(summary.latestLineInSand);
@@ -224,6 +264,8 @@ function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): strin
   if (summary.discordSends > 1) items.push('Review whether Discord should post only one main desk card per active campaign unless side, map, or execution readiness materially changes.');
   if (summary.staleOrNoChaseFlags > 0) items.push('Review stale-plan suppression: levels that already hit T1 or moved without retest should stay out of the main trader-facing card.');
   if (summary.candidateDeskConflicts > 0) items.push('Review candidate-vs-DeskState language: when the selected setup conflicts with the primary map, Discord should say review-only first.');
+  if (summary.phase4EnforcementFailures > 0) items.push('Block Discord sign-off until active HTF FVG reaction routing agrees with primary DeskState, selected candidate/campaign metadata, and communication-only approval boundaries.');
+  if (summary.htfFvgReactionBoundaryDrift > 0) items.push('Review HTF FVG reaction routing boundary drift immediately; this routing must not change execution approval, canExecute, ranking, risk, entries, stops, or targets.');
   if (summary.belowScoreSuppressions > 0) items.push('Review whether suppressed high-context ideas should be consolidated into one map update instead of creating trader noise.');
   if (!items.length) items.push('No immediate alert-behavior problem detected from the available tape; continue collecting the full session before changing rules.');
   items.push('Keep this research-only. Do not change canExecute, risk gates, model definitions, entries, stops, or targets from today alone.');
@@ -248,14 +290,19 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
     `- Duplicate suppressions: ${report.summary.duplicateSuppressions}`,
     `- Stale/no-chase flags: ${report.summary.staleOrNoChaseFlags}`,
     `- Candidate/DeskState side conflicts: ${report.summary.candidateDeskConflicts}`,
+    `- HTF FVG reaction routing events: ${report.summary.htfFvgReactionRoutingEvents}`,
+    `- HTF FVG reaction routing conflicts: ${report.summary.htfFvgReactionRoutingConflicts}`,
+    `- HTF FVG reaction boundary drift: ${report.summary.htfFvgReactionBoundaryDrift}`,
+    `- Phase 4 enforcement failures: ${report.summary.phase4EnforcementFailures}`,
+    `- Discord sign-off status: ${report.summary.discordSignoffStatus}`,
     `- Below-score suppressions: ${report.summary.belowScoreSuppressions}`,
     '',
     '## Consulting Focus',
     ...report.consultingFocus.map((item) => `- ${item}`),
     '',
     '## Bar-By-Bar Observer Notes',
-    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | Line | canExecute | Discord | Flags | Trader read |',
-    '| --- | ---: | ---: | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
+    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | HTF FVG Route | Phase 4 | Line | canExecute | Discord | Flags | Trader read |',
+    '| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
     ...report.observations.map((item) => [
       formatTime(item.completed5m),
       formatNumber(item.close),
@@ -264,6 +311,10 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
       item.selected,
       item.selectedLevels,
       item.deskPrimary,
+      item.htfFvgReactionRoutingStatus === 'N/A'
+        ? 'N/A'
+        : `${item.htfFvgReactionRoutingDirection} ${item.htfFvgReactionRoutingStatus}`.replace(/\|/g, '/'),
+      item.htfFvgReactionPhase4Enforcement,
       formatNumber(item.lineInSand),
       item.canExecute === null ? 'N/A' : String(item.canExecute),
       item.discordAction,
@@ -294,9 +345,15 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     const bar = asRecord(event.completed5m);
     const selected = asRecord(asRecord(event.setupCandidateStatus).selected);
     const primary = asRecord(asRecord(event.deskState).primaryDeskPlay);
+    const htfFvgReactionRouting = asRecord(primary.htfFvgReactionRouting);
     const plan = asRecord(event.plan);
     const discord = asRecord(event.discord);
     const flags = observerFlagsFor(event, selected, primary);
+    const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
+      ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')
+        ? 'fail'
+        : 'pass'
+      : 'not_applicable';
     return {
       completed5m,
       close: numberValue(bar.close),
@@ -305,6 +362,9 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
       selected: selectedLabel(selected),
       selectedLevels: selectedLevels(selected),
       deskPrimary: stringValue(primary.direction, 'WAIT'),
+      htfFvgReactionRoutingStatus: stringValue(htfFvgReactionRouting.status),
+      htfFvgReactionRoutingDirection: stringValue(htfFvgReactionRouting.direction),
+      htfFvgReactionPhase4Enforcement,
       lineInSand: numberValue(primary.lineInSand),
       canExecute: boolValue(plan.canExecute),
       discordAction: discord.shouldSend === true
@@ -316,12 +376,22 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
   });
 
   const latest = observations[observations.length - 1] || null;
+  const phase4EnforcementFailures = observations.filter((item) => item.htfFvgReactionPhase4Enforcement === 'fail').length;
   const summary: LiveDeskObserverReport['summary'] = {
     discordSends: observations.filter((item) => item.observerFlags.includes('discord_send')).length,
     discordSuppressions: observations.filter((item) => item.discordAction.startsWith('suppressed:')).length,
     duplicateSuppressions: observations.filter((item) => item.observerFlags.includes('dedupe_suppressed')).length,
     staleOrNoChaseFlags: observations.filter((item) => item.observerFlags.includes('stale_or_no_chase')).length,
     candidateDeskConflicts: observations.filter((item) => item.observerFlags.includes('candidate_desk_side_conflict')).length,
+    htfFvgReactionRoutingEvents: observations.filter((item) => item.observerFlags.includes('htf_fvg_reaction_routing_active')).length,
+    htfFvgReactionRoutingConflicts: observations.filter((item) => item.observerFlags.some((flag) => (
+      flag === 'htf_fvg_reaction_primary_mismatch' ||
+      flag === 'htf_fvg_reaction_selected_conflict' ||
+      flag === 'htf_fvg_reaction_campaign_conflict'
+    ))).length,
+    htfFvgReactionBoundaryDrift: observations.filter((item) => item.observerFlags.includes('htf_fvg_reaction_boundary_drift')).length,
+    phase4EnforcementFailures,
+    discordSignoffStatus: phase4EnforcementFailures > 0 ? 'blocked' : 'ready',
     belowScoreSuppressions: observations.filter((item) => item.observerFlags.includes('below_score_threshold')).length,
     latestCompleted5m: latest?.completed5m || null,
     latestDeskPrimary: latest?.deskPrimary || 'WAIT',
