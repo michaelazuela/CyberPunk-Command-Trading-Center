@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Compact oversized live Desk Play Discord payloads.
+Files changed: tools/automation/discord-alert-format.ts, docs/PROJECT_STATUS.md.
+Reason: The live 09:55 ET scanner cycle produced a high-quality conditional LONG plan with chart/levels, and the Morning HTF Desk Map posted, but the trade card failed safe because the image-backed compact Discord text was 1660 characters, above the 1600-character release gate. The scanner was correctly blocking an oversized payload, but the eligible trade plan still did not reach Discord.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. The Desk Play Discord summary now falls back to an essential compact ticket when rich text would exceed the image-backed send limit, while preserving primary side, decision class, active tactical line/zone migration, HTF rows, FVG/cascade context, line in the sand, entry/stop/T1/T2 or pending levels, trigger, invalidation, stand-down, chart status, and decision-support boundary.
+Trading logic changed: No. This is Discord presentation/length control only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, bridge behavior, or canExecute.
+Bridge impact: None.
+Discord impact: Yes. Eligible Desk Play/trade-plan posts should no longer fail solely because the rich card text is too long for an image-backed Discord alert.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart scanner so the live process picks up the formatter fallback, then observe the next qualifying selected plan.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Fix live Discord boundary for high-quality selected review plans.
 Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The 2026-06-24 morning scanner generated three high-quality LONG TurtleSoup trade-plan audits with complete levels and chart attachments, but Discord skipped them as `phase11_boundary`. The selected plan was qualified, while old rollout-checklist and mixed `promotion.blockedBy` text from non-selected/opposite candidates caused the live boundary to bury it.

@@ -1985,7 +1985,7 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
   const lines = deskPlayCurrentPlanLines(args, direction);
   const components = args.components || defaultOutcomeComponentsForSummary(args, direction === 'WAIT' ? null : direction);
   const headline = deskPlayPrimaryLabel(play, direction);
-  return {
+  const payload: DiscordWebhookPayload = {
     username: 'Quant Desk',
     content: `🟠 [${sessionLabel} DESK PLAY] ${args.instrument} - ${headline} | ${args.tradeDate}`,
     embeds: [
@@ -2000,6 +2000,172 @@ function scannerDeskPlayDiscordSummary(args: CompactDiscordSummaryArgs): Discord
     ],
     ...(components?.length ? { components } : {}),
   };
+  const maxMainText = args.attachments.chartPlan || args.attachments.priceLevelMap ? 1600 : 1900;
+  if (flattenDiscordPayloadText(payload).length <= maxMainText) return payload;
+  const fallbackPayload: DiscordWebhookPayload = {
+    ...payload,
+    embeds: [
+      {
+        ...payload.embeds[0],
+        description: professionalizeReportText(scannerDeskPlayFallbackLines(args, direction).join('\n')),
+      },
+    ],
+  };
+  if (flattenDiscordPayloadText(fallbackPayload).length <= maxMainText) return fallbackPayload;
+  if (!isHighConfidenceConditionalCandidate(args.candidates[0] || null, args.normalized)) return fallbackPayload;
+  return {
+    ...payload,
+    embeds: [
+      {
+        ...payload.embeds[0],
+        description: professionalizeReportText(scannerDeskPlayUltraFallbackLines(args, direction).join('\n')),
+      },
+    ],
+  };
+}
+
+function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  const candidate = args.candidates[0] || null;
+  const candidateDirection = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT' ? candidate.direction : null;
+  const playDirection = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : null;
+  const displayDirection = direction === 'WAIT' ? playDirection || candidateDirection || 'WAIT' : direction;
+  const candidateLevels = candidate ? appTargetLevels(candidate, args.normalized) : null;
+  const status = reportStatus(candidate, args.normalized, args.statusOverride || args.decisionOverride);
+  const lineInSand = candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
+    (displayDirection === 'LONG' || displayDirection === 'SHORT' ? deskPlayLineForDirection(play, displayDirection) : play?.lineInSand) ??
+    null;
+  const levels = displayDirection === 'LONG' || displayDirection === 'SHORT'
+    ? deskPlayDecisionMapLevels(args.normalized, displayDirection, lineInSand, play, args.currentPrice) ||
+      (candidate && candidateLevels ? {
+        entry: candidate.entry,
+        stop: candidateLevels.stop,
+        target1: candidateLevels.target1,
+        target2: candidateLevels.target2,
+      } : null)
+    : null;
+  const invalidWord = displayDirection === 'SHORT' ? 'above' : 'below';
+  const parentZone = play?.htfFvgCascade?.parentZone;
+  const reaction = play?.targetReactionLevel;
+  const statusText = isHighConfidenceConditionalCandidate(candidate, args.normalized)
+    ? 'High-confidence conditional; arms only after named completed 5M proof + app-owned canExecute.'
+    : status === 'EXECUTABLE'
+      ? 'Executable only while completed 5M trigger + canExecute remain true.'
+      : 'Review only until 5M trigger + canExecute.';
+  return [
+    `${args.instrument} Current Desk Plan`,
+    '',
+    `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
+    discordPromotionDecisionLine(candidate, args.normalized, status),
+    `HTF context: ${args.deskState?.htfContextStatus || 'unknown'} / ${play?.htfProtectedStructureMap?.reliability || 'unknown'}.`,
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfRegimeLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayLineDisplayLines(play, displayDirection, lineInSand)
+      : [`Line in sand: ${priceLine(lineInSand)}`]),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayActiveTacticalZoneLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfFvgCascadeLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? [
+          `Map Side: ${deskPlaySideStrength(play, displayDirection)}`,
+          `Conflict: ${deskPlayConflictSummary(play, displayDirection)}`,
+          `Readiness: ${deskPlayReadinessStatus(status !== 'EXECUTABLE' && Boolean(levels), Boolean(levels), isHighConfidenceConditionalCandidate(candidate, args.normalized))}`,
+        ]
+      : []),
+    ...(play ? ['HTF Lines:', ...deskPlayHtfLineRows(play, args.currentPrice)] : []),
+    ...(play && deskPlayFvgDecisionZoneLines(play).length ? deskPlayFvgDecisionZoneLines(play) : []),
+    `Line in sand: ${priceLine(lineInSand)}`,
+    displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? `Overall play: ${displayDirection} ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`
+      : 'Overall play: WAIT for one side to confirm.',
+    displayDirection === 'LONG' || displayDirection === 'SHORT'
+      ? sideBreakoutLabel(displayDirection, displayDirection === 'SHORT' ? 'BELOW' : 'ABOVE', lineInSand)
+      : 'WAIT - no active breakout line.',
+    ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
+    ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
+    levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Entry: pending',
+    ...(levels ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
+    `Next trigger: ${compactInstruction(
+      ((displayDirection === 'LONG' || displayDirection === 'SHORT') && play?.activeTacticalZone?.direction === displayDirection
+        ? play.activeTacticalZone.nextTrigger
+        : null) ||
+      candidate?.requiredTrigger ||
+      candidate?.nextAction ||
+      play?.nextTrigger,
+      `completed 5M acceptance ${displayDirection === 'SHORT' ? 'below' : 'above'} ${priceLine(lineInSand)}.`,
+    )}`,
+    `Invalidation: ${compactInstruction(candidate?.invalidation || play?.invalidation, `invalid ${invalidWord} ${priceLine(levels?.stop ?? null)}.`)}`,
+    `Stand down: ${standDownInstruction(candidate?.invalidation || play?.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels?.stop ?? lineInSand)}.`)}`,
+    ...(parentZone && isFinitePrice(parentZone.lower) && isFinitePrice(parentZone.upper)
+      ? [`HTF FVG: ${parentZone.timeframe || 'HTF'} ${priceLine(parentZone.lower)}-${priceLine(parentZone.upper)} (${parentZone.state || 'mapped'}).`]
+      : []),
+    ...(isFinitePrice(reaction)
+      ? [`Reaction: ${compactLine(play?.targetReactionLabel || 'HTF/session level', 36)} ${priceLine(reaction)}.`]
+      : []),
+    '',
+    'Decision support only. No automated orders.',
+    `Status: ${statusText}`,
+    deskPlayChartStatusLine({
+      hasChart: args.attachments.chartPlan,
+      hasLevels: Boolean(candidate?.entry != null && levels?.stop != null && levels?.target1 != null && levels?.target2 != null),
+    }),
+  ];
+}
+
+function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, direction: 'LONG' | 'SHORT' | 'WAIT'): string[] {
+  const play = args.deskState?.primaryDeskPlay;
+  const candidate = args.candidates[0] || null;
+  const candidateDirection = candidate?.direction === 'LONG' || candidate?.direction === 'SHORT' ? candidate.direction : null;
+  const playDirection = play?.direction === 'LONG' || play?.direction === 'SHORT' ? play.direction : null;
+  const displayDirection = direction === 'WAIT' ? playDirection || candidateDirection || 'WAIT' : direction;
+  const lineInSand = candidate?.activeRuleset?.htfLineInSand?.lineInSand ??
+    (displayDirection === 'LONG' || displayDirection === 'SHORT' ? deskPlayLineForDirection(play, displayDirection) : play?.lineInSand) ??
+    null;
+  const candidateLevels = candidate ? appTargetLevels(candidate, args.normalized) : null;
+  const levels = displayDirection === 'LONG' || displayDirection === 'SHORT'
+    ? deskPlayDecisionMapLevels(args.normalized, displayDirection, lineInSand, play, args.currentPrice) ||
+      (candidate && candidateLevels ? {
+        entry: candidate.entry,
+        stop: candidateLevels.stop,
+        target1: candidateLevels.target1,
+        target2: candidateLevels.target2,
+      } : null)
+    : null;
+  const parentZone = play?.htfFvgCascade?.parentZone;
+  const reaction = play?.targetReactionLevel;
+  const sideLine = displayDirection === 'SHORT'
+    ? sideBreakoutLabel('SHORT', 'BELOW', lineInSand)
+    : displayDirection === 'LONG'
+      ? sideBreakoutLabel('LONG', 'ABOVE', lineInSand)
+      : 'WAIT - no active breakout line.';
+  return [
+    `${args.instrument} Current Desk Plan`,
+    `Primary: ${primaryPlanLabel(deskPlayPrimaryLabel(play, direction))}`,
+    isHighConfidenceConditionalCandidate(candidate, args.normalized)
+      ? 'Decision: HIGH-CONFIDENCE CONDITIONAL - completed 5M proof + canExecute required.'
+      : statusLine(reportStatus(candidate, args.normalized, args.statusOverride || args.decisionOverride), candidate, args.normalized),
+    `HTF: ${args.deskState?.htfContextStatus || 'unknown'} / ${play?.htfProtectedStructureMap?.reliability || 'unknown'}.`,
+    ...(parentZone && isFinitePrice(parentZone.lower) && isFinitePrice(parentZone.upper)
+      ? [`Parent FVG: ${parentZone.timeframe || 'HTF'} ${priceLine(parentZone.lower)}-${priceLine(parentZone.upper)} (${parentZone.state || 'mapped'}).`]
+      : []),
+    `Line in sand: ${priceLine(lineInSand)}`,
+    sideLine,
+    ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
+    ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
+    levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'T1/T2: pending',
+    `Trigger: ${compactInstruction(candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 150)}`,
+    `Invalidation: ${compactInstruction(candidate?.invalidation || play?.invalidation, `invalid through ${priceLine(levels?.stop ?? lineInSand)}.`).slice(0, 130)}`,
+    ...(isFinitePrice(reaction) ? [`Reaction: ${compactLine(play?.targetReactionLabel || 'HTF/session level', 34)} ${priceLine(reaction)}.`] : []),
+    'Decision support only. No automated orders.',
+    'Chart: attached.',
+  ];
 }
 
 function compactRiskScoreReason(riskScore: ConditionalCandidateRiskScore): string {
