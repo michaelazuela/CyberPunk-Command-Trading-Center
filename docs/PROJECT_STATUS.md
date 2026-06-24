@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Normalize chart level-map action and invalidation labels.
+Files changed: tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, docs/PROJECT_STATUS.md.
+Reason: The live Discord chart level map was readable and posted correctly, but the action footer rendered duplicated labels such as `Action: Action...`, and the invalidation footer could render `Invalid: Invalid if...`.
+Tests run: npx tsx tools/automation/chart-markup-renderer.test.ts; npx tsc --noEmit --pretty false; fresh rendered level-map visual QA with view_image.
+Result: Passed. Level-map footer text now strips duplicated action/invalidation prefixes at the renderer boundary. Regression tests prevent `Action: Action`, `Invalid: Invalid`, and `Invalid: Invalid if` from returning.
+Trading logic changed: No. This is chart/level-map presentation only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation source values, bar-close handling, scanner selection, bridge behavior, Discord routing, or canExecute.
+Bridge impact: None.
+Discord impact: Indirect only. Future chart attachments should render cleaner action/invalidation text.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after focused verification.
+Next recommended action: Add a broader visual-text lint pass for rendered report artifacts so duplicated labels and accidental repeated section headers fail before Discord delivery.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Compact oversized live Desk Play Discord payloads.
 Files changed: tools/automation/discord-alert-format.ts, docs/PROJECT_STATUS.md.
 Reason: The live 09:55 ET scanner cycle produced a high-quality conditional LONG plan with chart/levels, and the Morning HTF Desk Map posted, but the trade card failed safe because the image-backed compact Discord text was 1660 characters, above the 1600-character release gate. The scanner was correctly blocking an oversized payload, but the eligible trade plan still did not reach Discord.

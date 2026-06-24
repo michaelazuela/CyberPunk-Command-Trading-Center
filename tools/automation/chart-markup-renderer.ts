@@ -687,6 +687,17 @@ function actionStateLine(status: ReturnType<typeof planDisplayStatus>): string {
   return 'Action: wait for 5M trigger';
 }
 
+function actionLineText(value: string): string {
+  return value.replace(/^Action:\s*/i, '').trim();
+}
+
+function invalidationLineText(value: string): string {
+  return value
+    .replace(/^Invalid(?:ation)?:\s*/i, '')
+    .replace(/^Invalid\s+if\s+/i, '')
+    .trim();
+}
+
 function planHeadlineMode(status: ReturnType<typeof planDisplayStatus>): 'PLAN' | 'REVIEW' {
   return status === 'EXECUTABLE' ? 'PLAN' : 'REVIEW';
 }
@@ -1399,7 +1410,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
     isPrice(plan.runner) ? `HTF Runner ${money(plan.runner)}` : null,
     isPrice(plan.stretch) ? `HTF Ext ${money(plan.stretch)}` : null,
   ].filter(Boolean).join(' | ') || 'No extra liquidity/obstacle context provided.';
-  const invalidationNote = compact(plan.candidate.invalidation || 'Invalidation follows protected structure stop.', 96);
+  const invalidationNote = compact(invalidationLineText(plan.candidate.invalidation || 'Invalidation follows protected structure stop.'), 96);
 
   return `<!doctype html>
 <html>
@@ -1437,7 +1448,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status === 'EXECUTABLE' ? status : 'REVIEW ONLY')}</text>
   <rect x="1320" y="48" width="132" height="42" rx="21" fill="#e2e8f0" opacity=".94" />
   <text x="1386" y="76" text-anchor="middle" class="header-pill">${money(current)}</text>
-  <text x="1122" y="116" class="action-copy">${escapeHtml(actionStateLine(status))}</text>
+  <text x="1122" y="116" class="action-copy">${escapeHtml(actionLineText(actionStateLine(status)))}</text>
   <rect x="${map.left}" y="${map.top}" width="${map.right - map.left}" height="${map.bottom - map.top}" rx="12" fill="#030807" stroke="#164e63" stroke-width="2" opacity=".94" />
   ${rewardZone}
   ${riskZone}
@@ -1445,7 +1456,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   ${rows}
   <rect x="112" y="824" width="1312" height="124" rx="10" fill="#070b0f" stroke="#64748b" opacity=".94" />
   <text x="142" y="860" class="action-title">ACTION</text>
-  <text x="260" y="860" class="action-copy">${escapeHtml(actionStateLine(status))}${status === 'CONDITIONAL' || status === 'WAIT' ? ' - pending trigger' : ''}</text>
+  <text x="260" y="860" class="action-copy">${escapeHtml(actionLineText(actionStateLine(status)))}${status === 'CONDITIONAL' || status === 'WAIT' ? ' - pending trigger' : ''}</text>
   <text x="142" y="890" class="action-copy">${escapeHtml(rrNote)}</text>
   <text x="142" y="916" class="action-copy">${escapeHtml(contextNote)}</text>
   <text x="142" y="936" class="action-copy">Invalid: ${escapeHtml(invalidationNote)}</text>

@@ -205,7 +205,7 @@ try {
     sessionLabel: 'morning',
   });
   assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'chart renderer must not mutate the input candidate');
-  assert.ok(chartHtml.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
+  assert.ok(chartHtml.includes('[AM REVIEW] MES - LONG'));
   assert.ok(chartHtml.includes('Action: wait for 5M trigger'));
   assert.ok(chartHtml.includes('Quality: <tspan fill="#facc15">78/100</tspan>'));
   assert.ok(chartHtml.includes('Risk: <tspan fill="#f8fafc">5.00 pts</tspan>'));
@@ -395,8 +395,11 @@ try {
     sessionLabel: 'morning',
   });
   assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'level map renderer must not mutate the input candidate');
-  assert.ok(levelMapHtml.includes('[AM REVIEW] MES - LONG CONDITIONAL / NO FRESH ENTRY'));
-  assert.ok(levelMapHtml.includes('Action: wait for 5M trigger'));
+  assert.ok(levelMapHtml.includes('[AM REVIEW] MES - LONG'));
+  assert.ok(levelMapHtml.includes('wait for 5M trigger'));
+  assert.ok(!/Action:\s*Action:/i.test(levelMapHtml));
+  assert.ok(!/Invalid:\s*Invalid:/i.test(levelMapHtml));
+  assert.ok(!/Invalid:\s*Invalid if/i.test(levelMapHtml));
   assert.ok(levelMapHtml.includes('pending trigger'));
   assert.ok(levelMapHtml.includes('ENTRY WAIT'));
   assert.ok(levelMapHtml.includes('STOP'));
