@@ -97,19 +97,47 @@ function deskStateLivePostActionable(deskState: DeskState | null): boolean {
 
 function collectDeskStateSuppressionText(deskState: DeskState | null): string {
   if (!deskState) return '';
-  return [
+  const directSuppressionText = [
     deskState.suppressionReason,
     deskState.visibilityMetadata?.suppressionReason,
     deskState.visibilityMetadata?.holdWithReason,
     deskState.visibilityMetadata?.noTradeWithReason,
     deskState.visibilityMetadata?.dataQualityBlocker,
-    deskState.promotion?.blockedBy?.join(' | '),
     deskState.selectedCandidate?.filteredOutReason,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+  if (deskStateHasQualifiedSelectedPlan(deskState)) return directSuppressionText;
+  return [
+    directSuppressionText,
+    deskState.promotion?.blockedBy?.join(' | '),
     deskState.bestLongPlan?.filteredOutReason,
     deskState.bestShortPlan?.filteredOutReason,
   ]
     .filter(Boolean)
     .join(' | ');
+}
+
+function isFinitePlanPrice(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function deskStateHasQualifiedSelectedPlan(deskState: DeskState): boolean {
+  const selected = deskState.selectedCandidate;
+  const score = selected?.decisionQualityScore ?? selected?.modelConfidenceScore ?? null;
+  return Boolean(
+    selected &&
+    isFinitePlanPrice(selected.entry) &&
+    isFinitePlanPrice(selected.stop) &&
+    isFinitePlanPrice(selected.target1) &&
+    isFinitePlanPrice(selected.target2) &&
+    typeof score === 'number' &&
+    score >= 80 &&
+    (deskState.visibilityMode === 'POST_REVIEW' || deskState.visibilityMode === 'POST_CONDITIONAL') &&
+    (deskState.discordAction === 'post_review' || deskState.discordAction === 'post_conditional') &&
+    deskState.visibilityMetadata?.authority?.discordEligible === true &&
+    deskState.visibilityMetadata?.authority?.canExecute === false
+  );
 }
 
 function deskStateOperationallySuppressed(deskState: DeskState | null): boolean {

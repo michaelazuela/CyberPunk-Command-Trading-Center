@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-24
+Task: Fix live Discord boundary for high-quality selected review plans.
+Files changed: src/lib/liveDiscordPostEligibility.ts, src/lib/liveDiscordPostEligibility.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The 2026-06-24 morning scanner generated three high-quality LONG TurtleSoup trade-plan audits with complete levels and chart attachments, but Discord skipped them as `phase11_boundary`. The selected plan was qualified, while old rollout-checklist and mixed `promotion.blockedBy` text from non-selected/opposite candidates caused the live boundary to bury it.
+Tests run: npx tsx src/lib/liveDiscordPostEligibility.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsc --noEmit --pretty false; actual 2026-06-24 MORNING-20260624-133501 audit replay through buildScannerLiveDiscordSendBoundaryReport; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build.
+Result: Passed. Focused tests, TypeScript, actual audit boundary replay, required guards, lint, and build passed. The actual missed 09:25 ET audit now evaluates `eligible=true` with no blockers.
+Trading logic changed: No. This is Discord send-boundary routing only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, or `canExecute`.
+Bridge impact: None.
+Discord impact: Yes. A selected high-quality full-level POST_REVIEW/POST_CONDITIONAL plan may now bypass the stale Phase 11 dry-scan/replay checklist when direct selected-plan suppression is absent. Direct duplicate, ledger, missed/no-chase, stale, data-quality, hold, and no-trade suppressions still block.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Restart scanner so live Discord boundary uses the fix, and observe the next qualifying selected plan.
+
+## Previous Change
+
 Date: 2026-06-23
 Task: Clean up cross-timeframe scanner history reliability for open-timestamped OHLC bars.
 Files changed: tools/automation/market-data-ingestion.ts, tools/automation/market-data-ingestion.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.

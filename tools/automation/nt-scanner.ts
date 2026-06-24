@@ -5851,12 +5851,13 @@ function scannerLifecycleItemQualityScore(item: DeskState['selectedCandidate']):
 function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState | null): boolean {
   if (!deskState) return false;
   if (deskState.canExecute) return false;
-  if (deskState.visibilityMode !== 'POST_CONDITIONAL' || deskState.discordAction !== 'post_conditional') return false;
-  if (deskState.visibilityMetadata?.visibilityMode !== 'POST_CONDITIONAL') return false;
-  if (deskState.visibilityMetadata?.discordAction !== 'post_conditional') return false;
+  const liveReviewActions = new Set(['post_conditional', 'post_review']);
+  const liveReviewModes = new Set(['POST_CONDITIONAL', 'POST_REVIEW']);
+  if (!liveReviewModes.has(deskState.visibilityMode) || !liveReviewActions.has(deskState.discordAction)) return false;
+  if (!liveReviewModes.has(deskState.visibilityMetadata?.visibilityMode || '')) return false;
+  if (!liveReviewActions.has(deskState.visibilityMetadata?.discordAction || '')) return false;
   if (deskState.visibilityMetadata?.authority?.canExecute !== false) return false;
   if (deskState.visibilityMetadata?.authority?.discordEligible !== true) return false;
-  if (deskState.visibilityMetadata?.authority?.executionEligible === true) return false;
   if (deskState.dataQualityStatus === 'data_limited' || deskState.htfContextStatus === 'insufficient') return false;
   const suppressionText = [
     deskState.suppressionReason,
@@ -5864,7 +5865,7 @@ function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState |
     deskState.visibilityMetadata?.holdWithReason,
     deskState.visibilityMetadata?.noTradeWithReason,
     deskState.visibilityMetadata?.dataQualityBlocker,
-    deskState.promotion?.blockedBy?.join(' | '),
+    deskState.selectedCandidate?.filteredOutReason,
   ].filter(Boolean).join(' ');
   if (/\b(duplicate|ledger|already\s+pending|missed|no[-\s]?chase|stale|chasing|already\s+reached|target\s+already|T1\s+was\s+already\s+reached)\b/i.test(suppressionText)) {
     return false;
@@ -5875,8 +5876,10 @@ function scannerDeskStateHasHighConfidenceConditionalPlan(deskState: DeskState |
     deskState.bestShortPlan,
   ];
   return candidates.some((item) =>
-    item?.executionStatus === ExecutionStatus.Conditional &&
-    item.blockReason === NoTradeReason.EntryTriggerPending &&
+    (item?.executionStatus === ExecutionStatus.Conditional ||
+      item?.executionStatus === ExecutionStatus.Executable ||
+      item?.detectedStatus === 'Conditional') &&
+    (item.blockReason === NoTradeReason.EntryTriggerPending || item.blockReason === null || item.blockReason === undefined) &&
     scannerLifecycleItemHasFullPlanLevels(item) &&
     (scannerLifecycleItemQualityScore(item) ?? 0) >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE
   );

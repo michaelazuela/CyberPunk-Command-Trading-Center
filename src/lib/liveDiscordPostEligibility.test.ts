@@ -226,6 +226,47 @@ const missedNoChaseBlocked = evaluateLiveDiscordPostEligibility(input({
 assert.equal(missedNoChaseBlocked.eligible, false);
 assert.ok(missedNoChaseBlocked.blockers.some((item) => item.includes('missed/no-chase')));
 
+const highQualitySelectedPlanIgnoresNonSelectedPromotionNoise = evaluateLiveDiscordPostEligibility(input({
+  deskState: {
+    ...deskState(),
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    selectedCandidate: {
+      entry: 7463.25,
+      stop: 7437.75,
+      target1: 7520,
+      target2: 7530,
+      decisionQualityScore: 92,
+      filteredOutReason: null,
+    } as DeskState['selectedCandidate'],
+    bestShortPlan: {
+      filteredOutReason: 'InvalidStopLocation',
+    } as DeskState['bestShortPlan'],
+    promotion: {
+      ...deskState().promotion,
+      blockedBy: [
+        'No chase: non-selected opposite candidate needs new proof.',
+        'ChasingExtendedMove',
+      ],
+    },
+    visibilityMetadata: {
+      ...deskState().visibilityMetadata,
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      holdWithReason: 'Candidate is structurally visible, but normalized canExecute is false.',
+      authority: {
+        ...deskState().visibilityMetadata.authority,
+        planEligible: true,
+        discordEligible: true,
+        executionEligible: false,
+        canExecute: false,
+      },
+    },
+  },
+}));
+assert.equal(highQualitySelectedPlanIgnoresNonSelectedPromotionNoise.eligible, true);
+assert.equal(highQualitySelectedPlanIgnoresNonSelectedPromotionNoise.authorityBoundary.createsTradeApproval, false);
+
 const heldDeskStateBlocked = evaluateLiveDiscordPostEligibility(input({
   deskState: {
     ...deskState(),

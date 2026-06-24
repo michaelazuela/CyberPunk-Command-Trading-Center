@@ -3398,6 +3398,55 @@ function highConfidenceConditionalBoundaryDeskStateFixture(): DeskState {
   });
 }
 
+function highConfidenceReviewBoundaryDeskStateFixture(): DeskState {
+  const highConfidenceCandidate: SetupCandidate = {
+    ...candidate,
+    executionStatus: ExecutionStatus.Executable,
+    blockReason: null,
+    decisionQualityScore: 92,
+  };
+  const visibilityMetadata: ScannerVisibilityMetadata = {
+    sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    suppressionReason: null,
+    nextTrigger: 'Qualified only if completed 5M proof and app-owned gates remain confirmed.',
+    dataQualityBlocker: null,
+    holdWithReason: null,
+    noTradeWithReason: null,
+    hasMeaningfulStructuredEvidence: true,
+    authority: {
+      registeredModel: true,
+      activeModel: true,
+      watchEligible: true,
+      planEligible: true,
+      discordEligible: true,
+      executionEligible: false,
+      humanReviewOnly: true,
+      canExecute: false,
+    },
+    notes: [],
+  };
+  const state = buildDeskState({
+    state: 'Approved',
+    candidate: highConfidenceCandidate,
+    visibilityMetadata,
+    candidateLifecycleTrace: buildCandidateLifecycleTrace({
+      candidates: [highConfidenceCandidate],
+      selectedCandidate: highConfidenceCandidate,
+      state: 'Approved',
+      alertDecision: { shouldSend: true, reason: 'High-confidence review fixture.' },
+      canExecute: false,
+    }),
+    canExecute: false,
+  });
+  state.promotion.blockedBy = [
+    'No chase: non-selected opposite candidate needs new proof.',
+    'ChasingExtendedMove',
+  ];
+  return state;
+}
+
 const liveBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
     dryRun: false,
@@ -3440,6 +3489,27 @@ assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.eligible, true);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.blockers.length, 0);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
 assert.equal(highConfidenceConditionalBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
+
+const highConfidenceReviewBoundaryWithoutChecklist = buildScannerLiveDiscordSendBoundaryReport({
+  config: {
+    dryRun: false,
+    liveDiscordPolicyConfirmed: false,
+  },
+  healthReport: scannerReadyHealthFixture(),
+  bridgeConnected: true,
+  bridgeInstrumentResolved: true,
+  completedFiveMinuteFresh: true,
+  htfContextPresent: true,
+  deskState: highConfidenceReviewBoundaryDeskStateFixture(),
+  decisionTapePath: path.join(auditDir, 'scanner-decision-tape-2026-06-24-MES-morning.json'),
+  auditPath: path.join(auditDir, 'scanner-morning-2026-06-24-MES-HIGH-CONFIDENCE-REVIEW.json'),
+  discordPayloadValidated: true,
+  webhookConfigured: true,
+});
+assert.equal(highConfidenceReviewBoundaryWithoutChecklist.eligible, true);
+assert.equal(highConfidenceReviewBoundaryWithoutChecklist.blockers.length, 0);
+assert.equal(highConfidenceReviewBoundaryWithoutChecklist.authorityBoundary.changesCanExecute, false);
+assert.equal(highConfidenceReviewBoundaryWithoutChecklist.authorityBoundary.createsTradeApproval, false);
 
 const liveBoundaryWithChecklist = buildScannerLiveDiscordSendBoundaryReport({
   config: {
