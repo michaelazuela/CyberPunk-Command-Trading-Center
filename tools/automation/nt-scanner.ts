@@ -6568,6 +6568,7 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   candidate?: SetupCandidate | null;
   normalizedCanExecute?: boolean | null;
   state: ScannerState;
+  currentPrice?: number | null;
   staleReason?: string | null;
   scannerReviewStatus?: string | null;
 }): ScannerAlertDecision {
@@ -6593,13 +6594,34 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   if (/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText)) {
     reasons.push('stale/no-chase review state');
   }
+  const activeZone = play.activeTacticalZone;
+  const currentPrice = args.currentPrice;
+  if (
+    args.candidate?.direction === 'SHORT' &&
+    activeZone?.direction === 'SHORT' &&
+    isFiniteTradePrice(currentPrice) &&
+    isFiniteTradePrice(activeZone.upper) &&
+    currentPrice > activeZone.upper
+  ) {
+    reasons.push(`current price ${currentPrice.toFixed(2)} is above active tactical zone ${activeZone.lower?.toFixed?.(2) || 'N/A'}-${activeZone.upper.toFixed(2)}`);
+  }
+  if (
+    args.candidate?.direction === 'LONG' &&
+    activeZone?.direction === 'LONG' &&
+    isFiniteTradePrice(currentPrice) &&
+    isFiniteTradePrice(activeZone.lower) &&
+    currentPrice < activeZone.lower
+  ) {
+    reasons.push(`current price ${currentPrice.toFixed(2)} is below active tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper?.toFixed?.(2) || 'N/A'}`);
+  }
 
   if (!reasons.length) return args.alertDecision;
 
   if (
     isHighQualityConditionalPrimaryAlertCandidate(args.candidate) &&
     args.state !== 'Missed' &&
-    !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText)
+    !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText) &&
+    !reasons.some((reason) => /current price .* active tactical zone/i.test(reason))
   ) {
     return {
       shouldSend: true,
@@ -7799,6 +7821,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     candidate,
     normalizedCanExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
     state: stateForAlert,
+    currentPrice,
     staleReason: stale.reason,
     scannerReviewStatus: selection.reviewStatus,
   });

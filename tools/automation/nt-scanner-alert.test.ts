@@ -292,6 +292,27 @@ const staleHighQualityPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGa
 });
 assert.equal(staleHighQualityPrimaryAlertGate.shouldSend, false);
 assert.match(staleHighQualityPrimaryAlertGate.reason, /stale\/no-chase review state/);
+const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...reviewOnlyPrimaryAlertGateFixture,
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      htfConflict: true,
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7429.25,
+        upper: 7431.5,
+      },
+      shortBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as DeskState,
+  currentPrice: 7470.5,
+});
+assert.equal(priceAwayFromZonePrimaryAlertGate.shouldSend, false);
+assert.match(priceAwayFromZonePrimaryAlertGate.reason, /current price 7470\.50 is above active tactical zone 7429\.25-7431\.50/);
+assert.doesNotMatch(priceAwayFromZonePrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
 
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),

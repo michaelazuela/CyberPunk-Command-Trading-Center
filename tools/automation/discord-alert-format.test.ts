@@ -675,6 +675,93 @@ assert.ok(!deskPlayText.includes('HTF Bias Lines'));
 assert.ok(!deskPlayText.includes('Desk Direction'));
 assert.ok(/Long T1 Hit|Long Stopped|Scratch|Missed/.test(JSON.stringify(deskPlayPayload)));
 
+const farAwayConditionalShortCandidate = {
+  ...sampleCandidate('SHORT'),
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+  entry: 7430.5,
+  stop: 7487,
+  target1: 7345.75,
+  target2: 7317.5,
+  riskPoints: 56.5,
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  decisionQualityScore: 93,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7429.25-7431.5 after sweep, reclaim, displacement, and bearish structure shift.',
+  invalidation: 'Invalid if price trades above the sweep high structure stop near 7487.',
+} as SetupCandidate;
+const farAwayConditionalPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-24',
+  instrument: 'MES',
+  planVersionId: 'EVENING-FAR-AWAY-CONDITIONAL',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: null,
+    invalidation: null,
+    setupCandidates: [farAwayConditionalShortCandidate],
+  },
+  candidates: [farAwayConditionalShortCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Evening Setup Scan',
+  currentPrice: 7470.5,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    lineInSand: 7430,
+    nextTrigger: farAwayConditionalShortCandidate.requiredTrigger,
+    invalidation: farAwayConditionalShortCandidate.invalidation,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT desk play',
+      summary: 'Short review only while price is away from the tactical zone.',
+      lineInSand: 7430,
+      shortBelow: 7430,
+      activeTacticalZone: {
+        sourceOfTruth: 'scanner_active_tactical_zone',
+        direction: 'SHORT',
+        lower: 7429.25,
+        upper: 7431.5,
+        anchorLine: 7429.25,
+        zoneLabel: '7429.25-7431.5 Imbalance Zone',
+        sourceTimeframe: '5M',
+        state: 'waiting_retest',
+        nextTrigger: 'Active tactical zone 7429.25-7431.50: completed 5M hold/reject below the zone required before fresh execution consideration.',
+        noChase: 'No chase away from 7429.25-7431.50.',
+      },
+      htfConflict: true,
+      discordEligible: true,
+      shortBias: {
+        state: 'primary',
+        scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+        decisionQualityScore: 93,
+        lineInSand: 7430,
+        nextTrigger: farAwayConditionalShortCandidate.requiredTrigger,
+        reason: farAwayConditionalShortCandidate.requiredTrigger,
+        blockers: ['EntryTriggerPending'],
+      },
+      longBias: {
+        state: 'countertrend_review',
+        decisionQualityScore: 44,
+        lineInSand: 7476,
+        nextTrigger: 'Long requires completed 5M proof above 7476.',
+      },
+    },
+  },
+});
+const farAwayConditionalText = flattenDiscordPayloadText(farAwayConditionalPayload);
+assert.ok(farAwayConditionalText.includes('Entry zone: 7429.25-7431.50'));
+assert.ok(farAwayConditionalText.includes('Current: 7470.50 (39.00 pts above zone)'));
+assert.ok(farAwayConditionalText.includes('Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'));
+assert.ok(farAwayConditionalText.includes('Entry if fresh proof returns: 7430.50'));
+assert.ok(!/^Entry: 7430\.50$/m.test(farAwayConditionalText));
+
 const decisionMapShortCandidate = sampleCandidate('SHORT');
 decisionMapShortCandidate.entry = 7339.75;
 decisionMapShortCandidate.stop = 7350.25;

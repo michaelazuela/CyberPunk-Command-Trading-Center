@@ -1458,6 +1458,51 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     args.deskState?.dataQualityStatus === 'data_limited' ||
     args.deskState?.htfContextStatus === 'insufficient';
   const referenceOnly = dataLimitedIssue && status !== 'EXECUTABLE';
+  const candidateZone = candidate.tacticalZone?.direction === direction ? candidate.tacticalZone : null;
+  const deskZone = args.deskState?.primaryDeskPlay?.activeTacticalZone?.direction === direction
+    ? args.deskState.primaryDeskPlay.activeTacticalZone
+    : null;
+  const activeZone = candidateZone || deskZone;
+  const activeZoneLower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
+  const activeZoneUpper = isFinitePrice(activeZone?.upper) ? activeZone.upper : null;
+  const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+  const currentVsZone = activeZoneLower !== null && activeZoneUpper !== null && currentPrice !== null
+    ? currentPrice < activeZoneLower
+      ? { state: 'below' as const, distance: activeZoneLower - currentPrice }
+      : currentPrice > activeZoneUpper
+        ? { state: 'above' as const, distance: currentPrice - activeZoneUpper }
+        : { state: 'inside' as const, distance: 0 }
+    : null;
+  const conditionalLevelLines = (): string[] => {
+    if (status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') {
+      return [
+        ...(currentVsZone?.state === 'inside' ? [
+          `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
+          `Current: ${priceLine(currentPrice)} (inside zone)`,
+        ] : []),
+        `Entry: ${priceLine(candidate.entry)}`,
+        `Stop: ${priceLine(levels.stop)}`,
+        `T1: ${priceLine(levels.target1)}`,
+        `T2: ${priceLine(levels.target2)}`,
+      ];
+    }
+    const noEntryInstruction = direction === 'SHORT'
+      ? currentVsZone.state === 'above'
+        ? 'Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'
+        : 'Entry status: NO CHASE - price is already below the active short zone; wait for a fresh completed 5M retest.'
+      : currentVsZone.state === 'below'
+        ? 'Entry status: NOT ACTIVE - current price is below the active long zone; wait for a fresh completed 5M setup or migrated line.'
+        : 'Entry status: NO CHASE - price is already above the active long zone; wait for a fresh completed 5M retest.';
+    return [
+      `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
+      `Current: ${priceLine(currentPrice)} (${numberLine(currentVsZone.distance)} pts ${currentVsZone.state} zone)`,
+      noEntryInstruction,
+      `Entry if fresh proof returns: ${priceLine(candidate.entry)}`,
+      `Stop: ${priceLine(levels.stop)}`,
+      `T1: ${priceLine(levels.target1)}`,
+      `T2: ${priceLine(levels.target2)}`,
+    ];
+  };
   const statusText = htfPublishIssue === 'opposed'
     ? 'Review only; HTF opposes this side.'
     : htfPublishIssue === 'unconfirmed'
@@ -1490,16 +1535,10 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     ...(referenceOnly ? [
       'Tactical levels - not execution approval.',
       'Sniper watch: 1M timing only; 5M close/hold required.',
-      `Entry: ${priceLine(candidate.entry)}`,
-      `Stop: ${priceLine(levels.stop)}`,
-      `T1: ${priceLine(levels.target1)}`,
-      `T2: ${priceLine(levels.target2)}`,
+      ...conditionalLevelLines(),
       'Reason not executable: HTF/data context is limited; canExecute remains false.',
     ] : [
-      `Entry: ${priceLine(candidate.entry)}`,
-      `Stop: ${priceLine(levels.stop)}`,
-      `T1: ${priceLine(levels.target1)}`,
-      `T2: ${priceLine(levels.target2)}`,
+      ...conditionalLevelLines(),
     ]),
     '',
     `Invalid ${invalidWord}: ${priceLine(levels.stop)}`,
@@ -1829,6 +1868,48 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     const levels = deskPlayDecisionMapLevels(args.normalized, side, line, play, args.currentPrice);
     const triggerWord = side === 'LONG' ? 'ABOVE' : 'BELOW';
     const safety = sidePresentationSafety(side);
+    const activeZone = play.activeTacticalZone?.direction === side ? play.activeTacticalZone : null;
+    const activeZoneLower = isFinitePrice(activeZone?.lower) ? activeZone.lower : null;
+    const activeZoneUpper = isFinitePrice(activeZone?.upper) ? activeZone.upper : null;
+    const currentPrice = isFinitePrice(args.currentPrice) ? args.currentPrice : null;
+    const currentVsZone = activeZoneLower !== null && activeZoneUpper !== null && currentPrice !== null
+      ? currentPrice < activeZoneLower
+        ? { state: 'below' as const, distance: activeZoneLower - currentPrice }
+        : currentPrice > activeZoneUpper
+          ? { state: 'above' as const, distance: currentPrice - activeZoneUpper }
+          : { state: 'inside' as const, distance: 0 }
+      : null;
+    const conditionalLevelLines = (): string[] => {
+      if (!levels) return [];
+      if (currentVsZone && currentVsZone.state !== 'inside') {
+        const noEntryInstruction = side === 'SHORT'
+          ? currentVsZone.state === 'above'
+            ? 'Entry status: NOT ACTIVE - current price is above the active short zone; wait for a fresh completed 5M setup or migrated line.'
+            : 'Entry status: NO CHASE - price is already below the active short zone; wait for a fresh completed 5M retest.'
+          : currentVsZone.state === 'below'
+            ? 'Entry status: NOT ACTIVE - current price is below the active long zone; wait for a fresh completed 5M setup or migrated line.'
+            : 'Entry status: NO CHASE - price is already above the active long zone; wait for a fresh completed 5M retest.';
+        return [
+          `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
+          `Current: ${priceLine(currentPrice)} (${numberLine(currentVsZone.distance)} pts ${currentVsZone.state} zone)`,
+          noEntryInstruction,
+          `Entry if fresh proof returns: ${priceLine(levels.entry)}`,
+          `Stop: ${priceLine(levels.stop)}`,
+          `T1: ${priceLine(levels.target1)}`,
+          `T2: ${priceLine(levels.target2)}`,
+        ];
+      }
+      return [
+        ...(currentVsZone?.state === 'inside' ? [
+          `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
+          `Current: ${priceLine(currentPrice)} (inside zone)`,
+        ] : []),
+        `Entry: ${priceLine(levels.entry)}`,
+        `Stop: ${priceLine(levels.stop)}`,
+        `T1: ${priceLine(levels.target1)}`,
+        `T2: ${priceLine(levels.target2)}`,
+      ];
+    };
     if (!levels) {
       return {
         hasLevels: false,
@@ -1853,10 +1934,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           sideBreakoutLabel(side, triggerWord, line),
           'High-confidence conditional trade plan - wait on the named completed 5M condition.',
           'Execution gate: armed only after that condition closes; not early-entry approval.',
-          `Entry: ${priceLine(levels.entry)}`,
-          `Stop: ${priceLine(levels.stop)}`,
-          `T1: ${priceLine(levels.target1)}`,
-          `T2: ${priceLine(levels.target2)}`,
+          ...conditionalLevelLines(),
           ...(safety.reason ? [`Caution: ${safety.reason}.`] : []),
         ],
       };
@@ -1874,10 +1952,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           sideBreakoutLabel(side, triggerWord, line),
           reviewLabel,
           proofLabel,
-          `Entry: ${priceLine(levels.entry)}`,
-          `Stop: ${priceLine(levels.stop)}`,
-          `T1: ${priceLine(levels.target1)}`,
-          `T2: ${priceLine(levels.target2)}`,
+          ...conditionalLevelLines(),
           ...(safety.reason ? [`Reason: ${safety.reason}.`] : []),
         ],
       };
