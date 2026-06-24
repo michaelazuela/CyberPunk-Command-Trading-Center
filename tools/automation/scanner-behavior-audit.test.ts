@@ -27,7 +27,26 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       },
       plan: { canExecute: false },
       visibility: { visibilityMode: 'POST_WATCH' },
-      deskState: { primaryDeskPlay: { direction: 'SHORT' } },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'LONG' },
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+        },
+      },
       staleReason: 'T1 was already reached before alert generation. No chase entry.',
       discord: {
         shouldSend: true,
@@ -47,7 +66,26 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
       },
       plan: { canExecute: false },
       visibility: { visibilityMode: 'HOLD_WITH_REASON' },
-      deskState: { primaryDeskPlay: { direction: 'SHORT' } },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'SHORT' },
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+        },
+      },
       staleReason: null,
       discord: {
         shouldSend: false,
@@ -79,10 +117,20 @@ assert.equal(report.summary.canExecuteFalseExpectedPosts, 1);
 assert.equal(report.summary.reviewOrWatchExpectedPosts, 1);
 assert.equal(report.summary.staleOrNoChaseEvents, 1);
 assert.equal(report.summary.candidateDeskConflicts, 1);
+assert.equal(report.summary.htfFvgReactionRoutingEvents, 2);
+assert.equal(report.summary.htfFvgReactionRoutingConflicts, 1);
+assert.equal(report.summary.htfFvgReactionBoundaryDrift, 0);
+assert.equal(report.summary.phase4EnforcementFailures, 1);
 assert.equal(report.summary.duplicateSuppressions, 1);
+assert.equal(report.rows[0].htfFvgReactionRoutingDirection, 'SHORT');
+assert.equal(report.rows[0].htfFvgReactionPhase4Enforcement, 'fail');
+assert.ok(report.rows[0].auditFlags.includes('htf_fvg_reaction_selected_conflict'));
+assert.ok(report.rows[0].auditFlags.includes('htf_fvg_reaction_campaign_conflict'));
+assert.equal(report.rows[1].htfFvgReactionPhase4Enforcement, 'pass');
 assert.match(report.markdown, /Scanner Behavior Phase 1 Audit/);
 assert.match(report.markdown, /Read-only replay audit/);
 assert.match(report.markdown, /canExecute=false expected posts: 1/);
+assert.match(report.markdown, /Phase 4 enforcement failures: 1/);
 assert.equal(JSON.stringify(report).includes('"canExecute":true'), false);
 
 fs.rmSync(tmp, { recursive: true, force: true });

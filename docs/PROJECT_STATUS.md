@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Phase 4 HTF FVG reaction routing replay-audit enforcement.
+Files changed: tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 3 routed trader-facing DeskState/Discord from active HTF parent FVG reaction memory when same-side 5M child confirmation and complete levels exist. Phase 4 adds a replay-audit enforcement layer so future scanner decision tapes flag any active HTF FVG reaction route that conflicts with primary DeskState, selected candidate side, active campaign side, or its communication-only approval boundary.
+Tests run: 3x loop verification with `npx tsx tools/automation/scanner-behavior-audit.test.ts`, `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`, `npx tsx src/lib/htfFvgReactionMemory.test.ts`, and `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`; real-tape audit dry run with `npx tsx tools/automation/scanner-behavior-audit.ts --trade-date 2026-06-24 --instrument MES --sessions all --json`; `npx tsc --noEmit --pretty false`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The new replay-audit fields mark active HTF FVG reaction routing events, fail Phase 4 enforcement when selected/campaign/primary side conflicts with the routed side, and fail if any routing approval-boundary flag drifts away from communication-only. Today's existing scanner tapes still load cleanly; they predate the new routing fields, so Phase 4-specific routing event count is zero on those tapes.
+Trading logic changed: No. This is read-only scanner decision-tape audit/test coverage only. It does not change setup definitions, ranking, candidate creation, entry, stop, target, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, or canExecute.
+Bridge impact: None. It reads existing scanner decision tape metadata only.
+Discord impact: No direct runtime delivery change. The audit now makes HTF FVG routing drift visible before a future delivery/replay sign-off.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: After this passes, wire the Phase 4 audit into the normal scanner replay/live-observation checklist so active HTF FVG routing drift is reviewed before Discord sign-off.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Phase 3 HTF FVG reaction communication/routing.
 Files changed: src/lib/localScannerEngine.ts, src/lib/htfFvgReactionRoutingPhase3.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/professional-report-language.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 2 stored active HTF parent FVG reaction memory, but the trader-facing DeskState/Discord path still needed to use that memory so a complete, high-quality conditional side is surfaced instead of being buried by an unrelated selected/campaign side. Phase 3 routes the displayed primary Desk Play side only when active HTF parent FVG reaction, same-direction 5M child FVG confirmation, and complete same-direction scanner-owned levels are all present.

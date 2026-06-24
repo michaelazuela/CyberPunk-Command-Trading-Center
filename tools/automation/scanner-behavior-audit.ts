@@ -15,6 +15,9 @@ export interface ScannerBehaviorAuditRow {
   selected: string;
   selectedDirection: string;
   deskPrimary: string;
+  htfFvgReactionRoutingStatus: string;
+  htfFvgReactionRoutingDirection: string;
+  htfFvgReactionPhase4Enforcement: 'pass' | 'fail' | 'not_applicable';
   canExecute: boolean | null;
   visibilityMode: string;
   discordAction: string;
@@ -41,6 +44,10 @@ export interface ScannerBehaviorAuditReport {
     reviewOrWatchExpectedPosts: number;
     staleOrNoChaseEvents: number;
     candidateDeskConflicts: number;
+    htfFvgReactionRoutingEvents: number;
+    htfFvgReactionRoutingConflicts: number;
+    htfFvgReactionBoundaryDrift: number;
+    phase4EnforcementFailures: number;
     dataQualityEvents: number;
     duplicateSuppressions: number;
   };
@@ -136,6 +143,10 @@ function boolValue(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function directionalValue(value: unknown): 'LONG' | 'SHORT' | null {
+  return value === 'LONG' || value === 'SHORT' ? value : null;
+}
+
 function formatTime(value: string): string {
   return value.match(/T(\d{2}:\d{2})/)?.[1] || value;
 }
@@ -161,6 +172,10 @@ function auditFlags(args: {
   visibilityMode: string;
   selectedDirection: string;
   deskPrimary: string;
+  activeCampaignDirection: string;
+  htfFvgReactionRoutingStatus: string;
+  htfFvgReactionRoutingDirection: string;
+  htfFvgReactionApprovalBoundary: Record<string, unknown>;
   currentRuleReason: string;
   staleReason: string | null;
 }): string[] {
@@ -180,6 +195,28 @@ function auditFlags(args: {
   ) {
     flags.push('candidate_desk_conflict');
   }
+  const routedDirection = directionalValue(args.htfFvgReactionRoutingDirection);
+  const activeRouting = args.htfFvgReactionRoutingStatus === 'routed_active_reaction' && routedDirection;
+  if (activeRouting) {
+    flags.push('htf_fvg_reaction_routing_active');
+    if (args.deskPrimary !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
+    if (args.selectedDirection !== 'N/A' && args.selectedDirection !== routedDirection) {
+      flags.push('htf_fvg_reaction_selected_conflict');
+    }
+    if (args.activeCampaignDirection !== 'N/A' && args.activeCampaignDirection !== routedDirection) {
+      flags.push('htf_fvg_reaction_campaign_conflict');
+    }
+    const boundary = args.htfFvgReactionApprovalBoundary;
+    const boundaryChanged = [
+      boundary.changesTradeApprovals,
+      boundary.changesCanExecute,
+      boundary.changesEntryStopTargets,
+      boundary.changesRiskRules,
+      boundary.changesRanking,
+      boundary.createsNewModel,
+    ].some((value) => value !== false);
+    if (boundaryChanged) flags.push('htf_fvg_reaction_boundary_drift');
+  }
   return flags;
 }
 
@@ -194,10 +231,15 @@ function rowFromEvent(args: {
   const plan = asRecord(args.event.plan);
   const visibility = asRecord(args.event.visibility);
   const deskPrimary = asRecord(asRecord(args.event.deskState).primaryDeskPlay);
+  const htfFvgReactionRouting = asRecord(deskPrimary.htfFvgReactionRouting);
+  const activeCampaign = asRecord(asRecord(args.event.candidateLifecycleTrace).activeCampaign);
   const discord = asRecord(args.event.discord);
   const canExecute = boolValue(plan.canExecute);
   const selectedDirection = stringValue(selected.direction);
   const deskPrimaryDirection = stringValue(deskPrimary.direction, 'WAIT');
+  const activeCampaignDirection = stringValue(activeCampaign.direction);
+  const htfFvgReactionRoutingStatus = stringValue(htfFvgReactionRouting.status);
+  const htfFvgReactionRoutingDirection = stringValue(htfFvgReactionRouting.direction);
   const currentRuleExpectedDiscordPost = discord.shouldSend === true;
   const currentRuleReason = stringValue(discord.sendOrSuppressReason, 'reason unavailable');
   const visibilityMode = stringValue(visibility.visibilityMode, 'N/A');
@@ -210,9 +252,18 @@ function rowFromEvent(args: {
     visibilityMode,
     selectedDirection,
     deskPrimary: deskPrimaryDirection,
+    activeCampaignDirection,
+    htfFvgReactionRoutingStatus,
+    htfFvgReactionRoutingDirection,
+    htfFvgReactionApprovalBoundary: asRecord(htfFvgReactionRouting.approvalBoundary),
     currentRuleReason,
     staleReason,
   });
+  const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
+    ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')
+      ? 'fail'
+      : 'pass'
+    : 'not_applicable';
 
   return {
     tradeDate: args.tradeDate,
@@ -224,6 +275,9 @@ function rowFromEvent(args: {
     selected: selectedLabel(selected),
     selectedDirection,
     deskPrimary: deskPrimaryDirection,
+    htfFvgReactionRoutingStatus,
+    htfFvgReactionRoutingDirection,
+    htfFvgReactionPhase4Enforcement,
     canExecute,
     visibilityMode,
     discordAction: currentRuleExpectedDiscordPost ? 'post' : 'suppress',
@@ -247,6 +301,14 @@ function findingsFor(summary: ScannerBehaviorAuditReport['summary']): string[] {
   }
   if (summary.candidateDeskConflicts > 0) {
     findings.push(`${summary.candidateDeskConflicts} event(s) had selected candidate direction opposing the primary DeskState; Phase 4 should enforce clearer trader-facing language if needed.`);
+  }
+  if (summary.phase4EnforcementFailures > 0) {
+    findings.push(`Phase 4 enforcement failed on ${summary.phase4EnforcementFailures} event(s): active HTF FVG reaction routing conflicted with primary, selected, campaign, or approval-boundary metadata.`);
+  } else if (summary.htfFvgReactionRoutingEvents > 0) {
+    findings.push(`Phase 4 enforcement passed on ${summary.htfFvgReactionRoutingEvents} active HTF FVG reaction routing event(s).`);
+  }
+  if (summary.htfFvgReactionBoundaryDrift > 0) {
+    findings.push(`${summary.htfFvgReactionBoundaryDrift} event(s) showed HTF FVG reaction routing boundary drift; routing must remain communication-only.`);
   }
   if (summary.duplicateSuppressions > 0) {
     findings.push(`${summary.duplicateSuppressions} event(s) were suppressed by duplicate/dedupe logic; Phase 2 should confirm this is reducing noise as intended.`);
@@ -273,6 +335,10 @@ function markdownFor(report: Omit<ScannerBehaviorAuditReport, 'markdown'>): stri
     `- Review/watch expected posts: ${report.summary.reviewOrWatchExpectedPosts}`,
     `- Stale/no-chase events: ${report.summary.staleOrNoChaseEvents}`,
     `- Candidate/DeskState conflicts: ${report.summary.candidateDeskConflicts}`,
+    `- HTF FVG reaction routing events: ${report.summary.htfFvgReactionRoutingEvents}`,
+    `- HTF FVG reaction routing conflicts: ${report.summary.htfFvgReactionRoutingConflicts}`,
+    `- HTF FVG reaction boundary drift: ${report.summary.htfFvgReactionBoundaryDrift}`,
+    `- Phase 4 enforcement failures: ${report.summary.phase4EnforcementFailures}`,
     `- Data-quality events: ${report.summary.dataQualityEvents}`,
     `- Duplicate suppressions: ${report.summary.duplicateSuppressions}`,
     '',
@@ -280,8 +346,8 @@ function markdownFor(report: Omit<ScannerBehaviorAuditReport, 'markdown'>): stri
     ...report.findings.map((finding) => `- ${finding}`),
     '',
     '## Bar-by-Bar Table',
-    '| Session | 5M ET | Close | Current | Scanner | Selected | Desk | canExecute | Visibility | Discord | Flags | Reason |',
-    '| --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| Session | 5M ET | Close | Current | Scanner | Selected | Desk | HTF FVG Route | Phase 4 | canExecute | Visibility | Discord | Flags | Reason |',
+    '| --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...report.rows.map((row) => [
       row.session,
       formatTime(row.completed5m),
@@ -290,6 +356,10 @@ function markdownFor(report: Omit<ScannerBehaviorAuditReport, 'markdown'>): stri
       row.scannerState,
       row.selected.replace(/\|/g, '/'),
       row.deskPrimary,
+      row.htfFvgReactionRoutingStatus === 'N/A'
+        ? 'N/A'
+        : `${row.htfFvgReactionRoutingDirection} ${row.htfFvgReactionRoutingStatus}`.replace(/\|/g, '/'),
+      row.htfFvgReactionPhase4Enforcement,
       row.canExecute === null ? 'N/A' : String(row.canExecute),
       row.visibilityMode,
       row.discordAction,
@@ -336,6 +406,14 @@ export async function buildScannerBehaviorAuditReport(options: ScannerBehaviorAu
     reviewOrWatchExpectedPosts: rows.filter((row) => row.currentRuleExpectedDiscordPost && row.auditFlags.includes('review_or_watch')).length,
     staleOrNoChaseEvents: rows.filter((row) => row.auditFlags.includes('stale_or_no_chase')).length,
     candidateDeskConflicts: rows.filter((row) => row.auditFlags.includes('candidate_desk_conflict')).length,
+    htfFvgReactionRoutingEvents: rows.filter((row) => row.auditFlags.includes('htf_fvg_reaction_routing_active')).length,
+    htfFvgReactionRoutingConflicts: rows.filter((row) => row.auditFlags.some((flag) => (
+      flag === 'htf_fvg_reaction_primary_mismatch' ||
+      flag === 'htf_fvg_reaction_selected_conflict' ||
+      flag === 'htf_fvg_reaction_campaign_conflict'
+    ))).length,
+    htfFvgReactionBoundaryDrift: rows.filter((row) => row.auditFlags.includes('htf_fvg_reaction_boundary_drift')).length,
+    phase4EnforcementFailures: rows.filter((row) => row.htfFvgReactionPhase4Enforcement === 'fail').length,
     dataQualityEvents: rows.filter((row) => row.auditFlags.includes('data_quality')).length,
     duplicateSuppressions: rows.filter((row) => row.auditFlags.includes('duplicate_suppression')).length,
   };
