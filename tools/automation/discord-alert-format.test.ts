@@ -1457,6 +1457,10 @@ const deskPlayPendingShortMapPayload = compactDiscordSummary({
         sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
         direction: 'SHORT',
         status: 'routed_active_reaction',
+        lineInSand: 7600,
+        lineLabel: 'SHORT BELOW 7600.00 from 60M parent FVG 7596.00-7604.00',
+        lifecycleState: 'rejected',
+        standDown: 'Stand down on completed 5M acceptance above parent zone 7604.00.',
         reason: 'SHORT routed from HTF parent reaction and 5M child proof; execution gates unchanged.',
       },
       htfFvgCascade: {
@@ -1584,6 +1588,8 @@ assert.ok(pendingShortMapText.includes('FVG is a reaction/management zone only.'
 assert.ok(pendingShortMapText.includes('HTF FVG Reaction Memory:'));
 assert.ok(pendingShortMapText.includes('HTF parent reaction: 60M 7596.00-7604.00'));
 assert.ok(pendingShortMapText.includes('5M child proof: 7592.00-7594.00 (child fvg confirmed)'));
+assert.ok(pendingShortMapText.includes('Line in sand: SHORT BELOW 7600.00 from 60M parent FVG 7596.00-7604.00'));
+assert.ok(pendingShortMapText.includes('Lifecycle: rejected'));
 assert.ok(pendingShortMapText.includes('Routing: SHORT surfaced from HTF parent reaction + 5M child proof.'));
 assert.ok(pendingShortMapText.includes('Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.'));
 assert.ok(pendingShortMapText.includes('HTF FVG Cascade:'));

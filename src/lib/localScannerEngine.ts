@@ -476,6 +476,10 @@ export interface DeskHtfFvgReactionRouting {
   sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing';
   direction: DeskPlayDirection;
   status: 'routed_active_reaction' | 'not_applicable' | 'missing_child_5m_confirmation' | 'missing_complete_lifecycle_plan';
+  lineInSand: number | null;
+  lineLabel: string | null;
+  lifecycleState: string | null;
+  standDown: string | null;
   reason: string;
   approvalBoundary: {
     changesTradeApprovals: false;
@@ -2808,6 +2812,34 @@ function htfParentZoneFromFvgFact(args: {
   };
 }
 
+function htfParentZoneFromReactionMemory(
+  memory: HtfFvgReactionMemory | null | undefined,
+  currentPrice?: number | null,
+): DeskHtfFvgParentZone | null {
+  const active = memory?.activeReaction;
+  if (!active || (active.direction !== 'LONG' && active.direction !== 'SHORT')) return null;
+  if (active.lifecycle.state === 'accepted_through' || active.lifecycle.state === 'inverted' || active.lifecycle.state === 'data_limited') return null;
+  return {
+    sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+    direction: active.direction,
+    timeframe: active.timeframe,
+    lower: active.lower,
+    upper: active.upper,
+    midpoint: active.midpoint,
+    label: `${active.timeframe} ${active.direction === 'LONG' ? 'bullish' : 'bearish'} active parent FVG reaction`,
+    state: activeTacticalZoneState({
+      direction: active.direction,
+      lower: active.lower,
+      upper: active.upper,
+      currentPrice,
+    }),
+    evidence: [
+      `Lifecycle ${active.lifecycle.state}; touches ${active.lifecycle.touchCount}; deepest mitigation ${active.lifecycle.deepestMitigationPercent ?? 'N/A'}%.`,
+      active.latestReaction?.evidence,
+    ].filter(Boolean).join(' '),
+  };
+}
+
 function htfFvgParentZonesFromChartContext(args: {
   chartContext?: Partial<ChartContext> | null;
   direction?: 'LONG' | 'SHORT' | null;
@@ -2822,7 +2854,7 @@ function htfFvgParentZonesFromChartContext(args: {
     mtf.fourHour,
   ].filter((set): set is TimeframeFactSet => Boolean(set));
   return sets.flatMap((set) =>
-    (set.fvgZones || [])
+    (set.fullWindowFvgZones?.length ? set.fullWindowFvgZones : set.fvgZones || [])
       .map((zone) => htfParentZoneFromFvgFact({
         direction: args.direction,
         timeframe: set.timeframe,
@@ -2884,6 +2916,7 @@ function buildHtfFvgCascade(args: {
   currentPrice?: number | null;
   lineInSand?: number | null;
   chartContext?: Partial<ChartContext> | null;
+  htfFvgReactionMemory?: HtfFvgReactionMemory | null;
 }): DeskHtfFvgCascade | null {
   const requestedDirection = args.direction === 'LONG' || args.direction === 'SHORT' ? args.direction : null;
   const tacticalParentZone = requestedDirection
@@ -2893,13 +2926,14 @@ function buildHtfFvgCascade(args: {
         currentPrice: args.currentPrice,
       })
     : null;
-  const chartParentZone = tacticalParentZone ? null : selectActiveHtfFvgParentZone({
+  const memoryParentZone = tacticalParentZone ? null : htfParentZoneFromReactionMemory(args.htfFvgReactionMemory, args.currentPrice);
+  const chartParentZone = tacticalParentZone || memoryParentZone ? null : selectActiveHtfFvgParentZone({
     chartContext: args.chartContext,
     direction: requestedDirection,
     currentPrice: args.currentPrice,
     lineInSand: args.lineInSand,
   });
-  const parentZone = tacticalParentZone || chartParentZone;
+  const parentZone = tacticalParentZone || memoryParentZone || chartParentZone;
   const direction = requestedDirection || parentZone?.direction || null;
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
   const nativeFiveMinuteZone = args.activeTacticalZone?.direction === direction &&
@@ -3198,10 +3232,34 @@ function htfFvgMemoryRoutableDirection(
   const direction = memory?.activeReaction?.direction;
   if (direction !== 'LONG' && direction !== 'SHORT') return null;
   if (memory.activeReaction?.state === 'accepted_through') return null;
+  if (memory.activeReaction?.lifecycle.state === 'accepted_through' || memory.activeReaction?.lifecycle.state === 'inverted' || memory.activeReaction?.lifecycle.state === 'data_limited') return null;
   if (memory.childConfirmation?.direction !== direction || memory.childConfirmation.state !== 'child_fvg_confirmed') return null;
   const item = direction === 'LONG' ? trace.bestLongPlan : trace.bestShortPlan;
   if (!item?.hasFullPlanLevels) return null;
   return direction;
+}
+
+function htfFvgReactionLineInSand(memory: HtfFvgReactionMemory | null): number | null {
+  const active = memory?.activeReaction;
+  if (!active) return null;
+  if (active.direction === 'LONG') return active.upper;
+  if (active.direction === 'SHORT') return active.lower;
+  return null;
+}
+
+function htfFvgReactionLineLabel(memory: HtfFvgReactionMemory | null): string | null {
+  const active = memory?.activeReaction;
+  const line = htfFvgReactionLineInSand(memory);
+  if (!active || line === null) return null;
+  return `${active.direction === 'LONG' ? 'LONG ABOVE' : 'SHORT BELOW'} ${line.toFixed(2)} from ${active.timeframe} parent FVG ${active.lower.toFixed(2)}-${active.upper.toFixed(2)}`;
+}
+
+function htfFvgReactionStandDown(memory: HtfFvgReactionMemory | null): string | null {
+  const active = memory?.activeReaction;
+  if (!active) return null;
+  return active.direction === 'LONG'
+    ? `Stand down on completed 5M acceptance below parent zone ${active.lower.toFixed(2)}.`
+    : `Stand down on completed 5M acceptance above parent zone ${active.upper.toFixed(2)}.`;
 }
 
 function selectPrimaryDeskPlayDirection(
@@ -3240,12 +3298,33 @@ function buildHtfFvgReactionRouting(args: {
     createsNewModel: false,
   } as const;
   const direction = args.memory?.activeReaction?.direction;
+  const lineInSand = htfFvgReactionLineInSand(args.memory);
+  const lineLabel = htfFvgReactionLineLabel(args.memory);
+  const lifecycleState = args.memory?.activeReaction?.lifecycle.state || null;
+  const standDown = htfFvgReactionStandDown(args.memory);
   if (direction !== 'LONG' && direction !== 'SHORT') {
     return {
       sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
       direction: 'WAIT',
       status: 'not_applicable',
+      lineInSand: null,
+      lineLabel: null,
+      lifecycleState: null,
+      standDown: null,
       reason: 'No active HTF parent FVG reaction is available for desk-side routing.',
+      approvalBoundary: boundary,
+    };
+  }
+  if (lifecycleState === 'accepted_through' || lifecycleState === 'inverted' || lifecycleState === 'data_limited') {
+    return {
+      sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+      direction: 'WAIT',
+      status: 'not_applicable',
+      lineInSand,
+      lineLabel,
+      lifecycleState,
+      standDown,
+      reason: `${direction} HTF parent FVG reaction remains visible for audit, but lifecycle state ${lifecycleState} is not eligible for active routing.`,
       approvalBoundary: boundary,
     };
   }
@@ -3254,6 +3333,10 @@ function buildHtfFvgReactionRouting(args: {
       sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
       direction: 'WAIT',
       status: 'missing_child_5m_confirmation',
+      lineInSand,
+      lineLabel,
+      lifecycleState,
+      standDown,
       reason: `${direction} HTF parent FVG reaction is visible, but same-direction 5M child FVG confirmation is missing.`,
       approvalBoundary: boundary,
     };
@@ -3264,6 +3347,10 @@ function buildHtfFvgReactionRouting(args: {
       sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
       direction: 'WAIT',
       status: 'missing_complete_lifecycle_plan',
+      lineInSand,
+      lineLabel,
+      lifecycleState,
+      standDown,
       reason: `${direction} HTF parent FVG reaction has child confirmation, but no same-direction complete lifecycle plan is available.`,
       approvalBoundary: boundary,
     };
@@ -3272,7 +3359,11 @@ function buildHtfFvgReactionRouting(args: {
     sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
     direction,
     status: args.primaryDirection === direction ? 'routed_active_reaction' : 'not_applicable',
-    reason: `${direction} routed for trader-facing DeskState because active HTF parent FVG reaction, same-direction 5M child FVG confirmation, and complete scanner-owned levels are present. Execution still requires normal 5M trigger, risk, target, invalidation, and canExecute gates.`,
+    lineInSand,
+    lineLabel,
+    lifecycleState,
+    standDown,
+    reason: `${direction} routed for trader-facing DeskState because active HTF parent FVG reaction, same-direction 5M child FVG confirmation, and complete scanner-owned levels are present. ${lineLabel ? `${lineLabel}. ` : ''}Execution still requires normal 5M trigger, risk, target, invalidation, and canExecute gates.`,
     approvalBoundary: boundary,
   };
 }
@@ -3423,6 +3514,7 @@ function buildPrimaryDeskPlay(args: {
     currentPrice: args.currentPrice,
     lineInSand: activeTacticalLine.activeLine ?? selectedLine,
     chartContext: args.chartContext,
+    htfFvgReactionMemory: preselectHtfFvgReactionMemory,
   });
   const htfFvgReactionMemory = preselectHtfFvgReactionMemory;
   const htfFvgReactionRouting = buildHtfFvgReactionRouting({

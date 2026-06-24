@@ -197,6 +197,10 @@ export interface CompactDeskStateForDiscord {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
       status?: string | null;
+      lineInSand?: number | null;
+      lineLabel?: string | null;
+      lifecycleState?: string | null;
+      standDown?: string | null;
       reason?: string | null;
     } | null;
     htfFvgCascade?: {
@@ -1684,13 +1688,27 @@ function deskPlayHtfFvgReactionMemoryLines(
   const stackLine = memory?.parentStackSummary
     ? compactLine(memory.parentStackSummary, 118)
     : null;
+  const lineLabel = routing?.lineLabel
+    ? compactLine(routing.lineLabel, 96)
+    : isFinitePrice(routing?.lineInSand)
+    ? `${displayDirection === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE'} ${priceLine(routing?.lineInSand)}`
+    : null;
+  const lifecycleLine = routing?.lifecycleState
+    ? `Lifecycle: ${compactLine(String(routing.lifecycleState).replace(/_/g, ' '), 32)}`
+    : null;
+  const standDown = routing?.standDown
+    ? compactLine(routing.standDown, 108)
+    : null;
   return [
     'HTF FVG Reaction Memory:',
     parentLine,
     `Reaction: ${reactionState}${active.latestReaction?.timestamp ? ` at ${compactLine(active.latestReaction.timestamp, 28)}` : ''}`,
     childLine,
+    ...(lineLabel ? [`Line in sand: ${lineLabel}`] : []),
+    ...(lifecycleLine ? [lifecycleLine] : []),
     ...(stackLine ? [stackLine] : []),
     routeLine,
+    ...(standDown ? [standDown] : []),
     'Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.',
   ];
 }
