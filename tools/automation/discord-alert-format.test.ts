@@ -1422,6 +1422,43 @@ const deskPlayPendingShortMapPayload = compactDiscordSummary({
         managementInstruction: 'FVG is a reaction/management zone only. It does not approve execution without completed 5M proof and canExecute.',
         noChase: 'No chase inside or beyond the FVG. Wait for completed 5M close/hold/retest proof.',
       },
+      htfFvgReactionMemory: {
+        sourceOfTruth: 'scanner_htf_parent_fvg_reaction_memory',
+        direction: 'SHORT',
+        activeReaction: {
+          sourceOfTruth: 'scanner_htf_parent_fvg_reaction_zone_memory',
+          direction: 'SHORT',
+          timeframe: '60M',
+          lower: 7596,
+          upper: 7604,
+          midpoint: 7600,
+          formedAt: '2026-06-23T02:00:00.0000000',
+          state: 'rejected',
+          latestReaction: {
+            timestamp: '2026-06-24T12:45:00.0000000',
+            state: 'rejected',
+            close: 7588.5,
+            evidence: '60M parent FVG rejected from structured OHLC.',
+          },
+        },
+        childConfirmation: {
+          direction: 'SHORT',
+          timeframe: '5M',
+          lower: 7592,
+          upper: 7594,
+          midpoint: 7593,
+          formedAt: '2026-06-24T12:40:00.0000000',
+          state: 'child_fvg_confirmed',
+          evidence: ['5M child FVG confirmed from structured OHLC.'],
+        },
+        summary: '60M SHORT parent FVG rejected; child_fvg_confirmed.',
+      },
+      htfFvgReactionRouting: {
+        sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+        direction: 'SHORT',
+        status: 'routed_active_reaction',
+        reason: 'SHORT routed from HTF parent reaction and 5M child proof; execution gates unchanged.',
+      },
       htfFvgCascade: {
         sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing',
         direction: 'SHORT',
@@ -1544,6 +1581,11 @@ assert.ok(pendingShortMapText.includes('60M FVG / imbalance decision zone: 7600.
 assert.ok(pendingShortMapText.includes('Hold: Short context needs completed 5M hold/rejection below 7600.00.'));
 assert.ok(pendingShortMapText.includes('Fold: completed acceptance above 7600.00 turns this FVG into support/long management context.'));
 assert.ok(pendingShortMapText.includes('FVG is a reaction/management zone only.'));
+assert.ok(pendingShortMapText.includes('HTF FVG Reaction Memory:'));
+assert.ok(pendingShortMapText.includes('HTF parent reaction: 60M 7596.00-7604.00'));
+assert.ok(pendingShortMapText.includes('5M child proof: 7592.00-7594.00 (child fvg confirmed)'));
+assert.ok(pendingShortMapText.includes('Routing: SHORT surfaced from HTF parent reaction + 5M child proof.'));
+assert.ok(pendingShortMapText.includes('Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.'));
 assert.ok(pendingShortMapText.includes('HTF FVG Cascade:'));
 assert.ok(pendingShortMapText.includes('Parent FVG: 60M 7596.00-7604.00'));
 assert.ok(pendingShortMapText.includes('5M route: parent zone + 5M trigger 7596.00-7604.00.'));

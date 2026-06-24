@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Phase 3 HTF FVG reaction communication/routing.
+Files changed: src/lib/localScannerEngine.ts, src/lib/htfFvgReactionRoutingPhase3.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/professional-report-language.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 2 stored active HTF parent FVG reaction memory, but the trader-facing DeskState/Discord path still needed to use that memory so a complete, high-quality conditional side is surfaced instead of being buried by an unrelated selected/campaign side. Phase 3 routes the displayed primary Desk Play side only when active HTF parent FVG reaction, same-direction 5M child FVG confirmation, and complete same-direction scanner-owned levels are all present.
+Tests run: 3x loop verification with `npx tsx src/lib/htfFvgReactionRoutingPhase3.test.ts`, `npx tsx src/lib/htfFvgReactionMemory.test.ts`, `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`, and `npx tsx tools/automation/discord-alert-format.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The routing test proves a higher-ranked/selected LONG can no longer bury a complete SHORT plan when structured HTF parent FVG rejection plus 5M child confirmation supports SHORT. Discord now renders HTF FVG Reaction Memory in rich, fallback, and ultra-compact desk-play paths, including the communication-only boundary.
+Trading logic changed: No. This is DeskState/Discord communication routing only. It does not change setup definitions, ranking scores, candidate creation, entry, stop, target, risk, invalidation, bar-close handling, bridge behavior, or canExecute.
+Bridge impact: None. It consumes existing structured OHLC/FVG memory only.
+Discord impact: Yes. Desk Play text can now show HTF parent reaction memory and route the trader-facing primary side when the memory has same-side 5M child confirmation and complete scanner-owned levels.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification. Existing Discord formatter tests still print a non-blocking preferred-length warning for a compact fixture.
+Next recommended action: Phase 4 should add replay-audit enforcement over real scanner decision tapes so any future selected/campaign side that conflicts with active HTF FVG reaction routing is flagged before Discord delivery.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Phase 2 structured HTF parent FVG reaction memory.
 Files changed: src/lib/htfFvgReactionMemory.ts, src/lib/htfFvgReactionMemory.test.ts, src/lib/localScannerEngine.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 1 proved the June 24 missed short had an older 60M bearish parent FVG reaction, 15M rejection, and 5M child FVG proof. Phase 2 stores that relationship as machine-readable scanner metadata so HTF parent-zone retest/rejection, stale accepted-through zones, and 5M child confirmation are available without parsing Discord text, chart text, screenshots, or narrative.

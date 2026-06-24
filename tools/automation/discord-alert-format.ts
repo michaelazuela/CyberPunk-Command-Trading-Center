@@ -161,6 +161,43 @@ export interface CompactDeskStateForDiscord {
       managementInstruction?: string | null;
       noChase?: string | null;
     } | null;
+    htfFvgReactionMemory?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | string | null;
+      activeReaction?: {
+        sourceOfTruth?: string;
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        midpoint?: number | null;
+        formedAt?: string | null;
+        state?: string | null;
+        latestReaction?: {
+          timestamp?: string | null;
+          state?: string | null;
+          close?: number | null;
+          evidence?: string | null;
+        } | null;
+      } | null;
+      childConfirmation?: {
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        midpoint?: number | null;
+        formedAt?: string | null;
+        state?: string | null;
+        evidence?: string[];
+      } | null;
+      summary?: string | null;
+    } | null;
+    htfFvgReactionRouting?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      status?: string | null;
+      reason?: string | null;
+    } | null;
     htfFvgCascade?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | string;
@@ -1616,6 +1653,43 @@ function deskPlayHtfFvgCascadeLines(
   ];
 }
 
+function deskPlayHtfFvgReactionMemoryLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const routing = play.htfFvgReactionRouting;
+  const memory = play.htfFvgReactionMemory;
+  const active = memory?.activeReaction;
+  const child = memory?.childConfirmation;
+  const displayDirection = direction === 'LONG' || direction === 'SHORT'
+    ? direction
+    : routing?.direction === 'LONG' || routing?.direction === 'SHORT'
+    ? routing.direction
+    : active?.direction === 'LONG' || active?.direction === 'SHORT'
+    ? active.direction
+    : null;
+  if (!displayDirection) return [];
+  if (!active || active.direction !== displayDirection) return [];
+  const parentState = compactLine(String(active.state || 'watch').replace(/_/g, ' '), 24);
+  const reactionState = compactLine(String(active.latestReaction?.state || active.state || 'reaction').replace(/_/g, ' '), 24);
+  const childState = compactLine(String(child?.state || 'waiting_for_child_5m_proof').replace(/_/g, ' '), 34);
+  const parentLine = `HTF parent reaction: ${compactLine(active.timeframe || 'HTF', 8)} ${zoneRangeLine(active.lower, active.upper)} (${parentState}; close ${priceLine(active.latestReaction?.close)})`;
+  const childLine = child?.state === 'child_fvg_confirmed'
+    ? `5M child proof: ${zoneRangeLine(child.lower, child.upper)} (${childState})`
+    : `5M child proof: ${childState}`;
+  const routeLine = routing?.status === 'routed_active_reaction'
+    ? `Routing: ${displayDirection} surfaced from HTF parent reaction + 5M child proof.`
+    : `Routing: ${compactLine(routing?.reason || memory?.summary || 'HTF FVG memory is context only.', 96)}`;
+  return [
+    'HTF FVG Reaction Memory:',
+    parentLine,
+    `Reaction: ${reactionState}${active.latestReaction?.timestamp ? ` at ${compactLine(active.latestReaction.timestamp, 28)}` : ''}`,
+    childLine,
+    routeLine,
+    'Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.',
+  ];
+}
+
 function deskPlayHtfRegimeLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -1840,6 +1914,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
+      ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
       ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
       ...deskPlayMainInstructionLines({
         play,
@@ -1890,6 +1965,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
     ...deskPlayActiveTacticalZoneLines(play, direction),
+    ...deskPlayHtfFvgReactionMemoryLines(play, direction),
     ...deskPlayHtfFvgCascadeLines(play, direction),
     ...deskPlayMainInstructionLines({
       play,
@@ -2049,6 +2125,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ? deskPlayActiveTacticalZoneLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfFvgReactionMemoryLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgCascadeLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
@@ -2119,6 +2198,8 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       } : null)
     : null;
   const parentZone = play?.htfFvgCascade?.parentZone;
+  const activeReaction = play?.htfFvgReactionMemory?.activeReaction;
+  const childConfirmation = play?.htfFvgReactionMemory?.childConfirmation;
   const reaction = play?.targetReactionLevel;
   const sideLine = displayDirection === 'SHORT'
     ? sideBreakoutLabel('SHORT', 'BELOW', lineInSand)
@@ -2134,6 +2215,9 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
     `HTF: ${args.deskState?.htfContextStatus || 'unknown'} / ${play?.htfProtectedStructureMap?.reliability || 'unknown'}.`,
     ...(parentZone && isFinitePrice(parentZone.lower) && isFinitePrice(parentZone.upper)
       ? [`Parent FVG: ${parentZone.timeframe || 'HTF'} ${priceLine(parentZone.lower)}-${priceLine(parentZone.upper)} (${parentZone.state || 'mapped'}).`]
+      : []),
+    ...(activeReaction && isFinitePrice(activeReaction.lower) && isFinitePrice(activeReaction.upper)
+      ? [`HTF FVG Reaction Memory: ${activeReaction.timeframe || 'HTF'} ${priceLine(activeReaction.lower)}-${priceLine(activeReaction.upper)} ${String(activeReaction.state || 'mapped').replace(/_/g, ' ')}; 5M ${String(childConfirmation?.state || 'waiting').replace(/_/g, ' ')}.`]
       : []),
     `Line in sand: ${priceLine(lineInSand)}`,
     sideLine,

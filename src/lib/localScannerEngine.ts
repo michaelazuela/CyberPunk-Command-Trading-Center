@@ -472,6 +472,21 @@ export interface DeskHtfFvgCascade {
   };
 }
 
+export interface DeskHtfFvgReactionRouting {
+  sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing';
+  direction: DeskPlayDirection;
+  status: 'routed_active_reaction' | 'not_applicable' | 'missing_child_5m_confirmation' | 'missing_complete_lifecycle_plan';
+  reason: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    createsNewModel: false;
+  };
+}
+
 export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
 
 export interface DeskHtfObjective {
@@ -633,6 +648,7 @@ export interface PrimaryDeskPlay {
   levelTransition: DeskLevelTransitionMap | null;
   fvgDecisionZone?: DeskFvgDecisionZone | null;
   htfFvgReactionMemory?: HtfFvgReactionMemory | null;
+  htfFvgReactionRouting?: DeskHtfFvgReactionRouting | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
@@ -3175,10 +3191,26 @@ function lifecycleItemPrimaryEligible(
   return lifecycleItemHasHtfSupport(item) && !lifecycleItemHasHtfConflict(item);
 }
 
+function htfFvgMemoryRoutableDirection(
+  trace: ScannerCandidateLifecycleTrace,
+  memory: HtfFvgReactionMemory | null,
+): Exclude<DeskPlayDirection, 'WAIT'> | null {
+  const direction = memory?.activeReaction?.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  if (memory.activeReaction?.state === 'accepted_through') return null;
+  if (memory.childConfirmation?.direction !== direction || memory.childConfirmation.state !== 'child_fvg_confirmed') return null;
+  const item = direction === 'LONG' ? trace.bestLongPlan : trace.bestShortPlan;
+  if (!item?.hasFullPlanLevels) return null;
+  return direction;
+}
+
 function selectPrimaryDeskPlayDirection(
   trace: ScannerCandidateLifecycleTrace,
   htfProtectedStructureMap: DeskHtfProtectedStructureMap,
+  htfFvgReactionMemory?: HtfFvgReactionMemory | null,
 ): DeskPlayDirection {
+  const htfFvgDirection = htfFvgMemoryRoutableDirection(trace, htfFvgReactionMemory || null);
+  if (htfFvgDirection) return htfFvgDirection;
   const long = trace.bestLongPlan;
   const short = trace.bestShortPlan;
   if (!long && !short) return 'WAIT';
@@ -3194,6 +3226,57 @@ function selectPrimaryDeskPlayDirection(
   return longScore >= shortScore ? 'LONG' : 'SHORT';
 }
 
+function buildHtfFvgReactionRouting(args: {
+  primaryDirection: DeskPlayDirection;
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  memory: HtfFvgReactionMemory | null;
+}): DeskHtfFvgReactionRouting {
+  const boundary = {
+    changesTradeApprovals: false,
+    changesCanExecute: false,
+    changesEntryStopTargets: false,
+    changesRiskRules: false,
+    changesRanking: false,
+    createsNewModel: false,
+  } as const;
+  const direction = args.memory?.activeReaction?.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') {
+    return {
+      sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+      direction: 'WAIT',
+      status: 'not_applicable',
+      reason: 'No active HTF parent FVG reaction is available for desk-side routing.',
+      approvalBoundary: boundary,
+    };
+  }
+  if (args.memory?.childConfirmation?.direction !== direction || args.memory?.childConfirmation?.state !== 'child_fvg_confirmed') {
+    return {
+      sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+      direction: 'WAIT',
+      status: 'missing_child_5m_confirmation',
+      reason: `${direction} HTF parent FVG reaction is visible, but same-direction 5M child FVG confirmation is missing.`,
+      approvalBoundary: boundary,
+    };
+  }
+  const item = direction === 'LONG' ? args.candidateLifecycleTrace.bestLongPlan : args.candidateLifecycleTrace.bestShortPlan;
+  if (!item?.hasFullPlanLevels) {
+    return {
+      sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+      direction: 'WAIT',
+      status: 'missing_complete_lifecycle_plan',
+      reason: `${direction} HTF parent FVG reaction has child confirmation, but no same-direction complete lifecycle plan is available.`,
+      approvalBoundary: boundary,
+    };
+  }
+  return {
+    sourceOfTruth: 'scanner_htf_parent_fvg_reaction_routing',
+    direction,
+    status: args.primaryDirection === direction ? 'routed_active_reaction' : 'not_applicable',
+    reason: `${direction} routed for trader-facing DeskState because active HTF parent FVG reaction, same-direction 5M child FVG confirmation, and complete scanner-owned levels are present. Execution still requires normal 5M trigger, risk, target, invalidation, and canExecute gates.`,
+    approvalBoundary: boundary,
+  };
+}
+
 function buildPrimaryDeskPlay(args: {
   candidate: SetupCandidate | null;
   visibilityMetadata: ScannerVisibilityMetadata;
@@ -3206,7 +3289,11 @@ function buildPrimaryDeskPlay(args: {
 }): PrimaryDeskPlay {
   const htfProtectedStructureMap = buildHtfProtectedStructureMap(args.candidate, args.htfLiquidityDrawState, args.currentPrice);
   const trendConfirmation = buildProtectedStructureTrendConfirmation(htfProtectedStructureMap);
-  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap);
+  const preselectHtfFvgReactionMemory = buildHtfFvgReactionMemory({
+    chartContext: args.chartContext,
+    direction: null,
+  });
+  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap, preselectHtfFvgReactionMemory);
   const longModelFit = buildApprovedModelFit({
     direction: 'LONG',
     item: args.candidateLifecycleTrace.bestLongPlan,
@@ -3337,9 +3424,11 @@ function buildPrimaryDeskPlay(args: {
     lineInSand: activeTacticalLine.activeLine ?? selectedLine,
     chartContext: args.chartContext,
   });
-  const htfFvgReactionMemory = buildHtfFvgReactionMemory({
-    chartContext: args.chartContext,
-    direction: primaryDirection === 'LONG' || primaryDirection === 'SHORT' ? primaryDirection : null,
+  const htfFvgReactionMemory = preselectHtfFvgReactionMemory;
+  const htfFvgReactionRouting = buildHtfFvgReactionRouting({
+    primaryDirection,
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    memory: htfFvgReactionMemory,
   });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
@@ -3380,6 +3469,7 @@ function buildPrimaryDeskPlay(args: {
     levelTransition,
     fvgDecisionZone,
     htfFvgReactionMemory,
+    htfFvgReactionRouting,
     htfFvgCascade,
     htfObjectiveLadder,
     htfProtectedStructureMap,
