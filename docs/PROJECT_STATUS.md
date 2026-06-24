@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Add Phase 1 HTF FVG reaction replay proof for the June 24 missed short.
+Files changed: tools/automation/htf-fvg-reaction-phase1.test.ts, docs/PROJECT_STATUS.md.
+Reason: The missed afternoon short needed a mechanical, OHLC-backed replay proof before changing runtime behavior. The proof locks down that the left-side 60M bearish FVG stack existed, the June 24 retest/rejection occurred, 15M rejected the same shelf, 5M produced a child bearish FVG and close below the short line, and the scanner tape later showed SHORT desk structure while selected/campaign state drifted back toward LONG.
+Tests run: 3x loop verification with `npx tsx tools/automation/htf-fvg-reaction-phase1.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, and `npx tsx tools/automation/discord-alert-format.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The Phase 1 proof repeatedly confirms the June 24 missed short sequence from OHLC and scanner tape: 60M parent bearish FVG reaction, 15M rejection, 5M child bearish FVG, 5M close below the short activation line, later no-chase state, and selected/campaign lifecycle drift away from the active SHORT structure.
+Trading logic changed: No. This is test/audit coverage only. It does not change setup definitions, ranking, entry, stop, target, risk, invalidation, bar-close handling, scanner selection, bridge behavior, Discord routing, or canExecute.
+Bridge impact: None. The test uses static NinjaTrader OHLC facts and an existing scanner decision tape fixture; it does not call or modify the live bridge.
+Discord impact: None direct.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification. Existing Discord formatter tests still print non-blocking warnings for preferred compact length and one-image fixture coverage, but those warnings were pre-existing and did not fail the delivery gate.
+Next recommended action: Phase 2 should convert this proof into structured HTF parent FVG reaction memory, still as context/routing metadata only before any promotion behavior changes.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Add Discord artifact lint hardening for trade-plan delivery.
 Files changed: tools/automation/discord-artifact-lint.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, scripts/architecture-guard.js, docs/PROJECT_STATUS.md.
 Reason: Live Discord/chart delivery drift showed that duplicated labels, stale `pending` text mixed with complete levels, missing required charts, missing RAG buttons, and oversized image-backed payloads need a single hard gate before Discord delivery.
