@@ -1791,6 +1791,73 @@ assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.a
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.changesRiskRules, false);
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.createsNewModel, false);
 
+const opposingParentHtfReactionChartContext = JSON.parse(JSON.stringify(routedHtfReactionChartContext)) as Partial<ChartContext>;
+if (opposingParentHtfReactionChartContext.multiTimeframeContext?.oneHour) {
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.trend = 'bullish';
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.low = 7386;
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.high = 7408.75;
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.close = 7401.75;
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.candles = [
+    { index: 0, timestamp: '2026-06-11T14:00:00.0000000', open: 7386, high: 7408.75, low: 7386, close: 7408.75, direction: 'bullish', confidence: 'High' },
+    { index: 1, timestamp: '2026-06-25T09:55:00.0000000', open: 7424.75, high: 7432, low: 7399.5, close: 7401.75, direction: 'bearish', confidence: 'High' },
+  ];
+  opposingParentHtfReactionChartContext.multiTimeframeContext.oneHour.fvgZones = [
+    {
+      direction: 'LONG',
+      lower: 7386,
+      upper: 7408.75,
+      midpoint: 7397.375,
+      formedAt: '2026-06-11T14:00:00.0000000',
+      confidence: 'High',
+    },
+  ];
+}
+if (opposingParentHtfReactionChartContext.multiTimeframeContext?.fiveMinute) {
+  opposingParentHtfReactionChartContext.multiTimeframeContext.fiveMinute.fvgZones = [
+    {
+      direction: 'SHORT',
+      lower: 7407,
+      upper: 7410.5,
+      midpoint: 7408.75,
+      formedAt: '2026-06-25T09:50:00.0000000',
+      confidence: 'High',
+    },
+  ];
+}
+const opposingParentHtfReactionDeskState = buildDeskState({
+  state: 'Missed',
+  candidate: routedHtfReactionCandidate,
+  visibilityMetadata: classifyScannerVisibility({
+    state: 'Missed',
+    candidate: routedHtfReactionCandidate,
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Missed setup below educational alert threshold.' },
+    canExecute: false,
+    staleReason: 'Move occurred without preferred retest. No chase entry.',
+  }),
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [routedHtfReactionCandidate],
+    selectedCandidate: routedHtfReactionCandidate,
+    state: 'Missed',
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Missed setup below educational alert threshold.' },
+    staleReason: 'Move occurred without preferred retest. No chase entry.',
+    canExecute: false,
+  }),
+  currentPrice: 7401.75,
+  canExecute: false,
+  chartContext: opposingParentHtfReactionChartContext,
+});
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.direction, 'WAIT');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.status, 'missing_child_5m_confirmation');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.sourceOfTruth, 'scanner_htf_parent_fvg_reaction_watch');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.direction, 'LONG');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.lineInSand, 7408.75);
+assert.ok(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.requiredProof.includes('same-direction completed 5M child proof'));
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.approvalBoundary.changesCanExecute, false);
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.discordEligible, true);
+
 const missedHtfReactionVisibility = classifyScannerVisibility({
   state: 'Missed',
   candidate: routedHtfReactionCandidate,

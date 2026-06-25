@@ -45,6 +45,30 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
   calls.push({ url: String(url), init });
   if (String(url).includes('/rest/v1/trade_embeddings?plan_version_id=')) {
+    if (String(url).includes('PLAN-T1-PARTIAL')) {
+      return new Response(JSON.stringify([{
+        id: 'row-t1-partial',
+        embedding_text: 'existing partial target embedding',
+        trade_plan_json: {
+          planVersionId: 'PLAN-T1-PARTIAL',
+          discordMessage: {
+            messageId: 'discord-message-t1-partial',
+            webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+            editAfterOutcome: true,
+          },
+          discordOutcome: {
+            updatedFrom: 'discord_button',
+            outcomeCode: 'short_t1_hit',
+            targetHit: 'T1',
+            targetHits: ['T1'],
+            tradeResult: 'win',
+          },
+          journalRecord: {
+            plannedR: 1.5,
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (String(url).includes('PLAN-ALREADY-SAVED') && !String(url).includes('PLAN-ALREADY-SAVED-MISSING-MESSAGE')) {
       return new Response(JSON.stringify([{
         id: 'row-already-saved',
@@ -165,6 +189,8 @@ globalThis.fetch = async (url, init = {}) => {
           ? String(url).includes('row-already-saved-missing-message')
             ? 'row-already-saved-missing-message'
             : 'row-already-saved'
+          : String(url).includes('row-t1-partial')
+            ? 'row-t1-partial'
           : String(url).includes('row-deleted-card')
             ? 'row-deleted-card'
             : String(url).includes('row-patch-fail')
@@ -180,6 +206,8 @@ globalThis.fetch = async (url, init = {}) => {
                 discordMessage: {
                   messageId: String(url).includes('row-deleted-card')
                     ? 'deleted-message-404'
+                    : String(url).includes('row-t1-partial')
+                      ? 'discord-message-t1-partial'
                     : String(url).includes('row-patch-fail')
                       ? 'discord-message-patch-fail'
                       : String(url).includes('row-source-webhook')
@@ -268,6 +296,78 @@ try {
   });
   assert.equal(lockedResponse.status, 200);
   assert.ok((await lockedResponse.text()).includes('already locked'));
+
+  const t1CallsBefore = calls.length;
+  const t1Token = buildToken({
+    ...payload,
+    pid: 'PLAN-T1-FIRST',
+    dir: 'SHORT',
+    o: 'short_t1_hit',
+    hit: 'T1',
+    kid: keyId(secret),
+  }, secret);
+  const t1Response = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(t1Token)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(t1Response.status, 200);
+  const t1Html = await t1Response.text();
+  assert.ok(t1Html.includes('Saved to RAG.'));
+  assert.ok(t1Html.includes('Discord card left active for T2/final outcome.'));
+  const t1Calls = calls.slice(t1CallsBefore);
+  assert.ok(!t1Calls.some((call) => call.init.method === 'PATCH' && String(call.url).includes('/api/webhooks/')), 'T1 must not lock or remove remaining Discord outcome buttons');
+  assert.ok(t1Calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-12345678')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcome?.targetHit === 'T1' &&
+      patch.trade_plan_json.discordOutcome.targetHits.includes('T1');
+  }), 'expected T1 to be saved to RAG as a partial target outcome');
+  assert.ok(t1Calls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-12345678')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcomeLock?.status === 'partial_outcome_kept_open' &&
+      patch.trade_plan_json.discordOutcomeLock.approvalBoundary?.buttonClickPlacesOrder === false;
+  }), 'expected T1 partial state to be recorded without changing execution approval');
+
+  const t2UpgradeCallsBefore = calls.length;
+  const t2UpgradeToken = buildToken({
+    ...payload,
+    pid: 'PLAN-T1-PARTIAL',
+    dir: 'SHORT',
+    o: 'short_t2_hit',
+    hit: 'T2',
+    kid: keyId(secret),
+  }, secret);
+  const t2UpgradeResponse = await onRequestGet({
+    request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(t2UpgradeToken)}`),
+    env: {
+      DISCORD_OUTCOME_SECRET: secret,
+      SUPABASE_URL: 'https://supabase.example',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      DISCORD_RAG_USER_ID: 'user-123',
+      QUANT_DESK_SCANNER_WEBHOOK_URL: 'https://discord.com/api/webhooks/webhook-id/webhook-token',
+    },
+  });
+  assert.equal(t2UpgradeResponse.status, 200);
+  const t2UpgradeHtml = await t2UpgradeResponse.text();
+  assert.ok(t2UpgradeHtml.includes('Saved to RAG.'));
+  assert.ok(t2UpgradeHtml.includes('Discord card locked.'));
+  const t2UpgradeCalls = calls.slice(t2UpgradeCallsBefore);
+  assert.ok(t2UpgradeCalls.some((call) => call.init.method === 'PATCH' && String(call.url).includes('/messages/discord-message-t1-partial')), 'T2 upgrade should lock the Discord card after final target is saved');
+  assert.ok(t2UpgradeCalls.some((call) => {
+    if (call.init.method !== 'PATCH' || !String(call.url).includes('/rest/v1/trade_embeddings?id=eq.row-t1-partial')) return false;
+    const patch = JSON.parse(String(call.init.body));
+    return patch.trade_plan_json?.discordOutcome?.targetHit === 'T2' &&
+      patch.trade_plan_json.discordOutcome.targetHits.join(',') === 'T1,T2' &&
+      patch.trade_plan_json.journalRecord?.actualResultR === 2;
+  }), 'expected T2 to upgrade the existing T1 outcome instead of being treated as already saved');
+
   const secretKeyToken = buildToken({ ...payload, pid: 'PLAN-SECRET-KEY-HEADERS', kid: keyId(secret) }, secret);
   await onRequestGet({
     request: new Request(`https://quant-desk.example/api/discord-outcome?t=${encodeURIComponent(secretKeyToken)}`),

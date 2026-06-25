@@ -377,6 +377,47 @@ function journalResultR(existingJournalRecord, payload, tradeResult) {
   return null;
 }
 
+function targetOutcomeRank(hit) {
+  const normalized = String(hit || '').toUpperCase();
+  if (normalized === 'T1') return 1;
+  if (normalized === 'T2') return 2;
+  if (normalized === 'RUNNER') return 3;
+  if (normalized === 'STRETCH') return 4;
+  return 0;
+}
+
+function canUpgradeExistingDiscordOutcome(existingOutcome, payload) {
+  if (existingOutcome?.updatedFrom !== 'discord_button') return true;
+  const existingRank = targetOutcomeRank(existingOutcome.targetHit);
+  const incomingRank = targetOutcomeRank(payload.hit);
+  return existingRank === 1 && incomingRank > existingRank;
+}
+
+function mergeTargetHits(existingOutcome, payload) {
+  const hits = Array.isArray(existingOutcome?.targetHits)
+    ? existingOutcome.targetHits
+    : existingOutcome?.targetHit && targetOutcomeRank(existingOutcome.targetHit) > 0
+      ? [existingOutcome.targetHit]
+      : [];
+  if (payload.hit && targetOutcomeRank(payload.hit) > 0) hits.push(payload.hit);
+  return [...new Set(hits.map((hit) => String(hit).toUpperCase()))]
+    .sort((a, b) => targetOutcomeRank(a) - targetOutcomeRank(b));
+}
+
+function shouldLockDiscordOutcome(payload) {
+  return !(payload.ft !== 'watch_feedback' && String(payload.hit || '').toUpperCase() === 'T1');
+}
+
+function unlockedPartialOutcomeStatus(payload) {
+  return {
+    edited: false,
+    status: 'partial_outcome_kept_open',
+    reason: `${String(payload.hit || 'T1').toLowerCase()}_saved_keep_buttons_active_for_final_outcome`,
+    replacementPosted: false,
+    replacementMessageId: null,
+  };
+}
+
 async function selectExistingRecord(context, payload, headers) {
   const supabaseUrl = normalizeSupabaseUrl(context);
   const response = await fetch(
@@ -530,7 +571,10 @@ async function persistOutcome(context, payload) {
   const existingPlanJson = existing?.trade_plan_json && typeof existing.trade_plan_json === 'object'
     ? existing.trade_plan_json
     : {};
-  if (existingPlanJson.discordOutcome?.updatedFrom === 'discord_button') {
+  const existingDiscordOutcome = existingPlanJson.discordOutcome && typeof existingPlanJson.discordOutcome === 'object'
+    ? existingPlanJson.discordOutcome
+    : null;
+  if (!canUpgradeExistingDiscordOutcome(existingDiscordOutcome, payload)) {
     return {
       rowId: existing?.id || payload.pid,
       discordMessage: existingPlanJson.discordMessage || null,
@@ -541,6 +585,7 @@ async function persistOutcome(context, payload) {
     tradeTaken: Boolean(payload.tt),
     direction: payload.dir || 'NONE',
     targetHit: payload.hit || 'NONE',
+    targetHits: mergeTargetHits(existingDiscordOutcome, payload),
     outcomeCode: payload.o || null,
     tradeResult,
     updatedFrom: 'discord_button',
@@ -679,14 +724,18 @@ export async function onRequestGet(context) {
     }
     const payload = await verifyToken(token, secrets);
     const result = await persistOutcome(context, payload);
-    const lock = await lockDiscordOutcomeMessage(context, payload, result.discordMessage);
+    const lock = shouldLockDiscordOutcome(payload)
+      ? await lockDiscordOutcomeMessage(context, payload, result.discordMessage)
+      : unlockedPartialOutcomeStatus(payload);
     const lockStatus = await updateDiscordOutcomeLockStatus(context, result.rowId, lock, payload);
     const lockStatusText = lockStatus.updated ? '' : ` RAG lock status update skipped (${lockStatus.reason}).`;
     const lockText = lock.edited
       ? 'Discord card locked.'
       : lock.replacementPosted
         ? 'Original Discord card was unavailable; locked replacement receipt posted.'
-        : `Discord card lock unavailable (${lock.reason}).`;
+        : lock.status === 'partial_outcome_kept_open'
+          ? 'Discord card left active for T2/final outcome.'
+          : `Discord card lock unavailable (${lock.reason}).`;
     if (result.alreadySaved) {
       return html(`Already saved. ${lockText}${lockStatusText} Plan ${payload.pid}. Existing RAG row ${String(result.rowId).slice(0, 8)}.`);
     }

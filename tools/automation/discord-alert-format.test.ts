@@ -1722,6 +1722,36 @@ const waitWithActiveParentFvgPayload = compactDiscordSummary({
       lineInSand: 7454.5,
       longAbove: 7454.5,
       shortBelow: 7450,
+      htfFvgParentReactionWatch: {
+        sourceOfTruth: 'scanner_htf_parent_fvg_reaction_watch',
+        eligible: true,
+        direction: 'LONG',
+        lineInSand: 7408.75,
+        lineLabel: 'LONG ABOVE 7408.75 from 60M parent FVG 7386.00-7408.75',
+        parentZone: {
+          sourceOfTruth: 'scanner_htf_fvg_parent_zone',
+          direction: 'LONG',
+          timeframe: '60M',
+          lower: 7386,
+          upper: 7408.75,
+          midpoint: 7397.375,
+          label: '60M bullish active parent FVG reaction',
+          state: 'holding',
+          evidence: '60M parent FVG reaction detected from structured OHLC.',
+        },
+        status: 'waiting_for_5m_child_confirmation',
+        requiredProof: 'Review-only HTF FVG reaction watch: wait for same-direction completed 5M child proof above 7408.75 before any fresh conditional plan can be built.',
+        reason: 'LONG HTF parent FVG reaction is visible, but same-direction 5M child FVG confirmation is missing.',
+        standDown: 'Stand down on completed 5M acceptance below parent zone 7386.00.',
+        approvalBoundary: {
+          changesTradeApprovals: false,
+          changesCanExecute: false,
+          changesEntryStopTargets: false,
+          changesRiskRules: false,
+          changesRanking: false,
+          createsNewModel: false,
+        },
+      },
       htfFvgCascade: {
         sourceOfTruth: 'scanner_htf_fvg_cascade_parent_zone_routing',
         direction: 'LONG',
@@ -1785,10 +1815,13 @@ const waitWithActiveParentFvgPayload = compactDiscordSummary({
 });
 const waitWithActiveParentFvgText = flattenDiscordPayloadText(waitWithActiveParentFvgPayload);
 assert.ok(waitWithActiveParentFvgText.includes('Primary: 🛑 WAIT'));
+assert.ok(waitWithActiveParentFvgText.includes('HTF Parent imbalance Reaction Watch:'));
+assert.ok(waitWithActiveParentFvgText.includes('LONG ABOVE 7408.75 from 60M parent FVG 7386.00-7408.75'));
+assert.ok(waitWithActiveParentFvgText.includes('Required proof: wait for same-direction completed 5M child proof above 7408.75'));
+assert.ok(waitWithActiveParentFvgText.includes('Boundary: review-only communication; no canExecute, stop, target, risk, ranking, or approval change.'));
 assert.ok(waitWithActiveParentFvgText.includes('HTF FVG Cascade:'));
 assert.ok(waitWithActiveParentFvgText.includes('Parent FVG: 15M 7448.00-7454.50'));
-assert.ok(waitWithActiveParentFvgText.includes('5M route: parent zone + 5M trigger 7448.00-7454.50.'));
-assert.ok(waitWithActiveParentFvgText.includes('Trigger: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
+assert.ok(waitWithActiveParentFvgText.includes('5M route: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
 assert.ok(waitWithActiveParentFvgText.includes('Stand down on completed 5M acceptance below parent zone 7448.00.'));
 
 const freshReentryWatchPayload = compactDiscordSummary({

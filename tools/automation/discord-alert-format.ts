@@ -203,6 +203,36 @@ export interface CompactDeskStateForDiscord {
       standDown?: string | null;
       reason?: string | null;
     } | null;
+    htfFvgParentReactionWatch?: {
+      sourceOfTruth?: string;
+      eligible?: boolean;
+      direction?: 'LONG' | 'SHORT' | string;
+      lineInSand?: number | null;
+      lineLabel?: string | null;
+      parentZone?: {
+        sourceOfTruth?: string;
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        midpoint?: number | null;
+        label?: string | null;
+        state?: string | null;
+        evidence?: string | null;
+      } | null;
+      status?: string | null;
+      requiredProof?: string | null;
+      reason?: string | null;
+      standDown?: string | null;
+      approvalBoundary?: {
+        changesTradeApprovals?: boolean;
+        changesCanExecute?: boolean;
+        changesEntryStopTargets?: boolean;
+        changesRiskRules?: boolean;
+        changesRanking?: boolean;
+        createsNewModel?: boolean;
+      } | null;
+    } | null;
     htfFvgCascade?: {
       sourceOfTruth?: string;
       direction?: 'LONG' | 'SHORT' | string;
@@ -1811,6 +1841,39 @@ function deskPlayHtfFvgReactionMemoryLines(
   ];
 }
 
+function deskPlayHtfFvgParentReactionWatchLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const watch = play.htfFvgParentReactionWatch;
+  if (!watch?.eligible) return [];
+  const watchDirection = watch.direction === 'LONG' || watch.direction === 'SHORT' ? watch.direction : null;
+  if (!watchDirection) return [];
+  const sideNote = direction === 'LONG' || direction === 'SHORT'
+    ? watchDirection === direction
+      ? 'same-side HTF parent reaction'
+      : `opposing HTF parent reaction while primary map is ${direction}`
+    : 'HTF parent reaction';
+  const parent = watch.parentZone;
+  const parentLine = parent
+    ? `Parent FVG: ${compactLine(parent.timeframe || 'HTF', 8)} ${zoneRangeLine(parent.lower, parent.upper)} (${compactLine(String(parent.state || 'watch').replace(/_/g, ' '), 24)})`
+    : 'Parent FVG: active parent zone mapped; exact bounds unavailable.';
+  const lineLabel = watch.lineLabel
+    ? compactLine(watch.lineLabel, 96)
+    : isFinitePrice(watch.lineInSand)
+    ? `${watchDirection === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE'} ${priceLine(watch.lineInSand)}`
+    : `${watchDirection} watch line pending`;
+  return [
+    'HTF Parent FVG Reaction Watch:',
+    `${lineLabel} (${sideNote}).`,
+    parentLine,
+    `Required proof: ${compactInstruction(watch.requiredProof, 'wait for same-direction completed 5M child proof before any fresh conditional plan.')}`,
+    `Reason: ${compactLine(watch.reason || 'HTF parent reaction is visible; 5M child confirmation is missing.', 108)}`,
+    ...(watch.standDown ? [compactLine(watch.standDown, 108)] : []),
+    'Boundary: review-only communication; no canExecute, stop, target, risk, ranking, or approval change.',
+  ];
+}
+
 function deskPlayFreshReentryWatchLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2142,6 +2205,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
+      ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
       ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
       ...deskPlayFreshReentryDisplayLines(play, waitMapSide),
@@ -2194,6 +2258,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
     ...deskPlayActiveTacticalZoneLines(play, direction),
+    ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
     ...deskPlayHtfFvgCascadeLines(play, direction),
     ...deskPlayFreshReentryDisplayLines(play, direction),
@@ -2372,6 +2437,21 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       : [`Line in sand: ${priceLine(lineInSand)}`]),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayActiveTacticalZoneLines(play, displayDirection)
+      : []),
+    ...(play
+      ? deskPlayHtfFvgParentReactionWatchLines(play, displayDirection)
+      : []),
+    ...(play?.htfFvgCascade
+      ? [
+          'HTF FVG Cascade:',
+          ...(play.htfFvgCascade.parentZone
+            ? [`Parent FVG: ${compactLine(play.htfFvgCascade.parentZone.timeframe || 'HTF', 8)} ${zoneRangeLine(play.htfFvgCascade.parentZone.lower, play.htfFvgCascade.parentZone.upper)} (${compactLine(String(play.htfFvgCascade.parentZone.state || 'mapped').replace(/_/g, ' '), 20)})`]
+            : []),
+          ...(play.htfFvgCascade.childExecutionZone
+            ? [`5M route: ${compactInstruction(play.htfFvgCascade.childExecutionZone.triggerNeeded || play.htfFvgCascade.routingSummary, 'wait for completed 5M proof around parent zone.')}`]
+            : []),
+          compactLine(play.htfFvgCascade.standDown || 'Stand down if parent zone fails on completed 5M proof.', 108),
+        ]
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgReactionMemoryLines(play, displayDirection)

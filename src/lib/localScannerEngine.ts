@@ -491,6 +491,27 @@ export interface DeskHtfFvgReactionRouting {
   };
 }
 
+export interface DeskHtfFvgParentReactionWatch {
+  sourceOfTruth: 'scanner_htf_parent_fvg_reaction_watch';
+  eligible: true;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lineInSand: number | null;
+  lineLabel: string | null;
+  parentZone: DeskHtfFvgParentZone | null;
+  status: 'waiting_for_5m_child_confirmation';
+  requiredProof: string;
+  reason: string;
+  standDown: string | null;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    createsNewModel: false;
+  };
+}
+
 export interface DeskFreshReentryWatch {
   sourceOfTruth: 'scanner_fresh_tactical_reentry_watch';
   eligible: boolean;
@@ -771,6 +792,7 @@ export interface PrimaryDeskPlay {
   fvgDecisionZone?: DeskFvgDecisionZone | null;
   htfFvgReactionMemory?: HtfFvgReactionMemory | null;
   htfFvgReactionRouting?: DeskHtfFvgReactionRouting | null;
+  htfFvgParentReactionWatch?: DeskHtfFvgParentReactionWatch | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   freshReentryWatch?: DeskFreshReentryWatch | null;
   freshReentryCandidates?: DeskFreshReentryCandidateSet | null;
@@ -3511,6 +3533,40 @@ function buildHtfFvgReactionRouting(args: {
   };
 }
 
+function buildHtfFvgParentReactionWatch(args: {
+  routing: DeskHtfFvgReactionRouting;
+  memory: HtfFvgReactionMemory | null;
+  currentPrice?: number | null;
+}): DeskHtfFvgParentReactionWatch | null {
+  if (args.routing.status !== 'missing_child_5m_confirmation') return null;
+  const direction = args.memory?.activeReaction?.direction;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+  const parentZone = htfParentZoneFromReactionMemory(args.memory, args.currentPrice);
+  const lineInSand = numericOrNull(args.routing.lineInSand);
+  const directionWord = direction === 'LONG' ? 'above' : 'below';
+  const lineText = lineInSand !== null ? lineInSand.toFixed(2) : 'the HTF parent FVG line';
+  return {
+    sourceOfTruth: 'scanner_htf_parent_fvg_reaction_watch',
+    eligible: true,
+    direction,
+    lineInSand,
+    lineLabel: args.routing.lineLabel,
+    parentZone,
+    status: 'waiting_for_5m_child_confirmation',
+    requiredProof: `Review-only HTF FVG reaction watch: wait for same-direction completed 5M child proof ${directionWord} ${lineText} before any fresh conditional plan can be built.`,
+    reason: args.routing.reason,
+    standDown: args.routing.standDown,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      createsNewModel: false,
+    },
+  };
+}
+
 function missedOrNoChaseText(value: string | null | undefined): boolean {
   return /\b(missed|no[-\s]?chase|already\s+triggered|already\s+reached|passed\s+T1|preferred\s+entry|preferred\s+retest|move\s+occurred\s+without)\b/i.test(value || '');
 }
@@ -3986,6 +4042,11 @@ function buildPrimaryDeskPlay(args: {
     candidateLifecycleTrace: args.candidateLifecycleTrace,
     memory: htfFvgReactionMemory,
   });
+  const htfFvgParentReactionWatch = buildHtfFvgParentReactionWatch({
+    routing: htfFvgReactionRouting,
+    memory: htfFvgReactionMemory,
+    currentPrice: args.currentPrice,
+  });
   const freshReentryWatch = buildFreshReentryWatch({
     primaryDirection,
     activeTacticalLine,
@@ -4021,7 +4082,8 @@ function buildPrimaryDeskPlay(args: {
         primaryDirection !== 'WAIT' &&
         (primaryBias.nextTrigger || primaryBias.lineInSand || primaryBias.reason)
       ) ||
-      waitWithStructuredEvidence
+      waitWithStructuredEvidence ||
+      Boolean(htfFvgParentReactionWatch)
     )
   );
 
@@ -4044,6 +4106,7 @@ function buildPrimaryDeskPlay(args: {
     fvgDecisionZone,
     htfFvgReactionMemory,
     htfFvgReactionRouting,
+    htfFvgParentReactionWatch,
     htfFvgCascade,
     freshReentryWatch,
     freshReentryCandidates,
