@@ -296,6 +296,8 @@ assert.equal(liveSignoffScript.includes('scanSetupCandidates'), false);
 assert.equal(liveSignoffScript.includes('canExecute = $true'), false);
 assert.ok(evidenceSummaryScript.includes('npm run supervisor:eod-summary -- --json'));
 assert.ok(evidenceSummaryScript.includes('evidence-summary'));
+assert.ok(evidenceSummaryScript.includes('[switch]$NoOpen'));
+assert.ok(evidenceSummaryScript.includes('if (-not $NoOpen)'));
 assert.ok(evidenceSummaryScript.includes('postsDiscord = $false'));
 assert.ok(evidenceSummaryScript.includes('writesSupabase = $false'));
 assert.ok(evidenceSummaryScript.includes('changesScannerState = $false'));

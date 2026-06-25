@@ -1,3 +1,7 @@
+param(
+  [switch]$NoOpen
+)
+
 $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -32,7 +36,9 @@ function Write-EvidenceSummaryLog {
   Add-Content -Path $LogPath -Value ($entry | ConvertTo-Json -Compress -Depth 5)
 }
 
-Write-EvidenceSummaryLog -Message 'End-of-day evidence summary requested from operator helper.'
+Write-EvidenceSummaryLog -Message 'End-of-day evidence summary requested from operator helper.' -Details @{
+  noOpen = [bool]$NoOpen
+}
 
 $command = 'npm run supervisor:eod-summary -- --json'
 $output = & cmd.exe /d /c $command 2>&1
@@ -64,18 +70,24 @@ if ($exitCode -ne 0) {
     exitCode = $exitCode
     textReport = $textPath
     jsonReport = if (Test-Path $reportPath) { $reportPath } else { $null }
+    noOpen = [bool]$NoOpen
   }
-  Start-Process -FilePath $textPath | Out-Null
+  if (-not $NoOpen) {
+    Start-Process -FilePath $textPath | Out-Null
+  }
   throw "Evidence summary did not pass. See $textPath."
 }
 
-Write-EvidenceSummaryLog -Message 'Evidence summary completed and opened.' -Details @{
+Write-EvidenceSummaryLog -Message 'Evidence summary completed.' -Details @{
   textReport = $textPath
   jsonReport = if (Test-Path $reportPath) { $reportPath } else { $null }
+  noOpen = [bool]$NoOpen
 }
 
-if (Test-Path $reportPath) {
-  Start-Process -FilePath $reportPath | Out-Null
-} else {
-  Start-Process -FilePath $textPath | Out-Null
+if (-not $NoOpen) {
+  if (Test-Path $reportPath) {
+    Start-Process -FilePath $reportPath | Out-Null
+  } else {
+    Start-Process -FilePath $textPath | Out-Null
+  }
 }

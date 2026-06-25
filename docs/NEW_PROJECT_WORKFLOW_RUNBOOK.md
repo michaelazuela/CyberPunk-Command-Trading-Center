@@ -170,7 +170,7 @@ Quant Desk Supervisor -> Open Live Signoff
 
 The tray helper runs `npm run supervisor:phase6-signoff -- --json`, writes a local report under `logs/supervisor/live-signoff`, and opens the report. It is read-only: it does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
 
-The tray also includes `Open Evidence Summary`, which runs `npm run supervisor:eod-summary -- --json`, writes a local report under `logs/supervisor/evidence-summary`, and opens the compact latest-bundle readout. It is read-only and does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
+The tray also includes `Open Evidence Summary`, which runs `npm run supervisor:eod-summary -- --json`, writes a local report under `logs/supervisor/evidence-summary`, and opens the compact latest-bundle readout. It supports `Open-QuantDesk-EvidenceSummary.ps1 -NoOpen` for automated loopback proof without launching report windows. It is read-only and does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
 
 For an archived checkpoint, run:
 
@@ -208,6 +208,7 @@ Pass criteria:
 - active HTF FVG routing events and Phase 5 contract events are present when expected for the session.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
+- evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
 
 ## Test Case Matrix
 
@@ -222,7 +223,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment

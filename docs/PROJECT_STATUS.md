@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 15 no-open evidence-summary helper loopback.
+Files changed: Open-QuantDesk-EvidenceSummary.ps1, tools/automation/new-project-workflow-loopback.ts, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 14 parse-checked the tray/helper scripts, but automated evidence signoff still needed to execute the evidence-summary helper without opening local report windows.
+Tests run: PowerShell parser check for `Open-QuantDesk-EvidenceSummary.ps1`; `powershell -NoProfile -ExecutionPolicy Bypass -File .\Open-QuantDesk-EvidenceSummary.ps1 -NoOpen`; `npx tsx tools/supervisor/supervisor.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --eod-summary --trade-date=2026-06-25 --instrument=MES --session=morning --json`; `npm run supervisor:eod-summary -- --trade-date 2026-06-25 --instrument MES --session morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The helper parses, runs in `-NoOpen` mode without launching report windows, and writes local evidence-summary output. The standard workflow loopback reported 19 pass, 0 fail, 12 skipped optional/full/real-tape checks. The real-tape workflow with `--eod-summary` reported 23 pass, 0 fail, 8 skipped optional checks, including `evidence-summary-tray-helper-no-open=pass`. Current June 25 morning evidence summary remains `status=ready`, signoff `ready`, Phase 6 `pass`, all files present, and no failures. During verification, two ignored generated runtime artifacts containing legacy text blocked `npm run lint`; they were removed because they were untracked local scanner/audit output and not source.
+Trading logic changed: No. This is read-only supervisor evidence workflow validation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: No additional evidence-workflow phase is required. Future phases should move only if there is a new scanner behavior, report-quality, operator-surface, or live-observation requirement.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 14 tray parser checks in workflow loopback.
 Files changed: tools/automation/new-project-workflow-loopback.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 13 added a tray evidence-summary shortcut, but the standard loopback runner did not directly parse-check tray/helper PowerShell scripts.

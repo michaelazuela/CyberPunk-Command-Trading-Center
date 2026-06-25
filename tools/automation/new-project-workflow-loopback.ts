@@ -35,6 +35,10 @@ function powershellParseArgs(filePath: string): string[] {
   ];
 }
 
+function powershellFileArgs(filePath: string, extraArgs: string[] = []): string[] {
+  return ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', filePath, ...extraArgs];
+}
+
 function argValue(name: string): string | null {
   const prefix = `${name}=`;
   const found = process.argv.slice(2).find((arg) => arg.startsWith(prefix));
@@ -182,6 +186,15 @@ const checks: LoopbackCheck[] = [
     windowsOnly: true,
   },
   {
+    id: 'evidence-summary-tray-helper-no-open',
+    area: 'supervisor_restart_workflow',
+    description: 'Runs the tray evidence-summary helper in no-open mode so loopback proves the shortcut execution path without opening report windows.',
+    command: powershellBin(),
+    args: powershellFileArgs('.\\Open-QuantDesk-EvidenceSummary.ps1', ['-NoOpen']),
+    realTapeOnly: true,
+    windowsOnly: true,
+  },
+  {
     id: 'fresh-reentry-phase3-loopback',
     area: 'fresh_tactical_reentry',
     description: 'Compares old watch-only behavior with approved Discord conditional re-entry display while preserving canExecute.',
@@ -287,6 +300,7 @@ function shouldRun(check: LoopbackCheck): boolean {
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
   if (check.id === 'end-of-day-evidence-bundle' && !eodBundle) return false;
   if (check.id === 'end-of-day-evidence-summary' && !eodSummary) return false;
+  if (check.id === 'evidence-summary-tray-helper-no-open' && !eodSummary) return false;
   return true;
 }
 
