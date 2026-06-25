@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-25
+Task: Install Phase 6 live-format signoff gate for fresh scanner/observer proof.
+Files changed: tools/automation/phase6-live-format-signoff.ts, tools/automation/phase6-live-format-signoff.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Phases 1-5 needed a standard pass/fail command that proves fresh/current-format scanner tapes are actually producing observer-ready HTF FVG routing and Phase 5 contract evidence, instead of relying on old historical tapes or manual observer interpretation.
+Tests run: `npx tsx tools/automation/phase6-live-format-signoff.test.ts`; `npm run phase6:live-format-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`; focused Phase 1-6 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, and `npx tsx tools/automation/phase6-live-format-signoff.test.ts`.
+Result: Passed. The Phase 6 signoff command is research-only and fails old/not-evaluable tapes, Phase 4/5 observer failures, missing HTF FVG routing fields, missing active routing events, or missing Phase 5 contract events. The live June 25 morning run reported `status=pass`, `discordSignoffStatus=ready`, Phase 4 failures 0, Phase 5 failures 0, and active HTF FVG routing events present.
+Trading logic changed: No. This is verification tooling only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None. The command reads scanner decision tapes and live-observer output only.
+Discord impact: None. The command does not post Discord; it verifies whether Discord signoff evidence is ready.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Use `npm run phase6:live-format-signoff -- --trade-date=<date> --instrument=MES --session=<morning|lunch|evening> --since-recorded-at=<scanner-restart-iso> --json` after scanner restarts. Phase 7 can harden supervisor automation around this command if desired.
+
+## Previous Change
+
 Date: 2026-06-24
 Task: Correct Phase 4 audit sign-off for suppressed selected-candidate residue.
 Files changed: tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
