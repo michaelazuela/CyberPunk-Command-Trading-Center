@@ -190,10 +190,15 @@ const trayStartScriptPath = path.join(repoRoot, 'Start-QuantDeskSupervisorTray.p
 const trayStartScript = fs.readFileSync(trayStartScriptPath, 'utf8');
 const supervisorStartScriptPath = path.join(repoRoot, 'Start-QuantDesk-Supervisor.ps1');
 const supervisorStartScript = fs.readFileSync(supervisorStartScriptPath, 'utf8');
+const liveSignoffScriptPath = path.join(repoRoot, 'Open-QuantDesk-LiveSignoff.ps1');
+const liveSignoffScript = fs.readFileSync(liveSignoffScriptPath, 'utf8');
 const trayLauncherPath = path.join(repoRoot, 'Launch-QuantDeskSupervisorTray.vbs');
 const trayLauncher = fs.readFileSync(trayLauncherPath, 'utf8');
 assert.ok(trayScript.includes('System.Windows.Forms.NotifyIcon'));
 assert.ok(trayScript.includes('Open Logs'));
+assert.ok(trayScript.includes('Open Live Signoff'));
+assert.ok(trayScript.includes('Open-QuantDesk-LiveSignoff.ps1'));
+assert.ok(trayScript.includes('open-live-signoff'));
 assert.ok(trayScript.includes('Open Research Status'));
 assert.ok(trayScript.includes('Open-QuantDesk-ResearchReview.ps1'));
 assert.ok(trayScript.includes('open-research-status'));
@@ -268,6 +273,20 @@ assert.ok(supervisorStartScript.includes('SYSTEM_ALERTS_DISCORD_WEBHOOK_URL'));
 assert.equal(supervisorStartScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(supervisorStartScript.includes('scanSetupCandidates'), false);
 assert.equal(supervisorStartScript.includes('canExecute'), false);
+assert.ok(liveSignoffScript.includes('npm run supervisor:phase6-signoff -- --json'));
+assert.ok(liveSignoffScript.includes('live-signoff'));
+assert.ok(liveSignoffScript.includes('postsDiscord = $false'));
+assert.ok(liveSignoffScript.includes('writesSupabase = $false'));
+assert.ok(liveSignoffScript.includes('changesScannerState = $false'));
+assert.ok(liveSignoffScript.includes('changesTradingLogic = $false'));
+assert.ok(liveSignoffScript.includes('changesCanExecute = $false'));
+assert.ok(liveSignoffScript.includes('startsChildProcesses = $false'));
+assert.equal(liveSignoffScript.includes('nt:scanner'), false);
+assert.equal(liveSignoffScript.includes('nt:candle-recorder'), false);
+assert.equal(liveSignoffScript.includes('DISCORD_WEBHOOK_URL'), false);
+assert.equal(liveSignoffScript.includes('runTradeDecisionPipeline'), false);
+assert.equal(liveSignoffScript.includes('scanSetupCandidates'), false);
+assert.equal(liveSignoffScript.includes('canExecute = $true'), false);
 
 const supervisorDir = path.dirname(fileURLToPath(import.meta.url));
 const protectedImportPatterns = [

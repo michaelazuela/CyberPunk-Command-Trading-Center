@@ -25,6 +25,7 @@ $IconPath = Join-Path $Root 'assets\launcher\quant-desk-supervisor-launcher.ico'
 $StartScript = Join-Path $Root 'Start-QuantDesk-Supervisor.ps1'
 $StopScript = Join-Path $Root 'Stop-QuantDesk-Supervisor.ps1'
 $ResearchReviewScript = Join-Path $Root 'Open-QuantDesk-ResearchReview.ps1'
+$LiveSignoffScript = Join-Path $Root 'Open-QuantDesk-LiveSignoff.ps1'
 $SelfHealNotifyScript = 'npm run supervisor:notify-self-heal'
 $RepairCacheCommand = 'npm run nt:backfill -- --days 2'
 $TrayLogPath = Join-Path $LogsDir 'tray.log'
@@ -348,6 +349,7 @@ $menu.Items.Add('-') | Out-Null
 $repairCacheItem = $menu.Items.Add('Repair Market Cache Now')
 $menu.Items.Add('-') | Out-Null
 $openStatusItem = $menu.Items.Add('Open Status')
+$openLiveSignoffItem = $menu.Items.Add('Open Live Signoff')
 $openResearchReviewItem = $menu.Items.Add('Open Research Status')
 $openLogsItem = $menu.Items.Add('Open Logs')
 $refreshItem = $menu.Items.Add('Refresh')
@@ -427,6 +429,7 @@ function Update-Tray {
     $stopItem.Enabled = ($null -ne $state.Payload) -or [bool]$state.ProcessRunning
     $repairCacheItem.Enabled = $true
     $openStatusItem.Enabled = $null -ne $state.Payload
+    $openLiveSignoffItem.Enabled = $true
     $openResearchReviewItem.Enabled = $true
     $openLogsItem.Enabled = $true
     $selfHealItem.Checked = $SelfHealEnabled
@@ -439,6 +442,7 @@ function Update-Tray {
     $stopItem.Enabled = $true
     $repairCacheItem.Enabled = $true
     $openStatusItem.Enabled = $false
+    $openLiveSignoffItem.Enabled = $true
     $openResearchReviewItem.Enabled = $true
     $openLogsItem.Enabled = $true
   }
@@ -481,6 +485,12 @@ $repairCacheItem.Add_Click({
 
 $openStatusItem.Add_Click({
   Start-Process $StatusUri | Out-Null
+})
+
+$openLiveSignoffItem.Add_Click({
+  $statusItem.Text = 'Status: Live signoff requested...'
+  Start-LocalScript -ScriptPath $LiveSignoffScript -Label 'open-live-signoff' | Out-Null
+  Update-Tray
 })
 
 $openResearchReviewItem.Add_Click({

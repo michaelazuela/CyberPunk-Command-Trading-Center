@@ -151,6 +151,31 @@ Pass criteria:
 - `git diff --check` has no whitespace errors;
 - any Supabase migration added in the same change has an applied/not-applied status documented.
 
+### Layer 4: post-restart live signoff
+
+Run after scanner or supervisor restart, before treating Discord live-format evidence as clean:
+
+```bash
+npm run supervisor:phase6-signoff -- --trade-date <yyyy-mm-dd> --instrument MES --session <morning|lunch|evening> --since-recorded-at <scanner-restart-iso> --json
+```
+
+From the Windows tray, use:
+
+```text
+Quant Desk Supervisor -> Open Live Signoff
+```
+
+The tray helper runs `npm run supervisor:phase6-signoff -- --json`, writes a local report under `logs/supervisor/live-signoff`, and opens the report. It is read-only: it does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
+
+Pass criteria:
+
+- supervisor signoff status is `ready`;
+- Phase 6 status is `pass`;
+- live observer Discord signoff is `ready`;
+- Phase 4 failures are `0`;
+- Phase 5 failures are `0`;
+- active HTF FVG routing events and Phase 5 contract events are present when expected for the session.
+
 ## Test Case Matrix
 
 | Case | Area | Required proof |
@@ -164,6 +189,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff` report |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment
@@ -235,5 +261,6 @@ The workflow fails when any of these occur:
 Recommended follow-up tasks:
 
 - Add the loopback runner to the standard pre-Discord sign-off checklist after every scanner phase.
+- Use tray `Open Live Signoff` or `npm run supervisor:phase6-signoff -- --json` after scanner/supervisor restarts before approving live-format Discord evidence.
 - Run real-tape mode at the end of each trading day for morning, lunch, and evening sessions.
 - Keep a dated markdown result beside major behavior audits so future drift can be compared against known-good output.

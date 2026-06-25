@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 8 operator live-signoff shortcut for the restart workflow.
+Files changed: Open-QuantDesk-LiveSignoff.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 7 added a clean supervisor signoff command, but the restart/live-observation workflow needed an operator-facing shortcut so the same proof can be run after scanner restarts without remembering the CLI command or relying on manual interpretation.
+Tests run: `npx tsx tools/supervisor/supervisor.test.ts`; `npx tsx tools/supervisor/phase6Signoff.test.ts`; `npx tsx tools/supervisor/health.test.ts`; `npx tsx tools/supervisor/readinessDrill.test.ts`; Phase 1-7 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, and `npx tsx tools/automation/phase6-live-format-signoff.test.ts`; real current-tape checks with `npm run supervisor:phase6-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json` and `npm run phase6:live-format-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`.
+Result: Passed. Tray/static coverage confirms the new `Open Live Signoff` menu calls the read-only helper, and the helper calls `npm run supervisor:phase6-signoff -- --json` with explicit no-Discord/no-Supabase/no-trading/no-child-process authority. Current June 25 morning signoff returned `ready`/`pass`, `discordSignoffStatus=ready`, Phase 4 failures 0, Phase 5 failures 0, and active HTF FVG routing events present.
+Trading logic changed: No. This is operator workflow/reporting only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The tray/helper does not post Discord; it only runs the supervisor signoff report and opens local output.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 9 can add an optional dated signoff manifest to the end-of-session loopback archive if we want every live approval checkpoint preserved beside the scanner audit tapes.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 7 supervisor signoff integration for Phase 6 live-format proof.
 Files changed: tools/supervisor/phase6Signoff.ts, tools/supervisor/phase6Signoff.test.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Phase 6 created a clean live-format signoff gate, but the supervisor needed a standard read-only command to surface that signoff after scanner restarts without posting Discord, starting services, changing scanner state, or touching trading logic.
