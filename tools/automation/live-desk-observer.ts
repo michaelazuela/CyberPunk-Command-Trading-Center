@@ -14,6 +14,7 @@ interface LiveDeskObserverOptions {
   json: boolean;
   watch: boolean;
   pollSeconds: number;
+  sinceRecordedAt?: string | null;
 }
 
 interface ObserverObservation {
@@ -52,6 +53,8 @@ interface LiveDeskObserverReport {
   generatedAt: string;
   sourceTape: string;
   eventCount: number;
+  filteredEventCount: number;
+  sinceRecordedAt: string | null;
   summary: {
     discordSends: number;
     discordSuppressions: number;
@@ -141,6 +144,7 @@ export function parseLiveDeskObserverArgs(args = process.argv.slice(2)): LiveDes
     json: hasFlag(args, '--json'),
     watch: hasFlag(args, '--watch'),
     pollSeconds: numberFlag(args, '--poll-seconds', 60),
+    sinceRecordedAt: readFlag(args, '--since-recorded-at') || readFlag(args, '--since') || null,
   };
 }
 
@@ -158,6 +162,12 @@ function numberValue(value: unknown): number | null {
 
 function boolValue(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
+}
+
+function timestampMs(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function samePrice(a: number | null, b: number | null): boolean {
@@ -416,6 +426,10 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
     '',
     '## Summary',
     `- Events reviewed: ${report.eventCount}`,
+    ...(report.sinceRecordedAt ? [
+      `- Since recordedAt: ${report.sinceRecordedAt}`,
+      `- Older tape events excluded: ${report.filteredEventCount}`,
+    ] : []),
     `- Discord sends: ${report.summary.discordSends}`,
     `- Discord suppressions: ${report.summary.discordSuppressions}`,
     `- Duplicate suppressions: ${report.summary.duplicateSuppressions}`,
@@ -476,7 +490,16 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
   }
 
   const tape = JSON.parse(await fs.readFile(sourceTape, 'utf8')) as Record<string, unknown>;
-  const eventEntries = Object.entries(asRecord(tape.events)).sort(([a], [b]) => a.localeCompare(b));
+  const sinceRecordedAt = options.sinceRecordedAt || null;
+  const sinceMs = timestampMs(sinceRecordedAt);
+  const allEventEntries = Object.entries(asRecord(tape.events)).sort(([a], [b]) => a.localeCompare(b));
+  const eventEntries = sinceMs === null
+    ? allEventEntries
+    : allEventEntries.filter(([, raw]) => {
+        const recordedAt = stringValue(asRecord(raw).recordedAt, '');
+        const recordedAtMs = timestampMs(recordedAt);
+        return recordedAtMs !== null && recordedAtMs >= sinceMs;
+      });
   const observations: ObserverObservation[] = eventEntries.map(([completed5m, raw]) => {
     const event = asRecord(raw);
     const bar = asRecord(event.completed5m);
@@ -565,6 +588,8 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     generatedAt: new Date().toISOString(),
     sourceTape,
     eventCount: observations.length,
+    filteredEventCount: allEventEntries.length - eventEntries.length,
+    sinceRecordedAt,
     summary,
     bottomLine: summarizeLatest(summary),
     consultingFocus: buildConsultingFocus(summary),

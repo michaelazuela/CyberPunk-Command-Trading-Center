@@ -16,6 +16,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
   session: 'morning',
   events: {
     '2026-06-18T09:35:00.0000000': {
+      recordedAt: '2026-06-18T13:35:10.000Z',
       completed5m: {
         time: '2026-06-18T09:35:00.0000000',
         open: 7577,
@@ -53,6 +54,7 @@ fs.writeFileSync(tapePath, JSON.stringify({
       },
     },
     '2026-06-18T09:50:00.0000000': {
+      recordedAt: '2026-06-18T13:50:10.000Z',
       completed5m: {
         time: '2026-06-18T09:50:00.0000000',
         open: 7538.75,
@@ -164,6 +166,25 @@ assert.match(report.markdown, /No chase/);
 assert.match(report.markdown, /Discord sign-off status: blocked/);
 assert.match(report.markdown, /Block Discord sign-off until active HTF FVG reaction routing agrees/);
 assert.match(report.markdown, /Phase 5 contract events: 1/);
+
+const sinceFilteredReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-18',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+  sinceRecordedAt: '2026-06-18T13:45:00.000Z',
+});
+
+assert.equal(sinceFilteredReport.eventCount, 1);
+assert.equal(sinceFilteredReport.filteredEventCount, 1);
+assert.equal(sinceFilteredReport.summary.discordSends, 1);
+assert.equal(sinceFilteredReport.summary.phase4EnforcementFailures, 1);
+assert.match(sinceFilteredReport.markdown, /Since recordedAt: 2026-06-18T13:45:00.000Z/);
+assert.match(sinceFilteredReport.markdown, /Older tape events excluded: 1/);
 
 fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-17-MES-morning.json'), JSON.stringify({
   reportType: 'scanner_decision_tape',
