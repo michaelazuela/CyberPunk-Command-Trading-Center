@@ -303,19 +303,29 @@ function observerFlagsFor(event: Record<string, unknown>, selected: Record<strin
   const activeCampaignDirection = stringValue(activeCampaign.direction, '');
   const routedDirection = directionalValue(htfFvgReactionRouting.direction);
   const canExecute = boolValue(asRecord(event.plan).canExecute);
+  const duplicateSuppressed = /duplicate/i.test(sendReason);
   const staleOrNoChase = /already|stale|no chase|T1 was already reached/i.test(`${staleReason} ${reviewStatus}`);
 
   if (discord.shouldSend === true) flags.push('discord_send');
-  if (/duplicate/i.test(sendReason)) flags.push('dedupe_suppressed');
+  if (duplicateSuppressed) flags.push('dedupe_suppressed');
   if (/below 80 score/i.test(sendReason)) flags.push('below_score_threshold');
   if (staleOrNoChase) flags.push('stale_or_no_chase');
-  if (!staleOrNoChase && selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection) {
+  const selectedPrimaryMismatch = selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection;
+  const selectedRoutingMismatch = routedDirection && selectedDirection && selectedDirection !== routedDirection;
+  const selectedMismatchIsHard = discord.shouldSend === true && !staleOrNoChase && !duplicateSuppressed;
+  if (selectedPrimaryMismatch && selectedMismatchIsHard) {
     flags.push('candidate_desk_side_conflict');
+  } else if (selectedPrimaryMismatch) {
+    flags.push('candidate_desk_side_warning');
   }
   if (htfFvgReactionRouting.status === 'routed_active_reaction' && routedDirection) {
     flags.push('htf_fvg_reaction_routing_active');
     if (primaryDirection !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
-    if (!staleOrNoChase && selectedDirection && selectedDirection !== routedDirection) flags.push('htf_fvg_reaction_selected_conflict');
+    if (selectedRoutingMismatch && selectedMismatchIsHard) {
+      flags.push('htf_fvg_reaction_selected_conflict');
+    } else if (selectedRoutingMismatch) {
+      flags.push('htf_fvg_reaction_selected_warning');
+    }
     if (activeCampaignDirection && activeCampaignDirection !== routedDirection) flags.push('htf_fvg_reaction_campaign_conflict');
     const boundary = asRecord(htfFvgReactionRouting.approvalBoundary);
     const boundaryChanged = [
@@ -346,8 +356,11 @@ function traderReadFor(event: Record<string, unknown>, selected: Record<string, 
   if (flags.includes('htf_fvg_phase5_contract_fail')) {
     return 'Discord sign-off blocked. Active HTF FVG reaction routing failed the Phase 5 contract across DeskState, memory, cascade, or optional delivery/persistence payloads.';
   }
-  if (flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')) {
+  if (flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active' && flag !== 'htf_fvg_reaction_selected_warning')) {
     return `Discord sign-off blocked. Active HTF FVG reaction routing says ${routedDirection}, but primary/selected/campaign metadata or approval boundary drifted; review before Discord delivery.`;
+  }
+  if (flags.includes('htf_fvg_reaction_selected_warning')) {
+    return `Warning only. Suppressed selected ${selectedDirection} residue conflicts with active ${routedDirection} HTF FVG route; not a Discord sign-off blocker unless it becomes trader-facing.`;
   }
   if (flags.includes('stale_or_no_chase')) {
     return `No chase. ${staleReason || 'The move was already mature when the tape recorded it.'}`;
@@ -381,7 +394,7 @@ function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): strin
   if (summary.staleOrNoChaseFlags > 0) items.push('Review stale-plan suppression: levels that already hit T1 or moved without retest should stay out of the main trader-facing card.');
   if (summary.candidateDeskConflicts > 0) items.push('Review candidate-vs-DeskState language: when the selected setup conflicts with the primary map, Discord should say review-only first.');
   if (summary.discordSignoffStatus === 'not_evaluable') items.push('Do not treat this as Phase 4-ready. Regenerate the scanner tape after the current scanner build is running so HTF FVG reaction routing fields are present.');
-  if (summary.phase4EnforcementFailures > 0) items.push('Block Discord sign-off until active HTF FVG reaction routing agrees with primary DeskState, selected candidate/campaign metadata, and communication-only approval boundaries.');
+  if (summary.phase4EnforcementFailures > 0) items.push('Block Discord sign-off until active HTF FVG reaction routing agrees with primary DeskState, trader-facing selected/campaign metadata, and communication-only approval boundaries.');
   if (summary.htfFvgPhase5ContractFailures > 0) items.push('Block Discord sign-off until HTF FVG reaction routing, memory, cascade parent zone, and optional Discord/chart/RAG payloads agree on the same active parent zone and line.');
   if (summary.htfFvgReactionBoundaryDrift > 0) items.push('Review HTF FVG reaction routing boundary drift immediately; this routing must not change execution approval, canExecute, ranking, risk, entries, stops, or targets.');
   if (summary.belowScoreSuppressions > 0) items.push('Review whether suppressed high-context ideas should be consolidated into one map update instead of creating trader noise.');
@@ -476,7 +489,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     const phase5Contract = phase5ContractFor(event, primary);
     const flags = observerFlagsFor(event, selected, primary, phase5Contract.status);
     const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
-      ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')
+      ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active' && flag !== 'htf_fvg_reaction_selected_warning')
         ? 'fail'
         : 'pass'
       : 'not_applicable';

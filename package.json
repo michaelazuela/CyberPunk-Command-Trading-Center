@@ -49,6 +49,7 @@
     "diagnostic:failed-plan-reversal-phase8": "tsx tools/automation/failed-plan-reversal-phase8-audit.ts",
     "weekly:report": "tsx tools/automation/weekly-trading-report.ts",
     "live:desk-observer": "tsx tools/automation/live-desk-observer.ts",
+    "workflow:loopback": "tsx tools/automation/new-project-workflow-loopback.ts",
     "research:desk-review": "tsx tools/automation/research-desk-inventory.ts",
     "research:desk-evidence": "tsx tools/automation/research-desk-evidence-table.ts",
     "research:desk-case-review": "tsx tools/automation/research-desk-case-review.ts",

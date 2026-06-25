@@ -92,6 +92,45 @@ fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morni
         sendOrSuppressReason: 'Duplicate alert suppressed for same setup/reference/direction/state.',
       },
     },
+    '2026-06-19T09:45:00.0000000': {
+      completed5m: { close: 7551 },
+      currentPrice: 7551.25,
+      scannerState: 'TriggerPending',
+      setupCandidateStatus: {
+        selected: {
+          direction: 'LONG',
+          setupType: 'TurtleSoup',
+          executionStatus: 'Conditional',
+        },
+      },
+      plan: { canExecute: false },
+      visibility: { visibilityMode: 'POST_CONDITIONAL' },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'SHORT' },
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+        },
+      },
+      staleReason: null,
+      discord: {
+        shouldSend: false,
+        sendOrSuppressReason: 'Duplicate alert suppressed for same setup/reference/direction/state.',
+      },
+    },
   },
 }));
 
@@ -110,24 +149,29 @@ assert.equal(report.authority.postsDiscord, false);
 assert.equal(report.authority.changesTradingLogic, false);
 assert.equal(report.authority.changesCanExecute, false);
 assert.equal(report.summary.tapesReviewed, 1);
-assert.equal(report.summary.eventsReviewed, 2);
+assert.equal(report.summary.eventsReviewed, 3);
 assert.equal(report.summary.currentRuleExpectedPosts, 1);
-assert.equal(report.summary.currentRuleSuppressions, 1);
+assert.equal(report.summary.currentRuleSuppressions, 2);
 assert.equal(report.summary.canExecuteFalseExpectedPosts, 1);
 assert.equal(report.summary.reviewOrWatchExpectedPosts, 1);
 assert.equal(report.summary.staleOrNoChaseEvents, 1);
 assert.equal(report.summary.candidateDeskConflicts, 0);
-assert.equal(report.summary.htfFvgReactionRoutingEvents, 2);
+assert.equal(report.summary.htfFvgReactionRoutingEvents, 3);
 assert.equal(report.summary.htfFvgReactionRoutingConflicts, 1);
 assert.equal(report.summary.htfFvgReactionBoundaryDrift, 0);
 assert.equal(report.summary.phase4EnforcementFailures, 1);
-assert.equal(report.summary.duplicateSuppressions, 1);
+assert.equal(report.summary.duplicateSuppressions, 2);
 assert.equal(report.rows[0].htfFvgReactionRoutingDirection, 'SHORT');
 assert.equal(report.rows[0].htfFvgReactionPhase4Enforcement, 'fail');
 assert.equal(report.rows[0].auditFlags.includes('candidate_desk_conflict'), false);
 assert.equal(report.rows[0].auditFlags.includes('htf_fvg_reaction_selected_conflict'), false);
 assert.ok(report.rows[0].auditFlags.includes('htf_fvg_reaction_campaign_conflict'));
 assert.equal(report.rows[1].htfFvgReactionPhase4Enforcement, 'pass');
+assert.equal(report.rows[2].htfFvgReactionPhase4Enforcement, 'pass');
+assert.equal(report.rows[2].auditFlags.includes('candidate_desk_conflict'), false);
+assert.equal(report.rows[2].auditFlags.includes('htf_fvg_reaction_selected_conflict'), false);
+assert.ok(report.rows[2].auditFlags.includes('candidate_desk_warning'));
+assert.ok(report.rows[2].auditFlags.includes('htf_fvg_reaction_selected_warning'));
 assert.match(report.markdown, /Scanner Behavior Phase 1 Audit/);
 assert.match(report.markdown, /Read-only replay audit/);
 assert.match(report.markdown, /canExecute=false expected posts: 1/);

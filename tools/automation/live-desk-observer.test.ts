@@ -517,4 +517,108 @@ assert.equal(staleSelectedResidueReport.summary.discordSignoffStatus, 'ready');
 assert.equal(staleSelectedResidueReport.observations[0].htfFvgReactionPhase4Enforcement, 'pass');
 assert.equal(staleSelectedResidueReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_conflict'), false);
 
+fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-22-MES-morning.json'), JSON.stringify({
+  reportType: 'scanner_decision_tape',
+  tradeDate: '2026-06-22',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-22T09:35:00.0000000': {
+      completed5m: {
+        time: '2026-06-22T09:35:00.0000000',
+        open: 7469,
+        high: 7471,
+        low: 7467,
+        close: 7469,
+      },
+      currentPrice: 7469.75,
+      scannerState: 'TriggerPending',
+      setupCandidateStatus: {
+        selected: {
+          setupType: 'TurtleSoup',
+          direction: 'SHORT',
+          executionStatus: 'Conditional',
+          entry: 7472.5,
+          stop: 7479,
+          target1: 7462.75,
+          target2: 7459.5,
+        },
+      },
+      plan: {
+        canExecute: false,
+      },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'LONG' },
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'LONG',
+          lineInSand: 7470,
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'LONG',
+            lineInSand: 7470,
+            lineLabel: 'LONG ABOVE 7470.00 from 15M parent FVG 7462.00-7470.00',
+            lifecycleState: 'rejected',
+            standDown: 'Stand down on completed 5M acceptance below parent zone 7462.00.',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+          htfFvgReactionMemory: {
+            activeReaction: {
+              direction: 'LONG',
+              timeframe: '15M',
+              lower: 7462,
+              upper: 7470,
+              lifecycle: { state: 'rejected' },
+            },
+          },
+          htfFvgCascade: {
+            parentZone: {
+              direction: 'LONG',
+              timeframe: '15M',
+              lower: 7462,
+              upper: 7470,
+            },
+          },
+        },
+      },
+      staleReason: 'Bearish Turtle Soup: buy-side sweep above 7475.5, reclaim back below the swept high, then confirm downward rejection or expansion.',
+      discord: {
+        shouldSend: false,
+        sendOrSuppressReason: 'Duplicate alert suppressed for same setup/reference/direction/state.',
+      },
+    },
+  },
+}));
+
+const duplicateSelectedResidueReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-22',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+});
+
+assert.equal(duplicateSelectedResidueReport.summary.duplicateSuppressions, 1);
+assert.equal(duplicateSelectedResidueReport.summary.candidateDeskConflicts, 0);
+assert.equal(duplicateSelectedResidueReport.summary.htfFvgReactionRoutingConflicts, 0);
+assert.equal(duplicateSelectedResidueReport.summary.phase4EnforcementFailures, 0);
+assert.equal(duplicateSelectedResidueReport.summary.discordSignoffStatus, 'ready');
+assert.equal(duplicateSelectedResidueReport.observations[0].htfFvgReactionPhase4Enforcement, 'pass');
+assert.equal(duplicateSelectedResidueReport.observations[0].observerFlags.includes('candidate_desk_side_conflict'), false);
+assert.equal(duplicateSelectedResidueReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_conflict'), false);
+assert.ok(duplicateSelectedResidueReport.observations[0].observerFlags.includes('candidate_desk_side_warning'));
+assert.ok(duplicateSelectedResidueReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_warning'));
+assert.match(duplicateSelectedResidueReport.observations[0].traderRead, /Warning only/);
+
 fs.rmSync(tmp, { recursive: true, force: true });

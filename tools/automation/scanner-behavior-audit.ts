@@ -182,28 +182,36 @@ function auditFlags(args: {
   const flags: string[] = [];
   const text = `${args.currentRuleReason} ${args.staleReason || ''} ${args.visibilityMode}`;
   const staleOrNoChase = /stale|no chase|already|T1 was already reached/i.test(text);
+  const duplicateSuppressed = /duplicate|dedupe/i.test(text);
   if (args.currentRuleExpectedDiscordPost) flags.push('current_rules_expect_post');
   if (args.canExecute === false) flags.push('canExecute_false');
   if (/POST_REVIEW|POST_WATCH|review|watch/i.test(args.visibilityMode)) flags.push('review_or_watch');
   if (staleOrNoChase) flags.push('stale_or_no_chase');
-  if (/duplicate|dedupe/i.test(text)) flags.push('duplicate_suppression');
+  if (duplicateSuppressed) flags.push('duplicate_suppression');
   if (/DATA_QUALITY|data quality|not usable/i.test(text)) flags.push('data_quality');
-  if (
-    !staleOrNoChase &&
-    args.selectedDirection !== 'N/A' &&
+  const selectedPrimaryMismatch = args.selectedDirection !== 'N/A' &&
     args.deskPrimary !== 'N/A' &&
     args.deskPrimary !== 'WAIT' &&
-    args.selectedDirection !== args.deskPrimary
+    args.selectedDirection !== args.deskPrimary;
+  const selectedMismatchIsHard = args.currentRuleExpectedDiscordPost && !staleOrNoChase && !duplicateSuppressed;
+  if (
+    selectedPrimaryMismatch &&
+    selectedMismatchIsHard
   ) {
     flags.push('candidate_desk_conflict');
+  } else if (selectedPrimaryMismatch) {
+    flags.push('candidate_desk_warning');
   }
   const routedDirection = directionalValue(args.htfFvgReactionRoutingDirection);
   const activeRouting = args.htfFvgReactionRoutingStatus === 'routed_active_reaction' && routedDirection;
   if (activeRouting) {
     flags.push('htf_fvg_reaction_routing_active');
     if (args.deskPrimary !== routedDirection) flags.push('htf_fvg_reaction_primary_mismatch');
-    if (!staleOrNoChase && args.selectedDirection !== 'N/A' && args.selectedDirection !== routedDirection) {
+    const selectedRoutingMismatch = args.selectedDirection !== 'N/A' && args.selectedDirection !== routedDirection;
+    if (selectedRoutingMismatch && selectedMismatchIsHard) {
       flags.push('htf_fvg_reaction_selected_conflict');
+    } else if (selectedRoutingMismatch) {
+      flags.push('htf_fvg_reaction_selected_warning');
     }
     if (args.activeCampaignDirection !== 'N/A' && args.activeCampaignDirection !== routedDirection) {
       flags.push('htf_fvg_reaction_campaign_conflict');
@@ -262,7 +270,7 @@ function rowFromEvent(args: {
     staleReason,
   });
   const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
-    ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active')
+    ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active' && flag !== 'htf_fvg_reaction_selected_warning')
       ? 'fail'
       : 'pass'
     : 'not_applicable';
