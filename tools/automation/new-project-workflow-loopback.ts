@@ -28,9 +28,11 @@ function argValue(name: string): string | null {
 
 const includeFull = process.argv.includes('--full');
 const includeRealTapes = process.argv.includes('--real-tapes');
+const archiveSignoff = process.argv.includes('--archive-signoff');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
+const session = argValue('--session') ?? 'morning';
 
 const checks: LoopbackCheck[] = [
   {
@@ -177,6 +179,14 @@ const checks: LoopbackCheck[] = [
     realTapeOnly: true,
   },
   {
+    id: 'live-signoff-manifest',
+    area: 'supervisor_restart_workflow',
+    description: 'Archives a dated supervisor Phase 6 live-format signoff manifest beside local supervisor evidence.',
+    command: bin('npm'),
+    args: ['run', 'supervisor:signoff-manifest', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', session, '--json'],
+    realTapeOnly: true,
+  },
+  {
     id: 'guard-no-firebase',
     area: 'project_guards',
     description: 'Verifies Firebase remains absent.',
@@ -221,6 +231,7 @@ const checks: LoopbackCheck[] = [
 function shouldRun(check: LoopbackCheck): boolean {
   if (check.fullOnly && !includeFull) return false;
   if (check.realTapeOnly && !includeRealTapes) return false;
+  if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
   return true;
 }
 
@@ -272,6 +283,7 @@ const summary = {
   instrument,
   includeFull,
   includeRealTapes,
+  archiveSignoff,
   authority: {
     readOnly: true,
     postsDiscord: false,

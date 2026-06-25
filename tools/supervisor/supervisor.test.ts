@@ -273,7 +273,7 @@ assert.ok(supervisorStartScript.includes('SYSTEM_ALERTS_DISCORD_WEBHOOK_URL'));
 assert.equal(supervisorStartScript.includes('runTradeDecisionPipeline'), false);
 assert.equal(supervisorStartScript.includes('scanSetupCandidates'), false);
 assert.equal(supervisorStartScript.includes('canExecute'), false);
-assert.ok(liveSignoffScript.includes('npm run supervisor:phase6-signoff -- --json'));
+assert.ok(liveSignoffScript.includes('npm run supervisor:signoff-manifest -- --json'));
 assert.ok(liveSignoffScript.includes('live-signoff'));
 assert.ok(liveSignoffScript.includes('postsDiscord = $false'));
 assert.ok(liveSignoffScript.includes('writesSupabase = $false'));
@@ -310,6 +310,17 @@ for (const entry of fs.readdirSync(supervisorDir)) {
     );
   }
 }
+
+const liveSignoffManifestSource = fs.readFileSync(path.join(supervisorDir, 'liveSignoffManifest.ts'), 'utf8');
+assert.ok(liveSignoffManifestSource.includes("reportType: 'supervisor_live_signoff_manifest'"));
+assert.ok(liveSignoffManifestSource.includes('phase_9_signoff_manifest_archive'));
+assert.ok(liveSignoffManifestSource.includes('postsDiscord: false'));
+assert.ok(liveSignoffManifestSource.includes('writesSupabase: false'));
+assert.ok(liveSignoffManifestSource.includes('changesScannerState: false'));
+assert.ok(liveSignoffManifestSource.includes('changesTradingLogic: false'));
+assert.ok(liveSignoffManifestSource.includes('changesCanExecute: false'));
+assert.ok(liveSignoffManifestSource.includes('startsChildProcesses: false'));
+assert.equal(liveSignoffManifestSource.includes('DISCORD_WEBHOOK_URL'), false);
 
 const tempLogsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-supervisor-test-'));
 const testChildRunArg = `--test-run=${process.pid}-${Date.now()}`;

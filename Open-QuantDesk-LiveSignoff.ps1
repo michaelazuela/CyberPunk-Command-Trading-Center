@@ -34,7 +34,7 @@ function Write-LiveSignoffLog {
 
 Write-LiveSignoffLog -Message 'Live-format supervisor signoff requested from operator helper.'
 
-$command = 'npm run supervisor:phase6-signoff -- --json'
+$command = 'npm run supervisor:signoff-manifest -- --json'
 $output = & cmd.exe /d /c $command 2>&1
 $exitCode = $LASTEXITCODE
 $timestamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
@@ -66,7 +66,7 @@ if ($exitCode -ne 0) {
     jsonReport = if (Test-Path $reportPath) { $reportPath } else { $null }
   }
   Start-Process -FilePath $textPath | Out-Null
-  throw "Live-format supervisor signoff did not pass. See $textPath."
+  throw "Live-format supervisor signoff manifest did not pass. See $textPath."
 }
 
 Write-LiveSignoffLog -Message 'Live-format supervisor signoff completed and opened.' -Details @{

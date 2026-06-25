@@ -137,6 +137,7 @@ Run before declaring the workflow clean:
 
 ```bash
 npx tsx tools/automation/new-project-workflow-loopback.ts --full
+npm run workflow:loopback -- --real-tapes --archive-signoff --trade-date=<date> --instrument=MES --session=<morning|lunch|evening>
 npm run guard:no-firebase
 npm run guard:architecture
 npm run guard:schema
@@ -150,6 +151,7 @@ Pass criteria:
 - Firebase, architecture, schema, lint, and build pass;
 - `git diff --check` has no whitespace errors;
 - any Supabase migration added in the same change has an applied/not-applied status documented.
+- if `--archive-signoff` is used, a manifest exists under `logs/supervisor/live-signoff-manifests/<trade-date>/` and reports `ready` before live Discord evidence is accepted.
 
 ### Layer 4: post-restart live signoff
 
@@ -166,6 +168,14 @@ Quant Desk Supervisor -> Open Live Signoff
 ```
 
 The tray helper runs `npm run supervisor:phase6-signoff -- --json`, writes a local report under `logs/supervisor/live-signoff`, and opens the report. It is read-only: it does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
+
+For an archived checkpoint, run:
+
+```bash
+npm run supervisor:signoff-manifest -- --trade-date <yyyy-mm-dd> --instrument MES --session <morning|lunch|evening> --json
+```
+
+The manifest is saved under `logs/supervisor/live-signoff-manifests/<trade-date>/` and records the supervisor signoff status, Phase 6 status, latest completed 5M, latest DeskState primary side, latest line in the sand, Phase 4/5 failure counts, active HTF FVG routing event counts, and the linked observer JSON path.
 
 Pass criteria:
 
@@ -189,7 +199,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff` report |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff` and `logs/supervisor/live-signoff-manifests` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment
@@ -261,6 +271,6 @@ The workflow fails when any of these occur:
 Recommended follow-up tasks:
 
 - Add the loopback runner to the standard pre-Discord sign-off checklist after every scanner phase.
-- Use tray `Open Live Signoff` or `npm run supervisor:phase6-signoff -- --json` after scanner/supervisor restarts before approving live-format Discord evidence.
+- Use tray `Open Live Signoff`, `npm run supervisor:phase6-signoff -- --json`, or `npm run supervisor:signoff-manifest -- --json` after scanner/supervisor restarts before approving live-format Discord evidence.
 - Run real-tape mode at the end of each trading day for morning, lunch, and evening sessions.
 - Keep a dated markdown result beside major behavior audits so future drift can be compared against known-good output.

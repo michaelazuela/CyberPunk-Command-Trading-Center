@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 9 live signoff manifest archive.
+Files changed: tools/supervisor/liveSignoffManifest.ts, tools/supervisor/liveSignoffManifest.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, Open-QuantDesk-LiveSignoff.ps1, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 8 made live signoff easy to run, but the evidence still needed a durable dated manifest beside the scanner/supervisor audit artifacts so restart signoff checkpoints can be reviewed later without reconstructing CLI output.
+Tests run: `npx tsx tools/supervisor/liveSignoffManifest.test.ts`; `npx tsx tools/supervisor/supervisor.test.ts`; `npx tsx tools/supervisor/phase6Signoff.test.ts`; `npx tsx tools/supervisor/health.test.ts`; `npx tsx tools/supervisor/readinessDrill.test.ts`; Phase 1-8 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, and `npx tsx tools/automation/phase6-live-format-signoff.test.ts`; `npm run workflow:loopback -- --json`; real current-tape checks with `npm run supervisor:signoff-manifest -- --trade-date 2026-06-25 --instrument MES --session morning --json`, `npm run supervisor:phase6-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`, and `npm run phase6:live-format-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`.
+Result: Passed. The new manifest command archived a dated JSON checkpoint under `logs/supervisor/live-signoff-manifests/2026-06-25/`, preserving the supervisor signoff status, Phase 6 status, latest completed 5M, latest DeskState primary, latest line in the sand, Phase 4/5 failure counts, active HTF FVG routing events, and linked observer JSON path. Current June 25 morning evidence returned `ready`/`pass`, `discordSignoffStatus=ready`, Phase 4 failures 0, Phase 5 failures 0, and active HTF FVG routing events present. The combined deterministic workflow loopback reported 17 pass, 0 fail, 9 skipped optional/full/real-tape checks.
+Trading logic changed: No. This is evidence archiving/reporting only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The manifest command and tray helper do not post Discord; they only run/read supervisor signoff evidence and write local files.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 10 can add optional end-of-day manifest bundling if we want one command to collect scanner tapes, observer reports, signoff manifests, and supervisor status into a dated archive folder.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 8 operator live-signoff shortcut for the restart workflow.
 Files changed: Open-QuantDesk-LiveSignoff.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 7 added a clean supervisor signoff command, but the restart/live-observation workflow needed an operator-facing shortcut so the same proof can be run after scanner restarts without remembering the CLI command or relying on manual interpretation.
