@@ -30,6 +30,7 @@ const includeFull = process.argv.includes('--full');
 const includeRealTapes = process.argv.includes('--real-tapes');
 const archiveSignoff = process.argv.includes('--archive-signoff');
 const eodBundle = process.argv.includes('--eod-bundle');
+const eodSummary = process.argv.includes('--eod-summary');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
@@ -197,6 +198,14 @@ const checks: LoopbackCheck[] = [
     realTapeOnly: true,
   },
   {
+    id: 'end-of-day-evidence-summary',
+    area: 'supervisor_restart_workflow',
+    description: 'Reads the latest/requested evidence bundle and prints compact ready/blocked/missing status.',
+    command: bin('npm'),
+    args: ['run', 'supervisor:eod-summary', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
+    realTapeOnly: true,
+  },
+  {
     id: 'guard-no-firebase',
     area: 'project_guards',
     description: 'Verifies Firebase remains absent.',
@@ -245,6 +254,7 @@ function shouldRun(check: LoopbackCheck): boolean {
   if (session !== 'all' && check.id === 'real-tape-live-observer-evening' && session !== 'evening') return false;
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
   if (check.id === 'end-of-day-evidence-bundle' && !eodBundle) return false;
+  if (check.id === 'end-of-day-evidence-summary' && !eodSummary) return false;
   return true;
 }
 
@@ -299,6 +309,7 @@ const summary = {
   includeRealTapes,
   archiveSignoff,
   eodBundle,
+  eodSummary,
   authority: {
     readOnly: true,
     postsDiscord: false,

@@ -185,6 +185,14 @@ npm run supervisor:eod-bundle -- --trade-date <yyyy-mm-dd> --instrument MES --se
 
 The bundle is saved under `logs/supervisor/end-of-day-evidence/<trade-date>/<instrument>/<session>/` and copies the signoff manifest, scanner decision tape, Phase 6 observer JSON, and a supervisor status snapshot into one dated folder.
 
+For a compact operator readout of an existing bundle, run:
+
+```bash
+npm run supervisor:eod-summary -- --trade-date <yyyy-mm-dd> --instrument MES --session <morning|lunch|evening>
+```
+
+The summary reads the local bundle manifest and prints `ready`, `blocked`, `unavailable`, or `missing` without opening the full JSON archive. It is read-only and does not create, copy, post, start, stop, or repair anything.
+
 Pass criteria:
 
 - supervisor signoff status is `ready`;
@@ -194,6 +202,7 @@ Pass criteria:
 - Phase 5 failures are `0`;
 - active HTF FVG routing events and Phase 5 contract events are present when expected for the session.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
+- end-of-day summary status is `ready` when used, with all bundle files present.
 
 ## Test Case Matrix
 
@@ -208,7 +217,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, and `logs/supervisor/end-of-day-evidence` reports |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment
@@ -280,6 +289,6 @@ The workflow fails when any of these occur:
 Recommended follow-up tasks:
 
 - Add the loopback runner to the standard pre-Discord sign-off checklist after every scanner phase.
-- Use tray `Open Live Signoff`, `npm run supervisor:phase6-signoff -- --json`, `npm run supervisor:signoff-manifest -- --json`, or `npm run supervisor:eod-bundle -- --json` after scanner/supervisor restarts before approving live-format Discord evidence.
+- Use tray `Open Live Signoff`, `npm run supervisor:phase6-signoff -- --json`, `npm run supervisor:signoff-manifest -- --json`, `npm run supervisor:eod-bundle -- --json`, or `npm run supervisor:eod-summary` after scanner/supervisor restarts before approving live-format Discord evidence.
 - Run real-tape mode at the end of each trading day for morning, lunch, and evening sessions.
 - Keep a dated markdown result beside major behavior audits so future drift can be compared against known-good output.

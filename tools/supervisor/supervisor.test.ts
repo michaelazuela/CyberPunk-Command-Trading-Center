@@ -331,6 +331,16 @@ assert.ok(endOfDayBundleSource.includes('changesTradingLogic: false'));
 assert.ok(endOfDayBundleSource.includes('changesCanExecute: false'));
 assert.ok(endOfDayBundleSource.includes('startsChildProcesses: false'));
 assert.equal(endOfDayBundleSource.includes('DISCORD_WEBHOOK_URL'), false);
+const endOfDaySummarySource = fs.readFileSync(path.join(supervisorDir, 'endOfDayEvidenceSummary.ts'), 'utf8');
+assert.ok(endOfDaySummarySource.includes("reportType: 'supervisor_end_of_day_evidence_summary'"));
+assert.ok(endOfDaySummarySource.includes('phase_11_operator_evidence_summary'));
+assert.ok(endOfDaySummarySource.includes('postsDiscord: false'));
+assert.ok(endOfDaySummarySource.includes('writesSupabase: false'));
+assert.ok(endOfDaySummarySource.includes('changesScannerState: false'));
+assert.ok(endOfDaySummarySource.includes('changesTradingLogic: false'));
+assert.ok(endOfDaySummarySource.includes('changesCanExecute: false'));
+assert.ok(endOfDaySummarySource.includes('startsChildProcesses: false'));
+assert.equal(endOfDaySummarySource.includes('DISCORD_WEBHOOK_URL'), false);
 
 const tempLogsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-supervisor-test-'));
 const testChildRunArg = `--test-run=${process.pid}-${Date.now()}`;

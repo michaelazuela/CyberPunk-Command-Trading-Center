@@ -21,6 +21,7 @@
     "supervisor:phase6-signoff": "tsx tools/supervisor/index.ts phase6-signoff",
     "supervisor:signoff-manifest": "tsx tools/supervisor/liveSignoffManifest.ts",
     "supervisor:eod-bundle": "tsx tools/supervisor/endOfDayEvidenceBundle.ts",
+    "supervisor:eod-summary": "tsx tools/supervisor/endOfDayEvidenceSummary.ts",
     "supervisor:audit": "tsx tools/supervisor/runtimeAudit.ts",
     "supervisor:repair": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Repair-QuantDesk-Runtime.ps1",
     "supervisor:cleanup-json": "tsx tools/supervisor/runtimeJsonCleanup.ts",

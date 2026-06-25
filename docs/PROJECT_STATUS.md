@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 11 compact evidence bundle summary.
+Files changed: tools/supervisor/endOfDayEvidenceSummary.ts, tools/supervisor/endOfDayEvidenceSummary.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 10 created full end-of-day evidence bundles, but operators needed a quick ready/blocked/missing readout without opening the full JSON archive.
+Tests run: `npx tsx tools/supervisor/endOfDayEvidenceSummary.test.ts`; `npx tsx tools/supervisor/endOfDayEvidenceBundle.test.ts`; `npx tsx tools/supervisor/liveSignoffManifest.test.ts`; `npx tsx tools/supervisor/supervisor.test.ts`; `npm run supervisor:eod-summary -- --trade-date 2026-06-25 --instrument MES --session morning --json`; `npm run workflow:loopback -- --real-tapes --eod-summary --trade-date=2026-06-25 --instrument=MES --session=morning --json`; Phase 1-10 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, `npx tsx tools/automation/phase6-live-format-signoff.test.ts`, `npx tsx tools/supervisor/phase6Signoff.test.ts`, `npx tsx tools/supervisor/health.test.ts`, and `npx tsx tools/supervisor/readinessDrill.test.ts`; `npm run workflow:loopback -- --json`.
+Result: Passed. The new summary command reads the existing June 25 morning evidence bundle and reports `status=ready`, signoff `ready`, Phase 6 `pass`, all four expected files present, and no failures. The real-tape workflow with `--eod-summary` reported 20 pass, 0 fail, 8 skipped optional checks. The deterministic workflow loopback reported 17 pass, 0 fail, 11 skipped optional/full/real-tape checks.
+Trading logic changed: No. This is local evidence status reporting only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The summary command does not post Discord; it only reads local evidence artifacts.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: No additional install phase is required for the evidence workflow unless you want the compact summary surfaced through the Windows tray or supervisor status command.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 10 end-of-day evidence bundle.
 Files changed: tools/supervisor/endOfDayEvidenceBundle.ts, tools/supervisor/endOfDayEvidenceBundle.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 9 preserved live signoff manifests, but end-of-day review still needed one dated folder containing the signoff manifest, scanner decision tape, Phase 6 observer report, and supervisor status snapshot together.
