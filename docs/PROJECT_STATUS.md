@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Approve Phase 3 fresh re-entry candidates for production Discord conditional-plan display only.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, docs/PHASE_3_FRESH_REENTRY_DESIGN.md, docs/PROJECT_STATUS.md.
+Reason: Trading-logic owner explicitly approved Phase 3 fresh re-entry candidates for Discord conditional-plan display while preserving canExecute and execution approval boundaries.
+Tests run: `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/fresh-reentry-phase3-loopback.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-desk-observer.test.ts`; `npx tsx tools/automation/scanner-behavior-audit.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. Loopback reports `approved_discord_conditional_display`, fresh best risk 4 pts, Discord conditional display approved, and canExecute boundary preserved.
+Trading logic changed: Yes, display approval state changed from pending review to approved Discord conditional display. No canExecute, execution approval, model definition, risk rule, or bar-close handling change.
+Bridge impact: None.
+Discord impact: Yes. Fresh re-entry candidates with complete deterministic levels now display as conditional plans with entry, stop, T1, T2, trigger, invalidation, and explicit canExecute boundary instead of watch-only pending text.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: None known after verification.
+Next recommended action: Live scanner observation/replay sign-off should verify a real Discord payload shows the fresh re-entry conditional block with chart attached.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Begin Phase 3 deterministic fresh tactical re-entry candidate builder pending trading-logic-owner review.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/fresh-reentry-phase3-loopback.ts, docs/PHASE_3_FRESH_REENTRY_DESIGN.md, docs/PROJECT_STATUS.md.
 Reason: Watch-state-only behavior did not compute a fresh entry/stop/T1/T2 after old levels were missed/no-chase while active HTF FVG routing still supported the side. Phase 3 now builds deterministic pending-review re-entry candidates from completed 5M acceptance, active line/zone seeds, protected 5M stop, and app-owned target math.

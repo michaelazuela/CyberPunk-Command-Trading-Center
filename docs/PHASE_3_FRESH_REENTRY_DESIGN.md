@@ -15,7 +15,7 @@ That behavior was watch-state only. It told Discord and DeskState that old level
 
 Phase 3 adds `freshReentryCandidates` to `primaryDeskPlay`.
 
-The builder is deterministic and pending owner review. It computes candidate levels but does not set `canExecute`, does not approve a trade, does not change model definitions, and does not change bar-close handling.
+The builder is deterministic and approved for production Discord conditional-plan display only. It computes candidate levels but does not set `canExecute`, does not approve a trade, does not change model definitions, and does not change bar-close handling.
 
 ## Exact Inputs
 
@@ -83,11 +83,12 @@ The builder reports old entry, old stop, old risk, new entry, new stop, new risk
 
 Phase 3 candidate sets carry:
 
-- `approvalStatus: pending_trading_logic_owner_review`
+- `approvalStatus: approved_discord_conditional_display`
 - `changesTradeApprovals: false`
 - `changesCanExecute: false`
 - `changesModelDefinitions: false`
 - `changesBarCloseHandling: false`
-- `requiresOwnerReviewBeforeCompletion: true`
+- `approvedForDiscordConditionalDisplay: true`
+- `changesExecutionApproval: false`
 
-The trading-logic owner must review the design, tests, loopback output, and risk impact before this behavior is accepted.
+The trading-logic owner approved this boundary for Discord conditional-plan display only. Any later change that routes these candidates into `canExecute`, execution approval, model definitions, or automated order behavior requires a separate explicit approval.

@@ -1869,7 +1869,7 @@ const freshReentryPhase3DeskState = buildDeskState({
 const phase3CandidateSet = freshReentryPhase3DeskState.primaryDeskPlay.freshReentryCandidates;
 assert.equal(phase3CandidateSet?.sourceOfTruth, 'scanner_fresh_tactical_reentry_candidate_builder');
 assert.equal(phase3CandidateSet?.oldBehavior.watchOnly, true);
-assert.equal(phase3CandidateSet?.approvalStatus, 'pending_trading_logic_owner_review');
+assert.equal(phase3CandidateSet?.approvalStatus, 'approved_discord_conditional_display');
 assert.equal(phase3CandidateSet?.inputs.fiveMinuteAcceptance, true);
 assert.equal(phase3CandidateSet?.bestCandidate?.source, 'active_line_retest');
 assert.equal(phase3CandidateSet?.bestCandidate?.entry, 7596);
@@ -1878,12 +1878,13 @@ assert.equal(phase3CandidateSet?.bestCandidate?.target1, 7590);
 assert.equal(phase3CandidateSet?.bestCandidate?.target2, 7588);
 assert.equal(phase3CandidateSet?.bestCandidate?.riskPoints, 4);
 assert.equal(phase3CandidateSet?.bestCandidate?.status, 'ready_for_owner_review');
-assert.equal(phase3CandidateSet?.bestCandidate?.approvalStatus, 'pending_trading_logic_owner_review');
+assert.equal(phase3CandidateSet?.bestCandidate?.approvalStatus, 'approved_discord_conditional_display');
 assert.equal(phase3CandidateSet?.approvalBoundary.changesCanExecute, false);
 assert.equal(phase3CandidateSet?.approvalBoundary.changesTradeApprovals, false);
 assert.equal(phase3CandidateSet?.approvalBoundary.changesModelDefinitions, false);
 assert.equal(phase3CandidateSet?.approvalBoundary.changesBarCloseHandling, false);
-assert.equal(phase3CandidateSet?.approvalBoundary.requiresOwnerReviewBeforeCompletion, true);
+assert.equal(phase3CandidateSet?.approvalBoundary.approvedForDiscordConditionalDisplay, true);
+assert.equal(phase3CandidateSet?.approvalBoundary.changesExecutionApproval, false);
 assert.equal(freshReentryPhase3DeskState.canExecute, false);
 assert.equal(freshReentryPhase3DeskState.visibilityMetadata.authority.canExecute, false);
 const phase3Comparison = compareFreshReentryPhase3Behavior([missedHtfReactionDeskState, freshReentryPhase3DeskState]);
@@ -1891,7 +1892,7 @@ assert.equal(phase3Comparison.oldWatchOnlyCycles, 2);
 assert.equal(phase3Comparison.newCandidateCycles, 1);
 assert.equal(phase3Comparison.readyCandidateCycles, 1);
 assert.equal(phase3Comparison.riskProfileChanged, true);
-assert.equal(phase3Comparison.ownerReviewRequired, true);
+assert.equal(phase3Comparison.discordConditionalDisplayApproved, true);
 assert.equal(phase3Comparison.canExecuteBoundaryPreserved, true);
 assert.deepEqual(phase3Comparison.changedEntries[0], {
   cycleIndex: 0,

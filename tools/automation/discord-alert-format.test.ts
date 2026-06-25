@@ -1918,6 +1918,34 @@ const freshReentryWatchPayload = compactDiscordSummary({
         nextStep: 'If the required completed 5M proof appears, build a fresh deterministic entry/stop/T1/T2 from new 5M structure.',
         levelsStatus: 'pending_fresh_structure',
       },
+      freshReentryCandidates: {
+        approvalStatus: 'approved_discord_conditional_display',
+        direction: 'SHORT',
+        bestCandidate: {
+          direction: 'SHORT',
+          status: 'ready_for_owner_review',
+          source: 'active_line_retest',
+          entry: 7464,
+          stop: 7468,
+          target1: 7458,
+          target2: 7456,
+          riskPoints: 4,
+          lineInSand: 7464,
+          invalidation: 'Invalid if completed 5M acceptance fails above protected stop 7468.00.',
+          requiredTrigger: 'Fresh completed 5M acceptance below 7464.00 plus retest/hold into 7464.00.',
+          nextAction: 'SHORT re-entry conditional display at 7464.00; execution still requires normal canExecute gates.',
+          approvalStatus: 'approved_discord_conditional_display',
+        },
+        riskImpact: {
+          oldEntry: 7477.75,
+          oldStop: 7487,
+          oldRiskPoints: 9.25,
+          bestEntry: 7464,
+          bestStop: 7468,
+          bestRiskPoints: 4,
+          riskDeltaPoints: -5.25,
+        },
+      },
       shortBias: {
         state: 'primary',
         scenarioLabel: 'Missed TurtleSoup short with fresh re-entry watch',
@@ -1934,11 +1962,12 @@ const freshReentryWatchPayload = compactDiscordSummary({
   },
 });
 const freshReentryWatchText = flattenDiscordPayloadText(freshReentryWatchPayload);
-assert.ok(freshReentryWatchText.includes('Fresh Re-entry Watch:'), freshReentryWatchText);
-assert.ok(freshReentryWatchText.includes('SHORT watch line: 7464.00.'), freshReentryWatchText);
-assert.ok(freshReentryWatchText.includes('Required proof: Completed 5M close/hold below 7464.00 with fresh protected 5M structure.'), freshReentryWatchText);
-assert.ok(freshReentryWatchText.includes('Fresh entry/stop/T1/T2: pending new 5M structure; do not reuse old missed levels.'), freshReentryWatchText);
-assert.ok(freshReentryWatchText.includes('Old missed levels: entry 7477.75, stop 7487.00, T1 7464.00, T2 7459.25 - management/history only.'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Fresh Re-entry Conditional Plan:'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('SHORT below 7464.00.'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Entry: 7464.00 | Stop: 7468.00 | Risk: 4.00 pts'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('T1: 7458.00 | T2: 7456.00'), freshReentryWatchText);
+assert.ok(freshReentryWatchText.includes('Status: approved for Discord conditional-plan display only; canExecute and execution approval unchanged.'), freshReentryWatchText);
+assert.equal(freshReentryWatchText.includes('Fresh entry/stop/T1/T2: pending new 5M structure'), false, freshReentryWatchText);
 
 const deskPlayWideReviewCandidate = sampleCandidate('SHORT');
 deskPlayWideReviewCandidate.setupType = SetupType.IntradayMssMicroContinuation;

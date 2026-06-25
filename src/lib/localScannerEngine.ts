@@ -532,7 +532,7 @@ export interface DeskFreshReentryCandidate {
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
   setupType: SetupType.IntradayMssMicroContinuation;
   candidateState: 'QUALIFIED_CONDITIONAL';
-  approvalStatus: 'pending_trading_logic_owner_review';
+  approvalStatus: 'approved_discord_conditional_display';
   status: DeskFreshReentryCandidateStatus;
   source: DeskFreshReentryCandidateSource;
   priority: number;
@@ -567,8 +567,8 @@ export interface DeskFreshReentryCandidate {
 export interface DeskFreshReentryCandidateSet {
   sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate_builder';
   replacesWatchOnlyBehavior: true;
-  algorithmVersion: 'phase3_fresh_reentry_v1_pending_owner_review';
-  approvalStatus: 'pending_trading_logic_owner_review';
+  algorithmVersion: 'phase3_fresh_reentry_v1_discord_conditional_display';
+  approvalStatus: 'approved_discord_conditional_display';
   direction: Exclude<SetupCandidate['direction'], 'NO TRADE'> | null;
   oldBehavior: {
     watchOnly: boolean;
@@ -604,7 +604,8 @@ export interface DeskFreshReentryCandidateSet {
     changesCanExecute: false;
     changesModelDefinitions: false;
     changesBarCloseHandling: false;
-    requiresOwnerReviewBeforeCompletion: true;
+    approvedForDiscordConditionalDisplay: true;
+    changesExecutionApproval: false;
   };
 }
 
@@ -857,7 +858,7 @@ export interface FreshReentryPhase3Comparison {
     riskDeltaPoints: number | null;
   }>;
   riskProfileChanged: boolean;
-  ownerReviewRequired: boolean;
+  discordConditionalDisplayApproved: boolean;
   canExecuteBoundaryPreserved: boolean;
   findings: string[];
 }
@@ -3713,7 +3714,7 @@ function buildFreshReentryCandidateSet(args: {
           direction,
           setupType: SetupType.IntradayMssMicroContinuation,
           candidateState: 'QUALIFIED_CONDITIONAL',
-          approvalStatus: 'pending_trading_logic_owner_review',
+          approvalStatus: 'approved_discord_conditional_display',
           status,
           source: seed.source,
           priority: 88 - seed.sourcePriority,
@@ -3728,7 +3729,7 @@ function buildFreshReentryCandidateSet(args: {
             ? `Invalid if completed 5M acceptance fails below protected stop ${stop.toFixed(2)}.`
             : `Invalid if completed 5M acceptance fails above protected stop ${stop.toFixed(2)}.`,
           requiredTrigger: `Fresh completed 5M acceptance ${direction === 'LONG' ? 'above' : 'below'} ${lineInSand.toFixed(2)} plus retest/hold into ${entry.toFixed(2)}.`,
-          nextAction: `${direction} re-entry candidate at ${entry.toFixed(2)}; execution still requires owner-approved Phase 3 behavior and normal canExecute gates.`,
+          nextAction: `${direction} re-entry conditional display at ${entry.toFixed(2)}; execution still requires normal canExecute gates.`,
           evidence: [
             watch.reason,
             watch.requiredProof,
@@ -3768,8 +3769,8 @@ function buildFreshReentryCandidateSet(args: {
   return {
     sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate_builder',
     replacesWatchOnlyBehavior: true,
-    algorithmVersion: 'phase3_fresh_reentry_v1_pending_owner_review',
-    approvalStatus: 'pending_trading_logic_owner_review',
+    algorithmVersion: 'phase3_fresh_reentry_v1_discord_conditional_display',
+    approvalStatus: 'approved_discord_conditional_display',
     direction,
     oldBehavior: {
       watchOnly: true,
@@ -3807,7 +3808,7 @@ function buildFreshReentryCandidateSet(args: {
       'Only configured instruments are eligible.',
       'Scanner active desk-plan window must be open.',
       '5M completed candle remains execution authority; HTF supplies context/routing only.',
-      'Phase 3 remains pending owner review and does not set canExecute.',
+      'Phase 3 is approved for Discord conditional-plan display only and does not set canExecute.',
     ],
     riskImpact: {
       oldEntry: watch.oldEntry,
@@ -3825,7 +3826,8 @@ function buildFreshReentryCandidateSet(args: {
       changesCanExecute: false,
       changesModelDefinitions: false,
       changesBarCloseHandling: false,
-      requiresOwnerReviewBeforeCompletion: true,
+      approvedForDiscordConditionalDisplay: true,
+      changesExecutionApproval: false,
     },
   };
 }
@@ -4257,9 +4259,10 @@ export function compareFreshReentryPhase3Behavior(deskStates: DeskState[]): Fres
     row.oldStop !== row.newStop ||
     row.oldRiskPoints !== row.newRiskPoints
   );
-  const ownerReviewRequired = candidateStates.every((state) =>
-    state.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'pending_trading_logic_owner_review' &&
-    state.primaryDeskPlay.freshReentryCandidates?.approvalBoundary.requiresOwnerReviewBeforeCompletion === true
+  const discordConditionalDisplayApproved = candidateStates.every((state) =>
+    state.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'approved_discord_conditional_display' &&
+    state.primaryDeskPlay.freshReentryCandidates?.approvalBoundary.approvedForDiscordConditionalDisplay === true &&
+    state.primaryDeskPlay.freshReentryCandidates?.approvalBoundary.changesExecutionApproval === false
   );
   const canExecuteBoundaryPreserved = states.every((state) =>
     state.canExecute === state.visibilityMetadata.authority.canExecute &&
@@ -4284,9 +4287,9 @@ export function compareFreshReentryPhase3Behavior(deskStates: DeskState[]): Fres
     changedEntries.length
       ? 'Entry/stop/risk profile changed versus watch-only behavior.'
       : 'No entry/stop/risk profile changes were available to compare.',
-    ownerReviewRequired
-      ? 'Phase 3 candidate sets remain pending trading-logic-owner review.'
-      : 'At least one Phase 3 candidate set did not preserve owner-review status.',
+    discordConditionalDisplayApproved
+      ? 'Phase 3 candidate sets are approved for Discord conditional-plan display only.'
+      : 'At least one Phase 3 candidate set is not approved for Discord conditional-plan display.',
     canExecuteBoundaryPreserved
       ? 'canExecute and trade-approval boundaries were preserved.'
       : 'canExecute or trade-approval boundary drift was detected.',
@@ -4299,7 +4302,7 @@ export function compareFreshReentryPhase3Behavior(deskStates: DeskState[]): Fres
     readyCandidateCycles: readyCandidateStates.length,
     changedEntries,
     riskProfileChanged: changedEntries.length > 0,
-    ownerReviewRequired,
+    discordConditionalDisplayApproved,
     canExecuteBoundaryPreserved,
     findings,
   };
