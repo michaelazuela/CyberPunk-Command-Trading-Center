@@ -4363,8 +4363,9 @@ try {
     outputDir,
   });
   const deskPlayText = flattenDiscordPayloadText(deskPlayResult.payload);
-  assert.equal(deskPlayResult.files.length, 1);
+  assert.equal(deskPlayResult.files.length, 2);
   assert.ok(deskPlayResult.chartMarkup);
+  assert.ok(deskPlayResult.levelMap);
   assert.deepEqual(
     (deskPlayResult.payload.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)),
     ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed'],
@@ -4446,6 +4447,7 @@ try {
     restoreOptionalEnv('DISCORD_RAG_USER_ID', previousDiscordRagUserId);
   }
   assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.chartMarkup), { ok: true });
+  assert.deepEqual(await verifyApprovedDailyTradePlanRender(deskPlayResult.levelMap), { ok: true });
   const deskPlayChartHtml = buildChartMarkupHtmlForTest({
     chartContext: chartContext as ChartContext,
     candidate: contextChartCandidate,

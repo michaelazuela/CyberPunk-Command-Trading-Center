@@ -1821,7 +1821,8 @@ assert.ok(waitWithActiveParentFvgText.includes('Required proof: wait for same-di
 assert.ok(waitWithActiveParentFvgText.includes('Boundary: review-only communication; no canExecute, stop, target, risk, ranking, or approval change.'));
 assert.ok(waitWithActiveParentFvgText.includes('HTF FVG Cascade:'));
 assert.ok(waitWithActiveParentFvgText.includes('Parent FVG: 15M 7448.00-7454.50'));
-assert.ok(waitWithActiveParentFvgText.includes('5M route: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
+assert.ok(waitWithActiveParentFvgText.includes('5M route: parent zone + 5M trigger 7448.00-7454.50.'));
+assert.ok(waitWithActiveParentFvgText.includes('Trigger: Use the 15M parent FVG; wait for completed 5M acceptance above 7454.50.'));
 assert.ok(waitWithActiveParentFvgText.includes('Stand down on completed 5M acceptance below parent zone 7448.00.'));
 
 const freshReentryWatchPayload = compactDiscordSummary({

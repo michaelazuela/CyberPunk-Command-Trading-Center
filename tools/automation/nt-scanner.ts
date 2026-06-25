@@ -5538,6 +5538,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   payload: DiscordWebhookPayload;
   files: string[];
   chartMarkup: string | null;
+  levelMap: string | null;
 }> {
   const contextCandidate = candidateForDeskPlayContextChart(args.deskState, args.normalized);
   const play = args.deskState.primaryDeskPlay;
@@ -5556,7 +5557,18 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
         filePrefix: `scanner-desk-play-${args.session}-${args.tradeDate}-${args.config.instrument}`,
       })
     : null;
-  const files = [chartMarkup].filter((file): file is string => Boolean(file));
+  const levelMap = contextCandidate
+    ? await renderPriceLevelMap({
+        chartContext: args.chartContext || null,
+        candidate: contextCandidate,
+        instrument: args.config.instrument,
+        tradeDate: args.tradeDate,
+        sessionLabel: args.session,
+        outputDir: args.outputDir,
+        filePrefix: `scanner-desk-play-${args.session}-${args.tradeDate}-${args.config.instrument}`,
+      })
+    : null;
+  const files = [chartMarkup, levelMap].filter((file): file is string => Boolean(file));
   const normalizedForPayload = contextCandidate
     ? {
         ...args.normalized,
@@ -5581,13 +5593,13 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
     planVersionId: args.planVersionId,
     attachments: {
       chartPlan: Boolean(chartMarkup),
-      priceLevelMap: false,
+      priceLevelMap: Boolean(levelMap),
       auditLogPath: args.decisionTapePath,
     },
     deskState: args.deskState,
   });
   validateDiscordPayload(payload, files);
-  return { payload, files, chartMarkup };
+  return { payload, files, chartMarkup, levelMap };
 }
 
 function scannerDiscordLine(value: number | null | undefined): string {

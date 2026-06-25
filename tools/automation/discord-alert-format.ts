@@ -2532,27 +2532,13 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
     ...(play
       ? deskPlayHtfFvgParentReactionWatchLines(play, displayDirection)
       : []),
-    ...(play?.htfFvgCascade
-      ? [
-          'HTF FVG Cascade:',
-          ...(play.htfFvgCascade.parentZone
-            ? [`Parent FVG: ${compactLine(play.htfFvgCascade.parentZone.timeframe || 'HTF', 8)} ${zoneRangeLine(play.htfFvgCascade.parentZone.lower, play.htfFvgCascade.parentZone.upper)} (${compactLine(String(play.htfFvgCascade.parentZone.state || 'mapped').replace(/_/g, ' '), 20)})`]
-            : []),
-          ...(play.htfFvgCascade.childExecutionZone
-            ? [`5M route: ${compactInstruction(play.htfFvgCascade.childExecutionZone.triggerNeeded || play.htfFvgCascade.routingSummary, 'wait for completed 5M proof around parent zone.')}`]
-            : []),
-          compactLine(play.htfFvgCascade.standDown || 'Stand down if parent zone fails on completed 5M proof.', 108),
-        ]
-      : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgReactionMemoryLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgParentZoneStackLines(play, displayDirection)
       : []),
-    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
-      ? deskPlayHtfFvgCascadeLines(play, displayDirection)
-      : []),
+    ...(play ? deskPlayHtfFvgCascadeLines(play, displayDirection) : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayFreshReentryDisplayLines(play, displayDirection)
       : []),

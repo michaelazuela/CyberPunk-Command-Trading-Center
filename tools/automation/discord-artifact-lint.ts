@@ -144,8 +144,8 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
     });
   }
 
-  const hasDeskPlaySingleChart = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*(?:review|attached)|current desk plan/i.test(text);
-  if (validFiles.length > 0 && validFiles.length < 2 && !hasDeskPlaySingleChart) {
+  const allowsSingleChartArtifact = /watch chart attached|review(?:[- ]only)?(?: chart)? attached|chart:\s*(?:review|attached)|current desk plan|tactical reversal watch/i.test(text);
+  if (validFiles.length > 0 && validFiles.length < 2 && !allowsSingleChartArtifact) {
     issues.push({
       severity: 'warn',
       code: 'single_trade_plan_image',
@@ -159,11 +159,14 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
       message: `Discord payload blocked: trade-plan compact alert text is ${text.length} characters; keep image-backed trade alerts under 1600.`,
     });
   }
-  if (text.length > 1200) {
+  const preferredTextLimit = policy.category === 'current_desk_plan' && hasCompleteAppLevels(text) && validFiles.length > 0
+    ? 1250
+    : 1200;
+  if (text.length > preferredTextLimit) {
     issues.push({
       severity: 'warn',
       code: 'preferred_text_limit',
-      message: `Discord payload warning: compact alert text is ${text.length} characters; preferred normal output is under 1200.`,
+      message: `Discord payload warning: compact alert text is ${text.length} characters; preferred normal output is under ${preferredTextLimit}.`,
     });
   }
 
