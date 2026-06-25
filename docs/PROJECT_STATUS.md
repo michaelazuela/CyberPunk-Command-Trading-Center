@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 10 end-of-day evidence bundle.
+Files changed: tools/supervisor/endOfDayEvidenceBundle.ts, tools/supervisor/endOfDayEvidenceBundle.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9 preserved live signoff manifests, but end-of-day review still needed one dated folder containing the signoff manifest, scanner decision tape, Phase 6 observer report, and supervisor status snapshot together.
+Tests run: `npx tsx tools/supervisor/endOfDayEvidenceBundle.test.ts`; `npx tsx tools/supervisor/liveSignoffManifest.test.ts`; `npx tsx tools/supervisor/supervisor.test.ts`; `npx tsx tools/supervisor/phase6Signoff.test.ts`; `npx tsx tools/supervisor/health.test.ts`; `npx tsx tools/supervisor/readinessDrill.test.ts`; Phase 1-9 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, and `npx tsx tools/automation/phase6-live-format-signoff.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --eod-bundle --trade-date=2026-06-25 --instrument=MES --session=morning --json`; real current-tape checks with `npm run supervisor:eod-bundle -- --trade-date 2026-06-25 --instrument MES --session morning --json`, `npm run supervisor:signoff-manifest -- --trade-date 2026-06-25 --instrument MES --session morning --json`, and `npm run supervisor:phase6-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`.
+Result: Passed. The new bundle command created `logs/supervisor/end-of-day-evidence/2026-06-25/MES/morning/` with the signoff manifest, scanner decision tape, Phase 6 observer JSON, supervisor status snapshot, and bundle manifest. Current June 25 morning bundle returned `status=ready`, signoff `ready`, Phase 6 `pass`, and no failures. The deterministic workflow loopback reported 17 pass, 0 fail, 10 skipped optional/full/real-tape checks. The real-tape morning workflow with `--eod-bundle` reported 20 pass, 0 fail, and skipped evening because `--session=morning` was requested.
+Trading logic changed: No. This is local evidence bundling only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The bundle command does not post Discord; it only copies local evidence artifacts and writes a local manifest.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 11 can optionally add a short operator command/report that summarizes the latest bundle status without opening the full JSON archive.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 9 live signoff manifest archive.
 Files changed: tools/supervisor/liveSignoffManifest.ts, tools/supervisor/liveSignoffManifest.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, Open-QuantDesk-LiveSignoff.ps1, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 8 made live signoff easy to run, but the evidence still needed a durable dated manifest beside the scanner/supervisor audit artifacts so restart signoff checkpoints can be reviewed later without reconstructing CLI output.

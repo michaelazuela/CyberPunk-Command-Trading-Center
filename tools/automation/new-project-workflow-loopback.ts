@@ -29,10 +29,12 @@ function argValue(name: string): string | null {
 const includeFull = process.argv.includes('--full');
 const includeRealTapes = process.argv.includes('--real-tapes');
 const archiveSignoff = process.argv.includes('--archive-signoff');
+const eodBundle = process.argv.includes('--eod-bundle');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
-const session = argValue('--session') ?? 'morning';
+const session = argValue('--session') ?? 'all';
+const signoffSession = session === 'all' ? 'morning' : session;
 
 const checks: LoopbackCheck[] = [
   {
@@ -183,7 +185,15 @@ const checks: LoopbackCheck[] = [
     area: 'supervisor_restart_workflow',
     description: 'Archives a dated supervisor Phase 6 live-format signoff manifest beside local supervisor evidence.',
     command: bin('npm'),
-    args: ['run', 'supervisor:signoff-manifest', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', session, '--json'],
+    args: ['run', 'supervisor:signoff-manifest', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
+    realTapeOnly: true,
+  },
+  {
+    id: 'end-of-day-evidence-bundle',
+    area: 'supervisor_restart_workflow',
+    description: 'Builds a dated evidence bundle with signoff manifest, scanner tape, observer report, and supervisor status.',
+    command: bin('npm'),
+    args: ['run', 'supervisor:eod-bundle', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
     realTapeOnly: true,
   },
   {
@@ -231,7 +241,10 @@ const checks: LoopbackCheck[] = [
 function shouldRun(check: LoopbackCheck): boolean {
   if (check.fullOnly && !includeFull) return false;
   if (check.realTapeOnly && !includeRealTapes) return false;
+  if (session !== 'all' && check.id === 'real-tape-live-observer-morning' && session !== 'morning') return false;
+  if (session !== 'all' && check.id === 'real-tape-live-observer-evening' && session !== 'evening') return false;
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
+  if (check.id === 'end-of-day-evidence-bundle' && !eodBundle) return false;
   return true;
 }
 
@@ -281,9 +294,11 @@ const summary = {
   generatedAt: new Date().toISOString(),
   tradeDate,
   instrument,
+  session,
   includeFull,
   includeRealTapes,
   archiveSignoff,
+  eodBundle,
   authority: {
     readOnly: true,
     postsDiscord: false,

@@ -321,6 +321,16 @@ assert.ok(liveSignoffManifestSource.includes('changesTradingLogic: false'));
 assert.ok(liveSignoffManifestSource.includes('changesCanExecute: false'));
 assert.ok(liveSignoffManifestSource.includes('startsChildProcesses: false'));
 assert.equal(liveSignoffManifestSource.includes('DISCORD_WEBHOOK_URL'), false);
+const endOfDayBundleSource = fs.readFileSync(path.join(supervisorDir, 'endOfDayEvidenceBundle.ts'), 'utf8');
+assert.ok(endOfDayBundleSource.includes("reportType: 'supervisor_end_of_day_evidence_bundle'"));
+assert.ok(endOfDayBundleSource.includes('phase_10_end_of_day_evidence_bundle'));
+assert.ok(endOfDayBundleSource.includes('postsDiscord: false'));
+assert.ok(endOfDayBundleSource.includes('writesSupabase: false'));
+assert.ok(endOfDayBundleSource.includes('changesScannerState: false'));
+assert.ok(endOfDayBundleSource.includes('changesTradingLogic: false'));
+assert.ok(endOfDayBundleSource.includes('changesCanExecute: false'));
+assert.ok(endOfDayBundleSource.includes('startsChildProcesses: false'));
+assert.equal(endOfDayBundleSource.includes('DISCORD_WEBHOOK_URL'), false);
 
 const tempLogsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quant-supervisor-test-'));
 const testChildRunArg = `--test-run=${process.pid}-${Date.now()}`;
