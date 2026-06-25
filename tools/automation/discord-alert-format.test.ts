@@ -3012,6 +3012,108 @@ assert.throws(() => validateDiscordPayload({
   }],
 }), /truncation artifact/);
 
+const htfParentZoneDeskPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  planVersionId: 'MORNING-DESK-PLAY-HTF-PARENT-ZONES',
+  normalized: {
+    decision: 'SHORT',
+    decisionStatus: TradeDecisionStatus.Wait,
+    canExecute: false,
+    entry: 7454.75,
+    stop: 7490.75,
+    t1: 7400.75,
+    t2: 7382.75,
+  },
+  candidates: [],
+  currentPrice: 7474,
+  attachments: { chartPlan: true, priceLevelMap: true },
+  deskState: {
+    discordAction: 'hold',
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    primaryDeskPlay: {
+      discordEligible: true,
+      direction: 'SHORT',
+      lineInSand: 7444,
+      shortBelow: 7444,
+      summary: 'HTF parent FVG is active; execution still requires 5M proof.',
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7444,
+        upper: 7465.25,
+        state: 'waiting_retest',
+        nextTrigger: 'Completed 5M hold/reject below the zone required.',
+      },
+      shortBias: {
+        state: 'primary',
+        decisionQualityScore: 98,
+        tradeReadiness: {
+          status: 'not_aligned',
+          reason: 'SHORT is not supported by aligned protected 15M+5M structure this cycle.',
+          missingProof: ['15M and 5M protected structure are not aligned for this side.'],
+        },
+      },
+      htfFvgReactionMemory: {
+        direction: 'SHORT',
+        activeReaction: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'rejected',
+          latestReaction: { state: 'rejected', close: 7455.25 },
+        },
+        parentZones: [
+          {
+            direction: 'SHORT',
+            timeframe: '240M',
+            lower: 7472.25,
+            upper: 7512,
+            state: 'rejected',
+            confidence: 'High',
+            lifecycle: { touchCount: 9 },
+            latestReaction: { close: 7455.25 },
+          },
+          {
+            direction: 'SHORT',
+            timeframe: '120M',
+            lower: 7472.25,
+            upper: 7496.5,
+            state: 'inside_zone',
+            confidence: 'High',
+            lifecycle: { touchCount: 14 },
+            latestReaction: { close: 7455.25 },
+          },
+        ],
+      },
+      htfFvgCascade: {
+        direction: 'SHORT',
+        parentZone: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'rejected',
+        },
+        childExecutionZone: {
+          direction: 'SHORT',
+          timeframe: '5M',
+          lower: 7444,
+          upper: 7465.25,
+          triggerNeeded: 'Completed 5M hold/reject below the zone required.',
+        },
+      },
+    },
+  },
+});
+const htfParentZoneDeskText = flattenDiscordPayloadText(htfParentZoneDeskPayload);
+assert.match(htfParentZoneDeskText, /HTF (?:FVG|imbalance) Parent Zones:/);
+assert.match(htfParentZoneDeskText, /240M 7472\.25-7512\.00/);
+assert.match(htfParentZoneDeskText, /120M 7472\.25-7496\.50/);
+assert.match(htfParentZoneDeskText, /Active tactical zone: 7444\.00-7465\.25/);
+
 console.log('Discord compact alert formatter verified.');
 
 if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;

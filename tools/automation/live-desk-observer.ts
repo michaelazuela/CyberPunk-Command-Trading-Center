@@ -28,6 +28,7 @@ interface ObserverObservation {
   hasHtfFvgReactionRoutingField: boolean;
   htfFvgReactionRoutingStatus: string;
   htfFvgReactionRoutingDirection: string;
+  htfFvgZoneContext: string;
   htfFvgReactionPhase4Enforcement: 'pass' | 'fail' | 'not_applicable';
   htfFvgPhase5ContractStatus: 'pass' | 'fail' | 'not_applicable';
   htfFvgPhase5Issues: string[];
@@ -73,6 +74,7 @@ interface LiveDeskObserverReport {
     latestCompleted5m: string | null;
     latestDeskPrimary: string;
     latestLineInSand: number | null;
+    latestHtfFvgZoneContext: string;
   };
   bottomLine: string;
   consultingFocus: string[];
@@ -185,6 +187,111 @@ function formatTime(value: string): string {
 
 function formatNumber(value: number | null): string {
   return value === null ? 'N/A' : value.toFixed(2);
+}
+
+function priceLocationToZone(currentPrice: number | null, lower: number | null, upper: number | null): string {
+  if (currentPrice === null || lower === null || upper === null) return 'location unavailable';
+  if (currentPrice < lower) return `${formatNumber(lower - currentPrice)} pts below`;
+  if (currentPrice > upper) return `${formatNumber(currentPrice - upper)} pts above`;
+  return 'inside';
+}
+
+function htfFvgZoneLabel(zone: Record<string, unknown>, currentPrice: number | null): string | null {
+  const direction = stringValue(zone.direction, '');
+  const timeframe = stringValue(zone.timeframe, '');
+  const lower = numberValue(zone.lower);
+  const upper = numberValue(zone.upper);
+  if (!direction || !timeframe || lower === null || upper === null) return null;
+  const state = stringValue(zone.state, stringValue(asRecord(zone.lifecycle).state, 'mapped')).replace(/_/g, ' ');
+  const confidence = stringValue(zone.confidence, '');
+  const location = priceLocationToZone(currentPrice, lower, upper);
+  return `${timeframe} ${direction} FVG ${formatNumber(lower)}-${formatNumber(upper)} (${state}${confidence ? `, ${confidence}` : ''}; current ${location})`;
+}
+
+function htfFvgZoneContextFor(primary: Record<string, unknown>, currentPrice: number | null): string {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  const addZone = (zone: Record<string, unknown>) => {
+    const direction = stringValue(zone.direction, '');
+    const timeframe = stringValue(zone.timeframe, '');
+    const lower = numberValue(zone.lower);
+    const upper = numberValue(zone.upper);
+    const key = `${timeframe}:${direction}:${formatNumber(lower)}:${formatNumber(upper)}`;
+    if (seen.has(key)) return;
+    const label = htfFvgZoneLabel(zone, currentPrice);
+    if (!label) return;
+    seen.add(key);
+    labels.push(label);
+  };
+
+  const cascadeParent = asRecord(asRecord(primary.htfFvgCascade).parentZone);
+  if (Object.keys(cascadeParent).length) addZone(cascadeParent);
+
+  const memory = asRecord(primary.htfFvgReactionMemory);
+  const activeReaction = asRecord(memory.activeReaction);
+  if (Object.keys(activeReaction).length) addZone(activeReaction);
+
+  const parentZones = Array.isArray(memory.parentZones) ? memory.parentZones : [];
+  const primaryDirection = directionalValue(primary.direction);
+  parentZones
+    .map(asRecord)
+    .filter((zone) => !primaryDirection || directionalValue(zone.direction) === primaryDirection)
+    .slice(0, 3)
+    .forEach(addZone);
+
+  const activeZone = asRecord(primary.activeTacticalZone);
+  if (Object.keys(activeZone).length) {
+    const direction = stringValue(activeZone.direction, '');
+    const lower = numberValue(activeZone.lower);
+    const upper = numberValue(activeZone.upper);
+    if (direction && lower !== null && upper !== null) {
+      const state = stringValue(activeZone.state, 'mapped').replace(/_/g, ' ');
+      labels.push(`Tactical ${direction} zone ${formatNumber(lower)}-${formatNumber(upper)} (${state}; current ${priceLocationToZone(currentPrice, lower, upper)})`);
+    }
+  }
+
+  return labels.length ? labels.join('; ') : 'No HTF FVG zone prices mapped.';
+}
+
+function truthfulSuppressionReason(args: {
+  event: Record<string, unknown>;
+  selected: Record<string, unknown>;
+  primary: Record<string, unknown>;
+  flags: string[];
+  htfFvgZoneContext: string;
+}): string {
+  const discord = asRecord(args.event.discord);
+  const rawReason = stringValue(discord.sendOrSuppressReason, 'reason unavailable');
+  if (discord.shouldSend === true) return rawReason;
+  const primaryDirection = directionalValue(args.primary.direction);
+  const bias = primaryDirection === 'LONG'
+    ? asRecord(args.primary.longBias)
+    : primaryDirection === 'SHORT'
+      ? asRecord(args.primary.shortBias)
+      : {};
+  const score = numberValue(bias.decisionQualityScore);
+  const readiness = asRecord(bias.tradeReadiness);
+  const executable = asRecord(bias.executableConsideration);
+  const missingProof = [
+    ...((Array.isArray(executable.missingGates) ? executable.missingGates : []) as unknown[]),
+    ...((Array.isArray(readiness.missingProof) ? readiness.missingProof : []) as unknown[]),
+  ].map((item) => stringValue(item, '')).filter(Boolean);
+  const status = stringValue(executable.status, stringValue(readiness.status, ''));
+  const highQualityHeld =
+    primaryDirection &&
+    typeof score === 'number' &&
+    score >= 85 &&
+    (
+      /below 80 score/i.test(rawReason) ||
+      /not_aligned|review_only|missing_proof|missed_no_chase/i.test(status) ||
+      missingProof.length > 0
+    );
+  if (!highQualityHeld) return rawReason;
+
+  const proofText = missingProof.length
+    ? Array.from(new Set(missingProof)).slice(0, 3).join('; ')
+    : stringValue(executable.gateSummary, stringValue(readiness.reason, 'completed 5M proof or canExecute alignment is missing'));
+  return `Held: high-quality ${primaryDirection} HTF/FVG map (${score}/100), but execution publication is not armed. Missing proof: ${proofText}. HTF zones: ${args.htfFvgZoneContext}.`;
 }
 
 function selectedLabel(selected: Record<string, unknown>): string {
@@ -395,7 +502,10 @@ function summarizeLatest(summary: LiveDeskObserverReport['summary']): string {
   if (!summary.latestCompleted5m) return 'No completed 5M events found in the scanner decision tape.';
   const side = summary.latestDeskPrimary || 'WAIT';
   const line = summary.latestLineInSand === null ? 'N/A' : formatNumber(summary.latestLineInSand);
-  return `Research-only all-trading-time bottom line: latest completed 5M is ${formatTime(summary.latestCompleted5m)} ET. Primary desk map is ${side}; line in sand ${line}. Do not chase old levels; wait for fresh completed 5M proof and app-owned canExecute.`;
+  const zones = summary.latestHtfFvgZoneContext && summary.latestHtfFvgZoneContext !== 'No HTF FVG zone prices mapped.'
+    ? ` HTF/FVG map: ${summary.latestHtfFvgZoneContext}.`
+    : '';
+  return `Research-only all-trading-time bottom line: latest completed 5M is ${formatTime(summary.latestCompleted5m)} ET. Primary desk map is ${side}; line in sand ${line}.${zones} Do not chase old levels; wait for fresh completed 5M proof and app-owned canExecute.`;
 }
 
 function buildConsultingFocus(summary: LiveDeskObserverReport['summary']): string[] {
@@ -449,8 +559,8 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
     ...report.consultingFocus.map((item) => `- ${item}`),
     '',
     '## Bar-By-Bar Observer Notes',
-    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | HTF FVG Route | Phase 4 | Phase 5 | Line | canExecute | Discord | Flags | Trader read |',
-    '| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
+    '| 5M ET | Close | Current | Scanner | Selected | Levels | Desk | HTF FVG Route | HTF FVG Zones | Phase 4 | Phase 5 | Line | canExecute | Discord | Flags | Trader read |',
+    '| --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | --- | --- |',
     ...report.observations.map((item) => [
       formatTime(item.completed5m),
       formatNumber(item.close),
@@ -462,6 +572,7 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
       item.htfFvgReactionRoutingStatus === 'N/A'
         ? 'N/A'
         : `${item.htfFvgReactionRoutingDirection} ${item.htfFvgReactionRoutingStatus}`.replace(/\|/g, '/'),
+      item.htfFvgZoneContext.replace(/\|/g, '/'),
       item.htfFvgReactionPhase4Enforcement,
       item.htfFvgPhase5ContractStatus === 'fail'
         ? `fail: ${item.htfFvgPhase5Issues.join('; ').replace(/\|/g, '/')}`
@@ -511,6 +622,15 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     const discord = asRecord(event.discord);
     const phase5Contract = phase5ContractFor(event, primary);
     const flags = observerFlagsFor(event, selected, primary, phase5Contract.status);
+    const currentPrice = numberValue(event.currentPrice);
+    const htfFvgZoneContext = htfFvgZoneContextFor(primary, currentPrice);
+    const suppressionReason = truthfulSuppressionReason({
+      event,
+      selected,
+      primary,
+      flags,
+      htfFvgZoneContext,
+    });
     const htfFvgReactionPhase4Enforcement = flags.includes('htf_fvg_reaction_routing_active')
       ? flags.some((flag) => flag.startsWith('htf_fvg_reaction_') && flag !== 'htf_fvg_reaction_routing_active' && flag !== 'htf_fvg_reaction_selected_warning')
         ? 'fail'
@@ -519,7 +639,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     return {
       completed5m,
       close: numberValue(bar.close),
-      currentPrice: numberValue(event.currentPrice),
+      currentPrice,
       scannerState: stringValue(event.scannerState, 'unknown'),
       selected: selectedLabel(selected),
       selectedLevels: selectedLevels(selected),
@@ -527,6 +647,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
       hasHtfFvgReactionRoutingField,
       htfFvgReactionRoutingStatus: stringValue(htfFvgReactionRouting.status),
       htfFvgReactionRoutingDirection: stringValue(htfFvgReactionRouting.direction),
+      htfFvgZoneContext,
       htfFvgReactionPhase4Enforcement,
       htfFvgPhase5ContractStatus: phase5Contract.status,
       htfFvgPhase5Issues: phase5Contract.issues,
@@ -534,7 +655,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
       canExecute: boolValue(plan.canExecute),
       discordAction: discord.shouldSend === true
         ? 'sent'
-        : `suppressed: ${stringValue(discord.sendOrSuppressReason, 'reason unavailable')}`,
+        : `suppressed: ${suppressionReason}`,
       observerFlags: flags,
       traderRead: traderReadFor(event, selected, primary, flags),
     };
@@ -572,6 +693,7 @@ export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptio
     latestCompleted5m: latest?.completed5m || null,
     latestDeskPrimary: latest?.deskPrimary || 'WAIT',
     latestLineInSand: latest?.lineInSand ?? null,
+    latestHtfFvgZoneContext: latest?.htfFvgZoneContext || 'No HTF FVG zone prices mapped.',
   };
   const reportWithoutMarkdown: Omit<LiveDeskObserverReport, 'markdown'> = {
     reportType: 'live_desk_observer',

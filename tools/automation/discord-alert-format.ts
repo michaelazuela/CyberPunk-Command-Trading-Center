@@ -190,6 +190,28 @@ export interface CompactDeskStateForDiscord {
         state?: string | null;
         evidence?: string[];
       } | null;
+      parentZones?: Array<{
+        direction?: 'LONG' | 'SHORT' | string;
+        timeframe?: string | null;
+        lower?: number | null;
+        upper?: number | null;
+        midpoint?: number | null;
+        formedAt?: string | null;
+        confidence?: string | null;
+        state?: string | null;
+        latestReaction?: {
+          timestamp?: string | null;
+          state?: string | null;
+          close?: number | null;
+          evidence?: string | null;
+        } | null;
+        lifecycle?: {
+          state?: string | null;
+          touchCount?: number | null;
+          latestTouchAt?: string | null;
+          deepestMitigationPercent?: number | null;
+        } | null;
+      }>;
       summary?: string | null;
       parentStackSummary?: string | null;
     } | null;
@@ -1841,6 +1863,32 @@ function deskPlayHtfFvgReactionMemoryLines(
   ];
 }
 
+function deskPlayHtfFvgParentZoneStackLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  const displayDirection = direction === 'LONG' || direction === 'SHORT' ? direction : null;
+  if (!displayDirection) return [];
+  const zones = (play.htfFvgReactionMemory?.parentZones || [])
+    .filter((zone) => zone.direction === displayDirection && isFinitePrice(zone.lower) && isFinitePrice(zone.upper))
+    .slice(0, 3);
+  if (!zones.length) return [];
+  return [
+    'HTF FVG Parent Zones:',
+    ...zones.map((zone) => {
+      const state = compactLine(String(zone.state || zone.lifecycle?.state || 'mapped').replace(/_/g, ' '), 20);
+      const confidence = zone.confidence ? `; ${zone.confidence}` : '';
+      const touchText = isFinitePrice(zone.lifecycle?.touchCount)
+        ? `; touches ${numberLine(zone.lifecycle?.touchCount)}`
+        : '';
+      const closeText = isFinitePrice(zone.latestReaction?.close)
+        ? `; reaction close ${priceLine(zone.latestReaction?.close)}`
+        : '';
+      return `${compactLine(zone.timeframe || 'HTF', 8)} ${zoneRangeLine(zone.lower, zone.upper)} (${state}${confidence}${touchText}${closeText})`;
+    }),
+  ];
+}
+
 function deskPlayHtfFvgParentReactionWatchLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2207,6 +2255,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
+      ...deskPlayHtfFvgParentZoneStackLines(play, waitMapSide),
       ...deskPlayHtfFvgCascadeLines(play, waitMapSide),
       ...deskPlayFreshReentryDisplayLines(play, waitMapSide),
       ...deskPlayMainInstructionLines({
@@ -2260,6 +2309,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
+    ...deskPlayHtfFvgParentZoneStackLines(play, direction),
     ...deskPlayHtfFvgCascadeLines(play, direction),
     ...deskPlayFreshReentryDisplayLines(play, direction),
     ...deskPlayMainInstructionLines({
@@ -2457,6 +2507,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ? deskPlayHtfFvgReactionMemoryLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfFvgParentZoneStackLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayHtfFvgCascadeLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
@@ -2573,6 +2626,9 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       : []),
     ...(activeReaction && isFinitePrice(activeReaction.lower) && isFinitePrice(activeReaction.upper)
       ? [`HTF FVG Reaction Memory: ${activeReaction.timeframe || 'HTF'} ${priceLine(activeReaction.lower)}-${priceLine(activeReaction.upper)} ${String(activeReaction.state || 'mapped').replace(/_/g, ' ')}; 5M ${String(childConfirmation?.state || 'waiting').replace(/_/g, ' ')}.`]
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayHtfFvgParentZoneStackLines(play, displayDirection).slice(0, 3)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayFreshReentryCandidateLines(play, displayDirection)

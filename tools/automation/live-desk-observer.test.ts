@@ -642,4 +642,143 @@ assert.ok(duplicateSelectedResidueReport.observations[0].observerFlags.includes(
 assert.ok(duplicateSelectedResidueReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_warning'));
 assert.match(duplicateSelectedResidueReport.observations[0].traderRead, /Warning only/);
 
+fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-25-MES-morning.json'), JSON.stringify({
+  reportType: 'scanner_decision_tape',
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-25T10:45:00.0000000': {
+      recordedAt: '2026-06-25T14:45:10.000Z',
+      completed5m: {
+        time: '2026-06-25T10:45:00.0000000',
+        open: 7463.25,
+        high: 7464,
+        low: 7444.25,
+        close: 7450.75,
+      },
+      currentPrice: 7474,
+      scannerState: 'Approved',
+      setupCandidateStatus: {
+        selected: {
+          setupType: 'SweepMssFvgRetrace',
+          direction: 'SHORT',
+          executionStatus: 'Executable',
+          entry: 7454.75,
+          stop: 7490.75,
+          target1: 7400.75,
+          target2: 7382.75,
+        },
+      },
+      plan: {
+        canExecute: false,
+      },
+      candidateLifecycleTrace: {
+        activeCampaign: { direction: 'SHORT' },
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          lineInSand: 7444,
+          activeTacticalZone: {
+            direction: 'SHORT',
+            lower: 7444,
+            upper: 7465.25,
+            state: 'waiting_retest',
+          },
+          shortBias: {
+            state: 'primary',
+            decisionQualityScore: 98,
+            tradeReadiness: {
+              status: 'not_aligned',
+              missingProof: ['15M and 5M protected structure are not aligned for this side.'],
+            },
+            executableConsideration: {
+              status: 'not_aligned',
+              canExecuteNow: false,
+              missingGates: ['15M and 5M protected structure are not aligned for this side.'],
+            },
+          },
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            lineInSand: 7472.25,
+            lineLabel: 'SHORT BELOW 7472.25 from 240M parent FVG 7472.25-7512.00',
+            lifecycleState: 'rejected',
+            standDown: 'Stand down on completed 5M acceptance above parent zone 7512.00.',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+          htfFvgReactionMemory: {
+            activeReaction: {
+              direction: 'SHORT',
+              timeframe: '240M',
+              lower: 7472.25,
+              upper: 7512,
+              state: 'rejected',
+              lifecycle: { state: 'rejected' },
+            },
+            parentZones: [
+              {
+                direction: 'SHORT',
+                timeframe: '240M',
+                lower: 7472.25,
+                upper: 7512,
+                state: 'rejected',
+                confidence: 'High',
+              },
+              {
+                direction: 'SHORT',
+                timeframe: '120M',
+                lower: 7472.25,
+                upper: 7496.5,
+                state: 'inside_zone',
+                confidence: 'High',
+              },
+            ],
+          },
+          htfFvgCascade: {
+            parentZone: {
+              direction: 'SHORT',
+              timeframe: '240M',
+              lower: 7472.25,
+              upper: 7512,
+              state: 'moved_away',
+            },
+          },
+        },
+      },
+      discord: {
+        shouldSend: false,
+        sendOrSuppressReason: 'Executable/approved plan below 80 score threshold.',
+      },
+    },
+  },
+}));
+
+const htfHeldReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+});
+
+assert.equal(htfHeldReport.summary.belowScoreSuppressions, 1);
+assert.match(htfHeldReport.observations[0].discordAction, /Held: high-quality SHORT HTF\/FVG map \(98\/100\)/);
+assert.match(htfHeldReport.observations[0].discordAction, /15M and 5M protected structure are not aligned/);
+assert.match(htfHeldReport.observations[0].discordAction, /240M SHORT FVG 7472\.25-7512\.00/);
+assert.match(htfHeldReport.observations[0].htfFvgZoneContext, /120M SHORT FVG 7472\.25-7496\.50/);
+assert.match(htfHeldReport.bottomLine, /HTF\/FVG map: .*240M SHORT FVG 7472\.25-7512\.00/);
+assert.match(htfHeldReport.markdown, /HTF FVG Zones/);
+
 fs.rmSync(tmp, { recursive: true, force: true });
