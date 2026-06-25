@@ -148,6 +148,7 @@ npm run build
 Pass criteria:
 
 - all runner checks pass;
+- tray/helper parser checks pass for `QuantDeskSupervisorTray.ps1` and `Open-QuantDesk-EvidenceSummary.ps1`;
 - Firebase, architecture, schema, lint, and build pass;
 - `git diff --check` has no whitespace errors;
 - any Supabase migration added in the same change has an applied/not-applied status documented.
@@ -221,7 +222,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment

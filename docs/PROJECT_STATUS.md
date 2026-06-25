@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 14 tray parser checks in workflow loopback.
+Files changed: tools/automation/new-project-workflow-loopback.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 13 added a tray evidence-summary shortcut, but the standard loopback runner did not directly parse-check tray/helper PowerShell scripts.
+Tests run: `npm run workflow:loopback -- --json`; `npx tsx tools/supervisor/supervisor.test.ts`; `npm run supervisor:eod-summary -- --trade-date 2026-06-25 --instrument MES --session morning --json`; standalone PowerShell parser checks for `QuantDeskSupervisorTray.ps1` and `Open-QuantDesk-EvidenceSummary.ps1`; `npm run workflow:loopback -- --real-tapes --eod-summary --trade-date=2026-06-25 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The standard loopback now includes `supervisor-tray-parser` and `evidence-summary-tray-helper-parser` and reported 19 pass, 0 fail, 11 skipped optional/full/real-tape checks. The real-tape workflow with `--eod-summary` reported 22 pass, 0 fail, 8 skipped optional checks. Current June 25 morning evidence summary remains `status=ready`, signoff `ready`, Phase 6 `pass`, all files present, and no failures.
+Trading logic changed: No. This is workflow verification only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: No additional evidence-workflow phase is required. Future phases should move to a new scanner behavior, report-quality, or operator-surface request.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 13 tray evidence-summary shortcut.
 Files changed: Open-QuantDesk-EvidenceSummary.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 12 surfaced the compact evidence summary in supervisor status, but operators still needed a dedicated tray click to open the latest summary report without typing a command.

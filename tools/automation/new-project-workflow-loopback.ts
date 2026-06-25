@@ -8,6 +8,7 @@ type LoopbackCheck = {
   args: string[];
   fullOnly?: boolean;
   realTapeOnly?: boolean;
+  windowsOnly?: boolean;
 };
 
 type LoopbackResult = LoopbackCheck & {
@@ -18,6 +19,20 @@ type LoopbackResult = LoopbackCheck & {
 
 function bin(name: 'npm' | 'npx'): string {
   return process.platform === 'win32' ? `${name}.cmd` : name;
+}
+
+function powershellBin(): string {
+  return 'powershell';
+}
+
+function powershellParseArgs(filePath: string): string[] {
+  return [
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    `$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile("${filePath}", [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }`,
+  ];
 }
 
 function argValue(name: string): string | null {
@@ -151,6 +166,22 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/supervisor/supervisor.test.ts'],
   },
   {
+    id: 'supervisor-tray-parser',
+    area: 'supervisor_restart_workflow',
+    description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',
+    command: powershellBin(),
+    args: powershellParseArgs('QuantDeskSupervisorTray.ps1'),
+    windowsOnly: true,
+  },
+  {
+    id: 'evidence-summary-tray-helper-parser',
+    area: 'supervisor_restart_workflow',
+    description: 'Verifies the tray evidence-summary helper parses and remains runnable as an operator shortcut.',
+    command: powershellBin(),
+    args: powershellParseArgs('Open-QuantDesk-EvidenceSummary.ps1'),
+    windowsOnly: true,
+  },
+  {
     id: 'fresh-reentry-phase3-loopback',
     area: 'fresh_tactical_reentry',
     description: 'Compares old watch-only behavior with approved Discord conditional re-entry display while preserving canExecute.',
@@ -250,6 +281,7 @@ const checks: LoopbackCheck[] = [
 function shouldRun(check: LoopbackCheck): boolean {
   if (check.fullOnly && !includeFull) return false;
   if (check.realTapeOnly && !includeRealTapes) return false;
+  if (check.windowsOnly && process.platform !== 'win32') return false;
   if (session !== 'all' && check.id === 'real-tape-live-observer-morning' && session !== 'morning') return false;
   if (session !== 'all' && check.id === 'real-tape-live-observer-evening' && session !== 'evening') return false;
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
