@@ -26,6 +26,7 @@ $StartScript = Join-Path $Root 'Start-QuantDesk-Supervisor.ps1'
 $StopScript = Join-Path $Root 'Stop-QuantDesk-Supervisor.ps1'
 $ResearchReviewScript = Join-Path $Root 'Open-QuantDesk-ResearchReview.ps1'
 $LiveSignoffScript = Join-Path $Root 'Open-QuantDesk-LiveSignoff.ps1'
+$EvidenceSummaryScript = Join-Path $Root 'Open-QuantDesk-EvidenceSummary.ps1'
 $SelfHealNotifyScript = 'npm run supervisor:notify-self-heal'
 $RepairCacheCommand = 'npm run nt:backfill -- --days 2'
 $TrayLogPath = Join-Path $LogsDir 'tray.log'
@@ -350,6 +351,7 @@ $repairCacheItem = $menu.Items.Add('Repair Market Cache Now')
 $menu.Items.Add('-') | Out-Null
 $openStatusItem = $menu.Items.Add('Open Status')
 $openLiveSignoffItem = $menu.Items.Add('Open Live Signoff')
+$openEvidenceSummaryItem = $menu.Items.Add('Open Evidence Summary')
 $openResearchReviewItem = $menu.Items.Add('Open Research Status')
 $openLogsItem = $menu.Items.Add('Open Logs')
 $refreshItem = $menu.Items.Add('Refresh')
@@ -490,6 +492,12 @@ $openStatusItem.Add_Click({
 $openLiveSignoffItem.Add_Click({
   $statusItem.Text = 'Status: Live signoff requested...'
   Start-LocalScript -ScriptPath $LiveSignoffScript -Label 'open-live-signoff' | Out-Null
+  Update-Tray
+})
+
+$openEvidenceSummaryItem.Add_Click({
+  $statusItem.Text = 'Status: Evidence summary requested...'
+  Start-LocalScript -ScriptPath $EvidenceSummaryScript -Label 'open-evidence-summary' | Out-Null
   Update-Tray
 })
 

@@ -169,6 +169,8 @@ Quant Desk Supervisor -> Open Live Signoff
 
 The tray helper runs `npm run supervisor:phase6-signoff -- --json`, writes a local report under `logs/supervisor/live-signoff`, and opens the report. It is read-only: it does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
 
+The tray also includes `Open Evidence Summary`, which runs `npm run supervisor:eod-summary -- --json`, writes a local report under `logs/supervisor/evidence-summary`, and opens the compact latest-bundle readout. It is read-only and does not post Discord, start scanner services, write Supabase, change scanner state, change trading logic, or change `canExecute`.
+
 For an archived checkpoint, run:
 
 ```bash
@@ -219,7 +221,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, tray `Open Live Signoff`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, and `logs/supervisor/end-of-day-evidence` reports |
+| Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
 ## Data Sources And Environment
@@ -291,6 +293,6 @@ The workflow fails when any of these occur:
 Recommended follow-up tasks:
 
 - Add the loopback runner to the standard pre-Discord sign-off checklist after every scanner phase.
-- Use tray `Open Live Signoff`, `npm run supervisor:phase6-signoff -- --json`, `npm run supervisor:signoff-manifest -- --json`, `npm run supervisor:eod-bundle -- --json`, or `npm run supervisor:eod-summary` after scanner/supervisor restarts before approving live-format Discord evidence.
+- Use tray `Open Live Signoff`, tray `Open Evidence Summary`, `npm run supervisor:phase6-signoff -- --json`, `npm run supervisor:signoff-manifest -- --json`, `npm run supervisor:eod-bundle -- --json`, or `npm run supervisor:eod-summary` after scanner/supervisor restarts before approving live-format Discord evidence.
 - Run real-tape mode at the end of each trading day for morning, lunch, and evening sessions.
 - Keep a dated markdown result beside major behavior audits so future drift can be compared against known-good output.

@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 13 tray evidence-summary shortcut.
+Files changed: Open-QuantDesk-EvidenceSummary.ps1, QuantDeskSupervisorTray.ps1, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 12 surfaced the compact evidence summary in supervisor status, but operators still needed a dedicated tray click to open the latest summary report without typing a command.
+Tests run: PowerShell parser checks for `Open-QuantDesk-EvidenceSummary.ps1` and `QuantDeskSupervisorTray.ps1`; `npx tsx tools/supervisor/supervisor.test.ts`; `npm run supervisor:eod-summary -- --trade-date 2026-06-25 --instrument MES --session morning --json`; `powershell -NoProfile -ExecutionPolicy Bypass -File .\Open-QuantDesk-EvidenceSummary.ps1`; `npm run workflow:loopback -- --real-tapes --eod-summary --trade-date=2026-06-25 --instrument=MES --session=morning --json`; `npm run workflow:loopback -- --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The new tray target script parses cleanly, static supervisor tests confirm the tray menu and helper boundaries, the helper runs `supervisor:eod-summary` successfully and writes a local report under `logs/supervisor/evidence-summary`, the current June 25 morning bundle reports `status=ready`, signoff `ready`, Phase 6 `pass`, all files present, and no failures. The real-tape workflow with `--eod-summary` reported 20 pass, 0 fail, 8 skipped optional checks. The deterministic workflow loopback reported 17 pass, 0 fail, 11 skipped optional/full/real-tape checks.
+Trading logic changed: No. This is a read-only Windows tray/operator-report shortcut only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The helper does not post Discord.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: No additional evidence-workflow phase is required. If another phase is needed, it should move to a different operator surface or a new scanner behavior request.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 12 supervisor status evidence-summary visibility.
 Files changed: tools/supervisor/status.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 11 added the compact evidence summary command, but the standard supervisor status view still did not surface that readout.
