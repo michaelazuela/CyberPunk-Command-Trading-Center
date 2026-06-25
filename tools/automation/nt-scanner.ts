@@ -4935,6 +4935,59 @@ function highQualityConditionalReviewStaleReason(candidate: SetupCandidate | nul
   return null;
 }
 
+function scannerHtfFvgReviewMapReason(args: {
+  deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+  currentPrice: number | null;
+}): string | null {
+  if (args.deskState.canExecute) return null;
+  if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') return null;
+  const play = args.deskState.primaryDeskPlay;
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  if (!direction) return null;
+  const bias = scannerDeskPlayPrimaryBias(args.deskState);
+  if (!bias || bias.state !== 'primary') return null;
+  const score = bias.decisionQualityScore ?? bias.lineConfidence?.score ?? bias.modelConfidenceScore ?? null;
+  if (typeof score !== 'number' || !Number.isFinite(score) || score < HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE) return null;
+  const referenceLevels = deskPlayPlanningLevels({ deskState: args.deskState, normalized: args.normalized });
+  const hasReferenceLevels = isFiniteTradePrice(referenceLevels.entry) &&
+    isFiniteTradePrice(referenceLevels.stop) &&
+    isFiniteTradePrice(referenceLevels.target1) &&
+    isFiniteTradePrice(referenceLevels.target2);
+  if (!hasReferenceLevels) return null;
+
+  const routed = play.htfFvgReactionRouting?.status === 'routed_active_reaction' &&
+    play.htfFvgReactionRouting.direction === direction;
+  const cascadeParent = play.htfFvgCascade?.direction === direction && play.htfFvgCascade.parentZone;
+  const memoryParent = play.htfFvgReactionMemory?.activeReaction?.direction === direction
+    ? play.htfFvgReactionMemory.activeReaction
+    : null;
+  const parent = cascadeParent || memoryParent || null;
+  if (!routed && !parent) return null;
+  if (!parent || !isFiniteTradePrice(parent.lower) || !isFiniteTradePrice(parent.upper)) return null;
+
+  const activeZone = play.activeTacticalZone;
+  const currentInsideTacticalZone = activeZone?.direction === direction &&
+    isFiniteTradePrice(args.currentPrice) &&
+    isFiniteTradePrice(activeZone.lower) &&
+    isFiniteTradePrice(activeZone.upper) &&
+    args.currentPrice >= activeZone.lower &&
+    args.currentPrice <= activeZone.upper;
+  const currentInsideParentZone = isFiniteTradePrice(args.currentPrice) &&
+    args.currentPrice >= parent.lower &&
+    args.currentPrice <= parent.upper;
+  const priceContext = currentInsideParentZone
+    ? 'current price is inside the HTF parent zone'
+    : currentInsideTacticalZone
+      ? 'current price is inside the active tactical zone after HTF reaction'
+      : 'current price is outside the parent zone; stale/no-chase guards still apply';
+  const parentLabel = `${parent.timeframe || 'HTF'} parent FVG ${parent.lower.toFixed(2)}-${parent.upper.toFixed(2)}`;
+  const childLabel = activeZone?.direction === direction && isFiniteTradePrice(activeZone.lower) && isFiniteTradePrice(activeZone.upper)
+    ? `; tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper.toFixed(2)}`
+    : '';
+  return `${direction} high-quality HTF/FVG review map is eligible: ${parentLabel}${childLabel}, decision quality is ${score}, ${priceContext}, complete app-owned entry/stop/T1/T2 are present, and Discord remains review-only until completed 5M proof plus canExecute.`;
+}
+
 export function evaluateScannerDeskPlayDiscordSuppression(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -4993,13 +5046,18 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
   const readiness = primaryBias?.tradeReadiness?.status || null;
   const tacticalCampaignMap = scannerTacticalCampaignMapFromDeskState({ deskState: args.deskState, normalized: args.normalized });
+  const htfFvgReviewMapReason = scannerHtfFvgReviewMapReason({
+    deskState: args.deskState,
+    normalized: args.normalized,
+    currentPrice: args.currentPrice,
+  });
   if (primaryBias && primaryBias.state !== 'primary') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
   }
   if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
   }
-  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate) {
+  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate && !htfFvgReviewMapReason) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
   }
   const staleLevelReason = scannerDeskPlayStaleLevelReason({
@@ -5009,6 +5067,9 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   });
   if (staleLevelReason) {
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);
+  }
+  if (readiness === 'not_aligned' && htfFvgReviewMapReason) {
+    return scannerDeskPlaySuppressionPost(htfFvgReviewMapReason);
   }
 
   const currentRecord = scannerDeskPlanRefreshRecord({

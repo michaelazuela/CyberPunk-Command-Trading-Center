@@ -2157,6 +2157,131 @@ const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordS
 assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, false);
 assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
 assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /5M protected-structure row is not aligned/);
+const htfFvgReviewMapDeskState = {
+    ...baseDeskPlanRefreshState,
+    canExecute: false,
+    bestShortPlan: null,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7444,
+      targetReactionLevel: 7450,
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7444,
+        upper: 7465.25,
+        state: 'in_zone',
+      },
+      htfFvgReactionRouting: {
+        status: 'routed_active_reaction',
+        direction: 'SHORT',
+        lineInSand: 7472.25,
+        lineLabel: 'SHORT BELOW 7472.25 from 240M parent FVG 7472.25-7512.00',
+      },
+      htfFvgCascade: {
+        direction: 'SHORT',
+        parentZone: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'rejected',
+        },
+      },
+      htfFvgReactionMemory: {
+        activeReaction: {
+          direction: 'SHORT',
+          timeframe: '240M',
+          lower: 7472.25,
+          upper: 7512,
+          state: 'rejected',
+        },
+      },
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        state: 'primary',
+        decisionQualityScore: 98,
+        tradeReadiness: {
+          status: 'not_aligned',
+          missingProof: ['15M and 5M protected structure are not aligned for this side.'],
+        },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '4H', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7520.5, confirmationLine: 7472.25 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7468, confirmationLine: 7472.25 },
+        ],
+      },
+    },
+  } as any;
+const htfFvgReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: htfFvgReviewMapDeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [{
+      setupType: SetupType.IntradayMssMicroContinuation,
+      scenarioLabel: 'HTF FVG review level carrier',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7465.25,
+      stop: 7468,
+      target1: 7461.25,
+      target2: 7459.75,
+      riskPoints: 2.75,
+      decisionQualityScore: 50,
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7463,
+  latestCompleted5m: '2026-06-25T10:55:00.0000000',
+});
+assert.equal(htfFvgReviewMapDeskPlaySuppression.shouldPost, true);
+assert.equal(htfFvgReviewMapDeskPlaySuppression.category, 'post');
+assert.equal(htfFvgReviewMapDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(htfFvgReviewMapDeskPlaySuppression.changesCanExecute, false);
+assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /SHORT high-quality HTF\/FVG review map is eligible/);
+assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /240M parent FVG 7472\.25-7512\.00/);
+assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /complete app-owned entry\/stop\/T1\/T2 are present/);
+assert.match(htfFvgReviewMapDeskPlaySuppression.reason, /Discord remains review-only/);
+const staleHtfFvgReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: shiftedDeskPlanRefreshKey,
+  deskState: htfFvgReviewMapDeskState,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    setupCandidates: [{
+      setupType: SetupType.IntradayMssMicroContinuation,
+      scenarioLabel: 'HTF FVG review level carrier',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7465.25,
+      stop: 7468,
+      target1: 7461.25,
+      target2: 7459.75,
+      riskPoints: 2.75,
+      decisionQualityScore: 50,
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7461,
+  latestCompleted5m: '2026-06-25T11:00:00.0000000',
+});
+assert.equal(staleHtfFvgReviewMapDeskPlaySuppression.shouldPost, false);
+assert.equal(staleHtfFvgReviewMapDeskPlaySuppression.category, 'passed_or_invalidated_levels');
+assert.match(staleHtfFvgReviewMapDeskPlaySuppression.reason, /already reached\/passed T1 7461\.25/);
 const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
