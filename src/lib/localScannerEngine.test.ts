@@ -6,6 +6,7 @@ import {
   buildDeskState,
   buildTradeDecisionMapAudit,
   buildTargetCascade,
+  compareFreshReentryPhase3Behavior,
   classifyScannerVisibility,
   latestCompletedBar,
   MARKET_MAPPING_COVERAGE,
@@ -1834,6 +1835,75 @@ assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.appro
 assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesRiskRules, false);
 assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.changesRanking, false);
 assert.equal(missedHtfReactionDeskState.primaryDeskPlay.freshReentryWatch?.approvalBoundary.createsNewModel, false);
+
+const freshReentryPhase3ChartContext = JSON.parse(JSON.stringify(routedHtfReactionChartContext)) as Partial<ChartContext>;
+if (freshReentryPhase3ChartContext.multiTimeframeContext?.fiveMinute) {
+  freshReentryPhase3ChartContext.multiTimeframeContext.fiveMinute.candles = [
+    { index: 0, timestamp: '2026-06-23T12:00:00.0000000', open: 7598, high: 7599.75, low: 7594, close: 7597, direction: 'bearish', confidence: 'High' },
+    { index: 1, timestamp: '2026-06-23T12:05:00.0000000', open: 7597, high: 7598.25, low: 7589, close: 7592, direction: 'bearish', confidence: 'High' },
+  ];
+}
+const freshReentryPhase3DeskState = buildDeskState({
+  state: 'Missed',
+  candidate: routedHtfReactionCandidate,
+  visibilityMetadata: missedHtfReactionVisibility,
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [routedHtfReactionCandidate],
+    selectedCandidate: {
+      ...routedHtfReactionCandidate,
+      missingEvidence: [
+        ...routedHtfReactionCandidate.missingEvidence,
+        'No chase: old entry already moved into target context.',
+      ],
+    },
+    state: 'Missed',
+    window: noonLunchPmWindow,
+    alertDecision: { shouldSend: false, reason: 'Missed/no-chase fixture.' },
+    staleReason: 'Current price is closer to T1 than the preferred entry zone. Move occurred without preferred retest. No chase entry.',
+    canExecute: false,
+  }),
+  currentPrice: 7592,
+  canExecute: false,
+  chartContext: freshReentryPhase3ChartContext,
+});
+const phase3CandidateSet = freshReentryPhase3DeskState.primaryDeskPlay.freshReentryCandidates;
+assert.equal(phase3CandidateSet?.sourceOfTruth, 'scanner_fresh_tactical_reentry_candidate_builder');
+assert.equal(phase3CandidateSet?.oldBehavior.watchOnly, true);
+assert.equal(phase3CandidateSet?.approvalStatus, 'pending_trading_logic_owner_review');
+assert.equal(phase3CandidateSet?.inputs.fiveMinuteAcceptance, true);
+assert.equal(phase3CandidateSet?.bestCandidate?.source, 'active_line_retest');
+assert.equal(phase3CandidateSet?.bestCandidate?.entry, 7596);
+assert.equal(phase3CandidateSet?.bestCandidate?.stop, 7600);
+assert.equal(phase3CandidateSet?.bestCandidate?.target1, 7590);
+assert.equal(phase3CandidateSet?.bestCandidate?.target2, 7588);
+assert.equal(phase3CandidateSet?.bestCandidate?.riskPoints, 4);
+assert.equal(phase3CandidateSet?.bestCandidate?.status, 'ready_for_owner_review');
+assert.equal(phase3CandidateSet?.bestCandidate?.approvalStatus, 'pending_trading_logic_owner_review');
+assert.equal(phase3CandidateSet?.approvalBoundary.changesCanExecute, false);
+assert.equal(phase3CandidateSet?.approvalBoundary.changesTradeApprovals, false);
+assert.equal(phase3CandidateSet?.approvalBoundary.changesModelDefinitions, false);
+assert.equal(phase3CandidateSet?.approvalBoundary.changesBarCloseHandling, false);
+assert.equal(phase3CandidateSet?.approvalBoundary.requiresOwnerReviewBeforeCompletion, true);
+assert.equal(freshReentryPhase3DeskState.canExecute, false);
+assert.equal(freshReentryPhase3DeskState.visibilityMetadata.authority.canExecute, false);
+const phase3Comparison = compareFreshReentryPhase3Behavior([missedHtfReactionDeskState, freshReentryPhase3DeskState]);
+assert.equal(phase3Comparison.oldWatchOnlyCycles, 2);
+assert.equal(phase3Comparison.newCandidateCycles, 1);
+assert.equal(phase3Comparison.readyCandidateCycles, 1);
+assert.equal(phase3Comparison.riskProfileChanged, true);
+assert.equal(phase3Comparison.ownerReviewRequired, true);
+assert.equal(phase3Comparison.canExecuteBoundaryPreserved, true);
+assert.deepEqual(phase3Comparison.changedEntries[0], {
+  cycleIndex: 0,
+  direction: 'SHORT',
+  oldEntry: 7588,
+  oldStop: 7604,
+  oldRiskPoints: 16,
+  newEntry: 7596,
+  newStop: 7600,
+  newRiskPoints: 4,
+  riskDeltaPoints: -12,
+});
 
 const waitWithParentHtfFvgCandidate = candidate({
   setupType: SetupType.IntradayMssMicroContinuation,

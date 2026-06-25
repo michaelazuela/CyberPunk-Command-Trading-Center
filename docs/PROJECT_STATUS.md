@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-24
+Task: Begin Phase 3 deterministic fresh tactical re-entry candidate builder pending trading-logic-owner review.
+Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/fresh-reentry-phase3-loopback.ts, docs/PHASE_3_FRESH_REENTRY_DESIGN.md, docs/PROJECT_STATUS.md.
+Reason: Watch-state-only behavior did not compute a fresh entry/stop/T1/T2 after old levels were missed/no-chase while active HTF FVG routing still supported the side. Phase 3 now builds deterministic pending-review re-entry candidates from completed 5M acceptance, active line/zone seeds, protected 5M stop, and app-owned target math.
+Tests run: `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/fresh-reentry-phase3-loopback.ts`.
+Result: Passed. Loopback compared old watch-only behavior to the new deterministic candidate package: old short entry/stop/risk 7588/7604/16 pts versus fresh pending-review candidate 7596/7600/4 pts with T1 7590 and T2 7588. `canExecute` stayed false and owner review remained required.
+Trading logic changed: Yes, pending review. The scanner now computes deterministic fresh re-entry candidate levels in DeskState metadata. This does not approve execution, set canExecute, change model definitions, or change bar-close handling.
+Bridge impact: Uses existing structured 5M OHLC candle facts and existing HTF FVG routing metadata only.
+Journal/RAG impact: No schema change.
+Supabase impact: No migration added.
+Known risks: Phase 3 must not be marked complete or approved until the trading-logic owner reviews the design, loopback output, tests, and risk impact.
+Next recommended action: Run full guards/build, then have the trading-logic owner review `docs/PHASE_3_FRESH_REENTRY_DESIGN.md` and the loopback output before allowing Discord or execution-path promotion.
+
+## Previous Change
+
+Date: 2026-06-24
 Task: Install Phase 1/2 fresh tactical re-entry watch diagnostics and Discord presentation.
 Files changed: src/lib/localScannerEngine.ts, src/lib/localScannerEngine.test.ts, tools/automation/discord-alert-format.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/live-desk-observer.ts, tools/automation/live-desk-observer.test.ts, tools/automation/scanner-behavior-audit.ts, tools/automation/scanner-behavior-audit.test.ts, docs/PROJECT_STATUS.md.
 Reason: Missed/no-chase entries with active HTF FVG reaction needed a clear trader-facing watch state: old levels are management/history only, while a fresh completed 5M line acceptance must build new deterministic levels before any execution consideration. Live loopback also exposed an opposite-side high-confidence conditional Discord bypass against active HTF FVG routing, so the Discord gate now blocks that communication risk.

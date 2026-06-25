@@ -1,4 +1,4 @@
-import { TRADE_RULES } from '../config/tradeRules';
+import { roundToTradeTick, targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 import { isMarketMappingWindowByEtMinutes } from '../config/timeWindows';
 import { SETUP_REGISTRY, type ParentModelFamily, type SetupRegistryEntry, type SetupRole, type SetupSession } from '../config/setupRegistry';
 import { ChartContext, ExecutionStatus, FvgZoneFact, NoTradeReason, SetupCandidate, SetupType, TacticalZoneBounds, TargetObjective, TimeframeFactSet, TradeDecisionStatus } from '../types';
@@ -517,6 +517,97 @@ export interface DeskFreshReentryWatch {
   };
 }
 
+export type DeskFreshReentryCandidateSource = 'active_line_retest' | 'child_zone_boundary' | 'child_zone_midpoint';
+export type DeskFreshReentryCandidateStatus =
+  | 'ready_for_owner_review'
+  | 'blocked_missing_5m_acceptance'
+  | 'blocked_missing_protected_stop'
+  | 'blocked_risk_too_wide'
+  | 'blocked_invalid_levels'
+  | 'blocked_instrument_or_session';
+
+export interface DeskFreshReentryCandidate {
+  sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate';
+  candidateKey: string;
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  setupType: SetupType.IntradayMssMicroContinuation;
+  candidateState: 'QUALIFIED_CONDITIONAL';
+  approvalStatus: 'pending_trading_logic_owner_review';
+  status: DeskFreshReentryCandidateStatus;
+  source: DeskFreshReentryCandidateSource;
+  priority: number;
+  rankScore: number;
+  entry: number;
+  stop: number;
+  target1: number;
+  target2: number;
+  riskPoints: number;
+  lineInSand: number;
+  invalidation: string;
+  requiredTrigger: string;
+  nextAction: string;
+  evidence: string[];
+  blockers: string[];
+  constraints: {
+    riskWithinMax: boolean;
+    maxRiskPoints: number;
+    instrumentSupported: boolean;
+    activeScannerWindow: boolean;
+    exposureLimit: 'one_fresh_reentry_candidate_per_side_per_line_source';
+    timeOfDayRule: 'scanner_active_desk_plan_window_required';
+  };
+  ordering: {
+    sourcePriority: number;
+    riskPoints: number;
+    distanceFromCurrent: number | null;
+    tieBreaker: string;
+  };
+}
+
+export interface DeskFreshReentryCandidateSet {
+  sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate_builder';
+  replacesWatchOnlyBehavior: true;
+  algorithmVersion: 'phase3_fresh_reentry_v1_pending_owner_review';
+  approvalStatus: 'pending_trading_logic_owner_review';
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'> | null;
+  oldBehavior: {
+    watchOnly: boolean;
+    levelsStatus: 'pending_fresh_structure' | 'not_applicable';
+    note: string;
+  };
+  inputs: {
+    hasFreshReentryWatch: boolean;
+    htfFvgRoutingStatus: DeskHtfFvgReactionRouting['status'] | null;
+    lineInSand: number | null;
+    fiveMinuteAcceptance: boolean;
+    latestFiveMinuteClose: number | null;
+    latestFiveMinuteTimestamp: string | null;
+    currentPrice: number | null;
+  };
+  conditions: string[];
+  blockers: string[];
+  candidates: DeskFreshReentryCandidate[];
+  bestCandidate: DeskFreshReentryCandidate | null;
+  orderingRules: string[];
+  constraints: string[];
+  riskImpact: {
+    oldEntry: number | null;
+    oldStop: number | null;
+    oldRiskPoints: number | null;
+    bestEntry: number | null;
+    bestStop: number | null;
+    bestRiskPoints: number | null;
+    riskDeltaPoints: number | null;
+  };
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesModelDefinitions: false;
+    changesBarCloseHandling: false;
+    requiresOwnerReviewBeforeCompletion: true;
+  };
+}
+
 export type DeskHtfObjectiveKind = 'reaction' | 'next_draw' | 'runner' | 'extension';
 
 export interface DeskHtfObjective {
@@ -681,6 +772,7 @@ export interface PrimaryDeskPlay {
   htfFvgReactionRouting?: DeskHtfFvgReactionRouting | null;
   htfFvgCascade?: DeskHtfFvgCascade | null;
   freshReentryWatch?: DeskFreshReentryWatch | null;
+  freshReentryCandidates?: DeskFreshReentryCandidateSet | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   nextTrigger: string | null;
@@ -745,6 +837,29 @@ export interface DeskStateReplayValidation {
     replayValidationChangesRules: false;
     replayValidationChangesCanExecute: false;
   };
+}
+
+export interface FreshReentryPhase3Comparison {
+  sourceOfTruth: 'scanner_fresh_reentry_phase3_comparison';
+  cycleCount: number;
+  oldWatchOnlyCycles: number;
+  newCandidateCycles: number;
+  readyCandidateCycles: number;
+  changedEntries: Array<{
+    cycleIndex: number;
+    direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+    oldEntry: number | null;
+    oldStop: number | null;
+    oldRiskPoints: number | null;
+    newEntry: number | null;
+    newStop: number | null;
+    newRiskPoints: number | null;
+    riskDeltaPoints: number | null;
+  }>;
+  riskProfileChanged: boolean;
+  ownerReviewRequired: boolean;
+  canExecuteBoundaryPreserved: boolean;
+  findings: string[];
 }
 
 export { selectScannerPlan } from '../agents/scannerPlanSelectionAgent';
@@ -3453,6 +3568,268 @@ function buildFreshReentryWatch(args: {
   };
 }
 
+type FreshReentryFiveMinuteCandle = NonNullable<ChartContext['candles']>[number];
+
+function freshReentryFiveMinuteCandles(chartContext?: Partial<ChartContext> | null): FreshReentryFiveMinuteCandle[] {
+  const mtfFive = chartContext?.multiTimeframeContext?.fiveMinute;
+  const candles = (mtfFive?.fullWindowCandles?.length ? mtfFive.fullWindowCandles : mtfFive?.candles?.length ? mtfFive.candles : chartContext?.candles) || [];
+  return candles.filter((candle) =>
+    numericOrNull(candle.open) !== null &&
+    numericOrNull(candle.high) !== null &&
+    numericOrNull(candle.low) !== null &&
+    numericOrNull(candle.close) !== null
+  );
+}
+
+function latestFreshReentryCandle(candles: FreshReentryFiveMinuteCandle[]): FreshReentryFiveMinuteCandle | null {
+  return candles.length ? candles[candles.length - 1] : null;
+}
+
+function candleAcceptedLine(
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  candle: FreshReentryFiveMinuteCandle | null,
+  lineInSand: number,
+): boolean {
+  const open = numericOrNull(candle?.open);
+  const close = numericOrNull(candle?.close);
+  if (open === null || close === null) return false;
+  if (direction === 'LONG') return close > lineInSand && close >= open;
+  return close < lineInSand && close <= open;
+}
+
+function protectedStopFromFreshReentryCandles(
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  entry: number,
+  candles: FreshReentryFiveMinuteCandle[],
+): number | null {
+  const recent = candles.slice(-5);
+  if (!recent.length) return null;
+  if (direction === 'LONG') {
+    const lows = recent.map((candle) => numericOrNull(candle.low)).filter((value): value is number => value !== null && value < entry);
+    if (!lows.length) return null;
+    return roundToTradeTick(Math.min(...lows) - TRADE_RULES.targetModel.tickSize);
+  }
+  const highs = recent.map((candle) => numericOrNull(candle.high)).filter((value): value is number => value !== null && value > entry);
+  if (!highs.length) return null;
+  return roundToTradeTick(Math.max(...highs) + TRADE_RULES.targetModel.tickSize);
+}
+
+function freshReentryEntrySeeds(args: {
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  lineInSand: number;
+  childZone?: DeskHtfFvgChildExecutionZone | null;
+}): Array<{ source: DeskFreshReentryCandidateSource; entry: number; sourcePriority: number }> {
+  const seeds: Array<{ source: DeskFreshReentryCandidateSource; entry: number; sourcePriority: number }> = [{
+    source: 'active_line_retest',
+    entry: roundToTradeTick(args.lineInSand),
+    sourcePriority: 1,
+  }];
+  const lower = numericOrNull(args.childZone?.lower);
+  const upper = numericOrNull(args.childZone?.upper);
+  if (lower !== null && upper !== null) {
+    const low = Math.min(lower, upper);
+    const high = Math.max(lower, upper);
+    const boundary = args.direction === 'LONG' ? low : high;
+    seeds.push({
+      source: 'child_zone_boundary',
+      entry: roundToTradeTick(boundary),
+      sourcePriority: 2,
+    });
+    seeds.push({
+      source: 'child_zone_midpoint',
+      entry: roundToTradeTick((low + high) / 2),
+      sourcePriority: 3,
+    });
+  }
+  const byKey = new Map<string, { source: DeskFreshReentryCandidateSource; entry: number; sourcePriority: number }>();
+  for (const seed of seeds) {
+    byKey.set(`${seed.source}:${seed.entry.toFixed(2)}`, seed);
+  }
+  return [...byKey.values()];
+}
+
+function buildFreshReentryCandidateSet(args: {
+  freshReentryWatch: DeskFreshReentryWatch | null;
+  htfFvgReactionRouting: DeskHtfFvgReactionRouting;
+  htfFvgCascade: DeskHtfFvgCascade | null;
+  chartContext?: Partial<ChartContext> | null;
+  currentPrice?: number | null;
+  activeScannerWindow: boolean;
+}): DeskFreshReentryCandidateSet | null {
+  const watch = args.freshReentryWatch;
+  if (!watch) return null;
+  const direction = watch.direction;
+  const lineInSand = numericOrNull(watch.lineInSand);
+  const candles = freshReentryFiveMinuteCandles(args.chartContext);
+  const latest = latestFreshReentryCandle(candles);
+  const latestClose = numericOrNull(latest?.close);
+  const currentPrice = numericOrNull(args.currentPrice) ?? latestClose;
+  const fiveMinuteAcceptance = lineInSand !== null && candleAcceptedLine(direction, latest, lineInSand);
+  const instrumentSupported = !args.chartContext?.instrument || TRADE_RULES.instruments.includes(args.chartContext.instrument);
+  const baseBlockers = [
+    args.htfFvgReactionRouting.status === 'routed_active_reaction' ? null : 'Active HTF FVG reaction routing is not active.',
+    lineInSand === null ? 'Fresh re-entry line in the sand is missing.' : null,
+    fiveMinuteAcceptance ? null : 'Latest completed 5M candle has not accepted the fresh re-entry line.',
+    instrumentSupported ? null : 'Instrument is outside configured trade-rule instruments.',
+    args.activeScannerWindow ? null : 'Scanner active desk-plan window is not open.',
+  ].filter((value): value is string => Boolean(value));
+  const canBuildLevels = baseBlockers.length === 0 && lineInSand !== null;
+  const candidates = canBuildLevels
+    ? freshReentryEntrySeeds({
+        direction,
+        lineInSand,
+        childZone: args.htfFvgCascade?.childExecutionZone || null,
+      }).map((seed): DeskFreshReentryCandidate | null => {
+        const entry = seed.entry;
+        const stop = protectedStopFromFreshReentryCandles(direction, entry, candles);
+        if (stop === null) {
+          return null;
+        }
+        const targets = targetsFromEntryStop(direction, entry, stop);
+        const target1 = numericOrNull(targets.target1);
+        const target2 = numericOrNull(targets.target2);
+        const riskPoints = numericOrNull(targets.riskPoints);
+        const blockers = [
+          riskPoints === null || target1 === null || target2 === null ? 'Entry, stop, target, or risk math is invalid.' : null,
+          riskPoints !== null && riskPoints > TRADE_RULES.maxRiskPoints ? `Risk ${riskPoints.toFixed(2)} exceeds max ${TRADE_RULES.maxRiskPoints.toFixed(2)}.` : null,
+        ].filter((value): value is string => Boolean(value));
+        if (riskPoints === null || target1 === null || target2 === null) return null;
+        const distanceFromCurrent = currentPrice === null ? null : Math.abs(currentPrice - entry);
+        const riskWithinMax = riskPoints <= TRADE_RULES.maxRiskPoints;
+        const status: DeskFreshReentryCandidateStatus = riskWithinMax ? 'ready_for_owner_review' : 'blocked_risk_too_wide';
+        const sourceBonus = seed.source === 'active_line_retest' ? 30 : seed.source === 'child_zone_boundary' ? 20 : 10;
+        const rankScore = Math.max(1, Math.round(100 + sourceBonus - riskPoints - (distanceFromCurrent ?? 0) * 0.25));
+        const candidateKey = [
+          'fresh-reentry',
+          direction,
+          seed.source,
+          entry.toFixed(2),
+          stop.toFixed(2),
+          lineInSand.toFixed(2),
+        ].join(':');
+        return {
+          sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate',
+          candidateKey,
+          direction,
+          setupType: SetupType.IntradayMssMicroContinuation,
+          candidateState: 'QUALIFIED_CONDITIONAL',
+          approvalStatus: 'pending_trading_logic_owner_review',
+          status,
+          source: seed.source,
+          priority: 88 - seed.sourcePriority,
+          rankScore,
+          entry,
+          stop,
+          target1,
+          target2,
+          riskPoints,
+          lineInSand,
+          invalidation: direction === 'LONG'
+            ? `Invalid if completed 5M acceptance fails below protected stop ${stop.toFixed(2)}.`
+            : `Invalid if completed 5M acceptance fails above protected stop ${stop.toFixed(2)}.`,
+          requiredTrigger: `Fresh completed 5M acceptance ${direction === 'LONG' ? 'above' : 'below'} ${lineInSand.toFixed(2)} plus retest/hold into ${entry.toFixed(2)}.`,
+          nextAction: `${direction} re-entry candidate at ${entry.toFixed(2)}; execution still requires owner-approved Phase 3 behavior and normal canExecute gates.`,
+          evidence: [
+            watch.reason,
+            watch.requiredProof,
+            args.htfFvgReactionRouting.reason,
+            `Protected 5M stop derived from latest ${Math.min(5, candles.length)} completed 5M candles.`,
+          ],
+          blockers,
+          constraints: {
+            riskWithinMax,
+            maxRiskPoints: TRADE_RULES.maxRiskPoints,
+            instrumentSupported,
+            activeScannerWindow: args.activeScannerWindow,
+            exposureLimit: 'one_fresh_reentry_candidate_per_side_per_line_source',
+            timeOfDayRule: 'scanner_active_desk_plan_window_required',
+          },
+          ordering: {
+            sourcePriority: seed.sourcePriority,
+            riskPoints,
+            distanceFromCurrent,
+            tieBreaker: candidateKey,
+          },
+        };
+      }).filter((candidate): candidate is DeskFreshReentryCandidate => Boolean(candidate))
+    : [];
+  const sorted = [...candidates].sort((a, b) =>
+    Number(b.status === 'ready_for_owner_review') - Number(a.status === 'ready_for_owner_review') ||
+    a.ordering.sourcePriority - b.ordering.sourcePriority ||
+    a.ordering.riskPoints - b.ordering.riskPoints ||
+    (a.ordering.distanceFromCurrent ?? 9999) - (b.ordering.distanceFromCurrent ?? 9999) ||
+    a.ordering.tieBreaker.localeCompare(b.ordering.tieBreaker)
+  );
+  const levelBuildBlockers = canBuildLevels && !sorted.length
+    ? ['Fresh line acceptance was present, but no valid protected 5M stop/target package could be derived.']
+    : [];
+  const bestCandidate = sorted.find((candidate) => candidate.status === 'ready_for_owner_review') || sorted[0] || null;
+  const oldRiskPoints = watch.oldEntry !== null && watch.oldStop !== null ? roundToTradeTick(Math.abs(watch.oldEntry - watch.oldStop)) : null;
+  return {
+    sourceOfTruth: 'scanner_fresh_tactical_reentry_candidate_builder',
+    replacesWatchOnlyBehavior: true,
+    algorithmVersion: 'phase3_fresh_reentry_v1_pending_owner_review',
+    approvalStatus: 'pending_trading_logic_owner_review',
+    direction,
+    oldBehavior: {
+      watchOnly: true,
+      levelsStatus: watch.levelsStatus,
+      note: 'Before Phase 3, the scanner only stated that a fresh deterministic package was required; it did not compute re-entry candidates.',
+    },
+    inputs: {
+      hasFreshReentryWatch: true,
+      htfFvgRoutingStatus: args.htfFvgReactionRouting.status,
+      lineInSand,
+      fiveMinuteAcceptance,
+      latestFiveMinuteClose: latestClose,
+      latestFiveMinuteTimestamp: latest?.timestamp || null,
+      currentPrice,
+    },
+    conditions: [
+      'Active HTF FVG reaction routing must match the primary desk direction.',
+      'Latest completed 5M candle must accept the active line in the trade direction.',
+      'Fresh entry seeds are deterministic: active line retest, child-zone boundary, then child-zone midpoint.',
+      'Protected stop comes from recent completed 5M structure, not HTF narrative.',
+      'T1/T2 use app target math from actual entry-to-stop risk.',
+    ],
+    blockers: [...baseBlockers, ...levelBuildBlockers],
+    candidates: sorted,
+    bestCandidate,
+    orderingRules: [
+      'Ready candidates sort before blocked candidates.',
+      'Entry source priority: active_line_retest, child_zone_boundary, child_zone_midpoint.',
+      'Lower actual risk sorts before higher actual risk.',
+      'Closer entry to current price sorts before farther entry.',
+      'Candidate key is the deterministic tie breaker.',
+    ],
+    constraints: [
+      `Risk must be <= ${TRADE_RULES.maxRiskPoints.toFixed(2)} points for ready status.`,
+      'Only configured instruments are eligible.',
+      'Scanner active desk-plan window must be open.',
+      '5M completed candle remains execution authority; HTF supplies context/routing only.',
+      'Phase 3 remains pending owner review and does not set canExecute.',
+    ],
+    riskImpact: {
+      oldEntry: watch.oldEntry,
+      oldStop: watch.oldStop,
+      oldRiskPoints,
+      bestEntry: bestCandidate?.entry ?? null,
+      bestStop: bestCandidate?.stop ?? null,
+      bestRiskPoints: bestCandidate?.riskPoints ?? null,
+      riskDeltaPoints: oldRiskPoints !== null && bestCandidate?.riskPoints !== undefined
+        ? roundToTradeTick(bestCandidate.riskPoints - oldRiskPoints)
+        : null,
+    },
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesModelDefinitions: false,
+      changesBarCloseHandling: false,
+      requiresOwnerReviewBeforeCompletion: true,
+    },
+  };
+}
+
 function buildPrimaryDeskPlay(args: {
   candidate: SetupCandidate | null;
   visibilityMetadata: ScannerVisibilityMetadata;
@@ -3617,6 +3994,14 @@ function buildPrimaryDeskPlay(args: {
     htfFvgCascade,
     visibilityMetadata: args.visibilityMetadata,
   });
+  const freshReentryCandidates = buildFreshReentryCandidateSet({
+    freshReentryWatch,
+    htfFvgReactionRouting,
+    htfFvgCascade,
+    chartContext: args.chartContext,
+    currentPrice: args.currentPrice,
+    activeScannerWindow: Boolean(args.visibilityMetadata.authority.activeModel),
+  });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,
     candidate: args.candidate,
@@ -3659,6 +4044,7 @@ function buildPrimaryDeskPlay(args: {
     htfFvgReactionRouting,
     htfFvgCascade,
     freshReentryWatch,
+    freshReentryCandidates,
     htfObjectiveLadder,
     htfProtectedStructureMap,
     nextTrigger,
@@ -3844,6 +4230,78 @@ export function validateDeskStateReplayPath(deskStates: DeskState[]): DeskStateR
       replayValidationChangesRules: false,
       replayValidationChangesCanExecute: false,
     },
+  };
+}
+
+export function compareFreshReentryPhase3Behavior(deskStates: DeskState[]): FreshReentryPhase3Comparison {
+  const states = [...deskStates];
+  const oldWatchOnlyStates = states.filter((state) => Boolean(state.primaryDeskPlay.freshReentryWatch));
+  const candidateStates = states.filter((state) => (state.primaryDeskPlay.freshReentryCandidates?.candidates.length || 0) > 0);
+  const readyCandidateStates = candidateStates.filter((state) => state.primaryDeskPlay.freshReentryCandidates?.bestCandidate?.status === 'ready_for_owner_review');
+  const changedEntries = candidateStates.map((state, cycleIndex) => {
+    const candidateSet = state.primaryDeskPlay.freshReentryCandidates;
+    const best = candidateSet?.bestCandidate || null;
+    return {
+      cycleIndex,
+      direction: candidateSet?.direction || best?.direction || 'LONG',
+      oldEntry: candidateSet?.riskImpact.oldEntry ?? null,
+      oldStop: candidateSet?.riskImpact.oldStop ?? null,
+      oldRiskPoints: candidateSet?.riskImpact.oldRiskPoints ?? null,
+      newEntry: best?.entry ?? null,
+      newStop: best?.stop ?? null,
+      newRiskPoints: best?.riskPoints ?? null,
+      riskDeltaPoints: candidateSet?.riskImpact.riskDeltaPoints ?? null,
+    };
+  }).filter((row) =>
+    row.oldEntry !== row.newEntry ||
+    row.oldStop !== row.newStop ||
+    row.oldRiskPoints !== row.newRiskPoints
+  );
+  const ownerReviewRequired = candidateStates.every((state) =>
+    state.primaryDeskPlay.freshReentryCandidates?.approvalStatus === 'pending_trading_logic_owner_review' &&
+    state.primaryDeskPlay.freshReentryCandidates?.approvalBoundary.requiresOwnerReviewBeforeCompletion === true
+  );
+  const canExecuteBoundaryPreserved = states.every((state) =>
+    state.canExecute === state.visibilityMetadata.authority.canExecute &&
+    (
+      !state.primaryDeskPlay.freshReentryCandidates ||
+      (
+        state.primaryDeskPlay.freshReentryCandidates.approvalBoundary.changesCanExecute === false &&
+        state.primaryDeskPlay.freshReentryCandidates.approvalBoundary.changesTradeApprovals === false
+      )
+    )
+  );
+  const findings = [
+    oldWatchOnlyStates.length
+      ? `Old behavior observed ${oldWatchOnlyStates.length} watch-only fresh re-entry cycle(s).`
+      : 'Old watch-only fresh re-entry behavior was not observed.',
+    candidateStates.length
+      ? `Phase 3 built deterministic candidates in ${candidateStates.length} cycle(s).`
+      : 'Phase 3 built no deterministic re-entry candidates.',
+    readyCandidateStates.length
+      ? `Ready-for-owner-review candidates appeared in ${readyCandidateStates.length} cycle(s).`
+      : 'No ready-for-owner-review candidates appeared.',
+    changedEntries.length
+      ? 'Entry/stop/risk profile changed versus watch-only behavior.'
+      : 'No entry/stop/risk profile changes were available to compare.',
+    ownerReviewRequired
+      ? 'Phase 3 candidate sets remain pending trading-logic-owner review.'
+      : 'At least one Phase 3 candidate set did not preserve owner-review status.',
+    canExecuteBoundaryPreserved
+      ? 'canExecute and trade-approval boundaries were preserved.'
+      : 'canExecute or trade-approval boundary drift was detected.',
+  ];
+  return {
+    sourceOfTruth: 'scanner_fresh_reentry_phase3_comparison',
+    cycleCount: states.length,
+    oldWatchOnlyCycles: oldWatchOnlyStates.length,
+    newCandidateCycles: candidateStates.length,
+    readyCandidateCycles: readyCandidateStates.length,
+    changedEntries,
+    riskProfileChanged: changedEntries.length > 0,
+    ownerReviewRequired,
+    canExecuteBoundaryPreserved,
+    findings,
   };
 }
 
