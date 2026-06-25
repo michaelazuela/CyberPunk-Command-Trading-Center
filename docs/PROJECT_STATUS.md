@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 12 supervisor status evidence-summary visibility.
+Files changed: tools/supervisor/status.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 11 added the compact evidence summary command, but the standard supervisor status view still did not surface that readout.
+Tests run: `npx tsx tools/supervisor/endOfDayEvidenceSummary.test.ts`; `npx tsx tools/supervisor/supervisor.test.ts`; `npm run supervisor:eod-summary -- --trade-date 2026-06-25 --instrument MES --session morning --json`; `npm run supervisor:status`; `npm run workflow:loopback -- --real-tapes --eod-summary --trade-date=2026-06-25 --instrument=MES --session=morning --json`; `npm run workflow:loopback -- --json`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. `supervisor:status` now includes `endOfDayEvidenceSummary` with the latest June 25 morning bundle showing `status=ready`, signoff `ready`, Phase 6 `pass`, all bundle files present, and no failures. The real-tape workflow with `--eod-summary` reported 20 pass, 0 fail, 8 skipped optional checks. The deterministic workflow loopback reported 17 pass, 0 fail, 11 skipped optional/full/real-tape checks.
+Trading logic changed: No. This is read-only supervisor status reporting only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. Supervisor status does not post Discord.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: No additional evidence-workflow phase is required unless you want the same compact summary exposed as a dedicated Windows tray click.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 11 compact evidence bundle summary.
 Files changed: tools/supervisor/endOfDayEvidenceSummary.ts, tools/supervisor/endOfDayEvidenceSummary.test.ts, tools/supervisor/supervisor.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 10 created full end-of-day evidence bundles, but operators needed a quick ready/blocked/missing readout without opening the full JSON archive.

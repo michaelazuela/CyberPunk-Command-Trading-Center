@@ -1,5 +1,6 @@
 import type { SupervisorChildService, SupervisorConfigResult } from './config';
 import type { DeliveryVisibilityReport } from './deliveryVisibility';
+import type { EndOfDayEvidenceSummary } from './endOfDayEvidenceSummary';
 import type { SupervisorHealthReport } from './health';
 import type { PreWindowBackfillResult } from './preWindowBackfill';
 import type { SupervisorState } from './processManager';
@@ -39,6 +40,7 @@ export interface SupervisorStatusPayload {
   health: SupervisorHealthReport | null;
   delivery: DeliveryVisibilityReport | null;
   preWindowBackfill: PreWindowBackfillResult | null;
+  endOfDayEvidenceSummary: EndOfDayEvidenceSummary | null;
   boundaries: {
     startsChildProcesses: boolean;
     autoRestartsChildProcesses: boolean;
@@ -59,6 +61,7 @@ export function buildSupervisorStatus(
   delivery: DeliveryVisibilityReport | null = null,
   now = new Date(),
   preWindowBackfill: PreWindowBackfillResult | null = null,
+  endOfDayEvidenceSummary: EndOfDayEvidenceSummary | null = null,
 ): SupervisorStatusPayload {
   const runtimeById = new Map((state?.services || []).map((service) => [service.id, service]));
 
@@ -97,6 +100,7 @@ export function buildSupervisorStatus(
     health,
     delivery,
     preWindowBackfill,
+    endOfDayEvidenceSummary,
     boundaries: {
       startsChildProcesses: true,
       autoRestartsChildProcesses: configResult.config.health.restartEnabled,

@@ -120,6 +120,7 @@ assert.equal(status.supervisor.phase, 'phase_4_event_delivery_visibility');
 assert.equal(status.supervisor.status, 'ready');
 assert.equal(status.supervisor.timestamp, '2026-06-05T12:00:00.000Z');
 assert.equal(status.config.status, 'valid');
+assert.equal(status.endOfDayEvidenceSummary, null);
 assert.equal(status.boundaries.startsChildProcesses, true);
 assert.equal(status.boundaries.autoRestartsChildProcesses, true);
 assert.equal(status.boundaries.restartPolicy, 'owned_failed_child_process_only');
@@ -182,6 +183,7 @@ assert.equal(scannerDiscordDisabledService.args.includes('--instrument'), true);
 const statusSource = await import('./status');
 assert.equal('runTradeDecisionPipeline' in statusSource, false);
 assert.equal('scanSetupCandidates' in statusSource, false);
+assert.equal('endOfDayEvidenceSummary' in buildSupervisorStatus(defaultConfig), true);
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const trayScriptPath = path.join(repoRoot, 'QuantDeskSupervisorTray.ps1');

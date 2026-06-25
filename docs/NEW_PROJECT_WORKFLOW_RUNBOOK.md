@@ -193,6 +193,8 @@ npm run supervisor:eod-summary -- --trade-date <yyyy-mm-dd> --instrument MES --s
 
 The summary reads the local bundle manifest and prints `ready`, `blocked`, `unavailable`, or `missing` without opening the full JSON archive. It is read-only and does not create, copy, post, start, stop, or repair anything.
 
+`npm run supervisor:status` also includes the latest local `endOfDayEvidenceSummary` field so the supervisor dashboard can show whether the most recent evidence bundle is ready, blocked, unavailable, or missing without running a separate command.
+
 Pass criteria:
 
 - supervisor signoff status is `ready`;

@@ -18,6 +18,7 @@ import {
   stopProcessTree,
   stopSupervisorProcess,
 } from './processManager';
+import { buildEndOfDayEvidenceSummary, parseEndOfDayEvidenceSummaryArgs } from './endOfDayEvidenceSummary';
 import { buildSupervisorPhase6SignoffStatus, parseSupervisorPhase6SignoffArgs } from './phase6Signoff';
 import { buildSupervisorStatus } from './status';
 
@@ -49,6 +50,15 @@ async function readLiveSupervisorStatus(configResult = loadSupervisorConfig()): 
   }
 }
 
+async function buildLatestEndOfDayEvidenceSummary() {
+  return buildEndOfDayEvidenceSummary(parseEndOfDayEvidenceSummaryArgs([]));
+}
+
+function withEndOfDayEvidenceSummary<T>(status: T, endOfDayEvidenceSummary: Awaited<ReturnType<typeof buildLatestEndOfDayEvidenceSummary>>): T {
+  if (!status || typeof status !== 'object') return status;
+  return { ...status, endOfDayEvidenceSummary };
+}
+
 export function isAddressInUseError(error: unknown): boolean {
   return Boolean(
     error &&
@@ -63,21 +73,23 @@ export async function runSupervisorCheck(): Promise<void> {
   const state = getSupervisorState(configResult.config);
   const health = await buildHealthReport(configResult.config, state);
   const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
-  printJson(buildSupervisorStatus(configResult, state, health, delivery));
+  const endOfDayEvidenceSummary = await buildLatestEndOfDayEvidenceSummary();
+  printJson(buildSupervisorStatus(configResult, state, health, delivery, new Date(), null, endOfDayEvidenceSummary));
   if (configResult.status !== 'valid') process.exitCode = 1;
 }
 
 export async function runSupervisorStatus(): Promise<void> {
   const configResult = loadSupervisorConfig();
   const liveStatus = await readLiveSupervisorStatus(configResult);
+  const endOfDayEvidenceSummary = await buildLatestEndOfDayEvidenceSummary();
   if (liveStatus) {
-    printJson(liveStatus);
+    printJson(withEndOfDayEvidenceSummary(liveStatus, endOfDayEvidenceSummary));
     return;
   }
   const state = getSupervisorState(configResult.config);
   const health = await buildHealthReport(configResult.config, state);
   const delivery = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
-  printJson(buildSupervisorStatus(configResult, state, health, delivery));
+  printJson(buildSupervisorStatus(configResult, state, health, delivery, new Date(), null, endOfDayEvidenceSummary));
   if (configResult.status !== 'valid') process.exitCode = 1;
 }
 
@@ -160,6 +172,7 @@ export function startSupervisor(): http.Server {
       if (!lastDeliveryReport) {
         lastDeliveryReport = buildDeliveryVisibilityReport({ staleAfterMs: configResult.config.health.logStaleAfterMs });
       }
+      const endOfDayEvidenceSummary = await buildLatestEndOfDayEvidenceSummary();
       const status = buildSupervisorStatus(
         configResult,
         supervisorState,
@@ -167,6 +180,7 @@ export function startSupervisor(): http.Server {
         lastDeliveryReport,
         new Date(),
         lastPreWindowBackfill,
+        endOfDayEvidenceSummary,
       );
       logger.log('info', 'Status requested.', { path: url.pathname, configStatus: status.config.status });
       response.writeHead(configResult.status === 'valid' ? 200 : 500, {
