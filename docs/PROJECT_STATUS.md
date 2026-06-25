@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 7 supervisor signoff integration for Phase 6 live-format proof.
+Files changed: tools/supervisor/phase6Signoff.ts, tools/supervisor/phase6Signoff.test.ts, tools/supervisor/index.ts, tools/supervisor/supervisor.test.ts, package.json, docs/PROJECT_STATUS.md.
+Reason: Phase 6 created a clean live-format signoff gate, but the supervisor needed a standard read-only command to surface that signoff after scanner restarts without posting Discord, starting services, changing scanner state, or touching trading logic.
+Tests run: `npx tsx tools/supervisor/phase6Signoff.test.ts`; `npx tsx tools/supervisor/supervisor.test.ts`; `npx tsx tools/supervisor/health.test.ts`; `npx tsx tools/supervisor/readinessDrill.test.ts`; Phase 1-6 loopbacks with `npx tsx src/lib/localScannerEngine.test.ts`, `npx tsx tools/automation/discord-alert-format.test.ts`, `npx tsx tools/automation/nt-scanner-alert.test.ts`, `npx tsx tools/automation/live-desk-observer.test.ts`, and `npx tsx tools/automation/phase6-live-format-signoff.test.ts`; real current-tape checks with `npm run phase6:live-format-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json` and `npm run supervisor:phase6-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`.
+Result: Passed. The new supervisor command reports `ready`, `blocked`, or `unavailable` without throwing on missing evidence. The June 25 morning current-tape supervisor check returned `status=ready`, Phase 6 `status=pass`, `discordSignoffStatus=ready`, Phase 4 failures 0, Phase 5 failures 0, and 27 active HTF FVG routing events.
+Trading logic changed: No. This is supervisor status/reporting only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The supervisor signoff command does not post Discord; it only reports whether Phase 6 evidence is ready, blocked, or unavailable.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 8 can add a runbook/tray/live-observation shortcut that calls `npm run supervisor:phase6-signoff` after scanner restarts and before Discord sign-off.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 6 live-format signoff gate for fresh scanner/observer proof.
 Files changed: tools/automation/phase6-live-format-signoff.ts, tools/automation/phase6-live-format-signoff.test.ts, package.json, docs/PROJECT_STATUS.md.
 Reason: Phases 1-5 needed a standard pass/fail command that proves fresh/current-format scanner tapes are actually producing observer-ready HTF FVG routing and Phase 5 contract evidence, instead of relying on old historical tapes or manual observer interpretation.

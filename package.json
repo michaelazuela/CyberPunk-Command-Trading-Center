@@ -18,6 +18,7 @@
     "supervisor:start": "tsx tools/supervisor/index.ts start",
     "supervisor:check": "tsx tools/supervisor/index.ts check",
     "supervisor:status": "tsx tools/supervisor/index.ts status",
+    "supervisor:phase6-signoff": "tsx tools/supervisor/index.ts phase6-signoff",
     "supervisor:audit": "tsx tools/supervisor/runtimeAudit.ts",
     "supervisor:repair": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Repair-QuantDesk-Runtime.ps1",
     "supervisor:cleanup-json": "tsx tools/supervisor/runtimeJsonCleanup.ts",

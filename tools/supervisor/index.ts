@@ -18,6 +18,7 @@ import {
   stopProcessTree,
   stopSupervisorProcess,
 } from './processManager';
+import { buildSupervisorPhase6SignoffStatus, parseSupervisorPhase6SignoffArgs } from './phase6Signoff';
 import { buildSupervisorStatus } from './status';
 
 dotenv.config({ quiet: true });
@@ -95,6 +96,14 @@ export async function runSupervisorStop(): Promise<void> {
     return;
   }
   stopSupervisorProcess(configResult.config, logger);
+}
+
+export async function runSupervisorPhase6Signoff(args = process.argv.slice(3)): Promise<void> {
+  const options = parseSupervisorPhase6SignoffArgs(args);
+  const status = await buildSupervisorPhase6SignoffStatus(options);
+  if (options.json) printJson(status);
+  else process.stdout.write(`${status.bottomLine}\n`);
+  if (status.status !== 'ready') process.exitCode = 1;
 }
 
 export function startSupervisor(): http.Server {
@@ -238,12 +247,14 @@ if (isDirectCliEntrypoint()) {
     await runSupervisorStatus();
   } else if (command === 'stop') {
     await runSupervisorStop();
+  } else if (command === 'phase6-signoff') {
+    await runSupervisorPhase6Signoff();
   } else if (command === 'notify-self-heal') {
     const configResult = loadSupervisorConfig();
     const result = await sendSupervisorSelfHealNotification(configResult.config.logsDir);
     printJson(result);
   } else {
-    process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|notify-self-heal]\n');
+    process.stderr.write('Usage: tsx tools/supervisor/index.ts [start|check|status|stop|phase6-signoff|notify-self-heal]\n');
     process.exitCode = 1;
   }
 }

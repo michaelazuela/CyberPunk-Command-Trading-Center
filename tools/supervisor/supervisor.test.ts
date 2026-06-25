@@ -20,6 +20,7 @@ import {
   type SupervisorNotificationState,
 } from './notifications';
 import { buildPreWindowBackfillCommand, buildWindowsSafeSpawnCommand, runPreWindowBackfillIfDue } from './preWindowBackfill';
+import { buildSupervisorPhase6SignoffStatus } from './phase6Signoff';
 import {
   findExternalServiceProcesses,
   getSupervisorState,
@@ -133,6 +134,10 @@ assert.equal(isAddressInUseError(new Error('listen EADDRINUSE')), false);
 assert.equal(status.boundaries.changesCanExecuteBehavior, false);
 assert.equal(JSON.stringify(status).includes('"canExecute":true'), false);
 assert.equal(status.boundaries.changesDiscordBehavior, false);
+const phase6SignoffSource = await import('./phase6Signoff');
+assert.equal('runTradeDecisionPipeline' in phase6SignoffSource, false);
+assert.equal('scanSetupCandidates' in phase6SignoffSource, false);
+assert.equal(typeof buildSupervisorPhase6SignoffStatus, 'function');
 
 const invalidConfig = loadSupervisorConfig(
   {
