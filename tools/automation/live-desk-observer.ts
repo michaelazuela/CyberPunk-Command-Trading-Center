@@ -429,7 +429,7 @@ function observerFlagsFor(event: Record<string, unknown>, selected: Record<strin
   if (staleOrNoChase) flags.push('stale_or_no_chase');
   const selectedPrimaryMismatch = selectedDirection && primaryDirection && primaryDirection !== 'WAIT' && selectedDirection !== primaryDirection;
   const selectedRoutingMismatch = routedDirection && selectedDirection && selectedDirection !== routedDirection;
-  const selectedMismatchIsHard = discord.shouldSend === true && !staleOrNoChase && !duplicateSuppressed;
+  const selectedMismatchIsHard = discord.shouldSend === true && canExecute === false && !staleOrNoChase && !duplicateSuppressed;
   if (selectedPrimaryMismatch && selectedMismatchIsHard) {
     flags.push('candidate_desk_side_conflict');
   } else if (selectedPrimaryMismatch) {

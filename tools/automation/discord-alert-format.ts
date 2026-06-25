@@ -479,6 +479,10 @@ interface CompactDeskPlayTradeReadiness {
   label?: string;
   action?: string;
   reason?: string;
+  displayStatus?: string;
+  displayLabel?: string;
+  displayAction?: string;
+  displayReason?: string;
   missingProof?: string[];
 }
 
@@ -1480,6 +1484,43 @@ function deskPlayReadinessStatus(reviewOnly: boolean, hasLevels: boolean, highCo
   return 'review map - wait';
 }
 
+function deskPlayReadinessDisplayLine(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  side: 'LONG' | 'SHORT' | 'WAIT',
+  reviewOnly: boolean,
+  hasLevels: boolean,
+  highConfidenceConditional = false,
+): string {
+  const readiness = side === 'LONG'
+    ? play.longBias?.tradeReadiness
+    : side === 'SHORT'
+    ? play.shortBias?.tradeReadiness
+    : null;
+  if (readiness?.displayLabel || readiness?.displayStatus) {
+    const label = readiness.displayLabel || readiness.displayStatus || readiness.label || 'REVIEW MAP';
+    const action = readiness.displayAction || readiness.action || readiness.displayReason || readiness.reason || '';
+    const actionText = compactInstruction(action, '');
+    return actionText ? `${label} - ${actionText}` : label;
+  }
+  const zone = play.activeTacticalZone?.direction === side ? play.activeTacticalZone : null;
+  const cascade = play.htfFvgCascade?.direction === side ? play.htfFvgCascade : null;
+  const parentReaction = play.htfFvgReactionMemory?.activeReaction?.direction === side
+    ? play.htfFvgReactionMemory.activeReaction
+    : null;
+  if (zone && (cascade || parentReaction)) {
+    const actionText = compactInstruction(zone.nextTrigger || cascade?.childExecutionZone?.triggerNeeded, 'wait for completed 5M proof.');
+    return `HTF FVG ACTIVE - WAITING 5M REJECTION - ${actionText}`;
+  }
+  if (play.htfFvgParentReactionWatch?.direction === side) {
+    const actionText = compactInstruction(
+      play.htfFvgParentReactionWatch.requiredProof,
+      'wait for same-direction completed 5M child proof.',
+    );
+    return `HTF PARENT ACTIVE - WAITING 5M CHILD PROOF - ${actionText}`;
+  }
+  return deskPlayReadinessStatus(reviewOnly, hasLevels, highConfidenceConditional);
+}
+
 function candidateBiasSummary(candidate: SetupCandidate): string {
   const directionWord = candidate.direction === 'SHORT' ? 'bearish' : candidate.direction === 'LONG' ? 'bullish' : 'neutral';
   const rulesetBlockers = [
@@ -2217,7 +2258,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     return [
       `Map Side: ${mapSide === 'WAIT' ? 'WAIT N/A' : deskPlaySideStrength(play, mapSide)}`,
       `Conflict: ${deskPlayConflictSummary(play, mapSide, safety.reason)}`,
-      `Readiness: ${deskPlayReadinessStatus(safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
+      `Readiness: ${deskPlayReadinessDisplayLine(play, mapSide, safety.reviewOnly, hasLevels, safety.highConfidenceConditional)}`,
     ];
   };
   if (direction !== 'LONG' && direction !== 'SHORT') {
@@ -2519,7 +2560,13 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ? [
           `Map Side: ${deskPlaySideStrength(play, displayDirection)}`,
           `Conflict: ${deskPlayConflictSummary(play, displayDirection)}`,
-          `Readiness: ${deskPlayReadinessStatus(status !== 'EXECUTABLE' && Boolean(levels), Boolean(levels), isHighConfidenceConditionalCandidate(candidate, args.normalized))}`,
+          `Readiness: ${deskPlayReadinessDisplayLine(
+            play,
+            displayDirection,
+            status !== 'EXECUTABLE' && Boolean(levels),
+            Boolean(levels),
+            isHighConfidenceConditionalCandidate(candidate, args.normalized),
+          )}`,
         ]
       : []),
     ...(play ? ['HTF Lines:', ...deskPlayHtfLineRows(play, args.currentPrice)] : []),

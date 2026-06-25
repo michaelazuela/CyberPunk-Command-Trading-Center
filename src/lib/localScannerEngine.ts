@@ -354,6 +354,10 @@ export interface DeskPlayTradeReadiness {
   label: string;
   action: string;
   reason: string;
+  displayStatus?: string;
+  displayLabel?: string;
+  displayAction?: string;
+  displayReason?: string;
   missingProof: string[];
   approvalBoundary: {
     changesTradeApprovals: false;
@@ -3298,6 +3302,142 @@ function buildTradeReadiness(args: {
   };
 }
 
+function decorateTradeReadinessDisplay(args: {
+  readiness: DeskPlayTradeReadiness;
+  direction: 'LONG' | 'SHORT';
+  htfFvgReactionRouting?: {
+    status?: string | null;
+    direction?: string | null;
+    reason?: string | null;
+  } | null;
+  htfFvgParentReactionWatch?: {
+    eligible?: boolean | null;
+    direction?: string | null;
+    requiredProof?: string | null;
+    reason?: string | null;
+  } | null;
+  activeTacticalZone?: {
+    direction?: string | null;
+    state?: string | null;
+    nextTrigger?: string | null;
+    noChase?: string | null;
+  } | null;
+  freshReentryWatch?: {
+    eligible?: boolean | null;
+    direction?: string | null;
+    requiredProof?: string | null;
+    reason?: string | null;
+    nextStep?: string | null;
+  } | null;
+}): DeskPlayTradeReadiness {
+  const withDisplay = (
+    displayStatus: string,
+    displayLabel: string,
+    displayAction: string,
+    displayReason: string,
+  ): DeskPlayTradeReadiness => ({
+    ...args.readiness,
+    displayStatus,
+    displayLabel,
+    displayAction,
+    displayReason,
+  });
+
+  if (args.readiness.status === 'data_limited') {
+    return withDisplay(
+      'htf_context_data_limited',
+      'HTF DATA LIMITED',
+      args.readiness.action,
+      'HTF context is data-limited; it cannot be used as structural promotion evidence.',
+    );
+  }
+
+  if (args.readiness.status === 'blocked') {
+    return withDisplay('blocked', 'BLOCKED', args.readiness.action, args.readiness.reason);
+  }
+
+  const freshReentryWatch = args.freshReentryWatch;
+  if (freshReentryWatch?.eligible && freshReentryWatch.direction === args.direction) {
+    return withDisplay(
+      'fresh_reentry_waiting_5m_proof',
+      'FRESH RE-ENTRY WATCH',
+      freshReentryWatch.requiredProof || freshReentryWatch.nextStep || args.readiness.action,
+      freshReentryWatch.reason || args.readiness.reason,
+    );
+  }
+
+  const parentWatch = args.htfFvgParentReactionWatch;
+  if (parentWatch?.eligible && parentWatch.direction === args.direction) {
+    return withDisplay(
+      'htf_parent_active_waiting_5m_child_confirmation',
+      'HTF PARENT ACTIVE - WAITING 5M CHILD PROOF',
+      parentWatch.requiredProof || args.readiness.action,
+      parentWatch.reason || 'HTF parent FVG is active, but same-direction completed 5M child proof is still missing.',
+    );
+  }
+
+  const route = args.htfFvgReactionRouting;
+  if (route?.status === 'routed_active_reaction' && route.direction === args.direction) {
+    const zone = args.activeTacticalZone?.direction === args.direction ? args.activeTacticalZone : null;
+    if (zone?.state === 'moved_away') {
+      return withDisplay(
+        'fresh_entry_missed_no_chase',
+        'FRESH ENTRY MISSED / NO CHASE',
+        zone.noChase || args.readiness.action,
+        'HTF parent FVG reacted, but price moved away from the active tactical zone; wait for fresh completed 5M proof.',
+      );
+    }
+    if (zone) {
+      return withDisplay(
+        'htf_zone_active_waiting_5m_rejection',
+        'HTF FVG ACTIVE - WAITING 5M REJECTION',
+        zone.nextTrigger || args.readiness.action,
+        'HTF parent FVG is active and the tactical zone is mapped; completed 5M rejection/hold still controls.',
+      );
+    }
+    return withDisplay(
+      'htf_parent_active_waiting_5m_proof',
+      'HTF PARENT ACTIVE - WAITING 5M PROOF',
+      route.reason || args.readiness.action,
+      'HTF parent FVG route is active; completed 5M proof still controls.',
+    );
+  }
+
+  if (args.readiness.status === 'missed_no_chase') {
+    return withDisplay(
+      'fresh_entry_missed_no_chase',
+      'FRESH ENTRY MISSED / NO CHASE',
+      args.readiness.action,
+      args.readiness.reason,
+    );
+  }
+
+  if (args.readiness.status === 'not_aligned') {
+    return withDisplay(
+      'protected_structure_not_aligned',
+      'PROTECTED STRUCTURE NOT ALIGNED',
+      args.readiness.action,
+      args.readiness.reason,
+    );
+  }
+
+  if (args.readiness.status === 'review_only_missing_proof') {
+    return withDisplay(
+      'review_only_missing_5m_proof',
+      'REVIEW ONLY - WAITING 5M PROOF',
+      args.readiness.action,
+      args.readiness.reason,
+    );
+  }
+
+  return withDisplay(
+    args.readiness.status,
+    args.readiness.label,
+    args.readiness.action,
+    args.readiness.reason,
+  );
+}
+
 function buildDirectionalBias(
   direction: 'LONG' | 'SHORT',
   item: ScannerCandidateLifecycleTraceItem | null,
@@ -4064,6 +4204,22 @@ function buildPrimaryDeskPlay(args: {
     chartContext: args.chartContext,
     currentPrice: args.currentPrice,
     activeScannerWindow: Boolean(args.visibilityMetadata.authority.activeModel),
+  });
+  longBias.tradeReadiness = decorateTradeReadinessDisplay({
+    readiness: longBias.tradeReadiness,
+    direction: 'LONG',
+    htfFvgReactionRouting,
+    htfFvgParentReactionWatch,
+    activeTacticalZone,
+    freshReentryWatch,
+  });
+  shortBias.tradeReadiness = decorateTradeReadinessDisplay({
+    readiness: shortBias.tradeReadiness,
+    direction: 'SHORT',
+    htfFvgReactionRouting,
+    htfFvgParentReactionWatch,
+    activeTacticalZone,
+    freshReentryWatch,
   });
   const htfObjectiveLadder = buildHtfObjectiveLadder({
     direction: primaryDirection,

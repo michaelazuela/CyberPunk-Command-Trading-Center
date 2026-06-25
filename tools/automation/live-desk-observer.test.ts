@@ -186,6 +186,101 @@ assert.equal(sinceFilteredReport.summary.phase4EnforcementFailures, 1);
 assert.match(sinceFilteredReport.markdown, /Since recordedAt: 2026-06-18T13:45:00.000Z/);
 assert.match(sinceFilteredReport.markdown, /Older tape events excluded: 1/);
 
+fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-19-MES-morning.json'), JSON.stringify({
+  reportType: 'scanner_decision_tape',
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  events: {
+    '2026-06-19T09:10:00.0000000': {
+      completed5m: {
+        time: '2026-06-19T09:10:00.0000000',
+        open: 7480,
+        high: 7485,
+        low: 7478,
+        close: 7483.75,
+      },
+      currentPrice: 7482,
+      scannerState: 'Approved',
+      setupCandidateStatus: {
+        selected: {
+          setupType: 'TurtleSoup',
+          direction: 'LONG',
+          executionStatus: 'Executable',
+          entry: 7483.75,
+          stop: 7479.75,
+          target1: 7489.75,
+          target2: 7491.75,
+        },
+      },
+      plan: {
+        canExecute: true,
+      },
+      deskState: {
+        primaryDeskPlay: {
+          direction: 'SHORT',
+          lineInSand: 7480.25,
+          htfFvgReactionRouting: {
+            status: 'routed_active_reaction',
+            direction: 'SHORT',
+            lineInSand: 7488.25,
+            lineLabel: 'SHORT BELOW 7488.25 from 60M parent FVG 7488.25-7496.50',
+            lifecycleState: 'holding',
+            standDown: 'Stand down on completed 5M acceptance above parent zone 7496.50.',
+            approvalBoundary: {
+              changesTradeApprovals: false,
+              changesCanExecute: false,
+              changesEntryStopTargets: false,
+              changesRiskRules: false,
+              changesRanking: false,
+              createsNewModel: false,
+            },
+          },
+          htfFvgReactionMemory: {
+            activeReaction: {
+              direction: 'SHORT',
+              timeframe: '60M',
+              lower: 7488.25,
+              upper: 7496.5,
+              lifecycle: { state: 'holding' },
+            },
+          },
+          htfFvgCascade: {
+            parentZone: {
+              direction: 'SHORT',
+              timeframe: '60M',
+              lower: 7488.25,
+              upper: 7496.5,
+            },
+          },
+        },
+      },
+      discord: {
+        shouldSend: true,
+        sendOrSuppressReason: 'Approved app-owned 5M execution alert.',
+      },
+    },
+  },
+}));
+
+const canExecuteAuthorityReport = await buildLiveDeskObserverReport({
+  tradeDate: '2026-06-19',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir,
+  outDir: path.join(tmp, 'out'),
+  json: false,
+  watch: false,
+  pollSeconds: 60,
+});
+
+assert.equal(canExecuteAuthorityReport.summary.discordSends, 1);
+assert.equal(canExecuteAuthorityReport.summary.phase4EnforcementFailures, 0);
+assert.equal(canExecuteAuthorityReport.summary.htfFvgReactionRoutingConflicts, 0);
+assert.equal(canExecuteAuthorityReport.summary.discordSignoffStatus, 'ready');
+assert.ok(canExecuteAuthorityReport.observations[0].observerFlags.includes('htf_fvg_reaction_selected_warning'));
+assert.equal(canExecuteAuthorityReport.observations[0].htfFvgReactionPhase4Enforcement, 'pass');
+
 fs.writeFileSync(path.join(auditDir, 'scanner-decision-tape-2026-06-17-MES-morning.json'), JSON.stringify({
   reportType: 'scanner_decision_tape',
   tradeDate: '2026-06-17',

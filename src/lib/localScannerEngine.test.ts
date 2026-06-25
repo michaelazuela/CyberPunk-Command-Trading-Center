@@ -1790,6 +1790,12 @@ assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.a
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.changesEntryStopTargets, false);
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.changesRiskRules, false);
 assert.equal(routedHtfReactionDeskState.primaryDeskPlay.htfFvgReactionRouting?.approvalBoundary.createsNewModel, false);
+assert.equal(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.status, 'not_aligned');
+assert.equal(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.displayStatus, 'htf_parent_active_waiting_5m_proof');
+assert.equal(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.displayLabel, 'HTF PARENT ACTIVE - WAITING 5M PROOF');
+assert.match(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.displayReason || '', /completed 5M proof still controls/i);
+assert.equal(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.approvalBoundary.changesCanExecute, false);
+assert.equal(routedHtfReactionDeskState.primaryDeskPlay.shortBias.tradeReadiness.approvalBoundary.changesTradeApprovals, false);
 
 const opposingParentHtfReactionChartContext = JSON.parse(JSON.stringify(routedHtfReactionChartContext)) as Partial<ChartContext>;
 if (opposingParentHtfReactionChartContext.multiTimeframeContext?.oneHour) {
@@ -1857,6 +1863,11 @@ assert.ok(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactio
 assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.approvalBoundary.changesCanExecute, false);
 assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.htfFvgParentReactionWatch?.approvalBoundary.changesTradeApprovals, false);
 assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.discordEligible, true);
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.longBias.tradeReadiness.status, 'not_aligned');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.longBias.tradeReadiness.displayStatus, 'htf_parent_active_waiting_5m_child_confirmation');
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.longBias.tradeReadiness.displayLabel, 'HTF PARENT ACTIVE - WAITING 5M CHILD PROOF');
+assert.match(opposingParentHtfReactionDeskState.primaryDeskPlay.longBias.tradeReadiness.displayAction || '', /same-direction completed 5M child proof/i);
+assert.equal(opposingParentHtfReactionDeskState.primaryDeskPlay.longBias.tradeReadiness.approvalBoundary.changesCanExecute, false);
 
 const missedHtfReactionVisibility = classifyScannerVisibility({
   state: 'Missed',
