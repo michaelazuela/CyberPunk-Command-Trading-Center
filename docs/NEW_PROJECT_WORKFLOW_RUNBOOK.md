@@ -238,6 +238,7 @@ Pass criteria:
 - Phase 8.45 cleanup audit runs read-only, reports zero unreviewed removal-ready live-code findings, and leaves deferred candidates as inventory for later explicit phases.
 - Phase 8.5 authority-language audit reports `pass`, requires precise authority metadata terms, and blocks vague live-surface phrases such as `approved model`, `approved setup`, or `valid trade`.
 - Phase 8.55 DeskState responsibility audit reports `pass`, verifies scanner-owned `DeskState`/visibility metadata is the source of truth, and blocks Discord/scheduler imports that would make presentation layers independent setup, decision, or conditional-plan builders.
+- Phase 8.6 no-silent-drop audit reports `pass`, verifies meaningful structured evidence resolves to visible lifecycle states, and requires explicit hold/no-trade/data-quality reasons without changing `canExecute`.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
@@ -260,6 +261,7 @@ Pass criteria:
 | Obsolete/dirty code cleanup audit | DeskState visibility cleanup | `phase-8-45-obsolete-dirty-code-cleanup-audit`, `diagnostic:obsolete-dirty-code-cleanup`, generated cleanup audit report, no deletion unless removal proof is explicit |
 | Authority language cleanup audit | DeskState visibility cleanup | `phase-8-5-authority-language-audit`, `diagnostic:authority-language`, precise authority terms present, no vague approved-model/setup wording in live scanner/Discord surfaces |
 | DeskState responsibility audit | DeskState visibility cleanup | `phase-8-55-deskstate-responsibility-audit`, `diagnostic:deskstate-responsibility`, scanner-owned `DeskState`/visibility metadata remains the source of truth, Discord/RAG/UI surfaces format/store/audit that state instead of owning decisions |
+| No silent drop policy audit | DeskState visibility cleanup | `phase-8-6-no-silent-drop-policy-audit`, `diagnostic:no-silent-drop`, structured conditional/blocked/missed/no-trade/data-limited candidates produce visible lifecycle metadata and explicit reasons while preserving `canExecute` |
 | Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 

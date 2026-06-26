@@ -298,6 +298,18 @@ Data quality limited -> show DATA_QUALITY_BLOCKER with exact missing proof.
 
 No intended execution approval change. Some scanner/Discord visibility behavior may change in later implementation, but it must not loosen `canExecute`.
 
+### Installed audit behavior
+
+Phase 8.6 is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:no-silent-drop -- --json
+```
+
+The standard workflow loopback also runs `phase-8-6-no-silent-drop-policy-audit`.
+
+Current no-silent-drop result: `pass`. The audit verifies all shared visibility modes and reason metadata fields exist, then exercises `classifyScannerVisibility`, `buildCandidateLifecycleTrace`, and `buildDeskState` together so structured conditional, blocked, missed, no-trade, and data-limited candidates resolve to visible lifecycle states with explicit reasons. It also verifies DeskState preserves visibility/action and does not change `canExecute`.
+
 ## Phase 9A: Trade Decision Map Audit
 
 ### Goal

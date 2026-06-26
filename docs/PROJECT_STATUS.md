@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 8.6 no silent drop policy audit.
+Files changed: tools/automation/no-silent-drop-policy-audit.ts, tools/automation/no-silent-drop-policy-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Meaningful structured OHLC evidence must not disappear from desk awareness without a visible lifecycle state and explicit reason. Blocked execution can remain blocked, full-plan Discord can remain strict, and `canExecute` remains the execution boundary, but structured conditional/blocked/missed/no-trade/data-limited candidates need traceable visibility metadata.
+Tests run: `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npm run diagnostic:no-silent-drop -- --json`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx src/agents/scannerPlanSelectionAgent.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 8.6 test verified the pass case, missing visibility-mode failure, missing structured-evidence failure, and read-only/no-authority-change boundaries. The real no-silent-drop audit scanned `src/lib/localScannerEngine.ts` and reported `status=pass`, 0 findings. Standard workflow loopback reported 25 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 28 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit verifies visibility states and reasons but does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The audit verifies lifecycle/DeskState visibility metadata but does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: After Phase 8.6 passes, install Phase 9A trade decision map audit.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 8.55 DeskState responsibility audit.
 Files changed: src/agents/scannerPlanSelectionAgent.ts, tools/automation/deskstate-responsibility-audit.ts, tools/automation/deskstate-responsibility-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: The workflow needs scanner-owned `DeskState`/visibility metadata to remain the single source of truth for active trade visibility. Discord, RAG, UI, and review agents may summarize/store/audit that state, but must not become independent setup scanners, trade-decision owners, conditional-plan builders, or silent suppressors.
@@ -15,8 +31,6 @@ Journal/RAG impact: None at runtime. The new audit verifies scanner automation c
 Supabase impact: No migration added.
 Known risks: None known.
 Next recommended action: After Phase 8.55 passes, install Phase 8.6 no silent drop policy.
-
-## Previous Change
 
 Date: 2026-06-26
 Task: Install Phase 8.5 authority language cleanup.
