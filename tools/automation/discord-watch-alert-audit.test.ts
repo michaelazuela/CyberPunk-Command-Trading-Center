@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { buildPhase9DDiscordWatchAlertAudit } from './discord-watch-alert-audit';
+
+const report = buildPhase9DDiscordWatchAlertAudit();
+
+assert.equal(report.reportType, 'phase_9d_discord_watch_alert_audit');
+assert.equal(report.status, 'pass', JSON.stringify(report.findings, null, 2));
+assert.equal(report.authority.readOnly, true);
+assert.equal(report.authority.postsDiscord, false);
+assert.equal(report.authority.writesSupabase, false);
+assert.equal(report.authority.changesScannerBehavior, false);
+assert.equal(report.authority.changesTradingLogic, false);
+assert.equal(report.authority.changesCanExecute, false);
+assert.equal(report.authority.changesEntryStopTargets, false);
+assert.equal(report.authority.changesRanking, false);
+assert.equal(report.authority.changesRiskRules, false);
+assert.equal(report.authority.changesBridgeBehavior, false);
+assert.equal(report.summary.watchAlertsAudited, 1);
+assert.equal(report.summary.watchVisibilityObserved, true);
+assert.equal(report.summary.lineInSandPresent, true);
+assert.equal(report.summary.completedFiveMinuteTriggerPresent, true);
+assert.equal(report.summary.invalidationPresent, true);
+assert.equal(report.summary.standDownPresent, true);
+assert.equal(report.summary.notExecutionApprovalPresent, true);
+assert.equal(report.summary.canExecuteBoundaryPreserved, true);
+assert.equal(report.summary.predictionLanguageBlocked, true);
+assert.ok(report.filesScanned.includes('src/lib/localScannerEngine.ts'));
+assert.ok(report.filesScanned.includes('tools/automation/discord-alert-format.ts'));
+assert.ok(report.sampleAlert.includes('SHORT WATCH FORMING'));
+assert.ok(report.sampleAlert.includes('Line in the sand: 7469.75'));
+assert.ok(report.sampleAlert.includes('SHORT BELOW: 7469.75'));
+assert.ok(report.sampleAlert.includes('Completed 5M close below 7469.75'));
+assert.ok(report.sampleAlert.includes('Invalidation: Invalid above 7489.75'));
+assert.ok(report.sampleAlert.includes('Stand down: No chase.'));
+assert.ok(report.sampleAlert.includes('NOT APPROVED'));
+assert.ok(report.sampleAlert.includes('canExecute=false'));
+assert.ok(report.markdown.includes('does not post Discord'));

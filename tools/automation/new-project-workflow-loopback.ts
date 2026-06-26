@@ -261,6 +261,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/active-desk-state-audit.test.ts'],
   },
   {
+    id: 'phase-9d-discord-watch-alert-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9D Discord watch alerts include line in the sand, completed-5M trigger, invalidation, stand-down/no-chase, and no-execution-approval language.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/discord-watch-alert-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',
