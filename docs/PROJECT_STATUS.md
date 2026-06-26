@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-25
+Task: Install Phase 16 generated-artifact guard boundary.
+Files changed: scripts/no-legacy-rules-check.js, docs/PROJECT_STATUS.md.
+Reason: Standard loopback can regenerate ignored runtime artifacts such as `tools/automation/.nt-scanner-state.json`; the legacy-rule guard scanned those generated files and blocked `npm run lint` even though they are not source and are excluded by `.gitignore`.
+Tests run: `npm run lint`; `npm run workflow:loopback -- --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run build`.
+Result: Passed. `npm run lint` now passes while ignored generated scanner state remains present, proving the legacy-rule guard still scans source but no longer fails on `.gitignore`-excluded runtime output. The standard workflow loopback reported 19 pass, 0 fail, 12 skipped optional/full/real-tape checks. Required guards and build passed.
+Trading logic changed: No. This is guard hygiene only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Ready for the next explicitly scoped scanner behavior, report-quality, operator-surface, or live-observation phase.
+
+## Previous Change
+
+Date: 2026-06-25
 Task: Install Phase 15 no-open evidence-summary helper loopback.
 Files changed: Open-QuantDesk-EvidenceSummary.ps1, tools/automation/new-project-workflow-loopback.ts, tools/supervisor/supervisor.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 14 parse-checked the tray/helper scripts, but automated evidence signoff still needed to execute the evidence-summary helper without opening local report windows.

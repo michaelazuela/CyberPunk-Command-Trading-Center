@@ -20,6 +20,25 @@ const IGNORED_DIRS = new Set([
   'build',
   'coverage',
   'docs/archive',
+  'tools/automation/chart-markups',
+  'tools/automation/diagnostic-reports',
+  'tools/automation/discord-audit',
+  'tools/automation/live-desk-observer-reports',
+  'tools/automation/research-outcome-reports',
+  'tools/automation/research-reports',
+  'tools/automation/research-review-charts',
+  'tools/automation/research-validation-reports',
+  'tools/automation/weekly-reports',
+]);
+
+const IGNORED_FILES = new Set([
+  'tools/automation/.discord-alert-state.json',
+  'tools/automation/.macro-calendar-cache.json',
+  'tools/automation/.market-data-gap-events.json',
+  'tools/automation/.nt-scanner-state.json',
+  'tools/automation/.nt-scanner-state.json.bak',
+  'tools/automation/.weekly-trading-report-state.json',
+  'tools/automation/discord-report-state.json',
 ]);
 
 const FORBIDDEN = [
@@ -61,6 +80,7 @@ const TEXT_EXTENSIONS = new Set([
 
 function shouldIgnore(fullPath) {
   const relative = path.relative(ROOT, fullPath).replace(/\\/g, '/');
+  if (IGNORED_FILES.has(relative)) return true;
   return [...IGNORED_DIRS].some((ignored) => relative === ignored || relative.startsWith(`${ignored}/`));
 }
 
