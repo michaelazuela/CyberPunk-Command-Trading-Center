@@ -50,6 +50,7 @@ const includeRealTapes = process.argv.includes('--real-tapes');
 const archiveSignoff = process.argv.includes('--archive-signoff');
 const eodBundle = process.argv.includes('--eod-bundle');
 const eodSummary = process.argv.includes('--eod-summary');
+const liveObservationSignoff = process.argv.includes('--live-observation-signoff');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
@@ -241,6 +242,14 @@ const checks: LoopbackCheck[] = [
     realTapeOnly: true,
   },
   {
+    id: 'live-observation-signoff-current-tape',
+    area: 'supervisor_restart_workflow',
+    description: 'Runs the Phase 17 live-observation signoff wrapper over the requested current scanner tape before accepting live Discord behavior.',
+    command: bin('npm'),
+    args: ['run', 'supervisor:live-observation-signoff', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
+    realTapeOnly: true,
+  },
+  {
     id: 'end-of-day-evidence-bundle',
     area: 'supervisor_restart_workflow',
     description: 'Builds a dated evidence bundle with signoff manifest, scanner tape, observer report, and supervisor status.',
@@ -305,6 +314,7 @@ function shouldRun(check: LoopbackCheck): boolean {
   if (session !== 'all' && check.id === 'real-tape-live-observer-morning' && session !== 'morning') return false;
   if (session !== 'all' && check.id === 'real-tape-live-observer-evening' && session !== 'evening') return false;
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
+  if (check.id === 'live-observation-signoff-current-tape' && !liveObservationSignoff) return false;
   if (check.id === 'end-of-day-evidence-bundle' && !eodBundle) return false;
   if (check.id === 'end-of-day-evidence-summary' && !eodSummary) return false;
   if (check.id === 'evidence-summary-tray-helper-no-open' && !eodSummary) return false;
