@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9A trade decision map audit.
+Files changed: tools/automation/trade-decision-map-audit.ts, tools/automation/trade-decision-map-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Before changing any behavior, the desk needs a repeatable inventory of the current setup/model hierarchy: model name, session window, required evidence, rank weight, watch/plan/Discord/execution eligibility, canExecute relationship, and known suppression paths.
+Tests run: `npx tsx tools/automation/trade-decision-map-audit.test.ts`; `npm run diagnostic:trade-decision-map -- --json`; `npx tsx src/config/setupRegistry.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 9A test verified registry coverage, read-only/no-authority-change boundaries, role coverage, and key human-review model presence. The real trade decision map audit scanned `src/config/setupRegistry.ts` and `src/lib/localScannerEngine.ts`, reported `status=pass`, 0 findings, and covered 33/33 setup registry entries: 9 primary models, 7 supporting-evidence entries, 17 deprecated entries, 3 human-review-only entries, and 6 execution-eligible metadata entries. Standard workflow loopback reported 26 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 29 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit inventories Discord eligibility metadata but does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The audit reads registry/scanner metadata and does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Install Phase 9B candidate lifecycle trace audit.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 8.6 no silent drop policy audit.
 Files changed: tools/automation/no-silent-drop-policy-audit.ts, tools/automation/no-silent-drop-policy-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Meaningful structured OHLC evidence must not disappear from desk awareness without a visible lifecycle state and explicit reason. Blocked execution can remain blocked, full-plan Discord can remain strict, and `canExecute` remains the execution boundary, but structured conditional/blocked/missed/no-trade/data-limited candidates need traceable visibility metadata.
@@ -15,8 +31,6 @@ Journal/RAG impact: None at runtime. The audit verifies lifecycle/DeskState visi
 Supabase impact: No migration added.
 Known risks: None known.
 Next recommended action: After Phase 8.6 passes, install Phase 9A trade decision map audit.
-
-## Previous Change
 
 Date: 2026-06-26
 Task: Install Phase 8.55 DeskState responsibility audit.

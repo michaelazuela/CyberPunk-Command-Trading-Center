@@ -240,6 +240,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/no-silent-drop-policy-audit.test.ts'],
   },
   {
+    id: 'phase-9a-trade-decision-map-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9A inventories setup registry decision-map authority, eligibility, canExecute relationships, and suppression paths without changing gates.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/trade-decision-map-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

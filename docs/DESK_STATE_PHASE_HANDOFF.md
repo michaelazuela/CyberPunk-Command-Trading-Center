@@ -337,6 +337,18 @@ Reveal whether a model is outranking, hiding, or suppressing another model.
 
 No intended trading logic change.
 
+### Installed audit behavior
+
+Phase 9A is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:trade-decision-map -- --json
+```
+
+The standard workflow loopback also runs `phase-9a-trade-decision-map-audit`.
+
+Current trade decision map result: `pass`. The audit verifies every `SETUP_REGISTRY` entry appears in `buildTradeDecisionMapAudit`, each entry carries model/session/evidence/rank/eligibility/canExecute/suppression metadata, deprecated entries are not plan/Discord/execution eligible, supporting-evidence entries remain context/watch only, human-review-only models remain `executionEligible=false`, and the audit reports `tradingLogicChanged=false`.
+
 ## Phase 9B: Candidate Lifecycle Trace
 
 ### Goal
