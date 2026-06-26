@@ -52,6 +52,7 @@ const eodBundle = process.argv.includes('--eod-bundle');
 const eodSummary = process.argv.includes('--eod-summary');
 const liveObservationSignoff = process.argv.includes('--live-observation-signoff');
 const requireEvidenceSummary = process.argv.includes('--require-evidence-summary');
+const discordCardSignoff = process.argv.includes('--discord-card-signoff');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
@@ -69,6 +70,18 @@ const liveObservationSignoffArgs = [
   signoffSession,
   '--json',
   ...(requireEvidenceSummary ? ['--require-evidence-summary'] : []),
+];
+const discordCardSignoffArgs = [
+  'run',
+  'supervisor:discord-card-signoff',
+  '--',
+  '--trade-date',
+  tradeDate,
+  '--instrument',
+  instrument,
+  '--session',
+  signoffSession,
+  '--json',
 ];
 
 const checks: LoopbackCheck[] = [
@@ -192,6 +205,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/supervisor/liveObservationSignoff.test.ts'],
   },
   {
+    id: 'supervisor-discord-card-artifact-signoff',
+    area: 'supervisor_restart_workflow',
+    description: 'Verifies Phase 17D Discord card artifact signoff over scanner reports, receipts, chart artifacts, and safe recovery boundaries.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/supervisor/discordCardArtifactSignoff.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',
@@ -280,6 +300,14 @@ const checks: LoopbackCheck[] = [
     realTapeOnly: true,
   },
   {
+    id: 'discord-card-artifact-signoff-current-tape',
+    area: 'supervisor_restart_workflow',
+    description: 'Runs the Phase 17D Discord card artifact signoff over the requested current scanner card reports and Discord receipts.',
+    command: bin('npm'),
+    args: discordCardSignoffArgs,
+    realTapeOnly: true,
+  },
+  {
     id: 'guard-no-firebase',
     area: 'project_guards',
     description: 'Verifies Firebase remains absent.',
@@ -329,6 +357,7 @@ function shouldRun(check: LoopbackCheck): boolean {
   if (session !== 'all' && check.id === 'real-tape-live-observer-evening' && session !== 'evening') return false;
   if (check.id === 'live-signoff-manifest' && !archiveSignoff) return false;
   if (check.id === 'live-observation-signoff-current-tape' && !liveObservationSignoff) return false;
+  if (check.id === 'discord-card-artifact-signoff-current-tape' && !discordCardSignoff) return false;
   if (check.id === 'end-of-day-evidence-bundle' && !eodBundle) return false;
   if (check.id === 'end-of-day-evidence-summary' && !eodSummary) return false;
   if (check.id === 'evidence-summary-tray-helper-no-open' && !eodSummary) return false;
@@ -387,6 +416,7 @@ const summary = {
   archiveSignoff,
   eodBundle,
   eodSummary,
+  discordCardSignoff,
   authority: {
     readOnly: true,
     postsDiscord: false,

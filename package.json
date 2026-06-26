@@ -23,6 +23,7 @@
     "supervisor:eod-bundle": "tsx tools/supervisor/endOfDayEvidenceBundle.ts",
     "supervisor:eod-summary": "tsx tools/supervisor/endOfDayEvidenceSummary.ts",
     "supervisor:live-observation-signoff": "tsx tools/supervisor/liveObservationSignoff.ts",
+    "supervisor:discord-card-signoff": "tsx tools/supervisor/discordCardArtifactSignoff.ts",
     "supervisor:audit": "tsx tools/supervisor/runtimeAudit.ts",
     "supervisor:repair": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Repair-QuantDesk-Runtime.ps1",
     "supervisor:cleanup-json": "tsx tools/supervisor/runtimeJsonCleanup.ts",

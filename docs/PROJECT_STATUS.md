@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 17D Discord card artifact signoff.
+Files changed: tools/supervisor/discordCardArtifactSignoff.ts, tools/supervisor/discordCardArtifactSignoff.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 17C proved live-observation and evidence-summary readiness, but posted Discord cards still needed a formal read-only signoff that joins scanner reports to Discord receipts and chart artifacts.
+Tests run: `npx tsx tools/supervisor/discordCardArtifactSignoff.test.ts`; `npm run supervisor:discord-card-signoff -- --trade-date 2026-06-26 --instrument MES --session morning --json`; visual QA inspection of `tools/automation/chart-markups/scanner-morning-2026-06-26-MES-1782481715384.png` and `tools/automation/chart-markups/scanner-morning-2026-06-26-MES-level-map-1782481715909.png`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 17D test verified ready, missing-chart blocked, unsafe-recovery blocked, and missing-RAG-marker blocked paths. The standalone June 26 morning card signoff returned `status=ready`, 1 scanner report, 1 matching Discord receipt, HTTP 200, safe recovery boundaries, RAG marker attached, readable chart PNG, readable level-map PNG, and `chart-markup-renderer` contract present. Visual QA found the actual card artifacts readable for main levels, status, action, entry zone, stop, T1/T2, runner, and decision-support language; the setup subtitle truncation is non-blocking. The standard workflow loopback reported 21 pass, 0 fail, 14 skipped optional/full/real-tape checks. The real-tape card-signoff loopback reported 24 pass, 0 fail, 11 skipped optional checks. Required guards, lint, and build passed.
+Trading logic changed: No. This is read-only artifact/signoff tooling only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The signoff reads local scanner reports, receipts, and chart artifact files only; it does not post, edit, or delete Discord messages.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known. Non-blocking visual polish remains: the chart/level-map setup subtitle can truncate on long setup names, but required action and level fields remain readable.
+Next recommended action: Ready for the next explicitly scoped phase; if continuing the hardening path, make the next phase visual-polish only for long card subtitles, with no scanner/trading behavior changes.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 17C required evidence-summary live-observation workflow.
 Files changed: tools/automation/new-project-workflow-loopback.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 17B proved fresh live-tape observation, but end-of-day signoff still needed workflow support for `--require-evidence-summary` after creating and verifying the evidence bundle.
