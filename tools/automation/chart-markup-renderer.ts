@@ -82,6 +82,21 @@ function compact(value?: string | null, max = 78): string {
   return text.length <= max ? text : `${text.slice(0, max - 3)}...`;
 }
 
+function cardModelLabel(value?: string | null): string {
+  const text = String(value || '').trim();
+  if (text === 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback') return 'Sweep -> Structure Shift -> Imbalance';
+  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Structure-Shift Continuation';
+  return text;
+}
+
+function sidePanelModelLabel(value?: string | null): string {
+  const text = String(value || '').trim();
+  if (text === 'Liquidity Sweep -> Structure Shift -> Imbalance Pullback') return 'Sweep + Shift + Imbalance';
+  if (text === 'Sweep -> Structure Shift -> Imbalance') return 'Sweep + Shift + Imbalance';
+  if (text === 'Intraday Structure-Shift Micro Continuation') return 'Structure-Shift Continuation';
+  return text;
+}
+
 function sessionPlanPrefix(sessionLabel: string): 'AM' | 'PM' {
   return /lunch|pm/i.test(sessionLabel) ? 'PM' : 'AM';
 }
@@ -735,7 +750,7 @@ function renderDirectionalHeader(input: ChartMarkupRenderInput, model: PlanRende
     <text x="558" y="61" class="banner-title" fill="#f8fafc">${escapeHtml(compact(title, 34))}</text>
     <rect x="1290" y="35" width="192" height="38" rx="19" fill="${isDeskPlayContext ? '#38bdf8' : statusColor(status)}" opacity=".94" />
     <text x="1386" y="61" text-anchor="middle" class="banner-status">${escapeHtml(badge)}</text>
-    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : 'Desk Map - Review Levels' : model.model, 42))}</text>
+    <text x="558" y="94" class="banner-sub" fill="${accent}">${escapeHtml(compact(isDeskPlayContext ? unsafeDeskReview ? `${oppositeDirection} Watch - Not A Trade Plan` : 'Desk Map - Review Levels' : cardModelLabel(model.model), 42))}</text>
     <text x="1076" y="94" class="banner-action">${escapeHtml(action)}</text>
   `;
 }
@@ -1280,7 +1295,7 @@ function buildChartHtml(input: ChartMarkupRenderInput): string {
   <rect x="32" y="94" width="160" height="30" rx="15" fill="${statusColor(plan.displayStatus)}" opacity=".92" />
   <text x="112" y="115" text-anchor="middle" class="status-badge">${escapeHtml(plan.displayStatus)}</text>
   <text x="210" y="115" class="panel-text">${scoreLabel}: <tspan fill="#facc15">${score == null ? 'N/A' : `${Math.round(score)}/100`}</tspan></text>
-  <text x="32" y="150" class="panel-text">Model: <tspan fill="#4ade80">${escapeHtml(compact(model, 31))}</tspan></text>
+    <text x="32" y="150" class="panel-text">Model: <tspan fill="#4ade80">${escapeHtml(compact(sidePanelModelLabel(model), 31))}</tspan></text>
   <line x1="32" y1="170" x2="424" y2="170" stroke="#334155" />
   <text x="32" y="196" class="context-mini">Higher TF: <tspan class="context-value">${escapeHtml(String(contextBias))}</tspan></text>
   <text x="236" y="196" class="context-mini">Bias: <tspan class="context-value">${escapeHtml(String(trendBias))}</tspan></text>
@@ -1443,7 +1458,7 @@ function buildLevelMapHtml(input: ChartMarkupRenderInput): string {
   ${renderDirectionLogo(isLong).replace('translate(470 29)', 'translate(112 42)')}
   <rect x="202" y="32" width="1284" height="108" rx="12" fill="${isLong ? '#062315' : '#261406'}" stroke="${accent}" stroke-width="2.3" opacity=".97" />
   <text x="232" y="76" class="title">${escapeHtml(compact(`[${prefix} ${planHeadlineMode(status)}] ${input.instrument} - ${plan.direction}`, 30))}</text>
-  <text x="232" y="112" class="subtitle">${escapeHtml(compact(plan.model, 54))}</text>
+  <text x="232" y="112" class="subtitle">${escapeHtml(compact(cardModelLabel(plan.model), 54))}</text>
   <rect x="1122" y="48" width="180" height="42" rx="21" fill="${statusColor(status)}" opacity=".94" />
   <text x="1212" y="76" text-anchor="middle" class="header-pill">${escapeHtml(status === 'EXECUTABLE' ? status : 'REVIEW ONLY')}</text>
   <rect x="1320" y="48" width="132" height="42" rx="21" fill="#e2e8f0" opacity=".94" />

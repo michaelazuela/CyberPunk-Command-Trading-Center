@@ -206,6 +206,9 @@ try {
   });
   assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'chart renderer must not mutate the input candidate');
   assert.ok(chartHtml.includes('[AM REVIEW] MES - LONG'));
+  assert.ok(chartHtml.includes('Sweep -&gt; Structure Shift -&gt; Imbalance'));
+  assert.ok(chartHtml.includes('Sweep + Shift + Imbalance'));
+  assert.ok(!chartHtml.includes('Imbalance Pullback'));
   assert.ok(chartHtml.includes('Action: wait for 5M trigger'));
   assert.ok(chartHtml.includes('Quality: <tspan fill="#facc15">78/100</tspan>'));
   assert.ok(chartHtml.includes('Risk: <tspan fill="#f8fafc">5.00 pts</tspan>'));
@@ -396,6 +399,8 @@ try {
   });
   assert.equal(JSON.stringify(candidate), candidateBeforeRender, 'level map renderer must not mutate the input candidate');
   assert.ok(levelMapHtml.includes('[AM REVIEW] MES - LONG'));
+  assert.ok(levelMapHtml.includes('Sweep -&gt; Structure Shift -&gt; Imbalance'));
+  assert.ok(!levelMapHtml.includes('Imbalance Pullback'));
   assert.ok(levelMapHtml.includes('wait for 5M trigger'));
   assert.ok(!/Action:\s*Action:/i.test(levelMapHtml));
   assert.ok(!/Invalid:\s*Invalid:/i.test(levelMapHtml));

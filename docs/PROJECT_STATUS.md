@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 17E Discord card subtitle visual polish.
+Files changed: tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, docs/PROJECT_STATUS.md.
+Reason: Phase 17D proved card artifact readiness, but visual QA found long setup subtitles could truncate awkwardly on Discord chart and level-map cards even though required trade levels remained readable.
+Tests run: `npx tsx tools/automation/chart-markup-renderer.test.ts`; `npx tsx tools/supervisor/discordCardArtifactSignoff.test.ts`; generated fresh Phase 17E chart and level-map visual QA samples with the current renderer and inspected both PNGs; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. Renderer tests confirm long model names now use concise card-facing labels instead of awkward subtitle truncation. Fresh visual QA samples showed the main banner, sidebar model line, and level-map subtitle readable with action, entry zone, stop, T1/T2, runner, right-side price labels, and decision-support footer intact. Temporary QA images were removed before commit. The standard workflow loopback reported 21 pass, 0 fail, 14 skipped optional/full/real-tape checks. The real-tape card-signoff loopback reported 24 pass, 0 fail, 11 skipped optional checks. Required guards, lint, and build passed.
+Trading logic changed: No. This is renderer display-label polish only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: Presentation only for generated chart/level-map card subtitles. It does not post, edit, delete, or route Discord messages.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Ready for the next explicitly scoped phase.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 17D Discord card artifact signoff.
 Files changed: tools/supervisor/discordCardArtifactSignoff.ts, tools/supervisor/discordCardArtifactSignoff.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 17C proved live-observation and evidence-summary readiness, but posted Discord cards still needed a formal read-only signoff that joins scanner reports to Discord receipts and chart artifacts.
