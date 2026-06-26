@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-26
+Task: Install Phase 17A live scanner/Discord observation signoff wrapper.
+Files changed: tools/supervisor/liveObservationSignoff.ts, tools/supervisor/liveObservationSignoff.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: After evidence and guard hardening, the next live-observation phase needed one read-only command that combines supervisor Phase 6 signoff, live observer Discord signoff, Phase 4/5 failure counts, HTF routing evidence, and evidence-summary context before accepting live scanner/Discord behavior as clean.
+Tests run: `npx tsx tools/supervisor/liveObservationSignoff.test.ts`; `npm run workflow:loopback -- --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run supervisor:live-observation-signoff -- --trade-date 2026-06-25 --instrument MES --session morning --json`.
+Result: Passed. The focused Phase 17A test verifies ready, blocked, and required-evidence-summary paths. The standard workflow loopback now includes `supervisor-live-observation-signoff` and reported 20 pass, 0 fail, 12 skipped optional/full/real-tape checks. Required guards, lint, and build passed. The real June 25 morning live-observation command returned `status=ready`, supervisor Phase 6 `ready/pass`, Discord signoff `ready`, Phase 4 failures `0`, Phase 5 failures `0`, 29 active HTF FVG routing events, 29 Phase 5 contract events, evidence summary `ready`, and no failures.
+Trading logic changed: No. This is read-only supervisor/live-observation signoff tooling only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The command reads local scanner/observer evidence only and does not post Discord.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 17B should be a live-window observation run after the scanner has produced fresh June 26 tapes. Only change code if that observation shows Discord/report drift.
+
+## Previous Change
+
 Date: 2026-06-25
 Task: Install Phase 16 generated-artifact guard boundary.
 Files changed: scripts/no-legacy-rules-check.js, docs/PROJECT_STATUS.md.

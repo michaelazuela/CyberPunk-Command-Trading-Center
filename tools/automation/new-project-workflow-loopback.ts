@@ -170,6 +170,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/supervisor/supervisor.test.ts'],
   },
   {
+    id: 'supervisor-live-observation-signoff',
+    area: 'supervisor_restart_workflow',
+    description: 'Verifies the Phase 17 live-observation signoff wrapper combines observer, Phase 6, and evidence-summary readiness without changing scanner or trading authority.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/supervisor/liveObservationSignoff.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',
