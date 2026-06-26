@@ -247,6 +247,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/trade-decision-map-audit.test.ts'],
   },
   {
+    id: 'phase-9b-candidate-lifecycle-trace-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9B lifecycle trace explains created, selected, directional, filtered, missing-proof, next-trigger, and Discord send/suppress state without changing gates.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/candidate-lifecycle-trace-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

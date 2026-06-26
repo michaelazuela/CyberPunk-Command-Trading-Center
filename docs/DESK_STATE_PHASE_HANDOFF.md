@@ -373,6 +373,18 @@ End mystery "NO TRADE" or quiet Discord outcomes.
 
 No intended trading logic change.
 
+### Installed audit behavior
+
+Phase 9B is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:candidate-lifecycle-trace -- --json
+```
+
+The standard workflow loopback also runs `phase-9b-candidate-lifecycle-trace-audit`.
+
+Current candidate lifecycle trace audit result: `pass`. The audit verifies the existing `buildCandidateLifecycleTrace` output explains created candidates, highest-ranked candidate, best long plan, best short plan, selected candidate, filtered-out candidates with reasons, copied Discord send/suppress reason, missing proof, and next trigger. It also verifies the phase remains metadata-only: no Discord posts, no Supabase writes, no scanner behavior change, no trading logic change, no ranking change, no `canExecute` change, and no entry/stop/target math change.
+
 ## Phase 9C: Active Desk State
 
 ### Goal

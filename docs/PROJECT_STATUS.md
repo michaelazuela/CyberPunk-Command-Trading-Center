@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9B candidate lifecycle trace audit.
+Files changed: tools/automation/candidate-lifecycle-trace-audit.ts, tools/automation/candidate-lifecycle-trace-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Before changing candidate lifecycle behavior, the desk needs a repeatable audit proving the existing lifecycle trace explains created candidates, selected candidate, highest-ranked candidate, best long/short ideas, filtered-out candidates, Discord send/suppress reason, missing proof, and next trigger.
+Tests run: `npx tsx tools/automation/candidate-lifecycle-trace-audit.test.ts`; `npm run diagnostic:candidate-lifecycle-trace -- --json`; `npx tsx tools/automation/trade-decision-map-audit.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 9B audit reported `status=pass`, 0 findings, 3 fixture candidates, 3 created candidates, 2 filtered candidates, highest-ranked candidate present, best long present, best short present, selected candidate present, copied Discord decision present, 4 missing-proof items, and next trigger present. Standard workflow loopback reported 27 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 30 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit copies and verifies existing Discord send/suppress decision metadata but does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The audit reads scanner lifecycle metadata and does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Install Phase 9C active DeskState audit.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 9A trade decision map audit.
 Files changed: tools/automation/trade-decision-map-audit.ts, tools/automation/trade-decision-map-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Before changing any behavior, the desk needs a repeatable inventory of the current setup/model hierarchy: model name, session window, required evidence, rank weight, watch/plan/Discord/execution eligibility, canExecute relationship, and known suppression paths.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None known.
 Next recommended action: Install Phase 9B candidate lifecycle trace audit.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-26
 Task: Install Phase 8.6 no silent drop policy audit.
