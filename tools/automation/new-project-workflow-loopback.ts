@@ -254,6 +254,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/candidate-lifecycle-trace-audit.test.ts'],
   },
   {
+    id: 'phase-9c-active-desk-state-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9C active DeskState mirrors visibility, lifecycle trace, promotion path, and canExecute boundaries as the scanner-owned source of truth.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/active-desk-state-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

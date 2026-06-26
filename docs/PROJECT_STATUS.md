@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9C active DeskState audit.
+Files changed: tools/automation/active-desk-state-audit.ts, tools/automation/active-desk-state-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Before changing DeskState behavior, the desk needs a repeatable audit proving each active DeskState snapshot is the scanner-owned source of truth and stays aligned with visibility metadata, candidate lifecycle trace, promotion path, no-chase/completed-5M language, and `canExecute` boundaries.
+Tests run: `npx tsx tools/automation/active-desk-state-audit.test.ts`; `npm run diagnostic:active-desk-state -- --json`; `npx tsx tools/automation/candidate-lifecycle-trace-audit.test.ts`; `npx tsx tools/automation/trade-decision-map-audit.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 9C audit reported `status=pass`, 0 findings, 2 DeskState snapshots, 1 watch snapshot, 1 plan/review/conditional snapshot, source-of-truth aligned, visibility aligned, promotion path observed, canExecute boundary preserved, no-chase/completed-5M language preserved, and 7 replay findings emitted as explanatory replay notes. Standard workflow loopback reported 28 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 31 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit verifies DeskState/visibility metadata that Discord may consume, but it does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The audit reads scanner DeskState metadata and does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Install Phase 9D Discord watch alert audit.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 9B candidate lifecycle trace audit.
 Files changed: tools/automation/candidate-lifecycle-trace-audit.ts, tools/automation/candidate-lifecycle-trace-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Before changing candidate lifecycle behavior, the desk needs a repeatable audit proving the existing lifecycle trace explains created candidates, selected candidate, highest-ranked candidate, best long/short ideas, filtered-out candidates, Discord send/suppress reason, missing proof, and next trigger.
@@ -16,7 +32,7 @@ Supabase impact: No migration added.
 Known risks: None known.
 Next recommended action: Install Phase 9C active DeskState audit.
 
-## Previous Change
+## Earlier Change
 
 Date: 2026-06-26
 Task: Install Phase 9A trade decision map audit.

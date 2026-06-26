@@ -419,6 +419,18 @@ The exact type can change to match the codebase, but the source-of-truth princip
 
 No intended approval change at first. It should report current decisions before changing them.
 
+### Installed audit behavior
+
+Phase 9C is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:active-desk-state -- --json
+```
+
+The standard workflow loopback also runs `phase-9c-active-desk-state-audit`.
+
+Current active DeskState audit result: `pass`. The audit verifies DeskState snapshots carry scanner-owned source-of-truth markers, mirror visibility mode / Discord action / `canExecute` from visibility metadata, carry candidate lifecycle trace and promotion path metadata, preserve watch-to-plan/review promotion proof, and keep all no-authority-change boundaries intact. It does not post Discord, write Supabase, change scanner behavior, change trading logic, change ranking, change risk rules, change bridge behavior, change `canExecute`, or change entry/stop/target math.
+
 ## Phase 9D: Discord Watch Alerts
 
 ### Goal

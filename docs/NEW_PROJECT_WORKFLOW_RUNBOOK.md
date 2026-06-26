@@ -241,6 +241,7 @@ Pass criteria:
 - Phase 8.6 no-silent-drop audit reports `pass`, verifies meaningful structured evidence resolves to visible lifecycle states, and requires explicit hold/no-trade/data-quality reasons without changing `canExecute`.
 - Phase 9A trade decision map audit reports `pass`, covers every `SETUP_REGISTRY` entry, and verifies role/eligibility/canExecute/suppression metadata without changing gates.
 - Phase 9B candidate lifecycle trace audit reports `pass`, verifies every scanner-cycle candidate can be explained as created, selected, directional best, filtered-with-reason, missing-proof, next-trigger, and copied Discord send/suppress state without changing gates.
+- Phase 9C active DeskState audit reports `pass`, verifies DeskState is the scanner-owned source of truth and mirrors visibility metadata, lifecycle trace, promotion path, no-chase language, and `canExecute` boundaries without changing gates.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
@@ -266,6 +267,7 @@ Pass criteria:
 | No silent drop policy audit | DeskState visibility cleanup | `phase-8-6-no-silent-drop-policy-audit`, `diagnostic:no-silent-drop`, structured conditional/blocked/missed/no-trade/data-limited candidates produce visible lifecycle metadata and explicit reasons while preserving `canExecute` |
 | Trade decision map audit | DeskState visibility cleanup | `phase-9a-trade-decision-map-audit`, `diagnostic:trade-decision-map`, full setup registry coverage, role/eligibility/canExecute/suppression metadata present, no trading logic changes |
 | Candidate lifecycle trace audit | DeskState visibility cleanup | `phase-9b-candidate-lifecycle-trace-audit`, `diagnostic:candidate-lifecycle-trace`, created/selected/directional/filtered/missing-proof/next-trigger/Discord-decision coverage present, no trading logic changes |
+| Active DeskState audit | DeskState visibility cleanup | `phase-9c-active-desk-state-audit`, `diagnostic:active-desk-state`, DeskState source-of-truth, visibility/lifecycle/promotion alignment, no-chase preservation, and canExecute boundary coverage present, no trading logic changes |
 | Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
