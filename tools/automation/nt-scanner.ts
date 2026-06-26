@@ -6864,7 +6864,7 @@ function buildWindowStartPayload(args: {
             inline: false,
           },
           {
-            name: '✅ Approved Models',
+            name: '✅ Active Models',
             value: `1️⃣ ${PROFESSIONAL_MODEL_ONE_LABEL}\n2️⃣ ${PROFESSIONAL_MODEL_TWO_LABEL}`,
             inline: false,
           },

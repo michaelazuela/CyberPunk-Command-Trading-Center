@@ -1277,7 +1277,7 @@ async function formatWeeklyPayload(tradeDate: string, context: Partial<ChartCont
             inline: false,
           },
           {
-            name: '5️⃣ 🧠 Approved Models For The Week',
+            name: '5️⃣ 🧠 Active Models For The Week',
             value: discordValue(formatWeeklyApprovedModels(context)),
             inline: false,
           },
@@ -1366,7 +1366,7 @@ async function formatPremarketPayload(tradeDate: string, context: Partial<ChartC
             value: [
               '⚠️ This brief does not approve trades.',
               '🗺️ The liquidity ladder tells us WHERE.',
-              '🎯 The approved model tells us WHEN.',
+              '🎯 The active model context tells us WHEN.',
               '🕯️ The 5M execution chart tells us WHETHER.',
               '⚖️ The risk gate tells us IF IT IS WORTH TAKING.',
               levels.length ? `🧱 Structured levels loaded: ${levels.length}.` : '🧱 No structural levels available.',

@@ -219,6 +219,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/obsolete-dirty-code-cleanup-audit.test.ts'],
   },
   {
+    id: 'phase-8-5-authority-language-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 8.5 live authority wording uses precise model/visibility terms without adding gates.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/authority-language-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

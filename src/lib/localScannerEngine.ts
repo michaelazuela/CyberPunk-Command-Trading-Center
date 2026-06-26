@@ -3278,7 +3278,7 @@ function buildTradeReadiness(args: {
       status: 'wait_for_pullback_or_new_5m_structure',
       label: 'WAIT FOR BETTER ENTRY',
       action: 'Wait for pullback/retest or new protected 5M MSS before execution consideration.',
-      reason: 'Approved model route exists, but the current route still needs better entry quality or fresh 5M proof.',
+      reason: 'Active model route exists, but the current route still needs better entry quality or fresh 5M proof.',
       missingProof: args.executableConsideration.missingGates,
     };
   }
@@ -3288,7 +3288,7 @@ function buildTradeReadiness(args: {
       status: 'execution_candidate',
       label: 'EXECUTION CANDIDATE',
       action: 'Hand to the existing canExecute gate; this layer does not approve execution.',
-      reason: 'Approved model route has complete scanner-owned levels and proof metadata.',
+      reason: 'Execution-eligible active model route has complete scanner-owned levels and proof metadata.',
       missingProof: [],
     };
   }

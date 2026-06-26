@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 8.5 authority language cleanup.
+Files changed: src/lib/localScannerEngine.ts, tools/automation/nt-scanner.ts, tools/automation/discord-scheduler.ts, tools/automation/authority-language-audit.ts, tools/automation/authority-language-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 8.45 identified authority-language drift risk. Live scanner and Discord surfaces needed precise registered/active/watch/plan/Discord/execution/human-review wording so model registration or visibility cannot be confused with execution approval.
+Tests run: `npx tsx tools/automation/authority-language-audit.test.ts`; `npm run diagnostic:authority-language -- --json`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/discord-scheduler-provenance.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 8.5 test verified vague phrase failure, compatibility alias allowance, missing required term failure, and read-only/no-authority-change boundaries. The real authority-language audit scanned 7 live authority surfaces and reported `status=pass`, 0 findings, and all required terms present. It also caught and drove cleanup of three live wording issues: scanner heartbeat `Approved Models`, weekly scheduler `Approved Models For The Week`, and weekly scheduler `approved model tells us WHEN`. Standard workflow loopback reported 23 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 26 pass, 0 fail, 11 skipped optional checks. Full test suite, required guards, lint, and build passed.
+Trading logic changed: No. This is live wording/audit tooling and documentation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: Presentation wording only for scanner heartbeat/weekly scheduler labels. No posting, routing, suppression, cadence, webhook, or outcome-button behavior changed.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 8.55 collapse agent responsibilities around DeskState: document/enforce that scanner-owned DeskState/visibility metadata is the single source of truth for Discord/RAG/UI summaries, without changing trade approvals or gates.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 8.45 obsolete and dirty code cleanup audit.
 Files changed: tools/automation/obsolete-dirty-code-cleanup-audit.ts, tools/automation/obsolete-dirty-code-cleanup-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Before adding more DeskState/visibility structure, the project needs a repeatable audit that inventories obsolete wording, duplicate persistence risk, Gemini/advisory active-path risk, no-trade collapse risk, and hardcoded-window drift without deleting trading-path code on weak evidence.

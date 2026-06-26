@@ -174,6 +174,18 @@ These terms are metadata and diagnostics first. They must not become new gates u
 
 No intended trading logic change.
 
+### Installed audit behavior
+
+Phase 8.5 is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:authority-language -- --json
+```
+
+The standard workflow loopback also runs `phase-8-5-authority-language-audit`.
+
+Current live-surface result: `pass`. The audit scans scanner, selection, Discord formatter/scheduler, setup registry, and responsibility registry authority surfaces for vague phrases such as `approved model`, `approved setup`, and `valid trade`, while requiring the precise metadata terms listed above. Compatibility identifiers such as `bestApprovedModel` may remain only as deprecated stored-audit aliases; user-facing live wording should use active/registered/execution-eligible language.
+
 ## Phase 8.55: Collapse Agent Responsibilities Around DeskState
 
 ### Goal
