@@ -99,7 +99,7 @@ This validates the core scanner workflow using checked-in deterministic tests:
 - live Discord rollout gates;
 - supervisor readiness;
 - fresh re-entry old-vs-new loopback.
-- Phase 9A/9B/9C/9D DeskState audits for trade decision map, candidate lifecycle trace, active DeskState, and Discord watch alert wording.
+- Phase 9A/9B/9C/9D/9E DeskState audits for trade decision map, candidate lifecycle trace, active DeskState, Discord watch alert wording, and watch-to-plan promotion proof.
 
 Pass criteria:
 
@@ -244,6 +244,7 @@ Pass criteria:
 - Phase 9B candidate lifecycle trace audit reports `pass`, verifies every scanner-cycle candidate can be explained as created, selected, directional best, filtered-with-reason, missing-proof, next-trigger, and copied Discord send/suppress state without changing gates.
 - Phase 9C active DeskState audit reports `pass`, verifies DeskState is the scanner-owned source of truth and mirrors visibility metadata, lifecycle trace, promotion path, no-chase language, and `canExecute` boundaries without changing gates.
 - Phase 9D Discord watch alert audit reports `pass`, verifies watch-alert text includes `WATCH FORMING`, line in the sand, side-specific line, completed-5M trigger, invalidation, stand-down/no-chase, not-execution-approval, and `canExecute=false` language without changing gates.
+- Phase 9E watch-to-plan promotion audit reports `pass`, verifies `watch -> conditional -> human_review_ready -> posted_plan` metadata continuity, required proof, blockers, `canPromoteNow=false`, replay validation, and no-authority-change boundaries without changing gates.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
@@ -271,6 +272,7 @@ Pass criteria:
 | Candidate lifecycle trace audit | DeskState visibility cleanup | `phase-9b-candidate-lifecycle-trace-audit`, `diagnostic:candidate-lifecycle-trace`, created/selected/directional/filtered/missing-proof/next-trigger/Discord-decision coverage present, no trading logic changes |
 | Active DeskState audit | DeskState visibility cleanup | `phase-9c-active-desk-state-audit`, `diagnostic:active-desk-state`, DeskState source-of-truth, visibility/lifecycle/promotion alignment, no-chase preservation, and canExecute boundary coverage present, no trading logic changes |
 | Discord watch alert audit | DeskState visibility cleanup | `phase-9d-discord-watch-alert-audit`, `diagnostic:discord-watch-alert`, watch text includes line in the sand, completed-5M trigger, invalidation, stand-down/no-chase, not-execution-approval, and `canExecute=false`, no trading logic changes |
+| Watch-to-plan promotion audit | DeskState visibility cleanup | `phase-9e-watch-to-plan-promotion-audit`, `diagnostic:watch-to-plan-promotion`, watch-to-conditional-review-posted metadata continuity, required proof, blockers, `canPromoteNow=false`, replay validation, no trading logic changes |
 | Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 

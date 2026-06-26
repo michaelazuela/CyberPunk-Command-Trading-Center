@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9E watch-to-plan promotion audit.
+Files changed: tools/automation/watch-to-plan-promotion-audit.ts, tools/automation/watch-to-plan-promotion-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Before changing watch-to-plan behavior, the desk needs a repeatable audit proving `DeskState.promotion` shows continuous watch -> conditional -> human-review-ready -> posted-plan metadata with proof requirements, blockers, replay validation, `canPromoteNow=false`, and no-authority-change boundaries.
+Tests run: `npx tsx tools/automation/watch-to-plan-promotion-audit.test.ts`; `npm run diagnostic:watch-to-plan-promotion -- --json`; `npx tsx tools/automation/discord-watch-alert-audit.test.ts`; `npx tsx tools/automation/active-desk-state-audit.test.ts`; `npx tsx tools/automation/candidate-lifecycle-trace-audit.test.ts`; `npx tsx tools/automation/trade-decision-map-audit.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsc --noEmit`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run test`; `npm run build`.
+Result: Passed. The focused Phase 9E audit reported `status=pass`, 0 findings, 4 DeskState snapshots audited, stages `watch -> conditional -> human_review_ready -> posted_plan`, watch-before-plan true, promotion path observed, promotion proof metadata present, canExecute boundary preserved, no-chase preserved, scanner source-of-truth aligned, Discord/RAG/UI alignment true, and `canPromoteNow=false` for every snapshot. Standard workflow loopback reported 30 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 33 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit verifies promotion metadata that Discord/RAG/UI consumers may inspect, but it does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The audit reads scanner DeskState metadata and does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Install Phase 9F replay-validation audit refresh only if we need a standalone loopback harness for replay verdicts. Existing replay validation is already covered by `bridgeDiagnosticReplayAgent` and the 9E audit.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 9D Discord watch alert audit.
 Files changed: tools/automation/discord-watch-alert-audit.ts, tools/automation/discord-watch-alert-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Before changing Discord watch behavior, the desk needs a repeatable audit proving watch alerts tell the trader what is forming with the line in the sand, completed-5M trigger, invalidation, stand-down/no-chase instruction, and explicit not-execution-approval/canExecute boundary language.

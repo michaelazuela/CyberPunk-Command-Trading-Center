@@ -268,6 +268,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/discord-watch-alert-audit.test.ts'],
   },
   {
+    id: 'phase-9e-watch-to-plan-promotion-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9E watch-to-plan promotion metadata carries required proof, blockers, canPromoteNow=false, and no-authority-change boundaries.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/watch-to-plan-promotion-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

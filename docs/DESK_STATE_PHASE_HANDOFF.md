@@ -481,6 +481,8 @@ Watch -> Conditional -> Human Review Ready -> Posted Plan
 
 Potential scanner/visibility behavior change. Must be reviewed carefully.
 
+Current watch-to-plan promotion audit result: `pass`. The audit verifies scanner-owned `DeskState.promotion` can represent `watch -> conditional -> human_review_ready -> posted_plan` continuity with required proof, blocker metadata, `canPromoteNow=false`, replay validation, no-chase/completed-5M/protected-structure language, source-of-truth markers, and no-authority-change boundaries. This install is audit/design only; it does not post Discord, write Supabase, change scanner behavior, change trading logic, change ranking, change risk rules, change bridge behavior, change `canExecute`, or change entry/stop/target math.
+
 ## Phase 9F: Replay Validation
 
 ### Goal

@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { buildPhase9EWatchToPlanPromotionAudit } from './watch-to-plan-promotion-audit';
+
+const report = buildPhase9EWatchToPlanPromotionAudit();
+
+assert.equal(report.reportType, 'phase_9e_watch_to_plan_promotion_audit');
+assert.equal(report.status, 'pass', JSON.stringify(report.findings, null, 2));
+assert.equal(report.authority.readOnly, true);
+assert.equal(report.authority.postsDiscord, false);
+assert.equal(report.authority.writesSupabase, false);
+assert.equal(report.authority.changesScannerBehavior, false);
+assert.equal(report.authority.changesTradingLogic, false);
+assert.equal(report.authority.changesCanExecute, false);
+assert.equal(report.authority.changesEntryStopTargets, false);
+assert.equal(report.authority.changesRanking, false);
+assert.equal(report.authority.changesRiskRules, false);
+assert.equal(report.authority.changesBridgeBehavior, false);
+assert.equal(report.summary.snapshotsAudited, 4);
+assert.deepEqual(report.summary.stagesObserved, ['watch', 'conditional', 'human_review_ready', 'posted_plan']);
+assert.equal(report.summary.watchAppearedBeforePlan, true);
+assert.equal(report.summary.promotionPathObserved, true);
+assert.equal(report.summary.watchToPlanPromotionProofed, true);
+assert.equal(report.summary.canExecuteBoundaryPreserved, true);
+assert.equal(report.summary.noChasePreserved, true);
+assert.equal(report.summary.sourceOfTruthAligned, true);
+assert.equal(report.summary.discordRagUiAligned, true);
+assert.equal(report.summary.canPromoteNowAlwaysFalse, true);
+assert.ok(report.filesScanned.includes('src/lib/localScannerEngine.ts'));
+assert.ok(report.filesScanned.includes('src/agents/bridgeDiagnosticReplayAgent.ts'));
+assert.ok(report.markdown.includes('watch -> conditional -> human_review_ready -> posted_plan'));
+assert.ok(report.markdown.includes('does not post Discord'));
