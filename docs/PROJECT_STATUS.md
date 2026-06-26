@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 8.55 DeskState responsibility audit.
+Files changed: src/agents/scannerPlanSelectionAgent.ts, tools/automation/deskstate-responsibility-audit.ts, tools/automation/deskstate-responsibility-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: The workflow needs scanner-owned `DeskState`/visibility metadata to remain the single source of truth for active trade visibility. Discord, RAG, UI, and review agents may summarize/store/audit that state, but must not become independent setup scanners, trade-decision owners, conditional-plan builders, or silent suppressors.
+Tests run: `npx tsx tools/automation/deskstate-responsibility-audit.test.ts`; `npm run diagnostic:deskstate-responsibility -- --json`; `npx tsx src/config/responsibilityRegistry.test.ts`; `npx tsx src/agents/scannerPlanSelectionAgent.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/discord-rag-persistence.test.ts`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npx tsc --noEmit`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 8.55 test verified pass, forbidden ownership import failure, missing registry marker failure, and read-only/no-authority-change boundaries. The real responsibility audit scanned 6 live responsibility surfaces and reported `status=pass`, 0 findings. Standard workflow loopback reported 24 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 27 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The new audit protects Discord formatter/scheduler responsibility boundaries but does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime. The new audit verifies scanner automation carries `DeskState` evidence downstream but does not write records.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: After Phase 8.55 passes, install Phase 8.6 no silent drop policy.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 8.5 authority language cleanup.
 Files changed: src/lib/localScannerEngine.ts, tools/automation/nt-scanner.ts, tools/automation/discord-scheduler.ts, tools/automation/authority-language-audit.ts, tools/automation/authority-language-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 8.45 identified authority-language drift risk. Live scanner and Discord surfaces needed precise registered/active/watch/plan/Discord/execution/human-review wording so model registration or visibility cannot be confused with execution approval.
@@ -15,8 +31,6 @@ Journal/RAG impact: None.
 Supabase impact: No migration added.
 Known risks: None known.
 Next recommended action: Phase 8.55 collapse agent responsibilities around DeskState: document/enforce that scanner-owned DeskState/visibility metadata is the single source of truth for Discord/RAG/UI summaries, without changing trade approvals or gates.
-
-## Previous Change
 
 Date: 2026-06-26
 Task: Install Phase 8.45 obsolete and dirty code cleanup audit.

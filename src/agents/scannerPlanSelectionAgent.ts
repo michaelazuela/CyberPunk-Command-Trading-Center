@@ -750,6 +750,7 @@ export function selectScannerPlan(args: {
   targetCascade?: TargetCascadeResult | null;
 }): ScannerPlanSelection {
   const selection = selectScannerPlanCore(args);
+  // sourceOfTruth: classifyScannerVisibility returns scanner_desk_state_visibility_metadata for downstream formatting/storage.
   return {
     ...selection,
     visibilityMetadata: classifyScannerVisibility({

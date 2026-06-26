@@ -226,6 +226,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/authority-language-audit.test.ts'],
   },
   {
+    id: 'phase-8-55-deskstate-responsibility-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 8.55 keeps DeskState/visibility metadata as the scanner-owned source of truth for Discord/RAG/UI visibility.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/deskstate-responsibility-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

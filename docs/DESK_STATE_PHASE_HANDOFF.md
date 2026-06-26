@@ -234,6 +234,18 @@ NinjaTrader OHLC
 
 No intended trading logic change.
 
+### Installed audit behavior
+
+Phase 8.55 is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:deskstate-responsibility -- --json
+```
+
+The standard workflow loopback also runs `phase-8-55-deskstate-responsibility-audit`.
+
+Current responsibility result: `pass`. The audit verifies the responsibility registry names scanner-owned `DeskState`/visibility metadata as the active visibility source of truth, confirms local scanner engine owns the visibility state builders, confirms the selection agent attaches scanner visibility metadata, confirms scanner automation carries `visibilityMetadata`, `candidateLifecycleTrace`, `tradeDecisionMapAudit`, and `deskState`, and blocks Discord formatter/scheduler imports that would make them independent setup, decision, or conditional-plan builders.
+
 ## Phase 8.6: No Silent Drop Policy
 
 ### Goal

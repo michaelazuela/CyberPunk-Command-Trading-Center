@@ -237,6 +237,7 @@ Pass criteria:
 - Phase 17F Discord card artifact signoff status is `ready` when used, with matching scanner report, Discord receipt, safe recovery boundaries, RAG marker, chart PNG, level-map PNG, current renderer contract, matching attachment planVersionId, and valid attachment generatedAt for each reviewed scanner card.
 - Phase 8.45 cleanup audit runs read-only, reports zero unreviewed removal-ready live-code findings, and leaves deferred candidates as inventory for later explicit phases.
 - Phase 8.5 authority-language audit reports `pass`, requires precise authority metadata terms, and blocks vague live-surface phrases such as `approved model`, `approved setup`, or `valid trade`.
+- Phase 8.55 DeskState responsibility audit reports `pass`, verifies scanner-owned `DeskState`/visibility metadata is the source of truth, and blocks Discord/scheduler imports that would make presentation layers independent setup, decision, or conditional-plan builders.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
@@ -258,6 +259,7 @@ Pass criteria:
 | Discord card artifact signoff | Supervisor/restart workflow | `supervisor-discord-card-artifact-signoff`, `discord-card-artifact-signoff-current-tape`, `supervisor:discord-card-signoff`, scanner report JSON, matching Discord receipt JSON, chart PNG, level-map PNG, current renderer contract metadata, local `logs/supervisor/discord-card-artifact-signoff` report |
 | Obsolete/dirty code cleanup audit | DeskState visibility cleanup | `phase-8-45-obsolete-dirty-code-cleanup-audit`, `diagnostic:obsolete-dirty-code-cleanup`, generated cleanup audit report, no deletion unless removal proof is explicit |
 | Authority language cleanup audit | DeskState visibility cleanup | `phase-8-5-authority-language-audit`, `diagnostic:authority-language`, precise authority terms present, no vague approved-model/setup wording in live scanner/Discord surfaces |
+| DeskState responsibility audit | DeskState visibility cleanup | `phase-8-55-deskstate-responsibility-audit`, `diagnostic:deskstate-responsibility`, scanner-owned `DeskState`/visibility metadata remains the source of truth, Discord/RAG/UI surfaces format/store/audit that state instead of owning decisions |
 | Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
