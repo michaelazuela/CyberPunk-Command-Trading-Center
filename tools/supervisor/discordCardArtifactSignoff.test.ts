@@ -18,6 +18,9 @@ async function seedReadyPackage(root: string, overrides: {
   missingChart?: boolean;
   unsafeRecovery?: boolean;
   ragReceiptAttached?: boolean;
+  renderContract?: string;
+  attachmentPlanVersionId?: string;
+  attachmentGeneratedAt?: string | null;
 } = {}) {
   const auditDir = path.join(root, 'audit');
   const outDir = path.join(root, 'out');
@@ -41,10 +44,10 @@ async function seedReadyPackage(root: string, overrides: {
     attachments: {
       chartMarkup,
       priceLevelMap,
-      renderContract: 'quant-desk-trade-plan-target-ladder-v2-axis-safe',
+      renderContract: overrides.renderContract ?? 'quant-desk-trade-plan-target-ladder-v2-axis-safe',
       generatedBy: 'chart-markup-renderer',
-      generatedAt: '2026-06-26T13:48:36.237Z',
-      planVersionId,
+      ...(overrides.attachmentGeneratedAt === null ? {} : { generatedAt: overrides.attachmentGeneratedAt ?? '2026-06-26T13:48:36.237Z' }),
+      planVersionId: overrides.attachmentPlanVersionId ?? planVersionId,
     },
   });
 
@@ -89,7 +92,7 @@ const ready = await buildDiscordCardArtifactSignoff({
   json: false,
 });
 assert.equal(ready.reportType, 'supervisor_discord_card_artifact_signoff');
-assert.equal(ready.phase, 'phase_17d_live_discord_card_artifact_review');
+assert.equal(ready.phase, 'phase_17f_live_discord_card_artifact_metadata_signoff');
 assert.equal(ready.status, 'ready');
 assert.equal(ready.scannerReportCount, 1);
 assert.equal(ready.reviewedCardCount, 1);
@@ -101,6 +104,9 @@ assert.equal(ready.checks.allTradeAlertsHaveRagReceipt, true);
 assert.equal(ready.checks.allChartArtifactsPresent, true);
 assert.equal(ready.checks.allChartArtifactsReadable, true);
 assert.equal(ready.checks.allRenderersIdentified, true);
+assert.equal(ready.checks.allRenderContractsCurrent, true);
+assert.equal(ready.checks.allAttachmentPlanVersionsMatched, true);
+assert.equal(ready.checks.allAttachmentGeneratedAtPresent, true);
 assert.equal(ready.authority.postsDiscord, false);
 assert.equal(ready.authority.writesSupabase, false);
 assert.equal(ready.authority.startsScannerServices, false);
@@ -154,5 +160,50 @@ const missingRag = await buildDiscordCardArtifactSignoff({
 });
 assert.equal(missingRag.status, 'blocked');
 assert.ok(missingRag.failures.some((failure) => failure.includes('RAG/outcome receipt marker')));
+
+const staleContractRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'discord-card-artifact-signoff-stale-contract-'));
+const staleContractDirs = await seedReadyPackage(staleContractRoot, { renderContract: 'legacy-render-contract' });
+const staleContract = await buildDiscordCardArtifactSignoff({
+  tradeDate: '2026-06-26',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir: staleContractDirs.auditDir,
+  outDir: staleContractDirs.outDir,
+  requireScannerReport: true,
+  requireLevelMap: true,
+  json: false,
+});
+assert.equal(staleContract.status, 'blocked');
+assert.ok(staleContract.failures.some((failure) => failure.includes('Renderer contract')));
+
+const planVersionMismatchRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'discord-card-artifact-signoff-plan-version-'));
+const planVersionMismatchDirs = await seedReadyPackage(planVersionMismatchRoot, { attachmentPlanVersionId: 'WRONG-PLAN' });
+const planVersionMismatch = await buildDiscordCardArtifactSignoff({
+  tradeDate: '2026-06-26',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir: planVersionMismatchDirs.auditDir,
+  outDir: planVersionMismatchDirs.outDir,
+  requireScannerReport: true,
+  requireLevelMap: true,
+  json: false,
+});
+assert.equal(planVersionMismatch.status, 'blocked');
+assert.ok(planVersionMismatch.failures.some((failure) => failure.includes('Attachment planVersionId')));
+
+const missingGeneratedAtRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'discord-card-artifact-signoff-generated-at-'));
+const missingGeneratedAtDirs = await seedReadyPackage(missingGeneratedAtRoot, { attachmentGeneratedAt: null });
+const missingGeneratedAt = await buildDiscordCardArtifactSignoff({
+  tradeDate: '2026-06-26',
+  instrument: 'MES',
+  session: 'morning',
+  auditDir: missingGeneratedAtDirs.auditDir,
+  outDir: missingGeneratedAtDirs.outDir,
+  requireScannerReport: true,
+  requireLevelMap: true,
+  json: false,
+});
+assert.equal(missingGeneratedAt.status, 'blocked');
+assert.ok(missingGeneratedAt.failures.some((failure) => failure.includes('generatedAt')));
 
 console.log('Discord card artifact signoff test verified.');

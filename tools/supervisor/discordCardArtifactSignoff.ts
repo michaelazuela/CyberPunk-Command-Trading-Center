@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 type SessionName = 'morning' | 'lunch' | 'evening';
+const EXPECTED_RENDER_CONTRACT = 'quant-desk-trade-plan-target-ladder-v2-axis-safe';
 
 export interface DiscordCardArtifactSignoffOptions {
   tradeDate: string;
@@ -26,6 +27,8 @@ export interface DiscordCardArtifactReview {
   priceLevelMapPath: string | null;
   renderContract: string | null;
   generatedBy: string | null;
+  attachmentPlanVersionId: string | null;
+  attachmentGeneratedAt: string | null;
   checks: {
     scannerReportReadable: boolean;
     receiptMatched: boolean;
@@ -37,13 +40,16 @@ export interface DiscordCardArtifactReview {
     priceLevelMapPresent: boolean;
     priceLevelMapReadablePng: boolean;
     rendererIdentified: boolean;
+    renderContractCurrent: boolean;
+    attachmentPlanVersionMatched: boolean;
+    attachmentGeneratedAtPresent: boolean;
   };
   failures: string[];
 }
 
 export interface DiscordCardArtifactSignoffReport {
   reportType: 'supervisor_discord_card_artifact_signoff';
-  phase: 'phase_17d_live_discord_card_artifact_review';
+  phase: 'phase_17f_live_discord_card_artifact_metadata_signoff';
   generatedAt: string;
   authority: {
     readOnly: true;
@@ -71,6 +77,9 @@ export interface DiscordCardArtifactSignoffReport {
     allChartArtifactsPresent: boolean;
     allChartArtifactsReadable: boolean;
     allRenderersIdentified: boolean;
+    allRenderContractsCurrent: boolean;
+    allAttachmentPlanVersionsMatched: boolean;
+    allAttachmentGeneratedAtPresent: boolean;
   };
   reviews: DiscordCardArtifactReview[];
   failures: string[];
@@ -224,6 +233,12 @@ function recoveryBoundariesSafe(receipt: Record<string, unknown>): boolean {
     boolValue(recoveryUse.mayPlaceOrder) === false;
 }
 
+function isValidTimestamp(value: string | null): boolean {
+  if (!value) return false;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed);
+}
+
 async function buildReview(args: {
   scannerReportPath: string;
   scannerReport: Record<string, unknown>;
@@ -237,6 +252,8 @@ async function buildReview(args: {
   const priceLevelMapPath = stringValue(attachments.priceLevelMap);
   const renderContract = stringValue(attachments.renderContract);
   const generatedBy = stringValue(attachments.generatedBy);
+  const attachmentPlanVersionId = stringValue(attachments.planVersionId);
+  const attachmentGeneratedAt = stringValue(attachments.generatedAt);
   const discordMessage = asRecord(args.receipt?.discordMessage);
   const receiptHttpStatus = numberValue(discordMessage.httpStatus);
   const chartMarkupReadablePng = await isReadablePng(chartMarkupPath);
@@ -251,7 +268,10 @@ async function buildReview(args: {
     chartMarkupReadablePng,
     priceLevelMapPresent: !args.requireLevelMap || Boolean(priceLevelMapPath),
     priceLevelMapReadablePng: !args.requireLevelMap || priceLevelMapReadablePng,
-    rendererIdentified: generatedBy === 'chart-markup-renderer' && Boolean(renderContract),
+    rendererIdentified: generatedBy === 'chart-markup-renderer',
+    renderContractCurrent: renderContract === EXPECTED_RENDER_CONTRACT,
+    attachmentPlanVersionMatched: attachmentPlanVersionId === planVersionId,
+    attachmentGeneratedAtPresent: isValidTimestamp(attachmentGeneratedAt),
   };
   const failures: string[] = [];
   if (!checks.receiptMatched) failures.push(`No trade_alert Discord receipt matched planVersionId ${planVersionId}.`);
@@ -262,7 +282,10 @@ async function buildReview(args: {
   if (!checks.chartMarkupReadablePng) failures.push(`Chart markup attachment is not a readable PNG for ${planVersionId}.`);
   if (!checks.priceLevelMapPresent) failures.push(`Price level map attachment missing for ${planVersionId}.`);
   if (!checks.priceLevelMapReadablePng) failures.push(`Price level map attachment is not a readable PNG for ${planVersionId}.`);
-  if (!checks.rendererIdentified) failures.push(`Renderer contract missing or not chart-markup-renderer for ${planVersionId}.`);
+  if (!checks.rendererIdentified) failures.push(`Renderer identity missing or not chart-markup-renderer for ${planVersionId}.`);
+  if (!checks.renderContractCurrent) failures.push(`Renderer contract for ${planVersionId} is not ${EXPECTED_RENDER_CONTRACT}.`);
+  if (!checks.attachmentPlanVersionMatched) failures.push(`Attachment planVersionId does not match scanner report planVersionId ${planVersionId}.`);
+  if (!checks.attachmentGeneratedAtPresent) failures.push(`Attachment generatedAt missing or invalid for ${planVersionId}.`);
 
   return {
     planVersionId,
@@ -274,6 +297,8 @@ async function buildReview(args: {
     priceLevelMapPath,
     renderContract,
     generatedBy,
+    attachmentPlanVersionId,
+    attachmentGeneratedAt,
     checks,
     failures,
   };
@@ -324,6 +349,8 @@ export async function buildDiscordCardArtifactSignoff(
         priceLevelMapPath: null,
         renderContract: null,
         generatedBy: null,
+        attachmentPlanVersionId: null,
+        attachmentGeneratedAt: null,
         checks: {
           scannerReportReadable: false,
           receiptMatched: false,
@@ -335,6 +362,9 @@ export async function buildDiscordCardArtifactSignoff(
           priceLevelMapPresent: false,
           priceLevelMapReadablePng: false,
           rendererIdentified: false,
+          renderContractCurrent: false,
+          attachmentPlanVersionMatched: false,
+          attachmentGeneratedAtPresent: false,
         },
         failures: [`Scanner report could not be read: ${error instanceof Error ? error.message : String(error)}`],
       });
@@ -351,6 +381,9 @@ export async function buildDiscordCardArtifactSignoff(
     allChartArtifactsPresent: reviews.every((review) => review.checks.chartMarkupPresent && review.checks.priceLevelMapPresent),
     allChartArtifactsReadable: reviews.every((review) => review.checks.chartMarkupReadablePng && review.checks.priceLevelMapReadablePng),
     allRenderersIdentified: reviews.every((review) => review.checks.rendererIdentified),
+    allRenderContractsCurrent: reviews.every((review) => review.checks.renderContractCurrent),
+    allAttachmentPlanVersionsMatched: reviews.every((review) => review.checks.attachmentPlanVersionMatched),
+    allAttachmentGeneratedAtPresent: reviews.every((review) => review.checks.attachmentGeneratedAtPresent),
   };
   const status: DiscordCardArtifactSignoffReport['status'] =
     scannerReportPaths.length === 0 && !options.requireScannerReport
@@ -363,7 +396,7 @@ export async function buildDiscordCardArtifactSignoff(
   );
   const report: DiscordCardArtifactSignoffReport = {
     reportType: 'supervisor_discord_card_artifact_signoff',
-    phase: 'phase_17d_live_discord_card_artifact_review',
+    phase: 'phase_17f_live_discord_card_artifact_metadata_signoff',
     generatedAt: new Date().toISOString(),
     authority: authority(),
     tradeDate: options.tradeDate,
@@ -378,8 +411,8 @@ export async function buildDiscordCardArtifactSignoff(
     failures,
     reportPath,
     bottomLine: status === 'ready'
-      ? `Phase 17D Discord card artifact signoff ready: ${reviews.length} scanner card report(s) have matching Discord receipts, safe recovery boundaries, RAG markers, and readable chart artifacts.`
-      : `Phase 17D Discord card artifact signoff ${status}: ${failures.join(' ')}`,
+      ? `Phase 17F Discord card artifact signoff ready: ${reviews.length} scanner card report(s) have matching Discord receipts, safe recovery boundaries, RAG markers, current renderer metadata, and readable chart artifacts.`
+      : `Phase 17F Discord card artifact signoff ${status}: ${failures.join(' ')}`,
   };
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   return report;

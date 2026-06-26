@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 17F Discord card artifact metadata contract signoff.
+Files changed: tools/supervisor/discordCardArtifactSignoff.ts, tools/supervisor/discordCardArtifactSignoff.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 17D verified card artifacts and Phase 17E polished card subtitles, but the artifact signoff still accepted any non-empty renderer contract instead of the current approved renderer metadata.
+Tests run: `npx tsx tools/supervisor/discordCardArtifactSignoff.test.ts`; `npm run supervisor:discord-card-signoff -- --trade-date 2026-06-26 --instrument MES --session morning --json`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 17F test verified ready, missing-chart blocked, unsafe-recovery blocked, missing-RAG-marker blocked, stale-render-contract blocked, attachment-planVersion mismatch blocked, and missing-generatedAt blocked paths. The standalone June 26 morning card signoff returned `status=ready`, 1 scanner report, 1 matching Discord receipt, HTTP 200, safe recovery boundaries, RAG marker attached, readable chart PNG, readable level-map PNG, `chart-markup-renderer`, current renderer contract, matching attachment planVersionId, valid attachment generatedAt, and no failures. The standard workflow loopback reported 21 pass, 0 fail, 14 skipped optional/full/real-tape checks. The real-tape card-signoff loopback reported 24 pass, 0 fail, 11 skipped optional checks. Required guards, lint, and build passed.
+Trading logic changed: No. This is read-only artifact metadata signoff only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The signoff reads local scanner reports, receipts, and chart artifact metadata only; it does not post, edit, delete, or route Discord messages.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Ready for the next explicitly scoped phase.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 17E Discord card subtitle visual polish.
 Files changed: tools/automation/chart-markup-renderer.ts, tools/automation/chart-markup-renderer.test.ts, docs/PROJECT_STATUS.md.
 Reason: Phase 17D proved card artifact readiness, but visual QA found long setup subtitles could truncate awkwardly on Discord chart and level-map cards even though required trade levels remained readable.
