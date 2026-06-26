@@ -51,11 +51,25 @@ const archiveSignoff = process.argv.includes('--archive-signoff');
 const eodBundle = process.argv.includes('--eod-bundle');
 const eodSummary = process.argv.includes('--eod-summary');
 const liveObservationSignoff = process.argv.includes('--live-observation-signoff');
+const requireEvidenceSummary = process.argv.includes('--require-evidence-summary');
 const json = process.argv.includes('--json');
 const tradeDate = argValue('--trade-date') ?? new Date().toISOString().slice(0, 10);
 const instrument = argValue('--instrument') ?? 'MES';
 const session = argValue('--session') ?? 'all';
 const signoffSession = session === 'all' ? 'morning' : session;
+const liveObservationSignoffArgs = [
+  'run',
+  'supervisor:live-observation-signoff',
+  '--',
+  '--trade-date',
+  tradeDate,
+  '--instrument',
+  instrument,
+  '--session',
+  signoffSession,
+  '--json',
+  ...(requireEvidenceSummary ? ['--require-evidence-summary'] : []),
+];
 
 const checks: LoopbackCheck[] = [
   {
@@ -242,14 +256,6 @@ const checks: LoopbackCheck[] = [
     realTapeOnly: true,
   },
   {
-    id: 'live-observation-signoff-current-tape',
-    area: 'supervisor_restart_workflow',
-    description: 'Runs the Phase 17 live-observation signoff wrapper over the requested current scanner tape before accepting live Discord behavior.',
-    command: bin('npm'),
-    args: ['run', 'supervisor:live-observation-signoff', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
-    realTapeOnly: true,
-  },
-  {
     id: 'end-of-day-evidence-bundle',
     area: 'supervisor_restart_workflow',
     description: 'Builds a dated evidence bundle with signoff manifest, scanner tape, observer report, and supervisor status.',
@@ -263,6 +269,14 @@ const checks: LoopbackCheck[] = [
     description: 'Reads the latest/requested evidence bundle and prints compact ready/blocked/missing status.',
     command: bin('npm'),
     args: ['run', 'supervisor:eod-summary', '--', '--trade-date', tradeDate, '--instrument', instrument, '--session', signoffSession, '--json'],
+    realTapeOnly: true,
+  },
+  {
+    id: 'live-observation-signoff-current-tape',
+    area: 'supervisor_restart_workflow',
+    description: 'Runs the Phase 17 live-observation signoff wrapper over the requested current scanner tape before accepting live Discord behavior.',
+    command: bin('npm'),
+    args: liveObservationSignoffArgs,
     realTapeOnly: true,
   },
   {

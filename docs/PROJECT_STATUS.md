@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 17C required evidence-summary live-observation workflow.
+Files changed: tools/automation/new-project-workflow-loopback.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 17B proved fresh live-tape observation, but end-of-day signoff still needed workflow support for `--require-evidence-summary` after creating and verifying the evidence bundle.
+Tests run: `npm run workflow:loopback -- --real-tapes --eod-bundle --eod-summary --live-observation-signoff --require-evidence-summary --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run supervisor:live-observation-signoff -- --trade-date 2026-06-26 --instrument MES --session morning --require-evidence-summary --json`; `npm run supervisor:eod-summary -- --trade-date 2026-06-26 --instrument MES --session morning --json`; `npm run workflow:loopback -- --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The required-evidence real-tape workflow reported 26 pass, 0 fail, 7 skipped optional checks; it created the June 26 morning evidence bundle, verified evidence summary ready, then ran `live-observation-signoff-current-tape` with `--require-evidence-summary=pass`. The standalone required live-observation signoff returned `status=ready`, supervisor Phase 6 `ready/pass`, Discord signoff `ready`, Phase 4 failures `0`, Phase 5 failures `0`, 8 active HTF FVG routing events, 8 Phase 5 contract events, evidence summary `ready`, and no failures. The standard workflow loopback reported 20 pass, 0 fail, 13 skipped optional/full/real-tape checks. Required guards, lint, and build passed.
+Trading logic changed: No. This is read-only workflow/signoff wiring only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The workflow reads local scanner/observer/evidence artifacts only and does not post Discord.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 17D should be an actual live Discord/card review pass only if new Discord sends/cards appear; otherwise this live-observation/evidence workflow is complete.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 17B live-observation signoff in real-tape workflow.
 Files changed: tools/automation/new-project-workflow-loopback.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 17A added the live-observation signoff command, but fresh/current scanner tape proof needed to be callable from the standard real-tape loopback with a dedicated flag.

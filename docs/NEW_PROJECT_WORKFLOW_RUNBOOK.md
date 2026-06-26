@@ -176,6 +176,12 @@ To include that same Phase 17 live-observation proof in the real-tape workflow l
 npm run workflow:loopback -- --real-tapes --live-observation-signoff --trade-date=<yyyy-mm-dd> --instrument=MES --session=<morning|lunch|evening> --json
 ```
 
+For end-of-day signoff where the evidence bundle must exist and be ready, run:
+
+```bash
+npm run workflow:loopback -- --real-tapes --eod-bundle --eod-summary --live-observation-signoff --require-evidence-summary --trade-date=<yyyy-mm-dd> --instrument=MES --session=<morning|lunch|evening> --json
+```
+
 From the Windows tray, use:
 
 ```text
@@ -221,6 +227,7 @@ Pass criteria:
 - Phase 5 failures are `0`;
 - active HTF FVG routing events and Phase 5 contract events are present when expected for the session.
 - Phase 17 live-observation signoff status is `ready` when used.
+- Phase 17 required-evidence signoff uses `--require-evidence-summary` only after `--eod-bundle --eod-summary` have created and verified the bundle.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.
@@ -238,7 +245,7 @@ Pass criteria:
 | 5M/15M/60M/120M/240M MSS evidence | MSS evidence | `mss-evidence`, `multi-timeframe-campaign-evidence`, `active-mss-ruleset-audit` |
 | Evening HTF-only data-quality noise | Evening hardening | `nt-scanner-alert`, `live-discord-rollout`, `supervisor-readiness-drill` |
 | Maintenance-break stale heartbeat | Evening hardening | `supervisor-runtime`, `supervisor:status` during/after maintenance break |
-| Live scanner/Discord observation signoff | Supervisor/restart workflow | `supervisor-live-observation-signoff`, `live-observation-signoff-current-tape`, `supervisor:live-observation-signoff`, `supervisor:phase6-signoff`, live observer report, local `logs/supervisor/live-observation-signoff` report |
+| Live scanner/Discord observation signoff | Supervisor/restart workflow | `supervisor-live-observation-signoff`, `live-observation-signoff-current-tape`, optional `--require-evidence-summary`, `supervisor:live-observation-signoff`, `supervisor:phase6-signoff`, live observer report, local `logs/supervisor/live-observation-signoff` report |
 | Post-restart live-format signoff | Supervisor/restart workflow | `supervisor:phase6-signoff`, `supervisor:signoff-manifest`, `supervisor:eod-bundle`, `supervisor:eod-summary`, `supervisor-tray-parser`, `evidence-summary-tray-helper-parser`, `evidence-summary-tray-helper-no-open`, tray `Open Live Signoff`, tray `Open Evidence Summary`, local `logs/supervisor/live-signoff`, `logs/supervisor/live-signoff-manifests`, `logs/supervisor/evidence-summary`, and `logs/supervisor/end-of-day-evidence` reports |
 | Discord chart/text/RAG artifact consistency | Presentation | `discord-alert-format`, `discord-cleanup-verification.test.ts`, visual QA when rendering actual cards |
 
