@@ -207,9 +207,16 @@ const checks: LoopbackCheck[] = [
   {
     id: 'supervisor-discord-card-artifact-signoff',
     area: 'supervisor_restart_workflow',
-    description: 'Verifies Phase 17D Discord card artifact signoff over scanner reports, receipts, chart artifacts, and safe recovery boundaries.',
+    description: 'Verifies Phase 17F Discord card artifact metadata signoff over scanner reports, receipts, chart artifacts, and safe recovery boundaries.',
     command: bin('npx'),
     args: ['tsx', 'tools/supervisor/discordCardArtifactSignoff.test.ts'],
+  },
+  {
+    id: 'phase-8-45-obsolete-dirty-code-cleanup-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 8.45 cleanup audit inventory remains read-only and separates removal-ready findings from deferred review candidates.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/obsolete-dirty-code-cleanup-audit.test.ts'],
   },
   {
     id: 'supervisor-tray-parser',
@@ -302,7 +309,7 @@ const checks: LoopbackCheck[] = [
   {
     id: 'discord-card-artifact-signoff-current-tape',
     area: 'supervisor_restart_workflow',
-    description: 'Runs the Phase 17D Discord card artifact signoff over the requested current scanner card reports and Discord receipts.',
+    description: 'Runs the Phase 17F Discord card artifact metadata signoff over the requested current scanner card reports and Discord receipts.',
     command: bin('npm'),
     args: discordCardSignoffArgs,
     realTapeOnly: true,

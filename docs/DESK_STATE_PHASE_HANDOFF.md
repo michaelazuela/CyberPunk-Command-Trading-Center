@@ -131,6 +131,18 @@ This phase must be audit-first. Do not delete trading-path code just because it 
 
 No intended trading logic change. This phase removes obsolete or duplicate code only when current behavior is protected by tests.
 
+### Installed audit behavior
+
+Phase 8.45 is installed as a repeatable read-only audit command:
+
+```bash
+npm run diagnostic:obsolete-dirty-code-cleanup -- --json
+```
+
+The standard workflow loopback also runs `phase-8-45-obsolete-dirty-code-cleanup-audit`.
+
+Current audit result: no live-code removal is justified without more review. The inventory is deferred into later phases, mostly authority-language cleanup, no-trade/visibility wording review, and hardcoded-window trace review. Do not delete those paths from this audit alone.
+
 ## Phase 8.5: Authority Language Cleanup
 
 ### Goal

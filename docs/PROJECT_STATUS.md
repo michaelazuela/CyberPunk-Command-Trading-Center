@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 8.45 obsolete and dirty code cleanup audit.
+Files changed: tools/automation/obsolete-dirty-code-cleanup-audit.ts, tools/automation/obsolete-dirty-code-cleanup-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Before adding more DeskState/visibility structure, the project needs a repeatable audit that inventories obsolete wording, duplicate persistence risk, Gemini/advisory active-path risk, no-trade collapse risk, and hardcoded-window drift without deleting trading-path code on weak evidence.
+Tests run: `npx tsx tools/automation/obsolete-dirty-code-cleanup-audit.test.ts`; `npm run diagnostic:obsolete-dirty-code-cleanup -- --json`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run test`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`.
+Result: Passed. The focused Phase 8.45 test verified removal-ready, deferred, canonical-window exclusion, and read-only authority boundaries. The real repo audit scanned 405 files and reported 490 deferred review candidates, 0 removal-ready live-code candidates, and 0 protected/current-contract findings. The deferred inventory grouped as 365 legacy approved-authority-language references, 109 hardcoded active-window strings requiring trace review, and 16 Discord no-trade collapse risk branches requiring visibility review. Standard workflow loopback reported 22 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 25 pass, 0 fail, 11 skipped optional checks. Full test suite, required guards, lint, and build passed. No code removal was performed because the audit did not prove any live path was unused, superseded, duplicated, or unsafe.
+Trading logic changed: No. This is read-only audit tooling and documentation only. It does not change setup definitions, ranking, candidate creation, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None. The audit does not post, edit, delete, route, or suppress Discord messages.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known. Deferred findings are inventory only and should not be deleted without later proof.
+Next recommended action: Phase 8.5 authority language cleanup: replace vague approved-model/setup wording with precise authority metadata and user-facing language without changing gates.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 17F Discord card artifact metadata contract signoff.
 Files changed: tools/supervisor/discordCardArtifactSignoff.ts, tools/supervisor/discordCardArtifactSignoff.test.ts, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 17D verified card artifacts and Phase 17E polished card subtitles, but the artifact signoff still accepted any non-empty renderer contract instead of the current approved renderer metadata.
