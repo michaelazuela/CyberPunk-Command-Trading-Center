@@ -289,6 +289,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/htf-fvg-decision-zone-alert-audit.test.ts'],
   },
   {
+    id: 'phase-9j-live-observation-proof-audit',
+    area: 'supervisor_restart_workflow',
+    description: 'Verifies the post-restart live-observation proof path is wired, read-only, restart-filterable, and documented after Phase 9H.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/live-observation-proof-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',

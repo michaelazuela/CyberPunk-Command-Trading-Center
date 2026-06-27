@@ -99,7 +99,7 @@ This validates the core scanner workflow using checked-in deterministic tests:
 - live Discord rollout gates;
 - supervisor readiness;
 - fresh re-entry old-vs-new loopback.
-- Phase 9A/9B/9C/9D/9E/9F/9H DeskState audits for trade decision map, candidate lifecycle trace, active DeskState, Discord watch alert wording, watch-to-plan promotion proof, replay verdicts, and HTF FVG decision-zone alert rendering.
+- Phase 9A/9B/9C/9D/9E/9F/9H/9J DeskState/live-proof audits for trade decision map, candidate lifecycle trace, active DeskState, Discord watch alert wording, watch-to-plan promotion proof, replay verdicts, HTF FVG decision-zone alert rendering, and post-restart live-observation proof wiring.
 
 Pass criteria:
 
@@ -247,6 +247,7 @@ Pass criteria:
 - Phase 9E watch-to-plan promotion audit reports `pass`, verifies `watch -> conditional -> human_review_ready -> posted_plan` metadata continuity, required proof, blockers, `canPromoteNow=false`, replay validation, and no-authority-change boundaries without changing gates.
 - Phase 9F replay validation audit reports `pass`, verifies replay verdicts for watch-before-plan, line metadata, promotion correctness, no-chase, explained no-trade, consumer alignment, and no-authority-change boundaries without changing gates.
 - Phase 9H HTF FVG decision-zone alert audit reports `pass`, verifies the Discord-rendered FVG decision-zone block includes line, why, hold, fold, no-chase, parent reaction, cascade, pending-level/review-only wording, and no-authority-change boundaries without changing gates.
+- Phase 9J live-observation proof audit reports `pass`, verifies the post-restart live-observation signoff command, loopback flag, read-only authority boundary, scanner-restart timestamp filter, runbook commands, and Phase 9H precondition are wired before live evidence is accepted.
 - end-of-day bundle status is `ready` when used, with no missing signoff/tape/observer/status files.
 - end-of-day summary status is `ready` when used, with all bundle files present.
 - evidence-summary tray helper no-open execution passes when `--real-tapes --eod-summary` is used.

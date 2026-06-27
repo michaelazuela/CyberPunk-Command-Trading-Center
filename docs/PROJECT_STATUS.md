@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-27
+Task: Install Phase 9J live-observation proof audit.
+Files changed: tools/automation/live-observation-proof-audit.ts, tools/automation/live-observation-proof-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9H completed the current audit/loopback side. The next practical risk is accepting fresh scanner output without a repeatable post-restart proof path, so this phase adds a read-only audit that verifies the live-observation signoff command, loopback flag, authority boundary, scanner-restart timestamp filter, runbook commands, and Phase 9H precondition are wired.
+Tests run: `npm run diagnostic:live-observation-proof -- --json`; `npx tsx tools/automation/live-observation-proof-audit.test.ts`; `npx tsx tools/automation/htf-fvg-decision-zone-alert-audit.test.ts`; `npx tsc --noEmit`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --live-observation-signoff --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run test`; `npm run build`.
+Result: Passed. The focused Phase 9J audit reported `status=pass`, 0 findings, supervisor live-observation command present, loopback flag present, read-only authority boundary present, scanner-restart timestamp filter present, runbook command present, and Phase 9H precondition present. Standard workflow loopback reported 33 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape live-observation plus card-signoff loopback reported 37 pass, 0 fail, 10 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Run the live-observation proof after the next scanner restart with fresh market data using `npm run workflow:loopback -- --real-tapes --live-observation-signoff --discord-card-signoff --trade-date=<date> --instrument=MES --session=<session> --json`. Add new code only if that fresh tape exposes a routing or artifact gap.
+
+## Previous Change
+
 Date: 2026-06-26
 Task: Install Phase 9H HTF FVG decision-zone alert audit.
 Files changed: tools/automation/htf-fvg-decision-zone-alert-audit.ts, tools/automation/htf-fvg-decision-zone-alert-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
