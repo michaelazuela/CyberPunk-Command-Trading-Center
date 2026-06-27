@@ -522,6 +522,8 @@ Make Discord name important 15M/60M/120M/240M FVG or imbalance decision zones wh
 
 `DeskState.primaryDeskPlay.fvgDecisionZone` is populated only when the active scanner-owned line in the sand is already tagged as an FVG/imbalance line. Current Desk Plan Discord output can then show a compact `FVG Decision Zone` block.
 
+Current decision-zone alert audit result: `pass`. The audit renders a Current Desk Plan fixture through the real Discord formatter and verifies the FVG Decision Zone block, line in the sand, why/hold/fold/no-chase instructions, HTF parent reaction memory, HTF FVG cascade, pending-level/review-only wording, and no-authority-change boundary.
+
 ### Trading logic impact
 
 No intended execution approval change. Discord visibility wording changes only.

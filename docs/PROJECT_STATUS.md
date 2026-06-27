@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9H HTF FVG decision-zone alert audit.
+Files changed: tools/automation/htf-fvg-decision-zone-alert-audit.ts, tools/automation/htf-fvg-decision-zone-alert-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9H runtime visibility already existed, but the desk needed a standalone loopback audit proving Current Desk Plan Discord output keeps HTF FVG decision-zone context visible with line, why, hold, fold, no-chase, parent reaction, cascade, pending-level/review-only wording, and no-authority-change boundaries.
+Tests run: `npm run diagnostic:htf-fvg-decision-zone-alert -- --json`; `npx tsx tools/automation/htf-fvg-decision-zone-alert-audit.test.ts`; `npx tsx tools/automation/replay-validation-audit.test.ts`; `npx tsc --noEmit`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run test`; `npm run build`.
+Result: Passed. The focused Phase 9H audit reported `status=pass`, 0 findings, FVG decision-zone block rendered, line in the sand rendered, why/hold/fold rendered, no-chase rendered, HTF parent reaction rendered, HTF FVG cascade rendered, pending-level/review-only wording preserved, and no-authority-change true. Standard workflow loopback reported 32 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 35 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit renders a synthetic payload through the existing formatter; it does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Phase 9 is complete from the current audit/loopback side. Next practical phase should be live-observation proof on fresh scanner output after restart/market data is active, then only add new code if live tapes expose a routing gap.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 9F replay validation audit.
 Files changed: tools/automation/replay-validation-audit.ts, tools/automation/replay-validation-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Phase 9F replay verdicts already existed inside the bridge diagnostic replay agent; the desk needed a standalone audit/loopback check proving watch-before-plan, line metadata, promotion correctness, no-chase, explained no-trade, consumer alignment, and no-authority-change boundaries.
