@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-26
+Task: Install Phase 9F replay validation audit.
+Files changed: tools/automation/replay-validation-audit.ts, tools/automation/replay-validation-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Phase 9F replay verdicts already existed inside the bridge diagnostic replay agent; the desk needed a standalone audit/loopback check proving watch-before-plan, line metadata, promotion correctness, no-chase, explained no-trade, consumer alignment, and no-authority-change boundaries.
+Tests run: `npm run diagnostic:replay-validation -- --json`; `npx tsx tools/automation/replay-validation-audit.test.ts`; `npx tsx tools/automation/watch-to-plan-promotion-audit.test.ts`; `npx tsc --noEmit`; `npm run workflow:loopback -- --json`; `npm run workflow:loopback -- --real-tapes --discord-card-signoff --trade-date=2026-06-26 --instrument=MES --session=morning --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run test`; `npm run build`.
+Result: Passed. The focused Phase 9F replay validation audit reported `status=pass`, 0 findings, 3 replay cycles, watch-before-move pass, line metadata pass, promotion correctness pass, no-chase preservation pass, explained no-trade pass, consumer alignment pass, and no-authority-change true. Standard workflow loopback reported 31 pass, 0 fail, 14 skipped optional/full/real-tape checks. Real-tape card-signoff workflow loopback reported 34 pass, 0 fail, 11 skipped optional checks. Full test suite, TypeScript, required guards, lint, and build passed.
+Trading logic changed: No. This is read-only audit tooling, loopback coverage, and documentation only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: None at runtime. The audit verifies replay metadata only; it does not post, route, suppress, edit, or delete messages.
+Journal/RAG impact: None at runtime.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Install Phase 9H HTF FVG decision-zone alert audit. After that, Phase 9 should be complete unless live observation exposes a new routing gap.
+
+## Previous Change
+
+Date: 2026-06-26
 Task: Install Phase 9E watch-to-plan promotion audit.
 Files changed: tools/automation/watch-to-plan-promotion-audit.ts, tools/automation/watch-to-plan-promotion-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/DESK_STATE_PHASE_HANDOFF.md, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Before changing watch-to-plan behavior, the desk needs a repeatable audit proving `DeskState.promotion` shows continuous watch -> conditional -> human-review-ready -> posted-plan metadata with proof requirements, blockers, replay validation, `canPromoteNow=false`, and no-authority-change boundaries.

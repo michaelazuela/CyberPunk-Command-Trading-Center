@@ -502,6 +502,8 @@ Prove the new command path before trusting it live.
 
 No, research/replay only.
 
+Current replay validation audit result: `pass`. The audit verifies the Phase 9F replay verdict reports watch-before-plan, line-in-sand/market-structure metadata, promotion correctness, no-chase preservation, clearly explained no-trade, Discord/RAG/UI DeskState alignment, and no-authority-change boundaries. It does not post Discord, write Supabase, change scanner behavior, change trading logic, change ranking, change risk rules, change bridge behavior, change `canExecute`, or change entry/stop/target math.
+
 ## Phase 9H: HTF FVG Decision-Zone Alerts
 
 ### Goal

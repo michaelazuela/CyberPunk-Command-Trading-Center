@@ -275,6 +275,13 @@ const checks: LoopbackCheck[] = [
     args: ['tsx', 'tools/automation/watch-to-plan-promotion-audit.test.ts'],
   },
   {
+    id: 'phase-9f-replay-validation-audit',
+    area: 'desk_state_visibility',
+    description: 'Verifies Phase 9F replay verdicts prove watch-before-plan, line metadata, promotion correctness, no-chase, explained no-trade, and consumer alignment.',
+    command: bin('npx'),
+    args: ['tsx', 'tools/automation/replay-validation-audit.test.ts'],
+  },
+  {
     id: 'supervisor-tray-parser',
     area: 'supervisor_restart_workflow',
     description: 'Verifies the Windows supervisor tray script parses before operator signoff shortcuts are trusted.',
