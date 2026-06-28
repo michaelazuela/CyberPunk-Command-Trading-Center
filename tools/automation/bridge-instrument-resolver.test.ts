@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 const bridgeUrl = 'http://127.0.0.1:8765';
@@ -130,5 +131,13 @@ const healthFailure = await resolveCurrentBridgeInstrument({
 assert.equal(healthFailure.instrument, 'MES 06-26');
 assert.equal(healthFailure.source, 'fallback');
 assert.ok(healthFailure.warning?.includes('bridge offline'));
+
+const recorderSource = fs.readFileSync(new URL('./candle-recorder.ts', import.meta.url), 'utf8');
+assert.ok(
+  recorderSource.includes('const requestedBridgeInstrument = argValue') &&
+    recorderSource.includes('currentBridgeInstrument: bridgeInstrument') &&
+    recorderSource.includes('bridgeInstrument = resolution.bridgeInstrument'),
+  'candle recorder must refresh active bridge contract inside the polling loop while preserving the requested root instrument',
+);
 
 console.log('Bridge instrument resolver verified.');

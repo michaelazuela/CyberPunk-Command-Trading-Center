@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-28
+Task: Fix open-market candle recorder heartbeat active-contract drift.
+Files changed: tools/automation/candle-recorder.ts, tools/automation/bridge-instrument-resolver.test.ts, docs/PROJECT_STATUS.md.
+Reason: During an open Sunday futures session, the supervisor scanner resolved root `MES` to active contract `MES 09-26`, but the candle recorder kept polling raw `MES`, causing repeated `Instrument not found: MES` warnings and a false recorder heartbeat issue. The recorder now preserves the configured root while refreshing the active bridge contract inside every polling cycle before OHLC fetch.
+Tests run: `npx tsx tools/automation/bridge-instrument-resolver.test.ts`; `npm run nt:candle-recorder -- --instrument MES --bridge-instrument MES --bridge-url http://127.0.0.1:8765 --once --bar-time-zone eastern`; supervisor restart/status check; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run guard:bridge-contracts`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Focused recorder loopback resolved root `MES` to active bridge contract `MES 09-26` and upserted 600 bars across 5m, 15m, 60m, 120m, and 240m. After supervisor restart, scanner and candle-recorder were both running, NinjaTrader bridge health reported `defaultInstrument=MES 09-26`, and recorder heartbeat was `ok` with 600 bars processed.
+Trading logic changed: No. This only changes recorder bridge-instrument selection before OHLC ingestion. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: Recorder now re-resolves root/stale bridge instruments from NinjaTrader bridge health each cycle so market_bars ingestion does not stay pinned to an unfetchable root symbol after market open, bridge refresh, or rollover.
+Discord impact: None directly. The fix reduces false supervisor recorder-heartbeat alerts caused by stale recorder ingestion.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Continue live observation during the evening scanner window. If a future alert says recorder heartbeat needs attention while the market is open, first check whether heartbeat `bridgeInstrument` is the resolved active contract and whether NinjaTrader bridge health exposes a matching `defaultInstrument`.
+
+## Previous Change
+
 Date: 2026-06-27
 Task: Install Phase 9J live-observation proof audit.
 Files changed: tools/automation/live-observation-proof-audit.ts, tools/automation/live-observation-proof-audit.test.ts, tools/automation/new-project-workflow-loopback.ts, package.json, docs/NEW_PROJECT_WORKFLOW_RUNBOOK.md, docs/PROJECT_STATUS.md.

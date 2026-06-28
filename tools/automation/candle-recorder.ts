@@ -199,10 +199,33 @@ async function recordOnce({
   return { total, latestCompleted5m: latest5m?.time || null, warning: null };
 }
 
+async function resolveRecorderBridgeInstrument(args: {
+  bridgeUrl: string;
+  instrument: Instrument;
+  requestedBridgeInstrument: string;
+  currentBridgeInstrument: string;
+  lastWarning: string | null;
+}): Promise<{ bridgeInstrument: string; lastWarning: string | null }> {
+  const resolution = await resolveCurrentBridgeInstrument({
+    bridgeUrl: args.bridgeUrl,
+    appInstrument: args.instrument,
+    requestedBridgeInstrument: args.requestedBridgeInstrument,
+  });
+  const warning = resolution.warning || null;
+  if (warning && warning !== args.lastWarning) {
+    console.warn(`[market-cache] ${warning}`);
+  }
+  if (resolution.instrument !== args.currentBridgeInstrument) {
+    console.warn(`[market-cache] Bridge instrument refreshed from ${args.currentBridgeInstrument} to ${resolution.instrument}.`);
+  }
+  return { bridgeInstrument: resolution.instrument, lastWarning: warning };
+}
+
 async function main() {
   const bridgeUrl = argValue('bridge-url') || process.env.NINJATRADER_BRIDGE_URL || 'http://127.0.0.1:8765';
   const instrument = ((argValue('instrument') || 'MES') as Instrument);
-  let bridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES';
+  const requestedBridgeInstrument = argValue('bridge-instrument') || process.env.NINJATRADER_BRIDGE_INSTRUMENT || 'MES';
+  let bridgeInstrument = requestedBridgeInstrument;
   const pollSeconds = Number(argValue('poll-seconds') || '60');
   const limit = Math.max(10, Math.min(450, Number(argValue('limit') || '120')));
   const maxStaleBarMinutes = numberArg('max-stale-bar-minutes', 10);
@@ -218,10 +241,11 @@ async function main() {
   const instrumentResolution = await resolveCurrentBridgeInstrument({
     bridgeUrl,
     appInstrument: instrument,
-    requestedBridgeInstrument: bridgeInstrument,
+    requestedBridgeInstrument,
   });
   bridgeInstrument = instrumentResolution.instrument;
-  if (instrumentResolution.warning) console.warn(`[market-cache] ${instrumentResolution.warning}`);
+  let lastInstrumentResolutionWarning = instrumentResolution.warning || null;
+  if (lastInstrumentResolutionWarning) console.warn(`[market-cache] ${lastInstrumentResolutionWarning}`);
 
   console.log('Quant Desk NinjaTrader candle recorder started.');
   console.log(`Bridge: ${bridgeUrl} | Instrument: ${bridgeInstrument} | Timeframes: ${TIMEFRAMES.join(', ')} | Bar time: ${barTimeZone}/${barTimestampMode}`);
@@ -229,6 +253,15 @@ async function main() {
 
   do {
     try {
+      const resolution = await resolveRecorderBridgeInstrument({
+        bridgeUrl,
+        instrument,
+        requestedBridgeInstrument,
+        currentBridgeInstrument: bridgeInstrument,
+        lastWarning: lastInstrumentResolutionWarning,
+      });
+      bridgeInstrument = resolution.bridgeInstrument;
+      lastInstrumentResolutionWarning = resolution.lastWarning;
       const result = await recordOnce({ bridgeUrl, instrument, bridgeInstrument, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone });
       writeHeartbeat(heartbeatPath, {
         status: result.warning ? 'warn' : 'ok',
