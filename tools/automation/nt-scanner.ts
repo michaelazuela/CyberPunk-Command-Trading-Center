@@ -5145,6 +5145,46 @@ function scannerHtfFvgReviewMapReason(args: {
   return `${direction} high-quality HTF/FVG review map is eligible: ${parentLabel}${childLabel}, decision quality is ${score}, ${priceContext}, complete app-owned entry/stop/T1/T2 are present, and Discord remains review-only until completed 5M proof plus canExecute.`;
 }
 
+function scannerEarlyLineInSandWatchReason(args: {
+  deskState: DeskState;
+  currentPrice: number | null;
+  latestCompleted5m?: string | null;
+  hasReferenceLevels: boolean;
+}): string | null {
+  if (args.deskState.canExecute) return null;
+  if (!args.latestCompleted5m) return null;
+  const play = args.deskState.primaryDeskPlay;
+  const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  if (!direction) return null;
+  const primaryBias = scannerDeskPlayPrimaryBias(args.deskState);
+  const line = roundNullableTradePrice(play.activeTacticalLine?.activeLine) ??
+    roundNullableTradePrice(deskPlayLineForDirection(args.deskState, direction)) ??
+    roundNullableTradePrice(primaryBias?.lineInSand) ??
+    roundNullableTradePrice(play.lineInSand);
+  if (line === null) return null;
+
+  const triggerWord = direction === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE';
+  const currentText = roundNullableTradePrice(args.currentPrice);
+  const htfStatus = args.deskState.htfContextStatus || 'unknown';
+  const dataStatus = args.deskState.dataQualityStatus || 'unknown';
+  const readiness = primaryBias?.tradeReadiness?.status || 'watch';
+  const proof = play.activeTacticalZone?.nextTrigger ||
+    play.activeTacticalLine?.nextTrigger ||
+    play.nextTrigger ||
+    args.deskState.nextTrigger ||
+    (direction === 'SHORT'
+      ? `completed 5M acceptance below ${line.toFixed(2)}.`
+      : `completed 5M acceptance above ${line.toFixed(2)}.`);
+  const standDown = scannerDeskPlayStandDownInstruction(args.deskState) ||
+    (direction === 'SHORT'
+      ? `Stand down if price accepts above ${line.toFixed(2)}.`
+      : `Stand down if price accepts below ${line.toFixed(2)}.`);
+  const levels = args.hasReferenceLevels
+    ? 'complete app-owned entry/stop/T1/T2 are present; stale/no-chase text still controls if price is away from the zone'
+    : 'entry/stop/T1/T2 are pending fresh 5M proof and protected-structure target math';
+  return `${direction} early line-in-sand watch is eligible for Discord as WATCH ONLY / NOT EXECUTION APPROVAL: ${triggerWord} ${line.toFixed(2)}; current ${currentText === null ? 'N/A' : currentText.toFixed(2)}; readiness ${readiness}; HTF context ${htfStatus}; data ${dataStatus}; ${levels}; required completed 5M proof: ${proof}; stand down: ${standDown}; no automated orders; canExecute remains false.`;
+}
+
 export function evaluateScannerDeskPlayDiscordSuppression(args: {
   tradeDate: string;
   instrument: Instrument;
@@ -5172,16 +5212,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     isFiniteTradePrice(referenceLevels.stop) &&
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
-  if (args.deskState.dataQualityStatus === 'data_limited') {
-    if (!hasReferenceLevels) {
-      return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited and no complete app-owned tactical levels are available.');
-    }
-  }
-  if (args.deskState.htfContextStatus === 'insufficient') {
-    if (!hasReferenceLevels) {
-      return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient and no complete app-owned tactical levels are available.');
-    }
-  }
   const play = args.deskState.primaryDeskPlay;
   const highQualityReviewCandidate = highQualityConditionalReviewCandidate({
     normalized: args.normalized,
@@ -5208,20 +5238,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     normalized: args.normalized,
     currentPrice: args.currentPrice,
   });
-  if (primaryBias && primaryBias.state !== 'primary') {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
-  }
-  if (readiness === 'data_limited' && hasReferenceLevels) {
-    return scannerDeskPlaySuppressionPost(
-      `Desk Play reference map is eligible for Discord as review-only because ${play.direction} readiness is data-limited, completed 5M is ready, and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.`,
-    );
-  }
-  if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
-  }
-  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate && !htfFvgReviewMapReason) {
-    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
-  }
   const staleLevelReason = scannerDeskPlayStaleLevelReason({
     deskState: args.deskState,
     currentPrice: args.currentPrice,
@@ -5230,10 +5246,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   if (staleLevelReason) {
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);
   }
-  if (readiness === 'not_aligned' && htfFvgReviewMapReason) {
-    return scannerDeskPlaySuppressionPost(htfFvgReviewMapReason);
-  }
-
   const currentRecord = scannerDeskPlanRefreshRecord({
     key: args.deskPlayKey,
     tradeDate: args.tradeDate,
@@ -5255,6 +5267,45 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       'Desk Play suppressed because primary side, readiness, HTF support/conflict, action state, and protected-structure map are unchanged from the latest posted Desk Play.',
       previousRecord.materialCadenceFingerprint || previousRecord.fingerprint,
     );
+  }
+  if (readiness === 'data_limited' && hasReferenceLevels) {
+    return scannerDeskPlaySuppressionPost(
+      `Desk Play reference map is eligible for Discord as review-only because ${play.direction} readiness is data-limited, completed 5M is ready, and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.`,
+    );
+  }
+  if (readiness === 'not_aligned' && htfFvgReviewMapReason) {
+    return scannerDeskPlaySuppressionPost(htfFvgReviewMapReason);
+  }
+  if (readiness === 'not_aligned' && tacticalCampaignMap.eligible) {
+    return scannerDeskPlaySuppressionPost(`Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`);
+  }
+  const earlyLineInSandWatchReason = scannerEarlyLineInSandWatchReason({
+    deskState: args.deskState,
+    currentPrice: args.currentPrice,
+    latestCompleted5m: args.latestCompleted5m,
+    hasReferenceLevels,
+  });
+  if (earlyLineInSandWatchReason) {
+    return scannerDeskPlaySuppressionPost(earlyLineInSandWatchReason);
+  }
+  if (args.deskState.dataQualityStatus === 'data_limited') {
+    if (!hasReferenceLevels) {
+      return scannerDeskPlaySuppressionBlocked('stale_data', 'Desk Play suppressed because scanner DeskState is data-limited and no complete app-owned tactical levels or scanner-owned early watch line are available.');
+    }
+  }
+  if (args.deskState.htfContextStatus === 'insufficient') {
+    if (!hasReferenceLevels) {
+      return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play suppressed because HTF context is insufficient and no complete app-owned tactical levels or scanner-owned early watch line are available.');
+    }
+  }
+  if (primaryBias && primaryBias.state !== 'primary') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
+  }
+  if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);
+  }
+  if (readiness === 'not_aligned' && !tacticalCampaignMap.eligible && !highQualityReviewCandidate && !htfFvgReviewMapReason) {
+    return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}: ${tacticalCampaignMap.reason}`);
   }
 
   const dataLimitedReview = args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient';

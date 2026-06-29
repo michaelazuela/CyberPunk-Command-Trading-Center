@@ -2170,9 +2170,13 @@ const nonTacticalNotAlignedDeskPlaySuppression = evaluateScannerDeskPlayDiscordS
   currentPrice: 7410,
   latestCompleted5m: '2026-06-08T15:40:00.0000000',
 });
-assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, false);
-assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'low_quality_map');
-assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /5M protected-structure row is not aligned/);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.shouldPost, true);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.category, 'post');
+assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /early line-in-sand watch is eligible/);
+assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /WATCH ONLY \/ NOT EXECUTION APPROVAL/);
+assert.match(nonTacticalNotAlignedDeskPlaySuppression.reason, /SHORT BELOW 7416\.50/);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(nonTacticalNotAlignedDeskPlaySuppression.changesCanExecute, false);
 const htfFvgReviewMapDeskState = {
     ...baseDeskPlanRefreshState,
     canExecute: false,
@@ -2373,6 +2377,139 @@ assert.equal(dataLimitedReferenceDeskPlaySuppression.category, 'post');
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference map is eligible/);
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /readiness is data-limited/);
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference entry\/stop\/T1\/T2/);
+const earlyLineInSandNoLevelsDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'evening',
+  deskPlayKey: '2026-06-25:MES:evening:DESK_PLAN_REFRESH:2026-06-25T19:25:00.0000000:no-campaign:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    canExecute: false,
+    bestShortPlan: null,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7450,
+      shortBelow: 7450,
+      activeTacticalLine: {
+        direction: 'SHORT',
+        activeLine: 7450,
+        migrated: true,
+        nextTrigger: 'Completed 5M close/hold below 7450.00, then reject the retest.',
+        standDown: 'Stand down if price accepts back above 7450.00.',
+      },
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: 7450,
+        tradeReadiness: { status: 'wait_for_completed_5m_proof' },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7450 },
+        ],
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7450.25,
+  latestCompleted5m: '2026-06-25T19:25:00.0000000',
+});
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.shouldPost, true);
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.category, 'post');
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /SHORT early line-in-sand watch is eligible/);
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /SHORT BELOW 7450\.00/);
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /current 7450\.25/);
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /pending fresh 5M proof/);
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /required completed 5M proof/);
+assert.match(earlyLineInSandNoLevelsDeskPlaySuppression.reason, /NOT EXECUTION APPROVAL/);
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(earlyLineInSandNoLevelsDeskPlaySuppression.changesCanExecute, false);
+const dataLimitedEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'evening',
+  deskPlayKey: '2026-06-25:MES:evening:DESK_PLAN_REFRESH:2026-06-25T19:30:00.0000000:no-campaign:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+    canExecute: false,
+    bestShortPlan: null,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7450,
+      shortBelow: 7450,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: 7450,
+        tradeReadiness: { status: 'data_limited' },
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '5M', bias: 'BEAR', currentBias: 'BEAR', protectedStructure: 7424.75, confirmationLine: 7450 },
+        ],
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: '120M preload is incomplete; 5M line watch is still visible.',
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7449.75,
+  latestCompleted5m: '2026-06-25T19:30:00.0000000',
+});
+assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.shouldPost, true);
+assert.equal(dataLimitedEarlyLineInSandDeskPlaySuppression.category, 'post');
+assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /SHORT BELOW 7450\.00/);
+assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /readiness data_limited/);
+assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /HTF context insufficient/);
+assert.match(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /data data_limited/);
+assert.doesNotMatch(dataLimitedEarlyLineInSandDeskPlaySuppression.reason, /HTF confirmation/);
+const missingFiveMinuteEarlyLineInSandDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-25',
+  instrument: 'MES',
+  session: 'evening',
+  deskPlayKey: '2026-06-25:MES:evening:DESK_PLAN_REFRESH:no-completed-5m:no-campaign:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+    canExecute: false,
+    bestShortPlan: null,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7450,
+      shortBelow: 7450,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: 7450,
+        tradeReadiness: { status: 'data_limited' },
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: '5M execution data unavailable.',
+    setupCandidates: [],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7449.75,
+});
+assert.equal(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.shouldPost, false);
+assert.equal(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.category, 'stale_data');
+assert.match(missingFiveMinuteEarlyLineInSandDeskPlaySuppression.reason, /no complete app-owned tactical levels or scanner-owned early watch line/);
 const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',
