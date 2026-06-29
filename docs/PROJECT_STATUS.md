@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-29
+Task: Correct Discord visibility routing for fresh high-confidence review-only conditional plans.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The 2026-06-29 09:50 ET SHORT Intraday MSS Micro Continuation candidate had candidate-level quality 90 with complete app-owned levels, HTF context sufficient, and canExecute=false, but Discord stayed silent because the primary alert decision had already been blocked by top-level confidence/risk gating. The routing gate now allows a fresh complete high-confidence candidate to promote a blocked primary alert into REVIEW ONLY / NOT EXECUTION APPROVAL Discord visibility while stale/no-chase, invalidated, target-passed, active-zone failure, and data-limited cases remain blocked.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Loopbacks verify the 2026-06-29 09:50 ET high-confidence SHORT can publish as review-only despite a blocked top-level alert score; 09:55 and target-passed variants remain suppressed as missed/no-chase; data-limited context remains blocked; missing complete levels do not publish as complete plans; and watchlist/advisory behavior remains separate from live trade-plan publication.
+Trading logic changed: No. This is Discord visibility/routing only. It does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, 5M bar-close handling, or trade models.
+Bridge impact: None.
+Discord impact: Fresh complete high-confidence conditional plans can publish as review-only even when the top-level primary alert score is blocked, provided the candidate is not stale, no-chase, invalidated, or beyond targets. Suppressed high-score candidates now include an explicit visibility-check reason.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Observe the next live scanner window to confirm fresh decision tapes show the review-only visibility reason when a high-confidence candidate is fresh and complete.
+
+## Previous Change
+
+Date: 2026-06-29
 Task: Implement HTF Target-To-Line Promotion for Discord Review Maps.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
 Reason: High-confidence review candidates could stay silent when price reached a reaction/target level even though the trader-facing map should show the decision line, acceptance condition, next HTF/session line, failure context, no-chase status, and review-only boundary. The scanner now allows a review-only target-to-line map to post when a valid reaction and next HTF/session line are present, while true invalidation, stale targets, passed T1/T2, active-zone failure, data-limited context, and canExecute boundaries remain blocked.

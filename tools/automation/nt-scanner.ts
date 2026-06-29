@@ -6968,7 +6968,9 @@ function isHighQualityConditionalPrimaryAlertCandidate(candidate?: SetupCandidat
     candidate?.executionStatus === ExecutionStatus.Executable;
   const blockerEligible =
     candidate?.executionStatus === ExecutionStatus.Executable ||
-    candidate?.blockReason === NoTradeReason.EntryTriggerPending;
+    candidate?.blockReason === NoTradeReason.EntryTriggerPending ||
+    candidate?.blockReason === null ||
+    candidate?.blockReason === undefined;
   return Boolean(
     candidate &&
     (candidate.direction === 'LONG' || candidate.direction === 'SHORT') &&
@@ -6994,8 +6996,6 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   staleReason?: string | null;
   scannerReviewStatus?: string | null;
 }): ScannerAlertDecision {
-  if (!args.alertDecision.shouldSend) return args.alertDecision;
-
   const reasons: string[] = [];
   const play = args.deskState.primaryDeskPlay;
   const candidateDirection = args.candidate?.direction || null;
@@ -7026,6 +7026,11 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   if (/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText)) {
     reasons.push('stale/no-chase review state');
   }
+  if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') {
+    reasons.push('HTF/data context insufficient for high-confidence review publication');
+  }
+  const candidateStaleReason = highQualityConditionalReviewStaleReason(args.candidate || null, args.currentPrice ?? null);
+  if (candidateStaleReason) reasons.push(candidateStaleReason);
   const activeZone = play.activeTacticalZone;
   const currentPrice = args.currentPrice;
   if (
@@ -7053,12 +7058,27 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
     isHighQualityConditionalPrimaryAlertCandidate(args.candidate) &&
     args.state !== 'Missed' &&
     !/stale|missed|no chase|already_triggered|no_fresh_entry/i.test(staleText) &&
+    !candidateStaleReason &&
+    args.deskState.dataQualityStatus !== 'data_limited' &&
+    args.deskState.htfContextStatus !== 'insufficient' &&
     !reasons.some((reason) => /conflicts with active HTF FVG routing/i.test(reason)) &&
     !reasons.some((reason) => /current price .* active tactical zone/i.test(reason))
   ) {
     return {
       shouldSend: true,
-      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is a conditional execution plan for trader review; it becomes execution-approved only if the named completed 5M condition closes and the app-owned canExecute gate turns true.`,
+      reason: `${args.alertDecision.reason} Primary trade-card DeskState/readiness suppression bypassed for high-confidence conditional publication: ${Array.from(new Set(reasons)).join('; ')}. Discord publication is REVIEW ONLY / NOT EXECUTION APPROVAL; it becomes execution-approved only if the named completed 5M condition closes and the app-owned canExecute gate turns true.`,
+    };
+  }
+
+  if (!args.alertDecision.shouldSend) {
+    const score = args.candidate?.decisionQualityScore ?? args.candidate?.modelConfidenceScore ?? null;
+    const highScoreCandidate = typeof score === 'number' &&
+      Number.isFinite(score) &&
+      score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE;
+    if (!highScoreCandidate) return args.alertDecision;
+    return {
+      shouldSend: false,
+      reason: `${args.alertDecision.reason} High-confidence review visibility check did not publish: ${Array.from(new Set(reasons)).join('; ') || 'candidate was not a fresh complete high-confidence review plan'}.`,
     };
   }
 

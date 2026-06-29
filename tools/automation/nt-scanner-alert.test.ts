@@ -297,7 +297,7 @@ const reviewOnlyPrimaryAlertGateFixture: Parameters<typeof evaluateScannerPrimar
 const reviewOnlyPrimaryAlertGate = evaluateScannerPrimaryAlertPublishingGate(reviewOnlyPrimaryAlertGateFixture);
 assert.equal(reviewOnlyPrimaryAlertGate.shouldSend, true);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
-assert.match(reviewOnlyPrimaryAlertGate.reason, /conditional execution plan for trader review/);
+assert.match(reviewOnlyPrimaryAlertGate.reason, /REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /app-owned canExecute gate turns true/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /canExecute=false/);
 assert.match(reviewOnlyPrimaryAlertGate.reason, /DeskState primary=WAIT/);
@@ -324,7 +324,7 @@ const priceAwayFromZonePrimaryAlertGate = evaluateScannerPrimaryAlertPublishingG
         tradeReadiness: { status: 'not_aligned' },
       },
     },
-  } as DeskState,
+  } as unknown as DeskState,
   currentPrice: 7470.5,
 });
 assert.equal(priceAwayFromZonePrimaryAlertGate.shouldSend, false);
@@ -355,12 +355,121 @@ const oppositeHtfRoutingPrimaryAlertGate = evaluateScannerPrimaryAlertPublishing
         tradeReadiness: { status: 'not_aligned' },
       },
     },
-  } as DeskState,
+  } as unknown as DeskState,
   staleReason: 'Bullish Turtle Soup: sell-side sweep below 7468, reclaim back above the swept low.',
 });
 assert.equal(oppositeHtfRoutingPrimaryAlertGate.shouldSend, false);
 assert.match(oppositeHtfRoutingPrimaryAlertGate.reason, /candidate side LONG conflicts with active HTF FVG routing SHORT/);
 assert.doesNotMatch(oppositeHtfRoutingPrimaryAlertGate.reason, /suppression bypassed for high-confidence conditional publication/);
+
+const june29MissedShortCandidate = {
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'SHORT',
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  confidence: 'High',
+  priority: 90,
+  decisionQualityScore: 90,
+  entry: 7460.25,
+  stop: 7490,
+  target1: 7415.75,
+  target2: 7400.75,
+  riskPoints: 29.75,
+  invalidation: 'Invalid if price reclaims above the protected 5M MSS swing stop near 7490.00.',
+  entryClarity: 90,
+  stopClarity: 90,
+  targetClarity: 90,
+  levelContextScore: 18,
+  evidence: ['Completed bearish 5M MSS plus bearish 15M MSS/displacement context.'],
+  missingEvidence: [],
+  blockReason: null,
+  requiredTrigger: 'Completed 5M close-through/retest below 7463.00.',
+  nextAction: 'Human Review Ready bearish intraday MSS micro-continuation plan. No chase; trader confirmation required and canExecute remains false.',
+  reducedRiskPlan: null,
+} as SetupCandidate;
+const june29ReviewOnlyShortGateFixture: Parameters<typeof evaluateScannerPrimaryAlertPublishingGate>[0] = {
+  alertDecision: { shouldSend: false, reason: 'Executable/approved plan below 80 score threshold.' },
+  candidate: june29MissedShortCandidate,
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'WAIT',
+      lineInSand: 7463,
+      shortBelow: 7460,
+      longAbove: 7478.5,
+      targetReactionLevel: 7450,
+      shortBias: {
+        tradeReadiness: { status: 'human_review_ready' },
+      },
+      longBias: {
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+    dataQualityStatus: 'partial',
+    htfContextStatus: 'sufficient',
+  } as unknown as DeskState,
+  normalizedCanExecute: false,
+  state: 'Approved',
+  currentPrice: 7460.25,
+  staleReason: null,
+  scannerReviewStatus: null,
+};
+const june29ReviewOnlyShortGate = evaluateScannerPrimaryAlertPublishingGate(june29ReviewOnlyShortGateFixture);
+assert.equal(june29ReviewOnlyShortGate.shouldSend, true);
+assert.match(june29ReviewOnlyShortGate.reason, /Executable\/approved plan below 80 score threshold/);
+assert.match(june29ReviewOnlyShortGate.reason, /REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
+assert.match(june29ReviewOnlyShortGate.reason, /app-owned canExecute gate turns true/);
+assert.match(june29ReviewOnlyShortGate.reason, /DeskState primary=WAIT/);
+assert.match(june29ReviewOnlyShortGate.reason, /canExecute=false/);
+
+const june29NoChaseShortGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...june29ReviewOnlyShortGateFixture,
+  alertDecision: { shouldSend: false, reason: 'Missed setup below educational alert threshold.' },
+  candidate: {
+    ...june29MissedShortCandidate,
+    entry: 7458.75,
+    stop: 7490,
+    target1: 7412,
+    target2: 7396.25,
+  },
+  state: 'Missed',
+  currentPrice: 7450,
+  staleReason: 'Preferred entry was missed. Do not chase. Waiting for new retest or next setup.',
+  scannerReviewStatus: null,
+});
+assert.equal(june29NoChaseShortGate.shouldSend, false);
+assert.match(june29NoChaseShortGate.reason, /stale\/no-chase review state|state=Missed/);
+assert.doesNotMatch(june29NoChaseShortGate.reason, /REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
+
+const june29DataLimitedShortGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...june29ReviewOnlyShortGateFixture,
+  alertDecision: { shouldSend: false, reason: 'Primary trade-card suppressed because the readiness gate is data-limited; review-map Discord output may post tactical levels only.' },
+  deskState: {
+    ...june29ReviewOnlyShortGateFixture.deskState,
+    dataQualityStatus: 'data_limited',
+    htfContextStatus: 'insufficient',
+  } as unknown as DeskState,
+});
+assert.equal(june29DataLimitedShortGate.shouldSend, false);
+assert.match(june29DataLimitedShortGate.reason, /HTF\/data context insufficient/);
+
+const missingLevelHighConfidenceGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...june29ReviewOnlyShortGateFixture,
+  candidate: {
+    ...june29MissedShortCandidate,
+    target1: null,
+    target2: null,
+  } as SetupCandidate,
+});
+assert.equal(missingLevelHighConfidenceGate.shouldSend, false);
+assert.doesNotMatch(missingLevelHighConfidenceGate.reason, /REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
+
+const throughTargetHighConfidenceGate = evaluateScannerPrimaryAlertPublishingGate({
+  ...june29ReviewOnlyShortGateFixture,
+  currentPrice: 7415.5,
+});
+assert.equal(throughTargetHighConfidenceGate.shouldSend, false);
+assert.match(throughTargetHighConfidenceGate.reason, /already reached\/passed T1 7415\.75/);
 
 assert.equal(
   scannerDiscordWebhookUrlForPost('https://discord.com/api/webhooks/123/token', undefined, true),
