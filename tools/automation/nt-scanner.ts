@@ -1999,7 +1999,7 @@ async function writeScannerDiscordAuditLog(args: {
     staleReason: args.staleReason,
   });
   const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
-  const deskState = args.deskState || buildDeskState({
+  const baseDeskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
     visibilityMetadata,
@@ -2008,6 +2008,11 @@ async function writeScannerDiscordAuditLog(args: {
     chartContext: args.chartContext || null,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
+  });
+  const deskState = withScannerCounterStructureConditional({
+    deskState: baseDeskState,
+    candidate: args.candidate,
+    normalized: args.normalized,
   });
   const auditPayload = repairDuplicateAuditTargets({
     createdAt: new Date().toISOString(),
@@ -2035,6 +2040,7 @@ async function writeScannerDiscordAuditLog(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
@@ -2408,7 +2414,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     staleReason: args.staleReason,
   });
   const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
-  const deskState = args.deskState || buildDeskState({
+  const baseDeskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
     visibilityMetadata,
@@ -2418,6 +2424,11 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     chartContext: args.chartContext as Partial<ChartContext> | null,
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
+  });
+  const deskState = withScannerCounterStructureConditional({
+    deskState: baseDeskState,
+    candidate: args.candidate,
+    normalized: args.normalized,
   });
   const reversalWatchLines = buildScannerReversalWatchLines({
     deskState,
@@ -2461,6 +2472,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     candidateLifecycleTrace,
     tradeDecisionMapAudit,
     deskState,
+    counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
     reversalWatch: {
       lines: reversalWatchLines,
       state: reversalWatchState,
@@ -3546,6 +3558,9 @@ export function candidateForDeskPlayContextChart(
     hasPlanningLevels
       ? 'Desk Play chart shows review-only app-owned planning levels.'
       : 'Protected 5M structure stop not confirmed; planning levels unavailable.',
+    ...(play.counterStructureConditional?.counterStructureConditional
+      ? ['Review Only - counter-structure conditional; not execution approval.']
+      : []),
     'No execution approval is attached to this image.',
   ]));
   return {
@@ -3573,6 +3588,9 @@ export function candidateForDeskPlayContextChart(
       play.summary,
       primaryBias.reason,
       play.countertrendWarning,
+      play.counterStructureConditional?.counterStructureConditional
+        ? `Counter-structure conditional map: ${play.counterStructureConditional.lowerTimeframeStateSummary}; ${play.counterStructureConditional.requiredTrigger}`
+        : null,
       ...play.notes,
     ].filter((value): value is string => Boolean(value)),
     missingEvidence: blockers,
@@ -4328,6 +4346,123 @@ function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | nul
       : `Stand down if price accepts above ${line.toFixed(2)}.`;
   }
   return 'Stand down if the primary side loses completed 5M proof or canExecute remains false.';
+}
+
+type ScannerCounterStructureConditional = NonNullable<DeskState['primaryDeskPlay']['counterStructureConditional']>;
+
+function scannerProtectedStructureRowSummary(
+  row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
+): string {
+  const current = row.currentBias || row.bias || 'UNKNOWN';
+  return `${row.timeframe} ${current}`;
+}
+
+function scannerCounterStructureBiasMatches(direction: 'LONG' | 'SHORT', value: string | null | undefined): boolean {
+  const normalized = String(value || '').toUpperCase();
+  return direction === 'LONG' ? normalized === 'BULL' : normalized === 'BEAR';
+}
+
+export function buildScannerCounterStructureConditional(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): ScannerCounterStructureConditional | null {
+  const play = args.deskState.primaryDeskPlay;
+  const direction = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : play.direction === 'LONG' || play.direction === 'SHORT'
+      ? play.direction
+      : null;
+  if (!direction || args.deskState.canExecute || args.normalized?.canExecute) return null;
+  if (!['post_conditional', 'post_review'].includes(args.deskState.discordAction)) return null;
+  const selectedBias = direction === 'LONG' ? play.longBias : play.shortBias;
+  const quality = args.candidate?.decisionQualityScore ??
+    args.candidate?.modelConfidenceScore ??
+    selectedBias.decisionQualityScore ??
+    selectedBias.modelConfidenceScore ??
+    selectedBias.rankScore ??
+    null;
+  if (typeof quality !== 'number' || quality < HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE) return null;
+  const rows = play.htfProtectedStructureMap.rows || [];
+  const lowerRows = rows.filter((row) => ['1H', '15M', '5M'].includes(row.timeframe));
+  if (!lowerRows.length) return null;
+  const lowerAligned = lowerRows.every((row) => scannerCounterStructureBiasMatches(direction, row.currentBias));
+  if (lowerAligned && !play.htfConflict && !play.countertrendWarning) return null;
+  const htfRows = rows.filter((row) => ['4H', '2H'].includes(row.timeframe));
+  const activeZone = play.activeTacticalZone?.direction === direction ? play.activeTacticalZone : null;
+  const activeLine = play.activeTacticalLine?.direction === direction && isFiniteTradePrice(play.activeTacticalLine.activeLine)
+    ? play.activeTacticalLine.activeLine
+    : direction === 'LONG'
+      ? play.longAbove ?? play.lineInSand
+      : play.shortBelow ?? play.lineInSand;
+  const zoneText = activeZone && isFiniteTradePrice(activeZone.lower) && isFiniteTradePrice(activeZone.upper)
+    ? `${activeZone.lower.toFixed(2)}-${activeZone.upper.toFixed(2)}`
+    : isFiniteTradePrice(activeLine)
+      ? activeLine.toFixed(2)
+      : 'the active tactical line';
+  const requiredTrigger = activeZone?.nextTrigger ||
+    play.nextTrigger ||
+    selectedBias.nextTrigger ||
+    args.candidate?.requiredTrigger ||
+    args.candidate?.nextAction ||
+    (direction === 'SHORT'
+      ? `SHORT only if completed 5M rejects/holds below ${zoneText}.`
+      : `LONG only if completed 5M reclaims/holds above ${zoneText}.`);
+  const standDown = activeZone?.standDown ||
+    scannerDeskPlayStandDownInstruction(args.deskState) ||
+    (direction === 'SHORT'
+      ? `Stand down if completed 5M accepts above ${zoneText}.`
+      : `Stand down if completed 5M accepts below ${zoneText}.`);
+  const htfBackdropSummary = htfRows.length
+    ? htfRows.map(scannerProtectedStructureRowSummary).join(' / ')
+    : play.htfProtectedStructureMap.summary || 'HTF backdrop available as context only';
+  const lowerTimeframeStateSummary = lowerRows.map(scannerProtectedStructureRowSummary).join(' / ');
+  return {
+    sourceOfTruth: 'scanner_counter_structure_conditional_clarity',
+    counterStructureConditional: true,
+    candidateDirection: direction,
+    htfBackdropSummary,
+    lowerTimeframeStateSummary,
+    whyShown: [
+      `${direction} map is shown because structured evidence and candidate quality are high enough for review-only visibility.`,
+      'Lower-timeframe structure is mixed, range, or opposed, so this is conditional context rather than an immediate trade call.',
+    ].join(' '),
+    requiredTrigger,
+    standDown,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      changesModelDefinitions: false,
+      changesBarCloseHandling: false,
+    },
+  };
+}
+
+function withScannerCounterStructureConditional(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): DeskState {
+  const counterStructureConditional = buildScannerCounterStructureConditional(args);
+  if (!counterStructureConditional) return args.deskState;
+  return {
+    ...args.deskState,
+    primaryDeskPlay: {
+      ...args.deskState.primaryDeskPlay,
+      counterStructureConditional,
+      notes: Array.from(new Set([
+        ...args.deskState.primaryDeskPlay.notes,
+        'Counter-structure conditional clarity applied for Discord review-only presentation.',
+      ])),
+    },
+    notes: Array.from(new Set([
+      ...args.deskState.notes,
+      'Counter-structure conditional clarity is presentation-only and does not affect canExecute.',
+    ])),
+  };
 }
 
 function scannerDeskPlayMainPlayFingerprint(args: {
@@ -5789,7 +5924,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     staleReason: args.staleReason,
   });
   const tradeDecisionMapAudit = args.tradeDecisionMapAudit || buildTradeDecisionMapAudit();
-  const deskState = args.deskState || buildDeskState({
+  const baseDeskState = args.deskState || buildDeskState({
     state: args.state,
     candidate: args.candidate,
     visibilityMetadata,
@@ -5800,9 +5935,27 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
-  const visualCandidate = deskState.discordAction === 'post_watch'
+  const deskState = withScannerCounterStructureConditional({
+    deskState: baseDeskState,
+    candidate: args.candidate,
+    normalized: args.normalized,
+  });
+  const visualCandidateBase = deskState.discordAction === 'post_watch'
     ? null
     : candidateForNormalizedVisualAuthority(args.candidate, args.normalized);
+  const counterStructureWarning = deskState.primaryDeskPlay.counterStructureConditional
+    ? `Counter-structure conditional map: ${deskState.primaryDeskPlay.counterStructureConditional.lowerTimeframeStateSummary}; ${deskState.primaryDeskPlay.counterStructureConditional.requiredTrigger}`
+    : null;
+  const visualCandidate = visualCandidateBase && counterStructureWarning
+    ? {
+        ...visualCandidateBase,
+        evidence: Array.from(new Set([...(visualCandidateBase.evidence || []), counterStructureWarning])),
+        missingEvidence: Array.from(new Set([
+          ...(visualCandidateBase.missingEvidence || []),
+          'Review Only - counter-structure conditional; not execution approval.',
+        ])),
+      }
+    : visualCandidateBase;
   const renderInput = visualCandidate
     ? {
         chartContext: args.chartContext || null,
@@ -5889,8 +6042,13 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   chartMarkup: string | null;
   levelMap: string | null;
 }> {
-  const contextCandidate = candidateForDeskPlayContextChart(args.deskState, args.normalized);
-  const play = args.deskState.primaryDeskPlay;
+  const deskState = withScannerCounterStructureConditional({
+    deskState: args.deskState,
+    candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
+    normalized: args.normalized,
+  });
+  const contextCandidate = candidateForDeskPlayContextChart(deskState, args.normalized);
+  const play = deskState.primaryDeskPlay;
   const chartContextLine = play.activeTacticalLine?.activeLine ?? play.lineInSand;
   const chartMarkup = contextCandidate
     ? await renderChartMarkup({
@@ -5945,7 +6103,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
       priceLevelMap: Boolean(levelMap),
       auditLogPath: args.decisionTapePath,
     },
-    deskState: args.deskState,
+    deskState,
   });
   validateDiscordPayload(payload, files);
   return { payload, files, chartMarkup, levelMap };

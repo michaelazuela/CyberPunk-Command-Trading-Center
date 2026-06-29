@@ -692,6 +692,26 @@ export interface DeskHtfProtectedStructureMap {
   };
 }
 
+export interface DeskCounterStructureConditional {
+  sourceOfTruth: 'scanner_counter_structure_conditional_clarity';
+  counterStructureConditional: boolean;
+  candidateDirection: DeskPlayDirection;
+  htfBackdropSummary: string;
+  lowerTimeframeStateSummary: string;
+  whyShown: string;
+  requiredTrigger: string;
+  standDown: string;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    changesModelDefinitions: false;
+    changesBarCloseHandling: false;
+  };
+}
+
 export interface DeskTrendConfirmation {
   sourceOfTruth: 'scanner_protected_structure_trend_confirmation';
   direction: DeskPlayDirection;
@@ -802,6 +822,7 @@ export interface PrimaryDeskPlay {
   freshReentryCandidates?: DeskFreshReentryCandidateSet | null;
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
+  counterStructureConditional?: DeskCounterStructureConditional | null;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;

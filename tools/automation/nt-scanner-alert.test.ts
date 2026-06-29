@@ -68,6 +68,7 @@ import {
   buildScannerMorningHtfDeskMapPayload,
   buildScannerLiveDiscordSendBoundaryReport,
   buildScannerLiveHoldNoticePayload,
+  buildScannerCounterStructureConditional,
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
@@ -116,6 +117,149 @@ assert.equal(shouldLogBridgeInstrumentResolution({
   source: 'front-month-rollover',
   warning: null,
 }, 'MES'), false);
+
+function counterStructureDeskStateFixture(direction: 'LONG' | 'SHORT', lowerBias: 'BULL' | 'BEAR' | 'RANGE'): DeskState {
+  const matchingBias = direction === 'LONG' ? 'BULL' : 'BEAR';
+  const line = direction === 'LONG' ? 5320 : 7467.5;
+  const zone = direction === 'LONG'
+    ? { lower: 5316, upper: 5320 }
+    : { lower: 7460.75, upper: 7474 };
+  return {
+    sourceOfTruth: 'scanner_desk_state',
+    marketMode: 'conditional',
+    activeCampaign: null,
+    bestLongPlan: null,
+    bestShortPlan: null,
+    selectedCandidate: null,
+    lineInSand: line,
+    nextTrigger: direction === 'LONG'
+      ? 'Completed 5M reclaim/hold above 5320.00.'
+      : 'Active tactical zone 7460.75-7474.00: completed 5M hold/reject below the zone required before fresh execution consideration.',
+    invalidation: direction === 'LONG'
+      ? 'Fresh LONG stand down on completed 5M acceptance below 5316.00.'
+      : 'Fresh SHORT stand down on completed 5M acceptance above 7474.00.',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    suppressionReason: null,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'ok',
+    canExecute: false,
+    promotion: {} as any,
+    visibilityMetadata: {
+      visibilityMode: 'POST_CONDITIONAL',
+      discordAction: 'post_conditional',
+      suppressionReason: null,
+      nextTrigger: null,
+      dataQualityBlocker: null,
+      holdWithReason: null,
+      noTradeWithReason: null,
+      hasMeaningfulStructuredEvidence: true,
+      sourceOfTruth: 'scanner_desk_state_visibility_metadata',
+      authority: {
+        registeredModel: true,
+        activeModel: true,
+        watchEligible: true,
+        planEligible: true,
+        discordEligible: true,
+        executionEligible: false,
+        humanReviewOnly: true,
+        canExecute: false,
+      },
+      notes: [],
+    },
+    candidateLifecycleTrace: {} as any,
+    notes: [],
+    primaryDeskPlay: {
+      sourceOfTruth: 'scanner_primary_desk_play',
+      direction,
+      trendConfirmation: {} as any,
+      activeTacticalLine: {
+        sourceOfTruth: 'scanner_active_tactical_line',
+        direction,
+        originalLine: line,
+        activeLine: line,
+        migrated: false,
+        supportingTimeframes: ['15M', '5M'],
+        reason: 'fixture',
+        nextTrigger: 'fixture trigger',
+        standDown: 'fixture stand down',
+        approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+      },
+      activeTacticalZone: {
+        sourceOfTruth: 'scanner_active_tactical_zone',
+        direction,
+        lower: zone.lower,
+        upper: zone.upper,
+        anchorLine: line,
+        migratedFromLine: null,
+        migrated: false,
+        zoneLabel: 'fixture active zone',
+        sourceTimeframe: '5M',
+        state: 'holding',
+        reason: 'fixture zone',
+        nextTrigger: direction === 'LONG' ? 'Completed 5M reclaim/hold above 5320.00.' : 'Completed 5M hold/reject below 7460.75-7474.00.',
+        standDown: direction === 'LONG' ? 'Fresh LONG stand down on completed 5M acceptance below 5316.00.' : 'Fresh SHORT stand down on completed 5M acceptance above 7474.00.',
+        noChase: 'No chase.',
+        approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+      },
+      modelRouting: {} as any,
+      title: `${direction} desk play`,
+      summary: `${direction} fixture desk play.`,
+      lineInSand: line,
+      longAbove: direction === 'LONG' ? line : null,
+      shortBelow: direction === 'SHORT' ? line : null,
+      targetReactionLevel: null,
+      targetReactionLabel: null,
+      targetReactionReason: null,
+      levelTransition: null,
+      htfObjectiveLadder: {} as any,
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        summary: 'fixture HTF map',
+        rows: [
+          { sourceOfTruth: 'scanner_htf_protected_structure_map', timeframe: '4H', bias: 'NEUTRAL', currentBias: 'RANGE', biasChangeLine: null, biasChangeConfirmation: null, protectedStructure: null, confirmationLine: null, target: null, targetLabel: null, confidence: 60, status: 'range', note: 'range' },
+          { sourceOfTruth: 'scanner_htf_protected_structure_map', timeframe: '2H', bias: matchingBias, currentBias: matchingBias, biasChangeLine: null, biasChangeConfirmation: null, protectedStructure: null, confirmationLine: null, target: null, targetLabel: null, confidence: 80, status: 'aligned', note: 'aligned' },
+          ...(['1H', '15M', '5M'] as const).map((timeframe) => ({ sourceOfTruth: 'scanner_htf_protected_structure_map' as const, timeframe, bias: lowerBias === 'RANGE' ? 'NEUTRAL' as const : lowerBias, currentBias: lowerBias, biasChangeLine: null, biasChangeConfirmation: null, protectedStructure: null, confirmationLine: null, target: null, targetLabel: null, confidence: 70, status: lowerBias, note: lowerBias })),
+        ],
+        approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+      },
+      nextTrigger: null,
+      invalidation: null,
+      noChase: 'No chase.',
+      longBias: { direction: 'LONG', decisionQualityScore: direction === 'LONG' ? 92 : 55, modelConfidenceScore: direction === 'LONG' ? 92 : 55, rankScore: direction === 'LONG' ? 92 : 55, nextTrigger: null, blockers: [], reason: 'fixture' } as any,
+      shortBias: { direction: 'SHORT', decisionQualityScore: direction === 'SHORT' ? 98 : 55, modelConfidenceScore: direction === 'SHORT' ? 98 : 55, rankScore: direction === 'SHORT' ? 98 : 55, nextTrigger: null, blockers: [], reason: 'fixture' } as any,
+      htfConflict: lowerBias !== matchingBias,
+      countertrendWarning: null,
+      discordEligible: true,
+      approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+      notes: [],
+    },
+  } as DeskState;
+}
+
+const shortCounter = buildScannerCounterStructureConditional({
+  deskState: counterStructureDeskStateFixture('SHORT', 'RANGE'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(shortCounter?.counterStructureConditional, true);
+assert.equal(shortCounter?.candidateDirection, 'SHORT');
+assert.ok(shortCounter?.lowerTimeframeStateSummary.includes('1H RANGE'));
+assert.ok(shortCounter?.standDown.includes('7474.00'));
+
+const longCounter = buildScannerCounterStructureConditional({
+  deskState: counterStructureDeskStateFixture('LONG', 'RANGE'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(longCounter?.counterStructureConditional, true);
+assert.equal(longCounter?.candidateDirection, 'LONG');
+assert.ok(longCounter?.requiredTrigger.includes('5320.00'));
+
+const alignedShortCounter = buildScannerCounterStructureConditional({
+  deskState: counterStructureDeskStateFixture('SHORT', 'BEAR'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(alignedShortCounter, null);
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES 06-26',

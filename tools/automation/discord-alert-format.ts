@@ -377,6 +377,16 @@ export interface CompactDeskStateForDiscord {
         note?: string;
       }>;
     } | null;
+    counterStructureConditional?: {
+      sourceOfTruth?: string;
+      counterStructureConditional?: boolean;
+      candidateDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      htfBackdropSummary?: string | null;
+      lowerTimeframeStateSummary?: string | null;
+      whyShown?: string | null;
+      requiredTrigger?: string | null;
+      standDown?: string | null;
+    } | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -1640,6 +1650,14 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
         ? { state: 'above' as const, distance: currentPrice - activeZoneUpper }
         : { state: 'inside' as const, distance: 0 }
     : null;
+  const counterStructureLines = counterStructureConditionalLines({
+    play: args.deskState?.primaryDeskPlay,
+    direction,
+    activeZoneLower,
+    activeZoneUpper,
+    lineInSand,
+  });
+  const entryLabel = counterStructureLines.length ? 'Conditional entry reference' : 'Entry';
   const conditionalLevelLines = (): string[] => {
     if (status === 'EXECUTABLE' || !currentVsZone || currentVsZone.state === 'inside') {
       return [
@@ -1647,7 +1665,7 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
           `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
           `Current: ${priceLine(currentPrice)} (inside zone)`,
         ] : []),
-        `Entry: ${priceLine(candidate.entry)}`,
+        `${entryLabel}: ${priceLine(candidate.entry)}`,
         `Stop: ${priceLine(levels.stop)}`,
         `T1: ${priceLine(levels.target1)}`,
         `T2: ${priceLine(levels.target2)}`,
@@ -1698,6 +1716,8 @@ function candidateCurrentDeskPlanLines(args: CompactDiscordSummaryArgs, candidat
     `Invalidation: ${compactInstruction(candidate.invalidation, `invalid ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     `Stand down: ${standDownInstruction(candidate.invalidation, `completed acceptance ${invalidWord} ${priceLine(levels.stop)}.`)}`,
     '',
+    ...counterStructureLines,
+    ...(counterStructureLines.length ? [''] : []),
     sideBreakoutLabel(direction, triggerWord, lineInSand),
     ...(referenceOnly ? [
       'Tactical levels - not execution approval.',
@@ -1781,6 +1801,54 @@ function deskPlayStandDownLine(args: {
       : `Stand down: completed acceptance above ${priceLine(args.lineInSand)}.`;
   }
   return 'Stand down: completed 5M proof is missing or canExecute remains false.';
+}
+
+function counterStructureConditionalLines(args: {
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null | undefined;
+  direction: 'LONG' | 'SHORT';
+  activeZoneLower?: number | null;
+  activeZoneUpper?: number | null;
+  lineInSand?: number | null;
+}): string[] {
+  const counter = args.play?.counterStructureConditional;
+  if (!counter?.counterStructureConditional) return [];
+  if (counter.candidateDirection && counter.candidateDirection !== args.direction) return [];
+  const htf = compactInstruction(counter.htfBackdropSummary, 'HTF context supports review only.');
+  const lower = compactInstruction(counter.lowerTimeframeStateSummary, 'lower timeframes are mixed/conflicted.');
+  const trigger = compactInstruction(
+    counter.requiredTrigger,
+    args.direction === 'SHORT'
+      ? `completed 5M rejects/holds below ${priceLine(args.lineInSand)}.`
+      : `completed 5M reclaims/holds above ${priceLine(args.lineInSand)}.`,
+  );
+  const standDown = compactInstruction(
+    counter.standDown,
+    args.direction === 'SHORT'
+      ? `completed 5M accepts above ${priceLine(args.activeZoneUpper ?? args.lineInSand)}.`
+      : `completed 5M accepts below ${priceLine(args.activeZoneLower ?? args.lineInSand)}.`,
+  );
+  const zoneText = args.activeZoneLower !== null && args.activeZoneLower !== undefined &&
+    args.activeZoneUpper !== null && args.activeZoneUpper !== undefined
+    ? zoneRangeLine(args.activeZoneLower, args.activeZoneUpper)
+    : priceLine(args.lineInSand);
+  const lowerSide = args.direction === 'SHORT' ? 'bullish/range/conflict' : 'bearish/range/conflict';
+  const action = args.direction === 'SHORT'
+    ? `SHORT only if completed 5M rejects/holds below ${zoneText}.`
+    : `LONG only if completed 5M reclaims/holds above ${zoneText}.`;
+  const noChase = args.direction === 'SHORT'
+    ? 'No chase if price is already below the zone or near/past T1.'
+    : 'No chase if price is already above the zone or near/past T1.';
+  return [
+    'Counter-Structure Conditional Map:',
+    `${args.direction} context comes from ${htf}.`,
+    `1H/15M/5M are ${lower || lowerSide}, so this is not an immediate ${args.direction.toLowerCase()}.`,
+    `Why shown: ${compactInstruction(counter.whyShown, 'structured evidence is meaningful, but execution still needs completed 5M proof.')}`,
+    action,
+    `Trigger: ${trigger}`,
+    `Stand down: ${standDown}`,
+    noChase,
+    'Review only. Not execution approval.',
+  ];
 }
 
 function deskPlayLineDisplayLines(
@@ -2220,6 +2288,14 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           ? { state: 'above' as const, distance: currentPrice - activeZoneUpper }
           : { state: 'inside' as const, distance: 0 }
       : null;
+    const counterStructureLines = counterStructureConditionalLines({
+      play,
+      direction: side,
+      activeZoneLower,
+      activeZoneUpper,
+      lineInSand: line,
+    });
+    const entryLabel = counterStructureLines.length ? 'Conditional entry reference' : 'Entry';
     const conditionalLevelLines = (): string[] => {
       if (!levels) return [];
       if (currentVsZone && currentVsZone.state !== 'inside') {
@@ -2245,7 +2321,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
           `Entry zone: ${zoneRangeLine(activeZoneLower, activeZoneUpper)}`,
           `Current: ${priceLine(currentPrice)} (inside zone)`,
         ] : []),
-        `Entry: ${priceLine(levels.entry)}`,
+        `${entryLabel}: ${priceLine(levels.entry)}`,
         `Stop: ${priceLine(levels.stop)}`,
         `T1: ${priceLine(levels.target1)}`,
         `T2: ${priceLine(levels.target2)}`,
@@ -2273,6 +2349,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         hasLevels: true,
         lines: [
           sideBreakoutLabel(side, triggerWord, line),
+          ...counterStructureLines,
           'High-confidence conditional trade plan - wait on the named completed 5M condition.',
           'Execution gate: armed only after that condition closes; not early-entry approval.',
           ...conditionalLevelLines(),
@@ -2291,6 +2368,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         hasLevels: true,
         lines: [
           sideBreakoutLabel(side, triggerWord, line),
+          ...counterStructureLines,
           reviewLabel,
           proofLabel,
           ...conditionalLevelLines(),

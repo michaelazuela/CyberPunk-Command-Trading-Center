@@ -346,6 +346,147 @@ assert.ok(!morningText.includes('HTF Runner Map:'));
 assert.ok(!morningText.includes('HTF reaction:'));
 assert.deepEqual((morning.components || []).flatMap((row: any) => row.components.map((component: any) => component.label)), ['Long T1 Hit', 'Long T2 Hit', 'Long Runner Hit', 'Long Stretch Hit', 'Long Stopped', 'Scratch', 'No Trade', 'Missed']);
 
+const counterShortCandidate = {
+  ...sampleCandidate('SHORT'),
+  entry: 7467.5,
+  stop: 7490,
+  target1: 7417.25,
+  target2: 7409,
+  riskPoints: 22.5,
+  decisionQualityScore: 98,
+  modelConfidenceScore: 98,
+  requiredTrigger: 'Active tactical zone 7460.75-7474.00: completed 5M hold/reject below the zone required before fresh execution consideration.',
+  invalidation: 'Fresh SHORT stand down on completed 5M acceptance above 7474.00.',
+} as SetupCandidate;
+const counterShortPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-29',
+  instrument: 'MES',
+  planVersionId: 'COUNTER-SHORT-TEST',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    noTradeReason: null,
+    invalidation: counterShortCandidate.invalidation,
+    setupCandidates: [counterShortCandidate],
+  },
+  candidates: [counterShortCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Morning',
+  windowLabel: 'Morning Setup Scanner',
+  currentPrice: 7467.5,
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    lineInSand: 7467.5,
+    nextTrigger: counterShortCandidate.requiredTrigger,
+    invalidation: counterShortCandidate.invalidation,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'SHORT',
+      title: 'SHORT desk play',
+      summary: 'Short review map into active tactical zone.',
+      lineInSand: 7467.5,
+      shortBelow: 7467.5,
+      longAbove: 7490,
+      nextTrigger: counterShortCandidate.requiredTrigger,
+      invalidation: counterShortCandidate.invalidation,
+      noChase: 'No chase away from zone.',
+      htfConflict: true,
+      countertrendWarning: null,
+      discordEligible: true,
+      activeTacticalZone: {
+        direction: 'SHORT',
+        lower: 7460.75,
+        upper: 7474,
+        nextTrigger: counterShortCandidate.requiredTrigger,
+        standDown: 'Fresh SHORT stand down on completed 5M acceptance above 7474.00.',
+      },
+      counterStructureConditional: {
+        counterStructureConditional: true,
+        candidateDirection: 'SHORT',
+        htfBackdropSummary: '4H RANGE / 2H BEAR',
+        lowerTimeframeStateSummary: '1H RANGE / 15M RANGE / 5M RANGE',
+        whyShown: 'SHORT map is shown because structured evidence is meaningful, but lower timeframes are not fully aligned.',
+        requiredTrigger: counterShortCandidate.requiredTrigger,
+        standDown: 'Fresh SHORT stand down on completed 5M acceptance above 7474.00.',
+      },
+    },
+  },
+});
+const counterShortText = flattenDiscordPayloadText(counterShortPayload);
+assert.ok(counterShortText.includes('Counter-Structure Conditional Map:'));
+assert.ok(counterShortText.includes('SHORT context comes from 4H RANGE / 2H BEAR.'));
+assert.ok(counterShortText.includes('1H/15M/5M are 1H RANGE / 15M RANGE / 5M RANGE, so this is not an immediate short.'));
+assert.ok(counterShortText.includes('SHORT only if completed 5M rejects/holds below 7460.75-7474.00.'));
+assert.ok(counterShortText.includes('Review only. Not execution approval.'));
+assert.ok(counterShortText.includes('Conditional entry reference: 7467.50'));
+assert.ok(!/^Entry: 7467\.50$/m.test(counterShortText));
+
+const counterLongCandidate = {
+  ...sampleCandidate('LONG'),
+  decisionQualityScore: 92,
+  modelConfidenceScore: 92,
+} as SetupCandidate;
+const counterLongPayload = compactDiscordSummary({
+  session: 'lunch',
+  tradeDate: '2026-06-29',
+  instrument: 'MES',
+  planVersionId: 'COUNTER-LONG-TEST',
+  normalized: { ...normalized, setupCandidates: [counterLongCandidate] },
+  candidates: [counterLongCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Lunch Setup Scanner',
+  currentPrice: 5320,
+  deskState: {
+    marketMode: 'conditional',
+    visibilityMode: 'POST_CONDITIONAL',
+    discordAction: 'post_conditional',
+    lineInSand: 5320,
+    nextTrigger: 'Completed 5M reclaim/hold above 5320.00.',
+    invalidation: 'Stand down below 5316.00.',
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG desk play',
+      summary: 'Long review map.',
+      lineInSand: 5320,
+      longAbove: 5320,
+      shortBelow: 5316,
+      nextTrigger: 'Completed 5M reclaim/hold above 5320.00.',
+      invalidation: 'Stand down below 5316.00.',
+      noChase: 'No chase.',
+      htfConflict: true,
+      countertrendWarning: null,
+      discordEligible: true,
+      activeTacticalZone: {
+        direction: 'LONG',
+        lower: 5316,
+        upper: 5320,
+        nextTrigger: 'Completed 5M reclaim/hold above 5320.00.',
+        standDown: 'Fresh LONG stand down on completed 5M acceptance below 5316.00.',
+      },
+      counterStructureConditional: {
+        counterStructureConditional: true,
+        candidateDirection: 'LONG',
+        htfBackdropSummary: '4H RANGE / 2H BULL',
+        lowerTimeframeStateSummary: '1H RANGE / 15M RANGE / 5M RANGE',
+        whyShown: 'LONG map is shown because structured evidence is meaningful, but lower timeframes are not fully aligned.',
+        requiredTrigger: 'Completed 5M reclaim/hold above 5320.00.',
+        standDown: 'Fresh LONG stand down on completed 5M acceptance below 5316.00.',
+      },
+    },
+  },
+});
+const counterLongText = flattenDiscordPayloadText(counterLongPayload);
+assert.ok(counterLongText.includes('LONG context comes from 4H RANGE / 2H BULL.'));
+assert.ok(counterLongText.includes('so this is not an immediate long.'));
+assert.ok(counterLongText.includes('LONG only if completed 5M reclaims/holds above 5316.00-5320.00.'));
+assert.ok(counterLongText.includes('Conditional entry reference: 5320.00'));
+
 const watchCandidate = {
   ...sampleCandidate('SHORT'),
   entry: null,

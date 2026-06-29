@@ -2828,6 +2828,21 @@ Next recommended action: Review live scanner/Discord output after deployment to 
 ## Current Change
 
 Date: 2026-06-29
+Task: Add counter-structure conditional clarity to Discord high-confidence review maps.
+Files changed: src/lib/localScannerEngine.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.test.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: A high-confidence conditional can be valid as a review-only map while 1H/15M/5M remain range, mixed, or opposed. Discord must state that clearly instead of making the plan read like an immediate trade call.
+Tests run: npx tsx tools/automation/discord-alert-format.test.ts; npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/live-discord-rollout.test.ts; npx tsx tools/automation/no-silent-drop-policy-audit.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Result: Passed.
+Trading logic changed: No.
+Bridge impact: None.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None known.
+Next recommended action: Observe the next live high-confidence conditional review map and confirm the counter-structure wording is concise enough in Discord preview.
+
+## Previous Change
+
+Date: 2026-06-29
 Task: Fix false morning scanner data-quality notice after trusted 5M-derived HTF repair.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The scanner rebuilt sufficient 240M history from trusted 5M OHLC, but the readiness gate still kept 240M marked insufficient and sent an operational data-quality Discord notice.
