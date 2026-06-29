@@ -48,6 +48,25 @@ function hasCompleteAppLevels(text: string): boolean {
   return hasNumericLevel(text, 'Entry') && hasNumericLevel(text, 'Stop') && hasNumericLevel(text, 'T1') && hasNumericLevel(text, 'T2');
 }
 
+function numericLevel(text: string, label: 'Entry' | 'Stop' | 'T1' | 'T2'): number | null {
+  const match = text.match(new RegExp(`\\b${label}:\\s*(-?\\d+(?:\\.\\d{1,2})?)\\b`, 'i'));
+  if (!match) return null;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function currentDeskPlanDirection(text: string): 'LONG' | 'SHORT' | null {
+  const entryIndex = text.search(/\bEntry:\s*(-?\d+(?:\.\d{1,2})?)\b/i);
+  const beforeEntry = entryIndex >= 0 ? text.slice(0, entryIndex) : text;
+  const actionableMatches = [...beforeEntry.matchAll(/\b(LONG ABOVE|SHORT BELOW)\b/gi)];
+  const activeSide = actionableMatches[actionableMatches.length - 1]?.[1]?.toUpperCase();
+  if (activeSide === 'LONG ABOVE') return 'LONG';
+  if (activeSide === 'SHORT BELOW') return 'SHORT';
+  if (/\bPrimary:\s*(?:🐂\s*)?LONG\b/i.test(text)) return 'LONG';
+  if (/\bPrimary:\s*(?:🐻\s*)?SHORT\b/i.test(text)) return 'SHORT';
+  return null;
+}
+
 function duplicateLabelIssues(text: string): DiscordArtifactLintIssue[] {
   const duplicatePatterns: Array<[RegExp, string, string]> = [
     [/\bAction:\s*Action\b/i, 'duplicate_action_label', 'duplicate Action label detected.'],
@@ -77,6 +96,25 @@ function stalePendingLevelIssues(text: string): DiscordArtifactLintIssue[] {
       code: `stale_${label.toLowerCase()}_pending`,
       message: `Discord artifact blocked: ${label}: pending is stale because complete app-owned levels are present.`,
     }));
+}
+
+function currentDeskPlanTargetOrderIssues(text: string): DiscordArtifactLintIssue[] {
+  if (!hasCompleteAppLevels(text)) return [];
+  const direction = currentDeskPlanDirection(text);
+  if (!direction) return [];
+  const entry = numericLevel(text, 'Entry');
+  const target1 = numericLevel(text, 'T1');
+  const target2 = numericLevel(text, 'T2');
+  if (entry === null || target1 === null || target2 === null) return [];
+  const ordered = direction === 'LONG'
+    ? target2 > target1 && target1 > entry
+    : target2 < target1 && target1 < entry;
+  if (ordered) return [];
+  return [{
+    severity: 'block',
+    code: 'current_desk_plan_target_order_mismatch',
+    message: `Discord artifact blocked: ${direction} Current Desk Plan app targets are internally inconsistent with Entry/T1/T2 order.`,
+  }];
 }
 
 export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordArtifactLintIssue[] {
@@ -127,6 +165,7 @@ export function lintDiscordArtifacts(input: DiscordArtifactLintInput): DiscordAr
 
   issues.push(...duplicateLabelIssues(text));
   issues.push(...stalePendingLevelIssues(text));
+  issues.push(...currentDeskPlanTargetOrderIssues(text));
 
   const hasCurrentDeskPlanLevels = policy.category === 'current_desk_plan' && hasCompleteAppLevels(text);
   if (policy.requiresChartWhenLevelsPresent && hasCurrentDeskPlanLevels && validFiles.length === 0) {

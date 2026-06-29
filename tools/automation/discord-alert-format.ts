@@ -613,13 +613,13 @@ function candidateLevels(candidate: SetupCandidate): { stop: number | null; targ
   };
 }
 
-function appTargetLevels(candidate: SetupCandidate, normalized: CompactNormalizedPlan): { stop: number | null; target1: number | null; target2: number | null } {
+function appTargetLevels(candidate: SetupCandidate, _normalized: CompactNormalizedPlan): { stop: number | null; target1: number | null; target2: number | null } {
   const stop = typeof candidate.stop === 'number' && Number.isFinite(candidate.stop) ? candidate.stop : null;
   const computed = targetsFromEntryStop(candidate.direction, candidate.entry, stop);
   return {
     stop,
-    target1: typeof normalized.t1 === 'number' && Number.isFinite(normalized.t1) ? normalized.t1 : computed.target1,
-    target2: typeof normalized.t2 === 'number' && Number.isFinite(normalized.t2) ? normalized.t2 : computed.target2,
+    target1: computed.target1,
+    target2: computed.target2,
   };
 }
 
@@ -1567,6 +1567,21 @@ function candidateLineInSand(candidate: SetupCandidate): number | null {
 
 function candidateHtfTargetLine(candidate: SetupCandidate, levels: { target1: number | null; target2: number | null }): string {
   const targetPlan = candidate.targetObjectivePlan;
+  const chartRunner = firstMeaningfulExtension(candidate.direction, levels.target2, [
+    candidate.target2,
+    targetPlan?.liquidityTarget1?.price,
+    targetPlan?.nearestLiquidityTarget?.price,
+    targetPlan?.liquidityTarget2?.price,
+    targetPlan?.liquidityRunnerTarget?.price,
+    targetPlan?.runnerTarget?.price,
+  ]);
+  const chartExtension = firstMeaningfulExtension(candidate.direction, chartRunner || levels.target2, [
+    targetPlan?.liquidityRunnerTarget?.price,
+    targetPlan?.runnerTarget?.price,
+  ]);
+  if (chartRunner || chartExtension) {
+    return `HTF target: ${priceLine(chartRunner)} / runner ${priceLine(chartExtension)}`;
+  }
   const targetObjective = firstMeaningfulTargetObjective(candidate.direction, levels.target2, [
     targetPlan?.nearestLiquidityTarget,
     targetPlan?.liquidityTarget1,

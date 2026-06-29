@@ -232,6 +232,34 @@ assert.throws(
   /duplicate Invalid label/,
 );
 assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload([
+    'Primary: 🐂 LONG',
+    'Line in sand: 7426.75',
+    'Entry: 7426.75',
+    'Stop: 7422.00',
+    'T1: 7447.00',
+    'T2: 7446.50',
+    'Invalidation: below 7422.00.',
+    'Chart: attached.',
+    'Decision support only.',
+  ].join('\n')), ['desk-plan-chart.png']),
+  /app targets are internally inconsistent/,
+);
+assert.throws(
+  () => validateDiscordPayload(currentDeskPlanPayload([
+    'Primary: 🐻 SHORT',
+    'Line in sand: 7426.75',
+    'Entry: 7426.75',
+    'Stop: 7432.00',
+    'T1: 7420.00',
+    'T2: 7421.00',
+    'Invalidation: above 7432.00.',
+    'Chart: attached.',
+    'Decision support only.',
+  ].join('\n')), ['desk-plan-chart.png']),
+  /app targets are internally inconsistent/,
+);
+assert.throws(
   () => validateDiscordPayload(currentDeskPlanPayload(`${completeLevelDescription}\n${'x'.repeat(1500)}`), ['desk-plan-chart.png']),
   /keep image-backed trade alerts under 1600/,
 );
@@ -2203,7 +2231,7 @@ assert.ok(extensionText.includes('Entry: 7603.25'));
 assert.ok(extensionText.includes('Stop: 7599.00'));
 assert.ok(extensionText.includes('T1: 7609.75'));
 assert.ok(extensionText.includes('T2: 7611.75'));
-assert.ok(extensionText.includes('HTF target: 7632.75 / runner N/A'));
+assert.ok(extensionText.includes('HTF target: 7620.00 / runner 7632.75'));
 assert.ok(!extensionText.includes('Confidence: 98/100'));
 assert.ok(!extensionText.includes('HTF Runner Map:'));
 assert.ok(!extensionText.includes('Mgmt: App T1/T2 tactical'));
@@ -2416,6 +2444,103 @@ assert.ok(!scannerReadyText.includes('Usage: structural confirmation allowed'));
 assert.ok(scannerReadyPayload.content?.startsWith('🟡'), 'canExecute=false must prevent green executable Discord status even with override');
 assert.equal(/APPROVED|EXECUTABLE/i.test(scannerReadyPayload.content || ''), false, 'normalized canExecute=false must not allow approved/executable headline text');
 assert.equal(/EXECUTABLE -|ApprovedTrade|Trade now|Entry confirmed|Take the trade|Enter now|Buy now|Sell now|Trade approved/i.test(scannerReadyText), false);
+
+const discordChartDriftCandidate = sampleCandidate('LONG');
+discordChartDriftCandidate.setupType = SetupType.TurtleSoup;
+discordChartDriftCandidate.scenarioLabel = 'Bullish Turtle Soup Reversal - normalized plan not executable';
+discordChartDriftCandidate.entry = 7426.75;
+discordChartDriftCandidate.stop = 7422;
+discordChartDriftCandidate.target1 = 7437.5;
+discordChartDriftCandidate.target2 = 7440;
+discordChartDriftCandidate.riskPoints = 4.75;
+discordChartDriftCandidate.decisionQualityScore = 87;
+discordChartDriftCandidate.modelConfidenceScore = 87;
+discordChartDriftCandidate.requiredTrigger = 'Bullish Turtle Soup: sell-side sweep below 7422.5, reclaim back above the swept low, then confirm upward rejection or expansion.';
+discordChartDriftCandidate.invalidation = 'Invalid if price trades below the sweep wick structure stop near 7422.';
+discordChartDriftCandidate.targetObjectivePlan = {
+  ...discordChartDriftCandidate.targetObjectivePlan!,
+  nearestObstacleTarget: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Session Bullish Displacement Imbalance Midpoint',
+    price: 7428.25,
+    source: 'current_window',
+    type: 'imbalance_midpoint',
+  },
+  nearestLiquidityTarget: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Prior RTH Day High',
+    price: 7459.25,
+    source: 'previous_rth',
+    type: 'high',
+  },
+  liquidityTarget1: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Prior RTH Day High',
+    price: 7459.25,
+    source: 'previous_rth',
+    type: 'high',
+  },
+  liquidityTarget2: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Prior 3 RTH Days High',
+    price: 7496.5,
+    source: 'three_day_rth',
+    type: 'high',
+  },
+  liquidityRunnerTarget: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Full ETH Context High',
+    price: 7696.25,
+    source: 'full_context',
+    type: 'high',
+  },
+  runnerTarget: {
+    ...discordChartDriftCandidate.targetObjectivePlan!.liquidityTarget1!,
+    label: 'Full ETH Context High',
+    price: 7696.25,
+    source: 'full_context',
+    type: 'high',
+  },
+};
+const discordChartDriftPayload = compactDiscordSummary({
+  session: 'evening',
+  tradeDate: '2026-06-28',
+  instrument: 'MES',
+  planVersionId: 'EVENING-DISCORD-CHART-LEVEL-DRIFT',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    decision: 'SHORT',
+    entry: 7448,
+    stop: 7448.75,
+    t1: 7447,
+    t2: 7446.5,
+    noTradeReason: null,
+    invalidation: 'Invalid if protected structure fails.',
+  },
+  candidates: [discordChartDriftCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  windowLabel: '18:45-22:15 ET',
+  currentPrice: 7423.25,
+  components: buildOutcomeComponents({
+    planVersionId: 'EVENING-DISCORD-CHART-LEVEL-DRIFT',
+    sessionType: 'evening',
+    tradeDate: '2026-06-28',
+    instrument: 'MES',
+    direction: 'LONG',
+  }),
+});
+validateDiscordPayload(discordChartDriftPayload, ['chart-plan.png', 'price-level-map.png']);
+const discordChartDriftText = flattenDiscordPayloadText(discordChartDriftPayload);
+assert.ok(discordChartDriftText.includes('Entry: 7426.75'));
+assert.ok(discordChartDriftText.includes('Stop: 7422.00'));
+assert.ok(discordChartDriftText.includes('T1: 7434.00'));
+assert.ok(discordChartDriftText.includes('T2: 7436.25'));
+assert.ok(discordChartDriftText.includes('HTF target: 7440.00 / runner 7696.25'));
+assert.ok(!discordChartDriftText.includes('T1: 7447.00'));
+assert.ok(!discordChartDriftText.includes('T2: 7446.50'));
+assert.ok(!discordChartDriftText.includes('HTF target: 7459.25 / runner 7496.50'));
 
 const openingDriveHumanReviewCandidate = sampleCandidate('SHORT');
 openingDriveHumanReviewCandidate.setupType = SetupType.OpeningDriveFvgContinuation;
