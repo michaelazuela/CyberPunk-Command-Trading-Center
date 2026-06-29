@@ -14,6 +14,7 @@ import {
   buildScannerHistoryPreloadPlan,
   buildSegmentedHistoryRepairWindows,
   attachFailedPlanReversalContextFromScannerState,
+  aggregateScannerFiveMinuteBarsToTimeframe,
   appOwnedFailedDecisionEventFromCandidate,
   appOwnedFailedPlanEventsFromScannerAudits,
   appOwnedFailedPlanEventsFromScannerState,
@@ -118,6 +119,21 @@ assert.equal(shouldLogBridgeInstrumentResolution({
   source: 'front-month-rollover',
   warning: 'Configured bridge instrument MES 06-26 is stale after rollover; using active front-month contract MES 09-26.',
 }, 'MES 06-26'), true);
+
+const rebuilt120mFrom5m = aggregateScannerFiveMinuteBarsToTimeframe([
+  { time: '2026-06-28T18:00:00', open: 7440, high: 7442, low: 7439, close: 7441, volume: 10 },
+  { time: '2026-06-28T18:05:00', open: 7441, high: 7445, low: 7440, close: 7444, volume: 20 },
+  { time: '2026-06-28T19:55:00', open: 7444, high: 7452, low: 7443, close: 7450, volume: 30 },
+], '120m');
+assert.equal(rebuilt120mFrom5m.length, 1);
+assert.deepEqual(rebuilt120mFrom5m[0], {
+  time: '2026-06-28T18:00:00',
+  open: 7440,
+  high: 7452,
+  low: 7439,
+  close: 7450,
+  volume: 60,
+});
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES',
@@ -2329,6 +2345,16 @@ const dataLimitedReferenceDeskPlaySuppression = evaluateScannerDeskPlayDiscordSu
     dataQualityStatus: 'data_limited',
     htfContextStatus: 'insufficient',
     canExecute: false,
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      lineInSand: 7450,
+      shortBelow: 7450,
+      shortBias: {
+        ...baseDeskPlanRefreshState.primaryDeskPlay.shortBias,
+        lineInSand: 7450,
+        tradeReadiness: { status: 'data_limited' },
+      },
+    },
   } as DeskState,
   normalized: {
     canExecute: false,
@@ -2345,6 +2371,7 @@ const dataLimitedReferenceDeskPlaySuppression = evaluateScannerDeskPlayDiscordSu
 assert.equal(dataLimitedReferenceDeskPlaySuppression.shouldPost, true);
 assert.equal(dataLimitedReferenceDeskPlaySuppression.category, 'post');
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference map is eligible/);
+assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /readiness is data-limited/);
 assert.match(dataLimitedReferenceDeskPlaySuppression.reason, /reference entry\/stop\/T1\/T2/);
 const dataLimitedNoLevelDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',

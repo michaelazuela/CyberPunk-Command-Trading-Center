@@ -100,7 +100,7 @@ import {
 } from './market-data-store';
 import {
   barsMatchRequestedTimeframe,
-  isSundayEveningFourHourReopenLagCovered,
+  isSundayEveningHtfReopenLagCovered,
   latestOpenTimestampCoverageToleranceMs,
   marketDataSourceFromCounts,
   mergeMarketDataBars,
@@ -562,6 +562,7 @@ export interface ScannerHistoryCoverageRecord {
   source: ScannerHistoryCoverageSource;
   cacheBars: number;
   bridgeRepairBars: number;
+  fiveMinuteAggregationRepairBars?: number;
   selfHealed: boolean;
   sufficient: boolean;
   warning: string | null;
@@ -1723,14 +1724,14 @@ export function barsCoverRequestedLookback(
   const latestCompletedToleranceMs = latestOpenTimestampCoverageToleranceMs(timeframe);
   const startCoverageToleranceMs = 24 * 60 * 60_000;
   const latestBarTime = sorted[sorted.length - 1]?.time;
-  const sundayEveningFourHourReopenLagCovered =
-    isSundayEveningFourHourReopenLagCovered(timeframe, latestBarTime, requestedTo);
+  const sundayEveningHtfReopenLagCovered =
+    isSundayEveningHtfReopenLagCovered(timeframe, latestBarTime, requestedTo);
   const latestCoverageSatisfied =
     last >= to - latestCompletedToleranceMs ||
-    sundayEveningFourHourReopenLagCovered;
+    sundayEveningHtfReopenLagCovered;
   const spanCoverageSatisfied =
     loadedSpanDays >= requiredSpanDays ||
-    (sundayEveningFourHourReopenLagCovered && loadedSpanDays >= requiredSpanDays - 3);
+    (sundayEveningHtfReopenLagCovered && loadedSpanDays >= requiredSpanDays - 3);
   return (
     sorted.length >= SCANNER_HISTORY_MIN_BARS[timeframe] &&
     first <= from + startCoverageToleranceMs &&
@@ -1742,8 +1743,9 @@ export function barsCoverRequestedLookback(
 export function summarizeScannerHistoryCoverage(record: ScannerHistoryCoverageRecord): string {
   const status = record.sufficient ? 'sufficient' : 'insufficient';
   const healed = record.selfHealed ? ', self-healed from bridge' : '';
+  const aggregated = record.fiveMinuteAggregationRepairBars ? `, 5m-aggregated=${record.fiveMinuteAggregationRepairBars}` : '';
   const limitation = record.dataLimitation?.message ? `, data-limit=${record.dataLimitation.message}` : '';
-  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}${limitation}`;
+  return `${record.timeframe}: ${status}, ${record.barsLoaded} bars, ${record.rangeStart || 'N/A'} to ${record.rangeEnd || 'N/A'}, source=${record.source}${healed}${aggregated}${limitation}`;
 }
 
 export function twoHourCoverageDiagnostic(
@@ -2618,6 +2620,119 @@ function scannerHistoryRepairBarsForTimeframe(
   return [];
 }
 
+function completedHtfAggregateBars(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe, requestedTo: string): NinjaBridgeBar[] {
+  if (timeframe === '5m') return bars;
+  const requestedToMs = barTimeMs(requestedTo);
+  if (requestedToMs === null) return bars;
+  const timeframeMs = timeframeMinutes(timeframe) * 60_000;
+  return bars.filter((bar) => {
+    const openMs = barTimeMs(bar.time);
+    return openMs !== null && openMs + timeframeMs <= requestedToMs;
+  });
+}
+
+function targetTimeframeBucketStartEt(value: string, timeframe: MarketBarTimeframe): string | null {
+  const normalized = normalizeCandleTimeEt(value);
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  const minutes = timeframeMinutes(timeframe);
+  const minuteOfDay = Number(match[2]) * 60 + Number(match[3]);
+  const bucketMinute = Math.floor(minuteOfDay / minutes) * minutes;
+  return `${match[1]}T${String(Math.floor(bucketMinute / 60)).padStart(2, '0')}:${String(bucketMinute % 60).padStart(2, '0')}:00`;
+}
+
+export function aggregateScannerFiveMinuteBarsToTimeframe(
+  bars: NinjaBridgeBar[],
+  targetTimeframe: MarketBarTimeframe,
+): NinjaBridgeBar[] {
+  const sorted = mergeBars([], bars);
+  if (targetTimeframe === '5m') return sorted;
+  const buckets = new Map<string, NinjaBridgeBar[]>();
+  for (const bar of sorted) {
+    const bucket = targetTimeframeBucketStartEt(bar.time, targetTimeframe);
+    if (!bucket) continue;
+    const list = buckets.get(bucket) || [];
+    list.push(bar);
+    buckets.set(bucket, list);
+  }
+  return [...buckets.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([time, bucketBars]) => {
+      const ordered = mergeBars([], bucketBars);
+      return {
+        time,
+        open: ordered[0].open,
+        high: Math.max(...ordered.map((bar) => bar.high)),
+        low: Math.min(...ordered.map((bar) => bar.low)),
+        close: ordered[ordered.length - 1].close,
+        volume: ordered.reduce((sum, bar) => sum + (Number(bar.volume) || 0), 0),
+      };
+    });
+}
+
+async function fetchFiveMinuteBarsForHtfAggregation(args: {
+  config: ScannerConfig;
+  from: string;
+  to: string;
+  limit: number;
+  marketConfig: MarketDataConfig | null;
+}): Promise<NinjaBridgeBar[]> {
+  let cached5m: NinjaBridgeBar[] = [];
+  if (args.marketConfig) {
+    try {
+      cached5m = await fetchCachedMarketBars({
+        instrument: args.config.bridgeInstrument,
+        timeframe: '5m',
+        from: args.from,
+        to: args.to,
+        config: args.marketConfig,
+        limit: args.limit,
+      });
+    } catch (error) {
+      console.warn(`[scanner-history] 5m: market_bars preload for HTF aggregation failed, attempting bridge repair: ${formatError(error)}`);
+    }
+  }
+  const cacheSufficient = barsCoverRequestedLookback(cached5m, args.from, args.to, '5m');
+  if (cacheSufficient) return cached5m;
+
+  try {
+    const historical = await getNinjaHistoricalBars({
+      instrument: args.config.bridgeInstrument,
+      timeframe: '5m',
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+      baseUrl: args.config.bridgeUrl,
+    });
+    const repair5m = scannerHistoryRepairBarsForTimeframe(
+      '5m',
+      historical.ok ? historical.bars || [] : [],
+      '5m bridge repair for HTF aggregation',
+    );
+    if (!repair5m.length) {
+      console.warn(`[scanner-history] 5m: bridge repair for HTF aggregation returned no bars for ${args.from} to ${args.to}: ${historical.error || 'unknown error'}`);
+      return cached5m;
+    }
+    if (args.marketConfig) {
+      try {
+        await upsertMarketBars({
+          bars: repair5m,
+          instrument: args.config.instrument,
+          bridgeInstrument: args.config.bridgeInstrument,
+          timeframe: '5m',
+          config: args.marketConfig,
+        });
+      } catch (error) {
+        console.warn(`[scanner-history] 5m: HTF aggregation repair bars loaded but cache upsert failed: ${formatError(error)}`);
+      }
+    }
+    return mergeBars(repair5m, cached5m);
+  } catch (error) {
+    console.warn(`[scanner-history] 5m: bridge repair for HTF aggregation failed: ${formatError(error)}`);
+    return cached5m;
+  }
+}
+
 async function fetchLiveBars(config: ScannerConfig): Promise<Record<MarketBarTimeframe, NinjaBridgeBar[]>> {
   const entries = await Promise.all(TIMEFRAMES.map(async (timeframe) => {
     const bars = await fetchFreshBridgeBars(config, timeframe, 220);
@@ -2666,6 +2781,7 @@ async function fetchScannerHistoryFrame(args: {
   }
 
   let repaired: NinjaBridgeBar[] = [];
+  let fiveMinuteAggregationRepairBars = 0;
   const cacheSufficient = barsCoverRequestedLookback(cached, args.from, args.to, args.timeframe);
   if (!cacheSufficient) {
     try {
@@ -2733,6 +2849,45 @@ async function fetchScannerHistoryFrame(args: {
       }
     }
   }
+  if (args.timeframe !== '5m' && !barsCoverRequestedLookback(bars, args.from, args.to, args.timeframe)) {
+    const sourceFiveMinuteBars = await fetchFiveMinuteBarsForHtfAggregation({
+      config: args.config,
+      from: args.from,
+      to: args.to,
+      limit: args.limit,
+      marketConfig,
+    });
+    const rebuilt = scannerHistoryRepairBarsForTimeframe(
+      args.timeframe,
+      completedHtfAggregateBars(
+        aggregateScannerFiveMinuteBarsToTimeframe(sourceFiveMinuteBars, args.timeframe),
+        args.timeframe,
+        args.to,
+      ),
+      'trusted 5M OHLC aggregation repair',
+    );
+    if (rebuilt.length) {
+      fiveMinuteAggregationRepairBars = rebuilt.length;
+      repaired = mergeBars(rebuilt, repaired);
+      bars = mergeBars(repaired, cached);
+      console.log(`[scanner-history] ${args.timeframe}: rebuilt ${rebuilt.length} bars from trusted 5M OHLC after native HTF repair remained incomplete.`);
+      if (marketConfig) {
+        try {
+          await upsertMarketBars({
+            bars: rebuilt,
+            instrument: args.config.instrument,
+            bridgeInstrument: args.config.bridgeInstrument,
+            timeframe: args.timeframe,
+            config: marketConfig,
+          });
+        } catch (error) {
+          console.warn(`[scanner-history] ${args.timeframe}: 5M-derived self-healed bars loaded but cache upsert failed: ${formatError(error)}`);
+        }
+      }
+    } else {
+      console.warn(`[scanner-history] ${args.timeframe}: trusted 5M OHLC aggregation repair did not produce usable ${args.timeframe} bars.`);
+    }
+  }
   const sorted = mergeBars([], bars);
   const verification = verifyMarketDataWindow({
     bars: sorted,
@@ -2748,6 +2903,7 @@ async function fetchScannerHistoryFrame(args: {
   });
   const coverage: ScannerHistoryCoverageRecord = {
     ...verification,
+    fiveMinuteAggregationRepairBars,
     requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
   };
   if (!coverage.sufficient) {
@@ -2775,6 +2931,7 @@ async function fetchScannerHistoryFrame(args: {
           htfPromotionAllowed: false,
           invalidBars: coverage.invalidBars || 0,
           duplicateTimestamps: coverage.duplicateTimestamps || 0,
+          fiveMinuteAggregationRepairBars,
         },
       }),
     });
@@ -5053,6 +5210,11 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   });
   if (primaryBias && primaryBias.state !== 'primary') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} is ${primaryBias.state}, not the primary actionable desk side.`);
+  }
+  if (readiness === 'data_limited' && hasReferenceLevels) {
+    return scannerDeskPlaySuppressionPost(
+      `Desk Play reference map is eligible for Discord as review-only because ${play.direction} readiness is data-limited, completed 5M is ready, and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.`,
+    );
   }
   if (readiness === 'data_limited' || readiness === 'blocked' || readiness === 'missed_no_chase') {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', `Desk Play suppressed because ${play.direction} readiness is ${readiness}.`);

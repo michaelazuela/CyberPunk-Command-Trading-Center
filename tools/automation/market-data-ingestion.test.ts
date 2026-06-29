@@ -196,6 +196,36 @@ const sundayEveningFridayOpenTimestampWindow = verifyMarketDataWindow({
 assert.equal(sundayEveningFridayOpenTimestampWindow.sufficient, true);
 assert.equal(sundayEveningFridayOpenTimestampWindow.dataLimitation.status, 'none');
 
+const sundayEveningTwoHourFridayCloseWindow = verifyMarketDataWindow({
+  bars: intervalBarsEnding('2026-06-26T17:00:00-04:00', 120, 360),
+  timeframe: '120m',
+  requestedFrom: '2026-05-29T00:00:00-04:00',
+  requestedTo: '2026-06-28T19:55:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 80,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 360,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(sundayEveningTwoHourFridayCloseWindow.sufficient, true);
+assert.equal(sundayEveningTwoHourFridayCloseWindow.dataLimitation.status, 'none');
+
+const afterFirstSundayTwoHourWindow = verifyMarketDataWindow({
+  bars: intervalBarsEnding('2026-06-26T17:00:00-04:00', 120, 360),
+  timeframe: '120m',
+  requestedFrom: '2026-05-29T00:00:00-04:00',
+  requestedTo: '2026-06-28T20:00:00-04:00',
+  requiredLookbackDays: 30,
+  minimumBars: 80,
+  source: 'market_bars_bridge_repair',
+  cacheBars: 360,
+  bridgeRepairBars: 0,
+  bridgeInstrument: 'MES 09-26',
+});
+assert.equal(afterFirstSundayTwoHourWindow.sufficient, false);
+assert.equal(afterFirstSundayTwoHourWindow.dataLimitation.status, 'bridge_or_cache_incomplete');
+
 const afterFirstSundayFourHourWindow = verifyMarketDataWindow({
   bars: sundayEveningFourHourCoverageBars,
   timeframe: '240m',

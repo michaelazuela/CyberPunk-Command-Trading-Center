@@ -127,20 +127,28 @@ export function isSundayEveningFourHourReopenLagCovered(
   lastLoadedTime: string | null | undefined,
   requestedTo: string,
 ): boolean {
-  if (timeframe !== '240m') return false;
+  return isSundayEveningHtfReopenLagCovered(timeframe, lastLoadedTime, requestedTo);
+}
+
+export function isSundayEveningHtfReopenLagCovered(
+  timeframe: MarketBarTimeframe,
+  lastLoadedTime: string | null | undefined,
+  requestedTo: string,
+): boolean {
+  if (timeframe !== '120m' && timeframe !== '240m') return false;
   const requested = etPartsFromCandleTime(requestedTo);
   if (requested.weekday !== 'Sun') return false;
 
   const requestedMinutes = requested.hour * 60 + requested.minute;
   const sundayOpen = 18 * 60;
-  const firstFourHourCompletion = 22 * 60;
-  if (requestedMinutes < sundayOpen || requestedMinutes >= firstFourHourCompletion) return false;
+  const firstCompletion = timeframe === '120m' ? 20 * 60 : 22 * 60;
+  if (requestedMinutes < sundayOpen || requestedMinutes >= firstCompletion) return false;
 
   const loaded = etPartsFromCandleTime(lastLoadedTime);
   const loadedMinutes = loaded.hour * 60 + loaded.minute;
-  // NinjaTrader timestamps 4H bars by bar open; Friday's 13:00 ET bar covers into the 17:00 ET close.
-  const finalFridayFourHourOpen = 13 * 60;
-  return loaded.weekday === 'Fri' && loadedMinutes >= finalFridayFourHourOpen;
+  // NinjaTrader HTF bars can leave the Friday close as the latest completed bar until the first Sunday HTF bar completes.
+  const finalFridayOpen = timeframe === '120m' ? 15 * 60 : 13 * 60;
+  return loaded.weekday === 'Fri' && loadedMinutes >= finalFridayOpen;
 }
 
 function hasValidOhlc(bar: NinjaBridgeBar): boolean {
@@ -260,7 +268,7 @@ export function verifyMarketDataWindow(args: {
     firstMs <= closedStartReopenMs + latestCompletedToleranceMs;
   const internalGaps = args.requiredLookbackDays <= 1 ? countInternalGaps(sorted, args.timeframe) : 0;
   const sundayEveningFourHourReopenLagCovered =
-    isSundayEveningFourHourReopenLagCovered(args.timeframe, last, args.requestedTo);
+    isSundayEveningHtfReopenLagCovered(args.timeframe, last, args.requestedTo);
   const latestCoverageSatisfied = toMs !== null && lastMs !== null && (
     lastMs >= toMs - latestCompletedToleranceMs ||
     sundayEveningFourHourReopenLagCovered
