@@ -5073,6 +5073,83 @@ function scannerDeskPlayStaleLevelReason(args: {
 
 const HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE = 85;
 
+function scannerTargetToLinePromotionReviewReason(args: {
+  deskState: DeskState;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+  currentPrice: number | null;
+  latestCompleted5m?: string | null;
+  hasReferenceLevels: boolean;
+  highQualityReviewCandidate?: SetupCandidate | null;
+}): string | null {
+  if (args.deskState.canExecute) return null;
+  if (!args.latestCompleted5m) return null;
+  if (args.deskState.dataQualityStatus === 'data_limited' || args.deskState.htfContextStatus === 'insufficient') return null;
+  const play = args.deskState.primaryDeskPlay;
+  const candidateDirection = args.highQualityReviewCandidate?.direction === 'LONG' || args.highQualityReviewCandidate?.direction === 'SHORT'
+    ? args.highQualityReviewCandidate.direction
+    : null;
+  const playDirection = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
+  const direction = candidateDirection || playDirection;
+  if (direction !== 'LONG' && direction !== 'SHORT') return null;
+
+  const primaryBias = direction === 'LONG' ? play.longBias : play.shortBias;
+  const score = args.highQualityReviewCandidate?.decisionQualityScore ??
+    args.highQualityReviewCandidate?.modelConfidenceScore ??
+    primaryBias?.decisionQualityScore ??
+    primaryBias?.lineConfidence?.score ??
+    null;
+  if (typeof score !== 'number' || !Number.isFinite(score) || score < HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE) return null;
+
+  const transition = play.levelTransition || null;
+  const reaction = roundNullableTradePrice(transition?.targetReactionLevel) ??
+    roundNullableTradePrice(play.targetReactionLevel);
+  if (reaction === null) return null;
+  const activeLine = roundNullableTradePrice(play.lineInSand) ??
+    roundNullableTradePrice(primaryBias?.lineInSand);
+  if (
+    activeLine !== null &&
+    (direction === 'LONG' ? reaction < activeLine - 0.25 : reaction > activeLine + 0.25)
+  ) {
+    return null;
+  }
+
+  const transitionLine = direction === 'LONG'
+    ? roundNullableTradePrice(transition?.longAbove) ?? roundNullableTradePrice(play.longAbove)
+    : roundNullableTradePrice(transition?.shortBelow) ?? roundNullableTradePrice(play.shortBelow);
+  const rows = play.htfProtectedStructureMap?.rows || [];
+  const rowLine = rows
+    .flatMap((row) => [
+      roundNullableTradePrice(row.confirmationLine),
+      roundNullableTradePrice(row.biasChangeLine),
+      roundNullableTradePrice(row.protectedStructure),
+      roundNullableTradePrice(row.target),
+    ])
+    .filter((line): line is number => line !== null)
+    .filter((line) => direction === 'LONG' ? line > reaction + 0.25 : line < reaction - 0.25)
+    .sort((a, b) => direction === 'LONG' ? a - b : b - a)[0] ?? null;
+  const nextLine = transitionLine !== null &&
+    (direction === 'LONG' ? transitionLine > reaction + 0.25 : transitionLine < reaction - 0.25)
+    ? transitionLine
+    : rowLine;
+  if (nextLine === null) return null;
+
+  const current = roundNullableTradePrice(args.currentPrice);
+  const currentContext = current === null
+    ? 'current price N/A'
+    : `current ${current.toFixed(2)}`;
+  const acceptance = direction === 'LONG'
+    ? `completed 5M/15M acceptance above ${reaction.toFixed(2)} promotes next HTF/session line ${nextLine.toFixed(2)}`
+    : `completed 5M/15M acceptance below ${reaction.toFixed(2)} promotes next HTF/session line ${nextLine.toFixed(2)}`;
+  const failure = direction === 'LONG'
+    ? `failure/rejection below ${reaction.toFixed(2)} keeps SHORT/opposing context active`
+    : `failure/rejection above ${reaction.toFixed(2)} keeps LONG/opposing context active`;
+  const levelText = args.hasReferenceLevels
+    ? 'app-owned entry/stop/T1/T2 are complete'
+    : 'entry/stop/T1/T2 remain pending fresh app-owned 5M proof';
+
+  return `${direction} target-to-line review map is eligible for Discord as REVIEW ONLY / NOT EXECUTION APPROVAL: decision line/reaction ${reaction.toFixed(2)}; ${acceptance}; ${failure}; ${currentContext}; ${levelText}; no chase at the reaction line; canExecute remains false.`;
+}
+
 function highQualityConditionalReviewCandidate(args: {
   normalized?: ReturnType<typeof buildAppTradePlan> | null;
   direction?: 'LONG' | 'SHORT' | 'WAIT' | string | null;
@@ -5236,9 +5313,6 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   staleReason?: string | null;
   now?: Date;
 }): ScannerDeskPlayDiscordSuppressionDecision {
-  if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason)) {
-    return scannerDeskPlaySuppressionBlocked('missed_no_chase', `Desk Play kept local because the selected setup is missed/no-chase: ${args.staleReason}`);
-  }
   if (args.deskState.canExecute) {
     return scannerDeskPlaySuppressionBlocked('low_quality_map', 'Desk Play refresh suppressed because executable approval should use the trade-alert path, not review-map Discord refresh.');
   }
@@ -5255,6 +5329,22 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     normalized: args.normalized,
     direction: play.direction,
   }) || highQualityConditionalReviewCandidate({ normalized: args.normalized });
+  const targetToLinePromotionReason = scannerTargetToLinePromotionReviewReason({
+    deskState: args.deskState,
+    normalized: args.normalized,
+    currentPrice: args.currentPrice,
+    latestCompleted5m: args.latestCompleted5m,
+    hasReferenceLevels,
+    highQualityReviewCandidate,
+  });
+  if (args.staleReason && /already|stale|missed|no chase|passed|invalidated|reached/i.test(args.staleReason)) {
+    const reactionOnlyNoChase = /reaction level|target\/reaction|decision line/i.test(args.staleReason) &&
+      !/invalidated|protected stop|active tactical zone|active tactical line|t1|t2|stale/i.test(args.staleReason);
+    if (reactionOnlyNoChase && targetToLinePromotionReason) {
+      return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
+    }
+    return scannerDeskPlaySuppressionBlocked('missed_no_chase', `Desk Play kept local because the selected setup is missed/no-chase: ${args.staleReason}`);
+  }
   const highQualityReviewStaleReason = highQualityConditionalReviewStaleReason(highQualityReviewCandidate, args.currentPrice);
   if (highQualityReviewStaleReason) {
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', highQualityReviewStaleReason);
@@ -5282,6 +5372,11 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
     referenceLevels,
   });
   if (staleLevelReason) {
+    const reactionOnlyNoChase = /reaction level|target\/reaction|decision line/i.test(staleLevelReason) &&
+      !/invalidated|protected stop|active tactical zone|active tactical line|t1|t2|stale/i.test(staleLevelReason);
+    if (reactionOnlyNoChase && targetToLinePromotionReason) {
+      return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
+    }
     return scannerDeskPlaySuppressionBlocked('passed_or_invalidated_levels', staleLevelReason);
   }
   const currentRecord = scannerDeskPlanRefreshRecord({
@@ -5313,6 +5408,9 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
   }
   if (readiness === 'not_aligned' && htfFvgReviewMapReason) {
     return scannerDeskPlaySuppressionPost(htfFvgReviewMapReason);
+  }
+  if (targetToLinePromotionReason) {
+    return scannerDeskPlaySuppressionPost(targetToLinePromotionReason);
   }
   if (readiness === 'not_aligned' && tacticalCampaignMap.eligible) {
     return scannerDeskPlaySuppressionPost(`Tactical campaign watch is eligible for Discord: ${tacticalCampaignMap.reason}`);

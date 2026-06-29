@@ -2,6 +2,22 @@
 
 ## Latest Change
 
+Date: 2026-06-29
+Task: Implement HTF Target-To-Line Promotion for Discord Review Maps.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, tools/automation/discord-alert-format.test.ts, docs/PROJECT_STATUS.md.
+Reason: High-confidence review candidates could stay silent when price reached a reaction/target level even though the trader-facing map should show the decision line, acceptance condition, next HTF/session line, failure context, no-chase status, and review-only boundary. The scanner now allows a review-only target-to-line map to post when a valid reaction and next HTF/session line are present, while true invalidation, stale targets, passed T1/T2, active-zone failure, data-limited context, and canExecute boundaries remain blocked.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Loopbacks verify LONG reaction 7480.00 can publish a review-only map with next HTF line 7488.25, SHORT reaction maps promote the next lower line, incomplete app levels print Entry/Stop/T1/T2 pending instead of stale/generated levels, and existing Discord lint/build/test coverage remains clean.
+Trading logic changed: No. This is Discord/DeskState presentation and review-map routing only. It does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, 5M bar-close handling, or trade models.
+Bridge impact: None.
+Discord impact: Review-only Current Desk Plan maps can now publish target-to-line context when the map is fresh and structured. Message text explicitly separates decision line/reaction, acceptance, next HTF line, failure/opposing context, no-chase, and pending app levels.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Use a fresh scanner restart/live observation to confirm new tapes show target-to-line review maps when the market reaches an HTF/session reaction and a next line is available.
+
+## Previous Change
+
 Date: 2026-06-28
 Task: Add controlled stale-artifact cleanup inventory and proof-exclusion guard.
 Files changed: tools/automation/stale-artifact-cleanup.ts, tools/automation/stale-artifact-cleanup.test.ts, tools/automation/live-desk-observer.ts, tools/supervisor/discordCardArtifactSignoff.ts, package.json, docs/STALE_ARTIFACT_CLEANUP_RUNBOOK.md, docs/PROJECT_STATUS.md.

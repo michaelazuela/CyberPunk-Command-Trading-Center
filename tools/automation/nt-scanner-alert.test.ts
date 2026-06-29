@@ -2303,6 +2303,165 @@ const staleHtfFvgReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSu
 assert.equal(staleHtfFvgReviewMapDeskPlaySuppression.shouldPost, false);
 assert.equal(staleHtfFvgReviewMapDeskPlaySuppression.category, 'passed_or_invalidated_levels');
 assert.match(staleHtfFvgReviewMapDeskPlaySuppression.reason, /already reached\/passed T1 7461\.25/);
+const targetToLineLongReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-29',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: '2026-06-29:MES:morning:DESK_PLAN_REFRESH:2026-06-29T09:30:00.0000000:no-campaign:LONG',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'ready',
+    bestShortPlan: null,
+    bestLongPlan: {
+      lineInSand: 7480,
+      entry: 7476.25,
+      stop: 7444.25,
+      target1: 7547.5,
+      target2: 7560,
+      riskPoints: 32,
+      targetReactionLevel: 7480,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'LONG',
+      lineInSand: 7480,
+      longAbove: 7488.25,
+      shortBelow: 7463,
+      targetReactionLevel: 7480,
+      targetReactionLabel: 'Round Number 7480',
+      levelTransition: {
+        sourceOfTruth: 'scanner_level_transition_map',
+        targetReactionLevel: 7480,
+        targetReactionLabel: 'Round Number 7480',
+        longAbove: 7488.25,
+        shortBelow: 7463,
+        targetManagementInstruction: 'No chase into 7480. Wait for completed 5M/15M acceptance.',
+      },
+      longBias: {
+        state: 'primary',
+        lineInSand: 7480,
+        decisionQualityScore: 90,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      shortBias: {
+        state: 'countertrend_review',
+        lineInSand: 7463,
+      },
+      htfProtectedStructureMap: {
+        rows: [
+          { timeframe: '15M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7463, confirmationLine: 7480, biasChangeLine: 7463 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7463, confirmationLine: 7480, biasChangeLine: 7463 },
+        ],
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [{
+      setupType: SetupType.TurtleSoup,
+      scenarioLabel: 'June 29 target-to-line long review',
+      direction: 'LONG',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7476.25,
+      stop: 7444.25,
+      target1: 7547.5,
+      target2: 7560,
+      riskPoints: 32,
+      decisionQualityScore: 90,
+      requiredTrigger: 'Completed 5M/15M acceptance above 7480.00.',
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7480.25,
+  latestCompleted5m: '2026-06-29T09:30:00.0000000',
+});
+assert.equal(targetToLineLongReviewMapDeskPlaySuppression.shouldPost, true);
+assert.equal(targetToLineLongReviewMapDeskPlaySuppression.category, 'post');
+assert.match(targetToLineLongReviewMapDeskPlaySuppression.reason, /LONG target-to-line review map is eligible/);
+assert.match(targetToLineLongReviewMapDeskPlaySuppression.reason, /decision line\/reaction 7480\.00/);
+assert.match(targetToLineLongReviewMapDeskPlaySuppression.reason, /acceptance above 7480\.00 promotes next HTF\/session line 7488\.25/);
+assert.match(targetToLineLongReviewMapDeskPlaySuppression.reason, /REVIEW ONLY \/ NOT EXECUTION APPROVAL/);
+assert.equal(targetToLineLongReviewMapDeskPlaySuppression.changesTradingLogic, false);
+assert.equal(targetToLineLongReviewMapDeskPlaySuppression.changesCanExecute, false);
+const targetToLineShortReviewMapDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
+  tradeDate: '2026-06-29',
+  instrument: 'MES',
+  session: 'morning',
+  deskPlayKey: '2026-06-29:MES:morning:DESK_PLAN_REFRESH:2026-06-29T09:30:00.0000000:no-campaign:SHORT',
+  deskState: {
+    ...baseDeskPlanRefreshState,
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    dataQualityStatus: 'ready',
+    bestShortPlan: {
+      lineInSand: 7460,
+      entry: 7465,
+      stop: 7475,
+      target1: 7450,
+      target2: 7445,
+      riskPoints: 10,
+      targetReactionLevel: 7460,
+    },
+    primaryDeskPlay: {
+      ...baseDeskPlanRefreshState.primaryDeskPlay,
+      direction: 'SHORT',
+      lineInSand: 7460,
+      longAbove: 7480,
+      shortBelow: 7450,
+      targetReactionLevel: 7460,
+      targetReactionLabel: 'Round Number 7460',
+      levelTransition: {
+        sourceOfTruth: 'scanner_level_transition_map',
+        targetReactionLevel: 7460,
+        targetReactionLabel: 'Round Number 7460',
+        longAbove: 7480,
+        shortBelow: 7450,
+        targetManagementInstruction: 'No chase into 7460. Wait for completed 5M/15M acceptance below.',
+      },
+      shortBias: {
+        state: 'primary',
+        lineInSand: 7460,
+        decisionQualityScore: 91,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+    },
+  } as any,
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    setupCandidates: [{
+      setupType: SetupType.SweepMssFvgRetrace,
+      scenarioLabel: 'Target-to-line short review',
+      direction: 'SHORT',
+      detectedStatus: SetupCandidateStatus.Conditional,
+      executionStatus: ExecutionStatus.Conditional,
+      blockReason: NoTradeReason.EntryTriggerPending,
+      entry: 7465,
+      stop: 7475,
+      target1: 7450,
+      target2: 7445,
+      riskPoints: 10,
+      decisionQualityScore: 91,
+      requiredTrigger: 'Completed 5M/15M acceptance below 7460.00.',
+    }],
+  } as any,
+  deskPlanRefreshSent: {},
+  currentPrice: 7459.75,
+  latestCompleted5m: '2026-06-29T09:30:00.0000000',
+});
+assert.equal(targetToLineShortReviewMapDeskPlaySuppression.shouldPost, true);
+assert.equal(targetToLineShortReviewMapDeskPlaySuppression.category, 'post');
+assert.match(targetToLineShortReviewMapDeskPlaySuppression.reason, /SHORT target-to-line review map is eligible/);
+assert.match(targetToLineShortReviewMapDeskPlaySuppression.reason, /acceptance below 7460\.00 promotes next HTF\/session line 7450\.00/);
 const tacticalRequiredTriggerDeskPlaySuppression = evaluateScannerDeskPlayDiscordSuppression({
   tradeDate: '2026-06-08',
   instrument: 'MES',

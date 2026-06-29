@@ -790,6 +790,103 @@ assert.ok(farAwayConditionalText.includes('Entry status: NOT ACTIVE - current pr
 assert.ok(farAwayConditionalText.includes('Entry if fresh proof returns: 7430.50'));
 assert.ok(!/^Entry: 7430\.50$/m.test(farAwayConditionalText));
 
+const targetToLineReviewCandidate = {
+  ...sampleCandidate('LONG'),
+  setupType: SetupType.TurtleSoup,
+  scenarioLabel: 'June 29 target-to-line long review',
+  entry: null,
+  stop: null,
+  target1: null,
+  target2: null,
+  riskPoints: null,
+  detectedStatus: SetupCandidateStatus.Conditional,
+  executionStatus: ExecutionStatus.Conditional,
+  decisionQualityScore: 90,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Completed 5M/15M acceptance above 7480.00 shifts attention to 7488.25.',
+  invalidation: 'Failure below 7480 keeps the short context active.',
+} as SetupCandidate;
+const targetToLineReviewPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-29',
+  instrument: 'MES',
+  planVersionId: 'TARGET-TO-LINE-DESK-PLAY-REVIEW',
+  normalized: {
+    canExecute: false,
+    decisionStatus: TradeDecisionStatus.Wait,
+    decision: 'NO TRADE',
+    noTradeReason: NoTradeReason.EntryTriggerPending,
+    invalidation: null,
+    setupCandidates: [targetToLineReviewCandidate],
+  },
+  candidates: [targetToLineReviewCandidate],
+  attachments: { chartPlan: true, priceLevelMap: true },
+  sourceLabel: 'Scanner',
+  windowLabel: 'Morning Setup Scan',
+  currentPrice: 7480.25,
+  deskState: {
+    marketMode: 'watching',
+    visibilityMode: 'POST_REVIEW',
+    discordAction: 'post_review',
+    lineInSand: 7480,
+    nextTrigger: targetToLineReviewCandidate.requiredTrigger,
+    invalidation: targetToLineReviewCandidate.invalidation,
+    canExecute: false,
+    primaryDeskPlay: {
+      direction: 'LONG',
+      title: 'LONG target-to-line review',
+      summary: 'Long is a review-only continuation map at the 7480 reaction line.',
+      lineInSand: 7480,
+      longAbove: 7488.25,
+      shortBelow: 7463,
+      targetReactionLevel: 7480,
+      targetReactionLabel: 'Round Number 7480',
+      targetReactionReason: '7480 is a target/reaction decision line, not a fresh entry by itself.',
+      levelTransition: {
+        sourceOfTruth: 'scanner_level_transition_map',
+        targetReactionLevel: 7480,
+        targetReactionLabel: 'Round Number 7480',
+        targetReactionReason: '7480 is a target/reaction decision line, not a fresh entry by itself.',
+        longAbove: 7488.25,
+        shortBelow: 7463,
+        targetManagementInstruction: 'No chase into 7480; wait for completed 5M/15M acceptance.',
+        nextStructureInstruction: 'Acceptance above 7480 promotes 7488.25 as the next HTF line.',
+      },
+      htfConflict: true,
+      discordEligible: true,
+      longBias: {
+        state: 'primary',
+        decisionQualityScore: 90,
+        lineInSand: 7480,
+        tradeReadiness: { status: 'not_aligned' },
+      },
+      shortBias: {
+        state: 'countertrend_review',
+        lineInSand: 7463,
+      },
+      htfProtectedStructureMap: {
+        sourceOfTruth: 'scanner_htf_protected_structure_map',
+        reliability: 'structural',
+        rows: [
+          { timeframe: '15M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7463, confirmationLine: 7480 },
+          { timeframe: '5M', bias: 'BULL', currentBias: 'BULL', protectedStructure: 7463, confirmationLine: 7480 },
+        ],
+      },
+    },
+  },
+});
+const targetToLineReviewText = flattenDiscordPayloadText(targetToLineReviewPayload);
+assert.ok(targetToLineReviewText.includes('Target-to-Line Map:'));
+assert.ok(targetToLineReviewText.includes('Decision line / reaction: Round Number 7480 7480.00.'));
+assert.ok(targetToLineReviewText.includes('Acceptance above 7480.00 -> Next HTF line 7488.25.'));
+assert.ok(targetToLineReviewText.includes('Reaction / failure: failure below 7480.00 keeps SHORT context active.'));
+assert.ok(targetToLineReviewText.includes('No chase: No chase into 7480; wait for completed 5M/15M acceptance.'));
+assert.ok(targetToLineReviewText.includes('Entry: pending'));
+assert.ok(targetToLineReviewText.includes('Stop: pending'));
+assert.ok(targetToLineReviewText.includes('T1: pending'));
+assert.ok(targetToLineReviewText.includes('T2: pending'));
+assert.ok(!targetToLineReviewText.includes('Entry: 5320.00'));
+
 const decisionMapShortCandidate = sampleCandidate('SHORT');
 decisionMapShortCandidate.entry = 7339.75;
 decisionMapShortCandidate.stop = 7350.25;
@@ -1714,7 +1811,10 @@ assert.ok(pendingShortMapText.includes('Trigger: Use the 60M parent FVG; wait fo
 assert.ok(pendingShortMapText.includes('Stand down on completed 5M acceptance above parent zone 7604.00.'));
 assert.ok(pendingShortMapText.includes('SHORT BELOW 7600.00'));
 assert.ok(pendingShortMapText.includes('LONG ABOVE 7610.00'));
-assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 2);
+assert.equal((pendingShortMapText.match(/^Entry: pending$/gm) || []).length, 1);
+assert.ok(pendingShortMapText.includes('Stop: pending'));
+assert.ok(pendingShortMapText.includes('T1: pending'));
+assert.ok(pendingShortMapText.includes('T2: pending'));
 assert.ok(pendingShortMapText.includes('No active LONG/SHORT plan with complete app-owned levels.'));
 assert.ok(!/Entry: 7615\.75|Stop: 7598\.50|T1: 7641\.75|T2: 7650\.25/.test(pendingShortMapText));
 

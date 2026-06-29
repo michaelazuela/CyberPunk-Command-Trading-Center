@@ -1804,6 +1804,50 @@ function deskPlayLineDisplayLines(
   return [`Line in sand: ${priceLine(activeLine)}`];
 }
 
+function deskPlayTargetToLinePromotionLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  const transition = play.levelTransition || null;
+  const reaction = isFinitePrice(transition?.targetReactionLevel)
+    ? transition.targetReactionLevel
+    : isFinitePrice(play.targetReactionLevel)
+      ? play.targetReactionLevel
+      : null;
+  if (!isFinitePrice(reaction)) return [];
+  const activeLine = isFinitePrice(play.lineInSand)
+    ? play.lineInSand
+    : direction === 'LONG' && isFinitePrice(play.longBias?.lineInSand)
+      ? play.longBias!.lineInSand!
+      : direction === 'SHORT' && isFinitePrice(play.shortBias?.lineInSand)
+        ? play.shortBias!.lineInSand!
+        : null;
+  if (
+    isFinitePrice(activeLine) &&
+    (direction === 'LONG' ? reaction < activeLine - 0.0001 : reaction > activeLine + 0.0001)
+  ) {
+    return [];
+  }
+  const nextLine = direction === 'LONG'
+    ? isFinitePrice(transition?.longAbove) ? transition.longAbove : isFinitePrice(play.longAbove) ? play.longAbove : null
+    : isFinitePrice(transition?.shortBelow) ? transition.shortBelow : isFinitePrice(play.shortBelow) ? play.shortBelow : null;
+  const nextLineIsValid = isFinitePrice(nextLine) &&
+    (direction === 'LONG' ? nextLine > reaction + 0.0001 : nextLine < reaction - 0.0001);
+  if (!nextLineIsValid) return [];
+  const acceptWord = direction === 'LONG' ? 'above' : 'below';
+  const failWord = direction === 'LONG' ? 'below' : 'above';
+  const opposing = direction === 'LONG' ? 'SHORT' : 'LONG';
+  const label = compactLine(transition?.targetReactionLabel || play.targetReactionLabel || 'HTF/session reaction', 46);
+  return [
+    'Target-to-Line Map:',
+    `Decision line / reaction: ${label} ${priceLine(reaction)}.`,
+    `Acceptance ${acceptWord} ${priceLine(reaction)} -> Next HTF line ${priceLine(nextLine)}.`,
+    `Reaction / failure: failure ${failWord} ${priceLine(reaction)} keeps ${opposing} context active.`,
+    `No chase: ${compactInstruction(transition?.targetManagementInstruction || play.noChase, 'wait for completed 5M/15M acceptance; review only, not execution approval.')}`,
+  ];
+}
+
 function deskPlayActiveTacticalZoneLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2308,6 +2352,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         waitMapSide,
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
+      ...deskPlayTargetToLinePromotionLines(play, waitMapSide),
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
@@ -2362,6 +2407,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     `Bias: ${deskPlayBiasSummary(play, direction, args.currentPrice)}`,
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
+    ...deskPlayTargetToLinePromotionLines(play, direction),
     ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
@@ -2514,7 +2560,13 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
   const levels = displayDirection === 'LONG' || displayDirection === 'SHORT'
     ? freshLevels ||
       deskPlayDecisionMapLevels(args.normalized, displayDirection, lineInSand, play, args.currentPrice) ||
-      (candidate && candidateLevels ? {
+      (candidate &&
+      candidateLevels &&
+      isFinitePrice(candidate.entry) &&
+      isFinitePrice(candidateLevels.stop) &&
+      isFinitePrice(candidateLevels.target1) &&
+      isFinitePrice(candidateLevels.target2)
+        ? {
         entry: candidate.entry,
         stop: candidateLevels.stop,
         target1: candidateLevels.target1,
@@ -2541,6 +2593,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayLineDisplayLines(play, displayDirection, lineInSand)
       : [`Line in sand: ${priceLine(lineInSand)}`]),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayTargetToLinePromotionLines(play, displayDirection)
+      : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayActiveTacticalZoneLines(play, displayDirection)
       : []),
@@ -2582,7 +2637,7 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
     ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
     ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
     levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
-    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Entry: pending',
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
     ...(levels ? [] : ['No active LONG/SHORT plan with complete app-owned levels.']),
     `Next trigger: ${compactInstruction(
       ((displayDirection === 'LONG' || displayDirection === 'SHORT') && play?.activeTacticalZone?.direction === displayDirection
@@ -2644,7 +2699,13 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
   const levels = displayDirection === 'LONG' || displayDirection === 'SHORT'
     ? freshLevels ||
       deskPlayDecisionMapLevels(args.normalized, displayDirection, lineInSand, play, args.currentPrice) ||
-      (candidate && candidateLevels ? {
+      (candidate &&
+      candidateLevels &&
+      isFinitePrice(candidate.entry) &&
+      isFinitePrice(candidateLevels.stop) &&
+      isFinitePrice(candidateLevels.target1) &&
+      isFinitePrice(candidateLevels.target2)
+        ? {
         entry: candidate.entry,
         stop: candidateLevels.stop,
         target1: candidateLevels.target1,
@@ -2687,12 +2748,15 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
           `Fresh levels: pending new 5M structure; old levels are management/history only.`,
         ]
       : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlayTargetToLinePromotionLines(play, displayDirection)
+      : []),
     `Line in sand: ${priceLine(lineInSand)}`,
     sideLine,
     ...(play?.shortBelow != null && displayDirection !== 'SHORT' ? [sideBreakoutLabel('SHORT', 'BELOW', play.shortBelow)] : []),
     ...(play?.longAbove != null && displayDirection !== 'LONG' ? [sideBreakoutLabel('LONG', 'ABOVE', play.longAbove)] : []),
     levels ? `Entry: ${priceLine(levels.entry)} | Stop: ${priceLine(levels.stop)}` : 'Entry: pending',
-    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'T1/T2: pending',
+    levels ? `T1: ${priceLine(levels.target1)} | T2: ${priceLine(levels.target2)}` : 'Stop: pending | T1: pending | T2: pending',
     `Trigger: ${compactInstruction(freshBest?.requiredTrigger || freshBest?.nextAction || candidate?.requiredTrigger || candidate?.nextAction || play?.nextTrigger, 'wait for completed 5M proof.' ).slice(0, 150)}`,
     `Invalidation: ${compactInstruction(freshBest?.invalidation || candidate?.invalidation || play?.invalidation, `invalid through ${priceLine(levels?.stop ?? lineInSand)}.`).slice(0, 130)}`,
     ...(isFinitePrice(reaction) ? [`Reaction: ${compactLine(play?.targetReactionLabel || 'HTF/session level', 34)} ${priceLine(reaction)}.`] : []),
