@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-29
+Task: Harden AM REVIEW high-confidence conditional duplicate and zone-failure Discord routing.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The 2026-06-29 AM REVIEW SHORT SweepMssFvgRetrace plan was correctly flagged as a duplicate/stale-risk candidate, but the high-confidence conditional visibility path still created repeated Discord receipts for the same alert key. The scanner now applies hard duplicate suppression after high-confidence routing and records completed-5M tactical-zone failure before delivery.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Loopbacks verify a fresh high-confidence conditional candidate remains eligible for one review-only delivery; same-key duplicate repost attempts are hard-suppressed even when high-confidence bypass would otherwise apply; SHORT completed 5M close above the tactical zone blocks further short trade-plan delivery; LONG completed 5M close below the tactical zone blocks further long trade-plan delivery; and the 2026-06-29 AM REVIEW replay sequence sends once, suppresses repeated same-key reposts, and records the completed-5M zone failure.
+Trading logic changed: No. This is Discord routing/dedupe/stale-zone delivery suppression only. It does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, 5M bar-close handling, or trade models.
+Bridge impact: None.
+Discord impact: Same-key high-confidence conditional candidates can publish once, but high-confidence bypass can no longer override durable duplicate suppression. Completed 5M failure of an active tactical zone blocks further live trade-plan delivery and records a stand-down/invalidation-only reason.
+Journal/RAG impact: None.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Observe the next live high-confidence conditional candidate to confirm decision tapes show `duplicate_suppressed_hard` for same-key refresh attempts and `zone_failed_completed_5m` when a completed 5M candle fails the active tactical zone.
+
+## Previous Change
+
+Date: 2026-06-29
 Task: Correct Discord visibility routing for fresh high-confidence review-only conditional plans.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The 2026-06-29 09:50 ET SHORT Intraday MSS Micro Continuation candidate had candidate-level quality 90 with complete app-owned levels, HTF context sufficient, and canExecute=false, but Discord stayed silent because the primary alert decision had already been blocked by top-level confidence/risk gating. The routing gate now allows a fresh complete high-confidence candidate to promote a blocked primary alert into REVIEW ONLY / NOT EXECUTION APPROVAL Discord visibility while stale/no-chase, invalidated, target-passed, active-zone failure, and data-limited cases remain blocked.

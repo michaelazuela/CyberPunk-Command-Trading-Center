@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { ExecutionStatus, NoTradeReason, SetupCandidateStatus, SetupType, TradeDecisionStatus, type ChartContext, type SetupCandidate } from '../../src/types';
-import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
+import { buildCandidateLifecycleTrace, buildDeskState, resolveScannerWindow, type DeskState, type ScannerState, type ScannerVisibilityMetadata } from '../../src/lib/localScannerEngine';
 import type { ScannerHealthReport } from '../../src/agents/scannerHealthAgent';
 import { BANNED_ACTIVE_DISCORD_ALERT_TEXT, flattenDiscordPayloadText } from './discord-alert-format';
 import {
@@ -23,6 +23,8 @@ import {
   evaluateScannerDeskPlayDiscordSuppression,
   evaluateScannerReversalWatchDiscordSuppression,
   evaluateScannerPrimaryAlertPublishingGate,
+  applyScannerCompletedFiveMinuteZoneFailureSuppression,
+  applyScannerHardDuplicateAlertSuppression,
   evaluatePreMarketDataReadinessBackfillGate,
   findMissedExecutableScannerDeliveries,
   cleanupExpiredScannerDiscordMessages,
@@ -421,6 +423,198 @@ assert.match(june29ReviewOnlyShortGate.reason, /REVIEW ONLY \/ NOT EXECUTION APP
 assert.match(june29ReviewOnlyShortGate.reason, /app-owned canExecute gate turns true/);
 assert.match(june29ReviewOnlyShortGate.reason, /DeskState primary=WAIT/);
 assert.match(june29ReviewOnlyShortGate.reason, /canExecute=false/);
+
+const june29DuplicateAlertKey = '2026-06-29|MES|morning|SHORT|SweepMssFvgRetrace|7467.5|Approved';
+const june29FreshReviewDelivery = applyScannerHardDuplicateAlertSuppression({
+  alertDecision: june29ReviewOnlyShortGate,
+  alertKey: june29DuplicateAlertKey,
+  existing: null,
+  previousDelivery: null,
+  planVersionId: 'MORNING-20260629-144350',
+});
+assert.equal(june29FreshReviewDelivery.shouldSend, true);
+const june29DuplicateDelivery = applyScannerHardDuplicateAlertSuppression({
+  alertDecision: june29ReviewOnlyShortGate,
+  alertKey: june29DuplicateAlertKey,
+  existing: { state: 'Approved', confidence: 100, sentAt: '2026-06-29T14:43:59.000Z' },
+  previousDelivery: {
+    alertKey: june29DuplicateAlertKey,
+    planVersionId: 'MORNING-20260629-144350',
+    instrument: 'MES',
+    tradeDate: '2026-06-29',
+    session: 'morning',
+    state: 'Approved',
+    confidence: 100,
+    candidate: {
+      setupType: 'SweepMssFvgRetrace',
+      direction: 'SHORT',
+      entry: 7467.5,
+      stop: 7490,
+      target1: 7417.25,
+      target2: 7409,
+      activeTimeframeMssRuleset: null,
+      activeCampaign: null,
+    },
+    deliveryStatus: 'sent',
+    webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+    httpStatus: 200,
+    discordMessageId: 'first-message',
+    error: null,
+    attemptedAt: '2026-06-29T14:43:58.000Z',
+    sentAt: '2026-06-29T14:43:59.000Z',
+    auditLogPath: 'scanner-morning-2026-06-29-MES-MORNING-20260629-144350.json',
+    stale: false,
+    retryEligible: false,
+  },
+  planVersionId: 'MORNING-20260629-154202',
+});
+assert.equal(june29DuplicateDelivery.shouldSend, false);
+assert.match(june29DuplicateDelivery.reason, /duplicate_suppressed_hard/);
+assert.match(june29DuplicateDelivery.reason, /same_candidate_lifecycle_refresh_suppressed/);
+assert.match(june29DuplicateDelivery.reason, /priorPlanVersionId=MORNING-20260629-144350/);
+assert.match(june29DuplicateDelivery.reason, /priorDiscordMessageId=first-message/);
+assert.match(june29DuplicateDelivery.reason, /High-confidence conditional bypass cannot override durable duplicate suppression/);
+
+const june29SweepMssFvgRetraceCandidate = {
+  ...june29MissedShortCandidate,
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'Sweep MSS FVG Retrace',
+  decisionQualityScore: 98,
+  entry: 7467.5,
+  stop: 7490,
+  target1: 7417.25,
+  target2: 7409,
+  riskPoints: 22.5,
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7460.75-7474 after sweep, reclaim, displacement, and bearish structure shift.',
+} as SetupCandidate;
+const june29ShortZoneDeskState = {
+  primaryDeskPlay: {
+    direction: 'SHORT',
+    activeTacticalZone: {
+      direction: 'SHORT',
+      lower: 7460.75,
+      upper: 7474,
+    },
+    shortBias: {
+      tradeReadiness: { status: 'human_review_ready' },
+    },
+  },
+  dataQualityStatus: 'partial',
+  htfContextStatus: 'sufficient',
+} as unknown as DeskState;
+const shortZoneFailureDelivery = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+  alertDecision: { shouldSend: true, reason: 'Fresh high-confidence conditional review map.' },
+  deskState: june29ShortZoneDeskState,
+  candidate: june29SweepMssFvgRetraceCandidate,
+  completed5m: { time: '2026-06-29T11:45:00.0000000', open: 7470, high: 7475, low: 7466.75, close: 7474.25, volume: 8688 },
+});
+assert.equal(shortZoneFailureDelivery.shouldSend, false);
+assert.match(shortZoneFailureDelivery.reason, /zone_failed_completed_5m/);
+assert.match(shortZoneFailureDelivery.reason, /direction=SHORT/);
+assert.match(shortZoneFailureDelivery.reason, /completedClose=7474\.25/);
+assert.match(shortZoneFailureDelivery.reason, /zoneUpper=7474\.00/);
+const longZoneFailureDelivery = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+  alertDecision: { shouldSend: true, reason: 'Fresh high-confidence conditional review map.' },
+  deskState: {
+    primaryDeskPlay: {
+      direction: 'LONG',
+      activeTacticalZone: {
+        direction: 'LONG',
+        lower: 7422,
+        upper: 7428,
+      },
+    },
+  } as unknown as DeskState,
+  candidate: {
+    ...june29MissedShortCandidate,
+    direction: 'LONG',
+    entry: 7426.75,
+    stop: 7422,
+    target1: 7434,
+    target2: 7436.25,
+  } as SetupCandidate,
+  completed5m: { time: '2026-06-29T11:45:00.0000000', open: 7426, high: 7427, low: 7420.75, close: 7421.75, volume: 8688 },
+});
+assert.equal(longZoneFailureDelivery.shouldSend, false);
+assert.match(longZoneFailureDelivery.reason, /zone_failed_completed_5m/);
+assert.match(longZoneFailureDelivery.reason, /direction=LONG/);
+assert.match(longZoneFailureDelivery.reason, /completedClose=7421\.75/);
+
+const june29FailureReplayBars = [
+  ['2026-06-29T10:35:00.0000000', 7463],
+  ['2026-06-29T10:40:00.0000000', 7460.75],
+  ['2026-06-29T10:45:00.0000000', 7459.5],
+  ['2026-06-29T10:50:00.0000000', 7455.5],
+  ['2026-06-29T10:55:00.0000000', 7469],
+  ['2026-06-29T11:00:00.0000000', 7468],
+  ['2026-06-29T11:05:00.0000000', 7463],
+  ['2026-06-29T11:10:00.0000000', 7461.25],
+  ['2026-06-29T11:15:00.0000000', 7464],
+  ['2026-06-29T11:20:00.0000000', 7459],
+  ['2026-06-29T11:25:00.0000000', 7456.5],
+  ['2026-06-29T11:30:00.0000000', 7467.25],
+  ['2026-06-29T11:35:00.0000000', 7465.75],
+  ['2026-06-29T11:40:00.0000000', 7470],
+  ['2026-06-29T11:45:00.0000000', 7474.25],
+  ['2026-06-29T11:50:00.0000000', 7469],
+] as const;
+let replaySentCount = 0;
+let replayExisting: { state: ScannerState; confidence: number; sentAt: string } | null = null;
+let replayPreviousDelivery: Parameters<typeof applyScannerHardDuplicateAlertSuppression>[0]['previousDelivery'] = null;
+let replayZoneFailureSeen = false;
+for (const [time, close] of june29FailureReplayBars) {
+  const duplicateDecision = applyScannerHardDuplicateAlertSuppression({
+    alertDecision: { shouldSend: true, reason: 'High-confidence conditional review replay.' },
+    alertKey: june29DuplicateAlertKey,
+    existing: replayExisting,
+    previousDelivery: replayPreviousDelivery,
+    planVersionId: `MORNING-20260629-${time.slice(11, 16).replace(':', '')}`,
+  });
+  const finalDecision = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+    alertDecision: duplicateDecision,
+    deskState: june29ShortZoneDeskState,
+    candidate: june29SweepMssFvgRetraceCandidate,
+    completed5m: { time, open: close, high: close, low: close, close, volume: 1 },
+  });
+  if (/zone_failed_completed_5m/.test(finalDecision.reason)) replayZoneFailureSeen = true;
+  if (finalDecision.shouldSend) {
+    replaySentCount += 1;
+    replayExisting = { state: 'Approved', confidence: 100, sentAt: time };
+    replayPreviousDelivery = {
+      alertKey: june29DuplicateAlertKey,
+      planVersionId: 'MORNING-20260629-144350',
+      instrument: 'MES',
+      tradeDate: '2026-06-29',
+      session: 'morning',
+      state: 'Approved',
+      confidence: 100,
+      candidate: {
+        setupType: 'SweepMssFvgRetrace',
+        direction: 'SHORT',
+        entry: 7467.5,
+        stop: 7490,
+        target1: 7417.25,
+        target2: 7409,
+        activeTimeframeMssRuleset: null,
+        activeCampaign: null,
+      },
+      deliveryStatus: 'sent',
+      webhookSource: 'QUANT_DESK_SCANNER_WEBHOOK_URL',
+      httpStatus: 200,
+      discordMessageId: 'replay-first-message',
+      error: null,
+      attemptedAt: time,
+      sentAt: time,
+      auditLogPath: 'scanner-morning-2026-06-29-MES-MORNING-20260629-144350.json',
+      stale: false,
+      retryEligible: false,
+    };
+  } else if (replayExisting) {
+    assert.match(finalDecision.reason, /duplicate_suppressed_hard|zone_failed_completed_5m/);
+  }
+}
+assert.equal(replaySentCount, 1);
+assert.equal(replayZoneFailureSeen, true);
 
 const june29NoChaseShortGate = evaluateScannerPrimaryAlertPublishingGate({
   ...june29ReviewOnlyShortGateFixture,

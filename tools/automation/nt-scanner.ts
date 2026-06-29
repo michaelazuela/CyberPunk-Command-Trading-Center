@@ -7088,6 +7088,87 @@ export function evaluateScannerPrimaryAlertPublishingGate(args: {
   };
 }
 
+export function applyScannerHardDuplicateAlertSuppression(args: {
+  alertDecision: ScannerAlertDecision;
+  alertKey: string;
+  existing?: { state: ScannerState; confidence: number; sentAt: string } | null;
+  previousDelivery?: ScannerAlertDeliveryRecord | null;
+  planVersionId: string;
+}): ScannerAlertDecision {
+  if (!args.alertDecision.shouldSend || !args.existing) return args.alertDecision;
+  const priorPlanVersionId = args.previousDelivery?.planVersionId || 'unknown';
+  const priorDiscordMessageId = args.previousDelivery?.discordMessageId || 'unknown';
+  return {
+    shouldSend: false,
+    reason: [
+      args.alertDecision.reason,
+      'duplicate_suppressed_hard',
+      'same_candidate_lifecycle_refresh_suppressed',
+      `alertKey=${args.alertKey}`,
+      `priorPlanVersionId=${priorPlanVersionId}`,
+      `priorDiscordMessageId=${priorDiscordMessageId}`,
+      `currentPlanVersionId=${args.planVersionId}`,
+      'High-confidence conditional bypass cannot override durable duplicate suppression.',
+    ].join(' | '),
+  };
+}
+
+export function applyScannerCompletedFiveMinuteZoneFailureSuppression(args: {
+  alertDecision: ScannerAlertDecision;
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  completed5m?: NinjaBridgeBar | null;
+}): ScannerAlertDecision {
+  const candidateDirection = args.candidate?.direction || null;
+  const activeZone = args.deskState.primaryDeskPlay.activeTacticalZone;
+  const completedClose = args.completed5m?.close;
+  if (
+    candidateDirection === 'SHORT' &&
+    activeZone?.direction === 'SHORT' &&
+    isFiniteTradePrice(completedClose) &&
+    isFiniteTradePrice(activeZone.upper) &&
+    completedClose > activeZone.upper
+  ) {
+    return {
+      shouldSend: false,
+      reason: [
+        args.alertDecision.reason,
+        'zone_failed_completed_5m',
+        'action=short_trade_plan_suppressed_stand_down_or_invalidation_only',
+        `direction=SHORT`,
+        `completedBarTime=${args.completed5m?.time || 'unknown'}`,
+        `completedClose=${completedClose.toFixed(2)}`,
+        `zoneLower=${isFiniteTradePrice(activeZone.lower) ? activeZone.lower.toFixed(2) : 'unknown'}`,
+        `zoneUpper=${activeZone.upper.toFixed(2)}`,
+        'Completed 5M close above the active SHORT tactical zone blocks further live short trade-plan delivery.',
+      ].join(' | '),
+    };
+  }
+  if (
+    candidateDirection === 'LONG' &&
+    activeZone?.direction === 'LONG' &&
+    isFiniteTradePrice(completedClose) &&
+    isFiniteTradePrice(activeZone.lower) &&
+    completedClose < activeZone.lower
+  ) {
+    return {
+      shouldSend: false,
+      reason: [
+        args.alertDecision.reason,
+        'zone_failed_completed_5m',
+        'action=long_trade_plan_suppressed_stand_down_or_invalidation_only',
+        `direction=LONG`,
+        `completedBarTime=${args.completed5m?.time || 'unknown'}`,
+        `completedClose=${completedClose.toFixed(2)}`,
+        `zoneLower=${activeZone.lower.toFixed(2)}`,
+        `zoneUpper=${isFiniteTradePrice(activeZone.upper) ? activeZone.upper.toFixed(2) : 'unknown'}`,
+        'Completed 5M close below the active LONG tactical zone blocks further live long trade-plan delivery.',
+      ].join(' | '),
+    };
+  }
+  return args.alertDecision;
+}
+
 export function shouldSuppressScannerDataQualityNoticeForReason(args: {
   session: LiveSession | 'market_mapping';
   reason: string;
@@ -8171,6 +8252,7 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   const alertKey = scannerAlertKey({ tradeDate, instrument: config.instrument, session: window.session, candidate, state: stateForAlert });
   const existing = state.sent[alertKey];
   const planVersionId = createPlanVersionId(session, tradeDate);
+  const previousDelivery = state.alertDeliveries[alertKey];
   let alertDecision = shouldSendScannerAlert({
     state: stateForAlert,
     confidence: confidence.score,
@@ -8280,6 +8362,63 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   });
   if (deskStateGatedAlertDecision.shouldSend !== alertDecision.shouldSend || deskStateGatedAlertDecision.reason !== alertDecision.reason) {
     alertDecision = deskStateGatedAlertDecision;
+    visibilityMetadata = classifyScannerVisibility({
+      state: stateForAlert,
+      candidate,
+      window,
+      alertDecision,
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
+      staleReason: stale.reason,
+    });
+    candidateLifecycleTrace = buildCandidateLifecycleTrace({
+      candidates: normalized.setupCandidates || [],
+      selectedCandidate: candidate,
+      state: stateForAlert,
+      window,
+      alertDecision,
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
+      staleReason: stale.reason,
+    });
+    deskState = buildDeskState({
+      state: stateForAlert,
+      candidate,
+      visibilityMetadata,
+      candidateLifecycleTrace,
+      targetCascade,
+      htfLiquidityDrawState: analysis.structuredChartContext?.htfLiquidityDrawState || null,
+      chartContext: analysis.structuredChartContext || null,
+      currentPrice,
+      canExecute: Boolean(normalized.canExecute) && !tradePlanningDataQualityBlocker,
+    });
+    if (tradePlanningDataQualityBlocker) {
+      deskState = {
+        ...deskState,
+        htfContextStatus: 'insufficient',
+        dataQualityStatus: 'data_limited',
+        canExecute: false,
+        suppressionReason: tradePlanningDataQualityBlocker,
+        notes: [
+          ...deskState.notes,
+          'Pre-Market Data Readiness + Backfill Gate is data-limited. Primary trade alerts are blocked; Desk Play may show review-only tactical levels when app-owned levels exist.',
+        ],
+      };
+    }
+  }
+  const duplicateGuardedAlertDecision = applyScannerHardDuplicateAlertSuppression({
+    alertDecision,
+    alertKey,
+    existing,
+    previousDelivery,
+    planVersionId,
+  });
+  const finalGuardedAlertDecision = applyScannerCompletedFiveMinuteZoneFailureSuppression({
+    alertDecision: duplicateGuardedAlertDecision,
+    deskState,
+    candidate,
+    completed5m,
+  });
+  if (finalGuardedAlertDecision.shouldSend !== alertDecision.shouldSend || finalGuardedAlertDecision.reason !== alertDecision.reason) {
+    alertDecision = finalGuardedAlertDecision;
     visibilityMetadata = classifyScannerVisibility({
       state: stateForAlert,
       candidate,
@@ -8696,7 +8835,6 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
     }
   }
 
-  const previousDelivery = state.alertDeliveries[alertKey];
   if (!alertDecision.shouldSend && stale.stale && previousDelivery?.deliveryStatus === 'failed' && previousDelivery.retryEligible) {
     state.alertDeliveries[alertKey] = {
       ...previousDelivery,
