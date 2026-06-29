@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isCurrentProofEligibleArtifactPath } from '../automation/stale-artifact-cleanup';
 
 type SessionName = 'morning' | 'lunch' | 'evening';
 const EXPECTED_RENDER_CONTRACT = 'quant-desk-trade-plan-target-ladder-v2-axis-safe';
@@ -184,7 +185,10 @@ async function readJson(filePath: string): Promise<Record<string, unknown>> {
 async function listFiles(dir: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
-    return entries.filter((entry) => entry.isFile()).map((entry) => path.join(dir, entry.name));
+    return entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => path.join(dir, entry.name))
+      .filter(isCurrentProofEligibleArtifactPath);
   } catch {
     return [];
   }

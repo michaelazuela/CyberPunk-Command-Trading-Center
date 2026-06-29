@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isCurrentProofEligibleArtifactPath } from './stale-artifact-cleanup';
 
 type SessionName = 'morning' | 'lunch' | 'evening';
 
@@ -596,6 +597,9 @@ function markdownFor(report: Omit<LiveDeskObserverReport, 'markdown'>): string {
 
 export async function buildLiveDeskObserverReport(options: LiveDeskObserverOptions): Promise<LiveDeskObserverReport> {
   const sourceTape = path.join(options.auditDir, `scanner-decision-tape-${options.tradeDate}-${options.instrument}-${options.session}.json`);
+  if (!isCurrentProofEligibleArtifactPath(sourceTape)) {
+    throw new Error(`Decision tape is archived/legacy and cannot be used as current scanner proof: ${sourceTape}`);
+  }
   if (!existsSync(sourceTape)) {
     throw new Error(`Decision tape not found: ${sourceTape}`);
   }

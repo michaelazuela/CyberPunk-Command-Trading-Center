@@ -3,6 +3,22 @@
 ## Latest Change
 
 Date: 2026-06-28
+Task: Add controlled stale-artifact cleanup inventory and proof-exclusion guard.
+Files changed: tools/automation/stale-artifact-cleanup.ts, tools/automation/stale-artifact-cleanup.test.ts, tools/automation/live-desk-observer.ts, tools/supervisor/discordCardArtifactSignoff.ts, package.json, docs/STALE_ARTIFACT_CLEANUP_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Discord/chart level drift exposed a project-hygiene risk: old generated scanner reports, receipts, decision tapes, chart renders, and temp backups can be mistaken for current scanner proof. The cleanup workflow now inventories generated artifacts first, protects source/tests/fixtures/docs/RAG/research records, defaults to dry-run, archives legacy generated artifacts only with `--apply`, deletes only per-file temp/backup generated artifacts, and blocks archived/legacy paths from current proof signoff.
+Tests run: `npx tsx tools/automation/stale-artifact-cleanup.test.ts`; `npx tsx tools/automation/live-observation-proof-audit.test.ts`; `npx tsx tools/supervisor/discordCardArtifactSignoff.test.ts`; `npx tsx tools/automation/stale-artifact-cleanup.ts --json-out tools/automation/diagnostic-reports/stale-artifact-cleanup-dry-run.json --json`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Focused cleanup loopback verified default dry-run makes no filesystem changes, apply mode only mutates an isolated temp workspace, archive/delete actions are exact, archive manifest is written, source/docs/tests/fixtures/research/RAG files are protected, and archived/legacy/backup artifacts are excluded from current proof/signoff. Real workspace dry-run produced ignored report `tools/automation/diagnostic-reports/stale-artifact-cleanup-dry-run.json` with 478 keep actions, 2,387 archive candidates, 21 generated temp/backup delete candidates, and 559 review-required items. No real workspace cleanup was applied.
+Trading logic changed: No. This is generated-artifact inventory, quarantine, documentation, and proof-input filtering only. It does not change setup definitions, ranking, candidate creation, candidate filtering, entries, stops, targets, risk, invalidation, bar-close handling, bridge behavior, Discord delivery cadence, live trade approval, or canExecute.
+Bridge impact: None.
+Discord impact: No posting/editing/deletion. Current proof/signoff now refuses archive/legacy/backup artifact paths as current evidence.
+Journal/RAG impact: Research and RAG records are explicitly protected from cleanup actions.
+Supabase impact: No migration added.
+Known risks: None known.
+Next recommended action: Run dry-run inventory first, review the JSON report, and apply cleanup only after the operator confirms the archive/delete candidates are safe.
+
+## Previous Change
+
+Date: 2026-06-28
 Task: Fix open-market candle recorder heartbeat active-contract drift.
 Files changed: tools/automation/candle-recorder.ts, tools/automation/bridge-instrument-resolver.test.ts, docs/PROJECT_STATUS.md.
 Reason: During an open Sunday futures session, the supervisor scanner resolved root `MES` to active contract `MES 09-26`, but the candle recorder kept polling raw `MES`, causing repeated `Instrument not found: MES` warnings and a false recorder heartbeat issue. The recorder now preserves the configured root while refreshing the active bridge contract inside every polling cycle before OHLC fetch.
