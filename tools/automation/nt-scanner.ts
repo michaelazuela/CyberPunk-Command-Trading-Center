@@ -106,6 +106,7 @@ import {
   mergeMarketDataBars,
   repairMarketDataBarsWithinBaseRange,
   verifyMarketDataWindow,
+  type MarketDataWindowVerification,
   type MarketDataWindowSource,
 } from './market-data-ingestion';
 import { applyNewsMacroCaution, loadMacroCalendarConfig } from './macro-calendar';
@@ -2631,6 +2632,30 @@ function completedHtfAggregateBars(bars: NinjaBridgeBar[], timeframe: MarketBarT
   });
 }
 
+export function verifiedFiveMinuteAggregationRepair(args: {
+  timeframe: MarketBarTimeframe;
+  bars: NinjaBridgeBar[];
+  requestedFrom: string;
+  requestedTo: string;
+  bridgeInstrument: string;
+}): { bars: NinjaBridgeBar[]; verification: MarketDataWindowVerification } | null {
+  if (args.timeframe === '5m' || !args.bars.length) return null;
+  const verification = verifyMarketDataWindow({
+    bars: args.bars,
+    timeframe: args.timeframe,
+    requestedFrom: args.requestedFrom,
+    requestedTo: args.requestedTo,
+    requiredLookbackDays: SCANNER_REQUIRED_HISTORY_LOOKBACK_DAYS,
+    minimumBars: SCANNER_HISTORY_MIN_BARS[args.timeframe],
+    source: 'market_bars_bridge_repair',
+    cacheBars: 0,
+    bridgeRepairBars: args.bars.length,
+    bridgeInstrument: args.bridgeInstrument,
+  });
+  if (!verification.sufficient) return null;
+  return { bars: mergeBars([], args.bars), verification };
+}
+
 function targetTimeframeBucketStartEt(value: string, timeframe: MarketBarTimeframe): string | null {
   const normalized = normalizeCandleTimeEt(value);
   const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
@@ -2868,9 +2893,22 @@ async function fetchScannerHistoryFrame(args: {
     );
     if (rebuilt.length) {
       fiveMinuteAggregationRepairBars = rebuilt.length;
-      repaired = mergeBars(rebuilt, repaired);
-      bars = mergeBars(repaired, cached);
-      console.log(`[scanner-history] ${args.timeframe}: rebuilt ${rebuilt.length} bars from trusted 5M OHLC after native HTF repair remained incomplete.`);
+      const verifiedRebuild = verifiedFiveMinuteAggregationRepair({
+        timeframe: args.timeframe,
+        bars: rebuilt,
+        requestedFrom: args.from,
+        requestedTo: args.to,
+        bridgeInstrument: args.config.bridgeInstrument,
+      });
+      if (verifiedRebuild) {
+        repaired = verifiedRebuild.bars;
+        bars = verifiedRebuild.bars;
+        console.log(`[scanner-history] ${args.timeframe}: rebuilt ${rebuilt.length} bars from trusted 5M OHLC and accepted them as sufficient HTF history after native HTF repair remained incomplete.`);
+      } else {
+        repaired = mergeBars(rebuilt, repaired);
+        bars = mergeBars(repaired, cached);
+        console.log(`[scanner-history] ${args.timeframe}: rebuilt ${rebuilt.length} bars from trusted 5M OHLC after native HTF repair remained incomplete.`);
+      }
       if (marketConfig) {
         try {
           await upsertMarketBars({

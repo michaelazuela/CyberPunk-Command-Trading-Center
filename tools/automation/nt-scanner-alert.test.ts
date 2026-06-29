@@ -76,6 +76,7 @@ import {
   summarizeScannerHistoryCoverage,
   syncLocalMarketDataGapEventsToSupabase,
   twoHourCoverageDiagnostic,
+  verifiedFiveMinuteAggregationRepair,
   verifyScannerActiveCampaignLedgerReady,
   writeLocalMarketDataGapEvent,
   writeScannerDiscordReceiptAuditLog,
@@ -3330,6 +3331,35 @@ assert.deepEqual(dataLimitedHtfCoverage.insufficientTimeframes, ['120m', '240m']
 assert.ok(dataLimitedHtfCoverage.summary.includes('context only'));
 assert.ok(dataLimitedHtfCoverage.summary.includes('segmented bridge repair'));
 assert.ok(dataLimitedHtfCoverage.summary.includes('cannot invent missing NinjaTrader bars'));
+const rebuiltFourHourBars = Array.from({ length: 181 }, (_, index) => {
+  const time = new Date(Date.UTC(2026, 4, 30, 8 + index * 4, 0, 0));
+  const base = 7400 + index * 0.25;
+  return {
+    time: time.toISOString().slice(0, 19),
+    open: base,
+    high: base + 2,
+    low: base - 2,
+    close: base + 1,
+    volume: 100 + index,
+  };
+});
+const verifiedFourHourRepair = verifiedFiveMinuteAggregationRepair({
+  timeframe: '240m',
+  bars: rebuiltFourHourBars,
+  requestedFrom: '2026-05-30T09:20:00',
+  requestedTo: '2026-06-29T09:20:00',
+  bridgeInstrument: 'MES 09-26',
+});
+assert.ok(verifiedFourHourRepair);
+assert.equal(verifiedFourHourRepair.verification.sufficient, true);
+const repairedHtfCoverage = htfHistoryCoverageReadiness([
+  { timeframe: '15m', requiredLookbackDays: 30, requestedFrom: '2026-05-30T09:20:00', requestedTo: '2026-06-29T09:20:00', barsLoaded: 1906, rangeStart: '2026-05-30T10:00:00', rangeEnd: '2026-06-29T09:15:00', source: 'market_bars_bridge_repair', cacheBars: 0, bridgeRepairBars: 1906, selfHealed: true, sufficient: true, warning: null },
+  { timeframe: '60m', requiredLookbackDays: 30, requestedFrom: '2026-05-30T09:20:00', requestedTo: '2026-06-29T09:20:00', barsLoaded: 492, rangeStart: '2026-05-30T10:00:00', rangeEnd: '2026-06-29T09:00:00', source: 'market_bars_bridge_repair', cacheBars: 0, bridgeRepairBars: 492, selfHealed: true, sufficient: true, warning: null },
+  { timeframe: '120m', requiredLookbackDays: 30, requestedFrom: '2026-05-30T09:20:00', requestedTo: '2026-06-29T09:20:00', barsLoaded: 274, rangeStart: '2026-05-30T10:00:00', rangeEnd: '2026-06-29T08:00:00', source: 'market_bars_bridge_repair', cacheBars: 0, bridgeRepairBars: 274, selfHealed: true, sufficient: true, warning: null },
+  { ...verifiedFourHourRepair.verification, fiveMinuteAggregationRepairBars: rebuiltFourHourBars.length, requiredLookbackDays: 30 },
+]);
+assert.equal(repairedHtfCoverage.status, 'sufficient');
+assert.deepEqual(repairedHtfCoverage.insufficientTimeframes, []);
 
 const failedPlanEvents = appOwnedFailedPlanEventsFromScannerState({
   state: {

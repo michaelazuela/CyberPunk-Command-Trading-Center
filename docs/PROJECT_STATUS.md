@@ -2777,6 +2777,22 @@ Supabase impact: None.
 Known risks: Build still reports pre-existing Vite chunk/dynamic-import warnings.
 Next recommended action: Review live scanner/Discord output after deployment to confirm the compact HTF Context section is readable in production Discord cards.
 
+## Current Change
+
+Date: 2026-06-29
+Task: Fix false morning scanner data-quality notice after trusted 5M-derived HTF repair.
+Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: The scanner rebuilt sufficient 240M history from trusted 5M OHLC, but the readiness gate still kept 240M marked insufficient and sent an operational data-quality Discord notice.
+Tests run: npx tsx tools/automation/nt-scanner-alert.test.ts; npx tsx tools/automation/live-discord-rollout.test.ts; npx tsx tools/automation/no-silent-drop-policy-audit.test.ts; npx tsx tools/automation/discord-alert-format.test.ts; npm run guard:no-firebase; npm run guard:architecture; npm run guard:schema; npm run lint; npm run build; npm run test.
+Live verification: Restarted the supervisor-owned scanner/recorder and confirmed 15M/60M/120M/240M rebuilt from trusted 5M OHLC are accepted as sufficient HTF history; readiness gate reports ready for 5M/15M/1H/2H/4H context.
+Result: Passed.
+Trading logic changed: No.
+Bridge impact: None. Existing 5M-derived HTF repair is now accepted only when it independently passes the same 30-day market-data verifier.
+Journal/RAG impact: None.
+Supabase impact: None.
+Known risks: None known after focused and live checks.
+Next recommended action: Continue live observation through the morning window and ensure any remaining suppression reasons are DeskState/canExecute reasons, not data-quality blockers.
+
 ## Previous Change
 
 Date: 2026-06-01
