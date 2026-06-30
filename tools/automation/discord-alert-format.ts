@@ -2001,7 +2001,7 @@ function deskPlayHtfFvgReactionMemoryLines(
     ? `5M child proof: ${zoneRangeLine(child.lower, child.upper)} (${childState})`
     : `5M child proof: ${childState}`;
   const routeLine = routing?.status === 'routed_active_reaction'
-    ? `Routing: ${displayDirection} surfaced from HTF parent reaction + 5M child proof.`
+    ? `Routing: ${displayDirection} surfaced from HTF parent reaction + 5M child proof. Defended HTF FVG routing is active.`
     : `Routing: ${compactLine(routing?.reason || memory?.summary || 'HTF FVG memory is context only.', 96)}`;
   const stackLine = memory?.parentStackSummary
     ? compactLine(memory.parentStackSummary, 118)
@@ -2017,17 +2017,22 @@ function deskPlayHtfFvgReactionMemoryLines(
   const standDown = routing?.standDown
     ? compactLine(routing.standDown, 108)
     : null;
+  const acceptanceLine = isFinitePrice(routing?.lineInSand)
+    ? `${displayDirection === 'SHORT' ? 'Acceptance below' : 'Acceptance above'} ${priceLine(routing?.lineInSand)} is the next review trigger; 5M still controls execution.`
+    : `Acceptance ${displayDirection === 'SHORT' ? 'below' : 'above'} the defended boundary is the next review trigger; 5M still controls execution.`;
   return [
-    'HTF FVG Reaction Memory:',
+    'Defended HTF FVG Reaction Memory:',
     parentLine,
     `Reaction: ${reactionState}${active.latestReaction?.timestamp ? ` at ${compactLine(active.latestReaction.timestamp, 28)}` : ''}`,
     childLine,
-    ...(lineLabel ? [`Line in sand: ${lineLabel}`] : []),
+    ...(lineLabel ? [`Line in sand: ${lineLabel}`, `Decision line: ${lineLabel}`] : []),
+    acceptanceLine,
     ...(lifecycleLine ? [lifecycleLine] : []),
     ...(stackLine ? [stackLine] : []),
     routeLine,
-    ...(standDown ? [standDown] : []),
+    ...(standDown ? [`Stand down: ${standDown}`] : []),
     'Boundary: communication/routing only; no canExecute, stop, target, risk, or approval change.',
+    'Review only / Not execution approval. 5M still controls execution.',
   ];
 }
 

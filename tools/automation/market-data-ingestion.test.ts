@@ -8,6 +8,7 @@ import {
   verifyMarketDataWindow,
 } from './market-data-ingestion';
 import {
+  buildMarketBarTimeframeIntegrityReport,
   countMarketBarTimeframeIntervalMismatches,
   filterBarsToRequestedTimeframe,
   marketDataCachePageRanges,
@@ -109,6 +110,20 @@ assert.equal(countMarketBarTimeframeIntervalMismatches([
   bar('2026-06-21T18:00:00-04:00'),
   bar('2026-06-21T19:45:00-04:00'),
 ], '120m') > 0, true);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T20:00:00-04:00'),
+], '240m') > 0, true);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T20:00:00-04:00'),
+  bar('2026-06-21T22:00:00-04:00'),
+], '120m'), 0);
+assert.equal(countMarketBarTimeframeIntervalMismatches([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T22:00:00-04:00'),
+  bar('2026-06-22T02:00:00-04:00'),
+], '240m'), 0);
 const filteredTwoHourCache = filterBarsToRequestedTimeframe([
   bar('2026-06-21T18:00:00-04:00'),
   bar('2026-06-21T18:05:00-04:00'),
@@ -122,6 +137,30 @@ assert.deepEqual(filteredTwoHourCache.map((item) => item.time), [
   '2026-06-21T20:00:00-04:00',
 ]);
 assert.equal(countMarketBarTimeframeIntervalMismatches(filteredTwoHourCache, '120m'), 0);
+const filteredFourHourCache = filterBarsToRequestedTimeframe([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T20:00:00-04:00'),
+  bar('2026-06-21T22:00:00-04:00'),
+  bar('2026-06-22T00:00:00-04:00'),
+  bar('2026-06-22T02:00:00-04:00'),
+], '240m');
+assert.deepEqual(filteredFourHourCache.map((item) => item.time), [
+  '2026-06-21T18:00:00-04:00',
+  '2026-06-21T22:00:00-04:00',
+  '2026-06-22T02:00:00-04:00',
+]);
+assert.equal(countMarketBarTimeframeIntervalMismatches(filteredFourHourCache, '240m'), 0);
+const badFourHourIntegrity = buildMarketBarTimeframeIntegrityReport([
+  bar('2026-06-21T18:00:00-04:00'),
+  bar('2026-06-21T20:00:00-04:00'),
+  bar('2026-06-21T22:00:00-04:00'),
+], '240m');
+assert.equal(badFourHourIntegrity.valid, false);
+assert.equal(badFourHourIntegrity.invalidShortIntervalRows, 2);
+assert.equal(badFourHourIntegrity.observedIntervalMinutes['120'], 2);
+const goodFourHourIntegrity = buildMarketBarTimeframeIntegrityReport(filteredFourHourCache, '240m');
+assert.equal(goodFourHourIntegrity.valid, true);
+assert.equal(goodFourHourIntegrity.observedIntervalMinutes['240'], 2);
 
 const sufficient = verifyMarketDataWindow({
   bars: repaired,

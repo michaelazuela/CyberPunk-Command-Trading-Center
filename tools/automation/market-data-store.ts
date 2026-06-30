@@ -81,35 +81,38 @@ function hasValidOhlcShape(bar: NinjaBridgeBar): boolean {
   return bar.high >= Math.max(bar.open, bar.close, bar.low) && bar.low <= Math.min(bar.open, bar.close, bar.high);
 }
 
-function timeframeMinutes(timeframe: MarketBarTimeframe): number {
+export function marketBarTimeframeMinutes(timeframe: MarketBarTimeframe): number {
   if (timeframe === '60m') return 60;
   if (timeframe === '120m') return 120;
   if (timeframe === '240m') return 240;
   return Number(timeframe.replace('m', '')) || 5;
 }
 
-function marketBarTimeMs(value: string | null | undefined): number | null {
+export function marketBarExpectedIntervalMs(timeframe: MarketBarTimeframe): number {
+  return marketBarTimeframeMinutes(timeframe) * 60_000;
+}
+
+export function marketBarTimeMs(value: string | null | undefined): number | null {
   const parsed = Date.parse(normalizeCandleTimeEt(String(value || '')));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function marketBarMinuteOfDay(value: string | null | undefined): number | null {
+export function marketBarMinuteOfDay(value: string | null | undefined): number | null {
   const match = normalizeCandleTimeEt(String(value || '')).match(/T(\d{2}):(\d{2})/);
   if (!match) return null;
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe: MarketBarTimeframe): boolean {
+export function isAlignedToTimeframeMinute(value: string | null | undefined, timeframe: MarketBarTimeframe): boolean {
   const minuteOfDay = marketBarMinuteOfDay(value);
   if (minuteOfDay === null) return false;
-  const minutes = timeframeMinutes(timeframe);
+  const minutes = marketBarTimeframeMinutes(timeframe);
   if (minutes >= 60) return minuteOfDay % 60 === 0;
   return minuteOfDay % minutes === 0;
 }
 
 export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
-  const expectedMs = timeframeMinutes(timeframe) * 60_000;
-  const minimumAllowedMs = expectedMs * 0.4;
+  const expectedMs = marketBarExpectedIntervalMs(timeframe);
   const sorted = bars
     .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
     .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null)
@@ -117,14 +120,89 @@ export function countMarketBarTimeframeIntervalMismatches(bars: NinjaBridgeBar[]
   let mismatches = sorted.filter((item) => !isAlignedToTimeframeMinute(item.bar.time, timeframe)).length;
   for (let index = 1; index < sorted.length; index += 1) {
     const delta = sorted[index].ms - sorted[index - 1].ms;
-    if (delta > 0 && delta < minimumAllowedMs) mismatches += 1;
+    if (delta > 0 && delta < expectedMs) mismatches += 1;
   }
   return mismatches;
 }
 
+export interface MarketBarTimeframeIntegrityReport {
+  timeframe: MarketBarTimeframe;
+  expectedIntervalMinutes: number;
+  rows: number;
+  oldestCandleTimeEt: string | null;
+  newestCandleTimeEt: string | null;
+  observedIntervalMinutes: Record<string, number>;
+  invalidAlignmentRows: number;
+  invalidShortIntervalRows: number;
+  invalidRows: Array<{
+    time: string;
+    reason: 'invalid_alignment' | 'short_interval';
+    previousTime?: string;
+    observedIntervalMinutes?: number;
+  }>;
+  valid: boolean;
+}
+
+export function buildMarketBarTimeframeIntegrityReport(
+  bars: NinjaBridgeBar[],
+  timeframe: MarketBarTimeframe,
+  invalidSampleLimit = 25,
+): MarketBarTimeframeIntegrityReport {
+  const expectedMs = marketBarExpectedIntervalMs(timeframe);
+  const sorted = bars
+    .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time), normalizedTime: normalizeCandleTimeEt(bar.time) }))
+    .filter((item): item is { bar: NinjaBridgeBar; ms: number; normalizedTime: string } => item.ms !== null && Boolean(item.normalizedTime))
+    .sort((a, b) => a.ms - b.ms);
+  const observedIntervalMinutes: Record<string, number> = {};
+  const invalidRows: MarketBarTimeframeIntegrityReport['invalidRows'] = [];
+  let invalidAlignmentRows = 0;
+  let invalidShortIntervalRows = 0;
+
+  for (const item of sorted) {
+    if (!isAlignedToTimeframeMinute(item.bar.time, timeframe)) {
+      invalidAlignmentRows += 1;
+      if (invalidRows.length < invalidSampleLimit) {
+        invalidRows.push({ time: item.normalizedTime, reason: 'invalid_alignment' });
+      }
+    }
+  }
+
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = sorted[index - 1];
+    const current = sorted[index];
+    const delta = current.ms - previous.ms;
+    if (delta <= 0) continue;
+    const observedMinutes = Math.round(delta / 60_000);
+    observedIntervalMinutes[String(observedMinutes)] = (observedIntervalMinutes[String(observedMinutes)] || 0) + 1;
+    if (delta < expectedMs) {
+      invalidShortIntervalRows += 1;
+      if (invalidRows.length < invalidSampleLimit) {
+        invalidRows.push({
+          time: current.normalizedTime,
+          previousTime: previous.normalizedTime,
+          reason: 'short_interval',
+          observedIntervalMinutes: observedMinutes,
+        });
+      }
+    }
+  }
+
+  return {
+    timeframe,
+    expectedIntervalMinutes: marketBarTimeframeMinutes(timeframe),
+    rows: sorted.length,
+    oldestCandleTimeEt: sorted[0]?.normalizedTime || null,
+    newestCandleTimeEt: sorted[sorted.length - 1]?.normalizedTime || null,
+    observedIntervalMinutes,
+    invalidAlignmentRows,
+    invalidShortIntervalRows,
+    invalidRows,
+    valid: invalidAlignmentRows === 0 && invalidShortIntervalRows === 0,
+  };
+}
+
 export function filterBarsToRequestedTimeframe(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): NinjaBridgeBar[] {
-  const expectedMs = timeframeMinutes(timeframe) * 60_000;
-  const minimumAllowedMs = expectedMs * 0.4;
+  const expectedMs = marketBarExpectedIntervalMs(timeframe);
   const sorted = bars
     .map((bar) => ({ bar, ms: marketBarTimeMs(bar.time) }))
     .filter((item): item is { bar: NinjaBridgeBar; ms: number } => item.ms !== null && isAlignedToTimeframeMinute(item.bar.time, timeframe))
@@ -132,7 +210,7 @@ export function filterBarsToRequestedTimeframe(bars: NinjaBridgeBar[], timeframe
   const kept: Array<{ bar: NinjaBridgeBar; ms: number }> = [];
   for (const item of sorted) {
     const previous = kept[kept.length - 1];
-    if (!previous || item.ms - previous.ms >= minimumAllowedMs || item.ms - previous.ms <= 0) {
+    if (!previous || item.ms - previous.ms >= expectedMs || item.ms - previous.ms <= 0) {
       kept.push(item);
     }
   }

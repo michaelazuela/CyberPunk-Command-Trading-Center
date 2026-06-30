@@ -5354,18 +5354,16 @@ function scannerHtfFvgReviewMapReason(args: {
   const direction = play.direction === 'LONG' || play.direction === 'SHORT' ? play.direction : null;
   if (!direction) return null;
   const bias = scannerDeskPlayPrimaryBias(args.deskState);
-  if (!bias || bias.state !== 'primary') return null;
-  const score = bias.decisionQualityScore ?? bias.lineConfidence?.score ?? bias.modelConfidenceScore ?? null;
-  if (typeof score !== 'number' || !Number.isFinite(score) || score < HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE) return null;
+  const score = bias?.decisionQualityScore ?? bias?.lineConfidence?.score ?? bias?.modelConfidenceScore ?? null;
   const referenceLevels = deskPlayPlanningLevels({ deskState: args.deskState, normalized: args.normalized });
   const hasReferenceLevels = isFiniteTradePrice(referenceLevels.entry) &&
     isFiniteTradePrice(referenceLevels.stop) &&
     isFiniteTradePrice(referenceLevels.target1) &&
     isFiniteTradePrice(referenceLevels.target2);
-  if (!hasReferenceLevels) return null;
 
   const routed = play.htfFvgReactionRouting?.status === 'routed_active_reaction' &&
     play.htfFvgReactionRouting.direction === direction;
+  if (!routed && (typeof score !== 'number' || !Number.isFinite(score) || score < HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE)) return null;
   const cascadeParent = play.htfFvgCascade?.direction === direction && play.htfFvgCascade.parentZone;
   const memoryParent = play.htfFvgReactionMemory?.activeReaction?.direction === direction
     ? play.htfFvgReactionMemory.activeReaction
@@ -5393,7 +5391,30 @@ function scannerHtfFvgReviewMapReason(args: {
   const childLabel = activeZone?.direction === direction && isFiniteTradePrice(activeZone.lower) && isFiniteTradePrice(activeZone.upper)
     ? `; tactical zone ${activeZone.lower.toFixed(2)}-${activeZone.upper.toFixed(2)}`
     : '';
-  return `${direction} high-quality HTF/FVG review map is eligible: ${parentLabel}${childLabel}, decision quality is ${score}, ${priceContext}, complete app-owned entry/stop/T1/T2 are present, and Discord remains review-only until completed 5M proof plus canExecute.`;
+  const line = roundNullableTradePrice(play.htfFvgReactionRouting?.lineInSand) ??
+    roundNullableTradePrice(deskPlayLineForDirection(args.deskState, direction)) ??
+    roundNullableTradePrice(play.lineInSand);
+  const lineText = line === null
+    ? `${direction} decision line pending`
+    : `${direction === 'SHORT' ? 'SHORT BELOW' : 'LONG ABOVE'} ${line.toFixed(2)}`;
+  const trigger = play.htfFvgReactionRouting?.reason ||
+    play.activeTacticalZone?.nextTrigger ||
+    play.nextTrigger ||
+    (direction === 'SHORT'
+      ? `completed 5M acceptance/rejection below ${line === null ? 'the defended boundary' : line.toFixed(2)}`
+      : `completed 5M acceptance/reclaim above ${line === null ? 'the defended boundary' : line.toFixed(2)}`);
+  const standDown = play.htfFvgReactionRouting?.standDown ||
+    scannerDeskPlayStandDownInstruction(args.deskState) ||
+    (direction === 'SHORT'
+      ? `Stand down if completed 5M accepts back above the defended zone.`
+      : `Stand down if completed 5M accepts back below the defended zone.`);
+  const levelText = hasReferenceLevels
+    ? 'complete app-owned entry/stop/T1/T2 are present'
+    : 'app-owned entry/stop/T1/T2 are pending fresh 5M structure; no stale/generated levels may be shown';
+  const scoreText = typeof score === 'number' && Number.isFinite(score)
+    ? `decision quality is ${score}`
+    : 'defended HTF FVG routing is active';
+  return `${direction} high-quality HTF/FVG review map is eligible; Defended HTF FVG reclaim-to-line map: ${parentLabel}${childLabel}; Decision line: ${lineText}; Acceptance ${direction === 'SHORT' ? 'below' : 'above'} that line is the next trigger; required proof: ${trigger}; stand down: ${standDown}; ${scoreText}; ${priceContext}; ${levelText}. Discord remains review-only. Review only / Not execution approval. 5M still controls execution; canExecute remains false until normal app-owned gates pass.`;
 }
 
 function scannerEarlyLineInSandWatchReason(args: {
@@ -5542,7 +5563,7 @@ export function evaluateScannerDeskPlayDiscordSuppression(args: {
       `Desk Play reference map is eligible for Discord as review-only because ${play.direction} readiness is data-limited, completed 5M is ready, and app-owned reference entry/stop/T1/T2 are available; HTF promotion remains blocked.`,
     );
   }
-  if (readiness === 'not_aligned' && htfFvgReviewMapReason) {
+  if (htfFvgReviewMapReason) {
     return scannerDeskPlaySuppressionPost(htfFvgReviewMapReason);
   }
   if (targetToLinePromotionReason) {

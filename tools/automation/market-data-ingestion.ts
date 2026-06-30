@@ -173,7 +173,6 @@ function countInternalGaps(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe
 
 export function countTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timeframe: MarketBarTimeframe): number {
   const expectedMs = timeframeMinutes(timeframe) * 60_000;
-  const minimumAllowedMs = expectedMs * 0.4;
   let mismatches = bars.filter((bar) => !isAlignedToTimeframeMinute(bar.time, timeframe)).length;
   const sorted = mergeMarketDataBars(bars, []);
   for (let index = 1; index < sorted.length; index += 1) {
@@ -181,7 +180,7 @@ export function countTimeframeIntervalMismatches(bars: NinjaBridgeBar[], timefra
     const current = timestampMs(sorted[index]?.time);
     if (previous === null || current === null) continue;
     const delta = current - previous;
-    if (delta > 0 && delta < minimumAllowedMs) mismatches += 1;
+    if (delta > 0 && delta < expectedMs) mismatches += 1;
   }
   return mismatches;
 }
