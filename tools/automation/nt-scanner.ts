@@ -831,6 +831,25 @@ function scannerActiveCampaignLedgerUrl(config: ScannerActiveCampaignDurableLedg
   return `${config.supabaseUrl}/rest/v1/scanner_active_campaign_alerts${query}`;
 }
 
+const ACTIVE_CAMPAIGN_PENDING_CLAIM_STALE_MS = 10 * 60 * 1000;
+
+function timestampMs(value: unknown): number | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isStalePendingActiveCampaignClaim(existing: any, nowMs = Date.now()): boolean {
+  const status = typeof existing?.delivery_status === 'string' ? existing.delivery_status : 'pending';
+  if (status !== 'pending') return false;
+  if (timestampMs(existing?.first_sent_at) !== null) return false;
+  const claimedAt = timestampMs(existing?.first_claimed_at)
+    ?? timestampMs(existing?.created_at)
+    ?? timestampMs(existing?.updated_at);
+  if (claimedAt === null) return false;
+  return nowMs - claimedAt >= ACTIVE_CAMPAIGN_PENDING_CLAIM_STALE_MS;
+}
+
 function scannerActiveCampaignRow(args: {
   config: ScannerActiveCampaignDurableLedgerConfig;
   campaignId: string;
@@ -966,7 +985,7 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
 
   const existing = (await fetchScannerActiveCampaignRows({ config: args.config, campaignId, fetchImpl }))[0] || null;
   const status = typeof existing?.delivery_status === 'string' ? existing.delivery_status : 'pending';
-  if (status === 'failed' || status === 'skipped' || status === 'released') {
+  if (status === 'failed' || status === 'skipped' || status === 'released' || isStalePendingActiveCampaignClaim(existing)) {
     await patchScannerActiveCampaignLedger({
       config: args.config,
       campaignId,
@@ -975,6 +994,14 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
         ...row,
         delivery_status: 'pending',
         first_claimed_at: new Date().toISOString(),
+        metadata: {
+          ...(existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {}),
+          ...(row.metadata && typeof row.metadata === 'object' ? row.metadata : {}),
+          reclaimedFromDeliveryStatus: status,
+          reclaimedReason: status === 'pending'
+            ? 'stale_pending_without_first_sent_at'
+            : `prior_${status}_delivery`,
+        },
       },
     });
     return {
@@ -982,7 +1009,9 @@ export async function claimDurableActiveCampaignScannerAlert(args: {
       claimed: true,
       shouldSuppress: false,
       campaignId,
-      reason: `ActiveCampaign durable ledger reclaimed ${campaignId} after prior ${status} delivery.`,
+      reason: status === 'pending'
+        ? `ActiveCampaign durable ledger reclaimed ${campaignId} after stale pending claim with no sent timestamp.`
+        : `ActiveCampaign durable ledger reclaimed ${campaignId} after prior ${status} delivery.`,
       durableAvailable: true,
     };
   }

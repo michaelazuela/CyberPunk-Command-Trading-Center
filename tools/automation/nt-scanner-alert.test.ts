@@ -3750,6 +3750,44 @@ assert.equal(durableDuplicate.claimed, false);
 assert.equal(durableDuplicate.shouldSuppress, true);
 assert.match(durableDuplicate.reason || '', /durable Supabase ledger/);
 
+let stalePendingReclaimed = false;
+const durableStalePendingFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const method = init?.method || 'GET';
+  if (method === 'POST') return new Response('duplicate', { status: 409 });
+  if (method === 'GET') {
+    return new Response(JSON.stringify([{
+      delivery_status: 'pending',
+      first_claimed_at: '2020-06-30T15:35:05.005Z',
+      first_sent_at: null,
+      suppressed_count: 144,
+      metadata: { existing: true },
+    }]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (method === 'PATCH') {
+    const body = JSON.parse(String(init?.body || '{}'));
+    stalePendingReclaimed = body.delivery_status === 'pending'
+      && body.metadata?.reclaimedReason === 'stale_pending_without_first_sent_at';
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  }
+  return new Response('', { status: 500 });
+};
+const durableStalePending = await claimDurableActiveCampaignScannerAlert({
+  config: durableLedgerConfig,
+  candidate: shiftedCampaignCandidate,
+  tradeDate: '2026-06-30',
+  instrument: 'MES',
+  session: 'morning',
+  state: 'Conditional',
+  confidence: 65,
+  alertKey: 'stale-pending-alert-key',
+  planVersionId: 'MORNING-20260630-153504',
+  fetchImpl: durableStalePendingFetch,
+});
+assert.equal(durableStalePending.claimed, true);
+assert.equal(durableStalePending.shouldSuppress, false);
+assert.match(durableStalePending.reason || '', /stale pending claim/);
+assert.equal(stalePendingReclaimed, true);
+
 let reclaimPatchedToPending = false;
 const durableReclaimFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const method = init?.method || 'GET';
