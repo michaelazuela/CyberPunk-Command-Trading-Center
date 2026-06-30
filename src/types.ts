@@ -1128,6 +1128,24 @@ export interface MissingLevelRequirement {
   requiredFor: 'entry' | 'stop' | 'trigger' | 'target' | 'invalidation' | 'context';
 }
 
+export type TargetRoomStatus =
+  | 'clean_t1_t2'
+  | 'clean_t1_t2_obstructed'
+  | 'blocked_before_t1'
+  | 'missing_levels'
+  | 'stale_or_invalidated';
+
+export interface TargetRoomAssessment {
+  targetRoomStatus: TargetRoomStatus;
+  t1Available: boolean;
+  t2Available: boolean;
+  cleanPathToT1: boolean;
+  obstacleBeforeT1: boolean;
+  t2ExtensionAvailable: boolean;
+  t2ExtensionObstructed: boolean;
+  targetRoomReason: string;
+}
+
 export interface SetupCandidate {
   setupType: SetupType;
   scenarioLabel?: string | null;
@@ -1180,6 +1198,7 @@ export interface SetupCandidate {
   target2?: number | null;
   target1Reason?: string | null;
   target2Reason?: string | null;
+  targetRoom?: TargetRoomAssessment | null;
   targetObjectivePlan?: TargetObjectivePlan | null;
   riskPoints?: number | null;
   riskAdvisoryStatus?: RiskAdvisoryStatus;

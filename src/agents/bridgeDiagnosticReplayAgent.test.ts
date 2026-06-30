@@ -55,7 +55,7 @@ function candidate(overrides: Partial<SetupCandidate> = {}): SetupCandidate {
     target2: 118,
     riskPoints: 5,
     invalidation: 'Below 103',
-    evidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Minimum 2.0R'],
+    evidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Clean 1.5R path'],
     missingEvidence: [],
     executionStatus: ExecutionStatus.Executable,
     blockReason: null,

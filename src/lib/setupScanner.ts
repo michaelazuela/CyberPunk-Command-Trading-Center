@@ -9,6 +9,7 @@ import {
   SetupCandidateStatus,
   SetupType,
   TacticalZoneBounds,
+  TargetRoomAssessment,
   TargetObjective,
   TimeframeMssEvidence,
   TradingPlanCandidateState,
@@ -63,6 +64,7 @@ interface ModelOneValidation {
   stop: number | null;
   target1: number | null;
   target2: number | null;
+  targetRoom: TargetRoomAssessment | null;
   risk: number | null;
   invalidation: string | null;
   requiredTrigger: string | null;
@@ -1189,6 +1191,7 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
       stop: null,
       target1: null,
       target2: null,
+      targetRoom: null,
       risk: null,
       invalidation: null,
       requiredTrigger: 'Wait for sweep, reclaim, displacement, market structure shift, and FVG retrace.',
@@ -1279,25 +1282,25 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
   const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
   const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
   const rTargets = targetsFromEntryStop(direction, entry, stop);
-  const minimumTarget = entry !== null && actualRisk !== null
+  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
+  const target2 = stopIsDirectionallyValid ? rTargets.target2 : null;
+  const t2Target = entry !== null && actualRisk !== null
     ? direction === 'LONG'
       ? entry + actualRisk * 2
       : entry - actualRisk * 2
     : null;
-  const hasExplicitTargetMap = Boolean((chartContext.targetObjectives || []).length || (chartContext.structuralLevels || []).length);
-  const liquidityTarget = entry !== null && minimumTarget !== null
-    ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
+  const liquidityTarget = entry !== null && t2Target !== null
+    ? opposingLiquidityTarget(chartContext, direction, entry, t2Target)
     : null;
-  const target2 = stopIsDirectionallyValid ? liquidityTarget ?? (hasExplicitTargetMap ? null : rTargets.target2) : null;
-  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
-  const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
-  const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
-  if (hasTwoR) evidence.push('Minimum 2.0R available');
-  else missingEvidence.push('Minimum 2.0R available');
-  if (target2 !== null) evidence.push(liquidityTarget !== null ? 'Targeting opposing liquidity' : 'Targeting valid R-based objective');
-  else missingEvidence.push('Targeting opposing liquidity');
+  const targetRoom = assessTargetRoom(chartContext, direction, entry, stop, target1, target2);
+  if (targetRoom.t1Available) evidence.push('Clean 1.5R path available');
+  else missingEvidence.push('Clean 1.5R path unavailable');
+  if (targetRoom.t2ExtensionAvailable) evidence.push('T2 2.0R extension available');
+  else if (targetRoom.t2ExtensionObstructed) evidence.push('T2 extension obstructed; manage at T1');
+  if (liquidityTarget !== null) evidence.push(`Opposing liquidity objective retained for management context: ${liquidityTarget}`);
+  else evidence.push('App targets remain T1 1.5R and T2 2.0R from actual entry/stop risk');
 
-  const fullSequence = hasSweep && hasReclaim && hasDisplacement && hasMss && hasFvg && retraceIntoFvg && entry !== null && stop !== null && stopIsDirectionallyValid && target2 !== null && hasTwoR;
+  const fullSequence = hasSweep && hasReclaim && hasDisplacement && hasMss && hasFvg && retraceIntoFvg && entry !== null && stop !== null && stopIsDirectionallyValid && target1 !== null && target2 !== null && targetRoom.cleanPathToT1;
   const partialCount = [hasSweep, hasReclaim, hasDisplacement, hasMss, hasFvg, retraceIntoFvg].filter(Boolean).length;
   const possible = !fullSequence && partialCount >= 2;
 
@@ -1309,6 +1312,7 @@ function validateModelOne(chartContext?: ChartContext | null, manualLevelConfirm
     stop,
     target1,
     target2,
+    targetRoom,
     risk: actualRisk,
     invalidation: stop !== null
       ? direction === 'LONG'
@@ -1482,9 +1486,10 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
       stop: null,
       target1: null,
       target2: null,
+      targetRoom: null,
       risk: null,
       invalidation: null,
-      requiredTrigger: 'Wait for a liquidity raid, reclaim after sweep, valid entry, structure stop, and 2.0R target room.',
+      requiredTrigger: 'Wait for a liquidity raid, reclaim after sweep, valid entry, structure stop, and clean 1.5R target room.',
       confidence: 'Low',
       evidence: [],
       missingEvidence: ['Wick-only rejection is not enough without a meaningful liquidity raid'],
@@ -1580,26 +1585,25 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
   const stopIsDirectionallyValid = hasDirectionallyValidStop(direction, entry, stop);
   const actualRisk = stopIsDirectionallyValid ? riskPoints(entry, stop) : null;
   const rTargets = targetsFromEntryStop(direction, entry, stop);
-  const minimumTarget = entry !== null && actualRisk !== null
+  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
+  const target2 = stopIsDirectionallyValid ? rTargets.target2 : null;
+  const t2Target = entry !== null && actualRisk !== null
     ? direction === 'LONG'
       ? entry + actualRisk * 2
       : entry - actualRisk * 2
     : null;
-  const hasExplicitTargetMap = Boolean((chartContext.targetObjectives || []).length || (chartContext.structuralLevels || []).length);
-  const liquidityTarget = entry !== null && minimumTarget !== null
-    ? opposingLiquidityTarget(chartContext, direction, entry, minimumTarget)
+  const liquidityTarget = entry !== null && t2Target !== null
+    ? opposingLiquidityTarget(chartContext, direction, entry, t2Target)
     : null;
-  const target1 = stopIsDirectionallyValid ? rTargets.target1 : null;
-  const target2 = stopIsDirectionallyValid ? rTargets.target2 : null;
-  const rewardToTarget = entry !== null && target2 !== null ? Math.abs(target2 - entry) : null;
-  const hasTwoR = actualRisk !== null && rewardToTarget !== null && actualRisk > 0 && rewardToTarget / actualRisk >= 2;
-  const hasMinimumTargetRoom = hasExplicitTargetMap ? liquidityTarget !== null : hasTwoR;
+  const targetRoom = assessTargetRoom(chartContext, direction, entry, stop, target1, target2);
   if (target1 !== null && target2 !== null) evidence.push('Targeting valid app R-based objectives');
   else missingEvidence.push('App T1/T2 from actual entry/stop risk');
   if (liquidityTarget !== null) evidence.push(`Opposing liquidity objective retained for management context: ${liquidityTarget}`);
-  else if (hasExplicitTargetMap) missingEvidence.push('Forward opposing liquidity objective for management context');
-  if (hasMinimumTargetRoom) evidence.push('Minimum 2.0R available');
-  else missingEvidence.push('Minimum 2.0R unavailable');
+  else evidence.push('App targets remain T1 1.5R and T2 2.0R from actual entry/stop risk');
+  if (targetRoom.t1Available) evidence.push('Clean 1.5R path available');
+  else missingEvidence.push(targetRoom.targetRoomReason || 'Clean 1.5R path unavailable');
+  if (targetRoom.t2ExtensionAvailable) evidence.push('T2 2.0R extension available');
+  else if (targetRoom.t2ExtensionObstructed) evidence.push('T2 extension obstructed; manage at T1');
 
   const bigPicture = bigPictureStructureForDirection(chartContext, direction);
   if (bigPicture.evidence) evidence.push(bigPicture.evidence);
@@ -1613,8 +1617,9 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     entry !== null &&
     stop !== null &&
     stopIsDirectionallyValid &&
+    target1 !== null &&
     target2 !== null &&
-    hasMinimumTargetRoom &&
+    targetRoom.cleanPathToT1 &&
     !bigPicture.countertrend;
   const possible = !fullSequence && hasSweep && establishedLevel.established;
 
@@ -1626,6 +1631,7 @@ function validateTurtleSoup(chartContext?: ChartContext | null, manualLevelConfi
     stop,
     target1,
     target2,
+    targetRoom,
     risk: actualRisk,
     invalidation: stop !== null
       ? direction === 'LONG'
@@ -1930,6 +1936,94 @@ function computedTargets(direction: Direction, entry: number | null, stop: numbe
   return actualTargets;
 }
 
+function directionalBetween(direction: Direction, price: number, entry: number, target: number): boolean {
+  if (direction === 'LONG') return price > entry && price < target;
+  if (direction === 'SHORT') return price < entry && price > target;
+  return false;
+}
+
+function reactionObstacleBeforeTarget(
+  chartContext: ChartContext,
+  direction: Direction,
+  entry: number | null,
+  target: number | null
+): TargetObjective | null {
+  if (direction !== 'LONG' && direction !== 'SHORT' || entry === null || target === null) return null;
+  const obstacles = (chartContext.targetObjectives || [])
+    .filter((objective) =>
+      objective.direction === direction &&
+      Number.isFinite(objective.price) &&
+      directionalBetween(direction, objective.price, entry, target)
+    )
+    .sort((a, b) =>
+      direction === 'LONG'
+        ? (a.price as number) - (b.price as number)
+        : (b.price as number) - (a.price as number)
+    );
+  return obstacles[0] || null;
+}
+
+function assessTargetRoom(
+  chartContext: ChartContext,
+  direction: Direction,
+  entry: number | null,
+  stop: number | null,
+  target1: number | null,
+  target2: number | null
+): TargetRoomAssessment {
+  if (direction !== 'LONG' && direction !== 'SHORT' || entry === null || stop === null || target1 === null || target2 === null) {
+    return {
+      targetRoomStatus: 'missing_levels',
+      t1Available: false,
+      t2Available: false,
+      cleanPathToT1: false,
+      obstacleBeforeT1: false,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: false,
+      targetRoomReason: 'Entry, stop, T1, and T2 are required before target room can be evaluated.',
+    };
+  }
+
+  const t1Obstacle = reactionObstacleBeforeTarget(chartContext, direction, entry, target1);
+  const t2Obstacle = reactionObstacleBeforeTarget(chartContext, direction, target1, target2);
+  if (t1Obstacle) {
+    return {
+      targetRoomStatus: 'blocked_before_t1',
+      t1Available: false,
+      t2Available: false,
+      cleanPathToT1: false,
+      obstacleBeforeT1: true,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: true,
+      targetRoomReason: `Clean 1.5R path unavailable: ${t1Obstacle.label} at ${t1Obstacle.price} sits before T1.`,
+    };
+  }
+
+  if (t2Obstacle) {
+    return {
+      targetRoomStatus: 'clean_t1_t2_obstructed',
+      t1Available: true,
+      t2Available: false,
+      cleanPathToT1: true,
+      obstacleBeforeT1: false,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: true,
+      targetRoomReason: `T1 1.5R is available; T2 2.0R extension is obstructed by ${t2Obstacle.label} at ${t2Obstacle.price}. Manage at T1.`,
+    };
+  }
+
+  return {
+    targetRoomStatus: 'clean_t1_t2',
+    t1Available: true,
+    t2Available: true,
+    cleanPathToT1: true,
+    obstacleBeforeT1: false,
+    t2ExtensionAvailable: true,
+    t2ExtensionObstructed: false,
+    targetRoomReason: 'T1 1.5R and T2 2.0R app targets are available from actual entry/stop risk.',
+  };
+}
+
 function executionStatusFor(
   status: SetupCandidateStatus,
   direction: Direction,
@@ -2076,6 +2170,7 @@ function candidateForEntry(entry: SetupRegistryEntry, input: SetupScannerInput, 
     stop: stopPrice,
     target1: targets.target1,
     target2: targets.target2,
+    targetRoom: primaryValidation?.targetRoom || assessTargetRoom(input.chartContext || ({ targetObjectives: [] } as ChartContext), direction, entryPrice, stopPrice, targets.target1, targets.target2),
     riskPoints: risk,
     riskAdvisoryStatus,
     riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
@@ -3230,6 +3325,7 @@ function buildSessionDriveFvgContinuationCandidate(
     stop,
     target1: targets.target1,
     target2: targets.target2,
+    targetRoom: assessTargetRoom(chartContext, direction, entry, stop, targets.target1, targets.target2),
     riskPoints: risk,
     riskAdvisoryStatus,
     riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',

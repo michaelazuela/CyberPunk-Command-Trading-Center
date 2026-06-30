@@ -55,7 +55,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     allowedSessions: BOTH_SESSIONS,
     detectionKeywords: ['sweep mss fvg', 'sweep reclaim displacement structure shift fvg retrace', 'sweep reclaim imbalance retrace'],
     possibleKeywords: ['liquidity sweep', 'reclaim', 'market structure shift', 'fvg retrace', 'imbalance retrace'],
-    requiredEvidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Minimum 2.0R'],
+    requiredEvidence: ['Liquidity sweep', 'Reclaim after sweep', 'Displacement', 'Market structure shift', 'FVG retrace', 'Clean 1.5R path'],
     defaultRequiredTrigger: 'Retrace into the FVG after sweep, reclaim, displacement, and market structure shift are confirmed.',
     defaultNextAction: 'Wait for the FVG retrace and structure-based stop; do not chase the displacement candle.',
   },

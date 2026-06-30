@@ -1774,7 +1774,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(modelOne.evidence.includes('Market structure shift confirmed'));
     assert.ok(modelOne.evidence.includes('Fair value gap / imbalance entry model'));
     assert.ok(modelOne.evidence.includes('Retrace into FVG confirmed'));
-    assert.ok(modelOne.evidence.includes('Minimum 2.0R available'));
+    assert.ok(modelOne.evidence.includes('Clean 1.5R path available'));
   }],
 
   ['active timeframe MSS ruleset keeps Model 1 executable only with aligned completed 5M MSS', () => {
@@ -2929,11 +2929,11 @@ const tests: Array<[string, () => void]> = [
     assert.ok(modelOne.missingEvidence.includes('Entry inside FVG or valid confluence zone'));
   }],
 
-  ['Phase E missing 2R target room blocks full qualification', () => {
+  ['Phase E clean 1.5R path is not blocked by missing 2R liquidity target', () => {
     const context = structuredContext();
     context.targetObjectives = [{
       label: 'Near obstacle',
-      price: 7402,
+      price: 7407,
       direction: 'LONG',
       source: 'app',
       type: 'liquidity_pool',
@@ -2946,9 +2946,12 @@ const tests: Array<[string, () => void]> = [
     const modelOne = result.candidates.find((candidate) => candidate.setupType === SetupType.SweepMssFvgRetrace);
 
     assert.ok(modelOne);
-    assert.equal(modelOne.executionStatus, ExecutionStatus.Conditional);
-    assert.equal(modelOne.target2, null);
-    assert.ok(modelOne.missingEvidence.includes('Minimum 2.0R available'));
+    assert.equal(modelOne.executionStatus, ExecutionStatus.Executable);
+    assert.equal(modelOne.target2, 7408.5);
+    assert.equal(modelOne.targetRoom?.targetRoomStatus, 'clean_t1_t2_obstructed');
+    assert.equal(modelOne.targetRoom?.t1Available, true);
+    assert.equal(modelOne.targetRoom?.t2ExtensionObstructed, true);
+    assert.ok(modelOne.evidence.includes('Clean 1.5R path available'));
   }],
 
   ['Phase E long stop is below sweep low', () => {
@@ -4394,7 +4397,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.evidence.includes('Stop beyond sweep wick'));
     assert.ok(turtle.evidence.includes('Targeting valid app R-based objectives'));
     assert.ok(turtle.evidence.some((item) => item.includes('Opposing liquidity objective retained for management context: 7404')));
-    assert.ok(turtle.evidence.includes('Minimum 2.0R available'));
+    assert.ok(turtle.evidence.includes('Clean 1.5R path available'));
   }],
 
   ['active timeframe MSS ruleset applies to Turtle Soup execution models', () => {
@@ -5004,7 +5007,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.missingEvidence.includes('Stop beyond sweep wick'));
   }],
 
-  ['Phase F Turtle Soup target room below 2R blocks qualification', () => {
+  ['Phase F Turtle Soup blocks when mapped objective sits before clean 1.5R path', () => {
     const context = bullishTurtleSoupContext();
     context.targetObjectives = [{
       label: 'Near obstacle',
@@ -5024,7 +5027,8 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.target1, 7402);
     assert.equal(turtle.target2, 7403.5);
     assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
-    assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
+    assert.equal(turtle.targetRoom?.targetRoomStatus, 'blocked_before_t1');
+    assert.ok(turtle.missingEvidence.some((item) => item.includes('Clean 1.5R path unavailable')));
   }],
 
   ['Phase F Turtle Soup rejects wick-only reversal without liquidity raid', () => {
@@ -5224,7 +5228,7 @@ const tests: Array<[string, () => void]> = [
     assert.ok(turtle.evidence.includes('Breaker + FVG overlap confluence'));
   }],
 
-  ['Phase G Breaker plus FVG overlap cannot bypass minimum 2R', () => {
+  ['Phase G Breaker plus FVG overlap cannot bypass blocked 1.5R target room', () => {
     const context = bullishTurtleSoupContext();
     context.targetObjectives = [{
       label: 'Near opposing liquidity',
@@ -5259,7 +5263,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(turtle.executionStatus, ExecutionStatus.Conditional);
     assert.equal(turtle.target1, 7402);
     assert.equal(turtle.target2, 7403.5);
-    assert.ok(turtle.missingEvidence.includes('Minimum 2.0R unavailable'));
+    assert.ok(turtle.missingEvidence.some((item) => item.includes('Clean 1.5R path unavailable')));
   }],
 
   ['Phase G deprecated setup types still cannot create candidates with breaker confluence present', () => {

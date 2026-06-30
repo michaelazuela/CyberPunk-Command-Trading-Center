@@ -44,7 +44,7 @@ This model looks for a failed breakout or failed breakdown after a raid:
 3. Price reclaims back inside the swept level.
 4. Entry or retest behavior confirms the failed break.
 5. Stop can be placed beyond the sweep wick or protected structure.
-6. Opposing liquidity or app-computed target room supports at least the required risk/reward filter.
+6. App-computed target room has a clean path to T1 at 1.5R. T2 at 2.0R is the second target / extension-management objective, not the minimum viability gate.
 
 The model can be qualified or conditional, but execution still requires the completed 5-minute trigger, protected stop, risk validation, and time-window gate.
 
@@ -115,7 +115,7 @@ The current standard is deterministic and app-owned:
 - Liquidity, obstacles, reaction zones, and runner objectives are target-management context.
 - Imbalances, gaps, opens, and round numbers are reaction or obstacle zones, not standalone liquidity targets.
 - No chase entries.
-- No trade is valid if target room, stop clarity, time-window gating, or risk validation fails.
+- No trade is valid if the clean 1.5R path, stop clarity, time-window gating, or risk validation fails. A blocked/obstructed 2.0R extension is managed at T1 instead of becoming the minimum blocker by itself.
 
 No-trade and wait states are valid professional outcomes.
 

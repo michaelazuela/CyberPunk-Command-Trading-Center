@@ -239,6 +239,8 @@ T1 = 1.5R
 T2 = 2.0R
 ```
 
+Target-room viability uses T1 as the floor: a clean 1.5R path is the minimum tactical target requirement. T2 at 2.0R remains the second app target / extension-management objective and must not suppress an otherwise fresh, valid clean-1.5R candidate by itself.
+
 AI-provided targets are advisory only and must not become executable targets unless they match the deterministic formula.
 
 ### 12. Define Invalidation

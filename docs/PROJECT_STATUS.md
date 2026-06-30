@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-30
+Task: Correct target-room viability from old 2R minimum to clean 1.5R minimum with T2 extension management.
+Files changed: src/types.ts, src/config/setupRegistry.ts, src/lib/setupScanner.ts, src/lib/conditionalPlanBuilder.ts, src/lib/localScannerEngine.ts, src/lib/setupScanner.test.ts, src/lib/localScannerEngine.test.ts, src/lib/tradeDecisionPipeline.test.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-scheduler.ts, tools/automation/replay-validation-audit.ts, docs/TRADING_RULES_REFERENCE.md, docs/TRADE_DECISION_PIPELINE.md, docs/PROJECT_STATUS.md.
+Reason: Scanner/setup paths still treated 2.0R as the minimum target-room blocker. The desk rule is T1=1.5R as minimum tactical viability and T2=2.0R as the second/extension target. A fresh clean-1.5R candidate must not be suppressed solely because 2R liquidity/extension is obstructed.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npx tsx src/lib/setupScanner.test.ts`; `npx tsx src/lib/localScannerEngine.test.ts`; `npx tsx src/lib/tradeDecisionPipeline.test.ts`; old 2R-minimum active-text scan; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Setup scanner, conditional builder, and local scanner now use clean 1.5R as target-room viability. T2 remains the app-owned 2.0R target/extension-management level, and a fresh clean-1.5R candidate cannot be suppressed by old 2R-minimum wording. Obstacles before T1 still block/downgrade with an explicit clean-1.5R reason, while stale/no-chase/duplicate protections remain intact.
+Trading logic changed: Yes, narrowly: target-room viability now keys off clean 1.5R path; 2.0R remains app T2/extension management.
+Bridge impact: None. No OHLC/bar-close or bridge contract changes.
+Journal/RAG impact: Candidate/audit fields may now include structured `targetRoom` status for clearer evidence.
+Supabase impact: No schema migration.
+Known risks: None known.
+Next recommended action: Restart scanner/services and observe live health.
+
+## Previous Change
+
+Date: 2026-06-30
 Task: Add Quant Desk stop-all and maintenance lock for Supabase IO cleanup.
 Files changed: tools/automation/quant-desk-maintenance.ts, tools/automation/quant-desk-process-control.ts, tools/automation/quant-desk-process-control.test.ts, tools/automation/candle-recorder.ts, tools/automation/nt-scanner.ts, tools/automation/backfill-market-bars.ts, tools/automation/market-bars-retention.ts, tools/supervisor/index.ts, tools/supervisor/processManager.ts, tools/supervisor/status.ts, tools/supervisor/notifications.ts, tools/supervisor/supervisor.test.ts, Stop-QuantDesk-Supervisor.ps1, package.json, docs/MARKET_BARS_IO_RUNBOOK.md, docs/PROJECT_STATUS.md.
 Reason: Tray scanner shutdown could leave supervisor-owned or orphaned candle-recorder processes running, which continued `market_bars` Supabase writes during IO recovery/retention cleanup.

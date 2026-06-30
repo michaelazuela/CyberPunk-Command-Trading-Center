@@ -295,7 +295,7 @@ assert.ok(lunchScore.score >= 45);
 const outsideScore = scoreScannerCandidate(strongCandidate, outsideWindow, 101, true, 8 * 60);
 assert.equal(outsideScore.score, 0);
 
-const lowEvScore = scoreScannerCandidate(candidate({ target1: 106 }), morningWindow, 101, true, 10 * 60 + 5);
+const lowEvScore = scoreScannerCandidate(candidate({ target1: 105.75 }), morningWindow, 101, true, 10 * 60 + 5);
 assert.equal(lowEvScore.score, 0);
 
 const staleScore = scoreScannerCandidate(candidate({ blockReason: 'stale setup' as NoTradeReason }), morningWindow, 101, true, 10 * 60 + 5);

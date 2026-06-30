@@ -4636,13 +4636,19 @@ function ictHardDisqualifierReason(candidate: SetupCandidate): string | null {
       ? Math.abs(candidate.target1 - candidate.entry)
       : null;
 
+  if (candidate.targetRoom?.targetRoomStatus === 'blocked_before_t1') {
+    return candidate.targetRoom.targetRoomReason || 'Clean 1.5R path unavailable';
+  }
+  if (candidate.targetRoom?.cleanPathToT1 === true) {
+    return null;
+  }
   if (
     typeof risk === 'number' &&
     risk > 0 &&
     typeof reward === 'number' &&
-    reward / risk < 2.0
+    reward / risk < 1.5
   ) {
-    return 'Minimum 2.0R unavailable';
+    return 'Clean 1.5R path unavailable';
   }
 
   return null;
@@ -5094,7 +5100,7 @@ export function buildTargetCascade(args: {
     };
   }
 
-  const targetRoomPoor = Boolean(activeTarget.rMultiple !== null && activeTarget.rMultiple !== undefined && activeTarget.rMultiple < 1);
+  const targetRoomPoor = Boolean(activeTarget.rMultiple !== null && activeTarget.rMultiple !== undefined && activeTarget.rMultiple < 1.5);
   return {
     activeTarget,
     activeTimeframe: String(activeTarget.source),
@@ -5103,7 +5109,7 @@ export function buildTargetCascade(args: {
     path,
     targetRoomPoor,
     reason: targetRoomPoor
-      ? 'Promoted target is too close to justify actual risk.'
+      ? 'Clean 1.5R path unavailable: promoted target is too close to justify actual risk.'
       : `Target cascade selected ${activeTarget.label} from ${activeTarget.source}.`,
   };
 }

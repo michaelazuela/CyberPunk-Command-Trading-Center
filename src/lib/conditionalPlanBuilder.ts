@@ -7,6 +7,8 @@ import {
   SetupCandidateStatus,
   SetupType,
   TacticalZoneBounds,
+  TargetObjective,
+  TargetRoomAssessment,
 } from '../types';
 import { targetsFromEntryStop, TRADE_RULES } from '../config/tradeRules';
 
@@ -457,6 +459,90 @@ function targetBeyondEntry(chartContext: ChartContext, direction: Exclude<Direct
   return roundToTick(directional[0] || minimumTarget);
 }
 
+function directionalBetween(direction: Direction, price: number, entry: number, target: number): boolean {
+  if (direction === 'LONG') return price > entry && price < target;
+  if (direction === 'SHORT') return price < entry && price > target;
+  return false;
+}
+
+function reactionObstacleBeforeTarget(
+  chartContext: ChartContext,
+  direction: Direction,
+  entry: number | null,
+  target: number | null
+): TargetObjective | null {
+  if (direction !== 'LONG' && direction !== 'SHORT' || !isPrice(entry) || !isPrice(target)) return null;
+  return (chartContext.targetObjectives || [])
+    .filter((objective) =>
+      objective.direction === direction &&
+      isPrice(objective.price) &&
+      directionalBetween(direction, objective.price, entry, target)
+    )
+    .sort((a, b) =>
+      direction === 'LONG'
+        ? (a.price as number) - (b.price as number)
+        : (b.price as number) - (a.price as number)
+    )[0] || null;
+}
+
+function assessTargetRoom(
+  chartContext: ChartContext,
+  direction: Direction,
+  entry: number | null,
+  stop: number | null,
+  target1: number | null,
+  target2: number | null
+): TargetRoomAssessment {
+  if (direction !== 'LONG' && direction !== 'SHORT' || !isPrice(entry) || !isPrice(stop) || !isPrice(target1) || !isPrice(target2)) {
+    return {
+      targetRoomStatus: 'missing_levels',
+      t1Available: false,
+      t2Available: false,
+      cleanPathToT1: false,
+      obstacleBeforeT1: false,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: false,
+      targetRoomReason: 'Entry, stop, T1, and T2 are required before target room can be evaluated.',
+    };
+  }
+  const t1Obstacle = reactionObstacleBeforeTarget(chartContext, direction, entry, target1);
+  const t2Obstacle = reactionObstacleBeforeTarget(chartContext, direction, target1, target2);
+  if (t1Obstacle) {
+    return {
+      targetRoomStatus: 'blocked_before_t1',
+      t1Available: false,
+      t2Available: false,
+      cleanPathToT1: false,
+      obstacleBeforeT1: true,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: true,
+      targetRoomReason: `Clean 1.5R path unavailable: ${t1Obstacle.label} at ${t1Obstacle.price} sits before T1.`,
+    };
+  }
+  if (t2Obstacle) {
+    return {
+      targetRoomStatus: 'clean_t1_t2_obstructed',
+      t1Available: true,
+      t2Available: false,
+      cleanPathToT1: true,
+      obstacleBeforeT1: false,
+      t2ExtensionAvailable: false,
+      t2ExtensionObstructed: true,
+      targetRoomReason: `T1 1.5R is available; T2 2.0R extension is obstructed by ${t2Obstacle.label} at ${t2Obstacle.price}. Manage at T1.`,
+    };
+  }
+  return {
+    targetRoomStatus: 'clean_t1_t2',
+    t1Available: true,
+    t2Available: true,
+    cleanPathToT1: true,
+    obstacleBeforeT1: false,
+    t2ExtensionAvailable: true,
+    t2ExtensionObstructed: false,
+    targetRoomReason: 'T1 1.5R and T2 2.0R app targets are available from actual entry/stop risk.',
+  };
+}
+
 function candleAfterTimestamp(candles: ReturnType<typeof readableCandles>, timestamp?: string | null) {
   const index = candles.findIndex((candle) => candle.timestamp === timestamp);
   return index >= 0 ? candles[index + 1] || null : null;
@@ -561,11 +647,11 @@ function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
     const risk = riskPoints(entry, stop);
     if (!isPrice(risk)) return [];
 
-    const minimumTarget = rTarget(direction, entry, risk, 2);
-    const target1 = targetBeyondEntry(chartContext, direction, entry, minimumTarget);
-    const reward = Math.abs(target1 - entry);
-    if (reward / risk < 2) return [];
-    const target2 = targetBeyondEntry(chartContext, direction, entry, rTarget(direction, entry, risk, 2.5));
+    const appTargets = targetsFromEntryStop(direction, entry, stop);
+    if (!isPrice(appTargets.target1) || !isPrice(appTargets.target2)) return [];
+    const target1 = appTargets.target1;
+    const target2 = appTargets.target2;
+    const extensionContext = targetBeyondEntry(chartContext, direction, entry, target2);
     const confluence = breakerFvgConfluence(chartContext, direction, entry);
     const baseConfidence: SetupCandidate['confidence'] = matchingDisplacement && structureShift ? 'High' : matchingDisplacement || structureShift ? 'Medium' : 'Low';
     const confidence = improveConfidence(baseConfidence, confluence);
@@ -590,14 +676,15 @@ function detectTurtleSoup(chartContext: ChartContext): TurtleSoupReference[] {
         `${direction === 'LONG' ? 'Sell-side' : 'Buy-side'} liquidity was swept and reclaimed.`,
         wickSupport.label || 'No qualifying wick rejection support; wick evidence is optional and cannot trigger by itself.',
         confluence || 'No breaker/FVG overlap confluence; breaker context is optional and cannot trigger by itself.',
-        `Turtle Soup ${breakoutText} target room passes the minimum 2.0R expected-value filter.`,
+        `Turtle Soup ${breakoutText} has clean 1.5R tactical target room; 2.0R remains T2/extension management.`,
         matchingDisplacement
           ? `${direction === 'LONG' ? 'Bullish' : 'Bearish'} expansion confirms the reversal attempt.`
           : 'Expansion is not fully confirmed; keep as conditional until price confirms.',
         structureShift
           ? 'Market structure shift supports the reversal.'
           : 'Market structure shift is not fully confirmed; this remains a watchlist/conditional reversal.',
-        `Stop ${stop} is beyond the sweep wick; target ${target1} is opposing liquidity or a valid 2.0R objective.`,
+        `Stop ${stop} is beyond the sweep wick; app T1 ${target1} is 1.5R and app T2 ${target2} is 2.0R.`,
+        `Nearest extension/liquidity context after T2: ${extensionContext}.`,
       ],
       confidence,
       hasConfirmation: Boolean(confirmation || matchingDisplacement),
@@ -650,11 +737,11 @@ function detectIctModelOne(chartContext: ChartContext): IctModelOneReference | n
       : roundToTick(sweepExtreme + tick);
     const risk = riskPoints(entry, stop);
     if (!isPrice(risk)) continue;
-    const minimumTarget = rTarget(direction, entry, risk, 2);
-    const target1 = targetBeyondEntry(chartContext, direction, entry, minimumTarget);
-    const reward = Math.abs(target1 - entry);
-    if (reward / risk < 2) continue;
-    const target2 = targetBeyondEntry(chartContext, direction, entry, rTarget(direction, entry, risk, 2.5));
+    const appTargets = targetsFromEntryStop(direction, entry, stop);
+    if (!isPrice(appTargets.target1) || !isPrice(appTargets.target2)) continue;
+    const target1 = appTargets.target1;
+    const target2 = appTargets.target2;
+    const extensionContext = targetBeyondEntry(chartContext, direction, entry, target2);
     const confluence = breakerFvgConfluence(chartContext, direction, entry, zone);
 
     candidates.push({
@@ -679,7 +766,8 @@ function detectIctModelOne(chartContext: ChartContext): IctModelOneReference | n
         `${direction === 'LONG' ? 'Bullish' : 'Bearish'} displacement confirmed with market structure shift.`,
         `${direction === 'LONG' ? 'Bullish' : 'Bearish'} impulse-qualified imbalance created and retraced.`,
         `Entry ${roundToTick(entry)} sits inside ${lower}-${upper}; stop ${stop} is beyond the sweep wick.`,
-        `Minimum 2.0R target requirement passed; target ${target1}.`,
+        `Clean 1.5R target room available; app T1 ${target1}, app T2 ${target2}.`,
+        `Nearest extension/liquidity context after T2: ${extensionContext}.`,
       ],
     });
   }
@@ -868,6 +956,7 @@ function makeCandidate(input: {
   const riskAdvisoryNote = riskAdvisoryStatus === 'RISK_ABOVE_STANDARD_LIMIT' || riskAdvisoryStatus === 'RISK_EXTENDED_STRUCTURAL'
     ? 'Risk exceeds standard limit. Human final decision required.'
     : null;
+  const targetRoom = assessTargetRoom(input.chartContext, input.direction, input.entry, structureStop, target1, target2);
 
   return {
     setupType: input.setupType,
@@ -881,6 +970,7 @@ function makeCandidate(input: {
     stop: structureStop,
     target1,
     target2,
+    targetRoom,
     riskPoints: risk,
     riskAdvisoryStatus,
     riskPolicy: riskAdvisoryStatus === 'RISK_WITHIN_STANDARD_LIMIT' ? 'STANDARD_RISK' : 'STRUCTURAL_RISK_ACKNOWLEDGED',
