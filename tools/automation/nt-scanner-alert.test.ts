@@ -39,6 +39,7 @@ import {
   markDurableActiveCampaignScannerAlertSent,
   recordScannerDiscordCleanupMessage,
   replacePriorScannerDiscordCurrentDeskPlans,
+  recoverStalePendingScannerFinalDeliveryOutcomes,
   recordActiveCampaignScannerAlertSent,
   recordActiveCampaignScannerAlertSuppressed,
   releaseDurableActiveCampaignScannerAlertClaim,
@@ -202,6 +203,31 @@ assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
 finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
 assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'delivery_failed');
 assert.equal(finalOutcomeAudit.deliveryOutcome.httpStatus, 500);
+
+const stalePendingOutcomeAuditFile = path.join(auditDir, 'scanner-lunch-2026-06-30-MES-STALLED-FINAL-OUTCOME.json');
+await fs.writeFile(stalePendingOutcomeAuditFile, JSON.stringify({
+  source: 'live-scanner',
+  tradeDate: '2026-06-30',
+  instrument: 'MES',
+  planVersionId: 'LUNCH-20260630-STALLED',
+  deliveryOutcome: {
+    status: 'pending_final_delivery',
+    reason: 'Discord artifact built; final delivery outcome has not been recorded yet.',
+    recordedAt: '2026-06-30T19:55:00.000Z',
+  },
+}, null, 2));
+const stalePendingOutcomeRecovery = await recoverStalePendingScannerFinalDeliveryOutcomes({
+  auditDir,
+  tradeDate: '2026-06-30',
+  instrument: 'MES',
+  now: new Date('2026-06-30T20:00:00.000Z'),
+  staleMs: 60_000,
+});
+assert.equal(stalePendingOutcomeRecovery.checked, 1);
+assert.equal(stalePendingOutcomeRecovery.recovered, 1);
+const recoveredPendingOutcomeAudit = JSON.parse(await fs.readFile(stalePendingOutcomeAuditFile, 'utf8'));
+assert.equal(recoveredPendingOutcomeAudit.deliveryOutcome.status, 'delivery_failed');
+assert.match(recoveredPendingOutcomeAudit.deliveryOutcome.reason, /Recovered stale pending final delivery outcome/);
 
 function counterStructureDeskStateFixture(direction: 'LONG' | 'SHORT', lowerBias: 'BULL' | 'BEAR' | 'RANGE'): DeskState {
   const matchingBias = direction === 'LONG' ? 'BULL' : 'BEAR';
@@ -3845,6 +3871,25 @@ await releaseDurableActiveCampaignScannerAlertClaim({
   },
 });
 assert.equal(releasedFailed, true);
+
+let releasedSkippedAfterSuppression = false;
+let skippedReleaseReason = '';
+await releaseDurableActiveCampaignScannerAlertClaim({
+  config: durableLedgerConfig,
+  campaignId: '2026-06-30:LONG:HTF-FAILED-AUCTION',
+  deliveryStatus: 'skipped',
+  reason: 'Final scanner publishing gate suppressed alert after durable claim: DeskState/readiness suppression.',
+  fetchImpl: async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const method = init?.method || 'GET';
+    if (method === 'GET') return new Response(JSON.stringify([{ metadata: { existing: true } }]), { status: 200 });
+    const body = JSON.parse(String(init?.body || '{}'));
+    releasedSkippedAfterSuppression = body.delivery_status === 'skipped';
+    skippedReleaseReason = String(body.metadata?.releaseReason || '');
+    return new Response(JSON.stringify([{ id: 'claim-1' }]), { status: 200 });
+  },
+});
+assert.equal(releasedSkippedAfterSuppression, true);
+assert.match(skippedReleaseReason, /Final scanner publishing gate suppressed alert after durable claim/);
 
 const juneFiveSameCycleFailedLong = appOwnedFailedDecisionEventFromCandidate({
   setupType: SetupType.TurtleSoup,

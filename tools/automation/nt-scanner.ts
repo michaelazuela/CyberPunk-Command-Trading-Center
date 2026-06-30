@@ -2143,6 +2143,8 @@ export interface ScannerDiscordFinalDeliveryOutcome {
   priorDiscordMessageId?: string | null;
 }
 
+const SCANNER_FINAL_DELIVERY_OUTCOME_STALE_MS = 2 * 60 * 1000;
+
 export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
   auditLogPath: string | null | undefined;
   outcome: ScannerDiscordFinalDeliveryOutcome;
@@ -2164,6 +2166,59 @@ export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
     deliveryOutcome: outcome,
   });
   return true;
+}
+
+export async function recoverStalePendingScannerFinalDeliveryOutcomes(args: {
+  auditDir?: string;
+  tradeDate?: string;
+  instrument?: Instrument;
+  now?: Date;
+  staleMs?: number;
+} = {}): Promise<{ checked: number; recovered: number; failed: number }> {
+  const auditDir = args.auditDir || DISCORD_AUDIT_DIR;
+  const nowMs = (args.now || new Date()).getTime();
+  const staleMs = args.staleMs ?? SCANNER_FINAL_DELIVERY_OUTCOME_STALE_MS;
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(auditDir);
+  } catch {
+    return { checked: 0, recovered: 0, failed: 0 };
+  }
+  let checked = 0;
+  let recovered = 0;
+  let failed = 0;
+  for (const entry of entries) {
+    if (!entry.startsWith('scanner-') || !entry.endsWith('.json')) continue;
+    const file = path.join(auditDir, entry);
+    let audit: any;
+    try {
+      audit = (await readRuntimeJson<Record<string, unknown>>(file)).value || {};
+    } catch {
+      continue;
+    }
+    if (args.tradeDate && audit.tradeDate !== args.tradeDate) continue;
+    if (args.instrument && audit.instrument !== args.instrument) continue;
+    const status = typeof audit?.deliveryOutcome?.status === 'string' ? audit.deliveryOutcome.status : null;
+    if (status !== 'pending_final_delivery') continue;
+    checked += 1;
+    const recordedAt = typeof audit?.deliveryOutcome?.recordedAt === 'string'
+      ? Date.parse(audit.deliveryOutcome.recordedAt)
+      : NaN;
+    if (Number.isFinite(recordedAt) && nowMs - recordedAt < staleMs) continue;
+    const ok = await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
+      auditLogPath: file,
+      outcome: {
+        status: 'delivery_failed',
+        reason: 'Recovered stale pending final delivery outcome: scanner artifact had no terminal sent/suppressed/failed outcome within the accountability window.',
+        webhookSource: null,
+        discordMessageId: null,
+        httpStatus: null,
+      },
+    });
+    if (ok) recovered += 1;
+    else failed += 1;
+  }
+  return { checked, recovered, failed };
 }
 
 export async function writeScannerDiscordReceiptAuditLog(args: {
@@ -9052,6 +9107,35 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
       };
     }
   }
+  if (!alertDecision.shouldSend && activeCampaignClaim.claimed && activeCampaignClaim.campaignId) {
+    const suppressedReason = alertDecision.reason || 'Scanner alert suppressed after durable ActiveCampaign claim.';
+    state.alertDeliveries[alertKey] = {
+      ...createPendingScannerAlertDeliveryRecord({
+        alertKey,
+        planVersionId,
+        instrument: config.instrument,
+        tradeDate,
+        session,
+        state: stateForAlert,
+        confidence: confidence.score,
+        candidate,
+        webhookSource: null,
+        auditLogPath: null,
+        stale: stale.stale,
+      }),
+      deliveryStatus: 'skipped',
+      error: suppressedReason,
+      retryEligible: false,
+    };
+    await releaseDurableActiveCampaignScannerAlertClaim({
+      config: activeCampaignClaim.source === 'supabase' ? durableLedgerConfig : null,
+      campaignId: activeCampaignClaim.campaignId,
+      deliveryStatus: 'skipped',
+      reason: `Final scanner publishing gate suppressed alert after durable claim: ${suppressedReason}`,
+    }).catch((ledgerError) => {
+      console.warn(`[scanner-delivery] ActiveCampaign durable suppression release failed safely: ${sanitizedError(ledgerError)}`);
+    });
+  }
   const decisionTapePath = await writeScannerDecisionTapeAuditLog({
     session,
     tradeDate,
@@ -9646,6 +9730,12 @@ async function runCycle(baseConfig: ScannerConfig): Promise<void> {
   }
 
   await writeState(state);
+  const recoveredPendingOutcomes = await recoverStalePendingScannerFinalDeliveryOutcomes({ tradeDate, instrument: config.instrument });
+  if (recoveredPendingOutcomes.recovered > 0 || recoveredPendingOutcomes.failed > 0) {
+    console.warn(
+      `[scanner-delivery] Recovered stale pending Discord final outcomes: checked=${recoveredPendingOutcomes.checked} recovered=${recoveredPendingOutcomes.recovered} failed=${recoveredPendingOutcomes.failed}`
+    );
+  }
   await warnOnMissedExecutableScannerDeliveries({ state, tradeDate, instrument: config.instrument });
 }
 
