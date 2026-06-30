@@ -774,6 +774,74 @@ export interface DeskActiveTacticalZone {
   };
 }
 
+export type DeskMtfArbitrationSide = DeskPlayDirection | 'DATA_LIMITED' | 'UNKNOWN';
+
+export type DeskMtfArbitrationStatus =
+  | 'aligned'
+  | 'mixed'
+  | 'counter_structure'
+  | 'wait'
+  | 'data_limited';
+
+export type DeskMtfCandidateRole =
+  | 'primary_plan'
+  | 'failure_scenario'
+  | 'review_only'
+  | 'stand_down';
+
+export interface DeskMtfPrimarySideArbitration {
+  sourceOfTruth: 'scanner_mtf_primary_side_arbitration';
+  mtfPrimarySide: DeskMtfArbitrationSide;
+  mtfHtfSide: DeskMtfArbitrationSide;
+  mtfLowerTimeframeSide: DeskMtfArbitrationSide;
+  mtfArbitrationStatus: DeskMtfArbitrationStatus;
+  candidateRole: DeskMtfCandidateRole;
+  candidateDirection: DeskPlayDirection;
+  arbitrationReason: string;
+  requiredProofToPromote: string;
+  standDownCondition: string;
+  timeframeRows: Array<{
+    timeframe: string;
+    side: DeskMtfArbitrationSide;
+    rawBias: string | null;
+  }>;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    changesModelDefinitions: false;
+    changesBarCloseHandling: false;
+  };
+}
+
+export interface DeskHtfTargetToLinePromotion {
+  sourceOfTruth: 'scanner_htf_target_to_line_promotion';
+  direction: DeskPlayDirection;
+  primaryMapSide: DeskMtfArbitrationSide;
+  currentReactionLine: number | null;
+  currentReactionLabel: string | null;
+  mainLineInSand: number | null;
+  nextHtfLine: number | null;
+  nextHtfLineLabel: string | null;
+  acceptanceRule: string;
+  failureRule: string;
+  standDownCondition: string;
+  noChase: string;
+  appTargetsComplete: boolean;
+  reviewOnly: true;
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    changesModelDefinitions: false;
+    changesBarCloseHandling: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -823,6 +891,8 @@ export interface PrimaryDeskPlay {
   htfObjectiveLadder: DeskHtfObjectiveLadder;
   htfProtectedStructureMap: DeskHtfProtectedStructureMap;
   counterStructureConditional?: DeskCounterStructureConditional | null;
+  mtfPrimarySideArbitration?: DeskMtfPrimarySideArbitration | null;
+  htfTargetToLinePromotion?: DeskHtfTargetToLinePromotion | null;
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;

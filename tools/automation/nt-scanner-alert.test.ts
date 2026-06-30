@@ -69,6 +69,8 @@ import {
   buildScannerLiveDiscordSendBoundaryReport,
   buildScannerLiveHoldNoticePayload,
   buildScannerCounterStructureConditional,
+  buildScannerMtfPrimarySideArbitration,
+  buildScannerHtfTargetToLinePromotion,
   buildScannerEndOfDayMarketRecapPayload,
   classifyScannerReversalWatchState,
   scannerTacticalCampaignMapFromDeskState,
@@ -343,6 +345,136 @@ const alignedShortCounter = buildScannerCounterStructureConditional({
   normalized: { canExecute: false } as any,
 });
 assert.equal(alignedShortCounter, null);
+
+const phase3CounterShort = buildScannerMtfPrimarySideArbitration({
+  deskState: counterStructureDeskStateFixture('SHORT', 'BULL'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3CounterShort.candidateRole, 'failure_scenario');
+assert.equal(phase3CounterShort.mtfPrimarySide, 'LONG');
+assert.equal(phase3CounterShort.mtfArbitrationStatus, 'counter_structure');
+assert.match(phase3CounterShort.requiredProofToPromote, /Completed 5M/i);
+assert.equal(phase3CounterShort.approvalBoundary.changesCanExecute, false);
+
+const phase3AlignedLong = buildScannerMtfPrimarySideArbitration({
+  deskState: counterStructureDeskStateFixture('LONG', 'BULL'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3AlignedLong.mtfPrimarySide, 'LONG');
+assert.equal(phase3AlignedLong.candidateRole, 'primary_plan');
+assert.notEqual(phase3AlignedLong.mtfArbitrationStatus, 'counter_structure');
+
+const phase3AlignedShort = buildScannerMtfPrimarySideArbitration({
+  deskState: counterStructureDeskStateFixture('SHORT', 'BEAR'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3AlignedShort.mtfPrimarySide, 'SHORT');
+assert.equal(phase3AlignedShort.candidateRole, 'primary_plan');
+
+const phase3CounterLong = buildScannerMtfPrimarySideArbitration({
+  deskState: counterStructureDeskStateFixture('LONG', 'BEAR'),
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3CounterLong.mtfPrimarySide, 'SHORT');
+assert.equal(phase3CounterLong.candidateRole, 'failure_scenario');
+
+const phase3MixedHtfLowerPrimary = counterStructureDeskStateFixture('LONG', 'BULL');
+phase3MixedHtfLowerPrimary.primaryDeskPlay.htfProtectedStructureMap.rows = phase3MixedHtfLowerPrimary.primaryDeskPlay.htfProtectedStructureMap.rows.map((row) => {
+  if (row.timeframe === '4H' || row.timeframe === '2H') return { ...row, bias: 'BEAR', currentBias: 'BEAR', status: 'bearish' };
+  return row;
+});
+const phase3Mixed = buildScannerMtfPrimarySideArbitration({
+  deskState: phase3MixedHtfLowerPrimary,
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3Mixed.mtfPrimarySide, 'LONG');
+assert.equal(phase3Mixed.mtfHtfSide, 'SHORT');
+assert.equal(phase3Mixed.mtfLowerTimeframeSide, 'LONG');
+assert.equal(phase3Mixed.mtfArbitrationStatus, 'mixed');
+
+const phase3DataLimitedState = counterStructureDeskStateFixture('LONG', 'BULL');
+phase3DataLimitedState.htfContextStatus = 'insufficient';
+phase3DataLimitedState.primaryDeskPlay.htfProtectedStructureMap.reliability = 'data_limited';
+const phase3DataLimited = buildScannerMtfPrimarySideArbitration({
+  deskState: phase3DataLimitedState,
+  normalized: { canExecute: false } as any,
+});
+assert.equal(phase3DataLimited.mtfArbitrationStatus, 'data_limited');
+assert.equal(phase3DataLimited.mtfPrimarySide, 'DATA_LIMITED');
+assert.equal(phase3DataLimited.candidateRole, 'stand_down');
+
+const phase4LongState = counterStructureDeskStateFixture('LONG', 'BULL');
+phase4LongState.primaryDeskPlay.targetReactionLevel = 7480;
+phase4LongState.primaryDeskPlay.targetReactionLabel = '15M defended FVG';
+phase4LongState.primaryDeskPlay.lineInSand = 7480;
+phase4LongState.primaryDeskPlay.longAbove = 7488.25;
+phase4LongState.primaryDeskPlay.levelTransition = {
+  sourceOfTruth: 'scanner_level_transition_map',
+  targetReactionLevel: 7480,
+  targetReactionLabel: '15M defended FVG',
+  targetReactionReason: 'fixture defended reaction',
+  longAbove: 7488.25,
+  shortBelow: 7463,
+  profitProtectionInstruction: 'Protect after acceptance.',
+  targetManagementInstruction: 'No chase into 7488.25; wait for acceptance.',
+  nextStructureInstruction: 'Acceptance above 7480 promotes 7488.25.',
+  approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+} as any;
+phase4LongState.primaryDeskPlay.mtfPrimarySideArbitration = buildScannerMtfPrimarySideArbitration({
+  deskState: phase4LongState,
+  normalized: { canExecute: false } as any,
+});
+const phase4LongPromotion = buildScannerHtfTargetToLinePromotion({
+  deskState: phase4LongState,
+  normalized: { entry: 7480, stop: 7474, t1: 7489, t2: 7492, canExecute: false } as any,
+});
+assert.equal(phase4LongPromotion?.direction, 'LONG');
+assert.equal(phase4LongPromotion?.currentReactionLine, 7480);
+assert.equal(phase4LongPromotion?.nextHtfLine, 7488.25);
+assert.equal(phase4LongPromotion?.primaryMapSide, 'LONG');
+assert.equal(phase4LongPromotion?.appTargetsComplete, true);
+assert.match(phase4LongPromotion?.acceptanceRule || '', /acceptance above 7480\.00 promotes 7488\.25/i);
+assert.match(phase4LongPromotion?.failureRule || '', /Failure\/rejection below 7480\.00/i);
+assert.equal(phase4LongPromotion?.approvalBoundary.changesEntryStopTargets, false);
+
+const phase4ShortState = counterStructureDeskStateFixture('SHORT', 'BEAR');
+phase4ShortState.primaryDeskPlay.targetReactionLevel = 7463;
+phase4ShortState.primaryDeskPlay.targetReactionLabel = '60M rejection line';
+phase4ShortState.primaryDeskPlay.lineInSand = 7463;
+phase4ShortState.primaryDeskPlay.shortBelow = 7450;
+phase4ShortState.primaryDeskPlay.levelTransition = {
+  sourceOfTruth: 'scanner_level_transition_map',
+  targetReactionLevel: 7463,
+  targetReactionLabel: '60M rejection line',
+  targetReactionReason: 'fixture rejected reaction',
+  longAbove: 7474,
+  shortBelow: 7450,
+  profitProtectionInstruction: 'Protect after acceptance.',
+  targetManagementInstruction: 'No chase into 7450; wait for acceptance.',
+  nextStructureInstruction: 'Acceptance below 7463 promotes 7450.',
+  approvalBoundary: { changesTradeApprovals: false, changesCanExecute: false, changesEntryStopTargets: false },
+} as any;
+phase4ShortState.primaryDeskPlay.mtfPrimarySideArbitration = buildScannerMtfPrimarySideArbitration({
+  deskState: phase4ShortState,
+  normalized: { canExecute: false } as any,
+});
+const phase4ShortPromotion = buildScannerHtfTargetToLinePromotion({
+  deskState: phase4ShortState,
+  normalized: { entry: 7460.25, stop: 7490, t1: 7415.75, t2: 7400.75, canExecute: false } as any,
+});
+assert.equal(phase4ShortPromotion?.direction, 'SHORT');
+assert.equal(phase4ShortPromotion?.currentReactionLine, 7463);
+assert.equal(phase4ShortPromotion?.nextHtfLine, 7450);
+assert.equal(phase4ShortPromotion?.primaryMapSide, 'SHORT');
+assert.match(phase4ShortPromotion?.acceptanceRule || '', /acceptance below 7463\.00 promotes 7450\.00/i);
+assert.match(phase4ShortPromotion?.failureRule || '', /Failure\/rejection above 7463\.00/i);
+
+const phase4MissingAppTargets = buildScannerHtfTargetToLinePromotion({
+  deskState: phase4LongState,
+  normalized: { entry: null, stop: null, t1: null, t2: null, canExecute: false } as any,
+});
+assert.equal(phase4MissingAppTargets?.appTargetsComplete, false);
+assert.equal(phase4MissingAppTargets?.nextHtfLine, 7488.25);
 assert.equal(shouldLogBridgeInstrumentResolution({
   instrument: 'MES 09-26',
   requestedInstrument: 'MES 06-26',

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-30
+Task: Install Phase 3/4 MTF primary-side arbitration and HTF target-to-line Discord review-map promotion.
+Files changed: src/lib/localScannerEngine.ts, tools/automation/nt-scanner.ts, tools/automation/discord-alert-format.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Counter-structure high-quality conditional maps could still read like the main play when lower-timeframe structure favored the opposite side, and HTF/FVG/session reaction levels were not always promoted into clear review-map decision lines with the next HTF line separated from app targets.
+Tests run: `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Phase 3 loopbacks assert deterministic MTF primary side, lower-timeframe primary arbitration, counter-structure failure-scenario labeling, aligned long/short behavior, and data-limited WAIT behavior. Phase 4 loopbacks assert LONG/SHORT reaction-line promotion, next HTF line selection, missing/complete app-target separation, and no canExecute/target-math changes. Combined verification passed with the Phase 1/2 cache-noise and no-silent-drop tests still clean.
+Trading logic changed: No. This adds DeskState/Discord/audit presentation metadata only; it does not change canExecute, execution approval, setup definitions, ranking, risk gates, stop/target math, model definitions, or 5M bar-close handling.
+Bridge impact: None. Uses existing structured scanner DeskState/HTF rows and level-transition fields.
+Journal/RAG impact: Audit/decision-tape records can now carry structured `mtfPrimarySideArbitration` and `htfTargetToLinePromotion` metadata.
+Supabase impact: No schema migration.
+Known risks: None known.
+Next recommended action: Restart scanner/services when ready so fresh decision tapes carry the new Phase 3/4 metadata.
+
+## Previous Change
+
+Date: 2026-06-30
 Task: Install Phase 1/2 HTF cache-noise cleanup and no-silent-drop Discord delivery proof.
 Files changed: tools/automation/market-data-store.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: Live scanner logs were repeatedly warning on malformed 120m/240m cache upserts, and review-map artifacts could show Discord eligibility without the same artifact carrying a final sent/suppressed/failed delivery outcome.

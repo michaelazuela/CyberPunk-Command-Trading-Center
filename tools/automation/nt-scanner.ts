@@ -2043,7 +2043,7 @@ async function writeScannerDiscordAuditLog(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
-  const deskState = withScannerCounterStructureConditional({
+  const deskState = withScannerReviewMapPresentation({
     deskState: baseDeskState,
     candidate: args.candidate,
     normalized: args.normalized,
@@ -2075,6 +2075,8 @@ async function writeScannerDiscordAuditLog(args: {
     tradeDecisionMapAudit,
     deskState,
     counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
+    mtfPrimarySideArbitration: deskState.primaryDeskPlay.mtfPrimarySideArbitration || null,
+    htfTargetToLinePromotion: deskState.primaryDeskPlay.htfTargetToLinePromotion || null,
     historyCoverage: args.historyCoverage || [],
     historyCoverageSummary: (args.historyCoverage || []).map(summarizeScannerHistoryCoverage),
     twoHourCoverage: twoHourCoverageDiagnostic(args.historyCoverage),
@@ -2498,7 +2500,7 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
-  const deskState = withScannerCounterStructureConditional({
+  const deskState = withScannerReviewMapPresentation({
     deskState: baseDeskState,
     candidate: args.candidate,
     normalized: args.normalized,
@@ -2546,6 +2548,8 @@ export async function writeScannerDecisionTapeAuditLog(args: {
     tradeDecisionMapAudit,
     deskState,
     counterStructureConditional: deskState.primaryDeskPlay.counterStructureConditional || null,
+    mtfPrimarySideArbitration: deskState.primaryDeskPlay.mtfPrimarySideArbitration || null,
+    htfTargetToLinePromotion: deskState.primaryDeskPlay.htfTargetToLinePromotion || null,
     reversalWatch: {
       lines: reversalWatchLines,
       state: reversalWatchState,
@@ -4427,12 +4431,160 @@ function scannerDeskPlayStandDownInstruction(deskState: DeskState): string | nul
 }
 
 type ScannerCounterStructureConditional = NonNullable<DeskState['primaryDeskPlay']['counterStructureConditional']>;
+type ScannerMtfPrimarySideArbitration = NonNullable<DeskState['primaryDeskPlay']['mtfPrimarySideArbitration']>;
+type ScannerHtfTargetToLinePromotion = NonNullable<DeskState['primaryDeskPlay']['htfTargetToLinePromotion']>;
 
 function scannerProtectedStructureRowSummary(
   row: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'][number],
 ): string {
   const current = row.currentBias || row.bias || 'UNKNOWN';
   return `${row.timeframe} ${current}`;
+}
+
+function scannerMtfRowSide(value: string | null | undefined): ScannerMtfPrimarySideArbitration['mtfPrimarySide'] {
+  const normalized = String(value || '').toUpperCase();
+  if (normalized === 'BULL' || normalized === 'BULLISH' || normalized === 'LONG') return 'LONG';
+  if (normalized === 'BEAR' || normalized === 'BEARISH' || normalized === 'SHORT') return 'SHORT';
+  if (normalized === 'DATA_LIMITED' || normalized === 'INSUFFICIENT') return 'DATA_LIMITED';
+  return 'WAIT';
+}
+
+function scannerMtfConsensusSide(
+  rows: DeskState['primaryDeskPlay']['htfProtectedStructureMap']['rows'],
+): ScannerMtfPrimarySideArbitration['mtfPrimarySide'] {
+  let longCount = 0;
+  let shortCount = 0;
+  let dataLimitedCount = 0;
+  for (const row of rows) {
+    const side = scannerMtfRowSide(row.currentBias || row.bias || row.status || null);
+    if (side === 'LONG') longCount += 1;
+    if (side === 'SHORT') shortCount += 1;
+    if (side === 'DATA_LIMITED') dataLimitedCount += 1;
+  }
+  if (dataLimitedCount > 0 && longCount === 0 && shortCount === 0) return 'DATA_LIMITED';
+  if (longCount > shortCount) return 'LONG';
+  if (shortCount > longCount) return 'SHORT';
+  return 'WAIT';
+}
+
+function scannerMtfProofToPromote(args: {
+  direction: 'LONG' | 'SHORT';
+  deskState: DeskState;
+}): string {
+  const play = args.deskState.primaryDeskPlay;
+  const zone = play.activeTacticalZone?.direction === args.direction ? play.activeTacticalZone : null;
+  const line = play.activeTacticalLine?.direction === args.direction && isFiniteTradePrice(play.activeTacticalLine.activeLine)
+    ? play.activeTacticalLine.activeLine
+    : args.direction === 'LONG'
+      ? play.longAbove ?? play.lineInSand ?? args.deskState.lineInSand
+      : play.shortBelow ?? play.lineInSand ?? args.deskState.lineInSand;
+  if (zone?.nextTrigger) return zone.nextTrigger;
+  if (play.nextTrigger) return play.nextTrigger;
+  if (args.deskState.nextTrigger) return args.deskState.nextTrigger;
+  if (isFiniteTradePrice(zone?.lower) && isFiniteTradePrice(zone?.upper)) {
+    const zoneText = `${zone!.lower!.toFixed(2)}-${zone!.upper!.toFixed(2)}`;
+    return args.direction === 'SHORT'
+      ? `Completed 5M failure/rejection below ${zoneText} required before SHORT can become primary.`
+      : `Completed 5M reclaim/hold above ${zoneText} required before LONG can become primary.`;
+  }
+  return args.direction === 'SHORT'
+    ? `Completed 5M rejection/failure below ${isFiniteTradePrice(line) ? line!.toFixed(2) : 'the active line'} required before SHORT can become primary.`
+    : `Completed 5M reclaim/hold above ${isFiniteTradePrice(line) ? line!.toFixed(2) : 'the active line'} required before LONG can become primary.`;
+}
+
+export function buildScannerMtfPrimarySideArbitration(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): ScannerMtfPrimarySideArbitration {
+  const play = args.deskState.primaryDeskPlay;
+  const rows = play.htfProtectedStructureMap.rows || [];
+  const candidateDirection = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : play.direction === 'LONG' || play.direction === 'SHORT'
+      ? play.direction
+      : 'WAIT';
+  const htfRows = rows.filter((row) => ['4H', '2H', '1H'].includes(row.timeframe));
+  const lowerRows = rows.filter((row) => ['1H', '15M', '5M'].includes(row.timeframe));
+  const mtfHtfSide = scannerMtfConsensusSide(htfRows);
+  const mtfLowerTimeframeSide = scannerMtfConsensusSide(lowerRows);
+  const dataLimited = args.deskState.htfContextStatus === 'insufficient' ||
+    args.deskState.dataQualityStatus === 'data_limited' ||
+    play.htfProtectedStructureMap.reliability === 'data_limited' ||
+    mtfHtfSide === 'DATA_LIMITED' ||
+    mtfLowerTimeframeSide === 'DATA_LIMITED';
+  const mtfPrimarySide = dataLimited
+    ? 'DATA_LIMITED'
+    : mtfLowerTimeframeSide === 'LONG' || mtfLowerTimeframeSide === 'SHORT'
+      ? mtfLowerTimeframeSide
+      : mtfHtfSide === 'LONG' || mtfHtfSide === 'SHORT'
+        ? mtfHtfSide
+        : play.direction;
+  const candidateIsDirectional = candidateDirection === 'LONG' || candidateDirection === 'SHORT';
+  const candidateOpposesPrimary = candidateIsDirectional &&
+    (mtfPrimarySide === 'LONG' || mtfPrimarySide === 'SHORT') &&
+    candidateDirection !== mtfPrimarySide;
+  const htfOpposesLower = (mtfHtfSide === 'LONG' || mtfHtfSide === 'SHORT') &&
+    (mtfLowerTimeframeSide === 'LONG' || mtfLowerTimeframeSide === 'SHORT') &&
+    mtfHtfSide !== mtfLowerTimeframeSide;
+  const mtfArbitrationStatus: ScannerMtfPrimarySideArbitration['mtfArbitrationStatus'] = dataLimited
+    ? 'data_limited'
+    : mtfPrimarySide !== 'LONG' && mtfPrimarySide !== 'SHORT'
+      ? 'wait'
+      : candidateOpposesPrimary
+        ? 'counter_structure'
+        : htfOpposesLower || mtfHtfSide === 'WAIT' || mtfLowerTimeframeSide === 'WAIT'
+          ? 'mixed'
+          : 'aligned';
+  const candidateRole: ScannerMtfPrimarySideArbitration['candidateRole'] =
+    mtfArbitrationStatus === 'counter_structure'
+      ? 'failure_scenario'
+      : mtfArbitrationStatus === 'data_limited' || mtfArbitrationStatus === 'wait'
+        ? 'stand_down'
+        : candidateIsDirectional && candidateDirection === mtfPrimarySide
+          ? 'primary_plan'
+          : 'review_only';
+  const requiredProofToPromote = candidateIsDirectional
+    ? scannerMtfProofToPromote({ direction: candidateDirection, deskState: args.deskState })
+    : 'Completed 5M proof is required before any candidate can become primary.';
+  const standDownCondition = scannerDeskPlayStandDownInstruction(args.deskState) ||
+    'Stand down if completed 5M proof is missing or the active tactical line fails.';
+  const arbitrationReason = dataLimited
+    ? 'MTF arbitration is data-limited; HTF is context only and cannot confirm a primary side.'
+    : candidateOpposesPrimary
+      ? `${candidateDirection} candidate opposes the ${mtfPrimarySide} primary map from 1H/15M/5M structure; it is a failure scenario until completed 5M proof promotes it.`
+      : mtfArbitrationStatus === 'mixed'
+        ? `${mtfPrimarySide} is the primary review-map side from deterministic MTF arbitration, with HTF/LTF conflict shown as context.`
+        : `${mtfPrimarySide} is the deterministic primary map side from the wired 240m/120m/60m/15m/5m structure.`;
+  return {
+    sourceOfTruth: 'scanner_mtf_primary_side_arbitration',
+    mtfPrimarySide,
+    mtfHtfSide,
+    mtfLowerTimeframeSide,
+    mtfArbitrationStatus,
+    candidateRole,
+    candidateDirection,
+    arbitrationReason,
+    requiredProofToPromote,
+    standDownCondition,
+    timeframeRows: rows.map((row) => {
+      const rawBias = row.currentBias || row.bias || row.status || null;
+      return {
+        timeframe: row.timeframe,
+        side: scannerMtfRowSide(rawBias),
+        rawBias,
+      };
+    }),
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      changesModelDefinitions: false,
+      changesBarCloseHandling: false,
+    },
+  };
 }
 
 function scannerCounterStructureBiasMatches(direction: 'LONG' | 'SHORT', value: string | null | undefined): boolean {
@@ -4541,6 +4693,166 @@ function withScannerCounterStructureConditional(args: {
       'Counter-structure conditional clarity is presentation-only and does not affect canExecute.',
     ])),
   };
+}
+
+function withScannerMtfPrimarySideArbitration(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): DeskState {
+  const mtfPrimarySideArbitration = buildScannerMtfPrimarySideArbitration(args);
+  return {
+    ...args.deskState,
+    primaryDeskPlay: {
+      ...args.deskState.primaryDeskPlay,
+      mtfPrimarySideArbitration,
+      notes: Array.from(new Set([
+        ...args.deskState.primaryDeskPlay.notes,
+        'MTF primary-side arbitration applied for Discord/DeskState presentation only.',
+      ])),
+    },
+    notes: Array.from(new Set([
+      ...args.deskState.notes,
+      'MTF primary-side arbitration is presentation-only and does not affect canExecute.',
+    ])),
+  };
+}
+
+function withScannerPresentationArbitration(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): DeskState {
+  const counterDeskState = withScannerCounterStructureConditional(args);
+  return withScannerMtfPrimarySideArbitration({
+    ...args,
+    deskState: counterDeskState,
+  });
+}
+
+function scannerNextHtfLineFromProtectedRows(args: {
+  deskState: DeskState;
+  direction: 'LONG' | 'SHORT';
+  reaction: number;
+}): number | null {
+  const candidates = (args.deskState.primaryDeskPlay.htfProtectedStructureMap.rows || [])
+    .flatMap((row) => [row.target, row.confirmationLine, row.biasChangeLine])
+    .filter((value): value is number => isFiniteTradePrice(value))
+    .filter((value) => args.direction === 'LONG'
+      ? value > args.reaction + 0.0001
+      : value < args.reaction - 0.0001)
+    .sort((a, b) => args.direction === 'LONG' ? a - b : b - a);
+  return candidates[0] ?? null;
+}
+
+export function buildScannerHtfTargetToLinePromotion(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): ScannerHtfTargetToLinePromotion | null {
+  const play = args.deskState.primaryDeskPlay;
+  const direction = args.candidate?.direction === 'LONG' || args.candidate?.direction === 'SHORT'
+    ? args.candidate.direction
+    : play.direction === 'LONG' || play.direction === 'SHORT'
+      ? play.direction
+      : null;
+  if (!direction) return null;
+  const transition = play.levelTransition || null;
+  const reaction = isFiniteTradePrice(transition?.targetReactionLevel)
+    ? transition!.targetReactionLevel!
+    : isFiniteTradePrice(play.targetReactionLevel)
+      ? play.targetReactionLevel!
+      : isFiniteTradePrice(play.htfFvgReactionRouting?.lineInSand)
+        ? play.htfFvgReactionRouting!.lineInSand!
+        : null;
+  if (!isFiniteTradePrice(reaction)) return null;
+  const mainLineInSand = isFiniteTradePrice(play.activeTacticalLine?.activeLine)
+    ? play.activeTacticalLine.activeLine
+    : isFiniteTradePrice(play.lineInSand)
+      ? play.lineInSand
+      : direction === 'LONG' && isFiniteTradePrice(play.longAbove)
+        ? play.longAbove
+        : direction === 'SHORT' && isFiniteTradePrice(play.shortBelow)
+          ? play.shortBelow
+          : null;
+  const transitionNext = direction === 'LONG'
+    ? transition?.longAbove ?? play.longAbove
+    : transition?.shortBelow ?? play.shortBelow;
+  const nextHtfLine = isFiniteTradePrice(transitionNext) &&
+    (direction === 'LONG' ? transitionNext! > reaction + 0.0001 : transitionNext! < reaction - 0.0001)
+    ? transitionNext!
+    : scannerNextHtfLineFromProtectedRows({ deskState: args.deskState, direction, reaction });
+  if (!isFiniteTradePrice(nextHtfLine)) return null;
+  const acceptWord = direction === 'LONG' ? 'above' : 'below';
+  const failWord = direction === 'LONG' ? 'below' : 'above';
+  const opposite = direction === 'LONG' ? 'SHORT' : 'LONG';
+  const primaryMapSide = play.mtfPrimarySideArbitration?.mtfPrimarySide || play.direction;
+  const appTargetsComplete = [args.normalized?.entry, args.normalized?.stop, args.normalized?.t1, args.normalized?.t2]
+    .every((value) => isFiniteTradePrice(value));
+  return {
+    sourceOfTruth: 'scanner_htf_target_to_line_promotion',
+    direction,
+    primaryMapSide,
+    currentReactionLine: reaction,
+    currentReactionLabel: transition?.targetReactionLabel || play.targetReactionLabel || play.htfFvgReactionRouting?.lineLabel || 'HTF/session reaction',
+    mainLineInSand,
+    nextHtfLine,
+    nextHtfLineLabel: direction === 'LONG' ? 'next higher HTF/session line' : 'next lower HTF/session line',
+    acceptanceRule: `Completed 5M/15M acceptance ${acceptWord} ${reaction.toFixed(2)} promotes ${nextHtfLine.toFixed(2)} as the next HTF line.`,
+    failureRule: `Failure/rejection ${failWord} ${reaction.toFixed(2)} keeps ${opposite} failure context active.`,
+    standDownCondition: scannerDeskPlayStandDownInstruction(args.deskState) ||
+      (direction === 'LONG'
+        ? `Stand down if completed 5M accepts below ${reaction.toFixed(2)}.`
+        : `Stand down if completed 5M accepts above ${reaction.toFixed(2)}.`),
+    noChase: transition?.targetManagementInstruction || play.noChase || 'No chase; wait for fresh completed 5M/15M proof.',
+    appTargetsComplete,
+    reviewOnly: true,
+    approvalBoundary: {
+      changesTradeApprovals: false,
+      changesCanExecute: false,
+      changesEntryStopTargets: false,
+      changesRiskRules: false,
+      changesRanking: false,
+      changesModelDefinitions: false,
+      changesBarCloseHandling: false,
+    },
+  };
+}
+
+function withScannerHtfTargetToLinePromotion(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): DeskState {
+  const htfTargetToLinePromotion = buildScannerHtfTargetToLinePromotion(args);
+  if (!htfTargetToLinePromotion) return args.deskState;
+  return {
+    ...args.deskState,
+    primaryDeskPlay: {
+      ...args.deskState.primaryDeskPlay,
+      htfTargetToLinePromotion,
+      notes: Array.from(new Set([
+        ...args.deskState.primaryDeskPlay.notes,
+        'HTF target-to-line promotion applied for Discord review-map presentation only.',
+      ])),
+    },
+    notes: Array.from(new Set([
+      ...args.deskState.notes,
+      'HTF target-to-line promotion is presentation-only and does not affect app targets or canExecute.',
+    ])),
+  };
+}
+
+function withScannerReviewMapPresentation(args: {
+  deskState: DeskState;
+  candidate?: SetupCandidate | null;
+  normalized?: ReturnType<typeof buildAppTradePlan> | null;
+}): DeskState {
+  const arbitratedDeskState = withScannerPresentationArbitration(args);
+  return withScannerHtfTargetToLinePromotion({
+    ...args,
+    deskState: arbitratedDeskState,
+  });
 }
 
 function scannerDeskPlayMainPlayFingerprint(args: {
@@ -6026,7 +6338,7 @@ export async function prepareLiveScannerDiscordAlertArtifacts(args: {
     currentPrice: args.currentPrice,
     canExecute: Boolean(args.normalized.canExecute),
   });
-  const deskState = withScannerCounterStructureConditional({
+  const deskState = withScannerReviewMapPresentation({
     deskState: baseDeskState,
     candidate: args.candidate,
     normalized: args.normalized,
@@ -6133,7 +6445,7 @@ export async function prepareLiveScannerDeskPlayAlertArtifacts(args: {
   chartMarkup: string | null;
   levelMap: string | null;
 }> {
-  const deskState = withScannerCounterStructureConditional({
+  const deskState = withScannerReviewMapPresentation({
     deskState: args.deskState,
     candidate: candidateForDeskPlayContextChart(args.deskState, args.normalized),
     normalized: args.normalized,

@@ -387,6 +387,34 @@ export interface CompactDeskStateForDiscord {
       requiredTrigger?: string | null;
       standDown?: string | null;
     } | null;
+    mtfPrimarySideArbitration?: {
+      sourceOfTruth?: string;
+      mtfPrimarySide?: 'LONG' | 'SHORT' | 'WAIT' | 'DATA_LIMITED' | 'UNKNOWN' | string;
+      mtfHtfSide?: 'LONG' | 'SHORT' | 'WAIT' | 'DATA_LIMITED' | 'UNKNOWN' | string;
+      mtfLowerTimeframeSide?: 'LONG' | 'SHORT' | 'WAIT' | 'DATA_LIMITED' | 'UNKNOWN' | string;
+      mtfArbitrationStatus?: string | null;
+      candidateRole?: string | null;
+      candidateDirection?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      arbitrationReason?: string | null;
+      requiredProofToPromote?: string | null;
+      standDownCondition?: string | null;
+    } | null;
+    htfTargetToLinePromotion?: {
+      sourceOfTruth?: string;
+      direction?: 'LONG' | 'SHORT' | 'WAIT' | string;
+      primaryMapSide?: 'LONG' | 'SHORT' | 'WAIT' | 'DATA_LIMITED' | 'UNKNOWN' | string;
+      currentReactionLine?: number | null;
+      currentReactionLabel?: string | null;
+      mainLineInSand?: number | null;
+      nextHtfLine?: number | null;
+      nextHtfLineLabel?: string | null;
+      acceptanceRule?: string | null;
+      failureRule?: string | null;
+      standDownCondition?: string | null;
+      noChase?: string | null;
+      appTargetsComplete?: boolean;
+      reviewOnly?: boolean;
+    } | null;
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -1813,16 +1841,17 @@ function counterStructureConditionalLines(args: {
   const counter = args.play?.counterStructureConditional;
   if (!counter?.counterStructureConditional) return [];
   if (counter.candidateDirection && counter.candidateDirection !== args.direction) return [];
+  const arbitration = args.play?.mtfPrimarySideArbitration || null;
   const htf = compactInstruction(counter.htfBackdropSummary, 'HTF context supports review only.');
   const lower = compactInstruction(counter.lowerTimeframeStateSummary, 'lower timeframes are mixed/conflicted.');
   const trigger = compactInstruction(
-    counter.requiredTrigger,
+    arbitration?.requiredProofToPromote || counter.requiredTrigger,
     args.direction === 'SHORT'
       ? `completed 5M rejects/holds below ${priceLine(args.lineInSand)}.`
       : `completed 5M reclaims/holds above ${priceLine(args.lineInSand)}.`,
   );
   const standDown = compactInstruction(
-    counter.standDown,
+    arbitration?.standDownCondition || counter.standDown,
     args.direction === 'SHORT'
       ? `completed 5M accepts above ${priceLine(args.activeZoneUpper ?? args.lineInSand)}.`
       : `completed 5M accepts below ${priceLine(args.activeZoneLower ?? args.lineInSand)}.`,
@@ -1838,11 +1867,17 @@ function counterStructureConditionalLines(args: {
   const noChase = args.direction === 'SHORT'
     ? 'No chase if price is already below the zone or near/past T1.'
     : 'No chase if price is already above the zone or near/past T1.';
+  const primary = String(arbitration?.mtfPrimarySide || 'WAIT').toUpperCase();
+  const role = String(arbitration?.candidateRole || 'failure_scenario').replace(/_/g, ' ');
   return [
     'Counter-Structure Conditional Map:',
+    `Primary map: ${primary}.`,
+    `Candidate role: ${role}.`,
+    'Counter-structure failure scenario; completed 5M proof required before this can become the main play.',
     `${args.direction} context comes from ${htf}.`,
     `1H/15M/5M are ${lower || lowerSide}, so this is not an immediate ${args.direction.toLowerCase()}.`,
-    `Why shown: ${compactInstruction(counter.whyShown, 'structured evidence is meaningful, but execution still needs completed 5M proof.')}`,
+    `Why shown: ${compactInstruction(arbitration?.arbitrationReason || counter.whyShown, 'structured evidence is meaningful, but execution still needs completed 5M proof.')}`,
+    `Main line in the sand: ${zoneText}.`,
     action,
     `Trigger: ${trigger}`,
     `Stand down: ${standDown}`,
@@ -1877,6 +1912,26 @@ function deskPlayTargetToLinePromotionLines(
   direction: 'LONG' | 'SHORT' | 'WAIT',
 ): string[] {
   if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  const promotion = play.htfTargetToLinePromotion;
+  if (
+    promotion?.direction === direction &&
+    isFinitePrice(promotion.currentReactionLine) &&
+    isFinitePrice(promotion.nextHtfLine)
+  ) {
+    return [
+      'HTF Target-to-Line Review Map:',
+      `Primary map: ${String(promotion.primaryMapSide || direction).toUpperCase()}.`,
+      `Current reaction / decision line: ${compactLine(promotion.currentReactionLabel || 'HTF/session reaction', 46)} ${priceLine(promotion.currentReactionLine)}.`,
+      `Main line in the sand: ${priceLine(promotion.mainLineInSand)}.`,
+      `Next HTF line: ${priceLine(promotion.nextHtfLine)} (${compactLine(promotion.nextHtfLineLabel || 'next structured line', 42)}).`,
+      `Acceptance: ${compactInstruction(promotion.acceptanceRule, `completed 5M/15M acceptance promotes ${priceLine(promotion.nextHtfLine)}.`)}`,
+      `Reaction / failure: ${compactInstruction(promotion.failureRule, 'failure keeps the opposing context active.')}`,
+      `No chase: ${compactInstruction(promotion.noChase, 'wait for fresh completed 5M/15M proof; review only, not execution approval.')}`,
+      `Stand down: ${standDownInstruction(promotion.standDownCondition, 'active HTF reaction map failed.')}`,
+      'App targets remain separate from HTF/session target or runner levels.',
+      'Review only. Not execution approval.',
+    ];
+  }
   const transition = play.levelTransition || null;
   const reaction = isFinitePrice(transition?.targetReactionLevel)
     ? transition.targetReactionLevel
