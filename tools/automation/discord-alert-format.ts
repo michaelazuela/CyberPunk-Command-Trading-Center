@@ -415,6 +415,50 @@ export interface CompactDeskStateForDiscord {
       appTargetsComplete?: boolean;
       reviewOnly?: boolean;
     } | null;
+    sameSideCampaignStack?: {
+      sourceOfTruth?: string;
+      campaignStackId?: string;
+      campaignDirection?: 'LONG' | 'SHORT' | string;
+      campaignStackMembers?: Array<{
+        candidateKey?: string;
+        setupType?: string;
+        scenarioLabel?: string | null;
+        role?: string;
+        roleReason?: string;
+        decisionQualityScore?: number | null;
+        modelConfidenceScore?: number | null;
+        rankScore?: number | null;
+        entry?: number | null;
+        stop?: number | null;
+        target1?: number | null;
+        target2?: number | null;
+        riskPoints?: number | null;
+        staleEntryReason?: string | null;
+      }>;
+      sharedReactionZone?: {
+        lower?: number | null;
+        upper?: number | null;
+        label?: string | null;
+      } | null;
+      sharedLineInSand?: number | null;
+      stackReason?: string | null;
+      stackStatus?: string | null;
+      leadTacticalPlanKey?: string | null;
+      campaignThesisKey?: string | null;
+      supportingEvidenceKeys?: string[];
+      staleLeadReason?: string | null;
+      freshEntryStatus?: string | null;
+      managementInstruction?: string | null;
+      standDownCondition?: string | null;
+      antiDrift?: {
+        sameSideCandidatesGrouped?: boolean;
+        leadTacticalPlanPreserved?: boolean;
+        staleEntryCannotPresentAsFresh?: boolean;
+        oppositeSideRequiresCompleted5mFailureProof?: boolean;
+        appTargetsFromLeadTacticalPlanOnly?: boolean;
+      };
+    } | null;
+    sameSideCampaignStacks?: unknown[];
     nextTrigger?: string | null;
     invalidation?: string | null;
     noChase?: string;
@@ -1215,7 +1259,7 @@ interface DeskPlayPlanningLevels {
   riskPoints: number;
   entryZoneLow: number;
   entryZoneHigh: number;
-  source: 'normalized_candidate' | 'protected_5m_review_path';
+  source: 'normalized_candidate' | 'protected_5m_review_path' | 'same_side_campaign_lead';
   noChase: boolean;
 }
 
@@ -1292,6 +1336,42 @@ function deskPlayDecisionMapLevels(
   play?: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']> | null,
   currentPrice?: number | null,
 ): DeskPlayPlanningLevels | null {
+  const stack = play?.sameSideCampaignStack;
+  const stackMembers = Array.isArray(stack?.campaignStackMembers) ? stack!.campaignStackMembers : [];
+  const stackLead = stack?.campaignDirection === direction
+    ? stackMembers.find((member) => member.candidateKey === stack.leadTacticalPlanKey) || null
+    : null;
+  if (
+    stackLead &&
+    isFinitePrice(stackLead.entry) &&
+    isFinitePrice(stackLead.stop) &&
+    isFinitePrice(stackLead.target1) &&
+    isFinitePrice(stackLead.target2)
+  ) {
+    const riskPoints = Math.abs(stackLead.entry - stackLead.stop);
+    const targetsAreValid = direction === 'LONG'
+      ? stackLead.target2 > stackLead.target1 && stackLead.target1 > stackLead.entry
+      : stackLead.target2 < stackLead.target1 && stackLead.target1 < stackLead.entry;
+    if (riskPoints > 0 && targetsAreValid) {
+      const zone = stack.sharedReactionZone &&
+        isFinitePrice(stack.sharedReactionZone.lower) &&
+        isFinitePrice(stack.sharedReactionZone.upper)
+        ? { low: stack.sharedReactionZone.lower, high: stack.sharedReactionZone.upper }
+        : deskPlayEntryZone(direction, stackLead.entry, riskPoints);
+      const current = isFinitePrice(currentPrice) ? currentPrice : null;
+      return {
+        entry: stackLead.entry,
+        stop: stackLead.stop,
+        target1: stackLead.target1,
+        target2: stackLead.target2,
+        riskPoints,
+        entryZoneLow: zone.low,
+        entryZoneHigh: zone.high,
+        source: 'same_side_campaign_lead',
+        noChase: current !== null && (direction === 'LONG' ? current > zone.high : current < zone.low),
+      };
+    }
+  }
   const candidate = deskPlayCandidateForDirection(normalized, direction);
   const normalizedMatchesDirection = normalized.decision === direction;
   const entry = normalizedMatchesDirection && isFinitePrice(normalized.entry)
@@ -1971,6 +2051,66 @@ function deskPlayTargetToLinePromotionLines(
   ];
 }
 
+function sameSideCampaignMemberLabel(
+  member: NonNullable<NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>['sameSideCampaignStack']>['campaignStackMembers'][number] | null | undefined,
+): string {
+  if (!member) return 'N/A';
+  return compactLine(member.scenarioLabel || member.setupType || member.candidateKey || 'candidate', 54);
+}
+
+function deskPlaySameSideCampaignStackLines(
+  play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
+  direction: 'LONG' | 'SHORT' | 'WAIT',
+): string[] {
+  if (direction !== 'LONG' && direction !== 'SHORT') return [];
+  const stack = play.sameSideCampaignStack;
+  if (!stack || stack.campaignDirection !== direction) return [];
+  const members = Array.isArray(stack.campaignStackMembers) ? stack.campaignStackMembers : [];
+  if (!members.length || !stack.campaignStackId) return [];
+  const lead = members.find((member) => member.candidateKey === stack.leadTacticalPlanKey) || null;
+  const thesis = members.find((member) => member.candidateKey === stack.campaignThesisKey) || null;
+  const support = members
+    .filter((member) => member.candidateKey !== lead?.candidateKey && member.candidateKey !== thesis?.candidateKey)
+    .map((member) => sameSideCampaignMemberLabel(member))
+    .slice(0, 3);
+  const zone = stack.sharedReactionZone && isFinitePrice(stack.sharedReactionZone.lower) && isFinitePrice(stack.sharedReactionZone.upper)
+    ? `${priceLine(stack.sharedReactionZone.lower)}-${priceLine(stack.sharedReactionZone.upper)}`
+    : 'pending';
+  const status = compactLine(String(stack.stackStatus || stack.freshEntryStatus || 'forming').replace(/_/g, ' '), 32);
+  const leadHasLevels = Boolean(
+    lead &&
+    isFinitePrice(lead.entry) &&
+    isFinitePrice(lead.stop) &&
+    isFinitePrice(lead.target1) &&
+    isFinitePrice(lead.target2)
+  );
+  const fresh = String(stack.freshEntryStatus || '').replace(/_/g, ' ');
+  const noChaseOrManagement = /no chase|management/i.test(fresh) || /no_chase|management/i.test(String(stack.stackStatus || ''));
+  return [
+    'Same-Side Campaign Stack:',
+    `Campaign: ${direction} (${status}).`,
+    `Campaign ID: ${compactLine(stack.campaignStackId, 92)}`,
+    `Lead tactical plan: ${sameSideCampaignMemberLabel(lead)}.`,
+    `Campaign thesis: ${sameSideCampaignMemberLabel(thesis)}.`,
+    ...(support.length ? [`Supporting evidence: ${support.join(' | ')}.`] : []),
+    `Reaction / entry zone: ${zone}.`,
+    ...(leadHasLevels ? [
+      `Lead Entry: ${priceLine(lead!.entry)} | Stop: ${priceLine(lead!.stop)} | Risk: ${numberLine(lead!.riskPoints)} pts`,
+      `App Targets: T1 ${priceLine(lead!.target1)} | T2 ${priceLine(lead!.target2)}`,
+    ] : [
+      'Lead Entry/Stop/T1/T2: pending - no stale/generated levels shown.',
+    ]),
+    `Fresh-entry status: ${fresh || status}.`,
+    ...(noChaseOrManagement ? [
+      `No chase / management: ${compactInstruction(stack.managementInstruction, 'If already in, manage; if not in, wait for a fresh pullback/retest.')}`,
+    ] : [
+      'Fresh entry remains tied to completed 5M proof and the lead tactical plan.',
+    ]),
+    `Stand down: ${standDownInstruction(stack.standDownCondition, 'completed 5M campaign failure or lead invalidation.')}`,
+    'Review only. Not execution approval. canExecute remains unchanged.',
+  ];
+}
+
 function deskPlayActiveTacticalZoneLines(
   play: NonNullable<CompactDeskStateForDiscord['primaryDeskPlay']>,
   direction: 'LONG' | 'SHORT' | 'WAIT',
@@ -2491,6 +2631,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
         play.lineInSand ?? deskPlayLineForDirection(play, waitMapSide === 'WAIT' ? 'LONG' : waitMapSide),
       ),
       ...deskPlayTargetToLinePromotionLines(play, waitMapSide),
+      ...deskPlaySameSideCampaignStackLines(play, waitMapSide),
       ...deskPlayActiveTacticalZoneLines(play, waitMapSide),
       ...deskPlayHtfFvgParentReactionWatchLines(play, waitMapSide),
       ...deskPlayHtfFvgReactionMemoryLines(play, waitMapSide),
@@ -2546,6 +2687,7 @@ function deskPlayCurrentPlanLines(args: CompactDiscordSummaryArgs, direction: 'L
     ...deskPlayHtfRegimeLines(play, direction),
     ...deskPlayLineDisplayLines(play, direction, lineInSand),
     ...deskPlayTargetToLinePromotionLines(play, direction),
+    ...deskPlaySameSideCampaignStackLines(play, direction),
     ...deskPlayActiveTacticalZoneLines(play, direction),
     ...deskPlayHtfFvgParentReactionWatchLines(play, direction),
     ...deskPlayHtfFvgReactionMemoryLines(play, direction),
@@ -2735,6 +2877,9 @@ function scannerDeskPlayFallbackLines(args: CompactDiscordSummaryArgs, direction
       ? deskPlayTargetToLinePromotionLines(play, displayDirection)
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlaySameSideCampaignStackLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayActiveTacticalZoneLines(play, displayDirection)
       : []),
     ...(play
@@ -2888,6 +3033,9 @@ function scannerDeskPlayUltraFallbackLines(args: CompactDiscordSummaryArgs, dire
       : []),
     ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
       ? deskPlayTargetToLinePromotionLines(play, displayDirection)
+      : []),
+    ...(play && (displayDirection === 'LONG' || displayDirection === 'SHORT')
+      ? deskPlaySameSideCampaignStackLines(play, displayDirection).slice(0, 9)
       : []),
     `Line in sand: ${priceLine(lineInSand)}`,
     sideLine,

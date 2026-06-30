@@ -842,6 +842,78 @@ export interface DeskHtfTargetToLinePromotion {
   };
 }
 
+export type DeskSameSideCampaignStackRole =
+  | 'lead_tactical_plan'
+  | 'entry_evidence'
+  | 'continuation_confirmation'
+  | 'htf_context'
+  | 'management_target_context'
+  | 'stale_entry_reference'
+  | 'invalidated_reference';
+
+export type DeskSameSideCampaignStackStatus =
+  | 'forming'
+  | 'fresh_entry_available'
+  | 'active_after_trigger'
+  | 'no_chase'
+  | 'management_only'
+  | 'stand_down'
+  | 'invalidated'
+  | 'stale';
+
+export interface DeskSameSideCampaignStackMember {
+  candidateKey: string;
+  setupType: SetupType;
+  scenarioLabel: string | null;
+  role: DeskSameSideCampaignStackRole;
+  roleReason: string;
+  decisionQualityScore: number | null;
+  modelConfidenceScore: number | null;
+  rankScore: number | null;
+  entry: number | null;
+  stop: number | null;
+  target1: number | null;
+  target2: number | null;
+  riskPoints: number | null;
+  staleEntryReason: string | null;
+}
+
+export interface DeskSameSideCampaignStack {
+  sourceOfTruth: 'scanner_same_side_campaign_stack';
+  campaignStackId: string;
+  campaignDirection: Exclude<SetupCandidate['direction'], 'NO TRADE'>;
+  campaignStackMembers: DeskSameSideCampaignStackMember[];
+  sharedReactionZone: TacticalZoneBounds | null;
+  sharedLineInSand: number | null;
+  stackReason: string;
+  stackStatus: DeskSameSideCampaignStackStatus;
+  leadTacticalPlanKey: string | null;
+  campaignThesisKey: string | null;
+  supportingEvidenceKeys: string[];
+  leadSelectionReason: string;
+  roleAssignmentReason: string;
+  staleLeadReason: string | null;
+  freshEntryStatus: 'fresh_entry_available' | 'no_chase' | 'management_only' | 'pending' | 'invalidated';
+  managementInstruction: string;
+  standDownCondition: string;
+  antiDrift: {
+    sameSideCandidatesGrouped: true;
+    leadTacticalPlanPreserved: boolean;
+    staleEntryCannotPresentAsFresh: true;
+    oppositeSideRequiresCompleted5mFailureProof: true;
+    appTargetsFromLeadTacticalPlanOnly: true;
+  };
+  approvalBoundary: {
+    changesTradeApprovals: false;
+    changesCanExecute: false;
+    changesEntryStopTargets: false;
+    changesRiskRules: false;
+    changesRanking: false;
+    changesModelDefinitions: false;
+    changesBarCloseHandling: false;
+  };
+}
+
 export interface PrimaryDeskPlay {
   sourceOfTruth: 'scanner_primary_desk_play';
   direction: DeskPlayDirection;
@@ -893,6 +965,8 @@ export interface PrimaryDeskPlay {
   counterStructureConditional?: DeskCounterStructureConditional | null;
   mtfPrimarySideArbitration?: DeskMtfPrimarySideArbitration | null;
   htfTargetToLinePromotion?: DeskHtfTargetToLinePromotion | null;
+  sameSideCampaignStack?: DeskSameSideCampaignStack | null;
+  sameSideCampaignStacks?: DeskSameSideCampaignStack[];
   nextTrigger: string | null;
   invalidation: string | null;
   noChase: string;
@@ -1605,6 +1679,290 @@ function missingLevelLabels(candidate: SetupCandidate): string[] {
 
 function numericOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function lifecycleItemHasCompleteLevels(item: ScannerCandidateLifecycleTraceItem | null | undefined): boolean {
+  return Boolean(
+    item &&
+    isValidPrice(item.entry) &&
+    isValidPrice(item.stop) &&
+    isValidPrice(item.target1) &&
+    isValidPrice(item.target2)
+  );
+}
+
+function parseFirstPriceRange(text: string | null | undefined): { lower: number; upper: number } | null {
+  if (!text) return null;
+  const match = text.match(/\b(\d{4,5}(?:\.\d{1,3})?)\s*-\s*(\d{4,5}(?:\.\d{1,3})?)\b/);
+  if (!match) return null;
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
+  return { lower: Math.min(first, second), upper: Math.max(first, second) };
+}
+
+function lifecycleItemReactionZone(item: ScannerCandidateLifecycleTraceItem): TacticalZoneBounds | null {
+  if (item.tacticalZone?.lower != null && item.tacticalZone?.upper != null) return item.tacticalZone;
+  if (item.direction !== 'LONG' && item.direction !== 'SHORT') return null;
+  const range = parseFirstPriceRange(`${item.requiredTrigger || ''} ${item.nextTrigger || ''}`);
+  if (!range) return null;
+  return {
+    sourceOfTruth: 'scanner_structured_zone',
+    direction: item.direction,
+    lower: range.lower,
+    upper: range.upper,
+    midpoint: roundToTradeTick((range.lower + range.upper) / 2),
+    label: `${range.lower.toFixed(2)}-${range.upper.toFixed(2)} structured trigger zone`,
+    sourceTimeframe: '5M',
+    confidence: 'Medium',
+    evidence: 'Parsed from scanner-owned candidate trigger text for presentation-only campaign grouping.',
+  };
+}
+
+function zonesOverlapOrNearby(a: TacticalZoneBounds | null, b: TacticalZoneBounds | null): boolean {
+  if (!a || !b || a.lower == null || a.upper == null || b.lower == null || b.upper == null) return false;
+  const lowerA = Math.min(a.lower, a.upper);
+  const upperA = Math.max(a.lower, a.upper);
+  const lowerB = Math.min(b.lower, b.upper);
+  const upperB = Math.max(b.lower, b.upper);
+  if (Math.max(lowerA, lowerB) <= Math.min(upperA, upperB)) return true;
+  const distance = Math.max(lowerA, lowerB) - Math.min(upperA, upperB);
+  return distance <= 4;
+}
+
+function mergedLifecycleZone(items: ScannerCandidateLifecycleTraceItem[]): TacticalZoneBounds | null {
+  const zones = items.map(lifecycleItemReactionZone).filter((zone): zone is TacticalZoneBounds => Boolean(zone));
+  if (!zones.length) return null;
+  const lower = Math.min(...zones.map((zone) => Number(zone.lower)).filter(Number.isFinite));
+  const upper = Math.max(...zones.map((zone) => Number(zone.upper)).filter(Number.isFinite));
+  if (!Number.isFinite(lower) || !Number.isFinite(upper)) return null;
+  const directionalItem = items.find((item): item is ScannerCandidateLifecycleTraceItem & { direction: 'LONG' | 'SHORT' } =>
+    item.direction === 'LONG' || item.direction === 'SHORT'
+  );
+  const direction: 'LONG' | 'SHORT' = directionalItem?.direction || 'LONG';
+  return {
+    sourceOfTruth: 'scanner_structured_zone',
+    direction,
+    lower: roundToTradeTick(lower),
+    upper: roundToTradeTick(upper),
+    midpoint: roundToTradeTick((lower + upper) / 2),
+    label: `${roundToTradeTick(lower).toFixed(2)}-${roundToTradeTick(upper).toFixed(2)} same-side campaign reaction zone`,
+    sourceTimeframe: '5M',
+    confidence: 'High',
+    evidence: 'Merged from same-side candidate tactical zones and trigger ranges for Discord/DeskState presentation only.',
+  };
+}
+
+function lifecycleItemStaleReason(
+  item: ScannerCandidateLifecycleTraceItem,
+  currentPrice?: number | null,
+  sharedZone?: TacticalZoneBounds | null,
+): string | null {
+  if (item.filteredOutReason && /invalid|blocked/i.test(item.filteredOutReason)) return item.filteredOutReason;
+  if (!isValidPrice(currentPrice)) return null;
+  const buffer = TRADE_RULES.targetModel.tickSize * 2;
+  if (item.direction === 'LONG') {
+    if (isValidPrice(item.target2) && currentPrice >= item.target2 - buffer) return `current price ${currentPrice.toFixed(2)} already reached/passed T2 ${item.target2.toFixed(2)}.`;
+    if (isValidPrice(item.target1) && currentPrice >= item.target1 - buffer) return `current price ${currentPrice.toFixed(2)} already reached/passed T1 ${item.target1.toFixed(2)}.`;
+    if (sharedZone?.upper != null && currentPrice > sharedZone.upper + buffer) return `current price ${currentPrice.toFixed(2)} is above the campaign entry zone ${sharedZone.lower?.toFixed?.(2) || 'N/A'}-${sharedZone.upper.toFixed(2)}.`;
+  }
+  if (item.direction === 'SHORT') {
+    if (isValidPrice(item.target2) && currentPrice <= item.target2 + buffer) return `current price ${currentPrice.toFixed(2)} already reached/passed T2 ${item.target2.toFixed(2)}.`;
+    if (isValidPrice(item.target1) && currentPrice <= item.target1 + buffer) return `current price ${currentPrice.toFixed(2)} already reached/passed T1 ${item.target1.toFixed(2)}.`;
+    if (sharedZone?.lower != null && currentPrice < sharedZone.lower - buffer) return `current price ${currentPrice.toFixed(2)} is below the campaign entry zone ${sharedZone.lower.toFixed(2)}-${sharedZone.upper?.toFixed?.(2) || 'N/A'}.`;
+  }
+  return null;
+}
+
+function lifecycleItemCampaignRole(
+  item: ScannerCandidateLifecycleTraceItem,
+  lead: ScannerCandidateLifecycleTraceItem | null,
+  thesis: ScannerCandidateLifecycleTraceItem | null,
+  staleReason: string | null,
+): { role: DeskSameSideCampaignStackRole; reason: string } {
+  if (staleReason && item.candidateKey === lead?.candidateKey) {
+    return { role: 'stale_entry_reference', reason: `Lead entry is no longer fresh: ${staleReason}` };
+  }
+  if (item.candidateKey === lead?.candidateKey) {
+    return { role: 'lead_tactical_plan', reason: 'Best complete same-side level package by decision quality, freshness, and deterministic tie-breakers.' };
+  }
+  if (item.candidateKey === thesis?.candidateKey) {
+    return { role: 'continuation_confirmation', reason: 'Highest same-side model confidence / continuation thesis support.' };
+  }
+  if (/opening.*fvg|fvg.*continuation/i.test(`${item.setupType} ${item.scenarioLabel || ''}`)) {
+    return { role: 'entry_evidence', reason: 'Supports the defended FVG/reaction-zone entry evidence for the campaign.' };
+  }
+  if (item.htfSupported) return { role: 'htf_context', reason: 'Supports the same-side campaign with HTF/session context.' };
+  return { role: 'management_target_context', reason: 'Supports same-side target or management context.' };
+}
+
+function sameSideCampaignStackId(
+  direction: Exclude<SetupCandidate['direction'], 'NO TRADE'>,
+  zone: TacticalZoneBounds | null,
+  items: ScannerCandidateLifecycleTraceItem[],
+): string {
+  const zonePart = zone?.lower != null && zone?.upper != null
+    ? `${roundToTradeTick(zone.lower)}-${roundToTradeTick(zone.upper)}`
+    : 'no-zone';
+  const setupPart = items.map((item) => item.setupType).sort().join('+');
+  return `same-side-campaign|${direction}|${zonePart}|${setupPart}`;
+}
+
+function sortedCampaignCandidates(items: ScannerCandidateLifecycleTraceItem[]): ScannerCandidateLifecycleTraceItem[] {
+  return [...items].sort((a, b) => {
+    const scoreDiff = lifecycleItemScore(b) - lifecycleItemScore(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    const rankDiff = (b.rankScore ?? -1) - (a.rankScore ?? -1);
+    if (rankDiff !== 0) return rankDiff;
+    return a.candidateKey.localeCompare(b.candidateKey);
+  });
+}
+
+function sortedCampaignLeadCandidates(items: ScannerCandidateLifecycleTraceItem[]): ScannerCandidateLifecycleTraceItem[] {
+  return [...items].sort((a, b) => {
+    const decisionDiff = (b.decisionQualityScore ?? -1) - (a.decisionQualityScore ?? -1);
+    if (decisionDiff !== 0) return decisionDiff;
+    const confidenceDiff = (b.modelConfidenceScore ?? -1) - (a.modelConfidenceScore ?? -1);
+    if (confidenceDiff !== 0) return confidenceDiff;
+    const riskA = a.riskPoints ?? Number.POSITIVE_INFINITY;
+    const riskB = b.riskPoints ?? Number.POSITIVE_INFINITY;
+    if (riskA !== riskB) return riskA - riskB;
+    const rankDiff = (b.rankScore ?? -1) - (a.rankScore ?? -1);
+    if (rankDiff !== 0) return rankDiff;
+    return a.candidateKey.localeCompare(b.candidateKey);
+  });
+}
+
+export function buildSameSideCampaignStacks(args: {
+  candidateLifecycleTrace: ScannerCandidateLifecycleTrace;
+  currentPrice?: number | null;
+}): DeskSameSideCampaignStack[] {
+  const directional = args.candidateLifecycleTrace.createdCandidates
+    .filter((item) => (item.direction === 'LONG' || item.direction === 'SHORT') && (
+      item.hasFullPlanLevels ||
+      item.htfSupported ||
+      item.tacticalZone ||
+      item.requiredTrigger ||
+      item.nextTrigger
+    ));
+  const stacks: DeskSameSideCampaignStack[] = [];
+  for (const direction of ['LONG', 'SHORT'] as const) {
+    const sideItems = directional.filter((item) => item.direction === direction);
+    if (sideItems.length < 2) continue;
+    const seededGroups: ScannerCandidateLifecycleTraceItem[][] = [];
+    for (const item of sideItems) {
+      const zone = lifecycleItemReactionZone(item);
+      const group = seededGroups.find((candidateGroup) => {
+        const groupZone = mergedLifecycleZone(candidateGroup);
+        return zonesOverlapOrNearby(zone, groupZone) ||
+          candidateGroup.some((other) => Math.abs((other.entry ?? 0) - (item.entry ?? Number.POSITIVE_INFINITY)) <= 6);
+      });
+      if (group) group.push(item);
+      else seededGroups.push([item]);
+    }
+    for (const group of seededGroups.filter((candidateGroup) => candidateGroup.length >= 2)) {
+      const sharedZone = mergedLifecycleZone(group);
+      const leadCandidates = sortedCampaignLeadCandidates(group.filter((item) => lifecycleItemHasCompleteLevels(item) && !lifecycleItemStaleReason(item, args.currentPrice, sharedZone)));
+      const lead = leadCandidates[0] || sortedCampaignLeadCandidates(group.filter(lifecycleItemHasCompleteLevels))[0] || null;
+      const thesis = [...group].sort((a, b) => {
+        const confidenceDiff = (b.modelConfidenceScore ?? -1) - (a.modelConfidenceScore ?? -1);
+        if (confidenceDiff !== 0) return confidenceDiff;
+        return lifecycleItemScore(b) - lifecycleItemScore(a);
+      })[0] || null;
+      const sharedLineInSand = [
+        lead?.lineInSand,
+        thesis?.lineInSand,
+        ...group.map((item) => item.lineInSand),
+      ].find((line): line is number => isValidPrice(line)) ?? null;
+      const staleLeadReason = lead ? lifecycleItemStaleReason(lead, args.currentPrice, sharedZone) : null;
+      const zoneStale = Boolean(staleLeadReason && /entry zone|T1|T2/i.test(staleLeadReason));
+      const targetManagement = Boolean(staleLeadReason && /T1|T2/i.test(staleLeadReason));
+      const stackStatus: DeskSameSideCampaignStackStatus = !lead
+        ? 'forming'
+        : targetManagement
+          ? 'management_only'
+          : zoneStale
+            ? 'no_chase'
+            : 'fresh_entry_available';
+      const members = sortedCampaignCandidates(group).map((item): DeskSameSideCampaignStackMember => {
+        const staleReason = lifecycleItemStaleReason(item, args.currentPrice, sharedZone);
+        const role = lifecycleItemCampaignRole(item, lead, thesis, staleReason);
+        return {
+          candidateKey: item.candidateKey,
+          setupType: item.setupType,
+          scenarioLabel: item.scenarioLabel,
+          role: role.role,
+          roleReason: role.reason,
+          decisionQualityScore: item.decisionQualityScore,
+          modelConfidenceScore: item.modelConfidenceScore,
+          rankScore: item.rankScore,
+          entry: item.entry,
+          stop: item.stop,
+          target1: item.target1,
+          target2: item.target2,
+          riskPoints: item.riskPoints,
+          staleEntryReason: staleReason,
+        };
+      });
+      stacks.push({
+        sourceOfTruth: 'scanner_same_side_campaign_stack',
+        campaignStackId: sameSideCampaignStackId(direction, sharedZone, group),
+        campaignDirection: direction,
+        campaignStackMembers: members,
+        sharedReactionZone: sharedZone,
+        sharedLineInSand,
+        stackReason: `${direction} candidates share the same tactical FVG/reaction campaign; grouped for one Discord/DeskState campaign read instead of competing isolated maps.`,
+        stackStatus,
+        leadTacticalPlanKey: lead?.candidateKey || null,
+        campaignThesisKey: thesis?.candidateKey || null,
+        supportingEvidenceKeys: members
+          .filter((member) => member.candidateKey !== lead?.candidateKey && member.candidateKey !== thesis?.candidateKey)
+          .map((member) => member.candidateKey),
+        leadSelectionReason: lead
+          ? 'Lead tactical plan selected from complete same-side levels by decision quality, freshness, and deterministic key tie-break.'
+          : 'No complete same-side level package is fresh enough to lead this campaign.',
+        roleAssignmentReason: 'Roles are deterministic presentation metadata only: lead tactical plan, entry evidence, continuation thesis, HTF/context, or management reference.',
+        staleLeadReason,
+        freshEntryStatus: !lead
+          ? 'pending'
+          : targetManagement
+            ? 'management_only'
+            : zoneStale
+              ? 'no_chase'
+              : 'fresh_entry_available',
+        managementInstruction: staleLeadReason
+          ? `Entry worked or moved away: ${staleLeadReason} If already in, manage the lead plan; if not in, wait for a fresh pullback/retest.`
+          : 'Fresh campaign entry is still tied to the lead tactical plan and completed 5M proof; no execution approval is created here.',
+        standDownCondition: direction === 'LONG'
+          ? `Stand down if completed 5M loses ${sharedZone?.lower != null ? roundToTradeTick(sharedZone.lower).toFixed(2) : 'the defended campaign zone'} or the lead invalidation.`
+          : `Stand down if completed 5M reclaims above ${sharedZone?.upper != null ? roundToTradeTick(sharedZone.upper).toFixed(2) : 'the defended campaign zone'} or the lead invalidation.`,
+        antiDrift: {
+          sameSideCandidatesGrouped: true,
+          leadTacticalPlanPreserved: Boolean(lead),
+          staleEntryCannotPresentAsFresh: true,
+          oppositeSideRequiresCompleted5mFailureProof: true,
+          appTargetsFromLeadTacticalPlanOnly: true,
+        },
+        approvalBoundary: {
+          changesTradeApprovals: false,
+          changesCanExecute: false,
+          changesEntryStopTargets: false,
+          changesRiskRules: false,
+          changesRanking: false,
+          changesModelDefinitions: false,
+          changesBarCloseHandling: false,
+        },
+      });
+    }
+  }
+  return stacks.sort((a, b) => {
+    const leadA = a.campaignStackMembers.find((member) => member.candidateKey === a.leadTacticalPlanKey);
+    const leadB = b.campaignStackMembers.find((member) => member.candidateKey === b.leadTacticalPlanKey);
+    const scoreDiff = (leadB?.decisionQualityScore ?? leadB?.modelConfidenceScore ?? -1) -
+      (leadA?.decisionQualityScore ?? leadA?.modelConfidenceScore ?? -1);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.campaignStackId.localeCompare(b.campaignStackId);
+  });
 }
 
 export function candidateTargetReactionObjective(candidate: SetupCandidate): TargetObjective | null {
@@ -4135,7 +4493,24 @@ function buildPrimaryDeskPlay(args: {
     chartContext: args.chartContext,
     direction: null,
   });
-  const primaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap, preselectHtfFvgReactionMemory);
+  const sameSideCampaignStacks = buildSameSideCampaignStacks({
+    candidateLifecycleTrace: args.candidateLifecycleTrace,
+    currentPrice: args.currentPrice,
+  });
+  const primaryCampaignStack = sameSideCampaignStacks[0] || null;
+  const selectedPrimaryDirection = selectPrimaryDeskPlayDirection(args.candidateLifecycleTrace, htfProtectedStructureMap, preselectHtfFvgReactionMemory);
+  const selectedPrimaryLifecycleItem = selectedPrimaryDirection === 'LONG'
+    ? args.candidateLifecycleTrace.bestLongPlan
+    : selectedPrimaryDirection === 'SHORT'
+      ? args.candidateLifecycleTrace.bestShortPlan
+      : null;
+  const primaryDirection = primaryCampaignStack &&
+    primaryCampaignStack.campaignDirection !== selectedPrimaryDirection &&
+    primaryCampaignStack.stackStatus !== 'invalidated' &&
+    primaryCampaignStack.stackStatus !== 'stand_down' &&
+    !lifecycleItemHasHtfSupport(selectedPrimaryLifecycleItem)
+    ? primaryCampaignStack.campaignDirection
+    : selectedPrimaryDirection;
   const longModelFit = buildApprovedModelFit({
     direction: 'LONG',
     item: args.candidateLifecycleTrace.bestLongPlan,
@@ -4319,11 +4694,13 @@ function buildPrimaryDeskPlay(args: {
     targetReaction,
     htfProtectedStructureMap,
   });
+  const stackLead = primaryCampaignStack?.campaignStackMembers.find((member) => member.candidateKey === primaryCampaignStack.leadTacticalPlanKey) || null;
   const invalidation = primaryBias?.invalidation || args.candidate?.invalidation || null;
   const waitWithStructuredEvidence = primaryDirection === 'WAIT' && Boolean(selectedLifecycleItem);
   const discordEligible = Boolean(
     !args.canExecute &&
     (
+      Boolean(primaryCampaignStack) ||
       (
         primaryBias &&
         primaryDirection !== 'WAIT' &&
@@ -4344,8 +4721,12 @@ function buildPrimaryDeskPlay(args: {
     title,
     summary,
     lineInSand: selectedLine,
-    longAbove: longBias.lineInSand,
-    shortBelow: shortBias.lineInSand,
+    longAbove: primaryCampaignStack?.campaignDirection === 'LONG'
+      ? stackLead?.entry ?? longBias.lineInSand
+      : longBias.lineInSand,
+    shortBelow: primaryCampaignStack?.campaignDirection === 'SHORT'
+      ? stackLead?.entry ?? shortBias.lineInSand
+      : shortBias.lineInSand,
     targetReactionLevel,
     targetReactionLabel,
     targetReactionReason,
@@ -4359,6 +4740,8 @@ function buildPrimaryDeskPlay(args: {
     freshReentryCandidates,
     htfObjectiveLadder,
     htfProtectedStructureMap,
+    sameSideCampaignStack: primaryCampaignStack,
+    sameSideCampaignStacks,
     nextTrigger,
     invalidation,
     noChase: 'No chase. Wait for completed 5M proof, retest/hold, protected structure, and normal app-owned gates.',

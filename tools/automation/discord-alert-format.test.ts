@@ -3486,6 +3486,110 @@ assert.match(htfParentZoneDeskText, /120M 7472\.25-7496\.50/);
 assert.match(htfParentZoneDeskText, /Active tactical zone: 7444\.00-7465\.25/);
 assert.match(htfParentZoneDeskText, /Readiness: HTF (?:FVG|imbalance) ACTIVE - WAITING 5M REJECTION - Completed 5M hold\/reject below the zone required\./);
 
+const sameSideCampaignPayload = compactDiscordSummary({
+  session: 'morning',
+  tradeDate: '2026-06-30',
+  instrument: 'MES',
+  planVersionId: 'MORNING-SAME-SIDE-CAMPAIGN',
+  normalized: {
+    decision: 'LONG',
+    decisionStatus: TradeDecisionStatus.ConditionalTrade,
+    canExecute: false,
+    entry: 7514.5,
+    stop: 7499.75,
+    t1: 7550,
+    t2: 7560,
+  },
+  candidates: [],
+  currentPrice: 7533.75,
+  attachments: { chartPlan: true, priceLevelMap: true },
+  deskState: {
+    discordAction: 'post_review',
+    canExecute: false,
+    htfContextStatus: 'sufficient',
+    primaryDeskPlay: {
+      discordEligible: true,
+      direction: 'LONG',
+      lineInSand: 7530,
+      longAbove: 7514.5,
+      shortBelow: 7511.25,
+      summary: 'LONG campaign stack active; no fresh entry after price moved away.',
+      longBias: { state: 'primary', decisionQualityScore: 92 },
+      sameSideCampaignStack: {
+        sourceOfTruth: 'scanner_same_side_campaign_stack',
+        campaignStackId: 'same-side-campaign|LONG|7510.5-7518.25|IntradayMssMicroContinuation+OpeningDriveFvgContinuation+SweepMssFvgRetrace',
+        campaignDirection: 'LONG',
+        sharedReactionZone: { lower: 7510.5, upper: 7518.25, label: '7510.50-7518.25 same-side campaign reaction zone' },
+        stackStatus: 'no_chase',
+        leadTacticalPlanKey: 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Conditional',
+        campaignThesisKey: 'IntradayMssMicroContinuation|LONG|Intraday MSS Micro Continuation|Conditional',
+        freshEntryStatus: 'no_chase',
+        managementInstruction: 'Entry worked or moved away: current price 7533.75 is above the campaign entry zone 7510.50-7518.25. If already in, manage the lead plan; if not in, wait for a fresh pullback/retest.',
+        standDownCondition: 'Stand down if completed 5M loses 7510.50 or the lead invalidation.',
+        antiDrift: {
+          sameSideCandidatesGrouped: true,
+          leadTacticalPlanPreserved: true,
+          staleEntryCannotPresentAsFresh: true,
+          oppositeSideRequiresCompleted5mFailureProof: true,
+          appTargetsFromLeadTacticalPlanOnly: true,
+        },
+        campaignStackMembers: [
+          {
+            candidateKey: 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Conditional',
+            setupType: 'SweepMssFvgRetrace',
+            scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+            role: 'lead_tactical_plan',
+            decisionQualityScore: 92,
+            entry: 7514.5,
+            stop: 7499.75,
+            target1: 7550,
+            target2: 7560,
+            riskPoints: 14.75,
+          },
+          {
+            candidateKey: 'OpeningDriveFvgContinuation|LONG|Opening Drive FVG Continuation|Conditional',
+            setupType: 'OpeningDriveFvgContinuation',
+            scenarioLabel: 'Opening Drive FVG Continuation',
+            role: 'entry_evidence',
+            decisionQualityScore: 73,
+            modelConfidenceScore: 93,
+            entry: 7514.375,
+            stop: 7510.25,
+            target1: 7520.5,
+            target2: 7522.75,
+            riskPoints: 4.125,
+          },
+          {
+            candidateKey: 'IntradayMssMicroContinuation|LONG|Intraday MSS Micro Continuation|Conditional',
+            setupType: 'IntradayMssMicroContinuation',
+            scenarioLabel: 'Intraday MSS Micro Continuation',
+            role: 'continuation_confirmation',
+            decisionQualityScore: 84,
+            modelConfidenceScore: 100,
+            entry: 7532.5,
+            stop: 7492,
+            target1: 7593.25,
+            target2: 7613.5,
+            riskPoints: 40.5,
+          },
+        ],
+      },
+    },
+  },
+});
+const sameSideCampaignText = flattenDiscordPayloadText(sameSideCampaignPayload);
+assert.match(sameSideCampaignText, /Same-Side Campaign Stack:/);
+assert.match(sameSideCampaignText, /Lead tactical plan: .*Sweep Reclaim Imbalance/);
+assert.match(sameSideCampaignText, /Campaign thesis: Intraday.*Micro Continuation\./);
+assert.match(sameSideCampaignText, /Supporting evidence: Opening Drive.*Continuation\./);
+assert.match(sameSideCampaignText, /Lead Entry: 7514\.50 \| Stop: 7499\.75/);
+assert.match(sameSideCampaignText, /App Targets: T1 7550\.00 \| T2 7560\.00/);
+assert.match(sameSideCampaignText, /T1: 7550\.00 \| T2: 7560\.00/);
+assert.match(sameSideCampaignText, /Fresh-entry status: no chase\./);
+assert.match(sameSideCampaignText, /wait for a fresh pullback\/retest/);
+assert.doesNotMatch(sameSideCampaignText, /Lead Entry: 7532\.50 \| Stop: 7492\.00/);
+assert.doesNotMatch(sameSideCampaignText, /T1: 7536\.75 \| T2: 7544\.00/);
+
 console.log('Discord compact alert formatter verified.');
 
 if (previousOutcomeBaseUrl === undefined) delete process.env.DISCORD_OUTCOME_BASE_URL;

@@ -4,6 +4,7 @@ import {
   applyStaleChaseGuard,
   buildCandidateLifecycleTrace,
   buildDeskState,
+  buildSameSideCampaignStacks,
   buildTradeDecisionMapAudit,
   buildTargetCascade,
   compareFreshReentryPhase3Behavior,
@@ -502,6 +503,229 @@ assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.direction, 'SHOR
 assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBias.state, 'primary');
 assert.equal(highQualityTriggerPendingDeskState.primaryDeskPlay.shortBelow, 7445);
 assert.equal(highQualityTriggerPendingDeskState.canExecute, false);
+
+const june30SweepMssLong = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Long: Sweep Reclaim Imbalance Retrace',
+  direction: 'LONG',
+  entry: 7514.5,
+  stop: 7499.75,
+  target1: 7550,
+  target2: 7560,
+  riskPoints: 14.75,
+  rankScore: 261,
+  decisionQualityScore: 92,
+  modelConfidenceScore: null,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  requiredTrigger: 'Entry only on retrace into bullish imbalance 7510.5-7518.25 after sweep, reclaim, displacement, and bullish structure shift.',
+  tacticalZone: {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: 'LONG',
+    lower: 7510.5,
+    upper: 7518.25,
+    midpoint: 7514.375,
+    label: '7510.50-7518.25 bullish FVG',
+    sourceTimeframe: '5M',
+    confidence: 'High',
+    evidence: 'June 30 defended bullish FVG.',
+  },
+});
+const june30OpeningDriveLong = candidate({
+  setupType: SetupType.OpeningDriveFvgContinuation,
+  scenarioLabel: 'Opening Drive FVG Continuation',
+  direction: 'LONG',
+  entry: 7514.375,
+  stop: 7510.25,
+  target1: 7520.5,
+  target2: 7522.75,
+  riskPoints: 4.125,
+  rankScore: 285.6,
+  decisionQualityScore: 73,
+  modelConfidenceScore: 93,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: NoTradeReason.EntryTriggerPending,
+  requiredTrigger: 'Human-review long: 15M bullish opening displacement, completed 5M bullish MSS/displacement, bullish 5M FVG retest/mitigation during 10:00-11:00 ET.',
+  tacticalZone: {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: 'LONG',
+    lower: 7510.5,
+    upper: 7518.25,
+    midpoint: 7514.375,
+    label: '7510.50-7518.25 opening-drive FVG',
+    sourceTimeframe: '5M',
+    confidence: 'High',
+    evidence: 'June 30 opening-drive defended FVG.',
+  },
+});
+const june30IntradayMssLong = candidate({
+  setupType: SetupType.IntradayMssMicroContinuation,
+  scenarioLabel: 'Intraday MSS Micro Continuation',
+  direction: 'LONG',
+  entry: 7532.5,
+  stop: 7492,
+  target1: 7593.25,
+  target2: 7613.5,
+  riskPoints: 40.5,
+  rankScore: 253,
+  decisionQualityScore: 84,
+  modelConfidenceScore: 100,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  requiredTrigger: 'Human-review long: completed bullish 5M MSS plus bullish 15M MSS/displacement context, then bullish 5M FVG retest/rejection from 7510.50-7518.25 or completed close-through/retest above 7518.25.',
+  tacticalZone: null,
+});
+const june30ShortDecoy = candidate({
+  setupType: SetupType.SweepMssFvgRetrace,
+  scenarioLabel: 'ICT Model 1 Short: Sweep Reclaim Imbalance Retrace',
+  direction: 'SHORT',
+  entry: 7512,
+  stop: 7542,
+  target1: 7467,
+  target2: 7452,
+  riskPoints: 30,
+  rankScore: 261,
+  decisionQualityScore: 98,
+  modelConfidenceScore: null,
+  executionStatus: ExecutionStatus.Conditional,
+  blockReason: null,
+  requiredTrigger: 'Entry only on retrace into bearish imbalance 7511.25-7512.75 after sweep, reclaim, displacement, and bearish structure shift.',
+  tacticalZone: {
+    sourceOfTruth: 'ohlc_fvg_zone',
+    direction: 'SHORT',
+    lower: 7511.25,
+    upper: 7512.75,
+    midpoint: 7512,
+    label: '7511.25-7512.75 bearish FVG',
+    sourceTimeframe: '5M',
+    confidence: 'Medium',
+    evidence: 'Decoy opposite-side candidate.',
+  },
+});
+const june30AlertDecision = { shouldSend: false, reason: 'Conditional plan below threshold.' };
+const june30Trace = buildCandidateLifecycleTrace({
+  candidates: [june30SweepMssLong, june30OpeningDriveLong, june30IntradayMssLong, june30ShortDecoy],
+  selectedCandidate: june30IntradayMssLong,
+  state: 'Conditional',
+  window: morningWindow,
+  alertDecision: june30AlertDecision,
+  canExecute: false,
+});
+const june30FreshStack = buildSameSideCampaignStacks({
+  candidateLifecycleTrace: june30Trace,
+  currentPrice: 7516,
+})[0];
+assert.equal(june30FreshStack.campaignDirection, 'LONG');
+assert.equal(june30FreshStack.campaignStackMembers.length, 3);
+assert.equal(june30FreshStack.leadTacticalPlanKey, 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Conditional');
+assert.equal(june30FreshStack.campaignThesisKey, 'IntradayMssMicroContinuation|LONG|Intraday MSS Micro Continuation|Conditional');
+assert.equal(june30FreshStack.stackStatus, 'fresh_entry_available');
+assert.equal(june30FreshStack.approvalBoundary.changesCanExecute, false);
+const june30NoChaseStack = buildSameSideCampaignStacks({
+  candidateLifecycleTrace: june30Trace,
+  currentPrice: 7533.75,
+})[0];
+assert.equal(june30NoChaseStack.stackStatus, 'no_chase');
+assert.equal(june30NoChaseStack.freshEntryStatus, 'no_chase');
+assert.match(june30NoChaseStack.managementInstruction, /wait for a fresh pullback\/retest/i);
+const june30Visibility = classifyScannerVisibility({
+  state: 'Conditional',
+  candidate: june30IntradayMssLong,
+  window: morningWindow,
+  alertDecision: june30AlertDecision,
+  canExecute: false,
+});
+const june30DeskState = buildDeskState({
+  state: 'Conditional',
+  candidate: june30IntradayMssLong,
+  visibilityMetadata: june30Visibility,
+  candidateLifecycleTrace: june30Trace,
+  currentPrice: 7533.75,
+  canExecute: false,
+});
+assert.equal(june30DeskState.primaryDeskPlay.sameSideCampaignStack?.campaignDirection, 'LONG');
+assert.equal(june30DeskState.primaryDeskPlay.sameSideCampaignStack?.stackStatus, 'no_chase');
+assert.equal(june30DeskState.primaryDeskPlay.sameSideCampaignStack?.antiDrift.appTargetsFromLeadTacticalPlanOnly, true);
+assert.equal(june30DeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
+assert.equal(june30DeskState.canExecute, false);
+
+const mirroredShortStack = buildSameSideCampaignStacks({
+  candidateLifecycleTrace: buildCandidateLifecycleTrace({
+    candidates: [
+      candidate({
+        setupType: SetupType.SweepMssFvgRetrace,
+        direction: 'SHORT',
+        scenarioLabel: 'Short Sweep MSS FVG Retrace',
+        entry: 7514.5,
+        stop: 7529.25,
+        target1: 7485,
+        target2: 7475,
+        riskPoints: 14.75,
+        decisionQualityScore: 92,
+        requiredTrigger: 'Entry only on retrace into bearish imbalance 7510.5-7518.25 after sweep, reclaim, displacement, and bearish structure shift.',
+        tacticalZone: {
+          sourceOfTruth: 'ohlc_fvg_zone',
+          direction: 'SHORT',
+          lower: 7510.5,
+          upper: 7518.25,
+          midpoint: 7514.375,
+          label: '7510.50-7518.25 bearish FVG',
+          sourceTimeframe: '5M',
+          confidence: 'High',
+          evidence: 'Mirrored short FVG.',
+        },
+      }),
+      candidate({
+        setupType: SetupType.OpeningDriveFvgContinuation,
+        direction: 'SHORT',
+        scenarioLabel: 'Opening Drive FVG Continuation',
+        entry: 7514.375,
+        stop: 7520,
+        target1: 7506,
+        target2: 7502.75,
+        riskPoints: 5.625,
+        decisionQualityScore: 73,
+        modelConfidenceScore: 93,
+        blockReason: NoTradeReason.EntryTriggerPending,
+        requiredTrigger: 'Human-review short: bearish opening displacement and bearish 5M FVG retest/mitigation.',
+        tacticalZone: {
+          sourceOfTruth: 'ohlc_fvg_zone',
+          direction: 'SHORT',
+          lower: 7510.5,
+          upper: 7518.25,
+          midpoint: 7514.375,
+          label: '7510.50-7518.25 bearish opening-drive FVG',
+          sourceTimeframe: '5M',
+          confidence: 'High',
+          evidence: 'Mirrored short opening-drive FVG.',
+        },
+      }),
+      candidate({
+        setupType: SetupType.IntradayMssMicroContinuation,
+        direction: 'SHORT',
+        scenarioLabel: 'Intraday MSS Micro Continuation',
+        entry: 7509,
+        stop: 7538,
+        target1: 7465.5,
+        target2: 7451,
+        riskPoints: 29,
+        decisionQualityScore: 84,
+        modelConfidenceScore: 100,
+        requiredTrigger: 'Human-review short: completed bearish 5M MSS plus bearish 15M MSS/displacement context, then bearish 5M FVG retest/rejection from 7510.50-7518.25.',
+      }),
+    ],
+    selectedCandidate: null,
+    state: 'Conditional',
+    window: morningWindow,
+    alertDecision: june30AlertDecision,
+    canExecute: false,
+  }),
+  currentPrice: 7516,
+})[0];
+assert.equal(mirroredShortStack.campaignDirection, 'SHORT');
+assert.equal(mirroredShortStack.campaignStackMembers.length, 3);
+assert.equal(mirroredShortStack.campaignThesisKey, 'IntradayMssMicroContinuation|SHORT|Intraday MSS Micro Continuation|Conditional');
+assert.equal(mirroredShortStack.approvalBoundary.changesTradeApprovals, false);
 assert.equal(
   shouldSendScannerAlert({ state: 'MarketMapping', confidence: 100, window: outsideWindow, candidate: strongCandidate }).shouldSend,
   false
