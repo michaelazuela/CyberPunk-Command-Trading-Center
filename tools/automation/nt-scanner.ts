@@ -2144,6 +2144,44 @@ export interface ScannerDiscordFinalDeliveryOutcome {
 }
 
 const SCANNER_FINAL_DELIVERY_OUTCOME_STALE_MS = 2 * 60 * 1000;
+const SCANNER_FINAL_DELIVERY_TERMINAL_STATUSES = new Set<ScannerDiscordFinalDeliveryOutcome['status']>([
+  'sent',
+  'hard_suppressed',
+  'duplicate_blocked',
+  'delivery_failed',
+]);
+
+export function validateScannerDiscordFinalDeliveryOutcome(args: {
+  audit: Record<string, any> | null | undefined;
+  requireTerminalForEligible?: boolean;
+}): { ok: true; status: ScannerDiscordFinalDeliveryOutcome['status']; reason: string } | { ok: false; reason: string } {
+  const audit = args.audit || {};
+  const outcome = audit.deliveryOutcome || {};
+  const status = typeof outcome.status === 'string' ? outcome.status : null;
+  const reason = typeof outcome.reason === 'string' ? outcome.reason : '';
+  const visibility = audit.visibility || {};
+  const lifecycle = audit.candidateLifecycleTrace || {};
+  const discord = audit.discord || {};
+  const eligible = visibility?.authority?.discordEligible === true ||
+    visibility?.discordAction === 'post_review' ||
+    lifecycle?.discordDecision?.shouldSend === true ||
+    lifecycle?.alertDecision?.shouldSend === true ||
+    discord?.shouldSend === true;
+
+  if (!status) {
+    if (args.requireTerminalForEligible && eligible) return { ok: false, reason: 'Discord-eligible scanner artifact has no deliveryOutcome.status.' };
+    return { ok: false, reason: 'Scanner artifact has no deliveryOutcome.status.' };
+  }
+  if (!SCANNER_FINAL_DELIVERY_TERMINAL_STATUSES.has(status as ScannerDiscordFinalDeliveryOutcome['status'])) {
+    if (args.requireTerminalForEligible && eligible) {
+      return { ok: false, reason: `Discord-eligible scanner artifact has non-terminal deliveryOutcome.status=${status}.` };
+    }
+    return { ok: false, reason: `Scanner artifact has non-terminal deliveryOutcome.status=${status}.` };
+  }
+  if (!reason.trim()) return { ok: false, reason: `Scanner artifact deliveryOutcome.status=${status} is missing a reason.` };
+  if (status === 'sent' && !outcome.discordMessageId) return { ok: false, reason: 'Sent scanner artifact is missing deliveryOutcome.discordMessageId.' };
+  return { ok: true, status: status as ScannerDiscordFinalDeliveryOutcome['status'], reason };
+}
 
 export async function writeScannerDiscordFinalDeliveryOutcomeAuditLog(args: {
   auditLogPath: string | null | undefined;

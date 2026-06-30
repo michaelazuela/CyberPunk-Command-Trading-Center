@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   assessBridgeBarStaleness,
   applyStaleChaseGuard,
@@ -648,6 +649,33 @@ assert.equal(june30DeskState.primaryDeskPlay.sameSideCampaignStack?.stackStatus,
 assert.equal(june30DeskState.primaryDeskPlay.sameSideCampaignStack?.antiDrift.appTargetsFromLeadTacticalPlanOnly, true);
 assert.equal(june30DeskState.primaryDeskPlay.approvalBoundary.changesTradeApprovals, false);
 assert.equal(june30DeskState.canExecute, false);
+
+const june30Tape = JSON.parse(readFileSync('tools/automation/discord-audit/scanner-decision-tape-2026-06-30-MES-morning.json', 'utf8'));
+const june30TapeEvent1010 = june30Tape.events['2026-06-30T10:10:00.0000000'];
+assert.equal(june30TapeEvent1010.deskState.primaryDeskPlay.direction, 'SHORT');
+const june30TapeLifecycle = june30TapeEvent1010.candidateLifecycleTrace;
+const june30TapeSelected = june30TapeLifecycle.selectedCandidate;
+assert.equal(june30TapeSelected.direction, 'LONG');
+assert.equal(june30TapeLifecycle.bestLongPlan.setupType, SetupType.SweepMssFvgRetrace);
+assert.equal(june30TapeLifecycle.bestLongPlan.decisionQualityScore, 92);
+assert.equal(june30TapeLifecycle.bestLongPlan.entry, 7514.5);
+assert.equal(june30TapeLifecycle.bestLongPlan.stop, 7499.75);
+assert.equal(june30TapeLifecycle.bestLongPlan.target1, 7550);
+assert.equal(june30TapeLifecycle.bestLongPlan.target2, 7560);
+const june30CurrentDeskStateFromTape = buildDeskState({
+  state: june30TapeEvent1010.scannerState,
+  candidate: june30TapeSelected,
+  visibilityMetadata: june30TapeEvent1010.visibility,
+  candidateLifecycleTrace: june30TapeLifecycle,
+  currentPrice: june30TapeEvent1010.currentPrice,
+  canExecute: false,
+});
+assert.equal(june30CurrentDeskStateFromTape.primaryDeskPlay.direction, 'LONG');
+assert.equal(june30CurrentDeskStateFromTape.primaryDeskPlay.sameSideCampaignStack?.campaignDirection, 'LONG');
+assert.equal(june30CurrentDeskStateFromTape.primaryDeskPlay.sameSideCampaignStack?.stackStatus, 'no_chase');
+assert.equal(june30CurrentDeskStateFromTape.primaryDeskPlay.sameSideCampaignStack?.leadTacticalPlanKey, 'SweepMssFvgRetrace|LONG|ICT Model 1 Long: Sweep Reclaim Imbalance Retrace|Executable');
+assert.equal(june30CurrentDeskStateFromTape.primaryDeskPlay.sameSideCampaignStack?.approvalBoundary.changesCanExecute, false);
+assert.equal(june30CurrentDeskStateFromTape.canExecute, false);
 
 const mirroredShortStack = buildSameSideCampaignStacks({
   candidateLifecycleTrace: buildCandidateLifecycleTrace({

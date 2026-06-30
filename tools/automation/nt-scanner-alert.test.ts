@@ -84,6 +84,7 @@ import {
   twoHourCoverageDiagnostic,
   verifiedFiveMinuteAggregationRepair,
   verifyScannerActiveCampaignLedgerReady,
+  validateScannerDiscordFinalDeliveryOutcome,
   writeLocalMarketDataGapEvent,
   writeScannerDiscordReceiptAuditLog,
   writeScannerDiscordFinalDeliveryOutcomeAuditLog,
@@ -179,6 +180,14 @@ assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
 let finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
 assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'sent');
 assert.equal(finalOutcomeAudit.deliveryOutcome.discordMessageId, 'loopback-message-id');
+assert.deepEqual(validateScannerDiscordFinalDeliveryOutcome({
+  audit: finalOutcomeAudit,
+  requireTerminalForEligible: true,
+}), {
+  ok: true,
+  status: 'sent',
+  reason: 'Discord review map delivered in loopback.',
+});
 assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
   auditLogPath: finalOutcomeAuditFile,
   outcome: {
@@ -191,6 +200,10 @@ assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
 finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
 assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'hard_suppressed');
 assert.match(finalOutcomeAudit.deliveryOutcome.reason, /stale\/no-chase/);
+assert.equal(validateScannerDiscordFinalDeliveryOutcome({
+  audit: finalOutcomeAudit,
+  requireTerminalForEligible: true,
+}).ok, true);
 assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
   auditLogPath: finalOutcomeAuditFile,
   outcome: {
@@ -203,6 +216,43 @@ assert.equal(await writeScannerDiscordFinalDeliveryOutcomeAuditLog({
 finalOutcomeAudit = JSON.parse(await fs.readFile(finalOutcomeAuditFile, 'utf8'));
 assert.equal(finalOutcomeAudit.deliveryOutcome.status, 'delivery_failed');
 assert.equal(finalOutcomeAudit.deliveryOutcome.httpStatus, 500);
+assert.equal(validateScannerDiscordFinalDeliveryOutcome({
+  audit: finalOutcomeAudit,
+  requireTerminalForEligible: true,
+}).ok, true);
+
+const nonTerminalEligibleOutcome = validateScannerDiscordFinalDeliveryOutcome({
+  audit: {
+    visibility: {
+      visibilityMode: 'POST_REVIEW',
+      discordAction: 'post_review',
+      authority: { discordEligible: true, canExecute: false },
+    },
+    candidateLifecycleTrace: {
+      alertDecision: { shouldSend: true, reason: 'eligible high-confidence review map' },
+    },
+    deliveryOutcome: {
+      status: 'pending_final_delivery',
+      reason: 'fixture pending',
+    },
+  },
+  requireTerminalForEligible: true,
+});
+assert.equal(nonTerminalEligibleOutcome.ok, false);
+assert.match(nonTerminalEligibleOutcome.reason, /non-terminal deliveryOutcome\.status=pending_final_delivery/);
+
+const sentWithoutMessageIdOutcome = validateScannerDiscordFinalDeliveryOutcome({
+  audit: {
+    visibility: { authority: { discordEligible: true } },
+    deliveryOutcome: {
+      status: 'sent',
+      reason: 'Sent but missing Discord message id.',
+    },
+  },
+  requireTerminalForEligible: true,
+});
+assert.equal(sentWithoutMessageIdOutcome.ok, false);
+assert.match(sentWithoutMessageIdOutcome.reason, /missing deliveryOutcome\.discordMessageId/);
 
 const stalePendingOutcomeAuditFile = path.join(auditDir, 'scanner-lunch-2026-06-30-MES-STALLED-FINAL-OUTCOME.json');
 await fs.writeFile(stalePendingOutcomeAuditFile, JSON.stringify({
