@@ -168,4 +168,15 @@ assert(
 );
 assert(htfEntry.defaultNextAction.includes('canExecute gates'), 'HTF registry action must preserve canExecute gate wording');
 
+const registryText = SETUP_REGISTRY
+  .flatMap((entry) => [
+    entry.label,
+    ...entry.requiredEvidence,
+    entry.defaultRequiredTrigger,
+    entry.defaultNextAction,
+  ])
+  .join(' ');
+assert(!/at least 2\.0R|minimum 2\.0R|2R target/i.test(registryText), 'registry must not reintroduce old 2R-minimum target-room wording');
+assert(registryText.includes('Clean path to app T1 at 1.5R'), 'registry must preserve clean 1.5R target-room wording');
+
 console.log('setupRegistry role accessors verified');

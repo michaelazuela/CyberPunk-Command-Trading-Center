@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-30
+Task: Clean active trading-language drift around target-room suppression and high-confidence conflict review visibility.
+Files changed: src/config/setupRegistry.ts, src/config/setupRegistry.test.ts, src/agents/bridgeDiagnosticReplayAgent.ts, src/lib/gemini.ts, src/lib/tradeDecisionPipeline.test.ts, tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
+Reason: Active metadata and advisory prompt text still carried old 2R-minimum style language after the target-room rule moved to clean 1.5R viability. The Desk Play review-map selector also excluded HTF-conflict wording before a fresh complete high-confidence conditional map could be shown as review-only, which risked hiding counter-structure plans instead of explaining them.
+Tests run: `npx tsx src/config/setupRegistry.test.ts`; `npx tsx src/lib/tradeDecisionPipeline.test.ts`; `npx tsx tools/automation/nt-scanner-alert.test.ts`; `npx tsx tools/automation/discord-alert-format.test.ts`; `npx tsx src/agents/bridgeDiagnosticReplayAgent.test.ts`; `npx tsx tools/automation/live-discord-rollout.test.ts`; `npx tsx tools/automation/no-silent-drop-policy-audit.test.ts`; active 2R-minimum language scan; `npm run guard:no-firebase`; `npm run guard:architecture`; `npm run guard:schema`; `npm run lint`; `npm run build`; `npm run test`.
+Result: Passed. Active registry/replay/Gemini language now states clean 1.5R as the target-room floor and T2 as extension/management context. Registry tests now fail if old 2R-minimum wording returns. Fresh complete high-confidence conditional Desk Play review maps are no longer silently excluded just because HTF conflict/counter-structure language is present; stale/no-chase, invalidated, duplicate, data-quality, and active-zone guards still control delivery.
+Trading logic changed: No. This phase changes active wording and Discord review-map visibility routing only; it does not change canExecute, execution approval, setup math, ranking, stops, targets, risk gates, or bar-close handling.
+Bridge impact: None.
+Journal/RAG impact: Clearer replay/audit wording only.
+Supabase impact: No schema migration.
+Known risks: None known.
+Next recommended action: Continue live observation for current scanner output and keep the active-language drift scan in regression checks.
+
+## Previous Change
+
+Date: 2026-06-30
 Task: Correct target-room viability from old 2R minimum to clean 1.5R minimum with T2 extension management.
 Files changed: src/types.ts, src/config/setupRegistry.ts, src/lib/setupScanner.ts, src/lib/conditionalPlanBuilder.ts, src/lib/localScannerEngine.ts, src/lib/setupScanner.test.ts, src/lib/localScannerEngine.test.ts, src/lib/tradeDecisionPipeline.test.ts, src/agents/bridgeDiagnosticReplayAgent.test.ts, tools/automation/discord-scheduler.ts, tools/automation/replay-validation-audit.ts, docs/TRADING_RULES_REFERENCE.md, docs/TRADE_DECISION_PIPELINE.md, docs/PROJECT_STATUS.md.
 Reason: Scanner/setup paths still treated 2.0R as the minimum target-room blocker. The desk rule is T1=1.5R as minimum tactical viability and T2=2.0R as the second/extension target. A fresh clean-1.5R candidate must not be suppressed solely because 2R liquidity/extension is obstructed.

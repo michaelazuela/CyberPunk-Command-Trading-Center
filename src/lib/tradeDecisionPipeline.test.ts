@@ -2433,7 +2433,7 @@ const tests: Array<[string, () => void]> = [
     assert.equal(strong?.fvgZones?.[0]?.impulseQualified, true);
   }],
 
-  ['39. Bullish Turtle Soup does not require FVG and enforces sweep wick stop plus 2R target', () => {
+  ['39. Bullish Turtle Soup does not require FVG and enforces sweep wick stop plus app T1/T2 targets', () => {
     const context = {
       ...structuredContext({
         keyLevels: {

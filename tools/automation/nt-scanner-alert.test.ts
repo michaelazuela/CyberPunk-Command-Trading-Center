@@ -3384,7 +3384,7 @@ const waitHighQualityConditionalDeskPlaySuppression = evaluateScannerDeskPlayDis
       rankScore: 227,
       decisionQualityScore: 93,
       evidence: ['Sweep/reclaim, displacement, MSS, and 5M FVG retrace are present.'],
-      missingEvidence: ['Completed 5M trigger/retest proof still required.'],
+      missingEvidence: ['Completed 5M trigger/retest proof still required.', 'HTF conflict still present; publish only as counter-structure review.'],
       requiredTrigger: 'Entry only on retrace into bearish imbalance 7445-7446.5 after sweep, reclaim, displacement, and bearish structure shift.',
       nextAction: 'Wait for completed 5M proof; do not chase after T1.',
       reducedRiskPlan: null,

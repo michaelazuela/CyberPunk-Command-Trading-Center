@@ -484,7 +484,7 @@ function buildGateReview(
       'Swept swing/session level',
       'Reclaim back inside level',
       'Stop beyond sweep wick',
-      'Opposing liquidity target with at least 2.0R',
+      'Clean path to app T1 at 1.5R; T2 is extension/management context',
     ]),
   ];
 }

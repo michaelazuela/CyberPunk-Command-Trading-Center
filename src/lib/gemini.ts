@@ -381,7 +381,7 @@ async function superAgent(imageData: ChartImagePayload, settings?: AISettings, p
     - AUDIT the required stop-loss distance against system caps.
     - STRUCTURE STOP: Stop must be tied to visible structure. IF visual structure suggests wider risk, mark the setup conditional and wait for a cleaner retest or tighter protected structure.
     - ACCOUNT EQUITY: Use configured account equity $${accountEquity}. IF estimated risk exceeds configured Risk Per Trade ${(riskPercent * 100).toFixed(2)}% ($${(accountEquity * riskPercent).toFixed(2)}) ➔ WARNING: OVERLEVERAGED.
-    - MONTE CARLO PROBABILITY: Based on the 5-minute wicks and HH/HL structure, what is the probability of hitting 2.0R vs 1.0R STOP?
+    - MONTE CARLO PROBABILITY: Based on the 5-minute wicks and HH/HL structure, assess whether the path to app T1 (1.5R) is clean and whether app T2 (2.0R) is realistic as extension/management context.
     - Provide a Final GO / NO-GO validation.
 
     =========================================
@@ -1173,7 +1173,7 @@ export async function generateStrategyInsights(trades: any[], currentRules: stri
   const systemInstruction = `
     You are the Master Trading Desk Quant Reviewer. Your task is to review a trader's history and current rules with institutional discipline and propose refinements.
     
-    TRADING SYSTEM: MES/MNQ Futures (2.0R Scalping)
+    TRADING SYSTEM: MES/MNQ Futures decision support. App targets are T1 = 1.5R and T2 = 2.0R; T1 is the target-room floor and T2 is extension/management context.
     
     Analyze the provided trade log for patterns in:
     - Win rate per day type

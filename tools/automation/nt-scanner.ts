@@ -5306,14 +5306,6 @@ function highQualityConditionalReviewCandidate(args: {
       const score = candidate.decisionQualityScore ?? candidate.modelConfidenceScore ?? null;
       return typeof score === 'number' && Number.isFinite(score) && score >= HIGH_QUALITY_CONDITIONAL_REVIEW_MIN_SCORE;
     })
-    .filter((candidate) => {
-      const text = [
-        ...(candidate.missingEvidence || []),
-        ...(candidate.activeRuleset?.timeframeMss?.blockers || []),
-        candidate.activeCampaign?.htfRelationship === 'conflict' ? 'active campaign HTF conflict' : null,
-      ].filter(Boolean).join(' ');
-      return !/opposing.*htf|htf.*conflict|higher-timeframe.*not aligned|opposing completed.*mss/i.test(text);
-    })
     .sort((a, b) => {
       const aScore = a.decisionQualityScore ?? a.modelConfidenceScore ?? 0;
       const bScore = b.decisionQualityScore ?? b.modelConfidenceScore ?? 0;

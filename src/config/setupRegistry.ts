@@ -82,7 +82,7 @@ export const SETUP_REGISTRY: SetupRegistryEntry[] = [
     allowedSessions: BOTH_SESSIONS,
     detectionKeywords: ['turtle soup', 'failed breakout reversal', 'failed breakdown reversal', 'sweep reclaim reversal'],
     possibleKeywords: ['liquidity raid reversal', 'failed continuation', 'reclaim after sweep', 'reversal after sweep'],
-    requiredEvidence: ['Swept swing/session level', 'Reclaim back inside level', 'Stop beyond sweep wick', 'Opposing liquidity target with at least 2.0R'],
+    requiredEvidence: ['Swept swing/session level', 'Reclaim back inside level', 'Stop beyond sweep wick', 'Clean path to app T1 at 1.5R; T2 is extension/management context'],
     defaultRequiredTrigger: 'Reclaim confirmation after the sweep, preferably followed by expansion or a structure shift.',
     defaultNextAction: 'Wait for reclaim confirmation or a retrace after expansion; do not chase the initial reversal move.',
   },
