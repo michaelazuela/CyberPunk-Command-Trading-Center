@@ -231,6 +231,7 @@ export function startSupervisor(): http.Server {
       `Quant Desk Local Supervisor listening on http://${configResult.config.host}:${configResult.config.port}${configResult.config.statusPath}\n`,
     );
 
+    supervisorState = launchEnabledServices(configResult.config, logger);
     const preloadResult = runHtfPreloadStartup(configResult.config, logger);
     logger.log(preloadResult.ok ? 'info' : 'warn', 'HTF preload startup result.', {
       enabled: preloadResult.enabled,
@@ -239,8 +240,8 @@ export function startSupervisor(): http.Server {
       reason: preloadResult.reason,
       stdoutLog: preloadResult.stdoutLog,
       stderrLog: preloadResult.stderrLog,
+      childServicesLaunchedBeforePreload: true,
     });
-    supervisorState = launchEnabledServices(configResult.config, logger);
     monitorTimer = setInterval(() => {
       monitor().catch((error) => logger.log('warn', 'Supervisor monitor failed safely.', { error: String(error) }));
     }, configResult.config.health.monitorIntervalMs);

@@ -3,6 +3,21 @@
 ## Latest Change
 
 Date: 2026-06-29
+Task: Add market_bars IO retention, recorder throttle, and backfill hardening.
+Files changed: tools/automation/market-bars-retention-core.ts, tools/automation/market-bars-retention-audit.ts, tools/automation/market-bars-retention.ts, tools/automation/market-bars-retention-audit.test.ts, tools/automation/market-bars-retention.test.ts, tools/automation/candle-recorder.ts, tools/automation/candle-recorder-throttle.test.ts, tools/automation/backfill-market-bars.ts, tools/automation/backfill-market-bars.test.ts, tools/supervisor/index.ts, package.json, docs/MARKET_BARS_IO_RUNBOOK.md, docs/PROJECT_STATUS.md.
+Reason: Supabase Disk IO warnings and local statement/upstream timeouts showed `market_bars` cache pressure. The scanner needs a rolling 30-day OHLC cache, not indefinite cache growth or repeated unchanged HTF rewrites.
+Tests run: targeted market-bars retention/audit tests, recorder throttle test, backfill skip test, supervisor/health tests, guards, lint, build, and full test suite.
+Result: Passed. Retention audit/dry-run loopbacks, recorder throttle loopback, selective backfill loopback, supervisor checks, guards, lint, build, and full test suite completed cleanly. Live Supabase audit/dry-run produced timeout evidence and performed no production deletion.
+Trading logic changed: No.
+Bridge impact: Bridge reads remain source of truth. Recorder writes are throttled for unchanged bars; scanner bridge reads are not blocked by persistence throttle.
+Journal/RAG impact: None. Retention is limited to `market_bars`; RAG/research/Discord artifacts are protected.
+Supabase impact: No schema migration. Added dry-run/apply retention tooling and audit receipts for `market_bars` only.
+Known risks: Production deletion is not performed unless retention apply is explicitly run after dry-run review.
+Next recommended action: Run `npm run market-bars:audit` and `npm run market-bars:retention:dry-run`; review receipts before any production apply.
+
+## Previous Change
+
+Date: 2026-06-29
 Task: Harden AM REVIEW high-confidence conditional duplicate and zone-failure Discord routing.
 Files changed: tools/automation/nt-scanner.ts, tools/automation/nt-scanner-alert.test.ts, docs/PROJECT_STATUS.md.
 Reason: The 2026-06-29 AM REVIEW SHORT SweepMssFvgRetrace plan was correctly flagged as a duplicate/stale-risk candidate, but the high-confidence conditional visibility path still created repeated Discord receipts for the same alert key. The scanner now applies hard duplicate suppression after high-confidence routing and records completed-5M tactical-zone failure before delivery.

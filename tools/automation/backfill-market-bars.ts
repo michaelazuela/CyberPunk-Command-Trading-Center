@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
-import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { fetchRawCachedMarketBars, loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
@@ -9,6 +9,26 @@ dotenv.config({ path: '.env.local', override: false, quiet: true });
 type Instrument = 'MES' | 'MNQ';
 
 const TIMEFRAMES: MarketBarTimeframe[] = ['5m', '15m', '60m', '120m', '240m'];
+
+const MINIMUM_DAILY_CACHE_BARS: Record<MarketBarTimeframe, number> = {
+  '5m': 200,
+  '15m': 60,
+  '60m': 18,
+  '120m': 8,
+  '240m': 4,
+};
+
+export function shouldSkipBackfillForCachedBars(args: {
+  timeframe: MarketBarTimeframe;
+  cachedBars: Array<{ time: string }>;
+}): boolean {
+  return args.cachedBars.length >= MINIMUM_DAILY_CACHE_BARS[args.timeframe];
+}
+
+function errorLooksLikeIoPressure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /timeout|timed out|statement timeout|upstream request timeout|57014/i.test(message);
+}
 
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
@@ -90,6 +110,18 @@ async function main() {
 
     for (const timeframe of TIMEFRAMES) {
       try {
+        const cachedBars = await fetchRawCachedMarketBars({
+          instrument: bridgeInstrument,
+          timeframe,
+          from,
+          to,
+          config,
+          limit: 5000,
+        });
+        if (shouldSkipBackfillForCachedBars({ timeframe, cachedBars })) {
+          console.log(`[backfill] ${tradeDate} ${timeframe}: skipped; cache coverage already sufficient (${cachedBars.length} bars).`);
+          continue;
+        }
         const response = await getNinjaHistoricalBars({
           instrument: bridgeInstrument,
           timeframe,
@@ -113,6 +145,11 @@ async function main() {
         console.log(`[backfill] ${tradeDate} ${timeframe}: upserted ${result.upserted}.`);
       } catch (error) {
         console.warn(`[backfill] ${tradeDate} ${timeframe}: ${error instanceof Error ? error.message : String(error)}`);
+        if (errorLooksLikeIoPressure(error)) {
+          console.warn('[backfill] IO pressure detected; stopping backfill early to avoid hammering Supabase.');
+          console.log(`[backfill] partial complete: ${total} bars processed.`);
+          return;
+        }
       }
       if (delayMs > 0) await sleep(delayMs);
     }
@@ -121,7 +158,9 @@ async function main() {
   console.log(`[backfill] complete: ${total} bars processed.`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1]?.replace(/\\/g, '/').endsWith('/tools/automation/backfill-market-bars.ts')) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

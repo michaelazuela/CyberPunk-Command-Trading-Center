@@ -4,7 +4,7 @@ import path from 'node:path';
 import { writeRuntimeJsonAtomicSync } from '../runtimeJson';
 import { getNinjaBridgeBars, getNinjaHistoricalBars } from '../../src/lib/ninjaTraderBridge';
 import { assessBridgeBarStaleness, latestCompletedBar, type BridgeTimestampMode, type BridgeTimeZoneMode } from '../../src/lib/localScannerEngine';
-import { loadMarketDataConfig, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
+import { loadMarketDataConfig, normalizeCandleTimeEt, upsertMarketBars, type MarketBarTimeframe } from './market-data-store';
 import { resolveCurrentBridgeInstrument } from './bridge-instrument-resolver';
 
 dotenv.config({ quiet: true });
@@ -24,6 +24,84 @@ interface RecorderHeartbeat {
   barsProcessed: number;
   warning: string | null;
   error: string | null;
+}
+
+export interface RecorderWriteWatermark {
+  latestCandleTimeEt: string | null;
+  cooldownUntilMs: number;
+  lastError: string | null;
+}
+
+export type RecorderWriteState = Record<string, RecorderWriteWatermark>;
+
+export function createRecorderWriteState(): RecorderWriteState {
+  return {};
+}
+
+function recorderWriteKey(bridgeInstrument: string, timeframe: MarketBarTimeframe): string {
+  return `${bridgeInstrument}|${timeframe}`;
+}
+
+function latestBarTimeEt(bars: Array<{ time: string }>): string | null {
+  return bars
+    .map((bar) => normalizeCandleTimeEt(bar.time))
+    .filter(Boolean)
+    .sort()
+    .at(-1) || null;
+}
+
+function errorLooksLikeIoPressure(message: string): boolean {
+  return /timeout|timed out|statement timeout|upstream request timeout|57014/i.test(message);
+}
+
+export function selectRecorderBarsForUpsert<T extends { time: string }>(args: {
+  bars: T[];
+  bridgeInstrument: string;
+  timeframe: MarketBarTimeframe;
+  state: RecorderWriteState;
+  nowMs?: number;
+}): T[] {
+  const key = recorderWriteKey(args.bridgeInstrument, args.timeframe);
+  const watermark = args.state[key];
+  const nowMs = args.nowMs ?? Date.now();
+  if (watermark?.cooldownUntilMs && watermark.cooldownUntilMs > nowMs) return [];
+  if (!watermark?.latestCandleTimeEt) return args.bars;
+  return args.bars.filter((bar) => normalizeCandleTimeEt(bar.time) > watermark.latestCandleTimeEt!);
+}
+
+export function markRecorderWriteSuccess(args: {
+  bars: Array<{ time: string }>;
+  bridgeInstrument: string;
+  timeframe: MarketBarTimeframe;
+  state: RecorderWriteState;
+}): void {
+  const latest = latestBarTimeEt(args.bars);
+  if (!latest) return;
+  args.state[recorderWriteKey(args.bridgeInstrument, args.timeframe)] = {
+    latestCandleTimeEt: latest,
+    cooldownUntilMs: 0,
+    lastError: null,
+  };
+}
+
+export function markRecorderWriteFailure(args: {
+  bridgeInstrument: string;
+  timeframe: MarketBarTimeframe;
+  state: RecorderWriteState;
+  error: unknown;
+  nowMs?: number;
+  cooldownMs?: number;
+}): void {
+  const key = recorderWriteKey(args.bridgeInstrument, args.timeframe);
+  const previous = args.state[key];
+  const message = formatError(args.error);
+  args.state[key] = {
+    latestCandleTimeEt: previous?.latestCandleTimeEt || null,
+    cooldownUntilMs: errorLooksLikeIoPressure(message)
+      ? (args.nowMs ?? Date.now()) + (args.cooldownMs ?? 120_000)
+      : 0,
+    lastError: message,
+  };
 }
 
 function argValue(name: string): string | null {
@@ -145,6 +223,7 @@ async function recordOnce({
   maxStaleBarMinutes,
   barTimestampMode,
   barTimeZone,
+  writeState,
 }: {
   bridgeUrl: string;
   instrument: Instrument;
@@ -153,6 +232,7 @@ async function recordOnce({
   maxStaleBarMinutes: number;
   barTimestampMode: BridgeTimestampMode;
   barTimeZone: BridgeTimeZoneMode;
+  writeState: RecorderWriteState;
 }): Promise<{ total: number; latestCompleted5m: string | null; warning: string | null }> {
   const config = loadMarketDataConfig();
   if (!config) {
@@ -182,9 +262,19 @@ async function recordOnce({
       console.warn(`[market-cache] ${timeframe}: no bars returned from bridge.`);
       continue;
     }
+    const barsToUpsert = selectRecorderBarsForUpsert({
+      bars,
+      bridgeInstrument,
+      timeframe,
+      state: writeState,
+    });
+    if (!barsToUpsert.length) {
+      console.log(`[market-cache] ${timeframe}: skipped unchanged bars.`);
+      continue;
+    }
     try {
       const result = await upsertMarketBars({
-        bars,
+        bars: barsToUpsert,
         instrument,
         bridgeInstrument,
         timeframe,
@@ -192,7 +282,19 @@ async function recordOnce({
       });
       total += result.upserted;
       console.log(`[market-cache] ${timeframe}: upserted ${result.upserted} bars.`);
+      markRecorderWriteSuccess({
+        bars: barsToUpsert,
+        bridgeInstrument,
+        timeframe,
+        state: writeState,
+      });
     } catch (error) {
+      markRecorderWriteFailure({
+        bridgeInstrument,
+        timeframe,
+        state: writeState,
+        error,
+      });
       console.warn(`[market-cache] ${timeframe}: upsert skipped: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
@@ -246,6 +348,7 @@ async function main() {
   bridgeInstrument = instrumentResolution.instrument;
   let lastInstrumentResolutionWarning = instrumentResolution.warning || null;
   if (lastInstrumentResolutionWarning) console.warn(`[market-cache] ${lastInstrumentResolutionWarning}`);
+  const writeState = createRecorderWriteState();
 
   console.log('Quant Desk NinjaTrader candle recorder started.');
   console.log(`Bridge: ${bridgeUrl} | Instrument: ${bridgeInstrument} | Timeframes: ${TIMEFRAMES.join(', ')} | Bar time: ${barTimeZone}/${barTimestampMode}`);
@@ -262,7 +365,7 @@ async function main() {
       });
       bridgeInstrument = resolution.bridgeInstrument;
       lastInstrumentResolutionWarning = resolution.lastWarning;
-      const result = await recordOnce({ bridgeUrl, instrument, bridgeInstrument, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone });
+      const result = await recordOnce({ bridgeUrl, instrument, bridgeInstrument, limit, maxStaleBarMinutes, barTimestampMode, barTimeZone, writeState });
       writeHeartbeat(heartbeatPath, {
         status: result.warning ? 'warn' : 'ok',
         updatedAt: new Date().toISOString(),
@@ -294,7 +397,9 @@ async function main() {
   } while (!once);
 }
 
-main().catch((error) => {
-  console.error(formatError(error));
-  process.exitCode = 1;
-});
+if (process.argv[1]?.replace(/\\/g, '/').endsWith('/tools/automation/candle-recorder.ts')) {
+  main().catch((error) => {
+    console.error(formatError(error));
+    process.exitCode = 1;
+  });
+}
